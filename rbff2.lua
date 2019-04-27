@@ -709,8 +709,11 @@ end)
 emu.registerbefore(function()
 end)
 
+save_memory.enabled = false
+
 emu.registerafter(function()
 	execute(global.active_menu)
+	save_memory.save()
 end)
 
 emu.registerexit(function()
