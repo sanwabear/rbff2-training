@@ -21,7 +21,7 @@
 --SOFTWARE.
 require("rbff2-global")
 
-local save_memory = {
+save_memory = {
 	fcount = 1,
 	enabled = false,
 	save = nil,

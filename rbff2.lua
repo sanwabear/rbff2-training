@@ -19,7 +19,7 @@
 --LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 --OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 --SOFTWARE.
-package.path = [[.\ext-lib\?.lua;.\lib\?.lua;.\ram-patch\?.lua;.\rom-patch\?.lua;]]..package.path
+package.path = [[.\ext-lib\?.lua;.\lib\?.lua;.\ram-patch\]]..emu.romname()..[[\?.lua;.\rom-patch\]]..emu.romname()..[[\?.lua;]]..package.path
 
 require("rbff2-global")
 require("fireflower-patch")
@@ -28,6 +28,7 @@ require("life-recover")
 require("debug-dip")
 require("auto-guard")
 require("player-controll")
+require("save-memory")
 dofile("ext-lib/table.save-0.94.lua")
 
 local osd = new_env("ext-lib/fighting-OSD.lua")
@@ -98,13 +99,13 @@ local global = {
 	end,
 }
 global.goto_player_select = function()
-	dofile("ram-patch/player-select.lua")
+	dofile("ram-patch/"..emu.romname().."/player-select.lua")
 	player_controll.apply_vs_mode(false)
 	debugdip.release_debugdip()
 	global.active_menu = global.fighting
 end
 global.restart_fight = function()
-	dofile("ram-patch/vs-restart.lua")
+	dofile("ram-patch/"..emu.romname().."/vs-restart.lua")
 	player_controll.apply_vs_mode(true)
 	debugdip.release_debugdip()
 end
@@ -706,7 +707,7 @@ gui.register(function()
 end)
 
 emu.registerbefore(function()
-	end)
+end)
 
 emu.registerafter(function()
 	execute(global.active_menu)
@@ -718,9 +719,6 @@ emu.registerexit(function()
 end)
 
 savestate.registerload(function()
-	fireflower_patch.apply_patch(romhack.char1_p1, 0x000000, false)
-	fireflower_patch.apply_patch(romhack.powbc_p1, 0x000000, false)
-	fireflower_patch.apply_patch(romhack.char1_p2, 0x100000, false)
 	hit_boxes.initialize_buffers()
 end)
 
@@ -728,4 +726,5 @@ emu.registerstart(function()
 	debugdip.release_debugdip()
 	osd.whatgame_OSD()
 	hit_boxes.whatgame()
+	fireflower_patch.apply_patch(romhack.char1_p1, 0x000000, false)
 end)

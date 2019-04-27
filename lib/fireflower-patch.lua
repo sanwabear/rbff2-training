@@ -32,15 +32,21 @@ fireflower_patch = {
 		end
 		if not force then
 			for saddr, v1, v2 in string.gmatch(s_patch, ptn) do
-				if memory.readbyte(fixaddr(saddr)) ~= tonumber(v1, 16) then
-					print("patch failure in 0x" .. saddr)
-					return false
+				local before = memory.readbyte(fixaddr(saddr))
+				if before ~= tonumber(v1, 16) then
+					if before == tonumber(v2, 16) then
+					-- already patched
+					else
+						print("patch failure in 0x" .. saddr)
+						return false
+					end
 				end
 			end
 		end
 		for saddr, v1, v2 in string.gmatch(s_patch, ptn) do
 			memory.writebyte(fixaddr(saddr), tonumber(v2, 16))
 		end
+		print("patch load")
 		return true
 	end
 }
