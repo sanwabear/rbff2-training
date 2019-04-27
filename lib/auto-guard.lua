@@ -1,0 +1,451 @@
+--MIT License
+--
+--Copyright (c) 2019 @ym2601 (https://github.com/sanwabear)
+--
+--Permission is hereby granted, free of charge, to any person obtaining a copy
+--of this software and associated documentation files (the "Software"), to deal
+--in the Software without restriction, including without limitation the rights
+--to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+--copies of the Software, and to permit persons to whom the Software is
+--furnished to do so, subject to the following conditions:
+--
+--The above copyright notice and this permission notice shall be included in all
+--copies or substantial portions of the Software.
+--
+--THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+--IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+--FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+--AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+--LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+--OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+--SOFTWARE.
+require("rbff2-global")
+
+math.randomseed(os.time())
+
+local function Set(list)
+	local set = {}
+	for _, l in ipairs(list) do set[l] = true end
+	return set
+end
+
+local move_type = {
+	unknown = -1,
+	attack = 0,
+	low_attack = 1,
+	provoke = 2, --挑発
+}
+
+local guard_config = {
+	players = {},
+
+	pos_diff = memory.readwordsigned(0x100420) - memory.readwordsigned(0x100520),
+	prev_pos_diff = memory.readwordsigned(0x100420) - memory.readwordsigned(0x100520),
+
+	func_passive_general = nil, -- 行動振り分け用関数
+	func_passive_forward = nil, -- 前進行動
+	func_passive_forward_disabled = function(player) end,
+	func_passive_no_guard = function(player) end,
+	func_passive_guard = nil, -- 常にガード
+	func_passive_guard1_hit = nil, -- 初回だけガード
+	func_passive_hit1_guard = nil, -- 初回だけノーガード
+	is_hit_or_guard = nil, -- 状態確認して返す
+	random_boolean = function() return math.random(255) % 2 == 0 end, --50％で抽選
+	func_passive_random_guard = nil,  -- ランダムでガード
+	func_passive_random_hit = nil,  -- ランダムでヒット
+	func_passive_random_keep = nil,  -- ランダムガードコア関数
+	func_counter_move = nil, -- 任意のコマンド入力
+}
+
+guard_config.func_counter_move = function(player)
+	local tbl ={}-- joypad.get(tbl)
+	local diff = guard_config.pos_diff
+	if guard_config.pos_diff == 0 then
+		diff = prev_pos_diff
+	end
+	local pos_judge = player.pside * guard_config.pos_diff
+	for _, k in pairs(player.counter_move.command[player.counter_move.count]) do
+		if k == "Front" then
+			if 0 < pos_judge then
+				tbl["P" .. player.opponent_num .. " Left"] = true
+			elseif 0 > pos_judge then
+				tbl["P" .. player.opponent_num .. " Right"] = true
+			end
+		elseif k == "Back" then
+			if 0 < pos_judge then
+				tbl["P" .. player.opponent_num .. " Right"] = true
+			elseif 0 > pos_judge then
+				tbl["P" .. player.opponent_num .. " Left"] = true
+			end
+		else
+			tbl["P" .. player.opponent_num .. " " .. k] = true
+		end
+	end
+	joypad.set(tbl)
+
+	player.counter_move.count = (player.counter_move.count + 1) % #player.counter_move.command
+	if player.counter_move.count == 0 then
+		player.counter_move.count = #player.counter_move.command
+	elseif player.counter_move.count == 1 then
+		-- 両プレイヤーの状態が安定するまで待つ
+		local await = emu.framecount() + 20
+		player.func_passive = function(player)
+			if await < emu.framecount()
+				and 0 == memory.readbyte(player.guard_addr)
+				and 0 == memory.readbyte(player.opponent_guard_addr)
+				and 0 == memory.readbyte(0x1004B6)
+				and 0 == memory.readbyte(0x1005B6)
+			then
+				player.func_passive = guard_config.func_passive_general
+				player.func_passive_guard = guard_config.func_counter_move
+			end
+		end
+	else
+		player.func_passive = guard_config.func_counter_move
+	end
+end
+
+-- TODO 下段の特定方法
+local low_attacks = Set {
+	--0x07, --下a
+	0x8, --下b
+	0x9, --下c
+	0x18, --ラインb
+	0x19 --ラインC
+}
+
+local apply_guard = nil
+
+apply_guard = function(pos_judge, player)
+	local prev_left, prev_right = player.left, player.right
+	if 0 < pos_judge then
+		player.left = false
+		player.right = true
+	elseif 0 > pos_judge then
+		player.left = true
+		player.right = false
+	else
+		apply_guard(player.prev_pos_judge, player)
+	end
+	player.prev_pos_judge = pos_judge
+end
+
+guard_config.func_passive_general = function(player)
+	local move = player.get_attack_type()
+	if move == move_type.attack or move == move_type.low_attack then
+		player.func_passive_guard(player)
+	elseif move == move_type.provoke then
+		player.func_passive_forward(player)
+	end
+end
+
+guard_config.func_passive_forward = function(player)
+	local tbl ={}-- joypad.get(tbl)
+
+	local pos_judge = player.pside * guard_config.pos_diff
+	if math.abs(pos_judge) > 90 then
+		if 90 < pos_judge then
+			tbl["P" .. player.opponent_num .. " Left"] = true
+		elseif 90 > pos_judge then
+			tbl["P" .. player.opponent_num .. " Right"] = true
+		end
+	end
+
+	joypad.set(tbl)
+end
+
+guard_config.func_passive_guard = function(player)
+	local tbl ={}-- joypad.get(tbl)
+
+	local pos_judge = player.pside * guard_config.pos_diff
+	if 0 == pos_judge then
+		if player.left == false and player.right == false then
+			--print("!!") --軸一致
+			apply_guard(pos_judge, player)
+		end
+	else
+		apply_guard(pos_judge, player)
+	end
+	tbl["P" .. player.opponent_num .. " Left"] = player.left
+	tbl["P" .. player.opponent_num .. " Right"] = player.right
+	tbl["P" .. player.opponent_num .. " Down"] = player.get_attack_type() == move_type.low_attack
+
+	joypad.set(tbl)
+end
+
+guard_config.is_hit_or_guard = function(expected, -- 1 is hit, 2 is guard
+	player)
+	return player.guard_or_hit == emu.framecount() and expected == memory.readbyte(player.guard_addr)
+end
+
+guard_config.func_passive_guard1_hit = function(player)
+	guard_config.func_passive_guard(player)
+	if guard_config.is_hit_or_guard(2, player) then
+		local await = emu.framecount() + 90 -- 90フレームだけガード
+		player.func_passive_guard = function(player)
+			if await < emu.framecount() then
+				player.func_passive_guard = guard_config.func_passive_guard1_hit
+				return guard_config.func_passive_guard(player)
+			end
+			return guard_config.func_passive_no_guard(player)
+		end
+	end
+end
+
+guard_config.func_passive_hit1_guard = function(player)
+	if guard_config.is_hit_or_guard(1, player) then
+		local await = emu.framecount() + 90
+		player.func_passive_guard = function(player)
+			if await < emu.framecount() then
+				player.func_passive_guard = guard_config.func_passive_hit1_guard
+				return guard_config.func_passive_no_guard(player)
+			end
+			return guard_config.func_passive_guard(player)
+		end
+	end
+end
+
+guard_config.func_passive_random_guard = function(player)
+	guard_config.func_passive_guard(player)
+	if guard_config.is_hit_or_guard(2, player) then
+		player.func_passive_guard = guard_config.func_passive_random_keep(2)
+	end
+end
+
+guard_config.func_passive_random_hit = function(player)
+	if guard_config.is_hit_or_guard(1, player) then
+		player.func_passive_guard = guard_config.func_passive_random_keep(1)
+	end
+end
+
+guard_config.func_passive_random_keep = function(expected, -- 1 is hit, 2 is guard
+	player)
+	return function(player) -- カリー化しておく
+		if expected == 2 then
+			guard_config.func_passive_guard(player)
+	end
+	if guard_config.is_hit_or_guard(0, player) then
+		if guard_config.random_boolean() then
+			player.func_passive_guard = guard_config.func_passive_random_hit
+		else
+			player.func_passive_guard = guard_config.func_passive_random_guard
+		end
+	end
+	end
+end
+
+for pside = -1, 1, 2 do
+	-- バッグDIP ステータス表示のP
+	-- 0x100460 下1桁表示
+	-- 0x100461
+	--
+	-- バッグDIP ステータス表示のA
+	-- 0x100462 下1桁表示
+	-- 0x100463
+	-- か
+	-- 0x100464 下1桁表示
+	-- 0x100465
+	local p1_addr = 0x100560
+	local p2_addr = 0x100561
+	local attack_addr = 0x1005B6
+	local fireball_addr = 0x1007BF
+	local opponent_guard_addr = 0x10058E
+	local guard_addr = 0x10048E
+	local opponent_num = 1
+	if pside == -1 then
+		attack_addr = 0x1004B6
+		fireball_addr = 0x1006BF
+		p1_addr = 0x100460
+		p2_addr = 0x100461
+		opponent_guard_addr = 0x10048E
+		guard_addr = 0x10058E
+		opponent_num = 2
+	end
+
+	local player = {
+		pside = pside,
+		left = false,
+		right = false,
+		down = false,
+		enable_auto_guard = true,
+		enable_low_guard = false,
+
+		counter_move = {
+			count = 0,
+			command = { },
+		},
+		set_counter_move = nil,
+
+		func_passive_guard = guard_config.func_passive_guard,
+		func_passive_forward = guard_config.func_passive_forward,
+		func_passive = guard_config.func_passive_general,
+
+		guard_or_hit = 0, --framecount
+		shot_fireball = 0, --framecount
+
+		opponent_num = opponent_num,
+		opponent_guard_addr = opponent_guard_addr,
+		addr = attack_addr,
+		guard_addr = guard_addr,
+		prev_pos_judge = pside,
+		get_attack_type = function()
+			local player = guard_config.players[pside]
+			local state =  memory.readbyte(opponent_guard_addr)
+			if state == 0 then
+				local attack = memory.readbyte(attack_addr)
+				if attack ~= 0 then
+					if player.enable_low_guard
+						or (player.enable_auto_guard and low_attacks[attack]) then
+						return move_type.low_attack
+					end
+					return move_type.attack
+						--elseif player.shot_fireball <= emu.framecount() and 0 < memory.readbyte(fireball_addr) then
+						--	return move_type.attack
+				elseif 0x01 == memory.readbyte(p1_addr) and 0x96 == memory.readbyte(p2_addr) then
+					return move_type.provoke
+				end
+			end
+			return move_type.unknown
+		end,
+	}
+
+	memory.registerwrite(guard_addr, function() player.guard_or_hit = emu.framecount() end)
+	memory.registerwrite(fireball_addr, function() player.shot_fireball = emu.framecount() end)
+
+	player.set_counter_move = function(command)
+		guard_config.players[pside].counter_move.count = 1
+		guard_config.players[pside].counter_move.command = command
+	end
+
+	guard_config.players[pside] = player
+end
+
+auto_guard = {}
+
+auto_guard.update_guard = function()
+	guard_config.pos_diff = memory.readwordsigned(0x100420) - memory.readwordsigned(0x100520)
+	if guard_config.pos_diff ~= 0 then
+		guard_config.prev_pos_diff = guard_config.pos_diff
+	end
+	for pside, player in pairs(guard_config.players) do
+		player.func_passive(player)
+	end
+end
+
+auto_guard.draw_guard_status = function()
+	gui.text(160-8, 217, guard_config.pos_diff, 0xFFFFFFFF)
+end
+
+---public config
+-- pside is -1=1P, 1=2P
+
+-- 挑発を受けた時の前進行動
+auto_guard.config_forward        = function()
+	for pside = -1, 1, 2 do
+		guard_config.players[pside].func_passive_forward = guard_config.func_passive_forward
+	end
+end
+
+auto_guard.config_forward_disabled = function()
+	for pside = -1, 1, 2 do
+		guard_config.players[pside].func_passive_forward = guard_config.func_passive_forward_disabled
+	end
+end
+
+-- ノーガード
+auto_guard.config_no_guard       = function(pside)
+	guard_config.players[pside].func_passive = guard_config.func_passive_general
+	guard_config.players[pside].func_passive_guard = guard_config.func_passive_no_guard
+end
+
+-- 自動ガード 実験的
+auto_guard.config_auto_guard     = function()
+	guard_config.players[pside].func_passive = guard_config.func_passive_general
+	guard_config.players[pside].func_passive_guard = guard_config.func_passive_guard
+	guard_config.players[pside].enable_auto_guard = true
+	guard_config.players[pside].enable_low_guard = false
+end
+
+-- 立ちガード
+auto_guard.config_standing_guard = function()
+	guard_config.players[pside].func_passive = guard_config.func_passive_general
+	guard_config.players[pside].func_passive_guard = guard_config.func_passive_guard
+	guard_config.players[pside].enable_auto_guard = false
+	guard_config.players[pside].enable_low_guard = false
+end
+
+-- しゃがみガード
+auto_guard.config_crouching_guard = function(pside)
+	guard_config.players[pside].func_passive = guard_config.func_passive_general
+	guard_config.players[pside].func_passive_guard = guard_config.func_passive_guard
+	guard_config.players[pside].enable_auto_guard = false
+	guard_config.players[pside].enable_low_guard = true
+end
+
+-- 初回だけノーガード
+auto_guard.config_1hit_guard     = function(pside)
+	guard_config.players[pside].func_passive = guard_config.func_passive_general
+	guard_config.players[pside].func_passive_guard = guard_config.func_passive_hit1_guard
+end
+
+-- ランダムガード
+auto_guard.config_random_guard   = function(pside)
+	guard_config.players[pside].func_passive = guard_config.func_passive_general
+	guard_config.players[pside].func_passive_guard = guard_config.func_passive_random_keep(0)
+end
+
+-- スウェー
+local sway = {
+	{ "Button D" },
+}
+auto_guard.config_sway           = function(pside)
+	guard_config.players[pside].func_passive = guard_config.func_passive_general
+	guard_config.players[pside].set_counter_move(sway)
+	guard_config.players[pside].func_passive_guard = guard_config.func_counter_move
+end
+
+-- 避け攻撃
+local attack_avoider = {
+	{ "Button A", "Button B" },
+}
+auto_guard.config_attack_avoider = function(pside)
+	guard_config.players[pside].func_passive = guard_config.func_passive_general
+	guard_config.players[pside].set_counter_move(attack_avoider)
+	guard_config.players[pside].func_passive_guard = guard_config.func_counter_move
+end
+
+-- 詠酒・対立ち攻撃
+local esaka_anti_stand = {
+	{ "Button A" },
+	{ "Button A" },
+	{ "Button A" , "Front" },
+}
+auto_guard.config_esaka_anti_stand = function(pside)
+	guard_config.players[pside].func_passive = guard_config.func_passive_general
+	guard_config.players[pside].set_counter_move(esaka_anti_stand)
+	guard_config.players[pside].func_passive_guard = guard_config.func_counter_move
+end
+
+-- 詠酒・対しゃがみ攻撃
+local esaka_anti_crouch = {
+	{ "Button A" },
+	{ "Button A" },
+	{ "Button A" , "Down" },
+}
+auto_guard.config_esaka_anti_crouch = function(pside)
+	guard_config.players[pside].func_passive = guard_config.func_passive_general
+	guard_config.players[pside].set_counter_move(esaka_anti_crouch)
+	guard_config.players[pside].func_passive_guard = guard_config.func_counter_move
+end
+
+-- 詠酒・対ジャンプ攻撃
+local esaka_anti_air = {
+	{ "Button A" },
+	{ "Button A" },
+	{ "Button A" , "Up" },
+}
+auto_guard.config_esaka_anti_air = function(pside)
+	guard_config.players[pside].func_passive = guard_config.func_passive_general
+	guard_config.players[pside].set_counter_move(esaka_anti_air)
+	guard_config.players[pside].func_passive_guard = guard_config.func_counter_move
+end
