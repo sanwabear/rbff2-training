@@ -124,5 +124,5 @@ rb2key.capture_keys = function()
 	kio3 = kio
 	last_time = emu.framecount()
 
-	return kio1, kio2, ki3o, rb2key, rb2key_pre
+	return kio1, kio2, kio3, rb2key, rb2key_pre
 end

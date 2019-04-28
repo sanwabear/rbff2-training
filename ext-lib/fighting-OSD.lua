@@ -98,7 +98,7 @@ local profile = {
 			pos_X = 0x0F, pos_Y = 0x28, length = 0x40, height = 0x04, 
 			level = function(p) return rb(p.max_stun_base + 0x02), rb(p.max_stun_base) end,
 			timeout = function(p)
-				state = rb(p.base + 0x02)
+				local state = rb(p.base + 0x02)
 				return get_state({
 					{
 						state = "countdown", 
@@ -170,26 +170,26 @@ for _, g in ipairs(profile) do
 				local now_dmg = g.text.last_dmg.val(p)
 				local state = g.text.state.val(p) ~= 0
 
-				ext = combo_dmg_ext[p.side]
+				text.ext = combo_dmg_ext[p.side]
 				if state == false then
-					ext.combo_dmg = 0
+					text.ext.combo_dmg = 0
 				end				
 
-				if emu.framecount() == ext.update_dmg then
-					ext.combo_dmg = ext.combo_dmg + now_dmg
-					ext.old_combo_dmg = ext.combo_dmg
-					if ext.max_dmg < ext.combo_dmg then
-						ext.max_dmg = ext.combo_dmg
+				if emu.framecount() == text.ext.update_dmg then
+					text.ext.combo_dmg = text.ext.combo_dmg + now_dmg
+					text.ext.old_combo_dmg = text.ext.combo_dmg
+					if text.ext.max_dmg < text.ext.combo_dmg then
+						text.ext.max_dmg = text.ext.combo_dmg
 					end
 				end
 
-				if ext.last_combo < combo then
-					ext.old_combo = combo	    
+				if text.ext.last_combo < combo then
+					text.ext.old_combo = combo	    
 				end
 
-				ext.last_combo = combo
-				ext.last_state = state
-				return ext.old_combo_dmg
+				text.ext.last_combo = combo
+				text.ext.last_state = state
+				return text.ext.old_combo_dmg
 			end
 		elseif text.name == "combo" then
 			text.val = function(p) return combo_dmg_ext[p.side].old_combo end

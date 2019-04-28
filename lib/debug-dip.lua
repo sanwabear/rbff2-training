@@ -69,7 +69,7 @@ debugdip.update_debugdips = function()
 end
 
 debugdip.release_debugdip = function()
-	memory.writebyte(0x107C28, flg and 0x99 or dip_config.fix_time)
+	memory.writebyte(0x107C28, 0x99 or dip_config.fix_time)
 	memory.writebyte(0x10E000, 0x00)
 	memory.writebyte(0x10E001, 0x00)
 	memory.writebyte(0x10E002, 0x00)

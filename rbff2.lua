@@ -21,6 +21,7 @@
 --SOFTWARE.
 package.path = [[.\ext-lib\?.lua;.\lib\?.lua;.\ram-patch\]]..emu.romname()..[[\?.lua;.\rom-patch\]]..emu.romname()..[[\?.lua;]]..package.path
 
+require("strict")
 require("rbff2-global")
 require("fireflower-patch")
 require("romhack")
