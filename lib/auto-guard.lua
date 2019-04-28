@@ -359,7 +359,7 @@ for pside = -1, 1, 2 do
 				return move_type.provoke
 			end
 		end
-		-- fireball
+		-- fireball 最終更新から30フレーム持続
 		if player.last_fireball_frame ~= 0 and 30 > emu.framecount() - player.last_fireball_frame then
 			return move_type.attack
 		end
