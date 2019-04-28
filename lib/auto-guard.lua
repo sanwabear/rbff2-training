@@ -291,6 +291,7 @@ for pside = -1, 1, 2 do
 	local p2_addr = 0x100561
 	local attack_addr = 0x1005B6
 	local fireball_addr = 0x1007BF
+	local fireball_pos_addrs = { 0x100720, 0x10072C, 0x100920, 0x10092C, 0x100B20, 0x100B2C }
 	local opponent_guard_addr = 0x10058E
 	local opponent_char_addr = 0x100511
 	local guard_addr = 0x10048E
@@ -298,6 +299,7 @@ for pside = -1, 1, 2 do
 	if pside == -1 then
 		attack_addr = 0x1004B6
 		fireball_addr = 0x1006BF
+		fireball_pos_addrs = { 0x100620, 0x10062C, 0x100820, 0x10082C, 0x100A20, 0x100A2C }
 		p1_addr = 0x100460
 		p2_addr = 0x100461
 		opponent_guard_addr = 0x10048E
@@ -332,26 +334,37 @@ for pside = -1, 1, 2 do
 		addr = attack_addr,
 		guard_addr = guard_addr,
 		prev_pos_judge = pside,
-		get_attack_type = function()
-			local player = guard_config.players[pside]
-			local state =  memory.readbyte(opponent_guard_addr)
-			if state == 0 then
-				local attack = memory.readbyte(attack_addr)
-				if attack ~= 0 then
-					if player.enable_low_guard
-						or (player.enable_auto_guard and low_attacks[memory.readbyte(opponent_char_addr)][attack]) then
-						return move_type.low_attack
-					end
-					return move_type.attack
-						--elseif player.shot_fireball <= emu.framecount() and 0 < memory.readbyte(fireball_addr) then
-						--	return move_type.attack
-				elseif 0x01 == memory.readbyte(p1_addr) and 0x96 == memory.readbyte(p2_addr) then
-					return move_type.provoke
-				end
-			end
-			return move_type.unknown
-		end,
+		get_attack_type = nil,
+		last_fireball_frame = 0,
 	}
+	memory.registerwrite(fireball_addr, function() player.last_fireball_frame = emu.framecount() end)
+	for i = 1, #fireball_pos_addrs do
+		memory.registerwrite(fireball_pos_addrs[i], function() player.last_fireball_frame = emu.framecount() end)
+	end
+
+	player.get_attack_type = function()
+		local player = guard_config.players[pside]
+		local state =  memory.readbyte(opponent_guard_addr)
+		if state == 0 then
+			local attack = memory.readbyte(attack_addr)
+			if attack ~= 0 then
+				if player.enable_low_guard
+					or (player.enable_auto_guard and low_attacks[memory.readbyte(opponent_char_addr)][attack]) then
+					return move_type.low_attack
+				end
+				return move_type.attack
+					--elseif player.shot_fireball <= emu.framecount() and 0 < memory.readbyte(fireball_addr) then
+					--	return move_type.attack
+			elseif 0x01 == memory.readbyte(p1_addr) and 0x96 == memory.readbyte(p2_addr) then
+				return move_type.provoke
+			end
+		end
+		-- fireball
+		if player.last_fireball_frame ~= 0 and 30 > emu.framecount() - player.last_fireball_frame then
+			return move_type.attack
+		end
+		return move_type.unknown
+	end
 
 	memory.registerwrite(guard_addr, function() player.guard_or_hit = emu.framecount() end)
 	memory.registerwrite(fireball_addr, function() player.shot_fireball = emu.framecount() end)
