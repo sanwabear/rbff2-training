@@ -176,8 +176,16 @@ guard_config.func_passive_general = function(player)
 	local move = player.get_attack_type()
 	if move == move_type.attack or move == move_type.low_attack then
 		player.func_passive_guard(player)
+		player.back_step_kill = false
 	elseif move == move_type.provoke then
 		player.func_passive_forward(player)
+		player.back_step_kill = true
+	else
+		-- バックステップ防止のため一瞬下に入力する
+		if not player.back_step_kill then
+			joypad.set({["P" .. player.opponent_num .. " Down"] = true })
+			player.back_step_kill = true
+		end
 	end
 end
 
