@@ -601,11 +601,13 @@ player_controll.hack_player_select = function()
 		memory.writebyte(0x1020B2 + i, 0x0A)
 	end
 
+	local p1 = memory.readbyte(0x107BA5)
+	local p2 = memory.readbyte(0x107BA7)
 	if fix_player_select.on_start_frame == ec or fix_player_select.on_select_frame == ec then
-		fix_player_select.apply_vs_mode()
+		if p1 == 0xFF or p2 == 0xFF then
+			fix_player_select.apply_vs_mode()
+		end
 	elseif fix_player_select.on_start_frame < ec and 8 < state_past then
-		local p1 = memory.readbyte(0x107BA5)
-		local p2 = memory.readbyte(0x107BA7)
 		-- copy joypad for enemy's cursor
 		if p1 ~= 0xFF and p2 == 0xFF then
 			if 0 < key.up or 0 < key.dn or 0 < key.lt or 0 < key.rt then
