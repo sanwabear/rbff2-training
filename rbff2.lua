@@ -71,9 +71,10 @@ local global = {
 			memory.readbyte(0x10FDAF) == 2
 	end,
 	is_player_select_active = function()
+		local s = memory.readword(0x107C22)
 		return not bios_test(0x100400) and not bios_test(0x100500) and
 			memory.readword(0x100701) < 0x200 and memory.readword(0x100701) >= 0x100 and
-			memory.readword(0x107C22) == 0x0000 and
+			(s == 0x0000 or s == 0x5500) and
 			memory.readbyte(0x10FDAF) == 2
 	end,
 	goto_player_select = nil,
@@ -708,7 +709,7 @@ gui.register(function()
 end)
 
 emu.registerbefore(function()
-end)
+	end)
 
 save_memory.enabled = false
 
