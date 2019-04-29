@@ -61,7 +61,7 @@ guard_config.func_counter_move = function(player)
 	local tbl ={}-- joypad.get(tbl)
 	local diff = guard_config.pos_diff
 	if guard_config.pos_diff == 0 then
-		diff = prev_pos_diff
+		diff = guard_config.prev_pos_diff
 	end
 	local pos_judge = player.pside * guard_config.pos_diff
 	for _, k in pairs(player.counter_move.command[player.counter_move.count]) do
