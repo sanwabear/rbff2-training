@@ -183,7 +183,11 @@ guard_config.func_passive_general = function(player)
 	else
 		-- バックステップ防止のため一瞬下に入力する
 		if not player.back_step_kill then
-			joypad.set({["P" .. player.opponent_num .. " Down"] = true })
+			local _, _, _, _, pre_key = rb2key.capture_keys()
+			if 0 < pre_key["lt"..player.opponent_num]
+			or 0 < pre_key["rt"..player.opponent_num] then
+				joypad.set({["P" .. player.opponent_num .. " Down"] = true })
+			end
 			player.back_step_kill = true
 		end
 	end
