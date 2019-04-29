@@ -675,10 +675,10 @@ global.do_save = function()
 	table.save(global.training.config, loc.."rbff2-training.tbl")
 	table.save(global.rec.config, loc.."rbff2-rec.tbl")
 	player_controll.each_replay_slots(function(i, slot)
-		table.save(global.player_and_stg.config, loc.."rbff2-player-stg.tbl")
-		table.save(global.extra.config, loc.."rbff2-extra.tbl")
 		table.save(slot, loc.."rbff2-rec-slot".. i ..".tbl")
 	end)
+	table.save(global.player_and_stg.config, loc.."rbff2-player-stg.tbl")
+	table.save(global.extra.config, loc.."rbff2-extra.tbl")
 end
 
 global.do_autosave = function()
