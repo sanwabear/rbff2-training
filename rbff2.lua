@@ -24,7 +24,6 @@ package.path = [[.\ext-lib\?.lua;.\lib\?.lua;.\ram-patch\]]..emu.romname()..[[\?
 require("strict")
 require("rbff2-global")
 require("fireflower-patch")
-require("romhack")
 require("life-recover")
 require("debug-dip")
 require("auto-guard")
@@ -638,6 +637,7 @@ global.main = create_menu(
 			-- -auto save only the main menu
 			table.save(menu.config, "save\\rbff2-main.tbl")
 		end
+		collectgarbage("count")
 	end,
 	function(menu)
 		global.active_menu = global.fighting
@@ -667,6 +667,7 @@ global.do_load = function()
 	global.apply_menu_options(global.rec)
 	global.apply_menu_options(global.player_and_stg)
 	global.apply_menu_options(global.extra)
+	collectgarbage("count")
 end
 
 global.do_save = function()
@@ -679,6 +680,7 @@ global.do_save = function()
 	end)
 	table.save(global.player_and_stg.config, loc.."rbff2-player-stg.tbl")
 	table.save(global.extra.config, loc.."rbff2-extra.tbl")
+	collectgarbage("count")
 end
 
 global.do_autosave = function()
@@ -715,7 +717,7 @@ emu.registerstart(function()
 	debugdip.release_debugdip()
 	osd.whatgame_OSD()
 	hit_boxes.whatgame()
-	fireflower_patch.apply_patch(romhack.char1_p1, 0x000000, false)
+	fireflower_patch.apply_patch_file([[.\rom-patch\]]..emu.romname()..[[\char1-p1.pat]], 0x000000, false)
 
 	-- auto load only the main menu
 	global.copy_config(table.load("save\\rbff2-main.tbl"), global.main.config)
@@ -726,5 +728,6 @@ emu.registerstart(function()
 	for _, menu in pairs({ global.main, global.rec, global.training,
 		global.fighting, global.extra, global.player_and_stg }) do
 		global.copy_config(menu.config, menu.opt_p)
+		global.apply_menu_options(menu)
 	end
 end)

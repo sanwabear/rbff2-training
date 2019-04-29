@@ -1,27 +1,3 @@
---MIT License
---
---Copyright (c) 2019 @ym2601 (https://github.com/sanwabear)
---
---Permission is hereby granted, free of charge, to any person obtaining a copy
---of this software and associated documentation files (the "Software"), to deal
---in the Software without restriction, including without limitation the rights
---to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
---copies of the Software, and to permit persons to whom the Software is
---furnished to do so, subject to the following conditions:
---
---The above copyright notice and this permission notice shall be included in all
---copies or substantial portions of the Software.
---
---THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
---IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
---FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
---AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
---LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
---OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
---SOFTWARE.
-romhack = {}
-
-romhack.char1_p1 = [[
 000D5AA2: 00 AF
 000D5AA3: 00 37
 000D5AA4: 00 7F
@@ -179,18 +155,17 @@ romhack.char1_p1 = [[
 000000DB: FF 0C
 000000DC: FF 00
 000000DD: FF 00
-000633E2: FA B8
-000633E3: 41 4E
-000633E4: 1E 90
-000633E5: 07 00
-0006378D: 13 19
-000637A9: 10 19
-000637BB: 18 19
-000637BF: 15 19
-000637CB: 18 19
-000637CF: 15 19
-000637D5: 00 13
-000637D7: 00 15
-000637D9: 00 10
-000637DB: 00 16
-]]
+00063402: FA B8
+00063403: 41 4E
+00063404: 1E 90
+00063405: 07 00
+000637AD: 13 19
+000637C9: 10 19
+000637DB: 18 19
+000637DF: 15 19
+000637EB: 18 19
+000637EF: 15 19
+000637F5: 00 13
+000637F7: 00 15
+000637F9: 00 10
+000637FB: 00 16

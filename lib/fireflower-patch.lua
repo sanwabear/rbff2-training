@@ -21,7 +21,7 @@
 --SOFTWARE.
 fireflower_patch = {
 	apply_patch = function(s_patch, offset, force)
-		local ptn = "%s*(%w+):%s+(%w+)%s+(%w+)%s*[\r\n]+"
+		local ptn = "%s*(%w+):%s+(%w+)%s+(%w+)%s*[\r\n]*"
 		local fixaddr = function(saddr)
 			local addr = tonumber(saddr, 16) + offset
 			if (addr % 2 == 0) then
@@ -46,7 +46,14 @@ fireflower_patch = {
 		for saddr, v1, v2 in string.gmatch(s_patch, ptn) do
 			memory.writebyte(fixaddr(saddr), tonumber(v2, 16))
 		end
-		print("patch load")
 		return true
-	end
+	end,
+	apply_patch_file = nil,
 }
+fireflower_patch.apply_patch_file = function(path, offset, force)
+	local f = io.open(path, "r")
+	for line in f:lines() do
+		fireflower_patch.apply_patch(line, offset, force)
+	end
+	f:close()
+end
