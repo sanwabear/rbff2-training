@@ -35,6 +35,7 @@ dofile("ext-lib/table.save-0.94.lua")
 local osd = new_env("ext-lib/fighting-OSD.lua")
 local input_display = new_env("ext-lib/scrolling-input-display.lua")
 local hit_boxes = new_env("ext-lib/garou-hitboxes.lua")
+local no_op = function() end
 
 local c = { --colors
 	red    = 0xFF4444FF,
@@ -61,7 +62,7 @@ local global = {
 	autosave = true,
 	match_active = false,
 	is_bios_test = function()
-		return bios_test(0x100400) and bios_test(0x100500)
+		return bios_test(0x100400) or bios_test(0x100500)
 	end,
 	is_match_active = function()
 		local s = memory.readword(0x107C22)
@@ -146,8 +147,8 @@ local create_menu = function(title, build_callback, on_apply, on_cancel, default
 		opt_p = {},
 		box_offset = 42, box_x1 = 72, box_y1 = 34, --[[offset - 8,]] box_x2 = 248, box_y2 = 0, -- #menu_indexes * 8 + offset + 24
 		title_x = 0, --[[ emu.screenwidth() - 4 * #title / 2]] title_y = 42,
-		on_apply = on_apply or function() end,
-		on_cancel = on_cancel or function() end,
+		on_apply = on_apply or no_op,
+		on_cancel = on_cancel or no_op,
 	}
 	build_callback(menu.body)
 	menu.body_len = #menu.body
@@ -478,8 +479,8 @@ global.extra = create_menu(
 		})
 		table.insert(menu, "TEST:")
 		table.insert(menu, {
-			"OFF", function() end,
-			"RUN", function() end,
+			"OFF", no_op,
+			"RUN", no_op,
 		})
 	end,
 	function(menu)
@@ -504,32 +505,32 @@ global.rec = create_menu(
 			"RECORD", function()
 				player_controll.config_mode_record()
 				debugdip.config_cpu_cant_move(true)
-				auto_guard.config_forward()
+				auto_guard.config_forward(true)
 			end,
 			"RE-PLAY", function()
 				player_controll.config_mode_replay()
 				debugdip.config_cpu_cant_move(true)
-				auto_guard.config_forward()
+				auto_guard.config_forward(true)
 			end,
 			"1P vs 2P", function()
 				player_controll.config_mode_off()
 				debugdip.config_cpu_cant_move(true)
-				auto_guard.config_forward()
+				auto_guard.config_forward(true)
 			end,
 			"1P vs COM", function()
 				player_controll.config_mode_cpu(1)
 				debugdip.config_cpu_cant_move(false)
-				auto_guard.config_forward_disabled()
+				auto_guard.config_forward(false)
 			end,
 			"COM vs 2P", function()
 				player_controll.config_mode_cpu(2)
 				debugdip.config_cpu_cant_move(false)
-				auto_guard.config_forward_disabled()
+				auto_guard.config_forward(false)
 			end,
 			"COM vs COM", function()
-				player_controll.config_mode_cpu(2)
+				player_controll.config_mode_cpu(3)
 				debugdip.config_cpu_cant_move(false)
-				auto_guard.config_forward_disabled()
+				auto_guard.config_forward(false)
 			end,
 		})
 		local options = {}
@@ -614,9 +615,9 @@ global.main = create_menu(
 		end
 
 		table.insert(menu, "TRAINIG MENU")
-		table.insert(menu, { "", function() end, })
+		table.insert(menu, { "", no_op, })
 		table.insert(menu, "RE-PLAY MENU")
-		table.insert(menu, { "", function() end, })
+		table.insert(menu, { "", no_op, })
 		local save_max = 10
 		local options = nil
 
@@ -642,13 +643,13 @@ global.main = create_menu(
 			"OFF", function() global.autosave = false end,
 		})
 		table.insert(menu, "PLAYER & STAGE")
-		table.insert(menu, { "", function() end, })
+		table.insert(menu, { "", no_op, })
 		table.insert(menu, "BACK PLAYER SELECT")
-		table.insert(menu, { "", function() end, })
+		table.insert(menu, { "", no_op, })
 		table.insert(menu, "EXTRA MENU")
-		table.insert(menu, { "", function() end, })
+		table.insert(menu, { "", no_op, })
 		table.insert(menu, "EXIT MENU")
-		table.insert(menu, { "", function() end, })
+		table.insert(menu, { "", no_op, })
 	end,
 	function(menu)
 		if menu.p == 1 then

@@ -405,15 +405,10 @@ end
 -- pside is -1=1P, 1=2P
 
 -- ’§”­‚ğó‚¯‚½‚Ì‘Ois“®
-auto_guard.config_forward        = function()
+auto_guard.config_forward        = function(enabled)
 	for pside = -1, 1, 2 do
-		guard_config.players[pside].func_passive_forward = guard_config.func_passive_forward
-	end
-end
-
-auto_guard.config_forward_disabled = function()
-	for pside = -1, 1, 2 do
-		guard_config.players[pside].func_passive_forward = guard_config.func_passive_forward_disabled
+		guard_config.players[pside].func_passive_forward = 
+			enabled and guard_config.func_passive_forward or guard_config.func_passive_forward_disabled
 	end
 end
 
