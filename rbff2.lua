@@ -688,19 +688,6 @@ global.main = create_menu(
 		menu.config[3] = 1
 		menu.config[4] = 1
 		menu.config[5] = 1
-
-		-- auto load only the main menu
-		pcall(function ()
-			local main_conf = table.load("save\\rbff2-main.tbl")
-			menu.config[3] = main_conf[3]
-			menu.config[4] = main_conf[4]
-			menu.config[5] = main_conf[5]
-		end)
-
-		if menu.config[5] == 1 then
-			global.autosave = true
-			global.do_load()
-		end
 	end)
 
 global.active_menu = global.fighting
@@ -733,4 +720,17 @@ emu.registerstart(function()
 	osd.whatgame_OSD()
 	hit_boxes.whatgame()
 	fireflower_patch.apply_patch(romhack.char1_p1, 0x000000, false)
+
+	-- auto load only the main menu
+	pcall(function ()
+		local main_conf = table.load("save\\rbff2-main.tbl")
+		global.main.config[3] = main_conf[3]
+		global.main.config[4] = main_conf[4]
+		global.main.config[5] = main_conf[5]
+	end)
+
+	if global.main.config[5] == 1 then
+		global.autosave = true
+		global.do_load()
+	end
 end)
