@@ -29,12 +29,20 @@ local module = {
 	{'ur'},
 	{'dl'},
 	{'dr'},
+	{'n' },
 	{'A', 'Button A'},
 	{'B', 'Button B'},
 	{'C', 'Button C'},
 	{'D', 'Button D'},
-	{'S', 'Start'}
+	--{'S', 'Start'}
 }
+local dirs = {
+	'Left',
+	'Right',
+	'Up',
+	'Down',
+}
+local neutral_index = 9
 local keyset = 2
 
 resourcepath = resourcepath .. "/"
@@ -119,17 +127,32 @@ end
 -- update functions
 
 local function filterinput(p, frame)
+	local neutral = true
 	for pressed, state in pairs(joypad.getdown(p)) do --Check current controller state >
 		for row, name in pairs(module) do               --but ignore non-gameplay buttons.
-			if pressed == name[keyset]
+			if
+			-- pressed == name[keyset]
 		--Arcade does not distinguish joypads, so inputs must be filtered by "P1" and "P2".
-			or pressed == "P" .. p .. " " .. tostring(name[keyset])
+			--or
+			 pressed == "P" .. p .. " " .. tostring(name[keyset])
 		--MAME also has unusual names for the start buttons.
-			or pressed == p .. (p == 1 and " Player " or " Players ") .. tostring(name[keyset]) then
+			--or pressed == p .. (p == 1 and " Player " or " Players ") .. tostring(name[keyset])
+			 then
 				frame[row] = state
 				break
 			end
 		end
+		if neutral then
+			for i = 1, #dirs do
+				if pressed == "P" .. p .. " " .. dirs[i] and state then
+					neutral = false
+					break
+				end
+			end
+		end
+	end
+	if neutral then
+		frame[neutral_index] = neutral
 	end
 end
 
