@@ -114,7 +114,7 @@ global.restart_fight = function()
 end
 
 global.copy_config = function(from, to)
-	for k, v in pairs(from) do
+	for k, v in pairs(from or {}) do
 		if type(v) == "table" then
 			to[k] = to[k] or { }
 			global.copy_config(to[k], v)
@@ -165,7 +165,6 @@ local create_menu = function(title, build_callback, on_apply, on_cancel, default
 	global.copy_config(menu.opt_p, menu.config)
 	default_callback(menu)
 	global.copy_config(menu.config, menu.opt_p)
-	global.apply_menu_options(menu)
 	return menu
 end
 
@@ -575,45 +574,6 @@ global.rec = create_menu(
 global.main = create_menu(
 	"- MAIN MENU -",
 	function(menu)
-		global.do_load = function()
-			local do_load_internal = function(conf, path)
-				if conf == nil then return end
-				return pcall(function ()
-					for k, v in pairs(table.load(path)) do
-						conf[k] = v
-					end
-				end)
-			end
-			local loc = "save\\"..global.load.."\\"
-			do_load_internal(global.training.config, loc.."rbff2-training.tbl")
-			do_load_internal(global.rec.config, loc.."rbff2-rec.tbl")
-			player_controll.each_replay_slots(function(i, slot) do_load_internal(slot, loc.."rbff2-rec-slot".. i ..".tbl") end)
-			do_load_internal(global.player_and_stg.config, loc.."rbff2-player-stg.tbl")
-			do_load_internal(global.extra.config, loc.."rbff2-extra.tbl")
-			global.apply_menu_options(global.training)
-			global.apply_menu_options(global.rec)
-			global.apply_menu_options(global.player_and_stg)
-			global.apply_menu_options(global.extra)
-		end
-		global.do_save = function()
-			local do_save = function(conf, path)
-				return pcall(function () table.save(conf, path) end)
-			end
-			local loc = "save\\"..global.save.."\\"
-			os.execute("mkdir " .. loc)
-			do_save(global.training.config, loc.."rbff2-training.tbl")
-			do_save(global.rec.config, loc.."rbff2-rec.tbl")
-			player_controll.each_replay_slots(function(i, slot)
-				do_save(global.player_and_stg.config, loc.."rbff2-player-stg.tbl")
-				do_save(global.extra.config, loc.."rbff2-extra.tbl")
-				do_save(slot, loc.."rbff2-rec-slot".. i ..".tbl") end)
-		end
-		global.do_autosave = function()
-			if global.autosave then
-				global.do_save()
-			end
-		end
-
 		table.insert(menu, "TRAINIG MENU")
 		table.insert(menu, { "", no_op, })
 		table.insert(menu, "RE-PLAY MENU")
@@ -676,7 +636,7 @@ global.main = create_menu(
 		else
 			global.active_menu = global.fighting
 			-- -auto save only the main menu
-			pcall(function () table.save(menu.config, "save\\rbff2-main.tbl") end)
+			table.save(menu.config, "save\\rbff2-main.tbl")
 		end
 	end,
 	function(menu)
@@ -691,6 +651,42 @@ global.main = create_menu(
 	end)
 
 global.active_menu = global.fighting
+
+global.do_load = function()
+	local loc = "save\\"..global.load.."\\"
+
+	global.copy_config(table.load(loc.."rbff2-training.tbl"), global.training.config)
+	global.copy_config(table.load(loc.."rbff2-rec.tbl"), global.rec.config)
+	player_controll.each_replay_slots(function(i, slot)
+		global.copy_config(table.load(loc.."rbff2-rec-slot".. i ..".tbl"), slot)
+	end)
+	global.copy_config(table.load(loc.."rbff2-player-stg.tbl"), global.player_and_stg.config)
+	global.copy_config(table.load(loc.."rbff2-extra.tbl"), global.extra.config)
+
+	global.apply_menu_options(global.training)
+	global.apply_menu_options(global.rec)
+	global.apply_menu_options(global.player_and_stg)
+	global.apply_menu_options(global.extra)
+end
+
+global.do_save = function()
+	local loc = "save\\"..global.save.."\\"
+	os.execute("mkdir " .. loc)
+	table.save(global.training.config, loc.."rbff2-training.tbl")
+	table.save(global.rec.config, loc.."rbff2-rec.tbl")
+	player_controll.each_replay_slots(function(i, slot)
+		table.save(global.player_and_stg.config, loc.."rbff2-player-stg.tbl")
+		table.save(global.extra.config, loc.."rbff2-extra.tbl")
+		table.save(slot, loc.."rbff2-rec-slot".. i ..".tbl")
+	end)
+end
+
+global.do_autosave = function()
+	if global.autosave then
+		global.do_save()
+	end
+end
+
 
 gui.register(function()
 	draw_screen(global.active_menu)
@@ -722,15 +718,13 @@ emu.registerstart(function()
 	fireflower_patch.apply_patch(romhack.char1_p1, 0x000000, false)
 
 	-- auto load only the main menu
-	pcall(function ()
-		local main_conf = table.load("save\\rbff2-main.tbl")
-		global.main.config[3] = main_conf[3]
-		global.main.config[4] = main_conf[4]
-		global.main.config[5] = main_conf[5]
-	end)
-
+	global.copy_config(table.load("save\\rbff2-main.tbl"), global.main.config)
 	if global.main.config[5] == 1 then
 		global.autosave = true
 		global.do_load()
+	end
+	for _, menu in pairs({ global.main, global.rec, global.training,
+		global.fighting, global.extra, global.player_and_stg }) do
+		global.copy_config(menu.config, menu.opt_p)
 	end
 end)
