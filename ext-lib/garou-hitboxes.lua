@@ -324,7 +324,9 @@ local type_check = {
 		local f = buffer[fc()-1] or buffer[fc()]
 		if f.same_plane and not obj.vulnerable then
 			if not game.no_combos then
-				return true
+				-- スロー中にあたり判定が見えなくなる問題の回避用。ちゃんとなおしたい。
+				return slow.phase == 0 and true or false
+				--return true
 			end
 			box.type = "push"
 		end
