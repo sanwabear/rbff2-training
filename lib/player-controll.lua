@@ -304,11 +304,19 @@ replay.record = function()
 	if replay.state == 1 then
 	elseif replay.state == 12 then
 	elseif replay.state == 22 then
-	elseif replay.state == 3 then
+	elseif replay.state == 3 and slow.phase() == 0 then
+		local slow_buttons = slow.buttons() --スロー中のボタンフィルタ用
+		local kiox = cur_slot.rec_controll == 2 and kio1 or kio2
+		kiox = bit.bor(kiox, slow_buttons["P"..cur_slot.rec_controll.." Button A"] == false and 0x10 or 0x00)
+		kiox = bit.bor(kiox, slow_buttons["P"..cur_slot.rec_controll.." Button B"] == false and 0x10 or 0x00)
+		kiox = bit.bor(kiox, slow_buttons["P"..cur_slot.rec_controll.." Button C"] == false and 0x10 or 0x00)
+		kiox = bit.bor(kiox, slow_buttons["P"..cur_slot.rec_controll.." Button D"] == false and 0x10 or 0x00)
+
 		cur_slot.rec_fc = cur_slot.rec_fc + 1
 		cur_slot.rec_buff_max_fc = cur_slot.rec_fc
-		cur_slot.rec_buff[cur_slot.rec_fc] = cur_slot.rec_controll == 2 and kio1 or kio2
+		cur_slot.rec_buff[cur_slot.rec_fc] = kiox
 		cur_slot.rec_side[cur_slot.rec_fc] = 0 > memory.readwordsigned(0x100420) - memory.readwordsigned(0x100520)
+	elseif replay.state == 3 and slow.phase() ~= 0 then
 	elseif replay.state == 4 then
 	else
 		replay.state = 1
@@ -476,7 +484,7 @@ replay.replay = function()
 	if replay.state == -1 then
 	elseif replay.state == -2 then
 	elseif replay.state == -3 then
-	elseif replay.state == -4 then
+	elseif replay.state == -4 and slow.phase() == 0 then
 		local p1_in_p1_side = 0 > memory.readwordsigned(0x100420) - memory.readwordsigned(0x100520)
 		--memory.writebyte(cur_slot.rec_controll == 1 and 0x1004CD or 0x1005CD, 0x5F) --cheat Motion blur
 		cur_slot.rec_fc = cur_slot.rec_fc < cur_slot.rec_buff_max_fc and cur_slot.rec_fc + 1 or 1
@@ -497,6 +505,8 @@ replay.replay = function()
 			tbl["P"..cur_slot.rec_controll.." Left"    ] = bit.band(input, 0x08) == 0x08
 		end
 		joypad.set(tbl)
+	elseif replay.state == -4 and slow.phase() ~= 0 then
+
 	elseif replay.state == -5 then
 	else
 		replay.state = 1
