@@ -725,3 +725,7 @@ end)
 config_draw_all = function(flg)
 	globals.draw_all = flg
 end
+
+config_draw_bg = function(flg)
+	globals.no_background = not flg
+end

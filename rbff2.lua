@@ -92,6 +92,7 @@ local global = {
 	next_p2 = 1,
 	next_p2col = 1,
 	next_stg_revkeys = {},
+	next_bgm = 1,
 
 	do_load = nil,
 	do_save = nil,
@@ -121,9 +122,33 @@ global.goto_player_select = function()
 	global.next_active_menu(global.fighting)
 end
 global.restart_fight = function()
+	global.next_active_menu(global.fighting)
+	local stg1 = global.next_stage
+	local stg2 = global.next_stage_tz
+	if stg2 == 0x02 and (stg1 == 2 or stg1 == 3 or stg1 == 4 or stg1 == 5 or stg1 == 6 or stg1 == 9) then
+		stg2 = 0x01
+	end
+	local p1 = global.next_p1
+	local p2 = global.next_p2
+	local p1col = global.next_p1col
+	local p2col = global.next_p2col
+	local bgm = global.next_bgm
+
 	dofile("ram-patch/"..emu.romname().."/vs-restart.lua")
 	player_controll.apply_vs_mode(true)
 	debugdip.release_debugdip()
+
+	memory.writebyte(0x107BB1, stg1)
+	memory.writebyte(0x107BB7, stg2)
+	memory.writebyte(0x107BA5, p1)
+	memory.writebyte(0x107BAC, p1col)
+	memory.writebyte(0x107BA7, p2)
+	if p1 == p2 then
+		memory.writebyte(0x107BAD, p1col == 0x00 and 0x01 or 0x00)
+	else
+		memory.writebyte(0x107BAD, p2col)
+	end
+	memory.writebyte(0x10A8D5, bgm) --BGM
 end
 
 global.copy_config = function(from, to)
@@ -371,28 +396,7 @@ global.player_and_stg = create_menu(
 		table.insert(menu, options)
 	end,
 	function(menu)
-		global.next_active_menu(global.fighting)
-		local stg1 = global.next_stage
-		local stg2 = global.next_stage_tz
-		if stg2 == 0x02 and (stg1 == 2 or stg1 == 3 or stg1 == 4 or stg1 == 5 or stg1 == 6 or stg1 == 9) then
-			stg2 = 0x01
-		end
-		local p1 = global.next_p1
-		local p2 = global.next_p2
-		local p1col = global.next_p1col
-		local p2col = global.next_p2col
 		global.restart_fight()
-		memory.writebyte(0x107BB1, stg1)
-		memory.writebyte(0x107BB7, stg2)
-		memory.writebyte(0x107BA5, p1)
-		memory.writebyte(0x107BAC, p1col)
-		memory.writebyte(0x107BA7, p2)
-		if p1 == p2 then
-			memory.writebyte(0x107BAD, p1col == 0x00 and 0x01 or 0x00)
-		else
-			memory.writebyte(0x107BAD, p2col)
-		end
-		memory.writebyte(0x10A8D5, global.next_bgm) --BGM
 	end,
 	function(menu)
 		global.next_active_menu(global.main)
@@ -448,20 +452,10 @@ global.training = create_menu(
 			"SHOW", function() hit_boxes.config_draw_all(true) end,
 			"HIDE", function() hit_boxes.config_draw_all(false) end,
 		})
-		table.insert(menu, "NUMBERS:")
+		table.insert(menu, "BACK GROUND:")
 		table.insert(menu, {
-			"HIDE", function() osd.config_show_numbers(false) end,
-			"SHOW", function() osd.config_show_numbers(true) end,
-		})
-		table.insert(menu, "STUNS:")
-		table.insert(menu, {
-			"SHOW", function() osd.config_show_bars(true) end,
-			"HIDE", function() osd.config_show_bars(false) end,
-		})
-		table.insert(menu, "COMBOS:")
-		table.insert(menu, {
-			"SHOW", function() osd.config_show_combos(true) end,
-			"HIDE", function() osd.config_show_combos(false) end,
+			"SHOW", function() hit_boxes.config_draw_bg(true) end,
+			"HIDE", function() hit_boxes.config_draw_bg(false) end,
 		})
 	end,
 	function(menu)
@@ -479,13 +473,6 @@ global.training = create_menu(
 		menu.config[6] = 2
 		menu.config[7] = 1
 		menu.config[8] = 1
-		menu.config[9] = 1
-		menu.config[10] = 1
-		menu.config[11] = 1
-		menu.config[12] = 1
-		menu.config[13] = 1
-		menu.config[14] = 2
-		menu.config[15] = 1
 	end)
 
 global.extra = create_menu(
@@ -507,6 +494,21 @@ global.extra = create_menu(
 		table.insert(menu, {
 			"HIDE", function() debugdip.config_watch_states(false) end,
 			"SHOW", function() debugdip.config_watch_states(true) end,
+		})
+		table.insert(menu, "NUMBERS:")
+		table.insert(menu, {
+			"HIDE", function() osd.config_show_numbers(false) end,
+			"SHOW", function() osd.config_show_numbers(true) end,
+		})
+		table.insert(menu, "STUNS:")
+		table.insert(menu, {
+			"SHOW", function() osd.config_show_bars(true) end,
+			"HIDE", function() osd.config_show_bars(false) end,
+		})
+		table.insert(menu, "COMBOS:")
+		table.insert(menu, {
+			"SHOW", function() osd.config_show_combos(true) end,
+			"HIDE", function() osd.config_show_combos(false) end,
 		})
 		table.insert(menu, "SLOW:")
 		local options = {}
@@ -532,8 +534,12 @@ global.extra = create_menu(
 	function(menu)
 		menu.config[1] = 1
 		menu.config[2] = 1
-		menu.config[3] = 1
+		menu.config[3] = 2
 		menu.config[4] = 1
+		menu.config[5] = 1
+		menu.config[6] = 1
+		menu.config[7] = 1
+		menu.config[8] = 1
 	end)
 
 global.rec = create_menu(
@@ -641,10 +647,29 @@ global.main = create_menu(
 			"ON", function() global.autosave = true end,
 			"OFF", function() global.autosave = false end,
 		})
-		table.insert(menu, "PLAYER & STAGE")
-		table.insert(menu, { "", no_op, })
-		table.insert(menu, "BACK PLAYER SELECT")
-		table.insert(menu, { "", no_op, })
+		table.insert(menu, "PLAYER & STAGE:")
+		table.insert(menu, {
+			"QUICK SELECT", function()
+				global.player_and_stg.opt_p[1] = memory.readbyte(0x107BA5)
+				global.player_and_stg.opt_p[2] = memory.readbyte(0x107BAC) + 1
+				global.player_and_stg.opt_p[3] = memory.readbyte(0x107BA7)
+				global.player_and_stg.opt_p[4] = memory.readbyte(0x107BAD) + 1
+				global.player_and_stg.opt_p[5] = global.next_stg_revkeys[ tohex(memory.readbyte(0x107BB1)).."-"..tohex(memory.readbyte(0x107BB7) )]
+				global.player_and_stg.opt_p[6] = memory.readbyte(0x10A8D5) > 0 and memory.readbyte(0x10A8D5) or 1
+				global.next_active_menu(global.player_and_stg)
+			end,
+			"ROUND RESTART", function()
+				global.next_p1 = memory.readbyte(0x107BA5)
+				global.next_p1col = memory.readbyte(0x107BAC)
+				global.next_p2 = memory.readbyte(0x107BA7)
+				global.next_p2col = memory.readbyte(0x107BAD)
+				global.next_stage = memory.readbyte(0x107BB1)
+				global.next_stage_tz = memory.readbyte(0x107BB7)
+				global.next_bgm = memory.readbyte(0x10A8D5) > 0 and memory.readbyte(0x10A8D5) or 1
+				global.restart_fight()
+			end,
+			"BACK PLAYER SELECT", global.goto_player_select,
+		})
 		table.insert(menu, "EXTRA MENU")
 		table.insert(menu, { "", no_op, })
 		table.insert(menu, "EXIT MENU")
@@ -661,16 +686,7 @@ global.main = create_menu(
 			global.do_save()
 		elseif menu.p == 5 then
 		elseif menu.p == 6 then
-			global.next_active_menu(global.player_and_stg)
-			global.active_menu.opt_p[1] = memory.readbyte(0x107BA5)
-			global.active_menu.opt_p[2] = memory.readbyte(0x107BAC) + 1
-			global.active_menu.opt_p[3] = memory.readbyte(0x107BA7)
-			global.active_menu.opt_p[4] = memory.readbyte(0x107BAD) + 1
-			global.active_menu.opt_p[5] = global.next_stg_revkeys[ tohex(memory.readbyte(0x107BB1)).."-"..tohex(memory.readbyte(0x107BB7) )]
-			global.active_menu.opt_p[6] = memory.readbyte(0x10A8D5) > 0 and memory.readbyte(0x10A8D5) or 1
 		elseif menu.p == 7 then
-			global.goto_player_select()
-		elseif menu.p == 8 then
 			global.next_active_menu(global.extra)
 		else
 			global.next_active_menu(global.fighting)
