@@ -64,6 +64,7 @@ local global = {
 	save = 1,
 	autosave = true,
 	match_active = false,
+	player_select_active = false,
 	is_bios_test = function()
 		return bios_test(0x100400) or bios_test(0x100500)
 	end,
@@ -265,12 +266,12 @@ local execute = function(menu)
 	local state_past = ec - global.input_accept_frame
 
 	global.match_active = global.is_match_active()
+	global.player_select_active = global.is_player_select_active()
 
-	if not global.match_active then
-		if global.is_player_select_active() then
-			player_controll.hack_player_select()
-		end
+	if global.player_select_active then
+		player_controll.hack_player_select()
 		return
+	elseif not global.match_active then
 	elseif global.match_active ~= old_active then
 		global.next_active_menu(global.fighting)
 		global.input_accept_frame = ec
@@ -770,14 +771,19 @@ emu.registerafter(function()
 
 	save_memory.save()
 
-	if (global.active_menu == global.fighting and in_pause())
-		or (global.active_menu ~= global.fighting and not in_pause()) then
-		-- 対戦画面へ遷移時はポーズ解除まで待機
-		-- メニューへ遷移時はポーズまで待機
-		joypad.set({["P1 Select"] = emu.framecount() % 2 == 0})
-		return
+	-- MEMO: メニュー表示の制御をきれいにしたい
+	if global.is_match_active() then
+		if (global.active_menu == global.fighting and in_pause())
+			or (global.active_menu ~= global.fighting and not in_pause()) then
+			-- 対戦画面へ遷移時はポーズ解除まで待機
+			-- メニューへ遷移時はポーズまで待機
+			joypad.set({["P1 Select"] = emu.framecount() % 4 == 0})
+			return
+		else
+			global.mode_switching = false
+		end
 	else
-		global.mode_switching = false
+		global.next_active_menu(global.fighting)
 	end
 end)
 
