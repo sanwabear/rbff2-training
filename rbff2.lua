@@ -114,10 +114,19 @@ global.restart_fight = function()
 end
 
 global.copy_config = function(from, to)
-	for k, v in pairs(from or {}) do
+	local keys = {}
+	for k, _ in pairs(from or {}) do
+		table.insert(keys, k)
+	end
+	for k, _ in pairs(to or {}) do
+		table.insert(keys, k)
+	end
+	for i = 1, #keys do
+		local k = keys[i]
+		local v = from[k]
 		if type(v) == "table" then
 			to[k] = to[k] or { }
-			global.copy_config(to[k], v)
+			global.copy_config(v, to[k])
 		else
 			to[k] = v
 		end
