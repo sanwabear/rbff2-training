@@ -95,7 +95,6 @@ end
 slow = {}
 slow.apply_slow = function()
 	if max == 0 then
-		do_pause(unpause)
 		return
 	end
 
