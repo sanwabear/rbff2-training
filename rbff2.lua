@@ -490,7 +490,7 @@ global.extra = create_menu(
 		local options = {}
 		table.insert(options, "OFF")
 		table.insert(options, function() slow.config_slow(0) end)
-		for i = 1, 60 do
+		for i = 3, 60 do
 			table.insert(options, tostring(i))
 			table.insert(options, function() slow.config_slow(i) end)
 		end

@@ -130,7 +130,7 @@ local function filterinput(p, frame)
 	local neutral = true
 	local slow_buttons = slow.buttons() --スロー中のボタンフィルタ用
 	for pressed, state in pairs(joypad.getdown(p)) do --Check current controller state >
-		if slow_buttons[pressed] and slow_buttons[pressed] == false then
+		if slow_buttons[pressed] == false then
 			state = false
 		end
 		for row, name in pairs(module) do               --but ignore non-gameplay buttons.
