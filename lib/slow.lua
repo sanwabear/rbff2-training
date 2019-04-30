@@ -68,7 +68,7 @@ local update_buttons = function()
 	buttons["P1 Button B"] = 1 <= kbak.b1
 	buttons["P1 Button C"] = 1 <= kbak.c1
 	buttons["P1 Button D"] = 1 <= kbak.d1
-	buttons["P2 Button A"] = 1 <= kbak.a1
+	buttons["P2 Button A"] = 1 <= kbak.a2
 	buttons["P2 Button B"] = 1 <= kbak.b2
 	buttons["P2 Button C"] = 1 <= kbak.c2
 	buttons["P2 Button D"] = 1 <= kbak.d2
@@ -81,7 +81,7 @@ local unsetkey = function()
 		["P1 Button B"] = x <= kbak.b1,
 		["P1 Button C"] = x <= kbak.c1,
 		["P1 Button D"] = x <= kbak.d1,
-		["P2 Button A"] = x <= kbak.a1,
+		["P2 Button A"] = x <= kbak.a2,
 		["P2 Button B"] = x <= kbak.b2,
 		["P2 Button C"] = x <= kbak.c2,
 		["P2 Button D"] = x <= kbak.d2,
