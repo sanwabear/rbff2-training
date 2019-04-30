@@ -50,7 +50,10 @@ local c = { --colors
 }
 
 local global = {
+	mode_switching = true,
 	active_menu = nil,
+	next_active_menu = nil,
+	next_active_menu_with_save = nil,
 	main = nil,
 	rec = nil,
 	training = nil,
@@ -100,12 +103,22 @@ local global = {
 		-- DIP1 bit7 STOP MODE
 		joypad.set({["Dip 1"] = bit.bor(joypad.get()["Dip 1"] or 0x00, 0x80) })
 	end,
+	unpause = no_op,
 }
+global.next_active_menu = function(menu)
+	global.mode_switching = true
+	global.active_menu = menu
+end
+global.next_active_menu_with_save = function(menu)
+	global.next_active_menu(menu)
+	global.do_autosave()
+end
+
 global.goto_player_select = function()
 	dofile("ram-patch/"..emu.romname().."/player-select.lua")
 	player_controll.apply_vs_mode(false)
 	debugdip.release_debugdip()
-	global.active_menu = global.fighting
+	global.next_active_menu(global.fighting)
 end
 global.restart_fight = function()
 	dofile("ram-patch/"..emu.romname().."/vs-restart.lua")
@@ -177,6 +190,15 @@ local create_menu = function(title, build_callback, on_apply, on_cancel, default
 	return menu
 end
 
+local console_guard = function(menu)
+	if memory.readbyte(0x10FD82) == 0x00
+		and memory.readbyte(0x1041D2) == 0x00
+		and menu ~= global.fighting then
+		return true
+	end
+	return false
+end
+
 local draw_screen = function(menu)
 	gui.clearuncommitted()
 
@@ -225,11 +247,12 @@ local execute = function(menu)
 		end
 		return
 	elseif global.match_active ~= old_active then
-		global.active_menu = global.fighting
+		global.next_active_menu(global.fighting)
 		global.input_accept_frame = ec
 	end
 
 	if menu == global.fighting then
+		global.unpause()
 		if 15 < state_past and 1 < key.sl and state_past >= key.sl then
 			global.input_accept_frame = ec
 			menu.on_apply(menu)
@@ -295,7 +318,7 @@ global.fighting = create_menu(
 	"- IN FIGHT -",
 	function(menu) end,
 	function(menu)
-		global.active_menu = global.main
+		global.next_active_menu(global.main)
 	end,
 	function(menu) end,
 	function(menu) end)
@@ -348,7 +371,7 @@ global.player_and_stg = create_menu(
 		table.insert(menu, options)
 	end,
 	function(menu)
-		global.active_menu = global.fighting
+		global.next_active_menu(global.fighting)
 		local stg1 = global.next_stage
 		local stg2 = global.next_stage_tz
 		if stg2 == 0x02 and (stg1 == 2 or stg1 == 3 or stg1 == 4 or stg1 == 5 or stg1 == 6 or stg1 == 9) then
@@ -372,7 +395,7 @@ global.player_and_stg = create_menu(
 		memory.writebyte(0x10A8D5, global.next_bgm) --BGM
 	end,
 	function(menu)
-		global.active_menu = global.main
+		global.next_active_menu(global.main)
 	end,
 	function(menu)
 		menu.config[1] = 1
@@ -442,11 +465,10 @@ global.training = create_menu(
 		})
 	end,
 	function(menu)
-		global.active_menu = global.main
-		global.do_autosave()
+		global.next_active_menu_with_save(global.main)
 	end,
 	function(menu)
-		global.active_menu = global.main
+		global.next_active_menu(global.main)
 	end,
 	function(menu)
 		menu.config[1] = 1
@@ -502,11 +524,10 @@ global.extra = create_menu(
 		})
 	end,
 	function(menu)
-		global.active_menu = global.main
-		global.do_autosave()
+		global.next_active_menu_with_save(global.main)
 	end,
 	function(menu)
-		global.active_menu = global.main
+		global.next_active_menu(global.main)
 	end,
 	function(menu)
 		menu.config[1] = 1
@@ -576,11 +597,10 @@ global.rec = create_menu(
 		})
 	end,
 	function(menu)
-		global.active_menu = global.main
-		global.do_autosave()
+		global.next_active_menu_with_save(global.main)
 	end,
 	function(menu)
-		global.active_menu = global.main
+		global.next_active_menu(global.main)
 	end,
 	function(menu)
 		menu.config[1] = 3
@@ -632,16 +652,16 @@ global.main = create_menu(
 	end,
 	function(menu)
 		if menu.p == 1 then
-			global.active_menu = global.training
+			global.next_active_menu(global.training)
 		elseif menu.p == 2 then
-			global.active_menu = global.rec
+			global.next_active_menu(global.rec)
 		elseif menu.p == 3 then
 			global.do_load()
 		elseif menu.p == 4 then
 			global.do_save()
 		elseif menu.p == 5 then
 		elseif menu.p == 6 then
-			global.active_menu = global.player_and_stg
+			global.next_active_menu(global.player_and_stg)
 			global.active_menu.opt_p[1] = memory.readbyte(0x107BA5)
 			global.active_menu.opt_p[2] = memory.readbyte(0x107BAC) + 1
 			global.active_menu.opt_p[3] = memory.readbyte(0x107BA7)
@@ -651,16 +671,16 @@ global.main = create_menu(
 		elseif menu.p == 7 then
 			global.goto_player_select()
 		elseif menu.p == 8 then
-			global.active_menu = global.extra
+			global.next_active_menu(global.extra)
 		else
-			global.active_menu = global.fighting
+			global.next_active_menu(global.fighting)
 			-- -auto save only the main menu
 			table.save(menu.config, "save\\rbff2-main.tbl")
 		end
 		collectgarbage("count")
 	end,
 	function(menu)
-		global.active_menu = global.fighting
+		global.next_active_menu(global.fighting)
 	end,
 	function(menu)
 		menu.config[1] = 1
@@ -670,7 +690,7 @@ global.main = create_menu(
 		menu.config[5] = 1
 	end)
 
-global.active_menu = global.fighting
+global.next_active_menu(global.fighting)
 
 global.do_load = function()
 	local loc = "save\\"..global.load.."\\"
@@ -711,7 +731,11 @@ end
 
 
 gui.register(function()
-	draw_screen(global.active_menu)
+	if global.mode_switching then
+		gui.clearuncommitted()
+	else
+		draw_screen(global.active_menu)
+	end
 end)
 
 emu.registerbefore(function()
@@ -719,9 +743,26 @@ emu.registerbefore(function()
 
 save_memory.enabled = false
 
+local in_pause = function()
+	return memory.readbyte(0x104191) == 0xFF
+end
+
 emu.registerafter(function()
-	execute(global.active_menu)
+	if not global.mode_switching then
+		execute(global.active_menu)
+	end
+
 	save_memory.save()
+
+	if (global.active_menu == global.fighting and in_pause())
+		or (global.active_menu ~= global.fighting and not in_pause()) then
+		-- 対戦画面へ遷移時はポーズ解除まで待機
+		-- メニューへ遷移時はポーズまで待機
+		joypad.set({["P1 Select"] = emu.framecount() % 2 == 0})
+		return
+	else
+		global.mode_switching = false
+	end
 end)
 
 emu.registerexit(function()
