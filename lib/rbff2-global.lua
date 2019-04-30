@@ -37,7 +37,6 @@ function new_env(scriptfile)
 	return env
 end
 
-
 rb2key = {}
 local rb2key_pre = {}
 local kprops = {"d1", "c1", "b1", "a1", "rt1", "lt1", "dn1", "up1", "sl1", "st1",
@@ -81,9 +80,6 @@ rb2key.capture_keys = function()
 			alleq = false
 		end
 		rb2key_pre[k] = rb2key[k]
-	end
-	if alleq then
-		rb2key_pre = rb2key
 	end
 	local kio = memory.readbyte(0x300000)
 	rb2key.d1  = bit.band(kio, 0x80) == 0x00 and posi_or_pl1(rb2key.d1 ) or nega_or_mi1(rb2key.d1 ) -- P1 Button D

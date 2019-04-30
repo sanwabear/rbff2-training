@@ -128,7 +128,11 @@ end
 
 local function filterinput(p, frame)
 	local neutral = true
+	local slow_buttons = slow.buttons() --スロー中のボタンフィルタ用
 	for pressed, state in pairs(joypad.getdown(p)) do --Check current controller state >
+		if slow_buttons[pressed] and slow_buttons[pressed] == false then
+			state = false
+		end
 		for row, name in pairs(module) do               --but ignore non-gameplay buttons.
 			if
 			-- pressed == name[keyset]
@@ -203,6 +207,10 @@ local function updaterecords(player, frame, input)
 end
 
 function do_registerafter()
+	if slow.phase() ~= 0 then
+		return
+	end
+
 	margin[1] = margin_left*effective_width
 	margin[2] = (emu.screenwidth and emu.screenwidth() or screenwidth) - margin_right*effective_width
 	margin[3] = margin_top*icon_size

@@ -29,6 +29,7 @@ require("debug-dip")
 require("auto-guard")
 require("player-controll")
 require("save-memory")
+require("slow")
 dofile("ext-lib/table.save-0.94.lua")
 
 local osd = new_env("ext-lib/fighting-OSD.lua")
@@ -225,6 +226,7 @@ local execute = function(menu)
 			menu.on_apply(menu)
 			return
 		else
+			slow.apply_slow()
 			osd.update_OSD()
 			player_controll.apply_player_controll()
 			hit_boxes.hitboxes_update_func()
@@ -475,6 +477,15 @@ global.extra = create_menu(
 			"HIDE", function() debugdip.config_watch_states(false) end,
 			"SHOW", function() debugdip.config_watch_states(true) end,
 		})
+		table.insert(menu, "SLOW:")
+		local options = {}
+		table.insert(options, "OFF")
+		table.insert(options, function() slow.config_slow(0) end)
+		for i = 1, 60 do
+			table.insert(options, tostring(i))
+			table.insert(options, function() slow.config_slow(i) end)
+		end
+		table.insert(menu, options)
 		table.insert(menu, "TEST:")
 		table.insert(menu, {
 			"OFF", no_op,
@@ -705,6 +716,7 @@ emu.registerafter(function()
 end)
 
 emu.registerexit(function()
+	slow.term()
 	debugdip.release_debugdip()
 	life_recover.term_life_recover()
 end)
@@ -731,3 +743,5 @@ emu.registerstart(function()
 		global.apply_menu_options(menu)
 	end
 end)
+
+collectgarbage("count")
