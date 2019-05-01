@@ -772,18 +772,20 @@ emu.registerafter(function()
 	save_memory.save()
 
 	-- MEMO: メニュー表示の制御をきれいにしたい
-	if global.is_match_active() then
-		if (global.active_menu == global.fighting and in_pause())
-			or (global.active_menu ~= global.fighting and not in_pause()) then
-			-- 対戦画面へ遷移時はポーズ解除まで待機
-			-- メニューへ遷移時はポーズまで待機
-			joypad.set({["P1 Select"] = emu.framecount() % 4 == 0})
-			return
+	if global.mode_switching then
+		if global.is_match_active() then
+			if (global.active_menu == global.fighting and in_pause())
+				or (global.active_menu ~= global.fighting and not in_pause()) then
+				-- 対戦画面へ遷移時はポーズ解除まで待機
+				-- メニューへ遷移時はポーズまで待機
+				joypad.set({["P1 Select"] = emu.framecount() % 4 == 0})
+				return
+			else
+				global.mode_switching = false
+			end
 		else
-			global.mode_switching = false
+			global.next_active_menu(global.fighting)
 		end
-	else
-		global.next_active_menu(global.fighting)
 	end
 end)
 

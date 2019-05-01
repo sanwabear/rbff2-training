@@ -99,23 +99,23 @@ slow.apply_slow = function()
 	end
 
 	-- スロー中にセレクトで抜ける（メニュー操作などできるように）
-	local _, _, _, ks, _ = rb2key.capture_keys()
+	local _, _, k3, ks, _ = rb2key.capture_keys()
 	if 0 < ks.sl then
 		do_pause(unpause)
 		return
 	end
 
-	count = count + 1
-	if count == max then
-		unsetkey()
-		phase = 1
-		do_pause(pause)
-	elseif count > max then
+	count = (count + 1) % max
+	if count == 0 then
 		update_buttons()
 		setkey()
 		count = 0
 		phase = 0
 		do_pause(unpause)
+	elseif count == max-1 then
+		unsetkey()
+		phase = 1
+		do_pause(pause)
 	else
 		checkkey()
 		phase = 2
