@@ -18,6 +18,7 @@ local thisframe, lastframe, module, keyset, changed = {}, {}
 local margin, rescale_icons, recording, display, start, effective_width = {}, true, false
 local draw = { [1] = true, [2] = true }
 local inp  = { [1] =   {}, [2] =   {} }
+local btwn = { [1] =   {}, [2] =   {} }
 local idle = { [1] =    0, [2] =    0 }
 
 local module = {
@@ -34,7 +35,7 @@ local module = {
 	{'B', 'Button B'},
 	{'C', 'Button C'},
 	{'D', 'Button D'},
-	--{'S', 'Start'}
+--{'S', 'Start'}
 }
 local dirs = {
 	'Left',
@@ -71,9 +72,9 @@ end
 --local str = image:pngStr()
 --local hexdump = string_to_hexdump(str)
 
-local blank_img_hexdump = 
-"89504E470D0A1A0A0000000D49484452000000400000002001030000009853ECC700000003504C5445000000A77A3DDA00" ..
-"00000174524E530040E6D8660000000D49444154189563601805F8000001200001BFC1B1A80000000049454E44AE426082"
+local blank_img_hexdump =
+	"89504E470D0A1A0A0000000D49484452000000400000002001030000009853ECC700000003504C5445000000A77A3DDA00" ..
+	"00000174524E530040E6D8660000000D49444154189563601805F8000001200001BFC1B1A80000000049454E44AE426082"
 local blank_img_string = hexdump_to_string(blank_img_hexdump)
 
 ----------------------------------------------------------------------------------------------------
@@ -113,10 +114,15 @@ readimages()
 
 function draw_input()
 	for player = 1, 2 do
+		local fix = player == 1 and 16 or -16
 		if draw[player] then
 			for line in pairs(inp[player]) do
 				for index,row in pairs(inp[player][line]) do
-					display(margin[player] + (index-1)*effective_width, margin[3] + (line-1)*icon_size, row)
+					local x, y = margin[player] + (index-1)*effective_width, margin[3] + (line-1)*icon_size
+					if index == 1 then
+						gui.text(x, y+4, btwn[player][line][index])
+					end
+					display(x+fix, y, row)
 				end
 			end
 		end
@@ -132,28 +138,28 @@ local function filterinput(p, frame)
 	for pressed, state in pairs(joypad.getdown(p)) do --Check current controller state >
 		if slow_buttons[pressed] == false then
 			state = false
-		end
-		for row, name in pairs(module) do               --but ignore non-gameplay buttons.
-			if
+	end
+	for row, name in pairs(module) do               --but ignore non-gameplay buttons.
+		if
 			-- pressed == name[keyset]
-		--Arcade does not distinguish joypads, so inputs must be filtered by "P1" and "P2".
+			--Arcade does not distinguish joypads, so inputs must be filtered by "P1" and "P2".
 			--or
-			 pressed == "P" .. p .. " " .. tostring(name[keyset])
-		--MAME also has unusual names for the start buttons.
-			--or pressed == p .. (p == 1 and " Player " or " Players ") .. tostring(name[keyset])
-			 then
-				frame[row] = state
+			pressed == "P" .. p .. " " .. tostring(name[keyset])
+	--MAME also has unusual names for the start buttons.
+	--or pressed == p .. (p == 1 and " Player " or " Players ") .. tostring(name[keyset])
+	then
+		frame[row] = state
+		break
+	end
+	end
+	if neutral then
+		for i = 1, #dirs do
+			if pressed == "P" .. p .. " " .. dirs[i] and state then
+				neutral = false
 				break
 			end
 		end
-		if neutral then
-			for i = 1, #dirs do
-				if pressed == "P" .. p .. " " .. dirs[i] and state then
-					neutral = false
-					break
-				end
-			end
-		end
+	end
 	end
 	if neutral then
 		frame[neutral_index] = neutral
@@ -164,8 +170,8 @@ local function compositeinput(frame)          --Convert individual directions to
 	for _,dir in pairs({ {1,3,5}, {2,3,6}, {1,4,7}, {2,4,8} }) do --ul, ur, dl, dr
 		if frame[dir[1]] and frame[dir[2]] then
 			frame[dir[1]], frame[dir[2]], frame[dir[3]] = nil, nil, true
-		end
 	end
+end
 end
 
 local function detectchanges(lastframe, thisframe)
@@ -174,35 +180,42 @@ local function detectchanges(lastframe, thisframe)
 		if lastframe and not lastframe[key] then  --that wasn't pressed last frame >
 			changed = true                          --then changes were made.
 			break
-		end
+	end
 	end
 end
 
-local function updaterecords(player, frame, input)
+local function updaterecords(player, frame, input, between)
 	if changed then                         --If changes were made >
 		if idle[player] < timeout then        --and the player hasn't been idle too long >
 			for record = buffersize, 2, -1 do
 				input[record] = input[record-1]   --then shift every old record by 1 >
-			end
-		else
-			for record = buffersize, 2, -1 do
-				input[record] = nil               --otherwise wipe out the old records.
-			end
-		end
-		idle[player] = 0                      --Reset the idle count >
-		input[1] = {}                         --and set current input as record 1 >
-		local index = 1
-		for row, name in ipairs(module) do    --but the order must not deviate from gamekeys.
-			for key, state in pairs(frame) do
-				if key == row then
-					input[1][index] = row
-					index = index+1
-					break
-				end
-			end
+				between[record] = between[record-1]
 		end
 	else
-		idle[player] = idle[player]+1         --Increment the idle count if nothing changed.
+		for record = buffersize, 2, -1 do
+			input[record] = nil               --otherwise wipe out the old records.
+			between[record] = nil
+		end
+	end
+	local last_idle = idle[player]+1     -- MEMO:1フレ足して表示、認識がまちがえていたら足さないように修正する
+	idle[player] = 0                      --Reset the idle count >
+	input[1] = {}                         --and set current input as record 1 >
+	between[1] = {}
+	local index = 1
+	for row, name in ipairs(module) do    --but the order must not deviate from gamekeys.
+		for key, state in pairs(frame) do
+			if key == row then
+				input[1][index] = row
+				between[1][index] = last_idle
+				index = index+1
+				break
+			end
+	end
+	end
+	else
+		if slow.phase() == 0 then             --スローの停止中はカウントしない
+			idle[player] = idle[player]+1         --Increment the idle count if nothing changed.
+		end
 	end
 end
 
@@ -219,7 +232,7 @@ function do_registerafter()
 		filterinput(player, thisframe)
 		compositeinput(thisframe)
 		detectchanges(lastframe[player], thisframe)
-		updaterecords(player, thisframe, inp[player])
+		updaterecords(player, thisframe, inp[player], btwn[player])
 		lastframe[player] = thisframe
 	end
 	if recording then
@@ -235,12 +248,12 @@ if savestate.registersave and savestate.registerload then --registersave/registe
 		return draw, inp, idle
 	end)
 
-	savestate.registerload(function(slot)
-		draw, inp, idle = savestate.loadscriptdata(slot)
-		if type(draw) ~= "table" then draw = { [1] = true, [2] = true } end
-		if type(inp)  ~= "table" then inp  = { [1] =   {}, [2] =   {} } end
-		if type(idle) ~= "table" then idle = { [1] =    0, [2] =    0 } end
-	end)
+savestate.registerload(function(slot)
+	draw, inp, idle = savestate.loadscriptdata(slot)
+	if type(draw) ~= "table" then draw = { [1] = true, [2] = true } end
+	if type(inp)  ~= "table" then inp  = { [1] =   {}, [2] =   {} } end
+	if type(idle) ~= "table" then idle = { [1] =    0, [2] =    0 } end
+end)
 end
 
 ----------------------------------------------------------------------------------------------------
