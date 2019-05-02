@@ -299,8 +299,7 @@ for pside = -1, 1, 2 do
 	-- ‚©
 	-- 0x100464 ‰º1Œ…•\Ž¦
 	-- 0x100465
-	local p1_addr = 0x100560
-	local p2_addr = 0x100561
+	local p_addr = 0x100560
 	local attack_addr = 0x1005B6
 	local fireball_addr = 0x1007BF
 	local fireball_pos_addrs = { 0x100720, 0x10072C, 0x100920, 0x10092C, 0x100B20, 0x100B2C }
@@ -312,8 +311,7 @@ for pside = -1, 1, 2 do
 		attack_addr = 0x1004B6
 		fireball_addr = 0x1006BF
 		fireball_pos_addrs = { 0x100620, 0x10062C, 0x100820, 0x10082C, 0x100A20, 0x100A2C }
-		p1_addr = 0x100460
-		p2_addr = 0x100461
+		p_addr = 0x100460
 		opponent_guard_addr = 0x10048E
 		opponent_char_addr = 0x100411
 		guard_addr = 0x10058E
@@ -367,7 +365,7 @@ for pside = -1, 1, 2 do
 				return move_type.attack
 					--elseif player.shot_fireball <= emu.framecount() and 0 < memory.readbyte(fireball_addr) then
 					--	return move_type.attack
-			elseif 0x01 == memory.readbyte(p1_addr) and 0x96 == memory.readbyte(p2_addr) then
+			elseif 0x0196 == memory.readword(p_addr) then
 				return move_type.provoke
 			end
 		end
