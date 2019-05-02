@@ -578,7 +578,9 @@ end
 -- draw the hitboxes
 
 local gui_box = function(x1, y1, x2, y2, color1, color2)
-	table.insert(gui_box_buf, { x1, y1, x2, y2, color1, color2 })
+	if slow.in_slow() then
+		table.insert(gui_box_buf, { x1, y1, x2, y2, color1, color2 })
+	end
 	gui.box(x1, y1, x2, y2, color1, color2)
 end
 
