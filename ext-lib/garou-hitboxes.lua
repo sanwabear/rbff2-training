@@ -6,41 +6,39 @@ print("http://code.google.com/p/mame-rr/wiki/Hitboxes")
 --print("Lua hotkey 3: toggle hitbox axis")
 --print("Lua hotkey 4: toggle pushboxes")
 
---[[
+--local boxes = {
+--	["vulnerability"] = {color = 0x7777FF, fill = 0x40, outline = 0x80},
+--	       ["attack"] = {color = 0xFF0000, fill = 0x40, outline = 0x80},
+--	 ["proj. attack"] = {color = 0xFF66FF, fill = 0x40, outline = 0x80},
+--	         ["push"] = {color = 0x00FF00, fill = 0x20, outline = 0xCC},
+--	        ["guard"] = {color = 0xCCCCFF, fill = 0x40, outline = 0x80},
+--	        ["throw"] = {color = 0xFFFF00, fill = 0x40, outline = 0x80}, --fatfury3
+--	   ["axis throw"] = {color = 0xFFAA00, fill = 0x40, outline = 0x80},
+--}
 local boxes = {
 	["vulnerability"] = {color = 0x7777FF, fill = 0x40, outline = 0x80},
-	       ["attack"] = {color = 0xFF0000, fill = 0x40, outline = 0x80},
-	 ["proj. attack"] = {color = 0xFF66FF, fill = 0x40, outline = 0x80},
-	         ["push"] = {color = 0x00FF00, fill = 0x20, outline = 0xCC},
-	        ["guard"] = {color = 0xCCCCFF, fill = 0x40, outline = 0x80},
-	        ["throw"] = {color = 0xFFFF00, fill = 0x40, outline = 0x80}, --fatfury3
-	   ["axis throw"] = {color = 0xFFAA00, fill = 0x40, outline = 0x80},
-}
-]]
-local boxes = {
-	["vulnerability"] = {color = 0x7777FF, fill = 0x40, outline = 0x80},
-	       ["attack"] = {color = 0xFF0000, fill = 0x40, outline = 0x80},
-	 ["proj. attack"] = {color = 0xFF66FF, fill = 0x40, outline = 0x80},
-	         ["push"] = {color = 0x00FF00, fill = 0x20, outline = 0xCC},
-	        ["guard"] = {color = 0xCCCCFF, fill = 0x40, outline = 0x80},
-	       ["guard1"] = {color = 0xC0C0C0, fill = 0x40, outline = 0x80},--rbff2 stand-guard
-	       ["guard2"] = {color = 0x808080, fill = 0x40, outline = 0x80},--rbff2 counch-guard
-	       ["guard3"] = {color = 0xC0C0C0, fill = 0x40, outline = 0x80},--rbff2 air-guard
-	       ["guard4"] = {color = 0xD0D0D0, fill = 0x40, outline = 0x80},--rbff2 j.atemi-nage
-	       ["guard5"] =  {color = 0x800000, fill = 0x40, outline = 0x80},--rbff2 c.atemi-nage
-	       ["guard6"] =  {color = 0xff0000, fill = 0x40, outline = 0x80},--rbff2 g.ateminage
-	       ["guard7"] =  {color = 0x800080, fill = 0x40, outline = 0x80},--rbff2 h.gyakushu-kyaku
-	       ["guard8"] =  {color = 0xff00ff, fill = 0x40, outline = 0x80},--rbff2 sadomazo
-	       ["guard9"] =  {color = 0x008000, fill = 0x40, outline = 0x80},--rbff2 bai-gaeshi
-	      ["guard10"] = {color = 0x00ff00, fill = 0x40, outline = 0x80},--?
-	      ["guard11"] = {color = 0x808000, fill = 0x40, outline = 0x80},--?
-	      ["guard12"] = {color = 0xffff00, fill = 0x40, outline = 0x80},--rbff2 p.throw
-	      ["guard13"] = {color = 000080, fill = 0x40, outline = 0x80},--?
-	      ["guard14"] = {color = 0x0000ff, fill = 0x40, outline = 0x80},--?
-	      ["guard15"] = {color = 0x008080, fill = 0x40, outline = 0x80},--?
-	      ["guard16"] = {color = 0x00ffff, fill = 0x40, outline = 0x80},--?
-	        ["throw"] = {color = 0xFFFF00, fill = 0x40, outline = 0x80}, --fatfury3
-	   ["axis throw"] = {color = 0xFFAA00, fill = 0x40, outline = 0x80},
+	["attack"] = {color = 0xFF0000, fill = 0x40, outline = 0x80},
+	["proj. attack"] = {color = 0xFF66FF, fill = 0x40, outline = 0x80},
+	["push"] = {color = 0x00FF00, fill = 0x20, outline = 0xCC},
+	["guard"] = {color = 0xCCCCFF, fill = 0x40, outline = 0x80},
+	["guard1"] = {color = 0xC0C0C0, fill = 0x40, outline = 0x80},--rbff2 stand-guard
+	["guard2"] = {color = 0x808080, fill = 0x40, outline = 0x80},--rbff2 counch-guard
+	["guard3"] = {color = 0xC0C0C0, fill = 0x40, outline = 0x80},--rbff2 air-guard
+	["guard4"] = {color = 0xD0D0D0, fill = 0x40, outline = 0x80},--rbff2 j.atemi-nage
+	["guard5"] =  {color = 0x800000, fill = 0x40, outline = 0x80},--rbff2 c.atemi-nage
+	["guard6"] =  {color = 0xff0000, fill = 0x40, outline = 0x80},--rbff2 g.ateminage
+	["guard7"] =  {color = 0x800080, fill = 0x40, outline = 0x80},--rbff2 h.gyakushu-kyaku
+	["guard8"] =  {color = 0xff00ff, fill = 0x40, outline = 0x80},--rbff2 sadomazo
+	["guard9"] =  {color = 0x008000, fill = 0x40, outline = 0x80},--rbff2 bai-gaeshi
+	["guard10"] = {color = 0x00ff00, fill = 0x40, outline = 0x80},--?
+	["guard11"] = {color = 0x808000, fill = 0x40, outline = 0x80},--?
+	["guard12"] = {color = 0xffff00, fill = 0x40, outline = 0x80},--rbff2 p.throw
+	["guard13"] = {color = 000080, fill = 0x40, outline = 0x80},--?
+	["guard14"] = {color = 0x0000ff, fill = 0x40, outline = 0x80},--?
+	["guard15"] = {color = 0x008080, fill = 0x40, outline = 0x80},--?
+	["guard16"] = {color = 0x00ffff, fill = 0x40, outline = 0x80},--?
+	["throw"] = {color = 0xFFFF00, fill = 0x40, outline = 0x80}, --fatfury3
+	["axis throw"] = {color = 0xFFAA00, fill = 0x40, outline = 0x80},
 }
 
 local globals = {
@@ -68,99 +66,99 @@ local offset, any_true, get_obj, set_vulnerable, set_harmless, insert_throw, def
 local a,v,p,g,t,x,g1,g2,g3,g4,g5,g6,g7,g8,g9,g10,g11,g12,g13,g14,g15,g16 = "attack","vulnerability","push","guard","throw","undefined","guard1","guard2","guard3","guard4","guard5","guard6","guard7","guard8","guard9","guard10","guard11","guard12","guard13","guard14","guard15","guard16"
 
 local profile = {
-{	game = "rbff2",
-	bank_switching = true,
-	match_active = 0x107C22,
-	player_base  = 0x100400,
-	stage_base   = 0x100E00,
-	obj_ptr_list = 0x100C92,
-	box_types = {
-		p,v,v,v,v,v,v,x,x,x,x,x,x,x,x,x,
-		g1,g2,g3,g4,g5,g6,g7,g8,g9,g10,g11,g12,g13,g14,g15,g16,
-	},
-	harmless = function(obj)
-		return bit.btst(3, rb(obj.base + 0x6A)) == 0 or rb(obj.base + 0xAA) > 0 or
-			(obj.projectile and rb(obj.base + 0xE7) > 0) or 
-			(not obj.projectile and rb(obj.base + 0xB6) == 0)
-	end,
-	process_throw = function(obj, box)
-		obj.opp_base = rd(obj.base + 0x96)
-		obj.opp_id = rw(obj.opp_base + 0x10)
-		obj.side = rbs(obj.base + 0x58) < 0 and -1 or 1
-		if box.ptr then --ground
-			local range = (rb(obj.base + 0x58) == rb(obj.opp_base + 0x58) and 0x4) or 0x3
-			range = math.abs(rbs(rd(box.ptr + 0x02) + bit.lshift(obj.opp_id, 3) + range) * 4)
-			range = range + rbs(rd(box.ptr + 0x02) + bit.lshift(obj.char_id, 3) + 0x3) * -4
-			box.d7 = (box.d7 == 0x65 and 0x3) or bit.band(box.d7 - 0x60, 0x7)
-			range = range + rbs(box.ptr + 0xD2 + obj.char_id * 4 + box.d7)
-			box.right = range * obj.side
-		elseif box.range_y then --air
-			box.right  = box.range_x * obj.flip_x
-			box.top    = -box.range_y
-			box.bottom =  box.range_y
-		else --special
-			box.right  = box.front * obj.side
-			if box.top == 0 then
-				box.top    = nil
-				box.bottom = nil
+	{	game = "rbff2",
+		bank_switching = true,
+		match_active = 0x107C22,
+		player_base  = 0x100400,
+		stage_base   = 0x100E00,
+		obj_ptr_list = 0x100C92,
+		box_types = {
+			p,v,v,v,v,v,v,x,x,x,x,x,x,x,x,x,
+			g1,g2,g3,g4,g5,g6,g7,g8,g9,g10,g11,g12,g13,g14,g15,g16,
+		},
+		harmless = function(obj)
+			return bit.btst(3, rb(obj.base + 0x6A)) == 0 or rb(obj.base + 0xAA) > 0 or
+				(obj.projectile and rb(obj.base + 0xE7) > 0) or
+				(not obj.projectile and rb(obj.base + 0xB6) == 0)
+		end,
+		process_throw = function(obj, box)
+			obj.opp_base = rd(obj.base + 0x96)
+			obj.opp_id = rw(obj.opp_base + 0x10)
+			obj.side = rbs(obj.base + 0x58) < 0 and -1 or 1
+			if box.ptr then --ground
+				local range = (rb(obj.base + 0x58) == rb(obj.opp_base + 0x58) and 0x4) or 0x3
+				range = math.abs(rbs(rd(box.ptr + 0x02) + bit.lshift(obj.opp_id, 3) + range) * 4)
+				range = range + rbs(rd(box.ptr + 0x02) + bit.lshift(obj.char_id, 3) + 0x3) * -4
+				box.d7 = (box.d7 == 0x65 and 0x3) or bit.band(box.d7 - 0x60, 0x7)
+				range = range + rbs(box.ptr + 0xD2 + obj.char_id * 4 + box.d7)
+				box.right = range * obj.side
+			elseif box.range_y then --air
+				box.right  = box.range_x * obj.flip_x
+				box.top    = -box.range_y
+				box.bottom =  box.range_y
+			else --special
+				box.right  = box.front * obj.side
+				if box.top == 0 then
+					box.top    = nil
+					box.bottom = nil
+				end
 			end
-		end
-	end,
-	breakpoints = {
-		{base = 0x05C2DA, func = function() set_vulnerable() end}, 
-		{base = 0x05C2E6, func = function() set_vulnerable(0xB1) end},
-		{base = 0x05C2E8, func = function() --check vuln at all times *** setregister for m68000.pc is broken ***
-			memory.setregister("m68000.pc", gr("pc") + 0x6) end},
-		{base = 0x05C2E8, --check vuln at all times *** hackish workaround ***
-			func = function() memory.setregister("m68000.a3", gr("a3") - 0xB5) end},
-		{base = 0x05C2EE, --*** fix for hackish workaround ***
-			func = function() memory.setregister("m68000.a3", gr("a3") + 0xB5) end},
-		{base = 0x012C42, ["rbff2k"] = 0x28, ["rbff2h"] = 0x0,
-			func = function() insert_box(4, 2) end},
-		{base = 0x012C88, ["rbff2k"] = 0x28, ["rbff2h"] = 0x0, 
-			func = function() insert_box(3, 1, true) end},
-		{base = 0x012D4C, ["rbff2k"] = 0x28, ["rbff2h"] = 0x0, --p1 push 
-			func = function() insert_box(4, 2) end},
-		{base = 0x012D92, ["rbff2k"] = 0x28, ["rbff2h"] = 0x0, --p2 push
-			func = function() insert_box(3, 1) end},
+		end,
+		breakpoints = {
+			{base = 0x05C2DA, func = function() set_vulnerable() end},
+			{base = 0x05C2E6, func = function() set_vulnerable(0xB1) end},
+			{base = 0x05C2E8, func = function() --check vuln at all times *** setregister for m68000.pc is broken ***
+				memory.setregister("m68000.pc", gr("pc") + 0x6) end},
+			{base = 0x05C2E8, --check vuln at all times *** hackish workaround ***
+				func = function() memory.setregister("m68000.a3", gr("a3") - 0xB5) end},
+			{base = 0x05C2EE, --*** fix for hackish workaround ***
+				func = function() memory.setregister("m68000.a3", gr("a3") + 0xB5) end},
+			{base = 0x012C42, ["rbff2k"] = 0x28, ["rbff2h"] = 0x0,
+				func = function() insert_box(4, 2) end},
+			{base = 0x012C88, ["rbff2k"] = 0x28, ["rbff2h"] = 0x0,
+				func = function() insert_box(3, 1, true) end},
+			{base = 0x012D4C, ["rbff2k"] = 0x28, ["rbff2h"] = 0x0, --p1 push
+				func = function() insert_box(4, 2) end},
+			{base = 0x012D92, ["rbff2k"] = 0x28, ["rbff2h"] = 0x0, --p2 push
+				func = function() insert_box(3, 1) end},
 
-		{base = 0x05D782, func = function() --ground throws
-			insert_throw({
-				ptr = gr("pc"),
-				d7 = bit.band(gr("d7"), 0xFFFF),
-		}) end},
-		{base = 0x060428, func = function() --air throws
-			local	ptr = gr("a0")
-			insert_throw({
-				range_x = rws(ptr + 0x0),
-				range_y = rws(ptr + 0x2),
-		}) end},
-		{base = 0x039F2A, ["rbff2k"] = 0xC, ["rbff2h"] = 0x20, func = function() --special throws
-			local	ptr = gr("a0")
-			insert_throw({
-				front  = rws(ptr + 0x0),
-				top    = rws(ptr + 0x2),
-				bottom = rws(ptr + 0x4),
-		}) end},
+			{base = 0x05D782, func = function() --ground throws
+				insert_throw({
+					ptr = gr("pc"),
+					d7 = bit.band(gr("d7"), 0xFFFF),
+				}) end},
+			{base = 0x060428, func = function() --air throws
+				local	ptr = gr("a0")
+				insert_throw({
+					range_x = rws(ptr + 0x0),
+					range_y = rws(ptr + 0x2),
+				}) end},
+			{base = 0x039F2A, ["rbff2k"] = 0xC, ["rbff2h"] = 0x20, func = function() --special throws
+				local	ptr = gr("a0")
+				insert_throw({
+					front  = rws(ptr + 0x0),
+					top    = rws(ptr + 0x2),
+					bottom = rws(ptr + 0x4),
+				}) end},
 
-		{base = 0x017300, ["rbff2k"] = 0x28, ["rbff2h"] = 0x0, no_background = true, --solid shadows
-			func = function() memory.writebyte(gr("a4") + 0x82, 0) end},
+			{base = 0x017300, ["rbff2k"] = 0x28, ["rbff2h"] = 0x0, no_background = true, --solid shadows
+				func = function() memory.writebyte(gr("a4") + 0x82, 0) end},
+		},
+		clones = {["rbff2k"] = -0x104, ["rbff2h"] = 0x20},
+		remove_background = function()
+			if rb(0x107BB9) ~= 0x01 then
+				return
+			end
+			local match = rb(0x107C22)
+			if match == 0x38 then --HUD
+				memory.writebyte(0x107C22, 0x33)
+			end
+			if match > 0 then --BG layers
+				memory.writebyte(0x107762, 0x00)
+				memory.writebyte(0x107765, 0x01)
+			end
+		end,
 	},
-	clones = {["rbff2k"] = -0x104, ["rbff2h"] = 0x20},
-	remove_background = function()
-		if rb(0x107BB9) ~= 0x01 then
-			return
-		end
-		local match = rb(0x107C22)
-		if match == 0x38 then --HUD
-			memory.writebyte(0x107C22, 0x33)
-		end
-		if match > 0 then --BG layers
-			memory.writebyte(0x107762, 0x00)
-			memory.writebyte(0x107765, 0x01)
-		end
-	end,
-},
 }
 
 
@@ -268,12 +266,10 @@ insert_throw = function(box)
 	if not f then
 		return
 	end
-	--[[
-	box.top    = obj.pos_y - bit.arshift(box.top    * (obj.scale or 0x100), 8)
-	box.bottom = obj.pos_y - bit.arshift(box.bottom * (obj.scale or 0x100), 8)
-	box.left   = obj.pos_x + bit.arshift(box.left   * (obj.scale or 0x100), 8)
-	box.right  = obj.pos_x + bit.arshift(box.right  * (obj.scale or 0x100), 8)
-	]]
+	--	box.top    = obj.pos_y - bit.arshift(box.top    * (obj.scale or 0x100), 8)
+	--	box.bottom = obj.pos_y - bit.arshift(box.bottom * (obj.scale or 0x100), 8)
+	--	box.left   = obj.pos_x + bit.arshift(box.left   * (obj.scale or 0x100), 8)
+	--	box.right  = obj.pos_x + bit.arshift(box.right  * (obj.scale or 0x100), 8)
 	box.left   = obj.pos_x + (box.left or 0)
 	box.right  = obj.pos_x + (box.right or 0)
 	box.top    = box.hard_top and (emu.screenheight() + f.screen_top - obj.pos_z - box.hard_top) --ryo's DM
@@ -325,8 +321,7 @@ local type_check = {
 		if f.same_plane and not obj.vulnerable then
 			if not game.no_combos then
 				-- スロー中にあたり判定が見えなくなる問題の回避用。ちゃんとなおしたい。
-				return slow.phase == 0 and true or false
-				--return true
+				return not slow.in_slow()
 			end
 			box.type = "push"
 		end
@@ -418,7 +413,7 @@ local update_object = function(f, obj)
 			box.type = box.id + 1 > #game.box_types and "attack" or game.box_types[box.id + 1] or "undefined"
 			--box.type = "undefined" --debug
 			table.insert(obj, define_box(obj, box))
-		end
+	end
 	end
 
 	local throw = throw_buffer[obj.base]
@@ -427,7 +422,7 @@ local update_object = function(f, obj)
 		table.insert(obj, throw)
 	end
 	throw_buffer[obj.base] = nil
-	
+
 	return obj
 end
 
@@ -545,18 +540,28 @@ local update_hitboxes = function()
 		memory.writeword(0x401FFE, globals.bg_color) --broken in FBA?
 	end
 
---	for _, obj in ipairs(f or {}) do
---		for _, t in ipairs(obj or {}) do
---			if t.type == a or t.type == "proj. attack" then
---				print(tohex(t.address), tohex(t.id))
---			end
---		end
---	end
+	--	for _, obj in ipairs(f or {}) do
+	--		for _, t in ipairs(obj or {}) do
+	--			if t.type == a or t.type == "proj. attack" then
+	--				print(tohex(t.address), tohex(t.id))
+	--			end
+	--		end
+	--	end
 end
 
+-- 途中でちらつくのを防止するためにバッファを2重にしておく。ちゃんとなおしたい。
+local gui_box_buf = {}
+local gui_box_buf2 = {}
 
 --emu.update_func( function()
 hitboxes_update_func = function()
+	if slow.in_slow() then
+		if slow.phase() == 1 then
+			gui_box_buf2 = gui_box_buf
+			gui_box_buf = {}
+		end
+	end
+
 	globals.register_count = (globals.register_count or 0) + 1
 	globals.last_frame = globals.last_frame or fc()
 	if globals.register_count == 1 then
@@ -572,6 +577,11 @@ end
 --------------------------------------------------------------------------------
 -- draw the hitboxes
 
+local gui_box = function(x1, y1, x2, y2, color1, color2)
+	table.insert(gui_box_buf, { x1, y1, x2, y2, color1, color2 })
+	gui.box(x1, y1, x2, y2, color1, color2)
+end
+
 local draw_hitbox = function(hb, same_plane)
 	if not hb or (hb.type == "push" and (not globals.draw_pushboxes or not same_plane)) then
 		return
@@ -585,7 +595,7 @@ local draw_hitbox = function(hb, same_plane)
 		--gui.text(hb.hval, hb.vval, string.format("%02X", hb.id)) --debug
 	end
 
-	gui.box(hb.left, hb.top, hb.right, hb.bottom, boxes[hb.type].fill, boxes[hb.type].outline)
+	gui_box(hb.left, hb.top, hb.right, hb.bottom, boxes[hb.type].fill, boxes[hb.type].outline)
 end
 
 
@@ -599,7 +609,7 @@ end
 
 
 render_hitboxes = function()
---	gui.clearuncommitted()
+	--	gui.clearuncommitted()
 	if not globals.draw_all then
 		return
 	end
@@ -624,39 +634,42 @@ render_hitboxes = function()
 			draw_axis(obj)
 		end
 	end
+
+	if 0 < #gui_box_buf then
+		for i = 1, #gui_box_buf do
+			gui.box(unpack(gui_box_buf[i]))
+		end
+	else
+		for i = 1, #gui_box_buf2 do
+			gui.box(unpack(gui_box_buf2[i]))
+		end
+	end
+
 end
 
 
 --------------------------------------------------------------------------------
 -- hotkey functions
---[[
-input.registerhotkey(1, function()
-	globals.blank_screen = not globals.blank_screen
-	render_hitboxes()
-	emu.message((globals.blank_screen and "activated" or "deactivated") .. " blank screen mode")
-end)
-
-
-input.registerhotkey(2, function()
-	globals.draw_axis = not globals.draw_axis
-	render_hitboxes()
-	emu.message((globals.draw_axis and "showing" or "hiding") .. " object axis")
-end)
-
-
-input.registerhotkey(3, function()
-	globals.draw_mini_axis = not globals.draw_mini_axis
-	render_hitboxes()
-	emu.message((globals.draw_mini_axis and "showing" or "hiding") .. " hitbox axis")
-end)
-
-
-input.registerhotkey(4, function()
-	globals.draw_pushboxes = not globals.draw_pushboxes
-	render_hitboxes()
-	emu.message((globals.draw_pushboxes and "showing" or "hiding") .. " pushboxes")
-end)
-]]
+--input.registerhotkey(1, function()
+--	globals.blank_screen = not globals.blank_screen
+--	render_hitboxes()
+--	emu.message((globals.blank_screen and "activated" or "deactivated") .. " blank screen mode")
+--end)
+--input.registerhotkey(2, function()
+--	globals.draw_axis = not globals.draw_axis
+--	render_hitboxes()
+--	emu.message((globals.draw_axis and "showing" or "hiding") .. " object axis")
+--end)
+--input.registerhotkey(3, function()
+--	globals.draw_mini_axis = not globals.draw_mini_axis
+--	render_hitboxes()
+--	emu.message((globals.draw_mini_axis and "showing" or "hiding") .. " hitbox axis")
+--end)
+--input.registerhotkey(4, function()
+--	globals.draw_pushboxes = not globals.draw_pushboxes
+--	render_hitboxes()
+--	emu.message((globals.draw_pushboxes and "showing" or "hiding") .. " pushboxes")
+--end)
 
 --------------------------------------------------------------------------------
 -- initialize on game startup
@@ -674,6 +687,7 @@ end
 
 initialize_buffers = function()
 	buffer, box_buffer, throw_buffer = {}, {}, {}
+	gui_box_buf, gui_box_buf2 = {}, {}
 end
 
 
@@ -704,23 +718,18 @@ whatgame = function()
 	print("unsupported game: " .. emu.gamename())
 end
 
---[[
-savestate.registerload(function()
-	initialize_buffers()
-end)
-
-gui.register(function()
-	render_hitboxes()
-end)
-
-emu.registerstart(function()
-	whatgame()
-end)
-
-emu.registerafter( function()
-	update_func()
-end)
-]]
+--savestate.registerload(function()
+--	initialize_buffers()
+--end)
+--gui.register(function()
+--	render_hitboxes()
+--end)
+--emu.registerstart(function()
+--	whatgame()
+--end)
+--emu.registerafter( function()
+--	update_func()
+--end)
 
 config_draw_all = function(flg)
 	globals.draw_all = flg

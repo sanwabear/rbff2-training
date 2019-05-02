@@ -130,6 +130,8 @@ slow.apply_slow = function()
 			else
 				phase = 2
 			end
+		elseif phase == 2 then
+			phase = 3
 		else
 			phase = 2
 		end
@@ -139,6 +141,8 @@ slow.apply_slow = function()
 			phase = 0
 		elseif count == max-1 then
 			phase = 1
+		elseif phase == 2 then
+			phase = 3
 		else
 			phase = 2
 		end
@@ -152,7 +156,7 @@ slow.apply_slow = function()
 	elseif phase == 1 then
 		unsetkey()
 		do_pause(pause)
-	else -- phase == 2
+	else -- phase == 2, 3
 		checkkey()
 		do_pause(pause)
 	end
@@ -190,4 +194,11 @@ end
 
 slow.term = function()
 	do_pause(unpause)
+end
+
+slow.in_slow = function()
+	if max == 0 then
+		return false
+	end
+	return true
 end
