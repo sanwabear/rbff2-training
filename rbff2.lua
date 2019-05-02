@@ -30,6 +30,7 @@ require("auto-guard")
 require("player-controll")
 require("save-memory")
 require("slow")
+require("adv-frames")
 dofile("ext-lib/table.save-0.94.lua")
 
 local osd = new_env("ext-lib/fighting-OSD.lua")
@@ -238,6 +239,7 @@ local draw_screen = function(menu)
 		osd.draw_OSD()
 		hit_boxes.render_hitboxes()
 		auto_guard.draw_guard_status()
+		adv_frames.draw_frames()
 		return
 	end
 
@@ -256,6 +258,27 @@ local draw_screen = function(menu)
 			gui.text(160, y, menu.body[i][menu.opt_p[p] * 2 - 1], color)
 			gui.text(236, y, menu.opt_p[p], color)
 		end
+	end
+end
+
+local in_pause = function()
+	return memory.readbyte(0x104191) == 0xFF
+end
+
+local wait_for_switching = function(menu)
+	-- MEMO: メニュー表示の制御をきれいにしたい
+	if global.is_match_active() then
+		if (menu == global.fighting and in_pause())
+			or (menu ~= global.fighting and not in_pause()) then
+			-- 対戦画面へ遷移時はポーズ解除まで待機
+			-- メニューへ遷移時はポーズまで待機
+			joypad.set({["P1 Select"] = emu.framecount() % 4 == 0})
+			return
+		else
+			global.mode_switching = false
+		end
+	else
+		global.next_active_menu(global.fighting)
 	end
 end
 
@@ -292,6 +315,7 @@ local execute = function(menu)
 			life_recover.update_life_recover()
 			auto_guard.update_guard()
 			debugdip.update_debugdips()
+			adv_frames.update_frames()
 		end
 	else
 		global.pause()
@@ -453,6 +477,11 @@ global.training = create_menu(
 			"SHOW", function() hit_boxes.config_draw_all(true) end,
 			"HIDE", function() hit_boxes.config_draw_all(false) end,
 		})
+		table.insert(menu, "ADV. FRAMES:")
+		table.insert(menu, {
+			"SHOW", function() adv_frames.config_draw(true) end,
+			"HIDE", function() adv_frames.config_draw(false) end,
+		})
 		table.insert(menu, "BACK GROUND:")
 		table.insert(menu, {
 			"SHOW", function() hit_boxes.config_draw_bg(true) end,
@@ -514,14 +543,18 @@ global.extra = create_menu(
 		table.insert(menu, "SLOW:")
 		local options = {}
 		table.insert(options, "OFF")
-		table.insert(options, function() slow.config_slow(0) end)
+		local config_slow = function(new_max)
+			slow.config_slow(new_max)
+			hit_boxes.initialize_buffers()
+		end
+		table.insert(options, function() config_slow(0) end)
 		table.insert(options, "STEP-1")
-		table.insert(options, function() slow.config_slow(-1) end)
+		table.insert(options, function() config_slow(-1) end)
 		table.insert(options, "STEP-2")
-		table.insert(options, function() slow.config_slow(-2) end)
+		table.insert(options, function() config_slow(-2) end)
 		for i = 3, 60 do
 			table.insert(options, tostring(i))
-			table.insert(options, function() slow.config_slow(i) end)
+			table.insert(options, function() config_slow(i) end)
 		end
 		table.insert(menu, options)
 		table.insert(menu, "TEST:")
@@ -664,6 +697,7 @@ global.main = create_menu(
 				global.next_active_menu(global.player_and_stg)
 			end,
 			"ROUND RESTART", function()
+				hit_boxes.initialize_buffers()
 				global.next_p1 = memory.readbyte(0x107BA5)
 				global.next_p1col = memory.readbyte(0x107BAC)
 				global.next_p2 = memory.readbyte(0x107BA7)
@@ -750,7 +784,6 @@ global.do_autosave = function()
 	end
 end
 
-
 gui.register(function()
 	if global.mode_switching then
 		gui.clearuncommitted()
@@ -764,33 +797,15 @@ emu.registerbefore(function()
 
 save_memory.enabled = false
 
-local in_pause = function()
-	return memory.readbyte(0x104191) == 0xFF
-end
-
 emu.registerafter(function()
-	if not global.mode_switching then
+	if global.mode_switching then
+		wait_for_switching(global.active_menu)
+	else
 		execute(global.active_menu)
 	end
 
 	save_memory.save()
 
-	-- MEMO: メニュー表示の制御をきれいにしたい
-	if global.mode_switching then
-		if global.is_match_active() then
-			if (global.active_menu == global.fighting and in_pause())
-				or (global.active_menu ~= global.fighting and not in_pause()) then
-				-- 対戦画面へ遷移時はポーズ解除まで待機
-				-- メニューへ遷移時はポーズまで待機
-				joypad.set({["P1 Select"] = emu.framecount() % 4 == 0})
-				return
-			else
-				global.mode_switching = false
-			end
-		else
-			global.next_active_menu(global.fighting)
-		end
-	end
 end)
 
 emu.registerexit(function()
