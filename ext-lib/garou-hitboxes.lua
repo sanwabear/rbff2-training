@@ -641,7 +641,7 @@ render_hitboxes = function()
 		for i = 1, #gui_box_buf do
 			gui.box(unpack(gui_box_buf[i]))
 		end
-	else
+	elseif slow.in_slow() then
 		for i = 1, #gui_box_buf2 do
 			gui.box(unpack(gui_box_buf2[i]))
 		end

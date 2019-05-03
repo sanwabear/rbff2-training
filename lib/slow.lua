@@ -21,6 +21,7 @@
 --SOFTWARE.
 
 local max = 0
+local no_slow = true
 local count = 0
 local input_accept_frame = 0
 local pause = 0xFF
@@ -47,6 +48,7 @@ for i = 1, #keyids do
 	nexts[id1] = false
 	offs[id1] = true
 end
+local active_frame = emu.framecount()
 
 local do_pause = function(v)
 	memory.writebyte(0x104191, v)
@@ -101,9 +103,14 @@ end
 slow = {}
 slow.max = function() return max+1 end
 slow.apply_slow = function()
+	local ec = emu.framecount()
+
 	if max == 0 then
+		active_frame = ec + 1
 		return
 	end
+
+	no_slow = false
 
 	-- スロー中にセレクトで抜ける（メニュー操作などできるように）
 	local _, _, k3, ck, _ = rb2key.capture_keys()
@@ -112,7 +119,6 @@ slow.apply_slow = function()
 		return
 	end
 
-	local ec = emu.framecount()
 	local state_past = ec - input_accept_frame
 
 	if max < 0 then
@@ -126,6 +132,8 @@ slow.apply_slow = function()
 		elseif (20 < ck.st and phase == 0) then
 			-- ステップ実行モード2=スタートおしっぱで通常速度へ
 			if max == -2 then
+				active_frame = ec + 1
+				no_slow = true
 				return
 			else
 				phase = 2
@@ -153,6 +161,7 @@ slow.apply_slow = function()
 		setkey()
 		count = 0
 		do_pause(unpause)
+		active_frame = ec + 1
 	elseif phase == 1 then
 		unsetkey()
 		do_pause(pause)
@@ -168,6 +177,7 @@ end
 slow.config_slow = function(new_max)
 	count = 0
 	max = new_max
+	no_slow = max == 0
 	input_accept_frame = 0
 	local _, _, _, ck, _ = rb2key.capture_keys()
 	for i = 1, #keyids do
@@ -179,14 +189,14 @@ slow.config_slow = function(new_max)
 end
 
 slow.phase = function()
-	if max == 0 then
+	if no_slow then
 		return 0
 	end
 	return phase
 end
 
 slow.buttons = function()
-	if max == 0 then
+	if no_slow then
 		return no_buttons
 	end
 	return buttons
@@ -197,8 +207,12 @@ slow.term = function()
 end
 
 slow.in_slow = function()
-	if max == 0 then
+	if no_slow then
 		return false
 	end
 	return true
+end
+
+slow.framecount = function()
+	return active_frame
 end
