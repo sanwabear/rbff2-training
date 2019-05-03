@@ -245,7 +245,8 @@ local draw_screen = function(menu)
 	end
 
 	local y = menu.box_offset
-	gui.box(menu.box_x1, menu.box_y1, menu.box_x2, menu.box_y2, c.gray2, c.gray3)
+	--gui.box(menu.box_x1, menu.box_y1, menu.box_x2, menu.box_y2, c.gray2, c.gray3)
+	gui_boxb(menu.box_x1, menu.box_y1, menu.box_x2, menu.box_y2, c.gray2, c.gray3)
 	gui.text(menu.title_x, menu.title_y, menu.title, c.white)
 	y = y + 8
 	for i = 2, menu.body_len, 2 do
@@ -738,10 +739,13 @@ global.main = create_menu(
 			-- -auto save only the main menu
 			table.save(menu.config, "save\\rbff2-main.tbl")
 		end
+		hit_boxes.initialize_buffers()
 		collectgarbage("count")
 	end,
 	function(menu)
+		hit_boxes.initialize_buffers()
 		global.next_active_menu(global.fighting)
+		collectgarbage("count")
 	end,
 	function(menu)
 		menu.config[1] = 1

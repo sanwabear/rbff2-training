@@ -55,6 +55,7 @@ local globals = {
 	throwbox_height = 0x50, --default for ground throws
 	no_background   = false, --remove backgrounds for sprite ripping
 	bg_color        = 0x8F8F, --color of removed background (16-bit depth) ...broken in FBA?
+	mesh            = false,
 }
 
 --------------------------------------------------------------------------------
@@ -577,11 +578,25 @@ end
 --------------------------------------------------------------------------------
 -- draw the hitboxes
 
+local gui_box2 = function(x1, y1, x2, y2, color1, color2)
+	if not globals.mesh then
+		gui.box(x1, y1, x2, y2, color1, color2)
+		return
+	end
+	if 0x00FF0000 ==  bit.band(color2, 0xFFFFFF00) then
+		gui.box(x1, y1, x2, y2, color1, color2)
+	elseif bit.band(color2, 0xFFFFFF00) == 0x7777FF00 then
+		gui_boxb(x1, y1, x2, y2, color1, color2, true)
+	else
+		gui_boxc(x1, y1, x2, y2, color1, color2, false)
+	end
+end
+
 local gui_box = function(x1, y1, x2, y2, color1, color2)
 	if slow.in_slow() then
 		table.insert(gui_box_buf, { x1, y1, x2, y2, color1, color2 })
 	end
-	gui.box(x1, y1, x2, y2, color1, color2)
+	gui_box2(x1, y1, x2, y2, color1, color2, false)
 end
 
 local draw_hitbox = function(hb, same_plane)
@@ -637,13 +652,15 @@ render_hitboxes = function()
 		end
 	end
 
-	if 0 < #gui_box_buf then
-		for i = 1, #gui_box_buf do
-			gui.box(unpack(gui_box_buf[i]))
-		end
-	elseif slow.in_slow() then
-		for i = 1, #gui_box_buf2 do
-			gui.box(unpack(gui_box_buf2[i]))
+	if slow.max() ~= 1 then
+		if 0 < #gui_box_buf then
+			for i = 1, #gui_box_buf do
+				gui_box2(unpack(gui_box_buf[i]))
+			end
+		else
+			for i = 1, #gui_box_buf2 do
+				gui_box2(unpack(gui_box_buf2[i]))
+			end
 		end
 	end
 
