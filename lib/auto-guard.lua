@@ -20,8 +20,11 @@
 --OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 --SOFTWARE.
 require("rbff2-global")
+require("slow")
 
 math.randomseed(os.time())
+
+local fc = slow.framecount
 
 local function Set(list)
 	local set = {}
@@ -58,13 +61,23 @@ local guard_config = {
 }
 
 guard_config.func_counter_move = function(player)
-	local tbl ={}-- joypad.get(tbl)
 	local diff = guard_config.pos_diff
 	if guard_config.pos_diff == 0 then
 		diff = guard_config.prev_pos_diff
 	end
 	local pos_judge = player.pside * guard_config.pos_diff
-	for _, k in pairs(player.counter_move.command[player.counter_move.count]) do
+
+	if slow.phase() == 0 then
+		player.counter_move.count = (player.counter_move.count + 1) % #player.counter_move.command
+		if player.counter_move.count == 0 then
+			player.counter_move.count = #player.counter_move.command
+		end
+	else
+		print(player.counter_move.count)
+	end
+
+	local tbl ={}-- joypad.get(tbl)
+	for _, k in pairs(player.counter_move.command[player.counter_move.count] or {}) do
 		if k == "Front" then
 			if 0 < pos_judge then
 				tbl["P" .. player.opponent_num .. " Left"] = true
@@ -81,21 +94,28 @@ guard_config.func_counter_move = function(player)
 			tbl["P" .. player.opponent_num .. " " .. k] = true
 		end
 	end
+	local slow_buttons = slow.buttons() --スロー中のボタンフィルタ用
+	local btn = { "A", "B", "C", "D" }
+	for i = 1, 4 do
+		local key = "P"..player.opponent_num.." Button "..btn[i]
+		tbl[key] = tbl[key] or slow_buttons[key]
+	end
 	joypad.set(tbl)
 
-	player.counter_move.count = (player.counter_move.count + 1) % #player.counter_move.command
-	if player.counter_move.count == 0 then
-		player.counter_move.count = #player.counter_move.command
-	elseif player.counter_move.count == 1 then
+	if player.counter_move.count == #player.counter_move.command then
 		-- 両プレイヤーの状態が安定するまで待つ
-		local await = emu.framecount() + 20
+		local await = 20
 		player.func_passive = function(player)
-			if await < emu.framecount()
+			if slow.phase() == 0 then
+				await = await - 1
+			end
+			if await <= 0
 				and 0 == memory.readbyte(player.guard_addr)
 				and 0 == memory.readbyte(player.opponent_guard_addr)
 				and 0 == memory.readbyte(0x1004B6)
 				and 0 == memory.readbyte(0x1005B6)
 			then
+				player.counter_move.count = 0
 				player.func_passive = guard_config.func_passive_general
 				player.func_passive_guard = guard_config.func_counter_move
 			end
@@ -185,7 +205,7 @@ guard_config.func_passive_general = function(player)
 		if not player.back_step_kill then
 			local _, _, _, _, pre_key = rb2key.capture_keys()
 			if 0 < pre_key["lt"..player.opponent_num]
-			or 0 < pre_key["rt"..player.opponent_num] then
+				or 0 < pre_key["rt"..player.opponent_num] then
 				joypad.set({["P" .. player.opponent_num .. " Down"] = true })
 			end
 			player.back_step_kill = true
@@ -229,15 +249,15 @@ end
 
 guard_config.is_hit_or_guard = function(expected, -- 1 is hit, 2 is guard
 	player)
-	return player.guard_or_hit == emu.framecount() and expected == memory.readbyte(player.guard_addr)
+	return player.guard_or_hit == fc() and expected == memory.readbyte(player.guard_addr)
 end
 
 guard_config.func_passive_guard1_hit = function(player)
 	guard_config.func_passive_guard(player)
 	if guard_config.is_hit_or_guard(2, player) then
-		local await = emu.framecount() + 90 -- 90フレームだけガード
+		local await = fc() + 90 -- 90フレームだけガード
 		player.func_passive_guard = function(player)
-			if await < emu.framecount() then
+			if await < fc() then
 				player.func_passive_guard = guard_config.func_passive_guard1_hit
 				return guard_config.func_passive_guard(player)
 			end
@@ -248,9 +268,9 @@ end
 
 guard_config.func_passive_hit1_guard = function(player)
 	if guard_config.is_hit_or_guard(1, player) then
-		local await = emu.framecount() + 90
+		local await = fc() + 90
 		player.func_passive_guard = function(player)
-			if await < emu.framecount() then
+			if await < fc() then
 				player.func_passive_guard = guard_config.func_passive_hit1_guard
 				return guard_config.func_passive_no_guard(player)
 			end
@@ -347,9 +367,9 @@ for pside = -1, 1, 2 do
 		get_attack_type = nil,
 		last_fireball_frame = 0,
 	}
-	memory.registerwrite(fireball_addr, function() player.last_fireball_frame = emu.framecount() end)
+	memory.registerwrite(fireball_addr, function() player.last_fireball_frame = fc() end)
 	for i = 1, #fireball_pos_addrs do
-		memory.registerwrite(fireball_pos_addrs[i], function() player.last_fireball_frame = emu.framecount() end)
+		memory.registerwrite(fireball_pos_addrs[i], function() player.last_fireball_frame = fc() end)
 	end
 
 	player.get_attack_type = function()
@@ -363,21 +383,21 @@ for pside = -1, 1, 2 do
 					return move_type.low_attack
 				end
 				return move_type.attack
-					--elseif player.shot_fireball <= emu.framecount() and 0 < memory.readbyte(fireball_addr) then
+					--elseif player.shot_fireball <= fc() and 0 < memory.readbyte(fireball_addr) then
 					--	return move_type.attack
 			elseif 0x0196 == memory.readword(p_addr) then
 				return move_type.provoke
 			end
 		end
 		-- fireball 最終更新から30フレーム持続
-		if player.last_fireball_frame ~= 0 and 30 > emu.framecount() - player.last_fireball_frame then
+		if player.last_fireball_frame ~= 0 and 30 > fc() - player.last_fireball_frame then
 			return move_type.attack
 		end
 		return move_type.unknown
 	end
 
-	memory.registerwrite(guard_addr, function() player.guard_or_hit = emu.framecount() end)
-	memory.registerwrite(fireball_addr, function() player.shot_fireball = emu.framecount() end)
+	memory.registerwrite(guard_addr, function() player.guard_or_hit = fc() end)
+	memory.registerwrite(fireball_addr, function() player.shot_fireball = fc() end)
 
 	player.set_counter_move = function(command)
 		guard_config.players[pside].counter_move.count = 1
@@ -409,7 +429,7 @@ end
 -- 挑発を受けた時の前進行動
 auto_guard.config_forward        = function(enabled)
 	for pside = -1, 1, 2 do
-		guard_config.players[pside].func_passive_forward = 
+		guard_config.players[pside].func_passive_forward =
 			enabled and guard_config.func_passive_forward or guard_config.func_passive_forward_disabled
 	end
 end
