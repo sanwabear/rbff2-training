@@ -310,13 +310,13 @@ guard_config.func_passive_random_keep = function(expected, -- 1 is hit, 2 is gua
 		if expected == 2 then
 			guard_config.func_passive_guard(player)
 	end
-	if guard_config.is_hit_or_guard(0, player) then
-		if guard_config.random_boolean() then
-			player.func_passive_guard = guard_config.func_passive_random_hit
-		else
-			player.func_passive_guard = guard_config.func_passive_random_guard
-		end
+	--if guard_config.is_hit_or_guard(0, player) then
+	if guard_config.random_boolean() then
+		player.func_passive_guard = guard_config.func_passive_random_hit
+	else
+		player.func_passive_guard = guard_config.func_passive_random_guard
 	end
+	--end
 	end
 end
 
@@ -480,6 +480,8 @@ end
 auto_guard.config_1hit_guard     = function(pside)
 	guard_config.players[pside].func_passive = guard_config.func_passive_general
 	guard_config.players[pside].func_passive_guard = guard_config.func_passive_hit1_guard
+	guard_config.players[pside].enable_auto_guard = true
+	guard_config.players[pside].enable_low_guard = false
 end
 
 -- ƒ‰ƒ“ƒ_ƒ€ƒK[ƒh
