@@ -22,20 +22,20 @@
 require("rbff2-global")
 
 local c = { --colors
-	red  = 0xFF0000FF,
+	red    = 0xFF0000FF,
 	cyan   = 0x00FFFFFF,
 	white  = 0xFFFFFFFF,
 }
 
 local frames = {
-	p = { 0x100460, 0x100560 }, -- 行動ID デバッグディップのPと同じ
-	hitstop = { 0x10048D, 0x10058D }, -- ヒットストップ
-	combo = { 0x10B4E0, 0x10B4E1 }, -- コンボ
-	combo_upd = {0, 0, },
+	p          = { 0x100460, 0x100560 }, -- 行動ID デバッグディップのPと同じ
+	hitstop    = { 0x10048D, 0x10058D }, -- ヒットストップ
+	combo      = { 0x10B4E0, 0x10B4E1 }, -- コンボ
+	combo_upd  = {0, 0, },
 	next_frame = {0, 0, },
-	act = {0, 0, }, -- 行動ID デバッグディップのPと同じ
-	no_guard = {0, 0, }, -- ガード不能フレーム数 1p, 2p
-	last = {0, 0, 0, 0, }, -- 1p, 2p 1p有利不利, 2p有利不利
+	act        = {0, 0, }, -- 行動ID デバッグディップのPと同じ
+	no_guard   = {0, 0, 0, }, -- ガード不能フレーム数 1p, 2p
+	last       = {0, 0, 0, 0, }, -- 1p, 2p 1p有利不利, 2p有利不利
 }
 
 for i = 1, #frames.combo do
