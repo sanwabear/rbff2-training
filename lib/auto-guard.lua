@@ -196,19 +196,25 @@ guard_config.func_passive_general = function(player)
 	local move = player.get_attack_type()
 	if move == move_type.attack or move == move_type.low_attack then
 		player.func_passive_guard(player)
-		player.back_step_kill = false
+		if slow.phase() == 0 then
+			local tbl = joypad.get()
+			if tbl["P" .. player.opponent_num .. " Left"]
+				or tbl["P" .. player.opponent_num .. " Right"] then
+				player.back_step_kill = false
+			end
+		end
 	elseif move == move_type.provoke then
 		player.func_passive_forward(player)
-		player.back_step_kill = true
+		if slow.phase() == 0 then
+			player.back_step_kill = true
+		end
 	else
 		-- バックステップ防止のため一瞬下に入力する
 		if not player.back_step_kill then
-			local _, _, _, _, pre_key = rb2key.capture_keys()
-			if 0 < pre_key["lt"..player.opponent_num]
-				or 0 < pre_key["rt"..player.opponent_num] then
-				joypad.set({["P" .. player.opponent_num .. " Down"] = true })
+			joypad.set({["P" .. player.opponent_num .. " Down"] = true })
+			if slow.phase() == 0 then
+				player.back_step_kill = true
 			end
-			player.back_step_kill = true
 		end
 	end
 end
@@ -255,9 +261,12 @@ end
 guard_config.func_passive_guard1_hit = function(player)
 	guard_config.func_passive_guard(player)
 	if guard_config.is_hit_or_guard(2, player) then
-		local await = fc() + 90 -- 90フレームだけガード
+		local await = 90 -- 90フレームだけガード
 		player.func_passive_guard = function(player)
-			if await < fc() then
+			if slow.phase() == 0 then
+				await = await - 1
+			end
+			if await <= 0 then
 				player.func_passive_guard = guard_config.func_passive_guard1_hit
 				return guard_config.func_passive_guard(player)
 			end
@@ -268,9 +277,12 @@ end
 
 guard_config.func_passive_hit1_guard = function(player)
 	if guard_config.is_hit_or_guard(1, player) then
-		local await = fc() + 90
+		local await = 90
 		player.func_passive_guard = function(player)
-			if await < fc() then
+			if slow.phase() == 0 then
+				await = await - 1
+			end
+			if await <= 0 then
 				player.func_passive_guard = guard_config.func_passive_hit1_guard
 				return guard_config.func_passive_no_guard(player)
 			end
