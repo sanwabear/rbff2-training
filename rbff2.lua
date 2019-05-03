@@ -109,7 +109,7 @@ local global = {
 	unpause = no_op,
 }
 global.next_active_menu = function(menu)
-	global.mode_switching = true
+	global.mode_switching = global.is_match_active() or not global.is_player_select_active()
 	global.active_menu = menu
 end
 global.next_active_menu_with_save = function(menu)
@@ -123,6 +123,7 @@ global.goto_player_select = function()
 	debugdip.release_debugdip()
 	global.next_active_menu(global.fighting)
 end
+
 global.restart_fight = function()
 	global.next_active_menu(global.fighting)
 	local stg1 = global.next_stage
@@ -688,6 +689,9 @@ global.main = create_menu(
 		table.insert(menu, "PLAYER & STAGE:")
 		table.insert(menu, {
 			"QUICK SELECT", function()
+				if menu.p ~= 6 then
+					return
+				end
 				hit_boxes.initialize_buffers()
 				global.player_and_stg.opt_p[1] = memory.readbyte(0x107BA5)
 				global.player_and_stg.opt_p[2] = memory.readbyte(0x107BAC) + 1
@@ -698,6 +702,9 @@ global.main = create_menu(
 				global.next_active_menu(global.player_and_stg)
 			end,
 			"ROUND RESTART", function()
+				if menu.p ~= 6 then
+					return
+				end
 				hit_boxes.initialize_buffers()
 				global.next_p1 = memory.readbyte(0x107BA5)
 				global.next_p1col = memory.readbyte(0x107BAC)
@@ -708,7 +715,12 @@ global.main = create_menu(
 				global.next_bgm = memory.readbyte(0x10A8D5) > 0 and memory.readbyte(0x10A8D5) or 1
 				global.restart_fight()
 			end,
-			"BACK PLAYER SELECT", global.goto_player_select,
+			"BACK PLAYER SELECT", function()
+				if menu.p ~= 6 then
+					return
+				end
+				global.goto_player_select()
+			end,
 		})
 		table.insert(menu, "EXTRA MENU")
 		table.insert(menu, { "", no_op, })
