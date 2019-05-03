@@ -688,39 +688,9 @@ global.main = create_menu(
 		})
 		table.insert(menu, "PLAYER & STAGE:")
 		table.insert(menu, {
-			"QUICK SELECT", function()
-				if menu.p ~= 6 then
-					return
-				end
-				hit_boxes.initialize_buffers()
-				global.player_and_stg.opt_p[1] = memory.readbyte(0x107BA5)
-				global.player_and_stg.opt_p[2] = memory.readbyte(0x107BAC) + 1
-				global.player_and_stg.opt_p[3] = memory.readbyte(0x107BA7)
-				global.player_and_stg.opt_p[4] = memory.readbyte(0x107BAD) + 1
-				global.player_and_stg.opt_p[5] = global.next_stg_revkeys[ tohex(memory.readbyte(0x107BB1)).."-"..tohex(memory.readbyte(0x107BB7) )]
-				global.player_and_stg.opt_p[6] = memory.readbyte(0x10A8D5) > 0 and memory.readbyte(0x10A8D5) or 1
-				global.next_active_menu(global.player_and_stg)
-			end,
-			"ROUND RESTART", function()
-				if menu.p ~= 6 then
-					return
-				end
-				hit_boxes.initialize_buffers()
-				global.next_p1 = memory.readbyte(0x107BA5)
-				global.next_p1col = memory.readbyte(0x107BAC)
-				global.next_p2 = memory.readbyte(0x107BA7)
-				global.next_p2col = memory.readbyte(0x107BAD)
-				global.next_stage = memory.readbyte(0x107BB1)
-				global.next_stage_tz = memory.readbyte(0x107BB7)
-				global.next_bgm = memory.readbyte(0x10A8D5) > 0 and memory.readbyte(0x10A8D5) or 1
-				global.restart_fight()
-			end,
-			"BACK PLAYER SELECT", function()
-				if menu.p ~= 6 then
-					return
-				end
-				global.goto_player_select()
-			end,
+			"QUICK SELECT", no_op,
+			"ROUND RESTART", no_op,
+			"BACK PLAYER SELECT", no_op,
 		})
 		table.insert(menu, "EXTRA MENU")
 		table.insert(menu, { "", no_op, })
@@ -738,6 +708,29 @@ global.main = create_menu(
 			global.do_save()
 		elseif menu.p == 5 then
 		elseif menu.p == 6 then
+			local opt = menu.opt_p[menu.p]
+			if opt == 1 then
+				hit_boxes.initialize_buffers()
+				global.player_and_stg.opt_p[1] = memory.readbyte(0x107BA5)
+				global.player_and_stg.opt_p[2] = memory.readbyte(0x107BAC) + 1
+				global.player_and_stg.opt_p[3] = memory.readbyte(0x107BA7)
+				global.player_and_stg.opt_p[4] = memory.readbyte(0x107BAD) + 1
+				global.player_and_stg.opt_p[5] = global.next_stg_revkeys[ tohex(memory.readbyte(0x107BB1)).."-"..tohex(memory.readbyte(0x107BB7) )]
+				global.player_and_stg.opt_p[6] = math.max(memory.readbyte(0x10A8D5), 1)
+				global.next_active_menu(global.player_and_stg)
+			elseif opt == 1 then
+				hit_boxes.initialize_buffers()
+				global.next_p1 = memory.readbyte(0x107BA5)
+				global.next_p1col = memory.readbyte(0x107BAC)
+				global.next_p2 = memory.readbyte(0x107BA7)
+				global.next_p2col = memory.readbyte(0x107BAD)
+				global.next_stage = memory.readbyte(0x107BB1)
+				global.next_stage_tz = memory.readbyte(0x107BB7)
+				global.next_bgm = math.max(memory.readbyte(0x10A8D5), 1)
+				global.restart_fight()
+			elseif opt == 3 then
+				global.goto_player_select()
+			end
 		elseif menu.p == 7 then
 			global.next_active_menu(global.extra)
 		else
