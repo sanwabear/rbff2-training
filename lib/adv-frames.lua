@@ -46,7 +46,7 @@ end
 
 adv_frames = {
 	enabled = true,
-	show_action = false,
+	show_action = true,
 }
 
 adv_frames.draw_frames = function()
@@ -75,7 +75,7 @@ adv_frames.update_frames = function()
 			and 0 < memory.readbyte(frames.combo[i]) then
 			-- 本判定処理の1Fとあわせてヒットストップぶんの2F削減する
 			frames.no_guard[i] = frames.no_guard[i] -1
-			print(emu.framecount(), memory.readbyte(frames.combo[i]), frames.next_frame[i])
+			--print(emu.framecount(), memory.readbyte(frames.combo[i]), frames.next_frame[i])
 			skip = true
 		end
 	end
@@ -85,12 +85,15 @@ adv_frames.update_frames = function()
 		for i = 1, #frames.p do
 			if memory.readbyte(frames.hitstop[i]) == 0x00 then
 				nostop = true
-				frames.act[i] = memory.readword(frames.p[i])
-				if frames.act[i] < 0x8 or frames.act[i] == 0x1D or frames.act[i] == 0x1E
-					or (0x20 <= frames.act[i] and frames.act[i] <= 0x23)
-					or (0x2C <= frames.act[i] and frames.act[i] <= 0x2F)
-					or (0x3C <= frames.act[i] and frames.act[i] <= 0x3F)
-					or frames.act[i] == 0x40 then
+				local act = memory.readword(frames.p[i])
+				frames.act[i] = act
+				if act < 0x8 or act == 0x1D or act == 0x1E
+					or (0x20 <= act and act <= 0x23)
+					or (0x2C <= act and act <= 0x2F)
+					or (0x3C <= act and act <= 0x3F)
+					or 0x6C == act --jin
+					or (0x108 <= act and act <=  0x10A) --marry
+					or act == 0x40 then
 					frames.no_guard[i] = 0
 				else
 					frames.no_guard[i] = frames.no_guard[i] + 1
