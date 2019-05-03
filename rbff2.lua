@@ -688,6 +688,7 @@ global.main = create_menu(
 		table.insert(menu, "PLAYER & STAGE:")
 		table.insert(menu, {
 			"QUICK SELECT", function()
+				hit_boxes.initialize_buffers()
 				global.player_and_stg.opt_p[1] = memory.readbyte(0x107BA5)
 				global.player_and_stg.opt_p[2] = memory.readbyte(0x107BAC) + 1
 				global.player_and_stg.opt_p[3] = memory.readbyte(0x107BA7)
