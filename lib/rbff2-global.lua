@@ -20,7 +20,7 @@
 --OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 --SOFTWARE.
 function tohex(num)
-	local hexstr = '0123456789abcdef'
+	local hexstr = '0123456789ABCDEF'
 	local s = ''
 	while num > 0 do
 		local mod = math.fmod(num, 16)
@@ -39,9 +39,11 @@ end
 
 rb2key = {}
 local rb2key_pre = {}
-local kprops = {"d1", "c1", "b1", "a1", "rt1", "lt1", "dn1", "up1", "sl1", "st1",
+local kprops = {
+	"d1", "c1", "b1", "a1", "rt1", "lt1", "dn1", "up1", "sl1", "st1",
 	"d2", "c2", "b2", "a2", "rt2", "lt2", "dn2", "up2", "sl2", "st2",
-	"d", "c", "b", "a", "rt", "lt", "dn", "up", "sl", "st",}
+	"d", "c", "b", "a", "rt", "lt", "dn", "up", "sl", "st",
+}
 local kprops_len = #kprops
 for i = 1, kprops_len do
 	rb2key[kprops[i]] = -emu.framecount()
