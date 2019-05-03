@@ -307,10 +307,12 @@ replay.record = function()
 	elseif replay.state == 3 and slow.phase() == 0 then
 		local slow_buttons = slow.buttons() --スロー中のボタンフィルタ用
 		local kiox = cur_slot.rec_controll == 2 and kio1 or kio2
-		kiox = bit.bor(kiox, slow_buttons["P"..cur_slot.rec_controll.." Button A"] == false and 0x10 or 0x00)
-		kiox = bit.bor(kiox, slow_buttons["P"..cur_slot.rec_controll.." Button B"] == false and 0x10 or 0x00)
-		kiox = bit.bor(kiox, slow_buttons["P"..cur_slot.rec_controll.." Button C"] == false and 0x10 or 0x00)
-		kiox = bit.bor(kiox, slow_buttons["P"..cur_slot.rec_controll.." Button D"] == false and 0x10 or 0x00)
+		kiox = bit.bxor(kiox, 0xFF)
+		kiox = bit.bor(kiox, slow_buttons["P"..cur_slot.rec_controll.." Button A"] == true and 0x10 or 0x00)
+		kiox = bit.bor(kiox, slow_buttons["P"..cur_slot.rec_controll.." Button B"] == true and 0x20 or 0x00)
+		kiox = bit.bor(kiox, slow_buttons["P"..cur_slot.rec_controll.." Button C"] == true and 0x40 or 0x00)
+		kiox = bit.bor(kiox, slow_buttons["P"..cur_slot.rec_controll.." Button D"] == true and 0x80 or 0x00)
+		kiox = bit.bxor(kiox, 0xFF)
 
 		cur_slot.rec_fc = cur_slot.rec_fc + 1
 		cur_slot.rec_buff_max_fc = cur_slot.rec_fc
