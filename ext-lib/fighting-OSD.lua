@@ -561,7 +561,7 @@ function whatgame_OSD()
 			 	end
 				tbl["P" .. guard_ext[pside].opponent_num .. " Down"] = true
 		
-				print(tbl)
+				--print(tbl)
 				joypad.set(tbl)
 			end
 		end
