@@ -56,6 +56,10 @@ local globals = {
 	no_background   = false, --remove backgrounds for sprite ripping
 	bg_color        = 0x8F8F, --color of removed background (16-bit depth) ...broken in FBA?
 	mesh            = false,
+	mesh_targets    = {},
+	mesh_initdraws  = {},
+	mesh_outlines   = {},
+	mesh_blink      = false,
 }
 
 --------------------------------------------------------------------------------
@@ -204,9 +208,23 @@ for game in ipairs(profile) do
 	g.clones = g.clones or {}
 end
 
-for _,box in pairs(boxes) do
+for typ,box in pairs(boxes) do
 	box.fill    = bit.lshift(box.color, 8) + (globals.no_alpha and 0x00 or box.fill)
 	box.outline = bit.lshift(box.color, 8) + (globals.no_alpha and 0xFF or box.outline)
+
+	if typ == "vulnerability" then
+		globals.mesh_targets[typ] = true
+		globals.mesh_initdraws[typ] = false
+		globals.mesh_outlines[typ] = false
+	elseif typ == "push" then
+		globals.mesh_targets[typ] = false
+		globals.mesh_initdraws[typ] = true
+		globals.mesh_outlines[typ] = false
+	else
+		globals.mesh_targets[typ] = true
+		globals.mesh_initdraws[typ] = true
+		globals.mesh_outlines[typ] = true
+	end
 end
 boxes["undefined"] = {}
 
@@ -578,25 +596,26 @@ end
 --------------------------------------------------------------------------------
 -- draw the hitboxes
 
-local gui_box2 = function(x1, y1, x2, y2, color1, color2)
-	if not globals.mesh then
-		gui.box(x1, y1, x2, y2, color1, color2)
+local gui_box2 = function(x1, y1, x2, y2, color1, color2, typ)
+	if not globals.mesh or globals.mesh_targets[typ] == false then
+		if not globals.mesh_blink or (emu.framecount() % 2 == 1) then
+			gui.box(x1, y1, x2, y2, color1, color2)
+		end
 		return
 	end
-	if 0x00FF0000 ==  bit.band(color2, 0xFFFFFF00) then
-		gui.box(x1, y1, x2, y2, color1, color2)
-	elseif bit.band(color2, 0xFFFFFF00) == 0x7777FF00 then
-		gui_boxb(x1, y1, x2, y2, color1, color2, true)
+	local draw = globals.mesh_blink and (emu.framecount() % 2 == (initb and 1 or 0)) or globals.mesh_initdraws[typ]
+	if globals.mesh_outlines[typ] == true then
+		gui_boxc(x1, y1, x2, y2, color1, color2, draw)
 	else
-		gui_boxc(x1, y1, x2, y2, color1, color2, false)
+		gui_boxb(x1, y1, x2, y2, color1, color2, draw)
 	end
 end
 
-local gui_box = function(x1, y1, x2, y2, color1, color2)
+local gui_box = function(x1, y1, x2, y2, color1, color2, typ)
 	if slow.in_slow() then
-		table.insert(gui_box_buf, { x1, y1, x2, y2, color1, color2 })
+		table.insert(gui_box_buf, { x1, y1, x2, y2, color1, color2, typ })
 	end
-	gui_box2(x1, y1, x2, y2, color1, color2, false)
+	gui_box2(x1, y1, x2, y2, color1, color2, typ)
 end
 
 local draw_hitbox = function(hb, same_plane)
@@ -612,7 +631,7 @@ local draw_hitbox = function(hb, same_plane)
 		--gui.text(hb.hval, hb.vval, string.format("%02X", hb.id)) --debug
 	end
 
-	gui_box(hb.left, hb.top, hb.right, hb.bottom, boxes[hb.type].fill, boxes[hb.type].outline)
+	gui_box(hb.left, hb.top, hb.right, hb.bottom, boxes[hb.type].fill, boxes[hb.type].outline, hb.type)
 end
 
 

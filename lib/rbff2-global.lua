@@ -125,14 +125,43 @@ rb2key.capture_keys = function()
 	return kio1, kio2, kio3, rb2key, rb2key_pre
 end
 
-local blink = false
 
 gui_boxb = function(x1, y1, x2, y2, color1, color2, initb)
-	local draw = blink and (emu.framecount() % 2 == (initb and 1 or 0)) or initb
+	local draw = initb
+	local is_draw = function(x, y)
+		return draw
+	end
 	for x = x1, x2 do
 		for y = y1, y2 do
 			draw = not draw
-			if draw then
+			if is_draw(x, y) then
+				gui.drawpixel(x, y, color2)
+			end
+		end
+	end
+end
+
+gui_boxbb = function(x1, y1, x2, y2, color1, color2, initb)
+	local draw = initb
+	local drawx = {
+		[x1] = true,
+		[x2] = true,
+		[x1 + 1] = true,
+		[x2 - 1] = true,
+	}
+	local drawy = {
+		[y1] = true,
+		[y2] = true,
+		[y1 + 1] = true,
+		[y2 - 1] = true,
+	}
+	local is_draw = function(x, y)
+		return draw and (drawx[x] or drawy[y])
+	end
+	for x = x1, x2 do
+		for y = y1, y2 do
+			draw = not draw
+			if is_draw(x, y) then
 				gui.drawpixel(x, y, color2)
 			end
 		end
@@ -141,5 +170,5 @@ end
 
 gui_boxc = function(x1, y1, x2, y2, color1, color2, initb)
 	gui.box(x1, y1, x2, y2, color1, color2)
-	gui_boxb(x1, y1, x2, y2, color1, color2)
+	gui_boxb(x1, y1, x2, y2, color1, color2, initb)
 end
