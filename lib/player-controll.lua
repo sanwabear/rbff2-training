@@ -640,3 +640,9 @@ player_controll.hack_player_select = function()
 end
 
 player_controll.apply_vs_mode = fix_player_select.apply_vs_mode
+
+player_controll.init = function()
+	fix_player_select.on_start2(0x107BA5, memory.readbyte(0x107BA5))
+	fix_player_select.on_start2(0x107BA7, memory.readbyte(0x107BA7))
+	fix_player_select.on_start1(0x107BB5, memory.readbyte(0x107BB5))
+end
