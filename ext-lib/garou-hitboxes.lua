@@ -603,7 +603,7 @@ local gui_box2 = function(x1, y1, x2, y2, color1, color2, typ)
 		end
 		return
 	end
-	local draw = globals.mesh_blink and (emu.framecount() % 2 == (initb and 1 or 0)) or globals.mesh_initdraws[typ]
+	local draw = globals.mesh_blink and (emu.framecount() % 2 == (globals.mesh_initdraws[typ] and 1 or 0)) or globals.mesh_initdraws[typ]
 	if globals.mesh_outlines[typ] == true then
 		gui_boxc(x1, y1, x2, y2, color1, color2, draw)
 	else
@@ -769,9 +769,10 @@ end
 --	update_func()
 --end)
 
-config_draw_all = function(flg, mesh)
+config_draw_all = function(flg, mesh, blink)
 	globals.draw_all = flg
 	globals.mesh = mesh
+	globals.mesh_blink = blink
 end
 
 config_draw_bg = function(flg)

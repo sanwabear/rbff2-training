@@ -476,9 +476,11 @@ global.training = create_menu(
 		})
 		table.insert(menu, "HITBOXES:")
 		table.insert(menu, {
-			"BOX", function() hit_boxes.config_draw_all(true, false) end,
-			"MESH", function() hit_boxes.config_draw_all(true, true) end,
-			"HIDE", function() hit_boxes.config_draw_all(false, false) end,
+			"BOX", function() hit_boxes.config_draw_all(true, false, false) end,
+			"BOX+BLINK", function() hit_boxes.config_draw_all(true, false, true) end,
+			"MESH", function() hit_boxes.config_draw_all(true, true, false) end,
+			"MESH+BLINK", function() hit_boxes.config_draw_all(true, true, true) end,
+			"HIDE", function() hit_boxes.config_draw_all(false, false, false) end,
 		})
 		table.insert(menu, "ADV. FRAMES:")
 		table.insert(menu, {
@@ -815,7 +817,7 @@ emu.registerafter(function()
 		execute(global.active_menu)
 	end
 
-	save_memory.save())
+	save_memory.save()
 end)
 
 emu.registerexit(function()

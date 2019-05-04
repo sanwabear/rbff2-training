@@ -168,7 +168,7 @@ gui_boxbb = function(x1, y1, x2, y2, color1, color2, initb)
 		for y = y1, y2, stepy do
 			draw = not draw
 			if is_draw(x, y) then
-				gui.drawpixel_fast(x, y, color2)
+				gui.drawpixel(x, y, color2)
 			end
 		end
 	end
