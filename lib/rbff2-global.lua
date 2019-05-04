@@ -125,14 +125,15 @@ rb2key.capture_keys = function()
 	return kio1, kio2, kio3, rb2key, rb2key_pre
 end
 
-
 gui_boxb = function(x1, y1, x2, y2, color1, color2, initb)
 	local draw = initb
 	local is_draw = function(x, y)
 		return draw
 	end
-	for x = x1, x2 do
-		for y = y1, y2 do
+	local stepx = x1 < x2 and 1 or -1
+	local stepy = y1 < y2 and 1 or -1
+	for x = x1, x2, stepx do
+		for y = y1, y2, stepy do
 			draw = not draw
 			if is_draw(x, y) then
 				gui.drawpixel(x, y, color2)
@@ -158,11 +159,16 @@ gui_boxbb = function(x1, y1, x2, y2, color1, color2, initb)
 	local is_draw = function(x, y)
 		return draw and (drawx[x] or drawy[y])
 	end
-	for x = x1, x2 do
-		for y = y1, y2 do
+	gui.prepare()
+	local stepx = x1 < x2 and 1 or -1
+	local stepy = y1 < y2 and 1 or -1
+	
+	print(stepx, x1, x2)
+	for x = x1, x2, stepx do
+		for y = y1, y2, stepy do
 			draw = not draw
 			if is_draw(x, y) then
-				gui.drawpixel(x, y, color2)
+				gui.drawpixel_fast(x, y, color2)
 			end
 		end
 	end

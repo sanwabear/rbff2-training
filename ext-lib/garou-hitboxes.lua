@@ -55,7 +55,7 @@ local globals = {
 	throwbox_height = 0x50, --default for ground throws
 	no_background   = false, --remove backgrounds for sprite ripping
 	bg_color        = 0x8F8F, --color of removed background (16-bit depth) ...broken in FBA?
-	mesh            = false,
+	mesh            = true,
 	mesh_targets    = {},
 	mesh_initdraws  = {},
 	mesh_outlines   = {},
@@ -769,8 +769,9 @@ end
 --	update_func()
 --end)
 
-config_draw_all = function(flg)
+config_draw_all = function(flg, mesh)
 	globals.draw_all = flg
+	globals.mesh = mesh
 end
 
 config_draw_bg = function(flg)

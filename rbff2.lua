@@ -476,8 +476,9 @@ global.training = create_menu(
 		})
 		table.insert(menu, "HITBOXES:")
 		table.insert(menu, {
-			"SHOW", function() hit_boxes.config_draw_all(true) end,
-			"HIDE", function() hit_boxes.config_draw_all(false) end,
+			"BOX", function() hit_boxes.config_draw_all(true, false) end,
+			"MESH", function() hit_boxes.config_draw_all(true, true) end,
+			"HIDE", function() hit_boxes.config_draw_all(false, false) end,
 		})
 		table.insert(menu, "ADV. FRAMES:")
 		table.insert(menu, {
@@ -719,7 +720,7 @@ global.main = create_menu(
 				global.player_and_stg.opt_p[5] = global.next_stg_revkeys[ tohex(memory.readbyte(0x107BB1)).."-"..tohex(memory.readbyte(0x107BB7) )]
 				global.player_and_stg.opt_p[6] = math.max(memory.readbyte(0x10A8D5), 1)
 				global.next_active_menu(global.player_and_stg)
-			elseif opt == 1 then
+			elseif opt == 2 then
 				hit_boxes.initialize_buffers()
 				global.next_p1 = memory.readbyte(0x107BA5)
 				global.next_p1col = memory.readbyte(0x107BAC)
@@ -814,8 +815,7 @@ emu.registerafter(function()
 		execute(global.active_menu)
 	end
 
-	save_memory.save()
-
+	save_memory.save())
 end)
 
 emu.registerexit(function()
