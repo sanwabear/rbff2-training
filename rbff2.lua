@@ -845,6 +845,8 @@ emu.registerstart(function()
 		global.copy_config(menu.config, menu.opt_p)
 		global.apply_menu_options(menu)
 	end
+
+	player_controll.init()
 end)
 
 collectgarbage("count")
