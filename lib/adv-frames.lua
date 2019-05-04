@@ -31,16 +31,24 @@ local frames = {
 	p          = { 0x100460, 0x100560 }, -- 行動ID デバッグディップのPと同じ
 	hitstop    = { 0x10048D, 0x10058D }, -- ヒットストップ
 	combo      = { 0x10B4E0, 0x10B4E1 }, -- コンボ
-	combo_upd  = {0, 0, },
-	next_frame = {0, 0, },
-	act        = {0, 0, }, -- 行動ID デバッグディップのPと同じ
-	no_guard   = {0, 0, 0, }, -- ガード不能フレーム数 1p, 2p
-	last       = {0, 0, 0, 0, }, -- 1p, 2p 1p有利不利, 2p有利不利
+	state      = { 0x10058E, 0x10048E }, -- 状態
+	chr        = { 0x107BA5, 0x107BA7 }, -- キャラ
+	skip_upd   = { 0, 0, },
+	skip_count = { 0, 0, },
+	next_frame = { 0, 0, },
+	act        = { 0, 0, }, -- 行動ID デバッグディップのPと同じ
+	no_guard   = { 0, 0, 0, }, -- ガード不能フレーム数 1p, 2p
+	last       = { 0, 0, 0, 0, }, -- 1p, 2p 1p有利不利, 2p有利不利
+	first      = { 0, 0, }, -- 初回ヒットまでのラグ1p, 2p
+	first_flg  = { true, true, }, -- 初回ヒットまでのラグ1p, 2p
 }
 
 for i = 1, #frames.combo do
 	memory.registerwrite(frames.combo[i], function()
-		frames.combo_upd[i] = emu.framecount()
+		frames.skip_upd[i] = emu.framecount()
+	end)
+	memory.registerwrite(frames.state[i], function()
+		frames.skip_upd[i] = emu.framecount()
 	end)
 end
 
@@ -49,19 +57,38 @@ adv_frames = {
 	show_action = true,
 }
 
+local gui_text = function(left, x, y, text, color)
+	local s = tostring(text)
+	if left then
+		if color then
+			gui.text(x + 16 - #s * 4, y, s, color)
+		else
+			gui.text(x + 16 - #s * 4, y, s)
+		end
+	else
+		if color then
+			gui.text(x - #s * 4, y, s, color)
+		else
+			gui.text(x - #s * 4, y, s)
+		end
+	end
+end
+
 adv_frames.draw_frames = function()
 	if not adv_frames then
 		return
 	end
 
+	gui_text(true , 160-72, 203, frames.last[1])
+	gui_text(false, 160+72, 203, frames.last[2])
+	gui_text(true , 160-72, 210, frames.first[1])
+	gui_text(false, 160+72, 210, frames.first[2])
 	if adv_frames.show_action then
-		gui.text(160-67, 203, tohex(frames.act[1]))
-		gui.text(160+64, 203, tohex(frames.act[2]))
+		gui_text(true , 160-43, 203, tohex(frames.act[1]))
+		gui_text(false, 160+43, 203, tohex(frames.act[2]))
 	end
-	gui.text(160-67, 210, frames.last[1])
-	gui.text(160+64, 210, frames.last[2])
-	gui.text(160-67, 217, frames.last[3], 0 > frames.last[3] and c.red or c.cyan)
-	gui.text(160+64, 217, frames.last[4], 0 > frames.last[4] and c.red or c.cyan)
+	gui_text(true , 160-72, 217, frames.last[3], 0 > frames.last[3] and c.red or c.cyan)
+	gui_text(false, 160+72, 217, frames.last[4], 0 > frames.last[4] and c.red or c.cyan)
 end
 
 adv_frames.update_frames = function()
@@ -71,13 +98,22 @@ adv_frames.update_frames = function()
 
 	local skip = false
 	for i = 1, #frames.p do
-		if emu.framecount() == frames.combo_upd[i]
-			and 0 < memory.readbyte(frames.combo[i]) then
+		if emu.framecount() == frames.skip_upd[i]
+			and memory.readbyte(frames.state[i]) ~= 0 then
+
 			-- 本判定処理の1Fとあわせてヒットストップぶんの2F削減する
-			frames.no_guard[i] = frames.no_guard[i] -1
-			--print(emu.framecount(), memory.readbyte(frames.combo[i]), frames.next_frame[i])
-			skip = true
+			frames.skip_count[i] = frames.skip_count[i] + 2
+
+			-- 初回のヒット/ガードまでのフレーム数を記憶する
+			if frames.first_flg[i] == true and memory.readbyte(frames.state[i]) ~= 0 then
+				frames.first[i] = frames.last[i]
+				frames.first_flg[i] = false
+			end
 		end
+
+		-- ヒットストップ判定と削減
+		skip = skip or frames.skip_count[i] > 0
+		frames.skip_count[i] = math.max(0, frames.skip_count[i] - 1)
 	end
 
 	if not skip and memory.readbyte(0x10D4EA) == 0 and slow.phase() == 0 then
@@ -86,15 +122,17 @@ adv_frames.update_frames = function()
 			if memory.readbyte(frames.hitstop[i]) == 0x00 then
 				nostop = true
 				local act = memory.readword(frames.p[i])
+				local chr = memory.readbyte(frames.chr[i])
 				frames.act[i] = act
 				if act < 0x8 or act == 0x1D or act == 0x1E
 					or (0x20 <= act and act <= 0x23)
 					or (0x2C <= act and act <= 0x2F)
 					or (0x3C <= act and act <= 0x3F)
-					or 0x6C == act --jin
-					or (0x108 <= act and act <=  0x10A) --marry
+					or (0x6C == act and chr == 12) --jin
+					or ((0x108 <= act and act <=  0x10A) and chr == 9) --marry
 					or act == 0x40 then
 					frames.no_guard[i] = 0
+					frames.first_flg[i] = true
 				else
 					frames.no_guard[i] = frames.no_guard[i] + 1
 					frames.last[i] = frames.no_guard[i] + 1 --行動発生までの1Fを加算する
@@ -115,5 +153,5 @@ adv_frames.update_frames = function()
 end
 
 adv_frames.config_draw = function(flg)
-
+	adv_frames.enabled = flg
 end
