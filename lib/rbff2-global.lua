@@ -38,6 +38,7 @@ function new_env(scriptfile)
 end
 
 rb2key = {}
+local rb2key_now = {}
 local rb2key_pre = {}
 local kprops = {
 	"d1", "c1", "b1", "a1", "rt1", "lt1", "dn1", "up1", "sl1", "st1",
@@ -46,7 +47,7 @@ local kprops = {
 }
 local kprops_len = #kprops
 for i = 1, kprops_len do
-	rb2key[kprops[i]] = -emu.framecount()
+	rb2key_now[kprops[i]] = -emu.framecount()
 	rb2key_pre[kprops[i]] = -emu.framecount()
 end
 local posi_or_pl1 = function(v)
@@ -72,108 +73,70 @@ end
 -- return 0x300000 , 0x340000 , 0x380000,    rb2key, rb2key_pre
 rb2key.capture_keys = function()
 	if last_time == emu.framecount() then
-		return kio1, kio2, kio3, rb2key, rb2key_pre
+		return kio1, kio2, kio3, rb2key_now, rb2key_pre
 	end
 
-	local alleq = true
 	for i = 1, kprops_len do
 		local k = kprops[i]
-		if rb2key_pre[k] ~= rb2key[k] then
-			alleq = false
-		end
-		rb2key_pre[k] = rb2key[k]
+		rb2key_pre[k] = rb2key_now[k]
 	end
 	local kio = memory.readbyte(0x300000)
-	rb2key.d1  = bit.band(kio, 0x80) == 0x00 and posi_or_pl1(rb2key.d1 ) or nega_or_mi1(rb2key.d1 ) -- P1 Button D
-	rb2key.c1  = bit.band(kio, 0x40) == 0x00 and posi_or_pl1(rb2key.c1 ) or nega_or_mi1(rb2key.c1 ) -- P1 Button C
-	rb2key.b1  = bit.band(kio, 0x20) == 0x00 and posi_or_pl1(rb2key.b1 ) or nega_or_mi1(rb2key.b1 ) -- P1 Button B
-	rb2key.a1  = bit.band(kio, 0x10) == 0x00 and posi_or_pl1(rb2key.a1 ) or nega_or_mi1(rb2key.a1 ) -- P1 Button A
-	rb2key.rt1 = bit.band(kio, 0x08) == 0x00 and posi_or_pl1(rb2key.rt1) or nega_or_mi1(rb2key.rt1) -- P1 Right
-	rb2key.lt1 = bit.band(kio, 0x04) == 0x00 and posi_or_pl1(rb2key.lt1) or nega_or_mi1(rb2key.lt1) -- P1 Left
-	rb2key.dn1 = bit.band(kio, 0x02) == 0x00 and posi_or_pl1(rb2key.dn1) or nega_or_mi1(rb2key.dn1) -- P1 Down
-	rb2key.up1 = bit.band(kio, 0x01) == 0x00 and posi_or_pl1(rb2key.up1) or nega_or_mi1(rb2key.up1) -- P1 Up
+	rb2key_now.d1  = bit.band(kio, 0x80) == 0x00 and posi_or_pl1(rb2key_now.d1 ) or nega_or_mi1(rb2key_now.d1 ) -- P1 Button D
+	rb2key_now.c1  = bit.band(kio, 0x40) == 0x00 and posi_or_pl1(rb2key_now.c1 ) or nega_or_mi1(rb2key_now.c1 ) -- P1 Button C
+	rb2key_now.b1  = bit.band(kio, 0x20) == 0x00 and posi_or_pl1(rb2key_now.b1 ) or nega_or_mi1(rb2key_now.b1 ) -- P1 Button B
+	rb2key_now.a1  = bit.band(kio, 0x10) == 0x00 and posi_or_pl1(rb2key_now.a1 ) or nega_or_mi1(rb2key_now.a1 ) -- P1 Button A
+	rb2key_now.rt1 = bit.band(kio, 0x08) == 0x00 and posi_or_pl1(rb2key_now.rt1) or nega_or_mi1(rb2key_now.rt1) -- P1 Right
+	rb2key_now.lt1 = bit.band(kio, 0x04) == 0x00 and posi_or_pl1(rb2key_now.lt1) or nega_or_mi1(rb2key_now.lt1) -- P1 Left
+	rb2key_now.dn1 = bit.band(kio, 0x02) == 0x00 and posi_or_pl1(rb2key_now.dn1) or nega_or_mi1(rb2key_now.dn1) -- P1 Down
+	rb2key_now.up1 = bit.band(kio, 0x01) == 0x00 and posi_or_pl1(rb2key_now.up1) or nega_or_mi1(rb2key_now.up1) -- P1 Up
 	kio1 = kio
 	kio = memory.readbyte(0x340000)
-	rb2key.d2  = bit.band(kio, 0x80) == 0x00 and posi_or_pl1(rb2key.d2 ) or nega_or_mi1(rb2key.d2 ) -- P2 Button D
-	rb2key.c2  = bit.band(kio, 0x40) == 0x00 and posi_or_pl1(rb2key.c2 ) or nega_or_mi1(rb2key.c2 ) -- P2 Button C
-	rb2key.b2  = bit.band(kio, 0x20) == 0x00 and posi_or_pl1(rb2key.b2 ) or nega_or_mi1(rb2key.b2 ) -- P2 Button B
-	rb2key.a2  = bit.band(kio, 0x10) == 0x00 and posi_or_pl1(rb2key.a2 ) or nega_or_mi1(rb2key.a2 ) -- P2 Button A
-	rb2key.rt2 = bit.band(kio, 0x08) == 0x00 and posi_or_pl1(rb2key.rt2) or nega_or_mi1(rb2key.rt2) -- P2 Right
-	rb2key.lt2 = bit.band(kio, 0x04) == 0x00 and posi_or_pl1(rb2key.lt2) or nega_or_mi1(rb2key.lt2) -- P2 Left
-	rb2key.dn2 = bit.band(kio, 0x02) == 0x00 and posi_or_pl1(rb2key.dn2) or nega_or_mi1(rb2key.dn2) -- P2 Down
-	rb2key.up2 = bit.band(kio, 0x01) == 0x00 and posi_or_pl1(rb2key.up2) or nega_or_mi1(rb2key.up2) -- P2 Up
+	rb2key_now.d2  = bit.band(kio, 0x80) == 0x00 and posi_or_pl1(rb2key_now.d2 ) or nega_or_mi1(rb2key_now.d2 ) -- P2 Button D
+	rb2key_now.c2  = bit.band(kio, 0x40) == 0x00 and posi_or_pl1(rb2key_now.c2 ) or nega_or_mi1(rb2key_now.c2 ) -- P2 Button C
+	rb2key_now.b2  = bit.band(kio, 0x20) == 0x00 and posi_or_pl1(rb2key_now.b2 ) or nega_or_mi1(rb2key_now.b2 ) -- P2 Button B
+	rb2key_now.a2  = bit.band(kio, 0x10) == 0x00 and posi_or_pl1(rb2key_now.a2 ) or nega_or_mi1(rb2key_now.a2 ) -- P2 Button A
+	rb2key_now.rt2 = bit.band(kio, 0x08) == 0x00 and posi_or_pl1(rb2key_now.rt2) or nega_or_mi1(rb2key_now.rt2) -- P2 Right
+	rb2key_now.lt2 = bit.band(kio, 0x04) == 0x00 and posi_or_pl1(rb2key_now.lt2) or nega_or_mi1(rb2key_now.lt2) -- P2 Left
+	rb2key_now.dn2 = bit.band(kio, 0x02) == 0x00 and posi_or_pl1(rb2key_now.dn2) or nega_or_mi1(rb2key_now.dn2) -- P2 Down
+	rb2key_now.up2 = bit.band(kio, 0x01) == 0x00 and posi_or_pl1(rb2key_now.up2) or nega_or_mi1(rb2key_now.up2) -- P2 Up
 	kio2 = kio
 	kio = memory.readbyte(0x380000)
-	rb2key.sl2 = bit.band(kio, 0x08) == 0x00 and posi_or_pl1(rb2key.sl2) or nega_or_mi1(rb2key.sl2) -- Select P2
-	rb2key.st2 = bit.band(kio, 0x04) == 0x00 and posi_or_pl1(rb2key.st2) or nega_or_mi1(rb2key.st2) -- Start P2
-	rb2key.sl1 = bit.band(kio, 0x02) == 0x00 and posi_or_pl1(rb2key.sl1) or nega_or_mi1(rb2key.sl1) -- Select P1
-	rb2key.st1 = bit.band(kio, 0x01) == 0x00 and posi_or_pl1(rb2key.st1) or nega_or_mi1(rb2key.st1) -- Start P1
+	rb2key_now.sl2 = bit.band(kio, 0x08) == 0x00 and posi_or_pl1(rb2key_now.sl2) or nega_or_mi1(rb2key_now.sl2) -- Select P2
+	rb2key_now.st2 = bit.band(kio, 0x04) == 0x00 and posi_or_pl1(rb2key_now.st2) or nega_or_mi1(rb2key_now.st2) -- Start P2
+	rb2key_now.sl1 = bit.band(kio, 0x02) == 0x00 and posi_or_pl1(rb2key_now.sl1) or nega_or_mi1(rb2key_now.sl1) -- Select P1
+	rb2key_now.st1 = bit.band(kio, 0x01) == 0x00 and posi_or_pl1(rb2key_now.st1) or nega_or_mi1(rb2key_now.st1) -- Start P1
 
-	rb2key.d  = math.max(rb2key.d1 , rb2key.d2 )
-	rb2key.c  = math.max(rb2key.c1 , rb2key.c2 )
-	rb2key.b  = math.max(rb2key.b1 , rb2key.b2 )
-	rb2key.a  = math.max(rb2key.a1 , rb2key.a2 )
-	rb2key.rt = math.max(rb2key.rt1, rb2key.rt2)
-	rb2key.lt = math.max(rb2key.lt1, rb2key.lt2)
-	rb2key.dn = math.max(rb2key.dn1, rb2key.dn2)
-	rb2key.up = math.max(rb2key.up1, rb2key.up2)
-	rb2key.sl = math.max(rb2key.sl1, rb2key.sl2)
-	rb2key.st = math.max(rb2key.st1, rb2key.st2)
+	rb2key_now.d  = math.max(rb2key_now.d1 , rb2key_now.d2 )
+	rb2key_now.c  = math.max(rb2key_now.c1 , rb2key_now.c2 )
+	rb2key_now.b  = math.max(rb2key_now.b1 , rb2key_now.b2 )
+	rb2key_now.a  = math.max(rb2key_now.a1 , rb2key_now.a2 )
+	rb2key_now.rt = math.max(rb2key_now.rt1, rb2key_now.rt2)
+	rb2key_now.lt = math.max(rb2key_now.lt1, rb2key_now.lt2)
+	rb2key_now.dn = math.max(rb2key_now.dn1, rb2key_now.dn2)
+	rb2key_now.up = math.max(rb2key_now.up1, rb2key_now.up2)
+	rb2key_now.sl = math.max(rb2key_now.sl1, rb2key_now.sl2)
+	rb2key_now.st = math.max(rb2key_now.st1, rb2key_now.st2)
 	kio3 = kio
 	last_time = emu.framecount()
 
-	return kio1, kio2, kio3, rb2key, rb2key_pre
+	return kio1, kio2, kio3, rb2key_now, rb2key_pre
 end
 
+-- メッシュシュだけ
 gui_boxb = function(x1, y1, x2, y2, color1, color2, initb)
-	local draw = initb
-	local is_draw = function(x, y)
-		return draw
-	end
 	local stepx = x1 < x2 and 1 or -1
 	local stepy = y1 < y2 and 1 or -1
 	for x = x1, x2, stepx do
 		for y = y1, y2, stepy do
-			draw = not draw
-			if is_draw(x, y) then
+			initb = not initb
+			if initb then
 				gui.drawpixel(x, y, color2)
 			end
 		end
 	end
 end
 
-gui_boxbb = function(x1, y1, x2, y2, color1, color2, initb)
-	local draw = initb
-	local drawx = {
-		[x1] = true,
-		[x2] = true,
-		[x1 + 1] = true,
-		[x2 - 1] = true,
-	}
-	local drawy = {
-		[y1] = true,
-		[y2] = true,
-		[y1 + 1] = true,
-		[y2 - 1] = true,
-	}
-	local is_draw = function(x, y)
-		return draw and (drawx[x] or drawy[y])
-	end
-	gui.prepare()
-	local stepx = x1 < x2 and 1 or -1
-	local stepy = y1 < y2 and 1 or -1
-	
-	print(stepx, x1, x2)
-	for x = x1, x2, stepx do
-		for y = y1, y2, stepy do
-			draw = not draw
-			if is_draw(x, y) then
-				gui.drawpixel(x, y, color2)
-			end
-		end
-	end
-end
-
+-- 外枠つきのメッシュ
 gui_boxc = function(x1, y1, x2, y2, color1, color2, initb)
 	gui.box(x1, y1, x2, y2, color1, color2)
 	gui_boxb(x1, y1, x2, y2, color1, color2, initb)
