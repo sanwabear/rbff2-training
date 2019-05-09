@@ -59,16 +59,6 @@ end
 local last_time = 0
 local kio1, kio2, kio3 = 0xFF, 0xFF, 0xFF
 
-bios_test = function(address)
-	local ram_value = memory.readbyte(address)
-	for _, test_value in ipairs({0x5555, 0xAAAA, bit.band(0xFFFF, address)}) do
-		if ram_value == test_value then
-			return true
-		end
-	end
-end
-
-
 --        REG_P1CNT, REG_P2CNT, REG_STATUS_B
 -- return 0x300000 , 0x340000 , 0x380000,    rb2key, rb2key_pre
 rb2key.capture_keys = function()

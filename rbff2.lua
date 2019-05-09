@@ -50,6 +50,68 @@ local c = { --colors
 	none   = 0x00000000,
 }
 
+local mem_0x100400 --Base p1
+local mem_0x100500 --Base p2
+local mem_0x100701 --場面判定用
+local mem_0x102557 --場面判定用
+local mem_0x107C22 --場面判定用
+local mem_0x10FDAF --場面判定用
+local mem_0x10FDB6 --P1 P2 開始判定用
+local mem_0x10FD82 -- console 0x00, mvs 0x01
+local mem_0x1041D2 -- unpause 0x00, pause 0xFF
+local mem_biostest
+local old_active
+local match_active
+local player_select_active
+
+local bios_test = function(address)
+	local ram_value = memory.readbyte(address)
+	for _, test_value in ipairs({0x5555, 0xAAAA, bit.band(0xFFFF, address)}) do
+		if ram_value == test_value then
+			return true
+		end
+	end
+end
+
+local readmems = function()
+	mem_0x100400 = memory.readbyte(0x100400)
+	mem_0x100500 = memory.readbyte(0x100500)
+	mem_0x100701 = memory.readword(0x100701)
+	mem_0x102557 = memory.readword(0x102557)
+	mem_0x107C22 = memory.readword(0x107C22)
+	mem_0x10FDAF = memory.readbyte(0x10FDAF)
+	mem_0x10FDB6 = memory.readword(0x10FDB6)
+	mem_0x10FD82 = memory.readbyte(0x10FD82)
+	mem_0x1041D2 = memory.readbyte(0x1041D2)
+	mem_biostest = bios_test(0x100400) or bios_test(0x100500)
+
+	old_active = match_active
+
+	if not mem_biostest
+		and mem_0x100701 >= 0x200
+		--and (mem_0x107C22 == 0x3800 or mem_0x107C22 == 0x107C22 or mem_0x107C22 == 0x4400)
+		and mem_0x107C22 == 0x4400
+		and mem_0x10FDAF == 2
+		and mem_0x10FDB6 ~= 0 then
+		match_active = true
+	else
+		match_active = false
+	end
+
+	if not mem_biostest
+		and mem_0x100701 < 0x200 and mem_0x100701 >= 0x100
+		and (mem_0x107C22 == 0x0000 or mem_0x107C22 == 0x5500)
+		and mem_0x10FDAF == 2
+		and mem_0x10FDB6 ~= 0
+		and mem_0x102557 == 0x60 then
+		player_select_active = true
+	else
+		player_select_active = false
+	end
+
+end
+readmems()
+
 local global = {
 	mode_switching = true,
 	active_menu = nil,
@@ -64,24 +126,11 @@ local global = {
 	load = 1,
 	save = 1,
 	autosave = true,
-	match_active = false,
-	player_select_active = false,
-	is_bios_test = function()
-		return bios_test(0x100400) or bios_test(0x100500)
-	end,
 	is_match_active = function()
-		local s = memory.readword(0x107C22)
-		return not bios_test(0x100400) and not bios_test(0x100500) and
-			memory.readword(0x100701) >= 0x200 and
-			(s == 0x3800 or s == 0x107C22 or s == 0x4400) and
-			memory.readbyte(0x10FDAF) == 2
+		return match_active
 	end,
 	is_player_select_active = function()
-		local s = memory.readword(0x107C22)
-		return not bios_test(0x100400) and not bios_test(0x100500) and
-			memory.readword(0x100701) < 0x200 and memory.readword(0x100701) >= 0x100 and
-			(s == 0x0000 or s == 0x5500) and
-			memory.readbyte(0x10FDAF) == 2
+		return player_select_active
 	end,
 	goto_player_select = nil,
 	restart_fight = nil,
@@ -102,14 +151,13 @@ local global = {
 	copy_config = nil,
 	apply_menu_options = nil,
 
-	pause = function()
+	dip_pause = function()
 		-- DIP1 bit7 STOP MODE
 		joypad.set({["Dip 1"] = bit.bor(joypad.get()["Dip 1"] or 0x00, 0x80) })
 	end,
-	unpause = no_op,
 }
 global.next_active_menu = function(menu)
-	global.mode_switching = global.is_match_active() or not global.is_player_select_active()
+	global.mode_switching = match_active or not player_select_active
 	global.active_menu = menu
 end
 global.next_active_menu_with_save = function(menu)
@@ -218,19 +266,10 @@ local create_menu = function(title, build_callback, on_apply, on_cancel, default
 	return menu
 end
 
-local console_guard = function(menu)
-	if memory.readbyte(0x10FD82) == 0x00
-		and memory.readbyte(0x1041D2) == 0x00
-		and menu ~= global.fighting then
-		return true
-	end
-	return false
-end
-
 local draw_screen = function(menu)
 	gui.clearuncommitted()
 
-	if not global.match_active then
+	if not match_active then
 		return
 	end
 
@@ -245,7 +284,6 @@ local draw_screen = function(menu)
 	end
 
 	local y = menu.box_offset
-	--gui.box(menu.box_x1, menu.box_y1, menu.box_x2, menu.box_y2, c.gray2, c.gray3)
 	gui_boxb(menu.box_x1, menu.box_y1, menu.box_x2, menu.box_y2, c.gray2, c.gray3)
 	gui.text(menu.title_x, menu.title_y, menu.title, c.white)
 	y = y + 8
@@ -263,48 +301,42 @@ local draw_screen = function(menu)
 	end
 end
 
-local in_pause = function()
-	return memory.readbyte(0x104191) == 0xFF
-end
-
 local wait_for_switching = function(menu)
 	-- MEMO: メニュー表示の制御をきれいにしたい
-	if global.is_match_active() then
-		if (menu == global.fighting and in_pause())
-			or (menu ~= global.fighting and not in_pause()) then
-			-- 対戦画面へ遷移時はポーズ解除まで待機
-			-- メニューへ遷移時はポーズまで待機
-			joypad.set({["P1 Select"] = emu.framecount() % 4 == 0})
-			return
-		else
-			global.mode_switching = false
+	if match_active then
+		-- Console only
+		if mem_0x10FD82 == 0x00 then
+			if (menu == global.fighting and mem_0x1041D2 ~= 0x00)
+				or (menu ~= global.fighting and mem_0x1041D2 == 0x00) then
+				-- 対戦画面へ遷移時はポーズ解除まで待機
+				-- メニューへ遷移時はポーズまで待機
+				joypad.set({["P1 Select"] = emu.framecount() % 4 == 0})
+				return
+			end
 		end
+
+		global.mode_switching = false
 	else
 		global.next_active_menu(global.fighting)
 	end
 end
 
 local execute = function(menu)
-	local old_active = global.match_active
-	local kio1, kio2, kio3, key, pre_key = rb2key.capture_keys()
+	local _, _, _, key, _ = rb2key.capture_keys()
 	local ec = emu.framecount()
 	local state_past = ec - global.input_accept_frame
 
-	global.match_active = global.is_match_active()
-	global.player_select_active = global.is_player_select_active()
-
-	if global.player_select_active then
+	if player_select_active then
 		player_controll.hack_player_select()
 		return
-	elseif not global.match_active then
-	elseif global.match_active ~= old_active then
+	elseif not match_active then
+	elseif match_active ~= old_active then
 		global.next_active_menu(global.fighting)
 		global.input_accept_frame = ec
 	end
 
 	if menu == global.fighting then
-		global.unpause()
-		if 15 < state_past and 1 < key.sl and state_past >= key.sl then
+		if 15 < state_past and 0 < key.sl and state_past >= key.sl then
 			global.input_accept_frame = ec
 			menu.on_apply(menu)
 			return
@@ -320,36 +352,44 @@ local execute = function(menu)
 			adv_frames.update_frames()
 		end
 	else
-		global.pause()
+		global.dip_pause()
 		if 15 < state_past then
-			local x, y = 0, 0
-			if 0 < key.up then
-				y = -1
-			elseif 0 < key.dn then
-				y = 1
-			elseif 0 < key.rt then
-				x = 1
-			elseif 0 < key.lt then
-				x = -1
-			elseif 0 < key.a and state_past >= key.a then
+			-- ボタン判定
+			if 0 < key.a and state_past >= key.a then
 				-- save and apply
 				global.input_accept_frame = ec
 				global.copy_config(menu.opt_p, menu.config)
 				global.apply_menu_options(menu)
 				menu.on_apply(menu)
 				return
-			elseif (1 < key.b and state_past >= key.b)
-				or (1 < key.sl and state_past >= key.sl) then
+			elseif (0 < key.b and state_past >= key.b)
+				or (0 < key.sl and state_past >= key.sl) then
 				-- cancel
 				global.input_accept_frame = ec
 				global.copy_config(menu.config, menu.opt_p)
 				menu.on_cancel(menu)
 				return
 			end
+
+			-- 上下カーソル移動
+			local y = 0
+			if 0 < key.up then
+				y = -1
+			elseif 0 < key.dn then
+				y = 1
+			end
 			if y ~= 0 then
 				global.input_accept_frame = ec
 				menu.p = (menu.p - 1 + y) % (menu.body_len/2) + 1
 				return
+			end
+
+			-- カーソル部分のオプション選択（左右）
+			local x = 0
+			if 0 < key.rt then
+				x = 1
+			elseif 0 < key.lt then
+				x = -1
 			end
 			if x ~= 0 then
 				global.input_accept_frame = ec
@@ -368,12 +408,12 @@ end
 
 global.fighting = create_menu(
 	"- IN FIGHT -",
-	function(menu) end,
+	no_op,
 	function(menu)
 		global.next_active_menu(global.main)
 	end,
-	function(menu) end,
-	function(menu) end)
+	no_op,
+	no_op)
 
 global.player_and_stg = create_menu(
 	"- PLAYER & STAGE -",
@@ -797,33 +837,15 @@ global.do_autosave = function()
 	end
 end
 
-gui.register(function()
-	if global.mode_switching then
-		gui.clearuncommitted()
-	else
-		draw_screen(global.active_menu)
-	end
-end)
-
-emu.registerbefore(function()
-	end)
-
-save_memory.enabled = false
-
-emu.registerafter(function()
-	if global.mode_switching then
-		wait_for_switching(global.active_menu)
-	else
-		execute(global.active_menu)
-	end
-
-	save_memory.save()
-end)
-
 emu.registerexit(function()
 	slow.term()
 	debugdip.release_debugdip()
 	life_recover.term_life_recover()
+	match_active = false
+	player_select_active = false
+
+	joypad.set({["Dip 1"] = 0x00 })
+	memory.writebyte(0x104191, 0x00)
 end)
 
 savestate.registerload(function()
@@ -831,10 +853,14 @@ savestate.registerload(function()
 end)
 
 emu.registerstart(function()
+	readmems()
 	debugdip.release_debugdip()
 	osd.whatgame_OSD()
 	hit_boxes.whatgame()
 	fireflower_patch.apply_patch_file([[.\rom-patch\]]..emu.romname()..[[\char1-p1.pat]], 0x000000, false)
+	joypad.set({["Dip 1"] = 0x00 })
+	memory.writebyte(0x104191, 0x00)
+	player_controll.init()
 
 	-- auto load only the main menu
 	global.copy_config(table.load("save\\rbff2-main.tbl"), global.main.config)
@@ -847,8 +873,31 @@ emu.registerstart(function()
 		global.copy_config(menu.config, menu.opt_p)
 		global.apply_menu_options(menu)
 	end
-
-	player_controll.init()
 end)
 
 collectgarbage("count")
+
+gui.register(function()
+	if global.mode_switching then
+		gui.clearuncommitted()
+	else
+		draw_screen(global.active_menu)
+	end
+end)
+
+emu.registerbefore(function()
+	end)
+
+emu.registerafter(function()
+	readmems()
+
+	if global.mode_switching then
+		wait_for_switching(global.active_menu)
+	else
+		execute(global.active_menu)
+	end
+
+	save_memory.save()
+end)
+
+save_memory.enabled = false
