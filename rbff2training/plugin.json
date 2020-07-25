@@ -1,0 +1,10 @@
+{
+  "plugin": {
+	"name": "rbff2training",
+	"description": "RBFF2 Training plugin",
+	"version": "0.0.1",
+	"author": "Sanwabear",
+	"type": "plugin",
+	"start": "true"
+  }
+}
