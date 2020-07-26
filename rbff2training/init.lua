@@ -401,7 +401,7 @@ function rbff2.startplugin()
 			{ name = "サイドワインダー", type = move_type.low_attack, ids = { 0x90, 0x91, 0x92, 0x93, }, },
 			{ name = "モンキーダンス", type = move_type.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
 			{ name = "ワイルドウルフ", type = move_type.overhead, ids = { 0xA4, 0xA5, 0xA6, }, },
-			{ name = "バイソンホーン", type = move_type.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
+			{ name = "バイソンホーン", type = move_type.low_attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
 			{ name = "フロッグハンティング", type = move_type.attack, ids = { 0xB8, 0xB9, 0xBD, 0xBE, 0xBA, 0xBB, 0xBC, }, },
 			{ name = "デンジャラスウルフ", type = move_type.overhead, ids = { 0xFF, 0x100, 0x101, 0x102, 0x103, 0x104, }, },
 			{ name = "ダンシングバイソン", type = move_type.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, }, },
