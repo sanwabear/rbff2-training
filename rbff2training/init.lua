@@ -1476,7 +1476,6 @@ function rbff2.startplugin()
 			return nil
 		elseif type_check[box.type](p.hit, box) then
 			if is_fireball then
-print("fireball")
 				box.visible = true
 				return box
 			end
