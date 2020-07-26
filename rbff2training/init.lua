@@ -398,7 +398,7 @@ function rbff2.startplugin()
 			{ name = "エレファントタスク", type = move_type.attack, ids = { 0x6B, }, },
 			{ name = "H・ヘッジホック", type = move_type.attack, ids = { 0x6C, }, },
 			{ name = "ローリングタートル", type = move_type.attack, ids = { 0x86, 0x88, 0x89, }, },
-			{ name = "サイドワインダー", type = move_type.low_attack, ids = { 0x90, 0x91, 0x93, }, },
+			{ name = "サイドワインダー", type = move_type.low_attack, ids = { 0x90, 0x91, 0x92, 0x93, }, },
 			{ name = "モンキーダンス", type = move_type.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
 			{ name = "ワイルドウルフ", type = move_type.overhead, ids = { 0xA4, 0xA5, 0xA6, }, },
 			{ name = "バイソンホーン", type = move_type.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
@@ -624,6 +624,7 @@ function rbff2.startplugin()
 			{ disp_name = "CA 下C", name = "CA 下C(2段目)", type = move_type.attack, ids = { 0x24C, }, },
 			{ disp_name = "CA 下C", name = "CA 下C(2段目)下Cルート", type = move_type.low_attack, ids = { 0x245, }, },
 			{ disp_name = "旧ブレイクストーム", name = "CA ブレイクストーム", type = move_type.attack, ids = { 0x247, 0x248, 0x249, 0x24A, }, },
+			{ name = "立B", type = move_type.overhead, ids = { 0x45, 0x72, 0x73, 0x74, }, },
 		},
 		-- キム・カッファン
 		{
@@ -910,7 +911,6 @@ function rbff2.startplugin()
 			{ name = "小ジャンプC", type = move_type.overhead, ids = { 0x55, }, },
 			{ name = "挑発", type = move_type.provoke, ids = { 0x196, }, },
 			{ name = "投げ", type = move_type.any, ids = { 0x6D, 0x6E, }, },
-			{ name = "空中投げ", type = move_type.any, ids = { 0x72, 0x73, 0x74, }, },
 			{ name = "ダウン", type = move_type.any, ids = { 0x192, }, },
 			{ disp_name = "おきあがり", name = "ダウンおきあがり", type = move_type.any, ids = { 0x193, 0x13B, }, },
 			{ name = "気絶", type = move_type.any, ids = { 0x194, 0x195, }, },
@@ -2975,8 +2975,10 @@ function rbff2.startplugin()
 			local col, line = 0xAAF0E68C, 0xDDF0E68C
 			if p.skip_frame or p.hit_skip ~= 0 then
 				col, line = 0xAA888888, 0xDD888888
-			elseif p.attacking or p.throwing then
+			elseif p.attacking then
 				col, line = 0xAAFF1493, 0xDDFF1493
+			elseif p.throwing then
+				col, line = 0xAAD2691E, 0xDDD2691E
 			elseif p.act_normal then
 				col, line = 0x44FFFFFF, 0xDDFFFFFF
 			end
@@ -3013,22 +3015,22 @@ function rbff2.startplugin()
 				if vulnerability_types[box.type] then
 					muteki = 3
 					if box.top < box.bottom then
-						vul_hi = math.min(vul_hi, box.top)
-						vul_lo = math.max(vul_lo, box.bottom)
+						vul_hi = math.min(vul_hi, box.top-screen_top)
+						vul_lo = math.max(vul_lo, box.bottom-screen_top)
 					else
-						vul_hi = math.min(vul_hi, box.bottom)
-						vul_lo = math.max(vul_lo, box.top)
+						vul_hi = math.min(vul_hi, box.bottom-screen_top)
+						vul_lo = math.max(vul_lo, box.top-screen_top)
 					end
 				end
 			end
 			if muteki == 0 then
 				-- 全身無敵
 				col, line = 0xAAB0E0E6, 0xDDAFEEEE
-			elseif 168 <= vul_hi and p.pos_y <= 0 then
+			elseif 152 <= vul_hi and p.pos_y <= 0 then -- 152 ローレンス避け 156 兄龍転身 168 その他避け
 				-- 上半身無敵（地上）
 				muteki = 1
 				col, line = 0xAA32CD32, 0xDDAFEEEE
-			elseif vul_lo <= 172 and p.pos_y <= 0 then -- 160 164 168 172
+			elseif vul_lo <= 172 and p.pos_y <= 0 then -- 160 164 168 172 ダブルローリング サイドワインダー
 				-- 足元無敵（地上）
 				muteki = 2
 				col, line = 0xAA9400D3, 0xDDAFEEEE
@@ -3036,7 +3038,7 @@ function rbff2.startplugin()
 				muteki = 3
 				col, line = 0x00000000, 0x00000000
 			end
-			-- print(string.format("hi %s, lo %s", vul_hi, vul_lo))
+			--print(string.format("top %s, hi %s, lo %s", screen_top, vul_hi, vul_lo))
 
 			frame = p.muteki.act_frames[#p.muteki.act_frames]
 			if frame == nil or chg_act_name or frame.col ~= col or p.state ~= p.old_state then
