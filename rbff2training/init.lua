@@ -678,7 +678,7 @@ function rbff2.startplugin()
 			{ disp_name = "気雷砲", name = "気雷砲（対空）", type = move_type.attack, ids = { 0x90, 0x91, 0x92, }, },
 			{ name = "破岩撃", type = move_type.low_attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, }, },
 			{ name = "超太鼓腹打ち/満腹対空", type = move_type.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0xA0, 0x9F, 0x9C, }, },
-			{ name = "軟体オヤジ", type = move_type.attack, ids = { 0xB8, 0xB9, 0xBA,1 0xBB, }, },
+			{ name = "軟体オヤジ", type = move_type.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, }, },
 			{ name = "クッサメ砲", type = move_type.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, }, },
 			{ name = "爆雷砲", type = move_type.attack, ids = { 0xFE, 0xFF, 0x100, }, },
 			{ name = "ホエホエ弾", type = move_type.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x114, 0x115, 0x116, 0x10E, 0x110, 0x10F, }, },
@@ -2627,6 +2627,10 @@ function rbff2.startplugin()
 		if not match_active then
 			return
 		end
+		-- ポーズ中は状態を更新しない
+		if mem_0x10E043 ~= 0 then
+			return
+		end
 
 		local next_joy = new_next_joy()
 
@@ -4302,8 +4306,7 @@ function rbff2.startplugin()
 			and active_mem_0x100701[mem_0x100701] ~= nil
 			and mem_0x107C22 == 0x4400
 			and mem_0x10FDAF == 2
-			and (mem_0x10FDB6 == 0x0100 or mem_0x10FDB6 == 0x0101)
-			and mem_0x10E043 == 0 then
+			and (mem_0x10FDB6 == 0x0100 or mem_0x10FDB6 == 0x0101) then
 			match_active = true
 		else
 			match_active = false
