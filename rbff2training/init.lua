@@ -676,7 +676,7 @@ function rbff2.startplugin()
 			{ name = "落撃双拳", type = move_type.overhead, ids = { 0x69, }, },
 			{ disp_name = "気雷砲", name = "気雷砲（前方）", type = move_type.attack, ids = { 0x86, 0x87, 0x88, }, },
 			{ disp_name = "気雷砲", name = "気雷砲（対空）", type = move_type.attack, ids = { 0x90, 0x91, 0x92, }, },
-			{ name = "破岩撃", type = move_type.low_attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, }, },
+			{ name = "破岩撃", type = move_type.low_attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, }, },
 			{ name = "超太鼓腹打ち/満腹対空", type = move_type.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0xA0, 0x9F, 0x9C, }, },
 			{ name = "軟体オヤジ", type = move_type.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, }, },
 			{ name = "クッサメ砲", type = move_type.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, }, },
