@@ -1428,7 +1428,7 @@ function rbff2.startplugin()
 	end
 
 	-- 当たり判定表示
-	local new_hitbox = function(p, id, top, bottom, left, right, attack_only)
+	local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fireball)
 		local box = {id = id}
 		local a = "attack"
 		box.type = box.id + 1 > #box_types and a or box_types[box.id + 1]
@@ -1475,6 +1475,11 @@ function rbff2.startplugin()
 			box.visible = false
 			return nil
 		elseif type_check[box.type](p.hit, box) then
+			if is_fireball then
+print("fireball")
+				box.visible = true
+				return box
+			end
 			-- フレーム表示や自動ガードで使うため無効状態の判定を返す
 			box.visible = false
 			return nil
@@ -1535,7 +1540,7 @@ function rbff2.startplugin()
 			p.hit.vulnerable = p.hit.vulnerable22
 		end
 		for _, box in ipairs(p.buffer) do
-			table.insert(p.hitboxes, new_hitbox(p, box.id, box.top, box.bottom, box.left, box.right, box.attack_only))
+			table.insert(p.hitboxes, new_hitbox(p, box.id, box.top, box.bottom, box.left, box.right, box.attack_only, box.is_fireball))
 		end
 
 		-- 空投げ, 必殺投げ
@@ -1773,6 +1778,7 @@ function rbff2.startplugin()
 	for i, p in ipairs(players) do
 		for base, _ in pairs(p.fireball_bases) do
 			p.fireball[base] = {
+				is_fireball    = true,
 				act            = 0,
 				pos            = 0, -- X位置
 				pos_y          = 0, -- Y位置
@@ -2867,6 +2873,7 @@ function rbff2.startplugin()
 				local k = box.on .. " " .. box.id.. " " .. box.top.. " " .. box.bottom.. " " .. box.left.. " " .. box.base.. " " .. (box.attack_only and "0" or "1")
 				if not uniq_hitboxes[k] then
 					uniq_hitboxes[k] = true
+					box.is_fireball = temp_hits[box.base].is_fireball == true
 					table.insert(temp_hits[box.base].buffer, box)
 				end
 			end
