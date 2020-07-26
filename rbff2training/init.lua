@@ -3007,18 +3007,36 @@ function rbff2.startplugin()
 			local last_frame = frame
 
 			-- 無敵表示
-			local muteki = true -- 無敵
+			local muteki = 0 -- 無敵
+			local vul_hi, vul_lo = 240, 0
 			for _, box in pairs(p.hitboxes) do
 				if vulnerability_types[box.type] then
-					muteki = false
-					break
+					muteki = 3
+					if box.top < box.bottom then
+						vul_hi = math.min(vul_hi, box.top)
+						vul_lo = math.max(vul_lo, box.bottom)
+					else
+						vul_hi = math.min(vul_hi, box.bottom)
+						vul_lo = math.max(vul_lo, box.top)
+					end
 				end
 			end
-			if muteki then
-				col, line = 0xAAAFEEEE, 0xDDAFEEEE
+			if muteki == 0 then
+				-- 全身無敵
+				col, line = 0xAAB0E0E6, 0xDDAFEEEE
+			elseif 168 <= vul_hi and p.pos_y <= 0 then
+				-- 上半身無敵（地上）
+				muteki = 1
+				col, line = 0xAA32CD32, 0xDDAFEEEE
+			elseif vul_lo <= 172 and p.pos_y <= 0 then -- 160 164 168 172
+				-- 足元無敵（地上）
+				muteki = 2
+				col, line = 0xAA9400D3, 0xDDAFEEEE
 			else
+				muteki = 3
 				col, line = 0x00000000, 0x00000000
 			end
+			-- print(string.format("hi %s, lo %s", vul_hi, vul_lo))
 
 			frame = p.muteki.act_frames[#p.muteki.act_frames]
 			if frame == nil or chg_act_name or frame.col ~= col or p.state ~= p.old_state then
