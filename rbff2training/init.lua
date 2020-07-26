@@ -3021,7 +3021,7 @@ function rbff2.startplugin()
 			end
 
 			frame = p.muteki.act_frames[#p.muteki.act_frames]
-			if frame == nil or chg_act_name or frame.col ~= col then
+			if frame == nil or chg_act_name or frame.col ~= col or p.state ~= p.old_state then
 				--行動IDの更新があった場合にフレーム情報追加
 				frame = { act = p.act, count = 1, col = col, name = p.act_data.name, disp_name = disp_name, line = line, }
 				table.insert(p.muteki.act_frames , frame)
