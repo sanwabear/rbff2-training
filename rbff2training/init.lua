@@ -603,13 +603,13 @@ function rbff2.startplugin()
 			{ disp_name = "ヘッドスピンアタック", name = "大ヘッドスピンアタック", type = move_type.attack, ids = { 0x90, 0x91, 0x92, 0x93, 0x95, 0x96, 0x94, }, },
 			{ disp_name = "着地", name = "ヘッドスピンアタック着地", type = move_type.any, ids = { 0x3D, }, },
 			{ name = "フライングスピンアタック", type = move_type.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9E, }, },
-			{ name = "ダンシングダイブ", type = move_type.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, }, },
+			{ name = "ダンシングダイブ", type = move_type.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xAA, }, },
 			{ name = "ブレイクストーム", type = move_type.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, 0xB6, 0xB4, 0xB5, 0xB3, 0xB7, }, },
 			{ name = "ダックフェイント・地", type = move_type.any, ids = { 0xC2, 0xC3, 0xC4, }, },
 			{ name = "ダックフェイント・空", type = move_type.any, ids = { 0xB8, 0xB9, 0xBA, }, },
 			{ name = "ダイビングパニッシャー", type = move_type.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, }, },
 			{ name = "ローリングパニッシャー", type = move_type.attack, ids = { 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, }, },
-			{ name = "ダンシングキャリバー", type = move_type.attack, ids = { 0xE9, 0xEA, 0xEB, 0xEC, 0xED, }, },
+			{ name = "ダンシングキャリバー", type = move_type.attack, ids = { 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0x115, }, },
 			{ name = "ブレイクハリケーン", type = move_type.attack, ids = { 0xEE, 0xEF, 0xF0, 0xF1, 0xF2, 0xF3, 0x116, 0xF4, }, },
 			{ name = "ブレイクスパイラル", type = move_type.attack, ids = { 0xFE, 0xFF, 0x100, 0x102, }, },
 			{ disp_name = "ブレイクスパイラルBR", name = "ブレイクスパイラルBR/クレイジーBR", type = move_type.attack, ids = { 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, }, },
@@ -678,7 +678,7 @@ function rbff2.startplugin()
 			{ disp_name = "気雷砲", name = "気雷砲（対空）", type = move_type.attack, ids = { 0x90, 0x91, 0x92, }, },
 			{ name = "破岩撃", type = move_type.low_attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, }, },
 			{ name = "超太鼓腹打ち/満腹対空", type = move_type.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0xA0, 0x9F, 0x9C, }, },
-			{ name = "軟体オヤジ", type = move_type.attack, ids = { 0xB8, 0xB9, 0xBB, }, },
+			{ name = "軟体オヤジ", type = move_type.attack, ids = { 0xB8, 0xB9, 0xBA,1 0xBB, }, },
 			{ name = "クッサメ砲", type = move_type.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, }, },
 			{ name = "爆雷砲", type = move_type.attack, ids = { 0xFE, 0xFF, 0x100, }, },
 			{ name = "ホエホエ弾", type = move_type.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x114, 0x115, 0x116, 0x10E, 0x110, 0x10F, }, },
@@ -743,9 +743,9 @@ function rbff2.startplugin()
 			{ name = "デンジャラススルー", type = move_type.attack, ids = { 0xAE, 0xAF, }, },
 			{ name = "グリフォンアッパー", type = move_type.attack, ids = { 0x248, }, },
 			{ name = "リフトアップブロー", type = move_type.attack, ids = { 0xC2, 0xC3, }, },
-			{ name = "フェニックススルー", type = move_type.attack, ids = { 0xA4, }, },
+			{ name = "フェニックススルー", type = move_type.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
 			{ name = "カイザークロー", type = move_type.attack, ids = { 0xB8, 0xB9, 0xBA, }, },
-			{ name = "カイザーウェイブ", type = move_type.attack, ids = { 0x100, 0x101, 0x102, }, },
+			{ name = "カイザーウェイブ", type = move_type.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, }, },
 			{ name = "ギガティックサイクロン", type = move_type.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0xC, 0x10C, 0x10D, 0x10C, 0x10E, }, },
 			{ name = "アンリミテッドデザイア", type = move_type.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, }, },
 			{ disp_name = "CA 立C", name = "CA 立C(2段目)近立Aルート", type = move_type.attack, ids = { 0x240, }, },
@@ -801,7 +801,7 @@ function rbff2.startplugin()
 			{ name = "後捜腿", type = move_type.attack, ids = { 0x6B, }, },
 			{ disp_name = "那夢波", name = "小 那夢波", type = move_type.attack, ids = { 0x86, 0x87, 0x88, }, },
 			{ disp_name = "那夢波", name = "大 那夢波", type = move_type.attack, ids = { 0x90, 0x91, 0x92, 0x93, }, },
-			{ disp_name = "閃里肘皇", name = "閃里肘皇/貫空/心砕把", type = move_type.attack, ids = { 0x9E, 0x9F, 0xA2, 0xA1, 0xA7, 0xAD, 0xA3, 0xA4, 0xA5, 0xA6, 0xA8, 0xA9, 0xAA, }, },
+			{ disp_name = "閃里肘皇", name = "閃里肘皇/貫空/心砕把", type = move_type.attack, ids = { 0x9E, 0x9F, 0xA2, 0xA1, 0xA7, 0xAD, 0xA3, 0xA4, 0xA5, 0xA6, 0xA8, 0xA9, 0xAA, 0xAB, 0xAC, }, },
 			{ name = "天崩山", type = move_type.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
 			{ disp_name = "詠酒", name = "詠酒・対ジャンプ攻撃", type = move_type.attack, ids = { 0xB8, }, },
 			{ disp_name = "詠酒", name = "詠酒・対立ち攻撃", type = move_type.attack, ids = { 0xAE, }, },
@@ -4336,7 +4336,7 @@ function rbff2.startplugin()
 		 mem_0x107C22,
 		 mem_0x10FDAF,
 		 mem_0x10FDB6)
-		if not bufuf[vv] then
+		if not bufuf[vv] and not active_mem_0x100701[mem_0x100701] then
 			bufuf[vv] = vv
 			print(vv)
 		end
