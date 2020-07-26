@@ -2848,6 +2848,9 @@ function rbff2.startplugin()
 			end
 		end
 
+		-- 判定データ排他用のテーブル
+		local uniq_hitboxes = {}
+
 		-- キャラと飛び道具の当たり判定取得
 		for addr = 0x10CB41, 0x10CB41 + pgm:read_u8(0x10CB40) * 0x10, 0x10 do
 			local box = {
@@ -2861,9 +2864,14 @@ function rbff2.startplugin()
 				attack_only = (pgm:read_u8(addr+0xA) == 1),
 			}
 			if box.on ~= 0xFF and temp_hits[box.base] then
-				table.insert(temp_hits[box.base].buffer, box)
+				local k = box.on .. " " .. box.id.. " " .. box.top.. " " .. box.bottom.. " " .. box.left.. " " .. box.base.. " " .. (box.attack_only and "0" or "1")
+				if not uniq_hitboxes[k] then
+					uniq_hitboxes[k] = true
+					table.insert(temp_hits[box.base].buffer, box)
+				end
 			end
 		end
+		uniq_hitboxes = {}
 		for _, p in pairs(temp_hits) do
 			-- キャラと飛び道具への当たり判定の反映
 			-- update_objectはキャラの位置情報と当たり判定の情報を読み込んだ後で実行すること
@@ -3421,15 +3429,6 @@ function rbff2.startplugin()
 		end
 	end
 
-	local add_hitbox_drawn = function(hitbox_drawn, x1, y1, x2, y2, c1, c2)
-		local key = string.format("%s %s %s %s %s %s", x1 or -1, y1 or -1, x2 or -1, y2 or -1, c1 or -1, c2 or -1)
-		if hitbox_drawn[key] == true then
-			return false
-		end
-		hitbox_drawn[key] = true
-		return true
-	end
-
 	tra_main.draw = function()
 		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 		local scr = manager:machine().screens[":screen"]
@@ -3441,26 +3440,25 @@ function rbff2.startplugin()
 		-- メイン処理
 		if match_active then
 			-- 判定表示（キャラ、飛び道具）
-			local hitbox_drawn = {}
 			if global.disp_hitbox then
 				for _, p in ipairs(players) do
 					for _, box in ipairs(p.hitboxes) do
 						if box.flat_throw then
-							if box.visible == true and add_hitbox_drawn(hitbox_drawn, box.left , box.top-8 , box.right, box.bottom+8, game_boxes[box.type].fill, game_boxes[box.type].fill) then
+							if box.visible == true then
 								scr:draw_box (box.left , box.top-8 , box.right, box.bottom+8, game_boxes[box.type].fill, game_boxes[box.type].fill)
 								scr:draw_line(box.left , box.bottom, box.right, box.bottom  , game_boxes[box.type].outline)
 								scr:draw_line(box.left , box.top-8 , box.left , box.bottom+8, game_boxes[box.type].outline)
 								scr:draw_line(box.right, box.top-8 , box.right, box.bottom+8, game_boxes[box.type].outline)
 							end
 						else
-							if box.visible == true and add_hitbox_drawn(hitbox_drawn, box.left, box.top, box.right, box.bottom, game_boxes[box.type].fill, game_boxes[box.type].outline) then
+							if box.visible == true then
 								scr:draw_box(box.left, box.top, box.right, box.bottom, game_boxes[box.type].fill, game_boxes[box.type].outline)
 							end
 						end
 					end
 					for _, fb in pairs(p.fireball) do
 						for _, box in ipairs(fb.hitboxes) do
-							if box.visible == true and add_hitbox_drawn(hitbox_drawn, box.left, box.top, box.right, box.bottom, game_boxes[box.type].fill, game_boxes[box.type].outline) then
+							if box.visible == true then
 								scr:draw_box(box.left, box.top, box.right, box.bottom, game_boxes[box.type].fill, game_boxes[box.type].outline)
 							end
 						end
