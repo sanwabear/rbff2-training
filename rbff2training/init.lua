@@ -2081,12 +2081,20 @@ function rbff2.startplugin()
 			return
 		end
 		if #bps_rg == 0 then
+			-- この処理をそのまま有効にすると通常時でもくらい判定が見えるようになるが、MVS版ビリーの本来は攻撃判定無しの垂直ジャンプ攻撃がヒットしてしまう
+			-- ビリーの判定が出ない(maincpu.pb@((A0)+$B6)==0)な垂直小ジャンプAと垂直小ジャンプBと斜め小ジャンプBときはこのワークアラウンドが動作しないようにする
+			local cond1 = "(maincpu.pw@107C22>0)&&(maincpu.pb@((A0)+$B6)==0)&&(maincpu.pw@((A0)+$60)!=$50)&&(maincpu.pw@((A0)+$60)!=$51)&&(maincpu.pw@((A0)+$60)!=$54)"
 			--check vuln at all times *** setregister for m68000.pc is broken *** --bp 05C2E8, 1, {PC=((PC)+$6);g}
-			table.insert(bps_rg, cpu:debug():bpset(fix_bp_addr(0x5C2E8), "maincpu.pw@107C22>0", "PC=((PC)+$6);g"))
+			table.insert(bps_rg, cpu:debug():bpset(fix_bp_addr(0x5C2E8), cond1.."&&(maincpu.pb@((A3)+$B6)==0)", "PC=((PC)+$6);g"))
+			 --この条件で動作させると攻撃判定がでてしまってヒットしてしまうのでダメ
+			--[[
+			local cond2 = "(maincpu.pw@107C22>0)&&(maincpu.pb@((A0)+$B6)==0)&&((maincpu.pw@((A0)+$60)==$50)||(maincpu.pw@((A0)+$60)==$51)||(maincpu.pw@((A0)+$60)==$54))"
+			table.insert(bps_rg, cpu:debug():bpset(fix_bp_addr(0x5C2E8), cond2, "maincpu.pb@((A3)+$B6)=1;g"))
+			]]
 			--check vuln at all times *** hackish workaround *** --bp 05C2E8, 1, {A3=((A3)-$B5);g}
-			table.insert(bps_rg, cpu:debug():bpset(fix_bp_addr(0x5C2E8), "maincpu.pw@107C22>0", "A3=((A3)-$B5);g"))
+			table.insert(bps_rg, cpu:debug():bpset(fix_bp_addr(0x5C2E8), cond1, "A3=((A3)-$B5);g"))
 			--*** fix for hackish workaround *** --bp 05C2EE, 1, {A3=((A3)+$B5);g}
-			table.insert(bps_rg, cpu:debug():bpset(fix_bp_addr(0x5C2EE), "maincpu.pw@107C22>0", "A3=((A3)+$B5);g"))
+			table.insert(bps_rg, cpu:debug():bpset(fix_bp_addr(0x5C2EE), cond1, "A3=((A3)+$B5);g"))
 		end
 	end
 
