@@ -36,22 +36,8 @@ BIOSに関しては UNIVERSAL-BIOS 4.0 をご利用ください。
 
 3. ネオジオのBIOSデータ
 	前述のロムデータと同じく[GOG]、 [DMM] または [Humble Bundle]で販売されている、移植ソフトからデータを入手できます。
-	
 	GOGかDMMで入手できる neogeo.zip に UNIVERSAL-BIOS 4.0 を追加して利用してください。
 	[UNIVERSAL-BIOS]から入手できます。
-	
-	一部不足するファイルに関してはコピー、リネームをし、MAME の実行ファイルにパッチをあててください。
-	+ uni-bios_4_0.rom →コピー、リネーム→ sp1-j3.bin
-	+ uni-bios_4_0.rom →コピー、リネーム→ sp1-j3.bin
-	+ uni-bios_4_0.rom →コピー、リネーム→ sp1-u2
-	+ uni-bios_4_0.rom →コピー、リネーム→ sp1-u3.bin
-	+ uni-bios_4_0.rom →コピー、リネーム→ sp1-u4.bin
-	+ uni-bios_4_0.rom →コピー、リネーム→ sp-u2.sp1
-	
-	下は私の`neogeo.zip`の中身です。
-    ![neogeo.zip](https://github.com/sanwabear/rbff2training-doc/blob/master/neogeo-zip.png?raw=true "neogeo.zip")
-	FireFlower形式のパッチデータである [mame64.pat](https://github.com/sanwabear/rbff2training-doc/blob/master/mame64.pat) を使用するか、参考にしてください。
-	[ATE]で入手できるFireFlower互換の FEP で適用できます。
 
 4. コマンド表示の処理でMAMEに含まれるdataプラグインを利用します。
 
@@ -64,53 +50,38 @@ BIOSに関しては UNIVERSAL-BIOS 4.0 をご利用ください。
 
 ### インストール方法
 
-1. MAMEのインストールディレクトリに移動します。
-
-2. プラグイン一式をpluginsディレクトリにコピーします。
-
-3. `plugin.ini`を編集して`data 1`とし、`rbff2training 1`を追記します。[plugin.ini]が参考です。
-	```INI
-    #
-    # PLUGINS OPTIONS
-	#
-    autofire                  0
-    cheat                     1
-    cheatfind                 1
-    console                   0
-    data                      1
-    discord                   0
-    dummy                     0
-    gdbstub                   0
-    hiscore                   0
-    json                      0
-    layout                    1
-    portname                  0
-    dummy                     0
-    timer                     0
-    rbff2training             1
-	```
-    
-4. mame.iniを編集して`plugins 1`とします。[mame.ini]が参考です。
-	```INI
-    #
-    # SCRIPTING OPTIONS
-    #
-    autoboot_command          
-    autoboot_delay            0
-    autoboot_script           
-    console                   0
-    plugins                   1
-    plugin                    
-    noplugin                  
-    ```
-5. MAME を **デバッグモード** 、 **UNIVERSAL BIOS 4.0**を指定して起動します。デバッグが有効でない場合はプラグイン実行時にエラーが発生して動作しません。次のコマンドをバッチファイルで用意しておくと便利でしょう。[mame.bat]が参考です。
-	```Batchfile
-    start mame64.exe -window -debug -pause_brightness 1 rbff2h -bios unibios40
-    ```
-
-[plugin.ini]:https://github.com/sanwabear/rbff2training-doc/blob/master/plugin.ini
-[mame.ini]:https://github.com/sanwabear/rbff2training-doc/blob/master/mame.ini
-[mame.bat]:https://github.com/sanwabear/rbff2training-doc/blob/master/mame.bat
+1.ダウンロードしたファイルを確認します。
+    ![ダウンロード後](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/1_MAME%E3%81%A8BIOS%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89%E5%BE%8C.png?raw=true "ダウンロード後")
+    この手順ではMAMEのアーカイブ(`mame0222b_64bit.exe`)と`uni-bios-40.zip`を使います。
+2. MAMEのインストールディレクトリを作成します。
+    ![ディレクトリ作成](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/2_MAME%E5%85%A5%E3%82%8C%E4%BD%9C%E6%88%90.png?raw=true "ディレクトリ作成")
+3. MAMEのアーカイブを解凍します。
+    ![解凍](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/3_MAME%E8%A7%A3%E7%AD%94.png?raw=true "解凍")
+    ↓
+    ![解凍後](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/4_%E8%A7%A3%E5%87%8D%E3%81%8A%E3%82%8F%E3%82%8A.png?raw=true "解凍後")
+4. ゲームのROMデータとBIOSデータをMAMEのromsディレクトリにコピーします。
+    ![ROMデータ](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/5_%E3%83%AD%E3%83%A0%E3%82%B3%E3%83%94%E3%83%BC.png?raw=true "ROMデータ")
+    ↓
+    ![ROMデータコピー後](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/6_%E3%83%AD%E3%83%A0%E3%82%B3%E3%83%94%E3%83%BC%E5%BE%8C.png?raw=true "ROMデータコピー後")
+    この手順ではDMMのインストール先ディレクトリからコピーします。
+5. ダウンロードしたUNIVERSAL-BIOS 4.0のBIOSデータを`neogeo.zip`の中に含めます。
+    ![UNIBIOSコピー](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/7_BIOS%E3%82%B3%E3%83%94%E3%83%BC.png?raw=true "UNIBIOSコピー")
+    ↓
+    ![UNIBIOSコピー後](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/8_BIOS%E3%82%B3%E3%83%94%E3%83%BC%E5%BE%8C.png?raw=true "UNIBIOSコピー後")
+6. 本スクリプトをダウンロードします。
+    ![スクリプト](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/9_%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89.png?raw=true "スクリプト")
+    ↓
+    ![スクリプトコピー](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/10_%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%82%B3%E3%83%94%E3%83%BC.png?raw=true "スクリプトコピー")
+    ↓
+    ![スクリプトコピー後](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/11_%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%82%B3%E3%83%94%E3%83%BC%E5%BE%8C.png?raw=true "スクリプトコピー後")
+7. 起動バッチを作成してMAMEのディレクトリに保存します。
+    ![起動バッチ](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/12_%E3%83%90%E3%83%83%E3%83%81%E4%BD%9C%E6%88%90.png?raw=true "起動バッチ")
+    ↓
+    ![起動バッチ保存後](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/13_%E3%83%90%E3%83%83%E3%83%81%E4%BF%9D%E5%AD%98%E5%BE%8C.png?raw=true "起動バッチ保存後")
+8. バッチを起動します。
+    ![起動後](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/14_%E3%83%90%E3%83%83%E3%83%81%E5%AE%9F%E8%A1%8C%E3%81%A7%E8%B5%B7%E5%8B%95.png?raw=true "起動後")
+9. Enjoy!
+    必要に応じてコンフィグ等、実施してください。
 
 ## トレーニングモード
 
