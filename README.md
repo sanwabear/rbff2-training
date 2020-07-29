@@ -57,26 +57,37 @@ BIOSに関しては UNIVERSAL-BIOS 4.0 をご利用ください。
 	![ディレクトリ作成](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/2_MAME%E5%85%A5%E3%82%8C%E4%BD%9C%E6%88%90.png?raw=true "ディレクトリ作成")
 3. MAMEのアーカイブを解凍します。
 	![解凍](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/3_MAME%E8%A7%A3%E7%AD%94.png?raw=true "解凍")
-	↓
+	- ↓ 解凍
 	![解凍後](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/4_%E8%A7%A3%E5%87%8D%E3%81%8A%E3%82%8F%E3%82%8A.png?raw=true "解凍後")
 4. ゲームのROMデータとBIOSデータをMAMEのromsディレクトリにコピーします。
 	![ROMデータ](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/5_%E3%83%AD%E3%83%A0%E3%82%B3%E3%83%94%E3%83%BC.png?raw=true "ROMデータ")
-	↓
+	- ↓ コピー
 	![ROMデータコピー後](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/6_%E3%83%AD%E3%83%A0%E3%82%B3%E3%83%94%E3%83%BC%E5%BE%8C.png?raw=true "ROMデータコピー後")
 	- この手順ではDMMのインストール先ディレクトリからコピーします。
 5. ダウンロードしたUNIVERSAL-BIOS 4.0のBIOSデータを`neogeo.zip`の中に含めます。
 	![UNIBIOSコピー](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/7_BIOS%E3%82%B3%E3%83%94%E3%83%BC.png?raw=true "UNIBIOSコピー")
-	↓
+	- ↓ コピー
+	
 	![UNIBIOSコピー後](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/8_BIOS%E3%82%B3%E3%83%94%E3%83%BC%E5%BE%8C.png?raw=true "UNIBIOSコピー後")
 6. 本スクリプトをダウンロードします。
 	![スクリプト](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/9_%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89.png?raw=true "スクリプト")
-	↓
+	- ↓ ダウンロード
+	
 	![スクリプトコピー](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/10_%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%82%B3%E3%83%94%E3%83%BC.png?raw=true "スクリプトコピー")
-	↓
+	- ↓ コピー
+	
 	![スクリプトコピー後](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/11_%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%82%B3%E3%83%94%E3%83%BC%E5%BE%8C.png?raw=true "スクリプトコピー後")
 7. 起動バッチを作成してMAMEのディレクトリに保存します。
 	![起動バッチ](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/12_%E3%83%90%E3%83%83%E3%83%81%E4%BD%9C%E6%88%90.png?raw=true "起動バッチ")
-	↓
+	- ↓ コピペ用
+	
+	```BatchFile
+	cd /d %~dp0
+	chcp 65001
+	start mame64.exe -window -debug -pause_brightness 1 rbff2h -bios unibios40 -plugin data,rbff2training
+	```
+	- ↓ 保存
+	
 	![起動バッチ保存後](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/13_%E3%83%90%E3%83%83%E3%83%81%E4%BF%9D%E5%AD%98%E5%BE%8C.png?raw=true "起動バッチ保存後")
 8. バッチを起動します。
 	![起動後](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/14_%E3%83%90%E3%83%83%E3%83%81%E5%AE%9F%E8%A1%8C%E3%81%A7%E8%B5%B7%E5%8B%95.png?raw=true "起動後")
