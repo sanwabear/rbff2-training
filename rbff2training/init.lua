@@ -144,7 +144,7 @@ function rbff2.startplugin()
 	-- DIPスイッチ
 	local dip_config ={
 		show_hitbox   = false,
-		infinity_life = false,
+		infinity_life = true,
 		easy_super    = false,
 		infinity_time = true,
 		fix_time      = 0x99,
@@ -1598,7 +1598,7 @@ function rbff2.startplugin()
 			dummy_gd         = 1,           -- なし, オート, 1ヒットガード, 1ガード, 常時, ランダム
 			dummy_down       = 1,           -- なし, テクニカルライズ, グランドスウェー
 
-			life_rec         = false,        -- 自動で体力回復させるときtrue
+			life_rec         = true,        -- 自動で体力回復させるときtrue
 			red              = true,        -- 赤体力にするときtrue
 			max              = true,        -- パワーMAXにするときtrue
 			disp_dmg         = true,        -- ダメージ表示するときtrue
@@ -3958,7 +3958,7 @@ function rbff2.startplugin()
 
 		local cond1 = math.min(math.max(pgm:read_u8(0x107BB1)  , 1), #stg1)
 		local cond2 = math.min(math.max(pgm:read_u8(0x107BB7)+1, 1), #stg2)
-		local cond3 = pgm:read_u8(0x107BB9) == 1 and 1 or 2
+		local cond3 = pgm:read_u8(0x107BB9) == 1 and 0x01 or 0x0F
 		main_menu.pos.col[ 8] = 1
 		for i, data in ipairs(stgs) do
 			if data.stg1 == cond1 and data.stg2 == cond2 and data.stg3 == cond3 then
@@ -4522,7 +4522,7 @@ function rbff2.startplugin()
 
 	emu.register_periodic(function()
 		main_or_menu()
-		--auto_recovery_debug()
+		auto_recovery_debug()
 	end)
 end
 
