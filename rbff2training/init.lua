@@ -144,7 +144,7 @@ function rbff2.startplugin()
 	-- DIPスイッチ
 	local dip_config ={
 		show_hitbox   = false,
-		infinity_life = true,
+		infinity_life = false,
 		easy_super    = false,
 		infinity_time = true,
 		fix_time      = 0x99,
@@ -175,9 +175,41 @@ function rbff2.startplugin()
 		bgm[i] = v
 	end
 	bgm[#bgm+1] = "なし"
-	local stg1 = { "Tree", "Billboard (1 Line)", "Square", "Geese Tower", "Strolheim Castle", "Crosswalk",
-		"Rest Stop", "Fighting Ring", "Jin Chamber", "Street (1 Line)",}
+	local stg1 = { "Tree", "Billboard (1 Line)", "Square", "Geese Tower", "Strolheim Castle", "Crosswalk", "Rest Stop",
+		"Fighting Ring", "Jin Chamber", "Street (1 Line)",
+	}
 	local stg2 = { 0x00, 0x01, 0x02, }
+	local stg3 = { 0x01, 0x0F, }
+	local stgs = {
+		{ name = "テリー・ボガード"          , stg1 = 0x07, stg2 = 0x00, stg3 = 0x01, }, -- テリー・ボガード
+		{ name = "アンディ・ボガード"        , stg1 = 0x01, stg2 = 0x02, stg3 = 0x01, }, -- アンディ・ボガード
+		{ name = "東丈"                      , stg1 = 0x08, stg2 = 0x02, stg3 = 0x01, }, -- 東丈
+		{ name = "不知火舞"                  , stg1 = 0x01, stg2 = 0x00, stg3 = 0x01, }, -- 不知火舞
+		{ name = "ギース・ハワード"          , stg1 = 0x04, stg2 = 0x00, stg3 = 0x01, }, -- ギース・ハワード
+		{ name = "望月双角"                  , stg1 = 0x01, stg2 = 0x01, stg3 = 0x01, }, -- 望月双角
+		{ name = "望月双角(雨)"              , stg1 = 0x01, stg2 = 0x01, stg3 = 0x0F, }, -- 望月双角
+		{ name = "ボブ・ウィルソン"          , stg1 = 0x08, stg2 = 0x00, stg3 = 0x01, }, -- ボブ・ウィルソン
+		{ name = "ホンフゥ"                  , stg1 = 0x0A, stg2 = 0x01, stg3 = 0x01, }, -- ホンフゥ
+		{ name = "ブルー・マリー"            , stg1 = 0x06, stg2 = 0x01, stg3 = 0x01, }, -- ブルー・マリー
+		{ name = "フランコ・バッシュ"        , stg1 = 0x08, stg2 = 0x02, stg3 = 0x01, }, -- フランコ・バッシュ
+		{ name = "山崎竜二"                  , stg1 = 0x02, stg2 = 0x01, stg3 = 0x01, }, -- 山崎竜二
+		{ name = "秦崇秀"                    , stg1 = 0x09, stg2 = 0x00, stg3 = 0x01, }, -- 秦崇秀
+		{ name = "秦崇雷"                    , stg1 = 0x09, stg2 = 0x01, stg3 = 0x01, }, -- 秦崇雷
+		{ name = "ダック・キング"            , stg1 = 0x06, stg2 = 0x00, stg3 = 0x01, }, -- ダック・キング
+		{ name = "キム・カッファン"          , stg1 = 0x03, stg2 = 0x00, stg3 = 0x01, }, -- キム・カッファン
+		{ name = "ビリー・カーン"            , stg1 = 0x04, stg2 = 0x01, stg3 = 0x01, }, -- ビリー・カーン
+		{ name = "チン・シンザン"            , stg1 = 0x02, stg2 = 0x00, stg3 = 0x01, }, -- チン・シンザン
+		{ name = "タン・フー・ルー"          , stg1 = 0x03, stg2 = 0x01, stg3 = 0x01, }, -- タン・フー・ルー
+		{ name = "ローレンス・ブラッド"      , stg1 = 0x05, stg2 = 0x01, stg3 = 0x01, }, -- ローレンス・ブラッド
+		{ name = "ヴォルフガング・クラウザー", stg1 = 0x05, stg2 = 0x00, stg3 = 0x01, }, -- ヴォルフガング・クラウザー
+		{ name = "リック・ストラウド"        , stg1 = 0x07, stg2 = 0x01, stg3 = 0x01, }, -- リック・ストラウド
+		{ name = "李香緋"                    , stg1 = 0x0A, stg2 = 0x00, stg3 = 0x01, }, -- 李香緋
+		{ name = "アルフレッド"              , stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, }, -- アルフレッド
+	}
+	local stg_names = {}
+	for i, stg in ipairs(stgs) do
+		table.insert(stg_names, stg.name)
+	end
 
 	local function Set(list)
 		local set = {}
@@ -1475,6 +1507,8 @@ function rbff2.startplugin()
 			box.visible = false
 			return nil
 		elseif type_check[box.type](p.hit, box) then
+			-- ビリーの旋風棍がヒット、ガードされると判定表示が消えてしまうので飛び道具は状態判断の対象から外す
+			-- ここの判断処理を省いても飛び道具が最大ヒットして無効になった時点で判定が消えるので悪影響はない
 			if is_fireball then
 				box.visible = true
 				return box
@@ -1564,7 +1598,7 @@ function rbff2.startplugin()
 			dummy_gd         = 1,           -- なし, オート, 1ヒットガード, 1ガード, 常時, ランダム
 			dummy_down       = 1,           -- なし, テクニカルライズ, グランドスウェー
 
-			life_rec         = true,        -- 自動で体力回復させるときtrue
+			life_rec         = false,        -- 自動で体力回復させるときtrue
 			red              = true,        -- 赤体力にするときtrue
 			max              = true,        -- パワーMAXにするときtrue
 			disp_dmg         = true,        -- ダメージ表示するときtrue
@@ -1877,11 +1911,12 @@ function rbff2.startplugin()
 	local restart_fight = function(param)
 		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 		param = param or {}
-		local stg1 = param.next_stage    or stg1[1]
-		local stg2 = param.next_stage_tz or stg2[1]
+		local stg1 = param.next_stage.stg1  or stg1[1]
+		local stg2 = param.next_stage.stg2 or stg2[1]
 		if stg2 == 0x02 and (stg1 == 2 or stg1 == 3 or stg1 == 4 or stg1 == 5 or stg1 == 6 or stg1 == 9 or stg1 == 10) then
 			stg2 = 0x01
 		end
+		local stg3  = param.next_stage.stg3 or 1
 		local p1    = param.next_p1    or 1
 		local p2    = param.next_p2    or 21
 		local p1col = param.next_p1col or 0x00
@@ -1895,6 +1930,7 @@ function rbff2.startplugin()
 
 		pgm:write_u8(0x107BB1, stg1)
 		pgm:write_u8(0x107BB7, stg2)
+		pgm:write_u8(0x107BB9, stg3) -- フックさせて無理やり実現するために0xD0を足す（0xD1～0xD5にする）
 		pgm:write_u8(p[1].addr.char , p1)
 		pgm:write_u8(p[1].addr.color, p1col)
 		pgm:write_u8(p[2].addr.char , p2)
@@ -1988,6 +2024,20 @@ function rbff2.startplugin()
 		end
 
 		if #bps == 0 then
+			-- ステージ設定用。メニューでFを設定した場合にのみ動作させる
+			-- ラウンド数を1に初期化→スキップ
+			table.insert(bps, cpu:debug():bpset(0x0F368, "maincpu.pw@((A5)-$448)==$F", "PC=F36E;g"))
+			-- ラウンド2以上の場合の初期化処理→無条件で実施
+			table.insert(bps, cpu:debug():bpset(0x22AD8, "maincpu.pw@((A5)-$448)==$F", "PC=22AF4;g"))
+			-- キャラ読込 ラウンド1の時だけ読み込む→無条件で実施
+			table.insert(bps, cpu:debug():bpset(0x22D32, "maincpu.pw@((A5)-$448)==$F", "PC=22D3E;g"))
+			-- ラウンド2以上の時の処理→データロード直後の状態なので不要。スキップしないとBGMが変わらない
+			table.insert(bps, cpu:debug():bpset(0x0F6AC, "maincpu.pw@((A5)-$448)==$F", "PC=F6B6;g"))
+			-- ラウンド1じゃないときの処理 →スキップ
+			table.insert(bps, cpu:debug():bpset(0x1E39A, "maincpu.pw@((A5)-$448)==$F", "PC=1E3A4;g"))
+			-- ラウンド1の時だけ読み込む →無条件で実施。データを1ラウンド目の値に戻す
+			table.insert(bps, cpu:debug():bpset(0x17694, "maincpu.pw@((A5)-$448)==$F", "maincpu.pw@((A5)-$448)=1;PC=176A0;g"))
+
 			-- 当たり判定用
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x5C2DA),
 				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100500)",
@@ -3600,7 +3650,7 @@ function rbff2.startplugin()
 
 		-- 画面表示
 		if global.no_background then
-			if pgm:read_u8(0x107BB9) == 0x01 then
+			if pgm:read_u8(0x107BB9) >= 0x05 then
 				local match = pgm:read_u8(0x107C22)
 				if match == 0x38 then --HUD
 					pgm:write_u8(0x107C22, 0x33)
@@ -3830,9 +3880,8 @@ function rbff2.startplugin()
 			next_p2       = main_menu.pos.col[5]  , -- 2P セレクト
 			next_p1col    = main_menu.pos.col[6]-1, -- 1P カラー
 			next_p2col    = main_menu.pos.col[7]-1, -- 2P カラー
-			next_stage    = main_menu.pos.col[8]  , -- ステージセレクト
-			next_stage_tz = main_menu.pos.col[9]-1,
-			next_bgm      = main_menu.pos.col[10] % #bgm, -- BGMセレクト
+			next_stage    = stgs[main_menu.pos.col[8]], -- ステージセレクト
+			next_bgm      = main_menu.pos.col[9] % #bgm, -- BGMセレクト
 		})
 		cls_joy()
 		-- 初期化
@@ -3854,8 +3903,7 @@ function rbff2.startplugin()
 			{ "2P セレクト"           , char_names },
 			{ "1P カラー"             , { "A", "D" } },
 			{ "2P カラー"             , { "A", "D" } },
-			{ "ステージセレクト1"     , stg1 },
-			{ "ステージセレクト2"     , stg2 },
+			{ "ステージセレクト"      , stg_names },
 			{ "BGMセレクト"           , bgm },
 			{ "リスタート" },
 		},
@@ -3871,7 +3919,6 @@ function rbff2.startplugin()
 				1, -- 1P カラー
 				1, -- 2P カラー
 				1, -- ステージセレクト
-				1, -- ステージセレクト
 				1, -- BGMセレクト
 				0, -- リスタート
 			},
@@ -3885,7 +3932,6 @@ function rbff2.startplugin()
 			menu_restart_fight, -- 1P カラー
 			menu_restart_fight, -- 2P カラー
 			menu_restart_fight, -- ステージセレクト
-			menu_restart_fight, -- ステージセレクト
 			menu_restart_fight, -- BGMセレクト
 			menu_restart_fight, -- リスタート
 		},
@@ -3898,7 +3944,6 @@ function rbff2.startplugin()
 			menu_exit, -- 1P カラー
 			menu_exit, -- 2P カラー
 			menu_exit, -- ステージセレクト
-			menu_exit, -- ステージセレクト
 			menu_exit, -- BGMセレクト
 			menu_exit, -- リスタート
 		},
@@ -3910,9 +3955,19 @@ function rbff2.startplugin()
 		main_menu.pos.col[ 5] = math.min(math.max(pgm:read_u8(0x107BA7)  , 1), #char_names)
 		main_menu.pos.col[ 6] = math.min(math.max(pgm:read_u8(0x107BAC)+1, 1), 2)
 		main_menu.pos.col[ 7] = math.min(math.max(pgm:read_u8(0x107BAD)+1, 1), 2)
-		main_menu.pos.col[ 8] = math.min(math.max(pgm:read_u8(0x107BB1)  , 1), #stg1)
-		main_menu.pos.col[ 9] = math.min(math.max(pgm:read_u8(0x107BB7)+1, 1), #stg2)
-		main_menu.pos.col[10] = math.min(math.max(pgm:read_u8(0x10A8D5)  , 1), #char_names)
+
+		local cond1 = math.min(math.max(pgm:read_u8(0x107BB1)  , 1), #stg1)
+		local cond2 = math.min(math.max(pgm:read_u8(0x107BB7)+1, 1), #stg2)
+		local cond3 = pgm:read_u8(0x107BB9) == 1 and 1 or 2
+		main_menu.pos.col[ 8] = 1
+		for i, data in ipairs(stgs) do
+			if data.stg1 == cond1 and data.stg2 == cond2 and data.stg3 == cond3 then
+				main_menu.pos.col[ 8] = i
+				break
+			end
+		end
+
+		main_menu.pos.col[ 9] = math.min(math.max(pgm:read_u8(0x10A8D5)  , 1), #char_names)
 	end
 	tra_menu = {
 		list = {
@@ -4467,7 +4522,7 @@ function rbff2.startplugin()
 
 	emu.register_periodic(function()
 		main_or_menu()
-		auto_recovery_debug()
+		--auto_recovery_debug()
 	end)
 end
 
