@@ -1083,11 +1083,12 @@ function rbff2.startplugin()
 			{ name = "ダイバージェンス", type = move_type.attack, ids = { 0x264, }, },
 		},
 	}
-	local char_acts = { }
+	local char_acts, char_1st_acts = {}, {}
 	for char, acts_base in pairs(char_acts_base) do
-		char_acts[char] = {}
-		for _, acts in pairs(acts_base) do
+		char_acts[char], char_1st_acts[char] = {}, {}
+		for i, acts in pairs(acts_base) do
 			for i, id in ipairs(acts.ids) do
+				char_1st_acts[char][id] = i == 1
 				char_acts[char][id] = acts
 			end
 		end
@@ -2534,7 +2535,7 @@ function rbff2.startplugin()
 			local frame_group = frames2[#frames2] or {}
 			local prev_frame  = frame_group ~= nil and frame_group[#frame_group] or nil
 			local prev_name   = prev_frame ~= nil and prev_frame.name or nil
-			if prev_name ~= frame.name then
+			if prev_name ~= frame.name or (frame.act_1st and frame.count == 1) then
 				upd = true
 				frame_group = {} -- ブレイクしたので新規にグループ作成
 				table.insert(frames2, frame_group)
@@ -2784,13 +2785,16 @@ function rbff2.startplugin()
 			p.old_act_data   = p.act_data or { name = "", type = move_type.any, }
 			if char_acts[#char_acts] and char_acts[#char_acts][p.act] then
 				p.act_data   = char_acts[#char_acts][p.act]
+				p.act_1st    = char_1st_acts[#char_acts][p.act] or false
 			elseif char_acts[p.char] and char_acts[p.char][p.act] then
 				p.act_data   = char_acts[p.char][p.act]
+				p.act_1st    = char_1st_acts[p.char][p.act] or false
 			else
 				p.act_data   = {
 					name     = (p.state == 1 or p.state == 3) and "やられ" or tohex(p.act), 
 					type     = move_type.any,
 				}
+				p.act_1st    = false
 			end
 			p.old_act_normal = p.act_normal
 			p.act_normal     = p.act_data.type == move_type.free
@@ -2818,6 +2822,7 @@ function rbff2.startplugin()
 			p.update_sts = (pgm:read_u8(p.addr.state2) ~= 0) and global.frame_number or p.update_sts
 			p.update_dmg = (p.tmp_dmg ~= 0) and global.frame_number or p.update_dmg
 			p.update_act = (pgm:read_u8(p.addr.act2) ~= 0) and global.frame_number or p.update_act
+			p.act_1st    = p.update_act == global.frame_number and p.act_1st == true
 
 			-- 当たり判定のフック確認
 			p.hit.vulnerable1  = pgm:read_u8(p.addr.vulnerable1)
@@ -3069,9 +3074,9 @@ function rbff2.startplugin()
 			local chg_act_name = (p.old_act_data.name ~= p.act_data.name)
 			local disp_name = convert(p.act_data.disp_name or p.act_data.name)
 
-			if #p.act_frames == 0 or chg_act_name or frame.col ~= col or chg_air_state ~= 0 or chg_fireball_state then
+			if #p.act_frames == 0 or chg_act_name or frame.col ~= col or chg_air_state ~= 0 or chg_fireball_state or p.act_1st then
 				--行動IDの更新があった場合にフレーム情報追加
-				frame = { act = p.act, count = 1, col = col, name = p.act_data.name, disp_name = disp_name, line = line, with_fireball = p.with_fireball, chg_air_state = chg_air_state, }
+				frame = { act = p.act, count = 1, col = col, name = p.act_data.name, disp_name = disp_name, line = line, with_fireball = p.with_fireball, chg_air_state = chg_air_state, act_1st = p.act_1st, }
 				table.insert(p.act_frames , frame)
 				if 180 < #p.act_frames then
 					--バッファ長調整
@@ -3121,9 +3126,9 @@ function rbff2.startplugin()
 			--print(string.format("top %s, hi %s, lo %s", screen_top, vul_hi, vul_lo))
 
 			frame = p.muteki.act_frames[#p.muteki.act_frames]
-			if frame == nil or chg_act_name or frame.col ~= col or p.state ~= p.old_state then
+			if frame == nil or chg_act_name or frame.col ~= col or p.state ~= p.old_state or p.act_1st then
 				--行動IDの更新があった場合にフレーム情報追加
-				frame = { act = p.act, count = 1, col = col, name = p.act_data.name, disp_name = disp_name, line = line, }
+				frame = { act = p.act, count = 1, col = col, name = p.act_data.name, disp_name = disp_name, line = line, act_1st = p.act_1st, }
 				table.insert(p.muteki.act_frames , frame)
 				if 180 < #p.muteki.act_frames then
 					--バッファ長調整
@@ -3178,9 +3183,9 @@ function rbff2.startplugin()
 			end
 
 			frame = p.frm_gap.act_frames[#p.frm_gap.act_frames]
-			if frame == nil or chg_act_name or (frame.col ~= col and (p.frame_gap == 0 or p.frame_gap == -1 or p.frame_gap == 1)) then
+			if frame == nil or chg_act_name or (frame.col ~= col and (p.frame_gap == 0 or p.frame_gap == -1 or p.frame_gap == 1)) or p.act_1st then
 				--行動IDの更新があった場合にフレーム情報追加
-				frame = { act = p.act, count = 1, col = col, name = p.act_data.name, disp_name = disp_name, line = line, }
+				frame = { act = p.act, count = 1, col = col, name = p.act_data.name, disp_name = disp_name, line = line, act_1st = p.act_1st, }
 				table.insert(p.frm_gap.act_frames , frame)
 				if 180 < #p.frm_gap.act_frames then
 					--バッファ長調整
