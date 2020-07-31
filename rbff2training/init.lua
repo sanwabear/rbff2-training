@@ -3706,6 +3706,7 @@ function rbff2.startplugin()
 	local menu_to_main = function(cancel)
 		local col = tra_menu.pos.col
 		local p   = players
+		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 		local scr = manager:machine().screens[":screen"]
 		local ec = scr:frame_number()
 		global.dummy_mode        = col[ 1]      -- ダミーモード           1
@@ -3750,6 +3751,10 @@ function rbff2.startplugin()
 				p.next_block_ec = 75
 				p.next_block_grace = global.next_block_grace
 			end
+
+			local max_life = p.red and 0x60 or 0xC0 -- 赤体力にするかどうか
+			pgm:write_u8(p.addr.life, max_life)         -- 体力
+			pgm:write_u8(p.addr.stun, p.addr.init_stun) -- スタン値
 		end
 
 		if global.dummy_mode == 5 then
