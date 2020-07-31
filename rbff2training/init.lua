@@ -139,12 +139,13 @@ function rbff2.startplugin()
 		input_accepted  = 0,
 
 		next_block_grace = 0, -- 1ガードでの持続フレーム数
+		infinity_life2   = true,
 	}
 
 	-- DIPスイッチ
 	local dip_config ={
 		show_hitbox   = false,
-		infinity_life = true,
+		infinity_life = false,
 		easy_super    = false,
 		infinity_time = true,
 		fix_time      = 0x99,
@@ -2024,6 +2025,11 @@ function rbff2.startplugin()
 		end
 
 		if #bps == 0 then
+			if global.infinity_life2 then
+				--bp 05B480,{(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100500)},{PC=5B48E;g}
+				table.insert(bps, cpu:debug():bpset(0x05B480, "(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100500)", "PC=5B48E;g"))
+			end
+
 			-- ステージ設定用。メニューでFを設定した場合にのみ動作させる
 			-- ラウンド数を1に初期化→スキップ
 			table.insert(bps, cpu:debug():bpset(0x0F368, "maincpu.pw@((A5)-$448)==$F", "PC=F36E;g"))
@@ -4522,7 +4528,7 @@ function rbff2.startplugin()
 
 	emu.register_periodic(function()
 		main_or_menu()
-		auto_recovery_debug()
+		--auto_recovery_debug()
 	end)
 end
 
