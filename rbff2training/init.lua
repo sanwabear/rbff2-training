@@ -3605,7 +3605,7 @@ function rbff2.startplugin()
 						draw_frame_groups(p.frm_gap.act_frames2, p.act_frames_total, 30, p1 and 65 or 73, 3, true)
 					end
 					if p.disp_frm then
-						draw_frames(p.act_frames2, p1 and 160 or 285, true , true, p1 and 40 or 165, 66, 8, 16)
+						draw_frames(p.act_frames2, p1 and 160 or 285, true , true, p1 and 40 or 165, 63, 8, 18)
 					end
 				end
 				if global.disp_frmgap then
