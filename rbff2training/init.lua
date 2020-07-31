@@ -2027,7 +2027,9 @@ function rbff2.startplugin()
 		if #bps == 0 then
 			if global.infinity_life2 then
 				--bp 05B480,{(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100500)},{PC=5B48E;g}
-				table.insert(bps, cpu:debug():bpset(0x05B480, "(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100500)", "PC=5B48E;g"))
+				table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05B460),
+					"(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100500)", 
+					string.format("PC=%x;g", fix_bp_addr(0x05B46E))))
 			end
 
 			-- ステージ設定用。メニューでFを設定した場合にのみ動作させる
