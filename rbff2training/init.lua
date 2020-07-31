@@ -4528,7 +4528,7 @@ function rbff2.startplugin()
 
 	emu.register_periodic(function()
 		main_or_menu()
-		--auto_recovery_debug()
+		auto_recovery_debug()
 	end)
 end
 
