@@ -1695,8 +1695,6 @@ function rbff2.startplugin()
 			fireball_bases   = p1 and Set { 0x100600, 0x100800, 0x100A00, } or
 				                      Set { 0x100700, 0x100900, 0x100B00, },
 			fireball         = {},
-			old_with_fireball= false,
-			with_fireball    = false,
 
 			hit              = {
 				pos_x        = 0,
@@ -2606,7 +2604,7 @@ function rbff2.startplugin()
 				if x2 < x then
 					x2 = x
 				else
-					on_fb = frame.with_fireball == true
+					on_fb = frame.chg_fireball_state == true
 					on_ar = frame.chg_air_state == 1
 					on_gd = frame.chg_air_state == -1
 				end
@@ -2833,6 +2831,7 @@ function rbff2.startplugin()
 				fb.hit.projectile = true
 				fb.hitboxes       = {}
 				fb.buffer         = {}
+				fb.act_data_fired = p.act_data -- 発射したタイミングの行動ID
 
 				fb.act_frames     = fb.act_frames  or {}
 				fb.act_frames2    = fb.act_frames2 or {}
@@ -2840,6 +2839,11 @@ function rbff2.startplugin()
 				-- 当たり判定の構築
 				if pgm:read_u16(pgm:read_u32(fb.addr.base)) ~= 0x4E75 then --0x4E75 is rts instruction
 					temp_hits[fb.addr.base] = fb
+					fb.count = (fb.count or 0) +1
+					fb.atk_count = fb.atk_count or 0
+				else
+					fb.count = 0
+					fb.atk_count = 0
 				end
 			end
 
@@ -3046,14 +3050,16 @@ function rbff2.startplugin()
 			end
 
 			-- 飛び道具
-			p.old_with_fireball = p.with_fireball
-			p.with_fireball     = false
+			local chg_fireball_state = false
 			for _, fb in pairs(p.fireball) do
 				local atk = false -- 攻撃判定 発生中
 				for _, box in pairs(fb.hitboxes) do
 					if box.visible then
 						atk = true
-						p.with_fireball = true
+						fb.atk_count = (fb.atk_count or 0) + 1 -- 攻撃判定発生のカウント
+						if fb.atk_count == 1 and fb.act_data_fired.name == p.act_data.name then
+							chg_fireball_state = true
+						end
 						break
 					end
 				end
@@ -3077,9 +3083,6 @@ function rbff2.startplugin()
 				-- 技名でグループ化したフレームデータの配列をマージ生成する
 				fb.act_frames2, _ = frame_groups(frame, fb.act_frames2 or {})
 			end
-			-- 飛び道具の状態遷移
-			-- 飛び道具無しから飛び道具ありになったタイミングだけ
-			local chg_fireball_state = (not p.old_with_fireball and p.with_fireball)
 
 			--ガード移行できない行動は色替えする
 			local col, line = 0xAAF0E68C, 0xDDF0E68C
@@ -3098,10 +3101,19 @@ function rbff2.startplugin()
 			local prev_last_frame = frame
 			local chg_act_name = (p.old_act_data.name ~= p.act_data.name)
 			local disp_name = convert(p.act_data.disp_name or p.act_data.name)
-
-			if #p.act_frames == 0 or chg_act_name or frame.col ~= col or chg_air_state ~= 0 or chg_fireball_state or p.act_1st then
+			if #p.act_frames == 0 or chg_act_name or frame.col ~= col or chg_air_state ~= 0 or chg_fireball_state == true or p.act_1st then
 				--行動IDの更新があった場合にフレーム情報追加
-				frame = { act = p.act, count = 1, col = col, name = p.act_data.name, disp_name = disp_name, line = line, with_fireball = p.with_fireball, chg_air_state = chg_air_state, act_1st = p.act_1st, }
+				frame = {
+					act = p.act,
+					count = 1,
+					col = col,
+					name = p.act_data.name,
+					disp_name = disp_name,
+					line = line,
+					chg_fireball_state = chg_fireball_state,
+					chg_air_state = chg_air_state,
+					act_1st = p.act_1st,
+				}
 				table.insert(p.act_frames , frame)
 				if 180 < #p.act_frames then
 					--バッファ長調整
@@ -3153,7 +3165,15 @@ function rbff2.startplugin()
 			frame = p.muteki.act_frames[#p.muteki.act_frames]
 			if frame == nil or chg_act_name or frame.col ~= col or p.state ~= p.old_state or p.act_1st then
 				--行動IDの更新があった場合にフレーム情報追加
-				frame = { act = p.act, count = 1, col = col, name = p.act_data.name, disp_name = disp_name, line = line, act_1st = p.act_1st, }
+				frame = {
+					act = p.act,
+					count = 1,
+					col = col,
+					name = p.act_data.name,
+					disp_name = disp_name,
+					line = line,
+					act_1st = p.act_1st,
+				}
 				table.insert(p.muteki.act_frames , frame)
 				if 180 < #p.muteki.act_frames then
 					--バッファ長調整
@@ -3210,7 +3230,15 @@ function rbff2.startplugin()
 			frame = p.frm_gap.act_frames[#p.frm_gap.act_frames]
 			if frame == nil or chg_act_name or (frame.col ~= col and (p.frame_gap == 0 or p.frame_gap == -1 or p.frame_gap == 1)) or p.act_1st then
 				--行動IDの更新があった場合にフレーム情報追加
-				frame = { act = p.act, count = 1, col = col, name = p.act_data.name, disp_name = disp_name, line = line, act_1st = p.act_1st, }
+				frame = {
+					act = p.act,
+					count = 1,
+					col = col,
+					name = p.act_data.name,
+					disp_name = disp_name,
+					line = line,
+					act_1st = p.act_1st,
+				}
 				table.insert(p.frm_gap.act_frames , frame)
 				if 180 < #p.frm_gap.act_frames then
 					--バッファ長調整
