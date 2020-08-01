@@ -171,45 +171,74 @@ function rbff2.startplugin()
 		"ダック・キング", "キム・カッファン", "ビリー・カーン", "チン・シンザン", "タン・フー・ルー",
 		"ローレンス・ブラッド", "ヴォルフガング・クラウザー", "リック・ストラウド", "李香緋", "アルフレッド",
 	}
-	local bgm = {}
-	for i, v in pairs(char_names) do
-		bgm[i] = v
+	local bgms = {
+		{ name = "クリといつまでも"              , id = 0x01, },
+		{ name = "雷波濤外伝"                    , id = 0x02, },
+		{ name = "タイ南部に伝わったSPの詩"      , id = 0x03, },
+		{ name = "まいまいきゅーん"              , id = 0x04, },
+		{ name = "ギースにしょうゆとオケヒット"  , id = 0x05, },
+		{ name = "TAKU-HATSU-Rock"               , id = 0x06, },
+		{ name = "蜜の味"                        , id = 0x07, },
+		{ name = "ドンチカ!!チ!!チ!!"            , id = 0x08, },
+		{ name = "Blue Mary's BLUES"             , id = 0x09, },
+		{ name = "GOLI-Rock"                     , id = 0x0A, },
+		{ name = "C62 -シロクニ- Ver.2"          , id = 0x0B, },
+		{ name = "パンドラの箱より 第3番「決断」", id = 0x0C, },
+		--{ name = "パンドラの箱より 第3番「決断」", id = 0x0D, },
+		{ name = "Duck! Duck! Duck!"             , id = 0x0E, },
+		{ name = "ソウルっす♪"                  , id = 0x0F, },
+		{ name = "ロンドンマーチ"                , id = 0x10, },
+		{ name = "ハプシュ！フゥゥゥ"            , id = 0x11, },
+		{ name = "中国四千年の歴史とはいかにII"  , id = 0x12, },
+		{ name = "牛とお戯れ"                    , id = 0x13, },
+		{ name = "REQUIEM K.626 [Lacrimosa]"     , id = 0x14, },
+		{ name = "Exceed The Limit"              , id = 0x15, },
+		{ name = "雄々盛嬢後援 ～競場詩～"       , id = 0x16, },
+		{ name = "Get The Sky -With Your Dream-" , id = 0x17, },
+		{ name = "なし"                          , id = 0x00, },
+		{ name = "4 HITs Ⅱ"                     , id = 0x1C, },
+		{ name = "Gain a victory"                , id = 0x1E, },
+		{ name = "NEOGEO SOUND LOGO"             , id = 0x26, },
+		{ name = "THE NEWCOMERS"                 , id = 0x44, },
+	}
+	local bgm_names = {}
+	for i, bgm in ipairs(bgms) do
+		table.insert(bgm_names, bgm.name)
 	end
-	bgm[#bgm+1] = "なし"
 	local stg1 = { "Tree", "Billboard (1 Line)", "Square", "Geese Tower", "Strolheim Castle", "Crosswalk", "Rest Stop",
 		"Fighting Ring", "Jin Chamber", "Street (1 Line)",
 	}
 	local stg2 = { 0x00, 0x01, 0x02, }
 	local stg3 = { 0x01, 0x0F, }
 	local stgs = {
-		{ name = "テリー・ボガード"          , stg1 = 0x07, stg2 = 0x00, stg3 = 0x01, }, -- テリー・ボガード
-		{ name = "アンディ・ボガード"        , stg1 = 0x01, stg2 = 0x02, stg3 = 0x01, }, -- アンディ・ボガード
-		{ name = "東丈"                      , stg1 = 0x08, stg2 = 0x02, stg3 = 0x01, }, -- 東丈
-		{ name = "不知火舞"                  , stg1 = 0x01, stg2 = 0x00, stg3 = 0x01, }, -- 不知火舞
-		{ name = "ギース・ハワード"          , stg1 = 0x04, stg2 = 0x00, stg3 = 0x01, }, -- ギース・ハワード
-		{ name = "望月双角"                  , stg1 = 0x01, stg2 = 0x01, stg3 = 0x01, }, -- 望月双角
-		{ name = "望月双角(雨)"              , stg1 = 0x01, stg2 = 0x01, stg3 = 0x0F, }, -- 望月双角
-		{ name = "ボブ・ウィルソン"          , stg1 = 0x08, stg2 = 0x00, stg3 = 0x01, }, -- ボブ・ウィルソン
-		{ name = "ホンフゥ"                  , stg1 = 0x0A, stg2 = 0x01, stg3 = 0x01, }, -- ホンフゥ
-		{ name = "ブルー・マリー"            , stg1 = 0x06, stg2 = 0x01, stg3 = 0x01, }, -- ブルー・マリー
-		{ name = "フランコ・バッシュ"        , stg1 = 0x08, stg2 = 0x02, stg3 = 0x01, }, -- フランコ・バッシュ
-		{ name = "山崎竜二"                  , stg1 = 0x02, stg2 = 0x01, stg3 = 0x01, }, -- 山崎竜二
-		{ name = "秦崇秀"                    , stg1 = 0x09, stg2 = 0x00, stg3 = 0x01, }, -- 秦崇秀
-		{ name = "秦崇雷"                    , stg1 = 0x09, stg2 = 0x01, stg3 = 0x01, }, -- 秦崇雷
-		{ name = "ダック・キング"            , stg1 = 0x06, stg2 = 0x00, stg3 = 0x01, }, -- ダック・キング
-		{ name = "キム・カッファン"          , stg1 = 0x03, stg2 = 0x00, stg3 = 0x01, }, -- キム・カッファン
-		{ name = "ビリー・カーン"            , stg1 = 0x04, stg2 = 0x01, stg3 = 0x01, }, -- ビリー・カーン
-		{ name = "チン・シンザン"            , stg1 = 0x02, stg2 = 0x00, stg3 = 0x01, }, -- チン・シンザン
-		{ name = "タン・フー・ルー"          , stg1 = 0x03, stg2 = 0x01, stg3 = 0x01, }, -- タン・フー・ルー
-		{ name = "ローレンス・ブラッド"      , stg1 = 0x05, stg2 = 0x01, stg3 = 0x01, }, -- ローレンス・ブラッド
-		{ name = "ヴォルフガング・クラウザー", stg1 = 0x05, stg2 = 0x00, stg3 = 0x01, }, -- ヴォルフガング・クラウザー
-		{ name = "リック・ストラウド"        , stg1 = 0x07, stg2 = 0x01, stg3 = 0x01, }, -- リック・ストラウド
-		{ name = "李香緋"                    , stg1 = 0x0A, stg2 = 0x00, stg3 = 0x01, }, -- 李香緋
-		{ name = "アルフレッド"              , stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, }, -- アルフレッド
+		{ name = "テリー・ボガード"          , stg_name = "Rest Stop-Daytime"          , stg1 = 0x07, stg2 = 0x00, stg3 = 0x01, },
+		{ name = "アンディ・ボガード"        , stg_name = "Tree-Night"                 , stg1 = 0x01, stg2 = 0x02, stg3 = 0x01, },
+		{ name = "東丈"                      , stg_name = "Fighting Ring-Night"        , stg1 = 0x08, stg2 = 0x02, stg3 = 0x01, },
+		{ name = "不知火舞"                  , stg_name = "Tree-Daytime"               , stg1 = 0x01, stg2 = 0x00, stg3 = 0x01, },
+		{ name = "ギース・ハワード"          , stg_name = "Geese Tower-Night"          , stg1 = 0x04, stg2 = 0x00, stg3 = 0x01, },
+		{ name = "望月双角"                  , stg_name = "Tree-Midnight"              , stg1 = 0x01, stg2 = 0x01, stg3 = 0x01, },
+		{ name = "望月双角(雨)"              , stg_name = "Tree-Rain"                  , stg1 = 0x01, stg2 = 0x01, stg3 = 0x0F, },
+		{ name = "ボブ・ウィルソン"          , stg_name = "Fighting Ring-Daytime"      , stg1 = 0x08, stg2 = 0x00, stg3 = 0x01, },
+		{ name = "ホンフゥ"                  , stg_name = "Street(1 Line)-Evening"     , stg1 = 0x0A, stg2 = 0x01, stg3 = 0x01, },
+		{ name = "ブルー・マリー"            , stg_name = "Crosswalk-Midnight"         , stg1 = 0x06, stg2 = 0x01, stg3 = 0x01, },
+		{ name = "フランコ・バッシュ"        , stg_name = "Fighting Ring-Evening"      , stg1 = 0x08, stg2 = 0x02, stg3 = 0x01, },
+		{ name = "山崎竜二"                  , stg_name = "Billboard(1 Line)-Midnight" , stg1 = 0x02, stg2 = 0x01, stg3 = 0x01, },
+		{ name = "秦崇秀"                    , stg_name = "Jin Chamber-Yellow"         , stg1 = 0x09, stg2 = 0x00, stg3 = 0x01, },
+		{ name = "秦崇雷"                    , stg_name = "Jin Chamber-Blue"           , stg1 = 0x09, stg2 = 0x01, stg3 = 0x01, },
+		{ name = "ダック・キング"            , stg_name = "Crosswalk-Night"            , stg1 = 0x06, stg2 = 0x00, stg3 = 0x01, },
+		{ name = "キム・カッファン"          , stg_name = "Square-Daytime"             , stg1 = 0x03, stg2 = 0x00, stg3 = 0x01, },
+		{ name = "ビリー・カーン"            , stg_name = "Geese Tower-Midnight"       , stg1 = 0x04, stg2 = 0x01, stg3 = 0x01, },
+		{ name = "チン・シンザン"            , stg_name = "Billboard(1 Line)-Night"    , stg1 = 0x02, stg2 = 0x00, stg3 = 0x01, },
+		{ name = "タン・フー・ルー"          , stg_name = "Square-Evening"             , stg1 = 0x03, stg2 = 0x01, stg3 = 0x01, },
+		{ name = "ローレンス・ブラッド"      , stg_name = "Strolheim Castle-Evening"   , stg1 = 0x05, stg2 = 0x01, stg3 = 0x01, },
+		{ name = "ヴォルフガング・クラウザー", stg_name = "Strolheim Castle-Night"     , stg1 = 0x05, stg2 = 0x00, stg3 = 0x01, },
+		{ name = "リック・ストラウド"        , stg_name = "Rest Stop-Evening"          , stg1 = 0x07, stg2 = 0x01, stg3 = 0x01, },
+		{ name = "李香緋"                    , stg_name = "Street(1 Line)-Daytime"     , stg1 = 0x0A, stg2 = 0x00, stg3 = 0x01, },
+		{ name = "アルフレッド"              , stg_name = "Rest Stop(1 Line)"          , stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, },
 	}
 	local stg_names = {}
 	for i, stg in ipairs(stgs) do
-		table.insert(stg_names, stg.name)
+		table.insert(stg_names, stg.stg_name)
 	end
 
 	local function Set(list)
@@ -1912,12 +1941,9 @@ function rbff2.startplugin()
 	local restart_fight = function(param)
 		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 		param = param or {}
-		local stg1 = param.next_stage.stg1  or stg1[1]
-		local stg2 = param.next_stage.stg2 or stg2[1]
-		if stg2 == 0x02 and (stg1 == 2 or stg1 == 3 or stg1 == 4 or stg1 == 5 or stg1 == 6 or stg1 == 9 or stg1 == 10) then
-			stg2 = 0x01
-		end
-		local stg3  = param.next_stage.stg3 or 1
+		local stg1  = param.next_stage.stg1 or stgs[1].stg1
+		local stg2  = param.next_stage.stg2 or stgs[1].stg2
+		local stg3  = param.next_stage.stg3 or stgs[1].stg3
 		local p1    = param.next_p1    or 1
 		local p2    = param.next_p2    or 21
 		local p1col = param.next_p1col or 0x00
@@ -3898,7 +3924,7 @@ function rbff2.startplugin()
 			next_p1col    = main_menu.pos.col[6]-1, -- 1P カラー
 			next_p2col    = main_menu.pos.col[7]-1, -- 2P カラー
 			next_stage    = stgs[main_menu.pos.col[8]], -- ステージセレクト
-			next_bgm      = main_menu.pos.col[9] % #bgm, -- BGMセレクト
+			next_bgm      = bgms[main_menu.pos.col[9]].id, -- BGMセレクト
 		})
 		cls_joy()
 		-- 初期化
@@ -3921,7 +3947,7 @@ function rbff2.startplugin()
 			{ "1P カラー"             , { "A", "D" } },
 			{ "2P カラー"             , { "A", "D" } },
 			{ "ステージセレクト"      , stg_names },
-			{ "BGMセレクト"           , bgm },
+			{ "BGMセレクト"           , bgm_names },
 			{ "リスタート" },
 		},
 		pos = { -- メニュー内の選択位置
@@ -3973,8 +3999,8 @@ function rbff2.startplugin()
 		main_menu.pos.col[ 6] = math.min(math.max(pgm:read_u8(0x107BAC)+1, 1), 2)
 		main_menu.pos.col[ 7] = math.min(math.max(pgm:read_u8(0x107BAD)+1, 1), 2)
 
-		local cond1 = math.min(math.max(pgm:read_u8(0x107BB1)  , 1), #stg1)
-		local cond2 = math.min(math.max(pgm:read_u8(0x107BB7)+1, 1), #stg2)
+		local cond1 = pgm:read_u8(0x107BB1)
+		local cond2 = pgm:read_u8(0x107BB7)
 		local cond3 = pgm:read_u8(0x107BB9) == 1 and 0x01 or 0x0F
 		main_menu.pos.col[ 8] = 1
 		for i, data in ipairs(stgs) do
