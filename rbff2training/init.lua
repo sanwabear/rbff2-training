@@ -140,6 +140,8 @@ function rbff2.startplugin()
 
 		next_block_grace = 0, -- 1ガードでの持続フレーム数
 		infinity_life2   = true,
+
+		dummy_bs_cmd     = 1, -- ブレイクショット
 	}
 
 	-- DIPスイッチ
@@ -823,7 +825,7 @@ function rbff2.startplugin()
 		{
 			{ disp_name = "フェイント", name = "フェイント シューティングスター", type = move_type.any, ids = { 0x112, }, },
 			{ name = "ガング・ホー", type = move_type.any, ids = { 0x6D, 0x6E, }, },
-			{ name = "チョッピングライト", type = move_type.overhead, ids = { 0x68, }, },
+			{ name = "チョッピングライト", type = move_type.overhead, ids = { 0x68, 0x69, }, },
 			{ name = "スマッシュソード", type = move_type.attack, ids = { 0x6A, }, },
 			{ name = "パニッシャー", type = move_type.attack, ids = { 0x6B, }, },
 			{ disp_name = "シューティングスター", name = "小 シューティングスター", type = move_type.attack, ids = { 0x86, 0x87, 0x8C, 0x88, 0x89, 0x8A, 0x8B, }, },
@@ -1353,16 +1355,123 @@ function rbff2.startplugin()
 	}
 
 	-- ボタンの色テーブル
-	local buttonchar
-	local function convert(str)
-		if not buttonchar then buttonchar = require("data/button_char") end
-		return buttonchar(str)
-	end
+	local convert = require("data/button_char")
 	local btn_col = {
 		[convert("_A")] = 0xFFCC0000, [convert("_B")] = 0xFFCC8800, [convert("_C")] = 0xFF3333CC,
 		[convert("_D")] = 0xFF336600, [convert("_S")] = 0xFFCC0000, [convert("^s")] = 0xFFBFBB0F,
 	}
 	local text_col, shadow_col = 0xFFFFFFFF, 0xFF000000
+
+	-- キー入力2
+	local cmd_base = {
+		-- 5 未入力
+		_5 = function(p, next_joy)
+			next_joy["P" .. p.control .. " Up"] = false
+			next_joy["P" .. p.control .. " Down"] = false
+			next_joy[p.block_side] = false
+			next_joy[p.front_side] = false
+			next_joy["P" .. p.control .. " Button 1"] = false
+			next_joy["P" .. p.control .. " Button 2"] = false
+			next_joy["P" .. p.control .. " Button 3"] = false
+			next_joy["P" .. p.control .. " Button 4"] = false
+		end,
+		-- 7 上後
+		_7 = function(p, next_joy)
+			next_joy["P" .. p.control .. " Up"] = true
+			next_joy[p.block_side] = true
+		end,
+		-- 8 上
+		_8 = function(p, next_joy)
+			next_joy["P" .. p.control .. " Up"] = true
+		end,
+		-- 9 上前
+		_9 = function(p, next_joy)
+			next_joy["P" .. p.control .. " Up"] = true
+			next_joy[p.front_side] = true
+		end,
+		-- 6 前
+		_6 = function(p, next_joy)
+			next_joy[p.front_side] = true
+		end,
+		-- 3 前下
+		_3 = function(p, next_joy)
+			next_joy[p.front_side] = true
+			next_joy["P" .. p.control .. " Down"] = true
+		end,
+		-- 2 下
+		_2 = function(p, next_joy)
+			next_joy["P" .. p.control .. " Down"] = true
+		end,
+		-- 1 後下
+		_1 = function(p, next_joy)
+			next_joy["P" .. p.control .. " Down"] = true
+			next_joy[p.block_side] = true
+		end,
+		-- 4 後
+		_4 = function(p, next_joy)
+			next_joy[p.block_side] = true
+		end,
+		-- A
+		_a = function(p, next_joy)
+			next_joy["P" .. p.control .. " Button 1"] = true
+		end,
+		-- B
+		_b = function(p, next_joy)
+			next_joy["P" .. p.control .. " Button 2"] = true
+		end,
+		-- C
+		_c = function(p, next_joy)
+			next_joy["P" .. p.control .. " Button 3"] = true
+		end,
+		-- D
+		_d = function(p, next_joy)
+			next_joy["P" .. p.control .. " Button 4"] = true
+		end,
+		-- BC
+		_bc = function(p, next_joy)
+			next_joy["P" .. p.control .. " Button 2"] = true
+			next_joy["P" .. p.control .. " Button 3"] = true
+		end,
+	}
+	local bs_cmds = {
+		{ name = "OFF"            , cmd = { }, },
+		{ name = "_6_2_3+_A"      , cmd = { cmd_base._6, cmd_base._2, cmd_base._3, cmd_base._a, }, },
+		{ name = "_6_2_3+_B"      , cmd = { cmd_base._6, cmd_base._2, cmd_base._3, cmd_base._b, }, },
+		{ name = "_6_2_3+_C"      , cmd = { cmd_base._6, cmd_base._2, cmd_base._3, cmd_base._c, }, },
+		{ name = "_2_3_6_9+_B"    , cmd = { cmd_base._2, cmd_base._3, cmd_base._6, cmd_base._9, cmd_base._b, }, },
+		{ name = "_2_1_4+_A"      , cmd = { cmd_base._2, cmd_base._1, cmd_base._4, cmd_base._a, }, },
+		{ name = "_2_1_4+_B"      , cmd = { cmd_base._2, cmd_base._1, cmd_base._4, cmd_base._b, }, },
+		{ name = "_2_1_4+_C"      , cmd = { cmd_base._2, cmd_base._1, cmd_base._4, cmd_base._c, }, },
+		{ name = "_2_3_6+_A"      , cmd = { cmd_base._2, cmd_base._3, cmd_base._6, cmd_base._a, }, },
+		{ name = "_2_3_6+_B"      , cmd = { cmd_base._2, cmd_base._3, cmd_base._6, cmd_base._b, }, },
+		{ name = "_2_3_6+_C"      , cmd = { cmd_base._2, cmd_base._3, cmd_base._6, cmd_base._c, }, },
+		{ name = "_4_1_2_3_6+_A"  , cmd = { cmd_base._4, cmd_base._1, cmd_base._2, cmd_base._3, cmd_base._6, cmd_base._a, }, },
+		{ name = "_4_1_2_3_6+_C"  , cmd = { cmd_base._4, cmd_base._1, cmd_base._2, cmd_base._3, cmd_base._6, cmd_base._c, }, },
+		{ name = "_1_2_3_6+_B"    , cmd = { cmd_base._1, cmd_base._2, cmd_base._3, cmd_base._6, cmd_base._b, }, },
+		{ name = "_6_3_2_1_4+_A"  , cmd = { cmd_base._6, cmd_base._3, cmd_base._2, cmd_base._1, cmd_base._4, cmd_base._b, }, },
+		{ name = "_6_3_2_1_4+_B"  , cmd = { cmd_base._6, cmd_base._3, cmd_base._2, cmd_base._1, cmd_base._4, cmd_base._b, }, },
+		{ name = "_6_3_2_1_4+_C"  , cmd = { cmd_base._6, cmd_base._3, cmd_base._2, cmd_base._1, cmd_base._4, cmd_base._b, }, },
+		{ name = "_1ため_6+_B"    , cmd = { cmd_base._1, cmd_base._6, cmd_base._b, }, },
+		{ name = "_1ため_6+_C"    , cmd = { cmd_base._1, cmd_base._6, cmd_base._c, }, },
+		{ name = "_4ため_6+_A"    , cmd = { cmd_base._6, cmd_base._b, }, },
+		{ name = "_4ため_6+_B"    , cmd = { cmd_base._6, cmd_base._b, }, },
+		{ name = "_2ため_8+_B"    , cmd = { cmd_base._2, cmd_base._8, cmd_base._b, }, },
+		{ name = "_2ため_8+_C"    , cmd = { cmd_base._2, cmd_base._8, cmd_base._c, }, },
+		{ name = "_2_1_4_6+_C"    , cmd = { cmd_base._2, cmd_base._1, cmd_base._4, cmd_base._6, cmd_base._c, }, },
+		{ name = "_6_4_6+_C"      , cmd = { cmd_base._6, cmd_base._4, cmd_base._6, cmd_base._c, }, },
+		{ name = "_2_2+_B"        , cmd = { cmd_base._2, cmd_base._5, cmd_base._2, cmd_base._b, }, },
+		{ name = "_A連打"         , cmd = { cmd_base._a, cmd_base._2, cmd_base._a, cmd_base._5, cmd_base._a, cmd_base._5, cmd_base._a, }, },
+		{ name = "_6_4_1_2_3+_B_C", cmd = { cmd_base._6, cmd_base._5, cmd_base._4, cmd_base._1, cmd_base._2, cmd_base._3, cmd_base._bc, }, },
+		{ name = "_2_1_4_1_6+_B_C", cmd = { cmd_base._2, cmd_base._1, cmd_base._4, cmd_base._1, cmd_base._6, cmd_base._bc, }, },
+		{ name = "_4ため_6+_B_C"  , cmd = { cmd_base._6, cmd_base._bc, }, },
+		{ name = "_1ため_2_6+_B_C", cmd = { cmd_base._1, cmd_base._2, cmd_base._6, cmd_base._bc, }, },
+		{ name = "_2_1_4_1_6+_C"  , cmd = { cmd_base._2, cmd_base._1, cmd_base._4, cmd_base._1, cmd_base._6, cmd_base._c, }, },
+		{ name = "_6_3_2_1_4_6+_A", cmd = { cmd_base._6, cmd_base._3, cmd_base._2, cmd_base._1, cmd_base._4, cmd_base._6, cmd_base._a, }, },
+	}
+	local bs_cmd_names = {}
+	for _, bs_cmd in pairs(bs_cmds) do
+		table.insert(bs_cmd_names, convert(bs_cmd.name))
+	end
 
 	function exists(name)
 		if type(name)~="string" then return false end
@@ -1627,6 +1736,7 @@ function rbff2.startplugin()
 			dummy_act        = 1,           -- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
 			dummy_gd         = 1,           -- なし, オート, 1ヒットガード, 1ガード, 常時, ランダム
 			dummy_down       = 1,           -- なし, テクニカルライズ, グランドスウェー
+			bs_count         = 0,           -- ブレイクショットの実施カウント
 
 			life_rec         = true,        -- 自動で体力回復させるときtrue
 			red              = true,        -- 赤体力にするときtrue
@@ -3313,12 +3423,14 @@ function rbff2.startplugin()
 			if bit32.band(p.reg_pcnt, 0x80) == 0x00 then
 				lever = lever .. "_D"
 			end
+			--[[ -- スタートセレクトは表示しない
 			if bit32.band(p.reg_st_b, p1 and 0x01 or 0x04) == 0x00 then
-				-- lever = lever .. "_S" -- スタートセレクトは表示しない
+				lever = lever .. "_S"
 			end
 			if bit32.band(p.reg_st_b, p1 and 0x02 or 0x08) == 0x00 then
-				-- lever = lever .. "^s" -- スタートセレクトは表示しない
+				lever = lever .. "^s"
 			end
+			]]
 			if p.key_hist[#p.key_hist] ~= lever then
 				for k = 2, #p.key_hist do
 					p.key_hist[k - 1] = p.key_hist[k]
@@ -3422,7 +3534,7 @@ function rbff2.startplugin()
 
 				-- なし, オート, 1ヒットガード, 1ガード, 常時, ランダム
 				-- リプレイ中は自動ガードしない
-				if (p.need_block or p.need_low_block or p.need_ovh_block) and accept_control then
+				if (p.need_block or p.need_low_block or p.need_ovh_block) and accept_control and (not p.bs_count or p.bs_count <= 0) then
 					local jumps = {0x9,
 						0x0B, 0x0C,
 						0x0D, 0x0E,
@@ -3542,6 +3654,23 @@ function rbff2.startplugin()
 							next_joy[d]  = (0 < joy_val[d] ) and false or true
 						end
 					end
+				end
+
+				-- ブレイクショット
+				if 0 < global.dummy_bs_cmd then
+					if (p.skip_frame or p.hit_skip ~= 0) and p.state == 2 and p.bs_count <= 0 then
+						p.bs_count = 1
+					end
+					local bs_cmd = bs_cmds[global.dummy_bs_cmd].cmd
+					if 1 <= p.bs_count and p.bs_count <= #bs_cmd then
+						cmd_base._5(p, next_joy)
+						bs_cmd[p.bs_count](p, next_joy)
+						p.bs_count = p.bs_count + 1
+					else 
+						p.bs_count = -1
+					end
+				else
+					p.bs_count = -1
 				end
 			end
 		end
@@ -3775,30 +3904,31 @@ function rbff2.startplugin()
 		p[2].dummy_act           = col[ 4]      -- 2P アクション          4
 		p[1].dummy_gd            = col[ 5]      -- 1P ガード              5
 		p[2].dummy_gd            = col[ 6]      -- 2P ガード              6
-		global.next_block_grace  = col[ 7] - 1  -- 1ガード持続フレーム数  7
-		p[1].dummy_down          = col[ 8]      -- 1P やられ時行動        8
-		p[2].dummy_down          = col[ 9]      -- 2P やられ時行動        9
-		p[1].fwd_prov            = col[10] == 2 -- 1P 挑発で前進         10
-		p[2].fwd_prov            = col[11] == 2 -- 2P 挑発で前進         11
-		--                             12                                12
-		p[1].red                 = col[13] == 2 -- 1P 体力ゲージ         13
-		p[2].red                 = col[14] == 2 -- 2P 体力ゲージ         14
-		p[1].max                 = col[15] == 2 -- 1P POWゲージ          15
-		p[2].max                 = col[16] == 2 -- 2P POWゲージ          16
-		--                             17                                17
-		global.disp_hitbox       = col[18] == 2 -- 判定表示              18
-		global.pause_hit         = col[19] == 2 -- ヒット時にポーズ      19
-		global.pausethrow        = col[20] == 2 -- 投げ判定発生時にポーズ20
-		p[1].disp_dmg            = col[21] == 2 -- 1P ダメージ表示       21
-		p[2].disp_dmg            = col[22] == 2 -- 2P ダメージ表示       22
-		p[1].disp_cmd            = col[23] == 2 -- 1P 入力表示           23
-		p[2].disp_cmd            = col[24] == 2 -- 2P 入力表示           24
-		global.disp_frmgap       = col[25] == 2 -- フレーム差表示        25
-		p[1].disp_frm            = col[26] == 2 -- 1P フレーム数表示     26
-		p[2].disp_frm            = col[27] == 2 -- 2P フレーム数表示     27
-		global.disp_stun         = col[28] == 2 -- スタン表示            28
-		global.disp_pos          = col[29] == 2 -- 1P 2P 距離表示        29
-		dip_config.easy_super    = col[30] == 2 -- 簡易超必              30
+		global.dummy_bs_cmd      = col[ 7]      -- ブレイクショット       7
+		global.next_block_grace  = col[ 8] - 1  -- 1ガード持続フレーム数  8
+		p[1].dummy_down          = col[ 9]      -- 1P やられ時行動        9
+		p[2].dummy_down          = col[10]      -- 2P やられ時行動       10
+		p[1].fwd_prov            = col[11] == 2 -- 1P 挑発で前進         11
+		p[2].fwd_prov            = col[12] == 2 -- 2P 挑発で前進         12
+		--                             13                                13
+		p[1].red                 = col[14] == 2 -- 1P 体力ゲージ         14
+		p[2].red                 = col[15] == 2 -- 2P 体力ゲージ         15
+		p[1].max                 = col[16] == 2 -- 1P POWゲージ          16
+		p[2].max                 = col[17] == 2 -- 2P POWゲージ          17
+		--                             18                                18
+		global.disp_hitbox       = col[19] == 2 -- 判定表示              19
+		global.pause_hit         = col[20] == 2 -- ヒット時にポーズ      20
+		global.pausethrow        = col[21] == 2 -- 投げ判定発生時にポーズ21
+		p[1].disp_dmg            = col[22] == 2 -- 1P ダメージ表示       22
+		p[2].disp_dmg            = col[23] == 2 -- 2P ダメージ表示       23
+		p[1].disp_cmd            = col[24] == 2 -- 1P 入力表示           24
+		p[2].disp_cmd            = col[25] == 2 -- 2P 入力表示           25
+		global.disp_frmgap       = col[26] == 2 -- フレーム差表示        26
+		p[1].disp_frm            = col[27] == 2 -- 1P フレーム数表示     27
+		p[2].disp_frm            = col[28] == 2 -- 2P フレーム数表示     28
+		global.disp_stun         = col[29] == 2 -- スタン表示            29
+		global.disp_pos          = col[30] == 2 -- 1P 2P 距離表示        30
+		dip_config.easy_super    = col[31] == 2 -- 簡易超必              31
 
 		for _, p in ipairs(players) do
 			if p.dummy_gd == 3 then
@@ -3815,6 +3945,8 @@ function rbff2.startplugin()
 			local max_life = p.red and 0x60 or 0xC0 -- 赤体力にするかどうか
 			pgm:write_u8(p.addr.life, max_life)         -- 体力
 			pgm:write_u8(p.addr.stun, p.addr.init_stun) -- スタン値
+
+			p.bs_count = -1
 		end
 
 		if global.dummy_mode == 5 then
@@ -3901,30 +4033,31 @@ function rbff2.startplugin()
 		col[ 4] = p[2].dummy_act           -- 2P アクション          4
 		col[ 5] = p[1].dummy_gd            -- 1P ガード              5
 		col[ 6] = p[2].dummy_gd            -- 2P ガード              6
-		col[ 7] = g.next_block_grace + 1   -- 1ガード持続フレーム数  7
-		col[ 8] = p[1].dummy_down          -- 1P やられ時行動        8
-		col[ 9] = p[2].dummy_down          -- 2P やられ時行動        9
-		col[10] = p[1].fwd_prov and 2 or 1 -- 1P 挑発で前進         10
-		col[11] = p[2].fwd_prov and 2 or 1 -- 2P 挑発で前進         11
-		--  12                                                      12
-		col[13] = p[1].red      and 2 or 1 -- 1P 体力ゲージ         13
-		col[14] = p[2].red      and 2 or 1 -- 2P 体力ゲージ         14
-		col[15] = p[1].max      and 2 or 1 -- 1P POWゲージ          15
-		col[16] = p[2].max      and 2 or 1 -- 2P POWゲージ          16
-		--  17                                                      17
-		col[18] = g.disp_hitbox and 2 or 1 -- 判定表示              18
-		col[19] = g.pause_hit   and 2 or 1 -- ヒット時にポーズ      19
-		col[20] = g.pausethrow  and 2 or 1 -- 投げ判定発生時にポーズ20
-		col[21] = p[1].disp_dmg and 2 or 1 -- 1P ダメージ表示       21
-		col[22] = p[2].disp_dmg and 2 or 1 -- 2P ダメージ表示       22
-		col[23] = p[1].disp_cmd and 2 or 1 -- 1P 入力表示           23
-		col[24] = p[2].disp_cmd and 2 or 1 -- 2P 入力表示           24
-		col[25] = g.disp_frmgap and 2 or 1 -- フレーム差表示        25
-		col[26] = p[1].disp_frm and 2 or 1 -- 1P フレーム数表示     26
-		col[27] = p[2].disp_frm and 2 or 1 -- 2P フレーム数表示     27
-		col[28] = g.disp_stun   and 2 or 1 -- スタン表示            28
-		col[29] = g.disp_pos    and 2 or 1 -- 1P 2P 距離表示        29
-		col[30] = dip_config.easy_super and 2 or 1 -- 簡易超必      30
+		col[ 7] = g.dummy_bs_cmd           -- ブレイクショット       7
+		col[ 8] = g.next_block_grace + 1   -- 1ガード持続フレーム数  8
+		col[ 9] = p[1].dummy_down          -- 1P やられ時行動        9
+		col[10] = p[2].dummy_down          -- 2P やられ時行動       10
+		col[11] = p[1].fwd_prov and 2 or 1 -- 1P 挑発で前進         11
+		col[12] = p[2].fwd_prov and 2 or 1 -- 2P 挑発で前進         12
+		--  13                                                      13
+		col[14] = p[1].red      and 2 or 1 -- 1P 体力ゲージ         14
+		col[15] = p[2].red      and 2 or 1 -- 2P 体力ゲージ         15
+		col[16] = p[1].max      and 2 or 1 -- 1P POWゲージ          16
+		col[17] = p[2].max      and 2 or 1 -- 2P POWゲージ          17
+		--  18                                                      18
+		col[19] = g.disp_hitbox and 2 or 1 -- 判定表示              19
+		col[20] = g.pause_hit   and 2 or 1 -- ヒット時にポーズ      20
+		col[21] = g.pausethrow  and 2 or 1 -- 投げ判定発生時にポーズ21
+		col[22] = p[1].disp_dmg and 2 or 1 -- 1P ダメージ表示       22
+		col[23] = p[2].disp_dmg and 2 or 1 -- 2P ダメージ表示       23
+		col[24] = p[1].disp_cmd and 2 or 1 -- 1P 入力表示           24
+		col[25] = p[2].disp_cmd and 2 or 1 -- 2P 入力表示           25
+		col[26] = g.disp_frmgap and 2 or 1 -- フレーム差表示        26
+		col[27] = p[1].disp_frm and 2 or 1 -- 1P フレーム数表示     27
+		col[28] = p[2].disp_frm and 2 or 1 -- 2P フレーム数表示     28
+		col[29] = g.disp_stun   and 2 or 1 -- スタン表示            29
+		col[30] = g.disp_pos    and 2 or 1 -- 1P 2P 距離表示        30
+		col[31] = dip_config.easy_super and 2 or 1 -- 簡易超必      31
 	end
 
 	menu_to_tra  = function() menu_cur = tra_menu end
@@ -4040,6 +4173,10 @@ function rbff2.startplugin()
 
 		main_menu.pos.col[ 9] = math.min(math.max(pgm:read_u8(0x10A8D5)  , 1), #char_names)
 	end
+	local gd_frms = {}
+	for i = 1, 61 do
+		gd_frms[i] = string.format("%sF後にガード解除", (i - 1))
+	end
 	tra_menu = {
 		list = {
 			{ "ダミーモード"          , { "プレイヤー vs プレイヤー", "プレイヤー vs CPU", "CPU vs プレイヤー", "1P&2P入れ替え", "レコード", "リプレイ" }, },
@@ -4048,7 +4185,8 @@ function rbff2.startplugin()
 			{ "2P アクション"         , { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
 			{ "1P ガード"             , { "なし", "オート", "1ヒットガード", "1ガード", "常時", "ランダム" }, },
 			{ "2P ガード"             , { "なし", "オート", "1ヒットガード", "1ガード", "常時", "ランダム" }, },
-			{ "1ガード持続フレーム数" , { }, },
+			{ "ブレイクショット"      , bs_cmd_names, },
+			{ "1ガード持続フレーム数" , gd_frms, },
 			{ "1P やられ時行動"       , { "なし", "テクニカルライズ", "グランドスウェー" }, },
 			{ "2P やられ時行動"       , { "なし", "テクニカルライズ", "グランドスウェー" }, },
 			{ "1P 挑発で前進"         , { "OFF", "ON" }, },
@@ -4083,30 +4221,31 @@ function rbff2.startplugin()
 				1, -- 2P アクション           4
 				1, -- 1P ガード               5
 				1, -- 2P ガード               6
-				1, -- 1ガード持続フレーム数   7
-				1, -- 1P やられ時行動         8
-				1, -- 2P やられ時行動         9
-				1, -- 1P 挑発で前進          10
-				1, -- 2P 挑発で前進          11
-				0, -- －ゲージ設定－         12
-				1, -- 1P 体力ゲージ          13
-				1, -- 2P 体力ゲージ          14
-				1, -- 1P POWゲージ           15
-				1, -- 2P POWゲージ           16
-				0, -- －一般設定－           17
-				1, -- 判定表示               18
-				1, -- ヒット時にポーズ       19
-				1, -- 投げ判定ポーズ         20
-				1, -- フレーム表示           21
-				1, -- 1P ダメージ表示        22
-				1, -- 2P ダメージ表示        23
-				1, -- 1P 入力表示            24
-				1, -- 2P 入力表示            25
-				1, -- 1P フレーム数表示      26
-				1, -- 2P フレーム数表示      27
-				1, -- スタン表示             28
-				1, -- 1P 2P 距離表示         29
-				1, -- 簡易超必               30
+				0, -- ブレイクショット        7
+				1, -- 1ガード持続フレーム数   8
+				1, -- 1P やられ時行動         9
+				1, -- 2P やられ時行動        10
+				1, -- 1P 挑発で前進          11
+				1, -- 2P 挑発で前進          12
+				0, -- －ゲージ設定－         13
+				1, -- 1P 体力ゲージ          14
+				1, -- 2P 体力ゲージ          15
+				1, -- 1P POWゲージ           16
+				1, -- 2P POWゲージ           17
+				0, -- －一般設定－           18
+				1, -- 判定表示               19
+				1, -- ヒット時にポーズ       20
+				1, -- 投げ判定ポーズ         21
+				1, -- フレーム表示           22
+				1, -- 1P ダメージ表示        23
+				1, -- 2P ダメージ表示        24
+				1, -- 1P 入力表示            25
+				1, -- 2P 入力表示            26
+				1, -- 1P フレーム数表示      27
+				1, -- 2P フレーム数表示      28
+				1, -- スタン表示             29
+				1, -- 1P 2P 距離表示         30
+				1, -- 簡易超必               31
 			},
 		},
 		on_a = {
@@ -4116,6 +4255,7 @@ function rbff2.startplugin()
 			menu_to_main, -- 2P アクション
 			menu_to_main, -- 1P ガード
 			menu_to_main, -- 2P ガード
+			menu_to_main, -- ブレイクショット
 			menu_to_main, -- 1ガード持続フレーム数
 			menu_to_main, -- 1P やられ時行動
 			menu_to_main, -- 2P やられ時行動
@@ -4148,6 +4288,7 @@ function rbff2.startplugin()
 			menu_to_main_cancel, -- 2P アクション
 			menu_to_main_cancel, -- 1P ガード
 			menu_to_main_cancel, -- 2P ガード
+			menu_to_main_cancel, -- ブレイクショット
 			menu_to_main_cancel, -- 1ガード持続フレーム数
 			menu_to_main_cancel, -- 1P やられ時行動
 			menu_to_main_cancel, -- 2P やられ時行動
@@ -4174,9 +4315,6 @@ function rbff2.startplugin()
 			menu_to_main_cancel, -- 簡易超必
 		},
 	}
-	for i = 1, 61 do
-		tra_menu.list[7][2][i] = string.format("%sF後にガード解除", (i - 1))
-	end
 
 	rec_menu = {
 		list = {
@@ -4593,7 +4731,7 @@ function rbff2.startplugin()
 
 	emu.register_periodic(function()
 		main_or_menu()
-		auto_recovery_debug()
+		--auto_recovery_debug()
 	end)
 end
 
