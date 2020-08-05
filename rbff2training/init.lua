@@ -710,6 +710,7 @@ function rbff2.startplugin()
 			{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = move_type.attack, ids = { 0x243, }, },
 			{ disp_name = "CA 立B", name = "CA 立B(3段目)", type = move_type.attack, ids = { 0x249, }, },
 			{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = move_type.attack, ids = { 0x242, }, },
+			{ name = "下A", type = move_type.low_attack, ids = { 0x47, }, },
 		},
 		-- ビリー・カーン
 		{
