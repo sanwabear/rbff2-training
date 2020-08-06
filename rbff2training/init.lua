@@ -4653,6 +4653,12 @@ function rbff2.startplugin()
 			pgm:write_direct_u16(0x63336, 0x4E71)
 			--時間の値にアイコン用のオフセット値を足しむ処理で空表示にする 0632DA: 0640 00EE                addi.w  #$ee, D0
 			pgm:write_direct_u16(0x632DC, 0x0DD7)
+			
+			-- 技データ（テリー）はCB340から開始（HOME版）、0000xx0Fから始まる。xxはレバー方向。
+			-- タイジンタコゥのタメ時間ぜろ
+			--pgm:write_direct_u8(0xCB3C2, 0x00)
+			--pgm:write_direct_u8(0xCB3C5, 0xF0)
+			--pgm:write_direct_u8(0xCB3C6, 0xF0)
 		end
 
 		-- 強制的に家庭用モードに変更
