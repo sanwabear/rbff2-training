@@ -66,7 +66,8 @@ local rbff2 = exports
 
 function rbff2.startplugin()
 	local main_or_menu_state
-	local menu_cur, main_menu, tra_menu, rec_menu, play_menu, menu, tra_main, menu_exit
+	local menu_cur, main_menu, tra_menu, rec_menu, play_menu, menu, tra_main, menu_exit, bs_menus
+
 	local menu_move_fc = 0
 
 	local mem_last_time         = 0      -- 最終読込フレーム(キャッシュ用)
@@ -140,8 +141,6 @@ function rbff2.startplugin()
 
 		next_block_grace = 0, -- 1ガードでの持続フレーム数
 		infinity_life2   = true,
-
-		dummy_bs_cmd     = 1, -- ブレイクショット
 	}
 
 	-- DIPスイッチ
@@ -249,6 +248,8 @@ function rbff2.startplugin()
 		return set
 	end
 
+	local guard_acts = {
+	}
 	local char_acts_base = {
 		-- テリー・ボガード
 		{
@@ -1135,6 +1136,186 @@ function rbff2.startplugin()
 			end
 		end
 	end
+	-- コマンドテーブル上の技ID
+	-- ブレイクショット対応技のみ
+	local char_bs_list = {
+		-- テリー・ボガード
+		{
+			{ id = 0x01, name = "小 バーンナックル", }, 
+			{ id = 0x02, name = "大 バーンナックル", }, 
+			{ id = 0x03, name = "パワーウェイブ", }, 
+			{ id = 0x04, name = "ラウンドウェイブ", }, 
+			{ id = 0x05, name = "クラックシュート", }, 
+			{ id = 0x06, name = "ファイヤーキック", }, 
+			{ id = 0x10, name = "パワーゲイザー", }, 
+		},
+		-- アンディ・ボガード
+		{
+			{ id = 0x03, name = "飛翔拳", }, 
+			{ id = 0x04, name = "激 飛翔拳", }, 
+			{ id = 0x05, name = "昇龍弾", }, 
+			{ id = 0x06, name = "空破弾", }, 
+			{ id = 0x12, name = "男打弾", }, 
+		},
+		-- 東丈
+		{
+			{ id = 0x06, name = "ハリケーンアッパー", }, 
+			{ id = 0x07, name = "爆裂ハリケーン", }, 
+			{ id = 0x04, name = "タイガーキック", }, 
+			{ id = 0x03, name = "黄金のカカト", }, 
+			{ id = 0x05, name = "爆裂拳", }, 
+		},
+		-- 不知火舞
+		{
+			{ id = 0x02, name = "龍炎舞", }, 
+			{ id = 0x04, name = "必殺忍蜂", }, 
+			{ id = 0x01, name = "花蝶扇", }, 
+			{ id = 0x03, name = "小夜千鳥", }, 
+		},
+		-- ギース・ハワード
+		{
+			{ id = 0x01, name = "烈風拳", }, 
+			{ id = 0x02, name = "ダブル烈風拳", }, 
+			{ id = 0x13, name = "デッドリーレイブ", }, 
+		},
+		-- 望月双角,
+		{
+			{ id = 0x01, name = "まきびし", }, 
+			{ id = 0x02, name = "野猿狩り", }, 
+			{ id = 0x03, name = "憑依弾", }, 
+			{ id = 0x05, name = "邪棍舞", }, 
+			{ id = 0x06, name = "喝", }, 
+		},
+		-- ボブ・ウィルソン
+		{
+			{ id = 0x03, name = "バイソンホーン", }, 
+			{ id = 0x01, name = "ローリングタートル", }, 
+			{ id = 0x04, name = "ワイルドウルフ", }, 
+			{ id = 0x03, name = "サイドワインダー", }, 
+			{ id = 0x05, name = "モンキーダンス", }, 
+		},
+		-- ホンフゥ
+		{
+			{ id = 0x02, name = "小 制空烈火棍", }, 
+			{ id = 0x03, name = "大 制空烈火棍", }, 
+			{ id = 0x05, name = "電光石火の天", }, 
+			{ id = 0x06, name = "電光石火の地", }, 
+			{ id = 0x12, name = "よかトンハンマー", }, 
+		},
+		-- ブルー・マリー
+		{
+			{ id = 0x05, name = "M.スナッチャー", }, 
+			{ id = 0x03, name = "スピンフォール", }, 
+			{ id = 0x02, name = "バーチカルアロー", }, 
+			{ id = 0x04, name = "ストレートスライサー", }, 
+		},
+		-- フランコ・バッシュ
+		{
+			{ id = 0x04, name = "ダブルコング", }, 
+			{ id = 0x05, name = "ザッパー", }, 
+			{ id = 0x06, name = "ゴールデンボンバー", }, 
+			{ id = 0x04, name = "ガッツダンク", }, 
+		},
+		-- 山崎竜二
+		{
+			{ id = 0x01, name = "蛇使い・上段", }, 
+			{ id = 0x02, name = "蛇使い・中段", }, 
+			{ id = 0x03, name = "蛇使い・下段", }, 
+			{ id = 0x07, name = "裁きの匕首", }, 
+		},
+		-- 秦崇秀
+		{
+			{ id = 0x02, name = "小 帝王天眼拳", }, 
+			{ id = 0x03, name = "大 帝王天眼拳", }, 
+			{ id = 0x04, name = "小 帝王天耳拳", }, 
+			{ id = 0x05, name = "大 帝王天耳拳", }, 
+			{ id = 0x07, name = "帝王神眼拳・その場", }, 
+			{ id = 0x08, name = "帝王神眼拳・頭上", }, 
+			{ id = 0x09, name = "帝王神眼拳・背後", }, 
+			{ id = 0x10, name = "帝王漏尽拳", }, 
+		},
+		-- 秦崇雷,
+		{
+			{ id = 0x02, name = "小 帝王天眼拳", }, 
+			{ id = 0x03, name = "大 帝王天眼拳", }, 
+			{ id = 0x04, name = "小 帝王天耳拳", }, 
+			{ id = 0x05, name = "大 帝王天耳拳", }, 
+			{ id = 0x06, name = "帝王漏尽拳", }, 
+		},
+		-- ダック・キング
+		{
+			{ id = 0x01, name = "小 ヘッドスピンアタック", }, 
+			{ id = 0x02, name = "大 ヘッドスピンアタック", }, 
+			{ id = 0x04, name = "ダンシングダイブ", }, 
+		},
+		-- キム・カッファン
+		{
+			{ id = 0x02, name = "小 半月斬", }, 
+			{ id = 0x03, name = "大 半月斬", }, 
+			{ id = 0x01, ver = 0x02, name = "飛燕斬・後方", }, 
+			{ id = 0x01, name = "飛燕斬・真上", }, 
+			{ id = 0x01, ver = 0x01, name = "飛燕斬・前方", }, 
+			{ id = 0x06, name = "覇気脚", }, 
+		},
+		-- ビリー・カーン
+		{
+			{ id = 0x03, name = "雀落とし", }, 
+			{ id = 0x05, name = "強襲飛翔棍", }, 
+			{ id = 0x06, name = "火龍追撃棍", }, 
+		},
+		-- チン・シンザン
+		{
+			{ id = 0x01, name = "氣雷砲（前方）", }, 
+			{ id = 0x02, name = "氣雷砲（対空）", }, 
+			{ id = 0x04, name = "小 破岩激", }, 
+			{ id = 0x05, name = "大 破岩激", }, 
+			{ id = 0x10, name = "爆雷砲", }, 
+		},
+		-- タン・フー・ルー,
+		{
+			{ id = 0x02, name = "小 箭疾歩", }, 
+			{ id = 0x03, name = "大 箭疾歩", }, 
+			{ id = 0x01, name = "衝波", }, 
+			{ id = 0x05, name = "烈千脚", }, 
+		},
+		-- ローレンス・ブラッド
+		{
+			{ id = 0x01, name = "小 ブラッディスピン", }, 
+			{ id = 0x02, name = "大 ブラッディスピン", }, 
+			{ id = 0x05, name = "ブラッディカッター", }, 
+		},
+		-- ヴォルフガング・クラウザー
+		{
+			{ id = 0x03, name = "レッグトマホーク", }, 
+			{ id = 0x10, name = "カイザーウェーブ", }, 
+		},
+		-- リック・ストラウド
+		{
+			{ id = 0x06, name = "ブレイジングサンバースト", }, 
+			{ id = 0x01, name = "小 シューティングスター", }, 
+			{ id = 0x02, name = "大 シューティングスター", }, 
+			{ id = 0x03, name = "ディバインブラスト", }, 
+			{ id = 0x04, name = "フルムーンフィーバー", }, 
+			{ id = 0x05, name = "ヘリオン", }, 
+		},
+		-- 李香緋
+		{
+			{ id = 0x01, name = "小 那夢波", }, 
+			{ id = 0x02, name = "大 那夢波", }, 
+			{ id = 0x03, name = "天崩山", }, 
+			{ id = 0x07, name = "詠酒・対空中攻撃", }, 
+			{ id = 0x08, name = "詠酒・対立ち攻撃", }, 
+			{ id = 0x09, name = "詠酒・対しゃがみ攻撃", }, 
+			{ id = 0x10, name = "大鉄神", }, 
+		},
+		-- アルフレッド
+		{
+			{ id = 0x01, name = "小 クリティカルウィング", }, 
+			{ id = 0x02, name = "大 クリティカルウィング", }, 
+			{ id = 0x03, name = "オーグメンターウィング", }, 
+			{ id = 0x04, name = "ダイバージェンス", }, 
+		},
+	}
 
 	-- エミュレータ本体の入力取得
 	local use_joy = {
@@ -1362,117 +1543,6 @@ function rbff2.startplugin()
 		[convert("_D")] = 0xFF336600, [convert("_S")] = 0xFFCC0000, [convert("^s")] = 0xFFBFBB0F,
 	}
 	local text_col, shadow_col = 0xFFFFFFFF, 0xFF000000
-
-	-- キー入力2
-	local cmd_base = {
-		-- 5 未入力
-		_5 = function(p, next_joy)
-			next_joy["P" .. p.control .. " Up"] = false
-			next_joy["P" .. p.control .. " Down"] = false
-			next_joy[p.block_side] = false
-			next_joy[p.front_side] = false
-			next_joy["P" .. p.control .. " Button 1"] = false
-			next_joy["P" .. p.control .. " Button 2"] = false
-			next_joy["P" .. p.control .. " Button 3"] = false
-			next_joy["P" .. p.control .. " Button 4"] = false
-		end,
-		-- 7 上後
-		_7 = function(p, next_joy)
-			next_joy["P" .. p.control .. " Up"] = true
-			next_joy[p.block_side] = true
-		end,
-		-- 8 上
-		_8 = function(p, next_joy)
-			next_joy["P" .. p.control .. " Up"] = true
-		end,
-		-- 9 上前
-		_9 = function(p, next_joy)
-			next_joy["P" .. p.control .. " Up"] = true
-			next_joy[p.front_side] = true
-		end,
-		-- 6 前
-		_6 = function(p, next_joy)
-			next_joy[p.front_side] = true
-		end,
-		-- 3 前下
-		_3 = function(p, next_joy)
-			next_joy[p.front_side] = true
-			next_joy["P" .. p.control .. " Down"] = true
-		end,
-		-- 2 下
-		_2 = function(p, next_joy)
-			next_joy["P" .. p.control .. " Down"] = true
-		end,
-		-- 1 後下
-		_1 = function(p, next_joy)
-			next_joy["P" .. p.control .. " Down"] = true
-			next_joy[p.block_side] = true
-		end,
-		-- 4 後
-		_4 = function(p, next_joy)
-			next_joy[p.block_side] = true
-		end,
-		-- A
-		_a = function(p, next_joy)
-			next_joy["P" .. p.control .. " Button 1"] = true
-		end,
-		-- B
-		_b = function(p, next_joy)
-			next_joy["P" .. p.control .. " Button 2"] = true
-		end,
-		-- C
-		_c = function(p, next_joy)
-			next_joy["P" .. p.control .. " Button 3"] = true
-		end,
-		-- D
-		_d = function(p, next_joy)
-			next_joy["P" .. p.control .. " Button 4"] = true
-		end,
-		-- BC
-		_bc = function(p, next_joy)
-			next_joy["P" .. p.control .. " Button 2"] = true
-			next_joy["P" .. p.control .. " Button 3"] = true
-		end,
-	}
-	local bs_cmds = {
-		{ name = "OFF"            , cmd = { }, },
-		{ name = "_6_2_3+_A"      , cmd = { cmd_base._6, cmd_base._2, cmd_base._3, cmd_base._a, }, },
-		{ name = "_6_2_3+_B"      , cmd = { cmd_base._6, cmd_base._2, cmd_base._3, cmd_base._b, }, },
-		{ name = "_6_2_3+_C"      , cmd = { cmd_base._6, cmd_base._2, cmd_base._3, cmd_base._c, }, },
-		{ name = "_2_3_6_9+_B"    , cmd = { cmd_base._2, cmd_base._3, cmd_base._6, cmd_base._9, cmd_base._b, }, },
-		{ name = "_2_1_4+_A"      , cmd = { cmd_base._2, cmd_base._1, cmd_base._4, cmd_base._a, }, },
-		{ name = "_2_1_4+_B"      , cmd = { cmd_base._2, cmd_base._1, cmd_base._4, cmd_base._b, }, },
-		{ name = "_2_1_4+_C"      , cmd = { cmd_base._2, cmd_base._1, cmd_base._4, cmd_base._c, }, },
-		{ name = "_2_3_6+_A"      , cmd = { cmd_base._2, cmd_base._3, cmd_base._6, cmd_base._a, }, },
-		{ name = "_2_3_6+_B"      , cmd = { cmd_base._2, cmd_base._3, cmd_base._6, cmd_base._b, }, },
-		{ name = "_2_3_6+_C"      , cmd = { cmd_base._2, cmd_base._3, cmd_base._6, cmd_base._c, }, },
-		{ name = "_4_1_2_3_6+_A"  , cmd = { cmd_base._4, cmd_base._1, cmd_base._2, cmd_base._3, cmd_base._6, cmd_base._a, }, },
-		{ name = "_4_1_2_3_6+_C"  , cmd = { cmd_base._4, cmd_base._1, cmd_base._2, cmd_base._3, cmd_base._6, cmd_base._c, }, },
-		{ name = "_1_2_3_6+_B"    , cmd = { cmd_base._1, cmd_base._2, cmd_base._3, cmd_base._6, cmd_base._b, }, },
-		{ name = "_6_3_2_1_4+_A"  , cmd = { cmd_base._6, cmd_base._3, cmd_base._2, cmd_base._1, cmd_base._4, cmd_base._b, }, },
-		{ name = "_6_3_2_1_4+_B"  , cmd = { cmd_base._6, cmd_base._3, cmd_base._2, cmd_base._1, cmd_base._4, cmd_base._b, }, },
-		{ name = "_6_3_2_1_4+_C"  , cmd = { cmd_base._6, cmd_base._3, cmd_base._2, cmd_base._1, cmd_base._4, cmd_base._b, }, },
-		{ name = "_1ため_6+_B"    , cmd = { cmd_base._1, cmd_base._6, cmd_base._b, }, },
-		{ name = "_1ため_6+_C"    , cmd = { cmd_base._1, cmd_base._6, cmd_base._c, }, },
-		{ name = "_4ため_6+_A"    , cmd = { cmd_base._6, cmd_base._b, }, },
-		{ name = "_4ため_6+_B"    , cmd = { cmd_base._6, cmd_base._b, }, },
-		{ name = "_2ため_8+_B"    , cmd = { cmd_base._2, cmd_base._8, cmd_base._b, }, },
-		{ name = "_2ため_8+_C"    , cmd = { cmd_base._2, cmd_base._8, cmd_base._c, }, },
-		{ name = "_2_1_4_6+_C"    , cmd = { cmd_base._2, cmd_base._1, cmd_base._4, cmd_base._6, cmd_base._c, }, },
-		{ name = "_6_4_6+_C"      , cmd = { cmd_base._6, cmd_base._4, cmd_base._6, cmd_base._c, }, },
-		{ name = "_2_2+_B"        , cmd = { cmd_base._2, cmd_base._5, cmd_base._2, cmd_base._b, }, },
-		{ name = "_A連打"         , cmd = { cmd_base._a, cmd_base._2, cmd_base._a, cmd_base._5, cmd_base._a, cmd_base._5, cmd_base._a, }, },
-		{ name = "_6_4_1_2_3+_B_C", cmd = { cmd_base._6, cmd_base._5, cmd_base._4, cmd_base._1, cmd_base._2, cmd_base._3, cmd_base._bc, }, },
-		{ name = "_2_1_4_1_6+_B_C", cmd = { cmd_base._2, cmd_base._1, cmd_base._4, cmd_base._1, cmd_base._6, cmd_base._bc, }, },
-		{ name = "_4ため_6+_B_C"  , cmd = { cmd_base._6, cmd_base._bc, }, },
-		{ name = "_1ため_2_6+_B_C", cmd = { cmd_base._1, cmd_base._2, cmd_base._6, cmd_base._bc, }, },
-		{ name = "_2_1_4_1_6+_C"  , cmd = { cmd_base._2, cmd_base._1, cmd_base._4, cmd_base._1, cmd_base._6, cmd_base._c, }, },
-		{ name = "_6_3_2_1_4_6+_A", cmd = { cmd_base._6, cmd_base._3, cmd_base._2, cmd_base._1, cmd_base._4, cmd_base._6, cmd_base._a, }, },
-	}
-	local bs_cmd_names = {}
-	for _, bs_cmd in pairs(bs_cmds) do
-		table.insert(bs_cmd_names, convert(bs_cmd.name))
-	end
 
 	function exists(name)
 		if type(name)~="string" then return false end
@@ -1736,6 +1806,10 @@ function rbff2.startplugin()
 		players[p] = {
 			dummy_act        = 1,           -- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
 			dummy_gd         = 1,           -- なし, オート, 1ヒットガード, 1ガード, 常時, ランダム
+			dummy_bs         = false,       -- ブレイクショットモードのときtrue
+			dummy_bs_list    = {},          -- ブレイクショットのコマンドテーブル上の技ID
+			dummy_bs_cnt     = 0,           -- ブレイクショットのコマンドテーブル上の技のバリエーション（基本は0、飛燕斬用）
+			dummy_bs_chr     = 0,           -- ブレイクショットの設定をした時のキャラID
 			dummy_down       = 1,           -- なし, テクニカルライズ, グランドスウェー
 			bs_count         = 0,           -- ブレイクショットの実施カウント
 
@@ -1924,6 +1998,9 @@ function rbff2.startplugin()
 				reg_st_b     = 0x380000,                    -- キー入力 REG_STATUS_B アドレス
 				control1     = p1 and 0x100412 or 0x100512, -- Human 1 or 2, CPU 3
 				control2     = p1 and 0x100413 or 0x100513, -- Human 1 or 2, CPU 3
+				select_hook  = p1 and 0x10CDD1 or 0x10CDD5, -- プレイヤーセレクト画面のフック処理用アドレス
+				bs_hook1     = p1 and 0x10DDDA or 0x10DDDC, -- BSモードのフック処理用アドレス。技のID。
+				bs_hook2     = p1 and 0x10DDDB or 0x10DDDD, -- BSモードのフック処理用アドレス。技のバリエーション。
 
 				-- フックできない変わり用
 				state2       = p1 and 0x10CA0E or 0x10CA0F, -- 状態
@@ -2166,6 +2243,16 @@ function rbff2.startplugin()
 					"(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100500)", 
 					string.format("PC=%x;g", fix_bp_addr(0x05B46E))))
 			end
+
+			-- BSモードのフック
+			-- bp 03957E,{((A6)==CB244)&&((A4)==100400)&&(maincpu.pb@10048E==2)},{D1=1;g}
+			-- bp 03957E,{((A6)==CB244)&&((A4)==100500)&&(maincpu.pb@10058E==2)},{D1=1;g}
+			-- 0395B2: 1941 00A3                move.b  D1, ($a3,A4) -- 確定した技データ
+			-- 0395B6: 195E 00A4                move.b  (A6)+, ($a4,A4) -- 技データ読込 だいたい06
+			-- 0395BA: 195E 00A5                move.b  (A6)+, ($a5,A4) -- 技データ読込 だいたい00、飛燕斬01、02、03
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03957E),
+				"(maincpu.pw@107C22>0)&&((A6)==CB244)&&((maincpu.pb@10048E==2&&($100400==((A4)&$FFFFFF)))||(maincpu.pb@10058E==2&&($100500==((A4)&$FFFFFF))))",
+				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$80);D1=(maincpu.pb@(temp1));A6=((A6)+2);maincpu.pb@((A4)+$A3)=D1;maincpu.pb@((A4)+$A4)=06;maincpu.pb@((A4)+$A5)=maincpu.pb@(temp1+1);PC=((PC)+$20);g"))
 
 			-- ステージ設定用。メニューでFを設定した場合にのみ動作させる
 			-- ラウンド数を1に初期化→スキップ
@@ -3535,7 +3622,7 @@ function rbff2.startplugin()
 
 				-- なし, オート, 1ヒットガード, 1ガード, 常時, ランダム
 				-- リプレイ中は自動ガードしない
-				if (p.need_block or p.need_low_block or p.need_ovh_block) and accept_control and (not p.bs_count or p.bs_count <= 0) then
+				if (p.need_block or p.need_low_block or p.need_ovh_block) and accept_control and p.bs_count <= 0 then
 					local jumps = {0x9,
 						0x0B, 0x0C,
 						0x0D, 0x0E,
@@ -3658,17 +3745,44 @@ function rbff2.startplugin()
 				end
 
 				-- ブレイクショット
-				if 0 < global.dummy_bs_cmd then
-					if (p.skip_frame or p.hit_skip ~= 0) and p.state == 2 and p.bs_count <= 0 then
-						p.bs_count = 1
+				if p.dummy_bs_chr ~= p.char then
+					p.dummy_bs = false
+					p.dummy_bs_list = {}
+					p.dummy_bs_cnt = 0
+				end
+				if p.dummy_bs == true then
+					pgm:write_u8(p.addr.bs_hook1, 0x20)             -- BSモード用技ID更新フック
+					pgm:write_u8(p.addr.bs_hook2, 0x00)             -- BSモード用技ID更新フック
+					local bs_list = p.dummy_bs_list
+					if #bs_list > 0 then
+						local bs = bs_list[math.random(#bs_list)]
+						local id = bs.id or 0x20
+						local ver = bs.ver or 0x00
+						pgm:write_u8(p.addr.bs_hook1, id)
+						pgm:write_u8(p.addr.bs_hook2, ver)
 					end
-					local bs_cmd = bs_cmds[global.dummy_bs_cmd].cmd
-					if 1 <= p.bs_count and p.bs_count <= #bs_cmd then
-						cmd_base._5(p, next_joy)
-						bs_cmd[p.bs_count](p, next_joy)
-						p.bs_count = p.bs_count + 1
-					else 
-						p.bs_count = -1
+
+					if (p.skip_frame or p.hit_skip ~= 0) and p.state == 2 and p.bs_count <= 0 then
+						p.bs_count = 0
+					end
+
+					if 0 <= p.bs_count then
+						if p.dummy_bs_cnt <= p.bs_count then
+							local bs_list = p.dummy_bs_list
+							if #bs_list > 0 then
+								next_joy["P" .. p.control .. " Up"] = false
+								next_joy["P" .. p.control .. " Down"] = false
+								next_joy[p.block_side] = false
+								next_joy[p.front_side] = false
+								next_joy["P" .. p.control .. " Button 1"] = true
+								next_joy["P" .. p.control .. " Button 2"] = false
+								next_joy["P" .. p.control .. " Button 3"] = false
+								next_joy["P" .. p.control .. " Button 4"] = false
+							end
+							p.bs_count = -1
+						else
+							p.bs_count = p.bs_count + 1
+						end
 					end
 				else
 					p.bs_count = -1
@@ -3895,6 +4009,7 @@ function rbff2.startplugin()
 	local menu_nop = function() end
 	local menu_to_main = function(cancel)
 		local col = tra_menu.pos.col
+		local row = tra_menu.pos.row
 		local p   = players
 		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 		local scr = manager:machine().screens[":screen"]
@@ -3905,31 +4020,32 @@ function rbff2.startplugin()
 		p[2].dummy_act           = col[ 4]      -- 2P アクション          4
 		p[1].dummy_gd            = col[ 5]      -- 1P ガード              5
 		p[2].dummy_gd            = col[ 6]      -- 2P ガード              6
-		global.dummy_bs_cmd      = col[ 7]      -- ブレイクショット       7
-		global.next_block_grace  = col[ 8] - 1  -- 1ガード持続フレーム数  8
-		p[1].dummy_down          = col[ 9]      -- 1P やられ時行動        9
-		p[2].dummy_down          = col[10]      -- 2P やられ時行動       10
-		p[1].fwd_prov            = col[11] == 2 -- 1P 挑発で前進         11
-		p[2].fwd_prov            = col[12] == 2 -- 2P 挑発で前進         12
-		--                             13                                13
-		p[1].red                 = col[14] == 2 -- 1P 体力ゲージ         14
-		p[2].red                 = col[15] == 2 -- 2P 体力ゲージ         15
-		p[1].max                 = col[16] == 2 -- 1P POWゲージ          16
-		p[2].max                 = col[17] == 2 -- 2P POWゲージ          17
-		--                             18                                18
-		global.disp_hitbox       = col[19] == 2 -- 判定表示              19
-		global.pause_hit         = col[20] == 2 -- ヒット時にポーズ      20
-		global.pausethrow        = col[21] == 2 -- 投げ判定発生時にポーズ21
-		p[1].disp_dmg            = col[22] == 2 -- 1P ダメージ表示       22
-		p[2].disp_dmg            = col[23] == 2 -- 2P ダメージ表示       23
-		p[1].disp_cmd            = col[24] == 2 -- 1P 入力表示           24
-		p[2].disp_cmd            = col[25] == 2 -- 2P 入力表示           25
-		global.disp_frmgap       = col[26] == 2 -- フレーム差表示        26
-		p[1].disp_frm            = col[27] == 2 -- 1P フレーム数表示     27
-		p[2].disp_frm            = col[28] == 2 -- 2P フレーム数表示     28
-		global.disp_stun         = col[29] == 2 -- スタン表示            29
-		global.disp_pos          = col[30] == 2 -- 1P 2P 距離表示        30
-		dip_config.easy_super    = col[31] == 2 -- 簡易超必              31
+		global.next_block_grace  = col[ 7] - 1  -- 1ガード持続フレーム数  7
+		p[1].dummy_bs            = col[ 8] == 2 -- 1P ブレイクショット    8
+		p[2].dummy_bs            = col[ 9] == 2 -- 2P ブレイクショット    9
+		p[1].dummy_down          = col[10]      -- 1P やられ時行動       10
+		p[2].dummy_down          = col[11]      -- 2P やられ時行動       11
+		p[1].fwd_prov            = col[12] == 2 -- 1P 挑発で前進         12
+		p[2].fwd_prov            = col[13] == 2 -- 2P 挑発で前進         13
+		--                             14                                14
+		p[1].red                 = col[15] == 2 -- 1P 体力ゲージ         15
+		p[2].red                 = col[16] == 2 -- 2P 体力ゲージ         16
+		p[1].max                 = col[17] == 2 -- 1P POWゲージ          17
+		p[2].max                 = col[18] == 2 -- 2P POWゲージ          18
+		--                             19                                19
+		global.disp_hitbox       = col[20] == 2 -- 判定表示              20
+		global.pause_hit         = col[21] == 2 -- ヒット時にポーズ      21
+		global.pausethrow        = col[22] == 2 -- 投げ判定発生時にポーズ22
+		p[1].disp_dmg            = col[23] == 2 -- 1P ダメージ表示       23
+		p[2].disp_dmg            = col[24] == 2 -- 2P ダメージ表示       24
+		p[1].disp_cmd            = col[25] == 2 -- 1P 入力表示           25
+		p[2].disp_cmd            = col[26] == 2 -- 2P 入力表示           26
+		global.disp_frmgap       = col[27] == 2 -- フレーム差表示        27
+		p[1].disp_frm            = col[28] == 2 -- 1P フレーム数表示     28
+		p[2].disp_frm            = col[29] == 2 -- 2P フレーム数表示     29
+		global.disp_stun         = col[30] == 2 -- スタン表示            30
+		global.disp_pos          = col[31] == 2 -- 1P 2P 距離表示        31
+		dip_config.easy_super    = col[32] == 2 -- 簡易超必              32
 
 		for _, p in ipairs(players) do
 			if p.dummy_gd == 3 then
@@ -3954,7 +4070,7 @@ function rbff2.startplugin()
 			-- レコード
 			-- 設定でレコーディングに入らずに抜けたとき用にモードを1に戻しておく
 			global.dummy_mode = 1
-			if not cancel then
+			if not cancel and row == 1 then
 				menu_cur = rec_menu
 				return
 			end
@@ -3963,9 +4079,33 @@ function rbff2.startplugin()
 			global.dummy_mode = 1
 			play_menu.pos.col[8] = recording.do_repeat   and 2 or 1 -- 繰り返し           8
 			play_menu.pos.col[9] = global.replay_fix_pos and 2 or 1 -- 開始間合い固定     9
-			if not cancel then
+			if not cancel and row == 1 then
 				menu_cur = play_menu
 				return
+			end
+		end
+
+		for i = 1, 2 do
+			if p[i].dummy_bs == true then
+				local bs_menu = bs_menus[i][p[i].char]
+				local bs_list = char_bs_list[p[i].char]
+				p[i].dummy_bs_list = {}
+				for j, bs in pairs(bs_list) do
+					if bs_menu.pos.col[j+1] == 2 then
+						table.insert(p[i].dummy_bs_list, bs)
+					end
+				end
+				p[i].dummy_bs_cnt = bs_menu.pos.col[#bs_menu.pos.col] - 1
+				p[i].dummy_bs_chr = p[i].char
+			end
+		end
+		-- 設定後にメニュー遷移
+		for i = 1, 2 do
+			if p[i].dummy_bs == true then
+				if not cancel and row == (7 + i) then
+					menu_cur = bs_menus[i][p[i].char]
+					return
+				end
 			end
 		end
 
@@ -4034,31 +4174,32 @@ function rbff2.startplugin()
 		col[ 4] = p[2].dummy_act           -- 2P アクション          4
 		col[ 5] = p[1].dummy_gd            -- 1P ガード              5
 		col[ 6] = p[2].dummy_gd            -- 2P ガード              6
-		col[ 7] = g.dummy_bs_cmd           -- ブレイクショット       7
-		col[ 8] = g.next_block_grace + 1   -- 1ガード持続フレーム数  8
-		col[ 9] = p[1].dummy_down          -- 1P やられ時行動        9
-		col[10] = p[2].dummy_down          -- 2P やられ時行動       10
-		col[11] = p[1].fwd_prov and 2 or 1 -- 1P 挑発で前進         11
-		col[12] = p[2].fwd_prov and 2 or 1 -- 2P 挑発で前進         12
-		--  13                                                      13
-		col[14] = p[1].red      and 2 or 1 -- 1P 体力ゲージ         14
-		col[15] = p[2].red      and 2 or 1 -- 2P 体力ゲージ         15
-		col[16] = p[1].max      and 2 or 1 -- 1P POWゲージ          16
-		col[17] = p[2].max      and 2 or 1 -- 2P POWゲージ          17
-		--  18                                                      18
-		col[19] = g.disp_hitbox and 2 or 1 -- 判定表示              19
-		col[20] = g.pause_hit   and 2 or 1 -- ヒット時にポーズ      20
-		col[21] = g.pausethrow  and 2 or 1 -- 投げ判定発生時にポーズ21
-		col[22] = p[1].disp_dmg and 2 or 1 -- 1P ダメージ表示       22
-		col[23] = p[2].disp_dmg and 2 or 1 -- 2P ダメージ表示       23
-		col[24] = p[1].disp_cmd and 2 or 1 -- 1P 入力表示           24
-		col[25] = p[2].disp_cmd and 2 or 1 -- 2P 入力表示           25
-		col[26] = g.disp_frmgap and 2 or 1 -- フレーム差表示        26
-		col[27] = p[1].disp_frm and 2 or 1 -- 1P フレーム数表示     27
-		col[28] = p[2].disp_frm and 2 or 1 -- 2P フレーム数表示     28
-		col[29] = g.disp_stun   and 2 or 1 -- スタン表示            29
-		col[30] = g.disp_pos    and 2 or 1 -- 1P 2P 距離表示        30
-		col[31] = dip_config.easy_super and 2 or 1 -- 簡易超必      31
+		col[ 7] = g.next_block_grace + 1   -- 1ガード持続フレーム数  7
+		col[ 8] = p[1].dummy_bs and 2 or 1 -- 1Pブレイクショット     8
+		col[ 9] = p[2].dummy_bs and 2 or 1 -- 2Pブレイクショット     9
+		col[10] = p[1].dummy_down          -- 1P やられ時行動       10
+		col[11] = p[2].dummy_down          -- 2P やられ時行動       11
+		col[12] = p[1].fwd_prov and 2 or 1 -- 1P 挑発で前進         12
+		col[13] = p[2].fwd_prov and 2 or 1 -- 2P 挑発で前進         13
+		--  14                                                      14
+		col[15] = p[1].red      and 2 or 1 -- 1P 体力ゲージ         15
+		col[16] = p[2].red      and 2 or 1 -- 2P 体力ゲージ         16
+		col[17] = p[1].max      and 2 or 1 -- 1P POWゲージ          17
+		col[18] = p[2].max      and 2 or 1 -- 2P POWゲージ          18
+		--  19                                                      19
+		col[20] = g.disp_hitbox and 2 or 1 -- 判定表示              20
+		col[21] = g.pause_hit   and 2 or 1 -- ヒット時にポーズ      21
+		col[22] = g.pausethrow  and 2 or 1 -- 投げ判定発生時にポーズ22
+		col[23] = p[1].disp_dmg and 2 or 1 -- 1P ダメージ表示       23
+		col[24] = p[2].disp_dmg and 2 or 1 -- 2P ダメージ表示       24
+		col[25] = p[1].disp_cmd and 2 or 1 -- 1P 入力表示           25
+		col[26] = p[2].disp_cmd and 2 or 1 -- 2P 入力表示           26
+		col[27] = g.disp_frmgap and 2 or 1 -- フレーム差表示        27
+		col[28] = p[1].disp_frm and 2 or 1 -- 1P フレーム数表示     28
+		col[29] = p[2].disp_frm and 2 or 1 -- 2P フレーム数表示     29
+		col[30] = g.disp_stun   and 2 or 1 -- スタン表示            30
+		col[31] = g.disp_pos    and 2 or 1 -- 1P 2P 距離表示        31
+		col[32] = dip_config.easy_super and 2 or 1 -- 簡易超必      32
 	end
 
 	menu_to_tra  = function() menu_cur = tra_menu end
@@ -4174,9 +4315,52 @@ function rbff2.startplugin()
 
 		main_menu.pos.col[ 9] = math.min(math.max(pgm:read_u8(0x10A8D5)  , 1), #char_names)
 	end
+	-- ブレイクショットメニュー
+	bs_menus = {}
+	local bs_frms = {}
+	for i = 1, 60 do
+		table.insert(bs_frms, string.format("ガードから%sF後に発動", i))
+	end
+	local menu_bs_to_tra_menu = function()
+		menu_to_tra()
+	end
+	for i = 1, 2 do
+		local pbs = {}
+		table.insert(bs_menus, pbs)
+		for _, bs_list in pairs(char_bs_list) do
+			local list, on_ab, col = {}, {}, {}
+			table.insert(list, { "     ONにしたスロットからランダムで発動されます。" })
+			table.insert(on_ab, menu_bs_to_tra_menu)
+			table.insert(col, 0)
+			for _, bs in pairs(bs_list) do
+				table.insert(list, { bs.name, { "OFF", "ON", }, })
+				table.insert(on_ab, menu_bs_to_tra_menu)
+				table.insert(col, 1)
+			end
+			table.insert(list, { "                   ブレイクショット設定" })
+			table.insert(on_ab, menu_bs_to_tra_menu)
+			table.insert(col, 0)
+
+			table.insert(list, { "タイミング", bs_frms })
+			table.insert(on_ab, menu_bs_to_tra_menu)
+			table.insert(col, 1)
+
+			local bs_menu = {
+				list = list,
+				pos = { -- メニュー内の選択位置
+					offset = 1,
+					row = 2,
+					col = col,
+				},
+				on_a = on_ab,
+				on_b = on_ab,
+			}
+			table.insert(pbs, bs_menu)
+		end
+	end
 	local gd_frms = {}
 	for i = 1, 61 do
-		gd_frms[i] = string.format("%sF後にガード解除", (i - 1))
+		table.insert(gd_frms, string.format("%sF後にガード解除", (i - 1)))
 	end
 	tra_menu = {
 		list = {
@@ -4186,8 +4370,9 @@ function rbff2.startplugin()
 			{ "2P アクション"         , { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
 			{ "1P ガード"             , { "なし", "オート", "1ヒットガード", "1ガード", "常時", "ランダム" }, },
 			{ "2P ガード"             , { "なし", "オート", "1ヒットガード", "1ガード", "常時", "ランダム" }, },
-			{ "ブレイクショット"      , bs_cmd_names, },
 			{ "1ガード持続フレーム数" , gd_frms, },
+			{ "1P ブレイクショット"   , { "OFF", "Aで選択画面へ" }, },
+			{ "2P ブレイクショット"   , { "OFF", "Aで選択画面へ" }, },
 			{ "1P やられ時行動"       , { "なし", "テクニカルライズ", "グランドスウェー" }, },
 			{ "2P やられ時行動"       , { "なし", "テクニカルライズ", "グランドスウェー" }, },
 			{ "1P 挑発で前進"         , { "OFF", "ON" }, },
@@ -4222,31 +4407,32 @@ function rbff2.startplugin()
 				1, -- 2P アクション           4
 				1, -- 1P ガード               5
 				1, -- 2P ガード               6
-				0, -- ブレイクショット        7
-				1, -- 1ガード持続フレーム数   8
-				1, -- 1P やられ時行動         9
-				1, -- 2P やられ時行動        10
-				1, -- 1P 挑発で前進          11
-				1, -- 2P 挑発で前進          12
-				0, -- －ゲージ設定－         13
-				1, -- 1P 体力ゲージ          14
-				1, -- 2P 体力ゲージ          15
-				1, -- 1P POWゲージ           16
-				1, -- 2P POWゲージ           17
-				0, -- －一般設定－           18
-				1, -- 判定表示               19
-				1, -- ヒット時にポーズ       20
-				1, -- 投げ判定ポーズ         21
-				1, -- フレーム表示           22
-				1, -- 1P ダメージ表示        23
-				1, -- 2P ダメージ表示        24
-				1, -- 1P 入力表示            25
-				1, -- 2P 入力表示            26
-				1, -- 1P フレーム数表示      27
-				1, -- 2P フレーム数表示      28
-				1, -- スタン表示             29
-				1, -- 1P 2P 距離表示         30
-				1, -- 簡易超必               31
+				1, -- 1ガード持続フレーム数   7
+				1, -- 1P ブレイクショット     8
+				1, -- 2P ブレイクショット     9
+				1, -- 1P やられ時行動        10
+				1, -- 2P やられ時行動        11
+				1, -- 1P 挑発で前進          12
+				1, -- 2P 挑発で前進          13
+				0, -- －ゲージ設定－         14
+				1, -- 1P 体力ゲージ          15
+				1, -- 2P 体力ゲージ          16
+				1, -- 1P POWゲージ           17
+				1, -- 2P POWゲージ           18
+				0, -- －一般設定－           19
+				1, -- 判定表示               20
+				1, -- ヒット時にポーズ       21
+				1, -- 投げ判定ポーズ         22
+				1, -- フレーム表示           23
+				1, -- 1P ダメージ表示        24
+				1, -- 2P ダメージ表示        25
+				1, -- 1P 入力表示            26
+				1, -- 2P 入力表示            27
+				1, -- 1P フレーム数表示      28
+				1, -- 2P フレーム数表示      29
+				1, -- スタン表示             30
+				1, -- 1P 2P 距離表示         31
+				1, -- 簡易超必               32
 			},
 		},
 		on_a = {
@@ -4256,8 +4442,9 @@ function rbff2.startplugin()
 			menu_to_main, -- 2P アクション
 			menu_to_main, -- 1P ガード
 			menu_to_main, -- 2P ガード
-			menu_to_main, -- ブレイクショット
 			menu_to_main, -- 1ガード持続フレーム数
+			menu_to_main, -- 1P ブレイクショット
+			menu_to_main, -- 2P ブレイクショット
 			menu_to_main, -- 1P やられ時行動
 			menu_to_main, -- 2P やられ時行動
 			menu_to_main, -- 1P 挑発で前進
@@ -4289,8 +4476,9 @@ function rbff2.startplugin()
 			menu_to_main_cancel, -- 2P アクション
 			menu_to_main_cancel, -- 1P ガード
 			menu_to_main_cancel, -- 2P ガード
-			menu_to_main_cancel, -- ブレイクショット
 			menu_to_main_cancel, -- 1ガード持続フレーム数
+			menu_to_main_cancel, -- 1P ブレイクショット
+			menu_to_main_cancel, -- 2P ブレイクショット
 			menu_to_main_cancel, -- 1P やられ時行動
 			menu_to_main_cancel, -- 2P やられ時行動
 			menu_to_main_cancel, -- 1P 挑発で前進
@@ -4558,7 +4746,7 @@ function rbff2.startplugin()
 		 0x022E, 0x022F, 0x0248, 0x03B3, 0x03C3, 0x03C4, 0x03C6, 0x03D0, 0x03D4, 0x03D5, 0x03D6, 0x03DF, 
 		 0x03E0, 0x03E1, 0x03E2, 0x03EA, 0x03EB, 0x03F3, 0x03F4, 0x03F5, 0x03F6, 0x03F7, 0x03FD, 0x03FE, 
 		 0x03FF, 0x0445, 0x0446, 0x0449, 0x044A, 0x044B, 0x0454, 0x0455, 0x0473, 0x0474, 0x0479, 0x047A, 
-		 0x0484, 0x0487, 0x0494, 0x0495, 0x04A1, 0x0613, 0x0614, 0x0615,
+		 0x0484, 0x0487, 0x0494, 0x0495, 0x04A1, 0x0613, 0x0614, 0x0615, 0x044E, 0x044F,
 	}
 
 	main_or_menu_state = tra_main -- menu or tra_main
@@ -4626,8 +4814,8 @@ function rbff2.startplugin()
 			end
 			player_select_active = false -- 状態リセット
 			pgm:write_u8(mem_0x10CDD0)
-			pgm:write_u32(0x10CDD1)
-			pgm:write_u32(0x10CDD5)
+			pgm:write_u32(players[1].addr.select_hook)
+			pgm:write_u32(players[2].addr.select_hook)
 		end
 
 		--状態チェック用
@@ -4647,18 +4835,21 @@ function rbff2.startplugin()
 		elseif not pached then
 			--pached = apply_patch_file(pgm, "ps2-p1.pat", true)
 			pached = apply_patch_file(pgm, "char1-p1.pat", true)
-			
+
 			-- キャラ選択の時間減らす処理をNOPにする
 			pgm:write_direct_u16(0x63336, 0x4E71)
 			pgm:write_direct_u16(0x63336, 0x4E71)
 			--時間の値にアイコン用のオフセット値を足しむ処理で空表示にする 0632DA: 0640 00EE                addi.w  #$ee, D0
 			pgm:write_direct_u16(0x632DC, 0x0DD7)
-			
-			-- 技データ（テリー）はCB340から開始（HOME版）、0000xx0Fから始まる。xxはレバー方向。
-			-- タイジンタコゥのタメ時間ぜろ
-			--pgm:write_direct_u8(0xCB3C2, 0x00)
-			--pgm:write_direct_u8(0xCB3C5, 0xF0)
-			--pgm:write_direct_u8(0xCB3C6, 0xF0)
+
+			-- BSモードの仕込み部分
+			-- 実質効いていない避け攻撃ぽいコマンドデータを1発BS用の入れ物に使う
+			-- 0xCB243の読込後にD1を技IDに差し替えればA(09)で技が出る。下は例。
+			-- bp 03957E,{((A6)==CB244)&&((A4)==100400)&&(maincpu.pb@10048E==2)},{D1=1;g}
+			-- bp 03957E,{((A6)==CB244)&&((A4)==100500)&&(maincpu.pb@10058E==2)},{D1=1;g}
+			-- 末尾1バイトの20は技のIDになるが、プログラム中で1Eまでの値しか通さないので20だと無害。
+			pgm:write_direct_u32(0xCB240, 0xF009FF20)
+			pgm:write_direct_u16(0xCB244, 0x0600)
 		end
 
 		-- 強制的に家庭用モードに変更
@@ -4712,8 +4903,8 @@ function rbff2.startplugin()
 		if player_select_active then
 			--apply_1p2p_active()
 			if pgm:read_u8(mem_0x10CDD0) > 12 then
-				local addr1 = bit32.band(0xFFFFFF, pgm:read_u32(0x10CDD1))
-				local addr2 = bit32.band(0xFFFFFF, pgm:read_u32(0x10CDD5))
+				local addr1 = bit32.band(0xFFFFFF, pgm:read_u32(players[1].addr.select_hook))
+				local addr2 = bit32.band(0xFFFFFF, pgm:read_u32(players[2].addr.select_hook))
 				if addr1 > 0 then
 					pgm:write_u8(addr1, 2)
 				end
@@ -4738,7 +4929,7 @@ function rbff2.startplugin()
 
 	emu.register_periodic(function()
 		main_or_menu()
-		--auto_recovery_debug()
+		auto_recovery_debug()
 	end)
 end
 
