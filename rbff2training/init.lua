@@ -200,7 +200,7 @@ function rbff2.startplugin()
 		{ name = "4 HITs Ⅱ"                     , id = 0x1C, },
 		{ name = "Gain a victory"                , id = 0x1E, },
 		{ name = "NEOGEO SOUND LOGO"             , id = 0x26, },
-		{ name = "THE NEWCOMERS"                 , id = 0x44, },
+		--{ name = "THE NEWCOMERS"                 , id = 0x44, },
 	}
 	local bgm_names = {}
 	for i, bgm in ipairs(bgms) do
@@ -3756,7 +3756,7 @@ function rbff2.startplugin()
 					p.dummy_bs_list = {}
 					p.dummy_bs_cnt = 0
 				end
-				if p.dummy_bs == true and (p.on_guard + 1) == global.frame_number then
+				if p.dummy_bs == true and p.on_guard == global.frame_number then
 					pgm:write_u8(p.addr.bs_hook1, 0x20)             -- BSモード用技ID更新フック
 					pgm:write_u8(p.addr.bs_hook2, 0x00)             -- BSモード用技ID更新フック
 					local bs_list = p.dummy_bs_list
@@ -4371,7 +4371,13 @@ function rbff2.startplugin()
 			end
 		end
 
-		main_menu.pos.col[11] = math.min(math.max(pgm:read_u8(0x10A8D5)  , 1), #char_names)
+		main_menu.pos.col[11] = 1
+		local bgmid = math.max(pgm:read_u8(0x10A8D5), 1)
+		for i, bgm in ipairs(bgms) do
+			if bgmid == bgm.id then
+				main_menu.pos.col[11] = 1
+			end
+		end
 	end
 	-- ブレイクショットメニュー
 	bs_menus = {}
