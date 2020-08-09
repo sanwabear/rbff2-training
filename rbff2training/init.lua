@@ -328,7 +328,7 @@ function rbff2.startplugin()
 			{ disp_name = "スラッシュキック", name = "大スラッシュキック", type = move_type.attack, ids = { 0x90, 0x91, 0x92, 0x93, 0x94, }, },
 			{ name = "黄金のカカト", type = move_type.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
 			{ name = "タイガーキック", type = move_type.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
-			{ name = "爆裂拳", type = move_type.attack, ids = { 0xB0, 0xB1, 0xB2, 0xAF, }, },
+			{ name = "爆裂拳", type = move_type.attack, ids = { 0xAE, 0xB0, 0xB1, 0xB2, 0xAF, }, },
 			{ name = "爆裂フック", type = move_type.attack, ids = { 0xB3, 0xB4, 0xB5, }, },
 			{ name = "爆裂アッパー", type = move_type.attack, ids = { 0xF8, 0xF9, 0xFA, 0xFB, }, },
 			{ name = "ハリケーンアッパー", type = move_type.attack, ids = { 0xB8, 0xB9, 0xBA, }, },
@@ -461,7 +461,7 @@ function rbff2.startplugin()
 			{ name = "レッグプレス", type = move_type.attack, ids = { 0x6A, 0x7A, 0x7B, }, },
 			{ name = "エレファントタスク", type = move_type.attack, ids = { 0x6B, }, },
 			{ name = "H・ヘッジホック", type = move_type.attack, ids = { 0x6C, }, },
-			{ name = "ローリングタートル", type = move_type.attack, ids = { 0x86, 0x88, 0x89, }, },
+			{ name = "ローリングタートル", type = move_type.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
 			{ name = "サイドワインダー", type = move_type.low_attack, ids = { 0x90, 0x91, 0x92, 0x93, }, },
 			{ name = "モンキーダンス", type = move_type.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
 			{ name = "ワイルドウルフ", type = move_type.overhead, ids = { 0xA4, 0xA5, 0xA6, }, },
@@ -1183,15 +1183,13 @@ function rbff2.startplugin()
 			{ id = 0x01, name = "まきびし", }, 
 			{ id = 0x02, name = "野猿狩り", }, 
 			{ id = 0x03, name = "憑依弾", }, 
-			{ id = 0x05, name = "邪棍舞", }, 
 			{ id = 0x06, name = "喝", }, 
 		},
 		-- ボブ・ウィルソン
 		{
-			{ id = 0x03, name = "バイソンホーン", }, 
 			{ id = 0x01, name = "ローリングタートル", }, 
 			{ id = 0x04, name = "ワイルドウルフ", }, 
-			{ id = 0x03, name = "サイドワインダー", }, 
+			{ id = 0x02, name = "サイドワインダー", }, 
 			{ id = 0x05, name = "モンキーダンス", }, 
 		},
 		-- ホンフゥ
@@ -1199,22 +1197,23 @@ function rbff2.startplugin()
 			{ id = 0x02, name = "小 制空烈火棍", }, 
 			{ id = 0x03, name = "大 制空烈火棍", }, 
 			{ id = 0x05, name = "電光石火の天", }, 
-			{ id = 0x06, name = "電光石火の地", }, 
+			{ id = 0x04, name = "電光石火の地", }, 
 			{ id = 0x12, name = "よかトンハンマー", }, 
 		},
 		-- ブルー・マリー
 		{
-			{ id = 0x05, name = "M.スナッチャー", }, 
-			{ id = 0x03, name = "スピンフォール", }, 
-			{ id = 0x02, name = "バーチカルアロー", }, 
-			{ id = 0x04, name = "ストレートスライサー", }, 
+			{ id = 0x02, name = "M.スナッチャー", }, 
+			{ id = 0x05, name = "スピンフォール", }, 
+			{ id = 0x06, name = "バーチカルアロー", }, 
+			{ id = 0x07, name = "ストレートスライサー", }, 
 		},
 		-- フランコ・バッシュ
 		{
-			{ id = 0x04, name = "ダブルコング", }, 
-			{ id = 0x05, name = "ザッパー", }, 
-			{ id = 0x06, name = "ゴールデンボンバー", }, 
+			{ id = 0x01 , name = "ダブルコング", }, 
+			{ id = 0x02, name = "ザッパー", }, 
+			{ id = 0x05, name = "ゴールデンボンバー", }, 
 			{ id = 0x04, name = "ガッツダンク", }, 
+			{ id = 0x10, name = "ファイナルオメガショット", }, 
 		},
 		-- 山崎竜二
 		{
@@ -1293,16 +1292,14 @@ function rbff2.startplugin()
 		{
 			{ id = 0x06, name = "ブレイジングサンバースト", }, 
 			{ id = 0x01, name = "小 シューティングスター", }, 
-			{ id = 0x02, name = "大 シューティングスター", }, 
 			{ id = 0x03, name = "ディバインブラスト", }, 
-			{ id = 0x04, name = "フルムーンフィーバー", }, 
 			{ id = 0x05, name = "ヘリオン", }, 
 		},
 		-- 李香緋
 		{
 			{ id = 0x01, name = "小 那夢波", }, 
 			{ id = 0x02, name = "大 那夢波", }, 
-			{ id = 0x03, name = "天崩山", }, 
+			{ id = 0x06, name = "天崩山", }, 
 			{ id = 0x07, name = "詠酒・対空中攻撃", }, 
 			{ id = 0x08, name = "詠酒・対立ち攻撃", }, 
 			{ id = 0x09, name = "詠酒・対しゃがみ攻撃", }, 
@@ -4746,7 +4743,8 @@ function rbff2.startplugin()
 		 0x022E, 0x022F, 0x0248, 0x03B3, 0x03C3, 0x03C4, 0x03C6, 0x03D0, 0x03D4, 0x03D5, 0x03D6, 0x03DF, 
 		 0x03E0, 0x03E1, 0x03E2, 0x03EA, 0x03EB, 0x03F3, 0x03F4, 0x03F5, 0x03F6, 0x03F7, 0x03FD, 0x03FE, 
 		 0x03FF, 0x0445, 0x0446, 0x0449, 0x044A, 0x044B, 0x0454, 0x0455, 0x0473, 0x0474, 0x0479, 0x047A, 
-		 0x0484, 0x0487, 0x0494, 0x0495, 0x04A1, 0x0613, 0x0614, 0x0615, 0x044E, 0x044F,
+		 0x0484, 0x0487, 0x0494, 0x0495, 0x04A1, 0x0613, 0x0614, 0x0615, 0x044E, 0x044F, 0x03EF, 0x03F0,
+		 0x03F1, 0x0480,
 	}
 
 	main_or_menu_state = tra_main -- menu or tra_main
