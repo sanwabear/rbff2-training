@@ -415,7 +415,8 @@ function rbff2.startplugin()
 			{ disp_name = "CA 下C", name = "CA 下C(2段目)下Aルート", type = move_type.attack, ids = { 0x24B, }, },
 			{ disp_name = "CA 立D", name = "CA 立D(2段目)", type = move_type.attack, ids = { 0x248, }, },
 			{ disp_name = "CA 下D", name = "CA 下D(2段目)", type = move_type.low_attack, ids = { 0x24A, }, },
-			{ name = "スゥエーC", type = move_type.low_attack, ids = { 0x25A, 0x25B, 0x25C, }, },
+			{ disp_name = "スゥエーC", name = "近スゥエーC", type = move_type.low_attack, ids = { 0x62, 0x63, 0x64, }, },
+			{ disp_name = "スゥエーC", name = "スゥエーC", type = move_type.low_attack, ids = { 0x25A, 0x25B, 0x25C, }, },
 		},
 		-- 望月双角,
 		{
@@ -586,7 +587,7 @@ function rbff2.startplugin()
 			{ name = "昇天", type = move_type.attack, ids = { 0x6B, }, },
 			{ disp_name = "蛇使い", name = "蛇使い・上段/蛇だまし", type = move_type.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
 			{ disp_name = "蛇使い", name = "蛇使い・中段/蛇だまし", type = move_type.attack, ids = { 0x90, 0x91, 0x92, 0x93, }, },
-			{ disp_name = "蛇使い", name = "蛇使い・下段/蛇だまし", type = move_type.low_attack, ids = { 0x9A, 0x9B, 0x9C, 0x89, }, },
+			{ disp_name = "蛇使い", name = "蛇使い・下段/蛇だまし", type = move_type.low_attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
 			{ name = "大蛇", type = move_type.low_attack, ids = { 0x94, }, },
 			{ name = "サドマゾ", type = move_type.attack, ids = { 0xA4, 0xA5, 0xA6, }, },
 			{ name = "裁きの匕首", type = move_type.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, }, },
@@ -601,7 +602,8 @@ function rbff2.startplugin()
 			{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = move_type.attack, ids = { 0x244, }, },
 			{ disp_name = "CA _3C", name = "CA 3C(2段目)", type = move_type.attack, ids = { 0x242, }, },
 			{ disp_name = "CA _6C", name = "CA 6C(2段目)", type = move_type.attack, ids = { 0x241, }, },
-			{ name = "スゥエーC", type = move_type.low_attack, ids = { 0x25A, 0x25B, 0x25C, }, },
+			{ disp_name = "スゥエーC", name = "近スゥエーC", type = move_type.low_attack, ids = { 0x62, 0x63, 0x64, }, },
+			{ disp_name = "スゥエーC", name = "スゥエーC", type = move_type.low_attack, ids = { 0x25A, 0x25B, 0x25C, }, },
 		},
 		-- 秦崇秀
 		{
@@ -725,7 +727,7 @@ function rbff2.startplugin()
 			{ name = "強襲飛翔棍", type = move_type.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
 			{ name = "超火炎旋風棍", type = move_type.attack, ids = { 0xFE, 0xFF, 0x100, }, },
 			{ name = "紅蓮殺棍", type = move_type.attack, ids = { 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, }, },
-			{ name = "サラマンダーストリーム", type = move_type.attack, ids = { 0x109, 0x108, 0x10A, 0x10B, 0x10C, }, },
+			{ name = "サラマンダーストリーム", type = move_type.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, }, },
 			{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = move_type.low_attack, ids = { 0x241, }, },
 			{ disp_name = "CA _6C", name = "CA 6C(2段目)", type = move_type.attack, ids = { 0x248, }, },
 			{ disp_name = "CA 下C", name = "CA 下C(2段目)", type = move_type.attack, ids = { 0x243, }, },
@@ -934,9 +936,12 @@ function rbff2.startplugin()
 			{ disp_name = "後歩き", name = "スゥエーライン上 後歩き", type = move_type.free, ids = { 0x2E, 0x2F, }, },
 			{ disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = move_type.any, ids = { 0x30, 0x31, 0x32, }, },
 			{ disp_name = "バックステップ", name = "スゥエーライン上 バックステップ", type = move_type.any, ids = { 0x33, 0x34, 0x35, }, },
-			{ name = "スゥエーA", type = move_type.overhead, ids = { 0x254, 0x255, 0x256, }, },
-			{ name = "スゥエーB", type = move_type.low_attack, ids = { 0x257, 0x258, 0x259, }, },
-			{ name = "スゥエーC", type = move_type.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
+			{ disp_name = "スゥエーA", name = "近スゥエーA", type = move_type.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
+			{ disp_name = "スゥエーB", name = "近スゥエーB", type = move_type.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
+			{ disp_name = "スゥエーC", name = "近スゥエーC", type = move_type.attack, ids = { 0x62, 0x63, 0x64, }, },
+			{ disp_name = "スゥエーA", name = "スゥエーA", type = move_type.overhead, ids = { 0x254, 0x255, 0x256, }, },
+			{ disp_name = "スゥエーB", name = "スゥエーB", type = move_type.low_attack, ids = { 0x257, 0x258, 0x259, }, },
+			{ disp_name = "スゥエーC", name = "スゥエーC", type = move_type.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
 			{ name = "ジャンプ移行", type = move_type.any, ids = { 0x8, 0xB, }, },
 			{ disp_name = "着地", name = "ジャンプ着地", type = move_type.any, ids = { 0x9, }, },
 			{ disp_name = "ジャンプ", name = "垂直ジャンプ", type = move_type.any, ids = { 0xB, 0xC, }, },
@@ -1805,10 +1810,10 @@ function rbff2.startplugin()
 			dummy_gd         = 1,           -- なし, オート, 1ヒットガード, 1ガード, 常時, ランダム
 			dummy_bs         = false,       -- ブレイクショットモードのときtrue
 			dummy_bs_list    = {},          -- ブレイクショットのコマンドテーブル上の技ID
-			dummy_bs_cnt     = 0,           -- ブレイクショットのコマンドテーブル上の技のバリエーション（基本は0、飛燕斬用）
+			dummy_bs_cnt     = 1,           -- ブレイクショットのコマンドテーブル上の技のバリエーション（基本は0、飛燕斬用）
 			dummy_bs_chr     = 0,           -- ブレイクショットの設定をした時のキャラID
 			dummy_down       = 1,           -- なし, テクニカルライズ, グランドスウェー
-			bs_count         = 0,           -- ブレイクショットの実施カウント
+			bs_count         = -1,          -- ブレイクショットの実施カウント
 
 			life_rec         = true,        -- 自動で体力回復させるときtrue
 			red              = true,        -- 赤体力にするときtrue
@@ -2999,14 +3004,15 @@ function rbff2.startplugin()
 			p.frm_gap.act_frames2  = p.frm_gap.act_frames2 or {}
 
 			p.act_contact    = pgm:read_u8(p.addr.act_contact)
+			p.on_guard       = p.on_guard or 0
 			p.hit_skip       = p.hit_skip or 0
 			p.old_act_data   = p.act_data or { name = "", type = move_type.any, }
-			if char_acts[#char_acts] and char_acts[#char_acts][p.act] then
-				p.act_data   = char_acts[#char_acts][p.act]
-				p.act_1st    = char_1st_acts[#char_acts][p.act] or false
-			elseif char_acts[p.char] and char_acts[p.char][p.act] then
+			if char_acts[p.char] and char_acts[p.char][p.act] then
 				p.act_data   = char_acts[p.char][p.act]
 				p.act_1st    = char_1st_acts[p.char][p.act] or false
+			elseif char_acts[#char_acts] and char_acts[#char_acts][p.act] then
+				p.act_data   = char_acts[#char_acts][p.act]
+				p.act_1st    = char_1st_acts[#char_acts][p.act] or false
 			else
 				p.act_data   = {
 					name     = (p.state == 1 or p.state == 3) and "やられ" or tohex(p.act), 
@@ -3222,6 +3228,9 @@ function rbff2.startplugin()
 			p.frame_gap      = p.frame_gap or 0
 			p.last_frame_gap = p.last_frame_gap or 0
 			if mem_0x10B862 ~= 0 and p.act_contact ~= 0 then
+				if p.state == 2 then
+					p.on_guard = global.frame_number
+				end
 				p.hit_skip = 2
 			end
 
@@ -3619,7 +3628,7 @@ function rbff2.startplugin()
 
 				-- なし, オート, 1ヒットガード, 1ガード, 常時, ランダム
 				-- リプレイ中は自動ガードしない
-				if (p.need_block or p.need_low_block or p.need_ovh_block) and accept_control and p.bs_count <= 0 then
+				if (p.need_block or p.need_low_block or p.need_ovh_block) and accept_control then
 					local jumps = {0x9,
 						0x0B, 0x0C,
 						0x0D, 0x0E,
@@ -3747,7 +3756,7 @@ function rbff2.startplugin()
 					p.dummy_bs_list = {}
 					p.dummy_bs_cnt = 0
 				end
-				if p.dummy_bs == true then
+				if p.dummy_bs == true and (p.on_guard + 1) == global.frame_number then
 					pgm:write_u8(p.addr.bs_hook1, 0x20)             -- BSモード用技ID更新フック
 					pgm:write_u8(p.addr.bs_hook2, 0x00)             -- BSモード用技ID更新フック
 					local bs_list = p.dummy_bs_list
@@ -3759,30 +3768,25 @@ function rbff2.startplugin()
 						pgm:write_u8(p.addr.bs_hook2, ver)
 					end
 
-					if (p.skip_frame or p.hit_skip ~= 0) and p.state == 2 and p.bs_count <= 0 then
-						p.bs_count = 0
+					if p.bs_count < 1 then
+						p.bs_count = 1
+					else
+						p.bs_count = p.bs_count + 1
 					end
-
-					if 0 <= p.bs_count then
-						if p.dummy_bs_cnt <= p.bs_count then
-							local bs_list = p.dummy_bs_list
-							if #bs_list > 0 then
-								next_joy["P" .. p.control .. " Up"] = false
-								next_joy["P" .. p.control .. " Down"] = false
-								next_joy[p.block_side] = false
-								next_joy[p.front_side] = false
-								next_joy["P" .. p.control .. " Button 1"] = true
-								next_joy["P" .. p.control .. " Button 2"] = false
-								next_joy["P" .. p.control .. " Button 3"] = false
-								next_joy["P" .. p.control .. " Button 4"] = false
-							end
-							p.bs_count = -1
-						else
-							p.bs_count = p.bs_count + 1
+					if p.dummy_bs_cnt <= p.bs_count then
+						local bs_list = p.dummy_bs_list
+						if #bs_list > 0 then
+							next_joy["P" .. p.control .. " Up"] = false
+							next_joy["P" .. p.control .. " Down"] = false
+							next_joy[p.block_side] = false
+							next_joy[p.front_side] = false
+							next_joy["P" .. p.control .. " Button 1"] = true
+							next_joy["P" .. p.control .. " Button 2"] = false
+							next_joy["P" .. p.control .. " Button 3"] = false
+							next_joy["P" .. p.control .. " Button 4"] = false
 						end
+						p.bs_count = -1
 					end
-				else
-					p.bs_count = -1
 				end
 			end
 		end
@@ -3853,9 +3857,9 @@ function rbff2.startplugin()
 				-- コンボ表示などの四角枠
 				if p.disp_dmg then
 					if p1 then
-						scr:draw_box(184+40, 40, 274+40,  62, 0x80404040, 0x80404040)
+						scr:draw_box(184+40, 40, 274+40,  63, 0x80404040, 0x80404040)
 					else
-						scr:draw_box( 45-40, 40, 134-40,  62, 0x80404040, 0x80404040)
+						scr:draw_box( 45-40, 40, 134-40,  63, 0x80404040, 0x80404040)
 					end
 
 					-- コンボ表示
@@ -3866,6 +3870,17 @@ function rbff2.startplugin()
 					scr:draw_text(p1 and 296 or 77, 41, "最大")
 					draw_rtext(   p1 and 311 or 92, 48, op.max_dmg)
 					draw_rtext(   p1 and 311 or 92, 55, op.max_combo)
+				end
+
+				-- BS状態表示
+				if p.dummy_bs == true then
+					if p1 then
+						scr:draw_box(106, 40, 150,  50, 0x80404040, 0x80404040)
+					else
+						scr:draw_box(169, 40, 213,  50, 0x80404040, 0x80404040)
+					end
+					scr:draw_text(p1 and 115 or 180, 41, "回ガードでBS")
+					draw_rtext(   p1 and 115 or 180, 41, p.dummy_bs_cnt - math.max(p.bs_count, 0))
 				end
 
 				-- スタン表示
@@ -4024,25 +4039,6 @@ function rbff2.startplugin()
 		p[2].dummy_down          = col[11]      -- 2P やられ時行動       11
 		p[1].fwd_prov            = col[12] == 2 -- 1P 挑発で前進         12
 		p[2].fwd_prov            = col[13] == 2 -- 2P 挑発で前進         13
-		--                             14                                14
-		p[1].red                 = col[15] == 2 -- 1P 体力ゲージ         15
-		p[2].red                 = col[16] == 2 -- 2P 体力ゲージ         16
-		p[1].max                 = col[17] == 2 -- 1P POWゲージ          17
-		p[2].max                 = col[18] == 2 -- 2P POWゲージ          18
-		--                             19                                19
-		global.disp_hitbox       = col[20] == 2 -- 判定表示              20
-		global.pause_hit         = col[21] == 2 -- ヒット時にポーズ      21
-		global.pausethrow        = col[22] == 2 -- 投げ判定発生時にポーズ22
-		p[1].disp_dmg            = col[23] == 2 -- 1P ダメージ表示       23
-		p[2].disp_dmg            = col[24] == 2 -- 2P ダメージ表示       24
-		p[1].disp_cmd            = col[25] == 2 -- 1P 入力表示           25
-		p[2].disp_cmd            = col[26] == 2 -- 2P 入力表示           26
-		global.disp_frmgap       = col[27] == 2 -- フレーム差表示        27
-		p[1].disp_frm            = col[28] == 2 -- 1P フレーム数表示     28
-		p[2].disp_frm            = col[29] == 2 -- 2P フレーム数表示     29
-		global.disp_stun         = col[30] == 2 -- スタン表示            30
-		global.disp_pos          = col[31] == 2 -- 1P 2P 距離表示        31
-		dip_config.easy_super    = col[32] == 2 -- 簡易超必              32
 
 		for _, p in ipairs(players) do
 			if p.dummy_gd == 3 then
@@ -4056,10 +4052,7 @@ function rbff2.startplugin()
 				p.next_block_grace = global.next_block_grace
 			end
 
-			local max_life = p.red and 0x60 or 0xC0 -- 赤体力にするかどうか
-			pgm:write_u8(p.addr.life, max_life)         -- 体力
-			pgm:write_u8(p.addr.stun, p.addr.init_stun) -- スタン値
-
+			-- ガードカウンター初期化
 			p.bs_count = -1
 		end
 
@@ -4082,25 +4075,23 @@ function rbff2.startplugin()
 			end
 		end
 
-		for i = 1, 2 do
-			if p[i].dummy_bs == true then
-				local bs_menu = bs_menus[i][p[i].char]
-				local bs_list = char_bs_list[p[i].char]
-				p[i].dummy_bs_list = {}
-				for j, bs in pairs(bs_list) do
-					if bs_menu.pos.col[j+1] == 2 then
-						table.insert(p[i].dummy_bs_list, bs)
-					end
+		for i, p in ipairs(players) do
+			local bs_menu = bs_menus[i][p.char]
+			local bs_list = char_bs_list[p.char]
+			p.dummy_bs_list = {}
+			for j, bs in pairs(bs_list) do
+				if bs_menu.pos.col[j+1] == 2 then
+					table.insert(p.dummy_bs_list, bs)
 				end
-				p[i].dummy_bs_cnt = bs_menu.pos.col[#bs_menu.pos.col] - 1
-				p[i].dummy_bs_chr = p[i].char
 			end
+			p.dummy_bs_cnt = bs_menu.pos.col[#bs_menu.pos.col]
+			p.dummy_bs_chr = p.char
 		end
 		-- 設定後にメニュー遷移
-		for i = 1, 2 do
-			if p[i].dummy_bs == true then
+		for i, p in ipairs(players) do
+			if p.dummy_bs == true then
 				if not cancel and row == (7 + i) then
-					menu_cur = bs_menus[i][p[i].char]
+					menu_cur = bs_menus[i][p.char]
 					return
 				end
 			end
@@ -4110,6 +4101,57 @@ function rbff2.startplugin()
 	end
 	local menu_to_main_cancel = function()
 		menu_to_main(true)
+	end
+	local bar_menu_to_main = function(cancel)
+		local col = bar_menu.pos.col
+		local row = bar_menu.pos.row
+		local p   = players
+		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+		local scr = manager:machine().screens[":screen"]
+		local ec = scr:frame_number()
+		--                              1                                 1
+		p[1].red                 = col[ 2] == 2 -- 1P 体力ゲージ          2
+		p[2].red                 = col[ 3] == 2 -- 2P 体力ゲージ          3
+		p[1].max                 = col[ 4] == 2 -- 1P POWゲージ           4
+		p[2].max                 = col[ 5] == 2 -- 2P POWゲージ           5
+		global.disp_stun         = col[ 6] == 2 -- スタン表示             6
+
+		menu_cur = main_menu
+	end
+	local bar_menu_to_main_cancel = function()
+		bar_menu_to_main(true)
+	end
+	local ex_menu_to_main = function(cancel)
+		local col = ex_menu.pos.col
+		local row = ex_menu.pos.row
+		local p   = players
+		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+		local scr = manager:machine().screens[":screen"]
+		local ec = scr:frame_number()
+		--                              1                                 1
+		global.disp_hitbox       = col[ 2] == 2 -- 判定表示               2
+		global.pause_hit         = col[ 3] == 2 -- ヒット時にポーズ       3
+		global.pausethrow        = col[ 4] == 2 -- 投げ判定発生時にポーズ 4
+		p[1].disp_dmg            = col[ 5] == 2 -- 1P ダメージ表示        5
+		p[2].disp_dmg            = col[ 6] == 2 -- 2P ダメージ表示        6
+		p[1].disp_cmd            = col[ 7] == 2 -- 1P 入力表示            7
+		p[2].disp_cmd            = col[ 8] == 2 -- 2P 入力表示            8
+		global.disp_frmgap       = col[ 9] == 2 -- フレーム差表示         9
+		p[1].disp_frm            = col[10] == 2 -- 1P フレーム数表示     10
+		p[2].disp_frm            = col[11] == 2 -- 2P フレーム数表示     11
+		global.disp_pos          = col[12] == 2 -- 1P 2P 距離表示        12
+		dip_config.easy_super    = col[13] == 2 -- 簡易超必              13
+
+		for _, p in ipairs(players) do
+			local max_life = p.red and 0x60 or 0xC0 -- 赤体力にするかどうか
+			pgm:write_u8(p.addr.life, max_life)         -- 体力
+			pgm:write_u8(p.addr.stun, p.addr.init_stun) -- スタン値
+		end
+
+		menu_cur = main_menu
+	end
+	local ex_menu_to_main_cancel = function()
+		ex_menu_to_main(true)
 	end
 	local menu_rec_to_tra = function() menu_cur = tra_menu end
 	local exit_menu_to_rec = function(slot_no)
@@ -4142,7 +4184,7 @@ function rbff2.startplugin()
 		exit_menu_to_play_common()
 		menu_cur = main_menu
 		menu_exit()
-	end
+ 	end
 	local exit_menu_to_play_cancel = function()
 		global.dummy_mode = 6 -- リプレイモードにする
 		global.rec_main = rec_await_play
@@ -4178,34 +4220,46 @@ function rbff2.startplugin()
 		col[11] = p[2].dummy_down          -- 2P やられ時行動       11
 		col[12] = p[1].fwd_prov and 2 or 1 -- 1P 挑発で前進         12
 		col[13] = p[2].fwd_prov and 2 or 1 -- 2P 挑発で前進         13
-		--  14                                                      14
-		col[15] = p[1].red      and 2 or 1 -- 1P 体力ゲージ         15
-		col[16] = p[2].red      and 2 or 1 -- 2P 体力ゲージ         16
-		col[17] = p[1].max      and 2 or 1 -- 1P POWゲージ          17
-		col[18] = p[2].max      and 2 or 1 -- 2P POWゲージ          18
-		--  19                                                      19
-		col[20] = g.disp_hitbox and 2 or 1 -- 判定表示              20
-		col[21] = g.pause_hit   and 2 or 1 -- ヒット時にポーズ      21
-		col[22] = g.pausethrow  and 2 or 1 -- 投げ判定発生時にポーズ22
-		col[23] = p[1].disp_dmg and 2 or 1 -- 1P ダメージ表示       23
-		col[24] = p[2].disp_dmg and 2 or 1 -- 2P ダメージ表示       24
-		col[25] = p[1].disp_cmd and 2 or 1 -- 1P 入力表示           25
-		col[26] = p[2].disp_cmd and 2 or 1 -- 2P 入力表示           26
-		col[27] = g.disp_frmgap and 2 or 1 -- フレーム差表示        27
-		col[28] = p[1].disp_frm and 2 or 1 -- 1P フレーム数表示     28
-		col[29] = p[2].disp_frm and 2 or 1 -- 2P フレーム数表示     29
-		col[30] = g.disp_stun   and 2 or 1 -- スタン表示            30
-		col[31] = g.disp_pos    and 2 or 1 -- 1P 2P 距離表示        31
-		col[32] = dip_config.easy_super and 2 or 1 -- 簡易超必      32
 	end
-
+	local init_bar_menu_config = function()
+		local col = bar_menu.pos.col
+		local p = players
+		local g = global
+		--   1                                                       1
+		col[ 2] = p[1].red      and 2 or 1 -- 1P 体力ゲージ          2
+		col[ 3] = p[2].red      and 2 or 1 -- 2P 体力ゲージ          3
+		col[ 4] = p[1].max      and 2 or 1 -- 1P POWゲージ           4
+		col[ 5] = p[2].max      and 2 or 1 -- 2P POWゲージ           5
+		col[ 6] = g.disp_stun   and 2 or 1 -- スタンゲージ           6
+	end
+	local init_ex_menu_config = function()
+		local col = ex_menu.pos.col
+		local p = players
+		local g = global
+		--   1                                                       1
+		col[ 2] = g.disp_hitbox and 2 or 1 -- 判定表示               2
+		col[ 3] = g.pause_hit   and 2 or 1 -- ヒット時にポーズ       3
+		col[ 4] = g.pausethrow  and 2 or 1 -- 投げ判定発生時にポーズ 4
+		col[ 5] = p[1].disp_dmg and 2 or 1 -- 1P ダメージ表示        5
+		col[ 6] = p[2].disp_dmg and 2 or 1 -- 2P ダメージ表示        6
+		col[ 7] = p[1].disp_cmd and 2 or 1 -- 1P 入力表示            7
+		col[ 8] = p[2].disp_cmd and 2 or 1 -- 2P 入力表示            8
+		col[ 9] = g.disp_frmgap and 2 or 1 -- フレーム差表示         9
+		col[10] = p[1].disp_frm and 2 or 1 -- 1P フレーム数表示     10
+		col[11] = p[2].disp_frm and 2 or 1 -- 2P フレーム数表示     11
+		col[12] = g.disp_pos    and 2 or 1 -- 1P 2P 距離表示        12
+		col[13] = dip_config.easy_super and 2 or 1 -- 簡易超必      13
+	end
 	menu_to_tra  = function() menu_cur = tra_menu end
+	menu_to_bar  = function() menu_cur = bar_menu end
+	menu_to_ex   = function() menu_cur = ex_menu end
 	menu_exit = function()
 		-- Bボタンでトレーニングモードへ切り替え
 		main_or_menu_state = tra_main
 		cls_joy()
 	end
 	local menu_player_select = function()
+		main_menu.pos.row = 1
 		cls_hook()
 		goto_player_select()
 		cls_joy()
@@ -4219,12 +4273,12 @@ function rbff2.startplugin()
 		main_menu.pos.row = 1
 		cls_hook()
 		restart_fight({
-			next_p1       = main_menu.pos.col[4]  , -- 1P セレクト
-			next_p2       = main_menu.pos.col[5]  , -- 2P セレクト
-			next_p1col    = main_menu.pos.col[6]-1, -- 1P カラー
-			next_p2col    = main_menu.pos.col[7]-1, -- 2P カラー
-			next_stage    = stgs[main_menu.pos.col[8]], -- ステージセレクト
-			next_bgm      = bgms[main_menu.pos.col[9]].id, -- BGMセレクト
+			next_p1       =      main_menu.pos.col[ 6]  , -- 1P セレクト
+			next_p2       =      main_menu.pos.col[ 7]  , -- 2P セレクト
+			next_p1col    =      main_menu.pos.col[ 8]-1, -- 1P カラー
+			next_p2col    =      main_menu.pos.col[ 9]-1, -- 2P カラー
+			next_stage    = stgs[main_menu.pos.col[10]], -- ステージセレクト
+			next_bgm      = bgms[main_menu.pos.col[11]].id, -- BGMセレクト
 		})
 		cls_joy()
 		-- 初期化
@@ -4239,7 +4293,9 @@ function rbff2.startplugin()
 	end
 	main_menu = {
 		list = {
-			{ "トレーニングオプション" },
+			{ "ダミー設定" },
+			{ "ゲージ設定" },
+			{ "一般設定" },
 			{ "プレイヤーセレクト画面" },
 			{ "                          クイックセレクト" },
 			{ "1P セレクト"           , char_names },
@@ -4254,7 +4310,9 @@ function rbff2.startplugin()
 			offset = 1,
 			row = 1,
 			col = {
-				0, -- トレーニングオプション
+				0, -- ダミー設定
+				0, -- ゲージ設定
+				0, -- 一般設定
 				0, -- プレイヤーセレクト画面
 				0, -- クイックセレクト
 				1, -- 1P セレクト
@@ -4267,7 +4325,9 @@ function rbff2.startplugin()
 			},
 		},
 		on_a = {
-			menu_to_tra, -- トレーニングオプション
+			menu_to_tra, -- ダミー設定
+			menu_to_bar, -- ゲージ設定
+			menu_to_ex,  -- 一般設定
 			menu_player_select, -- プレイヤーセレクト画面
 			menu_nop, -- クイックセレクト
 			menu_restart_fight, -- 1P セレクト
@@ -4279,7 +4339,8 @@ function rbff2.startplugin()
 			menu_restart_fight, -- リスタート
 		},
 		on_b = {
-			menu_exit, -- トレーニングオプション
+			menu_exit, -- ダミー設定
+			menu_exit, -- ゲージ設定
 			menu_exit, -- プレイヤーセレクト画面
 			menu_exit, -- クイックセレクト
 			menu_exit, -- 1P セレクト
@@ -4294,29 +4355,29 @@ function rbff2.startplugin()
 	local update_menu_pos = function()
 		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 		-- メニューの更新
-		main_menu.pos.col[ 4] = math.min(math.max(pgm:read_u8(0x107BA5)  , 1), #char_names)
-		main_menu.pos.col[ 5] = math.min(math.max(pgm:read_u8(0x107BA7)  , 1), #char_names)
-		main_menu.pos.col[ 6] = math.min(math.max(pgm:read_u8(0x107BAC)+1, 1), 2)
-		main_menu.pos.col[ 7] = math.min(math.max(pgm:read_u8(0x107BAD)+1, 1), 2)
+		main_menu.pos.col[ 6] = math.min(math.max(pgm:read_u8(0x107BA5)  , 1), #char_names)
+		main_menu.pos.col[ 7] = math.min(math.max(pgm:read_u8(0x107BA7)  , 1), #char_names)
+		main_menu.pos.col[ 8] = math.min(math.max(pgm:read_u8(0x107BAC)+1, 1), 2)
+		main_menu.pos.col[ 9] = math.min(math.max(pgm:read_u8(0x107BAD)+1, 1), 2)
 
 		local cond1 = pgm:read_u8(0x107BB1)
 		local cond2 = pgm:read_u8(0x107BB7)
 		local cond3 = pgm:read_u8(0x107BB9) == 1 and 0x01 or 0x0F
-		main_menu.pos.col[ 8] = 1
+		main_menu.pos.col[10] = 1
 		for i, data in ipairs(stgs) do
 			if data.stg1 == cond1 and data.stg2 == cond2 and data.stg3 == cond3 then
-				main_menu.pos.col[ 8] = i
+				main_menu.pos.col[10] = i
 				break
 			end
 		end
 
-		main_menu.pos.col[ 9] = math.min(math.max(pgm:read_u8(0x10A8D5)  , 1), #char_names)
+		main_menu.pos.col[11] = math.min(math.max(pgm:read_u8(0x10A8D5)  , 1), #char_names)
 	end
 	-- ブレイクショットメニュー
 	bs_menus = {}
 	local bs_frms = {}
 	for i = 1, 60 do
-		table.insert(bs_frms, string.format("ガードから%sF後に発動", i))
+		table.insert(bs_frms, string.format("%s回ガード後に発動", i))
 	end
 	local menu_bs_to_tra_menu = function()
 		menu_to_tra()
@@ -4374,25 +4435,6 @@ function rbff2.startplugin()
 			{ "2P やられ時行動"       , { "なし", "テクニカルライズ", "グランドスウェー" }, },
 			{ "1P 挑発で前進"         , { "OFF", "ON" }, },
 			{ "2P 挑発で前進"         , { "OFF", "ON" }, },
-			{ "                         ゲージ設定" },
-			{ "1P 体力ゲージ"         , { "通常", "赤" }, },
-			{ "2P 体力ゲージ"         , { "通常", "赤" }, },
-			{ "1P POWゲージ"          , { "通常", "無限" }, },
-			{ "2P POWゲージ"          , { "通常", "無限" }, },
-			{ "                          一般設定" },
-			{ "判定表示"              , { "OFF", "ON" }, },
-			{ "ヒット時にポーズ"      , { "OFF", "ON" }, },
-			{ "投げ判定発生時にポーズ", { "OFF", "ON" }, },
-			{ "1P ダメージ表示"       , { "OFF", "ON" }, },
-			{ "2P ダメージ表示"       , { "OFF", "ON" }, },
-			{ "1P 入力表示"           , { "OFF", "ON" }, },
-			{ "2P 入力表示"           , { "OFF", "ON" }, },
-			{ "フレーム差表示"        , { "OFF", "ON" }, },
-			{ "1P フレーム数表示"     , { "OFF", "ON" }, },
-			{ "2P フレーム数表示"     , { "OFF", "ON" }, },
-			{ "スタン表示"            , { "OFF", "ON" }, },
-			{ "1P 2P 距離表示"        , { "OFF", "ON" }, },
-			{ "簡易超必"              , { "OFF", "ON" }, },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
@@ -4411,30 +4453,11 @@ function rbff2.startplugin()
 				1, -- 2P やられ時行動        11
 				1, -- 1P 挑発で前進          12
 				1, -- 2P 挑発で前進          13
-				0, -- －ゲージ設定－         14
-				1, -- 1P 体力ゲージ          15
-				1, -- 2P 体力ゲージ          16
-				1, -- 1P POWゲージ           17
-				1, -- 2P POWゲージ           18
-				0, -- －一般設定－           19
-				1, -- 判定表示               20
-				1, -- ヒット時にポーズ       21
-				1, -- 投げ判定ポーズ         22
-				1, -- フレーム表示           23
-				1, -- 1P ダメージ表示        24
-				1, -- 2P ダメージ表示        25
-				1, -- 1P 入力表示            26
-				1, -- 2P 入力表示            27
-				1, -- 1P フレーム数表示      28
-				1, -- 2P フレーム数表示      29
-				1, -- スタン表示             30
-				1, -- 1P 2P 距離表示         31
-				1, -- 簡易超必               32
 			},
 		},
 		on_a = {
 			menu_to_main, -- ダミーモード
-			menu_to_main, -- －行動設定－
+			menu_to_main, -- －ダミー設定－
 			menu_to_main, -- 1P アクション
 			menu_to_main, -- 2P アクション
 			menu_to_main, -- 1P ガード
@@ -4446,29 +4469,10 @@ function rbff2.startplugin()
 			menu_to_main, -- 2P やられ時行動
 			menu_to_main, -- 1P 挑発で前進
 			menu_to_main, -- 2P 挑発で前進
-			menu_to_main, -- －ゲージ設定－
-			menu_to_main, -- 1P 体力ゲージ
-			menu_to_main, -- 2P 体力ゲージ
-			menu_to_main, -- 1P POWゲージ
-			menu_to_main, -- 2P POWゲージ
-			menu_to_main, -- －一般設定－
-			menu_to_main, -- 判定表示
-			menu_to_main, -- ヒット時にポーズ
-			menu_to_main, -- 投げ判定ポーズ
-			menu_to_main, -- 1P ダメージ表示
-			menu_to_main, -- 2P ダメージ表示
-			menu_to_main, -- 1P 入力表示
-			menu_to_main, -- 2P 入力表示
-			menu_to_main, -- フレーム差表示
-			menu_to_main, -- 1P フレーム数表示
-			menu_to_main, -- 2P フレーム数表示
-			menu_to_main, -- スタン表示
-			menu_to_main, -- 1P 2P 距離表示
-			menu_to_main, -- 簡易超必
 		},
 		on_b = {
 			menu_to_main_cancel, -- ダミーモード
-			menu_to_main_cancel, -- －行動設定－
+			menu_to_main_cancel, -- －ダミー設定－
 			menu_to_main_cancel, -- 1P アクション
 			menu_to_main_cancel, -- 2P アクション
 			menu_to_main_cancel, -- 1P ガード
@@ -4480,25 +4484,112 @@ function rbff2.startplugin()
 			menu_to_main_cancel, -- 2P やられ時行動
 			menu_to_main_cancel, -- 1P 挑発で前進
 			menu_to_main_cancel, -- 2P 挑発で前進
-			menu_to_main_cancel, -- －ゲージ設定－
-			menu_to_main_cancel, -- 1P 体力ゲージ
-			menu_to_main_cancel, -- 2P 体力ゲージ
-			menu_to_main_cancel, -- 1P POWゲージ
-			menu_to_main_cancel, -- 2P POWゲージ
-			menu_to_main_cancel, -- －一般設定－
-			menu_to_main_cancel, -- 判定表示
-			menu_to_main_cancel, -- ヒット時にポーズ
-			menu_to_main_cancel, -- 投げ判定ポーズ
-			menu_to_main_cancel, -- フレーム差表示
-			menu_to_main_cancel, -- 1P ダメージ表示
-			menu_to_main_cancel, -- 2P ダメージ表示
-			menu_to_main_cancel, -- 1P 入力表示
-			menu_to_main_cancel, -- 2P 入力表示
-			menu_to_main_cancel, -- 1P フレーム数表示
-			menu_to_main_cancel, -- 2P フレーム数表示
-			menu_to_main_cancel, -- スタン表示
-			menu_to_main_cancel, -- 1P 2P 距離表示
-			menu_to_main_cancel, -- 簡易超必
+		},
+	}
+
+	bar_menu = {
+		list = {
+			{ "                         ゲージ設定" },
+			{ "1P 体力ゲージ"         , { "通常", "赤" }, },
+			{ "2P 体力ゲージ"         , { "通常", "赤" }, },
+			{ "1P POWゲージ"          , { "通常", "無限" }, },
+			{ "2P POWゲージ"          , { "通常", "無限" }, },
+			{ "スタンゲージ"          , { "OFF", "ON" }, },
+		},
+		pos = { -- メニュー内の選択位置
+			offset = 1,
+			row = 2,
+			col = {
+				0, -- －ゲージ設定－          1
+				1, -- 1P 体力ゲージ           2
+				1, -- 2P 体力ゲージ           3
+				1, -- 1P POWゲージ            4
+				1, -- 2P POWゲージ            5
+				1, -- スタン表示             12
+			},
+		},
+		on_a = {
+			bar_menu_to_main, -- －ゲージ設定－
+			bar_menu_to_main, -- 1P 体力ゲージ
+			bar_menu_to_main, -- 2P 体力ゲージ
+			bar_menu_to_main, -- 1P POWゲージ
+			bar_menu_to_main, -- 2P POWゲージ
+			bar_menu_to_main, -- スタン表示
+		},
+		on_b = {
+			bar_menu_to_main_cancel, -- －ゲージ設定－
+			bar_menu_to_main_cancel, -- 1P 体力ゲージ
+			bar_menu_to_main_cancel, -- 2P 体力ゲージ
+			bar_menu_to_main_cancel, -- 1P POWゲージ
+			bar_menu_to_main_cancel, -- 2P POWゲージ
+			bar_menu_to_main_cancel, -- スタン表示
+		},
+	}
+
+	ex_menu = {
+		list = {
+			{ "                          一般設定" },
+			{ "判定表示"              , { "OFF", "ON" }, },
+			{ "ヒット時にポーズ"      , { "OFF", "ON" }, },
+			{ "投げ判定発生時にポーズ", { "OFF", "ON" }, },
+			{ "1P ダメージ表示"       , { "OFF", "ON" }, },
+			{ "2P ダメージ表示"       , { "OFF", "ON" }, },
+			{ "1P 入力表示"           , { "OFF", "ON" }, },
+			{ "2P 入力表示"           , { "OFF", "ON" }, },
+			{ "フレーム差表示"        , { "OFF", "ON" }, },
+			{ "1P フレーム数表示"     , { "OFF", "ON" }, },
+			{ "2P フレーム数表示"     , { "OFF", "ON" }, },
+			{ "1P 2P 距離表示"        , { "OFF", "ON" }, },
+			{ "簡易超必"              , { "OFF", "ON" }, },
+		},
+		pos = { -- メニュー内の選択位置
+			offset = 1,
+			row = 2,
+			col = {
+				0, -- －一般設定－            1
+				1, -- 判定表示                2
+				1, -- ヒット時にポーズ        3
+				1, -- 投げ判定ポーズ          4
+				1, -- フレーム表示            5
+				1, -- 1P ダメージ表示         6
+				1, -- 2P ダメージ表示         7
+				1, -- 1P 入力表示             8
+				1, -- 2P 入力表示             9
+				1, -- 1P フレーム数表示      10
+				1, -- 2P フレーム数表示      11
+				1, -- 1P 2P 距離表示         13
+				1, -- 簡易超必               14
+			},
+		},
+		on_a = {
+			ex_menu_to_main, -- －一般設定－
+			ex_menu_to_main, -- 判定表示
+			ex_menu_to_main, -- ヒット時にポーズ
+			ex_menu_to_main, -- 投げ判定ポーズ
+			ex_menu_to_main, -- 1P ダメージ表示
+			ex_menu_to_main, -- 2P ダメージ表示
+			ex_menu_to_main, -- 1P 入力表示
+			ex_menu_to_main, -- 2P 入力表示
+			ex_menu_to_main, -- フレーム差表示
+			ex_menu_to_main, -- 1P フレーム数表示
+			ex_menu_to_main, -- 2P フレーム数表示
+			ex_menu_to_main, -- 1P 2P 距離表示
+			ex_menu_to_main, -- 簡易超必
+		},
+		on_b = {
+			ex_menu_to_main_cancel, -- －一般設定－
+			ex_menu_to_main_cancel, -- 判定表示
+			ex_menu_to_main_cancel, -- ヒット時にポーズ
+			ex_menu_to_main_cancel, -- 投げ判定ポーズ
+			ex_menu_to_main_cancel, -- フレーム差表示
+			ex_menu_to_main_cancel, -- 1P ダメージ表示
+			ex_menu_to_main_cancel, -- 2P ダメージ表示
+			ex_menu_to_main_cancel, -- 1P 入力表示
+			ex_menu_to_main_cancel, -- 2P 入力表示
+			ex_menu_to_main_cancel, -- 1P フレーム数表示
+			ex_menu_to_main_cancel, -- 2P フレーム数表示
+			ex_menu_to_main_cancel, -- 1P 2P 距離表示
+			ex_menu_to_main_cancel, -- 簡易超必
 		},
 	}
 
@@ -4595,6 +4686,8 @@ function rbff2.startplugin()
 			exit_menu_to_play_cancel, -- 開始間合い
 		},
 	}
+	init_ex_menu_config()
+	init_bar_menu_config()
 	init_menu_config()
 
 	local prev_main_or_menu_state = nil
@@ -4615,6 +4708,7 @@ function rbff2.startplugin()
 			return
 		end
 		if menu_cur == nil then
+			bar_menu_to_main()
 			menu_to_main()
 		end
 
