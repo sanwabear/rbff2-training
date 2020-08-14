@@ -2425,6 +2425,7 @@ function rbff2.startplugin()
 
 		fixpos       = nil,
 		do_repeat    = false,
+		repeat_interval = 0,
 	}
 	for i = 1, 5 do
 		recording.slot[i] = {
@@ -2433,7 +2434,7 @@ function rbff2.startplugin()
 			name = "スロット" .. i,
 		}
 	end
-	local rec_await_no_input, rec_await_1st_input, rec_await_play, rec_input, rec_play, menu_to_tra, rec_fixpos
+	local rec_await_no_input, rec_await_1st_input, rec_await_play, rec_input, rec_play, rec_play_interval, menu_to_tra, rec_fixpos
 	local get_pos = function(i)
 		local p = players[i]
 		local obj_base = p.addr.base
@@ -2677,6 +2678,34 @@ function rbff2.startplugin()
 				stop = true
 			end
 		end
+
+		if stop then
+			global.repeat_interval = recording.repeat_interval
+			-- 状態変更
+			global.rec_main = rec_play_interval
+		end
+	end
+	--
+
+	-- リプレイまでの待ち時間
+	rec_play_interval = function(to_joy)
+		local scr = manager:machine().screens[":screen"]
+		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+		local ec = scr:frame_number()
+		local state_past = ec - global.input_accepted
+
+		local joy_val = get_joy()
+
+		if accept_input("Start", joy_val, state_past) then
+			-- 状態変更
+			global.rec_main = rec_await_play
+			global.input_accepted = ec
+			return 
+		end
+
+		global.repeat_interval = math.max(0, global.repeat_interval - 1)
+
+		local stop = global.repeat_interval == 0
 
 		if stop then
 			if recording.do_repeat then
@@ -3952,6 +3981,10 @@ function rbff2.startplugin()
 					-- リプレイ中
 					scr:draw_text(265-15, 204, "■ リプレイ中", 0xFFFFFFFF)
 					scr:draw_text(265-15, 212, "スタートおしっぱでメニュー", 0xFFFFFFFF)
+				elseif global.rec_main == rec_play_interval then
+					-- リプレイまち
+					scr:draw_text(265-15, 204, "■ リプレイ中", 0xFFFFFFFF)
+					scr:draw_text(265-15, 212, "スタートおしっぱでメニュー", 0xFFFFFFFF)
 				elseif global.rec_main == rec_await_play then
 					-- リプレイまち
 					scr:draw_text(265-15, 204, "■ スタートでリプレイ", 0xFFFFFFFF)
@@ -4062,8 +4095,9 @@ function rbff2.startplugin()
 		elseif global.dummy_mode == 6 then
 			-- リプレイ
 			global.dummy_mode = 1
-			play_menu.pos.col[8] = recording.do_repeat   and 2 or 1 -- 繰り返し           8
-			play_menu.pos.col[9] = global.replay_fix_pos and 2 or 1 -- 開始間合い固定     9
+			play_menu.pos.col[ 8] = recording.do_repeat   and 2 or 1 -- 繰り返し           8
+			play_menu.pos.col[ 9] = recording.repeat_interval + 1    -- 繰り返し間隔       9
+			play_menu.pos.col[10] = global.replay_fix_pos and 2 or 1 -- 開始間合い固定    10
 			if not cancel and row == 1 then
 				menu_cur = play_menu
 				return
@@ -4192,8 +4226,10 @@ function rbff2.startplugin()
 				table.insert(recording.live_slots, i-1)
 			end
 		end
-		recording.do_repeat   = col[8] == 2 -- 繰り返し           8
-		global.replay_fix_pos = col[9] == 2 -- 開始間合い固定     9
+		recording.do_repeat       = col[ 8] == 2 -- 繰り返し           8
+		recording.repeat_interval = col[ 8] - 1  -- 繰り返し間隔       9
+		global.replay_fix_pos     = col[10] == 2 -- 開始間合い固定    10
+		global.repeat_interval    = recording.repeat_interval
 	end
 	local exit_menu_to_play = function()
 		global.dummy_mode = 6 -- リプレイモードにする
@@ -4681,6 +4717,10 @@ function rbff2.startplugin()
 			menu_to_tra, -- スロット5
 		},
 	}
+	local play_interval = {}
+	for i = 1, 301 do
+		table.insert(play_interval, i-1)
+	end
 	play_menu = {
 		list = {
 			{ "     ONにしたスロットからランダムでリプレイされます。" },
@@ -4691,6 +4731,7 @@ function rbff2.startplugin()
 			{ "スロット5"             , { "OFF", "ON", }, },
 			{ "                        リプレイ設定" },
 			{ "繰り返し"              , { "OFF", "ON", }, },
+			{ "繰り返し間隔"          , play_interval, },
 			{ "開始間合い固定"        , { "OFF", "ON", }, },
 			{ "開始間合い"            , { "Aでレコード開始", }, },
 		},
@@ -4699,15 +4740,16 @@ function rbff2.startplugin()
 			row = 2,
 			col = {
 				0, -- 説明               1
-				1, -- スロット1          2
-				1, -- スロット2          3
-				1, -- スロット3          4
-				1, -- スロット4          5
-				1, -- スロット5          6
+				2, -- スロット1          2
+				2, -- スロット2          3
+				2, -- スロット3          4
+				2, -- スロット4          5
+				2, -- スロット5          6
 				0, -- リプレイ設定       7
 				1, -- 繰り返し           8
-				1, -- 開始間合い固定     9
-				1, -- 開始間合い        10
+				1, -- 繰り返し間隔       9
+				1, -- 開始間合い固定    10
+				1, -- 開始間合い        11
 			},
 		},
 		on_a = {
@@ -4719,6 +4761,7 @@ function rbff2.startplugin()
 			exit_menu_to_play, -- スロット5
 			exit_menu_to_play, -- リプレイ設定
 			exit_menu_to_play, -- 繰り返し
+			exit_menu_to_play, -- 繰り返し間隔
 			exit_menu_to_play, -- 開始間合い固定
 			exit_menu_to_rec_pos, -- 開始間合い
 		},
@@ -4732,6 +4775,7 @@ function rbff2.startplugin()
 			exit_menu_to_play_cancel, -- スロット5
 			exit_menu_to_play_cancel, -- リプレイ設定
 			exit_menu_to_play_cancel, -- 繰り返し
+			exit_menu_to_play_cancel, -- 繰り返し間隔
 			exit_menu_to_play_cancel, -- 開始間合い固定
 			exit_menu_to_play_cancel, -- 開始間合い
 		},
