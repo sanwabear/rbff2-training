@@ -495,9 +495,9 @@ function rbff2.startplugin()
 			{ name = "スピンフォール", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, }, },
 			{ disp_name = "スパイダー", name = "M.スパイダー/ダブルスパイダー 投げ", type = act_types.attack, ids = { 0x88, 0x89, 0x8A, 0x8B, }, },
 			{ name = "バーチカルアロー", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, }, },
-			{ disp_name = "スナッチャー", name = "M.スナッチャー/ダブルスナッチャー 投げ", type = act_types.attack, ids = { 0x93, 0x94, 0x95, 0x96, }, },
+			--{ disp_name = "スナッチャー", name = "M.スナッチャー/ダブルスナッチャー 投げ", type = act_types.attack, ids = { 0x93, 0x94, 0x95, 0x96, }, },
 			{ name = "ストレートスライサー", type = act_types.low_attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, }, },
-			{ disp_name = "クラッチ", name = "M.クラブクラッチ/ダブルクラッチ 投げ", type = act_types.attack, ids = { 0x9D, 0x9E, 0x9F, 0xA0, 0xA1, }, },
+			--{ disp_name = "クラッチ", name = "M.クラブクラッチ/ダブルクラッチ 投げ", type = act_types.attack, ids = { 0x9D, 0x9E, 0x9F, 0xA0, 0xA1, }, },
 			{ name = "M.ダイナマイトスウィング", type = act_types.attack, ids = { 0xCC, 0xCD, 0xCE, 0xCF, 0xD0, 0xD1, }, },
 			{ name = "M.タイフーン", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, 0x103, 0x104, 0x105, 0x106, 0x107, 0x116, }, },
 			{ name = "M.エスカレーション", type = act_types.attack, ids = { 0x10B, }, },
@@ -739,7 +739,7 @@ function rbff2.startplugin()
 			{ name = "撃放", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, }, },
 			{ name = "旋風剛拳", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, }, },
 			{ name = "大撃放", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, }, },
-			{ name = "CA 立C", name = "CA 立C(2段目)避け攻撃ルート", type = act_types.overhead, ids = { 0x247, 0x248, 0x249, }, },
+			{ disp_name = "CA 立C", name = "CA 立C(2段目)避け攻撃ルート", type = act_types.overhead, ids = { 0x247, 0x248, 0x249, }, },
 			{ name = "挑発", type = act_types.provoke, ids = { 0x24A, 0x24B, }, },
 		},
 		-- ローレンス・ブラッド
@@ -1285,26 +1285,28 @@ function rbff2.startplugin()
 
 	-- エミュレータ本体の入力取得
 	local use_joy = {
-		{ port = ":edge:joy:JOY1" , field = "P1 Button 1"    , frame = 0, prev = 0, player = 1, },
-		{ port = ":edge:joy:JOY1" , field = "P1 Button 2"    , frame = 0, prev = 0, player = 1, },
-		{ port = ":edge:joy:JOY1" , field = "P1 Button 3"    , frame = 0, prev = 0, player = 1, },
-		{ port = ":edge:joy:JOY1" , field = "P1 Button 4"    , frame = 0, prev = 0, player = 1, },
-		{ port = ":edge:joy:JOY1" , field = "P1 Down"        , frame = 0, prev = 0, player = 1, },
-		{ port = ":edge:joy:JOY1" , field = "P1 Left"        , frame = 0, prev = 0, player = 1, },
-		{ port = ":edge:joy:JOY1" , field = "P1 Right"       , frame = 0, prev = 0, player = 1, },
-		{ port = ":edge:joy:JOY1" , field = "P1 Up"          , frame = 0, prev = 0, player = 1, },
-		{ port = ":edge:joy:JOY2" , field = "P2 Button 1"    , frame = 0, prev = 0, player = 2, },
-		{ port = ":edge:joy:JOY2" , field = "P2 Button 2"    , frame = 0, prev = 0, player = 2, },
-		{ port = ":edge:joy:JOY2" , field = "P2 Button 3"    , frame = 0, prev = 0, player = 2, },
-		{ port = ":edge:joy:JOY2" , field = "P2 Button 4"    , frame = 0, prev = 0, player = 2, },
-		{ port = ":edge:joy:JOY2" , field = "P2 Down"        , frame = 0, prev = 0, player = 2, },
-		{ port = ":edge:joy:JOY2" , field = "P2 Left"        , frame = 0, prev = 0, player = 2, },
-		{ port = ":edge:joy:JOY2" , field = "P2 Right"       , frame = 0, prev = 0, player = 2, },
-		{ port = ":edge:joy:JOY2" , field = "P2 Up"          , frame = 0, prev = 0, player = 2, },
-		{ port = ":edge:joy:START", field = "2 Players Start", frame = 0, prev = 0, player = 2, },
-		{ port = ":edge:joy:START", field = "1 Player Start" , frame = 0, prev = 0, player = 1, },
+		{ port = ":edge:joy:JOY1" , field = "P1 Button 1"    , frame = 0, prev = 0, player = 1, get = 0, },
+		{ port = ":edge:joy:JOY1" , field = "P1 Button 2"    , frame = 0, prev = 0, player = 1, get = 0, },
+		{ port = ":edge:joy:JOY1" , field = "P1 Button 3"    , frame = 0, prev = 0, player = 1, get = 0, },
+		{ port = ":edge:joy:JOY1" , field = "P1 Button 4"    , frame = 0, prev = 0, player = 1, get = 0, },
+		{ port = ":edge:joy:JOY1" , field = "P1 Down"        , frame = 0, prev = 0, player = 1, get = 0, },
+		{ port = ":edge:joy:JOY1" , field = "P1 Left"        , frame = 0, prev = 0, player = 1, get = 0, },
+		{ port = ":edge:joy:JOY1" , field = "P1 Right"       , frame = 0, prev = 0, player = 1, get = 0, },
+		{ port = ":edge:joy:JOY1" , field = "P1 Up"          , frame = 0, prev = 0, player = 1, get = 0, },
+		{ port = ":edge:joy:JOY2" , field = "P2 Button 1"    , frame = 0, prev = 0, player = 2, get = 0, },
+		{ port = ":edge:joy:JOY2" , field = "P2 Button 2"    , frame = 0, prev = 0, player = 2, get = 0, },
+		{ port = ":edge:joy:JOY2" , field = "P2 Button 3"    , frame = 0, prev = 0, player = 2, get = 0, },
+		{ port = ":edge:joy:JOY2" , field = "P2 Button 4"    , frame = 0, prev = 0, player = 2, get = 0, },
+		{ port = ":edge:joy:JOY2" , field = "P2 Down"        , frame = 0, prev = 0, player = 2, get = 0, },
+		{ port = ":edge:joy:JOY2" , field = "P2 Left"        , frame = 0, prev = 0, player = 2, get = 0, },
+		{ port = ":edge:joy:JOY2" , field = "P2 Right"       , frame = 0, prev = 0, player = 2, get = 0, },
+		{ port = ":edge:joy:JOY2" , field = "P2 Up"          , frame = 0, prev = 0, player = 2, get = 0, },
+		{ port = ":edge:joy:START", field = "2 Players Start", frame = 0, prev = 0, player = 2, get = 0, },
+		{ port = ":edge:joy:START", field = "1 Player Start" , frame = 0, prev = 0, player = 1, get = 0, },
 	}
 	local get_joy = function(exclude_player)
+		local scr = manager:machine().screens[":screen"]
+		local ec = scr:frame_number()
 		local joy_port = {}
 		local joy_val = {}
 		for _, joy in ipairs(use_joy) do
@@ -1318,12 +1320,25 @@ function rbff2.startplugin()
 			elseif exclude_player ~= nil then
 				--print("ignore " .. joy.player)
 			end
-			joy.prev = joy.frame
-			if state > 0 then
-				joy.frame = (joy.frame > 0) and (joy.frame+1) or  1 -- on
-			else
-				joy.frame = (joy.frame < 0) and (joy.frame-1) or -1 -- off
+			if joy.get < ec then
+				joy.prev = joy.frame
+				if state > 0 then
+					-- on
+					if joy.frame > 0 then
+						joy.frame = joy.frame + 1
+					else
+						joy.frame = 1
+					end
+				else
+					-- off
+					if joy.frame < 0 then
+						joy.frame = joy.frame - 1
+					else
+						joy.frame = -1
+					end
+				end
 			end
+			joy.get = ec
 			joy_val[joy.field] = joy.frame
 		end
 		return joy_val
@@ -1478,11 +1493,17 @@ function rbff2.startplugin()
 		g14 = { id = 0x1E, name = "フェニックススルー", enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--?
 		g15 = { id = 0x1F, name = "ガード?6",           enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
 		g16 = { id = 0x20, name = "ガード?7",           enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
+		sv1  = { id = 0x02, name = "食らい1(スウェー中)", enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true },
+		sv2  = { id = 0x03, name = "食らい2(スウェー中)", enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true, },
 	}
-	local box_types = {}
+	local box_types, sway_box_types = {}, {}
 	for _, box in pairs(box_type_base) do
 		if 0 < box.id then
-			box_types[box.id] = box
+			if box.sway then
+				sway_box_types[box.id] = box
+			else
+				box_types[box.id] = box
+			end
 		end
 		box.fill    = bit32.lshift(box.fill   , 24) + box.color
 		box.outline = bit32.lshift(box.outline, 24) + box.color
@@ -1628,6 +1649,9 @@ function rbff2.startplugin()
 			--print(string.format("attack id %x", box.id))
 		else
 			box.type = box_types[box.id + 1]
+			if p.on_sway_line and sway_box_types[box.id + 1] then
+				box.type = sway_box_types[box.id + 1] 
+			end
 		end
 		box.type = box.type or box_type_base.x1
 		--[[ この判定が意味がないので無効化
@@ -1775,7 +1799,7 @@ function rbff2.startplugin()
 			dummy_bs_list    = {},          -- ブレイクショットのコマンドテーブル上の技ID
 			dummy_bs_cnt     = 1,           -- ブレイクショットのコマンドテーブル上の技のバリエーション（基本は0、飛燕斬用）
 			dummy_bs_chr     = 0,           -- ブレイクショットの設定をした時のキャラID
-			dummy_down       = 1,           -- なし, テクニカルライズ, グランドスウェー
+			dummy_down       = 1,           -- なし, テクニカルライズ, グランドスウェー, 起き上がり攻撃 
 			bs_count         = -1,          -- ブレイクショットの実施カウント
 
 			life_rec         = true,        -- 自動で体力回復させるときtrue
@@ -2978,6 +3002,7 @@ function rbff2.startplugin()
 			p.old_pos_y      = p.pos_y
 			p.pos_y          = pgm:read_i16(p.addr.pos_y)
 			p.pos_z          = pgm:read_i16(p.addr.pos_z)
+			p.on_sway_line   = 24 < p.pos_z
 			p.side           = pgm:read_i8(p.addr.side) < 0 and -1 or 1
 
 			p.attack         = pgm:read_u8(p.addr.attack)
@@ -3349,20 +3374,20 @@ function rbff2.startplugin()
 					end
 				end
 			end
-			if muteki == 0 then
+			if p.on_sway_line then
+				-- スウェー上
+				muteki, col, line = 4, 0xAAFFA500, 0xDDAFEEEE
+			elseif muteki == 0 then
 				-- 全身無敵
-				col, line = 0xAAB0E0E6, 0xDDAFEEEE
+				muteki, col, line = 0, 0xAAB0E0E6, 0xDDAFEEEE
 			elseif 152 <= vul_hi and p.pos_y <= 0 then -- 152 ローレンス避け 156 兄龍転身 168 その他避け
 				-- 上半身無敵（地上）
-				muteki = 1
-				col, line = 0xAA32CD32, 0xDDAFEEEE
+				muteki, col, line = 1, 0xAA32CD32, 0xDDAFEEEE
 			elseif vul_lo <= 172 and p.pos_y <= 0 then -- 160 164 168 172 ダブルローリング サイドワインダー
 				-- 足元無敵（地上）
-				muteki = 2
-				col, line = 0xAA9400D3, 0xDDAFEEEE
+				muteki, col, line = 2, 0xAA9400D3, 0xDDAFEEEE
 			else
-				muteki = 3
-				col, line = 0x00000000, 0x00000000
+				muteki, col, line = 3, 0x00000000, 0x00000000
 			end
 			--print(string.format("top %s, hi %s, lo %s", screen_top, vul_hi, vul_lo))
 
@@ -3608,7 +3633,7 @@ function rbff2.startplugin()
 							next_joy["P" .. p.control .. " Up"] = true
 						end
 					elseif p.dummy_act == 5 then
-						if p.pos_z == 24 then
+						if not p.on_sway_line then
 							if joy_val["P" .. p.control .. " Button 4"] < 0 then
 								next_joy["P" .. p.control .. " Button 4"] = true
 							end
@@ -3724,20 +3749,33 @@ function rbff2.startplugin()
 					next_joy[p.front_side] = true
 				end
 
-				-- なし, テクニカルライズ, グランドスウェー
+				-- なし, テクニカルライズ, グランドスウェー, 起き上がり攻撃
 				if p.state ~= 0 then
 					if p.act == 0x192 or p.act == 0x18E then
+						local btn_val = function(btn)
+							if 0 < joy_val[btn] then
+								return false
+							else
+								return true
+							end
+						end
 						if     p.dummy_down == 1 then
 						elseif p.dummy_down == 2 then
 							local dn = "P" .. p.control .. " Down"
 							local d  = "P" .. p.control .. " Button 4"
-							next_joy[dn] = (0 < joy_val[dn]) and false or true
-							next_joy[d]  = (0 < joy_val[d] ) and false or true
+							next_joy[dn] = btn_val(dn)
+							next_joy[d]  = btn_val(d)
 						elseif p.dummy_down == 3 then
 							local up = "P" .. p.control .. " Up"
 							local d  = "P" .. p.control .. " Button 4"
-							next_joy[up] = (0 < joy_val[up]) and false or true
-							next_joy[d]  = (0 < joy_val[d] ) and false or true
+							next_joy[up] = btn_val(up)
+							next_joy[d]  = btn_val(d)
+						elseif p.dummy_down == 4 then
+							-- 舞、ボブ、フランコ、山崎
+							if p.char == 0x04 or p.char == 0x07 or p.char == 0x0A or p.char == 0x0B then
+								local c  = "P" .. p.control .. " Button 3"
+								next_joy[c]  = btn_val(c)
+							end
 						end
 					end
 				end
@@ -4149,13 +4187,14 @@ function rbff2.startplugin()
 	local ex_menu_to_main_cancel = function()
 		ex_menu_to_main(true)
 	end
-	local col_list = { box_type_base.a, box_type_base.t3, box_type_base.pa, box_type_base.t, box_type_base.at,
-		box_type_base.pt, box_type_base.p, box_type_base.v1, box_type_base.v2, box_type_base.v3, box_type_base.v4,
-		box_type_base.v5, box_type_base.v6, box_type_base.x1, box_type_base.x2, box_type_base.x3, box_type_base.x4,
-		box_type_base.x5, box_type_base.x6, box_type_base.x7, box_type_base.x8, box_type_base.x9, box_type_base.g1,
-		box_type_base.g2, box_type_base.g3, box_type_base.g4, box_type_base.g5, box_type_base.g6, box_type_base.g7,
-		box_type_base.g8, box_type_base.g9, box_type_base.g10, box_type_base.g11, box_type_base.g12, box_type_base.g13,
-		box_type_base.g14, box_type_base.g15, box_type_base.g16, }
+	local box_type_col_list = { 
+		box_type_base.a, box_type_base.t3, box_type_base.pa, box_type_base.t, box_type_base.at, box_type_base.pt,
+		box_type_base.p, box_type_base.v1, box_type_base.sv1, box_type_base.v2, box_type_base.sv2, box_type_base.v3,
+		box_type_base.v4, box_type_base.v5, box_type_base.v6, box_type_base.x1, box_type_base.x2, box_type_base.x3,
+		box_type_base.x4, box_type_base.x5, box_type_base.x6, box_type_base.x7, box_type_base.x8, box_type_base.x9,
+		box_type_base.g1, box_type_base.g2, box_type_base.g3, box_type_base.g4, box_type_base.g5, box_type_base.g6,
+		box_type_base.g7, box_type_base.g8, box_type_base.g9, box_type_base.g10, box_type_base.g11, box_type_base.g12,
+		box_type_base.g13, box_type_base.g14, box_type_base.g15, box_type_base.g16, }
 	local col_menu_to_main = function(cancel)
 		local col = col_menu.pos.col
 		local row = col_menu.pos.row
@@ -4165,7 +4204,7 @@ function rbff2.startplugin()
 		local ec = scr:frame_number()
 
 		for i = 2, #col do
-			col_list[i-1].enabled = col[i] == 2
+			box_type_col_list[i-1].enabled = col[i] == 2
 		end
 
 		menu_cur = main_menu
@@ -4390,12 +4429,12 @@ function rbff2.startplugin()
 		main_menu.pos.col[ 9] = math.min(math.max(pgm:read_u8(0x107BAC)+1, 1), 2)
 		main_menu.pos.col[10] = math.min(math.max(pgm:read_u8(0x107BAD)+1, 1), 2)
 
-		local cond1 = pgm:read_u8(0x107BB1)
-		local cond2 = pgm:read_u8(0x107BB7)
-		local cond3 = pgm:read_u8(0x107BB9) == 1 and 0x01 or 0x0F
+		local stg1 = pgm:read_u8(0x107BB1)
+		local stg2 = pgm:read_u8(0x107BB7)
+		local stg3 = pgm:read_u8(0x107BB9) == 1 and 0x01 or 0x0F
 		main_menu.pos.col[11] = 1
 		for i, data in ipairs(stgs) do
-			if data.stg1 == cond1 and data.stg2 == cond2 and data.stg3 == cond3 then
+			if data.stg1 == stg1 and data.stg2 == stg2 and data.stg3 == stg3 then
 				main_menu.pos.col[11] = i
 				break
 			end
@@ -4467,8 +4506,8 @@ function rbff2.startplugin()
 			{ "1ガード持続フレーム数" , gd_frms, },
 			{ "1P ブレイクショット"   , { "OFF", "ON （Aで選択画面へ）" }, },
 			{ "2P ブレイクショット"   , { "OFF", "ON （Aで選択画面へ）" }, },
-			{ "1P やられ時行動"       , { "なし", "テクニカルライズ", "グランドスウェー" }, },
-			{ "2P やられ時行動"       , { "なし", "テクニカルライズ", "グランドスウェー" }, },
+			{ "1P やられ時行動"       , { "なし", "テクニカルライズ", "グランドスウェー", "起き上がり攻撃", }, },
+			{ "2P やられ時行動"       , { "なし", "テクニカルライズ", "グランドスウェー", "起き上がり攻撃", }, },
 			{ "1P 挑発で前進"         , { "OFF", "ON" }, },
 			{ "2P 挑発で前進"         , { "OFF", "ON" }, },
 		},
@@ -4643,7 +4682,7 @@ function rbff2.startplugin()
 	table.insert(col_menu.pos.col, 0)
 	table.insert(col_menu.on_a, col_menu_to_main)
 	table.insert(col_menu.on_b, col_menu_to_main_cancel)
-	for _, box in pairs(col_list) do
+	for _, box in pairs(box_type_col_list) do
 		table.insert(col_menu.list, { box.name, { "OFF", "ON", }, { fill = box.fill, outline = box.outline } })
 		table.insert(col_menu.pos.col, 2)
 		table.insert(col_menu.on_a, col_menu_to_main)
