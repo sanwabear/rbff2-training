@@ -34,16 +34,10 @@ local rbff2 = exports
 
 function rbff2.startplugin()
 	local main_or_menu_state, prev_main_or_menu_state
-	local menu_cur, main_menu, tra_menu, rec_menu, play_menu, menu, tra_main, menu_exit, bs_menus
-
-	local menu_move_fc = 0
+	local menu_cur, main_menu, tra_menu, rec_menu, play_menu, menu, tra_main, menu_exit, bs_menus, bar_menu, ex_menu, col_menu
 
 	local mem_last_time         = 0      -- 最終読込フレーム(キャッシュ用)
-	local mem_0x100400          = 0      -- 1P用のRAMスペースの先頭
-	local mem_0x100500          = 0      -- 2P用のRAMスペースの先頭
 	local mem_0x100701          = 0      -- 場面判定用
-	local mem_0x102557          = 0      -- 場面判定用
-	local mem_0x1041D2          = 0      -- unpause 0x00, pause 0xFF
 	local mem_0x107C22          = 0      -- 場面判定用
 	local mem_0x10B862          = 0      -- ガードヒット=FF
 	local mem_0x10D4EA          = 0      -- 潜在発動時の停止時間
@@ -51,15 +45,9 @@ function rbff2.startplugin()
 	local mem_0x10FDAF          = 0      -- 場面判定用
 	local mem_0x10FDB6          = 0      -- P1 P2 開始判定用
 	local mem_0x10E043          = 0      -- 手動でポーズしたときに00以外になる
-	local mem_bgm               = 0      -- BGM
-	local mem_reg_sts_b         = 0      -- REG_STATUS_B
-	local mem_stage             = 0      -- ステージ
-	local mem_stage_tz          = 0      -- ステージバリエーション(Timezone)
 	local mem_biostest          = false  -- 初期化中のときtrue
-	local old_active            = false  -- 対戦画面のときtrue(前フレーム)
 	local match_active          = false  -- 対戦画面のときtrue
 	local player_select_active  = false  -- プレイヤー選択画面のときtrue
-	local player_select_hacked  = 0        -- プレイヤー選択のハック用 
 	local mem_0x10CDD0          = 0x10CDD0 -- プレイヤー選択のハック用 
 	local p_space               = 0      -- 1Pと2Pの間隔
 	local prev_p_space          = 0      -- 1Pと2Pの間隔(前フレーム)
@@ -72,8 +60,8 @@ function rbff2.startplugin()
 	local bios_test             = function()
 		local cpu = manager:machine().devices[":maincpu"]
 		local pgm = cpu.spaces["program"]
-		local ram_value = pgm:read_u8(addr)
 		for _, addr in ipairs({0x100400, 0x100500}) do
+			local ram_value = pgm:read_u8(addr)
 			for _, test_value in ipairs({0x5555, 0xAAAA, bit32.band(0xFFFF, addr)}) do
 				if ram_value == test_value then
 					return true
@@ -139,7 +127,8 @@ function rbff2.startplugin()
 	-- 行動の種類
 	local act_types = { free = -1, attack = 0, low_attack = 1, provoke =  2, any = 3, overhead = 4 }
 
-	local char_names = { "テリー・ボガード", "アンディ・ボガード", "東丈", "不知火舞", "ギース・ハワード", "望月双角",
+	local char_names = {
+		"テリー・ボガード", "アンディ・ボガード", "東丈", "不知火舞", "ギース・ハワード", "望月双角",
 		"ボブ・ウィルソン", "ホンフゥ", "ブルー・マリー", "フランコ・バッシュ", "山崎竜二", "秦崇秀", "秦崇雷",
 		"ダック・キング", "キム・カッファン", "ビリー・カーン", "チン・シンザン", "タン・フー・ルー",
 		"ローレンス・ブラッド", "ヴォルフガング・クラウザー", "リック・ストラウド", "李香緋", "アルフレッド",
@@ -1106,182 +1095,368 @@ function rbff2.startplugin()
 		end
 	end
 	-- コマンドテーブル上の技ID
-	-- ブレイクショット対応技のみ
-	local char_bs_list = {
+	local char_cmd_list = {
 		-- テリー・ボガード
 		{
-			{ id = 0x01, name = "小 バーンナックル", }, 
-			{ id = 0x02, name = "大 バーンナックル", }, 
-			{ id = 0x03, name = "パワーウェイブ", }, 
-			{ id = 0x04, name = "ラウンドウェイブ", }, 
-			{ id = 0x05, name = "クラックシュート", }, 
-			{ id = 0x06, name = "ファイヤーキック", }, 
-			{ id = 0x10, name = "パワーゲイザー", }, 
+			{ id = 0x01, ver = 0x0600, bs = true , name = "小バーンナックル", },
+			{ id = 0x02, ver = 0x0600, bs = true , name = "大バーンナックル", },
+			{ id = 0x03, ver = 0x0600, bs = true , name = "パワーウェイブ", },
+			{ id = 0x04, ver = 0x0600, bs = true , name = "ランドウェイブ", },
+			{ id = 0x05, ver = 0x0600, bs = true , name = "クラックシュート", },
+			{ id = 0x06, ver = 0x0600, bs = true , name = "ファイヤーキック", },
+			{ id = 0x07, ver = 0x0600, bs = false, name = "パッシングスウェー", },
+			{ id = 0x08, ver = 0x0600, bs = false, name = "ライジングタックル", },
+			{ id = 0x10, ver = 0x0600, bs = true , name = "パワーゲイザー", },
+			{ id = 0x12, ver = 0x0600, bs = false, name = "トリプルゲイザー", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント バーンナックル", },
+			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント パワーゲイザー", },
 		},
 		-- アンディ・ボガード
 		{
-			{ id = 0x03, name = "飛翔拳", }, 
-			{ id = 0x04, name = "激 飛翔拳", }, 
-			{ id = 0x05, name = "昇龍弾", }, 
-			{ id = 0x06, name = "空破弾", }, 
-			{ id = 0x12, name = "男打弾", }, 
+			{ id = 0x01, ver = 0x0600, bs = false, name = "小残影拳", },
+			{ id = 0x02, ver = 0x06FF, bs = false, name = "大残影拳", },
+			{ id = 0x03, ver = 0x0600, bs = true , name = "飛翔拳", },
+			{ id = 0x04, ver = 0x0600, bs = true , name = "激飛翔拳", },
+			{ id = 0x05, ver = 0x0600, bs = true , name = "昇龍弾", },
+			{ id = 0x06, ver = 0x0600, bs = true , name = "空破弾", },
+			{ id = 0x07, ver = 0x1200, bs = false, name = "幻影不知火", },
+			{ id = 0x10, ver = 0x0600, bs = false, name = "超裂破弾", },
+			{ id = 0x12, ver = 0x0600, bs = true , name = "男打弾", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 残影拳", },
+			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント 飛翔拳", },
+			{ id = 0x48, ver = 0x0600, bs = false, name = "フェイント 超裂破弾", },
 		},
 		-- 東丈
 		{
-			{ id = 0x06, name = "ハリケーンアッパー", }, 
-			{ id = 0x07, name = "爆裂ハリケーン", }, 
-			{ id = 0x04, name = "タイガーキック", }, 
-			{ id = 0x03, name = "黄金のカカト", }, 
-			{ id = 0x05, name = "爆裂拳", }, 
+			{ id = 0x01, ver = 0x0600, bs = false, name = "小スラッシュキック", },
+			{ id = 0x02, ver = 0x0600, bs = false, name = "大スラッシュキック", },
+			{ id = 0x03, ver = 0x0600, bs = true , name = "黄金のカカト", },
+			{ id = 0x04, ver = 0x0600, bs = true , name = "タイガーキック", },
+			{ id = 0x05, ver = 0x0C00, bs = true , name = "爆裂拳", },
+			--{ id = 0x00, ver = 0x0CFF, bs = false, name = "爆裂フック", },
+			--{ id = 0x00, ver = 0x0CFE, bs = false, name = "爆裂アッパー", },
+			{ id = 0x06, ver = 0x0600, bs = true , name = "ハリケーンアッパー", },
+			{ id = 0x07, ver = 0x0600, bs = true , name = "爆裂ハリケーン", },
+			{ id = 0x10, ver = 0x0600, bs = false, name = "スクリューアッパー", },
+			{ id = 0x12, ver = 0x0600, bs = false, name = "サンダーファイヤー(C)", },
+			{ id = 0x13, ver = 0x0600, bs = false, name = "サンダーファイヤー(D)", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ハリケーンアッパー", },
+			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント スラッシュキック", },
 		},
 		-- 不知火舞
 		{
-			{ id = 0x02, name = "龍炎舞", }, 
-			{ id = 0x04, name = "必殺忍蜂", }, 
-			{ id = 0x01, name = "花蝶扇", }, 
-			{ id = 0x03, name = "小夜千鳥", }, 
+			{ id = 0x01, ver = 0x0600, bs = true , name = "花蝶扇", },
+			{ id = 0x02, ver = 0x0600, bs = true , name = "龍炎舞", },
+			{ id = 0x03, ver = 0x0600, bs = true , name = "小夜千鳥", },
+			{ id = 0x04, ver = 0x0600, bs = true , name = "必殺忍蜂", },
+			{ id = 0x05, ver = 0x0600, bs = false, name = "ムササビの舞", },
+			{ id = 0x10, ver = 0x0600, bs = false, name = "超必殺忍蜂", },
+			{ id = 0x12, ver = 0x0600, bs = false, name = "花嵐", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 花蝶扇", },
+			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント 花嵐", },
 		},
 		-- ギース・ハワード
 		{
-			{ id = 0x01, name = "烈風拳", }, 
-			{ id = 0x02, name = "ダブル烈風拳", }, 
-			{ id = 0x13, name = "デッドリーレイブ", }, 
+			{ id = 0x01, ver = 0x0600, bs = true , name = "烈風拳", },
+			{ id = 0x02, ver = 0x06FF, bs = true , name = "ダブル烈風拳", },
+			{ id = 0x03, ver = 0x0600, bs = false, name = "上段当て身投げ", },
+			{ id = 0x04, ver = 0x06FE, bs = false, name = "裏雲隠し", },
+			{ id = 0x05, ver = 0x0600, bs = false, name = "下段当て身打ち", },
+			{ id = 0x06, ver = 0x0600, bs = false, name = "雷鳴豪波投げ", },
+			{ id = 0x07, ver = 0x06FD, bs = false, name = "真空投げ", },
+			{ id = 0x10, ver = 0x0600, bs = false, name = "レイジングストーム", },
+			{ id = 0x12, ver = 0x0600, bs = false, name = "羅生門", },
+			{ id = 0x13, ver = 0x0600, bs = true , name = "デッドリーレイブ", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 烈風拳", },
+			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント レイジングストーム", },
 		},
 		-- 望月双角,
 		{
-			{ id = 0x01, name = "まきびし", }, 
-			{ id = 0x02, name = "野猿狩り", }, 
-			{ id = 0x03, name = "憑依弾", }, 
-			{ id = 0x06, name = "喝", }, 
+			{ id = 0x01, ver = 0x0600, bs = true , name = "野猿狩り", },
+			{ id = 0x02, ver = 0x0600, bs = true , name = "まきびし", },
+			{ id = 0x03, ver = 0x0600, bs = true , name = "憑依弾", },
+			{ id = 0x04, ver = 0x06FE, bs = false, name = "鬼門陣", },
+			{ id = 0x05, ver = 0x0CFF, bs = false, name = "邪棍舞", },
+			{ id = 0x06, ver = 0x0600, bs = true , name = "喝", },
+			{ id = 0x07, ver = 0x0600, bs = false, name = "渦炎陣", },
+			{ id = 0x10, ver = 0x0600, bs = false, name = "いかづち", },
+			{ id = 0x12, ver = 0x0600, bs = false, name = "無惨弾", },
+			{ id = 0x21, ver = 0x0600, bs = false, name = "雷撃棍", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント まきびし", },
+			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント いかづち", },
 		},
 		-- ボブ・ウィルソン
 		{
-			{ id = 0x01, name = "ローリングタートル", }, 
-			{ id = 0x04, name = "ワイルドウルフ", }, 
-			{ id = 0x02, name = "サイドワインダー", }, 
-			{ id = 0x05, name = "モンキーダンス", }, 
+			{ id = 0x01, ver = 0x0600, bs = true , name = "ローリングタートル", },
+			{ id = 0x02, ver = 0x0600, bs = true , name = "サイドワインダー", },
+			{ id = 0x03, ver = 0x0600, bs = false, name = "バイソンホーン", },
+			{ id = 0x04, ver = 0x0602, bs = true , name = "ワイルドウルフ", },
+			{ id = 0x05, ver = 0x0600, bs = true , name = "モンキーダンス", },
+			{ id = 0x06, ver = 0x06FE, bs = false, name = "フロッグハンティング", },
+			{ id = 0x00, ver = 0x1EFF, bs = false, name = "ホーネットアタック", },
+			{ id = 0x10, ver = 0x0600, bs = false, name = "デンジャラスウルフ", },
+			{ id = 0x12, ver = 0x0600, bs = false, name = "ダンシングバイソン", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ダンシングバイソン", },
 		},
 		-- ホンフゥ
 		{
-			{ id = 0x02, name = "小 制空烈火棍", }, 
-			{ id = 0x03, name = "大 制空烈火棍", }, 
-			{ id = 0x05, name = "電光石火の天", }, 
-			{ id = 0x04, name = "電光石火の地", }, 
-			{ id = 0x12, name = "よかトンハンマー", }, 
+			{ id = 0x01, ver = 0x0600, bs = false, name = "九龍の読み", },
+			{ id = 0x02, ver = 0x0600, bs = true , name = "小 制空烈火棍", },
+			{ id = 0x03, ver = 0x0600, bs = true , name = "大 制空烈火棍", },
+			{ id = 0x04, ver = 0x0600, bs = true , name = "電光石火の地", },
+			--{ id = 0x00, ver = 0x0CFE, bs = false, name = "電光パチキ", },
+			{ id = 0x05, ver = 0x0600, bs = true , name = "電光石火の天", },
+			{ id = 0x06, ver = 0x0600, bs = false, name = "炎の種馬", },
+			{ id = 0x00, ver = 0x0CFF, bs = false, name = "炎の種馬連打", },
+			{ id = 0x07, ver = 0x0600, bs = false, name = "必勝！逆襲拳", },
+			{ id = 0x10, ver = 0x0600, bs = false, name = "爆発ゴロー", },
+			{ id = 0x12, ver = 0x0600, bs = true , name = "よかトンハンマー", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 制空烈火棍", },
 		},
 		-- ブルー・マリー
 		{
-			{ id = 0x02, name = "M.スナッチャー", }, 
-			{ id = 0x05, name = "スピンフォール", }, 
-			{ id = 0x06, name = "バーチカルアロー", }, 
-			{ id = 0x07, name = "ストレートスライサー", }, 
+			{ id = 0x01, ver = 0x06FF, bs = false, name = "M.スパイダー", },
+			{ id = 0x02, ver = 0x06FE, bs = true , name = "M.スナッチャー", },
+			{ id = 0x03, ver = 0x06FD, bs = false, name = "M.クラブクラッチ", },
+			--{ id = 0x00, ver = 0x06FD, bs = false, name = "ダブルクラッチ", },
+			{ id = 0x04, ver = 0x0600, bs = false, name = "M.リアルカウンター", },
+			{ id = 0x05, ver = 0x0600, bs = true , name = "スピンフォール", },
+			{ id = 0x06, ver = 0x0600, bs = true , name = "バーチカルアロー", },
+			{ id = 0x07, ver = 0x0600, bs = true , name = "ストレートスライサー", },
+			{ id = 0x09, ver = 0x0600, bs = false, name = "ヤングダイブ", },
+			{ id = 0x08, ver = 0x06F9, bs = false, name = "M.ダイナマイトスウィング", },
+			{ id = 0x10, ver = 0x0600, bs = false, name = "M.タイフーン", },
+			{ id = 0x12, ver = 0x0600, bs = false, name = "M.エスカレーション", },
+			{ id = 0x28, ver = 0x0600, bs = false, name = "M.トリプルエクスタシー", },
+			{ id = 0x24, ver = 0x0600, bs = false, name = "レッグプレス", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント M.スナッチャー", },
 		},
 		-- フランコ・バッシュ
 		{
-			{ id = 0x01 , name = "ダブルコング", }, 
-			{ id = 0x02, name = "ザッパー", }, 
-			{ id = 0x05, name = "ゴールデンボンバー", }, 
-			{ id = 0x04, name = "ガッツダンク", }, 
-			{ id = 0x10, name = "ファイナルオメガショット", }, 
+			{ id = 0x01, ver = 0x0600, bs = true , name = "ダブルコング", },
+			{ id = 0x02, ver = 0x0600, bs = true , name = "ザッパー", },
+			{ id = 0x03, ver = 0x0600, bs = false, name = "ウェービングブロー", },
+			{ id = 0x04, ver = 0x0600, bs = true , name = "ガッツダンク", },
+			{ id = 0x05, ver = 0x0600, bs = true , name = "ゴールデンボンバー", },
+			{ id = 0x10, ver = 0x0600, bs = true , name = "ファイナルオメガショット", },
+			{ id = 0x11, ver = 0x0600, bs = false, name = "メガトンスクリュー", },
+			{ id = 0x12, ver = 0x0600, bs = false, name = "ハルマゲドンバスター", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ハルマゲドンバスター", },
+			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント ガッツダンク", },
 		},
 		-- 山崎竜二
 		{
-			{ id = 0x01, name = "蛇使い・上段", }, 
-			{ id = 0x02, name = "蛇使い・中段", }, 
-			{ id = 0x03, name = "蛇使い・下段", }, 
-			{ id = 0x07, name = "裁きの匕首", }, 
+			{ id = 0x01, ver = 0x0600, bs = true , name = "蛇使い・上段", },
+			{ id = 0x02, ver = 0x0600, bs = true , name = "蛇使い・中段", },
+			{ id = 0x03, ver = 0x0600, bs = true , name = "蛇使い・下段", },
+			{ id = 0x04, ver = 0x0600, bs = false, name = "サドマゾ", },
+			{ id = 0x05, ver = 0x0600, bs = false, name = "ヤキ入れ", },
+			{ id = 0x06, ver = 0x0600, bs = false, name = "倍返し", },
+			{ id = 0x07, ver = 0x0600, bs = true , name = "裁きの匕首", },
+			{ id = 0x08, ver = 0x0600, bs = false, name = "爆弾パチキ", },
+			{ id = 0x09, ver = 0x0C00, bs = false, name = "トドメ", },
+			{ id = 0x10, ver = 0x0600, bs = false, name = "ギロチン", },
+			{ id = 0x12, ver = 0x0600, bs = false, name = "ドリル", },
+			--{ id = 0x00, ver = 0x06FE, bs = false, name = "ドリル Lv.5", },
+			--{ id = 0x00, ver = 0x06FF, bs = false, name = "?", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 裁きの匕首", },
 		},
 		-- 秦崇秀
 		{
-			{ id = 0x02, name = "小 帝王天眼拳", }, 
-			{ id = 0x03, name = "大 帝王天眼拳", }, 
-			{ id = 0x04, name = "小 帝王天耳拳", }, 
-			{ id = 0x05, name = "大 帝王天耳拳", }, 
-			{ id = 0x07, name = "帝王神眼拳・その場", }, 
-			{ id = 0x08, name = "帝王神眼拳・頭上", }, 
-			{ id = 0x09, name = "帝王神眼拳・背後", }, 
-			{ id = 0x10, name = "帝王漏尽拳", }, 
+			{ id = 0x01, ver = 0x0600, bs = false, name = "帝王神足拳", },
+			{ id = 0x02, ver = 0x0600, bs = true , name = "小 帝王天眼拳", },
+			{ id = 0x03, ver = 0x0600, bs = true , name = "大 帝王天眼拳", },
+			{ id = 0x04, ver = 0x0600, bs = true , name = "小 帝王天耳拳", },
+			{ id = 0x05, ver = 0x0600, bs = true , name = "大 帝王天耳拳", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 海龍照臨", },
+			{ id = 0x06, ver = 0x0600, bs = false, name = "竜灯掌", },
+			{ id = 0x07, ver = 0x0600, bs = true , name = "帝王神眼拳（その場）", },
+			{ id = 0x08, ver = 0x06FF, bs = true , name = "帝王神眼拳（空中）", },
+			{ id = 0x09, ver = 0x0600, bs = true , name = "帝王神眼拳（背後）", },
+			{ id = 0x0A, ver = 0x0600, bs = false, name = "帝王空殺神眼拳", },
+			{ id = 0x10, ver = 0x0600, bs = true , name = "帝王漏尽拳", },
+			{ id = 0x11, ver = 0x0600, bs = false, name = "帝王空殺漏尽拳", },
+			{ id = 0x12, ver = 0x0600, bs = false, name = "海龍照臨", },
 		},
 		-- 秦崇雷,
 		{
-			{ id = 0x02, name = "小 帝王天眼拳", }, 
-			{ id = 0x03, name = "大 帝王天眼拳", }, 
-			{ id = 0x04, name = "小 帝王天耳拳", }, 
-			{ id = 0x05, name = "大 帝王天耳拳", }, 
-			{ id = 0x06, name = "帝王漏尽拳", }, 
+			{ id = 0x01, ver = 0x0600, bs = false, name = "帝王神足拳", },
+			{ id = 0x01, ver = 0x06FF, bs = false, name = "真 帝王神足拳", },
+			{ id = 0x02, ver = 0x0600, bs = true , name = "小 帝王天眼拳", },
+			{ id = 0x03, ver = 0x0600, bs = true , name = "大 帝王天眼拳", },
+			{ id = 0x04, ver = 0x0600, bs = true , name = "小 帝王天耳拳", },
+			{ id = 0x05, ver = 0x0600, bs = true , name = "大 帝王天耳拳", },
+			{ id = 0x06, ver = 0x0600, bs = true , name = "帝王漏尽拳", },
+			{ id = 0x07, ver = 0x0600, bs = false, name = "龍転身（前方）", },
+			{ id = 0x08, ver = 0x0600, bs = false, name = "龍転身（後方）", },
+			{ id = 0x10, ver = 0x06FF, bs = false, name = "帝王宿命拳", },
+			--{ id = 0x00, ver = 0x06FE, bs = false, name = "帝王宿命拳(連射)", },
+			{ id = 0x12, ver = 0x0600, bs = false, name = "帝王龍声拳", },
 		},
 		-- ダック・キング
 		{
-			{ id = 0x01, name = "小 ヘッドスピンアタック", }, 
-			{ id = 0x02, name = "大 ヘッドスピンアタック", }, 
-			{ id = 0x04, name = "ダンシングダイブ", }, 
+			{ id = 0x01, ver = 0x0600, bs = true , name = "小ヘッドスピンアタック", },
+			{ id = 0x02, ver = 0x0600, bs = true , name = "大ヘッドスピンアタック", },
+			{ id = 0x02, ver = 0x06FF, bs = true , name = "大ヘッドスピンアタック", },
+			--{ id = 0x00, ver = 0x06FF, bs = false, name = "ヘッドスピンアタック追撃", },
+			{ id = 0x03, ver = 0x0600, bs = false, name = "フライングスピンアタック", },
+			{ id = 0x04, ver = 0x0600, bs = true , name = "ダンシングダイブ", },
+			{ id = 0x00, ver = 0x06FE, bs = false, name = "リバースダイブ", },
+			{ id = 0x05, ver = 0x06FE, bs = false, name = "ブレイクストーム", },
+			--{ id = 0x00, ver = 0x06FD, bs = false, name = "ブレイクストーム追撃1段階目", },
+			--{ id = 0x00, ver = 0x06FC, bs = false, name = "ブレイクストーム追撃2段階目", },
+			--{ id = 0x00, ver = 0x06FB, bs = false, name = "ブレイクストーム追撃3段階目", },
+			{ id = 0x06, ver = 0x0600, bs = false, name = "ダックフェイント・空", },
+			{ id = 0x07, ver = 0x0600, bs = false, name = "ダックフェイント・地", },
+			{ id = 0x08, ver = 0x0600, bs = false, name = "?", },
+			{ id = 0x09, ver = 0x0600, bs = false, name = "?", },
+			{ id = 0x0A, ver = 0x0600, bs = false, name = "?", },
+			{ id = 0x0C, ver = 0x0600, bs = false, name = "?", },
+			{ id = 0x10, ver = 0x0600, bs = false, name = "ブレイクスパイラル", },
+			{ id = 0x11, ver = 0x06FA, bs = false, name = "ブレイクスパイラルBR", },
+			{ id = 0x12, ver = 0x0600, bs = false, name = "ダックダンス", },
+			--{ id = 0x00, ver = 0x06F8, bs = false, name = "ダックダンス継続", },
+			{ id = 0x13, ver = 0x0600, bs = false, name = "スーパーポンピングマシーン", },
+			{ id = 0x00, ver = 0x06F9, bs = false, name = "?", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ダックダンス", },
+			{ id = 0x28, ver = 0x0600, bs = false, name = "旧ブレイクストーム", },
 		},
 		-- キム・カッファン
 		{
-			{ id = 0x02, name = "小 半月斬", }, 
-			{ id = 0x03, name = "大 半月斬", }, 
-			{ id = 0x01, ver = 0x02, name = "飛燕斬・後方", }, 
-			{ id = 0x01, name = "飛燕斬・真上", }, 
-			{ id = 0x01, ver = 0x01, name = "飛燕斬・前方", }, 
-			{ id = 0x06, name = "覇気脚", }, 
+			{ id = 0x01, ver = 0x0600, bs = true , name = "飛燕斬・真上", },
+			{ id = 0x01, ver = 0x0601, bs = true , name = "飛燕斬・前方", },
+			{ id = 0x01, ver = 0x0602, bs = true , name = "飛燕斬・後方", },
+			{ id = 0x02, ver = 0x0600, bs = true , name = "小 半月斬", },
+			{ id = 0x03, ver = 0x0600, bs = true , name = "大 半月斬", },
+			{ id = 0x04, ver = 0x0800, bs = false, name = "飛翔脚", },
+			--{ id = 0x00, ver = 0x08FF, bs = false, name = "戒脚", },
+			{ id = 0x05, ver = 0x0600, bs = false, name = "空砂塵", },
+			{ id = 0x00, ver = 0x06FE, bs = false, name = "天昇斬", },
+			{ id = 0x06, ver = 0x0600, bs = true , name = "覇気脚", },
+			{ id = 0x10, ver = 0x0600, bs = false, name = "鳳凰天舞脚", },
+			{ id = 0x12, ver = 0x0600, bs = false, name = "鳳凰脚", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 鳳凰脚", },
 		},
 		-- ビリー・カーン
 		{
-			{ id = 0x03, name = "雀落とし", }, 
-			{ id = 0x05, name = "強襲飛翔棍", }, 
-			{ id = 0x06, name = "火龍追撃棍", }, 
+			{ id = 0x01, ver = 0x0600, bs = false, name = "三節棍中段打ち", },
+			{ id = 0x00, ver = 0x06FF, bs = false, name = "火炎三節棍中段打ち", },
+			{ id = 0x03, ver = 0x0600, bs = true , name = "雀落とし", },
+			{ id = 0x04, ver = 0x0C00, bs = false, name = "旋風棍", },
+			{ id = 0x05, ver = 0x0600, bs = true , name = "強襲飛翔棍", },
+			{ id = 0x06, ver = 0x0600, bs = true , name = "火龍追撃棍", },
+			{ id = 0x10, ver = 0x0600, bs = false, name = "超火炎旋風棍", },
+			{ id = 0x11, ver = 0x0600, bs = false, name = "紅蓮殺棍", },
+			{ id = 0x12, ver = 0x0600, bs = false, name = "サラマンダーストリーム", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 強襲飛翔棍", },
 		},
 		-- チン・シンザン
 		{
-			{ id = 0x01, name = "氣雷砲（前方）", }, 
-			{ id = 0x02, name = "氣雷砲（対空）", }, 
-			{ id = 0x04, name = "小 破岩激", }, 
-			{ id = 0x05, name = "大 破岩激", }, 
-			{ id = 0x10, name = "爆雷砲", }, 
+			{ id = 0x01, ver = 0x0600, bs = true , name = "気雷砲（前方）", },
+			{ id = 0x02, ver = 0x0600, bs = true , name = "気雷砲（対空）", },
+			{ id = 0x03, ver = 0x0600, bs = false, name = "超太鼓腹打ち", },
+			{ id = 0x00, ver = 0x06FF, bs = false, name = "満腹対空", },
+			{ id = 0x04, ver = 0x0600, bs = true , name = "小 破岩撃", },
+			{ id = 0x05, ver = 0x0600, bs = true , name = "大 破岩撃", },
+			{ id = 0x06, ver = 0x0600, bs = false, name = "軟体オヤジ", },
+			{ id = 0x07, ver = 0x0600, bs = false, name = "クッサメ砲", },
+			{ id = 0x10, ver = 0x0600, bs = true , name = "爆雷砲", },
+			{ id = 0x12, ver = 0x0600, bs = false, name = "ホエホエ弾", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 破岩撃", },
+			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント クッサメ砲", },
 		},
 		-- タン・フー・ルー,
 		{
-			{ id = 0x02, name = "小 箭疾歩", }, 
-			{ id = 0x03, name = "大 箭疾歩", }, 
-			{ id = 0x01, name = "衝波", }, 
-			{ id = 0x05, name = "烈千脚", }, 
+			{ id = 0x01, ver = 0x0600, bs = true , name = "衝波", },
+			{ id = 0x02, ver = 0x0600, bs = true , name = "小 箭疾歩", },
+			{ id = 0x03, ver = 0x0600, bs = true , name = "大 箭疾歩", },
+			{ id = 0x04, ver = 0x0600, bs = false, name = "撃放", },
+			{ id = 0x05, ver = 0x0600, bs = true , name = "裂千脚", },
+			{ id = 0x10, ver = 0x0600, bs = false, name = "旋風剛拳", },
+			{ id = 0x12, ver = 0x0600, bs = false, name = "大撃放", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 旋風剛拳", },
 		},
 		-- ローレンス・ブラッド
 		{
-			{ id = 0x01, name = "小 ブラッディスピン", }, 
-			{ id = 0x02, name = "大 ブラッディスピン", }, 
-			{ id = 0x05, name = "ブラッディカッター", }, 
+			{ id = 0x01, ver = 0x0600, bs = true , name = "小 ブラッディスピン", },
+			{ id = 0x02, ver = 0x0600, bs = true , name = "大 ブラッディスピン", },
+			{ id = 0x03, ver = 0x0600, bs = false, name = "ブラッディサーベル", },
+			{ id = 0x04, ver = 0x06FF, bs = false, name = "ブラッディミキサー", },
+			{ id = 0x05, ver = 0x0600, bs = true , name = "ブラッディカッター", },
+			{ id = 0x10, ver = 0x0600, bs = false, name = "ブラッディフラッシュ", },
+			{ id = 0x12, ver = 0x0600, bs = false, name = "ブラッディシャドー", },
 		},
 		-- ヴォルフガング・クラウザー
 		{
-			{ id = 0x03, name = "レッグトマホーク", }, 
-			{ id = 0x10, name = "カイザーウェーブ", }, 
+			{ id = 0x01, ver = 0x0600, bs = false, name = "ブリッツボール・上段", },
+			{ id = 0x02, ver = 0x06FF, bs = false, name = "ブリッツボール・下段", },
+			{ id = 0x03, ver = 0x0600, bs = true , name = "レッグトマホーク", },
+			{ id = 0x04, ver = 0x0600, bs = false, name = "フェニックススルー", },
+			{ id = 0x05, ver = 0x0600, bs = false, name = "デンジャラススルー", },
+			{ id = 0x00, ver = 0x06FD, bs = false, name = "グリフォンアッパー", },
+			{ id = 0x06, ver = 0x06FC, bs = false, name = "カイザークロー", },
+			{ id = 0x07, ver = 0x0600, bs = false, name = "リフトアップブロー", },
+			{ id = 0x10, ver = 0x0600, bs = true , name = "カイザーウェイブ", },
+			{ id = 0x12, ver = 0x0600, bs = false, name = "ギガティックサイクロン", },
+			{ id = 0x13, ver = 0x0600, bs = false, name = "アンリミテッドデザイア", },
+			{ id = 0x00, ver = 0x06FE, bs = false, name = "アンリミテッドデザイア2", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ブリッツボール", },
+			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント カイザーウェイブ", },
 		},
 		-- リック・ストラウド
 		{
-			{ id = 0x06, name = "ブレイジングサンバースト", }, 
-			{ id = 0x01, name = "小 シューティングスター", }, 
-			{ id = 0x03, name = "ディバインブラスト", }, 
-			{ id = 0x05, name = "ヘリオン", }, 
+			{ id = 0x01, ver = 0x0600, bs = true , name = "小 シューティングスター", },
+			{ id = 0x02, ver = 0x06FF, bs = false, name = "大 シューティングスター", },
+			{ id = 0x03, ver = 0x0600, bs = true , name = "ディバインブラスト", },
+			{ id = 0x04, ver = 0x0600, bs = false, name = "フルムーンフィーバー", },
+			{ id = 0x05, ver = 0x0600, bs = true , name = "ヘリオン", },
+			{ id = 0x06, ver = 0x0600, bs = true , name = "ブレイジングサンバースト", },
+			{ id = 0x09, ver = 0x0600, bs = false, name = "?", },
+			{ id = 0x10, ver = 0x0600, bs = false, name = "ガイアブレス", },
+			{ id = 0x12, ver = 0x0600, bs = false, name = "ハウリング・ブル", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント シューティングスター", },
 		},
 		-- 李香緋
 		{
-			{ id = 0x01, name = "小 那夢波", }, 
-			{ id = 0x02, name = "大 那夢波", }, 
-			{ id = 0x06, name = "天崩山", }, 
-			{ id = 0x07, name = "詠酒・対空中攻撃", }, 
-			{ id = 0x08, name = "詠酒・対立ち攻撃", }, 
-			{ id = 0x09, name = "詠酒・対しゃがみ攻撃", }, 
-			{ id = 0x10, name = "大鉄神", }, 
+			{ id = 0x01, ver = 0x0600, bs = true , name = "小 那夢波", },
+			{ id = 0x02, ver = 0x0600, bs = true , name = "大 那夢波", },
+			{ id = 0x03, ver = 0x06FF, bs = false, name = "閃里肘皇", },
+			{ id = 0x06, ver = 0x0600, bs = true , name = "天崩山", },
+			{ id = 0x07, ver = 0x0600, bs = true , name = "詠酒・対ジャンプ攻撃", },
+			{ id = 0x08, ver = 0x0600, bs = true , name = "詠酒・対立ち攻撃", },
+			{ id = 0x09, ver = 0x0600, bs = true , name = "詠酒・対しゃがみ攻撃", },
+			{ id = 0x10, ver = 0x0600, bs = true , name = "大鉄神", },
+			{ id = 0x11, ver = 0x06FD, bs = false, name = "超白龍", },
+			{ id = 0x00, ver = 0x06FD, bs = false, name = "超白龍2", },
+			{ id = 0x12, ver = 0x0600, bs = false, name = "真心牙", },
+			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント 天崩山", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 大鉄神", },
 		},
 		-- アルフレッド
 		{
-			{ id = 0x01, name = "小 クリティカルウィング", }, 
-			{ id = 0x02, name = "大 クリティカルウィング", }, 
-			{ id = 0x03, name = "オーグメンターウィング", }, 
-			{ id = 0x04, name = "ダイバージェンス", }, 
+			{ id = 0x01, ver = 0x0600, bs = true , name = "小 クリティカルウィング", },
+			{ id = 0x02, ver = 0x0600, bs = true , name = "大 クリティカルウィング", },
+			{ id = 0x03, ver = 0x0600, bs = true , name = "オーグメンターウィング", },
+			{ id = 0x04, ver = 0x0600, bs = true , name = "ダイバージェンス", },
+			{ id = 0x05, ver = 0x0600, bs = false, name = "メーデーメーデー", },
+			{ id = 0x06, ver = 0x0600, bs = false, name = "S.TOL", },
+			{ id = 0x10, ver = 0x0600, bs = false, name = "ショックストール", },
+			{ id = 0x12, ver = 0x0600, bs = false, name = "ウェーブライダー", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント クリティカルウィング", },
+			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント オーグメンターウィング", },
 		},
 	}
+	-- ブレイクショット対応技のみ
+	local char_bs_list = {}
+	for _, list in pairs(char_cmd_list) do
+		local bs_list = {}
+		for _, cmd in pairs(list) do
+			if cmd.bs then
+				table.insert(bs_list, cmd)
+			end
+		end
+		table.insert(char_bs_list, bs_list)
+	end
 
 	-- エミュレータ本体の入力取得
 	local use_joy = {
@@ -1493,8 +1668,8 @@ function rbff2.startplugin()
 		g14 = { id = 0x1E, name = "フェニックススルー", enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--?
 		g15 = { id = 0x1F, name = "ガード?6",           enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
 		g16 = { id = 0x20, name = "ガード?7",           enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
-		sv1  = { id = 0x02, name = "食らい1(スウェー中)", enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true },
-		sv2  = { id = 0x03, name = "食らい2(スウェー中)", enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true, },
+		sv1 = { id = 0x02, name = "食らい1(スウェー中)", enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true },
+		sv2 = { id = 0x03, name = "食らい2(スウェー中)", enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true, },
 	}
 	local box_types, sway_box_types = {}, {}
 	for _, box in pairs(box_type_base) do
@@ -1514,12 +1689,12 @@ function rbff2.startplugin()
 	local btn_col = { [convert("_A")] = 0xFFCC0000, [convert("_B")] = 0xFFCC8800, [convert("_C")] = 0xFF3333CC, [convert("_D")] = 0xFF336600, }
 	local text_col, shadow_col = 0xFFFFFFFF, 0xFF000000
 
-	function exists(name)
+	local exists = function(name)
 		if type(name)~="string" then return false end
 		return os.rename(name,name) and true or false
 	end
 
-	function is_file(name)
+	local is_file = function(name)
 		if type(name)~="string" then return false end
 		if not exists(name) then return false end
 		local f = io.open(name,"r")
@@ -1791,7 +1966,7 @@ function rbff2.startplugin()
 	-- プレイヤーの状態など
 	local players = {}
 	for p = 1, 2 do
-		p1 = (p == 1)
+		local p1 = (p == 1)
 		players[p] = {
 			dummy_act        = 1,           -- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
 			dummy_gd         = 1,           -- なし, オート, 1ヒットガード, 1ガード, 常時, ランダム
@@ -1976,7 +2151,6 @@ function rbff2.startplugin()
 				pos_y        = p1 and 0x100428 or 0x100528, -- Y位置
  				pos_z        = p1 and 0x100424 or 0x100524, -- Z位置
  				side         = p1 and 0x100458 or 0x100558, -- 向き
-				pow          = p1 and 0x1004BC or 0x1005BC, -- パワー
 				state        = p1 and 0x10048E or 0x10058E, -- 状態
 				stop         = p1 and 0x10048D or 0x10058D, -- ヒットストップ
 				stun         = p1 and 0x10B850 or 0x10B858, -- 現在スタン値
@@ -2241,7 +2415,7 @@ function rbff2.startplugin()
 			-- 0395BA: 195E 00A5                move.b  (A6)+, ($a5,A4) -- 技データ読込 だいたい00、飛燕斬01、02、03
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03957E),
 				"(maincpu.pw@107C22>0)&&((A6)==CB244)&&((maincpu.pb@10048E==2&&($100400==((A4)&$FFFFFF)))||(maincpu.pb@10058E==2&&($100500==((A4)&$FFFFFF))))",
-				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$80);D1=(maincpu.pb@(temp1));A6=((A6)+2);maincpu.pb@((A4)+$A3)=D1;maincpu.pb@((A4)+$A4)=06;maincpu.pb@((A4)+$A5)=maincpu.pb@(temp1+1);PC=((PC)+$20);g"))
+				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$80);D1=(maincpu.pb@(temp1));A6=((A6)+2);maincpu.pb@((A4)+$A3)=D1;maincpu.pb@((A4)+$A4)=maincpu.pb@(temp1+1);maincpu.pb@((A4)+$A5)=maincpu.pb@(temp1+2);PC=((PC)+$20);g"))
 
 			-- ステージ設定用。メニューでFを設定した場合にのみ動作させる
 			-- ラウンド数を1に初期化→スキップ
@@ -2422,7 +2596,10 @@ function rbff2.startplugin()
 			name = "スロット" .. i,
 		}
 	end
-	local rec_await_no_input, rec_await_1st_input, rec_await_play, rec_input, rec_play, rec_repeat_play, rec_play_interval, menu_to_tra, rec_fixpos
+
+	local rec_await_no_input, rec_await_1st_input, rec_await_play, rec_input, rec_play, rec_repeat_play, rec_play_interval, rec_fixpos
+	local menu_to_tra, menu_to_bar, menu_to_ex, menu_to_col
+
 	local get_pos = function(i)
 		local p = players[i]
 		local obj_base = p.addr.base
@@ -2967,7 +3144,6 @@ function rbff2.startplugin()
 			-- メニュー表示状態へ切り替え
 			global.input_accepted = ec
 			main_or_menu_state = menu
-			menu_move_fc = ec
 			cls_joy()
 			return
 		end
@@ -3788,14 +3964,14 @@ function rbff2.startplugin()
 				end
 				if p.dummy_bs == true and p.on_guard == global.frame_number then
 					pgm:write_u8(p.addr.bs_hook1, 0x20)             -- BSモード用技ID更新フック
-					pgm:write_u8(p.addr.bs_hook2, 0x00)             -- BSモード用技ID更新フック
+					pgm:write_u16(p.addr.bs_hook2, 0x0600)          -- BSモード用技ID更新フック
 					local bs_list = p.dummy_bs_list
 					if #bs_list > 0 then
 						local bs = bs_list[math.random(#bs_list)]
 						local id = bs.id or 0x20
-						local ver = bs.ver or 0x00
+						local ver = bs.ver or 0x0600
 						pgm:write_u8(p.addr.bs_hook1, id)
-						pgm:write_u8(p.addr.bs_hook2, ver)
+						pgm:write_u16(p.addr.bs_hook2, ver)
 					end
 
 					if p.bs_count < 1 then
@@ -4902,9 +5078,9 @@ function rbff2.startplugin()
 		scr:draw_box (0, 0, width, height, 0xC0000000, 0xC0000000)
 		local row_num = 1
 		for i = menu_cur.pos.offset, math.min(menu_cur.pos.offset+menu_max_row, #menu_cur.list) do
-			row = menu_cur.list[i]
+			local row = menu_cur.list[i]
 			local y = 48+10*row_num
-			local c1, c2, c3, c4
+			local c1, c2, c3, c4, c5
 			-- 選択行とそうでない行の色分け判断
 			if i == menu_cur.pos.row then
 				c1, c2, c3, c4, c5 = 0xFFEE3300, 0xFFDD2200, 0xFFFFFF00, 0xCC000000, 0xAAFFFFFF
@@ -4965,25 +5141,16 @@ function rbff2.startplugin()
 		mem_last_time = ec
 
 		-- メモリ値の読込と更新
-		mem_0x100400  = pgm:read_u8(0x100400)
-		mem_0x100500  = pgm:read_u8(0x100500)
 		mem_0x100701  = pgm:read_u16(0x100701) -- 22e 22f 対戦中
-		mem_0x102557  = pgm:read_u16(0x102557)
-		mem_0x1041D2  = pgm:read_u8(0x1041D2)
 		mem_0x107C22  = pgm:read_u16(0x107C22) -- 対戦中4400
 		mem_0x10B862  = pgm:read_u8(0x10B862) -- 対戦中00
 		mem_0x10D4EA  = pgm:read_u8(0x10D4EA)
 		mem_0x10FD82  = pgm:read_u8(0x10FD82)
 		mem_0x10FDAF  = pgm:read_u8(0x10FDAF)
 		mem_0x10FDB6  = pgm:read_u16(0x10FDB6)
-		mem_bgm       = math.max(pgm:read_u8(0x10A8D5), 1)
 		mem_biostest  = bios_test()
-		mem_reg_sts_b = pgm:read_u8(0x380000)
-		mem_stage     = pgm:read_u8(0x107BB1)
-		mem_stage_tz  = pgm:read_u8(0x107BB7)
 		mem_0x10E043  = pgm:read_u8(0x10E043)
 		prev_p_space  = (p_space ~= 0) and p_space or prev_p_space
-		old_active    = match_active
 
 		-- 対戦中かどうかの判定
 		if not mem_biostest
