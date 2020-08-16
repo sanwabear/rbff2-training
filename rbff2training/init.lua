@@ -87,7 +87,7 @@ function rbff2.startplugin()
 		pause_hit       = false, -- ヒット時にポーズ
 		pausethrow      = false, -- 投げ判定表示時にポーズ
 
-		frzc            = 1, 
+		frzc            = 1,
 		frz             = {0x1, 0x0},  -- DIPによる停止操作用の値とカウンタ
 
 		dummy_mode      = 1,
@@ -307,7 +307,7 @@ function rbff2.startplugin()
 			{ disp_name = "CA _8C", name = "CA 8C(3段目)", type = act_types.overhead, ids = { 0x251, 0x252, 0x253, }, },
 			{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x46, }, },
 			{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x24B, }, },
-			{ disp_name = "CA 236C", name = "CA 236C(3段目)", type = act_types.attack, ids = { 0x24A, }, },
+			{ disp_name = "CA _2_3_6+C", name = "CA 236C(3段目)", type = act_types.attack, ids = { 0x24A, }, },
 		},
 		-- 不知火舞
 		{
@@ -399,7 +399,7 @@ function rbff2.startplugin()
 			{ disp_name = "CA _6C", name = "CA 6C(2段目)", type = act_types.attack, ids = { 0x243, }, },
 			{ disp_name = "CA _2_2C", name = "CA 雷撃棍(3段目)", type = act_types.attack, ids = { 0x24B, }, },
 			{ disp_name = "CA 6B", name = "CA 6B(2段目)", type = act_types.attack, ids = { 0x247, }, },
-			{ disp_name = "CA _6_2_3A", name = "CA 623A(3段目)", type = act_types.attack, ids = { 0x242, }, },
+			{ disp_name = "CA _6_2_3+A", name = "CA 623A(3段目)", type = act_types.attack, ids = { 0x242, }, },
 			{ disp_name = "CA 下C", name = "CA 下C(2段目)立Aルート", type = act_types.low_attack, ids = { 0x244, }, },
 			{ disp_name = "CA 下C", name = "CA 下C(2段目)下Aルート", type = act_types.low_attack, ids = { 0x24D, }, },
 			{ disp_name = "CA 立C", name = "CA C(2段目)喝ルート", type = act_types.attack, ids = { 0xBC, }, },
@@ -475,22 +475,27 @@ function rbff2.startplugin()
 			{ disp_name = "M.リアルカウンター", name = "M.リアルカウンターA投げ", type = act_types.attack, ids = { 0xAC, 0xA7, 0xA8, 0xA9, 0xAA, 0xAB, }, },
 			{ disp_name = "M.リアルカウンター", name = "M.リアルカウンターB投げ", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, }, },
 			{ disp_name = "M.リアルカウンター", name = "M.リアルカウンターC投げ", type = act_types.attack, ids = { 0xE5, 0xE6, 0xE7, }, },
-			{ name = "M.スパイダー", type = act_types.attack, ids = { 0x8C, 0x86, 0x87, 0x88, 0x89, 0x8A, 0x8B, }, },
-			{ name = "M.スナッチャー", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, }, },
-			{ name = "M.クラブクラッチ", type = act_types.low_attack, ids = { 0x9A, 0x9B, 0xC4, 0xC5, 0x9D, 0x9E, 0x9F, 0xA0, 0xA1, }, },
 			{ name = "ヤングダイブ", type = act_types.overhead, ids = { 0xEA, 0xEB, 0xEC, 0xED, }, },
-			{ name = "デンジャラススパイダー", type = act_types.attack, ids = { 0xF0, 0x87, 0x88, 0x89, 0x8A, 0x8B, }, },
 			{ name = "リバースキック", type = act_types.overhead, ids = { 0xEE, 0xEF, }, },
+
+			{ name = "M.スパイダー", type = act_types.attack, ids = { 0x8C, 0x86, }, },
+			{ name = "デンジャラススパイダー", type = act_types.attack, ids = { 0xF0, }, },
 			{ name = "スピンフォール", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, }, },
-			{ disp_name = "スパイダー", name = "M.スパイダー/ダブルスパイダー 投げ", type = act_types.attack, ids = { 0x88, 0x89, 0x8A, 0x8B, }, },
+			{ name = "ダブルスパイダー", names = { "M.スパイダー", "デンジャラススパイダー", "ダブルスパイダー" }, type = act_types.attack, ids = { 0x87, 0x88, 0x89, 0x8A, 0x8B, }, },
+
+			{ name = "M.スナッチャー", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
 			{ name = "バーチカルアロー", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, }, },
-			--{ disp_name = "スナッチャー", name = "M.スナッチャー/ダブルスナッチャー 投げ", type = act_types.attack, ids = { 0x93, 0x94, 0x95, 0x96, }, },
-			{ name = "ストレートスライサー", type = act_types.low_attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, }, },
-			--{ disp_name = "クラッチ", name = "M.クラブクラッチ/ダブルクラッチ 投げ", type = act_types.attack, ids = { 0x9D, 0x9E, 0x9F, 0xA0, 0xA1, }, },
+			{ name = "ダブルスナッチャー", names = { "M.スナッチャー", "ダブルスナッチャー" }, type = act_types.attack, ids = { 0x93, 0x94, 0x95, 0x96, }, },
+
+			{ name = "M.クラブクラッチ", type = act_types.low_attack, ids = { 0x9A, 0x9B, }, },
+			{ name = "ストレートスライサー", type = act_types.low_attack, ids = { 0xC2, 0xC3, }, },
+			{ name = "ストレートスライサー", names = { "M.クラブクラッチ", "ストレートスライサー" }, type = act_types.low_attack, ids = { 0xC4, 0xC5, }, },
+			{ name = "ダブルクラッチ", names = { "M.クラブクラッチ", "ダブルクラッチ" }, type = act_types.attack, ids = { 0x9D, 0x9E, 0x9F, 0xA0, 0xA1, }, },
+
 			{ name = "M.ダイナマイトスウィング", type = act_types.attack, ids = { 0xCC, 0xCD, 0xCE, 0xCF, 0xD0, 0xD1, }, },
 			{ name = "M.タイフーン", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, 0x103, 0x104, 0x105, 0x106, 0x107, 0x116, }, },
 			{ name = "M.エスカレーション", type = act_types.attack, ids = { 0x10B, }, },
-			{ name = "M.トリプルエクスタシー", type = act_types.attack, ids = { 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xDD, 0xDE, 0xDF, }, },
+			{ name = "M.トリプルエクスタシー", type = act_types.attack, ids = { 0xD6, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xDD, 0xDE, 0xDF, }, },
 			{ name = "立ち", type = act_types.free, ids = { 0x109, 0x10A, 0x108, }, },
 			{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x24C, }, },
 			{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x251, }, },
@@ -538,9 +543,12 @@ function rbff2.startplugin()
 			{ name = "カチ上げ", type = act_types.attack, ids = { 0x69, }, },
 			{ name = "ブッ刺し", type = act_types.overhead, ids = { 0x6A, }, },
 			{ name = "昇天", type = act_types.attack, ids = { 0x6B, }, },
-			{ disp_name = "蛇使い", name = "蛇使い・上段/蛇だまし", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
-			{ disp_name = "蛇使い", name = "蛇使い・中段/蛇だまし", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, }, },
-			{ disp_name = "蛇使い", name = "蛇使い・下段/蛇だまし", type = act_types.low_attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
+			{ name = "蛇使い・上段", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
+			{ name = "蛇だまし・上段", type = act_types.attack, ids = { 0x89, }, },
+			{ name = "蛇使い・中段", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+			{ name = "蛇だまし・中段", type = act_types.attack, ids = { 0x93, }, },
+			{ name = "蛇使い・下段", type = act_types.low_attack, ids = { 0x9A, 0x9B, 0x9C, }, },
+			{ name = "蛇だまし・下段", type = act_types.low_attack, ids = { 0x9D, }, },
 			{ name = "大蛇", type = act_types.low_attack, ids = { 0x94, }, },
 			{ name = "サドマゾ", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, }, },
 			{ name = "裁きの匕首", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, }, },
@@ -564,13 +572,13 @@ function rbff2.startplugin()
 			{ name = "発勁龍", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 			{ name = "光輪殺", type = act_types.overhead, ids = { 0x68, }, },
 			{ name = "帝王神足拳", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, 0x8A, }, },
-			{ disp_name = "帝王天眼拳", name = "小 帝王天眼拳", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-			{ disp_name = "帝王天眼拳", name = "大 帝王天眼拳", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
-			{ disp_name = "帝王天耳拳", name = "小 帝王天耳拳", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
-			{ disp_name = "帝王天耳拳", name = "大 帝王天耳拳", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
-			{ disp_name = "帝王神眼拳", name = "帝王神眼拳（その場）", type = act_types.attack, ids = { 0xC2, 0xC3, }, },
-			{ disp_name = "帝王神眼拳", name = "帝王神眼拳（空中）", type = act_types.attack, ids = { 0xCC, 0xCD, 0xCF, }, },
-			{ disp_name = "帝王神眼拳", name = "帝王神眼拳（背後）", type = act_types.attack, ids = { 0xD6, 0xD7, }, },
+			{ name = "小 帝王天眼拳", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+			{ name = "大 帝王天眼拳", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
+			{ name = "小 帝王天耳拳", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
+			{ name = "大 帝王天耳拳", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
+			{ name = "帝王神眼拳（その場）", type = act_types.attack, ids = { 0xC2, 0xC3, }, },
+			{ name = "帝王神眼拳（空中）", type = act_types.attack, ids = { 0xCC, 0xCD, 0xCF, }, },
+			{ name = "帝王神眼拳（背後）", type = act_types.attack, ids = { 0xD6, 0xD7, }, },
 			{ name = "帝王空殺神眼拳", type = act_types.attack, ids = { 0xE0, 0xE1, }, },
 			{ name = "竜灯掌", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, }, },
 			{ name = "竜灯掌・幻殺", type = act_types.attack, ids = { 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, }, },
@@ -596,13 +604,13 @@ function rbff2.startplugin()
 			{ name = "発勁龍", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 			{ name = "龍脚殺", type = act_types.overhead, ids = { 0x68, }, },
 			{ name = "帝王神足拳", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
-			{ disp_name = "帝王天眼拳", name = "大 帝王天眼拳", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
-			{ disp_name = "帝王天眼拳", name = "小 帝王天眼拳", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-			{ disp_name = "帝王天耳拳", name = "小 帝王天耳拳", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
-			{ disp_name = "帝王天耳拳", name = "大 帝王天耳拳", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
+			{ name = "大 帝王天眼拳", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
+			{ name = "小 帝王天眼拳", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+			{ name = "小 帝王天耳拳", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
+			{ name = "大 帝王天耳拳", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
 			{ name = "帝王漏尽拳", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBB, 0xBA, 0xBC, }, },
-			{ disp_name = "龍転身", name = "龍転身（前方）", type = act_types.any, ids = { 0xC2, 0xC3, 0xC4, }, },
-			{ disp_name = "龍転身", name = "龍転身（後方）", type = act_types.any, ids = { 0xCC, 0xCD, 0xCE, }, },
+			{ name = "龍転身（前方）", type = act_types.any, ids = { 0xC2, 0xC3, 0xC4, }, },
+			{ name = "龍転身（後方）", type = act_types.any, ids = { 0xCC, 0xCD, 0xCE, }, },
 			{ name = "帝王宿命拳", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, },
 			{ name = "帝王宿命拳", type = act_types.attack, ids = { 0x101, 0x102, 0x104, 0x105, 0x107, 0x115, 0x116, 0x103, 0x106, }, },
 			{ name = "帝王龍声拳", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, }, },
@@ -618,9 +626,9 @@ function rbff2.startplugin()
 			{ name = "ニードルロー", type = act_types.low_attack, ids = { 0x68, }, },
 			{ name = "マッドスピンハンマー", type = act_types.overhead, ids = { 0x69, }, },
 			{ name = "ショッキングボール", type = act_types.attack, ids = { 0x6A, 0x6B, 0x6C, }, },
-			{ disp_name = "ヘッドスピンアタック", name = "小ヘッドスピンアタック", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, 0x8A, }, },
-			{ disp_name = "ヘッドスピンアタック", name = "大ヘッドスピンアタック", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, 0x95, 0x96, 0x94, }, },
-			{ disp_name = "着地", name = "ヘッドスピンアタック着地", type = act_types.any, ids = { 0x3D, }, },
+			{ name = "小ヘッドスピンアタック", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, 0x8A, }, },
+			{ name = "大ヘッドスピンアタック", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, 0x95, 0x96, 0x94, }, },
+			{ name = "ヘッドスピンアタック着地", names = { "小ヘッドスピンアタック", "大ヘッドスピンアタック" }, type = act_types.any, ids = { 0x3D, }, },
 			{ name = "フライングスピンアタック", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9E, }, },
 			{ name = "ダンシングダイブ", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xAA, }, },
 			{ name = "ブレイクストーム", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, 0xB6, 0xB4, 0xB5, 0xB3, 0xB7, }, },
@@ -651,10 +659,13 @@ function rbff2.startplugin()
 			{ name = "体落とし", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 			{ name = "ネリチャギ", type = act_types.overhead, ids = { 0x68, 0x69, 0x6A, }, },
 			{ name = "飛燕斬", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
-			{ disp_name = "半月斬", name = "小 半月斬", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-			{ disp_name = "半月斬", name = "大 半月斬", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
-			{ name = "飛翔脚", type = act_types.low_attack, ids = { 0xA4, 0xA6, 0xA5, 0xA7, 0xA8, 0xA9, }, },
-			{ disp_name = "空砂塵", name = "空砂塵/天昇斬", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, 0xB3, 0xB4, }, },
+			{ name = "小 半月斬", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+			{ name = "大 半月斬", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
+			{ name = "飛翔脚", type = act_types.low_attack, ids = { 0xA4, 0xA6, 0xA5, 0xA7, }, },
+			{ name = "戒脚", type = act_types.attack, ids = {  0xA8, 0xA9, }, },
+			{ name = "空砂塵", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
+			{ name = "天昇斬", type = act_types.attack, ids = { 0xB2, 0xB3, }, },
+			{ names = { "空砂塵", "天昇斬" }, type = act_types.attack, ids = { 0xB4, }, },
 			{ name = "覇気脚", type = act_types.low_attack, ids = { 0xB8, }, },
 			{ name = "鳳凰天舞脚", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, 0x103, 0x104, 0x105, 0x106, 0x107, }, },
 			{ name = "鳳凰脚", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, 0x110, 0x115, }, },
@@ -673,7 +684,9 @@ function rbff2.startplugin()
 			{ disp_name = "フェイント", name = "フェイント 強襲飛翔棍", type = act_types.any, ids = { 0x112, }, },
 			{ name = "一本釣り投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 			{ name = "地獄落とし", type = act_types.any, ids = { 0x81, 0x82, 0x83, 0x84, }, },
-			{ disp_name = "三節棍中段打ち", name = "三節棍中段打ち/火炎三節棍中段打ち", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, 0x90, 0x91, 0x92, 0x93, }, },
+			{ name = "三節棍中段打ち", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, 0x93, }, },
+			{ name = "火炎三節棍中段打ち", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+			{ names = { "三節棍中段打ち", "火炎三節棍中段打ち" }, type = act_types.attack, ids = { 0x93, }, },
 			{ name = "燕落とし", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
 			{ name = "火龍追撃棍", type = act_types.attack, ids = { 0xB8, 0xB9, }, },
 			{ name = "旋風棍", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, }, },
@@ -695,10 +708,13 @@ function rbff2.startplugin()
 			{ name = "頭突殺", type = act_types.attack, ids = { 0x81, 0x83, 0x84, }, },
 			{ name = "発勁裏拳", type = act_types.attack, ids = { 0x68, }, },
 			{ name = "落撃双拳", type = act_types.overhead, ids = { 0x69, }, },
-			{ disp_name = "気雷砲", name = "気雷砲（前方）", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
-			{ disp_name = "気雷砲", name = "気雷砲（対空）", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-			{ name = "破岩撃", type = act_types.low_attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, }, },
-			{ name = "超太鼓腹打ち/満腹対空", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0xA0, 0x9F, 0x9C, }, },
+			{ name = "気雷砲（前方）", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
+			{ name = "気雷砲（対空）", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+			{ name = "小 破岩撃", type = act_types.low_attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, }, },
+			{ name = "大 破岩撃", type = act_types.low_attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, }, },
+			{ name = "超太鼓腹打ち", type = act_types.attack, ids = { 0x9A, 0x9B, }, },
+			{ name = "満腹滞空", type = act_types.attack, ids = { 0x9F, 0xA0, }, },
+			{ names = { "超太鼓腹打ち", "滞空滞空" }, type = act_types.attack, ids = { 0x9D, 0x9E, 0x9C, }, },
 			{ name = "軟体オヤジ", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, }, },
 			{ name = "クッサメ砲", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, }, },
 			{ name = "爆雷砲", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, },
@@ -711,7 +727,7 @@ function rbff2.startplugin()
 			{ disp_name = "CA 下C", name = "CA 下C(2段目)ライン攻撃ルート", type = act_types.attack, ids = { 0x246, }, },
 			{ disp_name = "CA 立C", name = "CA 立C(2段目)ライン攻撃ルート", type = act_types.attack, ids = { 0x24B, 0x24C, 0x24D, }, },
 			{ disp_name = "CA 立C", name = "CA 立C(3段目)ライン攻撃ルート", type = act_types.low_attack, ids = { 0x247, }, },
-			{ disp_name = "CA _6_6B", name = "CA 66B(3段目)ライン攻撃ルート", type = act_types.any, ids = { 0x248, }, },
+			{ disp_name = "CA _6_6+B", name = "CA 66B(3段目)ライン攻撃ルート", type = act_types.any, ids = { 0x248, }, },
 			{ disp_name = "CA D", name = "CA D(2段目)", type = act_types.overhead, ids = { 0x243, }, },
 			{ disp_name = "CA _3C", name = "CA 3C(2段目)6Aルート", type = act_types.any, ids = { 0x244, }, },
 			{ disp_name = "CA _1C", name = "CA 1C(2段目)6Aルート", type = act_types.any, ids = { 0x245, }, },
@@ -722,8 +738,8 @@ function rbff2.startplugin()
 			{ name = "裂千掌", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 			{ name = "右降龍", type = act_types.attack, ids = { 0x68, }, },
 			{ name = "衝波", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
-			{ disp_name = "箭疾歩", name = "小 箭疾歩", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-			{ disp_name = "箭疾歩", name = "大 箭疾歩", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
+			{ name = "小 箭疾歩", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+			{ name = "大 箭疾歩", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
 			{ name = "裂千脚", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, }, },
 			{ name = "撃放", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, }, },
 			{ name = "旋風剛拳", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, }, },
@@ -736,9 +752,9 @@ function rbff2.startplugin()
 			{ name = "マタドールバスター", type = act_types.any, ids = { 0x6D, 0x6E, 0x6F, }, },
 			{ name = "トルネードキック", type = act_types.attack, ids = { 0x68, }, },
 			{ name = "オーレィ", type = act_types.any, ids = { 0x69, }, },
-			{ disp_name = "ブラッディスピン", name = "小 ブラッディスピン", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
-			{ disp_name = "ブラッディスピン", name = "大 ブラッディスピン", type = act_types.attack, ids = { 0x90, 0x91, 0x93, 0x94, 0x92, }, },
-			{ name = "ブラッディスピン隙", type = act_types.attack, ids = { 0x3D, }, },
+			{ name = "小ブラッディスピン", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
+			{ name = "大ブラッディスピン", type = act_types.attack, ids = { 0x90, 0x91, 0x93, 0x94, 0x92, }, },
+			{ names = { "小ブラッディスピン", "大ブラッディスピン" }, type = act_types.attack, ids = { 0x3D, }, },
 			{ name = "ブラッディサーベル", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
 			{ name = "ブラッディカッター", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, }, },
 			{ name = "ブラッディミキサー", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, }, },
@@ -748,7 +764,7 @@ function rbff2.startplugin()
 			{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x246, }, },
 			{ disp_name = "CA 立D", name = "CA 立D(2段目)", type = act_types.attack, ids = { 0x24C, }, },
 			{ disp_name = "CA 立C", name = "CA 立C(2段目)オーレィ", type = act_types.attack, ids = { 0x248, }, },
-			{ disp_name = "CA _6_3_2C", name = "CA 632C(3段目)オーレィ", type = act_types.overhead, ids = { 0x249, 0x24A, 0x24B, }, },
+			{ disp_name = "CA _6_3_2+C", name = "CA 632C(3段目)オーレィ", type = act_types.overhead, ids = { 0x249, 0x24A, 0x24B, }, },
 		},
 		-- ヴォルフガング・クラウザー
 		{
@@ -767,7 +783,7 @@ function rbff2.startplugin()
 			{ name = "フェニックススルー", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
 			{ name = "カイザークロー", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, }, },
 			{ name = "カイザーウェイブ", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, }, },
-			{ name = "ギガティックサイクロン", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0xC, 0x10C, 0x10D, 0x10C, 0x10E, }, },
+			{ name = "ギガティックサイクロン", names = { "アンリミテッドデザイア", "ギガティックサイクロン" }, type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0xC, 0x10C, 0x10D, 0x10C, 0x10E, }, },
 			{ name = "アンリミテッドデザイア", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, }, },
 			{ disp_name = "CA 立C", name = "CA 立C(2段目)近立Aルート", type = act_types.attack, ids = { 0x240, }, },
 			{ disp_name = "CA 立C", name = "CA 立C(2段目)立Aルート", type = act_types.attack, ids = { 0x24E, }, },
@@ -775,7 +791,7 @@ function rbff2.startplugin()
 			{ disp_name = "CA 立C", name = "CA 立C(2段目)下Aルート", type = act_types.attack, ids = { 0x241, }, },
 			{ disp_name = "CA 下C", name = "CA 下C(2段目)", type = act_types.low_attack, ids = { 0x244, }, },
 			{ disp_name = "CA 立C", name = "CA 立C(2段目)近立Cルート", type = act_types.attack, ids = { 0x243, }, },
-			{ disp_name = "CA _2_3_6C", name = "CA 236C(2段目)近立Cルート", type = act_types.attack, ids = { 0x245, }, },
+			{ disp_name = "CA _2_3_6+C", name = "CA 236C(2段目)近立Cルート", type = act_types.attack, ids = { 0x245, }, },
 			{ disp_name = "CA _3C", name = "CA 3C(2段目)近立Cルート", type = act_types.attack, ids = { 0x247, }, },
 		},
 		-- リック・ストラウド
@@ -809,8 +825,8 @@ function rbff2.startplugin()
 			{ disp_name = "CA 立B", name = "CA 立B(2段目)下Bルート", type = act_types.attack, ids = { 0x24C, }, },
 			{ disp_name = "CA 下C", name = "CA 下C(2段目)下Bルート", type = act_types.low_attack, ids = { 0x24A, }, },
 			{ disp_name = "CA C", name = "CA C(3段目)遠立Bルート", type = act_types.attack, ids = { 0x24E, 0x24F, 0x250, }, },
-			{ disp_name = "CA _2_2C", name = "CA 22C(3段目)遠立Bルート", type = act_types.overhead, ids = { 0xE6, 0xE7, }, },
-			{ disp_name = "CA _3_3B", name = "CA 33B(2段目)", type = act_types.overhead, ids = { 0xE0, 0xE1, }, },
+			{ disp_name = "CA _2_2+C", name = "CA 22C(3段目)遠立Bルート", type = act_types.overhead, ids = { 0xE6, 0xE7, }, },
+			{ disp_name = "CA _3_3+B", name = "CA 33B(2段目)", type = act_types.overhead, ids = { 0xE0, 0xE1, }, },
 			{ disp_name = "CA _4C", name = "CA 4C(2段目)", type = act_types.attack, ids = { 0x249, }, },
 		},
 		-- 李香緋
@@ -820,13 +836,23 @@ function rbff2.startplugin()
 			{ name = "力千後宴", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 			{ name = "裡門頂肘", type = act_types.attack, ids = { 0x68, 0x69, 0x6A, }, },
 			{ name = "後捜腿", type = act_types.attack, ids = { 0x6B, }, },
-			{ disp_name = "那夢波", name = "小 那夢波", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
-			{ disp_name = "那夢波", name = "大 那夢波", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, }, },
-			{ disp_name = "閃里肘皇", name = "閃里肘皇/貫空/心砕把", type = act_types.attack, ids = { 0x9E, 0x9F, 0xA2, 0xA1, 0xA7, 0xAD, 0xA3, 0xA4, 0xA5, 0xA6, 0xA8, 0xA9, 0xAA, 0xAB, 0xAC, }, },
+			{ name = "小 那夢波", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
+			{ name = "大 那夢波", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, }, },
+			--[[
+				0x9E, 0x9F, 閃里肘皇移動
+				0xA2, 閃里肘皇スカり
+				0xA1, 0xA7, 閃里肘皇ヒット
+				0xAD, 閃里肘皇・心砕把スカり
+				0xA3, 0xA4, 0xA5, 0xA6, 閃里肘皇・貫空
+				0xA8, 0xA9, 0xAA, 0xAB, 0xAC, 閃里肘皇・心砕把
+			]]
+			{ name = "閃里肘皇", type = act_types.attack, ids = { 0x9E, 0x9F, 0xA2, 0xA1, 0xA7, }, },
+			{ name = "閃里肘皇・貫空", type = act_types.attack, ids = { 0xA3, 0xA4, 0xA5, 0xA6, }, },
+			{ name = "閃里肘皇・心砕把", type = act_types.attack, ids = { 0xAD, 0xA8, 0xA9, 0xAA, 0xAB, 0xAC, }, },
 			{ name = "天崩山", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
-			{ disp_name = "詠酒", name = "詠酒・対ジャンプ攻撃", type = act_types.attack, ids = { 0xB8, }, },
-			{ disp_name = "詠酒", name = "詠酒・対立ち攻撃", type = act_types.attack, ids = { 0xAE, }, },
-			{ disp_name = "詠酒", name = "詠酒・対しゃがみ攻撃", type = act_types.attack, ids = { 0xC2, }, },
+			{ name = "詠酒・対ジャンプ攻撃", type = act_types.attack, ids = { 0xB8, }, },
+			{ name = "詠酒・対立ち攻撃", type = act_types.attack, ids = { 0xAE, }, },
+			{ name = "詠酒・対しゃがみ攻撃", type = act_types.attack, ids = { 0xC2, }, },
 			{ name = "大鉄神", type = act_types.attack, ids = { 0xF4, 0xF5, 0xF6, 0xF7, }, },
 			{ name = "超白龍", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, 0x103, }, },
 			{ name = "真心牙", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, 0x110, }, },
@@ -847,7 +873,7 @@ function rbff2.startplugin()
 			{ disp_name = "CA 立C", name = "CA 立C(3段目)Bルート", type = act_types.overhead, ids = { 0x249, }, },
 			{ disp_name = "CA _3C", name = "CA 3C(3段目)Bルート", type = act_types.provoke, ids = { 0x250, 0x251, 0x252, }, },
 			{ disp_name = "CA 下C", name = "CA 下C(3段目)Bルート", type = act_types.low_attack, ids = { 0x287, }, },
-			{ disp_name = "CA _6_6A", name = "CA 66A", type = act_types.attack, ids = { 0x24F, }, },
+			{ disp_name = "CA _6_6+A", name = "CA 66A", type = act_types.attack, ids = { 0x24F, }, },
 		},
 		-- アルフレッド
 		{
@@ -3503,16 +3529,47 @@ function rbff2.startplugin()
 
 			-- 行動が変わったかのフラグ
 			local frame = p.act_frames[#p.act_frames]
-			local prev_last_frame = frame
+			--[[
 			local chg_act_name = (p.old_act_data.name ~= p.act_data.name)
 			local disp_name = convert(p.act_data.disp_name or p.act_data.name)
+			]]
+			local concrete_name, chg_act_name, disp_name
+			if frame ~= nil then
+				if p.act_data.names then
+					chg_act_name = true
+					for _, name in pairs(p.act_data.names) do
+						if frame.name == name then
+							chg_act_name = false
+							concrete_name = frame.name
+							disp_name = frame.disp_name
+							p.act_1st = false
+						end
+					end
+					if chg_act_name then
+						concrete_name = p.act_data.name or p.act_data.names[1]
+						disp_name = convert(p.act_data.disp_name or concrete_name)
+					end
+				elseif frame.name ~= p.act_data.name then
+					concrete_name = p.act_data.name
+					disp_name = convert(p.act_data.disp_name or concrete_name)
+					chg_act_name = true
+				else
+					concrete_name = frame.name
+					disp_name = frame.disp_name
+					chg_act_name = false
+				end
+			else
+				concrete_name = p.act_data.name
+				disp_name = convert(p.act_data.disp_name or concrete_name)
+				chg_act_name = true
+			end
 			if #p.act_frames == 0 or chg_act_name or frame.col ~= col or chg_air_state ~= 0 or chg_fireball_state == true or p.act_1st then
 				--行動IDの更新があった場合にフレーム情報追加
 				frame = {
 					act = p.act,
 					count = 1,
 					col = col,
-					name = p.act_data.name,
+					name = concrete_name,
 					disp_name = disp_name,
 					line = line,
 					chg_fireball_state = chg_fireball_state,
@@ -4391,6 +4448,8 @@ function rbff2.startplugin()
 
 	local menu_rec_to_tra = function() menu_cur = tra_menu end
 	local exit_menu_to_rec = function(slot_no)
+		local scr = manager:machine().screens[":screen"]
+		local ec = scr:frame_number()
 		local col = rec_menu.pos.col
 		global.dummy_mode = 5
 		global.rec_main = rec_await_no_input
@@ -4417,6 +4476,8 @@ function rbff2.startplugin()
 		global.repeat_interval    = recording.repeat_interval
 	end
 	local exit_menu_to_play = function()
+		local scr = manager:machine().screens[":screen"]
+		local ec = scr:frame_number()
 		global.dummy_mode = 6 -- リプレイモードにする
 		global.rec_main = rec_await_play
 		global.input_accepted = ec
@@ -4425,6 +4486,8 @@ function rbff2.startplugin()
 		menu_exit()
  	end
 	local exit_menu_to_play_cancel = function()
+		local scr = manager:machine().screens[":screen"]
+		local ec = scr:frame_number()
 		global.dummy_mode = 6 -- リプレイモードにする
 		global.rec_main = rec_await_play
 		global.input_accepted = ec
@@ -4432,6 +4495,8 @@ function rbff2.startplugin()
 		menu_to_tra()
 	end
 	local exit_menu_to_rec_pos = function()
+		local scr = manager:machine().screens[":screen"]
+		local ec = scr:frame_number()
 		global.dummy_mode = 5 -- レコードモードにする
 		global.rec_main = rec_fixpos
 		global.input_accepted = ec
