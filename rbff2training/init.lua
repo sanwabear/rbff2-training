@@ -34,7 +34,7 @@ local rbff2 = exports
 
 function rbff2.startplugin()
 	local main_or_menu_state, prev_main_or_menu_state
-	local menu_cur, main_menu, tra_menu, rec_menu, play_menu, menu, tra_main, menu_exit, bs_menus, bar_menu, ex_menu, col_menu
+	local menu_cur, main_menu, tra_menu, rec_menu, play_menu, menu, tra_main, menu_exit, bs_menus, rvs_menus, bar_menu, ex_menu, col_menu
 
 	local mem_last_time         = 0      -- 最終読込フレーム(キャッシュ用)
 	local mem_0x100701          = 0      -- 場面判定用
@@ -1120,8 +1120,147 @@ function rbff2.startplugin()
 			end
 		end
 	end
+	-- キー入力2
+	local cmd_neutral = function(p, next_joy)
+		next_joy["P" .. p.control .. " Up"] = false
+		next_joy["P" .. p.control .. " Down"] = false
+		next_joy[p.block_side] = false
+		next_joy[p.front_side] = false
+		next_joy["P" .. p.control .. " Button 1"] = false
+		next_joy["P" .. p.control .. " Button 2"] = false
+		next_joy["P" .. p.control .. " Button 3"] = false
+		next_joy["P" .. p.control .. " Button 4"] = false
+	end
+	local cmd_base = {
+		_5 = cmd_neutral,
+		_7 = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy["P" .. p.control .. " Up"] = true
+			next_joy[p.block_side] = true
+		end,
+		_8 = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy["P" .. p.control .. " Up"] = true
+		end,
+		_9 = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy["P" .. p.control .. " Up"] = true
+			next_joy[p.front_side] = true
+		end,
+		_6 = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy[p.front_side] = true
+		end,
+		_3 = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy[p.front_side] = true
+			next_joy["P" .. p.control .. " Down"] = true
+		end,
+		_2 = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy["P" .. p.control .. " Down"] = true
+		end,
+		_1 = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy["P" .. p.control .. " Down"] = true
+			next_joy[p.block_side] = true
+		end,
+		_4 = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy[p.block_side] = true
+		end,
+		_a = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy["P" .. p.control .. " Button 1"] = true
+		end,
+		_b = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy["P" .. p.control .. " Button 2"] = true
+		end,
+		_c = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy["P" .. p.control .. " Button 3"] = true
+		end,
+		_d = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy["P" .. p.control .. " Button 4"] = true
+		end,
+		_ab = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy["P" .. p.control .. " Button 1"] = true
+			next_joy["P" .. p.control .. " Button 2"] = true
+		end,
+		_bc = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy["P" .. p.control .. " Button 2"] = true
+			next_joy["P" .. p.control .. " Button 3"] = true
+		end,
+		_6a = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy[p.front_side] = true
+			next_joy["P" .. p.control .. " Button 1"] = true
+		end,
+		_3a = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy[p.front_side] = true
+			next_joy["P" .. p.control .. " Down"] = true
+			next_joy["P" .. p.control .. " Button 1"] = true
+		end,
+		_2a = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy["P" .. p.control .. " Down"] = true
+			next_joy["P" .. p.control .. " Button 1"] = true
+		end,
+		_4a = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy[p.block_side] = true
+			next_joy["P" .. p.control .. " Button 1"] = true
+		end,
+		_6b = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy[p.front_side] = true
+			next_joy["P" .. p.control .. " Button 2"] = true
+		end,
+		_3b = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy[p.front_side] = true
+			next_joy["P" .. p.control .. " Down"] = true
+			next_joy["P" .. p.control .. " Button 2"] = true
+		end,
+		_2b = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy["P" .. p.control .. " Down"] = true
+			next_joy["P" .. p.control .. " Button 2"] = true
+		end,
+		_4b = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy[p.block_side] = true
+			next_joy["P" .. p.control .. " Button 2"] = true
+		end,
+		_6c = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy[p.front_side] = true
+			next_joy["P" .. p.control .. " Button 3"] = true
+		end,
+		_3c = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy[p.front_side] = true
+			next_joy["P" .. p.control .. " Down"] = true
+			next_joy["P" .. p.control .. " Button 3"] = true
+		end,
+		_2c = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy["P" .. p.control .. " Down"] = true
+			next_joy["P" .. p.control .. " Button 3"] = true
+		end,
+		_4c = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy[p.block_side] = true
+			next_joy["P" .. p.control .. " Button 3"] = true
+		end,
+	}
 	-- コマンドテーブル上の技ID
-	local char_cmd_list = {
+	local char_rvs_list = {
 		-- テリー・ボガード
 		{
 			{ id = 0x01, ver = 0x0600, bs = true , name = "小バーンナックル", },
@@ -1474,7 +1613,7 @@ function rbff2.startplugin()
 	}
 	-- ブレイクショット対応技のみ
 	local char_bs_list = {}
-	for _, list in pairs(char_cmd_list) do
+	for _, list in pairs(char_rvs_list) do
 		local bs_list = {}
 		for _, cmd in pairs(list) do
 			if cmd.bs then
@@ -1775,7 +1914,7 @@ function rbff2.startplugin()
 		return string.len(tostring(num))
 	end
 
-	local function draw_rtext(x, y, str, fgcol, bgcol)
+	local draw_rtext = function(x, y, str, fgcol, bgcol)
 		if not str then
 			return
 		end
@@ -1795,7 +1934,7 @@ function rbff2.startplugin()
 	end
 
 	-- コマンド入力表示
-	local function draw_cmd(p, line, frame, str)
+	local draw_cmd = function(p, line, frame, str)
 		local scr = manager:machine().screens[":screen"]
 		local cstr = convert(str)
 		local width = scr:width() * scr:xscale()
@@ -1996,12 +2135,20 @@ function rbff2.startplugin()
 		players[p] = {
 			dummy_act        = 1,           -- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
 			dummy_gd         = 1,           -- なし, オート, 1ヒットガード, 1ガード, 常時, ランダム
+			dummy_down       = 1,           -- なし, テクニカルライズ, グランドスウェー, 起き上がり攻撃 
+
 			dummy_bs         = false,       -- ブレイクショットモードのときtrue
 			dummy_bs_list    = {},          -- ブレイクショットのコマンドテーブル上の技ID
 			dummy_bs_cnt     = 1,           -- ブレイクショットのコマンドテーブル上の技のバリエーション（基本は0、飛燕斬用）
 			dummy_bs_chr     = 0,           -- ブレイクショットの設定をした時のキャラID
-			dummy_down       = 1,           -- なし, テクニカルライズ, グランドスウェー, 起き上がり攻撃 
 			bs_count         = -1,          -- ブレイクショットの実施カウント
+
+			dummy_rvs       = false,       -- リバーサルモードのときtrue
+			dummy_rvs_list   = {},          -- リバーサルのコマンドテーブル上の技ID
+			dummy_rvs_cnt    = 1,           -- リバーサルのコマンドテーブル上の技のバリエーション（基本は0、飛燕斬用）
+			dummy_rvs_chr    = 0,           -- リバーサルの設定をした時のキャラID
+			rvs_count        = -1,          -- リバーサルの実施カウント
+			rvs_toggle       = false,       -- リバーサルの実施トグルフラグ
 
 			life_rec         = true,        -- 自動で体力回復させるときtrue
 			red              = true,        -- 赤体力にするときtrue
@@ -3915,9 +4062,11 @@ function rbff2.startplugin()
 								if 0 <= p.next_block_grace then
 									next_joy[p.block_side] = true
 									next_joy[p.front_side] = false
+									p.backstep_killer = false
 								else
 									next_joy[p.block_side] = false
 									next_joy[p.front_side] = true
+									p.backstep_killer = true
 								end
 							end
 						else
@@ -4042,17 +4191,43 @@ function rbff2.startplugin()
 					if p.dummy_bs_cnt <= p.bs_count then
 						local bs_list = p.dummy_bs_list
 						if #bs_list > 0 then
-							next_joy["P" .. p.control .. " Up"] = false
-							next_joy["P" .. p.control .. " Down"] = false
-							next_joy[p.block_side] = false
-							next_joy[p.front_side] = false
-							next_joy["P" .. p.control .. " Button 1"] = true
-							next_joy["P" .. p.control .. " Button 2"] = false
-							next_joy["P" .. p.control .. " Button 3"] = false
-							next_joy["P" .. p.control .. " Button 4"] = false
+							cmd_base._a(p, next_joy)
 						end
 						p.bs_count = -1
 					end
+				end
+
+				-- リバーサル
+				if p.dummy_rvs_chr ~= p.char then
+					p.dummy_rvs = false
+					p.dummy_rvs_list = {}
+					p.dummy_rvs_cnt = 0
+				end
+				if p.dummy_rvs == true and
+					p.state == 2 and
+					(p.on_guard + 2) < global.frame_number and
+					p.skip_frame == false and
+					p.hit_skip == 0 then
+
+					if p.rvs_toggle == true then
+						p.rvs_toggle = false
+
+						pgm:write_u8(p.addr.bs_hook1, 0x20)             -- BSモード用技ID更新フック
+						pgm:write_u16(p.addr.bs_hook2, 0x0600)          -- BSモード用技ID更新フック
+						local rvs_list = p.dummy_rvs_list
+						if #rvs_list > 0 then
+							local rvs = rvs_list[math.random(#rvs_list)]
+							local id = rvs.id or 0x20
+							local ver = rvs.ver or 0x0600
+							pgm:write_u8(p.addr.bs_hook1, id)
+							pgm:write_u16(p.addr.bs_hook2, ver)
+							cmd_base._a(p, next_joy)
+						end
+					else
+						p.rvs_toggle = true
+					end
+				else
+					p.rvs_toggle = false
 				end
 			end
 		end
@@ -4305,10 +4480,12 @@ function rbff2.startplugin()
 		global.next_block_grace  = col[ 7] - 1  -- 1ガード持続フレーム数  7
 		p[1].dummy_bs            = col[ 8] == 2 -- 1P ブレイクショット    8
 		p[2].dummy_bs            = col[ 9] == 2 -- 2P ブレイクショット    9
-		p[1].dummy_down          = col[10]      -- 1P やられ時行動       10
-		p[2].dummy_down          = col[11]      -- 2P やられ時行動       11
-		p[1].fwd_prov            = col[12] == 2 -- 1P 挑発で前進         12
-		p[2].fwd_prov            = col[13] == 2 -- 2P 挑発で前進         13
+		p[1].dummy_rvs           = col[10] == 2 -- 1P リバーサル         10
+		p[2].dummy_rvs           = col[11] == 2 -- 2P リバーサル         11
+		p[1].dummy_down          = col[12]      -- 1P やられ時行動       12
+		p[2].dummy_down          = col[13]      -- 2P やられ時行動       13
+		p[1].fwd_prov            = col[14] == 2 -- 1P 挑発で前進         14
+		p[2].fwd_prov            = col[15] == 2 -- 2P 挑発で前進         15
 
 		for _, p in ipairs(players) do
 			if p.dummy_gd == 3 then
@@ -4324,6 +4501,8 @@ function rbff2.startplugin()
 
 			-- ガードカウンター初期化
 			p.bs_count = -1
+			p.rvs_count = -1
+			p.rvs_toggle = false
 		end
 
 		if global.dummy_mode == 5 then
@@ -4348,8 +4527,9 @@ function rbff2.startplugin()
 		end
 
 		for i, p in ipairs(players) do
-			local bs_menu = bs_menus[i][p.char]
-			local bs_list = char_bs_list[p.char]
+			-- ブレイクショット
+			local bs_menu = bs_menus[i][p.char] or {}
+			local bs_list = char_bs_list[p.char] or {}
 			p.dummy_bs_list = {}
 			for j, bs in pairs(bs_list) do
 				if bs_menu.pos.col[j+1] == 2 then
@@ -4358,11 +4538,29 @@ function rbff2.startplugin()
 			end
 			p.dummy_bs_cnt = bs_menu.pos.col[#bs_menu.pos.col]
 			p.dummy_bs_chr = p.char
+
+			-- リバーサル
+			local rvs_menu = rvs_menus[i][p.char] or {}
+			local rvs_list = char_rvs_list[p.char] or {}
+			p.dummy_rvs_list = {}
+			for j, rvs in pairs(rvs_list) do
+				if rvs_menu.pos.col[j+1] == 2 then
+					table.insert(p.dummy_rvs_list, rvs)
+				end
+			end
+			p.dummy_rvs_cnt = rvs_menu.pos.col[#rvs_menu.pos.col]
+			p.dummy_rvs_chr = p.char
 		end
 		-- 設定後にメニュー遷移
 		for i, p in ipairs(players) do
+			-- ブレイクショット
 			if not cancel and row == (7 + i) then
 				menu_cur = bs_menus[i][p.char]
+				return
+			end
+			-- リバーサル
+			if not cancel and row == (9 + i) then
+				menu_cur = rvs_menus[i][p.char]
 				return
 			end
 		end
@@ -4523,10 +4721,12 @@ function rbff2.startplugin()
 		col[ 7] = g.next_block_grace + 1   -- 1ガード持続フレーム数  7
 		col[ 8] = p[1].dummy_bs and 2 or 1 -- 1Pブレイクショット     8
 		col[ 9] = p[2].dummy_bs and 2 or 1 -- 2Pブレイクショット     9
-		col[10] = p[1].dummy_down          -- 1P やられ時行動       10
-		col[11] = p[2].dummy_down          -- 2P やられ時行動       11
-		col[12] = p[1].fwd_prov and 2 or 1 -- 1P 挑発で前進         12
-		col[13] = p[2].fwd_prov and 2 or 1 -- 2P 挑発で前進         13
+		col[10] = p[1].dummy_rvs and 2 or 1 -- 1P リバーサル        10
+		col[11] = p[2].dummy_rvs and 2 or 1 -- 2P リバーサル        11
+		col[12] = p[1].dummy_down          -- 1P やられ時行動       12
+		col[13] = p[2].dummy_down          -- 2P やられ時行動       13
+		col[14] = p[1].fwd_prov and 2 or 1 -- 1P 挑発で前進         14
+		col[15] = p[2].fwd_prov and 2 or 1 -- 2P 挑発で前進         15
 	end
 	local init_bar_menu_config = function()
 		local col = bar_menu.pos.col
@@ -4693,17 +4893,21 @@ function rbff2.startplugin()
 		end
 	end
 	-- ブレイクショットメニュー
-	bs_menus = {}
-	local bs_frms = {}
+	bs_menus, rvs_menus = {}, {}
+	local bs_guards = {}
 	for i = 1, 60 do
-		table.insert(bs_frms, string.format("%s回ガード後に発動", i))
+		table.insert(bs_guards, string.format("%s回ガード後に発動", i))
 	end
 	local menu_bs_to_tra_menu = function()
 		menu_to_tra()
 	end
+	local menu_rvs_to_tra_menu = function()
+		menu_to_tra()
+	end
 	for i = 1, 2 do
-		local pbs = {}
+		local pbs, prvs = {}, {}
 		table.insert(bs_menus, pbs)
+		table.insert(rvs_menus, prvs)
 		for _, bs_list in pairs(char_bs_list) do
 			local list, on_ab, col = {}, {}, {}
 			table.insert(list, { "     ONにしたスロットからランダムで発動されます。" })
@@ -4718,7 +4922,7 @@ function rbff2.startplugin()
 			table.insert(on_ab, menu_bs_to_tra_menu)
 			table.insert(col, 0)
 
-			table.insert(list, { "タイミング", bs_frms })
+			table.insert(list, { "タイミング", bs_guards })
 			table.insert(on_ab, menu_bs_to_tra_menu)
 			table.insert(col, 1)
 
@@ -4733,6 +4937,36 @@ function rbff2.startplugin()
 				on_b = on_ab,
 			}
 			table.insert(pbs, bs_menu)
+		end
+		for _, rvs_list in pairs(char_rvs_list) do
+			local list, on_ab, col = {}, {}, {}
+			table.insert(list, { "     ONにしたスロットからランダムで発動されます。" })
+			table.insert(on_ab, menu_rvs_to_tra_menu)
+			table.insert(col, 0)
+			for _, bs in pairs(rvs_list) do
+				table.insert(list, { bs.name, { "OFF", "ON", }, })
+				table.insert(on_ab, menu_rvs_to_tra_menu)
+				table.insert(col, 1)
+			end
+			table.insert(list, { "                   ブレイクショット設定" })
+			table.insert(on_ab, menu_rvs_to_tra_menu)
+			table.insert(col, 0)
+
+			table.insert(list, { "タイミング", bs_guards })
+			table.insert(on_ab, menu_rvs_to_tra_menu)
+			table.insert(col, 1)
+
+			local rvs_menu = {
+				list = list,
+				pos = { -- メニュー内の選択位置
+					offset = 1,
+					row = 2,
+					col = col,
+				},
+				on_a = on_ab,
+				on_b = on_ab,
+			}
+			table.insert(prvs, rvs_menu)
 		end
 	end
 	local gd_frms = {}
@@ -4750,6 +4984,8 @@ function rbff2.startplugin()
 			{ "1ガード持続フレーム数" , gd_frms, },
 			{ "1P ブレイクショット"   , { "OFF", "ON （Aで選択画面へ）" }, },
 			{ "2P ブレイクショット"   , { "OFF", "ON （Aで選択画面へ）" }, },
+			{ "1P リバーサル"        , { "OFF", "ON （Aで選択画面へ）" }, },
+			{ "2P リバーサル"        , { "OFF", "ON （Aで選択画面へ）" }, },
 			{ "1P やられ時行動"       , { "なし", "テクニカルライズ", "グランドスウェー", "起き上がり攻撃", }, },
 			{ "2P やられ時行動"       , { "なし", "テクニカルライズ", "グランドスウェー", "起き上がり攻撃", }, },
 			{ "1P 挑発で前進"         , { "OFF", "ON" }, },
@@ -4768,10 +5004,12 @@ function rbff2.startplugin()
 				1, -- 1ガード持続フレーム数   7
 				1, -- 1P ブレイクショット     8
 				1, -- 2P ブレイクショット     9
-				1, -- 1P やられ時行動        10
-				1, -- 2P やられ時行動        11
-				1, -- 1P 挑発で前進          12
-				1, -- 2P 挑発で前進          13
+				1, -- 1P リバーサル          10
+				1, -- 2P リバーサル          11
+				1, -- 1P やられ時行動        12
+				1, -- 2P やられ時行動        13
+				1, -- 1P 挑発で前進          14
+				1, -- 2P 挑発で前進          15
 			},
 		},
 		on_a = {
@@ -4784,6 +5022,8 @@ function rbff2.startplugin()
 			menu_to_main, -- 1ガード持続フレーム数
 			menu_to_main, -- 1P ブレイクショット
 			menu_to_main, -- 2P ブレイクショット
+			menu_to_main, -- 1P リバーサル
+			menu_to_main, -- 2P リバーサル
 			menu_to_main, -- 1P やられ時行動
 			menu_to_main, -- 2P やられ時行動
 			menu_to_main, -- 1P 挑発で前進
@@ -4799,6 +5039,8 @@ function rbff2.startplugin()
 			menu_to_main_cancel, -- 1ガード持続フレーム数
 			menu_to_main_cancel, -- 1P ブレイクショット
 			menu_to_main_cancel, -- 2P ブレイクショット
+			menu_to_main_cancel, -- 1P リバーサル
+			menu_to_main_cancel, -- 2P リバーサル
 			menu_to_main_cancel, -- 1P やられ時行動
 			menu_to_main_cancel, -- 2P やられ時行動
 			menu_to_main_cancel, -- 1P 挑発で前進
@@ -4824,7 +5066,7 @@ function rbff2.startplugin()
 				1, -- 2P 体力ゲージ           3
 				1, -- 1P POWゲージ            4
 				1, -- 2P POWゲージ            5
-				1, -- スタン表示             12
+				1, -- スタンゲージ            6
 			},
 		},
 		on_a = {
@@ -4833,7 +5075,7 @@ function rbff2.startplugin()
 			bar_menu_to_main, -- 2P 体力ゲージ
 			bar_menu_to_main, -- 1P POWゲージ
 			bar_menu_to_main, -- 2P POWゲージ
-			bar_menu_to_main, -- スタン表示
+			bar_menu_to_main, -- スタンゲージ
 		},
 		on_b = {
 			bar_menu_to_main_cancel, -- －ゲージ設定－
@@ -4841,7 +5083,7 @@ function rbff2.startplugin()
 			bar_menu_to_main_cancel, -- 2P 体力ゲージ
 			bar_menu_to_main_cancel, -- 1P POWゲージ
 			bar_menu_to_main_cancel, -- 2P POWゲージ
-			bar_menu_to_main_cancel, -- スタン表示
+			bar_menu_to_main_cancel, -- スタンゲージ
 		},
 	}
 
@@ -5003,7 +5245,7 @@ function rbff2.startplugin()
 				0, -- リプレイ設定       7
 				1, -- 繰り返し           8
 				1, -- 繰り返し間隔       9
-				1, -- 繰り返し開始条件   10
+				1, -- 繰り返し開始条件  10
 				1, -- 開始間合い固定    11
 				1, -- 開始間合い        12
 			},
@@ -5363,7 +5605,7 @@ function rbff2.startplugin()
 
 	emu.register_periodic(function()
 		main_or_menu()
-		--auto_recovery_debug()
+		auto_recovery_debug()
 	end)
 end
 
