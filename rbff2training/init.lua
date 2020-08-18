@@ -2128,27 +2128,42 @@ function rbff2.startplugin()
 		end
 	end
 
+	local dummy_gd_type = {
+		none   = 1, -- なし
+		auto   = 2, -- オート
+		bs     = 3, -- ブレイクショット
+		hit1   = 4, -- 1ヒットガード
+		guard1 = 5, -- 1ガード
+		fixed  = 6, -- 常時
+		random = 7, -- ランダム
+	}
+	local wakeup_type = {
+		none = 1, -- なし
+		rvs  = 2, -- リバーサル
+		tech = 3, -- テクニカルライズ
+		sway = 4, -- グランドスウェー
+		atk  = 5, -- 起き上がり攻撃
+	}
 	-- プレイヤーの状態など
 	local players = {}
 	for p = 1, 2 do
 		local p1 = (p == 1)
 		players[p] = {
 			dummy_act        = 1,           -- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
-			dummy_gd         = 1,           -- なし, オート, 1ヒットガード, 1ガード, 常時, ランダム
-			dummy_down       = 1,           -- なし, テクニカルライズ, グランドスウェー, 起き上がり攻撃 
+			dummy_gd         = dummy_gd_type.none, -- なし, オート, ブレイクショット, 1ヒットガード, 1ガード, 常時, ランダム
+			dummy_wakeup     = wakeup_type.none,  -- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
 
-			dummy_bs         = false,       -- ブレイクショットモードのときtrue
+			dummy_bs         = nil,         -- ランダムで選択されたブレイクショット
 			dummy_bs_list    = {},          -- ブレイクショットのコマンドテーブル上の技ID
-			dummy_bs_cnt     = 1,           -- ブレイクショットのコマンドテーブル上の技のバリエーション（基本は0、飛燕斬用）
+			dummy_bs_cnt     = 1,           -- ブレイクショットのカウンタ
 			dummy_bs_chr     = 0,           -- ブレイクショットの設定をした時のキャラID
 			bs_count         = -1,          -- ブレイクショットの実施カウント
 
-			dummy_rvs       = false,       -- リバーサルモードのときtrue
+			dummy_rvs        = nil,         -- ランダムで選択されたリバーサル
 			dummy_rvs_list   = {},          -- リバーサルのコマンドテーブル上の技ID
-			dummy_rvs_cnt    = 1,           -- リバーサルのコマンドテーブル上の技のバリエーション（基本は0、飛燕斬用）
+			dummy_rvs_cnt    = 1,           -- リバーサルのカウンタ
 			dummy_rvs_chr    = 0,           -- リバーサルの設定をした時のキャラID
 			rvs_count        = -1,          -- リバーサルの実施カウント
-			rvs_toggle       = false,       -- リバーサルの実施トグルフラグ
 
 			life_rec         = true,        -- 自動で体力回復させるときtrue
 			red              = true,        -- 赤体力にするときtrue
@@ -2179,6 +2194,14 @@ function rbff2.startplugin()
 			tmp_combo        = 0,           -- 一次的なコンボ数
 			tmp_dmg          = 0,           -- ダメージが入ったフレーム
 			color            = 0,           -- カラー A=0x00 D=0x01
+
+
+			frame_gap        = 0,
+			last_frame_gap   = 0,
+			act_contact      = 0,
+			on_guard         = 0,
+			hit_skip         = 0,
+			skip_frame       = false,
 
 			key_now          = {},          -- 前フレームまでの個別キー入力フレーム
 			key_pre          = {},          -- 個別キー入力フレーム
@@ -3366,6 +3389,27 @@ function rbff2.startplugin()
 			p.stun           = pgm:read_u8(p.addr.stun)
 			p.stun_timer     = pgm:read_u16(p.addr.stun_timer)
 
+			--フレーム数
+			p.frame_gap      = p.frame_gap or 0
+			p.last_frame_gap = p.last_frame_gap or 0
+			if mem_0x10B862 ~= 0 and p.act_contact ~= 0 then
+				if p.state == 2 then
+					p.on_guard = global.frame_number
+				end
+				p.hit_skip = 2
+			end
+
+			--停止演出のチェック
+			p.skip_frame = p.hit_skip ~= 0 or p.stop ~= 0 or mem_0x10D4EA ~= 0
+
+			if p.skip_frame then
+				--停止フレームはフレーム計算しない
+				if p.hit_skip ~= 0 then
+					--ヒットストップの減算
+					p.hit_skip = p.hit_skip - 1
+				end
+			end
+
 			-- フレーム表示用処理
 			p.act_frames     = p.act_frames  or {}
 			p.act_frames2    = p.act_frames2 or {}
@@ -3500,7 +3544,7 @@ function rbff2.startplugin()
 			temp_hits[p.addr.base] = p
 
 			--攻撃種類,ガード要否
-			if p.update_sts and p.state ~= p.old_state then
+			if global.frame_number <= p.update_sts and p.state ~= p.old_state then
 				p.random_boolean = math.random(255) % 2 == 0
 			end
 			op.need_block     = false
@@ -3523,6 +3567,32 @@ function rbff2.startplugin()
 					op.need_low_block = op.need_low_block or (act_type == act_types.low_attack)
 					op.need_ovh_block = op.need_ovh_block or (act_type == act_types.overhead)
 					--print(string.format("%x %s", fb.act, act_type)) -- debug
+				end
+			end
+
+			-- リバーサルのランダム選択
+			p.dummy_rvs = nil
+			if p.dummy_wakeup == wakeup_type.rvs and #p.dummy_rvs_list > 0 then
+				p.dummy_rvs = p.dummy_rvs_list[math.random(#p.dummy_rvs_list)]
+			end
+			-- ブレイクショットのランダム選択
+			p.dummy_bs = nil
+			if p.dummy_gd == dummy_gd_type.bs and #p.dummy_bs_list > 0 then
+				if p.state == 2 and (p.skip_frame or p.hit_skip ~= 0) then
+					p.dummy_bs = p.dummy_bs_list[math.random(#p.dummy_bs_list)]
+				end
+			end
+
+			-- BSモード用技ID更新フック用の値更新
+			p.write_bs_hook = function()
+				local bs_hook = p.dummy_rvs or p.dummy_bs
+				if bs_hook then
+					pgm:write_u8(p.addr.bs_hook1, bs_hook.id or 0x20)
+					pgm:write_u16(p.addr.bs_hook2, bs_hook.ver or 0x0600)
+					print(string.format("bshook %s %x %x %x", global.frame_number, p.act, bs_hook.id or 0x20, bs_hook.ver or 0x0600))
+				else
+					pgm:write_u8(p.addr.bs_hook1, 0x20)
+					pgm:write_u16(p.addr.bs_hook2, 0x0600)
 				end
 			end
 		end
@@ -3600,27 +3670,6 @@ function rbff2.startplugin()
 
 		for i, p in ipairs(players) do
 			local op = players[3-i]
-
-			--フレーム数
-			p.frame_gap      = p.frame_gap or 0
-			p.last_frame_gap = p.last_frame_gap or 0
-			if mem_0x10B862 ~= 0 and p.act_contact ~= 0 then
-				if p.state == 2 then
-					p.on_guard = global.frame_number
-				end
-				p.hit_skip = 2
-			end
-
-			--停止演出のチェック
-			p.skip_frame = p.hit_skip ~= 0 or p.stop ~= 0 or mem_0x10D4EA ~= 0
-
-			if p.skip_frame then
-				--停止フレームはフレーム計算しない
-				if p.hit_skip ~= 0 then
-					--ヒットストップの減算
-					p.hit_skip = p.hit_skip - 1
-				end
-			end
 
 			-- ジャンプの遷移ポイントかどうか
 			local chg_air_state = 0
@@ -4043,17 +4092,18 @@ function rbff2.startplugin()
 							break
 						end
 					end
-					if p.dummy_gd == 5 then
+					if p.dummy_gd == dummy_gd_type.fixed then
 						-- 常時（ガード方向はダミーモードに従う）
 						next_joy[p.block_side] = true
 						p.backstep_killer = true
-					elseif p.dummy_gd == 2 or -- オート
-						(p.dummy_gd == 6 and p.random_boolean) or -- ランダム
-						(p.dummy_gd == 3 and p.next_block) or -- 1ヒットガード
-						(p.dummy_gd == 4) -- 1ガード
+					elseif p.dummy_gd == dummy_gd_type.auto or -- オート
+						p.dummy_gd == dummy_gd_type.bs or -- ブレイクショット
+						(p.dummy_gd == dummy_gd_type.random and p.random_boolean) or -- ランダム
+						(p.dummy_gd == dummy_gd_type.hit1 and p.next_block) or -- 1ヒットガード
+						(p.dummy_gd == dummy_gd_type.guard1) -- 1ガード
 						-- 1ガードのときは連続ガードは成立させたいので上下の切り替えは実施する
 					then
-						if p.dummy_gd == 4 then
+						if p.dummy_gd == dummy_gd_type.guard1 then
 							if p.next_block then
 								next_joy[p.block_side] = true
 							else
@@ -4090,7 +4140,7 @@ function rbff2.startplugin()
 						p.backstep_killer = false
 					end
 				end
-				if p.update_sts and p.state ~= p.old_state and p.dummy_gd == 3 then
+				if global.frame_number <= p.update_sts and p.state ~= p.old_state and p.dummy_gd == dummy_gd_type.hit1 then
 					-- 1ヒットガードのときは次ガードすべきかどうかの状態を切り替える
 					-- ヒット時はガードに切り替え
 					if p.state == 1 then
@@ -4098,7 +4148,7 @@ function rbff2.startplugin()
 					end
 					-- カウンター初期化
 					p.next_block_ec = 75
-				elseif p.update_sts and p.state ~= p.old_state and p.dummy_gd == 4 then
+				elseif global.frame_number <= p.update_sts and p.state ~= p.old_state and p.dummy_gd == dummy_gd_type.guard1 then
 					-- 1ガードのときは次ガードすべきかどうかの状態を切り替える
 					if p.state == 2 then
 						if p.skip_frame or p.hit_skip ~= 0 then
@@ -4121,9 +4171,9 @@ function rbff2.startplugin()
 						p.next_block_ec = 0
 					end
 					if p.next_block_ec == 0 then
-						if p.dummy_gd == 4 then
+						if p.dummy_gd == dummy_gd_type.guard1 then
 							p.next_block = true
-						elseif p.dummy_gd == 3 then
+						elseif p.dummy_gd == dummy_gd_type.hit1 then
 							p.next_block = false
 						end
 					end
@@ -4134,100 +4184,59 @@ function rbff2.startplugin()
 					next_joy[p.front_side] = true
 				end
 
-				-- なし, テクニカルライズ, グランドスウェー, 起き上がり攻撃
-				if p.state ~= 0 then
-					if p.act == 0x192 or p.act == 0x18E then
-						local btn_val = function(btn)
-							if 0 < joy_val[btn] then
-								return false
-							else
-								return true
-							end
+				local toggle_joy_val = function(btn)
+					if 0 < joy_val[btn] then
+						next_joy[btn] = false
+					else
+						next_joy[btn] = true
+					end
+					return next_joy[btn]
+				end
+
+				-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
+				if p.act == 0x193 or p.act == 0x13B then
+					if p.dummy_wakeup == wakeup_type.rvs then
+						if toggle_joy_val("P" .. p.control .. " Button 1") then
+							p.write_bs_hook()
 						end
-						if     p.dummy_down == 1 then
-						elseif p.dummy_down == 2 then
-							local dn = "P" .. p.control .. " Down"
-							local d  = "P" .. p.control .. " Button 4"
-							next_joy[dn] = btn_val(dn)
-							next_joy[d]  = btn_val(d)
-						elseif p.dummy_down == 3 then
-							local up = "P" .. p.control .. " Up"
-							local d  = "P" .. p.control .. " Button 4"
-							next_joy[up] = btn_val(up)
-							next_joy[d]  = btn_val(d)
-						elseif p.dummy_down == 4 then
-							-- 舞、ボブ、フランコ、山崎
-							if p.char == 0x04 or p.char == 0x07 or p.char == 0x0A or p.char == 0x0B then
-								local c  = "P" .. p.control .. " Button 3"
-								next_joy[c]  = btn_val(c)
-							end
+					end
+				elseif p.act == 0x192 or p.act == 0x18E then
+					if p.dummy_wakeup == wakeup_type.tech then
+						toggle_joy_val("P" .. p.control .. " Down")
+						toggle_joy_val("P" .. p.control .. " Button 4")
+					elseif p.dummy_wakeup == wakeup_type.sway then
+						toggle_joy_val("P" .. p.control .. " Up")
+						toggle_joy_val("P" .. p.control .. " Button 4")
+					elseif p.dummy_wakeup == wakeup_type.atk then
+						-- 舞、ボブ、フランコ、山崎
+						if p.char == 0x04 or p.char == 0x07 or p.char == 0x0A or p.char == 0x0B then
+							toggle_joy_val("P" .. p.control .. " Button 3")
 						end
 					end
 				end
 
 				-- ブレイクショット
-				if p.dummy_bs_chr ~= p.char then
-					p.dummy_bs = false
-					p.dummy_bs_list = {}
-					p.dummy_bs_cnt = 0
-				end
-				if p.dummy_bs == true and p.on_guard == global.frame_number then
-					pgm:write_u8(p.addr.bs_hook1, 0x20)             -- BSモード用技ID更新フック
-					pgm:write_u16(p.addr.bs_hook2, 0x0600)          -- BSモード用技ID更新フック
-					local bs_list = p.dummy_bs_list
-					if #bs_list > 0 then
-						local bs = bs_list[math.random(#bs_list)]
-						local id = bs.id or 0x20
-						local ver = bs.ver or 0x0600
-						pgm:write_u8(p.addr.bs_hook1, id)
-						pgm:write_u16(p.addr.bs_hook2, ver)
-					end
-
+				if p.dummy_gd == dummy_gd_type.bs and p.on_guard == global.frame_number then
 					if p.bs_count < 1 then
 						p.bs_count = 1
 					else
 						p.bs_count = p.bs_count + 1
 					end
-					if p.dummy_bs_cnt <= p.bs_count then
-						local bs_list = p.dummy_bs_list
-						if #bs_list > 0 then
-							cmd_base._a(p, next_joy)
+					if p.dummy_bs_cnt <= p.bs_count and p.dummy_bs then
+						if toggle_joy_val("P" .. p.control .. " Button 1") then
+							p.write_bs_hook()
 						end
 						p.bs_count = -1
 					end
 				end
 
 				-- リバーサル
-				if p.dummy_rvs_chr ~= p.char then
-					p.dummy_rvs = false
-					p.dummy_rvs_list = {}
-					p.dummy_rvs_cnt = 0
-				end
-				if p.dummy_rvs == true and
-					p.state == 2 and
-					(p.on_guard + 2) < global.frame_number and
-					p.skip_frame == false and
-					p.hit_skip == 0 then
-
-					if p.rvs_toggle == true then
-						p.rvs_toggle = false
-
-						pgm:write_u8(p.addr.bs_hook1, 0x20)             -- BSモード用技ID更新フック
-						pgm:write_u16(p.addr.bs_hook2, 0x0600)          -- BSモード用技ID更新フック
-						local rvs_list = p.dummy_rvs_list
-						if #rvs_list > 0 then
-							local rvs = rvs_list[math.random(#rvs_list)]
-							local id = rvs.id or 0x20
-							local ver = rvs.ver or 0x0600
-							pgm:write_u8(p.addr.bs_hook1, id)
-							pgm:write_u16(p.addr.bs_hook2, ver)
-							cmd_base._a(p, next_joy)
+				if p.dummy_wakeup == wakeup_type.rvs and p.state == 2 and p.skip_frame == false and p.hit_skip == 0 then
+					if p.dummy_rvs then
+						if toggle_joy_val("P" .. p.control .. " Button 1") then
+							p.write_bs_hook()
 						end
-					else
-						p.rvs_toggle = true
 					end
-				else
-					p.rvs_toggle = false
 				end
 			end
 		end
@@ -4314,7 +4323,7 @@ function rbff2.startplugin()
 				end
 
 				-- BS状態表示
-				if p.dummy_bs == true then
+				if p.dummy_gd == dummy_gd_type.bs then
 					if p1 then
 						scr:draw_box(106, 40, 150,  50, 0x80404040, 0x80404040)
 					else
@@ -4478,31 +4487,27 @@ function rbff2.startplugin()
 		p[1].dummy_gd            = col[ 5]      -- 1P ガード              5
 		p[2].dummy_gd            = col[ 6]      -- 2P ガード              6
 		global.next_block_grace  = col[ 7] - 1  -- 1ガード持続フレーム数  7
-		p[1].dummy_bs            = col[ 8] == 2 -- 1P ブレイクショット    8
-		p[2].dummy_bs            = col[ 9] == 2 -- 2P ブレイクショット    9
-		p[1].dummy_rvs           = col[10] == 2 -- 1P リバーサル         10
-		p[2].dummy_rvs           = col[11] == 2 -- 2P リバーサル         11
-		p[1].dummy_down          = col[12]      -- 1P やられ時行動       12
-		p[2].dummy_down          = col[13]      -- 2P やられ時行動       13
-		p[1].fwd_prov            = col[14] == 2 -- 1P 挑発で前進         14
-		p[2].fwd_prov            = col[15] == 2 -- 2P 挑発で前進         15
+		p[1].dummy_wakeup        = col[ 8]      -- 1P やられ時行動        8
+		p[2].dummy_wakeup        = col[ 9]      -- 2P やられ時行動        9
+		p[1].fwd_prov            = col[10] == 2 -- 1P 挑発で前進         10
+		p[2].fwd_prov            = col[11] == 2 -- 2P 挑発で前進         11
 
 		for _, p in ipairs(players) do
-			if p.dummy_gd == 3 then
+			if p.dummy_gd == dummy_gd_type.hit1 then
 				p.next_block = false
 				-- カウンター初期化
 				p.next_block_ec = 75
-			elseif p.dummy_gd == 4 then
+			elseif p.dummy_gd == dummy_gd_type.guard1 then
 				p.next_block = true
 				-- カウンター初期化
 				p.next_block_ec = 75
 				p.next_block_grace = global.next_block_grace
 			end
 
-			-- ガードカウンター初期化
+			-- BSガードカウンター初期化
 			p.bs_count = -1
+			-- リバサカウンター初期化
 			p.rvs_count = -1
-			p.rvs_toggle = false
 		end
 
 		if global.dummy_mode == 5 then
@@ -4516,7 +4521,7 @@ function rbff2.startplugin()
 		elseif global.dummy_mode == 6 then
 			-- リプレイ
 			global.dummy_mode = 1
-			play_menu.pos.col[ 8] = recording.do_repeat   and 2 or 1 -- 繰り返し           8
+			play_menu.pos.col[ 8] = recording.do_repeat and 2 or 1 -- 繰り返し           8
 			play_menu.pos.col[ 9] = recording.repeat_interval + 1    -- 繰り返し間隔       9
 			play_menu.pos.col[10] = global.await_neutral and 2 or 1  -- 繰り返し開始条件  10
 			play_menu.pos.col[11] = global.replay_fix_pos and 2 or 1 -- 開始間合い固定    11
@@ -4548,18 +4553,18 @@ function rbff2.startplugin()
 					table.insert(p.dummy_rvs_list, rvs)
 				end
 			end
-			p.dummy_rvs_cnt = rvs_menu.pos.col[#rvs_menu.pos.col]
+			--p.dummy_rvs_cnt = rvs_menu.pos.col[#rvs_menu.pos.col]
 			p.dummy_rvs_chr = p.char
 		end
 		-- 設定後にメニュー遷移
 		for i, p in ipairs(players) do
 			-- ブレイクショット
-			if not cancel and row == (7 + i) then
+			if not cancel and row == (4 + i) and p.dummy_gd == dummy_gd_type.bs then
 				menu_cur = bs_menus[i][p.char]
 				return
 			end
 			-- リバーサル
-			if not cancel and row == (9 + i) then
+			if not cancel and row == (7 + i) and p.dummy_wakeup == wakeup_type.rvs then
 				menu_cur = rvs_menus[i][p.char]
 				return
 			end
@@ -4719,14 +4724,10 @@ function rbff2.startplugin()
 		col[ 5] = p[1].dummy_gd            -- 1P ガード              5
 		col[ 6] = p[2].dummy_gd            -- 2P ガード              6
 		col[ 7] = g.next_block_grace + 1   -- 1ガード持続フレーム数  7
-		col[ 8] = p[1].dummy_bs and 2 or 1 -- 1Pブレイクショット     8
-		col[ 9] = p[2].dummy_bs and 2 or 1 -- 2Pブレイクショット     9
-		col[10] = p[1].dummy_rvs and 2 or 1 -- 1P リバーサル        10
-		col[11] = p[2].dummy_rvs and 2 or 1 -- 2P リバーサル        11
-		col[12] = p[1].dummy_down          -- 1P やられ時行動       12
-		col[13] = p[2].dummy_down          -- 2P やられ時行動       13
-		col[14] = p[1].fwd_prov and 2 or 1 -- 1P 挑発で前進         14
-		col[15] = p[2].fwd_prov and 2 or 1 -- 2P 挑発で前進         15
+		col[ 8] = p[1].dummy_wakeup         -- 1P やられ時行動       8
+		col[ 9] = p[2].dummy_wakeup         -- 2P やられ時行動       9
+		col[10] = p[1].fwd_prov and 2 or 1  -- 1P 挑発で前進        10
+		col[11] = p[2].fwd_prov and 2 or 1  -- 2P 挑発で前進        11
 	end
 	local init_bar_menu_config = function()
 		local col = bar_menu.pos.col
@@ -4979,15 +4980,11 @@ function rbff2.startplugin()
 			{ "                         ダミー設定" },
 			{ "1P アクション"         , { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
 			{ "2P アクション"         , { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
-			{ "1P ガード"             , { "なし", "オート", "1ヒットガード", "1ガード", "常時", "ランダム" }, },
-			{ "2P ガード"             , { "なし", "オート", "1ヒットガード", "1ガード", "常時", "ランダム" }, },
+			{ "1P ガード"             , { "なし", "オート", "ブレイクショット（Aで選択画面へ）", "1ヒットガード", "1ガード", "常時", "ランダム" }, },
+			{ "2P ガード"             , { "なし", "オート", "ブレイクショット（Aで選択画面へ）", "1ヒットガード", "1ガード", "常時", "ランダム" }, },
 			{ "1ガード持続フレーム数" , gd_frms, },
-			{ "1P ブレイクショット"   , { "OFF", "ON （Aで選択画面へ）" }, },
-			{ "2P ブレイクショット"   , { "OFF", "ON （Aで選択画面へ）" }, },
-			{ "1P リバーサル"        , { "OFF", "ON （Aで選択画面へ）" }, },
-			{ "2P リバーサル"        , { "OFF", "ON （Aで選択画面へ）" }, },
-			{ "1P やられ時行動"       , { "なし", "テクニカルライズ", "グランドスウェー", "起き上がり攻撃", }, },
-			{ "2P やられ時行動"       , { "なし", "テクニカルライズ", "グランドスウェー", "起き上がり攻撃", }, },
+			{ "1P やられ時行動"       , { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ", "グランドスウェー", "起き上がり攻撃", }, },
+			{ "2P やられ時行動"       , { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ", "グランドスウェー", "起き上がり攻撃", }, },
 			{ "1P 挑発で前進"         , { "OFF", "ON" }, },
 			{ "2P 挑発で前進"         , { "OFF", "ON" }, },
 		},
@@ -5002,14 +4999,10 @@ function rbff2.startplugin()
 				1, -- 1P ガード               5
 				1, -- 2P ガード               6
 				1, -- 1ガード持続フレーム数   7
-				1, -- 1P ブレイクショット     8
-				1, -- 2P ブレイクショット     9
-				1, -- 1P リバーサル          10
-				1, -- 2P リバーサル          11
-				1, -- 1P やられ時行動        12
-				1, -- 2P やられ時行動        13
-				1, -- 1P 挑発で前進          14
-				1, -- 2P 挑発で前進          15
+				1, -- 1P やられ時行動         8
+				1, -- 2P やられ時行動         9
+				1, -- 1P 挑発で前進          10
+				1, -- 2P 挑発で前進          11
 			},
 		},
 		on_a = {
@@ -5020,10 +5013,6 @@ function rbff2.startplugin()
 			menu_to_main, -- 1P ガード
 			menu_to_main, -- 2P ガード
 			menu_to_main, -- 1ガード持続フレーム数
-			menu_to_main, -- 1P ブレイクショット
-			menu_to_main, -- 2P ブレイクショット
-			menu_to_main, -- 1P リバーサル
-			menu_to_main, -- 2P リバーサル
 			menu_to_main, -- 1P やられ時行動
 			menu_to_main, -- 2P やられ時行動
 			menu_to_main, -- 1P 挑発で前進
@@ -5037,10 +5026,6 @@ function rbff2.startplugin()
 			menu_to_main_cancel, -- 1P ガード
 			menu_to_main_cancel, -- 2P ガード
 			menu_to_main_cancel, -- 1ガード持続フレーム数
-			menu_to_main_cancel, -- 1P ブレイクショット
-			menu_to_main_cancel, -- 2P ブレイクショット
-			menu_to_main_cancel, -- 1P リバーサル
-			menu_to_main_cancel, -- 2P リバーサル
 			menu_to_main_cancel, -- 1P やられ時行動
 			menu_to_main_cancel, -- 2P やられ時行動
 			menu_to_main_cancel, -- 1P 挑発で前進
