@@ -1644,22 +1644,19 @@ function rbff2.startplugin()
 		{ port = ":edge:joy:START", field = "2 Players Start", frame = 0, prev = 0, player = 2, get = 0, },
 		{ port = ":edge:joy:START", field = "1 Player Start" , frame = 0, prev = 0, player = 1, get = 0, },
 	}
-	local get_joy = function(exclude_player)
+	local get_joy_base = function(prev, exclude_player)
 		local scr = manager:machine().screens[":screen"]
 		local ec = scr:frame_number()
 		local joy_port = {}
 		local joy_val = {}
+		local prev_joy_val = {}
 		for _, joy in ipairs(use_joy) do
 			local state = 0
-			if exclude_player ~= joy.player then
-				if not joy_port[joy.port] then
-					joy_port[joy.port] = manager:machine():ioport().ports[joy.port]:read()
-				end
-				local field = manager:machine():ioport().ports[joy.port].fields[joy.field]
-				state = ((joy_port[joy.port] & field.mask) ~ field.defvalue)
-			elseif exclude_player ~= nil then
-				--print("ignore " .. joy.player)
+			if not joy_port[joy.port] then
+				joy_port[joy.port] = manager:machine():ioport().ports[joy.port]:read()
 			end
+			local field = manager:machine():ioport().ports[joy.port].fields[joy.field]
+			state = ((joy_port[joy.port] & field.mask) ~ field.defvalue)
 			if joy.get < ec then
 				joy.prev = joy.frame
 				if state > 0 then
@@ -1679,9 +1676,21 @@ function rbff2.startplugin()
 				end
 			end
 			joy.get = ec
-			joy_val[joy.field] = joy.frame
+			if exclude_player ~= joy.player then
+				joy_val[joy.field] = joy.frame
+				prev_joy_val[joy.field] = joy.prev
+				--if "P2 Button 1" == joy.field then
+				--	print(string.format("%s %s %s %s", global.frame_number, joy.field, joy.prev, joy.frame))
+				--end
+			end
 		end
-		return joy_val
+		return prev and prev_joy_val or joy_val
+	end
+	local get_joy = function(exclude_player)
+		return get_joy_base(false, exclude_player)
+	end
+	local get_prev_joy = function(exclude_player)
+		return get_joy_base(true, exclude_player)
 	end
 	local accept_input = function(btn, joy_val, state_past)
 		if 12 < state_past then
@@ -2200,6 +2209,9 @@ function rbff2.startplugin()
 			last_frame_gap   = 0,
 			act_contact      = 0,
 			on_guard         = 0,
+			guard1           = 0,
+			on_guard1        = 0,
+			on_hit           = 0,
 			hit_skip         = 0,
 			skip_frame       = false,
 
@@ -3331,6 +3343,7 @@ function rbff2.startplugin()
 		local state_past = ec - global.input_accepted
 		local width = scr:width() * scr:xscale()
 		local joy_val = get_joy()
+		local prev_joy_val = get_prev_joy()
 
 		global.frame_number = global.frame_number + 1
 
@@ -3395,8 +3408,20 @@ function rbff2.startplugin()
 			if mem_0x10B862 ~= 0 and p.act_contact ~= 0 then
 				if p.state == 2 then
 					p.on_guard = global.frame_number
+					--print(string.format("on guard %x" , p.act))
+				elseif p.state == 1 then
+					p.on_hit = global.frame_number
 				end
 				p.hit_skip = 2
+			end
+			if p.state ~= 2 then
+				p.guard1 = 0
+			elseif p.on_guard == global.frame_number then
+				p.guard1 = 1 -- 1ガード確定
+			elseif p.guard1 == 1 and p.skip_frame == false and p.hit_skip == 0 then
+				p.guard1 = 2 -- ガード後のヒットストップ解除フレームの記録
+				p.on_guard1 = global.frame_number
+				--print("on guard1")
 			end
 
 			--停止演出のチェック
@@ -3589,7 +3614,7 @@ function rbff2.startplugin()
 				if bs_hook then
 					pgm:write_u8(p.addr.bs_hook1, bs_hook.id or 0x20)
 					pgm:write_u16(p.addr.bs_hook2, bs_hook.ver or 0x0600)
-					print(string.format("bshook %s %x %x %x", global.frame_number, p.act, bs_hook.id or 0x20, bs_hook.ver or 0x0600))
+					--print(string.format("bshook %s %x %x %x", global.frame_number, p.act, bs_hook.id or 0x20, bs_hook.ver or 0x0600))
 				else
 					pgm:write_u8(p.addr.bs_hook1, 0x20)
 					pgm:write_u16(p.addr.bs_hook2, 0x0600)
@@ -4065,7 +4090,7 @@ function rbff2.startplugin()
 							next_joy["P" .. p.control .. " Up"] = true
 						end
 					elseif p.dummy_act == 5 then
-						if not p.on_sway_line then
+						if not p.on_sway_line and p.state == 0 then
 							if joy_val["P" .. p.control .. " Button 4"] < 0 then
 								next_joy["P" .. p.control .. " Button 4"] = true
 							end
@@ -4101,27 +4126,7 @@ function rbff2.startplugin()
 						(p.dummy_gd == dummy_gd_type.random and p.random_boolean) or -- ランダム
 						(p.dummy_gd == dummy_gd_type.hit1 and p.next_block) or -- 1ヒットガード
 						(p.dummy_gd == dummy_gd_type.guard1) -- 1ガード
-						-- 1ガードのときは連続ガードは成立させたいので上下の切り替えは実施する
 					then
-						if p.dummy_gd == dummy_gd_type.guard1 then
-							if p.next_block then
-								next_joy[p.block_side] = true
-							else
-								p.next_block_grace = p.next_block_grace and (p.next_block_grace - 1) or global.next_block_grace
-								-- 1ガードのガード解除
-								if 0 <= p.next_block_grace then
-									next_joy[p.block_side] = true
-									next_joy[p.front_side] = false
-									p.backstep_killer = false
-								else
-									next_joy[p.block_side] = false
-									next_joy[p.front_side] = true
-									p.backstep_killer = true
-								end
-							end
-						else
-							next_joy[p.block_side] = true
-						end
 						-- 中段から優先
 						if p.need_ovh_block then
 							next_joy["P" .. p.control .. " Down"] = false
@@ -4133,6 +4138,13 @@ function rbff2.startplugin()
 						else
 							p.backstep_killer = true
 						end
+						if p.dummy_gd == dummy_gd_type.guard1 and p.next_block ~= true then
+							-- 1ガードの時は連続ガードの上下段のみ対応させる
+							next_joy[p.block_side] = false
+							p.backstep_killer = false
+						else
+							next_joy[p.block_side] = true
+						end
 					end
 				else
 					if p.backstep_killer then
@@ -4140,43 +4152,59 @@ function rbff2.startplugin()
 						p.backstep_killer = false
 					end
 				end
-				if global.frame_number <= p.update_sts and p.state ~= p.old_state and p.dummy_gd == dummy_gd_type.hit1 then
+
+				-- 次のガード要否を判断する
+				if p.dummy_gd == dummy_gd_type.hit1 then
 					-- 1ヒットガードのときは次ガードすべきかどうかの状態を切り替える
-					-- ヒット時はガードに切り替え
-					if p.state == 1 then
-						p.next_block = true
+					if global.frame_number == p.on_hit then
+						p.next_block = true	-- ヒット時はガードに切り替え
+						p.next_block_ec = 75 -- カウンター初期化
+					elseif global.frame_number == p.on_guard then
+						p.next_block = false
 					end
-					-- カウンター初期化
-					p.next_block_ec = 75
-				elseif global.frame_number <= p.update_sts and p.state ~= p.old_state and p.dummy_gd == dummy_gd_type.guard1 then
-					-- 1ガードのときは次ガードすべきかどうかの状態を切り替える
-					if p.state == 2 then
-						if p.skip_frame or p.hit_skip ~= 0 then
+					if p.next_block == false then
+						-- カウンター消費しきったらヒットするように切り替える
+						p.next_block_ec = p.next_block_ec and (p.next_block_ec - 1) or 0
+						if p.next_block_ec == 0 then
 							p.next_block = false
 						end
-					elseif p.state == 1 then
-						p.next_block = true
 					end
-					-- カウンター初期化
-					p.next_block_ec = 75
-					p.next_block_grace = global.next_block_grace
-
-					--print((p.next_block and "G" or "-") .. " " .. p.next_block_ec .. " " .. p.state .. " " .. op.old_state)
-
-				else
-					-- 状態更新なしでカウンター消費しきったらヒットするように切り替える
-					if p.next_block_ec and p.next_block_ec > 0 then
-						p.next_block_ec = p.next_block_ec - 1
+				elseif p.dummy_gd == dummy_gd_type.guard1 then
+					if p.guard1 == 0 and p.next_block_ec == 75 then
+						p.next_block = true
+						--print("guard0")
+					elseif p.guard1 == 1 then
+						p.next_block = true
+						p.next_block_ec = 75 -- カウンター初期化
+						--print("guard1")
+					elseif p.guard1 == 2 and global.frame_number <= (p.on_guard1 + global.next_block_grace) then
+						p.next_block = true
+						--print("in grace")
 					else
-						p.next_block_ec = 0
-					end
-					if p.next_block_ec == 0 then
-						if p.dummy_gd == dummy_gd_type.guard1 then
+						-- カウンター消費しきったらガードするように切り替える
+						p.next_block_ec = p.next_block_ec and (p.next_block_ec - 1) or 0
+						if p.next_block_ec == 0 then
 							p.next_block = true
-						elseif p.dummy_gd == dummy_gd_type.hit1 then
+							p.next_block_ec = 75 -- カウンター初期化
+							p.guard1 = 0
+							--print("reset")
+						elseif global.frame_number == p.on_guard then
+							p.next_block_ec = 75 -- カウンター初期化
 							p.next_block = false
+							--print("countdown " .. p.next_block_ec)
+						else
+							p.next_block = false
+							--print("countdown " .. p.next_block_ec)
 						end
 					end
+					if global.frame_number == p.on_hit then
+						-- ヒット時はガードに切り替え
+						p.next_block = true	
+						p.next_block_ec = 75 -- カウンター初期化
+						p.guard1 = 0
+						--print("HIT reset")
+					end
+					--print((p.next_block and "G" or "-") .. " " .. p.next_block_ec .. " " .. p.state .. " " .. op.old_state)
 				end
 
 				--挑発中は前進
@@ -4184,11 +4212,26 @@ function rbff2.startplugin()
 					next_joy[p.front_side] = true
 				end
 
-				local toggle_joy_val = function(btn)
-					if 0 < joy_val[btn] then
-						next_joy[btn] = false
-					else
-						next_joy[btn] = true
+				local toggle_joy_val = function(btn, cycle)
+					cycle = cycle == nil and 1 or cycle
+					local nega  = -cycle
+
+					-- 未入力
+					if joy_val[btn] < 0 then
+						if nega < joy_val[btn] then
+							next_joy[btn] = false
+						else
+							next_joy[btn] = true
+						end
+						return next_joy[btn]
+					end
+
+					-- 入力あり
+					next_joy[btn] = true
+					if 0 < prev_joy_val[btn] then
+						if cycle <= joy_val[btn] then
+							next_joy[btn] = false
+						end
 					end
 					return next_joy[btn]
 				end
@@ -4196,21 +4239,27 @@ function rbff2.startplugin()
 				-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
 				if p.act == 0x193 or p.act == 0x13B then
 					if p.dummy_wakeup == wakeup_type.rvs then
-						if toggle_joy_val("P" .. p.control .. " Button 1") then
+						if toggle_joy_val("P" .. p.control .. " Button 1", 5) then
 							p.write_bs_hook()
 						end
 					end
 				elseif p.act == 0x192 or p.act == 0x18E then
 					if p.dummy_wakeup == wakeup_type.tech then
-						toggle_joy_val("P" .. p.control .. " Down")
-						toggle_joy_val("P" .. p.control .. " Button 4")
+						if toggle_joy_val("P" .. p.control .. " Down") then
+							next_joy["P" .. p.control .. " Button 4"] = true
+						end
 					elseif p.dummy_wakeup == wakeup_type.sway then
-						toggle_joy_val("P" .. p.control .. " Up")
-						toggle_joy_val("P" .. p.control .. " Button 4")
+						if toggle_joy_val("P" .. p.control .. " Up") then
+							next_joy["P" .. p.control .. " Button 4"] = true
+						end
 					elseif p.dummy_wakeup == wakeup_type.atk then
 						-- 舞、ボブ、フランコ、山崎
 						if p.char == 0x04 or p.char == 0x07 or p.char == 0x0A or p.char == 0x0B then
-							toggle_joy_val("P" .. p.control .. " Button 3")
+							if toggle_joy_val("P" .. p.control .. " Button 3") then
+								next_joy["P" .. p.control .. " Button 1"] = false
+								next_joy["P" .. p.control .. " Button 2"] = false
+								next_joy["P" .. p.control .. " Button 4"] = false
+							end
 						end
 					end
 				end
@@ -4230,9 +4279,34 @@ function rbff2.startplugin()
 					end
 				end
 
-				-- リバーサル
-				if p.dummy_wakeup == wakeup_type.rvs and p.state == 2 and p.skip_frame == false and p.hit_skip == 0 then
-					if p.dummy_rvs then
+				--[[
+				リバーサル:ガードリバーサルのガード硬直後のコマンド成立させるタイミング
+				x ... 硬直解除  + ... 技確定猶予  ^ ... 技確定フレーム
+				.        0         1         2         3         4
+				.        12345678901234567890123456789012345678901234567890
+				12F硬直      ++++++++x
+				13F硬直       ++++++++x
+				14F硬直        ++++++++x
+				15F硬直         ++++++++x
+				16F硬直          ++++++++x
+				反映             ^9F
+				19F硬直            ++++++++x
+				21F硬直              ++++++++x
+				22F硬直               ++++++++x
+				23F硬直                ++++++++x
+				24F硬直                 ++++++++x
+				反映                    ^16F
+				25F硬直                   ++++++++x
+				反映                      ^18
+				27F硬直                     ++++++++x
+				28F硬直                      ++++++++x
+				反映                         ^21F
+				]]
+				if p.dummy_wakeup == wakeup_type.rvs and p.state == 2 and p.dummy_rvs then
+					if p.on_guard1+9 == global.frame_number or
+						p.on_guard1+16 == global.frame_number or
+						p.on_guard1+18 == global.frame_number or
+						p.on_guard1+21 == global.frame_number then
 						if toggle_joy_val("P" .. p.control .. " Button 1") then
 							p.write_bs_hook()
 						end
@@ -4495,19 +4569,14 @@ function rbff2.startplugin()
 		for _, p in ipairs(players) do
 			if p.dummy_gd == dummy_gd_type.hit1 then
 				p.next_block = false
-				-- カウンター初期化
-				p.next_block_ec = 75
+				p.next_block_ec = 75 -- カウンター初期化
 			elseif p.dummy_gd == dummy_gd_type.guard1 then
 				p.next_block = true
-				-- カウンター初期化
-				p.next_block_ec = 75
-				p.next_block_grace = global.next_block_grace
+				p.next_block_ec = 75 -- カウンター初期化
 			end
-
-			-- BSガードカウンター初期化
-			p.bs_count = -1
-			-- リバサカウンター初期化
-			p.rvs_count = -1
+			p.bs_count = -1 -- BSガードカウンター初期化
+			p.rvs_count = -1 -- リバサカウンター初期化
+			p.guard1 = 0
 		end
 
 		if global.dummy_mode == 5 then
@@ -4533,28 +4602,34 @@ function rbff2.startplugin()
 
 		for i, p in ipairs(players) do
 			-- ブレイクショット
-			local bs_menu = bs_menus[i][p.char] or {}
-			local bs_list = char_bs_list[p.char] or {}
-			p.dummy_bs_list = {}
-			for j, bs in pairs(bs_list) do
-				if bs_menu.pos.col[j+1] == 2 then
-					table.insert(p.dummy_bs_list, bs)
-				end
-			end
-			p.dummy_bs_cnt = bs_menu.pos.col[#bs_menu.pos.col]
 			p.dummy_bs_chr = p.char
+			p.dummy_bs_list = {}
+			local bs_menu = bs_menus[i][p.char]
+			if bs_menu then
+				p.dummy_bs_cnt = bs_menu.pos.col[#bs_menu.pos.col]
+				for j, bs in pairs(char_bs_list[p.char]) do
+					if bs_menu.pos.col[j+1] == 2 then
+						table.insert(p.dummy_bs_list, bs)
+					end
+				end
+			else
+				p.dummy_bs_cnt = -1
+			end
 
 			-- リバーサル
-			local rvs_menu = rvs_menus[i][p.char] or {}
-			local rvs_list = char_rvs_list[p.char] or {}
-			p.dummy_rvs_list = {}
-			for j, rvs in pairs(rvs_list) do
-				if rvs_menu.pos.col[j+1] == 2 then
-					table.insert(p.dummy_rvs_list, rvs)
-				end
-			end
-			--p.dummy_rvs_cnt = rvs_menu.pos.col[#rvs_menu.pos.col]
 			p.dummy_rvs_chr = p.char
+			p.dummy_rvs_list = {}
+			local rvs_menu = rvs_menus[i][p.char]
+			if rvs_menu then
+				p.dummy_rvs_cnt = rvs_menu.pos.col[#rvs_menu.pos.col]
+				for j, rvs in pairs(char_rvs_list[p.char]) do
+					if rvs_menu.pos.col[j+1] == 2 then
+						table.insert(p.dummy_rvs_list, rvs)
+					end
+				end
+			else
+				p.dummy_rvs_cnt = -1
+			end
 		end
 		-- 設定後にメニュー遷移
 		for i, p in ipairs(players) do
@@ -5404,7 +5479,6 @@ function rbff2.startplugin()
 					end
 				end
 				if row[3] and row[3].outline then
-					print("col")
 					scr:draw_box(200, y+2, 218, y+7, row[3].outline, row[3].outline)
 				end
 			end
