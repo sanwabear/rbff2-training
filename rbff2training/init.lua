@@ -75,6 +75,7 @@ function rbff2.startplugin()
 
 		-- 当たり判定用
 		axis_color      = 0xFFFFFFFF,
+		axis_air_color  = 0xFFFF00FF,
 		axis_size       = 12,
 		no_alpha        = true, --fill = 0x00, outline = 0xFF for all box types
 		throwbox_height = 200, --default for ground throws
@@ -926,9 +927,9 @@ function rbff2.startplugin()
 			{ disp_name = "ジャンプ", name = "垂直ジャンプ", type = act_types.any, ids = { 0xB, 0xC, }, },
 			{ disp_name = "ジャンプ", name = "前ジャンプ", type = act_types.any, ids = { 0xD, 0xE, }, },
 			{ disp_name = "ジャンプ", name = "後ジャンプ", type = act_types.any, ids = { 0xF, 0x10, }, },
-			{ disp_name = "小ジャンプ", name = "垂直小ジャンプ", type = act_types.any, ids = { 0xB, 0x11, 0x12, }, },
-			{ disp_name = "小ジャンプ", name = "前小ジャンプ", type = act_types.any, ids = { 0xD, 0x13, 0x14, }, },
-			{ disp_name = "小ジャンプ", name = "後小ジャンプ", type = act_types.any, ids = { 0xF, 0x15, 0x16, }, },
+			{ disp_name = "ジャンプ", name = "垂直小ジャンプ", type = act_types.any, ids = { 0xB, 0x11, 0x12, }, },
+			{ disp_name = "ジャンプ", name = "前小ジャンプ", type = act_types.any, ids = { 0xD, 0x13, 0x14, }, },
+			{ disp_name = "ジャンプ", name = "後小ジャンプ", type = act_types.any, ids = { 0xF, 0x15, 0x16, }, },
 			{ name = "テクニカルライズ", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
 			{ name = "グランドスゥエー", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
 			{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
@@ -4424,8 +4425,9 @@ function rbff2.startplugin()
 				-- 座標表示
 				local width = scr:width() * scr:xscale()
 				if global.disp_hitbox then
-					scr:draw_line(p.hit.pos_x, p.hit.pos_y-global.axis_size, p.hit.pos_x, p.hit.pos_y+global.axis_size, global.axis_color)
-					scr:draw_line(p.hit.pos_x-global.axis_size, p.hit.pos_y, p.hit.pos_x+global.axis_size, p.hit.pos_y, global.axis_color)
+					local col = 0 < p.pos_y and global.axis_air_color or global.axis_color
+					scr:draw_line(p.hit.pos_x, p.hit.pos_y-global.axis_size, p.hit.pos_x, p.hit.pos_y+global.axis_size, col)
+					scr:draw_line(p.hit.pos_x-global.axis_size, p.hit.pos_y, p.hit.pos_x+global.axis_size, p.hit.pos_y, col)
 				end
 
 				--行動IDとフレーム数表示
