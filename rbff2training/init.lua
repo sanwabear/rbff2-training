@@ -2212,6 +2212,7 @@ function rbff2.startplugin()
 			guard1           = 0,
 			on_guard1        = 0,
 			on_hit           = 0,
+			on_wakeup        = 0,
 			hit_skip         = 0,
 			skip_frame       = false,
 
@@ -2625,7 +2626,8 @@ function rbff2.startplugin()
 			-- 0395B6: 195E 00A4                move.b  (A6)+, ($a4,A4) -- 技データ読込 だいたい06
 			-- 0395BA: 195E 00A5                move.b  (A6)+, ($a5,A4) -- 技データ読込 だいたい00、飛燕斬01、02、03
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03957E),
-				"(maincpu.pw@107C22>0)&&((A6)==CB244)&&((maincpu.pb@10048E==2&&($100400==((A4)&$FFFFFF)))||(maincpu.pb@10058E==2&&($100500==((A4)&$FFFFFF))))",
+				--"(maincpu.pw@107C22>0)&&((A6)==CB244)&&((maincpu.pb@10048E==2&&($100400==((A4)&$FFFFFF)))||(maincpu.pb@10058E==2&&($100500==((A4)&$FFFFFF))))",
+				"(maincpu.pw@107C22>0)&&((A6)==CB244)&&(((maincpu.pb@10048E==2||maincpu.pw@100460==$193||maincpu.pw@100460==$13B)&&($100400==((A4)&$FFFFFF)))||((maincpu.pb@10058E==2||maincpu.pw@100560==$193||maincpu.pw@100560==$13B)&&($100500==((A4)&$FFFFFF))))",
 				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$80);D1=(maincpu.pb@(temp1));A6=((A6)+2);maincpu.pb@((A4)+$A3)=D1;maincpu.pb@((A4)+$A4)=maincpu.pb@(temp1+1);maincpu.pb@((A4)+$A5)=maincpu.pb@(temp1+2);PC=((PC)+$20);g"))
 
 			-- ステージ設定用。メニューでFを設定した場合にのみ動作させる
@@ -3424,6 +3426,10 @@ function rbff2.startplugin()
 				--print("on guard1")
 			end
 
+			if (p.old_act ~= 0x193 and p.old_act ~= 0x13B) and (p.act == 0x193 or p.act == 0x13B) then
+				p.on_wakeup = global.frame_number
+			end
+
 			--停止演出のチェック
 			p.skip_frame = p.hit_skip ~= 0 or p.stop ~= 0 or mem_0x10D4EA ~= 0
 
@@ -3609,15 +3615,15 @@ function rbff2.startplugin()
 			end
 
 			-- BSモード用技ID更新フック用の値更新
-			p.write_bs_hook = function()
-				local bs_hook = p.dummy_rvs or p.dummy_bs
+			p.write_bs_hook = function(bs_hook)
 				if bs_hook then
 					pgm:write_u8(p.addr.bs_hook1, bs_hook.id or 0x20)
 					pgm:write_u16(p.addr.bs_hook2, bs_hook.ver or 0x0600)
-					--print(string.format("bshook %s %x %x %x", global.frame_number, p.act, bs_hook.id or 0x20, bs_hook.ver or 0x0600))
+					print(string.format("bshook %s %x %x %x", global.frame_number, p.act, bs_hook.id or 0x20, bs_hook.ver or 0x0600))
 				else
 					pgm:write_u8(p.addr.bs_hook1, 0x20)
 					pgm:write_u16(p.addr.bs_hook2, 0x0600)
+					print(string.format("bshook %s %x %x %x", global.frame_number, 0x20, 0x0600))
 				end
 			end
 		end
@@ -4238,9 +4244,10 @@ function rbff2.startplugin()
 
 				-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
 				if p.act == 0x193 or p.act == 0x13B then
-					if p.dummy_wakeup == wakeup_type.rvs then
-						if toggle_joy_val("P" .. p.control .. " Button 1", 5) then
-							p.write_bs_hook()
+					if p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs and
+						p.on_wakeup+17 == global.frame_number then
+						if toggle_joy_val("P" .. p.control .. " Button 1") then
+							p.write_bs_hook(p.dummy_rvs)
 						end
 					end
 				elseif p.act == 0x192 or p.act == 0x18E then
@@ -4273,7 +4280,7 @@ function rbff2.startplugin()
 					end
 					if p.dummy_bs_cnt <= p.bs_count and p.dummy_bs then
 						if toggle_joy_val("P" .. p.control .. " Button 1") then
-							p.write_bs_hook()
+							p.write_bs_hook(p.dummy_bs)
 						end
 						p.bs_count = -1
 					end
@@ -4308,7 +4315,7 @@ function rbff2.startplugin()
 						p.on_guard1+18 == global.frame_number or
 						p.on_guard1+21 == global.frame_number then
 						if toggle_joy_val("P" .. p.control .. " Button 1") then
-							p.write_bs_hook()
+							p.write_bs_hook(p.dummy_rvs)
 						end
 					end
 				end
