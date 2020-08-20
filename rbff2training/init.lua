@@ -101,6 +101,7 @@ function rbff2.startplugin()
 		repeat_interval = 0,
 		await_neutral   = false,
 		replay_fix_pos  = false,
+		mame_debug_wnd  = false, -- MAMEデバッグウィンドウ表示のときtrue
 	}
 
 	-- DIPスイッチ
@@ -1121,6 +1122,15 @@ function rbff2.startplugin()
 			end
 		end
 	end
+	local jump_acts = {
+		[0x9] = true,
+		[0x0B] = true, [0x0C] = true,
+		[0x0D] = true, [0x0E] = true,
+		[0x0F] = true, [0x10] = true,
+		[0x0B] = true, [0x11] = true, [0x12] = true,
+		[0x0D] = true, [0x13] = true, [0x14] = true,
+		[0x0F] = true, [0x15] = true, [0x16] = true,
+	}
 	-- キー入力2
 	local cmd_neutral = function(p, next_joy)
 		next_joy["P" .. p.control .. " Up"] = false
@@ -2255,6 +2265,8 @@ function rbff2.startplugin()
 				                      { [0x100700] = true, [0x100900] = true, [0x100B00] = true, },
 			fireball         = {},
 
+			bs_hooked        = 0,           -- BSモードのフック処理フレーム数。
+
 			hit              = {
 				pos_x        = 0,
 				pos_z        = 0,
@@ -2372,8 +2384,9 @@ function rbff2.startplugin()
 				control1     = p1 and 0x100412 or 0x100512, -- Human 1 or 2, CPU 3
 				control2     = p1 and 0x100413 or 0x100513, -- Human 1 or 2, CPU 3
 				select_hook  = p1 and 0x10CDD1 or 0x10CDD5, -- プレイヤーセレクト画面のフック処理用アドレス
-				bs_hook1     = p1 and 0x10DDDA or 0x10DDDC, -- BSモードのフック処理用アドレス。技のID。
-				bs_hook2     = p1 and 0x10DDDB or 0x10DDDD, -- BSモードのフック処理用アドレス。技のバリエーション。
+				bs_hook1     = p1 and 0x10DDDA or 0x10DDDE, -- BSモードのフック処理用アドレス。技のID。
+				bs_hook2     = p1 and 0x10DDDB or 0x10DDDF, -- BSモードのフック処理用アドレス。技のバリエーション。
+				bs_hook3     = p1 and 0x10DDDD or 0x10DDE1, -- BSモードのフック処理用アドレス。技発動。
 
 				-- フックできない変わり用
 				state2       = p1 and 0x10CA0E or 0x10CA0F, -- 状態
@@ -2628,8 +2641,9 @@ function rbff2.startplugin()
 			-- 0395BA: 195E 00A5                move.b  (A6)+, ($a5,A4) -- 技データ読込 だいたい00、飛燕斬01、02、03
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03957E),
 				--"(maincpu.pw@107C22>0)&&((A6)==CB244)&&((maincpu.pb@10048E==2&&($100400==((A4)&$FFFFFF)))||(maincpu.pb@10058E==2&&($100500==((A4)&$FFFFFF))))",
-				"(maincpu.pw@107C22>0)&&((A6)==CB244)&&(((maincpu.pb@10048E==2||maincpu.pw@100460==$193||maincpu.pw@100460==$13B)&&($100400==((A4)&$FFFFFF)))||((maincpu.pb@10058E==2||maincpu.pw@100560==$193||maincpu.pw@100560==$13B)&&($100500==((A4)&$FFFFFF))))",
-				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$80);D1=(maincpu.pb@(temp1));A6=((A6)+2);maincpu.pb@((A4)+$A3)=D1;maincpu.pb@((A4)+$A4)=maincpu.pb@(temp1+1);maincpu.pb@((A4)+$A5)=maincpu.pb@(temp1+2);PC=((PC)+$20);g"))
+				--"(maincpu.pw@107C22>0)&&((A6)==CB244)&&(((maincpu.pb@10048E==2||maincpu.pw@100460==$193||maincpu.pw@100460==$13B)&&($100400==((A4)&$FFFFFF)))||((maincpu.pb@10058E==2||maincpu.pw@100560==$193||maincpu.pw@100560==$13B)&&($100500==((A4)&$FFFFFF))))",
+				"(maincpu.pw@107C22>0)&&((A6)==CB244)&&(((maincpu.pb@10DDDD==$1)&&($100400==((A4)&$FFFFFF)))||((maincpu.pb@10DDE1==$1)&&($100500==((A4)&$FFFFFF))))",
+				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$40);D1=(maincpu.pb@(temp1));A6=((A6)+2);maincpu.pb@((A4)+$A3)=D1;maincpu.pb@((A4)+$A4)=maincpu.pb@(temp1+1);maincpu.pb@((A4)+$A5)=maincpu.pb@(temp1+2);PC=((PC)+$20);g"))
 
 			-- ステージ設定用。メニューでFを設定した場合にのみ動作させる
 			-- ラウンド数を1に初期化→スキップ
@@ -3614,16 +3628,21 @@ function rbff2.startplugin()
 					p.dummy_bs = p.dummy_bs_list[math.random(#p.dummy_bs_list)]
 				end
 			end
-
 			-- BSモード用技ID更新フック用の値更新
+			if p.bs_hooked + 2 < global.frame_number then
+				pgm:write_u8(p.addr.bs_hook3, 0xFF) -- 初期化
+			end
 			p.write_bs_hook = function(bs_hook)
 				if bs_hook then
 					pgm:write_u8(p.addr.bs_hook1, bs_hook.id or 0x20)
 					pgm:write_u16(p.addr.bs_hook2, bs_hook.ver or 0x0600)
+					pgm:write_u8(p.addr.bs_hook3, 0x01)
+					p.bs_hooked = global.frame_number
 					print(string.format("bshook %s %x %x %x", global.frame_number, p.act, bs_hook.id or 0x20, bs_hook.ver or 0x0600))
 				else
 					pgm:write_u8(p.addr.bs_hook1, 0x20)
 					pgm:write_u16(p.addr.bs_hook2, 0x0600)
+					pgm:write_u8(p.addr.bs_hook3, 0xFF)
 					print(string.format("bshook %s %x %x %x", global.frame_number, 0x20, 0x0600))
 				end
 			end
@@ -4110,19 +4129,8 @@ function rbff2.startplugin()
 				-- なし, オート, 1ヒットガード, 1ガード, 常時, ランダム
 				-- リプレイ中は自動ガードしない
 				if (p.need_block or p.need_low_block or p.need_ovh_block) and accept_control then
-					local jumps = {0x9,
-						0x0B, 0x0C,
-						0x0D, 0x0E,
-						0x0F, 0x10,
-						0x0B, 0x11, 0x12,
-						0x0D, 0x13, 0x14,
-						0x0F, 0x15, 0x16,
-					}
-					for _, jump in pairs(jumps) do
-						if jump == p.act then
-							next_joy["P" .. p.control .. " Up"] = false
-							break
-						end
+					if jump_acts[p.act] then
+						next_joy["P" .. p.control .. " Up"] = false
 					end
 					if p.dummy_gd == dummy_gd_type.fixed then
 						-- 常時（ガード方向はダミーモードに従う）
@@ -4244,9 +4252,12 @@ function rbff2.startplugin()
 				end
 
 				-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
-				if p.act == 0x193 or p.act == 0x13B then
+				local landing = p.pos_y < p.old_pos_y and 0 < p.pos_y and p.pos_y < 15
+				if p.act == 0x193 or p.act == 0x13B or landing then
+					print("rvs")
 					if p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs and
-						p.on_wakeup+17 == global.frame_number then
+						(p.on_wakeup+17 == global.frame_number or landing) then
+							print("rvsx")
 						if toggle_joy_val("P" .. p.control .. " Button 1") then
 							p.write_bs_hook(p.dummy_rvs)
 						end
@@ -4698,6 +4709,7 @@ function rbff2.startplugin()
 		p[2].disp_frm            = col[11] == 2 -- 2P フレーム数表示     11
 		global.disp_pos          = col[12] == 2 -- 1P 2P 距離表示        12
 		dip_config.easy_super    = col[13] == 2 -- 簡易超必              13
+		global.mame_debug_wnd    = col[14] == 2 -- MAMEデバッグウィンドウ14
 
 		for _, p in ipairs(players) do
 			local max_life = p.red and 0x60 or 0xC0 -- 赤体力にするかどうか
@@ -4841,6 +4853,7 @@ function rbff2.startplugin()
 		col[11] = p[2].disp_frm and 2 or 1 -- 2P フレーム数表示     11
 		col[12] = g.disp_pos    and 2 or 1 -- 1P 2P 距離表示        12
 		col[13] = dip_config.easy_super and 2 or 1 -- 簡易超必      13
+		col[14] = global.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ14
 	end
 	menu_to_tra  = function() menu_cur = tra_menu end
 	menu_to_bar  = function() menu_cur = bar_menu end
@@ -5171,6 +5184,7 @@ function rbff2.startplugin()
 			{ "2P フレーム数表示"     , { "OFF", "ON" }, },
 			{ "1P 2P 距離表示"        , { "OFF", "ON" }, },
 			{ "簡易超必"              , { "OFF", "ON" }, },
+			{ "MAMEデバッグウィンドウ", { "OFF", "ON" }, },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
@@ -5187,8 +5201,9 @@ function rbff2.startplugin()
 				1, -- 2P 入力表示             9
 				1, -- 1P フレーム数表示      10
 				1, -- 2P フレーム数表示      11
-				1, -- 1P 2P 距離表示         13
-				1, -- 簡易超必               14
+				1, -- 1P 2P 距離表示         12
+				1, -- 簡易超必               13
+				1, -- MAMEデバッグウィンドウ 14
 			},
 		},
 		on_a = {
@@ -5205,6 +5220,7 @@ function rbff2.startplugin()
 			ex_menu_to_main, -- 2P フレーム数表示
 			ex_menu_to_main, -- 1P 2P 距離表示
 			ex_menu_to_main, -- 簡易超必
+			ex_menu_to_main, -- MAMEデバッグウィンドウ
 		},
 		on_b = {
 			ex_menu_to_main_cancel, -- －一般設定－
@@ -5220,6 +5236,7 @@ function rbff2.startplugin()
 			ex_menu_to_main_cancel, -- 2P フレーム数表示
 			ex_menu_to_main_cancel, -- 1P 2P 距離表示
 			ex_menu_to_main_cancel, -- 簡易超必
+			ex_menu_to_main_cancel, -- MAMEデバッグウィンドウ
 		},
 	}
 
@@ -5673,7 +5690,9 @@ function rbff2.startplugin()
 
 	emu.register_periodic(function()
 		main_or_menu()
-		auto_recovery_debug()
+		if global.mame_debug_wnd == false then
+			auto_recovery_debug()
+		end
 	end)
 end
 
