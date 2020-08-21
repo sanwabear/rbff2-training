@@ -962,11 +962,11 @@ function rbff2.startplugin()
 			{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
 			{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
 			{ name = "投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
-			{ name = "ダウン", type = act_types.any, ids = { 0x192, }, },
+			{ name = "ダウン", type = act_types.any, ids = { 0x192, }, }, -- 0x18E
 			{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, }, },
 			{ name = "気絶", type = act_types.any, ids = { 0x194, 0x195, }, },
 			{ name = "ガード", type = act_types.any, ids = { 0x117, 0x118, 0x119, 0x11A, 0x11B, 0x11C, 0x11D, 0x11E, 0x11F, 0x120, 0x121, 0x122, 0x123, 0x124, 0x125, 0x126, 0x127, 0x128, 0x129, 0x12A, 0x12C, 0x12D, 0x131, 0x132, 0x133, 0x134, 0x135, 0x136, 0x137, 0x139, }, },
-			{ name = "やられ", type = act_types.any, ids = { 0x13F, 0x140, 0x141, 0x142, 0x143, 0x144, 0x145, 0x146, 0x147, 0x148, 0x149, 0x14A, 0x14B, 0x14C, 0x14C, 0x14D, 0x14E, 0x14F, }, },
+			{ name = "やられ", type = act_types.any, ids = { 0x13F, 0x140, 0x141, 0x142, 0x143, 0x144, 0x145, 0x146, 0x147, 0x148, 0x149, 0x14A, 0x14B, 0x14C, 0x14C, 0x14D, 0x14E, 0x14F, 0x1E9, 0x239 }, },
 		},
 	}
 	local char_fireball_base = {
@@ -1131,6 +1131,8 @@ function rbff2.startplugin()
 		[0x0D] = true, [0x13] = true, [0x14] = true,
 		[0x0F] = true, [0x15] = true, [0x16] = true,
 	}
+	local wakeup_acts = { [0x193] = true, [0x13B] = true, }
+
 	-- キー入力2
 	local cmd_neutral = function(p, next_joy)
 		next_joy["P" .. p.control .. " Up"] = false
@@ -1346,7 +1348,7 @@ function rbff2.startplugin()
 			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント 烈風拳", },
 			-- { id = 0x47, ver = 0x0600, bs = false, name = "フェイント レイジングストーム", },
 		},
-		-- 望月双角,
+		-- 望月双角
 		{
 			{ id = 0x01, ver = 0x0600, bs = true , name = "野猿狩り", },
 			{ id = 0x02, ver = 0x0600, bs = true , name = "まきびし", },
@@ -1475,7 +1477,7 @@ function rbff2.startplugin()
 			{ id = 0x02, ver = 0x0600, bs = true , name = "大ヘッドスピンアタック", },
 			-- { id = 0x02, ver = 0x06FF, bs = true , name = "大ヘッドスピンアタック", },
 			-- { id = 0x00, ver = 0x06FF, bs = false, name = "ヘッドスピンアタック追撃", },
-			-- { id = 0x03, ver = 0x0600, bs = false, name = "フライングスピンアタック", },
+			{ id = 0x03, ver = 0x0600, bs = false, name = "フライングスピンアタック", },
 			{ id = 0x04, ver = 0x0600, bs = true , name = "ダンシングダイブ", },
 			{ id = 0x00, ver = 0x06FE, bs = false, name = "リバースダイブ", },
 			{ id = 0x05, ver = 0x06FE, bs = false, name = "ブレイクストーム", },
@@ -1484,16 +1486,16 @@ function rbff2.startplugin()
 			-- { id = 0x00, ver = 0x06FB, bs = false, name = "ブレイクストーム追撃3段階目", },
 			-- { id = 0x06, ver = 0x0600, bs = false, name = "ダックフェイント・空", },
 			-- { id = 0x07, ver = 0x0600, bs = false, name = "ダックフェイント・地", },
-			-- { id = 0x08, ver = 0x0600, bs = false, name = "ダイビングパニッシャー?", },
+			{ id = 0x08, ver = 0x0600, bs = false, name = "クロスヘッドスピン", },
 			{ id = 0x09, ver = 0x0600, bs = false, name = "ダンシングキャリバー", },
 			{ id = 0x0A, ver = 0x0600, bs = false, name = "ローリングパニッシャー", },
 			{ id = 0x0C, ver = 0x0600, bs = false, name = "ブレイクハリケーン", },
 			{ id = 0x10, ver = 0x0600, bs = false, name = "ブレイクスパイラル", },
-			{ id = 0x11, ver = 0x06FA, bs = false, name = "ブレイクスパイラルBR", },
+			--{ id = 0x11, ver = 0x06FA, bs = false, name = "ブレイクスパイラルBR", },
 			{ id = 0x12, ver = 0x0600, bs = false, name = "ダックダンス", },
 			--{ id = 0x00, ver = 0x06F8, bs = false, name = "ダックダンス継続", },
 			{ id = 0x13, ver = 0x0600, bs = false, name = "スーパーポンピングマシーン", },
-			-- { id = 0x00, ver = 0x06F9, bs = false, name = "?", },
+			-- { id = 0x00, ver = 0x06F9, bs = false, name = "ダイビングパニッシャー?", },
 			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント ダックダンス", },
 			-- { id = 0x28, ver = 0x0600, bs = false, name = "旧ブレイクストーム", },
 		},
@@ -2219,10 +2221,12 @@ function rbff2.startplugin()
 			frame_gap        = 0,
 			last_frame_gap   = 0,
 			act_contact      = 0,
-			on_guard         = 0,
-			guard1           = 0,
-			on_guard1        = 0,
-			on_hit           = 0,
+			guard1           = 0,          -- ガード時（硬直前後）フレームの判断用
+			on_guard         = 0,          -- ガード時（硬直前）フレーム
+			on_guard1        = 0,          -- ガード時（硬直後）フレーム
+			hit1             = 0,          -- ヒット時（硬直前後）フレームの判断用
+			on_hit           = 0,          -- ヒット時（硬直前）フレーム
+			on_hit1          = 0,          -- ヒット時（硬直後）フレーム
 			on_wakeup        = 0,
 			hit_skip         = 0,
 			skip_frame       = false,
@@ -2236,6 +2240,7 @@ function rbff2.startplugin()
 			act_frames_total = 0,
 
 			muteki           = {
+				type         = 0,
 				act_frames   = {},
 				act_frames2  = {},
 			},
@@ -3426,34 +3431,15 @@ function rbff2.startplugin()
 				if p.state == 2 then
 					p.on_guard = global.frame_number
 					--print(string.format("on guard %x" , p.act))
-				elseif p.state == 1 then
+				elseif p.state == 1 or p.state == 3 then
 					p.on_hit = global.frame_number
 				end
 				p.hit_skip = 2
 			end
-			if p.state ~= 2 then
-				p.guard1 = 0
-			elseif p.on_guard == global.frame_number then
-				p.guard1 = 1 -- 1ガード確定
-			elseif p.guard1 == 1 and p.skip_frame == false and p.hit_skip == 0 then
-				p.guard1 = 2 -- ガード後のヒットストップ解除フレームの記録
-				p.on_guard1 = global.frame_number
-				--print("on guard1")
-			end
 
-			if (p.old_act ~= 0x193 and p.old_act ~= 0x13B) and (p.act == 0x193 or p.act == 0x13B) then
+			-- 起き上がりフレーム
+			if wakeup_acts[p.old_act] ~= true and wakeup_acts[p.act] == true then
 				p.on_wakeup = global.frame_number
-			end
-
-			--停止演出のチェック
-			p.skip_frame = p.hit_skip ~= 0 or p.stop ~= 0 or mem_0x10D4EA ~= 0
-
-			if p.skip_frame then
-				--停止フレームはフレーム計算しない
-				if p.hit_skip ~= 0 then
-					--ヒットストップの減算
-					p.hit_skip = p.hit_skip - 1
-				end
 			end
 
 			-- フレーム表示用処理
@@ -3615,37 +3601,6 @@ function rbff2.startplugin()
 					--print(string.format("%x %s", fb.act, act_type)) -- debug
 				end
 			end
-
-			-- リバーサルのランダム選択
-			p.dummy_rvs = nil
-			if p.dummy_wakeup == wakeup_type.rvs and #p.dummy_rvs_list > 0 then
-				p.dummy_rvs = p.dummy_rvs_list[math.random(#p.dummy_rvs_list)]
-			end
-			-- ブレイクショットのランダム選択
-			p.dummy_bs = nil
-			if p.dummy_gd == dummy_gd_type.bs and #p.dummy_bs_list > 0 then
-				if p.state == 2 and (p.skip_frame or p.hit_skip ~= 0) then
-					p.dummy_bs = p.dummy_bs_list[math.random(#p.dummy_bs_list)]
-				end
-			end
-			-- BSモード用技ID更新フック用の値更新
-			if p.bs_hooked + 2 < global.frame_number then
-				pgm:write_u8(p.addr.bs_hook3, 0xFF) -- 初期化
-			end
-			p.write_bs_hook = function(bs_hook)
-				if bs_hook then
-					pgm:write_u8(p.addr.bs_hook1, bs_hook.id or 0x20)
-					pgm:write_u16(p.addr.bs_hook2, bs_hook.ver or 0x0600)
-					pgm:write_u8(p.addr.bs_hook3, 0x01)
-					p.bs_hooked = global.frame_number
-					print(string.format("bshook %s %x %x %x", global.frame_number, p.act, bs_hook.id or 0x20, bs_hook.ver or 0x0600))
-				else
-					pgm:write_u8(p.addr.bs_hook1, 0x20)
-					pgm:write_u16(p.addr.bs_hook2, 0x0600)
-					pgm:write_u8(p.addr.bs_hook3, 0xFF)
-					print(string.format("bshook %s %x %x %x", global.frame_number, 0x20, 0x0600))
-				end
-			end
 		end
 
 		-- 判定データ排他用のテーブル
@@ -3681,6 +3636,106 @@ function rbff2.startplugin()
 			-- キャラと飛び道具への当たり判定の反映
 			-- update_objectはキャラの位置情報と当たり判定の情報を読み込んだ後で実行すること
 			update_object(p, global.frame_number)
+		end
+		for i, p in ipairs(players) do
+			-- 無敵表示
+			p.muteki.type = 0 -- 無敵
+			p.vul_hi, p.vul_lo = 240, 0
+			for _, box in pairs(p.hitboxes) do
+				if box.type.type == "vuln" then
+					p.muteki.type = 3
+					if box.top < box.bottom then
+						p.vul_hi = math.min(p.vul_hi, box.top-screen_top)
+						p.vul_lo = math.max(p.vul_lo, box.bottom-screen_top)
+					else
+						p.vul_hi = math.min(p.vul_hi, box.bottom-screen_top)
+						p.vul_lo = math.max(p.vul_lo, box.top-screen_top)
+					end
+				end
+			end
+			if p.on_sway_line then
+				p.muteki.type = 4 -- スウェー上
+			elseif p.muteki.type == 0 then
+				p.muteki.type = 0 -- 全身無敵
+			elseif 152 <= p.vul_hi and p.pos_y <= 0 then -- 152 ローレンス避け 156 兄龍転身 168 その他避け
+				p.muteki.type = 1 -- 上半身無敵（地上）
+			elseif p.vul_lo <= 172 and p.pos_y <= 0 then -- 160 164 168 172 ダブルローリング サイドワインダー
+				p.muteki.type = 2 -- 足元無敵（地上）
+			else
+				p.muteki.type = 3
+			end
+
+			--停止演出のチェック
+			p.skip_frame = p.hit_skip ~= 0 or p.stop ~= 0 or mem_0x10D4EA ~= 0
+
+			if p.hit_skip ~= 0 or mem_0x10D4EA ~= 0 then
+				--停止フレームはフレーム計算しない
+				if p.hit_skip ~= 0 then
+					--ヒットストップの減算
+					p.hit_skip = p.hit_skip - 1
+				end
+			end
+
+			-- ヒットフレームの判断
+			if p.state ~= 1 and p.state ~= 3 then
+				p.hit1 = 0
+			elseif p.on_hit == global.frame_number then
+				p.hit1 = 1 -- 1ヒット確定
+				print("on hit")
+			end
+			-- 停止時間なしのヒットガードのためelseifで繋げない
+			if p.hit1 == 1 and p.skip_frame == false then
+				p.hit1 = 2 -- ヒット後のヒットストップ解除フレームの記録
+				p.on_hit1 = global.frame_number
+				print("on hit1")
+			end
+
+			-- ガードフレームの判断
+			if p.state ~= 2 then
+				p.guard1 = 0
+			elseif p.on_guard == global.frame_number then
+				p.guard1 = 1 -- 1ガード確定
+				print("on guard")
+			end
+			-- 停止時間なしのヒットガードのためelseifで繋げない
+			if p.guard1 == 1 and p.skip_frame == false then
+				p.guard1 = 2 -- ガード後のヒットストップ解除フレームの記録
+				p.on_guard1 = global.frame_number
+				print("on guard1")
+			end
+		end
+
+		for i, p in ipairs(players) do
+			-- リバーサルのランダム選択
+			p.dummy_rvs = nil
+			if p.dummy_wakeup == wakeup_type.rvs and #p.dummy_rvs_list > 0 then
+				p.dummy_rvs = p.dummy_rvs_list[math.random(#p.dummy_rvs_list)]
+			end
+			-- ブレイクショットのランダム選択
+			p.dummy_bs = nil
+			if p.dummy_gd == dummy_gd_type.bs and #p.dummy_bs_list > 0 then
+				if p.state == 2 and p.skip_frame then
+					p.dummy_bs = p.dummy_bs_list[math.random(#p.dummy_bs_list)]
+				end
+			end
+			-- BSモード用技ID更新フック用の値更新
+			if p.bs_hooked + 2 < global.frame_number then
+				pgm:write_u8(p.addr.bs_hook3, 0xFF) -- 初期化
+			end
+			p.write_bs_hook = function(bs_hook)
+				if bs_hook then
+					pgm:write_u8(p.addr.bs_hook1, bs_hook.id or 0x20)
+					pgm:write_u16(p.addr.bs_hook2, bs_hook.ver or 0x0600)
+					pgm:write_u8(p.addr.bs_hook3, 0x01)
+					p.bs_hooked = global.frame_number
+					print(string.format("bshook %s %x %x %x", global.frame_number, p.act, bs_hook.id or 0x20, bs_hook.ver or 0x0600))
+				else
+					pgm:write_u8(p.addr.bs_hook1, 0x20)
+					pgm:write_u16(p.addr.bs_hook2, 0x0600)
+					pgm:write_u8(p.addr.bs_hook3, 0xFF)
+					print(string.format("bshook %s %x %x %x", global.frame_number, 0x20, 0x0600))
+				end
+			end
 		end
 
 		-- キャラ間の距離
@@ -3767,7 +3822,7 @@ function rbff2.startplugin()
 
 			--ガード移行できない行動は色替えする
 			local col, line = 0xAAF0E68C, 0xDDF0E68C
-			if p.skip_frame or p.hit_skip ~= 0 then
+			if p.skip_frame and p.muteki.type == 0 then
 				col, line = 0xAA888888, 0xDD888888
 			elseif p.attacking then
 				col, line = 0xAAFF1493, 0xDDFF1493
@@ -3843,34 +3898,16 @@ function rbff2.startplugin()
 			local last_frame = frame
 
 			-- 無敵表示
-			local muteki = 0 -- 無敵
-			local vul_hi, vul_lo = 240, 0
-			for _, box in pairs(p.hitboxes) do
-				if box.type.type == "vuln" then
-					muteki = 3
-					if box.top < box.bottom then
-						vul_hi = math.min(vul_hi, box.top-screen_top)
-						vul_lo = math.max(vul_lo, box.bottom-screen_top)
-					else
-						vul_hi = math.min(vul_hi, box.bottom-screen_top)
-						vul_lo = math.max(vul_lo, box.top-screen_top)
-					end
-				end
-			end
-			if p.on_sway_line then
-				-- スウェー上
-				muteki, col, line = 4, 0xAAFFA500, 0xDDAFEEEE
-			elseif muteki == 0 then
-				-- 全身無敵
-				muteki, col, line = 0, 0xAAB0E0E6, 0xDDAFEEEE
-			elseif 152 <= vul_hi and p.pos_y <= 0 then -- 152 ローレンス避け 156 兄龍転身 168 その他避け
-				-- 上半身無敵（地上）
-				muteki, col, line = 1, 0xAA32CD32, 0xDDAFEEEE
-			elseif vul_lo <= 172 and p.pos_y <= 0 then -- 160 164 168 172 ダブルローリング サイドワインダー
-				-- 足元無敵（地上）
-				muteki, col, line = 2, 0xAA9400D3, 0xDDAFEEEE
+			if p.muteki.type== 4 then -- スウェー上
+				col, line = 0xAAFFA500, 0xDDAFEEEE
+			elseif p.muteki.type == 0 then -- 全身無敵
+				col, line = 0xAAB0E0E6, 0xDDAFEEEE
+			elseif p.muteki.type == 1 then -- 上半身無敵（地上）
+				col, line = 0xAA32CD32, 0xDDAFEEEE
+			elseif p.muteki.type == 2 then -- 足元無敵（地上）
+				col, line = 0xAA9400D3, 0xDDAFEEEE
 			else
-				muteki, col, line = 3, 0x00000000, 0x00000000
+				col, line = 0x00000000, 0x00000000
 			end
 			--print(string.format("top %s, hi %s, lo %s", screen_top, vul_hi, vul_lo))
 
@@ -4253,11 +4290,8 @@ function rbff2.startplugin()
 
 				-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
 				local landing = p.pos_y < p.old_pos_y and 0 < p.pos_y and p.pos_y < 15
-				if p.act == 0x193 or p.act == 0x13B or landing then
-					print("rvs")
-					if p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs and
-						(p.on_wakeup+17 == global.frame_number or landing) then
-							print("rvsx")
+				if wakeup_acts[p.act] or landing then
+					if p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs and (p.on_wakeup+17 == global.frame_number or landing) then
 						if toggle_joy_val("P" .. p.control .. " Button 1") then
 							p.write_bs_hook(p.dummy_rvs)
 						end
@@ -4321,13 +4355,25 @@ function rbff2.startplugin()
 				28F硬直                      ++++++++x
 				反映                         ^21F
 				]]
-				if p.dummy_wakeup == wakeup_type.rvs and p.state == 2 and p.dummy_rvs then
-					if p.on_guard1+9 == global.frame_number or
-						p.on_guard1+16 == global.frame_number or
-						p.on_guard1+18 == global.frame_number or
-						p.on_guard1+21 == global.frame_number then
-						if toggle_joy_val("P" .. p.control .. " Button 1") then
-							p.write_bs_hook(p.dummy_rvs)
+				if p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs then
+					if p.state == 2 then
+						for _, gap in pairs({ 9, 16, 18, 21, 38 }) do
+							if p.on_guard1+gap == global.frame_number then
+								if toggle_joy_val("P" .. p.control .. " Button 1") then
+									p.write_bs_hook(p.dummy_rvs)
+									break;
+								end
+							end
+						end
+					elseif p.state == 1 or p.state == 3 then
+						for _, gap in pairs({ 13, 22, 26, 30, 35, 40, 44 }) do
+							if p.on_hit1+gap == global.frame_number then
+								if toggle_joy_val("P" .. p.control .. " Button 1") then
+									p.write_bs_hook(p.dummy_rvs)
+									print("rvs " .. gap)
+									break;
+								end
+							end
 						end
 					end
 				end
