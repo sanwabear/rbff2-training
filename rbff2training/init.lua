@@ -2016,11 +2016,13 @@ function rbff2.startplugin()
 			end
 		end
 		box.type = box.type or box_type_base.x1
-		--[[ この判定が意味がないので無効化
-		if (attack_only and box.type ~= box_type_base.a) or (not attack_only and box.type == box_type_base.a) then
+		if attack_only == true and box.type ~= box_type_base.a then
+			--print("ignore NOT attack type " .. key)
+			return nil
+		elseif attack_only ~= true and box.type == box_type_base.a then
+			--print("ignore attack type "  .. key)
 			return nil
 		end
-		]]
 		if box.type == box_type_base.a then
 			-- 攻撃中のフラグをたてる
 			p.attacking = true
@@ -2130,10 +2132,18 @@ function rbff2.startplugin()
 		elseif p.hit.vulnerable21 == 1 then
 			p.hit.vulnerable = p.hit.vulnerable22
 		end
+
+		-- 判定データ排他用のテーブル
+		local uniq_hitboxes = {}
 		for _, box in ipairs(p.buffer) do
 			local hitbox = new_hitbox(p, box.id, box.top, box.bottom, box.left, box.right, box.attack_only, box.is_fireball, box.key)
 			if hitbox then
-				table.insert(p.hitboxes, hitbox)
+				if not uniq_hitboxes[box.key] then
+					uniq_hitboxes[box.key] = true
+					table.insert(p.hitboxes, hitbox)
+				else
+					--print("DROP " .. box.key) --debug
+				end
 			end
 		end
 
@@ -2677,22 +2687,22 @@ function rbff2.startplugin()
 			--判定追加1
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x012C42),
 				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100F00)",
-				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;temp0=temp0+$10;maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
+				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
 
 			--判定追加2
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x012C88),
 				"(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100F00)",
-				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$01;temp0=temp0+$10;maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
+				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$01;maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
 
 			--判定追加3
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x012D4C),
 				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100F00)",
-				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;temp0=temp0+$10;maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
+				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
 
 			--判定追加4
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x012D92),
 				"(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100F00)",
-				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;temp0=temp0+$10;maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
+				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
 
 			--ground throws
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05D782),
@@ -2787,7 +2797,7 @@ function rbff2.startplugin()
 		-- 各種当たり判定のフック
 		-- 0x10CB40 当たり判定の発生個数
 		-- 0x10CB41 から 0x10 間隔で当たり判定をbpsetのフックで記録する
-		for addr = 0x10CB41, 0x10CB41 + pgm:read_u8(0x10CB40) * 0x10, 0x10 do
+		for addr = 0x10CB41, 0x10CB41 + pgm:read_u8(0x10CB40) * 0x11 do
 			pgm:write_u8(addr, 0xFF)
 		end
 		pgm:write_u8(0x10CB40, 0x00)
@@ -3603,35 +3613,27 @@ function rbff2.startplugin()
 			end
 		end
 
-		-- 判定データ排他用のテーブル
-		local uniq_hitboxes = {}
-
 		-- キャラと飛び道具の当たり判定取得
 		for addr = 0x10CB41, 0x10CB41 + pgm:read_u8(0x10CB40) * 0x10, 0x10 do
 			local box = {
 				on          = pgm:read_u8(addr),
-				id          = pgm:read_u8(addr+1),
-				top         = pgm:read_i8(addr+2),
-				bottom      = pgm:read_i8(addr+3),
-				left        = pgm:read_i8(addr+4),
-				right       = pgm:read_i8(addr+5),
-				base        = pgm:read_u32(addr+6),
+				id          = pgm:read_u8(addr+0x1),
+				top         = pgm:read_i8(addr+0x2),
+				bottom      = pgm:read_i8(addr+0x3),
+				left        = pgm:read_i8(addr+0x4),
+				right       = pgm:read_i8(addr+0x5),
+				base        = pgm:read_u32(addr+0x6),
 				attack_only = (pgm:read_u8(addr+0xA) == 1),
+				attack_only_val = pgm:read_u8(addr+0xA),
 			}
 			if box.on ~= 0xFF and temp_hits[box.base] then
 				box.key = string.format("%x %x id:%x x1:%x x2:%x y1:%x y2:%x", global.frame_number, box.base, box.id, box.top, box.bottom, box.left, box.right)
-				if not uniq_hitboxes[box.key] then
-					uniq_hitboxes[box.key] = true
-					box.is_fireball = temp_hits[box.base].is_fireball == true
-					table.insert(temp_hits[box.base].buffer, box)
-				else
-					--print("DROP " .. box.key) --debug
-				end
+				box.is_fireball = temp_hits[box.base].is_fireball == true
+				table.insert(temp_hits[box.base].buffer, box)
 			else
 				--print("DROP " .. box.key) --debug
 			end
 		end
-		uniq_hitboxes = {}
 		for _, p in pairs(temp_hits) do
 			-- キャラと飛び道具への当たり判定の反映
 			-- update_objectはキャラの位置情報と当たり判定の情報を読み込んだ後で実行すること
@@ -3822,7 +3824,7 @@ function rbff2.startplugin()
 
 			--ガード移行できない行動は色替えする
 			local col, line = 0xAAF0E68C, 0xDDF0E68C
-			if p.skip_frame and p.muteki.type == 0 then
+			if p.skip_frame then
 				col, line = 0xAA888888, 0xDD888888
 			elseif p.attacking then
 				col, line = 0xAAFF1493, 0xDDFF1493
