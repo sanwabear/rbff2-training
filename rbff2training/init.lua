@@ -1273,9 +1273,27 @@ function rbff2.startplugin()
 		end,
 	}
 	-- コマンドテーブル上の技ID
+	local common_rvs = {
+		{ cmd = cmd_base._a      , bs = false, name = "立A", },
+		{ cmd = cmd_base._b      , bs = false, name = "立B", },
+		{ cmd = cmd_base._c      , bs = false, name = "立C", },
+		{ cmd = cmd_base._d      , bs = false, name = "立D", },
+		{ cmd = cmd_base._ab     , bs = false, name = "避け攻撃", },
+		-- { cmd = cmd_base._6c     , bs = false, name = "投げ", },
+		-- { cmd = cmd_base._2a     , bs = false, name = "下A", },
+		-- { cmd = cmd_base._2b     , bs = false, name = "下B", },
+		-- { cmd = cmd_base._2c     , bs = false, name = "下C", },
+		-- { cmd = cmd_base._8      , bs = false, name = "垂直ジャンプ", },
+		-- { cmd = cmd_base._9      , bs = false, name = "前ジャンプ", },
+		-- { cmd = cmd_base._7      , bs = false, name = "後ジャンプ", },
+		-- { id = 0x1E, ver = 0x0600, bs = true , name = "ダッシュ", },
+		-- { id = 0x1F, ver = 0x0600, bs = true , name = "飛び退き", },
+	}
 	local char_rvs_list = {
 		-- テリー・ボガード
 		{
+			-- { cmd = cmd_base._3a     , bs = false, name = "ワイルドアッパー", },
+			-- { cmd = cmd_base._6b     , bs = false, name = "バックスピンキック", },
 			{ id = 0x01, ver = 0x0600, bs = true , name = "小バーンナックル", },
 			{ id = 0x02, ver = 0x0600, bs = true , name = "大バーンナックル", },
 			{ id = 0x03, ver = 0x0600, bs = true , name = "パワーウェイブ", },
@@ -1627,6 +1645,9 @@ function rbff2.startplugin()
 	-- ブレイクショット対応技のみ
 	local char_bs_list = {}
 	for _, list in pairs(char_rvs_list) do
+		for i, cmd in pairs(common_rvs) do
+			table.insert(list, i, cmd)
+		end
 		local bs_list = {}
 		for _, cmd in pairs(list) do
 			if cmd.bs then
@@ -1819,7 +1840,7 @@ function rbff2.startplugin()
 	local box_type_base = {
 		a   = { id = 0x00, name = "攻撃",               enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF00FF, fill = 0x40, outline = 0xFF },
 		t3  = { id = 0x00, name = "未使用",             enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0x8B4513, fill = 0x40, outline = 0xFF },
-		pa  = { id = 0x00, name = "飛び道具(未使用?)",  enabled = true, type_check = type_ck_und,  type = "attack", color = 0xFF00FF, fill = 0x40, outline = 0xFF },
+		pa  = { id = 0x00, name = "飛び道具",           enabled = true, type_check = type_ck_und,  type = "attack", color = 0xFF0033, fill = 0x40, outline = 0xFF },
 		t   = { id = 0x00, name = "投げ",               enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
 		at  = { id = 0x00, name = "必殺技投げ",         enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
 		pt  = { id = 0x00, name = "空中投げ",           enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
@@ -2002,12 +2023,19 @@ function rbff2.startplugin()
 	end
 
 	-- 当たり判定表示
+	local accept_atk_only = {
+		[box_type_base.a ] = true,
+		[box_type_base.v3] = true,
+		[box_type_base.v4] = true,
+		[box_type_base.v5] = true,
+		[box_type_base.v6] = true,
+		[box_type_base.x1] = true,
+	}
 	local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fireball, key)
 		local box = {id = id}
-		local a = "攻撃判定"
 		box.type = nil
 		if box.id + 1 > #box_types then
-			box.type = box_type_base.a
+			box.type = is_fireball and box_type_base.pa or box_type_base.a
 			--print(string.format("attack id %x", box.id))
 		else
 			box.type = box_types[box.id + 1]
@@ -2016,13 +2044,14 @@ function rbff2.startplugin()
 			end
 		end
 		box.type = box.type or box_type_base.x1
-		if attack_only == true and box.type ~= box_type_base.a then
-			--print("ignore NOT attack type " .. key)
+		--[[ 意味がないので無効化する
+		local accept_atk = accept_atk_only[box.type]
+		if attack_only == true and accept_atk ~= true then
 			return nil
-		elseif attack_only ~= true and box.type == box_type_base.a then
-			--print("ignore attack type "  .. key)
+		elseif attack_only ~= true and accept_atk == true then
 			return nil
 		end
+		]]
 		if box.type == box_type_base.a then
 			-- 攻撃中のフラグをたてる
 			p.attacking = true
@@ -2239,6 +2268,7 @@ function rbff2.startplugin()
 			on_hit1          = 0,          -- ヒット時（硬直後）フレーム
 			on_wakeup        = 0,
 			hit_skip         = 0,
+			old_skip_frame   = false,
 			skip_frame       = false,
 
 			key_now          = {},          -- 前フレームまでの個別キー入力フレーム
@@ -3668,6 +3698,7 @@ function rbff2.startplugin()
 			end
 
 			--停止演出のチェック
+			p.old_skip_frame = p.skip_frame
 			p.skip_frame = p.hit_skip ~= 0 or p.stop ~= 0 or mem_0x10D4EA ~= 0
 
 			if p.hit_skip ~= 0 or mem_0x10D4EA ~= 0 then
@@ -3683,13 +3714,11 @@ function rbff2.startplugin()
 				p.hit1 = 0
 			elseif p.on_hit == global.frame_number then
 				p.hit1 = 1 -- 1ヒット確定
-				print("on hit")
 			end
 			-- 停止時間なしのヒットガードのためelseifで繋げない
-			if p.hit1 == 1 and p.skip_frame == false then
+			if (p.hit1 == 1 and p.skip_frame == false) or ((p.state == 1 or p.state == 3) and p.old_skip_frame == true and p.skip_frame == false) then
 				p.hit1 = 2 -- ヒット後のヒットストップ解除フレームの記録
 				p.on_hit1 = global.frame_number
-				print("on hit1")
 			end
 
 			-- ガードフレームの判断
@@ -3697,13 +3726,11 @@ function rbff2.startplugin()
 				p.guard1 = 0
 			elseif p.on_guard == global.frame_number then
 				p.guard1 = 1 -- 1ガード確定
-				print("on guard")
 			end
 			-- 停止時間なしのヒットガードのためelseifで繋げない
-			if p.guard1 == 1 and p.skip_frame == false then
+			if (p.guard1 == 1 and p.skip_frame == false) or (p.state == 2 and p.old_skip_frame == true and p.skip_frame == false) then
 				p.guard1 = 2 -- ガード後のヒットストップ解除フレームの記録
 				p.on_guard1 = global.frame_number
-				print("on guard1")
 			end
 		end
 
@@ -3725,17 +3752,17 @@ function rbff2.startplugin()
 				pgm:write_u8(p.addr.bs_hook3, 0xFF) -- 初期化
 			end
 			p.write_bs_hook = function(bs_hook)
-				if bs_hook then
+				if bs_hook and bs_hook.id then
 					pgm:write_u8(p.addr.bs_hook1, bs_hook.id or 0x20)
 					pgm:write_u16(p.addr.bs_hook2, bs_hook.ver or 0x0600)
 					pgm:write_u8(p.addr.bs_hook3, 0x01)
 					p.bs_hooked = global.frame_number
-					print(string.format("bshook %s %x %x %x", global.frame_number, p.act, bs_hook.id or 0x20, bs_hook.ver or 0x0600))
+					-- print(string.format("bshook %s %x %x %x", global.frame_number, p.act, bs_hook.id or 0x20, bs_hook.ver or 0x0600))
 				else
 					pgm:write_u8(p.addr.bs_hook1, 0x20)
 					pgm:write_u16(p.addr.bs_hook2, 0x0600)
 					pgm:write_u8(p.addr.bs_hook3, 0xFF)
-					print(string.format("bshook %s %x %x %x", global.frame_number, 0x20, 0x0600))
+					-- print(string.format("bshook %s %x %x %x", global.frame_number, 0x20, 0x0600))
 				end
 			end
 		end
@@ -4289,14 +4316,21 @@ function rbff2.startplugin()
 					end
 					return next_joy[btn]
 				end
+				local input_rvs = function()
+					if p.dummy_rvs.cmd then
+						p.dummy_rvs.cmd(p, next_joy)
+					else
+						if toggle_joy_val("P" .. p.control .. " Button 1") then
+							p.write_bs_hook(p.dummy_rvs)
+						end
+					end
+				end
 
 				-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
 				local landing = p.pos_y < p.old_pos_y and 0 < p.pos_y and p.pos_y < 15
 				if wakeup_acts[p.act] or landing then
 					if p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs and (p.on_wakeup+17 == global.frame_number or landing) then
-						if toggle_joy_val("P" .. p.control .. " Button 1") then
-							p.write_bs_hook(p.dummy_rvs)
-						end
+						input_rvs()
 					end
 				elseif p.act == 0x192 or p.act == 0x18E then
 					if p.dummy_wakeup == wakeup_type.tech then
@@ -4361,20 +4395,15 @@ function rbff2.startplugin()
 					if p.state == 2 then
 						for _, gap in pairs({ 9, 16, 18, 21, 38 }) do
 							if p.on_guard1+gap == global.frame_number then
-								if toggle_joy_val("P" .. p.control .. " Button 1") then
-									p.write_bs_hook(p.dummy_rvs)
-									break;
-								end
+								input_rvs()
+								break;
 							end
 						end
 					elseif p.state == 1 or p.state == 3 then
-						for _, gap in pairs({ 13, 22, 26, 30, 35, 40, 44 }) do
+						for _, gap in pairs({ 0, 13, 22, 26, 30, 35, 40, 44 }) do
 							if p.on_hit1+gap == global.frame_number then
-								if toggle_joy_val("P" .. p.control .. " Button 1") then
-									p.write_bs_hook(p.dummy_rvs)
-									print("rvs " .. gap)
-									break;
-								end
+								input_rvs()
+								break;
 							end
 						end
 					end
