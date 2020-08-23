@@ -127,7 +127,7 @@ function rbff2.startplugin()
 	}
 
 	-- 行動の種類
-	local act_types = { free = -1, attack = 0, low_attack = 1, provoke =  2, any = 3, overhead = 4 }
+	local act_types = { free = -1, attack = 0, low_attack = 1, provoke =  2, any = 3, overhead = 4, guard = 5, hit = 6, }
 
 	local char_names = {
 		"テリー・ボガード", "アンディ・ボガード", "東丈", "不知火舞", "ギース・ハワード", "望月双角",
@@ -148,7 +148,7 @@ function rbff2.startplugin()
 		{ id = 0x0A, name = "GOLI-Rock"                     , }, --フランコ・バッシュ
 		{ id = 0x0B, name = "C62 -シロクニ- Ver.2"          , }, --山崎竜二
 		{ id = 0x0C, name = "パンドラの箱より 第3番「決断」", }, --秦崇秀
-		{ id = 0x0D, name = "パンドラの箱より 第3番「決断」", }, --秦崇雷,
+		{ id = 0x0D, name = "パンドラの箱より 第3番「決断」 ", }, --秦崇雷 崇秀と崇雷が同じBGMなので名前にスペースいれて排他かける
 		{ id = 0x0E, name = "Duck! Duck! Duck!"             , }, --ダック・キング
 		{ id = 0x0F, name = "ソウルっす♪"                  , }, --キム・カッファン
 		{ id = 0x10, name = "ロンドンマーチ"                , }, --ビリー・カーン
@@ -965,8 +965,8 @@ function rbff2.startplugin()
 			{ name = "ダウン", type = act_types.any, ids = { 0x192, }, }, -- 0x18E
 			{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, }, },
 			{ name = "気絶", type = act_types.any, ids = { 0x194, 0x195, }, },
-			{ name = "ガード", type = act_types.any, ids = { 0x117, 0x118, 0x119, 0x11A, 0x11B, 0x11C, 0x11D, 0x11E, 0x11F, 0x120, 0x121, 0x122, 0x123, 0x124, 0x125, 0x126, 0x127, 0x128, 0x129, 0x12A, 0x12C, 0x12D, 0x131, 0x132, 0x133, 0x134, 0x135, 0x136, 0x137, 0x139, }, },
-			{ name = "やられ", type = act_types.any, ids = { 0x13F, 0x140, 0x141, 0x142, 0x143, 0x144, 0x145, 0x146, 0x147, 0x148, 0x149, 0x14A, 0x14B, 0x14C, 0x14C, 0x14D, 0x14E, 0x14F, 0x1E9, 0x239 }, },
+			{ name = "ガード", type = act_types.guard, ids = { 0x117, 0x118, 0x119, 0x11A, 0x11B, 0x11C, 0x11D, 0x11E, 0x11F, 0x120, 0x121, 0x122, 0x123, 0x124, 0x125, 0x126, 0x127, 0x128, 0x129, 0x12A, 0x12C, 0x12D, 0x131, 0x132, 0x133, 0x134, 0x135, 0x136, 0x137, 0x139, }, },
+			{ name = "やられ", type = act_types.hit, ids = { 0x13F, 0x140, 0x141, 0x142, 0x143, 0x144, 0x145, 0x146, 0x147, 0x148, 0x149, 0x14A, 0x14B, 0x14C, 0x14C, 0x14D, 0x14E, 0x14F, 0x1E9, 0x239 }, },
 		},
 	}
 	local char_fireball_base = {
@@ -1106,7 +1106,11 @@ function rbff2.startplugin()
 		char_acts[char], char_1st_acts[char] = {}, {}
 		for i, acts in pairs(acts_base) do
 			for i, id in ipairs(acts.ids) do
-				char_1st_acts[char][id] = i == 1
+				if acts.type == act_types.guard or acts.type == act_types.hit then
+					-- char_1st_actsには登録しない
+				else
+					char_1st_acts[char][id] = i == 1
+				end
 				char_acts[char][id] = acts
 			end
 		end
@@ -2441,6 +2445,7 @@ function rbff2.startplugin()
 				vulnerable1  = p1 and 0x10CB30 or 0x10CB31,
 				vulnerable21 = p1 and 0x10CB32 or 0x10CB33,
 				vulnerable22 = p1 and 0x10CB34 or 0x10CB35, --0の時vulnerable=true
+
 			},
 		}
 
@@ -3509,6 +3514,15 @@ function rbff2.startplugin()
 				}
 				p.act_1st    = false
 			end
+			if p.act_data.name == "やられ" then
+				p.act_1st    = false
+			elseif (p.state == 1 or p.state == 3) then
+				p.act_data   = {
+					name     = "やられ",
+					type     = act_types.any,
+				}
+				p.act_1st    = false
+			end
 			p.old_act_normal = p.act_normal
 			p.act_normal     = p.act_data.type == act_types.free
 
@@ -3700,6 +3714,59 @@ function rbff2.startplugin()
 			--停止演出のチェック
 			p.old_skip_frame = p.skip_frame
 			p.skip_frame = p.hit_skip ~= 0 or p.stop ~= 0 or mem_0x10D4EA ~= 0
+
+			--[[調査用ログ
+			local printdata = function()
+				print(string.format("%2s %2s %2x %2s %2x %4x %4x %2x %2x %2x %2x %2x %2x %4x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x", 
+				p.state,                  --1
+				p.stop,                   --2 0x10058D
+				pgm:read_u8(0x1005D0),    --3
+				pgm:read_u8(0x100569),    --4
+				pgm:read_u8(0x100589),    --5
+				pgm:read_u16(0x100520),   --6
+				pgm:read_u16(0x100524),   --7
+				pgm:read_u8(0x100558),    --8
+				pgm:read_u8(0x10057F),    --9
+				pgm:read_u8(0x1005B8),    --10
+				pgm:read_u8(0x1005ee),    --11
+				pgm:read_u8(0x1005d1),    --12
+				pgm:read_u8(0x100570),    --13
+				pgm:read_u16(0x100560),   --14
+				pgm:read_u16(0x100500),    --15
+
+				pgm:read_u8(0x10050a),
+				pgm:read_u8(0x100516),
+				pgm:read_u8(0x100520),
+				pgm:read_u8(0x100534),
+				pgm:read_u8(0x100558),
+				pgm:read_u8(0x100560),
+				pgm:read_u8(0x10057e),
+				pgm:read_u8(0x10057f),
+				pgm:read_u8(0x100582),
+				pgm:read_u8(0x100583),
+				pgm:read_u8(0x100587),
+				pgm:read_u8(0x10058a),
+				pgm:read_u8(0x1005b2),
+				pgm:read_u8(0x1005b6),
+				pgm:read_u8(0x1005ba),
+				pgm:read_u8(0x1005bf),
+				pgm:read_u8(0x1005c0),
+				pgm:read_u8(0x1005c9),
+				pgm:read_u8(0x1005cc),
+				pgm:read_u8(0x1005d0),
+				pgm:read_u8(0x1005ea)
+				
+				))
+			end
+			if p.state == 1 or p.state == 2 or p.state == 3 then
+				if p.old_state ~= p.state then
+					print("--")
+				end
+				printdata()
+			elseif p.old_state == 1 or p.old_state == 2 or p.old_state == 3 then
+				printdata()
+			end
+			]]
 
 			if p.hit_skip ~= 0 or mem_0x10D4EA ~= 0 then
 				--停止フレームはフレーム計算しない
