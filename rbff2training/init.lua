@@ -238,8 +238,8 @@ function rbff2.startplugin()
 			{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x240, }, },
 			{ disp_name = "CA 下C", name = "CA 下C(2段目)", type = act_types.attack, ids = { 0x243, }, },
 			{ disp_name = "パワーチャージ", name = "CA パワーチャージ", type = act_types.attack, ids = { 0x24D, }, },
-			{ disp_name = "CA 立D", name = "CA 立D(2段目)", type = act_types.attack, ids = { 0x24A, }, },
-			{ disp_name = "CA 下D", name = "CA 下D(2段目)", type = act_types.low_attack, ids = { 0x24B, }, },
+			{ disp_name = "CA 対スゥエーライン攻撃", name = "CA 立D(2段目)", type = act_types.attack, ids = { 0x24A, }, },
+			{ disp_name = "CA 対スゥエーライン攻撃", name = "CA 下D(2段目)", type = act_types.low_attack, ids = { 0x24B, }, },
 			{ disp_name = "パワーダンク", name = "CA パワーダンク", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, }, },
 			{ disp_name = "CA 立C", name = "CA 近立C(2段目)", type = act_types.attack, ids = { 0x248, }, },
 			{ disp_name = "CA 立C", name = "CA 近立C(3段目)", type = act_types.attack, ids = { 0x249, }, },
@@ -366,15 +366,14 @@ function rbff2.startplugin()
 			{ disp_name = "CA 下C", name = "CA 下C(3段目)", type = act_types.low_attack, ids = { 0x247, }, },
 			{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x246, }, },
 			{ disp_name = "CA 立C", name = "CA 近C(2段目)", type = act_types.attack, ids = { 0x244, }, },
-			{ disp_name = "真空投げ", name = "CA 真空投げ(3段目)", type = act_types.attack, ids = { 0x22, 0x23, }, },
 			{ disp_name = "CA 下C", name = "CA 下C(2段目)昇天明星打ちルート", type = act_types.low_attack, ids = { 0x247, }, },
 			{ disp_name = "CA 立C", name = "CA 立C(2段目)昇天明星打ちルート", type = act_types.attack, ids = { 0x249, }, },
 			{ disp_name = "CA _8C", name = "CA 8C(3段目)昇天明星打ちルート", type = act_types.attack, ids = { 0x24E, 0x24F, 0x250, }, },
 			{ disp_name = "CA 立C", name = "CA 立C(2段目)近立Bルート", type = act_types.attack, ids = { 0x24D, }, },
 			{ disp_name = "CA 立C", name = "CA 立C(2段目)下Aルート", type = act_types.attack, ids = { 0x240, }, },
 			{ disp_name = "CA 下C", name = "CA 下C(2段目)下Aルート", type = act_types.attack, ids = { 0x24B, }, },
-			{ disp_name = "CA 立D", name = "CA 立D(2段目)", type = act_types.attack, ids = { 0x248, }, },
-			{ disp_name = "CA 下D", name = "CA 下D(2段目)", type = act_types.low_attack, ids = { 0x24A, }, },
+			{ disp_name = "CA 対スゥエーライン攻撃", name = "CA 立D(2段目)", type = act_types.attack, ids = { 0x248, }, },
+			{ disp_name = "CA 対スゥエーライン攻撃", name = "CA 下D(2段目)", type = act_types.low_attack, ids = { 0x24A, }, },
 			{ disp_name = "スゥエーC", name = "近スゥエーC", type = act_types.low_attack, ids = { 0x62, 0x63, 0x64, }, },
 			{ disp_name = "スゥエーC", name = "スゥエーC", type = act_types.low_attack, ids = { 0x25A, 0x25B, 0x25C, }, },
 		},
@@ -1283,10 +1282,10 @@ function rbff2.startplugin()
 		{ cmd = cmd_base._c      , bs = false, name = "立C", },
 		{ cmd = cmd_base._d      , bs = false, name = "立D", },
 		{ cmd = cmd_base._ab     , bs = false, name = "避け攻撃", },
-		-- { cmd = cmd_base._6c     , bs = false, name = "投げ", },
-		-- { cmd = cmd_base._2a     , bs = false, name = "下A", },
-		-- { cmd = cmd_base._2b     , bs = false, name = "下B", },
-		-- { cmd = cmd_base._2c     , bs = false, name = "下C", },
+		{ cmd = cmd_base._6c     , bs = false, name = "投げ", },
+		{ cmd = cmd_base._2a     , bs = false, name = "下A", },
+		{ cmd = cmd_base._2b     , bs = false, name = "下B", },
+		{ cmd = cmd_base._2c     , bs = false, name = "下C", },
 		-- { cmd = cmd_base._8      , bs = false, name = "垂直ジャンプ", },
 		-- { cmd = cmd_base._9      , bs = false, name = "前ジャンプ", },
 		-- { cmd = cmd_base._7      , bs = false, name = "後ジャンプ", },
@@ -1296,8 +1295,8 @@ function rbff2.startplugin()
 	local char_rvs_list = {
 		-- テリー・ボガード
 		{
-			-- { cmd = cmd_base._3a     , bs = false, name = "ワイルドアッパー", },
-			-- { cmd = cmd_base._6b     , bs = false, name = "バックスピンキック", },
+			{ cmd = cmd_base._3a     , bs = false, name = "ワイルドアッパー", },
+			{ cmd = cmd_base._6b     , bs = false, name = "バックスピンキック", },
 			{ id = 0x01, ver = 0x0600, bs = true , name = "小バーンナックル", },
 			{ id = 0x02, ver = 0x0600, bs = true , name = "大バーンナックル", },
 			{ id = 0x03, ver = 0x0600, bs = true , name = "パワーウェイブ", },
@@ -2424,6 +2423,8 @@ function rbff2.startplugin()
  				side         = p1 and 0x100458 or 0x100558, -- 向き
 				state        = p1 and 0x10048E or 0x10058E, -- 状態
 				stop         = p1 and 0x10048D or 0x10058D, -- ヒットストップ
+				knock_back1  = p1 and 0x100469 or 0x100569, -- のけぞり確認用1(色々)
+				knock_back2  = p1 and 0x100416 or 0x100516, -- のけぞり確認用2(裏雲隠し)
 				stun         = p1 and 0x10B850 or 0x10B858, -- 現在スタン値
  				stun_timer   = p1 and 0x10B854 or 0x10B85C, -- スタン値ゼロ化までの残フレーム数
  				tmp_combo    = p1 and 0x10B4E0 or 0x10B4E1, -- コンボテンポラリ
@@ -3451,6 +3452,9 @@ function rbff2.startplugin()
 			p.act            = pgm:read_u16(p.addr.act)
 			p.provoke        = 0x0196 == p.act --挑発中
 			p.stop           = pgm:read_u8(p.addr.stop)
+			p.knock_back1    = pgm:read_u8(p.addr.knock_back1)
+			p.knock_back2    = pgm:read_u8(p.addr.knock_back1)
+
 			p.last_dmg       = p.last_dmg or 0 --pgm:read_u8(p.addr.last_dmg)
 			p.char           = pgm:read_u8(p.addr.char)
 			p.pos            = pgm:read_i16(p.addr.pos)
@@ -3716,46 +3720,15 @@ function rbff2.startplugin()
 			p.skip_frame = p.hit_skip ~= 0 or p.stop ~= 0 or mem_0x10D4EA ~= 0
 
 			--[[調査用ログ
+			]]
 			local printdata = function()
-				print(string.format("%2s %2s %2x %2s %2x %4x %4x %2x %2x %2x %2x %2x %2x %4x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x", 
+				print(string.format("%2x %2s %2s %2s %2s %2s", 
 				p.state,                  --1
 				p.stop,                   --2 0x10058D
-				pgm:read_u8(0x1005D0),    --3
-				pgm:read_u8(0x100569),    --4
-				pgm:read_u8(0x100589),    --5
-				pgm:read_u16(0x100520),   --6
-				pgm:read_u16(0x100524),   --7
-				pgm:read_u8(0x100558),    --8
-				pgm:read_u8(0x10057F),    --9
-				pgm:read_u8(0x1005B8),    --10
-				pgm:read_u8(0x1005ee),    --11
-				pgm:read_u8(0x1005d1),    --12
-				pgm:read_u8(0x100570),    --13
-				pgm:read_u16(0x100560),   --14
-				pgm:read_u16(0x100500),    --15
-
-				pgm:read_u8(0x10050a),
-				pgm:read_u8(0x100516),
-				pgm:read_u8(0x100520),
-				pgm:read_u8(0x100534),
-				pgm:read_u8(0x100558),
-				pgm:read_u8(0x100560),
-				pgm:read_u8(0x10057e),
-				pgm:read_u8(0x10057f),
-				pgm:read_u8(0x100582),
-				pgm:read_u8(0x100583),
-				pgm:read_u8(0x100587),
-				pgm:read_u8(0x10058a),
-				pgm:read_u8(0x1005b2),
-				pgm:read_u8(0x1005b6),
-				pgm:read_u8(0x1005ba),
-				pgm:read_u8(0x1005bf),
-				pgm:read_u8(0x1005c0),
-				pgm:read_u8(0x1005c9),
-				pgm:read_u8(0x1005cc),
-				pgm:read_u8(0x1005d0),
-				pgm:read_u8(0x1005ea)
-				
+				pgm:read_u8(0x100569), 
+				bit32.band(p.stop               , pgm:read_u8(0x10054c)), --  2 24
+				bit32.band(pgm:read_u8(0x100569), pgm:read_u8(0x100550)), --  4 25
+				pgm:read_u8(0x100516)  -- 17 25
 				))
 			end
 			if p.state == 1 or p.state == 2 or p.state == 3 then
@@ -3766,7 +3739,6 @@ function rbff2.startplugin()
 			elseif p.old_state == 1 or p.old_state == 2 or p.old_state == 3 then
 				printdata()
 			end
-			]]
 
 			if p.hit_skip ~= 0 or mem_0x10D4EA ~= 0 then
 				--停止フレームはフレーム計算しない
@@ -4392,6 +4364,14 @@ function rbff2.startplugin()
 						end
 					end
 				end
+				local input_rvs2 = function()
+					if p.dummy_rvs.cmd then
+						p.dummy_rvs.cmd(p, next_joy)
+					else
+						cmd_base._a(p, next_joy)
+						p.write_bs_hook(p.dummy_rvs)
+					end
+				end
 
 				-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
 				local landing = p.pos_y < p.old_pos_y and 0 < p.pos_y and p.pos_y < 15
@@ -4435,44 +4415,17 @@ function rbff2.startplugin()
 					end
 				end
 
-				--[[
-				リバーサル:ガードリバーサルのガード硬直後のコマンド成立させるタイミング
-				x ... 硬直解除  + ... 技確定猶予  ^ ... 技確定フレーム
-				.        0         1         2         3         4
-				.        12345678901234567890123456789012345678901234567890
-				12F硬直      ++++++++x
-				13F硬直       ++++++++x
-				14F硬直        ++++++++x
-				15F硬直         ++++++++x
-				16F硬直          ++++++++x
-				反映             ^9F
-				19F硬直            ++++++++x
-				21F硬直              ++++++++x
-				22F硬直               ++++++++x
-				23F硬直                ++++++++x
-				24F硬直                 ++++++++x
-				反映                    ^16F
-				25F硬直                   ++++++++x
-				反映                      ^18
-				27F硬直                     ++++++++x
-				28F硬直                      ++++++++x
-				反映                         ^21F
-				]]
+				-- リバーサル
+				-- のけぞり中のデータをみてのけぞり修了の_2F前に入力確定する
 				if p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs then
-					if p.state == 2 then
-						for _, gap in pairs({ 9, 16, 18, 21, 38 }) do
-							if p.on_guard1+gap == global.frame_number then
-								input_rvs()
-								break;
-							end
-						end
-					elseif p.state == 1 or p.state == 3 then
-						for _, gap in pairs({ 0, 13, 22, 26, 30, 35, 40, 44 }) do
-							if p.on_hit1+gap == global.frame_number then
-								input_rvs()
-								break;
-							end
-						end
+					if (p.state == 1 or p.state == 2) and p.stop == 0 and
+						(p.on_hit1+1 < global.frame_number or p.on_guard+1 < global.frame_number) and
+						p.knock_back1 == 0 then
+						-- 通常攻撃、ライン送り、ライン戻し、デンジャラススルー用
+						input_rvs2()
+					elseif p.state == 3 and p.stop == 0 and p.knock_back1 == 1 then
+						-- 裏雲隠し用
+						input_rvs2()
 					end
 				end
 			end
