@@ -934,14 +934,16 @@ function rbff2.startplugin()
 			{ disp_name = "スゥエーC", name = "スゥエーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
 			{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, 0xB, }, },
 			{ disp_name = "着地", name = "ジャンプ着地", type = act_types.any, ids = { 0x9, }, },
-			{ disp_name = "ジャンプ", name = "垂直ジャンプ", type = act_types.any, ids = { 0xB, 0xC, }, },
-			{ disp_name = "ジャンプ", name = "前ジャンプ", type = act_types.any, ids = { 0xD, 0xE, }, },
-			{ disp_name = "ジャンプ", name = "後ジャンプ", type = act_types.any, ids = { 0xF, 0x10, }, },
-			{ disp_name = "ジャンプ", name = "垂直小ジャンプ", type = act_types.any, ids = { 0xB, 0x11, 0x12, }, },
-			{ disp_name = "ジャンプ", name = "前小ジャンプ", type = act_types.any, ids = { 0xD, 0x13, 0x14, }, },
-			{ disp_name = "ジャンプ", name = "後小ジャンプ", type = act_types.any, ids = { 0xF, 0x15, 0x16, }, },
-			{ name = "テクニカルライズ", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-			{ name = "グランドスゥエー", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
+			{ name = "ジャンプ", type = act_types.any, ids = { 
+				0xB, 0xC, -- 垂直ジャンプ
+				0xD, 0xE, -- 前ジャンプ
+				0xF, 0x10, -- 後ジャンプ
+				0xB, 0x11, 0x12, -- 垂直小ジャンプ
+				0xD, 0x13, 0x14, -- 前小ジャンプ
+				0xF, 0x15, 0x16, -- 後小ジャンプ
+			}, },
+			{ name = "グランドスゥエー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
+			{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
 			{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
 			{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
 			{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
@@ -972,7 +974,7 @@ function rbff2.startplugin()
 			{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
 			{ name = "投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 			{ name = "ダウン", type = act_types.any, ids = { 0x192, }, }, -- 0x18E
-			{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, }, },
+			{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 			{ name = "気絶", type = act_types.any, ids = { 0x194, 0x195, }, },
 			{ name = "ガード", type = act_types.guard, ids = { 0x117, 0x118, 0x119, 0x11A, 0x11B, 0x11C, 0x11D, 0x11E, 0x11F, 0x120, 0x121, 0x122, 0x123, 0x124, 0x125, 0x126, 0x127, 0x128, 0x129, 0x12A, 0x12C, 0x12D, 0x131, 0x132, 0x133, 0x134, 0x135, 0x136, 0x137, 0x139, }, },
 			{ name = "やられ", type = act_types.hit, ids = { 0x13F, 0x140, 0x141, 0x142, 0x143, 0x144, 0x145, 0x146, 0x147, 0x148, 0x149, 0x14A, 0x14B, 0x14C, 0x14C, 0x14D, 0x14E, 0x14F, 0x1E9, 0x239 }, },
@@ -2177,6 +2179,9 @@ function rbff2.startplugin()
 			p.hit.harmless = true
 		elseif p.char == 5 and p.act == 0x46 and p.act_count == 6 then
 			-- ギースの遠立Cの持続
+			p.hit.harmless = true
+		elseif p.char == 5 and p.act == 0x43 and p.act_count == 5 then
+			-- ギースの近立Cの持続
 			p.hit.harmless = true
 		end
 
