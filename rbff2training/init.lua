@@ -125,6 +125,13 @@ function rbff2.startplugin()
 		29 --[[ CHONREI ]] ,32 --[[ DUCK ]] ,32 --[[ KIM ]] ,32 --[[ BILLY ]] ,31 --[[ CHENG ]] ,31 --[[ TUNG ]],
 		35 --[[ LAURENCE ]] ,35 --[[ KRAUSER ]] ,32 --[[ RICK ]] ,29 --[[ XIANGFEI ]] ,32 --[[ ALFRED ]]
 	}
+	-- 起き上がりフレーム数
+	local wakeup_frms = {
+		20 --[[ TERRY ]] ,20 --[[ ANDY ]] ,20 --[[ JOE ]], 17 --[[ MAI ]], 20 --[[ GEESE ]], 20 --[[ SOKAKU ]],
+		20 --[[ BOB ]] ,20 --[[ HON-FU ]] ,20 --[[ MARY ]] ,20 --[[ BASH ]] ,20 --[[ YAMAZAKI ]] ,20 --[[ CHONSHU ]],
+		20 --[[ CHONREI ]] ,20 --[[ DUCK ]] ,20 --[[ KIM ]] ,20 --[[ BILLY ]] ,20 --[[ CHENG ]] ,20 --[[ TUNG ]],
+		20 --[[ LAURENCE ]] ,20 --[[ KRAUSER ]] ,20 --[[ RICK ]] ,14 --[[ XIANGFEI ]] ,20 --[[ ALFRED ]]
+	}
 
 	-- 行動の種類
 	local act_types = { free = -1, attack = 0, low_attack = 1, provoke =  2, any = 3, overhead = 4, guard = 5, hit = 6, }
@@ -447,7 +454,10 @@ function rbff2.startplugin()
 			{ name = "電光石火の地", type = act_types.low_attack, ids = { 0xA4, 0xA5, 0xA6, }, },
 			{ name = "電光パチキ", type = act_types.attack, ids = { 0xA8, }, },
 			{ name = "炎の種馬", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBC, 0xBD, 0xBE, 0xBF, 0xC0, }, },
-			{ name = "必勝！逆襲拳", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xD0, 0xD1, }, },
+			{ name = "必勝！逆襲拳", type = act_types.any, ids = { 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xD1 }, },
+			{ name = "必勝！逆襲拳-1", names = { "必勝！逆襲拳" }, type = act_types.low_attack, ids = { 0xCA, 0xCC, }, },
+			{ name = "必勝！逆襲拳-2", names = { "必勝！逆襲拳" }, type = act_types.overhead, ids = { 0xCD, 0xCE, }, },
+			{ name = "必勝！逆襲拳-3", names = { "必勝！逆襲拳" }, type = act_types.attack, ids = { 0xCF, 0xD0, }, },
 			{ name = "爆発ゴロー", type = act_types.attack, ids = { 0xFF, 0x101, 0x9C, 0x102, }, },
 			{ name = "よかトンハンマー", type = act_types.overhead, ids = { 0x108, 0x109, 0x10A, 0x10B, }, },
 			{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x245, }, },
@@ -2042,7 +2052,7 @@ function rbff2.startplugin()
 			--print(string.format("attack id %x", box.id))
 		else
 			box.type = box_types[box.id + 1]
-			if p.on_sway_line and sway_box_types[box.id + 1] then
+			if p.in_sway_line and sway_box_types[box.id + 1] then
 				box.type = sway_box_types[box.id + 1] 
 			end
 		end
@@ -2055,7 +2065,7 @@ function rbff2.startplugin()
 			return nil
 		end
 		]]
-		if box.type == box_type_base.a then
+		if box.type == box_type_base.a and (is_fireball == true or p.hit.harmless == false) then
 			-- 攻撃中のフラグをたてる
 			p.attacking = true
 		end
@@ -2157,6 +2167,19 @@ function rbff2.startplugin()
 			(p.hit.projectile and pgm:read_u8(obj_base + 0xE7) > 0) or
 			(not p.hit.projectile and pgm:read_u8(obj_base + 0xB6) == 0)
 
+		-- パッチ当て
+		-- プログラム解析できたらまっとうな形で反映できるようにする
+		if p.char == 20 and p.act == 0x68 and p.act_count == 5 then
+			-- クラウザーのデスハンマーの持続
+			p.hit.harmless = true
+		elseif p.char == 10 and p.act == 0x108 and p.act_count == 4 then
+			-- フランコのハルマゲドンバスターの出かかり
+			p.hit.harmless = true
+		elseif p.char == 5 and p.act == 0x46 and p.act_count == 6 then
+			-- ギースの遠立Cの持続
+			p.hit.harmless = true
+		end
+
 		-- 食らい判定かどうか
 		p.hit.vulnerable = false
 		if p.hit.vulnerable1 == 1 then
@@ -2253,6 +2276,10 @@ function rbff2.startplugin()
 			pos_y            = 0,           -- Y位置
 			old_pos_y        = 0,           -- Y位置
 			pos_z            = 0,           -- Z位置
+			old_pos_z        = 0,           -- Z位置
+			on_main_line     = 0,           -- Z位置メインに移動した瞬間フレーム
+			on_sway_line     = 0,           -- Z位置スウェイに移動した瞬間フレーム
+			in_sway_line     = false,       -- Z位置
 			side             = 0,           -- 向き
 			state            = 0,           -- いまのやられ状態
 			tmp_combo        = 0,           -- 一次的なコンボ数
@@ -2278,6 +2305,7 @@ function rbff2.startplugin()
 			key_pre          = {},          -- 個別キー入力フレーム
 			key_hist         = {},
 			key_frames       = {},
+			act_frame        = 0,
 			act_frames       = {},
 			act_frames2      = {},
 			act_frames_total = 0,
@@ -2405,6 +2433,8 @@ function rbff2.startplugin()
 			addr           = {
 				base         = p1 and 0x100400 or 0x100500, -- キャラ状態とかのベースのアドレス
 				act          = p1 and 0x100460 or 0x100560, -- 行動ID デバッグディップステータス表示のPと同じ
+				act_count    = p1 and 0x100466 or 0x100566, -- 現在の行動のカウンタ
+				act_frame    = p1 and 0x10046F or 0x10056F, -- 現在の行動の残フレーム、ゼロになると次の行動へ
 				act_contact  = p1 and 0x100401 or 0x100501, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
 				attack       = p1 and 0x1004B6 or 0x1005B6, -- 攻撃中のみ変化
 				char         = p1 and 0x107BA5 or 0x107BA7, -- キャラ
@@ -2425,6 +2455,8 @@ function rbff2.startplugin()
 				stop         = p1 and 0x10048D or 0x10058D, -- ヒットストップ
 				knock_back1  = p1 and 0x100469 or 0x100569, -- のけぞり確認用1(色々)
 				knock_back2  = p1 and 0x100416 or 0x100516, -- のけぞり確認用2(裏雲隠し)
+				knock_back3  = p1 and 0x10047E or 0x10057E, -- のけぞり確認用2(裏雲隠し)
+
 				stun         = p1 and 0x10B850 or 0x10B858, -- 現在スタン値
  				stun_timer   = p1 and 0x10B854 or 0x10B85C, -- スタン値ゼロ化までの残フレーム数
  				tmp_combo    = p1 and 0x10B4E0 or 0x10B4E1, -- コンボテンポラリ
@@ -3450,18 +3482,34 @@ function rbff2.startplugin()
 
 			p.old_act        = p.act or 0x00
 			p.act            = pgm:read_u16(p.addr.act)
+			p.act_count      = pgm:read_u8(p.addr.act_count)
+			p.act_frame      = pgm:read_u8(p.addr.act_frame)
 			p.provoke        = 0x0196 == p.act --挑発中
 			p.stop           = pgm:read_u8(p.addr.stop)
 			p.knock_back1    = pgm:read_u8(p.addr.knock_back1)
-			p.knock_back2    = pgm:read_u8(p.addr.knock_back1)
+			p.knock_back2    = pgm:read_u8(p.addr.knock_back2)
+			p.knock_back3    = pgm:read_u8(p.addr.knock_back3)
 
 			p.last_dmg       = p.last_dmg or 0 --pgm:read_u8(p.addr.last_dmg)
 			p.char           = pgm:read_u8(p.addr.char)
 			p.pos            = pgm:read_i16(p.addr.pos)
 			p.old_pos_y      = p.pos_y
 			p.pos_y          = pgm:read_i16(p.addr.pos_y)
+			if 0 < p.pos_y then
+				p.pos_y_peek = math.max(p.pos_y_peek or 0, p.pos_y)
+			else
+				p.pos_y_peek = 0
+			end
+			if p.pos_y < p.old_pos_y then
+				p.pos_y_down = p.pos_y_down and (p.pos_y_down + 1) or 1
+			else
+				p.pos_y_down = 0
+			end
+			p.old_pos_z      = p.pos_z
 			p.pos_z          = pgm:read_i16(p.addr.pos_z)
-			p.on_sway_line   = 24 < p.pos_z
+			p.on_sway_line   = (40 == p.pos_z and 40 > p.old_pos_z) and global.frame_number or p.on_sway_line
+			p.on_main_line   = (24 == p.pos_z and 24 < p.old_pos_z) and global.frame_number or p.on_main_line
+			p.in_sway_line   = 24 < p.pos_z
 			p.side           = pgm:read_i8(p.addr.side) < 0 and -1 or 1
 
 			p.attack         = pgm:read_u8(p.addr.attack)
@@ -3703,7 +3751,7 @@ function rbff2.startplugin()
 					end
 				end
 			end
-			if p.on_sway_line then
+			if p.in_sway_line then
 				p.muteki.type = 4 -- スウェー上
 			elseif p.muteki.type == 0 then
 				p.muteki.type = 0 -- 全身無敵
@@ -3722,13 +3770,18 @@ function rbff2.startplugin()
 			--[[調査用ログ
 			]]
 			local printdata = function()
-				print(string.format("%2x %2s %2s %2s %2s %2s", 
+				print(string.format("%2x %2s %2s %2s %2s %2s %2s %2x %2s %2s %2x", 
 				p.state,                  --1
 				p.stop,                   --2 0x10058D
 				pgm:read_u8(0x100569), 
 				bit32.band(p.stop               , pgm:read_u8(0x10054c)), --  2 24
 				bit32.band(pgm:read_u8(0x100569), pgm:read_u8(0x100550)), --  4 25
-				pgm:read_u8(0x100516)  -- 17 25
+				pgm:read_u8(0x100516),  -- 17 25
+				p.pos_z,
+				p.knock_back3,
+				p.on_sway_line,
+				p.on_main_line,
+				p.act
 				))
 			end
 			if p.state == 1 or p.state == 2 or p.state == 3 then
@@ -4221,7 +4274,7 @@ function rbff2.startplugin()
 							next_joy["P" .. p.control .. " Up"] = true
 						end
 					elseif p.dummy_act == 5 then
-						if not p.on_sway_line and p.state == 0 then
+						if not p.in_sway_line and p.state == 0 then
 							if joy_val["P" .. p.control .. " Button 4"] < 0 then
 								next_joy["P" .. p.control .. " Button 4"] = true
 							end
@@ -4374,22 +4427,30 @@ function rbff2.startplugin()
 				end
 
 				-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
-				local landing = p.pos_y < p.old_pos_y and 0 < p.pos_y and p.pos_y < 15
-				if wakeup_acts[p.act] or landing then
-					if p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs and (p.on_wakeup+17 == global.frame_number or landing) then
-						input_rvs()
+				if p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs then
+					-- ダウン起き上がりリバーサル入力
+					if wakeup_acts[p.act] and (p.on_wakeup+wakeup_frms[p.char] - 2) <= global.frame_number then
+						input_rvs2()
 					end
+					-- TODO 着地リバーサル入力
+					if 14 < p.pos_y_down or (1 < p.pos_y_down and 11 > p.pos_y) then
+						input_rvs2()
+					end
+					--print(string.format("%s %s -> %s %s %s", i, p.old_pos_y, p.pos_y, p.pos_y_down, p.pos_y_peek))
 				elseif p.act == 0x192 or p.act == 0x18E then
 					if p.dummy_wakeup == wakeup_type.tech then
+						-- テクニカルライズ入力
 						if toggle_joy_val("P" .. p.control .. " Down") then
 							next_joy["P" .. p.control .. " Button 4"] = true
 						end
 					elseif p.dummy_wakeup == wakeup_type.sway then
+						-- グランドスウェー入力
 						if toggle_joy_val("P" .. p.control .. " Up") then
 							next_joy["P" .. p.control .. " Button 4"] = true
 						end
 					elseif p.dummy_wakeup == wakeup_type.atk then
-						-- 舞、ボブ、フランコ、山崎
+						-- 起き上がり攻撃入力
+						-- 舞、ボブ、フランコ、山崎のみなのでキャラをチェックする
 						if p.char == 0x04 or p.char == 0x07 or p.char == 0x0A or p.char == 0x0B then
 							if toggle_joy_val("P" .. p.control .. " Button 3") then
 								next_joy["P" .. p.control .. " Button 1"] = false
@@ -4416,15 +4477,35 @@ function rbff2.startplugin()
 				end
 
 				-- リバーサル
-				-- のけぞり中のデータをみてのけぞり修了の_2F前に入力確定する
 				if p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs then
-					if (p.state == 1 or p.state == 2) and p.stop == 0 and
-						(p.on_hit1+1 < global.frame_number or p.on_guard+1 < global.frame_number) and
-						p.knock_back1 == 0 then
-						-- 通常攻撃、ライン送り、ライン戻し、デンジャラススルー用
-						input_rvs2()
-					elseif p.state == 3 and p.stop == 0 and p.knock_back1 == 1 then
-						-- 裏雲隠し用
+					if (p.state == 1 or p.state == 2) and p.stop == 0 then
+						-- のけぞり中のデータをみてのけぞり修了の_2F前に入力確定する
+						if p.knock_back3 == 0x80 and p.knock_back1 == 0 then
+							input_rvs2()
+						end
+						-- デンジャラススルー用
+						if p.knock_back3 == 0x0 and p.stop < 3 then
+							input_rvs2()
+						end
+						-- TODO ラインもどしからのレバー入れ技
+						--[[
+						if ((p.on_sway_line+8 < global.frame_number and p.on_sway_line+15 > global.frame_number) or
+						(p.on_main_line+8 < global.frame_number and p.on_sway_line+15 < global.frame_number)) then
+							if pgm:read_u8(0x10057e) == 0x80 then
+								-- ライン送り、ライン戻し
+								input_rvs2()
+							end
+						else
+							if (p.on_hit1+1 < global.frame_number or p.on_guard+1 < global.frame_number) and
+							(24 >= p.pos_z or 40 <= p.pos_z) and
+							p.knock_back1 == 0 then
+								-- 通常攻撃、デンジャラススルー
+								input_rvs2()
+							end
+						end
+						]]
+					elseif p.state == 3 and p.stop == 0 and p.knock_back2 <= 1 then
+						-- 当身うち空振りと裏雲隠し用
 						input_rvs2()
 					end
 				end
@@ -4510,6 +4591,24 @@ function rbff2.startplugin()
 					scr:draw_text(p1 and 296 or 77, 41, "最大")
 					draw_rtext(   p1 and 311 or 92, 48, op.max_dmg)
 					draw_rtext(   p1 and 311 or 92, 55, op.max_combo)
+				end
+
+				-- 状態表示
+				scr:draw_text(p1 and 228 or  9, 48, "ダメージ:")
+				scr:draw_text(p1 and 228 or  9, 55, "コンボ:")
+				draw_rtext(   p1 and 281 or 62, 48, op.last_combo_dmg .. "(+" .. op.last_dmg .. ")")
+				draw_rtext(   p1 and 281 or 62, 55, op.last_combo)
+				scr:draw_text(p1 and 296 or 77, 41, "最大")
+				draw_rtext(   p1 and 311 or 92, 48, op.max_dmg)
+				draw_rtext(   p1 and 311 or 92, 55, op.max_combo)
+
+				draw_rtext(p1 and 9 or 311,  8, p.state)
+				draw_rtext(p1 and 9 or 311, 15, p.hit.vulnerable and "V" or "")
+				draw_rtext(p1 and 9 or 311, 22, p.hit.harmless   and "" or "H")
+				if p1 then
+					scr:draw_text(9, 29, string.format("%4x %2s %2s", p.act, p.act_count, p.act_frame))
+				else
+					draw_rtext(311, 29, string.format("%4x %2s %2s", p.act, p.act_count, p.act_frame))
 				end
 
 				-- BS状態表示
@@ -5482,10 +5581,6 @@ function rbff2.startplugin()
 		if not match_active or player_select_active then
 			return
 		end
-		if menu_cur == nil then
-			bar_menu_to_main()
-			menu_to_main()
-		end
 
 		-- 初回のメニュー表示時は状態更新
 		if prev_main_or_menu_state ~= menu and main_or_menu_state == menu then
@@ -5708,6 +5803,9 @@ function rbff2.startplugin()
 			-- 末尾1バイトの20は技のIDになるが、プログラム中で1Eまでの値しか通さないので20だと無害。
 			pgm:write_direct_u32(0xCB240, 0xF009FF20)
 			pgm:write_direct_u16(0xCB244, 0x0600)
+
+			--逆襲拳、サドマゾの初段で相手の状態変更しない（相手が投げられなくなる事象が解消する）
+			--pgm:write_direct_u8(0x57F43, 0x00)
 		end
 
 		-- 強制的に家庭用モードに変更
@@ -5775,10 +5873,18 @@ function rbff2.startplugin()
 		-- 更新フックの仕込み、フックにはデバッガ必須
 		set_hook()
 
+		-- メニュー初期化前に処理されないようにする
 		main_or_menu_state.proc()
 
 		-- メニュー切替のタイミングでフック用に記録した値が状態変更後に謝って読みこまれないように常に初期化する
 		cls_hook()
+	end
+
+	-- メニューの初期化
+	if menu_cur == nil then
+		menu_cur = main_menu
+		--bar_menu_to_main()
+		--menu_to_main()
 	end
 
 	emu.register_frame_done(function()
