@@ -2070,6 +2070,7 @@ function rbff2.startplugin()
 		if box.type == box_type_base.a and (is_fireball == true or p.hit.harmless == false) then
 			-- 攻撃中のフラグをたてる
 			p.attacking = true
+			p.attack_id = id
 		end
 
 		box.top    = p.hit.pos_y - bit32.arshift(top    * p.hit.scale * 4, 8)
@@ -2162,6 +2163,7 @@ function rbff2.startplugin()
 		p.hit.base    = obj_base
 
 		p.attacking   = false
+		p.attack_id   = 0
 		p.throwing    = false
 
 		-- ヒットするかどうか
@@ -2171,18 +2173,92 @@ function rbff2.startplugin()
 
 		-- パッチ当て
 		-- プログラム解析できたらまっとうな形で反映できるようにする
-		if p.char == 20 and p.act == 0x68 and p.act_count == 5 then
-			-- クラウザーのデスハンマーの持続
-			p.hit.harmless = true
-		elseif p.char == 10 and p.act == 0x108 and p.act_count == 4 then
-			-- フランコのハルマゲドンバスターの出かかり
-			p.hit.harmless = true
-		elseif p.char == 5 and p.act == 0x46 and p.act_count == 6 then
-			-- ギースの遠立Cの持続
-			p.hit.harmless = true
-		elseif p.char == 5 and p.act == 0x43 and p.act_count == 5 then
-			-- ギースの近立Cの持続
-			p.hit.harmless = true
+		if p.char == 20 then -- クラウザー
+			-- デスハンマーの持続
+			if p.act == 0x68 and p.act_count >= 5 then
+				p.hit.harmless = true
+			end
+		elseif p.char == 10 then -- フランコ
+			-- ハルマゲドンバスターの出かかり
+			if p.act == 0x108 and p.act_count == 4  then
+				p.hit.harmless = true
+			end
+		elseif p.char == 5 then -- ギース
+			if p.act == 0x42 and p.act_count >= 2 then
+				-- 遠立Cの持続
+				p.hit.harmless = true
+			elseif p.act == 0x46 and p.act_count >= 6 then
+				-- 遠立Cの持続
+				p.hit.harmless = true
+			elseif p.char == 5 and p.act == 0x43 and p.act_count >= 5 then
+				-- 近立Cの持続
+				p.hit.harmless = true
+			end
+		elseif p.char == 1 then -- テリー
+			if p.act == 0x45 and p.act_count >= 4 then
+				-- 遠Bの持続
+				p.hit.harmless = true
+			elseif p.act == 0x47 and p.act_count >= 2 then
+				-- 下Aの持続
+				p.hit.harmless = true
+			end
+		elseif p.char == 2 then -- アンディ
+			if p.act == 0x44 and p.act_count >= 3 then
+				-- Aの持続
+				p.hit.harmless = true
+			elseif p.act == 0x45 and p.act_count >= 4 then
+				-- Bの持続
+				p.hit.harmless = true
+			elseif p.act == 0x47 and p.act_count >= 2 then
+				-- 下Aの持続
+				p.hit.harmless = true
+			elseif p.act == 0x48 and p.act_count >= 3 then
+				-- 下Bの持続
+				p.hit.harmless = true
+			elseif p.act == 0x240 and p.act_count >= 4 then
+				-- 立B立Bの2段目の持続
+				p.hit.harmless = true
+			elseif p.act == 0x241 and p.act_count >= 3 then
+				-- 下B下Bの持続
+				p.hit.harmless = true
+			end
+		elseif p.char == 3 then -- ジョー
+			if p.act == 0x41 and p.act_count >= 3 then
+				-- 近Aの持続
+				p.hit.harmless = true
+			elseif p.act == 0x42 and p.act_count >= 4 then
+				-- 近Bの持続
+				p.hit.harmless = true
+			elseif p.act == 0x44 and p.act_count >= 2 then
+				-- 遠Aの持続
+				p.hit.harmless = true
+			elseif p.act == 0x45 and p.act_count >= 4 then
+				-- 遠Bの持続
+				p.hit.harmless = true
+			elseif p.act == 0x47 and p.act_count >= 3 then
+				-- 下Aの持続
+				p.hit.harmless = true
+			elseif p.act == 0x48 and p.act_count >= 3 then
+				-- 下Bの持続
+				p.hit.harmless = true
+			elseif p.act == 0x24B and p.act_count == 3 then
+				-- 遠BCの2段目の持続
+				p.hit.harmless = true
+			elseif p.act == 0x24C and p.act_count >= 4 then
+				-- 近ABAの3段目の持続
+				p.hit.harmless = true
+			end
+		elseif p.char == 4 then -- 舞
+			if p.act == 0x47 and p.act_count >= 2 then
+				-- 下Aの持続
+				p.hit.harmless = true
+			elseif p.act == 0x48 and p.act_count >= 2 then
+				-- 下Bの持続
+				p.hit.harmless = true
+			elseif p.act == 0x243 and p.act_count >= 3 then
+				-- 下ACの持続
+				p.hit.harmless = true
+			end
 		end
 
 		-- 食らい判定かどうか
@@ -2460,7 +2536,7 @@ function rbff2.startplugin()
 				stop         = p1 and 0x10048D or 0x10058D, -- ヒットストップ
 				knock_back1  = p1 and 0x100469 or 0x100569, -- のけぞり確認用1(色々)
 				knock_back2  = p1 and 0x100416 or 0x100516, -- のけぞり確認用2(裏雲隠し)
-				knock_back3  = p1 and 0x10047E or 0x10057E, -- のけぞり確認用2(裏雲隠し)
+				knock_back3  = p1 and 0x10047E or 0x10057E, -- のけぞり確認用3(フェニックススルー)
 
 				stun         = p1 and 0x10B850 or 0x10B858, -- 現在スタン値
  				stun_timer   = p1 and 0x10B854 or 0x10B85C, -- スタン値ゼロ化までの残フレーム数
@@ -4607,14 +4683,17 @@ function rbff2.startplugin()
 				draw_rtext(   p1 and 311 or 92, 48, op.max_dmg)
 				draw_rtext(   p1 and 311 or 92, 55, op.max_combo)
 
-				draw_rtext(p1 and 9 or 311,  8, p.state)
-				draw_rtext(p1 and 9 or 311, 15, p.hit.vulnerable and "V" or "")
-				draw_rtext(p1 and 9 or 311, 22, p.hit.harmless   and "" or "H")
-				if p1 then
-					scr:draw_text(9, 29, string.format("%4x %2s %2s", p.act, p.act_count, p.act_frame))
-				else
-					draw_rtext(311, 29, string.format("%4x %2s %2s", p.act, p.act_count, p.act_frame))
+				local draw_status = function(x, y, text)
+					if p1 then
+						scr:draw_text(x, y, text)
+					else
+						draw_rtext(320-x-5, y, text)
+					end
 				end
+				draw_status(4,  8, p.state)
+				draw_status(4, 15, p.hit.vulnerable and "V" or "")
+				draw_status(4, 22, string.format("%1s %2x %2x", p.hit.harmless and "" or "H", p.attack, p.attack_id))
+				draw_status(4, 29, string.format("%4x %2s %2s", p.act, p.act_count, p.act_frame))
 
 				-- BS状態表示
 				if p.dummy_gd == dummy_gd_type.bs then
