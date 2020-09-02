@@ -1301,8 +1301,8 @@ function rbff2.startplugin()
 		-- { cmd = cmd_base._8      , bs = false, name = "垂直ジャンプ", },
 		-- { cmd = cmd_base._9      , bs = false, name = "前ジャンプ", },
 		-- { cmd = cmd_base._7      , bs = false, name = "後ジャンプ", },
-		{ id = 0x1E, ver = 0x0600, bs = true , name = "ダッシュ", },
-		{ id = 0x1F, ver = 0x0600, bs = true , name = "飛び退き", },
+		-- { id = 0x1E, ver = 0x0600, bs = true , name = "ダッシュ", },
+		-- { id = 0x1F, ver = 0x0600, bs = true , name = "飛び退き", },
 	}
 	local char_rvs_list = {
 		-- テリー・ボガード
@@ -4489,11 +4489,20 @@ function rbff2.startplugin()
 					end
 					return next_joy[btn]
 				end
+				local input_rvs = function()
+					if p.dummy_rvs.cmd then
+						p.dummy_rvs.cmd(p, next_joy)
+					else
+						if toggle_joy_val("P" .. p.control .. " Button 1") then
+							p.write_bs_hook(p.dummy_rvs)
+						end
+					end
+				end
 				local input_rvs2 = function()
 					if p.dummy_rvs.cmd then
 						p.dummy_rvs.cmd(p, next_joy)
 					else
-						cmd_base._5(p, next_joy)
+						cmd_base._a(p, next_joy)
 						p.write_bs_hook(p.dummy_rvs)
 					end
 				end
@@ -5872,11 +5881,11 @@ function rbff2.startplugin()
 
 			-- BSモードの仕込み部分
 			-- 実質効いていない避け攻撃ぽいコマンドデータを1発BS用の入れ物に使う
-			-- 0xCB243の読込後にD1を技IDに差し替えれば未入力(00)で技が出る。下は例。
+			-- 0xCB243の読込後にD1を技IDに差し替えればA(09)で技が出る。下は例。
 			-- bp 03957E,{((A6)==CB244)&&((A4)==100400)&&(maincpu.pb@10048E==2)},{D1=1;g}
 			-- bp 03957E,{((A6)==CB244)&&((A4)==100500)&&(maincpu.pb@10058E==2)},{D1=1;g}
 			-- 末尾1バイトの20は技のIDになるが、プログラム中で1Eまでの値しか通さないので20だと無害。
-			pgm:write_direct_u32(0xCB240, 0xF000FF20)
+			pgm:write_direct_u32(0xCB240, 0xF009FF20)
 			pgm:write_direct_u16(0xCB244, 0x0600)
 
 			--逆襲拳、サドマゾの初段で相手の状態変更しない（相手が投げられなくなる事象が解消する）
