@@ -2804,8 +2804,6 @@ function rbff2.startplugin()
 			-- 0395B6: 195E 00A4                move.b  (A6)+, ($a4,A4) -- 技データ読込 だいたい06
 			-- 0395BA: 195E 00A5                move.b  (A6)+, ($a5,A4) -- 技データ読込 だいたい00、飛燕斬01、02、03
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03957E),
-				--"(maincpu.pw@107C22>0)&&((A6)==CB244)&&((maincpu.pb@10048E==2&&($100400==((A4)&$FFFFFF)))||(maincpu.pb@10058E==2&&($100500==((A4)&$FFFFFF))))",
-				--"(maincpu.pw@107C22>0)&&((A6)==CB244)&&(((maincpu.pb@10048E==2||maincpu.pw@100460==$193||maincpu.pw@100460==$13B)&&($100400==((A4)&$FFFFFF)))||((maincpu.pb@10058E==2||maincpu.pw@100560==$193||maincpu.pw@100560==$13B)&&($100500==((A4)&$FFFFFF))))",
 				"(maincpu.pw@107C22>0)&&((A6)==CB244)&&(((maincpu.pb@10DDDD==$1)&&($100400==((A4)&$FFFFFF)))||((maincpu.pb@10DDE1==$1)&&($100500==((A4)&$FFFFFF))))",
 				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$40);D1=(maincpu.pb@(temp1));A6=((A6)+2);maincpu.pb@((A4)+$A3)=D1;maincpu.pb@((A4)+$A4)=maincpu.pb@(temp1+1);maincpu.pb@((A4)+$A5)=maincpu.pb@(temp1+2);PC=((PC)+$20);g"))
 
@@ -4489,16 +4487,11 @@ function rbff2.startplugin()
 					end
 					return next_joy[btn]
 				end
-				local input_rvs = function()
-					if p.dummy_rvs.cmd then
-						p.dummy_rvs.cmd(p, next_joy)
-					else
-						if toggle_joy_val("P" .. p.control .. " Button 1") then
-							p.write_bs_hook(p.dummy_rvs)
-						end
-					end
+				local input_bs = function()
+					cmd_base._a(p, next_joy)
+					p.write_bs_hook(p.dummy_bs)
 				end
-				local input_rvs2 = function()
+				local input_rvs = function()
 					if p.dummy_rvs.cmd then
 						p.dummy_rvs.cmd(p, next_joy)
 					else
@@ -4511,11 +4504,11 @@ function rbff2.startplugin()
 				if p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs then
 					-- ダウン起き上がりリバーサル入力
 					if wakeup_acts[p.act] and (p.on_wakeup+wakeup_frms[p.char] - 2) <= global.frame_number then
-						input_rvs2()
+						input_rvs()
 					end
 					-- TODO 着地リバーサル入力
 					if 14 < p.pos_y_down or (1 < p.pos_y_down and 11 > p.pos_y) then
-						input_rvs2()
+						input_rvs()
 					end
 					--print(string.format("%s %s -> %s %s %s", i, p.old_pos_y, p.pos_y, p.pos_y_down, p.pos_y_peek))
 				elseif p.act == 0x192 or p.act == 0x18E then
@@ -4550,9 +4543,7 @@ function rbff2.startplugin()
 						p.bs_count = p.bs_count + 1
 					end
 					if p.dummy_bs_cnt <= p.bs_count and p.dummy_bs then
-						if toggle_joy_val("P" .. p.control .. " Button 1") then
-							p.write_bs_hook(p.dummy_bs)
-						end
+						input_bs()
 						p.bs_count = -1
 					end
 				end
@@ -4562,11 +4553,11 @@ function rbff2.startplugin()
 					if (p.state == 1 or p.state == 2) and p.stop == 0 then
 						-- のけぞり中のデータをみてのけぞり修了の_2F前に入力確定する
 						if p.knock_back3 == 0x80 and p.knock_back1 == 0 then
-							input_rvs2()
+							input_rvs()
 						end
 						-- デンジャラススルー用
 						if p.knock_back3 == 0x0 and p.stop < 3 then
-							input_rvs2()
+							input_rvs()
 						end
 						-- TODO ラインもどしからのレバー入れ技
 						--[[
@@ -4574,20 +4565,20 @@ function rbff2.startplugin()
 						(p.on_main_line+8 < global.frame_number and p.on_sway_line+15 < global.frame_number)) then
 							if pgm:read_u8(0x10057e) == 0x80 then
 								-- ライン送り、ライン戻し
-								input_rvs2()
+								input_rvs()
 							end
 						else
 							if (p.on_hit1+1 < global.frame_number or p.on_guard+1 < global.frame_number) and
 							(24 >= p.pos_z or 40 <= p.pos_z) and
 							p.knock_back1 == 0 then
 								-- 通常攻撃、デンジャラススルー
-								input_rvs2()
+								input_rvs()
 							end
 						end
 						]]
 					elseif p.state == 3 and p.stop == 0 and p.knock_back2 <= 1 then
 						-- 当身うち空振りと裏雲隠し用
-						input_rvs2()
+						input_rvs()
 					end
 				end
 			end
