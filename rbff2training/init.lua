@@ -3847,7 +3847,6 @@ function rbff2.startplugin()
 			p.skip_frame = p.hit_skip ~= 0 or p.stop ~= 0 or mem_0x10D4EA ~= 0
 
 			--[[調査用ログ
-			]]
 			local printdata = function()
 				print(string.format("%2x %2s %2s %2s %2s %2s %2s %2x %2s %2s %2x", 
 				p.state,                  --1
@@ -3871,6 +3870,7 @@ function rbff2.startplugin()
 			elseif p.old_state == 1 or p.old_state == 2 or p.old_state == 3 then
 				printdata()
 			end
+			]]
 
 			if p.hit_skip ~= 0 or mem_0x10D4EA ~= 0 then
 				--停止フレームはフレーム計算しない
@@ -4488,14 +4488,14 @@ function rbff2.startplugin()
 					return next_joy[btn]
 				end
 				local input_bs = function()
-					cmd_base._a(p, next_joy)
+					--cmd_base._a(p, next_joy)
 					p.write_bs_hook(p.dummy_bs)
 				end
 				local input_rvs = function()
 					if p.dummy_rvs.cmd then
 						p.dummy_rvs.cmd(p, next_joy)
 					else
-						cmd_base._a(p, next_joy)
+						--cmd_base._a(p, next_joy)
 						p.write_bs_hook(p.dummy_rvs)
 					end
 				end
@@ -4506,8 +4506,8 @@ function rbff2.startplugin()
 					if wakeup_acts[p.act] and (p.on_wakeup+wakeup_frms[p.char] - 2) <= global.frame_number then
 						input_rvs()
 					end
-					-- TODO 着地リバーサル入力
-					if 14 < p.pos_y_down or (1 < p.pos_y_down and 11 > p.pos_y) then
+					-- 着地リバーサル入力
+					if 1 < p.pos_y_down and p.old_pos_y > p.pos_y and p.pos_y == 0 then
 						input_rvs()
 					end
 					--print(string.format("%s %s -> %s %s %s", i, p.old_pos_y, p.pos_y, p.pos_y_down, p.pos_y_peek))
@@ -5872,11 +5872,11 @@ function rbff2.startplugin()
 
 			-- BSモードの仕込み部分
 			-- 実質効いていない避け攻撃ぽいコマンドデータを1発BS用の入れ物に使う
-			-- 0xCB243の読込後にD1を技IDに差し替えればA(09)で技が出る。下は例。
+			-- 0xCB243の読込後にD1を技IDに差し替えれば未入力(00)で技が出る。下は例。
 			-- bp 03957E,{((A6)==CB244)&&((A4)==100400)&&(maincpu.pb@10048E==2)},{D1=1;g}
 			-- bp 03957E,{((A6)==CB244)&&((A4)==100500)&&(maincpu.pb@10058E==2)},{D1=1;g}
-			-- 末尾1バイトの20は技のIDになるが、プログラム中で1Eまでの値しか通さないので20だと無害。
-			pgm:write_direct_u32(0xCB240, 0xF009FF20)
+			-- 末尾1バイトの20は技のIDになるが、プログラム中で1Eまでの値しか通さないのと、00だと無害。
+			pgm:write_direct_u32(0xCB240, 0xF000FF00)
 			pgm:write_direct_u16(0xCB244, 0x0600)
 
 			--逆襲拳、サドマゾの初段で相手の状態変更しない（相手が投げられなくなる事象が解消する）
