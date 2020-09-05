@@ -1625,7 +1625,7 @@ function rbff2.startplugin()
 			{ id = 0x10, ver = 0x0600, bs = true , name = "カイザーウェイブ", },
 			{ id = 0x12, ver = 0x0600, bs = false, name = "ギガティックサイクロン", },
 			{ id = 0x13, ver = 0x0600, bs = false, name = "アンリミテッドデザイア", },
-			{ id = 0x00, ver = 0x06FE, bs = false, name = "アンリミテッドデザイア2", },
+			-- { id = 0x00, ver = 0x06FE, bs = false, name = "アンリミテッドデザイア2", },
 			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ブリッツボール", },
 			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント カイザーウェイブ", },
 		},
@@ -4576,9 +4576,9 @@ function rbff2.startplugin()
 				end
 
 				-- 自動追撃 TODO メニュー実装
+				--[[
 				if op.act == 0x190 or op.act == 0x192 or op.act == 0x18E or op.act == 0x13B then
 					-- 自動ダウン投げ
-					--[[
 					if p.char == 5 then
 						-- ギース
 						p.write_bs_hook({ id = 0x06, ver = 0x0600, bs = false, name = "雷鳴豪波投げ", })
@@ -4599,12 +4599,39 @@ function rbff2.startplugin()
 						-- ジョー、双角、ボブ、ホンフゥ、ダック、クラウザー
 						p.write_bs_hook({ id = 0x21, ver = 0x0600, bs = false, name = "ダウン攻撃", })
 					end
-					]]
 				end
-				--[[
-				if p.char == 7 and p.act == 0x6D  and p.act_count == 5  and p.act_frame == 0 then
+				if p.char == 7 then
 					-- ボブ
-					p.write_bs_hook({ id = 0x00, ver = 0x1EFF, bs = false, name = "ホーネットアタック", })
+					if  p.act == 0x6D  and p.act_count == 5  and p.act_frame == 0 then
+						p.write_bs_hook({ id = 0x00, ver = 0x1EFF, bs = false, name = "ホーネットアタック", })
+					end
+				elseif p.char == 5 then
+					-- ギース
+					if p.skip_frame and op.state == 1 then
+						if p.act == 0xE1 or p.act == 0xE3 then
+							cmd_base._a(p, next_joy)
+						elseif p.act == 0xE4 or p.act == 0xE5 or p.act == 0xE6 then
+							cmd_base._b(p, next_joy)
+						elseif p.act == 0xE7 or p.act == 0xE8 or p.act == 0xE9 then
+							cmd_base._c(p, next_joy)
+						elseif p.act == 0xEA then
+							p.write_bs_hook({ id = 0x00, ver = 0x1EFF, bs = false, name = "デッドリーレイブ(フィニッシュ)", })
+						end
+					end
+				elseif p.char == 20 then
+					-- クラウザー
+					if p.skip_frame and op.state == 1 then
+						if p.act == 0xE1 or p.act == 0xE7 then
+							cmd_base._a(p, next_joy)
+						elseif p.act == 0xE3 or p.act == 0xE5 or p.act == 0xE8 then
+							cmd_base._b(p, next_joy)
+						elseif p.act == 0xE4 or p.act == 0xE6 or p.act == 0xE9 then
+							cmd_base._c(p, next_joy)
+						elseif p.act == 0xEA then
+							--cmd_base._c(p, next_joy)
+							p.write_bs_hook({ id = 0x00, ver = 0x06FE, bs = false, name = "アンリミテッドデザイア2", })
+						end
+					end
 				end
 				]]
 
