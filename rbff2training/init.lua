@@ -1147,6 +1147,7 @@ function rbff2.startplugin()
 		[0x0F] = true, [0x15] = true, [0x16] = true,
 	}
 	local wakeup_acts = { [0x193] = true, [0x13B] = true, }
+	local down_acts = { [0x190] = true, [0x192] = true, [0x18E] = true, }
 
 	-- キー入力2
 	local cmd_neutral = function(p, next_joy)
@@ -1286,6 +1287,16 @@ function rbff2.startplugin()
 			next_joy[p.block_side] = true
 			next_joy["P" .. p.control .. " Button 3"] = true
 		end,
+		_8d = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy["P" .. p.control .. " Up"] = true
+			next_joy["P" .. p.control .. " Button 4"] = true
+		end,
+		_2d = function(p, next_joy)
+			cmd_neutral(p, next_joy)
+			next_joy["P" .. p.control .. " Down"] = true
+			next_joy["P" .. p.control .. " Button 4"] = true
+		end,
 	}
 	-- コマンドテーブル上の技ID
 	local common_rvs = {
@@ -1354,8 +1365,8 @@ function rbff2.startplugin()
 			{ id = 0x10, ver = 0x0600, bs = false, name = "スクリューアッパー", },
 			{ id = 0x12, ver = 0x0600, bs = false, name = "サンダーファイヤー(C)", },
 			{ id = 0x13, ver = 0x0600, bs = false, name = "サンダーファイヤー(D)", },
-			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント ハリケーンアッパー", },
-			-- { id = 0x47, ver = 0x0600, bs = false, name = "フェイント スラッシュキック", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ハリケーンアッパー", },
+			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント スラッシュキック", },
 		},
 		-- 不知火舞
 		{
@@ -1366,8 +1377,8 @@ function rbff2.startplugin()
 			-- { id = 0x05, ver = 0x0600, bs = false, name = "ムササビの舞", },
 			{ id = 0x10, ver = 0x0600, bs = false, name = "超必殺忍蜂", },
 			{ id = 0x12, ver = 0x0600, bs = false, name = "花嵐", },
-			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント 花蝶扇", },
-			-- { id = 0x47, ver = 0x0600, bs = false, name = "フェイント 花嵐", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 花蝶扇", },
+			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント 花嵐", },
 		},
 		-- ギース・ハワード
 		{
@@ -1381,8 +1392,8 @@ function rbff2.startplugin()
 			{ id = 0x10, ver = 0x0600, bs = false, name = "レイジングストーム", },
 			{ id = 0x12, ver = 0x0600, bs = false, name = "羅生門", },
 			{ id = 0x13, ver = 0x0600, bs = true , name = "デッドリーレイブ", },
-			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント 烈風拳", },
-			-- { id = 0x47, ver = 0x0600, bs = false, name = "フェイント レイジングストーム", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 烈風拳", },
+			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント レイジングストーム", },
 		},
 		-- 望月双角
 		{
@@ -1396,8 +1407,8 @@ function rbff2.startplugin()
 			{ id = 0x10, ver = 0x0600, bs = false, name = "いかづち", },
 			{ id = 0x12, ver = 0x0600, bs = false, name = "無惨弾", },
 			{ id = 0x21, ver = 0x0600, bs = false, name = "雷撃棍", },
-			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント まきびし", },
-			-- { id = 0x47, ver = 0x0600, bs = false, name = "フェイント いかづち", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント まきびし", },
+			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント いかづち", },
 		},
 		-- ボブ・ウィルソン
 		{
@@ -1410,7 +1421,7 @@ function rbff2.startplugin()
 			-- { id = 0x00, ver = 0x1EFF, bs = false, name = "ホーネットアタック", },
 			{ id = 0x10, ver = 0x0600, bs = false, name = "デンジャラスウルフ", },
 			{ id = 0x12, ver = 0x0600, bs = false, name = "ダンシングバイソン", },
-			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント ダンシングバイソン", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ダンシングバイソン", },
 		},
 		-- ホンフゥ
 		{
@@ -1425,7 +1436,7 @@ function rbff2.startplugin()
 			{ id = 0x07, ver = 0x0600, bs = false, name = "必勝！逆襲拳", },
 			{ id = 0x10, ver = 0x0600, bs = false, name = "爆発ゴロー", },
 			{ id = 0x12, ver = 0x0600, bs = true , name = "よかトンハンマー", },
-			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント 制空烈火棍", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 制空烈火棍", },
 		},
 		-- ブルー・マリー
 		{
@@ -1443,7 +1454,7 @@ function rbff2.startplugin()
 			{ id = 0x12, ver = 0x0600, bs = false, name = "M.エスカレーション", },
 			-- { id = 0x28, ver = 0x0600, bs = false, name = "M.トリプルエクスタシー", },
 			-- { id = 0x24, ver = 0x0600, bs = false, name = "レッグプレス", },
-			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント M.スナッチャー", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント M.スナッチャー", },
 		},
 		-- フランコ・バッシュ
 		{
@@ -1455,8 +1466,8 @@ function rbff2.startplugin()
 			{ id = 0x10, ver = 0x0600, bs = true , name = "ファイナルオメガショット", },
 			{ id = 0x11, ver = 0x0600, bs = false, name = "メガトンスクリュー", },
 			{ id = 0x12, ver = 0x0600, bs = false, name = "ハルマゲドンバスター", },
-			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント ハルマゲドンバスター", },
-			-- { id = 0x47, ver = 0x0600, bs = false, name = "フェイント ガッツダンク", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ハルマゲドンバスター", },
+			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント ガッツダンク", },
 		},
 		-- 山崎竜二
 		{
@@ -1473,7 +1484,7 @@ function rbff2.startplugin()
 			{ id = 0x12, ver = 0x0600, bs = false, name = "ドリル", },
 			-- { id = 0x00, ver = 0x06FE, bs = false, name = "ドリル Lv.5", },
 			-- { id = 0x00, ver = 0x06FF, bs = false, name = "?", },
-			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント 裁きの匕首", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 裁きの匕首", },
 		},
 		-- 秦崇秀
 		{
@@ -1482,7 +1493,7 @@ function rbff2.startplugin()
 			{ id = 0x03, ver = 0x0600, bs = true , name = "大 帝王天眼拳", },
 			{ id = 0x04, ver = 0x0600, bs = true , name = "小 帝王天耳拳", },
 			{ id = 0x05, ver = 0x0600, bs = true , name = "大 帝王天耳拳", },
-			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント 海龍照臨", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 海龍照臨", },
 			{ id = 0x06, ver = 0x0600, bs = false, name = "竜灯掌", },
 			{ id = 0x07, ver = 0x0600, bs = true , name = "帝王神眼拳（その場）", },
 			{ id = 0x08, ver = 0x06FF, bs = true , name = "帝王神眼拳（空中）", },
@@ -1506,6 +1517,7 @@ function rbff2.startplugin()
 			{ id = 0x10, ver = 0x06FF, bs = false, name = "帝王宿命拳", },
 			--{ id = 0x00, ver = 0x06FE, bs = false, name = "帝王宿命拳(連射)", },
 			{ id = 0x12, ver = 0x0600, bs = false, name = "帝王龍声拳", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 帝王宿命拳", },
 		},
 		-- ダック・キング
 		{
@@ -1532,7 +1544,7 @@ function rbff2.startplugin()
 			--{ id = 0x00, ver = 0x06F8, bs = false, name = "ダックダンス継続", },
 			{ id = 0x13, ver = 0x0600, bs = false, name = "スーパーポンピングマシーン", },
 			-- { id = 0x00, ver = 0x06F9, bs = false, name = "ダイビングパニッシャー?", },
-			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント ダックダンス", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ダックダンス", },
 			-- { id = 0x28, ver = 0x0600, bs = false, name = "旧ブレイクストーム", },
 		},
 		-- キム・カッファン
@@ -1549,7 +1561,7 @@ function rbff2.startplugin()
 			{ id = 0x06, ver = 0x0600, bs = true , name = "覇気脚", },
 			-- { id = 0x10, ver = 0x0600, bs = false, name = "鳳凰天舞脚", },
 			{ id = 0x12, ver = 0x0600, bs = false, name = "鳳凰脚", },
-			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント 鳳凰脚", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 鳳凰脚", },
 		},
 		-- ビリー・カーン
 		{
@@ -1562,7 +1574,7 @@ function rbff2.startplugin()
 			{ id = 0x10, ver = 0x0600, bs = false, name = "超火炎旋風棍", },
 			{ id = 0x11, ver = 0x0600, bs = false, name = "紅蓮殺棍", },
 			{ id = 0x12, ver = 0x0600, bs = false, name = "サラマンダーストリーム", },
-			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント 強襲飛翔棍", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 強襲飛翔棍", },
 		},
 		-- チン・シンザン
 		{
@@ -1576,8 +1588,8 @@ function rbff2.startplugin()
 			{ id = 0x07, ver = 0x0600, bs = false, name = "クッサメ砲", },
 			{ id = 0x10, ver = 0x0600, bs = true , name = "爆雷砲", },
 			{ id = 0x12, ver = 0x0600, bs = false, name = "ホエホエ弾", },
-			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント 破岩撃", },
-			-- { id = 0x47, ver = 0x0600, bs = false, name = "フェイント クッサメ砲", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 破岩撃", },
+			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント クッサメ砲", },
 		},
 		-- タン・フー・ルー,
 		{
@@ -1588,7 +1600,7 @@ function rbff2.startplugin()
 			{ id = 0x05, ver = 0x0600, bs = true , name = "裂千脚", },
 			{ id = 0x10, ver = 0x0600, bs = false, name = "旋風剛拳", },
 			{ id = 0x12, ver = 0x0600, bs = false, name = "大撃放", },
-			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント 旋風剛拳", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 旋風剛拳", },
 		},
 		-- ローレンス・ブラッド
 		{
@@ -1613,9 +1625,9 @@ function rbff2.startplugin()
 			{ id = 0x10, ver = 0x0600, bs = true , name = "カイザーウェイブ", },
 			{ id = 0x12, ver = 0x0600, bs = false, name = "ギガティックサイクロン", },
 			{ id = 0x13, ver = 0x0600, bs = false, name = "アンリミテッドデザイア", },
-			-- { id = 0x00, ver = 0x06FE, bs = false, name = "アンリミテッドデザイア2", },
-			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント ブリッツボール", },
-			-- { id = 0x47, ver = 0x0600, bs = false, name = "フェイント カイザーウェイブ", },
+			{ id = 0x00, ver = 0x06FE, bs = false, name = "アンリミテッドデザイア2", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ブリッツボール", },
+			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント カイザーウェイブ", },
 		},
 		-- リック・ストラウド
 		{
@@ -1628,7 +1640,7 @@ function rbff2.startplugin()
 			-- { id = 0x09, ver = 0x0600, bs = false, name = "?", },
 			{ id = 0x10, ver = 0x0600, bs = false, name = "ガイアブレス", },
 			{ id = 0x12, ver = 0x0600, bs = false, name = "ハウリング・ブル", },
-			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント シューティングスター", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント シューティングスター", },
 		},
 		-- 李香緋
 		{
@@ -1643,8 +1655,8 @@ function rbff2.startplugin()
 			{ id = 0x11, ver = 0x06FD, bs = false, name = "超白龍", },
 			-- { id = 0x00, ver = 0x06FD, bs = false, name = "超白龍2", },
 			{ id = 0x12, ver = 0x0600, bs = false, name = "真心牙", },
-			-- { id = 0x47, ver = 0x0600, bs = false, name = "フェイント 天崩山", },
-			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント 大鉄神", },
+			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント 天崩山", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 大鉄神", },
 		},
 		-- アルフレッド
 		{
@@ -1656,8 +1668,8 @@ function rbff2.startplugin()
 			{ id = 0x06, ver = 0x0600, bs = false, name = "S.TOL", },
 			--{ id = 0x10, ver = 0x0600, bs = false, name = "ショックストール", },
 			{ id = 0x12, ver = 0x0600, bs = false, name = "ウェーブライダー", },
-			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント クリティカルウィング", },
-			-- { id = 0x47, ver = 0x0600, bs = false, name = "フェイント オーグメンターウィング", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント クリティカルウィング", },
+			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント オーグメンターウィング", },
 		},
 	}
 	-- ブレイクショット対応技のみ
@@ -2381,6 +2393,7 @@ function rbff2.startplugin()
 			on_hit           = 0,          -- ヒット時（硬直前）フレーム
 			on_hit1          = 0,          -- ヒット時（硬直後）フレーム
 			on_wakeup        = 0,
+			on_down          = 0,
 			hit_skip         = 0,
 			old_skip_frame   = false,
 			skip_frame       = false,
@@ -3627,7 +3640,10 @@ function rbff2.startplugin()
 			if wakeup_acts[p.old_act] ~= true and wakeup_acts[p.act] == true then
 				p.on_wakeup = global.frame_number
 			end
-
+			-- ダウンフレーム
+			if down_acts[p.old_act] ~= true and down_acts[p.act] == true then
+				p.on_down = global.frame_number
+			end
 			-- フレーム表示用処理
 			p.act_frames     = p.act_frames  or {}
 			p.act_frames2    = p.act_frames2 or {}
@@ -4543,17 +4559,13 @@ function rbff2.startplugin()
 						input_rvs()
 					end
 					--print(string.format("%s %s -> %s %s %s", i, p.old_pos_y, p.pos_y, p.pos_y_down, p.pos_y_peek))
-				elseif p.act == 0x192 or p.act == 0x18E or p.act == 0x190 then
+				elseif p.on_down == global.frame_number then
 					if p.dummy_wakeup == wakeup_type.tech then
 						-- テクニカルライズ入力
-						if toggle_joy_val("P" .. p.control .. " Down") then
-							next_joy["P" .. p.control .. " Button 4"] = true
-						end
+						cmd_base._2d(p, next_joy)
 					elseif p.dummy_wakeup == wakeup_type.sway then
 						-- グランドスウェー入力
-						if toggle_joy_val("P" .. p.control .. " Up") then
-							next_joy["P" .. p.control .. " Button 4"] = true
-						end
+						cmd_base._8d(p, next_joy)
 					elseif p.dummy_wakeup == wakeup_type.atk then
 						-- 起き上がり攻撃入力
 						-- 舞、ボブ、フランコ、山崎のみなのでキャラをチェックする
@@ -4562,26 +4574,39 @@ function rbff2.startplugin()
 						end
 					end
 				end
-				-- 自動ダウン攻撃
-				-- TODO メニュー実装
-				if op.act == 0x190 or op.act == 0x192 or op.act == 0x18E then
+
+				-- 自動追撃 TODO メニュー実装
+				if op.act == 0x190 or op.act == 0x192 or op.act == 0x18E or op.act == 0x13B then
+					-- 自動ダウン投げ
+					--[[
 					if p.char == 5 then
 						-- ギース
 						p.write_bs_hook({ id = 0x06, ver = 0x0600, bs = false, name = "雷鳴豪波投げ", })
 					elseif p.char == 9 then
 						-- マリー
-						-- レッグプレス
-						p.write_bs_hook({ id = 0x24, ver = 0x0600, bs = false, name = "レッグプレス", })
-						-- M.ダイナマイトスウィング
 						p.write_bs_hook({ id = 0x08, ver = 0x06F9, bs = false, name = "M.ダイナマイトスウィング", })
+					end
+					]]
+					-- 自動ダウン攻撃
+					--[[
+					if p.char == 9 then
+						-- マリー
+						p.write_bs_hook({ id = 0x24, ver = 0x0600, bs = false, name = "レッグプレス", })
 					elseif p.char == 11 then
 						-- 山崎
 						p.write_bs_hook({ id = 0x09, ver = 0x0C00, bs = false, name = "トドメ", })
 					elseif p.char == 3 or p.char == 6 or p.char == 7 or p.char == 8 or p.char == 14 or p.char == 20 then
-						-- ジョー、ボブ、双角、ホンフゥ、ダック、クラウザー
+						-- ジョー、双角、ボブ、ホンフゥ、ダック、クラウザー
 						p.write_bs_hook({ id = 0x21, ver = 0x0600, bs = false, name = "ダウン攻撃", })
 					end
+					]]
 				end
+				--[[
+				if p.char == 7 and p.act == 0x6D  and p.act_count == 5  and p.act_frame == 0 then
+					-- ボブ
+					p.write_bs_hook({ id = 0x00, ver = 0x1EFF, bs = false, name = "ホーネットアタック", })
+				end
+				]]
 
 				-- ブレイクショット
 				if p.dummy_gd == dummy_gd_type.bs and p.on_guard == global.frame_number then
