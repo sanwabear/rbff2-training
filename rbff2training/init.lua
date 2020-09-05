@@ -784,7 +784,7 @@ function rbff2.startplugin()
 			{ name = "ニースマッシャー", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 			{ name = "デスハンマー", type = act_types.overhead, ids = { 0x68, }, },
 			{ name = "カイザーボディプレス", type = act_types.attack, ids = { 0x69, 0x72, }, },
-			{ name = "ダイビングエルボー", type = act_types.attack, ids = { 0x73, 0x74, 0x75, }, },
+			{ name = "ダイビングエルボー", type = act_types.attack, ids = { 0x6A, 0x73, 0x74, 0x75, }, },
 			{ disp_name = "ブリッツボール", name = "ブリッツボール・上段", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
 			{ disp_name = "ブリッツボール", name = "ブリッツボール・下段", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
 			{ name = "レッグトマホーク", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
@@ -973,7 +973,7 @@ function rbff2.startplugin()
 			{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
 			{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
 			{ name = "投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
-			{ name = "ダウン", type = act_types.any, ids = { 0x192, }, }, -- 0x18E
+			{ name = "ダウン", type = act_types.any, ids = { 0x192, 0x18E, 0x190,  }, },
 			{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 			{ name = "気絶", type = act_types.any, ids = { 0x194, 0x195, }, },
 			{ name = "ガード", type = act_types.guard, ids = { 0x117, 0x118, 0x119, 0x11A, 0x11B, 0x11C, 0x11D, 0x11E, 0x11F, 0x120, 0x121, 0x122, 0x123, 0x124, 0x125, 0x126, 0x127, 0x128, 0x129, 0x12A, 0x12C, 0x12D, 0x131, 0x132, 0x133, 0x134, 0x135, 0x136, 0x137, 0x139, }, },
@@ -1298,11 +1298,14 @@ function rbff2.startplugin()
 		{ cmd = cmd_base._2a     , bs = false, name = "下A", },
 		{ cmd = cmd_base._2b     , bs = false, name = "下B", },
 		{ cmd = cmd_base._2c     , bs = false, name = "下C", },
-		-- { cmd = cmd_base._8      , bs = false, name = "垂直ジャンプ", },
-		-- { cmd = cmd_base._9      , bs = false, name = "前ジャンプ", },
-		-- { cmd = cmd_base._7      , bs = false, name = "後ジャンプ", },
-		-- { id = 0x1E, ver = 0x0600, bs = true , name = "ダッシュ", },
-		-- { id = 0x1F, ver = 0x0600, bs = true , name = "飛び退き", },
+		{ cmd = cmd_base._8      , bs = false, name = "垂直ジャンプ", },
+		{ cmd = cmd_base._9      , bs = false, name = "前ジャンプ", },
+		{ cmd = cmd_base._7      , bs = false, name = "後ジャンプ", },
+		{ id = 0x1E, ver = 0x0600, bs = false, name = "ダッシュ", },
+		{ id = 0x1F, ver = 0x0600, bs = false, name = "飛び退き", },
+		{ id = 0x20, ver = 0x0600, bs = false, name = "20", },
+		{ id = 0x21, ver = 0x0600, bs = false, name = "21", },
+		{ id = 0x23, ver = 0x7800, bs = false, name = "23", },
 	}
 	local char_rvs_list = {
 		-- テリー・ボガード
@@ -1319,8 +1322,8 @@ function rbff2.startplugin()
 			{ id = 0x08, ver = 0x0600, bs = false, name = "ライジングタックル", },
 			{ id = 0x10, ver = 0x0600, bs = true , name = "パワーゲイザー", },
 			{ id = 0x12, ver = 0x0600, bs = false, name = "トリプルゲイザー", },
-			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント バーンナックル", },
-			-- { id = 0x47, ver = 0x0600, bs = false, name = "フェイント パワーゲイザー", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント バーンナックル", },
+			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント パワーゲイザー", },
 		},
 		-- アンディ・ボガード
 		{
@@ -1333,9 +1336,9 @@ function rbff2.startplugin()
 			-- { id = 0x07, ver = 0x1200, bs = false, name = "幻影不知火", },
 			{ id = 0x10, ver = 0x0600, bs = false, name = "超裂破弾", },
 			{ id = 0x12, ver = 0x0600, bs = true , name = "男打弾", },
-			-- { id = 0x46, ver = 0x0600, bs = false, name = "フェイント 残影拳", },
-			-- { id = 0x47, ver = 0x0600, bs = false, name = "フェイント 飛翔拳", },
-			-- { id = 0x48, ver = 0x0600, bs = false, name = "フェイント 超裂破弾", },
+			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 残影拳", },
+			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント 飛翔拳", },
+			{ id = 0x48, ver = 0x0600, bs = false, name = "フェイント 超裂破弾", },
 		},
 		-- 東丈
 		{
@@ -2797,14 +2800,21 @@ function rbff2.startplugin()
 					string.format("PC=%x;g", fix_bp_addr(0x05B46E))))
 			end
 
-			-- BSモードのフック
+			-- リバーサルとBSモードのフック
+			-- ダッシュとか用
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03957E),
+				"(maincpu.pw@107C22>0)&&((A6)==CB244)&&((($1E<=maincpu.pb@10DDDA)&&(maincpu.pb@10DDDD==$1)&&($100400==((A4)&$FFFFFF)))||(($1E<=maincpu.pb@10DDDE)&&(maincpu.pb@10DDE1==$1)&&($100500==((A4)&$FFFFFF))))",
+				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$40);D1=(maincpu.pb@(temp1));A6=((A6)+1);maincpu.pb@((A4)+$D6)=D1;maincpu.pb@((A4)+$D7)=maincpu.pb@(temp1+1);PC=((PC)+$20);g"))
+
+			-- リバーサルとBSモードのフック
+			-- 必殺技用
 			-- bp 03957E,{((A6)==CB244)&&((A4)==100400)&&(maincpu.pb@10048E==2)},{D1=1;g}
 			-- bp 03957E,{((A6)==CB244)&&((A4)==100500)&&(maincpu.pb@10058E==2)},{D1=1;g}
 			-- 0395B2: 1941 00A3                move.b  D1, ($a3,A4) -- 確定した技データ
 			-- 0395B6: 195E 00A4                move.b  (A6)+, ($a4,A4) -- 技データ読込 だいたい06
 			-- 0395BA: 195E 00A5                move.b  (A6)+, ($a5,A4) -- 技データ読込 だいたい00、飛燕斬01、02、03
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03957E),
-				"(maincpu.pw@107C22>0)&&((A6)==CB244)&&(((maincpu.pb@10DDDD==$1)&&($100400==((A4)&$FFFFFF)))||((maincpu.pb@10DDE1==$1)&&($100500==((A4)&$FFFFFF))))",
+				"(maincpu.pw@107C22>0)&&((A6)==CB244)&&((($1E>maincpu.pb@10DDDA)&&(maincpu.pb@10DDDD==$1)&&($100400==((A4)&$FFFFFF)))||(($1E>maincpu.pb@10DDDE)&&(maincpu.pb@10DDE1==$1)&&($100500==((A4)&$FFFFFF))))",
 				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$40);D1=(maincpu.pb@(temp1));A6=((A6)+2);maincpu.pb@((A4)+$A3)=D1;maincpu.pb@((A4)+$A4)=maincpu.pb@(temp1+1);maincpu.pb@((A4)+$A5)=maincpu.pb@(temp1+2);PC=((PC)+$20);g"))
 
 			-- ステージ設定用。メニューでFを設定した場合にのみ動作させる
@@ -3647,7 +3657,7 @@ function rbff2.startplugin()
 			end
 			if p.act_data.name == "やられ" then
 				p.act_1st    = false
-			elseif (p.state == 1 or p.state == 3) then
+			elseif p.act_data.name ~= "ダウン" and (p.state == 1 or p.state == 3) then
 				p.act_data   = {
 					name     = "やられ",
 					type     = act_types.any,
@@ -3924,13 +3934,13 @@ function rbff2.startplugin()
 			end
 			p.write_bs_hook = function(bs_hook)
 				if bs_hook and bs_hook.id then
-					pgm:write_u8(p.addr.bs_hook1, bs_hook.id or 0x20)
+					pgm:write_u8(p.addr.bs_hook1, bs_hook.id or 0x00)
 					pgm:write_u16(p.addr.bs_hook2, bs_hook.ver or 0x0600)
 					pgm:write_u8(p.addr.bs_hook3, 0x01)
 					p.bs_hooked = global.frame_number
-					-- print(string.format("bshook %s %x %x %x", global.frame_number, p.act, bs_hook.id or 0x20, bs_hook.ver or 0x0600))
+					--print(string.format("bshook %s %x %x %x", global.frame_number, p.act, bs_hook.id or 0x20, bs_hook.ver or 0x0600))
 				else
-					pgm:write_u8(p.addr.bs_hook1, 0x20)
+					pgm:write_u8(p.addr.bs_hook1, 0x00)
 					pgm:write_u16(p.addr.bs_hook2, 0x0600)
 					pgm:write_u8(p.addr.bs_hook3, 0xFF)
 					-- print(string.format("bshook %s %x %x %x", global.frame_number, 0x20, 0x0600))
@@ -4506,12 +4516,34 @@ function rbff2.startplugin()
 					if wakeup_acts[p.act] and (p.on_wakeup+wakeup_frms[p.char] - 2) <= global.frame_number then
 						input_rvs()
 					end
-					-- 着地リバーサル入力
+					-- 着地リバーサル入力（やられの着地）
 					if 1 < p.pos_y_down and p.old_pos_y > p.pos_y and p.pos_y == 0 then
 						input_rvs()
 					end
+					-- 着地リバーサル入力（通常ジャンプの着地）
+					if p.act == 0x9 and (p.act_frame == 2 or p.act_frame == 0) then
+						input_rvs()
+					end
+					-- リバーサルじゃない最速入力
+					if p.state == 0 and p.act_data.name ~= "やられ" and p.old_act_data.name == "やられ" then
+						input_rvs()
+					end
+					-- のけぞりのリバーサル入力
+					if (p.state == 1 or p.state == 2) and p.stop == 0 then
+						-- のけぞり中のデータをみてのけぞり修了の_2F前に入力確定する
+						if p.knock_back3 == 0x80 and p.knock_back1 == 0 then
+							input_rvs()
+						end
+						-- デンジャラススルー用
+						if p.knock_back3 == 0x0 and p.stop < 3 then
+							input_rvs()
+						end
+					elseif p.state == 3 and p.stop == 0 and p.knock_back2 <= 1 then
+						-- 当身うち空振りと裏雲隠し用
+						input_rvs()
+					end
 					--print(string.format("%s %s -> %s %s %s", i, p.old_pos_y, p.pos_y, p.pos_y_down, p.pos_y_peek))
-				elseif p.act == 0x192 or p.act == 0x18E then
+				elseif p.act == 0x192 or p.act == 0x18E or p.act == 0x190 then
 					if p.dummy_wakeup == wakeup_type.tech then
 						-- テクニカルライズ入力
 						if toggle_joy_val("P" .. p.control .. " Down") then
@@ -4526,12 +4558,28 @@ function rbff2.startplugin()
 						-- 起き上がり攻撃入力
 						-- 舞、ボブ、フランコ、山崎のみなのでキャラをチェックする
 						if p.char == 0x04 or p.char == 0x07 or p.char == 0x0A or p.char == 0x0B then
-							if toggle_joy_val("P" .. p.control .. " Button 3") then
-								next_joy["P" .. p.control .. " Button 1"] = false
-								next_joy["P" .. p.control .. " Button 2"] = false
-								next_joy["P" .. p.control .. " Button 4"] = false
-							end
+							p.write_bs_hook({ id = 0x23, ver = 0x7800, bs = false, name = "起き上がり攻撃", })
 						end
+					end
+				end
+				-- 自動ダウン攻撃
+				-- TODO メニュー実装
+				if op.act == 0x190 or op.act == 0x192 or op.act == 0x18E then
+					if p.char == 5 then
+						-- ギース
+						p.write_bs_hook({ id = 0x06, ver = 0x0600, bs = false, name = "雷鳴豪波投げ", })
+					elseif p.char == 9 then
+						-- マリー
+						-- レッグプレス
+						p.write_bs_hook({ id = 0x24, ver = 0x0600, bs = false, name = "レッグプレス", })
+						-- M.ダイナマイトスウィング
+						p.write_bs_hook({ id = 0x08, ver = 0x06F9, bs = false, name = "M.ダイナマイトスウィング", })
+					elseif p.char == 11 then
+						-- 山崎
+						p.write_bs_hook({ id = 0x09, ver = 0x0C00, bs = false, name = "トドメ", })
+					elseif p.char == 3 or p.char == 6 or p.char == 7 or p.char == 8 or p.char == 14 or p.char == 20 then
+						-- ジョー、ボブ、双角、ホンフゥ、ダック、クラウザー
+						p.write_bs_hook({ id = 0x21, ver = 0x0600, bs = false, name = "ダウン攻撃", })
 					end
 				end
 
@@ -4545,40 +4593,6 @@ function rbff2.startplugin()
 					if p.dummy_bs_cnt <= p.bs_count and p.dummy_bs then
 						input_bs()
 						p.bs_count = -1
-					end
-				end
-
-				-- リバーサル
-				if p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs then
-					if (p.state == 1 or p.state == 2) and p.stop == 0 then
-						-- のけぞり中のデータをみてのけぞり修了の_2F前に入力確定する
-						if p.knock_back3 == 0x80 and p.knock_back1 == 0 then
-							input_rvs()
-						end
-						-- デンジャラススルー用
-						if p.knock_back3 == 0x0 and p.stop < 3 then
-							input_rvs()
-						end
-						-- TODO ラインもどしからのレバー入れ技
-						--[[
-						if ((p.on_sway_line+8 < global.frame_number and p.on_sway_line+15 > global.frame_number) or
-						(p.on_main_line+8 < global.frame_number and p.on_sway_line+15 < global.frame_number)) then
-							if pgm:read_u8(0x10057e) == 0x80 then
-								-- ライン送り、ライン戻し
-								input_rvs()
-							end
-						else
-							if (p.on_hit1+1 < global.frame_number or p.on_guard+1 < global.frame_number) and
-							(24 >= p.pos_z or 40 <= p.pos_z) and
-							p.knock_back1 == 0 then
-								-- 通常攻撃、デンジャラススルー
-								input_rvs()
-							end
-						end
-						]]
-					elseif p.state == 3 and p.stop == 0 and p.knock_back2 <= 1 then
-						-- 当身うち空振りと裏雲隠し用
-						input_rvs()
 					end
 				end
 			end
@@ -5870,7 +5884,7 @@ function rbff2.startplugin()
 			--時間の値にアイコン用のオフセット値を足しむ処理で空表示にする 0632DA: 0640 00EE                addi.w  #$ee, D0
 			pgm:write_direct_u16(0x632DC, 0x0DD7)
 
-			-- BSモードの仕込み部分
+			-- リバーサルとBSモードの仕込み部分
 			-- 実質効いていない避け攻撃ぽいコマンドデータを1発BS用の入れ物に使う
 			-- 0xCB243の読込後にD1を技IDに差し替えれば未入力(00)で技が出る。下は例。
 			-- bp 03957E,{((A6)==CB244)&&((A4)==100400)&&(maincpu.pb@10048E==2)},{D1=1;g}
@@ -5879,8 +5893,8 @@ function rbff2.startplugin()
 			pgm:write_direct_u32(0xCB240, 0xF000FF00)
 			pgm:write_direct_u16(0xCB244, 0x0600)
 
-			--逆襲拳、サドマゾの初段で相手の状態変更しない（相手が投げられなくなる事象が解消する）
-			--pgm:write_direct_u8(0x57F43, 0x00)
+			-- 逆襲拳、サドマゾの初段で相手の状態変更しない（相手が投げられなくなる事象が解消する）
+			-- pgm:write_direct_u8(0x57F43, 0x00)
 		end
 
 		-- 強制的に家庭用モードに変更
