@@ -34,7 +34,7 @@ local rbff2 = exports
 
 function rbff2.startplugin()
 	local main_or_menu_state, prev_main_or_menu_state
-	local menu_cur, main_menu, tra_menu, rec_menu, play_menu, menu, tra_main, menu_exit, bs_menus, rvs_menus, bar_menu, ex_menu, col_menu
+	local menu_cur, main_menu, tra_menu, rec_menu, play_menu, menu, tra_main, menu_exit, bs_menus, rvs_menus, bar_menu, ex_menu, col_menu, auto_menu
 
 	local mem_last_time         = 0      -- 最終読込フレーム(キャッシュ用)
 	local mem_0x100701          = 0      -- 場面判定用
@@ -87,6 +87,15 @@ function rbff2.startplugin()
 		disp_frmgap     = true, -- フレーム差表示
 		pause_hit       = false, -- ヒット時にポーズ
 		pausethrow      = false, -- 投げ判定表示時にポーズ
+
+		auto_input      = {
+			otg_thw     = false, -- ダウン投げ              2
+			otg_atk     = false, -- ダウン攻撃              3
+			thw_otg     = false, -- 通常投げの派生技        4
+			rave        = 1,     -- デッドリーレイブ        5
+			desire      = 1,     -- アンリミテッドデザイア  6
+			drill       = 5,     -- ドリル                  7
+		},
 
 		frzc            = 1,
 		frz             = {0x1, 0x0},  -- DIPによる停止操作用の値とカウンタ
@@ -3011,7 +3020,7 @@ function rbff2.startplugin()
 	end
 
 	local rec_await_no_input, rec_await_1st_input, rec_await_play, rec_input, rec_play, rec_repeat_play, rec_play_interval, rec_fixpos
-	local menu_to_tra, menu_to_bar, menu_to_ex, menu_to_col
+	local menu_to_tra, menu_to_bar, menu_to_ex, menu_to_col, menu_to_auto
 
 	local get_pos = function(i)
 		local p = players[i]
@@ -4575,71 +4584,114 @@ function rbff2.startplugin()
 					end
 				end
 
-				-- 自動追撃 TODO メニュー実装
-				--[[
+				-- 自動ダウン追撃
 				if op.act == 0x190 or op.act == 0x192 or op.act == 0x18E or op.act == 0x13B then
 					-- 自動ダウン投げ
-					if p.char == 5 then
-						-- ギース
-						p.write_bs_hook({ id = 0x06, ver = 0x0600, bs = false, name = "雷鳴豪波投げ", })
-					elseif p.char == 9 then
-						-- マリー
-						p.write_bs_hook({ id = 0x08, ver = 0x06F9, bs = false, name = "M.ダイナマイトスウィング", })
+					-- TODO 間合い管理
+					if global.auto_input.otg_thw then
+						if p.char == 5 then
+							-- ギース
+							p.write_bs_hook({ id = 0x06, ver = 0x0600, bs = false, name = "雷鳴豪波投げ", })
+						elseif p.char == 9 then
+							-- マリー
+							p.write_bs_hook({ id = 0x08, ver = 0x06F9, bs = false, name = "M.ダイナマイトスウィング", })
+						end
 					end
-					]]
 					-- 自動ダウン攻撃
-					--[[
-					if p.char == 9 then
-						-- マリー
-						p.write_bs_hook({ id = 0x24, ver = 0x0600, bs = false, name = "レッグプレス", })
-					elseif p.char == 11 then
-						-- 山崎
-						p.write_bs_hook({ id = 0x09, ver = 0x0C00, bs = false, name = "トドメ", })
-					elseif p.char == 3 or p.char == 6 or p.char == 7 or p.char == 8 or p.char == 14 or p.char == 20 then
-						-- ジョー、双角、ボブ、ホンフゥ、ダック、クラウザー
-						p.write_bs_hook({ id = 0x21, ver = 0x0600, bs = false, name = "ダウン攻撃", })
+					-- TODO 間合い管理
+					if global.auto_input.otg_atk then
+						if p.char == 9 then
+							-- マリー
+							p.write_bs_hook({ id = 0x24, ver = 0x0600, bs = false, name = "レッグプレス", })
+						elseif p.char == 11 then
+							-- 山崎
+							p.write_bs_hook({ id = 0x09, ver = 0x0C00, bs = false, name = "トドメ", })
+						elseif p.char == 3 or p.char == 6 or p.char == 7 or p.char == 8 or p.char == 14 or p.char == 20 then
+							-- ジョー、双角、ボブ、ホンフゥ、ダック、クラウザー
+							-- TODO ホンフゥはタイミングがわるいと全然あたらない
+							p.write_bs_hook({ id = 0x21, ver = 0x0600, bs = false, name = "ダウン攻撃", })
+						end
 					end
 				end
-				if p.char == 7 then
-					-- ボブ
-					if  p.act == 0x6D  and p.act_count == 5  and p.act_frame == 0 then
-						p.write_bs_hook({ id = 0x00, ver = 0x1EFF, bs = false, name = "ホーネットアタック", })
+				-- 自動投げ追撃
+				if global.auto_input.thw_otg then
+					if p.char == 7 then
+						-- ボブ
+						if  p.act == 0x6D  and p.act_count == 5  and p.act_frame == 0 then
+							p.write_bs_hook({ id = 0x00, ver = 0x1EFF, bs = false, name = "ホーネットアタック", })
+						end
+					elseif p.char == 5 then
+						-- ギース TODO
+					elseif p.char == 6 then
+						-- 双角 TODO
+					elseif p.char == 9 then
+						-- マリー TODO
 					end
-				elseif p.char == 5 then
+				end
+				-- 自動デッドリーレイブ
+				print(global.auto_input.rave)
+				if 1 < global.auto_input.rave and p.char == 5 then
 					-- ギース
 					if p.skip_frame and op.state == 1 then
-						if p.act == 0xE1 or p.act == 0xE3 then
+						if p.act == 0xE1 and 2 <= global.auto_input.rave then
 							cmd_base._a(p, next_joy)
-						elseif p.act == 0xE4 or p.act == 0xE5 or p.act == 0xE6 then
+						elseif p.act == 0xE3 and 3 <= global.auto_input.rave then
+							cmd_base._a(p, next_joy)
+						elseif p.act == 0xE4 and 4 <= global.auto_input.rave then
 							cmd_base._b(p, next_joy)
-						elseif p.act == 0xE7 or p.act == 0xE8 or p.act == 0xE9 then
+						elseif p.act == 0xE5 and 5 <= global.auto_input.rave then
+							cmd_base._b(p, next_joy)
+						elseif p.act == 0xE6 and 6 <= global.auto_input.rave then
+							cmd_base._b(p, next_joy)
+						elseif p.act == 0xE7 and 7 <= global.auto_input.rave then
 							cmd_base._c(p, next_joy)
-						elseif p.act == 0xEA then
+						elseif p.act == 0xE8 and 8 <= global.auto_input.rave then
+							cmd_base._c(p, next_joy)
+						elseif p.act == 0xE9 and 9 <= global.auto_input.rave then
+							cmd_base._c(p, next_joy)
+						elseif p.act == 0xEA and 10 <= global.auto_input.rave then
 							p.write_bs_hook({ id = 0x00, ver = 0x1EFF, bs = false, name = "デッドリーレイブ(フィニッシュ)", })
 						end
 					end
-				elseif p.char == 20 then
+				end
+				-- 自動アンリミテッドデザイア
+				if 1 < global.auto_input.desire and p.char == 20 then
 					-- クラウザー
 					if p.skip_frame and op.state == 1 then
-						if p.act == 0xE1 or p.act == 0xE7 then
+						if p.act == 0xE1 and 2 <= global.auto_input.desire then
 							cmd_base._a(p, next_joy)
-						elseif p.act == 0xE3 or p.act == 0xE5 or p.act == 0xE8 then
+						elseif p.act == 0xE3 and 3 <= global.auto_input.desire then
 							cmd_base._b(p, next_joy)
-						elseif p.act == 0xE4 or p.act == 0xE6 or p.act == 0xE9 then
+						elseif p.act == 0xE4 and 4 <= global.auto_input.desire then
 							cmd_base._c(p, next_joy)
-						elseif p.act == 0xEA then
-							--cmd_base._c(p, next_joy)
+						elseif p.act == 0xE5 and 5 <= global.auto_input.desire then
+							cmd_base._b(p, next_joy)
+						elseif p.act == 0xE6 and 6 <= global.auto_input.desire then
+							cmd_base._c(p, next_joy)
+						elseif p.act == 0xE7 and 7 <= global.auto_input.desire then
+							cmd_base._a(p, next_joy)
+						elseif p.act == 0xE8 and 8 <= global.auto_input.desire then
+							cmd_base._b(p, next_joy)
+						elseif p.act == 0xE9 and 9 <= global.auto_input.desire then
+							cmd_base._c(p, next_joy)
+						elseif p.act == 0xEA and 10 == global.auto_input.desire then
+							cmd_base._c(p, next_joy)
+						elseif p.act == 0xEA and 11 == global.auto_input.desire then
 							p.write_bs_hook({ id = 0x00, ver = 0x06FE, bs = false, name = "アンリミテッドデザイア2", })
 						end
 					end
 				end
-				]]
+				-- 自動ドリル
+				if 1 < global.auto_input.drill and p.char == 11 then
+					-- TODO
+				end
 
 				-- ブレイクショット
 				if p.dummy_gd == dummy_gd_type.bs and p.on_guard == global.frame_number then
 					if p.bs_count < 1 then
 						p.bs_count = 1
 					else
+
 						p.bs_count = p.bs_count + 1
 					end
 					if p.dummy_bs_cnt <= p.bs_count and p.dummy_bs then
@@ -5032,7 +5084,6 @@ function rbff2.startplugin()
 		local p   = players
 		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 		local scr = manager:machine().screens[":screen"]
-		local ec = scr:frame_number()
 		--                              1                                 1
 		global.disp_hitbox       = col[ 2] == 2 -- 判定表示               2
 		global.pause_hit         = col[ 3] == 2 -- ヒット時にポーズ       3
@@ -5058,6 +5109,21 @@ function rbff2.startplugin()
 	end
 	local ex_menu_to_main_cancel = function()
 		ex_menu_to_main(true)
+	end
+	local auto_menu_to_main = function()
+		local col = auto_menu.pos.col
+		-- 自動入力設定            1
+		global.auto_input.otg_thw = col[ 2] == 2 -- ダウン投げ              2
+		global.auto_input.otg_atk = col[ 3] == 2 -- ダウン攻撃              3
+		global.auto_input.thw_otg = col[ 4] == 2 -- 通常投げの派生技        4
+		global.auto_input.rave    = col[ 5] -- デッドリーレイブ        5
+		global.auto_input.desire  = col[ 6] -- アンリミテッドデザイア  6
+		global.auto_input.drill   = col[ 7] -- ドリル                  7
+
+		menu_cur = main_menu
+	end
+	local auto_menu_to_main_cancel = function()
+		auto_menu_to_main(true)
 	end
 	local box_type_col_list = { 
 		box_type_base.a, box_type_base.t3, box_type_base.pa, box_type_base.t, box_type_base.at, box_type_base.pt,
@@ -5192,9 +5258,22 @@ function rbff2.startplugin()
 		col[13] = dip_config.easy_super and 2 or 1 -- 簡易超必      13
 		col[14] = global.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ14
 	end
+	local init_auto_menu_config = function()
+		local col = auto_menu.pos.col
+		local p = players
+		local g = global
+		-- 自動入力設定            1
+		col[ 2] = g.auto_input.otg_thw and 2 or 1 -- ダウン投げ              2
+		col[ 3] = g.auto_input.otg_atk and 2 or 1 -- ダウン攻撃              3
+		col[ 4] = g.auto_input.thw_otg and 2 or 1 -- 通常投げの派生技        4
+		col[ 5] = g.auto_input.rave    -- デッドリーレイブ        5
+		col[ 6] = g.auto_input.desire  -- アンリミテッドデザイア  6
+		col[ 7] = g.auto_input.drill   -- ドリル                  7
+	end
 	menu_to_tra  = function() menu_cur = tra_menu end
 	menu_to_bar  = function() menu_cur = bar_menu end
 	menu_to_ex   = function() menu_cur = ex_menu end
+	menu_to_auto = function() menu_cur = auto_menu end
 	menu_to_col  = function() menu_cur = col_menu end
 	menu_exit = function()
 		-- Bボタンでトレーニングモードへ切り替え
@@ -5217,12 +5296,12 @@ function rbff2.startplugin()
 		main_menu.pos.row = 1
 		cls_hook()
 		restart_fight({
-			next_p1       =      main_menu.pos.col[ 7]  , -- 1P セレクト
-			next_p2       =      main_menu.pos.col[ 8]  , -- 2P セレクト
-			next_p1col    =      main_menu.pos.col[ 9]-1, -- 1P カラー
-			next_p2col    =      main_menu.pos.col[10]-1, -- 2P カラー
-			next_stage    = stgs[main_menu.pos.col[11]], -- ステージセレクト
-			next_bgm      = bgms[main_menu.pos.col[12]].id, -- BGMセレクト
+			next_p1       =      main_menu.pos.col[ 8]  , -- 1P セレクト
+			next_p2       =      main_menu.pos.col[ 9]  , -- 2P セレクト
+			next_p1col    =      main_menu.pos.col[10]-1, -- 1P カラー
+			next_p2col    =      main_menu.pos.col[11]-1, -- 2P カラー
+			next_stage    = stgs[main_menu.pos.col[12]], -- ステージセレクト
+			next_bgm      = bgms[main_menu.pos.col[13]].id, -- BGMセレクト
 		})
 		cls_joy()
 		-- 初期化
@@ -5240,6 +5319,7 @@ function rbff2.startplugin()
 			{ "ダミー設定" },
 			{ "ゲージ設定" },
 			{ "一般設定" },
+			{ "自動入力設定" },
 			{ "判定個別設定" },
 			{ "プレイヤーセレクト画面" },
 			{ "                          クイックセレクト" },
@@ -5258,6 +5338,7 @@ function rbff2.startplugin()
 				0, -- ダミー設定
 				0, -- ゲージ設定
 				0, -- 一般設定
+				0, -- 自動入力設定
 				0, -- 判定個別設定
 				0, -- プレイヤーセレクト画面
 				0, -- クイックセレクト
@@ -5274,6 +5355,7 @@ function rbff2.startplugin()
 			menu_to_tra, -- ダミー設定
 			menu_to_bar, -- ゲージ設定
 			menu_to_ex,  -- 一般設定
+			menu_to_auto, -- 自動入力設定
 			menu_to_col, -- 判定個別設定
 			menu_player_select, -- プレイヤーセレクト画面
 			menu_nop, -- クイックセレクト
@@ -5289,6 +5371,7 @@ function rbff2.startplugin()
 			menu_exit, -- ダミー設定
 			menu_exit, -- ゲージ設定
 			menu_exit, -- 判定個別設定
+			menu_exit, -- 自動入力設定
 			menu_exit, -- プレイヤーセレクト画面
 			menu_exit, -- クイックセレクト
 			menu_exit, -- 1P セレクト
@@ -5303,27 +5386,27 @@ function rbff2.startplugin()
 	local update_menu_pos = function()
 		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 		-- メニューの更新
-		main_menu.pos.col[ 7] = math.min(math.max(pgm:read_u8(0x107BA5)  , 1), #char_names)
-		main_menu.pos.col[ 8] = math.min(math.max(pgm:read_u8(0x107BA7)  , 1), #char_names)
-		main_menu.pos.col[ 9] = math.min(math.max(pgm:read_u8(0x107BAC)+1, 1), 2)
-		main_menu.pos.col[10] = math.min(math.max(pgm:read_u8(0x107BAD)+1, 1), 2)
+		main_menu.pos.col[ 8] = math.min(math.max(pgm:read_u8(0x107BA5)  , 1), #char_names)
+		main_menu.pos.col[ 9] = math.min(math.max(pgm:read_u8(0x107BA7)  , 1), #char_names)
+		main_menu.pos.col[10] = math.min(math.max(pgm:read_u8(0x107BAC)+1, 1), 2)
+		main_menu.pos.col[11] = math.min(math.max(pgm:read_u8(0x107BAD)+1, 1), 2)
 
 		local stg1 = pgm:read_u8(0x107BB1)
 		local stg2 = pgm:read_u8(0x107BB7)
 		local stg3 = pgm:read_u8(0x107BB9) == 1 and 0x01 or 0x0F
-		main_menu.pos.col[11] = 1
+		main_menu.pos.col[12] = 1
 		for i, data in ipairs(stgs) do
 			if data.stg1 == stg1 and data.stg2 == stg2 and data.stg3 == stg3 then
-				main_menu.pos.col[11] = i
+				main_menu.pos.col[12] = i
 				break
 			end
 		end
 
-		main_menu.pos.col[12] = 1
+		main_menu.pos.col[13] = 1
 		local bgmid = math.max(pgm:read_u8(0x10A8D5), 1)
 		for i, bgm in ipairs(bgms) do
 			if bgmid == bgm.id then
-				main_menu.pos.col[12] = bgm.name_idx
+				main_menu.pos.col[13] = bgm.name_idx
 			end
 		end
 	end
@@ -5577,6 +5660,49 @@ function rbff2.startplugin()
 		},
 	}
 
+	auto_menu = {
+		list = {
+			{ "                        自動入力設定" },
+			{ "ダウン投げ"            , { "OFF", "ON" }, },
+			{ "ダウン攻撃"            , { "OFF", "ON" }, },
+			{ "通常投げの派生技"      , { "OFF", "ON" }, },
+			{ "デッドリーレイブ"      , { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, },
+			{ "アンリミテッドデザイア", { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "ギガティックサイクロン" }, },
+			{ "ドリル"                , { 1, 2, 3, 4, 5 }, },
+		},
+		pos = { -- メニュー内の選択位置
+			offset = 1,
+			row = 2,
+			col = {
+				0, -- 自動入力設定            1
+				1, -- ダウン投げ              2
+				1, -- ダウン攻撃              3
+				1, -- 通常投げの派生技        4
+				1, -- デッドリーレイブ        5
+				1, -- アンリミテッドデザイア  6
+				1, -- ドリル                  7
+			},
+		},
+		on_a = {
+			auto_menu_to_main, -- 自動入力設定            1
+			auto_menu_to_main, -- ダウン投げ              2
+			auto_menu_to_main, -- ダウン攻撃              3
+			auto_menu_to_main, -- 通常投げの派生技        4
+			auto_menu_to_main, -- デッドリーレイブ        5
+			auto_menu_to_main, -- アンリミテッドデザイア  6
+			auto_menu_to_main, -- ドリル                  7
+		},
+		on_b = {
+			auto_menu_to_main_cancel, -- 自動入力設定            1
+			auto_menu_to_main_cancel, -- ダウン投げ              2
+			auto_menu_to_main_cancel, -- ダウン攻撃              3
+			auto_menu_to_main_cancel, -- 通常投げの派生技        4
+			auto_menu_to_main_cancel, -- デッドリーレイブ        5
+			auto_menu_to_main_cancel, -- アンリミテッドデザイア  6
+			auto_menu_to_main_cancel, -- ドリル                  7
+		},
+	}
+
 	col_menu = {
 		list = {},
 		pos = { -- メニュー内の選択位置
@@ -5702,6 +5828,7 @@ function rbff2.startplugin()
 			exit_menu_to_play_cancel, -- 開始間合い
 		},
 	}
+	init_auto_menu_config()
 	init_ex_menu_config()
 	init_bar_menu_config()
 	init_menu_config()
