@@ -4629,7 +4629,6 @@ function rbff2.startplugin()
 					end
 				end
 				-- 自動デッドリーレイブ
-				print(global.auto_input.rave)
 				if 1 < global.auto_input.rave and p.char == 5 then
 					-- ギース
 					if p.skip_frame and op.state == 1 then
@@ -4960,9 +4959,7 @@ function rbff2.startplugin()
 		local col = tra_menu.pos.col
 		local row = tra_menu.pos.row
 		local p   = players
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
-		local scr = manager:machine().screens[":screen"]
-		local ec = scr:frame_number()
+
 		global.dummy_mode        = col[ 1]      -- ダミーモード           1
 		--                              2          レコード・リプレイ設定 2
 		p[1].dummy_act           = col[ 3]      -- 1P アクション          3
@@ -5832,6 +5829,7 @@ function rbff2.startplugin()
 	init_ex_menu_config()
 	init_bar_menu_config()
 	init_menu_config()
+	menu_to_main(true)
 
 	menu = {}
 	menu.proc = function()
