@@ -21,7 +21,6 @@
 --SOFTWARE.
 
 local exports = {}
-local sqlite3 = require('lsqlite3')
 require('lfs')
 
 exports.name = "rbff2training"
@@ -181,7 +180,7 @@ function rbff2.startplugin()
 		{ id = 0x26, name = "NEOGEO SOUND LOGO"             , }, -- ネオジオデモ
 	}
 	local bgm_names = {}
-	for i, bgm in ipairs(bgms) do
+	for _, bgm in ipairs(bgms) do
 		local exists = false
 		for _, name in pairs(bgm_names) do
 			if name == bgm.name then
@@ -222,7 +221,7 @@ function rbff2.startplugin()
 		{ stg1 = 0x0A, stg2 = 0x01, stg3 = 0x01, name = "NEW CHALLENGERS[2]", }, -- ホンフゥ
 	}
 	local names = {}
-	for i, stg in ipairs(stgs) do
+	for _, stg in ipairs(stgs) do
 		table.insert(names, stg.name)
 	end
 
@@ -1762,9 +1761,6 @@ function rbff2.startplugin()
 	local get_joy = function(exclude_player)
 		return get_joy_base(false, exclude_player)
 	end
-	local get_prev_joy = function(exclude_player)
-		return get_joy_base(true, exclude_player)
-	end
 	local accept_input = function(btn, joy_val, state_past)
 		if 12 < state_past then
 			local p1 = btn == "Start" and "1 Player Start" or ("P1 " .. btn)
@@ -1865,7 +1861,6 @@ function rbff2.startplugin()
 	end
 
 	-- 当たり判定
-	local buffer     = {} -- 当たり判定のバッファ
 	local type_ck_push = function(obj, box)
 		obj.height = obj.height or box.bottom - box.top --used for height of ground throwbox
 	end
@@ -2019,7 +2014,6 @@ function rbff2.startplugin()
 	local draw_cmd = function(p, line, frame, str)
 		local scr = manager:machine().screens[":screen"]
 		local cstr = convert(str)
-		local width = scr:width() * scr:xscale()
 
 		local p1 = p == 1
 		local xx = p1 and 15 or 300   -- 1Pと2Pで左右に表示し分ける
@@ -3040,7 +3034,6 @@ function rbff2.startplugin()
 	-- リプレイ開始位置記憶
 	rec_fixpos = function()
 		local scr = manager:machine().screens[":screen"]
-		local ec = scr:frame_number()
 
 		local pos = { get_pos(1), get_pos(2) }
 		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
@@ -3056,7 +3049,6 @@ function rbff2.startplugin()
 	-- 未入力状態を待ちける→入力開始まで待ち受ける
 	rec_await_no_input = function()
 		local scr = manager:machine().screens[":screen"]
-		local ec = scr:frame_number()
 
 		local joy_val = get_joy()
 
@@ -3074,7 +3066,6 @@ function rbff2.startplugin()
 	end
 	rec_await_1st_input = function()
 		local scr = manager:machine().screens[":screen"]
-		local ec = scr:frame_number()
 
 		local joy_val = get_joy(recording.temp_player)
 
@@ -3102,7 +3093,6 @@ function rbff2.startplugin()
 	-- 入力中
 	rec_input = function()
 		local scr = manager:machine().screens[":screen"]
-		local ec = scr:frame_number()
 
 		local joy_val = get_joy(recording.player)
 
@@ -3194,19 +3184,6 @@ function rbff2.startplugin()
 	end
 	-- 繰り返しリプレイ待ち
 	rec_repeat_play= function()
-		local scr = manager:machine().screens[":screen"]
-		local ec = scr:frame_number()
-
-		local joy_val = get_joy()
-
-		local no_input = true
-		for k, f in pairs(joy_val) do
-			if f > 0 then
-				no_input = false
-				break
-			end
-		end
-
 		-- 繰り返し前の行動が完了するまで待つ
 		local p = players[3-recording.player]
 		local op = players[recording.player]
@@ -3281,7 +3258,6 @@ function rbff2.startplugin()
 	-- リプレイまでの待ち時間
 	rec_play_interval = function(to_joy)
 		local scr = manager:machine().screens[":screen"]
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 		local ec = scr:frame_number()
 		local state_past = ec - global.input_accepted
 
@@ -3554,7 +3530,6 @@ function rbff2.startplugin()
 		local state_past = ec - global.input_accepted
 		local width = scr:width() * scr:xscale()
 		local joy_val = get_joy()
-		local prev_joy_val = get_prev_joy()
 
 		global.frame_number = global.frame_number + 1
 
@@ -3580,7 +3555,6 @@ function rbff2.startplugin()
 		-- 1Pと2Pの状態読取
 		for i, p in ipairs(players) do
 			local op         = players[3-i]
-			local p1         = i == 1
 
 			p.life           = pgm:read_u8(p.addr.life)                 -- 今の体力
 			p.old_state      = p.state                                  -- 前フレームの状態保存
@@ -3849,7 +3823,7 @@ function rbff2.startplugin()
 			-- update_objectはキャラの位置情報と当たり判定の情報を読み込んだ後で実行すること
 			update_object(p, global.frame_number)
 		end
-		for i, p in ipairs(players) do
+		for _, p in ipairs(players) do
 			-- 無敵表示
 			p.muteki.type = 0 -- 無敵
 			p.vul_hi, p.vul_lo = 240, 0
@@ -3940,7 +3914,7 @@ function rbff2.startplugin()
 			end
 		end
 
-		for i, p in ipairs(players) do
+		for _, p in ipairs(players) do
 			-- リバーサルのランダム選択
 			p.dummy_rvs = nil
 			if p.dummy_wakeup == wakeup_type.rvs and #p.dummy_rvs_list > 0 then
@@ -4499,38 +4473,13 @@ function rbff2.startplugin()
 					next_joy[p.front_side] = true
 				end
 
-				local toggle_joy_val = function(btn, cycle)
-					cycle = cycle == nil and 1 or cycle
-					local nega  = -cycle
-
-					-- 未入力
-					if joy_val[btn] < 0 then
-						if nega < joy_val[btn] then
-							next_joy[btn] = false
-						else
-							next_joy[btn] = true
-						end
-						return next_joy[btn]
-					end
-
-					-- 入力あり
-					next_joy[btn] = true
-					if 0 < prev_joy_val[btn] then
-						if cycle <= joy_val[btn] then
-							next_joy[btn] = false
-						end
-					end
-					return next_joy[btn]
-				end
 				local input_bs = function()
-					--cmd_base._a(p, next_joy)
 					p.write_bs_hook(p.dummy_bs)
 				end
 				local input_rvs = function()
 					if p.dummy_rvs.cmd then
 						p.dummy_rvs.cmd(p, next_joy)
 					else
-						--cmd_base._a(p, next_joy)
 						p.write_bs_hook(p.dummy_rvs)
 					end
 				end
@@ -4718,9 +4667,6 @@ function rbff2.startplugin()
 		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 		local scr = manager:machine().screens[":screen"]
 		local ec = scr:frame_number()
-		local state_past = ec - global.input_accepted
-		local width = scr:width() * scr:xscale()
-		local joy_val = get_joy()
 
 		-- メイン処理
 		if match_active then
@@ -4822,7 +4768,6 @@ function rbff2.startplugin()
 				end
 
 				-- 座標表示
-				local width = scr:width() * scr:xscale()
 				if global.disp_hitbox then
 					local col = 0 < p.pos_y and global.axis_air_color or global.axis_color
 					scr:draw_line(p.hit.pos_x, p.hit.pos_y-global.axis_size, p.hit.pos_x, p.hit.pos_y+global.axis_size, col)
@@ -4832,10 +4777,6 @@ function rbff2.startplugin()
 				--行動IDとフレーム数表示
 				if global.disp_frmgap or p.disp_frm then
 					local p1 = i == 1
-					local row = 1
-					local x1 = p1 and 55 or 205
-					local prev_name = nil
-					local y = 56
 					if global.disp_frmgap then
 						draw_frame_groups(p.act_frames2, p.act_frames_total, 30, p1 and 64 or 72, 8)
 						local j = 0
@@ -5077,10 +5018,8 @@ function rbff2.startplugin()
 	end
 	local ex_menu_to_main = function(cancel)
 		local col = ex_menu.pos.col
-		local row = ex_menu.pos.row
 		local p   = players
 		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
-		local scr = manager:machine().screens[":screen"]
 		--                              1                                 1
 		global.disp_hitbox       = col[ 2] == 2 -- 判定表示               2
 		global.pause_hit         = col[ 3] == 2 -- ヒット時にポーズ       3
@@ -5132,11 +5071,6 @@ function rbff2.startplugin()
 		box_type_base.g13, box_type_base.g14, box_type_base.g15, box_type_base.g16, }
 	local col_menu_to_main = function(cancel)
 		local col = col_menu.pos.col
-		local row = col_menu.pos.row
-		local p   = players
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
-		local scr = manager:machine().screens[":screen"]
-		local ec = scr:frame_number()
 
 		for i = 2, #col do
 			box_type_col_list[i-1].enabled = col[i] == 2
@@ -5152,7 +5086,6 @@ function rbff2.startplugin()
 	local exit_menu_to_rec = function(slot_no)
 		local scr = manager:machine().screens[":screen"]
 		local ec = scr:frame_number()
-		local col = rec_menu.pos.col
 		global.dummy_mode = 5
 		global.rec_main = rec_await_no_input
 		global.input_accepted = ec
@@ -5837,7 +5770,6 @@ function rbff2.startplugin()
 		set_freeze(false)
 	end
 	menu.draw = function()
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 		local scr = manager:machine().screens[":screen"]
 		local ec = scr:frame_number()
 		local state_past = ec - global.input_accepted
