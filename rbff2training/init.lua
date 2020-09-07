@@ -926,7 +926,8 @@ function rbff2.startplugin()
 			{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 			{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
 			{ name = "しゃがみ歩き", type = act_types.free, ids = { 0x7, }, },
-			{ name = "スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+			{ disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+			{ disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 			{ name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
 			{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 			{ disp_name = "立ち", name = "スゥエーライン上 立ち", type = act_types.free, ids = { 0x21, 0x40, 0x20, 0x3F, }, },
@@ -3594,7 +3595,12 @@ function rbff2.startplugin()
 			p.pos_z          = pgm:read_i16(p.addr.pos_z)
 			p.on_sway_line   = (40 == p.pos_z and 40 > p.old_pos_z) and global.frame_number or p.on_sway_line
 			p.on_main_line   = (24 == p.pos_z and 24 < p.old_pos_z) and global.frame_number or p.on_main_line
-			p.in_sway_line   = 24 < p.pos_z
+			p.in_sway_line   = pgm:read_u8(p.addr.base + 0x89) -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
+			if p.in_sway_line == 0x00 or (p.in_sway_line == 0x82 and 24 < p.pos_z) then
+				p.in_sway_line = false
+			else
+				p.in_sway_line = true
+			end
 			p.side           = pgm:read_i8(p.addr.side) < 0 and -1 or 1
 
 			p.attack         = pgm:read_u8(p.addr.attack)
@@ -3823,7 +3829,7 @@ function rbff2.startplugin()
 			-- update_objectはキャラの位置情報と当たり判定の情報を読み込んだ後で実行すること
 			update_object(p, global.frame_number)
 		end
-		for _, p in ipairs(players) do
+		for i, p in ipairs(players) do
 			-- 無敵表示
 			p.muteki.type = 0 -- 無敵
 			p.vul_hi, p.vul_lo = 240, 0
