@@ -2571,6 +2571,8 @@ function rbff2.startplugin()
 				bs_hook2     = p1 and 0x10DDDB or 0x10DDDF, -- BSモードのフック処理用アドレス。技のバリエーション。
 				bs_hook3     = p1 and 0x10DDDD or 0x10DDE1, -- BSモードのフック処理用アドレス。技発動。
 
+				throw_frm    = p1 and 0x10DDE2 or 0x10DDE3, -- 投げ可能なフレーム経過
+
 				-- フックできない変わり用
 				state2       = p1 and 0x10CA0E or 0x10CA0F, -- 状態
 				act2         = p1 and 0x10CA12 or 0x10CA13, -- 行動ID デバッグディップステータス表示のPと同じ
@@ -2927,6 +2929,13 @@ function rbff2.startplugin()
 				--no    shadows FF
 				table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x017300), "maincpu.pw@107C22>0", "maincpu.pb@((A4)+$82)=$FF;g"))
 			end
+
+			-- 潜在ぜったい投げるマン
+			--table.insert(bps, cpu:debug():bpset(0x39FAC, "1", "maincpu.pw@((A3)+$90)=FF;g"))
+			-- 投げ可能フレーム
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x039F96), "1",
+				"temp1=$10DDE2+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=D7;g"))
+			
 		end
 	end
 
@@ -3565,6 +3574,7 @@ function rbff2.startplugin()
 			p.max_combo      = tohexnum(pgm:read_u8(p.addr.max_combo2)) -- 最大コンボ数
 			p.tmp_dmg        = pgm:read_u8(p.addr.last_dmg)  -- ダメージ
 			pgm:write_u8(p.addr.last_dmg, 0x00)              -- つぎの更新チェックのためにゼロにする(フックが出来なかったのでワークアラウンド)
+			p.throw_frm     =  pgm:read_u8(p.addr.throw_frm)
 
 			p.old_act        = p.act or 0x00
 			p.act            = pgm:read_u16(p.addr.act)
@@ -4219,13 +4229,6 @@ function rbff2.startplugin()
 				last_frame.frm_gap = last_frame.frm_gap or {}
 				table.insert(last_frame.frm_gap, p.frm_gap.act_frames2[#p.frm_gap.act_frames2])
 			end
-
-			--[[ debug
-			-- 技IDの確認用
-			if i == 1 and p.old_act ~= p.act and p.act then
-				print(string.format("%x %x", p.char, p.act))
-			end
-			]]
 		end
 		--1Pと2Pともにフレーム数が多すぎる場合は加算をやめる
 		fix_max_framecount()
@@ -4320,6 +4323,7 @@ function rbff2.startplugin()
 					-- やられ状態から戻ったときに回復させる
 					pgm:write_u8(p.addr.life, max_life)         -- 体力
 					pgm:write_u8(p.addr.stun, p.addr.init_stun) -- スタン値
+					pgm:write_u8(p.addr.stun_timer, 0)          -- スタン値タイマー
 				elseif max_life < p.life then
 					-- 最大値の方が少ない場合は強制で減らす
 					pgm:write_u8(p.addr.life, max_life)
@@ -4734,15 +4738,6 @@ function rbff2.startplugin()
 					draw_rtext(   p1 and 311 or 92, 55, op.max_combo)
 				end
 
-				-- 状態表示
-				scr:draw_text(p1 and 228 or  9, 48, "ダメージ:")
-				scr:draw_text(p1 and 228 or  9, 55, "コンボ:")
-				draw_rtext(   p1 and 281 or 62, 48, op.last_combo_dmg .. "(+" .. op.last_dmg .. ")")
-				draw_rtext(   p1 and 281 or 62, 55, op.last_combo)
-				scr:draw_text(p1 and 296 or 77, 41, "最大")
-				draw_rtext(   p1 and 311 or 92, 48, op.max_dmg)
-				draw_rtext(   p1 and 311 or 92, 55, op.max_combo)
-
 				local draw_status = function(x, y, text)
 					if p1 then
 						scr:draw_text(x, y, text)
@@ -4750,7 +4745,12 @@ function rbff2.startplugin()
 						draw_rtext(320-x-5, y, text)
 					end
 				end
-				draw_status(4,  8, p.state)
+				if p1 then
+					scr:draw_box(0, 40, 0,  37, 0x80404040, 0x80404040)
+				else
+					scr:draw_box(0, 320-40, 0,  37, 0x80404040, 0x80404040)
+				end
+				draw_status(4,  8, string.format("%s %2s %3s", p.state, p.throw_frm, pgm:read_u8(p.addr.base + 0x90)))
 				draw_status(4, 15, p.hit.vulnerable and "V" or "")
 				draw_status(4, 22, string.format("%1s %2x %2x", p.hit.harmless and "" or "H", p.attack, p.attack_id))
 				draw_status(4, 29, string.format("%4x %2s %2s", p.act, p.act_count, p.act_frame))
@@ -4768,9 +4768,17 @@ function rbff2.startplugin()
 
 				-- スタン表示
 				if global.disp_stun then
-					scr:draw_box(p1 and (138 - p.max_stun) or 180, 29, p1 and 140 or (182 + p.max_stun), 34, 0xDDC0C0C0) -- 枠
-					scr:draw_box(p1 and (139 - p.max_stun) or 181, 30, p1 and 139 or (181 + p.max_stun), 33, 0xDD000000) -- 黒背景
-					scr:draw_box(p1 and (139 - p.stun)     or 181, 30, p1 and 139 or (181 + p.stun)    , 33, 0xDDFF0000) -- スタン値
+					scr:draw_box(p1 and (138 - p.max_stun)   or 180, 29, p1 and 140 or (182 + p.max_stun)  , 34, 0xDDC0C0C0) -- 枠
+					scr:draw_box(p1 and (139 - p.max_stun)   or 181, 30, p1 and 139 or (181 + p.max_stun)  , 33, 0xDD000000) -- 黒背景
+					scr:draw_box(p1 and (139 - p.stun)       or 181, 30, p1 and 139 or (181 + p.stun)      , 33, 0xDDFF0000) -- スタン値
+					draw_rtext(p1 and 135.5 or 190.5, 28.5,  p.stun, shadow_col)
+					draw_rtext(p1 and 135   or 190  , 28  ,  p.stun)
+
+					scr:draw_box(p1 and (138 - 90)           or 180, 35, p1 and 140 or (182 + 90)          , 40, 0xDDC0C0C0) -- 枠
+					scr:draw_box(p1 and (139 - 90)           or 181, 36, p1 and 139 or (181 + 90)          , 39, 0xDD000000) -- 黒背景
+					scr:draw_box(p1 and (139 - p.stun_timer) or 181, 36, p1 and 139 or (181 + p.stun_timer), 39, 0xDDFFFF00) -- スタン値
+					draw_rtext(p1 and 135.5 or 190.5, 34.5,  p.stun_timer, shadow_col)
+					draw_rtext(p1 and 135   or 190  , 34  ,  p.stun_timer)
 				end
 
 				-- 座標表示
@@ -4803,8 +4811,8 @@ function rbff2.startplugin()
 				end
 				if global.disp_frmgap then
 					--フレーム差表示
-					draw_rtext(p1 and 135.5 or 190.5, 34.5,  p.last_frame_gap, shadow_col)
-					draw_rtext(p1 and 135   or 190  , 34  ,  p.last_frame_gap)
+					draw_rtext(p1 and 135.5 or 190.5, 40.5,  p.last_frame_gap, shadow_col)
+					draw_rtext(p1 and 135   or 190  , 40  ,  p.last_frame_gap)
 				end
 			end
 
@@ -5042,9 +5050,10 @@ function rbff2.startplugin()
 		global.mame_debug_wnd    = col[14] == 2 -- MAMEデバッグウィンドウ14
 
 		for _, p in ipairs(players) do
-			local max_life = p.red and 0x60 or 0xC0 -- 赤体力にするかどうか
+			local max_life = p.red and 0x60 or 0xC0     -- 赤体力にするかどうか
 			pgm:write_u8(p.addr.life, max_life)         -- 体力
 			pgm:write_u8(p.addr.stun, p.addr.init_stun) -- スタン値
+			pgm:write_u8(p.addr.stun_timer, 0)          -- スタン値タイマー
 		end
 
 		menu_cur = main_menu
