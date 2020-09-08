@@ -1323,9 +1323,6 @@ function rbff2.startplugin()
 		{ cmd = cmd_base._7      , bs = false, name = "後ジャンプ", },
 		{ id = 0x1E, ver = 0x0600, bs = false, name = "ダッシュ", },
 		{ id = 0x1F, ver = 0x0600, bs = false, name = "飛び退き", },
-		{ id = 0x20, ver = 0x0600, bs = false, name = "20", },
-		{ id = 0x21, ver = 0x0600, bs = false, name = "21", },
-		{ id = 0x23, ver = 0x7800, bs = false, name = "23", },
 	}
 	local char_rvs_list = {
 		-- テリー・ボガード
@@ -2571,7 +2568,8 @@ function rbff2.startplugin()
 				bs_hook2     = p1 and 0x10DDDB or 0x10DDDF, -- BSモードのフック処理用アドレス。技のバリエーション。
 				bs_hook3     = p1 and 0x10DDDD or 0x10DDE1, -- BSモードのフック処理用アドレス。技発動。
 
-				throw_frm    = p1 and 0x10DDE2 or 0x10DDE3, -- 投げ可能なフレーム経過
+				tw_threshold = p1 and 0x10DDE2 or 0x10DDE3, -- 投げ可能かどうかのフレーム判定のしきい値
+				tw_frame     = p1 and 0x100490 or 0x100590, -- 投げ可能かどうかのフレーム経過
 
 				-- フックできない変わり用
 				state2       = p1 and 0x10CA0E or 0x10CA0F, -- 状態
@@ -3574,7 +3572,8 @@ function rbff2.startplugin()
 			p.max_combo      = tohexnum(pgm:read_u8(p.addr.max_combo2)) -- 最大コンボ数
 			p.tmp_dmg        = pgm:read_u8(p.addr.last_dmg)  -- ダメージ
 			pgm:write_u8(p.addr.last_dmg, 0x00)              -- つぎの更新チェックのためにゼロにする(フックが出来なかったのでワークアラウンド)
-			p.throw_frm     =  pgm:read_u8(p.addr.throw_frm)
+			p.tw_threshold   = pgm:read_u8(p.addr.tw_threshold)
+			p.tw_frame       = pgm:read_u8(p.addr.tw_frame)
 
 			p.old_act        = p.act or 0x00
 			p.act            = pgm:read_u16(p.addr.act)
@@ -4750,11 +4749,11 @@ function rbff2.startplugin()
 					end
 				end
 				if p1 then
-					scr:draw_box(0, 40, 0,  37, 0x80404040, 0x80404040)
+					scr:draw_box(  3, 7,  40,  36, 0x80404040, 0x80404040)
 				else
-					scr:draw_box(0, 320-40, 0,  37, 0x80404040, 0x80404040)
+					scr:draw_box(279, 7, 316,  36, 0x80404040, 0x80404040)
 				end
-				draw_status(4,  8, string.format("%s %2s %3s", p.state, p.throw_frm, pgm:read_u8(p.addr.base + 0x90)))
+				draw_status(4,  8, string.format("%s %2s %3s", p.state, p.tw_threshold, p.tw_frame))
 				draw_status(4, 15, p.hit.vulnerable and "V" or "")
 				draw_status(4, 22, string.format("%1s %2x %2x", p.hit.harmless and "" or "H", p.attack, p.attack_id))
 				draw_status(4, 29, string.format("%4x %2s %2s", p.act, p.act_count, p.act_frame))
