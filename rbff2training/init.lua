@@ -4235,6 +4235,7 @@ function rbff2.startplugin()
 
 		for i, p in ipairs(players) do
 			local p1 = i == 1
+			local op = players[3-i]
 
 			-- 入力表示用の情報構築
 			local key_now = p.key_now
@@ -4319,11 +4320,14 @@ function rbff2.startplugin()
 				local max_life = p.red and 0x60 or 0xC0 -- 赤体力にするかどうか
 
 				-- 回復判定して回復
-				if p.old_state ~= p.state and max_life ~= p.life then
+				--if p.old_state ~= p.state and max_life ~= p.life then
+				if (math.max(p.update_dmg, op.update_dmg) + 180) <= global.frame_number then
 					-- やられ状態から戻ったときに回復させる
-					pgm:write_u8(p.addr.life, max_life)         -- 体力
-					pgm:write_u8(p.addr.stun, p.addr.init_stun) -- スタン値
-					pgm:write_u8(p.addr.stun_timer, 0)          -- スタン値タイマー
+					pgm:write_u8(p.addr.life, max_life) -- 体力
+					pgm:write_u8(p.addr.stun, 0) -- スタン値
+					pgm:write_u8(p.addr.max_stun,  p.init_stun) -- 最大スタン値 
+					pgm:write_u8(p.addr.init_stun, p.init_stun) -- 最大スタン値
+					pgm:write_u8(p.addr.stun_timer, 0) -- スタン値タイマー
 				elseif max_life < p.life then
 					-- 最大値の方が少ない場合は強制で減らす
 					pgm:write_u8(p.addr.life, max_life)
@@ -5051,9 +5055,11 @@ function rbff2.startplugin()
 
 		for _, p in ipairs(players) do
 			local max_life = p.red and 0x60 or 0xC0     -- 赤体力にするかどうか
-			pgm:write_u8(p.addr.life, max_life)         -- 体力
-			pgm:write_u8(p.addr.stun, p.addr.init_stun) -- スタン値
-			pgm:write_u8(p.addr.stun_timer, 0)          -- スタン値タイマー
+			pgm:write_u8(p.addr.life, max_life) -- 体力
+			pgm:write_u8(p.addr.stun, 0) -- スタン値
+			pgm:write_u8(p.addr.max_stun,  p.init_stun) -- 最大スタン値 
+			pgm:write_u8(p.addr.init_stun, p.init_stun) -- 最大スタン値
+			pgm:write_u8(p.addr.stun_timer, 0) -- スタン値タイマー
 		end
 
 		menu_cur = main_menu
