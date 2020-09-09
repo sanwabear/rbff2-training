@@ -2570,6 +2570,7 @@ function rbff2.startplugin()
 
 				tw_threshold = p1 and 0x10DDE2 or 0x10DDE3, -- 投げ可能かどうかのフレーム判定のしきい値
 				tw_frame     = p1 and 0x100490 or 0x100590, -- 投げ可能かどうかのフレーム経過
+				tw_accepted  = p1 and 0x10DDE4 or 0x10DDE5, -- 投げ確定時のフレーム経過
 
 				-- フックできない変わり用
 				state2       = p1 and 0x10CA0E or 0x10CA0F, -- 状態
@@ -2930,9 +2931,12 @@ function rbff2.startplugin()
 
 			-- 潜在ぜったい投げるマン
 			--table.insert(bps, cpu:debug():bpset(0x39FAC, "1", "maincpu.pw@((A3)+$90)=FF;g"))
-			-- 投げ可能フレーム
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x039F96), "1",
+			-- 投げ可能判定用フレーム
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x039F90), "1",
 				"temp1=$10DDE2+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=D7;g"))
+			-- 投げ確定時の判定用フレーム
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x039F96), "1",
+				"temp1=$10DDE4+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@((A3)+$90);g"))
 			
 		end
 	end
@@ -3573,6 +3577,7 @@ function rbff2.startplugin()
 			p.tmp_dmg        = pgm:read_u8(p.addr.last_dmg)  -- ダメージ
 			pgm:write_u8(p.addr.last_dmg, 0x00)              -- つぎの更新チェックのためにゼロにする(フックが出来なかったのでワークアラウンド)
 			p.tw_threshold   = pgm:read_u8(p.addr.tw_threshold)
+			p.tw_accepted    = pgm:read_u8(p.addr.tw_accepted)
 			p.tw_frame       = pgm:read_u8(p.addr.tw_frame)
 
 			p.old_act        = p.act or 0x00
@@ -4582,12 +4587,26 @@ function rbff2.startplugin()
 						if  p.act == 0x6D  and p.act_count == 5  and p.act_frame == 0 then
 							p.write_bs_hook({ id = 0x00, ver = 0x1EFF, bs = false, name = "ホーネットアタック", })
 						end
+					elseif p.char == 3 then
+						-- ジョー
+						if  p.act == 0x70  and p.act_count == 0  and p.act_frame == 11 then
+							cmd_base._2c(p, next_joy)
+						end
 					elseif p.char == 5 then
-						-- ギース TODO
+						-- ギース
+						if  p.act == 0x6D  and p.act_count == 0  and p.act_frame == 0 then
+							p.write_bs_hook({ id = 0x50, ver = 0x0600, bs = false, name = "絶命人中打ち", })
+						end
 					elseif p.char == 6 then
-						-- 双角 TODO
+						-- 双角
+						if  p.act == 0x6D  and p.act_count == 0  and p.act_frame == 0 then
+							p.write_bs_hook({ id = 0x50, ver = 0x0600, bs = false, name = "地獄門", })
+						end
 					elseif p.char == 9 then
-						-- マリー TODO
+						-- マリー
+						if  p.act == 0x6D  and p.act_count == 0  and p.act_frame == 0 then
+							p.write_bs_hook({ id = 0x50, ver = 0x0600, bs = false, name = "アキレスホールド", })
+						end
 					end
 				end
 				-- 自動デッドリーレイブ
@@ -4643,8 +4662,19 @@ function rbff2.startplugin()
 					end
 				end
 				-- 自動ドリル
-				if 1 < global.auto_input.drill and p.char == 11 then
-					-- TODO
+				if 1 < global.auto_input.drill and p.char == 11 and 1 < global.auto_input.drill then
+					if p.act >= 0x108 and p.act <= 0x10D and p.act_frame % 2 == 0 then
+						local lv = pgm:read_u8(p.addr.base + 0x94)
+						if (lv < 9 and 2 <= global.auto_input.drill) or
+							(lv < 10 and 3 <= global.auto_input.drill) or
+							4 <= global.auto_input.drill then
+								cmd_base._c(p, next_joy)
+						end
+					elseif p.act == 0x10E and p.act_count == 0  and p.act_frame == 0 then
+						if 5 == global.auto_input.drill then
+							p.write_bs_hook({ id = 0x00, ver = 0x06FE, bs = false, name = "ドリル Lv.5", })
+						end
+					end
 				end
 
 				-- ブレイクショット
@@ -4753,7 +4783,7 @@ function rbff2.startplugin()
 				else
 					scr:draw_box(279, 7, 316,  36, 0x80404040, 0x80404040)
 				end
-				draw_status(4,  8, string.format("%s %2s %3s", p.state, p.tw_threshold, p.tw_frame))
+				draw_status(4,  8, string.format("%s %2s %3s %3s", p.state, p.tw_threshold, p.tw_accepted, p.tw_frame))
 				draw_status(4, 15, p.hit.vulnerable and "V" or "")
 				draw_status(4, 22, string.format("%1s %2x %2x", p.hit.harmless and "" or "H", p.attack, p.attack_id))
 				draw_status(4, 29, string.format("%4x %2s %2s", p.act, p.act_count, p.act_frame))
