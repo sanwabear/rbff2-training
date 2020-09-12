@@ -3580,6 +3580,16 @@ function rbff2.startplugin()
 			p.tw_accepted    = pgm:read_u8(p.addr.tw_accepted)
 			p.tw_frame       = pgm:read_u8(p.addr.tw_frame)
 			p.tw_muteki      = pgm:read_u8(p.addr.tw_muteki)
+			-- 通常投げ無敵 その2(HOME 039FC6から03A000の処理を再現して投げ無敵の値を求める)
+			p.tw_muteki2     = 0
+			if 0x70 <= p.attack then
+				local d1 = pgm:read_u16(p.addr.base + 0x10)
+				d1 = bit32.band(0xFF, d1 + d1)
+				d1 = bit32.band(0xFF, d1 + d1)
+				local a0 = pgm:read_u32(d1 + 0x89692)
+				local d2 = p.attack - 0x70
+				p.tw_muteki2 = pgm:read_u8(a0 + d2)
+			end
 
 			p.old_act        = p.act or 0x00
 			p.act            = pgm:read_u16(p.addr.act)
@@ -4783,8 +4793,9 @@ function rbff2.startplugin()
 				else
 					scr:draw_box(279, 7, 316,  36, 0x80404040, 0x80404040)
 				end
+
 				draw_status(4,  8, string.format("%s %2s %3s %3s", p.state, p.tw_threshold, p.tw_accepted, p.tw_frame))
-				draw_status(4, 15, string.format("%1s %2s", p.hit.vulnerable and "V" or "-", p.tw_muteki))
+				draw_status(4, 15, string.format("%1s %2s %1s", p.hit.vulnerable and "V" or "-", p.tw_muteki, p.tw_muteki2))
 				draw_status(4, 22, string.format("%1s %2x %2x", p.hit.harmless and "-" or "H", p.attack, p.attack_id))
 				draw_status(4, 29, string.format("%4x %2s %2s", p.act, p.act_count, p.act_frame))
 
