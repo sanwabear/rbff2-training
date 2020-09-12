@@ -575,7 +575,7 @@ function rbff2.startplugin()
 			{ name = "倍返し", type = act_types.attack, ids = { 0xB8, 0xBA, 0xB9, 0xBB, 0xBC, }, },
 			{ name = "爆弾パチキ", type = act_types.attack, ids = { 0xCC, 0xCD, 0xCE, 0xCF, }, },
 			{ name = "トドメ", type = act_types.attack, ids = { 0xD6, 0xDA, 0xD8, 0xDB, 0xD9, 0xD7, }, },
-			{ name = "ギロチン", type = act_types.attack, ids = { 0xFF, 0x100, 0x101, 0x102, 0x103, }, },
+			{ name = "ギロチン", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, 0x103, }, },
 			{ name = "ドリル", type = act_types.attack, ids = { 0x101, 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, 0x110, 0xE0, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xEF, 0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, }, },
 			{ disp_name = "CA 立C", name = "CA 立C(2段目)3Aルート", type = act_types.attack, ids = { 0x245, }, },
 			{ disp_name = "CA 立C", name = "CA 立C(3段目)3Aルート", type = act_types.attack, ids = { 0x247, 0x248, 0x249, }, },
@@ -2571,6 +2571,7 @@ function rbff2.startplugin()
 				tw_threshold = p1 and 0x10DDE2 or 0x10DDE3, -- 投げ可能かどうかのフレーム判定のしきい値
 				tw_frame     = p1 and 0x100490 or 0x100590, -- 投げ可能かどうかのフレーム経過
 				tw_accepted  = p1 and 0x10DDE4 or 0x10DDE5, -- 投げ確定時のフレーム経過
+				tw_muteki    = p1 and 0x1004F6 or 0x1005F6, -- 投げ無敵の残フレーム数
 
 				-- フックできない変わり用
 				state2       = p1 and 0x10CA0E or 0x10CA0F, -- 状態
@@ -3577,6 +3578,7 @@ function rbff2.startplugin()
 			p.tw_threshold   = pgm:read_u8(p.addr.tw_threshold)
 			p.tw_accepted    = pgm:read_u8(p.addr.tw_accepted)
 			p.tw_frame       = pgm:read_u8(p.addr.tw_frame)
+			p.tw_muteki      = pgm:read_u8(p.addr.tw_muteki)
 
 			p.old_act        = p.act or 0x00
 			p.act            = pgm:read_u16(p.addr.act)
@@ -4781,8 +4783,8 @@ function rbff2.startplugin()
 					scr:draw_box(279, 7, 316,  36, 0x80404040, 0x80404040)
 				end
 				draw_status(4,  8, string.format("%s %2s %3s %3s", p.state, p.tw_threshold, p.tw_accepted, p.tw_frame))
-				draw_status(4, 15, p.hit.vulnerable and "V" or "")
-				draw_status(4, 22, string.format("%1s %2x %2x", p.hit.harmless and "" or "H", p.attack, p.attack_id))
+				draw_status(4, 15, string.format("%1s %2s", p.hit.vulnerable and "V" or "-", p.tw_muteki))
+				draw_status(4, 22, string.format("%1s %2x %2x", p.hit.harmless and "-" or "H", p.attack, p.attack_id))
 				draw_status(4, 29, string.format("%4x %2s %2s", p.act, p.act_count, p.act_frame))
 
 				-- BS状態表示
