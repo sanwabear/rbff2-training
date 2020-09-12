@@ -295,6 +295,7 @@ function rbff2.startplugin()
 			{ disp_name = "フェイント", name = "フェイント スラッシュキック", type = act_types.any, ids = { 0x113, }, },
 			{ disp_name = "フェイント", name = "フェイント ハリケーンアッパー", type = act_types.any, ids = { 0x112, }, },
 			{ name = "ジョースペシャル", type = act_types.any, ids = { 0x6D, 0x6E, 0x6F, 0x70, 0x71, }, },
+			{ name = "夏のおもひで", type = act_types.any, ids = { 0x24E, 0x24F, }, },
 			{ name = "膝地獄", type = act_types.any, ids = { 0x81, 0x82, 0x83, 0x84, }, },
 			{ name = "スライディング", type = act_types.low_attack, ids = { 0x68, 0xF4, 0xF5, }, },
 			{ name = "ハイキック", type = act_types.attack, ids = { 0x69, }, },
