@@ -75,6 +75,7 @@ function rbff2.startplugin()
 		-- 当たり判定用
 		axis_color      = 0xFFFFFFFF,
 		axis_air_color  = 0xFFFF00FF,
+		axis_internal_color = 0xFF00FFFF,
 		axis_size       = 12,
 		no_alpha        = true, --fill = 0x00, outline = 0xFF for all box types
 		throwbox_height = 200, --default for ground throws
@@ -2167,6 +2168,16 @@ function rbff2.startplugin()
 		local obj_base = p.addr.base
 
 		p.hit.pos_x   = p.pos - screen_left
+		if p.min_pos then
+			p.hit.min_pos_x = p.min_pos - screen_left
+		else
+			p.hit.min_pos_x = nil
+		end
+		if p.max_pos then
+			p.hit.max_pos_x = p.max_pos - screen_left
+		else
+			p.hit.max_pos_x = nil
+		end
 		p.hit.pos_z   = p.pos_z
 		p.hit.pos_y   = height - p.pos_y - p.hit.pos_z
 		p.hit.pos_y   = screen_top + p.hit.pos_y
@@ -2371,6 +2382,8 @@ function rbff2.startplugin()
 			old_state        = 0,           -- 前フレームのやられ状態
 			attack           = 0,           -- 攻撃中のみ変化
 			pos              = 0,           -- X位置
+			max_pos          = 0,           -- X位置最大
+			min_pos          = 0,           -- X位置最小
 			pos_y            = 0,           -- Y位置
 			old_pos_y        = 0,           -- Y位置
 			pos_z            = 0,           -- Z位置
@@ -2536,7 +2549,7 @@ function rbff2.startplugin()
 				act_frame    = p1 and 0x10046F or 0x10056F, -- 現在の行動の残フレーム、ゼロになると次の行動へ
 				act_contact  = p1 and 0x100401 or 0x100501, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
 				attack       = p1 and 0x1004B6 or 0x1005B6, -- 攻撃中のみ変化
-				char         = p1 and 0x107BA5 or 0x107BA7, -- キャラ
+				char         = p1 and 0x107BA5 or 0x107BA7, -- キャラ()
 				color        = p1 and 0x107BAC or 0x107BAD, -- カラー A=0x00 D=0x01
 				combo        = p1 and 0x10B4E4 or 0x10B4E5, -- コンボ
 				combo2       = p1 and 0x10B4E5 or 0x10B4E4, -- 最近のコンボ数のアドレス
@@ -2547,6 +2560,8 @@ function rbff2.startplugin()
 				max_combo    = p1 and 0x10B4EF or 0x10B4F0, -- 最大コンボ
 				max_stun     = p1 and 0x10B84E or 0x10B856, -- 最大スタン値
 				pos          = p1 and 0x100420 or 0x100520, -- X位置
+				max_pos      = p1 and 0x10DDE6 or 0x10DDE8, -- X位置最大
+				min_pos      = p1 and 0x10DDEA or 0x10DDEC, -- X位置最小
 				pos_y        = p1 and 0x100428 or 0x100528, -- Y位置
  				pos_z        = p1 and 0x100424 or 0x100524, -- Z位置
  				side         = p1 and 0x100458 or 0x100558, -- 向き
@@ -2795,6 +2810,12 @@ function rbff2.startplugin()
 			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x10058F, 1, "wpdata!=0", "maincpu.pb@10CA11=1;g"))
 			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100460, 1, "wpdata!=0", "maincpu.pb@10CA12=1;g"))
 			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100560, 1, "wpdata!=0", "maincpu.pb@10CA13=1;g"))
+
+			-- X軸のMAXとMIN
+			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100420, 2, "wpdata>maincpu.pw@10DDE6", "maincpu.pw@10DDE6=wpdata;g"))
+			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100420, 2, "wpdata<maincpu.pw@10DDEA", "maincpu.pw@10DDEA=wpdata;g"))
+			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100520, 2, "wpdata>maincpu.pw@10DDE8", "maincpu.pw@10DDE8=wpdata;g"))
+			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100520, 2, "wpdata<maincpu.pw@10DDEC", "maincpu.pw@10DDEC=wpdata;g"))
 		end
 	end
 
@@ -2825,8 +2846,6 @@ function rbff2.startplugin()
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03957E),
 				"(maincpu.pw@107C22>0)&&((A6)==CB244)&&((($1E<=maincpu.pb@10DDDA)&&(maincpu.pb@10DDDD==$1)&&($100400==((A4)&$FFFFFF)))||(($1E<=maincpu.pb@10DDDE)&&(maincpu.pb@10DDE1==$1)&&($100500==((A4)&$FFFFFF))))",
 				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$40);D1=(maincpu.pb@(temp1));A6=((A6)+1);maincpu.pb@((A4)+$D6)=D1;maincpu.pb@((A4)+$D7)=maincpu.pb@(temp1+1);PC=((PC)+$20);g"))
-
-			-- リバーサルとBSモードのフック
 			-- 必殺技用
 			-- bp 03957E,{((A6)==CB244)&&((A4)==100400)&&(maincpu.pb@10048E==2)},{D1=1;g}
 			-- bp 03957E,{((A6)==CB244)&&((A4)==100500)&&(maincpu.pb@10058E==2)},{D1=1;g}
@@ -2881,7 +2900,7 @@ function rbff2.startplugin()
 				"(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100F00)",
 				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
 
-			--ground throws
+			-- 地上通常投げ
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05D782),
 				"(maincpu.pw@107C22>0)&&((((D7)&$FFFF)!=0x65))&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100500)",
 				"temp1=$10CD90+((((A4)&$FFFFFF)-$100400)/$8);maincpu.pb@(temp1)=$1;maincpu.pd@(temp1+$1)=((A4)&$FFFFFF);maincpu.pd@(temp1+$5)=maincpu.pd@(((A4)&$FFFFFF)+$96);maincpu.pw@(temp1+$A)=maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10);maincpu.pw@(temp1+$C)=maincpu.pw@(((A4)&$FFFFFF)+$10);maincpu.pb@(temp1+$10)=maincpu.pb@(((A4)&$FFFFFF)+$96+$58);maincpu.pb@(temp1+$11)=maincpu.pb@(((A4)&$FFFFFF)+$58);maincpu.pb@(temp1+$12)=maincpu.pb@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$58);maincpu.pb@(temp1+$13)=maincpu.pb@(maincpu.pd@((PC)+$2));maincpu.pb@(temp1+$14)=maincpu.pb@((maincpu.pd@((PC)+$02))+((maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10))<<3)+$3);maincpu.pb@(temp1+$15)=maincpu.pb@((maincpu.pd@((PC)+$02))+((maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10))<<3)+$4);maincpu.pb@(temp1+$16)=maincpu.pb@((maincpu.pd@((PC)+$2))+((maincpu.pw@(((A4)&$FFFFFF)+$10))<<3)+$3);maincpu.pb@(temp1+$17)=maincpu.pb@((PC)+$D2+(maincpu.pw@((A4)&$FFFFFF)+$10)*4+((((D7)&$FFFF)-$60)&$7));g"))
@@ -3589,6 +3608,7 @@ function rbff2.startplugin()
 				local a0 = pgm:read_u32(d1 + 0x89692)
 				local d2 = p.attack - 0x70
 				p.tw_muteki2 = pgm:read_u8(a0 + d2)
+				--print(string.format("%x", a0 + d2))
 			end
 
 			p.old_act        = p.act or 0x00
@@ -3604,6 +3624,16 @@ function rbff2.startplugin()
 			p.last_dmg       = p.last_dmg or 0 --pgm:read_u8(p.addr.last_dmg)
 			p.char           = pgm:read_u8(p.addr.char)
 			p.pos            = pgm:read_i16(p.addr.pos)
+			p.max_pos        = pgm:read_i16(p.addr.max_pos)
+			if p.max_pos == 0 or p.max_pos == p.pos then
+				p.max_pos = nil
+			end
+			pgm:write_i16(p.addr.max_pos, 0)
+			p.min_pos        = pgm:read_i16(p.addr.min_pos)
+			if p.min_pos == 1000 or p.min_pos == p.pos then
+				p.min_pos = nil
+			end
+			pgm:write_i16(p.addr.min_pos, 1000)
 			p.old_pos_y      = p.pos_y
 			p.pos_y          = pgm:read_i16(p.addr.pos_y)
 			if 0 < p.pos_y then
@@ -3854,6 +3884,71 @@ function rbff2.startplugin()
 			-- update_objectはキャラの位置情報と当たり判定の情報を読み込んだ後で実行すること
 			update_object(p, global.frame_number)
 		end
+
+		-- 1Pと2Pの通常投げ間合い取得
+		-- 0x05D78Cからの実装
+		for i, p in ipairs(players) do
+			local op         = players[3-i]
+			local d0, d1, d4, d5, a0_1, a0_2 = 0, 0, 0, 0, 0x5C9BC, 0x5D874
+			local char1, char2 = pgm:read_u16(p.addr.base + 0x10), pgm:read_u16(op.addr.base + 0x10)
+			local op_pos = op.max_pos or op.min_pos or op.pos -- 投げられ側のX位置は補正前の値
+			local p_pos = p.pos                             -- 投げ側のX位置は補正後の値
+
+			d0 = char2                                      -- D0 = 100510アドレスの値(相手のキャラID)
+			d0 = bit32.band(0xFFFF, bit32.lshift(d0, 3))    -- D0 を3ビット左シフト
+			if p.side == op.side then                       -- 自分の向きと相手の向きが違ったら
+				d0 = pgm:read_u8(0x4 + a0_1 + d0)           -- D0 = A0+4+D0アドレスのデータ(0x5CAC3~)
+			else                                            -- 自分の向きと相手の向きが同じなら
+				d0 = pgm:read_u8(0x3 + a0_1 + d0)           -- D0 = A0+3+D0アドレスのデータ(0x5CABB~)
+			end
+			d0 = 0xFF00 + d0
+			if 0 > op.side then                             -- 位置がマイナスなら
+				d0 = 0x10000 - d0                           -- NEG
+			end
+			d0 = bit32.band(0xFFFF, d0 + d0)                -- 2倍値に
+			d0 = bit32.band(0xFFFF, d0 + d0)                -- さらに2倍値に
+			d1 = op_pos                                     -- D1 = 相手のX位置
+			d1 = bit32.band(0xFFFF, d1 - d0)                -- 相手との距離計算
+			local op_d0 = d0                                -- 投げ間合いの補正値
+			local op_d1 = d1
+
+			d5 = char1                                      -- D5 = 100410アドレスの値(キャラID)
+			d5 = bit32.band(0xFFFF, bit32.lshift(d5, 3))    -- D5 = D5を3ビット左シフト
+			d5 = pgm:read_u8(0x3 + a0_1 + d5)               -- D5 = 3+A0+D5アドレスのデータ
+			d5 = 0xFF00 + d5
+			if 0 > p.side then                              -- 位置がマイナスなら
+				d5 = 0x10000 - d5                           -- NEG
+			end
+			d5 = bit32.band(0xFFFF, d5 + d5)                -- 2倍値に
+			d5 = bit32.band(0xFFFF, d5 + d5)                -- さらに2倍値に
+			d0 = p_pos                                      -- 自分のX位置
+			d0 = bit32.band(0xFFFF, d0 - d5)                -- 投げ間合いの限界距離
+			local p_d0 = d0
+
+			d0 = d1 > d0 and (d1 - d0) or (d0 - d1)         -- D1(相手との距離) と D0 を比較して差分算出
+			d0 = bit32.band(0xFFFF, d0)
+			local gap = d0
+
+			local d1 = char1
+			d1 = bit32.band(0xFFFF, d1 + d1)                -- 2倍値に
+			d1 = bit32.band(0xFFFF, d1 + d1)                -- さらに2倍値に
+			d4 = pgm:read_u8(a0_2 + d1)                     -- 投げ間合いから相手座標の距離の±許容幅
+			local ret = d4 >= d0
+			--print(string.format("%s %s %s %s %s %s", i, ret, gap, p_d0, op_d0, d4))
+			local a = math.abs(op_pos - op_d1)
+			if 0 > p.side  then
+				p_d0 = p_d0 - a - screen_left
+			else
+				p_d0 = p_d0 + a - screen_left
+			end
+			-- 投げ間合いセット
+			p.throw = {
+				x1 = p_d0 - d4,
+				x2 = p_d0 + d4,
+				in_range = ret,
+			}
+		end
+
 		for i, p in ipairs(players) do
 			-- 無敵表示
 			p.muteki.type = 0 -- 無敵
@@ -4719,7 +4814,6 @@ function rbff2.startplugin()
 	tra_main.draw = function()
 		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 		local scr = manager:machine().screens[":screen"]
-		local ec = scr:frame_number()
 
 		-- メイン処理
 		if match_active then
@@ -4825,11 +4919,26 @@ function rbff2.startplugin()
 					draw_rtext(p1 and 135   or 190  , 34  ,  p.stun_timer)
 				end
 
+				local draw_axis = function(x, col)
+					if x then
+						scr:draw_line(x, p.hit.pos_y-global.axis_size, x, p.hit.pos_y+global.axis_size, col)
+						scr:draw_line(x-global.axis_size, p.hit.pos_y, x+global.axis_size, p.hit.pos_y, col)
+						scr:draw_text(x-1  , p.hit.pos_y+global.axis_size+0.5, i, shadow_col)
+						scr:draw_text(x-1.5, p.hit.pos_y+global.axis_size    , i, col)
+					end
+				end
 				-- 座標表示
 				if global.disp_hitbox then
-					local col = 0 < p.pos_y and global.axis_air_color or global.axis_color
-					scr:draw_line(p.hit.pos_x, p.hit.pos_y-global.axis_size, p.hit.pos_x, p.hit.pos_y+global.axis_size, col)
-					scr:draw_line(p.hit.pos_x-global.axis_size, p.hit.pos_y, p.hit.pos_x+global.axis_size, p.hit.pos_y, col)
+					if 0 == p.pos_y then
+						local color = p.throw.in_range and 0xFFFFFF00 or 0xFF999999
+						scr:draw_line(p.throw.x1, p.hit.pos_y  , p.throw.x2, p.hit.pos_y  , color)
+						scr:draw_line(p.throw.x1, p.hit.pos_y-8, p.throw.x1, p.hit.pos_y+8, color)
+						scr:draw_line(p.throw.x2, p.hit.pos_y-8, p.throw.x2, p.hit.pos_y+8, color)
+					end
+
+					draw_axis(p.hit.pos_x, 0 < p.pos_y and global.axis_air_color or global.axis_color)
+					draw_axis(p.hit.max_pos_x, global.axis_internal_color)
+					draw_axis(p.hit.min_pos_x, global.axis_internal_color)
 				end
 
 				--行動IDとフレーム数表示
@@ -4864,6 +4973,7 @@ function rbff2.startplugin()
 			local abs_space = math.abs(p_space)
 			if global.disp_pos then
 				draw_rtext(160, 217 - math.floor(get_digit(abs_space)/2), abs_space)
+				--print(string.format("%3s %3s %3s %3s xx %3s %3s", players[1].min_pos, players[2].min_pos, players[1].max_pos, players[2].max_pos, players[1].pos, players[2].pos))
 			end
 
 			-- レコーディング状態表示
