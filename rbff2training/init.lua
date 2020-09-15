@@ -3786,6 +3786,7 @@ function rbff2.startplugin()
 			range = range + p.n_throw.range6
 			p.n_throw.range    = range
 			p.n_throw.right    = p.n_throw.range * p.side
+			p.n_throw.left     = (p.n_throw.range - p.n_throw.range6 * 2) * p.side
 			p.n_throw.type     = box_type_base.t
 			p.n_throw.on = p.addr.base == p.n_throw.base and p.n_throw.on or 0
 
@@ -3945,6 +3946,8 @@ function rbff2.startplugin()
 			p.throw = {
 				x1 = p_d0 - d4,
 				x2 = p_d0 + d4,
+				half_range = d4,
+				full_range = d4 + d4,
 				in_range = ret,
 			}
 		end
