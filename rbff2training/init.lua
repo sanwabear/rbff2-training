@@ -4933,10 +4933,10 @@ function rbff2.startplugin()
 				-- 座標表示
 				if global.disp_hitbox then
 					if 0 == p.pos_y then
-						local color = p.throw.in_range and 0xFFFFFF00 or 0xFF999999
+						local color = p.throw.in_range and 0xFFFFFF00 or 0xFFBBBBBB
 						scr:draw_line(p.throw.x1, p.hit.pos_y  , p.throw.x2, p.hit.pos_y  , color)
-						scr:draw_line(p.throw.x1, p.hit.pos_y-8, p.throw.x1, p.hit.pos_y+8, color)
-						scr:draw_line(p.throw.x2, p.hit.pos_y-8, p.throw.x2, p.hit.pos_y+8, color)
+						scr:draw_line(p.throw.x1, p.hit.pos_y-4, p.throw.x1, p.hit.pos_y+4, color)
+						scr:draw_line(p.throw.x2, p.hit.pos_y-4, p.throw.x2, p.hit.pos_y+4, color)
 					end
 
 					draw_axis(p.hit.pos_x, 0 < p.pos_y and global.axis_air_color or global.axis_color)
@@ -5118,37 +5118,6 @@ function rbff2.startplugin()
 			end
 		end
 
-		for i, p in ipairs(players) do
-			-- ブレイクショット
-			p.dummy_bs_chr = p.char
-			p.dummy_bs_list = {}
-			local bs_menu = bs_menus[i][p.char]
-			if bs_menu then
-				p.dummy_bs_cnt = bs_menu.pos.col[#bs_menu.pos.col]
-				for j, bs in pairs(char_bs_list[p.char]) do
-					if bs_menu.pos.col[j+1] == 2 then
-						table.insert(p.dummy_bs_list, bs)
-					end
-				end
-			else
-				p.dummy_bs_cnt = -1
-			end
-
-			-- リバーサル
-			p.dummy_rvs_chr = p.char
-			p.dummy_rvs_list = {}
-			local rvs_menu = rvs_menus[i][p.char]
-			if rvs_menu then
-				p.dummy_rvs_cnt = rvs_menu.pos.col[#rvs_menu.pos.col]
-				for j, rvs in pairs(char_rvs_list[p.char]) do
-					if rvs_menu.pos.col[j+1] == 2 then
-						table.insert(p.dummy_rvs_list, rvs)
-					end
-				end
-			else
-				p.dummy_rvs_cnt = -1
-			end
-		end
 		-- 設定後にメニュー遷移
 		for i, p in ipairs(players) do
 			-- ブレイクショット
@@ -5164,6 +5133,43 @@ function rbff2.startplugin()
 		end
 
 		menu_cur = main_menu
+	end
+	local menu_update_rvs = function()
+		for i, p in ipairs(players) do
+			-- ブレイクショット
+			if p.dummy_bs_chr ~= p.char then
+				p.dummy_bs_chr = p.char
+				p.dummy_bs_list = {}
+				local bs_menu = bs_menus[i][p.char]
+				if bs_menu then
+					p.dummy_bs_cnt = bs_menu.pos.col[#bs_menu.pos.col]
+					for j, bs in pairs(char_bs_list[p.char]) do
+						if bs_menu.pos.col[j+1] == 2 then
+							table.insert(p.dummy_bs_list, bs)
+						end
+					end
+				else
+					p.dummy_bs_cnt = -1
+				end
+			end
+
+			-- リバーサル
+			if p.dummy_rvs_chr ~= p.char then
+				p.dummy_rvs_chr = p.char
+				p.dummy_rvs_list = {}
+				local rvs_menu = rvs_menus[i][p.char]
+				if rvs_menu then
+					p.dummy_rvs_cnt = rvs_menu.pos.col[#rvs_menu.pos.col]
+					for j, rvs in pairs(char_rvs_list[p.char]) do
+						if rvs_menu.pos.col[j+1] == 2 then
+							table.insert(p.dummy_rvs_list, rvs)
+						end
+					end
+				else
+					p.dummy_rvs_cnt = -1
+				end
+			end
+		end
 	end
 	local menu_to_main_cancel = function()
 		menu_to_main(true)
@@ -6244,6 +6250,9 @@ function rbff2.startplugin()
 
 		-- 更新フックの仕込み、フックにはデバッガ必須
 		set_hook()
+
+		-- キャラにあわせたメニュー設定
+		menu_update_rvs()
 
 		-- メニュー初期化前に処理されないようにする
 		main_or_menu_state.proc()
