@@ -5070,43 +5070,6 @@ function rbff2.startplugin()
 	-- メニュー表示
 	local menu_max_row = 13
 	local menu_nop = function() end
-	local menu_update_rvs = function()
-		for i, p in ipairs(players) do
-			-- ブレイクショット
-			if p.dummy_bs_chr ~= p.char then
-				p.dummy_bs_chr = p.char
-				p.dummy_bs_list = {}
-				local bs_menu = bs_menus[i][p.char]
-				if bs_menu then
-					p.dummy_bs_cnt = bs_menu.pos.col[#bs_menu.pos.col]
-					for j, bs in pairs(char_bs_list[p.char]) do
-						if bs_menu.pos.col[j+1] == 2 then
-							table.insert(p.dummy_bs_list, bs)
-						end
-					end
-				else
-					p.dummy_bs_cnt = -1
-				end
-			end
-
-			-- リバーサル
-			if p.dummy_rvs_chr ~= p.char then
-				p.dummy_rvs_chr = p.char
-				p.dummy_rvs_list = {}
-				local rvs_menu = rvs_menus[i][p.char]
-				if rvs_menu then
-					p.dummy_rvs_cnt = rvs_menu.pos.col[#rvs_menu.pos.col]
-					for j, rvs in pairs(char_rvs_list[p.char]) do
-						if rvs_menu.pos.col[j+1] == 2 then
-							table.insert(p.dummy_rvs_list, rvs)
-						end
-					end
-				else
-					p.dummy_rvs_cnt = -1
-				end
-			end
-		end
-	end
 	local menu_to_main = function(cancel)
 		local col = tra_menu.pos.col
 		local row = tra_menu.pos.row
@@ -5159,7 +5122,37 @@ function rbff2.startplugin()
 		end
 
 		-- キャラにあわせたメニュー設定
-		menu_update_rvs()
+		for i, p in ipairs(players) do
+			-- ブレイクショット
+			p.dummy_bs_chr = p.char
+			p.dummy_bs_list = {}
+			local bs_menu = bs_menus[i][p.char]
+			if bs_menu then
+				p.dummy_bs_cnt = bs_menu.pos.col[#bs_menu.pos.col]
+				for j, bs in pairs(char_bs_list[p.char]) do
+					if bs_menu.pos.col[j+1] == 2 then
+						table.insert(p.dummy_bs_list, bs)
+					end
+				end
+			else
+				p.dummy_bs_cnt = -1
+			end
+
+			-- リバーサル
+			p.dummy_rvs_chr = p.char
+			p.dummy_rvs_list = {}
+			local rvs_menu = rvs_menus[i][p.char]
+			if rvs_menu then
+				p.dummy_rvs_cnt = rvs_menu.pos.col[#rvs_menu.pos.col]
+				for j, rvs in pairs(char_rvs_list[p.char]) do
+					if rvs_menu.pos.col[j+1] == 2 then
+						table.insert(p.dummy_rvs_list, rvs)
+					end
+				end
+			else
+				p.dummy_rvs_cnt = -1
+			end
+		end
 
 		-- 設定後にメニュー遷移
 		for i, p in ipairs(players) do
@@ -6252,9 +6245,6 @@ function rbff2.startplugin()
 
 		-- 更新フックの仕込み、フックにはデバッガ必須
 		set_hook()
-
-		-- キャラにあわせたメニュー設定
-		menu_update_rvs()
 
 		-- メニュー初期化前に処理されないようにする
 		main_or_menu_state.proc()
