@@ -96,6 +96,7 @@ function rbff2.startplugin()
 			rave        = 1,     -- デッドリーレイブ        5
 			desire      = 1,     -- アンリミテッドデザイア  6
 			drill       = 5,     -- ドリル                  7
+			pairon      = 1,     -- 超白龍                  8
 		},
 
 		frzc            = 1,
@@ -1311,13 +1312,13 @@ function rbff2.startplugin()
 		end,
 	}
 	local rvs_types = {
-		on_wakeup = 1,           -- ダウン起き上がりリバーサル入力
-		jump_landing = 2,        -- 着地リバーサル入力（やられの着地）
-		knock_back_landing = 3,  -- 着地リバーサル入力（通常ジャンプの着地）
+		on_wakeup           = 1, -- ダウン起き上がりリバーサル入力
+		jump_landing        = 2, -- 着地リバーサル入力（やられの着地）
+		knock_back_landing  = 3, -- 着地リバーサル入力（通常ジャンプの着地）
 		knock_back_recovery = 4, -- リバーサルじゃない最速入力
-		in_knock_back = 5,       -- のけぞり中のデータをみてのけぞり修了の_2F前に入力確定する
-		dangerous_through = 6,   -- デンジャラススルー用
-		atemi = 7,               -- 当身うち空振りと裏雲隠し用
+		in_knock_back       = 5, -- のけぞり中のデータをみてのけぞり修了の_2F前に入力確定する
+		dangerous_through   = 6, -- デンジャラススルー用
+		atemi               = 7, -- 当身うち空振りと裏雲隠し用
 	}
 	-- コマンドテーブル上の技ID
 	local common_rvs = {
@@ -1649,6 +1650,7 @@ function rbff2.startplugin()
 		},
 		-- リック・ストラウド
 		{
+			--{ id = 0x28, ver = 0x0600, bs = true , name = "?", },
 			{ id = 0x01, ver = 0x0600, bs = true , name = "小 シューティングスター", },
 			{ id = 0x02, ver = 0x06FF, bs = false, name = "大 シューティングスター", },
 			{ id = 0x03, ver = 0x0600, bs = true , name = "ディバインブラスト", },
@@ -1662,9 +1664,12 @@ function rbff2.startplugin()
 		},
 		-- 李香緋
 		{
+			--{ id = 0x28, ver = 0x0600, bs = true , name = "?", },
+			--{ id = 0x29, ver = 0x0600, bs = true , name = "?", },
 			{ id = 0x01, ver = 0x0600, bs = true , name = "小 那夢波", },
 			{ id = 0x02, ver = 0x0600, bs = true , name = "大 那夢波", },
 			{ id = 0x03, ver = 0x06FF, bs = false, name = "閃里肘皇", },
+			{ id = 0x00, ver = 0x06FE, bs = false, name = "閃里肘皇・心砕把", },
 			{ id = 0x06, ver = 0x0600, bs = true , name = "天崩山", },
 			{ id = 0x07, ver = 0x0600, bs = true , name = "詠酒・対ジャンプ攻撃", },
 			{ id = 0x08, ver = 0x0600, bs = true , name = "詠酒・対立ち攻撃", },
@@ -2214,6 +2219,11 @@ function rbff2.startplugin()
 		if p.char == 20 then -- クラウザー
 			-- デスハンマーの持続
 			if p.act == 0x68 and p.act_count >= 5 then
+				p.hit.harmless = true
+			end
+		elseif p.char == 22 then -- シャンフェイ
+			-- 超白龍の持続
+			if p.act == 0xFE and p.act_count == 2 then
 				p.hit.harmless = true
 			end
 		elseif p.char == 10 then -- フランコ
@@ -4701,6 +4711,7 @@ function rbff2.startplugin()
 						end
 					end
 				end
+
 				-- 自動投げ追撃
 				if global.auto_input.thw_otg then
 					if p.char == 7 then
@@ -4727,6 +4738,10 @@ function rbff2.startplugin()
 						-- マリー
 						if  p.act == 0x6D  and p.act_count == 0  and p.act_frame == 0 then
 							p.write_bs_hook({ id = 0x50, ver = 0x0600, bs = false, name = "アキレスホールド", })
+						end
+					elseif p.char == 22 then
+						if p.act == 0xA1 and p.act_count == 6  and p.act_frame >= 0 then
+							p.write_bs_hook({ id = 0x03, ver = 0x06FF, bs = false, name = "閃里肘皇", })
 						end
 					end
 				end
@@ -4794,6 +4809,17 @@ function rbff2.startplugin()
 							p.write_bs_hook({ id = 0x00, ver = 0x06FE, bs = false, name = "ドリル Lv.5", })
 						end
 					end
+				end
+				-- 自動超白龍
+				if 1 < global.auto_input.pairon and p.char == 22 then
+					if p.act == 0x43 and p.act_count >= 0 and p.act_count <= 3 and p.act_frame >= 0 and 2 == global.auto_input.pairon then
+						p.write_bs_hook({ id = 0x11, ver = 0x06FD, bs = false, name = "超白龍", })
+					elseif p.act == 0x43 and p.act_count == 3 and p.act_count <= 3 and p.act_frame >= 0 and 3 == global.auto_input.pairon then
+						p.write_bs_hook({ id = 0x11, ver = 0x06FD, bs = false, name = "超白龍", })
+					elseif p.act == 0x9F and p.act_count == 2 and p.act_frame >= 0 then
+						--p.write_bs_hook({ id = 0x00, ver = 0x06FE, bs = false, name = "閃里肘皇・心砕把", })
+					end
+					--p.write_bs_hook({ id = 0x00, ver = 0x06FD, bs = false, name = "超白龍2", })
 				end
 
 				-- ブレイクショット
@@ -5243,6 +5269,7 @@ function rbff2.startplugin()
 		global.auto_input.rave    = col[ 5] -- デッドリーレイブ        5
 		global.auto_input.desire  = col[ 6] -- アンリミテッドデザイア  6
 		global.auto_input.drill   = col[ 7] -- ドリル                  7
+		global.auto_input.pairon  = col[ 8] -- 超白龍                  8
 
 		menu_cur = main_menu
 	end
@@ -5387,6 +5414,7 @@ function rbff2.startplugin()
 		col[ 5] = g.auto_input.rave    -- デッドリーレイブ        5
 		col[ 6] = g.auto_input.desire  -- アンリミテッドデザイア  6
 		col[ 7] = g.auto_input.drill   -- ドリル                  7
+		col[ 8] = g.auto_input.pairon  -- 超白龍                  8
 	end
 	menu_to_tra  = function() menu_cur = tra_menu end
 	menu_to_bar  = function() menu_cur = bar_menu end
@@ -5783,6 +5811,7 @@ function rbff2.startplugin()
 			{ "デッドリーレイブ"      , { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, },
 			{ "アンリミテッドデザイア", { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "ギガティックサイクロン" }, },
 			{ "ドリル"                , { 1, 2, 3, 4, 5 }, },
+			{ "超白龍"                , { "OFF", "C攻撃-判定発生前", "C攻撃-判定発生後" }, },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
@@ -5795,6 +5824,7 @@ function rbff2.startplugin()
 				1, -- デッドリーレイブ        5
 				1, -- アンリミテッドデザイア  6
 				1, -- ドリル                  7
+				1, -- 超白龍                  8
 			},
 		},
 		on_a = {
@@ -5805,6 +5835,7 @@ function rbff2.startplugin()
 			auto_menu_to_main, -- デッドリーレイブ        5
 			auto_menu_to_main, -- アンリミテッドデザイア  6
 			auto_menu_to_main, -- ドリル                  7
+			auto_menu_to_main, -- 超白龍                  8
 		},
 		on_b = {
 			auto_menu_to_main_cancel, -- 自動入力設定            1
@@ -5814,6 +5845,7 @@ function rbff2.startplugin()
 			auto_menu_to_main_cancel, -- デッドリーレイブ        5
 			auto_menu_to_main_cancel, -- アンリミテッドデザイア  6
 			auto_menu_to_main_cancel, -- ドリル                  7
+			auto_menu_to_main_cancel, -- 超白龍                  8
 		},
 	}
 
