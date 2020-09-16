@@ -4775,10 +4775,8 @@ function rbff2.startplugin()
 				if 1 < global.auto_input.drill and p.char == 11 and 1 < global.auto_input.drill then
 					if p.act >= 0x108 and p.act <= 0x10D and p.act_frame % 2 == 0 then
 						local lv = pgm:read_u8(p.addr.base + 0x94)
-						if (lv < 9 and 2 <= global.auto_input.drill) or
-							(lv < 10 and 3 <= global.auto_input.drill) or
-							4 <= global.auto_input.drill then
-								cmd_base._c(p, next_joy)
+						if (lv < 9 and 2 <= global.auto_input.drill) or (lv < 10 and 3 <= global.auto_input.drill) or 4 <= global.auto_input.drill then
+							cmd_base._c(p, next_joy)
 						end
 					elseif p.act == 0x10E and p.act_count == 0  and p.act_frame == 0 then
 						if 5 == global.auto_input.drill then
@@ -5087,6 +5085,39 @@ function rbff2.startplugin()
 		p[1].fwd_prov            = col[10] == 2 -- 1P 挑発で前進         10
 		p[2].fwd_prov            = col[11] == 2 -- 2P 挑発で前進         11
 
+		-- キャラにあわせたメニュー設定
+		for i, p in ipairs(players) do
+			-- ブレイクショット
+			p.dummy_bs_chr = p.char
+			p.dummy_bs_list = {}
+			local bs_menu = bs_menus[i][p.char]
+			if bs_menu then
+				p.dummy_bs_cnt = bs_menu.pos.col[#bs_menu.pos.col]
+				for j, bs in pairs(char_bs_list[p.char]) do
+					if bs_menu.pos.col[j+1] == 2 then
+						table.insert(p.dummy_bs_list, bs)
+					end
+				end
+			else
+				p.dummy_bs_cnt = -1
+			end
+
+			-- リバーサル
+			p.dummy_rvs_chr = p.char
+			p.dummy_rvs_list = {}
+			local rvs_menu = rvs_menus[i][p.char]
+			if rvs_menu then
+				p.dummy_rvs_cnt = rvs_menu.pos.col[#rvs_menu.pos.col]
+				for j, rvs in pairs(char_rvs_list[p.char]) do
+					if rvs_menu.pos.col[j+1] == 2 then
+						table.insert(p.dummy_rvs_list, rvs)
+					end
+				end
+			else
+				p.dummy_rvs_cnt = -1
+			end
+		end
+
 		for _, p in ipairs(players) do
 			if p.dummy_gd == dummy_gd_type.hit1 then
 				p.next_block = false
@@ -5118,39 +5149,6 @@ function rbff2.startplugin()
 			if not cancel and row == 1 then
 				menu_cur = play_menu
 				return
-			end
-		end
-
-		-- キャラにあわせたメニュー設定
-		for i, p in ipairs(players) do
-			-- ブレイクショット
-			p.dummy_bs_chr = p.char
-			p.dummy_bs_list = {}
-			local bs_menu = bs_menus[i][p.char]
-			if bs_menu then
-				p.dummy_bs_cnt = bs_menu.pos.col[#bs_menu.pos.col]
-				for j, bs in pairs(char_bs_list[p.char]) do
-					if bs_menu.pos.col[j+1] == 2 then
-						table.insert(p.dummy_bs_list, bs)
-					end
-				end
-			else
-				p.dummy_bs_cnt = -1
-			end
-
-			-- リバーサル
-			p.dummy_rvs_chr = p.char
-			p.dummy_rvs_list = {}
-			local rvs_menu = rvs_menus[i][p.char]
-			if rvs_menu then
-				p.dummy_rvs_cnt = rvs_menu.pos.col[#rvs_menu.pos.col]
-				for j, rvs in pairs(char_rvs_list[p.char]) do
-					if rvs_menu.pos.col[j+1] == 2 then
-						table.insert(p.dummy_rvs_list, rvs)
-					end
-				end
-			else
-				p.dummy_rvs_cnt = -1
 			end
 		end
 
