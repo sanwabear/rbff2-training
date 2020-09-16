@@ -805,7 +805,7 @@ function rbff2.startplugin()
 			{ name = "フェニックススルー", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
 			{ name = "カイザークロー", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, }, },
 			{ name = "カイザーウェイブ", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, }, },
-			{ name = "ギガティックサイクロン", names = { "アンリミテッドデザイア", "ギガティックサイクロン" }, type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0xC, 0x10C, 0x10D, 0x10C, 0x10E, }, },
+			{ name = "ギガティックサイクロン", names = { "アンリミテッドデザイア", "ギガティックサイクロン", "ジャンプ" }, type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0xC, 0x10C, 0x10D, 0x10C, 0x10E, }, },
 			{ name = "アンリミテッドデザイア", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, }, },
 			{ disp_name = "CA 立C", name = "CA 立C(2段目)近立Aルート", type = act_types.attack, ids = { 0x240, }, },
 			{ disp_name = "CA 立C", name = "CA 立C(2段目)立Aルート", type = act_types.attack, ids = { 0x24E, }, },
@@ -1309,6 +1309,15 @@ function rbff2.startplugin()
 			next_joy["P" .. p.control .. " Down"] = true
 			next_joy["P" .. p.control .. " Button 4"] = true
 		end,
+	}
+	local rvs_types = {
+		on_wakeup = 1,           -- ダウン起き上がりリバーサル入力
+		jump_landing = 2,        -- 着地リバーサル入力（やられの着地）
+		knock_back_landing = 3,  -- 着地リバーサル入力（通常ジャンプの着地）
+		knock_back_recovery = 4, -- リバーサルじゃない最速入力
+		in_knock_back = 5,       -- のけぞり中のデータをみてのけぞり修了の_2F前に入力確定する
+		dangerous_through = 6,   -- デンジャラススルー用
+		atemi = 7,               -- 当身うち空振りと裏雲隠し用
 	}
 	-- コマンドテーブル上の技ID
 	local common_rvs = {
@@ -4604,9 +4613,11 @@ function rbff2.startplugin()
 				local input_bs = function()
 					p.write_bs_hook(p.dummy_bs)
 				end
-				local input_rvs = function()
+				local input_rvs = function(rvs_type)
 					if p.dummy_rvs.cmd then
-						p.dummy_rvs.cmd(p, next_joy)
+						if rvs_types.knock_back_recovery ~= rvs_type then
+							p.dummy_rvs.cmd(p, next_joy)
+						end
 					else
 						p.write_bs_hook(p.dummy_rvs)
 					end
@@ -4616,33 +4627,33 @@ function rbff2.startplugin()
 				if p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs then
 					-- ダウン起き上がりリバーサル入力
 					if wakeup_acts[p.act] and (p.on_wakeup+wakeup_frms[p.char] - 2) <= global.frame_number then
-						input_rvs()
+						input_rvs(rvs_types.on_wakeup)
 					end
 					-- 着地リバーサル入力（やられの着地）
 					if 1 < p.pos_y_down and p.old_pos_y > p.pos_y and p.pos_y == 0 then
-						input_rvs()
+						input_rvs(rvs_types.knock_back_landing)
 					end
 					-- 着地リバーサル入力（通常ジャンプの着地）
 					if p.act == 0x9 and (p.act_frame == 2 or p.act_frame == 0) then
-						input_rvs()
+						input_rvs(rvs_types.jump_landing)
 					end
 					-- リバーサルじゃない最速入力
 					if p.state == 0 and p.act_data.name ~= "やられ" and p.old_act_data.name == "やられ" then
-						input_rvs()
+						input_rvs(rvs_types.knock_back_recovery)
 					end
 					-- のけぞりのリバーサル入力
 					if (p.state == 1 or p.state == 2) and p.stop == 0 then
 						-- のけぞり中のデータをみてのけぞり修了の_2F前に入力確定する
 						if p.knock_back3 == 0x80 and p.knock_back1 == 0 then
-							input_rvs()
+							input_rvs(rvs_types.in_knock_back)
 						end
 						-- デンジャラススルー用
 						if p.knock_back3 == 0x0 and p.stop < 3 then
-							input_rvs()
+							input_rvs(rvs_types.dangerous_through)
 						end
 					elseif p.state == 3 and p.stop == 0 and p.knock_back2 <= 1 then
 						-- 当身うち空振りと裏雲隠し用
-						input_rvs()
+						input_rvs(rvs_types.atemi)
 					end
 					--print(string.format("%s %s -> %s %s %s", i, p.old_pos_y, p.pos_y, p.pos_y_down, p.pos_y_peek))
 				elseif p.on_down == global.frame_number then
