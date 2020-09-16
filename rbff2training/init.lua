@@ -80,6 +80,7 @@ function rbff2.startplugin()
 		no_alpha        = true, --fill = 0x00, outline = 0xFF for all box types
 		throwbox_height = 200, --default for ground throws
 		no_background   = false,
+		no_bars         = false,
 
 		disp_stun       = true, -- スタン表示
 		disp_pos        = true, -- 1P 2P 距離表示
@@ -5019,6 +5020,7 @@ function rbff2.startplugin()
 		end
 
 		-- 画面表示
+		--[[
 		if global.no_background then
 			if pgm:read_u8(0x107BB9) >= 0x05 then
 				local match = pgm:read_u8(0x107C22)
@@ -5032,6 +5034,7 @@ function rbff2.startplugin()
 				pgm:write_u16(0x401FFE, 0x8F8F)
 			end
 		end
+		]]
 
 		for i, p in ipairs(players) do
 			local pause = false
@@ -5067,6 +5070,43 @@ function rbff2.startplugin()
 	-- メニュー表示
 	local menu_max_row = 13
 	local menu_nop = function() end
+	local menu_update_rvs = function()
+		for i, p in ipairs(players) do
+			-- ブレイクショット
+			if p.dummy_bs_chr ~= p.char then
+				p.dummy_bs_chr = p.char
+				p.dummy_bs_list = {}
+				local bs_menu = bs_menus[i][p.char]
+				if bs_menu then
+					p.dummy_bs_cnt = bs_menu.pos.col[#bs_menu.pos.col]
+					for j, bs in pairs(char_bs_list[p.char]) do
+						if bs_menu.pos.col[j+1] == 2 then
+							table.insert(p.dummy_bs_list, bs)
+						end
+					end
+				else
+					p.dummy_bs_cnt = -1
+				end
+			end
+
+			-- リバーサル
+			if p.dummy_rvs_chr ~= p.char then
+				p.dummy_rvs_chr = p.char
+				p.dummy_rvs_list = {}
+				local rvs_menu = rvs_menus[i][p.char]
+				if rvs_menu then
+					p.dummy_rvs_cnt = rvs_menu.pos.col[#rvs_menu.pos.col]
+					for j, rvs in pairs(char_rvs_list[p.char]) do
+						if rvs_menu.pos.col[j+1] == 2 then
+							table.insert(p.dummy_rvs_list, rvs)
+						end
+					end
+				else
+					p.dummy_rvs_cnt = -1
+				end
+			end
+		end
+	end
 	local menu_to_main = function(cancel)
 		local col = tra_menu.pos.col
 		local row = tra_menu.pos.row
@@ -5118,6 +5158,9 @@ function rbff2.startplugin()
 			end
 		end
 
+		-- キャラにあわせたメニュー設定
+		menu_update_rvs()
+
 		-- 設定後にメニュー遷移
 		for i, p in ipairs(players) do
 			-- ブレイクショット
@@ -5133,43 +5176,6 @@ function rbff2.startplugin()
 		end
 
 		menu_cur = main_menu
-	end
-	local menu_update_rvs = function()
-		for i, p in ipairs(players) do
-			-- ブレイクショット
-			if p.dummy_bs_chr ~= p.char then
-				p.dummy_bs_chr = p.char
-				p.dummy_bs_list = {}
-				local bs_menu = bs_menus[i][p.char]
-				if bs_menu then
-					p.dummy_bs_cnt = bs_menu.pos.col[#bs_menu.pos.col]
-					for j, bs in pairs(char_bs_list[p.char]) do
-						if bs_menu.pos.col[j+1] == 2 then
-							table.insert(p.dummy_bs_list, bs)
-						end
-					end
-				else
-					p.dummy_bs_cnt = -1
-				end
-			end
-
-			-- リバーサル
-			if p.dummy_rvs_chr ~= p.char then
-				p.dummy_rvs_chr = p.char
-				p.dummy_rvs_list = {}
-				local rvs_menu = rvs_menus[i][p.char]
-				if rvs_menu then
-					p.dummy_rvs_cnt = rvs_menu.pos.col[#rvs_menu.pos.col]
-					for j, rvs in pairs(char_rvs_list[p.char]) do
-						if rvs_menu.pos.col[j+1] == 2 then
-							table.insert(p.dummy_rvs_list, rvs)
-						end
-					end
-				else
-					p.dummy_rvs_cnt = -1
-				end
-			end
-		end
 	end
 	local menu_to_main_cancel = function()
 		menu_to_main(true)
@@ -5579,10 +5585,6 @@ function rbff2.startplugin()
 			table.insert(list, { "                   ブレイクショット設定" })
 			table.insert(on_ab, menu_rvs_to_tra_menu)
 			table.insert(col, 0)
-
-			table.insert(list, { "タイミング", bs_guards })
-			table.insert(on_ab, menu_rvs_to_tra_menu)
-			table.insert(col, 1)
 
 			local rvs_menu = {
 				list = list,
@@ -6180,7 +6182,7 @@ function rbff2.startplugin()
 			-- bp 03957E,{((A6)==CB244)&&((A4)==100500)&&(maincpu.pb@10058E==2)},{D1=1;g}
 			-- 末尾1バイトの20は技のIDになるが、プログラム中で1Eまでの値しか通さないのと、00だと無害。
 			pgm:write_direct_u32(0xCB240, 0xF000FF00)
-			pgm:write_direct_u16(0xCB244, 0x0600)
+			pgm:write_direct_u16(0xCB244, 0x0000)
 
 			-- 逆襲拳、サドマゾの初段で相手の状態変更しない（相手が投げられなくなる事象が解消する）
 			-- pgm:write_direct_u8(0x57F43, 0x00)
