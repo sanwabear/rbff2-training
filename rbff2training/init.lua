@@ -2977,6 +2977,8 @@ function rbff2.startplugin()
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x039F96), "1",
 				"temp1=$10DDE4+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@((A3)+$90);g"))
 
+			-- 判定の接触判定が無視される
+			-- bp 13118,1,{PC=1311C;g}
 		end
 	end
 
