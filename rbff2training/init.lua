@@ -1889,6 +1889,7 @@ function rbff2.startplugin()
 	end
 	local box_type_base = {
 		a   = { id = 0x00, name = "攻撃",               enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF00FF, fill = 0x40, outline = 0xFF },
+		fa  = { id = 0x00, name = "嘘攻撃",             enabled = true, type_check = type_ck_atk,  type = "unkown", color = 0x8B4513, fill = 0x40, outline = 0xFF },
 		t3  = { id = 0x00, name = "未使用",             enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0x8B4513, fill = 0x40, outline = 0xFF },
 		pa  = { id = 0x00, name = "飛び道具",           enabled = true, type_check = type_ck_und,  type = "attack", color = 0xFF0033, fill = 0x40, outline = 0xFF },
 		t   = { id = 0x00, name = "投げ",               enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
@@ -2085,6 +2086,9 @@ function rbff2.startplugin()
 		box.type = nil
 		if box.id + 1 > #box_types then
 			box.type = is_fireball and box_type_base.pa or box_type_base.a
+			if box.type == box_type_base.a and p.hit.fake_hit == true then
+				box.type = box_type_base.fa
+			end
 			--print(string.format("attack id %x", box.id))
 		else
 			box.type = box_types[box.id + 1]
@@ -2101,7 +2105,7 @@ function rbff2.startplugin()
 			return nil
 		end
 		]]
-		if box.type == box_type_base.a and (is_fireball == true or p.hit.harmless == false) then
+		if box.type == box_type_base.a and (is_fireball == true or (p.hit.harmless == false and p.hit.fake_hit == false)) then
 			-- 攻撃中のフラグをたてる
 			p.attacking = true
 			p.attack_id = id
@@ -2211,20 +2215,24 @@ function rbff2.startplugin()
 		p.throwing    = false
 
 		-- ヒットするかどうか
-		p.hit.harmless   = bit32.btest(3, pgm:read_u8(obj_base + 0x6A)) == 0 or pgm:read_u8(obj_base + 0xAA) > 0 or
+		p.hit.harmless   = (bit32.btest(3, pgm:read_u8(obj_base + 0x6A)) == 0) or (pgm:read_u8(obj_base + 0xAA) > 0) or
 			(p.hit.projectile and pgm:read_u8(obj_base + 0xE7) > 0) or
 			(not p.hit.projectile and pgm:read_u8(obj_base + 0xB6) == 0)
 
 		-- 嘘判定のチェック
-		p.hit.harmless = p.old_hit_check2 == 0
+		if p.hit_check2 == 0 or p.hit_check2 > 0x70 then
+			p.hit.fake_hit = true
+		else
+			p.hit.fake_hit = false
+		end
 
 		local changeh = function()
-			if p.hit.harmless == true then
+			if p.hit.fake_hit == true then
 				print("ok")
 			else
 				print("override")
 			end
-			p.hit.harmless = true
+			p.hit.fake_hit = true
 		end
 		-- パッチ当て
 		-- プログラム解析できたらまっとうな形で反映できるようにする
@@ -2495,6 +2503,9 @@ function rbff2.startplugin()
 			bs_hooked        = 0,           -- BSモードのフック処理フレーム数。
 
 			hit              = {
+				hit_check1   = 0, -- ヒットチェック用
+				hit_check2   = 0, -- ヒットチェック用
+				hit_check3   = 0, -- ヒットチェック用
 				pos_x        = 0,
 				pos_z        = 0,
 				pos_y        = 0,
@@ -2503,7 +2514,8 @@ function rbff2.startplugin()
 				scale        = 0,
 				char_id      = 0,
 				vulnerable   = 0,
-				harmless     = 0,
+				harmless     = false,
+				fake_hit     = false,
 				vulnerable1  = 0,
 				vulnerable21 = 0,
 				vulnerable22 = 0,           -- 0の時vulnerable=true
@@ -2665,6 +2677,9 @@ function rbff2.startplugin()
 				pos_z          = 0, -- Z位置
 				hitboxes       = {},
 				hit            = {
+					hit_check1 = base + 0x67, -- ヒットチェック用
+					hit_check2 = base + 0x6A, -- ヒットチェック用
+					hit_check3 = base + 0x7A, -- ヒットチェック用
 					pos_x      = 0,
 					pos_z      = 0,
 					pos_y      = 0,
@@ -2673,7 +2688,8 @@ function rbff2.startplugin()
 					scale      = 0,
 					char_id    = 0,
 					vulnerable = 0,
-					harmless   = 0,
+					harmless   = false,
+					fake_hit   = false,
 				},
 				addr           = {
 					base       = base, -- キャラ状態とかのベースのアドレス
@@ -3670,7 +3686,6 @@ function rbff2.startplugin()
 			p.knock_back2    = pgm:read_u8(p.addr.knock_back2)
 			p.knock_back3    = pgm:read_u8(p.addr.knock_back3)
 			p.hit_check1     = bit32.lrotate(bit32.band(0xC0, pgm:read_u8(p.addr.hit_check1)), 2 + 16 + 8)
-			p.old_hit_check2 = p.hit_check2 or 0
 			p.hit_check2     = pgm:read_u8(p.addr.hit_check2)
 			p.hit_check3     = pgm:read_u8(p.addr.hit_check3)
 
@@ -3782,6 +3797,10 @@ function rbff2.startplugin()
 
 			-- 飛び道具の状態読取
 			for _, fb in pairs(p.fireball) do
+				fb.hit_check1     = bit32.lrotate(bit32.band(0xC0, pgm:read_u8(fb.addr.hit_check1)), 2 + 16 + 8)
+				fb.hit_check2     = pgm:read_u8(fb.addr.hit_check2)
+				fb.hit_check3     = pgm:read_u8(fb.addr.hit_check3)
+	
 				fb.act            = pgm:read_u16(fb.addr.act)
 				fb.pos            = pgm:read_i16(fb.addr.pos)
 				fb.pos_y          = pgm:read_i16(fb.addr.pos_y)
