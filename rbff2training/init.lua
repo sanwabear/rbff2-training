@@ -1889,7 +1889,7 @@ function rbff2.startplugin()
 	end
 	local box_type_base = {
 		a   = { id = 0x00, name = "攻撃",               enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF00FF, fill = 0x40, outline = 0xFF },
-		fa  = { id = 0x00, name = "嘘攻撃",             enabled = true, type_check = type_ck_atk,  type = "unkown", color = 0x8B4513, fill = 0x40, outline = 0xFF },
+		fa  = { id = 0x00, name = "嘘攻撃",             enabled = true, type_check = type_ck_atk,  type = "unkown", color = 0xB5B5AC, fill = 0x40, outline = 0xFF },
 		t3  = { id = 0x00, name = "未使用",             enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0x8B4513, fill = 0x40, outline = 0xFF },
 		pa  = { id = 0x00, name = "飛び道具",           enabled = true, type_check = type_ck_und,  type = "attack", color = 0xFF0033, fill = 0x40, outline = 0xFF },
 		t   = { id = 0x00, name = "投げ",               enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
@@ -2075,6 +2075,7 @@ function rbff2.startplugin()
 	-- 当たり判定表示
 	local accept_atk_only = {
 		[box_type_base.a ] = true,
+		[box_type_base.fa] = true,
 		[box_type_base.v3] = true,
 		[box_type_base.v4] = true,
 		[box_type_base.v5] = true,
@@ -2228,7 +2229,7 @@ function rbff2.startplugin()
 
 		local changeh = function()
 			if p.hit.fake_hit == true then
-				print("ok")
+				-- print("ok")
 			else
 				print("override")
 			end
@@ -5329,7 +5330,7 @@ function rbff2.startplugin()
 		auto_menu_to_main(true)
 	end
 	local box_type_col_list = { 
-		box_type_base.a, box_type_base.t3, box_type_base.pa, box_type_base.t, box_type_base.at, box_type_base.pt,
+		box_type_base.a, box_type_base.fa, box_type_base.t3, box_type_base.pa, box_type_base.t, box_type_base.at, box_type_base.pt,
 		box_type_base.p, box_type_base.v1, box_type_base.sv1, box_type_base.v2, box_type_base.sv2, box_type_base.v3,
 		box_type_base.v4, box_type_base.v5, box_type_base.v6, box_type_base.x1, box_type_base.x2, box_type_base.x3,
 		box_type_base.x4, box_type_base.x5, box_type_base.x6, box_type_base.x7, box_type_base.x8, box_type_base.x9,
