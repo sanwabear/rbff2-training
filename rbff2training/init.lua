@@ -2228,12 +2228,14 @@ function rbff2.startplugin()
 		end
 
 		local changeh = function()
-			if p.hit.fake_hit == true then
-				-- print("ok")
-			else
-				print("override")
+			if p.attack ~= 0 then
+				if p.hit.fake_hit == true then
+					-- print("ok")
+				else
+					print("override")
+				end
+				p.hit.fake_hit = true
 			end
-			p.hit.fake_hit = true
 		end
 		-- パッチ当て
 		-- プログラム解析できたらまっとうな形で反映できるようにする
@@ -2427,6 +2429,7 @@ function rbff2.startplugin()
 			min_pos          = 0,           -- X位置最小
 			pos_y            = 0,           -- Y位置
 			old_pos_y        = 0,           -- Y位置
+			force_y_pos      = 0,           -- Y位置強制
 			pos_z            = 0,           -- Z位置
 			old_pos_z        = 0,           -- Z位置
 			on_main_line     = 0,           -- Z位置メインに移動した瞬間フレーム
@@ -4901,6 +4904,13 @@ function rbff2.startplugin()
 				manager:machine():ioport().ports[joy.port].fields[joy.field]:set_value(next_joy[joy.field] and 1 or 0)
 			end
 		end
+
+		-- Y座標強制
+		for i, p in ipairs(players) do
+			if p.force_y_pos ~= 0 and p.state == 0 then
+				pgm:write_i16(p.addr.pos_y, p.force_y_pos)
+			end
+		end
 	end
 
 	tra_main.draw = function()
@@ -5174,6 +5184,8 @@ function rbff2.startplugin()
 		p[2].dummy_wakeup        = col[ 9]      -- 2P やられ時行動        9
 		p[1].fwd_prov            = col[10] == 2 -- 1P 挑発で前進         10
 		p[2].fwd_prov            = col[11] == 2 -- 2P 挑発で前進         11
+		p[1].force_y_pos         = col[12] - 1  -- 1P Y座標強制          12
+		p[2].force_y_pos         = col[13] - 1  -- 2P Y座標強制          13
 
 		-- キャラにあわせたメニュー設定
 		for i, p in ipairs(players) do
@@ -5421,10 +5433,12 @@ function rbff2.startplugin()
 		col[ 5] = p[1].dummy_gd            -- 1P ガード              5
 		col[ 6] = p[2].dummy_gd            -- 2P ガード              6
 		col[ 7] = g.next_block_grace + 1   -- 1ガード持続フレーム数  7
-		col[ 8] = p[1].dummy_wakeup         -- 1P やられ時行動       8
-		col[ 9] = p[2].dummy_wakeup         -- 2P やられ時行動       9
-		col[10] = p[1].fwd_prov and 2 or 1  -- 1P 挑発で前進        10
-		col[11] = p[2].fwd_prov and 2 or 1  -- 2P 挑発で前進        11
+		col[ 8] = p[1].dummy_wakeup        -- 1P やられ時行動       8
+		col[ 9] = p[2].dummy_wakeup        -- 2P やられ時行動       9
+		col[10] = p[1].fwd_prov and 2 or 1 -- 1P 挑発で前進        10
+		col[11] = p[2].fwd_prov and 2 or 1 -- 2P 挑発で前進        11
+		col[12] = p[1].force_y_pos + 1     -- 1P Y座標強制         12
+		col[13] = p[2].force_y_pos + 1     -- 2P Y座標強制         13
 	end
 	local init_bar_menu_config = function()
 		local col = bar_menu.pos.col
@@ -5686,6 +5700,10 @@ function rbff2.startplugin()
 	for i = 1, 61 do
 		table.insert(gd_frms, string.format("%sF後にガード解除", (i - 1)))
 	end
+	local force_y_pos = {}
+	for i = 1, 256 do
+		table.insert(force_y_pos, i - 1)
+	end
 	tra_menu = {
 		list = {
 			{ "ダミーモード"          , { "プレイヤー vs プレイヤー", "プレイヤー vs CPU", "CPU vs プレイヤー", "1P&2P入れ替え", "レコード", "リプレイ" }, },
@@ -5699,6 +5717,8 @@ function rbff2.startplugin()
 			{ "2P やられ時行動"       , { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ", "グランドスウェー", "起き上がり攻撃", }, },
 			{ "1P 挑発で前進"         , { "OFF", "ON" }, },
 			{ "2P 挑発で前進"         , { "OFF", "ON" }, },
+			{ "1P Y座標強制"          , force_y_pos, },
+			{ "2P Y座標強制"          , force_y_pos, },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
@@ -5715,6 +5735,8 @@ function rbff2.startplugin()
 				1, -- 2P やられ時行動         9
 				1, -- 1P 挑発で前進          10
 				1, -- 2P 挑発で前進          11
+				1, -- 1P Y座標強制           12
+				1, -- 2P Y座標強制           13
 			},
 		},
 		on_a = {
@@ -5729,6 +5751,8 @@ function rbff2.startplugin()
 			menu_to_main, -- 2P やられ時行動
 			menu_to_main, -- 1P 挑発で前進
 			menu_to_main, -- 2P 挑発で前進
+			menu_to_main, -- 1P Y座標強制
+			menu_to_main, -- 2P Y座標強制
 		},
 		on_b = {
 			menu_to_main_cancel, -- ダミーモード
@@ -5742,6 +5766,8 @@ function rbff2.startplugin()
 			menu_to_main_cancel, -- 2P やられ時行動
 			menu_to_main_cancel, -- 1P 挑発で前進
 			menu_to_main_cancel, -- 2P 挑発で前進
+			menu_to_main_cancel, -- 1P Y座標強制
+			menu_to_main_cancel, -- 2P Y座標強制
 		},
 	}
 
@@ -6122,6 +6148,28 @@ function rbff2.startplugin()
 			if cols then
 				local col_pos = menu_cur.pos.col
 				col_pos[menu_cur.pos.row] = col_pos[menu_cur.pos.row] and (col_pos[menu_cur.pos.row]+1) or 2
+				if col_pos[menu_cur.pos.row] > #cols then
+					col_pos[menu_cur.pos.row] = #cols
+				end
+			end
+			global.input_accepted = ec
+		elseif accept_input("Button 3", joy_val, state_past) then
+			-- カーソル左10移動
+			local cols = menu_cur.list[menu_cur.pos.row][2]
+			if cols then
+				local col_pos = menu_cur.pos.col
+				col_pos[menu_cur.pos.row] = col_pos[menu_cur.pos.row] and (col_pos[menu_cur.pos.row]-10) or 1
+				if col_pos[menu_cur.pos.row] <= 0 then
+					col_pos[menu_cur.pos.row] = 1
+				end
+			end
+			global.input_accepted = ec
+		elseif accept_input("Button 4", joy_val, state_past) then
+			-- カーソル右10移動
+			local cols = menu_cur.list[menu_cur.pos.row][2]
+			if cols then
+				local col_pos = menu_cur.pos.col
+				col_pos[menu_cur.pos.row] = col_pos[menu_cur.pos.row] and (col_pos[menu_cur.pos.row]+10) or 11
 				if col_pos[menu_cur.pos.row] > #cols then
 					col_pos[menu_cur.pos.row] = #cols
 				end
