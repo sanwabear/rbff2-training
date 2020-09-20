@@ -555,8 +555,9 @@ function rbff2.startplugin()
 			{ disp_name = "CA 立D", name = "CA 立D(2段目)", type = act_types.attack, ids = { 0x240, }, },
 			{ disp_name = "CA 立B", name = "CA 立B(3段目)", type = act_types.low_attack, ids = { 0x246, }, },
 			{ disp_name = "CA 下C", name = "CA 下C(3段目)", type = act_types.low_attack, ids = { 0x249, }, },
-			{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x24D, }, },
+			{ disp_name = "CA _6C", name = "CA 6C(3段目)", type = act_types.attack, ids = { 0x24A, 0x24B, }, },
 			{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.overhead, ids = { 0x24C, }, },
+			{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x24D, }, },
 		},
 		-- 山崎竜二
 		{
@@ -2214,98 +2215,109 @@ function rbff2.startplugin()
 			(p.hit.projectile and pgm:read_u8(obj_base + 0xE7) > 0) or
 			(not p.hit.projectile and pgm:read_u8(obj_base + 0xB6) == 0)
 
+		-- 嘘判定のチェック
+		p.hit.harmless = p.old_hit_check2 == 0
+
+		local changeh = function()
+			if p.hit.harmless == true then
+				print("ok")
+			else
+				print("override")
+			end
+			p.hit.harmless = true
+		end
 		-- パッチ当て
 		-- プログラム解析できたらまっとうな形で反映できるようにする
 		if p.char == 20 then -- クラウザー
 			-- デスハンマーの持続
 			if p.act == 0x68 and p.act_count >= 5 then
-				p.hit.harmless = true
+				changeh()
 			end
 		elseif p.char == 22 then -- シャンフェイ
 			-- 超白龍の持続
 			if p.act == 0xFE and p.act_count == 2 then
-				p.hit.harmless = true
+				changeh()
 			end
 		elseif p.char == 10 then -- フランコ
 			-- ハルマゲドンバスターの出かかり
 			if p.act == 0x108 and p.act_count == 4  then
-				p.hit.harmless = true
+				changeh()
 			end
 		elseif p.char == 5 then -- ギース
 			if p.act == 0x42 and p.act_count >= 2 then
 				-- 遠立Cの持続
-				p.hit.harmless = true
+				changeh()
 			elseif p.act == 0x46 and p.act_count >= 6 then
 				-- 遠立Cの持続
-				p.hit.harmless = true
+				changeh()
 			elseif p.char == 5 and p.act == 0x43 and p.act_count >= 5 then
 				-- 近立Cの持続
-				p.hit.harmless = true
+				changeh()
 			end
 		elseif p.char == 1 then -- テリー
 			if p.act == 0x45 and p.act_count >= 4 then
 				-- 遠Bの持続
-				p.hit.harmless = true
+				changeh()
 			elseif p.act == 0x47 and p.act_count >= 2 then
 				-- 下Aの持続
-				p.hit.harmless = true
+				changeh()
 			end
 		elseif p.char == 2 then -- アンディ
 			if p.act == 0x44 and p.act_count >= 3 then
 				-- Aの持続
-				p.hit.harmless = true
+				changeh()
 			elseif p.act == 0x45 and p.act_count >= 4 then
 				-- Bの持続
-				p.hit.harmless = true
+				changeh()
 			elseif p.act == 0x47 and p.act_count >= 2 then
 				-- 下Aの持続
-				p.hit.harmless = true
+				changeh()
 			elseif p.act == 0x48 and p.act_count >= 3 then
 				-- 下Bの持続
-				p.hit.harmless = true
+				changeh()
 			elseif p.act == 0x240 and p.act_count >= 4 then
 				-- 立B立Bの2段目の持続
-				p.hit.harmless = true
+				changeh()
 			elseif p.act == 0x241 and p.act_count >= 3 then
 				-- 下B下Bの持続
-				p.hit.harmless = true
+				changeh()
 			end
 		elseif p.char == 3 then -- ジョー
 			if p.act == 0x41 and p.act_count >= 3 then
 				-- 近Aの持続
-				p.hit.harmless = true
+				changeh()
 			elseif p.act == 0x42 and p.act_count >= 4 then
 				-- 近Bの持続
-				p.hit.harmless = true
+				changeh()
 			elseif p.act == 0x44 and p.act_count >= 2 then
 				-- 遠Aの持続
-				p.hit.harmless = true
+				changeh()
 			elseif p.act == 0x45 and p.act_count >= 4 then
 				-- 遠Bの持続
-				p.hit.harmless = true
+				changeh()
 			elseif p.act == 0x47 and p.act_count >= 3 then
 				-- 下Aの持続
-				p.hit.harmless = true
+				changeh()
 			elseif p.act == 0x48 and p.act_count >= 3 then
 				-- 下Bの持続
-				p.hit.harmless = true
+				changeh()
 			elseif p.act == 0x24B and p.act_count == 3 then
 				-- 遠BCの2段目の持続
-				p.hit.harmless = true
+				changeh()
 			elseif p.act == 0x24C and p.act_count >= 4 then
 				-- 近ABAの3段目の持続
-				p.hit.harmless = true
+				changeh()
 			end
 		elseif p.char == 4 then -- 舞
 			if p.act == 0x47 and p.act_count >= 2 then
 				-- 下Aの持続
-				p.hit.harmless = true
+				changeh()
 			elseif p.act == 0x48 and p.act_count >= 2 then
 				-- 下Bの持続
-				p.hit.harmless = true
+				changeh()
 			elseif p.act == 0x243 and p.act_count >= 3 then
 				-- 下ACの持続
-				p.hit.harmless = true
+				changeh()
 			end
 		end
 
@@ -2411,12 +2423,12 @@ function rbff2.startplugin()
 			on_main_line     = 0,           -- Z位置メインに移動した瞬間フレーム
 			on_sway_line     = 0,           -- Z位置スウェイに移動した瞬間フレーム
 			in_sway_line     = false,       -- Z位置
+			sway_status      = 0,           --
 			side             = 0,           -- 向き
 			state            = 0,           -- いまのやられ状態
 			tmp_combo        = 0,           -- 一次的なコンボ数
 			tmp_dmg          = 0,           -- ダメージが入ったフレーム
 			color            = 0,           -- カラー A=0x00 D=0x01
-
 
 			frame_gap        = 0,
 			last_frame_gap   = 0,
@@ -2432,6 +2444,13 @@ function rbff2.startplugin()
 			hit_skip         = 0,
 			old_skip_frame   = false,
 			skip_frame       = false,
+
+			knock_back1      = 0, -- のけぞり確認用1(色々)
+			knock_back2      = 0, -- のけぞり確認用2(裏雲隠し)
+			knock_back3      = 0, -- のけぞり確認用3(フェニックススルー)
+			hit_check1       = 0, -- ヒットチェック用
+			hit_check2       = 0, -- ヒットチェック用
+			hit_check3       = 0, -- ヒットチェック用
 
 			key_now          = {},          -- 前フレームまでの個別キー入力フレーム
 			key_pre          = {},          -- 個別キー入力フレーム
@@ -2583,13 +2602,17 @@ function rbff2.startplugin()
 				max_pos      = p1 and 0x10DDE6 or 0x10DDE8, -- X位置最大
 				min_pos      = p1 and 0x10DDEA or 0x10DDEC, -- X位置最小
 				pos_y        = p1 and 0x100428 or 0x100528, -- Y位置
- 				pos_z        = p1 and 0x100424 or 0x100524, -- Z位置
+				pos_z        = p1 and 0x100424 or 0x100524, -- Z位置
+				sway_status  = p1 and 0x100489 or 0x100589, -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
  				side         = p1 and 0x100458 or 0x100558, -- 向き
 				state        = p1 and 0x10048E or 0x10058E, -- 状態
 				stop         = p1 and 0x10048D or 0x10058D, -- ヒットストップ
 				knock_back1  = p1 and 0x100469 or 0x100569, -- のけぞり確認用1(色々)
 				knock_back2  = p1 and 0x100416 or 0x100516, -- のけぞり確認用2(裏雲隠し)
 				knock_back3  = p1 and 0x10047E or 0x10057E, -- のけぞり確認用3(フェニックススルー)
+				hit_check1   = p1 and 0x100467 or 0x100567, -- ヒットチェック用
+				hit_check2   = p1 and 0x10046A or 0x10056A, -- ヒットチェック用
+				hit_check3   = p1 and 0x10047A or 0x10057A, -- ヒットチェック用
 
 				stun         = p1 and 0x10B850 or 0x10B858, -- 現在スタン値
  				stun_timer   = p1 and 0x10B854 or 0x10B85C, -- スタン値ゼロ化までの残フレーム数
@@ -3646,6 +3669,10 @@ function rbff2.startplugin()
 			p.knock_back1    = pgm:read_u8(p.addr.knock_back1)
 			p.knock_back2    = pgm:read_u8(p.addr.knock_back2)
 			p.knock_back3    = pgm:read_u8(p.addr.knock_back3)
+			p.hit_check1     = bit32.lrotate(bit32.band(0xC0, pgm:read_u8(p.addr.hit_check1)), 2 + 16 + 8)
+			p.old_hit_check2 = p.hit_check2 or 0
+			p.hit_check2     = pgm:read_u8(p.addr.hit_check2)
+			p.hit_check3     = pgm:read_u8(p.addr.hit_check3)
 
 			p.last_dmg       = p.last_dmg or 0 --pgm:read_u8(p.addr.last_dmg)
 			p.char           = pgm:read_u8(p.addr.char)
@@ -3676,8 +3703,8 @@ function rbff2.startplugin()
 			p.pos_z          = pgm:read_i16(p.addr.pos_z)
 			p.on_sway_line   = (40 == p.pos_z and 40 > p.old_pos_z) and global.frame_number or p.on_sway_line
 			p.on_main_line   = (24 == p.pos_z and 24 < p.old_pos_z) and global.frame_number or p.on_main_line
-			p.in_sway_line   = pgm:read_u8(p.addr.base + 0x89) -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
-			if p.in_sway_line == 0x00 or (p.in_sway_line == 0x82 and 24 < p.pos_z) then
+			p.sway_status    = pgm:read_u8(p.addr.sway_status) -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
+			if p.sway_status == 0x00 or (p.sway_status == 0x82 and 24 < p.pos_z) then
 				p.in_sway_line = false
 			else
 				p.in_sway_line = true
@@ -4974,8 +5001,8 @@ function rbff2.startplugin()
 				end
 				-- 座標表示
 				if global.disp_hitbox then
-					if 0 == p.pos_y then
-						local color = p.throw.in_range and 0xFFFFFF00 or 0xFFBBBBBB
+					if 0 == p.pos_y and p.sway_status == 0x00 then
+						local color = (p.throw.in_range and op.sway_status == 0x00) and 0xFFFFFF00 or 0xFFBBBBBB
 						scr:draw_line(p.throw.x1, p.hit.pos_y  , p.throw.x2, p.hit.pos_y  , color)
 						scr:draw_line(p.throw.x1, p.hit.pos_y-4, p.throw.x1, p.hit.pos_y+4, color)
 						scr:draw_line(p.throw.x2, p.hit.pos_y-4, p.throw.x2, p.hit.pos_y+4, color)
