@@ -1888,47 +1888,47 @@ function rbff2.startplugin()
 		--print(string.format("%x, unk box id: %x", obj.base, box.id)) --debug
 	end
 	local box_type_base = {
-		a   = { id = 0x00, name = "攻撃",               enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF00FF, fill = 0x40, outline = 0xFF },
-		fa  = { id = 0x00, name = "嘘攻撃",             enabled = true, type_check = type_ck_atk,  type = "unkown", color = 0xB5B5AC, fill = 0x40, outline = 0xFF },
-		t3  = { id = 0x00, name = "未使用",             enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0x8B4513, fill = 0x40, outline = 0xFF },
-		pa  = { id = 0x00, name = "飛び道具",           enabled = true, type_check = type_ck_und,  type = "attack", color = 0xFF0033, fill = 0x40, outline = 0xFF },
-		t   = { id = 0x00, name = "投げ",               enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
-		at  = { id = 0x00, name = "必殺技投げ",         enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
-		pt  = { id = 0x00, name = "空中投げ",           enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
-		p   = { id = 0x01, name = "押し合い",           enabled = true, type_check = type_ck_push, type = "push",   color = 0xDDDDDD, fill = 0x00, outline = 0xFF },
-		v1  = { id = 0x02, name = "食らい1",            enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x0000FF, fill = 0x40, outline = 0xFF },
-		v2  = { id = 0x03, name = "食らい2",            enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x0000FF, fill = 0x40, outline = 0xFF },
+		a   = { id = 0x00, name = "攻撃",                     enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF00FF, fill = 0x40, outline = 0xFF },
+		fa  = { id = 0x00, name = "攻撃(無効)",               enabled = true, type_check = type_ck_und,  type = "attack", color = 0x00FF00, fill = 0x40, outline = 0xFF },
+		t3  = { id = 0x00, name = "未使用",                   enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0x8B4513, fill = 0x40, outline = 0xFF },
+		pa  = { id = 0x00, name = "飛び道具",                 enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x40, outline = 0xFF },
+		t   = { id = 0x00, name = "投げ",                     enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
+		at  = { id = 0x00, name = "必殺技投げ",               enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
+		pt  = { id = 0x00, name = "空中投げ",                 enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
+		p   = { id = 0x01, name = "押し合い",                 enabled = true, type_check = type_ck_push, type = "push",   color = 0xDDDDDD, fill = 0x00, outline = 0xFF },
+		v1  = { id = 0x02, name = "食らい1",                  enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x0000FF, fill = 0x40, outline = 0xFF },
+		v2  = { id = 0x03, name = "食らい2",                  enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x0000FF, fill = 0x40, outline = 0xFF },
 		v3  = { id = 0x04, name = "食らい(ダウン追撃のみ可)", enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x00FFFF, fill = 0x80, outline = 0xFF },
-		v4  = { id = 0x05, name = "食らい(空中追撃のみ可)", enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x00FFFF, fill = 0x80, outline = 0xFF },
-		v5  = { id = 0x06, name = "食らい5(未使用?)",   enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x606060, fill = 0x40, outline = 0xFF },
-		v6  = { id = 0x07, name = "食らい(対ライン上攻撃)", enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x00FFFF, fill = 0x80, outline = 0xFF },
-		x1  = { id = 0x08, name = "食らい(対ライン下攻撃)", enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x00FFFF, fill = 0x80, outline = 0xFF },
-		x2  = { id = 0x09, name = "用途不明2",          enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-		x3  = { id = 0x0A, name = "用途不明3",          enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-		x4  = { id = 0x0B, name = "用途不明4",          enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-		x5  = { id = 0x0C, name = "用途不明5",          enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-		x6  = { id = 0x0D, name = "用途不明6",          enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-		x7  = { id = 0x0E, name = "用途不明7",          enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-		x8  = { id = 0x0F, name = "用途不明8",          enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-		x9  = { id = 0x10, name = "用途不明9",          enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-		g1  = { id = 0x11, name = "立ガード",           enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 stand-guard
-		g2  = { id = 0x12, name = "下段ガード",         enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 counch-guard
-		g3  = { id = 0x13, name = "空中ガード",         enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 air-guard
-		g4  = { id = 0x14, name = "上段当身投げ",       enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 j.atemi-nage
-		g5  = { id = 0x15, name = "中段当身投げ",       enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 c.atemi-nage
-		g6  = { id = 0x16, name = "下段当身投げ",       enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 g.ateminage
-		g7  = { id = 0x17, name = "必勝逆襲脚",         enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 h.gyakushu-kyaku
-		g8  = { id = 0x18, name = "サドマゾ",           enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 sadomazo
-		g9  = { id = 0x19, name = "倍返し",             enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xFF007F, fill = 0x40, outline = 0xFF },--rbff2 bai-gaeshi
-		g10 = { id = 0x1A, name = "ガード?1",           enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },
-		g11 = { id = 0x1B, name = "ガード?2",           enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
-		g12 = { id = 0x1C, name = "ガード?3",           enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--rbff2 p.throw?
-		g13 = { id = 0x1D, name = "ガード?4",           enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
-		g14 = { id = 0x1E, name = "フェニックススルー", enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--?
-		g15 = { id = 0x1F, name = "ガード?6",           enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
-		g16 = { id = 0x20, name = "ガード?7",           enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
-		sv1 = { id = 0x02, name = "食らい1(スウェー中)", enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true },
-		sv2 = { id = 0x03, name = "食らい2(スウェー中)", enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true, },
+		v4  = { id = 0x05, name = "食らい(空中追撃のみ可)",   enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x00FFFF, fill = 0x80, outline = 0xFF },
+		v5  = { id = 0x06, name = "食らい5(未使用?)",         enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x606060, fill = 0x40, outline = 0xFF },
+		v6  = { id = 0x07, name = "食らい(対ライン上攻撃)",   enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x00FFFF, fill = 0x80, outline = 0xFF },
+		x1  = { id = 0x08, name = "食らい(対ライン下攻撃)",   enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x00FFFF, fill = 0x80, outline = 0xFF },
+		x2  = { id = 0x09, name = "用途不明2",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
+		x3  = { id = 0x0A, name = "用途不明3",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
+		x4  = { id = 0x0B, name = "用途不明4",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
+		x5  = { id = 0x0C, name = "用途不明5",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
+		x6  = { id = 0x0D, name = "用途不明6",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
+		x7  = { id = 0x0E, name = "用途不明7",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
+		x8  = { id = 0x0F, name = "用途不明8",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
+		x9  = { id = 0x10, name = "用途不明9",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
+		g1  = { id = 0x11, name = "立ガード",                 enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 stand-guard
+		g2  = { id = 0x12, name = "下段ガード",               enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 counch-guard
+		g3  = { id = 0x13, name = "空中ガード",               enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 air-guard
+		g4  = { id = 0x14, name = "上段当身投げ",             enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 j.atemi-nage
+		g5  = { id = 0x15, name = "中段当身投げ",             enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 c.atemi-nage
+		g6  = { id = 0x16, name = "下段当身投げ",             enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 g.ateminage
+		g7  = { id = 0x17, name = "必勝逆襲脚",               enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 h.gyakushu-kyaku
+		g8  = { id = 0x18, name = "サドマゾ",                 enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 sadomazo
+		g9  = { id = 0x19, name = "倍返し",                   enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xFF007F, fill = 0x40, outline = 0xFF },--rbff2 bai-gaeshi
+		g10 = { id = 0x1A, name = "ガード?1",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },
+		g11 = { id = 0x1B, name = "ガード?2",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
+		g12 = { id = 0x1C, name = "ガード?3",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--rbff2 p.throw?
+		g13 = { id = 0x1D, name = "ガード?4",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
+		g14 = { id = 0x1E, name = "フェニックススルー",       enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--?
+		g15 = { id = 0x1F, name = "ガード?6",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
+		g16 = { id = 0x20, name = "ガード?7",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
+		sv1 = { id = 0x02, name = "食らい1(スウェー中)",      enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true },
+		sv2 = { id = 0x03, name = "食らい2(スウェー中)",      enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true, },
 	}
 	local box_types, sway_box_types = {}, {}
 	for _, box in pairs(box_type_base) do
@@ -2086,9 +2086,18 @@ function rbff2.startplugin()
 		local box = {id = id}
 		box.type = nil
 		if box.id + 1 > #box_types then
-			box.type = is_fireball and box_type_base.pa or box_type_base.a
-			if box.type == box_type_base.a and p.hit.fake_hit == true then
-				box.type = box_type_base.fa
+			if is_fireball then
+				if p.hit.harmless == true then
+					box.type = box_type_base.fa -- 嘘判定
+				else
+					box.type = box_type_base.pa
+				end
+			else
+				if p.hit.harmless == true then
+					box.type = box_type_base.fa -- 嘘判定
+				else
+					box.type = box_type_base.a
+				end
 			end
 			--print(string.format("attack id %x", box.id))
 		else
@@ -2216,19 +2225,7 @@ function rbff2.startplugin()
 		p.throwing    = false
 
 		-- ヒットするかどうか
-		p.hit.harmless   = (bit32.btest(3, pgm:read_u8(obj_base + 0x6A)) == 0) or (pgm:read_u8(obj_base + 0xAA) > 0) or
-			(p.hit.projectile and pgm:read_u8(obj_base + 0xE7) > 0) or
-			(not p.hit.projectile and pgm:read_u8(obj_base + 0xB6) == 0)
-
-		-- 嘘判定のチェック
-		if p.hit_check4 ~= 0 and p.attack ~= 0 and bit32.btest(p.hit_check2, 8+3) == false then
-			p.hit.fake_hit = true
-		else
-			p.hit.fake_hit = false
-		end
-		--if p.hit_check4 ~= 0 then
-		--	print(i, p.hit_check2, bit32.btest(p.hit_check2, 8+3))
-		--end
+		p.hit.harmless = p.fake_hit or p.full_hit or p.harmless2
 
 		-- 食らい判定かどうか
 		p.hit.vulnerable = false
@@ -2358,10 +2355,7 @@ function rbff2.startplugin()
 			knock_back1      = 0, -- のけぞり確認用1(色々)
 			knock_back2      = 0, -- のけぞり確認用2(裏雲隠し)
 			knock_back3      = 0, -- のけぞり確認用3(フェニックススルー)
-			hit_check1       = 0, -- ヒットチェック用
-			hit_check2       = 0, -- ヒットチェック用
-			hit_check3       = 0, -- ヒットチェック用
-			hit_check4       = 0, -- フックによるヒットチェック用
+			fake_hit        = 0, -- ヒットチェック用
 
 			key_now          = {},          -- 前フレームまでの個別キー入力フレーム
 			key_pre          = {},          -- 個別キー入力フレーム
@@ -2406,10 +2400,6 @@ function rbff2.startplugin()
 			bs_hooked        = 0,           -- BSモードのフック処理フレーム数。
 
 			hit              = {
-				hit_check1   = 0, -- ヒットチェック用
-				hit_check2   = 0, -- ヒットチェック用
-				hit_check3   = 0, -- ヒットチェック用
-				hit_check4   = 0, -- フックによるヒットチェック用
 				pos_x        = 0,
 				pos_z        = 0,
 				pos_y        = 0,
@@ -2526,10 +2516,6 @@ function rbff2.startplugin()
 				knock_back1  = p1 and 0x100469 or 0x100569, -- のけぞり確認用1(色々)
 				knock_back2  = p1 and 0x100416 or 0x100516, -- のけぞり確認用2(裏雲隠し)
 				knock_back3  = p1 and 0x10047E or 0x10057E, -- のけぞり確認用3(フェニックススルー)
-				hit_check1   = p1 and 0x100467 or 0x100567, -- ヒットチェック用
-				hit_check2   = p1 and 0x10046A or 0x10056A, -- ヒットチェック用
-				hit_check3   = p1 and 0x10047A or 0x10057A, -- ヒットチェック用
-				hit_check4   = p1 and 0x10DDF0 or 0x10DDF1, -- フックによるヒットチェック用
 
 				stun         = p1 and 0x10B850 or 0x10B858, -- 現在スタン値
  				stun_timer   = p1 and 0x10B854 or 0x10B85C, -- スタン値ゼロ化までの残フレーム数
@@ -2558,6 +2544,10 @@ function rbff2.startplugin()
 				vulnerable21 = p1 and 0x10CB32 or 0x10CB33,
 				vulnerable22 = p1 and 0x10CB34 or 0x10CB35, --0の時vulnerable=true
 
+				-- ヒットするかどうか
+				fake_hit     = p1 and 0x10046A or 0x10056A, -- 嘘判定チェック用 3ビット目が立っていると嘘判定
+				full_hit     = p1 and 0x1004AA or 0x1005AA, -- 判定チェック用1 0じゃないとき全段攻撃ヒット/ガード
+				harmless2    = p1 and 0x1004B6 or 0x1005B6, -- 判定チェック用2 0のときは何もしていない
 			},
 		}
 
@@ -2580,11 +2570,12 @@ function rbff2.startplugin()
 				pos            = 0, -- X位置
 				pos_y          = 0, -- Y位置
 				pos_z          = 0, -- Z位置
+				attack         = 0, -- 攻撃中のみ変化
+				fake_hit       = false, -- 嘘判定チェック用
+				full_hit       = false, -- 判定チェック用1
+				harmless2      = false, -- 判定チェック用2 飛び道具専用
 				hitboxes       = {},
 				hit            = {
-					hit_check1 = base + 0x67, -- ヒットチェック用
-					hit_check2 = base + 0x6A, -- ヒットチェック用
-					hit_check3 = base + 0x7A, -- ヒットチェック用
 					pos_x      = 0,
 					pos_z      = 0,
 					pos_y      = 0,
@@ -2594,7 +2585,6 @@ function rbff2.startplugin()
 					char_id    = 0,
 					vulnerable = 0,
 					harmless   = false,
-					fake_hit   = false,
 				},
 				addr           = {
 					base       = base, -- キャラ状態とかのベースのアドレス
@@ -2602,6 +2592,11 @@ function rbff2.startplugin()
 					pos        = base + 0x20, -- X位置
 					pos_y      = base + 0x28, -- Y位置
 	 				pos_z      = base + 0x24, -- Z位置
+
+					-- ヒットするかどうか
+					fake_hit   = base + 0x6A, -- 嘘判定チェック用 3ビット目が立っていると嘘判定
+					full_hit   = base + 0xAA, -- 判定チェック用1 0じゃないとき全段攻撃ヒット/ガード
+					harmless2  = base + 0xE7, -- 判定チェック用2 0じゃないときヒット/ガード
 				},
 			}
 		end
@@ -2927,13 +2922,6 @@ function rbff2.startplugin()
 
 			-- 攻撃のヒットをむりやりガードに変更する
 			-- bp 0580F4,1,{pc=5810a;g}
-
-			-- 嘘攻撃判定の区別用に判定の範囲チェック直前まで来ていることを判別するためのフック
-			-- bp 012CB2,{D0==0&&(maincpu.pw@107C22>0)&&(maincpu.pb@((A4)+$B6)>0)&&(($100400==((A4)&$FFFFFF))||(((A4)&$FFFFFF)==$100500))}
-			table.insert(bps, cpu:debug():bpset(
-				fix_bp_addr(0x012C92),
-				"D0==0&&(maincpu.pw@107C22>0)&&(maincpu.pb@((A4)+$B6)>0)&&(($100400==((A4)&$FFFFFF))||(((A4)&$FFFFFF)==$100500))",
-				"temp1=$10DDF0+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=7;g"))
 		end
 	end
 
@@ -3597,11 +3585,23 @@ function rbff2.startplugin()
 			p.knock_back1    = pgm:read_u8(p.addr.knock_back1)
 			p.knock_back2    = pgm:read_u8(p.addr.knock_back2)
 			p.knock_back3    = pgm:read_u8(p.addr.knock_back3)
-			p.hit_check1     = bit32.lrotate(bit32.band(0xC0, pgm:read_u8(p.addr.hit_check1)), 2 + 16 + 8)
-			p.hit_check2     = pgm:read_u8(p.addr.hit_check2)
-			p.hit_check3     = pgm:read_u8(p.addr.hit_check3)
-			p.hit_check4     = pgm:read_u8(p.addr.hit_check4)
-			pgm:write_u8(p.addr.hit_check4, 0)
+			p.attack         = pgm:read_u8(p.addr.attack)
+			p.fake_hit       = bit32.btest(pgm:read_u8(p.addr.fake_hit), 8+3) == false
+			p.full_hit       = pgm:read_u8(p.addr.full_hit) > 0
+			p.harmless2      = pgm:read_u8(p.addr.harmless2) == 0
+			--[[
+			if 0 < p.attack then
+				print(string.format("%x %1s  %2x(%s) %2x(%s) %2x(%s)",
+					p.addr.base,
+					(p.fake_hit or p.full_hit or p.harmless2) and "H" or " ",
+					pgm:read_u8(p.addr.fake_hit),
+					p.fake_hit and "o" or "-",
+					pgm:read_u8(p.addr.full_hit),
+					p.full_hit and "o" or "-",
+					pgm:read_u8(p.addr.harmless2),
+					p.harmless2 and "o" or "-"))
+			end
+			]]
 
 			p.last_dmg       = p.last_dmg or 0 --pgm:read_u8(p.addr.last_dmg)
 			p.char           = pgm:read_u8(p.addr.char)
@@ -3639,8 +3639,6 @@ function rbff2.startplugin()
 				p.in_sway_line = true
 			end
 			p.side           = pgm:read_i8(p.addr.side) < 0 and -1 or 1
-
-			p.attack         = pgm:read_u8(p.addr.attack)
 
 			p.life           = pgm:read_u8(p.addr.life)
 			p.pow            = pgm:read_u8(p.addr.pow)
@@ -3711,16 +3709,28 @@ function rbff2.startplugin()
 
 			-- 飛び道具の状態読取
 			for _, fb in pairs(p.fireball) do
-				fb.hit_check1     = bit32.lrotate(bit32.band(0xC0, pgm:read_u8(fb.addr.hit_check1)), 2 + 16 + 8)
-				fb.hit_check2     = pgm:read_u8(fb.addr.hit_check2)
-				fb.hit_check3     = pgm:read_u8(fb.addr.hit_check3)
-				fb.hit_check4     = 0
-	
 				fb.act            = pgm:read_u16(fb.addr.act)
 				fb.pos            = pgm:read_i16(fb.addr.pos)
 				fb.pos_y          = pgm:read_i16(fb.addr.pos_y)
 				fb.pos_z          = pgm:read_i16(fb.addr.pos_z)
 				fb.hit.projectile = true
+				fb.attack         = pgm:read_u16(pgm:read_u32(fb.addr.base))
+				fb.fake_hit       = bit32.btest(pgm:read_u8(fb.addr.fake_hit), 8+3) == false
+				fb.full_hit       = pgm:read_u8(fb.addr.full_hit ) > 0
+				fb.harmless2      = pgm:read_u8(fb.addr.harmless2) > 0
+				--[[
+				if fb.attack ~= 0x4E75 then
+					print(string.format("%x %1s  %2x(%s) %2x(%s) %2x(%s)",
+						fb.addr.base,
+						(fb.fake_hit or fb.full_hit  or fb.harmless2) and " " or "H",
+						pgm:read_u8(fb.addr.fake_hit),
+						fb.fake_hit and "o" or "-",
+						pgm:read_u8(fb.addr.full_hit),
+						fb.full_hit  and "o" or "-",
+						pgm:read_u8(fb.addr.harmless2),
+						fb.harmless2 and "o" or "-"))
+				end
+				]]
 				fb.hitboxes       = {}
 				fb.buffer         = {}
 				fb.act_data_fired = p.act_data -- 発射したタイミングの行動ID
@@ -3729,7 +3739,7 @@ function rbff2.startplugin()
 				fb.act_frames2    = fb.act_frames2 or {}
 
 				-- 当たり判定の構築
-				if pgm:read_u16(pgm:read_u32(fb.addr.base)) ~= 0x4E75 then --0x4E75 is rts instruction
+				if fb.attack ~= 0x4E75 then --0x4E75 is rts instruction
 					temp_hits[fb.addr.base] = fb
 					fb.count = (fb.count or 0) +1
 					fb.atk_count = fb.atk_count or 0
