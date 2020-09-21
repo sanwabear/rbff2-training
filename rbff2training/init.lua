@@ -2221,7 +2221,9 @@ function rbff2.startplugin()
 			(not p.hit.projectile and pgm:read_u8(obj_base + 0xB6) == 0)
 
 		-- 嘘判定のチェック
-		if p.hit_check2 == 0 or p.hit_check2 > 0x70 then
+		if p.hit_check2 == 0 then
+			p.hit.fake_hit = true
+		elseif p.hit_check4 == 0 and p.attack ~= 0 then
 			p.hit.fake_hit = true
 		else
 			p.hit.fake_hit = false
@@ -2463,6 +2465,7 @@ function rbff2.startplugin()
 			hit_check1       = 0, -- ヒットチェック用
 			hit_check2       = 0, -- ヒットチェック用
 			hit_check3       = 0, -- ヒットチェック用
+			hit_check4       = 0, -- フックによるヒットチェック用
 
 			key_now          = {},          -- 前フレームまでの個別キー入力フレーム
 			key_pre          = {},          -- 個別キー入力フレーム
@@ -2510,6 +2513,7 @@ function rbff2.startplugin()
 				hit_check1   = 0, -- ヒットチェック用
 				hit_check2   = 0, -- ヒットチェック用
 				hit_check3   = 0, -- ヒットチェック用
+				hit_check4   = 0, -- フックによるヒットチェック用
 				pos_x        = 0,
 				pos_z        = 0,
 				pos_y        = 0,
@@ -2629,6 +2633,7 @@ function rbff2.startplugin()
 				hit_check1   = p1 and 0x100467 or 0x100567, -- ヒットチェック用
 				hit_check2   = p1 and 0x10046A or 0x10056A, -- ヒットチェック用
 				hit_check3   = p1 and 0x10047A or 0x10057A, -- ヒットチェック用
+				hit_check4   = p1 and 0x10DDF0 or 0x10DDF1, -- フックによるヒットチェック用
 
 				stun         = p1 and 0x10B850 or 0x10B858, -- 現在スタン値
  				stun_timer   = p1 and 0x10B854 or 0x10B85C, -- スタン値ゼロ化までの残フレーム数
@@ -3015,10 +3020,10 @@ function rbff2.startplugin()
 			--table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x039F8C), "1",
 			--	"maincpu.pb@((A3)+$90)=$19;g"))
 			-- 投げ可能判定用フレーム
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x039F90), "1",
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x039F90), "maincpu.pw@107C22>0",
 				"temp1=$10DDE2+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=D7;g"))
 			-- 投げ確定時の判定用フレーム
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x039F96), "1",
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x039F96), "maincpu.pw@107C22>0",
 				"temp1=$10DDE4+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@((A3)+$90);g"))
 
 			-- 判定の接触判定が無視される
@@ -3026,6 +3031,13 @@ function rbff2.startplugin()
 
 			-- 攻撃のヒットをむりやりガードに変更する
 			-- bp 0580F4,1,{pc=5810a;g}
+
+			-- 嘘攻撃判定の区別用に判定の範囲チェック直前まで来ていることを判別するためのフック
+			-- bp 012CB2,{D0==0&&(maincpu.pw@107C22>0)&&(maincpu.pb@((A4)+$B6)>0)&&(($100400==((A4)&$FFFFFF))||(((A4)&$FFFFFF)==$100500))}
+			table.insert(bps, cpu:debug():bpset(
+				fix_bp_addr(0x012C92),
+				"D0==0&&(maincpu.pw@107C22>0)&&(maincpu.pb@((A4)+$B6)>0)&&(($100400==((A4)&$FFFFFF))||(((A4)&$FFFFFF)==$100500))",
+				"temp1=$10DDF0+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=7;g"))
 		end
 	end
 
@@ -3692,6 +3704,9 @@ function rbff2.startplugin()
 			p.hit_check1     = bit32.lrotate(bit32.band(0xC0, pgm:read_u8(p.addr.hit_check1)), 2 + 16 + 8)
 			p.hit_check2     = pgm:read_u8(p.addr.hit_check2)
 			p.hit_check3     = pgm:read_u8(p.addr.hit_check3)
+			p.hit_check4     = pgm:read_u8(p.addr.hit_check4)
+			pgm:write_u8(p.addr.hit_check4, 0)
+			print(i, p.hit_check4)
 
 			p.last_dmg       = p.last_dmg or 0 --pgm:read_u8(p.addr.last_dmg)
 			p.char           = pgm:read_u8(p.addr.char)
@@ -3804,6 +3819,7 @@ function rbff2.startplugin()
 				fb.hit_check1     = bit32.lrotate(bit32.band(0xC0, pgm:read_u8(fb.addr.hit_check1)), 2 + 16 + 8)
 				fb.hit_check2     = pgm:read_u8(fb.addr.hit_check2)
 				fb.hit_check3     = pgm:read_u8(fb.addr.hit_check3)
+				fb.hit_check4     = 0
 	
 				fb.act            = pgm:read_u16(fb.addr.act)
 				fb.pos            = pgm:read_i16(fb.addr.pos)
