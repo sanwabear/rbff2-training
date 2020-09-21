@@ -2221,118 +2221,14 @@ function rbff2.startplugin()
 			(not p.hit.projectile and pgm:read_u8(obj_base + 0xB6) == 0)
 
 		-- 嘘判定のチェック
-		if p.hit_check2 == 0 then
-			p.hit.fake_hit = true
-		elseif p.hit_check4 == 0 and p.attack ~= 0 then
+		if p.hit_check4 ~= 0 and p.attack ~= 0 and bit32.btest(p.hit_check2, 8+3) == false then
 			p.hit.fake_hit = true
 		else
 			p.hit.fake_hit = false
 		end
-
-		local changeh = function()
-			if p.attack ~= 0 then
-				if p.hit.fake_hit == true then
-					-- print("ok")
-				else
-					print("override")
-				end
-				p.hit.fake_hit = true
-			end
-		end
-		-- パッチ当て
-		-- プログラム解析できたらまっとうな形で反映できるようにする
-		if p.char == 20 then -- クラウザー
-			-- デスハンマーの持続
-			if p.act == 0x68 and p.act_count >= 5 then
-				changeh()
-			end
-		elseif p.char == 22 then -- シャンフェイ
-			-- 超白龍の持続
-			if p.act == 0xFE and p.act_count == 2 then
-				changeh()
-			end
-		elseif p.char == 10 then -- フランコ
-			-- ハルマゲドンバスターの出かかり
-			if p.act == 0x108 and p.act_count == 4  then
-				changeh()
-			end
-		elseif p.char == 5 then -- ギース
-			if p.act == 0x42 and p.act_count >= 2 then
-				-- 遠立Cの持続
-				changeh()
-			elseif p.act == 0x46 and p.act_count >= 6 then
-				-- 遠立Cの持続
-				changeh()
-			elseif p.char == 5 and p.act == 0x43 and p.act_count >= 5 then
-				-- 近立Cの持続
-				changeh()
-			end
-		elseif p.char == 1 then -- テリー
-			if p.act == 0x45 and p.act_count >= 4 then
-				-- 遠Bの持続
-				changeh()
-			elseif p.act == 0x47 and p.act_count >= 2 then
-				-- 下Aの持続
-				changeh()
-			end
-		elseif p.char == 2 then -- アンディ
-			if p.act == 0x44 and p.act_count >= 3 then
-				-- Aの持続
-				changeh()
-			elseif p.act == 0x45 and p.act_count >= 4 then
-				-- Bの持続
-				changeh()
-			elseif p.act == 0x47 and p.act_count >= 2 then
-				-- 下Aの持続
-				changeh()
-			elseif p.act == 0x48 and p.act_count >= 3 then
-				-- 下Bの持続
-				changeh()
-			elseif p.act == 0x240 and p.act_count >= 4 then
-				-- 立B立Bの2段目の持続
-				changeh()
-			elseif p.act == 0x241 and p.act_count >= 3 then
-				-- 下B下Bの持続
-				changeh()
-			end
-		elseif p.char == 3 then -- ジョー
-			if p.act == 0x41 and p.act_count >= 3 then
-				-- 近Aの持続
-				changeh()
-			elseif p.act == 0x42 and p.act_count >= 4 then
-				-- 近Bの持続
-				changeh()
-			elseif p.act == 0x44 and p.act_count >= 2 then
-				-- 遠Aの持続
-				changeh()
-			elseif p.act == 0x45 and p.act_count >= 4 then
-				-- 遠Bの持続
-				changeh()
-			elseif p.act == 0x47 and p.act_count >= 3 then
-				-- 下Aの持続
-				changeh()
-			elseif p.act == 0x48 and p.act_count >= 3 then
-				-- 下Bの持続
-				changeh()
-			elseif p.act == 0x24B and p.act_count == 3 then
-				-- 遠BCの2段目の持続
-				changeh()
-			elseif p.act == 0x24C and p.act_count >= 4 then
-				-- 近ABAの3段目の持続
-				changeh()
-			end
-		elseif p.char == 4 then -- 舞
-			if p.act == 0x47 and p.act_count >= 2 then
-				-- 下Aの持続
-				changeh()
-			elseif p.act == 0x48 and p.act_count >= 2 then
-				-- 下Bの持続
-				changeh()
-			elseif p.act == 0x243 and p.act_count >= 3 then
-				-- 下ACの持続
-				changeh()
-			end
-		end
+		--if p.hit_check4 ~= 0 then
+		--	print(i, p.hit_check2, bit32.btest(p.hit_check2, 8+3))
+		--end
 
 		-- 食らい判定かどうか
 		p.hit.vulnerable = false
@@ -3706,7 +3602,6 @@ function rbff2.startplugin()
 			p.hit_check3     = pgm:read_u8(p.addr.hit_check3)
 			p.hit_check4     = pgm:read_u8(p.addr.hit_check4)
 			pgm:write_u8(p.addr.hit_check4, 0)
-			print(i, p.hit_check4)
 
 			p.last_dmg       = p.last_dmg or 0 --pgm:read_u8(p.addr.last_dmg)
 			p.char           = pgm:read_u8(p.addr.char)
