@@ -1889,9 +1889,11 @@ function rbff2.startplugin()
 	end
 	local box_type_base = {
 		a   = { id = 0x00, name = "攻撃",                     enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF00FF, fill = 0x40, outline = 0xFF },
+		aa  = { id = 0x00, name = "攻撃(空中追撃可)",         enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF00FF, fill = 0x40, outline = 0xFF },
 		fa  = { id = 0x00, name = "攻撃(無効)",               enabled = true, type_check = type_ck_und,  type = "attack", color = 0x00FF00, fill = 0x40, outline = 0xFF },
 		t3  = { id = 0x00, name = "未使用",                   enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0x8B4513, fill = 0x40, outline = 0xFF },
 		pa  = { id = 0x00, name = "飛び道具",                 enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x40, outline = 0xFF },
+		paa = { id = 0x00, name = "飛び道具(空中追撃可)",     enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF00FF, fill = 0x40, outline = 0xFF },
 		t   = { id = 0x00, name = "投げ",                     enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
 		at  = { id = 0x00, name = "必殺技投げ",               enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
 		pt  = { id = 0x00, name = "空中投げ",                 enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
@@ -2075,6 +2077,7 @@ function rbff2.startplugin()
 	-- 当たり判定表示
 	local accept_atk_only = {
 		[box_type_base.a ] = true,
+		[box_type_base.aa] = true,
 		[box_type_base.fa] = true,
 		[box_type_base.v3] = true,
 		[box_type_base.v4] = true,
@@ -2086,20 +2089,45 @@ function rbff2.startplugin()
 		local box = {id = id}
 		box.type = nil
 		if box.id + 1 > #box_types then
+			local harmless = false
 			if is_fireball then
 				if p.hit.harmless == true then
 					box.type = box_type_base.fa -- 嘘判定
+					harmless = true
 				else
 					box.type = box_type_base.pa
 				end
 			else
 				if p.hit.harmless == true then
 					box.type = box_type_base.fa -- 嘘判定
+					harmless = true
 				else
 					box.type = box_type_base.a
 				end
 			end
-			--print(string.format("attack id %x", box.id))
+			-- 家庭用版 012E0E~012E34の処理をベースに空中追撃判定を持つかどうかを判断する
+			local d2 = box.id - 0x20
+			if d2 >= 0 then
+				local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+				d2 = pgm:read_u8(0x94EEC + d2)	
+				d2 = bit32.band(0xFFFF, d2 + d2)
+				d2 = bit32.band(0xFFFF, d2 + d2)
+				local a0 = pgm:read_u32(0x13120 + d2)
+				local asm =  pgm:read_u16(a0)
+				if 0x70FF == asm then
+					-- 0x70FF は moveq   #-$1, D0 でヒットしない処理結果を表す
+					-- 空中追撃できない判定
+					--print(string.format("not %x %x %x %x", box.id, d2, a0, asm))
+				else
+					-- 判定差し替え
+					if box_type_base.a == box.type then
+						box.type = box_type_base.aa
+					elseif box_type_base.pa == box.type then
+						box.type = box_type_base.paa
+					end
+					--print(string.format("hit %x %x %x %x %s", box.id, d2, a0, asm, harmless and "o" or ""))
+				end
+			end
 		else
 			box.type = box_types[box.id + 1]
 			if p.in_sway_line and sway_box_types[box.id + 1] then
@@ -2115,7 +2143,8 @@ function rbff2.startplugin()
 			return nil
 		end
 		]]
-		if box.type == box_type_base.a and (is_fireball == true or (p.hit.harmless == false and p.hit.fake_hit == false)) then
+		if (box.type == box_type_base.a or box.type == box_type_base.aa) and
+			(is_fireball == true or (p.hit.harmless == false and p.hit.fake_hit == false)) then
 			-- 攻撃中のフラグをたてる
 			p.attacking = true
 			p.attack_id = id
@@ -5263,7 +5292,8 @@ function rbff2.startplugin()
 		auto_menu_to_main(true)
 	end
 	local box_type_col_list = { 
-		box_type_base.a, box_type_base.fa, box_type_base.t3, box_type_base.pa, box_type_base.t, box_type_base.at, box_type_base.pt,
+		box_type_base.a, box_type_base.aa, box_type_base.fa, box_type_base.t3, box_type_base.pa, box_type_base.paa,
+		box_type_base.t, box_type_base.at, box_type_base.pt,
 		box_type_base.p, box_type_base.v1, box_type_base.sv1, box_type_base.v2, box_type_base.sv2, box_type_base.v3,
 		box_type_base.v4, box_type_base.v5, box_type_base.v6, box_type_base.x1, box_type_base.x2, box_type_base.x3,
 		box_type_base.x4, box_type_base.x5, box_type_base.x6, box_type_base.x7, box_type_base.x8, box_type_base.x9,
