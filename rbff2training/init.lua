@@ -80,7 +80,9 @@ function rbff2.startplugin()
 		no_alpha        = true, --fill = 0x00, outline = 0xFF for all box types
 		throwbox_height = 200, --default for ground throws
 		no_background   = false,
+		no_background_addr = 0x10DDF0,
 		no_bars         = false,
+		sync_pos_x      = 1, -- 1: OFF, 2:1Pと同期, 3:2Pと同期
 
 		disp_stun       = true, -- スタン表示
 		disp_pos        = true, -- 1P 2P 距離表示
@@ -198,30 +200,32 @@ function rbff2.startplugin()
 		end
 	end
 	local stgs = {
-		{ stg1 = 0x01, stg2 = 0x00, stg3 = 0x01, name = "日本 [1]"          , }, -- 不知火舞
-		{ stg1 = 0x01, stg2 = 0x01, stg3 = 0x01, name = "日本 [2]"          , }, -- 望月双角,
-		{ stg1 = 0x01, stg2 = 0x01, stg3 = 0x0F, name = "日本 [2] 雨"       , }, -- 望月双角,
-		{ stg1 = 0x01, stg2 = 0x02, stg3 = 0x01, name = "日本 [3]"          , }, -- アンディ・ボガード
-		{ stg1 = 0x02, stg2 = 0x00, stg3 = 0x01, name = "香港1 [1]"         , }, -- チン・シンザン
-		{ stg1 = 0x02, stg2 = 0x01, stg3 = 0x01, name = "香港1 [2]"         , }, -- 山崎竜二
-		{ stg1 = 0x03, stg2 = 0x00, stg3 = 0x01, name = "韓国 [1]"          , }, -- キム・カッファン
-		{ stg1 = 0x03, stg2 = 0x01, stg3 = 0x01, name = "韓国 [2]"          , }, -- タン・フー・ルー,
-		{ stg1 = 0x04, stg2 = 0x00, stg3 = 0x01, name = "サウスタウン [1]"  , }, -- ギース・ハワード
-		{ stg1 = 0x04, stg2 = 0x01, stg3 = 0x01, name = "サウスタウン [2]"  , }, -- ビリー・カーン
-		{ stg1 = 0x05, stg2 = 0x00, stg3 = 0x01, name = "ドイツ [1]"        , }, -- ヴォルフガング・クラウザー
-		{ stg1 = 0x05, stg2 = 0x01, stg3 = 0x01, name = "ドイツ [2]"        , }, -- ローレンス・ブラッド
-		{ stg1 = 0x06, stg2 = 0x00, stg3 = 0x01, name = "アメリカ1 [1]"     , }, -- ダック・キング
-		{ stg1 = 0x06, stg2 = 0x01, stg3 = 0x01, name = "アメリカ1 [2]"     , }, -- ブルー・マリー
-		{ stg1 = 0x07, stg2 = 0x00, stg3 = 0x01, name = "アメリカ2 [1]"     , }, -- テリー・ボガード
-		{ stg1 = 0x07, stg2 = 0x01, stg3 = 0x01, name = "アメリカ2 [2]"     , }, -- リック・ストラウド
-		{ stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, name = "アメリカ2 [2]"     , }, -- アルフレッド
-		{ stg1 = 0x08, stg2 = 0x00, stg3 = 0x01, name = "タイ [1]"          , }, -- ボブ・ウィルソン
-		{ stg1 = 0x08, stg2 = 0x01, stg3 = 0x01, name = "タイ [2]"          , }, -- フランコ・バッシュ
-		{ stg1 = 0x08, stg2 = 0x02, stg3 = 0x01, name = "タイ [3]"          , }, -- 東丈
-		{ stg1 = 0x09, stg2 = 0x00, stg3 = 0x01, name = "香港2 [1]"         , }, -- 秦崇秀
-		{ stg1 = 0x09, stg2 = 0x01, stg3 = 0x01, name = "香港2 [2]"         , }, -- 秦崇雷,
-		{ stg1 = 0x0A, stg2 = 0x00, stg3 = 0x01, name = "NEW CHALLENGERS[1]", }, -- 李香緋
-		{ stg1 = 0x0A, stg2 = 0x01, stg3 = 0x01, name = "NEW CHALLENGERS[2]", }, -- ホンフゥ
+		{ stg1 = 0x01, stg2 = 0x00, stg3 = 0x01, name = "日本 [1]"          , no_background = false, }, -- 不知火舞
+		{ stg1 = 0x01, stg2 = 0x01, stg3 = 0x01, name = "日本 [2]"          , no_background = false, }, -- 望月双角,
+		{ stg1 = 0x01, stg2 = 0x01, stg3 = 0x0F, name = "日本 [2] 雨"       , no_background = false, }, -- 望月双角,
+		{ stg1 = 0x01, stg2 = 0x02, stg3 = 0x01, name = "日本 [3]"          , no_background = false, }, -- アンディ・ボガード
+		{ stg1 = 0x02, stg2 = 0x00, stg3 = 0x01, name = "香港1 [1]"         , no_background = false, }, -- チン・シンザン
+		{ stg1 = 0x02, stg2 = 0x01, stg3 = 0x01, name = "香港1 [2]"         , no_background = false, }, -- 山崎竜二
+		{ stg1 = 0x03, stg2 = 0x00, stg3 = 0x01, name = "韓国 [1]"          , no_background = false, }, -- キム・カッファン
+		{ stg1 = 0x03, stg2 = 0x01, stg3 = 0x01, name = "韓国 [2]"          , no_background = false, }, -- タン・フー・ルー,
+		{ stg1 = 0x04, stg2 = 0x00, stg3 = 0x01, name = "サウスタウン [1]"  , no_background = false, }, -- ギース・ハワード
+		{ stg1 = 0x04, stg2 = 0x01, stg3 = 0x01, name = "サウスタウン [2]"  , no_background = false, }, -- ビリー・カーン
+		{ stg1 = 0x05, stg2 = 0x00, stg3 = 0x01, name = "ドイツ [1]"        , no_background = false, }, -- ヴォルフガング・クラウザー
+		{ stg1 = 0x05, stg2 = 0x01, stg3 = 0x01, name = "ドイツ [2]"        , no_background = false, }, -- ローレンス・ブラッド
+		{ stg1 = 0x06, stg2 = 0x00, stg3 = 0x01, name = "アメリカ1 [1]"     , no_background = false, }, -- ダック・キング
+		{ stg1 = 0x06, stg2 = 0x01, stg3 = 0x01, name = "アメリカ1 [2]"     , no_background = false, }, -- ブルー・マリー
+		{ stg1 = 0x07, stg2 = 0x00, stg3 = 0x01, name = "アメリカ2 [1]"     , no_background = false, }, -- テリー・ボガード
+		{ stg1 = 0x07, stg2 = 0x01, stg3 = 0x01, name = "アメリカ2 [2]"     , no_background = false, }, -- リック・ストラウド
+		{ stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, name = "アメリカ2 [2]"     , no_background = false, }, -- アルフレッド
+		{ stg1 = 0x08, stg2 = 0x00, stg3 = 0x01, name = "タイ [1]"          , no_background = false, }, -- ボブ・ウィルソン
+		{ stg1 = 0x08, stg2 = 0x01, stg3 = 0x01, name = "タイ [2]"          , no_background = false, }, -- フランコ・バッシュ
+		{ stg1 = 0x08, stg2 = 0x02, stg3 = 0x01, name = "タイ [3]"          , no_background = false, }, -- 東丈
+		{ stg1 = 0x09, stg2 = 0x00, stg3 = 0x01, name = "香港2 [1]"         , no_background = false, }, -- 秦崇秀
+		{ stg1 = 0x09, stg2 = 0x01, stg3 = 0x01, name = "香港2 [2]"         , no_background = false, }, -- 秦崇雷,
+		{ stg1 = 0x0A, stg2 = 0x00, stg3 = 0x01, name = "NEW CHALLENGERS[1]", no_background = false, }, -- 李香緋
+		{ stg1 = 0x0A, stg2 = 0x01, stg3 = 0x01, name = "NEW CHALLENGERS[2]", no_background = false, }, -- ホンフゥ
+		{ stg1 = 0x01, stg2 = 0x00, stg3 = 0x01, name = "背景なし"          , no_background = true , }, -- 背景なし
+		--{ stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, name = "背景なし(1LINE)"   , no_background = true , }, -- 背景なし(1LINE)
 	}
 	local names = {}
 	for _, stg in ipairs(stgs) do
@@ -2710,6 +2714,7 @@ function rbff2.startplugin()
 		local stg1  = param.next_stage.stg1 or stgs[1].stg1
 		local stg2  = param.next_stage.stg2 or stgs[1].stg2
 		local stg3  = param.next_stage.stg3 or stgs[1].stg3
+		global.no_background = (param.next_stage or stgs[1]).no_background
 		local p1    = param.next_p1    or 1
 		local p2    = param.next_p2    or 21
 		local p1col = param.next_p1col or 0x00
@@ -2934,11 +2939,9 @@ function rbff2.startplugin()
 			-- 影表示
 			--{base = 0x017300, ["rbff2k"] = 0x28, ["rbff2h"] = 0x0, no_background = true,
 			--			func = function() memory.pgm:write_u8(gr("a4") + 0x82, 0) end},
-			if global.no_background then
-				--solid shadows 01
-				--no    shadows FF
-				table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x017300), "maincpu.pw@107C22>0", "maincpu.pb@((A4)+$82)=$FF;g"))
-			end
+			--solid shadows 01
+			--no    shadows FF
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x017300), "maincpu.pw@107C22>0&&maincpu.pb@10DDF0==FF", "maincpu.pb@((A4)+$82)=$FF;g"))
 
 			-- 潜在ぜったい投げるマン
 			--table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x039F8C), "1",
@@ -4865,6 +4868,13 @@ function rbff2.startplugin()
 				pgm:write_i16(p.addr.pos_y, p.force_y_pos)
 			end
 		end
+		-- X座標同期とY座標をだいぶ上に
+		if global.sync_pos_x ~= 1 then
+			local from = global.sync_pos_x - 1
+			local to   = 3 - from
+			pgm:write_i16(players[to].addr.pos, players[from].pos)
+			pgm:write_i16(players[to].addr.pos_y, 240)
+		end
 	end
 
 	tra_main.draw = function()
@@ -5072,21 +5082,23 @@ function rbff2.startplugin()
 		end
 
 		-- 画面表示
-		--[[
 		if global.no_background then
-			if pgm:read_u8(0x107BB9) >= 0x05 then
+			if pgm:read_u8(0x107BB9) == 0x01 then
 				local match = pgm:read_u8(0x107C22)
 				if match == 0x38 then --HUD
 					pgm:write_u8(0x107C22, 0x33)
 				end
 				if match > 0 then --BG layers
 					pgm:write_u8(0x107762, 0x00)
-					pgm:write_u8(0x107765, 0x01)
+					--pgm:write_u8(0x107765, 0x01)
 				end
-				pgm:write_u16(0x401FFE, 0x8F8F)
 			end
+			--pgm:write_u16(0x401FFE, 0x8F8F)
+			pgm:write_u16(0x401FFE, 0x5ABB)
+			pgm:write_u8(global.no_background_addr, 0xFF)
+		else
+			pgm:write_u8(global.no_background_addr, 0x00)
 		end
-		]]
 
 		for i, p in ipairs(players) do
 			local pause = false
@@ -5140,6 +5152,7 @@ function rbff2.startplugin()
 		p[2].fwd_prov            = col[11] == 2 -- 2P 挑発で前進         11
 		p[1].force_y_pos         = col[12] - 1  -- 1P Y座標強制          12
 		p[2].force_y_pos         = col[13] - 1  -- 2P Y座標強制          13
+		global.sync_pos_x        = col[14]      -- X座標同期
 
 		-- キャラにあわせたメニュー設定
 		for i, p in ipairs(players) do
@@ -5388,12 +5401,13 @@ function rbff2.startplugin()
 		col[ 5] = p[1].dummy_gd            -- 1P ガード              5
 		col[ 6] = p[2].dummy_gd            -- 2P ガード              6
 		col[ 7] = g.next_block_grace + 1   -- 1ガード持続フレーム数  7
-		col[ 8] = p[1].dummy_wakeup        -- 1P やられ時行動       8
-		col[ 9] = p[2].dummy_wakeup        -- 2P やられ時行動       9
-		col[10] = p[1].fwd_prov and 2 or 1 -- 1P 挑発で前進        10
-		col[11] = p[2].fwd_prov and 2 or 1 -- 2P 挑発で前進        11
-		col[12] = p[1].force_y_pos + 1     -- 1P Y座標強制         12
-		col[13] = p[2].force_y_pos + 1     -- 2P Y座標強制         13
+		col[ 8] = p[1].dummy_wakeup        -- 1P やられ時行動        8
+		col[ 9] = p[2].dummy_wakeup        -- 2P やられ時行動        9
+		col[10] = p[1].fwd_prov and 2 or 1 -- 1P 挑発で前進         10
+		col[11] = p[2].fwd_prov and 2 or 1 -- 2P 挑発で前進         11
+		col[12] = p[1].force_y_pos + 1     -- 1P Y座標強制          12
+		col[13] = p[2].force_y_pos + 1     -- 2P Y座標強制          13
+		g.sync_pos_x = col[14]             -- X座標同期             14
 	end
 	local init_bar_menu_config = function()
 		local col = bar_menu.pos.col
@@ -5437,6 +5451,11 @@ function rbff2.startplugin()
 		col[ 6] = g.auto_input.desire  -- アンリミテッドデザイア  6
 		col[ 7] = g.auto_input.drill   -- ドリル                  7
 		col[ 8] = g.auto_input.pairon  -- 超白龍                  8
+	end
+	local init_restart_fight = function()
+		local col = tra_menu.pos.col
+		local p = players
+		local g = global
 	end
 	menu_to_tra  = function() menu_cur = tra_menu end
 	menu_to_bar  = function() menu_cur = bar_menu end
@@ -5674,6 +5693,7 @@ function rbff2.startplugin()
 			{ "2P 挑発で前進"         , { "OFF", "ON" }, },
 			{ "1P Y座標強制"          , force_y_pos, },
 			{ "2P Y座標強制"          , force_y_pos, },
+			{ "画面上に移動"          , { "OFF", "2Pを上に移動", "1Pを上に移動", }, },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
@@ -5692,6 +5712,7 @@ function rbff2.startplugin()
 				1, -- 2P 挑発で前進          11
 				1, -- 1P Y座標強制           12
 				1, -- 2P Y座標強制           13
+				1, -- X座標同期              14
 			},
 		},
 		on_a = {
@@ -5708,6 +5729,7 @@ function rbff2.startplugin()
 			menu_to_main, -- 2P 挑発で前進
 			menu_to_main, -- 1P Y座標強制
 			menu_to_main, -- 2P Y座標強制
+			menu_to_main, -- X座標同期
 		},
 		on_b = {
 			menu_to_main_cancel, -- ダミーモード
@@ -5723,6 +5745,7 @@ function rbff2.startplugin()
 			menu_to_main_cancel, -- 2P 挑発で前進
 			menu_to_main_cancel, -- 1P Y座標強制
 			menu_to_main_cancel, -- 2P Y座標強制
+			menu_to_main_cancel, -- X座標同期
 		},
 	}
 
@@ -6012,6 +6035,7 @@ function rbff2.startplugin()
 	init_ex_menu_config()
 	init_bar_menu_config()
 	init_menu_config()
+	init_restart_fight()
 	menu_to_main(true)
 
 	menu = {}
