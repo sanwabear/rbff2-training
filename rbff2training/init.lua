@@ -224,8 +224,8 @@ function rbff2.startplugin()
 		{ stg1 = 0x09, stg2 = 0x01, stg3 = 0x01, name = "香港2 [2]"         , no_background = false, }, -- 秦崇雷,
 		{ stg1 = 0x0A, stg2 = 0x00, stg3 = 0x01, name = "NEW CHALLENGERS[1]", no_background = false, }, -- 李香緋
 		{ stg1 = 0x0A, stg2 = 0x01, stg3 = 0x01, name = "NEW CHALLENGERS[2]", no_background = false, }, -- ホンフゥ
-		{ stg1 = 0x01, stg2 = 0x00, stg3 = 0x01, name = "背景なし"          , no_background = true , }, -- 背景なし
-		--{ stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, name = "背景なし(1LINE)"   , no_background = true , }, -- 背景なし(1LINE)
+		{ stg1 = 0x04, stg2 = 0x01, stg3 = 0x01, name = "背景なし"          , no_background = true , }, -- 背景なし
+		{ stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, name = "背景なし(1LINE)"   , no_background = true , }, -- 背景なし(1LINE)
 	}
 	local names = {}
 	for _, stg in ipairs(stgs) do
@@ -5090,7 +5090,7 @@ function rbff2.startplugin()
 				end
 				if match > 0 then --BG layers
 					pgm:write_u8(0x107762, 0x00)
-					--pgm:write_u8(0x107765, 0x01)
+					pgm:write_u8(0x107765, 0x01)
 				end
 			end
 			--pgm:write_u16(0x401FFE, 0x8F8F)
