@@ -1891,9 +1891,10 @@ function rbff2.startplugin()
 		a   = { id = 0x00, name = "攻撃",                     enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF00FF, fill = 0x40, outline = 0xFF },
 		aa  = { id = 0x00, name = "攻撃(空中追撃可)",         enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF00FF, fill = 0x40, outline = 0xFF },
 		fa  = { id = 0x00, name = "攻撃(無効)",               enabled = true, type_check = type_ck_und,  type = "attack", color = 0x00FF00, fill = 0x40, outline = 0xFF },
+		faa = { id = 0x00, name = "攻撃(無効、空中追撃可)",   enabled = true, type_check = type_ck_und,  type = "attack", color = 0x00FF00, fill = 0x40, outline = 0xFF },
 		t3  = { id = 0x00, name = "未使用",                   enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0x8B4513, fill = 0x40, outline = 0xFF },
 		pa  = { id = 0x00, name = "飛び道具",                 enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x40, outline = 0xFF },
-		paa = { id = 0x00, name = "飛び道具(空中追撃可)",     enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF00FF, fill = 0x40, outline = 0xFF },
+		paa = { id = 0x00, name = "飛び道具(空中追撃可)",     enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x40, outline = 0xFF },
 		t   = { id = 0x00, name = "投げ",                     enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
 		at  = { id = 0x00, name = "必殺技投げ",               enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
 		pt  = { id = 0x00, name = "空中投げ",                 enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
@@ -2079,6 +2080,7 @@ function rbff2.startplugin()
 		[box_type_base.a ] = true,
 		[box_type_base.aa] = true,
 		[box_type_base.fa] = true,
+		[box_type_base.faa] = true,
 		[box_type_base.v3] = true,
 		[box_type_base.v4] = true,
 		[box_type_base.v5] = true,
@@ -2124,6 +2126,8 @@ function rbff2.startplugin()
 						box.type = box_type_base.aa
 					elseif box_type_base.pa == box.type then
 						box.type = box_type_base.paa
+					elseif box_type_base.fa == box.type then
+						box.type = box_type_base.faa
 					end
 					--print(string.format("hit %x %x %x %x %s", box.id, d2, a0, asm, harmless and "o" or ""))
 				end
@@ -5292,7 +5296,7 @@ function rbff2.startplugin()
 		auto_menu_to_main(true)
 	end
 	local box_type_col_list = { 
-		box_type_base.a, box_type_base.aa, box_type_base.fa, box_type_base.t3, box_type_base.pa, box_type_base.paa,
+		box_type_base.a, box_type_base.aa, box_type_base.fa,  box_type_base.faa, box_type_base.t3, box_type_base.pa, box_type_base.paa,
 		box_type_base.t, box_type_base.at, box_type_base.pt,
 		box_type_base.p, box_type_base.v1, box_type_base.sv1, box_type_base.v2, box_type_base.sv2, box_type_base.v3,
 		box_type_base.v4, box_type_base.v5, box_type_base.v6, box_type_base.x1, box_type_base.x2, box_type_base.x3,
