@@ -2568,6 +2568,7 @@ function rbff2.startplugin()
 			addr           = {
 				base         = p1 and 0x100400 or 0x100500, -- キャラ状態とかのベースのアドレス
 				act          = p1 and 0x100460 or 0x100560, -- 行動ID デバッグディップステータス表示のPと同じ
+				acta         = p1 and 0x100462 or 0x100562, -- 行動ID デバッグディップステータス表示のAと同じ
 				act_count    = p1 and 0x100466 or 0x100566, -- 現在の行動のカウンタ
 				act_frame    = p1 and 0x10046F or 0x10056F, -- 現在の行動の残フレーム、ゼロになると次の行動へ
 				act_contact  = p1 and 0x100401 or 0x100501, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
@@ -2648,6 +2649,7 @@ function rbff2.startplugin()
 			p.fireball[base] = {
 				is_fireball    = true,
 				act            = 0,
+				asm            = 0,
 				pos            = 0, -- X位置
 				pos_y          = 0, -- Y位置
 				pos_z          = 0, -- Z位置
@@ -2674,11 +2676,12 @@ function rbff2.startplugin()
 				},
 				addr           = {
 					base       = base, -- キャラ状態とかのベースのアドレス
-					act        = base + 0x60, -- 技のID
+					act        = base + 0x60, -- 技のID デバッグのP
+					acta       = base + 0x62, -- 技のID デバッグのA
 					pos        = base + 0x20, -- X位置
 					pos_y      = base + 0x28, -- Y位置
 	 				pos_z      = base + 0x24, -- Z位置
-
+					attack     = base + 0xBF, -- デバッグのNO
 					-- ヒットするかどうか
 					fake_hit   = p.fake_hits[base],
 					obsl_hit   = base + 0x6A, -- 嘘判定チェック用 3ビット目が立っていると嘘判定
@@ -3681,6 +3684,7 @@ function rbff2.startplugin()
 
 			p.old_act        = p.act or 0x00
 			p.act            = pgm:read_u16(p.addr.act)
+			p.acta           = pgm:read_u16(p.addr.acta)
 			p.act_count      = pgm:read_u8(p.addr.act_count)
 			p.act_frame      = pgm:read_u8(p.addr.act_frame)
 			p.provoke        = 0x0196 == p.act --挑発中
@@ -3816,17 +3820,19 @@ function rbff2.startplugin()
 			-- 飛び道具の状態読取
 			for _, fb in pairs(p.fireball) do
 				fb.act            = pgm:read_u16(fb.addr.act)
+				fb.acta           = pgm:read_u16(fb.addr.acta)
 				fb.pos            = pgm:read_i16(fb.addr.pos)
 				fb.pos_y          = pgm:read_i16(fb.addr.pos_y)
 				fb.pos_z          = pgm:read_i16(fb.addr.pos_z)
 				fb.hit.projectile = true
-				fb.attack         = pgm:read_u16(pgm:read_u32(fb.addr.base))
+				fb.asm            = pgm:read_u16(pgm:read_u32(fb.addr.base))
+				fb.attack         = pgm:read_u16(pgm:read_u32(fb.addr.attack))
 				fb.fake_hit       = bit32.btest(pgm:read_u8(fb.addr.fake_hit), 8+3) == false
 				fb.obsl_hit       = bit32.btest(pgm:read_u8(fb.addr.obsl_hit), 8+3) == false
 				fb.full_hit       = pgm:read_u8(fb.addr.full_hit ) > 0
 				fb.harmless2      = pgm:read_u8(fb.addr.harmless2) > 0
 				--[[
-				if fb.attack ~= 0x4E75 then
+				if fb.asm ~= 0x4E75 then
 					print(string.format("%x %1s  %2x(%s) %2x(%s) %2x(%s)",
 						fb.addr.base,
 						(fb.obsl_hit or fb.full_hit  or fb.harmless2) and " " or "H",
@@ -3846,7 +3852,7 @@ function rbff2.startplugin()
 				fb.act_frames2    = fb.act_frames2 or {}
 
 				-- 当たり判定の構築
-				if fb.attack ~= 0x4E75 then --0x4E75 is rts instruction
+				if fb.asm ~= 0x4E75 then --0x4E75 is rts instruction
 					temp_hits[fb.addr.base] = fb
 					fb.count = (fb.count or 0) +1
 					fb.atk_count = fb.atk_count or 0
