@@ -2343,6 +2343,9 @@ function rbff2.startplugin()
 			disp_cmd         = true,        -- 入力表示するときtrue
 			disp_frm         = true,        -- フレーム数表示するときtrue
 
+			no_hit           = 0,           -- Nヒット目に空ぶるカウントのカウンタ
+			no_hit_limit     = 0,           -- Nヒット目に空ぶるカウントの上限
+
 			combo            = 0,           -- 最近のコンボ数
 			tmp_combo_dmg    = 0,
 			last_combo       = 0,
@@ -2553,6 +2556,8 @@ function rbff2.startplugin()
 				knock_back1  = p1 and 0x100469 or 0x100569, -- のけぞり確認用1(色々)
 				knock_back2  = p1 and 0x100416 or 0x100516, -- のけぞり確認用2(裏雲隠し)
 				knock_back3  = p1 and 0x10047E or 0x10057E, -- のけぞり確認用3(フェニックススルー)
+
+				no_hit       = p1 and 0x10DDF2 or 0x10DDF1, -- ヒットしないフック
 
 				stun         = p1 and 0x10B850 or 0x10B858, -- 現在スタン値
  				stun_timer   = p1 and 0x10B854 or 0x10B85C, -- スタン値ゼロ化までの残フレーム数
@@ -2958,6 +2963,18 @@ function rbff2.startplugin()
 
 			-- 攻撃のヒットをむりやりガードに変更する
 			-- bp 0580F4,1,{pc=5810a;g}
+
+			-- 投げ確定時の判定用フレーム
+			--[[
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x012FD0),
+				"maincpu.pw@107C22>0&&((maincpu.pb@10DDF1>0&&(A4)==100500)||(maincpu.pb@10DDF1>0&&(A4)==100400))",
+				"temp1=$10DDF1+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=0;PC=" .. string.format("%x", fix_bp_addr(0x012FDA)) .. ";g"))
+			]]
+
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x0130F8),
+				"maincpu.pw@107C22>0&&((maincpu.pb@10DDF1>0&&(A4)==100500)||(maincpu.pb@10DDF2>0&&(A4)==100400))",
+				"maincpu.pb@(temp1)=0;PC=" .. string.format("%x", fix_bp_addr(0x012FDA)) .. ";g"))
+				--temp1=$10DDF2-((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=0;
 		end
 	end
 
@@ -4862,6 +4879,25 @@ function rbff2.startplugin()
 			end
 		end
 
+		for i, p in ipairs(players) do
+			local op = players[3 - i]
+			if p.on_hit == global.frame_number and p.state ~= 0 then
+				p.no_hit = p.no_hit - 1
+				if p.no_hit == 0 and p.no_hit_limit > 0  then
+					pgm:write_u8(p.addr.no_hit, 1)
+					--print(string.format("nohit %x %x %s", p.addr.base, p.no_hit, op.attack))
+				else
+					--print(string.format("hit   %x %x %s", p.addr.base, p.no_hit, op.attack))
+				end
+			elseif op.attack == 0 then
+				p.no_hit = p.no_hit_limit
+				pgm:write_u8(p.addr.no_hit, 0)
+				if p.no_hit ~= p.no_hit_limit then
+					--print(string.format("reset %x %x %s", p.addr.base, p.no_hit, op.attack))
+				end
+			end
+		end
+
 		-- Y座標強制
 		for i, p in ipairs(players) do
 			if p.force_y_pos ~= 0 and p.state == 0 then
@@ -5148,11 +5184,13 @@ function rbff2.startplugin()
 		global.next_block_grace  = col[ 7] - 1  -- 1ガード持続フレーム数  7
 		p[1].dummy_wakeup        = col[ 8]      -- 1P やられ時行動        8
 		p[2].dummy_wakeup        = col[ 9]      -- 2P やられ時行動        9
-		p[1].fwd_prov            = col[10] == 2 -- 1P 挑発で前進         10
-		p[2].fwd_prov            = col[11] == 2 -- 2P 挑発で前進         11
-		p[1].force_y_pos         = col[12] - 1  -- 1P Y座標強制          12
-		p[2].force_y_pos         = col[13] - 1  -- 2P Y座標強制          13
-		global.sync_pos_x        = col[14]      -- X座標同期
+		p[2].no_hit_limit        = col[10] - 1  -- 1P 強制空振り         10
+		p[1].no_hit_limit        = col[11] - 1  -- 2P 強制空振り         11
+		p[1].fwd_prov            = col[12] == 2 -- 1P 挑発で前進         12
+		p[2].fwd_prov            = col[13] == 2 -- 2P 挑発で前進         13
+		p[1].force_y_pos         = col[14] - 1  -- 1P Y座標強制          14
+		p[2].force_y_pos         = col[15] - 1  -- 2P Y座標強制          15
+		global.sync_pos_x        = col[16]      -- X座標同期             16
 
 		-- キャラにあわせたメニュー設定
 		for i, p in ipairs(players) do
@@ -5280,11 +5318,11 @@ function rbff2.startplugin()
 
 		for _, p in ipairs(players) do
 			local max_life = p.red and 0x60 or 0xC0     -- 赤体力にするかどうか
-			pgm:write_u8(p.addr.life, max_life) -- 体力
-			pgm:write_u8(p.addr.stun, 0) -- スタン値
+			pgm:write_u8(p.addr.life, max_life)         -- 体力
+			pgm:write_u8(p.addr.stun, 0)                -- スタン値
 			pgm:write_u8(p.addr.max_stun,  p.init_stun) -- 最大スタン値 
 			pgm:write_u8(p.addr.init_stun, p.init_stun) -- 最大スタン値
-			pgm:write_u8(p.addr.stun_timer, 0) -- スタン値タイマー
+			pgm:write_u8(p.addr.stun_timer, 0)          -- スタン値タイマー
 		end
 
 		menu_cur = main_menu
@@ -5298,10 +5336,10 @@ function rbff2.startplugin()
 		global.auto_input.otg_thw = col[ 2] == 2 -- ダウン投げ              2
 		global.auto_input.otg_atk = col[ 3] == 2 -- ダウン攻撃              3
 		global.auto_input.thw_otg = col[ 4] == 2 -- 通常投げの派生技        4
-		global.auto_input.rave    = col[ 5] -- デッドリーレイブ        5
-		global.auto_input.desire  = col[ 6] -- アンリミテッドデザイア  6
-		global.auto_input.drill   = col[ 7] -- ドリル                  7
-		global.auto_input.pairon  = col[ 8] -- 超白龍                  8
+		global.auto_input.rave    = col[ 5]      -- デッドリーレイブ        5
+		global.auto_input.desire  = col[ 6]      -- アンリミテッドデザイア  6
+		global.auto_input.drill   = col[ 7]      -- ドリル                  7
+		global.auto_input.pairon  = col[ 8]      -- 超白龍                  8
 
 		menu_cur = main_menu
 	end
@@ -5403,11 +5441,13 @@ function rbff2.startplugin()
 		col[ 7] = g.next_block_grace + 1   -- 1ガード持続フレーム数  7
 		col[ 8] = p[1].dummy_wakeup        -- 1P やられ時行動        8
 		col[ 9] = p[2].dummy_wakeup        -- 2P やられ時行動        9
-		col[10] = p[1].fwd_prov and 2 or 1 -- 1P 挑発で前進         10
-		col[11] = p[2].fwd_prov and 2 or 1 -- 2P 挑発で前進         11
-		col[12] = p[1].force_y_pos + 1     -- 1P Y座標強制          12
-		col[13] = p[2].force_y_pos + 1     -- 2P Y座標強制          13
-		g.sync_pos_x = col[14]             -- X座標同期             14
+		col[10] = p[2].no_hit_limit + 1    -- 1P 強制空振り         10
+		col[11] = p[1].no_hit_limit + 1    -- 2P 強制空振り         11
+		col[12] = p[1].fwd_prov and 2 or 1 -- 1P 挑発で前進         12
+		col[13] = p[2].fwd_prov and 2 or 1 -- 2P 挑発で前進         13
+		col[14] = p[1].force_y_pos + 1     -- 1P Y座標強制          14
+		col[15] = p[2].force_y_pos + 1     -- 2P Y座標強制          15
+		g.sync_pos_x = col[16]             -- X座標同期             16
 	end
 	local init_bar_menu_config = function()
 		local col = bar_menu.pos.col
@@ -5678,6 +5718,10 @@ function rbff2.startplugin()
 	for i = 1, 256 do
 		table.insert(force_y_pos, i - 1)
 	end
+	local no_hit_row = { "OFF", }
+	for i = 2, 99 do
+		table.insert(no_hit_row, string.format("%s段目で空振り", i))
+	end
 	tra_menu = {
 		list = {
 			{ "ダミーモード"          , { "プレイヤー vs プレイヤー", "プレイヤー vs CPU", "CPU vs プレイヤー", "1P&2P入れ替え", "レコード", "リプレイ" }, },
@@ -5689,6 +5733,8 @@ function rbff2.startplugin()
 			{ "1ガード持続フレーム数" , gd_frms, },
 			{ "1P やられ時行動"       , { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ", "グランドスウェー", "起き上がり攻撃", }, },
 			{ "2P やられ時行動"       , { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ", "グランドスウェー", "起き上がり攻撃", }, },
+			{ "1P 強制空振り"         , no_hit_row, },
+			{ "2P 強制空振り"         , no_hit_row, },
 			{ "1P 挑発で前進"         , { "OFF", "ON" }, },
 			{ "2P 挑発で前進"         , { "OFF", "ON" }, },
 			{ "1P Y座標強制"          , force_y_pos, },
@@ -5708,11 +5754,13 @@ function rbff2.startplugin()
 				1, -- 1ガード持続フレーム数   7
 				1, -- 1P やられ時行動         8
 				1, -- 2P やられ時行動         9
-				1, -- 1P 挑発で前進          10
-				1, -- 2P 挑発で前進          11
-				1, -- 1P Y座標強制           12
-				1, -- 2P Y座標強制           13
-				1, -- X座標同期              14
+				1, -- 1P 強制空振り          10
+				1, -- 2P 強制空振り          11
+				1, -- 1P 挑発で前進          12
+				1, -- 2P 挑発で前進          13
+				1, -- 1P Y座標強制           14
+				1, -- 2P Y座標強制           15
+				1, -- X座標同期              16
 			},
 		},
 		on_a = {
@@ -5725,6 +5773,8 @@ function rbff2.startplugin()
 			menu_to_main, -- 1ガード持続フレーム数
 			menu_to_main, -- 1P やられ時行動
 			menu_to_main, -- 2P やられ時行動
+			menu_to_main, -- 1P 強制空振り
+			menu_to_main, -- 2P 強制空振り
 			menu_to_main, -- 1P 挑発で前進
 			menu_to_main, -- 2P 挑発で前進
 			menu_to_main, -- 1P Y座標強制
@@ -5741,6 +5791,8 @@ function rbff2.startplugin()
 			menu_to_main_cancel, -- 1ガード持続フレーム数
 			menu_to_main_cancel, -- 1P やられ時行動
 			menu_to_main_cancel, -- 2P やられ時行動
+			menu_to_main_cancel, -- 1P 強制空振り
+			menu_to_main_cancel, -- 2P 強制空振り
 			menu_to_main_cancel, -- 1P 挑発で前進
 			menu_to_main_cancel, -- 2P 挑発で前進
 			menu_to_main_cancel, -- 1P Y座標強制
