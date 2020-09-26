@@ -1893,12 +1893,23 @@ function rbff2.startplugin()
 	end
 	local box_type_base = {
 		a   = { id = 0x00, name = "攻撃",                     enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF00FF, fill = 0x40, outline = 0xFF },
+		fa  = { id = 0x00, name = "攻撃(嘘)",                 enabled = true, type_check = type_ck_und,  type = "attack", color = 0x00FF00, fill = 0x00, outline = 0xFF },
+		da  = { id = 0x00, name = "攻撃(無効)",               enabled = true, type_check = type_ck_und,  type = "attack", color = 0xFF00FF, fill = 0x00, outline = 0xFF },
+
 		aa  = { id = 0x00, name = "攻撃(空中追撃可)",         enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF00FF, fill = 0x40, outline = 0xFF },
-		fa  = { id = 0x00, name = "攻撃(無効)",               enabled = true, type_check = type_ck_und,  type = "attack", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-		faa = { id = 0x00, name = "攻撃(無効、空中追撃可)",   enabled = true, type_check = type_ck_und,  type = "attack", color = 0x00FF00, fill = 0x40, outline = 0xFF },
+		faa = { id = 0x00, name = "攻撃(嘘、空中追撃可)",     enabled = true, type_check = type_ck_und,  type = "attack", color = 0x00FF00, fill = 0x00, outline = 0xFF },
+		daa = { id = 0x00, name = "攻撃(無効、空中追撃可)",   enabled = true, type_check = type_ck_und,  type = "attack", color = 0xFF00FF, fill = 0x00, outline = 0xFF },
+
 		t3  = { id = 0x00, name = "未使用",                   enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0x8B4513, fill = 0x40, outline = 0xFF },
+
 		pa  = { id = 0x00, name = "飛び道具",                 enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x40, outline = 0xFF },
+		pfa = { id = 0x00, name = "飛び道具(嘘)",             enabled = true, type_check = type_ck_atk,  type = "attack", color = 0x00FF33, fill = 0x00, outline = 0xFF },
+		pda = { id = 0x00, name = "飛び道具(無効)",           enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x00, outline = 0xFF },
+
 		paa = { id = 0x00, name = "飛び道具(空中追撃可)",     enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x40, outline = 0xFF },
+		pfaa= { id = 0x00, name = "飛び道具(嘘、空中追撃可)", enabled = true, type_check = type_ck_atk,  type = "attack", color = 0x00FF33, fill = 0x00, outline = 0xFF },
+		pdaa= { id = 0x00, name = "飛び道具(無効、空中追撃可)",enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x00, outline = 0xFF },
+
 		t   = { id = 0x00, name = "投げ",                     enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
 		at  = { id = 0x00, name = "必殺技投げ",               enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
 		pt  = { id = 0x00, name = "空中投げ",                 enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
@@ -2095,47 +2106,63 @@ function rbff2.startplugin()
 		local box = {id = id}
 		box.type = nil
 		if box.id + 1 > #box_types then
-			local harmless = false
-			if is_fireball then
-				if p.hit.harmless == true then
-					box.type = box_type_base.fa -- 嘘判定
-					harmless = true
-				else
-					box.type = box_type_base.pa
-				end
-			else
-				if p.hit.harmless == true then
-					box.type = box_type_base.fa -- 嘘判定
-					harmless = true
-				else
-					box.type = box_type_base.a
-				end
-			end
+			-- 嘘判定   ... 判定出現時点で攻撃能力なし
+			-- 無効判定 ... ヒット後などで判定出現時点では攻撃能力があるが無効化されたもの
+			local fake, harmless = p.hit.fake_hit == true, p.hit.harmless == true
 			-- 家庭用版 012E0E~012E34の処理をベースに空中追撃判定を持つかどうかを判断する
-			local d2 = box.id - 0x20
+			local d2, a0, asm, air = box.id - 0x20, 0, 0, false
+			local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 			if d2 >= 0 then
-				local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 				d2 = pgm:read_u8(0x94EEC + d2)	
 				d2 = bit32.band(0xFFFF, d2 + d2)
 				d2 = bit32.band(0xFFFF, d2 + d2)
-				local a0 = pgm:read_u32(0x13120 + d2)
-				local asm =  pgm:read_u16(a0)
-				if 0x70FF == asm then
-					-- 0x70FF は moveq   #-$1, D0 でヒットしない処理結果を表す
-					-- 空中追撃できない判定
-					--print(string.format("not %x %x %x %x", box.id, d2, a0, asm))
-				else
-					-- 判定差し替え
-					if box_type_base.a == box.type then
-						box.type = box_type_base.aa
-					elseif box_type_base.pa == box.type then
-						box.type = box_type_base.paa
-					elseif box_type_base.fa == box.type then
-						box.type = box_type_base.faa
-					end
-					--print(string.format("hit %x %x %x %x %s", box.id, d2, a0, asm, harmless and "o" or ""))
+				a0 = pgm:read_u32(0x13120 + d2)
+				asm = pgm:read_u16(a0)
+				if 0x70FF ~= asm then -- 0x70FF は moveq   #-$1, D0 でヒットしない処理結果を表す--空中追撃できない判定
+					air = true
 				end
 			end
+			if is_fireball and air then
+				if fake then
+					box.type = box_type_base.pfaa -- 飛び道具(空中追撃可、嘘)
+				elseif harmless then
+					box.type = box_type_base.pdaa -- 飛び道具(空中追撃可、無効)
+				else
+					box.type = box_type_base.paa  -- 飛び道具(空中追撃可)
+				end
+			elseif is_fireball and not air then
+				if fake then
+					box.type = box_type_base.pfa -- 飛び道具(嘘)
+				elseif harmless then
+					box.type = box_type_base.pda -- 飛び道具(無効)
+				else
+					box.type = box_type_base.pa  -- 飛び道具
+				end
+			elseif not is_fireball and air then
+				if fake then
+					box.type = box_type_base.faa -- 攻撃(嘘)
+				elseif harmless then
+					box.type = box_type_base.daa -- 攻撃(無効、空中追撃可)
+				else
+					box.type = box_type_base.aa  -- 攻撃(空中追撃可)
+				end
+			else
+				if fake then
+					box.type = box_type_base.fa  -- 攻撃(嘘)
+				elseif harmless then
+					box.type = box_type_base.da  -- 攻撃(無効)
+				else
+					box.type = box_type_base.a   -- 攻撃(空中追撃可)
+				end
+			end
+			--[[
+			print(string.format("hit %x %x %x %x %2s %4s %4s %4s %2s", box.id, d2, a0, asm,
+				harmless and "hm" or "",
+				fake and "fake" or "",
+				p.hit.obsl_hit and "obsl" or "",
+				p.hit.full_hit and "full" or "",
+				p.hit.harmless2 and "h2" or ""))
+			]]
 		else
 			box.type = box_types[box.id + 1]
 			if p.in_sway_line and sway_box_types[box.id + 1] then
@@ -2152,7 +2179,7 @@ function rbff2.startplugin()
 		end
 		]]
 		if (box.type == box_type_base.a or box.type == box_type_base.aa) and
-			(is_fireball == true or (p.hit.harmless == false and p.hit.fake_hit == false)) then
+			(is_fireball == true or (p.hit.harmless == false and p.hit.obsl_hit == false)) then
 			-- 攻撃中のフラグをたてる
 			p.attacking = true
 			p.attack_id = id
@@ -2262,7 +2289,11 @@ function rbff2.startplugin()
 		p.throwing    = false
 
 		-- ヒットするかどうか
-		p.hit.harmless = p.fake_hit or p.full_hit or p.harmless2
+		p.hit.harmless = p.obsl_hit or p.full_hit or p.harmless2
+		p.hit.fake_hit = p.fake_hit
+		p.hit.obsl_hit = p.obsl_hit
+		p.hit.full_hit = p.full_hit
+		p.hit.harmless2 = p.harmless2
 
 		-- 食らい判定かどうか
 		p.hit.vulnerable = false
@@ -2395,7 +2426,10 @@ function rbff2.startplugin()
 			knock_back1      = 0, -- のけぞり確認用1(色々)
 			knock_back2      = 0, -- のけぞり確認用2(裏雲隠し)
 			knock_back3      = 0, -- のけぞり確認用3(フェニックススルー)
-			fake_hit        = 0, -- ヒットチェック用
+			fake_hit         = false,
+			obsl_hit         = false, -- 嘘判定チェック用
+			full_hit         = false, -- 判定チェック用1
+			harmless2        = false, -- 判定チェック用2 飛び道具専用
 
 			key_now          = {},          -- 前フレームまでの個別キー入力フレーム
 			key_pre          = {},          -- 個別キー入力フレーム
@@ -2434,7 +2468,9 @@ function rbff2.startplugin()
 			hitboxes         = {},
 			buffer           = {},
 			fireball_bases   = p1 and { [0x100600] = true, [0x100800] = true, [0x100A00] = true, } or
-				                      { [0x100700] = true, [0x100900] = true, [0x100B00] = true, },
+			                          { [0x100700] = true, [0x100900] = true, [0x100B00] = true, },
+			fake_hits        = p1 and { [0x100600] = 0x10DDF5, [0x100800] = 0x10DDF7, [0x100A00] = 0x10DDF9, } or
+									  { [0x100700] = 0x10DDF6, [0x100900] = 0x10DDF8, [0x100B00] = 0x10DDFA, },
 			fireball         = {},
 
 			bs_hooked        = 0,           -- BSモードのフック処理フレーム数。
@@ -2449,7 +2485,9 @@ function rbff2.startplugin()
 				char_id      = 0,
 				vulnerable   = 0,
 				harmless     = false,
-				fake_hit     = false,
+				obsl_hit     = false,
+				full_hit     = false,
+				harmless2    = false,
 				vulnerable1  = 0,
 				vulnerable21 = 0,
 				vulnerable22 = 0,           -- 0の時vulnerable=true
@@ -2584,10 +2622,11 @@ function rbff2.startplugin()
 				-- フックできない変わり用-当たり判定
 				vulnerable1  = p1 and 0x10CB30 or 0x10CB31,
 				vulnerable21 = p1 and 0x10CB32 or 0x10CB33,
-				vulnerable22 = p1 and 0x10CB34 or 0x10CB35, --0の時vulnerable=true
+				vulnerable22 = p1 and 0x10CB34 or 0x10CB35, -- 0の時vulnerable=true
 
 				-- ヒットするかどうか
-				fake_hit     = p1 and 0x10046A or 0x10056A, -- 嘘判定チェック用 3ビット目が立っていると嘘判定
+				fake_hit     = p1 and 0x10DDF3 or 0x10DDF4, -- 出だしから嘘判定のフック
+				obsl_hit     = p1 and 0x10046A or 0x10056A, -- 嘘判定チェック用 3ビット目が立っていると嘘判定
 				full_hit     = p1 and 0x1004AA or 0x1005AA, -- 判定チェック用1 0じゃないとき全段攻撃ヒット/ガード
 				harmless2    = p1 and 0x1004B6 or 0x1005B6, -- 判定チェック用2 0のときは何もしていない
 			},
@@ -2613,7 +2652,8 @@ function rbff2.startplugin()
 				pos_y          = 0, -- Y位置
 				pos_z          = 0, -- Z位置
 				attack         = 0, -- 攻撃中のみ変化
-				fake_hit       = false, -- 嘘判定チェック用
+				fake_hit       = false,
+				obsl_hit       = false, -- 嘘判定チェック用
 				full_hit       = false, -- 判定チェック用1
 				harmless2      = false, -- 判定チェック用2 飛び道具専用
 				hitboxes       = {},
@@ -2627,6 +2667,10 @@ function rbff2.startplugin()
 					char_id    = 0,
 					vulnerable = 0,
 					harmless   = false,
+					fake_hit   = false,
+					obsl_hit   = false,
+					full_hit   = false,
+					harmless2  = false,
 				},
 				addr           = {
 					base       = base, -- キャラ状態とかのベースのアドレス
@@ -2636,7 +2680,8 @@ function rbff2.startplugin()
 	 				pos_z      = base + 0x24, -- Z位置
 
 					-- ヒットするかどうか
-					fake_hit   = base + 0x6A, -- 嘘判定チェック用 3ビット目が立っていると嘘判定
+					fake_hit   = p.fake_hits[base],
+					obsl_hit   = base + 0x6A, -- 嘘判定チェック用 3ビット目が立っていると嘘判定
 					full_hit   = base + 0xAA, -- 判定チェック用1 0じゃないとき全段攻撃ヒット/ガード
 					harmless2  = base + 0xE7, -- 判定チェック用2 0じゃないときヒット/ガード
 				},
@@ -2971,10 +3016,15 @@ function rbff2.startplugin()
 				"temp1=$10DDF1+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=0;PC=" .. string.format("%x", fix_bp_addr(0x012FDA)) .. ";g"))
 			]]
 
+			-- N段目で空ぶりさせるフック
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x0130F8),
 				"maincpu.pw@107C22>0&&((maincpu.pb@10DDF1>0&&(A4)==100500)||(maincpu.pb@10DDF2>0&&(A4)==100400))",
 				"maincpu.pb@(temp1)=0;PC=" .. string.format("%x", fix_bp_addr(0x012FDA)) .. ";g"))
-				--temp1=$10DDF2-((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=0;
+	
+			-- ヒット後ではなく技の出だしから嘘判定であることの判定用フック
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x011DFE),
+				"maincpu.pw@107C22>0",
+				"temp1=$10DDF3+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(D5);g"))
 		end
 	end
 
@@ -3640,15 +3690,18 @@ function rbff2.startplugin()
 			p.knock_back3    = pgm:read_u8(p.addr.knock_back3)
 			p.attack         = pgm:read_u8(p.addr.attack)
 			p.fake_hit       = bit32.btest(pgm:read_u8(p.addr.fake_hit), 8+3) == false
+			p.obsl_hit       = bit32.btest(pgm:read_u8(p.addr.obsl_hit), 8+3) == false
 			p.full_hit       = pgm:read_u8(p.addr.full_hit) > 0
 			p.harmless2      = pgm:read_u8(p.addr.harmless2) == 0
 			--[[
 			if 0 < p.attack then
-				print(string.format("%x %1s  %2x(%s) %2x(%s) %2x(%s)",
+				print(string.format("%x %1s %2x(%s) %2x(%s) %2x(%s) %2x(%s)",
 					p.addr.base,
-					(p.fake_hit or p.full_hit or p.harmless2) and "H" or " ",
+					(p.obsl_hit or p.full_hit or p.harmless2) and "H" or " ",
 					pgm:read_u8(p.addr.fake_hit),
 					p.fake_hit and "o" or "-",
+					pgm:read_u8(p.addr.obsl_hit),
+					p.obsl_hit and "o" or "-",
 					pgm:read_u8(p.addr.full_hit),
 					p.full_hit and "o" or "-",
 					pgm:read_u8(p.addr.harmless2),
@@ -3769,15 +3822,16 @@ function rbff2.startplugin()
 				fb.hit.projectile = true
 				fb.attack         = pgm:read_u16(pgm:read_u32(fb.addr.base))
 				fb.fake_hit       = bit32.btest(pgm:read_u8(fb.addr.fake_hit), 8+3) == false
+				fb.obsl_hit       = bit32.btest(pgm:read_u8(fb.addr.obsl_hit), 8+3) == false
 				fb.full_hit       = pgm:read_u8(fb.addr.full_hit ) > 0
 				fb.harmless2      = pgm:read_u8(fb.addr.harmless2) > 0
 				--[[
 				if fb.attack ~= 0x4E75 then
 					print(string.format("%x %1s  %2x(%s) %2x(%s) %2x(%s)",
 						fb.addr.base,
-						(fb.fake_hit or fb.full_hit  or fb.harmless2) and " " or "H",
-						pgm:read_u8(fb.addr.fake_hit),
-						fb.fake_hit and "o" or "-",
+						(fb.obsl_hit or fb.full_hit  or fb.harmless2) and " " or "H",
+						pgm:read_u8(fb.addr.obsl_hit),
+						fb.obsl_hit and "o" or "-",
 						pgm:read_u8(fb.addr.full_hit),
 						fb.full_hit  and "o" or "-",
 						pgm:read_u8(fb.addr.harmless2),
@@ -5347,8 +5401,9 @@ function rbff2.startplugin()
 		auto_menu_to_main(true)
 	end
 	local box_type_col_list = { 
-		box_type_base.a, box_type_base.aa, box_type_base.fa,  box_type_base.faa, box_type_base.t3, box_type_base.pa, box_type_base.paa,
-		box_type_base.t, box_type_base.at, box_type_base.pt,
+		box_type_base.a, box_type_base.fa, box_type_base.da, box_type_base.aa, box_type_base.faa, box_type_base.daa,
+		box_type_base.pa, box_type_base.pfa, box_type_base.pda, box_type_base.paa, box_type_base.pfaa, box_type_base.pdaa,
+		box_type_base.t3, box_type_base.t, box_type_base.at, box_type_base.pt,
 		box_type_base.p, box_type_base.v1, box_type_base.sv1, box_type_base.v2, box_type_base.sv2, box_type_base.v3,
 		box_type_base.v4, box_type_base.v5, box_type_base.v6, box_type_base.x1, box_type_base.x2, box_type_base.x3,
 		box_type_base.x4, box_type_base.x5, box_type_base.x6, box_type_base.x7, box_type_base.x8, box_type_base.x9,
