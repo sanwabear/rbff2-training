@@ -1893,21 +1893,21 @@ function rbff2.startplugin()
 	end
 	local box_type_base = {
 		a   = { id = 0x00, name = "攻撃",                     enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF00FF, fill = 0x40, outline = 0xFF },
-		fa  = { id = 0x00, name = "攻撃(嘘)",                 enabled = true, type_check = type_ck_und,  type = "attack", color = 0x00FF00, fill = 0x00, outline = 0xFF },
+		fa  = { id = 0x00, name = "攻撃(嘘)",                 enabled = false, type_check = type_ck_und,  type = "attack", color = 0x00FF00, fill = 0x00, outline = 0xFF },
 		da  = { id = 0x00, name = "攻撃(無効)",               enabled = true, type_check = type_ck_und,  type = "attack", color = 0xFF00FF, fill = 0x00, outline = 0xFF },
 
 		aa  = { id = 0x00, name = "攻撃(空中追撃可)",         enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF00FF, fill = 0x40, outline = 0xFF },
-		faa = { id = 0x00, name = "攻撃(嘘、空中追撃可)",     enabled = true, type_check = type_ck_und,  type = "attack", color = 0x00FF00, fill = 0x00, outline = 0xFF },
+		faa = { id = 0x00, name = "攻撃(嘘、空中追撃可)",     enabled = false, type_check = type_ck_und,  type = "attack", color = 0x00FF00, fill = 0x00, outline = 0xFF },
 		daa = { id = 0x00, name = "攻撃(無効、空中追撃可)",   enabled = true, type_check = type_ck_und,  type = "attack", color = 0xFF00FF, fill = 0x00, outline = 0xFF },
 
 		t3  = { id = 0x00, name = "未使用",                   enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0x8B4513, fill = 0x40, outline = 0xFF },
 
 		pa  = { id = 0x00, name = "飛び道具",                 enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x40, outline = 0xFF },
-		pfa = { id = 0x00, name = "飛び道具(嘘)",             enabled = true, type_check = type_ck_atk,  type = "attack", color = 0x00FF33, fill = 0x00, outline = 0xFF },
+		pfa = { id = 0x00, name = "飛び道具(嘘)",             enabled = false, type_check = type_ck_atk,  type = "attack", color = 0x00FF33, fill = 0x00, outline = 0xFF },
 		pda = { id = 0x00, name = "飛び道具(無効)",           enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x00, outline = 0xFF },
 
 		paa = { id = 0x00, name = "飛び道具(空中追撃可)",     enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x40, outline = 0xFF },
-		pfaa= { id = 0x00, name = "飛び道具(嘘、空中追撃可)", enabled = true, type_check = type_ck_atk,  type = "attack", color = 0x00FF33, fill = 0x00, outline = 0xFF },
+		pfaa= { id = 0x00, name = "飛び道具(嘘、空中追撃可)", enabled = false, type_check = type_ck_atk,  type = "attack", color = 0x00FF33, fill = 0x00, outline = 0xFF },
 		pdaa= { id = 0x00, name = "飛び道具(無効、空中追撃可)",enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x00, outline = 0xFF },
 
 		t   = { id = 0x00, name = "投げ",                     enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
@@ -6029,7 +6029,7 @@ function rbff2.startplugin()
 	table.insert(col_menu.on_b, col_menu_to_main_cancel)
 	for _, box in pairs(box_type_col_list) do
 		table.insert(col_menu.list, { box.name, { "OFF", "ON", }, { fill = box.fill, outline = box.outline } })
-		table.insert(col_menu.pos.col, 2)
+		table.insert(col_menu.pos.col, box.enabled and 2 or 1)
 		table.insert(col_menu.on_a, col_menu_to_main)
 		table.insert(col_menu.on_b, col_menu_to_main_cancel)
 	end
