@@ -84,7 +84,6 @@ function rbff2.startplugin()
 		no_bars         = false,
 		sync_pos_x      = 1, -- 1: OFF, 2:1Pと同期, 3:2Pと同期
 
-		disp_stun       = true, -- スタン表示
 		disp_pos        = true, -- 1P 2P 距離表示
 		disp_hitbox     = true, -- 判定表示
 		disp_frmgap     = true, -- フレーム差表示
@@ -2389,6 +2388,9 @@ function rbff2.startplugin()
 			old_combo        = 0,           -- 前フレームのコンボ数
 			last_combo_dmg   = 0,
 			old_state        = 0,           -- 前フレームのやられ状態
+			char             = 0,
+			act              = 0,
+			acta             = 0,
 			attack           = 0,           -- 攻撃中のみ変化
 			pos              = 0,           -- X位置
 			max_pos          = 0,           -- X位置最大
@@ -3612,6 +3614,72 @@ function rbff2.startplugin()
 		end
 	end
 
+	-- 1Pと2Pの通常投げ間合い取得
+	-- 0x05D78Cからの実装
+	local get_n_throw = function(p, op)
+		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+		local d0, d1, d4, d5, a0_1, a0_2 = 0, 0, 0, 0, 0x5C9BC, 0x5D874
+		local char1, char2 = pgm:read_u16(p.addr.base + 0x10), pgm:read_u16(op.addr.base + 0x10)
+		local op_pos = op.max_pos or op.min_pos or op.pos -- 投げられ側のX位置は補正前の値
+		local p_pos = p.pos                             -- 投げ側のX位置は補正後の値
+
+		d0 = char2                                      -- D0 = 100510アドレスの値(相手のキャラID)
+		d0 = bit32.band(0xFFFF, bit32.lshift(d0, 3))    -- D0 を3ビット左シフト
+		if p.side == op.side then                       -- 自分の向きと相手の向きが違ったら
+			d0 = pgm:read_u8(0x4 + a0_1 + d0)           -- D0 = A0+4+D0アドレスのデータ(0x5CAC3~)
+		else                                            -- 自分の向きと相手の向きが同じなら
+			d0 = pgm:read_u8(0x3 + a0_1 + d0)           -- D0 = A0+3+D0アドレスのデータ(0x5CABB~)
+		end
+		d0 = 0xFF00 + d0
+		if 0 > op.side then                             -- 位置がマイナスなら
+			d0 = 0x10000 - d0                           -- NEG
+		end
+		d0 = bit32.band(0xFFFF, d0 + d0)                -- 2倍値に
+		d0 = bit32.band(0xFFFF, d0 + d0)                -- さらに2倍値に
+		d1 = op_pos                                     -- D1 = 相手のX位置
+		d1 = bit32.band(0xFFFF, d1 - d0)                -- 相手との距離計算
+		local op_d0 = d0                                -- 投げ間合いの補正値
+		local op_d1 = d1
+
+		d5 = char1                                      -- D5 = 100410アドレスの値(キャラID)
+		d5 = bit32.band(0xFFFF, bit32.lshift(d5, 3))    -- D5 = D5を3ビット左シフト
+		d5 = pgm:read_u8(0x3 + a0_1 + d5)               -- D5 = 3+A0+D5アドレスのデータ
+		d5 = 0xFF00 + d5
+		if 0 > p.side then                              -- 位置がマイナスなら
+			d5 = 0x10000 - d5                           -- NEG
+		end
+		d5 = bit32.band(0xFFFF, d5 + d5)                -- 2倍値に
+		d5 = bit32.band(0xFFFF, d5 + d5)                -- さらに2倍値に
+		d0 = p_pos                                      -- 自分のX位置
+		d0 = bit32.band(0xFFFF, d0 - d5)                -- 投げ間合いの限界距離
+		local p_d0 = d0
+
+		d0 = d1 > d0 and (d1 - d0) or (d0 - d1)         -- D1(相手との距離) と D0 を比較して差分算出
+		d0 = bit32.band(0xFFFF, d0)
+		local gap = d0
+
+		local d1 = char1
+		d1 = bit32.band(0xFFFF, d1 + d1)                -- 2倍値に
+		d1 = bit32.band(0xFFFF, d1 + d1)                -- さらに2倍値に
+		d4 = pgm:read_u8(a0_2 + d1)                     -- 投げ間合いから相手座標の距離の±許容幅
+		local ret = d4 >= d0
+		local a = math.abs(op_pos - op_d1)
+		if 0 > p.side  then
+			p_d0 = p_d0 - a - screen_left
+		else
+			p_d0 = p_d0 + a - screen_left
+		end
+		print(string.format("%x %s %s %s %s %s %s %s", p.addr.base, ret, gap, p_d0, op_d0, d4, p_pos, op_pos))
+		-- 投げ間合いセット
+		p.throw = {
+			x1 = p_d0 - d4,
+			x2 = p_d0 + d4,
+			half_range = d4,
+			full_range = d4 + d4,
+			in_range = ret,
+		}
+	end
+
 	-- トレモのメイン処理
 	tra_main = {}
 	tra_main.proc = function()
@@ -3874,6 +3942,7 @@ function rbff2.startplugin()
 			p.hit.vulnerable22 = pgm:read_u8(p.addr.vulnerable22) == 0 --0の時vulnerable=true
 
 			-- 投げ判定取得
+			get_n_throw(p, op)
 			p.n_throw.left     = nil
 			p.n_throw.right    = nil
 			p.n_throw.top      = nil
@@ -3893,10 +3962,10 @@ function rbff2.startplugin()
 			p.n_throw.range6   = pgm:read_i8(p.n_throw.addr.range6)
 			local range = (p.n_throw.range1 == p.n_throw.range2 and math.abs(p.n_throw.range42*4)) or math.abs(p.n_throw.range41*4)
 			range = range + p.n_throw.range5 * -4
-			range = range + p.n_throw.range6
+			range = range + p.throw.half_range
 			p.n_throw.range    = range
 			p.n_throw.right    = p.n_throw.range * p.side
-			p.n_throw.left     = (p.n_throw.range - p.n_throw.range6 * 2) * p.side
+			p.n_throw.left     = (p.n_throw.range - p.throw.full_range) * p.side
 			p.n_throw.type     = box_type_base.t
 			p.n_throw.on = p.addr.base == p.n_throw.base and p.n_throw.on or 0
 
@@ -3994,72 +4063,6 @@ function rbff2.startplugin()
 			-- キャラと飛び道具への当たり判定の反映
 			-- update_objectはキャラの位置情報と当たり判定の情報を読み込んだ後で実行すること
 			update_object(p, global.frame_number)
-		end
-
-		-- 1Pと2Pの通常投げ間合い取得
-		-- 0x05D78Cからの実装
-		for i, p in ipairs(players) do
-			local op         = players[3-i]
-			local d0, d1, d4, d5, a0_1, a0_2 = 0, 0, 0, 0, 0x5C9BC, 0x5D874
-			local char1, char2 = pgm:read_u16(p.addr.base + 0x10), pgm:read_u16(op.addr.base + 0x10)
-			local op_pos = op.max_pos or op.min_pos or op.pos -- 投げられ側のX位置は補正前の値
-			local p_pos = p.pos                             -- 投げ側のX位置は補正後の値
-
-			d0 = char2                                      -- D0 = 100510アドレスの値(相手のキャラID)
-			d0 = bit32.band(0xFFFF, bit32.lshift(d0, 3))    -- D0 を3ビット左シフト
-			if p.side == op.side then                       -- 自分の向きと相手の向きが違ったら
-				d0 = pgm:read_u8(0x4 + a0_1 + d0)           -- D0 = A0+4+D0アドレスのデータ(0x5CAC3~)
-			else                                            -- 自分の向きと相手の向きが同じなら
-				d0 = pgm:read_u8(0x3 + a0_1 + d0)           -- D0 = A0+3+D0アドレスのデータ(0x5CABB~)
-			end
-			d0 = 0xFF00 + d0
-			if 0 > op.side then                             -- 位置がマイナスなら
-				d0 = 0x10000 - d0                           -- NEG
-			end
-			d0 = bit32.band(0xFFFF, d0 + d0)                -- 2倍値に
-			d0 = bit32.band(0xFFFF, d0 + d0)                -- さらに2倍値に
-			d1 = op_pos                                     -- D1 = 相手のX位置
-			d1 = bit32.band(0xFFFF, d1 - d0)                -- 相手との距離計算
-			local op_d0 = d0                                -- 投げ間合いの補正値
-			local op_d1 = d1
-
-			d5 = char1                                      -- D5 = 100410アドレスの値(キャラID)
-			d5 = bit32.band(0xFFFF, bit32.lshift(d5, 3))    -- D5 = D5を3ビット左シフト
-			d5 = pgm:read_u8(0x3 + a0_1 + d5)               -- D5 = 3+A0+D5アドレスのデータ
-			d5 = 0xFF00 + d5
-			if 0 > p.side then                              -- 位置がマイナスなら
-				d5 = 0x10000 - d5                           -- NEG
-			end
-			d5 = bit32.band(0xFFFF, d5 + d5)                -- 2倍値に
-			d5 = bit32.band(0xFFFF, d5 + d5)                -- さらに2倍値に
-			d0 = p_pos                                      -- 自分のX位置
-			d0 = bit32.band(0xFFFF, d0 - d5)                -- 投げ間合いの限界距離
-			local p_d0 = d0
-
-			d0 = d1 > d0 and (d1 - d0) or (d0 - d1)         -- D1(相手との距離) と D0 を比較して差分算出
-			d0 = bit32.band(0xFFFF, d0)
-			local gap = d0
-
-			local d1 = char1
-			d1 = bit32.band(0xFFFF, d1 + d1)                -- 2倍値に
-			d1 = bit32.band(0xFFFF, d1 + d1)                -- さらに2倍値に
-			d4 = pgm:read_u8(a0_2 + d1)                     -- 投げ間合いから相手座標の距離の±許容幅
-			local ret = d4 >= d0
-			--print(string.format("%s %s %s %s %s %s", i, ret, gap, p_d0, op_d0, d4))
-			local a = math.abs(op_pos - op_d1)
-			if 0 > p.side  then
-				p_d0 = p_d0 - a - screen_left
-			else
-				p_d0 = p_d0 + a - screen_left
-			end
-			-- 投げ間合いセット
-			p.throw = {
-				x1 = p_d0 - d4,
-				x2 = p_d0 + d4,
-				half_range = d4,
-				full_range = d4 + d4,
-				in_range = ret,
-			}
 		end
 
 		for i, p in ipairs(players) do
@@ -5067,7 +5070,7 @@ function rbff2.startplugin()
 				end
 
 				-- スタン表示
-				if global.disp_stun then
+				if p.disp_stun then
 					scr:draw_box(p1 and (138 - p.max_stun)   or 180, 29, p1 and 140 or (182 + p.max_stun)  , 34, 0xDDC0C0C0) -- 枠
 					scr:draw_box(p1 and (139 - p.max_stun)   or 181, 30, p1 and 139 or (181 + p.max_stun)  , 33, 0xDD000000) -- 黒背景
 					scr:draw_box(p1 and (139 - p.stun)       or 181, 30, p1 and 139 or (181 + p.stun)      , 33, 0xDDFF0000) -- スタン値
@@ -5176,6 +5179,49 @@ function rbff2.startplugin()
 				end
 			end
 		end
+
+		-- ログ
+		local log = ""
+		for i, p in ipairs(players) do
+			log = log .. string.format(
+				"%6x %1s %1s %s %4x %4x %4x ",
+				p.addr.base,
+				p.char,
+				p.state,
+				p.act_contact,
+				p.act,
+				p.acta,
+				p.attack
+				--,	p.act_count, p.act_frame
+			)
+			for _, box in ipairs(p.hitboxes) do
+				local atk, air = " ", " "
+
+				if box.type == box_type_base.a then
+					atk, air = "A", " "
+				elseif box.type == box_type_base.da then
+					atk, air = "A", " "
+				elseif box.type == box_type_base.aa then
+					atk, air = "A", "A"
+				elseif box.type == box_type_base.daa then
+					atk, air = "A", "A"
+				end
+				log = log .. string.format("%2x %1s %1s ", box.id or 0xFF, atk, air)
+
+				local tw, range = " ", " "
+				if box.type == box_type_base.t then
+					tw, range = "NT", string.format("%sx%s", math.abs(box.left-box.right), math.abs(box.top-box.bottom))
+				elseif box.type == box_type_base.at then
+					tw, range = "AT", string.format("%sx%s", math.abs(box.left-box.right), math.abs(box.top-box.bottom))
+				elseif box.type == box_type_base.pt then
+					tw, range = "PT", string.format("%sx%s", math.abs(box.left-box.right), math.abs(box.top-box.bottom))
+				else
+					tw, range = "", ""
+				end
+				log = log .. string.format("%2x %1s %1s ", box.id or 0xFF, tw, range)
+			end
+		end
+		print(log)
 
 		-- 画面表示
 		if global.no_background then
@@ -5350,7 +5396,8 @@ function rbff2.startplugin()
 		p[2].red                 = col[ 3] == 2 -- 2P 体力ゲージ          3
 		p[1].max                 = col[ 4] == 2 -- 1P POWゲージ           4
 		p[2].max                 = col[ 5] == 2 -- 2P POWゲージ           5
-		global.disp_stun         = col[ 6] == 2 -- スタン表示             6
+		p[1].disp_stun           = col[ 6] == 2 -- 1P スタン表示          6
+		p[2].disp_stun           = col[ 7] == 2 -- 2P スタン表示          7
 
 		menu_cur = main_menu
 	end
@@ -5514,12 +5561,13 @@ function rbff2.startplugin()
 		local col = bar_menu.pos.col
 		local p = players
 		local g = global
-		--   1                                                       1
-		col[ 2] = p[1].red      and 2 or 1 -- 1P 体力ゲージ          2
-		col[ 3] = p[2].red      and 2 or 1 -- 2P 体力ゲージ          3
-		col[ 4] = p[1].max      and 2 or 1 -- 1P POWゲージ           4
-		col[ 5] = p[2].max      and 2 or 1 -- 2P POWゲージ           5
-		col[ 6] = g.disp_stun   and 2 or 1 -- スタンゲージ           6
+		--   1                                                        1
+		col[ 2] = p[1].red       and 2 or 1 -- 1P 体力ゲージ          2
+		col[ 3] = p[2].red       and 2 or 1 -- 2P 体力ゲージ          3
+		col[ 4] = p[1].max       and 2 or 1 -- 1P POWゲージ           4
+		col[ 5] = p[2].max       and 2 or 1 -- 2P POWゲージ           5
+		col[ 6] = p[1].disp_stun and 2 or 1 -- スタン表示             6
+		col[ 7] = p[2].disp_stun and 2 or 1 -- スタン表示             7
 	end
 	local init_ex_menu_config = function()
 		local col = ex_menu.pos.col
@@ -5869,7 +5917,8 @@ function rbff2.startplugin()
 			{ "2P 体力ゲージ"         , { "通常", "赤" }, },
 			{ "1P POWゲージ"          , { "通常", "無限" }, },
 			{ "2P POWゲージ"          , { "通常", "無限" }, },
-			{ "スタンゲージ"          , { "OFF", "ON" }, },
+			{ "1P スタンゲージ"       , { "OFF", "ON" }, },
+			{ "2P スタンゲージ"       , { "OFF", "ON" }, },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
@@ -5880,7 +5929,8 @@ function rbff2.startplugin()
 				1, -- 2P 体力ゲージ           3
 				1, -- 1P POWゲージ            4
 				1, -- 2P POWゲージ            5
-				1, -- スタンゲージ            6
+				1, -- 1P スタンゲージ         6
+				1, -- 2P スタンゲージ         7
 			},
 		},
 		on_a = {
@@ -5889,7 +5939,8 @@ function rbff2.startplugin()
 			bar_menu_to_main, -- 2P 体力ゲージ
 			bar_menu_to_main, -- 1P POWゲージ
 			bar_menu_to_main, -- 2P POWゲージ
-			bar_menu_to_main, -- スタンゲージ
+			bar_menu_to_main, -- 1P スタンゲージ
+			bar_menu_to_main, -- 2P スタンゲージ
 		},
 		on_b = {
 			bar_menu_to_main_cancel, -- －ゲージ設定－
@@ -5897,7 +5948,8 @@ function rbff2.startplugin()
 			bar_menu_to_main_cancel, -- 2P 体力ゲージ
 			bar_menu_to_main_cancel, -- 1P POWゲージ
 			bar_menu_to_main_cancel, -- 2P POWゲージ
-			bar_menu_to_main_cancel, -- スタンゲージ
+			bar_menu_to_main_cancel, -- 1P スタンゲージ
+			bar_menu_to_main_cancel, -- 2P スタンゲージ
 		},
 	}
 
@@ -6364,13 +6416,13 @@ function rbff2.startplugin()
 			and mem_0x10FDB6 ~= 0
 			and mem_0x10E043 == 0 then
 			if not player_select_active then
-				print("player_select_active = true")
+				--print("player_select_active = true")
 			end
 			player_select_active = true
 			pgm:write_u8(mem_0x10D4EA, 0x00)
 		else
 			if player_select_active then
-				print("player_select_active = false")
+				--print("player_select_active = false")
 			end
 			player_select_active = false -- 状態リセット
 			pgm:write_u8(mem_0x10CDD0)
@@ -6379,15 +6431,13 @@ function rbff2.startplugin()
 		end
 
 		--状態チェック用
-		local vv = string.format("%x %x %x %x", 
-		 mem_0x100701,
-		 mem_0x107C22,
-		 mem_0x10FDAF,
-		 mem_0x10FDB6)
+		--[[
+		local vv = string.format("%x %x %x %x", mem_0x100701, mem_0x107C22, mem_0x10FDAF, mem_0x10FDB6)
 		if not bufuf[vv] and not active_mem_0x100701[mem_0x100701] then
 			bufuf[vv] = vv
 			print(vv)
 		end
+		]]
 
 		-- ROM部分のメモリエリアへパッチあて
 		if mem_biostest then
