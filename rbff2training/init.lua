@@ -2876,8 +2876,8 @@ function rbff2.startplugin()
 			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100B2C, 1, "wpdata!=0", "maincpu.pb@10CA0D=1;g"))
 			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x10048E, 1, "wpdata!=0", "maincpu.pb@10CA0E=maincpu.pb@10048E;g"))
 			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x10058E, 1, "wpdata!=0", "maincpu.pb@10CA0F=maincpu.pb@10058E;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x10048F, 1, "wpdata!=0", "maincpu.pb@10CA10=wpdata;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x10058F, 1, "wpdata!=0", "maincpu.pb@10CA11=wpdata;g"))
+			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x10048F, 1, "1", "maincpu.pb@10CA10=wpdata;g"))
+			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x10058F, 1, "1", "maincpu.pb@10CA11=wpdata;g"))
 			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100460, 1, "wpdata!=0", "maincpu.pb@10CA12=1;g"))
 			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100560, 1, "wpdata!=0", "maincpu.pb@10CA13=1;g"))
 
@@ -3050,7 +3050,7 @@ function rbff2.startplugin()
 				"temp1=$10DDF3+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(D5);g"))
 
 			-- 補正前ダメージ取得用フック
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05B11A),
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05B13A),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DDFB+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@((A4)+$8F);g"))
 
@@ -3697,7 +3697,7 @@ function rbff2.startplugin()
 		else
 			p_d0 = p_d0 + a - screen_left
 		end
-		print(string.format("%x %s %s %s %s %s %s %s", p.addr.base, ret, gap, p_d0, op_d0, d4, p_pos, op_pos))
+		--print(string.format("%x %s %s %s %s %s %s %s", p.addr.base, ret, gap, p_d0, op_d0, d4, p_pos, op_pos))
 		-- 投げ間合いセット
 		p.throw = {
 			x1 = p_d0 - d4,
@@ -4584,6 +4584,7 @@ function rbff2.startplugin()
 				p.max_disp_stun = math.max(p.max_disp_stun, p.last_combo_stun)
 				p.max_st_timer = math.max(p.max_st_timer, p.last_combo_st_timer)
 			end
+			print(p.tmp_dmg)
 			p.last_state = state
 
 			-- 体力とスタン値とMAXスタン値回復
@@ -5272,7 +5273,7 @@ function rbff2.startplugin()
 				log = log .. string.format("%2x %1s %1s ", box.id or 0xFF, tw, range)
 			end
 		end
-		print(log)
+		--print(log)
 
 		-- 画面表示
 		if global.no_background then
