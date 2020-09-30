@@ -86,7 +86,7 @@ function rbff2.startplugin()
 
 		disp_pos        = true, -- 1P 2P 距離表示
 		disp_hitbox     = true, -- 判定表示
-		disp_frmgap     = true, -- フレーム差表示
+		disp_frmgap     = 2, -- フレーム差表示
 		pause_hit       = false, -- ヒット時にポーズ
 		pausethrow      = false, -- 投げ判定表示時にポーズ
 
@@ -2051,7 +2051,7 @@ function rbff2.startplugin()
 
 		local p1 = p == 1
 		local xx = p1 and 15 or 300   -- 1Pと2Pで左右に表示し分ける
-		local yy = (line + 8 - 1) * 8 -- +8はオフセット位置
+		local yy = (line + 10 - 1) * 8 -- +8はオフセット位置
 
 		if 0 < frame then
 			if 999 < frame then
@@ -2377,21 +2377,30 @@ function rbff2.startplugin()
 			no_hit_limit     = 0,           -- Nヒット目に空ぶるカウントの上限
 
 			combo            = 0,           -- 最近のコンボ数
-			tmp_combo_dmg    = 0,
 			last_combo       = 0,
 			last_dmg         = 0,           -- ダメージ
+			tmp_stun         = 0,
+			tmp_st_timer     = 0,
+			last_pure_dmg    = 0,
+			last_stun        = 0,
+			last_st_timer    = 0,
 			last_state       = true,
 			life             = 0,           -- いまの体力
 			max_combo        = 0,           -- 最大コンボ数
 			max_dmg          = 0,
+			max_disp_stun    = 0,
+			max_st_timer     = 0,
 			mv_state         = 0,           -- 動作
 			old_combo        = 0,           -- 前フレームのコンボ数
 			last_combo_dmg   = 0,
+			last_combo_stun  = 0,
+			last_combo_st_timer = 0,
 			old_state        = 0,           -- 前フレームのやられ状態
 			char             = 0,
 			act              = 0,
 			acta             = 0,
 			attack           = 0,           -- 攻撃中のみ変化
+			op_attack        = 0,           -- くらい中のみ変化(ダメージ計算等で利用)
 			pos              = 0,           -- X位置
 			max_pos          = 0,           -- X位置最大
 			min_pos          = 0,           -- X位置最小
@@ -2407,6 +2416,9 @@ function rbff2.startplugin()
 			side             = 0,           -- 向き
 			state            = 0,           -- いまのやられ状態
 			tmp_combo        = 0,           -- 一次的なコンボ数
+			tmp_combo_dmg    = 0,
+			last_combo_stun_offset = 0,
+			last_combo_st_timer_offset = 0,
 			tmp_dmg          = 0,           -- ダメージが入ったフレーム
 			color            = 0,           -- カラー A=0x00 D=0x01
 
@@ -2575,6 +2587,7 @@ function rbff2.startplugin()
 				act_frame    = p1 and 0x10046F or 0x10056F, -- 現在の行動の残フレーム、ゼロになると次の行動へ
 				act_contact  = p1 and 0x100401 or 0x100501, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
 				attack       = p1 and 0x1004B6 or 0x1005B6, -- 攻撃中のみ変化
+				op_attack    = p1 and 0x1005EB or 0x1005B6, -- くらい中のみ変化(ダメージ計算等で利用)
 				char         = p1 and 0x107BA5 or 0x107BA7, -- キャラ()
 				color        = p1 and 0x107BAC or 0x107BAD, -- カラー A=0x00 D=0x01
 				combo        = p1 and 0x10B4E4 or 0x10B4E5, -- コンボ
@@ -2582,6 +2595,10 @@ function rbff2.startplugin()
 				tmp_combo2   = p1 and 0x10B4E1 or 0x10B4E0, -- 一次的なコンボ数のアドレス
 				max_combo2   = p1 and 0x10B4F0 or 0x10B4EF, -- 最大コンボ数のアドレス
 				last_dmg     = p1 and 0x10048F or 0x10058F, -- 最終ダメージ
+				tmp_dmg      = p1 and 0x10CA10 or 0x10CA11, -- 最終ダメージの更新フック
+				pure_dmg     = p1 and 0x10DDFB or 0x10DDFC, -- 最終ダメージ(補正前)
+				tmp_stun     = p1 and 0x10DDFD or 0x10DDFF, -- 最終スタン値
+				tmp_st_timer = p1 and 0x10DDFE or 0x10DE00, -- 最終スタンタイマー
 				life         = p1 and 0x10048B or 0x10058B, -- 体力
 				max_combo    = p1 and 0x10B4EF or 0x10B4F0, -- 最大コンボ
 				max_stun     = p1 and 0x10B84E or 0x10B856, -- 最大スタン値
@@ -2639,7 +2656,7 @@ function rbff2.startplugin()
 			players[p].key_now[kprops[i]] = 0
 			players[p].key_pre[kprops[i]] = 0
 		end
-		for i = 1, 18 do
+		for i = 1, 16 do
 			players[p].key_hist[i] = ""
 			players[p].key_frames[i] = 0
 			players[p].act_frames[i] = {0,0}
@@ -2858,8 +2875,8 @@ function rbff2.startplugin()
 			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100B2C, 1, "wpdata!=0", "maincpu.pb@10CA0D=1;g"))
 			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x10048E, 1, "wpdata!=0", "maincpu.pb@10CA0E=maincpu.pb@10048E;g"))
 			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x10058E, 1, "wpdata!=0", "maincpu.pb@10CA0F=maincpu.pb@10058E;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x10048F, 1, "wpdata!=0", "maincpu.pb@10CA10=1;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x10058F, 1, "wpdata!=0", "maincpu.pb@10CA11=1;g"))
+			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x10048F, 1, "wpdata!=0", "maincpu.pb@10CA10=wpdata;g"))
+			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x10058F, 1, "wpdata!=0", "maincpu.pb@10CA11=wpdata;g"))
 			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100460, 1, "wpdata!=0", "maincpu.pb@10CA12=1;g"))
 			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100560, 1, "wpdata!=0", "maincpu.pb@10CA13=1;g"))
 
@@ -3030,6 +3047,16 @@ function rbff2.startplugin()
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x011DFE),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DDF3+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(D5);g"))
+
+			-- 補正前ダメージ取得用フック
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05B11A),
+				"maincpu.pw@107C22>0",
+				"temp1=$10DDFB+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@((A4)+$8F);g"))
+
+			-- スタン値とスタン値タイマー取得用フック
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05C1E0),
+				"maincpu.pw@107C22>0",
+				"temp1=$10DDFD+((((A4)&$FFFFFF)-$100400)/$80);maincpu.pb@(temp1)=(D0);maincpu.pb@(temp1+$1)=(D1);g"))
 		end
 	end
 
@@ -3732,8 +3759,14 @@ function rbff2.startplugin()
 			p.combo          = tohexnum(pgm:read_u8(p.addr.combo2))     -- 最近のコンボ数
 			p.tmp_combo      = tohexnum(pgm:read_u8(p.addr.tmp_combo2)) -- 一次的なコンボ数
 			p.max_combo      = tohexnum(pgm:read_u8(p.addr.max_combo2)) -- 最大コンボ数
-			p.tmp_dmg        = pgm:read_u8(p.addr.last_dmg)  -- ダメージ
-			pgm:write_u8(p.addr.last_dmg, 0x00)              -- つぎの更新チェックのためにゼロにする(フックが出来なかったのでワークアラウンド)
+			p.tmp_dmg        = pgm:read_u8(p.addr.tmp_dmg)              -- ダメージ
+			p.pure_dmg       = pgm:read_u8(p.addr.pure_dmg)             -- ダメージ
+			p.tmp_stun       = pgm:read_u8(p.addr.tmp_stun)             -- スタン値
+			p.tmp_st_timer   = pgm:read_u8(p.addr.tmp_st_timer)         -- スタンタイマー
+			pgm:write_u8(p.addr.tmp_dmg, 0)
+			pgm:write_u8(p.addr.pure_dmg, 0)
+			pgm:write_u8(p.addr.tmp_stun, 0)
+			pgm:write_u8(p.addr.tmp_st_timer, 0)
 			p.tw_threshold   = pgm:read_u8(p.addr.tw_threshold)
 			p.tw_accepted    = pgm:read_u8(p.addr.tw_accepted)
 			p.tw_frame       = pgm:read_u8(p.addr.tw_frame)
@@ -3761,6 +3794,7 @@ function rbff2.startplugin()
 			p.knock_back2    = pgm:read_u8(p.addr.knock_back2)
 			p.knock_back3    = pgm:read_u8(p.addr.knock_back3)
 			p.attack         = pgm:read_u8(p.addr.attack)
+			p.op_attack      = pgm:read_u8(p.addr.op_attack)
 			p.fake_hit       = bit32.btest(pgm:read_u8(p.addr.fake_hit), 8+3) == false
 			p.obsl_hit       = bit32.btest(pgm:read_u8(p.addr.obsl_hit), 8+3) == false
 			p.full_hit       = pgm:read_u8(p.addr.full_hit) > 0
@@ -3781,7 +3815,10 @@ function rbff2.startplugin()
 			end
 			]]
 
-			p.last_dmg       = p.last_dmg or 0 --pgm:read_u8(p.addr.last_dmg)
+			p.last_dmg       = p.last_dmg or 0
+			p.last_pure_dmg  = p.last_pure_dmg or 0
+			p.last_stun      = p.last_stun or 0
+			p.last_st_timer  = p.last_st_timer or 0
 			p.char           = pgm:read_u8(p.addr.char)
 			p.pos            = pgm:read_i16(p.addr.pos)
 			p.max_pos        = pgm:read_i16(p.addr.max_pos)
@@ -4529,15 +4566,22 @@ function rbff2.startplugin()
 			local state = p.state ~= 0 -- 素立ちじゃない
 			if state == false then
 				p.tmp_combo_dmg = 0
+				p.last_combo_stun_offset = p.stun
+				p.last_combo_st_timer_offset = p.stun_timer
 			end
 			if p.tmp_dmg ~= 0x00 then
 				p.last_dmg = p.tmp_dmg
+				p.last_pure_dmg = p.pure_dmg
 				p.tmp_combo_dmg = p.tmp_combo_dmg + p.tmp_dmg
 				p.last_combo = p.tmp_combo
 				p.last_combo_dmg = p.tmp_combo_dmg
-				if p.max_dmg < p.tmp_combo_dmg then
-					p.max_dmg = p.tmp_combo_dmg
-				end
+				p.max_dmg = math.max(p.max_dmg, p.tmp_combo_dmg)
+				p.last_stun = p.tmp_stun
+				p.last_st_timer = p.tmp_st_timer
+				p.last_combo_stun = p.stun - p.last_combo_stun_offset
+				p.last_combo_st_timer = math.max(0, p.stun_timer - p.last_combo_st_timer_offset)
+				p.max_disp_stun = math.max(p.max_disp_stun, p.last_combo_stun)
+				p.max_st_timer = math.max(p.max_st_timer, p.last_combo_st_timer)
 			end
 			p.last_state = state
 
@@ -5025,19 +5069,25 @@ function rbff2.startplugin()
 				-- コンボ表示などの四角枠
 				if p.disp_dmg then
 					if p1 then
-						scr:draw_box(184+40, 40, 274+40,  63, 0x80404040, 0x80404040)
+						scr:draw_box(184+40, 40, 274+40,  77, 0x80404040, 0x80404040)
 					else
-						scr:draw_box( 45-40, 40, 134-40,  63, 0x80404040, 0x80404040)
+						scr:draw_box( 45-40, 40, 134-40,  77, 0x80404040, 0x80404040)
 					end
 
 					-- コンボ表示
 					scr:draw_text(p1 and 228 or  9, 48, "ダメージ:")
 					scr:draw_text(p1 and 228 or  9, 55, "コンボ:")
-					draw_rtext(   p1 and 281 or 62, 48, op.last_combo_dmg .. "(+" .. op.last_dmg .. ")")
+					scr:draw_text(p1 and 228 or  9, 62, "スタン値:")
+					scr:draw_text(p1 and 228 or  9, 69, "ｽﾀﾝ値ﾀｲﾏｰ:")
+					draw_rtext(   p1 and 281 or 62, 48, string.format("%s(+%s/%s)", op.last_combo_dmg, op.last_dmg, op.last_pure_dmg))
 					draw_rtext(   p1 and 281 or 62, 55, op.last_combo)
+					draw_rtext(   p1 and 281 or 62, 62, string.format("%s(+%s)", op.last_combo_stun, op.last_stun))
+					draw_rtext(   p1 and 281 or 62, 69, string.format("%s(+%s)", op.last_combo_st_timer, op.last_st_timer))
 					scr:draw_text(p1 and 296 or 77, 41, "最大")
 					draw_rtext(   p1 and 311 or 92, 48, op.max_dmg)
 					draw_rtext(   p1 and 311 or 92, 55, op.max_combo)
+					draw_rtext(   p1 and 311 or 92, 62, op.max_disp_stun)
+					draw_rtext(   p1 and 311 or 92, 69, op.max_st_timer)
 				end
 
 				local draw_status = function(x, y, text)
@@ -5107,9 +5157,9 @@ function rbff2.startplugin()
 				end
 
 				--行動IDとフレーム数表示
-				if global.disp_frmgap or p.disp_frm then
+				if global.disp_frmgap > 0 or p.disp_frm then
 					local p1 = i == 1
-					if global.disp_frmgap then
+					if global.disp_frmgap == 1 then
 						draw_frame_groups(p.act_frames2, p.act_frames_total, 30, p1 and 64 or 72, 8)
 						local j = 0
 						for base, _ in pairs(p.fireball_bases) do
@@ -5127,7 +5177,7 @@ function rbff2.startplugin()
 						draw_frames(p.act_frames2, p1 and 160 or 285, true , true, p1 and 40 or 165, 63, 8, 18)
 					end
 				end
-				if global.disp_frmgap then
+				if global.disp_frmgap > 0 then
 					--フレーム差表示
 					draw_rtext(p1 and 135.5 or 190.5, 40.5,  p.last_frame_gap, shadow_col)
 					draw_rtext(p1 and 135   or 190  , 40  ,  p.last_frame_gap)
@@ -5416,7 +5466,7 @@ function rbff2.startplugin()
 		p[2].disp_dmg            = col[ 6] == 2 -- 2P ダメージ表示        6
 		p[1].disp_cmd            = col[ 7] == 2 -- 1P 入力表示            7
 		p[2].disp_cmd            = col[ 8] == 2 -- 2P 入力表示            8
-		global.disp_frmgap       = col[ 9] == 2 -- フレーム差表示         9
+		global.disp_frmgap       = col[ 9]      -- フレーム差表示         9
 		p[1].disp_frm            = col[10] == 2 -- 1P フレーム数表示     10
 		p[2].disp_frm            = col[11] == 2 -- 2P フレーム数表示     11
 		global.disp_pos          = col[12] == 2 -- 1P 2P 距離表示        12
@@ -5581,7 +5631,7 @@ function rbff2.startplugin()
 		col[ 6] = p[2].disp_dmg and 2 or 1 -- 2P ダメージ表示        6
 		col[ 7] = p[1].disp_cmd and 2 or 1 -- 1P 入力表示            7
 		col[ 8] = p[2].disp_cmd and 2 or 1 -- 2P 入力表示            8
-		col[ 9] = g.disp_frmgap and 2 or 1 -- フレーム差表示         9
+		col[ 9] = g.disp_frmgap            -- フレーム差表示         9
 		col[10] = p[1].disp_frm and 2 or 1 -- 1P フレーム数表示     10
 		col[11] = p[2].disp_frm and 2 or 1 -- 2P フレーム数表示     11
 		col[12] = g.disp_pos    and 2 or 1 -- 1P 2P 距離表示        12
@@ -5925,12 +5975,12 @@ function rbff2.startplugin()
 			row = 2,
 			col = {
 				0, -- －ゲージ設定－          1
-				1, -- 1P 体力ゲージ           2
-				1, -- 2P 体力ゲージ           3
-				1, -- 1P POWゲージ            4
-				1, -- 2P POWゲージ            5
-				1, -- 1P スタンゲージ         6
-				1, -- 2P スタンゲージ         7
+				2, -- 1P 体力ゲージ           2
+				2, -- 2P 体力ゲージ           3
+				2, -- 1P POWゲージ            4
+				2, -- 2P POWゲージ            5
+				2, -- 1P スタンゲージ         6
+				2, -- 2P スタンゲージ         7
 			},
 		},
 		on_a = {
@@ -5963,7 +6013,7 @@ function rbff2.startplugin()
 			{ "2P ダメージ表示"       , { "OFF", "ON" }, },
 			{ "1P 入力表示"           , { "OFF", "ON" }, },
 			{ "2P 入力表示"           , { "OFF", "ON" }, },
-			{ "フレーム差表示"        , { "OFF", "ON" }, },
+			{ "フレーム差表示"        , { "OFF", "数値とグラフ", "数値" }, },
 			{ "1P フレーム数表示"     , { "OFF", "ON" }, },
 			{ "2P フレーム数表示"     , { "OFF", "ON" }, },
 			{ "1P 2P 距離表示"        , { "OFF", "ON" }, },
@@ -5978,11 +6028,11 @@ function rbff2.startplugin()
 				1, -- 判定表示                2
 				1, -- ヒット時にポーズ        3
 				1, -- 投げ判定ポーズ          4
-				1, -- フレーム表示            5
-				1, -- 1P ダメージ表示         6
-				1, -- 2P ダメージ表示         7
-				1, -- 1P 入力表示             8
-				1, -- 2P 入力表示             9
+				1, -- 1P ダメージ表示         5
+				1, -- 2P ダメージ表示         6
+				1, -- 1P 入力表示             7
+				1, -- 2P 入力表示             8
+				2, -- フレーム差表示          9
 				1, -- 1P フレーム数表示      10
 				1, -- 2P フレーム数表示      11
 				1, -- 1P 2P 距離表示         12
