@@ -2372,6 +2372,7 @@ function rbff2.startplugin()
 			disp_dmg         = true,        -- ダメージ表示するときtrue
 			disp_cmd         = true,        -- 入力表示するときtrue
 			disp_frm         = true,        -- フレーム数表示するときtrue
+			disp_stun        = true,        -- スタン表示
 
 			no_hit           = 0,           -- Nヒット目に空ぶるカウントのカウンタ
 			no_hit_limit     = 0,           -- Nヒット目に空ぶるカウントの上限
@@ -5079,11 +5080,11 @@ function rbff2.startplugin()
 					scr:draw_text(p1 and 228 or  9, 55, "コンボ:")
 					scr:draw_text(p1 and 228 or  9, 62, "スタン値:")
 					scr:draw_text(p1 and 228 or  9, 69, "ｽﾀﾝ値ﾀｲﾏｰ:")
-					draw_rtext(   p1 and 281 or 62, 48, string.format("%s(+%s/%s)", op.last_combo_dmg, op.last_dmg, op.last_pure_dmg))
-					draw_rtext(   p1 and 281 or 62, 55, op.last_combo)
-					draw_rtext(   p1 and 281 or 62, 62, string.format("%s(+%s)", op.last_combo_stun, op.last_stun))
-					draw_rtext(   p1 and 281 or 62, 69, string.format("%s(+%s)", op.last_combo_st_timer, op.last_st_timer))
-					scr:draw_text(p1 and 296 or 77, 41, "最大")
+					draw_rtext(   p1 and 296 or 77, 48, string.format("%s(+%s/%s)", op.last_combo_dmg, op.last_dmg, op.last_pure_dmg))
+					draw_rtext(   p1 and 296 or 77, 55, op.last_combo)
+					draw_rtext(   p1 and 296 or 77, 62, string.format("%s(+%s)", op.last_combo_stun, op.last_stun))
+					draw_rtext(   p1 and 296 or 77, 69, string.format("%s(+%s)", op.last_combo_st_timer, op.last_st_timer))
+					scr:draw_text(p1 and 299 or 80, 41, "最大")
 					draw_rtext(   p1 and 311 or 92, 48, op.max_dmg)
 					draw_rtext(   p1 and 311 or 92, 55, op.max_combo)
 					draw_rtext(   p1 and 311 or 92, 62, op.max_disp_stun)
@@ -5157,9 +5158,9 @@ function rbff2.startplugin()
 				end
 
 				--行動IDとフレーム数表示
-				if global.disp_frmgap > 0 or p.disp_frm then
+				if global.disp_frmgap > 1 or p.disp_frm then
 					local p1 = i == 1
-					if global.disp_frmgap == 1 then
+					if global.disp_frmgap == 2 then
 						draw_frame_groups(p.act_frames2, p.act_frames_total, 30, p1 and 64 or 72, 8)
 						local j = 0
 						for base, _ in pairs(p.fireball_bases) do
@@ -5177,7 +5178,7 @@ function rbff2.startplugin()
 						draw_frames(p.act_frames2, p1 and 160 or 285, true , true, p1 and 40 or 165, 63, 8, 18)
 					end
 				end
-				if global.disp_frmgap > 0 then
+				if global.disp_frmgap > 1 then
 					--フレーム差表示
 					draw_rtext(p1 and 135.5 or 190.5, 40.5,  p.last_frame_gap, shadow_col)
 					draw_rtext(p1 and 135   or 190  , 40  ,  p.last_frame_gap)
