@@ -4197,14 +4197,18 @@ function rbff2.startplugin()
 		for _, p in ipairs(players) do
 			-- リバーサルのランダム選択
 			p.dummy_rvs = nil
-			if p.dummy_wakeup == wakeup_type.rvs and #p.dummy_rvs_list > 0 then
-				p.dummy_rvs = p.dummy_rvs_list[math.random(#p.dummy_rvs_list)]
+			if p.dummy_bs_chr == p.char then
+				if p.dummy_wakeup == wakeup_type.rvs and #p.dummy_rvs_list > 0 then
+					p.dummy_rvs = p.dummy_rvs_list[math.random(#p.dummy_rvs_list)]
+				end
 			end
 			-- ブレイクショットのランダム選択
 			p.dummy_bs = nil
-			if p.dummy_gd == dummy_gd_type.bs and #p.dummy_bs_list > 0 then
-				if p.state == 2 and p.skip_frame then
-					p.dummy_bs = p.dummy_bs_list[math.random(#p.dummy_bs_list)]
+			if p.dummy_rvs_chr == p.char then
+				if p.dummy_gd == dummy_gd_type.bs and #p.dummy_bs_list > 0 then
+					if p.state == 2 and p.skip_frame then
+						p.dummy_bs = p.dummy_bs_list[math.random(#p.dummy_bs_list)]
+					end
 				end
 			end
 			-- BSモード用技ID更新フック用の値更新
@@ -4584,7 +4588,6 @@ function rbff2.startplugin()
 				p.max_disp_stun = math.max(p.max_disp_stun, p.last_combo_stun)
 				p.max_st_timer = math.max(p.max_st_timer, p.last_combo_st_timer)
 			end
-			print(p.tmp_dmg)
 			p.last_state = state
 
 			-- 体力とスタン値とMAXスタン値回復
@@ -5057,9 +5060,6 @@ function rbff2.startplugin()
 
 			-- コマンド入力とダメージとコンボ表示
 			for i, p in ipairs(players) do
-				local p1 = i == 1
-				local op = players[3-i]
-
 				-- コマンド入力表示
 				if p.disp_cmd then
 					for k = 1, #p.key_hist do
@@ -5067,7 +5067,12 @@ function rbff2.startplugin()
 					end
 					draw_cmd(i, #p.key_hist + 1, 0, "")
 				end
-
+			end
+			-- コマンド入力とダメージとコンボ表示
+			for i, p in ipairs(players) do
+				local p1 = i == 1
+				local op = players[3-i]
+			
 				-- コンボ表示などの四角枠
 				if p.disp_dmg then
 					if p1 then
@@ -5135,7 +5140,11 @@ function rbff2.startplugin()
 					draw_rtext(p1 and 135.5 or 190.5, 34.5,  p.stun_timer, shadow_col)
 					draw_rtext(p1 and 135   or 190  , 34  ,  p.stun_timer)
 				end
+			end
 
+			-- コマンド入力とダメージとコンボ表示
+			for i, p in ipairs(players) do
+				local op = players[3-i]
 				local draw_axis = function(x, col)
 					if x then
 						scr:draw_line(x, p.hit.pos_y-global.axis_size, x, p.hit.pos_y+global.axis_size, col)
@@ -5157,10 +5166,13 @@ function rbff2.startplugin()
 					draw_axis(p.hit.max_pos_x, global.axis_internal_color)
 					draw_axis(p.hit.min_pos_x, global.axis_internal_color)
 				end
+			end
+			-- コマンド入力とダメージとコンボ表示
+			for i, p in ipairs(players) do
+				local p1 = i == 1
 
 				--行動IDとフレーム数表示
 				if global.disp_frmgap > 1 or p.disp_frm then
-					local p1 = i == 1
 					if global.disp_frmgap == 2 then
 						draw_frame_groups(p.act_frames2, p.act_frames_total, 30, p1 and 64 or 72, 8)
 						local j = 0
