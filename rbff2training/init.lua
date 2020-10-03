@@ -109,10 +109,11 @@ local global = {
 
 	next_block_grace = 0, -- 1ガードでの持続フレーム数
 	infinity_life2   = true,
-	repeat_interval = 0,
-	await_neutral   = false,
-	replay_fix_pos  = false,
-	mame_debug_wnd  = false, -- MAMEデバッグウィンドウ表示のときtrue
+	pow_mode         = 1,  -- POWモード　1:自動回復 2:固定 3:通常動作
+	repeat_interval  = 0,
+	await_neutral    = false,
+	replay_fix_pos   = false,
+	mame_debug_wnd   = false, -- MAMEデバッグウィンドウ表示のときtrue
 }
 
 -- DIPスイッチ
@@ -2381,6 +2382,10 @@ function rbff2.startplugin()
 			combo            = 0,           -- 最近のコンボ数
 			last_combo       = 0,
 			last_dmg         = 0,           -- ダメージ
+			last_pow         = 0,           -- POWゲージ増加量
+			tmp_pow          = 0,           -- POWゲージ増加量
+			tmp_pow_rsv      = 0,           -- POWゲージ増加量(予約値)
+			tmp_pow_atc      = 0,           -- POWゲージ増加量(予約時の行動)
 			tmp_stun         = 0,
 			tmp_st_timer     = 0,
 			dmg_scaling      = 1,
@@ -2391,15 +2396,17 @@ function rbff2.startplugin()
 			last_pure_dmg    = 0,
 			last_stun        = 0,
 			last_st_timer    = 0,
-			last_state       = true,
+			last_normal_state = true,
 			life             = 0,           -- いまの体力
 			max_combo        = 0,           -- 最大コンボ数
 			max_dmg          = 0,
+			max_combo_pow    = 0,
 			max_disp_stun    = 0,
 			max_st_timer     = 0,
 			mv_state         = 0,           -- 動作
 			old_combo        = 0,           -- 前フレームのコンボ数
 			last_combo_dmg   = 0,
+			last_combo_pow   = 0,
 			last_dmg_scaling = 1,
 			last_combo_stun  = 0,
 			last_combo_st_timer = 0,
@@ -2427,6 +2434,7 @@ function rbff2.startplugin()
 			state            = 0,           -- いまのやられ状態
 			tmp_combo        = 0,           -- 一次的なコンボ数
 			tmp_combo_dmg    = 0,
+			tmp_combo_pow    = 0,
 			last_combo_stun_offset = 0,
 			last_combo_st_timer_offset = 0,
 			tmp_dmg          = 0,           -- ダメージが入ったフレーム
@@ -2612,6 +2620,8 @@ function rbff2.startplugin()
 				last_dmg     = p1 and 0x10048F or 0x10058F, -- 最終ダメージ
 				tmp_dmg      = p1 and 0x10CA10 or 0x10CA11, -- 最終ダメージの更新フック
 				pure_dmg     = p1 and 0x10DDFB or 0x10DDFC, -- 最終ダメージ(補正前)
+				tmp_pow      = p1 and 0x10DE59 or 0x10DE58, -- POWゲージ増加量
+				tmp_pow_rsv  = p1 and 0x10DE5B or 0x10DE5A, -- POWゲージ増加量(予約値)
 				tmp_stun     = p1 and 0x10DDFD or 0x10DDFF, -- 最終スタン値
 				tmp_st_timer = p1 and 0x10DDFE or 0x10DE00, -- 最終スタンタイマー
 				life         = p1 and 0x10048B or 0x10058B, -- 体力
@@ -3092,6 +3102,17 @@ function rbff2.startplugin()
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x5B224),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DE56+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@(temp1)+1;g"))
+
+			-- POWゲージ増加量取得用フック
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x5B3AC),
+				"maincpu.pw@107C22>0",
+				"temp1=$10DE58+((((A3)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g"))
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x3C164),
+				"maincpu.pw@107C22>0",
+				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g"))
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x3BF1A),
+				"maincpu.pw@107C22>0",
+				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g"))
 		end
 	end
 
@@ -3791,15 +3812,26 @@ function rbff2.startplugin()
 			p.life           = pgm:read_u8(p.addr.life)                 -- 今の体力
 			p.old_state      = p.state                                  -- 前フレームの状態保存
 			p.state          = pgm:read_u8(p.addr.state)                -- 今の状態
+			p.last_normal_state = p.normal_state
+			p.normal_state   = p.state == 0 -- 素立ち
 			p.combo          = tohexnum(pgm:read_u8(p.addr.combo2))     -- 最近のコンボ数
 			p.tmp_combo      = tohexnum(pgm:read_u8(p.addr.tmp_combo2)) -- 一次的なコンボ数
 			p.max_combo      = tohexnum(pgm:read_u8(p.addr.max_combo2)) -- 最大コンボ数
 			p.tmp_dmg        = pgm:read_u8(p.addr.tmp_dmg)              -- ダメージ
 			p.pure_dmg       = pgm:read_u8(p.addr.pure_dmg)             -- ダメージ
+			p.tmp_pow        = pgm:read_u8(p.addr.tmp_pow)              -- POWゲージ増加量
+			p.tmp_pow_rsv    = pgm:read_u8(p.addr.tmp_pow_rsv)          -- POWゲージ増加量(予約値)
+			if p.tmp_pow_rsv > 0 then
+				p.tmp_pow_atc = p.attack                                -- POWゲージ増加量(予約時の行動)
+			end
 			p.tmp_stun       = pgm:read_u8(p.addr.tmp_stun)             -- スタン値
 			p.tmp_st_timer   = pgm:read_u8(p.addr.tmp_st_timer)         -- スタンタイマー
+if p.tmp_pow > 0 or p.tmp_pow_rsv > 0 then
+	print(i, p.tmp_pow, p.tmp_pow_rsv)
+end
 			pgm:write_u8(p.addr.tmp_dmg, 0)
 			pgm:write_u8(p.addr.pure_dmg, 0)
+			pgm:write_u8(p.addr.tmp_pow, 0)
 			pgm:write_u8(p.addr.tmp_stun, 0)
 			pgm:write_u8(p.addr.tmp_st_timer, 0)
 			p.tw_threshold   = pgm:read_u8(p.addr.tw_threshold)
@@ -3857,6 +3889,7 @@ function rbff2.startplugin()
 			end
 			]]
 			p.last_dmg       = p.last_dmg or 0
+			p.last_pow       = p.last_pow or 0
 			p.last_pure_dmg  = p.last_pure_dmg or 0
 			p.last_stun      = p.last_stun or 0
 			p.last_st_timer  = p.last_st_timer or 0
@@ -4642,9 +4675,9 @@ function rbff2.startplugin()
 			end
 
 			-- コンボ数とコンボダメージの処理
-			local state = p.state ~= 0 -- 素立ちじゃない
-			if state == false then
+			if p.normal_state == true then
 				p.tmp_combo_dmg = 0
+				p.tmp_combo_pow = 0
 				p.last_combo_stun_offset = p.stun
 				p.last_combo_st_timer_offset = p.stun_timer
 			end
@@ -4654,11 +4687,16 @@ function rbff2.startplugin()
 			if p.tmp_dmg ~= 0x00 then
 				p.last_dmg = p.tmp_dmg
 				p.last_pure_dmg = p.pure_dmg
+				p.last_pow = p.tmp_pow
 				p.tmp_combo_dmg = p.tmp_combo_dmg + p.tmp_dmg
+				p.tmp_combo_pow = p.tmp_combo_pow + p.tmp_pow
+				-- TODO 必殺技のPOW加算
 				p.last_combo = p.tmp_combo
 				p.last_combo_dmg = p.tmp_combo_dmg
+				p.last_combo_pow = p.tmp_combo_pow
 				p.last_dmg_scaling = p.dmg_scaling
 				p.max_dmg = math.max(p.max_dmg, p.tmp_combo_dmg)
+				p.max_combo_pow = math.max(p.max_combo_pow, p.tmp_combo_pow)
 				p.last_stun = p.tmp_stun
 				p.last_st_timer = p.tmp_st_timer
 				p.last_combo_stun = p.stun - p.last_combo_stun_offset
@@ -4666,7 +4704,6 @@ function rbff2.startplugin()
 				p.max_disp_stun = math.max(p.max_disp_stun, p.last_combo_stun)
 				p.max_st_timer = math.max(p.max_st_timer, p.last_combo_st_timer)
 			end
-			p.last_state = state
 
 			-- 体力とスタン値とMAXスタン値回復
 			local life = { 0xC0, 0x60, 0x00 }
@@ -4694,11 +4731,12 @@ function rbff2.startplugin()
 			-- 0x3C, 0x1E, 0x00
 			local pow = { 0x3C, 0x1E, 0x00 }
 			local max_pow  = pow[p.max] or (p.max - #pow) -- パワーMAXにするかどうか
-			if global.infinity_pow then
+			-- POWモード　1:自動回復 2:固定 3:通常動作
+			if global.pow_mode == 2 then
 				pgm:write_u8(p.addr.pow, max_pow)
-			elseif p.pow == 0 then
+			elseif global.pow_mode == 1 and p.pow == 0 then
 				pgm:write_u8(p.addr.pow, max_pow)
-			elseif max_pow < p.pow then
+			elseif global.pow_mode ~= 3 and max_pow < p.pow then
 				-- 最大値の方が少ない場合は強制で減らす
 				pgm:write_u8(p.addr.pow, max_pow)
 			end
@@ -5164,9 +5202,11 @@ function rbff2.startplugin()
 				-- コンボ表示などの四角枠
 				if p.disp_dmg then
 					if p1 then
-						scr:draw_box(184+40, 40, 274+40,  77, 0x80404040, 0x80404040)
+						--scr:draw_box(184+40, 40, 274+40,  77, 0x80404040, 0x80404040)
+						scr:draw_box(184+40, 40, 274+40,  84, 0x80404040, 0x80404040)
 					else
-						scr:draw_box( 45-40, 40, 134-40,  77, 0x80404040, 0x80404040)
+						--scr:draw_box( 45-40, 40, 134-40,  77, 0x80404040, 0x80404040)
+						scr:draw_box( 45-40, 40, 134-40,  84, 0x80404040, 0x80404040)
 					end
 
 					-- コンボ表示
@@ -5175,16 +5215,19 @@ function rbff2.startplugin()
 					scr:draw_text(p1 and 228 or  9, 55, "コンボ:")
 					scr:draw_text(p1 and 228 or  9, 62, "スタン値:")
 					scr:draw_text(p1 and 228 or  9, 69, "ｽﾀﾝ値ﾀｲﾏｰ:")
-					draw_rtext(   p1 and 296 or 77, 41, string.format("%s%%", op.last_dmg_scaling * 100))
+					scr:draw_text(p1 and 228 or  9, 76, "POW:")
+					draw_rtext(   p1 and 296 or 77, 41, string.format("%s%%", (op.last_dmg_scaling-1) * 100))
 					draw_rtext(   p1 and 296 or 77, 48, string.format("%s(+%s/%s)", op.last_combo_dmg, op.last_dmg, op.last_pure_dmg))
 					draw_rtext(   p1 and 296 or 77, 55, op.last_combo)
 					draw_rtext(   p1 and 296 or 77, 62, string.format("%s(+%s)", op.last_combo_stun, op.last_stun))
 					draw_rtext(   p1 and 296 or 77, 69, string.format("%s(+%s)", op.last_combo_st_timer, op.last_st_timer))
+					draw_rtext(   p1 and 296 or 77, 76, string.format("%s(+%s)", op.last_combo_pow, op.last_pow))
 					scr:draw_text(p1 and 299 or 80, 41, "最大")
 					draw_rtext(   p1 and 311 or 92, 48, op.max_dmg)
 					draw_rtext(   p1 and 311 or 92, 55, op.max_combo)
 					draw_rtext(   p1 and 311 or 92, 62, op.max_disp_stun)
 					draw_rtext(   p1 and 311 or 92, 69, op.max_st_timer)
+					draw_rtext(   p1 and 311 or 92, 76, op.max_combo_pow)
 				end
 
 				local draw_status = function(x, y, text)
@@ -5557,7 +5600,7 @@ function rbff2.startplugin()
 		p[1].disp_stun           = col[ 6] == 2 -- 1P スタンゲージ表示         6
 		p[2].disp_stun           = col[ 7] == 2 -- 2P スタンゲージ表示         7
 		dip_config.infinity_life = col[ 8] == 2 -- 体力ゲージモード            8
-		global.infinity_pow      = col[ 9] == 2 -- スタンゲージモード          9
+		global.pow_mode          = col[ 9]      -- POWモード                   9
 
 		menu_cur = main_menu
 	end
@@ -5720,7 +5763,7 @@ function rbff2.startplugin()
 		col[ 6] = p[1].disp_stun and 2 or 1 -- 1P スタンゲージ表示    6
 		col[ 7] = p[2].disp_stun and 2 or 1 -- 2P スタンゲージ表示    7
 		col[ 8] = dip_config.infinity_life and 2 or 1 -- 体力ゲージモード 8
-		col[ 9] = g.infinity_pow and 2 or 1 -- スタンゲージモード     9
+		col[ 9] = g.pow_mode                -- POWモード              9
 	end
 	local init_ex_menu_config = function()
 		local col = ex_menu.pos.col
@@ -6073,7 +6116,7 @@ function rbff2.startplugin()
 			{ "1P スタンゲージ表示"   , { "OFF", "ON" }, },
 			{ "2P スタンゲージ表示"   , { "OFF", "ON" }, },
 			{ "体力ゲージモード"      , { "自動回復", "固定" }, },
-			{ "POWゲージモード"       , { "自動回復", "固定" }, },
+			{ "POWゲージモード"       , { "自動回復", "固定", "通常動作" }, },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
