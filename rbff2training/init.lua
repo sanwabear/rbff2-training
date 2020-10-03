@@ -31,2320 +31,2321 @@ exports.author = { name = "Sanwabear" }
 
 local rbff2 = exports
 
-function rbff2.startplugin()
-	local main_or_menu_state, prev_main_or_menu_state
-	local menu_cur, main_menu, tra_menu, rec_menu, play_menu, menu, tra_main, menu_exit, bs_menus, rvs_menus, bar_menu, ex_menu, col_menu, auto_menu
+local main_or_menu_state, prev_main_or_menu_state
+local menu_cur, main_menu, tra_menu, rec_menu, play_menu, menu, tra_main, menu_exit, bs_menus, rvs_menus, bar_menu, ex_menu, col_menu, auto_menu
 
-	local mem_last_time         = 0      -- 最終読込フレーム(キャッシュ用)
-	local mem_0x100701          = 0      -- 場面判定用
-	local mem_0x107C22          = 0      -- 場面判定用
-	local mem_0x10B862          = 0      -- ガードヒット=FF
-	local mem_0x10D4EA          = 0      -- 潜在発動時の停止時間
-	local mem_0x10FD82          = 0      -- console 0x00, mvs 0x01
-	local mem_0x10FDAF          = 0      -- 場面判定用
-	local mem_0x10FDB6          = 0      -- P1 P2 開始判定用
-	local mem_0x10E043          = 0      -- 手動でポーズしたときに00以外になる
-	local mem_biostest          = false  -- 初期化中のときtrue
-	local match_active          = false  -- 対戦画面のときtrue
-	local player_select_active  = false  -- プレイヤー選択画面のときtrue
-	local mem_0x10CDD0          = 0x10CDD0 -- プレイヤー選択のハック用 
-	local p_space               = 0      -- 1Pと2Pの間隔
-	local prev_p_space          = 0      -- 1Pと2Pの間隔(前フレーム)
-	local stage_base_addr       = 0x100E00
-	local offset_pos_x          = 0x20
-	local offset_pos_z          = 0x24
-	local offset_pos_y          = 0x28
-	local screen_left           = 0
-	local screen_top            = 0
-	local bios_test             = function()
-		local cpu = manager:machine().devices[":maincpu"]
-		local pgm = cpu.spaces["program"]
-		for _, addr in ipairs({0x100400, 0x100500}) do
-			local ram_value = pgm:read_u8(addr)
-			for _, test_value in ipairs({0x5555, 0xAAAA, bit32.band(0xFFFF, addr)}) do
-				if ram_value == test_value then
-					return true
-				end
+local mem_last_time         = 0      -- 最終読込フレーム(キャッシュ用)
+local mem_0x100701          = 0      -- 場面判定用
+local mem_0x107C22          = 0      -- 場面判定用
+local mem_0x10B862          = 0      -- ガードヒット=FF
+local mem_0x10D4EA          = 0      -- 潜在発動時の停止時間
+local mem_0x10FD82          = 0      -- console 0x00, mvs 0x01
+local mem_0x10FDAF          = 0      -- 場面判定用
+local mem_0x10FDB6          = 0      -- P1 P2 開始判定用
+local mem_0x10E043          = 0      -- 手動でポーズしたときに00以外になる
+local mem_biostest          = false  -- 初期化中のときtrue
+local match_active          = false  -- 対戦画面のときtrue
+local player_select_active  = false  -- プレイヤー選択画面のときtrue
+local mem_0x10CDD0          = 0x10CDD0 -- プレイヤー選択のハック用 
+local p_space               = 0      -- 1Pと2Pの間隔
+local prev_p_space          = 0      -- 1Pと2Pの間隔(前フレーム)
+local stage_base_addr       = 0x100E00
+local offset_pos_x          = 0x20
+local offset_pos_z          = 0x24
+local offset_pos_y          = 0x28
+local screen_left           = 0
+local screen_top            = 0
+local bios_test             = function()
+	local cpu = manager:machine().devices[":maincpu"]
+	local pgm = cpu.spaces["program"]
+	for _, addr in ipairs({0x100400, 0x100500}) do
+		local ram_value = pgm:read_u8(addr)
+		for _, test_value in ipairs({0x5555, 0xAAAA, bit32.band(0xFFFF, addr)}) do
+			if ram_value == test_value then
+				return true
 			end
 		end
 	end
+end
 
-	local global = {
-		frame_number    = 0,
+local global = {
+	frame_number    = 0,
 
-		-- 当たり判定用
-		axis_color      = 0xFFFFFFFF,
-		axis_air_color  = 0xFFFF00FF,
-		axis_internal_color = 0xFF00FFFF,
-		axis_size       = 12,
-		no_alpha        = true, --fill = 0x00, outline = 0xFF for all box types
-		throwbox_height = 200, --default for ground throws
-		no_background   = false,
-		no_background_addr = 0x10DDF0,
-		no_bars         = false,
-		sync_pos_x      = 1, -- 1: OFF, 2:1Pと同期, 3:2Pと同期
+	-- 当たり判定用
+	axis_color      = 0xFFFFFFFF,
+	axis_air_color  = 0xFFFF00FF,
+	axis_internal_color = 0xFF00FFFF,
+	axis_size       = 12,
+	no_alpha        = true, --fill = 0x00, outline = 0xFF for all box types
+	throwbox_height = 200, --default for ground throws
+	no_background   = false,
+	no_background_addr = 0x10DDF0,
+	no_bars         = false,
+	sync_pos_x      = 1, -- 1: OFF, 2:1Pと同期, 3:2Pと同期
 
-		disp_pos        = true, -- 1P 2P 距離表示
-		disp_hitbox     = true, -- 判定表示
-		disp_frmgap     = 2, -- フレーム差表示
-		pause_hit       = false, -- ヒット時にポーズ
-		pausethrow      = false, -- 投げ判定表示時にポーズ
+	disp_pos        = true, -- 1P 2P 距離表示
+	disp_hitbox     = true, -- 判定表示
+	disp_frmgap     = 2, -- フレーム差表示
+	pause_hit       = false, -- ヒット時にポーズ
+	pausethrow      = false, -- 投げ判定表示時にポーズ
 
-		auto_input      = {
-			otg_thw     = false, -- ダウン投げ              2
-			otg_atk     = false, -- ダウン攻撃              3
-			thw_otg     = false, -- 通常投げの派生技        4
-			rave        = 1,     -- デッドリーレイブ        5
-			desire      = 1,     -- アンリミテッドデザイア  6
-			drill       = 5,     -- ドリル                  7
-			pairon      = 1,     -- 超白龍                  8
-		},
+	auto_input      = {
+		otg_thw     = false, -- ダウン投げ              2
+		otg_atk     = false, -- ダウン攻撃              3
+		thw_otg     = false, -- 通常投げの派生技        4
+		rave        = 1,     -- デッドリーレイブ        5
+		desire      = 1,     -- アンリミテッドデザイア  6
+		drill       = 5,     -- ドリル                  7
+		pairon      = 1,     -- 超白龍                  8
+	},
 
-		frzc            = 1,
-		frz             = {0x1, 0x0},  -- DIPによる停止操作用の値とカウンタ
+	frzc            = 1,
+	frz             = {0x1, 0x0},  -- DIPによる停止操作用の値とカウンタ
 
-		dummy_mode      = 1,
-		rec_main        = nil,
+	dummy_mode      = 1,
+	rec_main        = nil,
 
-		input_accepted  = 0,
+	input_accepted  = 0,
 
-		next_block_grace = 0, -- 1ガードでの持続フレーム数
-		infinity_life2   = true,
-		repeat_interval = 0,
-		await_neutral   = false,
-		replay_fix_pos  = false,
-		mame_debug_wnd  = false, -- MAMEデバッグウィンドウ表示のときtrue
-	}
+	next_block_grace = 0, -- 1ガードでの持続フレーム数
+	infinity_life2   = true,
+	repeat_interval = 0,
+	await_neutral   = false,
+	replay_fix_pos  = false,
+	mame_debug_wnd  = false, -- MAMEデバッグウィンドウ表示のときtrue
+}
 
-	-- DIPスイッチ
-	local dip_config ={
-		show_hitbox   = false,
-		infinity_life = false,
-		easy_super    = false,
-		infinity_time = true,
-		fix_time      = 0x99,
-		stage_select  = false,
-		alfred        = false,
-		watch_states  = false,
-		cpu_cant_move = false,
-	}
+-- DIPスイッチ
+local dip_config ={
+	show_hitbox   = false,
+	infinity_life = false,
+	easy_super    = false,
+	infinity_time = true,
+	fix_time      = 0x99,
+	stage_select  = false,
+	alfred        = false,
+	watch_states  = false,
+	cpu_cant_move = false,
+}
 
-	-- 最大スタン値の初期値
-	-- 配列のインデックス=キャラID
-	local init_stuns =  {
-		32 --[[ TERRY ]] ,31 --[[ ANDY ]] ,32 --[[ JOE ]], 29 --[[ MAI ]], 33 --[[ GEESE ]], 32 --[[ SOKAKU ]],
-		31 --[[ BOB ]] ,31 --[[ HON-FU ]] ,29 --[[ MARY ]] ,35 --[[ BASH ]] ,38 --[[ YAMAZAKI ]] ,29 --[[ CHONSHU ]],
-		29 --[[ CHONREI ]] ,32 --[[ DUCK ]] ,32 --[[ KIM ]] ,32 --[[ BILLY ]] ,31 --[[ CHENG ]] ,31 --[[ TUNG ]],
-		35 --[[ LAURENCE ]] ,35 --[[ KRAUSER ]] ,32 --[[ RICK ]] ,29 --[[ XIANGFEI ]] ,32 --[[ ALFRED ]]
-	}
-	-- 起き上がりフレーム数
-	local wakeup_frms = {
-		20 --[[ TERRY ]] ,20 --[[ ANDY ]] ,20 --[[ JOE ]], 17 --[[ MAI ]], 20 --[[ GEESE ]], 20 --[[ SOKAKU ]],
-		20 --[[ BOB ]] ,20 --[[ HON-FU ]] ,20 --[[ MARY ]] ,20 --[[ BASH ]] ,20 --[[ YAMAZAKI ]] ,20 --[[ CHONSHU ]],
-		20 --[[ CHONREI ]] ,20 --[[ DUCK ]] ,20 --[[ KIM ]] ,20 --[[ BILLY ]] ,20 --[[ CHENG ]] ,20 --[[ TUNG ]],
-		20 --[[ LAURENCE ]] ,20 --[[ KRAUSER ]] ,20 --[[ RICK ]] ,14 --[[ XIANGFEI ]] ,20 --[[ ALFRED ]]
-	}
+-- 最大スタン値の初期値
+-- 配列のインデックス=キャラID
+local init_stuns =  {
+	32 --[[ TERRY ]] ,31 --[[ ANDY ]] ,32 --[[ JOE ]], 29 --[[ MAI ]], 33 --[[ GEESE ]], 32 --[[ SOKAKU ]],
+	31 --[[ BOB ]] ,31 --[[ HON-FU ]] ,29 --[[ MARY ]] ,35 --[[ BASH ]] ,38 --[[ YAMAZAKI ]] ,29 --[[ CHONSHU ]],
+	29 --[[ CHONREI ]] ,32 --[[ DUCK ]] ,32 --[[ KIM ]] ,32 --[[ BILLY ]] ,31 --[[ CHENG ]] ,31 --[[ TUNG ]],
+	35 --[[ LAURENCE ]] ,35 --[[ KRAUSER ]] ,32 --[[ RICK ]] ,29 --[[ XIANGFEI ]] ,32 --[[ ALFRED ]]
+}
+-- 起き上がりフレーム数
+local wakeup_frms = {
+	20 --[[ TERRY ]] ,20 --[[ ANDY ]] ,20 --[[ JOE ]], 17 --[[ MAI ]], 20 --[[ GEESE ]], 20 --[[ SOKAKU ]],
+	20 --[[ BOB ]] ,20 --[[ HON-FU ]] ,20 --[[ MARY ]] ,20 --[[ BASH ]] ,20 --[[ YAMAZAKI ]] ,20 --[[ CHONSHU ]],
+	20 --[[ CHONREI ]] ,20 --[[ DUCK ]] ,20 --[[ KIM ]] ,20 --[[ BILLY ]] ,20 --[[ CHENG ]] ,20 --[[ TUNG ]],
+	20 --[[ LAURENCE ]] ,20 --[[ KRAUSER ]] ,20 --[[ RICK ]] ,14 --[[ XIANGFEI ]] ,20 --[[ ALFRED ]]
+}
 
-	-- 行動の種類
-	local act_types = { free = -1, attack = 0, low_attack = 1, provoke =  2, any = 3, overhead = 4, guard = 5, hit = 6, }
+-- 行動の種類
+local act_types = { free = -1, attack = 0, low_attack = 1, provoke =  2, any = 3, overhead = 4, guard = 5, hit = 6, }
 
-	local char_names = {
-		"テリー・ボガード", "アンディ・ボガード", "東丈", "不知火舞", "ギース・ハワード", "望月双角",
-		"ボブ・ウィルソン", "ホンフゥ", "ブルー・マリー", "フランコ・バッシュ", "山崎竜二", "秦崇秀", "秦崇雷",
-		"ダック・キング", "キム・カッファン", "ビリー・カーン", "チン・シンザン", "タン・フー・ルー",
-		"ローレンス・ブラッド", "ヴォルフガング・クラウザー", "リック・ストラウド", "李香緋", "アルフレッド",
-	}
-	local bgms = {
-		{ id = 0x01, name = "クリといつまでも"              , }, --テリー・ボガード
-		{ id = 0x02, name = "雷波濤外伝"                    , }, --アンディ・ボガード
-		{ id = 0x03, name = "タイ南部に伝わったSPの詩"      , }, --東丈
-		{ id = 0x04, name = "まいまいきゅーん"              , }, --不知火舞
-		{ id = 0x05, name = "ギースにしょうゆとオケヒット"  , }, --ギース・ハワード
-		{ id = 0x06, name = "TAKU-HATSU-Rock"               , }, --望月双角,
-		{ id = 0x07, name = "蜜の味"                        , }, --ボブ・ウィルソン
-		{ id = 0x08, name = "ドンチカ!!チ!!チ!!"            , }, --ホンフゥ
-		{ id = 0x09, name = "Blue Mary's BLUES"             , }, --ブルー・マリー
-		{ id = 0x0A, name = "GOLI-Rock"                     , }, --フランコ・バッシュ
-		{ id = 0x0B, name = "C62 -シロクニ- Ver.2"          , }, --山崎竜二
-		{ id = 0x0C, name = "パンドラの箱より 第3番「決断」", }, --秦崇秀
-		{ id = 0x0D, name = "パンドラの箱より 第3番「決断」 ", }, --秦崇雷 崇秀と崇雷が同じBGMなので名前にスペースいれて排他かける
-		{ id = 0x0E, name = "Duck! Duck! Duck!"             , }, --ダック・キング
-		{ id = 0x0F, name = "ソウルっす♪"                  , }, --キム・カッファン
-		{ id = 0x10, name = "ロンドンマーチ"                , }, --ビリー・カーン
-		{ id = 0x11, name = "ハプシュ！フゥゥゥ"            , }, --チン・シンザン
-		{ id = 0x12, name = "中国四千年の歴史とはいかにII"  , }, --タン・フー・ルー,
-		{ id = 0x13, name = "牛とお戯れ"                    , }, --ローレンス・ブラッド
-		{ id = 0x14, name = "REQUIEM K.626 [Lacrimosa]"     , }, --ヴォルフガング・クラウザー
-		{ id = 0x15, name = "Exceed The Limit"              , }, --リック・ストラウド
-		{ id = 0x16, name = "雄々盛嬢後援 ～競場詩～"       , }, --李香緋
-		{ id = 0x17, name = "Get The Sky -With Your Dream-" , }, --アルフレッド
-		{ id = 0x00, name = "なし"                          , }, -- なし
-		{ id = 0x1C, name = "4 HITs Ⅱ"                     , }, -- キャラクターセレクト
-		{ id = 0x1E, name = "Gain a victory"                , }, -- 勝利デモ
-		{ id = 0x26, name = "NEOGEO SOUND LOGO"             , }, -- ネオジオデモ
-	}
-	local bgm_names = {}
-	for _, bgm in ipairs(bgms) do
-		local exists = false
-		for _, name in pairs(bgm_names) do
-			if name == bgm.name then
-				exists = true
-				bgm.name_idx = #bgm_names
-				break
-			end
-		end
-		if not exists then 
-			table.insert(bgm_names, bgm.name)
+local char_names = {
+	"テリー・ボガード", "アンディ・ボガード", "東丈", "不知火舞", "ギース・ハワード", "望月双角",
+	"ボブ・ウィルソン", "ホンフゥ", "ブルー・マリー", "フランコ・バッシュ", "山崎竜二", "秦崇秀", "秦崇雷",
+	"ダック・キング", "キム・カッファン", "ビリー・カーン", "チン・シンザン", "タン・フー・ルー",
+	"ローレンス・ブラッド", "ヴォルフガング・クラウザー", "リック・ストラウド", "李香緋", "アルフレッド",
+}
+local bgms = {
+	{ id = 0x01, name = "クリといつまでも"              , }, --テリー・ボガード
+	{ id = 0x02, name = "雷波濤外伝"                    , }, --アンディ・ボガード
+	{ id = 0x03, name = "タイ南部に伝わったSPの詩"      , }, --東丈
+	{ id = 0x04, name = "まいまいきゅーん"              , }, --不知火舞
+	{ id = 0x05, name = "ギースにしょうゆとオケヒット"  , }, --ギース・ハワード
+	{ id = 0x06, name = "TAKU-HATSU-Rock"               , }, --望月双角,
+	{ id = 0x07, name = "蜜の味"                        , }, --ボブ・ウィルソン
+	{ id = 0x08, name = "ドンチカ!!チ!!チ!!"            , }, --ホンフゥ
+	{ id = 0x09, name = "Blue Mary's BLUES"             , }, --ブルー・マリー
+	{ id = 0x0A, name = "GOLI-Rock"                     , }, --フランコ・バッシュ
+	{ id = 0x0B, name = "C62 -シロクニ- Ver.2"          , }, --山崎竜二
+	{ id = 0x0C, name = "パンドラの箱より 第3番「決断」", }, --秦崇秀
+	{ id = 0x0D, name = "パンドラの箱より 第3番「決断」 ", }, --秦崇雷 崇秀と崇雷が同じBGMなので名前にスペースいれて排他かける
+	{ id = 0x0E, name = "Duck! Duck! Duck!"             , }, --ダック・キング
+	{ id = 0x0F, name = "ソウルっす♪"                  , }, --キム・カッファン
+	{ id = 0x10, name = "ロンドンマーチ"                , }, --ビリー・カーン
+	{ id = 0x11, name = "ハプシュ！フゥゥゥ"            , }, --チン・シンザン
+	{ id = 0x12, name = "中国四千年の歴史とはいかにII"  , }, --タン・フー・ルー,
+	{ id = 0x13, name = "牛とお戯れ"                    , }, --ローレンス・ブラッド
+	{ id = 0x14, name = "REQUIEM K.626 [Lacrimosa]"     , }, --ヴォルフガング・クラウザー
+	{ id = 0x15, name = "Exceed The Limit"              , }, --リック・ストラウド
+	{ id = 0x16, name = "雄々盛嬢後援 ～競場詩～"       , }, --李香緋
+	{ id = 0x17, name = "Get The Sky -With Your Dream-" , }, --アルフレッド
+	{ id = 0x00, name = "なし"                          , }, -- なし
+	{ id = 0x1C, name = "4 HITs Ⅱ"                     , }, -- キャラクターセレクト
+	{ id = 0x1E, name = "Gain a victory"                , }, -- 勝利デモ
+	{ id = 0x26, name = "NEOGEO SOUND LOGO"             , }, -- ネオジオデモ
+}
+local bgm_names = {}
+for _, bgm in ipairs(bgms) do
+	local exists = false
+	for _, name in pairs(bgm_names) do
+		if name == bgm.name then
+			exists = true
 			bgm.name_idx = #bgm_names
+			break
 		end
 	end
-	local stgs = {
-		{ stg1 = 0x01, stg2 = 0x00, stg3 = 0x01, name = "日本 [1]"          , no_background = false, }, -- 不知火舞
-		{ stg1 = 0x01, stg2 = 0x01, stg3 = 0x01, name = "日本 [2]"          , no_background = false, }, -- 望月双角,
-		{ stg1 = 0x01, stg2 = 0x01, stg3 = 0x0F, name = "日本 [2] 雨"       , no_background = false, }, -- 望月双角,
-		{ stg1 = 0x01, stg2 = 0x02, stg3 = 0x01, name = "日本 [3]"          , no_background = false, }, -- アンディ・ボガード
-		{ stg1 = 0x02, stg2 = 0x00, stg3 = 0x01, name = "香港1 [1]"         , no_background = false, }, -- チン・シンザン
-		{ stg1 = 0x02, stg2 = 0x01, stg3 = 0x01, name = "香港1 [2]"         , no_background = false, }, -- 山崎竜二
-		{ stg1 = 0x03, stg2 = 0x00, stg3 = 0x01, name = "韓国 [1]"          , no_background = false, }, -- キム・カッファン
-		{ stg1 = 0x03, stg2 = 0x01, stg3 = 0x01, name = "韓国 [2]"          , no_background = false, }, -- タン・フー・ルー,
-		{ stg1 = 0x04, stg2 = 0x00, stg3 = 0x01, name = "サウスタウン [1]"  , no_background = false, }, -- ギース・ハワード
-		{ stg1 = 0x04, stg2 = 0x01, stg3 = 0x01, name = "サウスタウン [2]"  , no_background = false, }, -- ビリー・カーン
-		{ stg1 = 0x05, stg2 = 0x00, stg3 = 0x01, name = "ドイツ [1]"        , no_background = false, }, -- ヴォルフガング・クラウザー
-		{ stg1 = 0x05, stg2 = 0x01, stg3 = 0x01, name = "ドイツ [2]"        , no_background = false, }, -- ローレンス・ブラッド
-		{ stg1 = 0x06, stg2 = 0x00, stg3 = 0x01, name = "アメリカ1 [1]"     , no_background = false, }, -- ダック・キング
-		{ stg1 = 0x06, stg2 = 0x01, stg3 = 0x01, name = "アメリカ1 [2]"     , no_background = false, }, -- ブルー・マリー
-		{ stg1 = 0x07, stg2 = 0x00, stg3 = 0x01, name = "アメリカ2 [1]"     , no_background = false, }, -- テリー・ボガード
-		{ stg1 = 0x07, stg2 = 0x01, stg3 = 0x01, name = "アメリカ2 [2]"     , no_background = false, }, -- リック・ストラウド
-		{ stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, name = "アメリカ2 [2]"     , no_background = false, }, -- アルフレッド
-		{ stg1 = 0x08, stg2 = 0x00, stg3 = 0x01, name = "タイ [1]"          , no_background = false, }, -- ボブ・ウィルソン
-		{ stg1 = 0x08, stg2 = 0x01, stg3 = 0x01, name = "タイ [2]"          , no_background = false, }, -- フランコ・バッシュ
-		{ stg1 = 0x08, stg2 = 0x02, stg3 = 0x01, name = "タイ [3]"          , no_background = false, }, -- 東丈
-		{ stg1 = 0x09, stg2 = 0x00, stg3 = 0x01, name = "香港2 [1]"         , no_background = false, }, -- 秦崇秀
-		{ stg1 = 0x09, stg2 = 0x01, stg3 = 0x01, name = "香港2 [2]"         , no_background = false, }, -- 秦崇雷,
-		{ stg1 = 0x0A, stg2 = 0x00, stg3 = 0x01, name = "NEW CHALLENGERS[1]", no_background = false, }, -- 李香緋
-		{ stg1 = 0x0A, stg2 = 0x01, stg3 = 0x01, name = "NEW CHALLENGERS[2]", no_background = false, }, -- ホンフゥ
-		{ stg1 = 0x04, stg2 = 0x01, stg3 = 0x01, name = "背景なし"          , no_background = true , }, -- 背景なし
-		{ stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, name = "背景なし(1LINE)"   , no_background = true , }, -- 背景なし(1LINE)
-	}
-	local names = {}
-	for _, stg in ipairs(stgs) do
-		table.insert(names, stg.name)
+	if not exists then 
+		table.insert(bgm_names, bgm.name)
+		bgm.name_idx = #bgm_names
 	end
+end
+local stgs = {
+	{ stg1 = 0x01, stg2 = 0x00, stg3 = 0x01, name = "日本 [1]"          , no_background = false, }, -- 不知火舞
+	{ stg1 = 0x01, stg2 = 0x01, stg3 = 0x01, name = "日本 [2]"          , no_background = false, }, -- 望月双角,
+	{ stg1 = 0x01, stg2 = 0x01, stg3 = 0x0F, name = "日本 [2] 雨"       , no_background = false, }, -- 望月双角,
+	{ stg1 = 0x01, stg2 = 0x02, stg3 = 0x01, name = "日本 [3]"          , no_background = false, }, -- アンディ・ボガード
+	{ stg1 = 0x02, stg2 = 0x00, stg3 = 0x01, name = "香港1 [1]"         , no_background = false, }, -- チン・シンザン
+	{ stg1 = 0x02, stg2 = 0x01, stg3 = 0x01, name = "香港1 [2]"         , no_background = false, }, -- 山崎竜二
+	{ stg1 = 0x03, stg2 = 0x00, stg3 = 0x01, name = "韓国 [1]"          , no_background = false, }, -- キム・カッファン
+	{ stg1 = 0x03, stg2 = 0x01, stg3 = 0x01, name = "韓国 [2]"          , no_background = false, }, -- タン・フー・ルー,
+	{ stg1 = 0x04, stg2 = 0x00, stg3 = 0x01, name = "サウスタウン [1]"  , no_background = false, }, -- ギース・ハワード
+	{ stg1 = 0x04, stg2 = 0x01, stg3 = 0x01, name = "サウスタウン [2]"  , no_background = false, }, -- ビリー・カーン
+	{ stg1 = 0x05, stg2 = 0x00, stg3 = 0x01, name = "ドイツ [1]"        , no_background = false, }, -- ヴォルフガング・クラウザー
+	{ stg1 = 0x05, stg2 = 0x01, stg3 = 0x01, name = "ドイツ [2]"        , no_background = false, }, -- ローレンス・ブラッド
+	{ stg1 = 0x06, stg2 = 0x00, stg3 = 0x01, name = "アメリカ1 [1]"     , no_background = false, }, -- ダック・キング
+	{ stg1 = 0x06, stg2 = 0x01, stg3 = 0x01, name = "アメリカ1 [2]"     , no_background = false, }, -- ブルー・マリー
+	{ stg1 = 0x07, stg2 = 0x00, stg3 = 0x01, name = "アメリカ2 [1]"     , no_background = false, }, -- テリー・ボガード
+	{ stg1 = 0x07, stg2 = 0x01, stg3 = 0x01, name = "アメリカ2 [2]"     , no_background = false, }, -- リック・ストラウド
+	{ stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, name = "アメリカ2 [2]"     , no_background = false, }, -- アルフレッド
+	{ stg1 = 0x08, stg2 = 0x00, stg3 = 0x01, name = "タイ [1]"          , no_background = false, }, -- ボブ・ウィルソン
+	{ stg1 = 0x08, stg2 = 0x01, stg3 = 0x01, name = "タイ [2]"          , no_background = false, }, -- フランコ・バッシュ
+	{ stg1 = 0x08, stg2 = 0x02, stg3 = 0x01, name = "タイ [3]"          , no_background = false, }, -- 東丈
+	{ stg1 = 0x09, stg2 = 0x00, stg3 = 0x01, name = "香港2 [1]"         , no_background = false, }, -- 秦崇秀
+	{ stg1 = 0x09, stg2 = 0x01, stg3 = 0x01, name = "香港2 [2]"         , no_background = false, }, -- 秦崇雷,
+	{ stg1 = 0x0A, stg2 = 0x00, stg3 = 0x01, name = "NEW CHALLENGERS[1]", no_background = false, }, -- 李香緋
+	{ stg1 = 0x0A, stg2 = 0x01, stg3 = 0x01, name = "NEW CHALLENGERS[2]", no_background = false, }, -- ホンフゥ
+	{ stg1 = 0x04, stg2 = 0x01, stg3 = 0x01, name = "背景なし"          , no_background = true , }, -- 背景なし
+	{ stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, name = "背景なし(1LINE)"   , no_background = true , }, -- 背景なし(1LINE)
+}
+local names = {}
+for _, stg in ipairs(stgs) do
+	table.insert(names, stg.name)
+end
 
-	local char_acts_base = {
-		-- テリー・ボガード
-		{
-			{ disp_name = "フェイント", name = "フェイント パワーゲイザー", type = act_types.any, ids = { 0x113, }, },
-			{ disp_name = "フェイント", name = "フェイント バーンナックル", type = act_types.any, ids = { 0x112, }, },
-			{ name = "バスタースルー", type = act_types.any, ids = { 0x6D, 0x6E, }, },
-			{ name = "ワイルドアッパー", type = act_types.attack, ids = { 0x69, }, },
-			{ name = "バックスピンキック", type = act_types.attack, ids = { 0x68, }, },
-			{ name = "チャージキック", type = act_types.overhead, ids = { 0x6A, }, },
-			{ disp_name = "バーンナックル", name = "小バーンナックル", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
-			{ disp_name = "バーンナックル", name = "大バーンナックル", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-			{ name = "パワーウェイブ", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
-			{ name = "ランドウェイブ", type = act_types.low_attack, ids = { 0xA4, 0xA5, 0xA6, }, },
-			{ name = "ファイヤーキック", type = act_types.low_attack, ids = { 0xB8, 0xB9, 0xBC, 0xBA, 0xBB, }, },
-			{ name = "クラックシュート", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, }, },
-			{ name = "ライジングタックル", type = act_types.attack, ids = { 0xCC, 0xCD, 0xCE, 0xCF, 0xD0, }, },
-			{ name = "パッシングスウェー", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, }, },
-			{ name = "パワーゲイザー", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, },
-			{ name = "トリプルゲイザー", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, }, },
-			{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x241, }, },
-			{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x242, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x244, }, },
-			{ disp_name = "CA _6C", name = "CA 5C(3段目)", type = act_types.attack, ids = { 0x245, }, },
-			{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x246, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(2段目or3段目)", type = act_types.low_attack, ids = { 0x247, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x240, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(2段目)", type = act_types.attack, ids = { 0x243, }, },
-			{ disp_name = "パワーチャージ", name = "CA パワーチャージ", type = act_types.attack, ids = { 0x24D, }, },
-			{ disp_name = "CA 対スゥエーライン攻撃", name = "CA 立D(2段目)", type = act_types.attack, ids = { 0x24A, }, },
-			{ disp_name = "CA 対スゥエーライン攻撃", name = "CA 下D(2段目)", type = act_types.low_attack, ids = { 0x24B, }, },
-			{ disp_name = "パワーダンク", name = "CA パワーダンク", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, }, },
-			{ disp_name = "CA 立C", name = "CA 近立C(2段目)", type = act_types.attack, ids = { 0x248, }, },
-			{ disp_name = "CA 立C", name = "CA 近立C(3段目)", type = act_types.attack, ids = { 0x249, }, },
-		},
-		-- アンディ・ボガード
-		{
-			{ disp_name = "フェイント", name = "フェイント 残影拳", type = act_types.any, ids = { 0x112, }, },
-			{ disp_name = "フェイント", name = "フェイント 飛翔拳", type = act_types.any, ids = { 0x113, }, },
-			{ disp_name = "フェイント", name = "フェイント 超裂破弾", type = act_types.any, ids = { 0x114, }, },
-			{ name = "内股", type = act_types.attack, ids = { 0x6D, 0x6E, }, },
-			{ name = "上げ面", type = act_types.attack, ids = { 0x69, }, },
-			{ name = "浴びせ蹴り", type = act_types.attack, ids = { 0x68, }, },
-			{ name = "小残影拳", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, 0x8A, }, },
-			{ name = "大残影拳/疾風裏拳", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, 0x94, 0x95, }, },
-			{ name = "飛翔拳", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
-			{ name = "激飛翔拳", type = act_types.attack, ids = { 0xA7, 0xA4, 0xA5, 0xA6, }, },
-			{ name = "昇龍弾", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
-			{ name = "空破弾", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, }, },
-			{ name = "幻影不知火", type = act_types.attack, ids = { 0xC8, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, }, },
-			{ name = "超裂破弾", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, }, },
-			{ name = "男打弾", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10E, 0x10F, 0x10B, 0x10C, 0x10D, }, },
-			{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x240, }, },
-			{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x241, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x242, }, },
-			{ disp_name = "CA _6C", name = "CA 6C(3段目)", type = act_types.attack, ids = { 0x243, }, },
-			{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x245, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(3段目)", type = act_types.low_attack, ids = { 0x246, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x244, }, },
-			{ disp_name = "浴びせ蹴り 追撃", name = "CA 浴びせ蹴り追撃", type = act_types.attack, ids = { 0xF4, 0xF5, 0xF6, }, },
-			{ disp_name = "上げ面追加 B", name = "CA 上げ面追加B(2段目)", type = act_types.attack, ids = { 0x24A, 0x24B, 0x24C, }, },
-			{ disp_name = "上げ面追加 C", name = "CA 上げ面追加C(3段目)", type = act_types.overhead, ids = { 0x24D, 0x24E, }, },
-			{ disp_name = "上げ面追加 立C", name = "CA 上げ面追加近C(2段目)", type = act_types.attack, ids = { 0x247, }, },
-			{ disp_name = "上げ面追加 立C", name = "CA 上げ面追加近C(3段目)", type = act_types.attack, ids = { 0x248, }, },
-			{ disp_name = "上げ面追加 下C", name = "CA 上げ面追加下C(2段目)", type = act_types.attack, ids = { 0x246, }, },
-		},
-		-- 東丈
-		{
-			{ disp_name = "フェイント", name = "フェイント スラッシュキック", type = act_types.any, ids = { 0x113, }, },
-			{ disp_name = "フェイント", name = "フェイント ハリケーンアッパー", type = act_types.any, ids = { 0x112, }, },
-			{ name = "ジョースペシャル", type = act_types.any, ids = { 0x6D, 0x6E, 0x6F, 0x70, 0x71, }, },
-			{ name = "夏のおもひで", type = act_types.any, ids = { 0x24E, 0x24F, }, },
-			{ name = "膝地獄", type = act_types.any, ids = { 0x81, 0x82, 0x83, 0x84, }, },
-			{ name = "スライディング", type = act_types.low_attack, ids = { 0x68, 0xF4, 0xF5, }, },
-			{ name = "ハイキック", type = act_types.attack, ids = { 0x69, }, },
-			{ name = "炎の指先", type = act_types.attack, ids = { 0x6A, }, },
-			{ disp_name = "スラッシュキック", name = "小スラッシュキック", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
-			{ disp_name = "スラッシュキック", name = "大スラッシュキック", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, 0x94, }, },
-			{ name = "黄金のカカト", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
-			{ name = "タイガーキック", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
-			{ name = "爆裂拳", type = act_types.attack, ids = { 0xAE, 0xB0, 0xB1, 0xB2, 0xAF, }, },
-			{ name = "爆裂フック", type = act_types.attack, ids = { 0xB3, 0xB4, 0xB5, }, },
-			{ name = "爆裂アッパー", type = act_types.attack, ids = { 0xF8, 0xF9, 0xFA, 0xFB, }, },
-			{ name = "ハリケーンアッパー", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, }, },
-			{ name = "爆裂ハリケーン", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, }, },
-			{ name = "スクリューアッパー", type = act_types.attack, ids = { 0xFE, 0xFF, }, },
-			{ disp_name = "サンダーファイヤー", name = "サンダーファイヤー(C)", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, 0x110, 0x111, }, },
-			{ disp_name = "サンダーファイヤー", name = "サンダーファイヤー(D)", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, }, },
-			{ disp_name = "CA 立A", name = "CA 立A(2段目)", type = act_types.attack, ids = { 0x24B, }, },
-			{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x42, }, },
-			{ disp_name = "CA 立B", name = "CA 遠立B(2段目)", type = act_types.attack, ids = { 0x244, }, },
-			{ disp_name = "CA 立C", name = "CA 遠立C(3段目)", type = act_types.attack, ids = { 0x255, }, },
-			{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x48, }, },
-			{ disp_name = "CA 立A", name = "CA 立A(3段目)", type = act_types.attack, ids = { 0x24C, }, },
-			{ disp_name = "CA 立B", name = "CA 立B(3段目)", type = act_types.attack, ids = { 0x45, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x25, }, },
-			{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x246, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x240, }, },
-			{ disp_name = "CA _8C", name = "CA 8C(3段目)", type = act_types.overhead, ids = { 0x251, 0x252, 0x253, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x46, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x24B, }, },
-			{ disp_name = "CA _2_3_6+C", name = "CA 236C(3段目)", type = act_types.attack, ids = { 0x24A, }, },
-		},
-		-- 不知火舞
-		{
-			{ disp_name = "フェイント", name = "フェイント 花蝶扇", type = act_types.attack, ids = { 0x112, }, },
-			{ disp_name = "フェイント", name = "フェイント 花嵐", type = act_types.attack, ids = { 0x113, }, },
-			{ name = "風車崩し・改", type = act_types.attack, ids = { 0x6D, 0x6E, }, },
-			{ name = "夢桜・改", type = act_types.attack, ids = { 0x72, 0x73, }, },
-			{ name = "跳ね蹴り", type = act_types.attack, ids = { 0x68, }, },
-			{ name = "三角跳び", type = act_types.attack, ids = { 0x69, }, },
-			{ name = "龍の舞", type = act_types.attack, ids = { 0x6A, }, },
-			{ name = "花蝶扇", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
-			{ name = "龍炎舞", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-			{ name = "小夜千鳥", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
-			{ name = "必殺忍蜂", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
-			{ name = "ムササビの舞", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, }, },
-			{ name = "超必殺忍蜂", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, 0x103, }, },
-			{ name = "花嵐", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, }, },
-			{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x42, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x43, }, },
-			{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x242, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(2段目)下Aルート", type = act_types.attack, ids = { 0x243, }, },
-			{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x244, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x246, }, },
-			{ disp_name = "龍の舞追撃 立D", name = "龍の舞追撃立D", type = act_types.attack, ids = { 0x249, }, },
-			{ disp_name = "龍の舞追撃 下D", name = "龍の舞追撃下D", type = act_types.attack, ids = { 0x66, }, },
-			{ disp_name = "CA C", name = "CA C(4段目)", type = act_types.attack, ids = { 0x24A, 0x24B, 0x24C, }, },
-			{ disp_name = "CA B", name = "CA B(5段目)", type = act_types.overhead, ids = { 0x24D, 0x24E, }, },
-			{ disp_name = "CA C", name = "CA C(5段目)", type = act_types.overhead, ids = { 0x24F, 0x250, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(2段目)下Bルート", type = act_types.attack, ids = { 0x247, }, },
-		},
-		-- ギース・ハワード
-		{
-			{ disp_name = "フェイント", name = "フェイント 烈風拳", type = act_types.any, ids = { 0x112, }, },
-			{ disp_name = "フェイント", name = "フェイント レイジングストーム", type = act_types.any, ids = { 0x113, }, },
-			{ name = "虎殺投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
-			{ name = "絶命人中打ち", type = act_types.any, ids = { 0x7C, 0x7D, 0x7E, 0x7F, }, },
-			{ name = "虎殺掌", type = act_types.any, ids = { 0x81, 0x82, 0x83, 0x84, }, },
-			{ name = "昇天明星打ち", type = act_types.attack, ids = { 0x69, }, },
-			{ name = "飛燕失脚", type = act_types.overhead, ids = { 0x68, 0x6B, 0x6C, }, },
-			{ name = "雷光回し蹴り", type = act_types.attack, ids = { 0x6A, }, },
-			{ name = "烈風拳", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
-			{ name = "ダブル烈風拳", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-			{ name = "下段当て身打ち", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
-			{ name = "裏雲隠し", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
-			{ name = "上段当て身投げ", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
-			{ name = "雷鳴豪波投げ", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, }, },
-			{ name = "真空投げ", type = act_types.attack, ids = { 0xC2, 0xC3, }, },
-			{ name = "レイジングストーム", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, },
-			{ name = "羅生門", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, }, },
-			{ name = "デッドリーレイブ", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, }, },
-			{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x241, }, },
-			{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x242, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x245, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(3段目)", type = act_types.low_attack, ids = { 0x247, }, },
-			{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x246, }, },
-			{ disp_name = "CA 立C", name = "CA 近C(2段目)", type = act_types.attack, ids = { 0x244, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(2段目)昇天明星打ちルート", type = act_types.low_attack, ids = { 0x247, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)昇天明星打ちルート", type = act_types.attack, ids = { 0x249, }, },
-			{ disp_name = "CA _8C", name = "CA 8C(3段目)昇天明星打ちルート", type = act_types.attack, ids = { 0x24E, 0x24F, 0x250, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)近立Bルート", type = act_types.attack, ids = { 0x24D, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)下Aルート", type = act_types.attack, ids = { 0x240, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(2段目)下Aルート", type = act_types.attack, ids = { 0x24B, }, },
-			{ disp_name = "CA 対スゥエーライン攻撃", name = "CA 立D(2段目)", type = act_types.attack, ids = { 0x248, }, },
-			{ disp_name = "CA 対スゥエーライン攻撃", name = "CA 下D(2段目)", type = act_types.low_attack, ids = { 0x24A, }, },
-			{ disp_name = "スゥエーC", name = "近スゥエーC", type = act_types.low_attack, ids = { 0x62, 0x63, 0x64, }, },
-			{ disp_name = "スゥエーC", name = "スゥエーC", type = act_types.low_attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		},
-		-- 望月双角,
-		{
-			{ disp_name = "フェイント", name = "フェイント まきびし", type = act_types.any, ids = { 0x112, }, },
-			{ disp_name = "フェイント", name = "フェイント いかづち", type = act_types.any, ids = { 0x113, }, },
-			{ name = "無道縛り投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
-			{ name = "地獄門", type = act_types.any, ids = { 0x7C, 0x7D, 0x7E, 0x7F, }, },
-			{ name = "昇天殺", type = act_types.attack, ids = { 0x72, 0x73, }, },
-			{ name = "雷撃棍", type = act_types.attack, ids = { 0x69, 0x6A, 0x6B, }, },
-			{ name = "錫杖上段打ち", type = act_types.attack, ids = { 0x68, }, },
-			{ name = "野猿狩り", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
-			{ name = "まきびし", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-			{ name = "憑依弾", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
-			{ name = "鬼門陣", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
-			{ name = "邪棍舞", type = act_types.low_attack, ids = { 0xAE, 0xAF, 0xB0, }, },
-			{ name = "喝", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, }, },
-			{ name = "渦炎陣", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, }, },
-			{ name = "いかづち", type = act_types.attack, ids = { 0xFE, 0xFF, 0x103, 0x100, 0x101, }, },
-			{ name = "無惨弾", type = act_types.overhead, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x241, }, },
-			{ disp_name = "CA 立C", name = "CA 近立C(2段目)", type = act_types.attack, ids = { 0x240, }, },
-			{ disp_name = "CA _6C", name = "CA 6C(2段目)", type = act_types.attack, ids = { 0x243, }, },
-			{ disp_name = "CA _2_2C", name = "CA 雷撃棍(3段目)", type = act_types.attack, ids = { 0x24B, }, },
-			{ disp_name = "CA 6B", name = "CA 6B(2段目)", type = act_types.attack, ids = { 0x247, }, },
-			{ disp_name = "CA _6_2_3+A", name = "CA 623A(3段目)", type = act_types.attack, ids = { 0x242, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(2段目)立Aルート", type = act_types.low_attack, ids = { 0x244, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(2段目)下Aルート", type = act_types.low_attack, ids = { 0x24D, }, },
-			{ disp_name = "CA 立C", name = "CA C(2段目)喝ルート", type = act_types.attack, ids = { 0xBC, }, },
-		},
-		-- ボブ・ウィルソン
-		{
-			{ disp_name = "フェイント", name = "フェイント ダンシングバイソン", type = act_types.any, ids = { 0x112, }, },
-			{ name = "ファルコン", type = act_types.any, ids = { 0x6D, 0x6E, }, },
-			{ name = "ホーネットアタック", type = act_types.any, ids = { 0x7C, 0x7D, 0x7E, }, },
-			{ name = "イーグルキャッチ", type = act_types.any, ids = { 0x72, 0x73, 0x74, }, },
-			{ name = "フライングフィッシュ", type = act_types.attack, ids = { 0x68, 0x77, 0x78, }, },
-			{ name = "イーグルステップ", type = act_types.attack, ids = { 0x69, }, },
-			{ name = "レッグプレス", type = act_types.attack, ids = { 0x6A, 0x7A, 0x7B, }, },
-			{ name = "エレファントタスク", type = act_types.attack, ids = { 0x6B, }, },
-			{ name = "H・ヘッジホック", type = act_types.attack, ids = { 0x6C, }, },
-			{ name = "ローリングタートル", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
-			{ name = "サイドワインダー", type = act_types.low_attack, ids = { 0x90, 0x91, 0x92, 0x93, }, },
-			{ name = "モンキーダンス", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
-			{ name = "ワイルドウルフ", type = act_types.overhead, ids = { 0xA4, 0xA5, 0xA6, }, },
-			{ name = "バイソンホーン", type = act_types.low_attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
-			{ name = "フロッグハンティング", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBD, 0xBE, 0xBA, 0xBB, 0xBC, }, },
-			{ name = "デンジャラスウルフ", type = act_types.overhead, ids = { 0xFF, 0x100, 0x101, 0x102, 0x103, 0x104, }, },
-			{ name = "ダンシングバイソン", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, }, },
-			{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x243, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x240, }, },
-			{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x242, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x245, }, },
-			{ disp_name = "CA _6C", name = "CA 6C(3段目)", type = act_types.attack, ids = { 0x247, }, },
-			{ disp_name = "CA _8C", name = "CA 8C(3段目)", type = act_types.overhead, ids = { 0x24A, 0x24B, 0x24C, }, },
-		},
-		-- ホンフゥ
-		{
-			{ disp_name = "フェイント", name = "フェイント 制空烈火棍", type = act_types.any, ids = { 0x112, }, },
-			{ name = "バックフリップ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
-			{ name = "経絡乱打", type = act_types.any, ids = { 0x81, 0x82, 0x83, 0x84, }, },
-			{ name = "ハエタタキ", type = act_types.attack, ids = { 0x69, }, },
-			{ name = "踏み込み側蹴り", type = act_types.attack, ids = { 0x68, }, },
-			{ name = "トドメヌンチャク", type = act_types.attack, ids = { 0x6A, }, },
-			{ name = "九龍の読み", type = act_types.attack, ids = { 0x86, 0x86, 0x87, 0x88, 0x89, }, },
-			{ name = "黒龍", type = act_types.attack, ids = { 0xD7, 0xD8, 0xD9, 0xDA, }, },
-			{ disp_name = "制空烈火棍", name = "小 制空烈火棍", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, }, },
-			{ disp_name = "制空烈火棍", name = "大 制空烈火棍", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
-			{ name = "電光石火の天", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, }, },
-			{ name = "電光石火の地", type = act_types.low_attack, ids = { 0xA4, 0xA5, 0xA6, }, },
-			{ name = "電光パチキ", type = act_types.attack, ids = { 0xA8, }, },
-			{ name = "炎の種馬", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBC, 0xBD, 0xBE, 0xBF, 0xC0, }, },
-			{ name = "必勝！逆襲拳", type = act_types.any, ids = { 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xD1 }, },
-			{ name = "必勝！逆襲拳-1", names = { "必勝！逆襲拳" }, type = act_types.low_attack, ids = { 0xCA, 0xCC, }, },
-			{ name = "必勝！逆襲拳-2", names = { "必勝！逆襲拳" }, type = act_types.overhead, ids = { 0xCD, 0xCE, }, },
-			{ name = "必勝！逆襲拳-3", names = { "必勝！逆襲拳" }, type = act_types.attack, ids = { 0xCF, 0xD0, }, },
-			{ name = "爆発ゴロー", type = act_types.attack, ids = { 0xFF, 0x101, 0x9C, 0x102, }, },
-			{ name = "よかトンハンマー", type = act_types.overhead, ids = { 0x108, 0x109, 0x10A, 0x10B, }, },
-			{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x245, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x240, }, },
-			{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x242, }, },
-			{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x246, }, },
-			{ disp_name = "CA 立C", name = "CA 近立C(2段目)近立Aルート", type = act_types.attack, ids = { 0x247, }, },
-			{ disp_name = "CA 立C", name = "CA 近立C(3段目)近立Aルート", type = act_types.attack, ids = { 0x248, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)立Aルート", type = act_types.attack, ids = { 0x252, }, },
-			{ disp_name = "CA 立B", name = "CA 立B(2段目) 立Bルート", type = act_types.attack, ids = { 0x24C, 0x24D, 0x24E, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目) 立Bルート", type = act_types.overhead, ids = { 0x24F, 0x250, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)3Aルート", type = act_types.attack, ids = { 0x243, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)3Aルート", type = act_types.attack, ids = { 0x244, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(2段目)3Aルート", type = act_types.low_attack, ids = { 0x24B, }, },
-			{ disp_name = "CA _3C ", name = "CA 3C(2段目)6Bルート", type = act_types.low_attack, ids = { 0x251, }, },
-		},
-		-- ブルー・マリー
-		{
-			{ disp_name = "フェイント", name = "フェイント M.スナッチャー", type = act_types.any, ids = { 0x112, }, },
-			{ name = "ヘッドスロー", type = act_types.any, ids = { 0x6D, 0x6E, }, },
-			{ name = "アキレスホールド", type = act_types.any, ids = { 0x7C, 0x7E, 0x7F, }, },
-			{ name = "ヒールフォール", type = act_types.overhead, ids = { 0x69, }, },
-			{ name = "ダブルローリング", type = act_types.low_attack, ids = { 0x68, 0x6C, }, },
-			{ name = "レッグプレス", type = act_types.attack, ids = { 0x6A, }, },
-			{ name = "M.リアルカウンター", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xAC, }, },
-			{ disp_name = "M.リアルカウンター", name = "M.リアルカウンターA投げ", type = act_types.attack, ids = { 0xAC, 0xA7, 0xA8, 0xA9, 0xAA, 0xAB, }, },
-			{ disp_name = "M.リアルカウンター", name = "M.リアルカウンターB投げ", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, }, },
-			{ disp_name = "M.リアルカウンター", name = "M.リアルカウンターC投げ", type = act_types.attack, ids = { 0xE5, 0xE6, 0xE7, }, },
-			{ name = "ヤングダイブ", type = act_types.overhead, ids = { 0xEA, 0xEB, 0xEC, 0xED, }, },
-			{ name = "リバースキック", type = act_types.overhead, ids = { 0xEE, 0xEF, }, },
+local char_acts_base = {
+	-- テリー・ボガード
+	{
+		{ disp_name = "フェイント", name = "フェイント パワーゲイザー", type = act_types.any, ids = { 0x113, }, },
+		{ disp_name = "フェイント", name = "フェイント バーンナックル", type = act_types.any, ids = { 0x112, }, },
+		{ name = "バスタースルー", type = act_types.any, ids = { 0x6D, 0x6E, }, },
+		{ name = "ワイルドアッパー", type = act_types.attack, ids = { 0x69, }, },
+		{ name = "バックスピンキック", type = act_types.attack, ids = { 0x68, }, },
+		{ name = "チャージキック", type = act_types.overhead, ids = { 0x6A, }, },
+		{ disp_name = "バーンナックル", name = "小バーンナックル", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
+		{ disp_name = "バーンナックル", name = "大バーンナックル", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+		{ name = "パワーウェイブ", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
+		{ name = "ランドウェイブ", type = act_types.low_attack, ids = { 0xA4, 0xA5, 0xA6, }, },
+		{ name = "ファイヤーキック", type = act_types.low_attack, ids = { 0xB8, 0xB9, 0xBC, 0xBA, 0xBB, }, },
+		{ name = "クラックシュート", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, }, },
+		{ name = "ライジングタックル", type = act_types.attack, ids = { 0xCC, 0xCD, 0xCE, 0xCF, 0xD0, }, },
+		{ name = "パッシングスウェー", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, }, },
+		{ name = "パワーゲイザー", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, },
+		{ name = "トリプルゲイザー", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, }, },
+		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x241, }, },
+		{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x242, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x244, }, },
+		{ disp_name = "CA _6C", name = "CA 5C(3段目)", type = act_types.attack, ids = { 0x245, }, },
+		{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x246, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(2段目or3段目)", type = act_types.low_attack, ids = { 0x247, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x240, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(2段目)", type = act_types.attack, ids = { 0x243, }, },
+		{ disp_name = "パワーチャージ", name = "CA パワーチャージ", type = act_types.attack, ids = { 0x24D, }, },
+		{ disp_name = "CA 対スゥエーライン攻撃", name = "CA 立D(2段目)", type = act_types.attack, ids = { 0x24A, }, },
+		{ disp_name = "CA 対スゥエーライン攻撃", name = "CA 下D(2段目)", type = act_types.low_attack, ids = { 0x24B, }, },
+		{ disp_name = "パワーダンク", name = "CA パワーダンク", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, }, },
+		{ disp_name = "CA 立C", name = "CA 近立C(2段目)", type = act_types.attack, ids = { 0x248, }, },
+		{ disp_name = "CA 立C", name = "CA 近立C(3段目)", type = act_types.attack, ids = { 0x249, }, },
+	},
+	-- アンディ・ボガード
+	{
+		{ disp_name = "フェイント", name = "フェイント 残影拳", type = act_types.any, ids = { 0x112, }, },
+		{ disp_name = "フェイント", name = "フェイント 飛翔拳", type = act_types.any, ids = { 0x113, }, },
+		{ disp_name = "フェイント", name = "フェイント 超裂破弾", type = act_types.any, ids = { 0x114, }, },
+		{ name = "内股", type = act_types.attack, ids = { 0x6D, 0x6E, }, },
+		{ name = "上げ面", type = act_types.attack, ids = { 0x69, }, },
+		{ name = "浴びせ蹴り", type = act_types.attack, ids = { 0x68, }, },
+		{ name = "小残影拳", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, 0x8A, }, },
+		{ name = "大残影拳/疾風裏拳", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, 0x94, 0x95, }, },
+		{ name = "飛翔拳", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
+		{ name = "激飛翔拳", type = act_types.attack, ids = { 0xA7, 0xA4, 0xA5, 0xA6, }, },
+		{ name = "昇龍弾", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
+		{ name = "空破弾", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, }, },
+		{ name = "幻影不知火", type = act_types.attack, ids = { 0xC8, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, }, },
+		{ name = "超裂破弾", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, }, },
+		{ name = "男打弾", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10E, 0x10F, 0x10B, 0x10C, 0x10D, }, },
+		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x240, }, },
+		{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x241, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x242, }, },
+		{ disp_name = "CA _6C", name = "CA 6C(3段目)", type = act_types.attack, ids = { 0x243, }, },
+		{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x245, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(3段目)", type = act_types.low_attack, ids = { 0x246, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x244, }, },
+		{ disp_name = "浴びせ蹴り 追撃", name = "CA 浴びせ蹴り追撃", type = act_types.attack, ids = { 0xF4, 0xF5, 0xF6, }, },
+		{ disp_name = "上げ面追加 B", name = "CA 上げ面追加B(2段目)", type = act_types.attack, ids = { 0x24A, 0x24B, 0x24C, }, },
+		{ disp_name = "上げ面追加 C", name = "CA 上げ面追加C(3段目)", type = act_types.overhead, ids = { 0x24D, 0x24E, }, },
+		{ disp_name = "上げ面追加 立C", name = "CA 上げ面追加近C(2段目)", type = act_types.attack, ids = { 0x247, }, },
+		{ disp_name = "上げ面追加 立C", name = "CA 上げ面追加近C(3段目)", type = act_types.attack, ids = { 0x248, }, },
+		{ disp_name = "上げ面追加 下C", name = "CA 上げ面追加下C(2段目)", type = act_types.attack, ids = { 0x246, }, },
+	},
+	-- 東丈
+	{
+		{ disp_name = "フェイント", name = "フェイント スラッシュキック", type = act_types.any, ids = { 0x113, }, },
+		{ disp_name = "フェイント", name = "フェイント ハリケーンアッパー", type = act_types.any, ids = { 0x112, }, },
+		{ name = "ジョースペシャル", type = act_types.any, ids = { 0x6D, 0x6E, 0x6F, 0x70, 0x71, }, },
+		{ name = "夏のおもひで", type = act_types.any, ids = { 0x24E, 0x24F, }, },
+		{ name = "膝地獄", type = act_types.any, ids = { 0x81, 0x82, 0x83, 0x84, }, },
+		{ name = "スライディング", type = act_types.low_attack, ids = { 0x68, 0xF4, 0xF5, }, },
+		{ name = "ハイキック", type = act_types.attack, ids = { 0x69, }, },
+		{ name = "炎の指先", type = act_types.attack, ids = { 0x6A, }, },
+		{ disp_name = "スラッシュキック", name = "小スラッシュキック", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
+		{ disp_name = "スラッシュキック", name = "大スラッシュキック", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, 0x94, }, },
+		{ name = "黄金のカカト", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
+		{ name = "タイガーキック", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
+		{ name = "爆裂拳", type = act_types.attack, ids = { 0xAE, 0xB0, 0xB1, 0xB2, 0xAF, }, },
+		{ name = "爆裂フック", type = act_types.attack, ids = { 0xB3, 0xB4, 0xB5, }, },
+		{ name = "爆裂アッパー", type = act_types.attack, ids = { 0xF8, 0xF9, 0xFA, 0xFB, }, },
+		{ name = "ハリケーンアッパー", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, }, },
+		{ name = "爆裂ハリケーン", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, }, },
+		{ name = "スクリューアッパー", type = act_types.attack, ids = { 0xFE, 0xFF, }, },
+		{ disp_name = "サンダーファイヤー", name = "サンダーファイヤー(C)", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, 0x110, 0x111, }, },
+		{ disp_name = "サンダーファイヤー", name = "サンダーファイヤー(D)", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, }, },
+		{ disp_name = "CA 立A", name = "CA 立A(2段目)", type = act_types.attack, ids = { 0x24B, }, },
+		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x42, }, },
+		{ disp_name = "CA 立B", name = "CA 遠立B(2段目)", type = act_types.attack, ids = { 0x244, }, },
+		{ disp_name = "CA 立C", name = "CA 遠立C(3段目)", type = act_types.attack, ids = { 0x255, }, },
+		{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x48, }, },
+		{ disp_name = "CA 立A", name = "CA 立A(3段目)", type = act_types.attack, ids = { 0x24C, }, },
+		{ disp_name = "CA 立B", name = "CA 立B(3段目)", type = act_types.attack, ids = { 0x45, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x25, }, },
+		{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x246, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x240, }, },
+		{ disp_name = "CA _8C", name = "CA 8C(3段目)", type = act_types.overhead, ids = { 0x251, 0x252, 0x253, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x46, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x24B, }, },
+		{ disp_name = "CA _2_3_6+C", name = "CA 236C(3段目)", type = act_types.attack, ids = { 0x24A, }, },
+	},
+	-- 不知火舞
+	{
+		{ disp_name = "フェイント", name = "フェイント 花蝶扇", type = act_types.attack, ids = { 0x112, }, },
+		{ disp_name = "フェイント", name = "フェイント 花嵐", type = act_types.attack, ids = { 0x113, }, },
+		{ name = "風車崩し・改", type = act_types.attack, ids = { 0x6D, 0x6E, }, },
+		{ name = "夢桜・改", type = act_types.attack, ids = { 0x72, 0x73, }, },
+		{ name = "跳ね蹴り", type = act_types.attack, ids = { 0x68, }, },
+		{ name = "三角跳び", type = act_types.attack, ids = { 0x69, }, },
+		{ name = "龍の舞", type = act_types.attack, ids = { 0x6A, }, },
+		{ name = "花蝶扇", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
+		{ name = "龍炎舞", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+		{ name = "小夜千鳥", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
+		{ name = "必殺忍蜂", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
+		{ name = "ムササビの舞", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, }, },
+		{ name = "超必殺忍蜂", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, 0x103, }, },
+		{ name = "花嵐", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, }, },
+		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x42, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x43, }, },
+		{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x242, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(2段目)下Aルート", type = act_types.attack, ids = { 0x243, }, },
+		{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x244, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x246, }, },
+		{ disp_name = "龍の舞追撃 立D", name = "龍の舞追撃立D", type = act_types.attack, ids = { 0x249, }, },
+		{ disp_name = "龍の舞追撃 下D", name = "龍の舞追撃下D", type = act_types.attack, ids = { 0x66, }, },
+		{ disp_name = "CA C", name = "CA C(4段目)", type = act_types.attack, ids = { 0x24A, 0x24B, 0x24C, }, },
+		{ disp_name = "CA B", name = "CA B(5段目)", type = act_types.overhead, ids = { 0x24D, 0x24E, }, },
+		{ disp_name = "CA C", name = "CA C(5段目)", type = act_types.overhead, ids = { 0x24F, 0x250, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(2段目)下Bルート", type = act_types.attack, ids = { 0x247, }, },
+	},
+	-- ギース・ハワード
+	{
+		{ disp_name = "フェイント", name = "フェイント 烈風拳", type = act_types.any, ids = { 0x112, }, },
+		{ disp_name = "フェイント", name = "フェイント レイジングストーム", type = act_types.any, ids = { 0x113, }, },
+		{ name = "虎殺投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
+		{ name = "絶命人中打ち", type = act_types.any, ids = { 0x7C, 0x7D, 0x7E, 0x7F, }, },
+		{ name = "虎殺掌", type = act_types.any, ids = { 0x81, 0x82, 0x83, 0x84, }, },
+		{ name = "昇天明星打ち", type = act_types.attack, ids = { 0x69, }, },
+		{ name = "飛燕失脚", type = act_types.overhead, ids = { 0x68, 0x6B, 0x6C, }, },
+		{ name = "雷光回し蹴り", type = act_types.attack, ids = { 0x6A, }, },
+		{ name = "烈風拳", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
+		{ name = "ダブル烈風拳", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+		{ name = "下段当て身打ち", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
+		{ name = "裏雲隠し", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
+		{ name = "上段当て身投げ", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
+		{ name = "雷鳴豪波投げ", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, }, },
+		{ name = "真空投げ", type = act_types.attack, ids = { 0xC2, 0xC3, }, },
+		{ name = "レイジングストーム", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, },
+		{ name = "羅生門", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, }, },
+		{ name = "デッドリーレイブ", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, }, },
+		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x241, }, },
+		{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x242, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x245, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(3段目)", type = act_types.low_attack, ids = { 0x247, }, },
+		{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x246, }, },
+		{ disp_name = "CA 立C", name = "CA 近C(2段目)", type = act_types.attack, ids = { 0x244, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(2段目)昇天明星打ちルート", type = act_types.low_attack, ids = { 0x247, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)昇天明星打ちルート", type = act_types.attack, ids = { 0x249, }, },
+		{ disp_name = "CA _8C", name = "CA 8C(3段目)昇天明星打ちルート", type = act_types.attack, ids = { 0x24E, 0x24F, 0x250, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)近立Bルート", type = act_types.attack, ids = { 0x24D, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)下Aルート", type = act_types.attack, ids = { 0x240, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(2段目)下Aルート", type = act_types.attack, ids = { 0x24B, }, },
+		{ disp_name = "CA 対スゥエーライン攻撃", name = "CA 立D(2段目)", type = act_types.attack, ids = { 0x248, }, },
+		{ disp_name = "CA 対スゥエーライン攻撃", name = "CA 下D(2段目)", type = act_types.low_attack, ids = { 0x24A, }, },
+		{ disp_name = "スゥエーC", name = "近スゥエーC", type = act_types.low_attack, ids = { 0x62, 0x63, 0x64, }, },
+		{ disp_name = "スゥエーC", name = "スゥエーC", type = act_types.low_attack, ids = { 0x25A, 0x25B, 0x25C, }, },
+	},
+	-- 望月双角,
+	{
+		{ disp_name = "フェイント", name = "フェイント まきびし", type = act_types.any, ids = { 0x112, }, },
+		{ disp_name = "フェイント", name = "フェイント いかづち", type = act_types.any, ids = { 0x113, }, },
+		{ name = "無道縛り投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
+		{ name = "地獄門", type = act_types.any, ids = { 0x7C, 0x7D, 0x7E, 0x7F, }, },
+		{ name = "昇天殺", type = act_types.attack, ids = { 0x72, 0x73, }, },
+		{ name = "雷撃棍", type = act_types.attack, ids = { 0x69, 0x6A, 0x6B, }, },
+		{ name = "錫杖上段打ち", type = act_types.attack, ids = { 0x68, }, },
+		{ name = "野猿狩り", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
+		{ name = "まきびし", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+		{ name = "憑依弾", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
+		{ name = "鬼門陣", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
+		{ name = "邪棍舞", type = act_types.low_attack, ids = { 0xAE, 0xAF, 0xB0, }, },
+		{ name = "喝", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, }, },
+		{ name = "渦炎陣", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, }, },
+		{ name = "いかづち", type = act_types.attack, ids = { 0xFE, 0xFF, 0x103, 0x100, 0x101, }, },
+		{ name = "無惨弾", type = act_types.overhead, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x241, }, },
+		{ disp_name = "CA 立C", name = "CA 近立C(2段目)", type = act_types.attack, ids = { 0x240, }, },
+		{ disp_name = "CA _6C", name = "CA 6C(2段目)", type = act_types.attack, ids = { 0x243, }, },
+		{ disp_name = "CA _2_2C", name = "CA 雷撃棍(3段目)", type = act_types.attack, ids = { 0x24B, }, },
+		{ disp_name = "CA 6B", name = "CA 6B(2段目)", type = act_types.attack, ids = { 0x247, }, },
+		{ disp_name = "CA _6_2_3+A", name = "CA 623A(3段目)", type = act_types.attack, ids = { 0x242, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(2段目)立Aルート", type = act_types.low_attack, ids = { 0x244, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(2段目)下Aルート", type = act_types.low_attack, ids = { 0x24D, }, },
+		{ disp_name = "CA 立C", name = "CA C(2段目)喝ルート", type = act_types.attack, ids = { 0xBC, }, },
+	},
+	-- ボブ・ウィルソン
+	{
+		{ disp_name = "フェイント", name = "フェイント ダンシングバイソン", type = act_types.any, ids = { 0x112, }, },
+		{ name = "ファルコン", type = act_types.any, ids = { 0x6D, 0x6E, }, },
+		{ name = "ホーネットアタック", type = act_types.any, ids = { 0x7C, 0x7D, 0x7E, }, },
+		{ name = "イーグルキャッチ", type = act_types.any, ids = { 0x72, 0x73, 0x74, }, },
+		{ name = "フライングフィッシュ", type = act_types.attack, ids = { 0x68, 0x77, 0x78, }, },
+		{ name = "イーグルステップ", type = act_types.attack, ids = { 0x69, }, },
+		{ name = "レッグプレス", type = act_types.attack, ids = { 0x6A, 0x7A, 0x7B, }, },
+		{ name = "エレファントタスク", type = act_types.attack, ids = { 0x6B, }, },
+		{ name = "H・ヘッジホック", type = act_types.attack, ids = { 0x6C, }, },
+		{ name = "ローリングタートル", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
+		{ name = "サイドワインダー", type = act_types.low_attack, ids = { 0x90, 0x91, 0x92, 0x93, }, },
+		{ name = "モンキーダンス", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
+		{ name = "ワイルドウルフ", type = act_types.overhead, ids = { 0xA4, 0xA5, 0xA6, }, },
+		{ name = "バイソンホーン", type = act_types.low_attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
+		{ name = "フロッグハンティング", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBD, 0xBE, 0xBA, 0xBB, 0xBC, }, },
+		{ name = "デンジャラスウルフ", type = act_types.overhead, ids = { 0xFF, 0x100, 0x101, 0x102, 0x103, 0x104, }, },
+		{ name = "ダンシングバイソン", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, }, },
+		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x243, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x240, }, },
+		{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x242, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x245, }, },
+		{ disp_name = "CA _6C", name = "CA 6C(3段目)", type = act_types.attack, ids = { 0x247, }, },
+		{ disp_name = "CA _8C", name = "CA 8C(3段目)", type = act_types.overhead, ids = { 0x24A, 0x24B, 0x24C, }, },
+	},
+	-- ホンフゥ
+	{
+		{ disp_name = "フェイント", name = "フェイント 制空烈火棍", type = act_types.any, ids = { 0x112, }, },
+		{ name = "バックフリップ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
+		{ name = "経絡乱打", type = act_types.any, ids = { 0x81, 0x82, 0x83, 0x84, }, },
+		{ name = "ハエタタキ", type = act_types.attack, ids = { 0x69, }, },
+		{ name = "踏み込み側蹴り", type = act_types.attack, ids = { 0x68, }, },
+		{ name = "トドメヌンチャク", type = act_types.attack, ids = { 0x6A, }, },
+		{ name = "九龍の読み", type = act_types.attack, ids = { 0x86, 0x86, 0x87, 0x88, 0x89, }, },
+		{ name = "黒龍", type = act_types.attack, ids = { 0xD7, 0xD8, 0xD9, 0xDA, }, },
+		{ disp_name = "制空烈火棍", name = "小 制空烈火棍", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, }, },
+		{ disp_name = "制空烈火棍", name = "大 制空烈火棍", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
+		{ name = "電光石火の天", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, }, },
+		{ name = "電光石火の地", type = act_types.low_attack, ids = { 0xA4, 0xA5, 0xA6, }, },
+		{ name = "電光パチキ", type = act_types.attack, ids = { 0xA8, }, },
+		{ name = "炎の種馬", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBC, 0xBD, 0xBE, 0xBF, 0xC0, }, },
+		{ name = "必勝！逆襲拳", type = act_types.any, ids = { 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xD1 }, },
+		{ name = "必勝！逆襲拳-1", names = { "必勝！逆襲拳" }, type = act_types.low_attack, ids = { 0xCA, 0xCC, }, },
+		{ name = "必勝！逆襲拳-2", names = { "必勝！逆襲拳" }, type = act_types.overhead, ids = { 0xCD, 0xCE, }, },
+		{ name = "必勝！逆襲拳-3", names = { "必勝！逆襲拳" }, type = act_types.attack, ids = { 0xCF, 0xD0, }, },
+		{ name = "爆発ゴロー", type = act_types.attack, ids = { 0xFF, 0x101, 0x9C, 0x102, }, },
+		{ name = "よかトンハンマー", type = act_types.overhead, ids = { 0x108, 0x109, 0x10A, 0x10B, }, },
+		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x245, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x240, }, },
+		{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x242, }, },
+		{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x246, }, },
+		{ disp_name = "CA 立C", name = "CA 近立C(2段目)近立Aルート", type = act_types.attack, ids = { 0x247, }, },
+		{ disp_name = "CA 立C", name = "CA 近立C(3段目)近立Aルート", type = act_types.attack, ids = { 0x248, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)立Aルート", type = act_types.attack, ids = { 0x252, }, },
+		{ disp_name = "CA 立B", name = "CA 立B(2段目) 立Bルート", type = act_types.attack, ids = { 0x24C, 0x24D, 0x24E, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目) 立Bルート", type = act_types.overhead, ids = { 0x24F, 0x250, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)3Aルート", type = act_types.attack, ids = { 0x243, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)3Aルート", type = act_types.attack, ids = { 0x244, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(2段目)3Aルート", type = act_types.low_attack, ids = { 0x24B, }, },
+		{ disp_name = "CA _3C ", name = "CA 3C(2段目)6Bルート", type = act_types.low_attack, ids = { 0x251, }, },
+	},
+	-- ブルー・マリー
+	{
+		{ disp_name = "フェイント", name = "フェイント M.スナッチャー", type = act_types.any, ids = { 0x112, }, },
+		{ name = "ヘッドスロー", type = act_types.any, ids = { 0x6D, 0x6E, }, },
+		{ name = "アキレスホールド", type = act_types.any, ids = { 0x7C, 0x7E, 0x7F, }, },
+		{ name = "ヒールフォール", type = act_types.overhead, ids = { 0x69, }, },
+		{ name = "ダブルローリング", type = act_types.low_attack, ids = { 0x68, 0x6C, }, },
+		{ name = "レッグプレス", type = act_types.attack, ids = { 0x6A, }, },
+		{ name = "M.リアルカウンター", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xAC, }, },
+		{ disp_name = "M.リアルカウンター", name = "M.リアルカウンターA投げ", type = act_types.attack, ids = { 0xAC, 0xA7, 0xA8, 0xA9, 0xAA, 0xAB, }, },
+		{ disp_name = "M.リアルカウンター", name = "M.リアルカウンターB投げ", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, }, },
+		{ disp_name = "M.リアルカウンター", name = "M.リアルカウンターC投げ", type = act_types.attack, ids = { 0xE5, 0xE6, 0xE7, }, },
+		{ name = "ヤングダイブ", type = act_types.overhead, ids = { 0xEA, 0xEB, 0xEC, 0xED, }, },
+		{ name = "リバースキック", type = act_types.overhead, ids = { 0xEE, 0xEF, }, },
 
-			{ name = "M.スパイダー", type = act_types.attack, ids = { 0x8C, 0x86, }, },
-			{ name = "デンジャラススパイダー", type = act_types.attack, ids = { 0xF0, }, },
-			{ name = "スピンフォール", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, }, },
-			{ name = "ダブルスパイダー", names = { "M.スパイダー", "デンジャラススパイダー", "ダブルスパイダー" }, type = act_types.attack, ids = { 0x87, 0x88, 0x89, 0x8A, 0x8B, }, },
+		{ name = "M.スパイダー", type = act_types.attack, ids = { 0x8C, 0x86, }, },
+		{ name = "デンジャラススパイダー", type = act_types.attack, ids = { 0xF0, }, },
+		{ name = "スピンフォール", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, }, },
+		{ name = "ダブルスパイダー", names = { "M.スパイダー", "デンジャラススパイダー", "ダブルスパイダー" }, type = act_types.attack, ids = { 0x87, 0x88, 0x89, 0x8A, 0x8B, }, },
 
-			{ name = "M.スナッチャー", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-			{ name = "バーチカルアロー", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, }, },
-			{ name = "ダブルスナッチャー", names = { "M.スナッチャー", "ダブルスナッチャー" }, type = act_types.attack, ids = { 0x93, 0x94, 0x95, 0x96, }, },
+		{ name = "M.スナッチャー", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+		{ name = "バーチカルアロー", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, }, },
+		{ name = "ダブルスナッチャー", names = { "M.スナッチャー", "ダブルスナッチャー" }, type = act_types.attack, ids = { 0x93, 0x94, 0x95, 0x96, }, },
 
-			{ name = "M.クラブクラッチ", type = act_types.low_attack, ids = { 0x9A, 0x9B, }, },
-			{ name = "ストレートスライサー", type = act_types.low_attack, ids = { 0xC2, 0xC3, }, },
-			{ name = "ストレートスライサー", names = { "M.クラブクラッチ", "ストレートスライサー" }, type = act_types.low_attack, ids = { 0xC4, 0xC5, }, },
-			{ name = "ダブルクラッチ", names = { "M.クラブクラッチ", "ダブルクラッチ" }, type = act_types.attack, ids = { 0x9D, 0x9E, 0x9F, 0xA0, 0xA1, }, },
+		{ name = "M.クラブクラッチ", type = act_types.low_attack, ids = { 0x9A, 0x9B, }, },
+		{ name = "ストレートスライサー", type = act_types.low_attack, ids = { 0xC2, 0xC3, }, },
+		{ name = "ストレートスライサー", names = { "M.クラブクラッチ", "ストレートスライサー" }, type = act_types.low_attack, ids = { 0xC4, 0xC5, }, },
+		{ name = "ダブルクラッチ", names = { "M.クラブクラッチ", "ダブルクラッチ" }, type = act_types.attack, ids = { 0x9D, 0x9E, 0x9F, 0xA0, 0xA1, }, },
 
-			{ name = "M.ダイナマイトスウィング", type = act_types.attack, ids = { 0xCC, 0xCD, 0xCE, 0xCF, 0xD0, 0xD1, }, },
-			{ name = "M.タイフーン", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, 0x103, 0x104, 0x105, 0x106, 0x107, 0x116, }, },
-			{ name = "M.エスカレーション", type = act_types.attack, ids = { 0x10B, }, },
-			{ name = "M.トリプルエクスタシー", type = act_types.attack, ids = { 0xD6, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xDD, 0xDE, 0xDF, }, },
-			{ name = "立ち", type = act_types.free, ids = { 0x109, 0x10A, 0x108, }, },
-			{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x24C, }, },
-			{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x251, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x246, }, },
-			{ disp_name = "CA _6C", name = "CA 6C(3段目)", type = act_types.attack, ids = { 0x250, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(3段目)", type = act_types.low_attack, ids = { 0x247, }, },
-			{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x242, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)下Aルート", type = act_types.attack, ids = { 0x241, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)立Aルート", type = act_types.attack, ids = { 0x240, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)立Cルート", type = act_types.attack, ids = { 0x243, 0x244, 0x245, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)立Cルート", type = act_types.attack, ids = { 0x252, 0x253, }, },
-			{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x24D, }, },
-			{ disp_name = "CA _6C", name = "CA 6C(2段目)避け攻撃ルート", type = act_types.attack, ids = { 0x249, 0x24A, 0x24B, }, },
-		},
-		-- フランコ・バッシュ
-		{
-			{ disp_name = "フェイント", name = "フェイント ガッツダンク", type = act_types.any, ids = { 0x113, }, },
-			{ disp_name = "フェイント", name = "フェイント ハルマゲドンバスター", type = act_types.any, ids = { 0x112, }, },
-			{ name = "ゴリラッシュ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
-			{ name = "スマッシュ", type = act_types.attack, ids = { 0x68, }, },
-			{ name = "バッシュトルネード", type = act_types.attack, ids = { 0x6A, }, },
-			{ name = "バロムパンチ", type = act_types.attack, ids = { 0x69, }, },
-			{ name = "ダブルコング", type = act_types.overhead, ids = { 0x86, 0x87, 0x88, 0x89, }, },
-			{ name = "ザッパー", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-			{ name = "ウェービングブロー", type = act_types.attack, ids = { 0x9A, 0x9B, }, },
-			{ name = "ガッツダンク", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xAC, }, },
-			{ name = "ゴールデンボンバー", type = act_types.attack, ids = { 0xAD, 0xAE, 0xAF, 0xB0, 0xB1, }, },
-			{ name = "ファイナルオメガショット", type = act_types.overhead, ids = { 0xFE, 0xFF, 0x100, }, },
-			{ name = "メガトンスクリュー", type = act_types.attack, ids = { 0xF4, 0xF5, 0xF6, 0xF7, 0xFC, 0xF8, }, },
-			{ name = "ハルマゲドンバスター", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, }, },
-			{ disp_name = "CA 立A", name = "CA 立A(3段目)", type = act_types.attack, ids = { 0x248, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x247, }, },
-			{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x242, }, },
-			{ disp_name = "CA 立D", name = "CA 立D(2段目)", type = act_types.attack, ids = { 0x240, }, },
-			{ disp_name = "CA 立B", name = "CA 立B(3段目)", type = act_types.low_attack, ids = { 0x246, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(3段目)", type = act_types.low_attack, ids = { 0x249, }, },
-			{ disp_name = "CA _6C", name = "CA 6C(3段目)", type = act_types.attack, ids = { 0x24A, 0x24B, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.overhead, ids = { 0x24C, }, },
-			{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x24D, }, },
-		},
-		-- 山崎竜二
-		{
-			{ disp_name = "フェイント", name = "フェイント 裁きの匕首", type = act_types.any, ids = { 0x112, }, },
-			{ name = "ブン投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
-			{ name = "目ツブシ", type = act_types.attack, ids = { 0x68, 0x6C, }, },
-			{ name = "カチ上げ", type = act_types.attack, ids = { 0x69, }, },
-			{ name = "ブッ刺し", type = act_types.overhead, ids = { 0x6A, }, },
-			{ name = "昇天", type = act_types.attack, ids = { 0x6B, }, },
-			{ name = "蛇使い・上段", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
-			{ name = "蛇だまし・上段", type = act_types.attack, ids = { 0x89, }, },
-			{ name = "蛇使い・中段", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-			{ name = "蛇だまし・中段", type = act_types.attack, ids = { 0x93, }, },
-			{ name = "蛇使い・下段", type = act_types.low_attack, ids = { 0x9A, 0x9B, 0x9C, }, },
-			{ name = "蛇だまし・下段", type = act_types.low_attack, ids = { 0x9D, }, },
-			{ name = "大蛇", type = act_types.low_attack, ids = { 0x94, }, },
-			{ name = "サドマゾ", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, }, },
-			{ name = "裁きの匕首", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, }, },
-			{ name = "ヤキ入れ", type = act_types.overhead, ids = { 0xAE, 0xAF, 0xB0, 0xB4, }, },
-			{ name = "倍返し", type = act_types.attack, ids = { 0xB8, 0xBA, 0xB9, 0xBB, 0xBC, }, },
-			{ name = "爆弾パチキ", type = act_types.attack, ids = { 0xCC, 0xCD, 0xCE, 0xCF, }, },
-			{ name = "トドメ", type = act_types.attack, ids = { 0xD6, 0xDA, 0xD8, 0xDB, 0xD9, 0xD7, }, },
-			{ name = "ギロチン", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, 0x103, }, },
-			{ name = "ドリル", type = act_types.attack, ids = { 0x101, 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, 0x110, 0xE0, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xEF, 0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)3Aルート", type = act_types.attack, ids = { 0x245, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)3Aルート", type = act_types.attack, ids = { 0x247, 0x248, 0x249, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x244, }, },
-			{ disp_name = "CA _3C", name = "CA 3C(2段目)", type = act_types.attack, ids = { 0x242, }, },
-			{ disp_name = "CA _6C", name = "CA 6C(2段目)", type = act_types.attack, ids = { 0x241, }, },
-			{ disp_name = "スゥエーC", name = "近スゥエーC", type = act_types.low_attack, ids = { 0x62, 0x63, 0x64, }, },
-			{ disp_name = "スゥエーC", name = "スゥエーC", type = act_types.low_attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		},
-		-- 秦崇秀
-		{
-			{ disp_name = "フェイント", name = "フェイント 海龍照臨", type = act_types.any, ids = { 0x112, }, },
-			{ name = "発勁龍", type = act_types.any, ids = { 0x6D, 0x6E, }, },
-			{ name = "光輪殺", type = act_types.overhead, ids = { 0x68, }, },
-			{ name = "帝王神足拳", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, 0x8A, }, },
-			{ name = "小 帝王天眼拳", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-			{ name = "大 帝王天眼拳", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
-			{ name = "小 帝王天耳拳", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
-			{ name = "大 帝王天耳拳", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
-			{ name = "帝王神眼拳（その場）", type = act_types.attack, ids = { 0xC2, 0xC3, }, },
-			{ name = "帝王神眼拳（空中）", type = act_types.attack, ids = { 0xCC, 0xCD, 0xCF, }, },
-			{ name = "帝王神眼拳（背後）", type = act_types.attack, ids = { 0xD6, 0xD7, }, },
-			{ name = "帝王空殺神眼拳", type = act_types.attack, ids = { 0xE0, 0xE1, }, },
-			{ name = "竜灯掌", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, }, },
-			{ name = "竜灯掌・幻殺", type = act_types.attack, ids = { 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, }, },
-			{ name = "帝王漏尽拳", type = act_types.attack, ids = { 0xFE, 0xFF, 0x101, 0x100, }, },
-			{ name = "帝王空殺漏尽拳", type = act_types.attack, ids = { 0xEA, 0xEB, 0xEC, 0xEE, 0xEF, 0xED, }, },
-			{ name = "海龍照臨", type = act_types.attack, ids = { 0x108, 0x109, 0x109, 0x10A, 0x10B, }, },
-			{ name = "立ち", type = act_types.free, ids = { 0x6C, }, },
-			{ disp_name = "CA 立A", name = "CA 立A(2段目)", type = act_types.attack, ids = { 0x247, }, },
-			{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x246, }, },
-			{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x24B, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x240, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(3段目)", type = act_types.low_attack, ids = { 0x24C, }, },
-			{ disp_name = "CA _6C", name = "CA 6C(3段目)", type = act_types.attack, ids = { 0x242, }, },
-			{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x241, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(2段目)", type = act_types.low_attack, ids = { 0x248, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)Cルート", type = act_types.attack, ids = { 0x245, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)Cルート", type = act_types.attack, ids = { 0x243, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(4段目)Cルート", type = act_types.attack, ids = { 0x244, }, },
-		},
-		-- 秦崇雷,
-		{
-			{ disp_name = "フェイント", name = "フェイント 帝王宿命拳", type = act_types.any, ids = { 0x112, }, },
-			{ name = "発勁龍", type = act_types.any, ids = { 0x6D, 0x6E, }, },
-			{ name = "龍脚殺", type = act_types.overhead, ids = { 0x68, }, },
-			{ name = "帝王神足拳", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
-			{ name = "大 帝王天眼拳", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
-			{ name = "小 帝王天眼拳", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-			{ name = "小 帝王天耳拳", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
-			{ name = "大 帝王天耳拳", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
-			{ name = "帝王漏尽拳", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBB, 0xBA, 0xBC, }, },
-			{ name = "龍転身（前方）", type = act_types.any, ids = { 0xC2, 0xC3, 0xC4, }, },
-			{ name = "龍転身（後方）", type = act_types.any, ids = { 0xCC, 0xCD, 0xCE, }, },
-			{ name = "帝王宿命拳", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, },
-			{ name = "帝王宿命拳", type = act_types.attack, ids = { 0x101, 0x102, 0x104, 0x105, 0x107, 0x115, 0x116, 0x103, 0x106, }, },
-			{ name = "帝王龍声拳", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, }, },
-			{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x243, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)立Bルート", type = act_types.attack, ids = { 0x242, }, },
-			{ disp_name = "CA _8C", name = "CA 8C(3段目)立Bルート", type = act_types.overhead, ids = { 0x244, 0x245, 0x246, }, },
-			{ disp_name = "CA _3C", name = "CA 3C(3段目)立Bルート", type = act_types.attack, ids = { 0x240, }, },
-		},
-		-- ダック・キング
-		{
-			{ disp_name = "フェイント", name = "フェイント ダックダンス", type = act_types.any, ids = { 0x112, }, },
-			{ name = "ローリングネックスルー", type = act_types.attack, ids = { 0x6D, 0x6E, 0x6F, 0x70, 0x71, }, },
-			{ name = "ニードルロー", type = act_types.low_attack, ids = { 0x68, }, },
-			{ name = "マッドスピンハンマー", type = act_types.overhead, ids = { 0x69, }, },
-			{ name = "ショッキングボール", type = act_types.attack, ids = { 0x6A, 0x6B, 0x6C, }, },
-			{ name = "小ヘッドスピンアタック", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, 0x8A, }, },
-			{ name = "大ヘッドスピンアタック", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, 0x95, 0x96, 0x94, }, },
-			{ name = "ヘッドスピンアタック着地", names = { "小ヘッドスピンアタック", "大ヘッドスピンアタック" }, type = act_types.any, ids = { 0x3D, }, },
-			{ name = "フライングスピンアタック", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9E, }, },
-			{ name = "ダンシングダイブ", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xAA, }, },
-			{ name = "ブレイクストーム", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, 0xB6, 0xB4, 0xB5, 0xB3, 0xB7, }, },
-			{ name = "ダックフェイント・地", type = act_types.any, ids = { 0xC2, 0xC3, 0xC4, }, },
-			{ name = "ダックフェイント・空", type = act_types.any, ids = { 0xB8, 0xB9, 0xBA, }, },
-			{ name = "ダイビングパニッシャー", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, }, },
-			{ name = "ローリングパニッシャー", type = act_types.attack, ids = { 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, }, },
-			{ name = "ダンシングキャリバー", type = act_types.attack, ids = { 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0x115, }, },
-			{ name = "ブレイクハリケーン", type = act_types.attack, ids = { 0xEE, 0xEF, 0xF0, 0xF1, 0xF2, 0xF3, 0x116, 0xF4, }, },
-			{ name = "ブレイクスパイラル", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x102, }, },
-			{ disp_name = "ブレイクスパイラルBR", name = "ブレイクスパイラルBR/クレイジーBR", type = act_types.attack, ids = { 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, }, },
-			{ name = "ダックダンス", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, }, },
-			{ name = "スーパーポンピングマシーン", type = act_types.low_attack, ids = { 0x77, 0x78, 0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7F, 0x82, 0x80, 0x81, }, },
-			{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x24E, }, },
-			{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x24F, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x243, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(3段目)", type = act_types.low_attack, ids = { 0x24D, }, },
-			{ disp_name = "CA _6C", name = "CA 6C(3段目)", type = act_types.attack, ids = { 0x242, }, },
-			{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x244, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(2段目)", type = act_types.attack, ids = { 0x24C, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(2段目)下Cルート", type = act_types.low_attack, ids = { 0x245, }, },
-			{ disp_name = "旧ブレイクストーム", name = "CA ブレイクストーム", type = act_types.attack, ids = { 0x247, 0x248, 0x249, 0x24A, }, },
-			{ name = "立B", type = act_types.overhead, ids = { 0x45, 0x72, 0x73, 0x74, }, },
-		},
-		-- キム・カッファン
-		{
-			{ disp_name = "フェイント", name = "フェイント 鳳凰脚", type = act_types.any, ids = { 0x112, }, },
-			{ name = "体落とし", type = act_types.any, ids = { 0x6D, 0x6E, }, },
-			{ name = "ネリチャギ", type = act_types.overhead, ids = { 0x68, 0x69, 0x6A, }, },
-			{ name = "飛燕斬", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
-			{ name = "小 半月斬", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-			{ name = "大 半月斬", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
-			{ name = "飛翔脚", type = act_types.low_attack, ids = { 0xA4, 0xA6, 0xA5, 0xA7, }, },
-			{ name = "戒脚", type = act_types.attack, ids = {  0xA8, 0xA9, }, },
-			{ name = "空砂塵", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
-			{ name = "天昇斬", type = act_types.attack, ids = { 0xB2, 0xB3, }, },
-			{ names = { "空砂塵", "天昇斬" }, type = act_types.attack, ids = { 0xB4, }, },
-			{ name = "覇気脚", type = act_types.low_attack, ids = { 0xB8, }, },
-			{ name = "鳳凰天舞脚", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, 0x103, 0x104, 0x105, 0x106, 0x107, }, },
-			{ name = "鳳凰脚", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, 0x110, 0x115, }, },
-			{ name = "CA ネリチャギ", type = act_types.overhead, ids = { 0x24B, 0x24A, 0x24C, }, },
-			{ disp_name = "CA 立A", name = "CA 立A(2段目)立Cルート", type = act_types.attack, ids = { 0x241, }, },
-			{ disp_name = "CA 立B", name = "CA 立B(3段目)立Cルート", type = act_types.attack, ids = { 0x244, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(4段目)立Cルート", type = act_types.attack, ids = { 0x246, 0x247, 0x248, }, },
-			{ disp_name = "CA 立A", name = "CA 立A(2段目)", type = act_types.attack, ids = { 0x240, }, },
-			{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x243, }, },
-			{ disp_name = "CA 立B", name = "CA 立B(3段目)", type = act_types.attack, ids = { 0x249, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x242, }, },
-			{ name = "下A", type = act_types.low_attack, ids = { 0x47, }, },
-		},
-		-- ビリー・カーン
-		{
-			{ disp_name = "フェイント", name = "フェイント 強襲飛翔棍", type = act_types.any, ids = { 0x112, }, },
-			{ name = "一本釣り投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
-			{ name = "地獄落とし", type = act_types.any, ids = { 0x81, 0x82, 0x83, 0x84, }, },
-			{ name = "三節棍中段打ち", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, 0x93, }, },
-			{ name = "火炎三節棍中段打ち", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-			{ names = { "三節棍中段打ち", "火炎三節棍中段打ち" }, type = act_types.attack, ids = { 0x93, }, },
-			{ name = "燕落とし", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
-			{ name = "火龍追撃棍", type = act_types.attack, ids = { 0xB8, 0xB9, }, },
-			{ name = "旋風棍", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, }, },
-			{ name = "強襲飛翔棍", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
-			{ name = "超火炎旋風棍", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, },
-			{ name = "紅蓮殺棍", type = act_types.attack, ids = { 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, }, },
-			{ name = "サラマンダーストリーム", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.low_attack, ids = { 0x241, }, },
-			{ disp_name = "CA _6C", name = "CA 6C(2段目)", type = act_types.attack, ids = { 0x248, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(2段目)", type = act_types.attack, ids = { 0x243, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)下Cルート", type = act_types.attack, ids = { 0x245, }, },
-			{ disp_name = "集点連破棍", name = "CA 236C(2段目)下Cルート", type = act_types.attack, ids = { 0x246, }, },
-		},
-		-- チン・シンザン
-		{
-			{ disp_name = "フェイント", name = "フェイント 破岩撃", type = act_types.any, ids = { 0x112, }, },
-			{ disp_name = "フェイント", name = "フェイント クッサメ砲", type = act_types.any, ids = { 0x113, }, },
-			{ name = "合気投げ", type = act_types.attack, ids = { 0x6D, 0x6E, }, },
-			{ name = "頭突殺", type = act_types.attack, ids = { 0x81, 0x83, 0x84, }, },
-			{ name = "発勁裏拳", type = act_types.attack, ids = { 0x68, }, },
-			{ name = "落撃双拳", type = act_types.overhead, ids = { 0x69, }, },
-			{ name = "気雷砲（前方）", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
-			{ name = "気雷砲（対空）", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-			{ name = "小 破岩撃", type = act_types.low_attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, }, },
-			{ name = "大 破岩撃", type = act_types.low_attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, }, },
-			{ name = "超太鼓腹打ち", type = act_types.attack, ids = { 0x9A, 0x9B, }, },
-			{ name = "満腹滞空", type = act_types.attack, ids = { 0x9F, 0xA0, }, },
-			{ names = { "超太鼓腹打ち", "滞空滞空" }, type = act_types.attack, ids = { 0x9D, 0x9E, 0x9C, }, },
-			{ name = "軟体オヤジ", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, }, },
-			{ name = "クッサメ砲", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, }, },
-			{ name = "爆雷砲", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, },
-			{ name = "ホエホエ弾", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x114, 0x115, 0x116, 0x10E, 0x110, 0x10F, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)近立Aルート", type = act_types.low_attack, ids = { 0x24A, }, },
-			{ disp_name = "CA _3C", name = "CA 3C(2段目)近立Aルート", type = act_types.attack, ids = { 0x242, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)立Aルート", type = act_types.attack, ids = { 0x240, }, },
-			{ disp_name = "CA _3C", name = "CA 3C(2段目)立Aルート", type = act_types.attack, ids = { 0x249, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)立Cルート", type = act_types.attack, ids = { 0x241, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(2段目)ライン攻撃ルート", type = act_types.attack, ids = { 0x246, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)ライン攻撃ルート", type = act_types.attack, ids = { 0x24B, 0x24C, 0x24D, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)ライン攻撃ルート", type = act_types.low_attack, ids = { 0x247, }, },
-			{ disp_name = "CA _6_6+B", name = "CA 66B(3段目)ライン攻撃ルート", type = act_types.any, ids = { 0x248, }, },
-			{ disp_name = "CA D", name = "CA D(2段目)", type = act_types.overhead, ids = { 0x243, }, },
-			{ disp_name = "CA _3C", name = "CA 3C(2段目)6Aルート", type = act_types.any, ids = { 0x244, }, },
-			{ disp_name = "CA _1C", name = "CA 1C(2段目)6Aルート", type = act_types.any, ids = { 0x245, }, },
-		},
-		-- タン・フー・ルー,
-		{
-			{ disp_name = "フェイント", name = "フェイント 旋風剛拳", type = act_types.any, ids = { 0x112, }, },
-			{ name = "裂千掌", type = act_types.any, ids = { 0x6D, 0x6E, }, },
-			{ name = "右降龍", type = act_types.attack, ids = { 0x68, }, },
-			{ name = "衝波", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
-			{ name = "小 箭疾歩", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-			{ name = "大 箭疾歩", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
-			{ name = "裂千脚", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, }, },
-			{ name = "撃放", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, }, },
-			{ name = "旋風剛拳", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, }, },
-			{ name = "大撃放", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)避け攻撃ルート", type = act_types.overhead, ids = { 0x247, 0x248, 0x249, }, },
-			{ name = "挑発", type = act_types.provoke, ids = { 0x24A, 0x24B, }, },
-		},
-		-- ローレンス・ブラッド
-		{
-			{ name = "マタドールバスター", type = act_types.any, ids = { 0x6D, 0x6E, 0x6F, }, },
-			{ name = "トルネードキック", type = act_types.attack, ids = { 0x68, }, },
-			{ name = "オーレィ", type = act_types.any, ids = { 0x69, }, },
-			{ name = "小ブラッディスピン", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
-			{ name = "大ブラッディスピン", type = act_types.attack, ids = { 0x90, 0x91, 0x93, 0x94, 0x92, }, },
-			{ names = { "小ブラッディスピン", "大ブラッディスピン" }, type = act_types.attack, ids = { 0x3D, }, },
-			{ name = "ブラッディサーベル", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
-			{ name = "ブラッディカッター", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, }, },
-			{ name = "ブラッディミキサー", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, }, },
-			{ name = "ブラッディフラッシュ", type = act_types.attack, ids = { 0xFF, 0x100, 0x101, 0x102, }, },
-			{ name = "ブラッディシャドー", type = act_types.attack, ids = { 0x108, 0x109, 0x10E, 0x10D, 0x10B, 0x10C, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x245, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x246, }, },
-			{ disp_name = "CA 立D", name = "CA 立D(2段目)", type = act_types.attack, ids = { 0x24C, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)オーレィ", type = act_types.attack, ids = { 0x248, }, },
-			{ disp_name = "CA _6_3_2+C", name = "CA 632C(3段目)オーレィ", type = act_types.overhead, ids = { 0x249, 0x24A, 0x24B, }, },
-		},
-		-- ヴォルフガング・クラウザー
-		{
-			{ disp_name = "フェイント", name = "フェイント ブリッツボール", type = act_types.any, ids = { 0x112, }, },
-			{ disp_name = "フェイント", name = "フェイント カイザーウェイブ", type = act_types.any, ids = { 0x113, }, },
-			{ name = "ニースマッシャー", type = act_types.any, ids = { 0x6D, 0x6E, }, },
-			{ name = "デスハンマー", type = act_types.overhead, ids = { 0x68, }, },
-			{ name = "カイザーボディプレス", type = act_types.attack, ids = { 0x69, 0x72, }, },
-			{ name = "ダイビングエルボー", type = act_types.attack, ids = { 0x6A, 0x73, 0x74, 0x75, }, },
-			{ disp_name = "ブリッツボール", name = "ブリッツボール・上段", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
-			{ disp_name = "ブリッツボール", name = "ブリッツボール・下段", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-			{ name = "レッグトマホーク", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
-			{ name = "デンジャラススルー", type = act_types.attack, ids = { 0xAE, 0xAF, }, },
-			{ name = "グリフォンアッパー", type = act_types.attack, ids = { 0x248, }, },
-			{ name = "リフトアップブロー", type = act_types.attack, ids = { 0xC2, 0xC3, }, },
-			{ name = "フェニックススルー", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
-			{ name = "カイザークロー", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, }, },
-			{ name = "カイザーウェイブ", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, }, },
-			{ name = "ギガティックサイクロン", names = { "アンリミテッドデザイア", "ギガティックサイクロン", "ジャンプ" }, type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0xC, 0x10C, 0x10D, 0x10C, 0x10E, }, },
-			{ name = "アンリミテッドデザイア", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)近立Aルート", type = act_types.attack, ids = { 0x240, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)立Aルート", type = act_types.attack, ids = { 0x24E, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)立Bルート", type = act_types.attack, ids = { 0x242, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)下Aルート", type = act_types.attack, ids = { 0x241, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(2段目)", type = act_types.low_attack, ids = { 0x244, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)近立Cルート", type = act_types.attack, ids = { 0x243, }, },
-			{ disp_name = "CA _2_3_6+C", name = "CA 236C(2段目)近立Cルート", type = act_types.attack, ids = { 0x245, }, },
-			{ disp_name = "CA _3C", name = "CA 3C(2段目)近立Cルート", type = act_types.attack, ids = { 0x247, }, },
-		},
-		-- リック・ストラウド
-		{
-			{ disp_name = "フェイント", name = "フェイント シューティングスター", type = act_types.any, ids = { 0x112, }, },
-			{ name = "ガング・ホー", type = act_types.any, ids = { 0x6D, 0x6E, }, },
-			{ name = "チョッピングライト", type = act_types.overhead, ids = { 0x68, 0x69, }, },
-			{ name = "スマッシュソード", type = act_types.attack, ids = { 0x6A, }, },
-			{ name = "パニッシャー", type = act_types.attack, ids = { 0x6B, }, },
-			{ disp_name = "シューティングスター", name = "小 シューティングスター", type = act_types.attack, ids = { 0x86, 0x87, 0x8C, 0x88, 0x89, 0x8A, 0x8B, }, },
-			{ disp_name = "シューティングスター", name = "大 シューティングスター", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, 0x94, }, },
-			{ name = "シューティングスターEX", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0x3D, }, },
-			{ name = "ブレイジングサンバースト", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, }, },
-			{ name = "ヘリオン", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB1, 0xB0, }, },
-			{ name = "フルムーンフィーバー", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, }, },
-			{ name = "ディバインブラスト/フェイクブラスト", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9F, }, },
-			{ name = "ガイアブレス", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, },
-			{ name = "ハウリング・ブル", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, }, },
-			{ disp_name = "CA 立B", name = "CA 立B(2段目)近立Aルート", type = act_types.attack, ids = { 0x240, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)近立A Cルート", type = act_types.attack, ids = { 0x243, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)近立Aルート", type = act_types.attack, ids = { 0x24D, }, },
-			{ disp_name = "CA 立B", name = "CA 立B(2段目)立A Bルート", type = act_types.attack, ids = { 0x241, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)立Aルート", type = act_types.attack, ids = { 0x244, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)立Aルート", type = act_types.attack, ids = { 0x246, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)近立Bルート", type = act_types.attack, ids = { 0x253, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)近立Bルート 遠Bルート", type = act_types.attack, ids = { 0x251, }, },
-			{ disp_name = "CA 3C(", name = "CA 3C(3段目)近立Bルート", type = act_types.attack, ids = { 0x248, }, },
-			{ disp_name = "CA 下B", name = "CA 下B(2段目)近立Bルート 下Aルート", type = act_types.attack, ids = { 0x242, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(3段目)近立Bルート 下Aルート", type = act_types.low_attack, ids = { 0x247, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)下Aルート", type = act_types.attack, ids = { 0x245, }, },
-			{ disp_name = "CA 立B", name = "CA 立B(2段目)下Bルート", type = act_types.attack, ids = { 0x24C, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(2段目)下Bルート", type = act_types.low_attack, ids = { 0x24A, }, },
-			{ disp_name = "CA C", name = "CA C(3段目)遠立Bルート", type = act_types.attack, ids = { 0x24E, 0x24F, 0x250, }, },
-			{ disp_name = "CA _2_2+C", name = "CA 22C(3段目)遠立Bルート", type = act_types.overhead, ids = { 0xE6, 0xE7, }, },
-			{ disp_name = "CA _3_3+B", name = "CA 33B(2段目)", type = act_types.overhead, ids = { 0xE0, 0xE1, }, },
-			{ disp_name = "CA _4C", name = "CA 4C(2段目)", type = act_types.attack, ids = { 0x249, }, },
-		},
-		-- 李香緋
-		{
-			{ disp_name = "フェイント", name = "フェイント 天崩山", type = act_types.any, ids = { 0x113, }, },
-			{ disp_name = "フェイント", name = "フェイント 大鉄神", type = act_types.any, ids = { 0x112, }, },
-			{ name = "力千後宴", type = act_types.any, ids = { 0x6D, 0x6E, }, },
-			{ name = "裡門頂肘", type = act_types.attack, ids = { 0x68, 0x69, 0x6A, }, },
-			{ name = "後捜腿", type = act_types.attack, ids = { 0x6B, }, },
-			{ name = "小 那夢波", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
-			{ name = "大 那夢波", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, }, },
-			--[[
-				0x9E, 0x9F, 閃里肘皇移動
-				0xA2, 閃里肘皇スカり
-				0xA1, 0xA7, 閃里肘皇ヒット
-				0xAD, 閃里肘皇・心砕把スカり
-				0xA3, 0xA4, 0xA5, 0xA6, 閃里肘皇・貫空
-				0xA8, 0xA9, 0xAA, 0xAB, 0xAC, 閃里肘皇・心砕把
-			]]
-			{ name = "閃里肘皇", type = act_types.attack, ids = { 0x9E, 0x9F, 0xA2, 0xA1, 0xA7, }, },
-			{ name = "閃里肘皇・貫空", type = act_types.attack, ids = { 0xA3, 0xA4, 0xA5, 0xA6, }, },
-			{ name = "閃里肘皇・心砕把", type = act_types.attack, ids = { 0xAD, 0xA8, 0xA9, 0xAA, 0xAB, 0xAC, }, },
-			{ name = "天崩山", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
-			{ name = "詠酒・対ジャンプ攻撃", type = act_types.attack, ids = { 0xB8, }, },
-			{ name = "詠酒・対立ち攻撃", type = act_types.attack, ids = { 0xAE, }, },
-			{ name = "詠酒・対しゃがみ攻撃", type = act_types.attack, ids = { 0xC2, }, },
-			{ name = "大鉄神", type = act_types.attack, ids = { 0xF4, 0xF5, 0xF6, 0xF7, }, },
-			{ name = "超白龍", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, 0x103, }, },
-			{ name = "真心牙", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, 0x110, }, },
-			{ disp_name = "CA 立A", name = "CA 立A(2段目)", type = act_types.attack, ids = { 0x241, }, },
-			{ disp_name = "CA 立A", name = "CA 立A(3段目)", type = act_types.attack, ids = { 0x242, }, },
-			{ disp_name = "CA 立A", name = "CA 立A(4段目)", type = act_types.attack, ids = { 0x243, }, },
-			{ disp_name = "CA 下A", name = "CA 下A(2段目)", type = act_types.attack, ids = { 0x244, }, },
-			{ disp_name = "CA 下A", name = "CA 下A(3段目)", type = act_types.attack, ids = { 0x245, }, },
-			{ disp_name = "CA 下A", name = "CA 下A(4段目)", type = act_types.attack, ids = { 0x246, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目、4段目)", type = act_types.attack, ids = { 0x24C, }, },
-			{ disp_name = "CA 立B", name = "CA 立B(4段目)", type = act_types.attack, ids = { 0x24D, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x24A, }, },
-			{ disp_name = "CA 立A", name = "CA 立A(3段目)Cのあと", type = act_types.attack, ids = { 0x24B, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(4段目)CAのあと", type = act_types.attack, ids = { 0x24C, }, },
-			{ disp_name = "挑発", name = "アッチョンブリケ", type = act_types.provoke, ids = { 0x283, }, },
-			{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x246, }, },
-			{ disp_name = "CA 下B", name = "CA 下B(2段目)下Bルート", type = act_types.low_attack, ids = { 0x24E, }, },
-			{ disp_name = "CA 立C", name = "CA 立C(3段目)Bルート", type = act_types.overhead, ids = { 0x249, }, },
-			{ disp_name = "CA _3C", name = "CA 3C(3段目)Bルート", type = act_types.provoke, ids = { 0x250, 0x251, 0x252, }, },
-			{ disp_name = "CA 下C", name = "CA 下C(3段目)Bルート", type = act_types.low_attack, ids = { 0x287, }, },
-			{ disp_name = "CA _6_6+A", name = "CA 66A", type = act_types.attack, ids = { 0x24F, }, },
-		},
-		-- アルフレッド
-		{
-			{ disp_name = "フェイント", name = "フェイント クリティカルウィング", type = act_types.any, ids = { 0x112, }, },
-			{ disp_name = "フェイント", name = "フェイント オーグメンターウィング", type = act_types.any, ids = { 0x113, }, },
-			{ name = "バスタソニックウィング", type = act_types.any, ids = { 0x6D, 0x6E, }, },
-			{ name = "フロントステップキック", type = act_types.attack, ids = { 0x68, }, },
-			{ name = "バックステップキック", type = act_types.attack, ids = { 0x78, }, },
-			{ name = "フォッカー", type = act_types.attack, ids = { 0x69, }, },
-			{ disp_name = "クリティカルウィング", name = "小 クリティカルウィング", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
-			{ disp_name = "クリティカルウィング", name = "大 クリティカルウィング", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, }, },
-			{ name = "オーグメンターウィング", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
-			{ name = "ダイバージェンス", type = act_types.attack, ids = { 0xA4, 0xA5, }, },
-			{ name = "メーデーメーデー", type = act_types.attack, ids = { 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7, 0xAE, 0xAF, 0xB0, 0xB1, }, },
-			{ name = "S.TOL", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF, }, },
-			{ name = "ショックストール", type = act_types.attack, ids = { 0x100, 0x101, 0x102, 0x103, 0x104, 0x105, 0xFE, 0xFF, 0x100, 0xF4, 0xF5, 0xF6, 0xF7, }, },
-			{ name = "ウェーブライダー", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, }, },
-		},
-		{
-			-- 共通行動
-			{ name = "立ち", type = act_types.free, ids = { 0x1, 0x0, 0x23, 0x22, }, },
-			{ name = "立ち振り向き", type = act_types.free, ids = { 0x1D, }, },
-			{ name = "しゃがみ振り向き", type = act_types.free, ids = { 0x1E, }, },
-			{ name = "振り向き中", type = act_types.free, ids = { 0x3D, }, },
-			{ name = "しゃがみ振り向き中", type = act_types.free, ids = { 0x3E, }, },
-			{ name = "しゃがみ", type = act_types.free, ids = { 0x4, 0x24, 0x25, }, },
-			{ name = "しゃがみ途中", type = act_types.free, ids = { 0x5, }, },
-			{ name = "立ち途中", type = act_types.free, ids = { 0x6, }, },
-			{ name = "前歩き", type = act_types.free, ids = { 0x2, }, },
-			{ name = "後歩き", type = act_types.free, ids = { 0x3, }, },
-			{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-			{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-			{ name = "しゃがみ歩き", type = act_types.free, ids = { 0x7, }, },
-			{ disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-			{ disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
-			{ name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
-			{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-			{ disp_name = "立ち", name = "スゥエーライン上 立ち", type = act_types.free, ids = { 0x21, 0x40, 0x20, 0x3F, }, },
-			{ disp_name = "前歩き", name = "スゥエーライン上 前歩き", type = act_types.free, ids = { 0x2D, 0x2C, }, },
-			{ disp_name = "後歩き", name = "スゥエーライン上 後歩き", type = act_types.free, ids = { 0x2E, 0x2F, }, },
-			{ disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-			{ disp_name = "バックステップ", name = "スゥエーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-			{ disp_name = "スゥエーA", name = "近スゥエーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-			{ disp_name = "スゥエーB", name = "近スゥエーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
-			{ disp_name = "スゥエーC", name = "近スゥエーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-			{ disp_name = "スゥエーA", name = "スゥエーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-			{ disp_name = "スゥエーB", name = "スゥエーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
-			{ disp_name = "スゥエーC", name = "スゥエーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-			{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, 0xB, }, },
-			{ disp_name = "着地", name = "ジャンプ着地", type = act_types.any, ids = { 0x9, }, },
-			{ name = "ジャンプ", type = act_types.any, ids = { 
-				0xB, 0xC, -- 垂直ジャンプ
-				0xD, 0xE, -- 前ジャンプ
-				0xF, 0x10, -- 後ジャンプ
-				0xB, 0x11, 0x12, -- 垂直小ジャンプ
-				0xD, 0x13, 0x14, -- 前小ジャンプ
-				0xF, 0x15, 0x16, -- 後小ジャンプ
-			}, },
-			{ name = "グランドスゥエー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-			{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-			{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-			{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-			{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
-			{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-			{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
-			{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
-			{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
-			{ disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
-			{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-			{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-			{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-			{ disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-			{ disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-			{ disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
-			{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
-			{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
-			{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
-			{ name = "ジャンプ振り向き", type = act_types.attack, ids = { 0x1F, }, },
-			{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-			{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-			{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-			{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-			{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-			{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-			{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-			{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-			{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-			{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-			{ name = "投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
-			{ name = "ダウン", type = act_types.any, ids = { 0x192, 0x18E, 0x190,  }, },
-			{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
-			{ name = "気絶", type = act_types.any, ids = { 0x194, 0x195, }, },
-			{ name = "ガード", type = act_types.guard, ids = { 0x117, 0x118, 0x119, 0x11A, 0x11B, 0x11C, 0x11D, 0x11E, 0x11F, 0x120, 0x121, 0x122, 0x123, 0x124, 0x125, 0x126, 0x127, 0x128, 0x129, 0x12A, 0x12C, 0x12D, 0x131, 0x132, 0x133, 0x134, 0x135, 0x136, 0x137, 0x139, }, },
-			{ name = "やられ", type = act_types.hit, ids = { 0x13F, 0x140, 0x141, 0x142, 0x143, 0x144, 0x145, 0x146, 0x147, 0x148, 0x149, 0x14A, 0x14B, 0x14C, 0x14C, 0x14D, 0x14E, 0x14F, 0x1E9, 0x239 }, },
-		},
-	}
-	local char_fireball_base = {
-		-- テリー・ボガード
-		{
-			{ name = "パワーウェイブ", type = act_types.attack, ids = { 0x265, 0x266, 0x26A, }, },
-			{ name = "ラウンドウェイブ", type = act_types.low_attack, ids = { 0x260, }, },
-			{ name = "パワーゲイザー", type = act_types.attack, ids = { 0x261, }, },
-			{ name = "トリプルゲイザー", type = act_types.attack, ids = { 0x267, }, },
-		},
-		-- アンディ・ボガード
-		{
-			{ name = "飛翔拳", type = act_types.attack, ids = { 0x262, 0x263, }, },
-			{ name = "激飛翔拳", type = act_types.attack, ids = { 0x266, 0x267, }, },
-		},
-		-- 東丈
-		{
-			{ name = "ハリケーンアッパー", type = act_types.attack, ids = { 0x267, 0x269, }, },
-			{ name = "スクリューアッパー", type = act_types.attack, ids = { 0x269, 0x26A, 0x26B, }, },
-		},
-		-- 不知火舞
-		{
-			{ name = "花蝶扇", type = act_types.attack, ids = { 0x261, 0x262, 0x263, }, },
-			{ name = "龍炎舞", type = act_types.attack, ids = { 0x264, }, },
-		},
-		-- ギース・ハワード
-		{
-			{ name = "烈風拳", type = act_types.attack, ids = { 0x261, 0x260, 0x276, }, },
-			{ name = "ダブル烈風拳", type = act_types.attack, ids = { 0x262, 0x263, 0x264, 0x265, }, },
-			{ name = "レイジングストーム", type = act_types.attack, ids = { 0x269, 0x26B, 0x26A, }, },
-		},
-		-- 望月双角,
-		{
-			{ name = "雷撃棍", type = act_types.attack, ids = { 0x260, }, },
-			{ name = "野猿狩り/掴み", type = act_types.attack, ids = { 0x277, 0x27C, }, },
-			{ name = "まきびし", type = act_types.low_attack, ids = { 0x274, 0x275, }, },
-			{ name = "憑依弾", type = act_types.attack, ids = { 0x263, 0x266, }, },
-			{ name = "邪棍舞", type = act_types.low_attack, ids = { 0xF4, 0xF5, }, },
-			{ name = "突破", type = act_types.attack, ids = { 0xFA, }, },
-			{ name = "降破", type = act_types.overhead, ids = { 0xF9, }, },
-			{ name = "倒破", type = act_types.low_attack, ids = { 0xF7, }, },
-			{ name = "払破", type = act_types.attack, ids = { 0xF8, }, },
-			{ name = "天破", type = act_types.attack, ids = { 0xF6, }, },
-			{ name = "喝", type = act_types.attack, ids = { 0x282, 0x283, }, },
-			{ name = "いかづち", type = act_types.attack, ids = { 0x286, 0x287, }, },
-		},
-		-- ボブ・ウィルソン
-		{
-		},
-		-- ホンフゥ
-		{
-			{ name = "よかトンハンマー", type = act_types.attack, ids = { 0x26B, }, },
-		},
-		-- ブルー・マリー
-		{
-		},
-		-- フランコ・バッシュ
-		{
-			{ name = "ザッパー", type = act_types.attack, ids = { 0x269, }, },
-			{ name = "ファイナルオメガショット", type = act_types.attack, ids = { 0x26C, }, },
-		},
-		-- 山崎竜二
-		{
-			{ name = "目ツブシ", type = act_types.attack, ids = { 0x261, }, },
-			{ name = "倍返し", type = act_types.attack, ids = { 0x262, 0x263, 0x270, 0x26D, }, },
-		},
-		-- 秦崇秀
-		{
-			{ name = "帝王天眼拳", type = act_types.attack, ids = { 0x262, 0x263, 0x265, }, },
-			{ name = "海龍照臨", type = act_types.attack, ids = { 0x273, 0x274, }, },
-			{ name = "帝王漏尽拳", type = act_types.attack, ids = { 0x26C, }, },
-			{ name = "帝王空殺漏尽拳", type = act_types.attack, ids = { 0x26F, }, },
-		},
-		-- 秦崇雷,
-		{
-			{ name = "帝王漏尽拳", type = act_types.attack, ids = { 0x266, }, },
-			{ name = "帝王天眼拳", type = act_types.attack, ids = { 0x26E, }, },
-			{ name = "帝王宿命拳", type = act_types.attack, ids = { 0x268, 0x273, }, },
-			{ name = "帝王龍声拳", type = act_types.attack, ids = { 0x26B, }, },
-		},
-		-- ダック・キング
-		{
-		},
-		-- キム・カッファン
-		{
-		},
-		-- ビリー・カーン
-		{
-			{ name = "三節棍中段打ち", type = act_types.attack, ids = { 0x266, }, },
-			{ name = "火炎三節棍中段打ち", type = act_types.attack, ids = { 0x267, }, },
-			{ name = "旋風棍", type = act_types.attack, ids = { 0x269, }, },
-			{ name = "超火炎旋風棍", type = act_types.attack, ids = { 0x261, 0x263, 0x262, }, },
-			{ name = "サラマンダーストリーム", type = act_types.attack, ids = { 0x27A, 0x278, }, },
-		},
-		-- チン・シンザン
-		{
-			{ name = "気雷砲", type = act_types.attack, ids = { 0x267, 0x268, 0x26E, }, },
-			{ name = "爆雷砲", type = act_types.attack, ids = { 0x287, 0x272, 0x273, }, },
-			{ name = "ホエホエ弾", type = act_types.attack, ids = { 0x280, 0x281, 0x27E, 0x27F, }, },
-			{ name = "クッサメ砲", type = act_types.attack, ids = { 0x282, }, },
-		},
-		-- タン・フー・ルー,
-		{
-			{ name = "衝波", type = act_types.attack, ids = { 0x265, }, },
-		},
-		-- ローレンス・ブラッド
-		{
-			{ name = "ブラッディサーベル", type = act_types.attack, ids = { 0x282, }, },
-			{ name = "ブラッディミキサー", type = act_types.attack, ids = { 0x284, }, },
-		},
-		-- ヴォルフガング・クラウザー
-		{
-			{ name = "小 ブリッツボール", type = act_types.attack, ids = { 0x263, 0x262, }, },
-			{ name = "大 ブリッツボール", type = act_types.attack, ids = { 0x266, }, },
-			{ name = "カイザーウェイブ1", type = act_types.attack, ids = { 0x26E, 0x26F, }, },
-			{ name = "カイザーウェイブ2", type = act_types.attack, ids = { 0x282, 0x270, }, },
-			{ name = "カイザーウェイブ3", type = act_types.attack, ids = { 0x283, 0x271, }, },
-		},
-		-- リック・ストラウド
-		{
-			{ name = "ガイアブレス", type = act_types.attack, ids = { 0x261, }, },
-			{ name = "ハウリング・ブル", type = act_types.attack, ids = { 0x26A, 0x26B, 0x267, }, },
-		},
-		-- 李香緋
-		{
-			{ name = "那夢波", type = act_types.attack, ids = { 0x263, }, },
-			{ name = "那夢波", type = act_types.attack, ids = { 0x268, }, },
-			{ name = "真心牙", type = act_types.attack, ids = { 0x270, }, },
-		},
-		-- アルフレッド
-		{
-			{ name = "ダイバージェンス", type = act_types.attack, ids = { 0x264, }, },
-		},
-	}
-	local char_acts, char_1st_acts = {}, {}
-	for char, acts_base in pairs(char_acts_base) do
-		char_acts[char], char_1st_acts[char] = {}, {}
-		for i, acts in pairs(acts_base) do
-			for i, id in ipairs(acts.ids) do
-				if acts.type == act_types.guard or acts.type == act_types.hit then
-					-- char_1st_actsには登録しない
-				else
-					char_1st_acts[char][id] = i == 1
-				end
-				char_acts[char][id] = acts
-			end
-		end
-	end
-	local char_fireballs = { }
-	for char, fireballs_base in pairs(char_fireball_base) do
-		char_fireballs [char] = {}
-		for _, fireball in pairs(fireballs_base) do
-			local label = fireball.name
-			local type  = fireball.name
-			for _, id in pairs(fireball.ids) do
-				char_fireballs[char][id] = fireball
-			end
-		end
-	end
-	local jump_acts = {
-		[0x9] = true,
-		[0x0B] = true, [0x0C] = true,
-		[0x0D] = true, [0x0E] = true,
-		[0x0F] = true, [0x10] = true,
-		[0x0B] = true, [0x11] = true, [0x12] = true,
-		[0x0D] = true, [0x13] = true, [0x14] = true,
-		[0x0F] = true, [0x15] = true, [0x16] = true,
-	}
-	local wakeup_acts = { [0x193] = true, [0x13B] = true, }
-	local down_acts = { [0x190] = true, [0x192] = true, [0x18E] = true, }
-
-	-- キー入力2
-	local cmd_neutral = function(p, next_joy)
-		next_joy["P" .. p.control .. " Up"] = false
-		next_joy["P" .. p.control .. " Down"] = false
-		next_joy[p.block_side] = false
-		next_joy[p.front_side] = false
-		next_joy["P" .. p.control .. " Button 1"] = false
-		next_joy["P" .. p.control .. " Button 2"] = false
-		next_joy["P" .. p.control .. " Button 3"] = false
-		next_joy["P" .. p.control .. " Button 4"] = false
-	end
-	local cmd_base = {
-		_5 = cmd_neutral,
-		_7 = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy["P" .. p.control .. " Up"] = true
-			next_joy[p.block_side] = true
-		end,
-		_8 = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy["P" .. p.control .. " Up"] = true
-		end,
-		_9 = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy["P" .. p.control .. " Up"] = true
-			next_joy[p.front_side] = true
-		end,
-		_6 = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy[p.front_side] = true
-		end,
-		_3 = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy[p.front_side] = true
-			next_joy["P" .. p.control .. " Down"] = true
-		end,
-		_2 = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy["P" .. p.control .. " Down"] = true
-		end,
-		_1 = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy["P" .. p.control .. " Down"] = true
-			next_joy[p.block_side] = true
-		end,
-		_4 = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy[p.block_side] = true
-		end,
-		_a = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy["P" .. p.control .. " Button 1"] = true
-		end,
-		_b = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy["P" .. p.control .. " Button 2"] = true
-		end,
-		_c = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy["P" .. p.control .. " Button 3"] = true
-		end,
-		_d = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy["P" .. p.control .. " Button 4"] = true
-		end,
-		_ab = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy["P" .. p.control .. " Button 1"] = true
-			next_joy["P" .. p.control .. " Button 2"] = true
-		end,
-		_bc = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy["P" .. p.control .. " Button 2"] = true
-			next_joy["P" .. p.control .. " Button 3"] = true
-		end,
-		_6a = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy[p.front_side] = true
-			next_joy["P" .. p.control .. " Button 1"] = true
-		end,
-		_3a = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy[p.front_side] = true
-			next_joy["P" .. p.control .. " Down"] = true
-			next_joy["P" .. p.control .. " Button 1"] = true
-		end,
-		_2a = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy["P" .. p.control .. " Down"] = true
-			next_joy["P" .. p.control .. " Button 1"] = true
-		end,
-		_4a = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy[p.block_side] = true
-			next_joy["P" .. p.control .. " Button 1"] = true
-		end,
-		_6b = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy[p.front_side] = true
-			next_joy["P" .. p.control .. " Button 2"] = true
-		end,
-		_3b = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy[p.front_side] = true
-			next_joy["P" .. p.control .. " Down"] = true
-			next_joy["P" .. p.control .. " Button 2"] = true
-		end,
-		_2b = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy["P" .. p.control .. " Down"] = true
-			next_joy["P" .. p.control .. " Button 2"] = true
-		end,
-		_4b = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy[p.block_side] = true
-			next_joy["P" .. p.control .. " Button 2"] = true
-		end,
-		_6c = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy[p.front_side] = true
-			next_joy["P" .. p.control .. " Button 3"] = true
-		end,
-		_3c = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy[p.front_side] = true
-			next_joy["P" .. p.control .. " Down"] = true
-			next_joy["P" .. p.control .. " Button 3"] = true
-		end,
-		_2c = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy["P" .. p.control .. " Down"] = true
-			next_joy["P" .. p.control .. " Button 3"] = true
-		end,
-		_4c = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy[p.block_side] = true
-			next_joy["P" .. p.control .. " Button 3"] = true
-		end,
-		_8d = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy["P" .. p.control .. " Up"] = true
-			next_joy["P" .. p.control .. " Button 4"] = true
-		end,
-		_2d = function(p, next_joy)
-			cmd_neutral(p, next_joy)
-			next_joy["P" .. p.control .. " Down"] = true
-			next_joy["P" .. p.control .. " Button 4"] = true
-		end,
-	}
-	local rvs_types = {
-		on_wakeup           = 1, -- ダウン起き上がりリバーサル入力
-		jump_landing        = 2, -- 着地リバーサル入力（やられの着地）
-		knock_back_landing  = 3, -- 着地リバーサル入力（通常ジャンプの着地）
-		knock_back_recovery = 4, -- リバーサルじゃない最速入力
-		in_knock_back       = 5, -- のけぞり中のデータをみてのけぞり修了の_2F前に入力確定する
-		dangerous_through   = 6, -- デンジャラススルー用
-		atemi               = 7, -- 当身うち空振りと裏雲隠し用
-	}
-	-- コマンドテーブル上の技ID
-	local common_rvs = {
-		{ cmd = cmd_base._a      , bs = false, name = "立A", },
-		{ cmd = cmd_base._b      , bs = false, name = "立B", },
-		{ cmd = cmd_base._c      , bs = false, name = "立C", },
-		{ cmd = cmd_base._d      , bs = false, name = "立D", },
-		{ cmd = cmd_base._ab     , bs = false, name = "避け攻撃", },
-		{ cmd = cmd_base._6c     , bs = false, name = "投げ", },
-		{ cmd = cmd_base._2a     , bs = false, name = "下A", },
-		{ cmd = cmd_base._2b     , bs = false, name = "下B", },
-		{ cmd = cmd_base._2c     , bs = false, name = "下C", },
-		{ cmd = cmd_base._8      , bs = false, name = "垂直ジャンプ", },
-		{ cmd = cmd_base._9      , bs = false, name = "前ジャンプ", },
-		{ cmd = cmd_base._7      , bs = false, name = "後ジャンプ", },
-		{ id = 0x1E, ver = 0x0600, bs = false, name = "ダッシュ", },
-		{ id = 0x1F, ver = 0x0600, bs = false, name = "飛び退き", },
-	}
-	local char_rvs_list = {
-		-- テリー・ボガード
-		{
-			{ cmd = cmd_base._3a     , bs = false, name = "ワイルドアッパー", },
-			{ cmd = cmd_base._6b     , bs = false, name = "バックスピンキック", },
-			{ id = 0x01, ver = 0x0600, bs = true , name = "小バーンナックル", },
-			{ id = 0x02, ver = 0x0600, bs = true , name = "大バーンナックル", },
-			{ id = 0x03, ver = 0x0600, bs = true , name = "パワーウェイブ", },
-			{ id = 0x04, ver = 0x0600, bs = true , name = "ランドウェイブ", },
-			{ id = 0x05, ver = 0x0600, bs = true , name = "クラックシュート", },
-			{ id = 0x06, ver = 0x0600, bs = true , name = "ファイヤーキック", },
-			{ id = 0x07, ver = 0x0600, bs = false, name = "パッシングスウェー", },
-			{ id = 0x08, ver = 0x0600, bs = false, name = "ライジングタックル", },
-			{ id = 0x10, ver = 0x0600, bs = true , name = "パワーゲイザー", },
-			{ id = 0x12, ver = 0x0600, bs = false, name = "トリプルゲイザー", },
-			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント バーンナックル", },
-			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント パワーゲイザー", },
-		},
-		-- アンディ・ボガード
-		{
-			{ id = 0x01, ver = 0x0600, bs = false, name = "小残影拳", },
-			{ id = 0x02, ver = 0x06FF, bs = false, name = "大残影拳", },
-			{ id = 0x03, ver = 0x0600, bs = true , name = "飛翔拳", },
-			{ id = 0x04, ver = 0x0600, bs = true , name = "激飛翔拳", },
-			{ id = 0x05, ver = 0x0600, bs = true , name = "昇龍弾", },
-			{ id = 0x06, ver = 0x0600, bs = true , name = "空破弾", },
-			-- { id = 0x07, ver = 0x1200, bs = false, name = "幻影不知火", },
-			{ id = 0x10, ver = 0x0600, bs = false, name = "超裂破弾", },
-			{ id = 0x12, ver = 0x0600, bs = true , name = "男打弾", },
-			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 残影拳", },
-			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント 飛翔拳", },
-			{ id = 0x48, ver = 0x0600, bs = false, name = "フェイント 超裂破弾", },
-		},
-		-- 東丈
-		{
-			{ id = 0x01, ver = 0x0600, bs = false, name = "小スラッシュキック", },
-			{ id = 0x02, ver = 0x0600, bs = false, name = "大スラッシュキック", },
-			{ id = 0x03, ver = 0x0600, bs = true , name = "黄金のカカト", },
-			{ id = 0x04, ver = 0x0600, bs = true , name = "タイガーキック", },
-			{ id = 0x05, ver = 0x0C00, bs = true , name = "爆裂拳", },
-			-- { id = 0x00, ver = 0x0CFF, bs = false, name = "爆裂フック", },
-			-- { id = 0x00, ver = 0x0CFE, bs = false, name = "爆裂アッパー", },
-			{ id = 0x06, ver = 0x0600, bs = true , name = "ハリケーンアッパー", },
-			{ id = 0x07, ver = 0x0600, bs = true , name = "爆裂ハリケーン", },
-			{ id = 0x10, ver = 0x0600, bs = false, name = "スクリューアッパー", },
-			{ id = 0x12, ver = 0x0600, bs = false, name = "サンダーファイヤー(C)", },
-			{ id = 0x13, ver = 0x0600, bs = false, name = "サンダーファイヤー(D)", },
-			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ハリケーンアッパー", },
-			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント スラッシュキック", },
-		},
-		-- 不知火舞
-		{
-			{ id = 0x01, ver = 0x0600, bs = true , name = "花蝶扇", },
-			{ id = 0x02, ver = 0x0600, bs = true , name = "龍炎舞", },
-			{ id = 0x03, ver = 0x0600, bs = true , name = "小夜千鳥", },
-			{ id = 0x04, ver = 0x0600, bs = true , name = "必殺忍蜂", },
-			-- { id = 0x05, ver = 0x0600, bs = false, name = "ムササビの舞", },
-			{ id = 0x10, ver = 0x0600, bs = false, name = "超必殺忍蜂", },
-			{ id = 0x12, ver = 0x0600, bs = false, name = "花嵐", },
-			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 花蝶扇", },
-			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント 花嵐", },
-		},
-		-- ギース・ハワード
-		{
-			{ id = 0x01, ver = 0x0600, bs = true , name = "烈風拳", },
-			{ id = 0x02, ver = 0x06FF, bs = true , name = "ダブル烈風拳", },
-			{ id = 0x03, ver = 0x0600, bs = false, name = "上段当て身投げ", },
-			{ id = 0x04, ver = 0x06FE, bs = false, name = "裏雲隠し", },
-			{ id = 0x05, ver = 0x0600, bs = false, name = "下段当て身打ち", },
-			{ id = 0x06, ver = 0x0600, bs = false, name = "雷鳴豪波投げ", },
-			{ id = 0x07, ver = 0x06FD, bs = false, name = "真空投げ", },
-			{ id = 0x10, ver = 0x0600, bs = false, name = "レイジングストーム", },
-			{ id = 0x12, ver = 0x0600, bs = false, name = "羅生門", },
-			{ id = 0x13, ver = 0x0600, bs = true , name = "デッドリーレイブ", },
-			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 烈風拳", },
-			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント レイジングストーム", },
-		},
-		-- 望月双角
-		{
-			{ id = 0x01, ver = 0x0600, bs = true , name = "野猿狩り", },
-			{ id = 0x02, ver = 0x0600, bs = true , name = "まきびし", },
-			{ id = 0x03, ver = 0x0600, bs = true , name = "憑依弾", },
-			{ id = 0x04, ver = 0x06FE, bs = false, name = "鬼門陣", },
-			{ id = 0x05, ver = 0x0CFF, bs = false, name = "邪棍舞", },
-			{ id = 0x06, ver = 0x0600, bs = true , name = "喝", },
-			{ id = 0x07, ver = 0x0600, bs = false, name = "渦炎陣", },
-			{ id = 0x10, ver = 0x0600, bs = false, name = "いかづち", },
-			{ id = 0x12, ver = 0x0600, bs = false, name = "無惨弾", },
-			{ id = 0x21, ver = 0x0600, bs = false, name = "雷撃棍", },
-			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント まきびし", },
-			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント いかづち", },
-		},
-		-- ボブ・ウィルソン
-		{
-			{ id = 0x01, ver = 0x0600, bs = true , name = "ローリングタートル", },
-			{ id = 0x02, ver = 0x0600, bs = true , name = "サイドワインダー", },
-			{ id = 0x03, ver = 0x0600, bs = false, name = "バイソンホーン", },
-			{ id = 0x04, ver = 0x0602, bs = true , name = "ワイルドウルフ", },
-			{ id = 0x05, ver = 0x0600, bs = true , name = "モンキーダンス", },
-			{ id = 0x06, ver = 0x06FE, bs = false, name = "フロッグハンティング", },
-			-- { id = 0x00, ver = 0x1EFF, bs = false, name = "ホーネットアタック", },
-			{ id = 0x10, ver = 0x0600, bs = false, name = "デンジャラスウルフ", },
-			{ id = 0x12, ver = 0x0600, bs = false, name = "ダンシングバイソン", },
-			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ダンシングバイソン", },
-		},
-		-- ホンフゥ
-		{
-			{ id = 0x01, ver = 0x0600, bs = false, name = "九龍の読み", },
-			{ id = 0x02, ver = 0x0600, bs = true , name = "小 制空烈火棍", },
-			{ id = 0x03, ver = 0x0600, bs = true , name = "大 制空烈火棍", },
-			{ id = 0x04, ver = 0x0600, bs = true , name = "電光石火の地", },
-			--{ id = 0x00, ver = 0x0CFE, bs = false, name = "電光パチキ", },
-			{ id = 0x05, ver = 0x0600, bs = true , name = "電光石火の天", },
-			{ id = 0x06, ver = 0x0600, bs = false, name = "炎の種馬", },
-			{ id = 0x00, ver = 0x0CFF, bs = false, name = "炎の種馬連打", },
-			{ id = 0x07, ver = 0x0600, bs = false, name = "必勝！逆襲拳", },
-			{ id = 0x10, ver = 0x0600, bs = false, name = "爆発ゴロー", },
-			{ id = 0x12, ver = 0x0600, bs = true , name = "よかトンハンマー", },
-			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 制空烈火棍", },
-		},
-		-- ブルー・マリー
-		{
-			{ id = 0x01, ver = 0x06FF, bs = false, name = "M.スパイダー", },
-			{ id = 0x02, ver = 0x06FE, bs = true , name = "M.スナッチャー", },
-			{ id = 0x03, ver = 0x06FD, bs = false, name = "M.クラブクラッチ", },
-			--{ id = 0x00, ver = 0x06FD, bs = false, name = "ダブルクラッチ", },
-			{ id = 0x04, ver = 0x0600, bs = false, name = "M.リアルカウンター", },
-			{ id = 0x05, ver = 0x0600, bs = true , name = "スピンフォール", },
-			{ id = 0x06, ver = 0x0600, bs = true , name = "バーチカルアロー", },
-			{ id = 0x07, ver = 0x0600, bs = true , name = "ストレートスライサー", },
-			{ id = 0x09, ver = 0x0600, bs = false, name = "ヤングダイブ", },
-			{ id = 0x08, ver = 0x06F9, bs = false, name = "M.ダイナマイトスウィング", },
-			{ id = 0x10, ver = 0x0600, bs = false, name = "M.タイフーン", },
-			{ id = 0x12, ver = 0x0600, bs = false, name = "M.エスカレーション", },
-			-- { id = 0x28, ver = 0x0600, bs = false, name = "M.トリプルエクスタシー", },
-			-- { id = 0x24, ver = 0x0600, bs = false, name = "レッグプレス", },
-			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント M.スナッチャー", },
-		},
-		-- フランコ・バッシュ
-		{
-			{ id = 0x01, ver = 0x0600, bs = true , name = "ダブルコング", },
-			{ id = 0x02, ver = 0x0600, bs = true , name = "ザッパー", },
-			{ id = 0x03, ver = 0x0600, bs = false, name = "ウェービングブロー", },
-			{ id = 0x04, ver = 0x0600, bs = true , name = "ガッツダンク", },
-			{ id = 0x05, ver = 0x0600, bs = true , name = "ゴールデンボンバー", },
-			{ id = 0x10, ver = 0x0600, bs = true , name = "ファイナルオメガショット", },
-			{ id = 0x11, ver = 0x0600, bs = false, name = "メガトンスクリュー", },
-			{ id = 0x12, ver = 0x0600, bs = false, name = "ハルマゲドンバスター", },
-			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ハルマゲドンバスター", },
-			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント ガッツダンク", },
-		},
-		-- 山崎竜二
-		{
-			{ id = 0x01, ver = 0x0600, bs = true , name = "蛇使い・上段", },
-			{ id = 0x02, ver = 0x0600, bs = true , name = "蛇使い・中段", },
-			{ id = 0x03, ver = 0x0600, bs = true , name = "蛇使い・下段", },
-			{ id = 0x04, ver = 0x0600, bs = false, name = "サドマゾ", },
-			{ id = 0x05, ver = 0x0600, bs = false, name = "ヤキ入れ", },
-			{ id = 0x06, ver = 0x0600, bs = false, name = "倍返し", },
-			{ id = 0x07, ver = 0x0600, bs = true , name = "裁きの匕首", },
-			{ id = 0x08, ver = 0x0600, bs = false, name = "爆弾パチキ", },
-			{ id = 0x09, ver = 0x0C00, bs = false, name = "トドメ", },
-			{ id = 0x10, ver = 0x0600, bs = false, name = "ギロチン", },
-			{ id = 0x12, ver = 0x0600, bs = false, name = "ドリル", },
-			-- { id = 0x00, ver = 0x06FE, bs = false, name = "ドリル Lv.5", },
-			-- { id = 0x00, ver = 0x06FF, bs = false, name = "?", },
-			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 裁きの匕首", },
-		},
-		-- 秦崇秀
-		{
-			{ id = 0x01, ver = 0x0600, bs = false, name = "帝王神足拳", },
-			{ id = 0x02, ver = 0x0600, bs = true , name = "小 帝王天眼拳", },
-			{ id = 0x03, ver = 0x0600, bs = true , name = "大 帝王天眼拳", },
-			{ id = 0x04, ver = 0x0600, bs = true , name = "小 帝王天耳拳", },
-			{ id = 0x05, ver = 0x0600, bs = true , name = "大 帝王天耳拳", },
-			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 海龍照臨", },
-			{ id = 0x06, ver = 0x0600, bs = false, name = "竜灯掌", },
-			{ id = 0x07, ver = 0x0600, bs = true , name = "帝王神眼拳（その場）", },
-			{ id = 0x08, ver = 0x06FF, bs = true , name = "帝王神眼拳（空中）", },
-			{ id = 0x09, ver = 0x0600, bs = true , name = "帝王神眼拳（背後）", },
-			-- { id = 0x0A, ver = 0x0600, bs = false, name = "帝王空殺神眼拳", },
-			{ id = 0x10, ver = 0x0600, bs = true , name = "帝王漏尽拳", },
-			-- { id = 0x11, ver = 0x0600, bs = false, name = "帝王空殺漏尽拳", },
-			{ id = 0x12, ver = 0x0600, bs = false, name = "海龍照臨", },
-		},
-		-- 秦崇雷,
-		{
-			{ id = 0x01, ver = 0x0600, bs = false, name = "帝王神足拳", },
-			{ id = 0x01, ver = 0x06FF, bs = false, name = "真 帝王神足拳", },
-			{ id = 0x02, ver = 0x0600, bs = true , name = "小 帝王天眼拳", },
-			{ id = 0x03, ver = 0x0600, bs = true , name = "大 帝王天眼拳", },
-			{ id = 0x04, ver = 0x0600, bs = true , name = "小 帝王天耳拳", },
-			{ id = 0x05, ver = 0x0600, bs = true , name = "大 帝王天耳拳", },
-			{ id = 0x06, ver = 0x0600, bs = true , name = "帝王漏尽拳", },
-			{ id = 0x07, ver = 0x0600, bs = false, name = "龍転身（前方）", },
-			{ id = 0x08, ver = 0x0600, bs = false, name = "龍転身（後方）", },
-			{ id = 0x10, ver = 0x06FF, bs = false, name = "帝王宿命拳", },
-			--{ id = 0x00, ver = 0x06FE, bs = false, name = "帝王宿命拳(連射)", },
-			{ id = 0x12, ver = 0x0600, bs = false, name = "帝王龍声拳", },
-			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 帝王宿命拳", },
-		},
-		-- ダック・キング
-		{
-			{ id = 0x01, ver = 0x0600, bs = true , name = "小ヘッドスピンアタック", },
-			{ id = 0x02, ver = 0x0600, bs = true , name = "大ヘッドスピンアタック", },
-			-- { id = 0x02, ver = 0x06FF, bs = true , name = "大ヘッドスピンアタック", },
-			-- { id = 0x00, ver = 0x06FF, bs = false, name = "ヘッドスピンアタック追撃", },
-			{ id = 0x03, ver = 0x0600, bs = false, name = "フライングスピンアタック", },
-			{ id = 0x04, ver = 0x0600, bs = true , name = "ダンシングダイブ", },
-			{ id = 0x00, ver = 0x06FE, bs = false, name = "リバースダイブ", },
-			{ id = 0x05, ver = 0x06FE, bs = false, name = "ブレイクストーム", },
-			-- { id = 0x00, ver = 0x06FD, bs = false, name = "ブレイクストーム追撃1段階目", },
-			-- { id = 0x00, ver = 0x06FC, bs = false, name = "ブレイクストーム追撃2段階目", },
-			-- { id = 0x00, ver = 0x06FB, bs = false, name = "ブレイクストーム追撃3段階目", },
-			-- { id = 0x06, ver = 0x0600, bs = false, name = "ダックフェイント・空", },
-			-- { id = 0x07, ver = 0x0600, bs = false, name = "ダックフェイント・地", },
-			{ id = 0x08, ver = 0x0600, bs = false, name = "クロスヘッドスピン", },
-			{ id = 0x09, ver = 0x0600, bs = false, name = "ダンシングキャリバー", },
-			{ id = 0x0A, ver = 0x0600, bs = false, name = "ローリングパニッシャー", },
-			{ id = 0x0C, ver = 0x0600, bs = false, name = "ブレイクハリケーン", },
-			{ id = 0x10, ver = 0x0600, bs = false, name = "ブレイクスパイラル", },
-			--{ id = 0x11, ver = 0x06FA, bs = false, name = "ブレイクスパイラルBR", },
-			{ id = 0x12, ver = 0x0600, bs = false, name = "ダックダンス", },
-			--{ id = 0x00, ver = 0x06F8, bs = false, name = "ダックダンス継続", },
-			{ id = 0x13, ver = 0x0600, bs = false, name = "スーパーポンピングマシーン", },
-			-- { id = 0x00, ver = 0x06F9, bs = false, name = "ダイビングパニッシャー?", },
-			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ダックダンス", },
-			-- { id = 0x28, ver = 0x0600, bs = false, name = "旧ブレイクストーム", },
-		},
-		-- キム・カッファン
-		{
-			{ id = 0x01, ver = 0x0600, bs = true , name = "飛燕斬・真上", },
-			{ id = 0x01, ver = 0x0601, bs = true , name = "飛燕斬・前方", },
-			{ id = 0x01, ver = 0x0602, bs = true , name = "飛燕斬・後方", },
-			{ id = 0x02, ver = 0x0600, bs = true , name = "小 半月斬", },
-			{ id = 0x03, ver = 0x0600, bs = true , name = "大 半月斬", },
-			{ id = 0x04, ver = 0x0800, bs = false, name = "飛翔脚", },
-			-- { id = 0x00, ver = 0x08FF, bs = false, name = "戒脚", },
-			{ id = 0x05, ver = 0x0600, bs = false, name = "空砂塵", },
-			{ id = 0x00, ver = 0x06FE, bs = false, name = "天昇斬", },
-			{ id = 0x06, ver = 0x0600, bs = true , name = "覇気脚", },
-			-- { id = 0x10, ver = 0x0600, bs = false, name = "鳳凰天舞脚", },
-			{ id = 0x12, ver = 0x0600, bs = false, name = "鳳凰脚", },
-			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 鳳凰脚", },
-		},
-		-- ビリー・カーン
-		{
-			{ id = 0x01, ver = 0x0600, bs = false, name = "三節棍中段打ち", },
-			-- { id = 0x00, ver = 0x06FF, bs = false, name = "火炎三節棍中段打ち", },
-			{ id = 0x03, ver = 0x0600, bs = true , name = "雀落とし", },
-			{ id = 0x04, ver = 0x0C00, bs = false, name = "旋風棍", },
-			{ id = 0x05, ver = 0x0600, bs = true , name = "強襲飛翔棍", },
-			{ id = 0x06, ver = 0x0600, bs = true , name = "火龍追撃棍", },
-			{ id = 0x10, ver = 0x0600, bs = false, name = "超火炎旋風棍", },
-			{ id = 0x11, ver = 0x0600, bs = false, name = "紅蓮殺棍", },
-			{ id = 0x12, ver = 0x0600, bs = false, name = "サラマンダーストリーム", },
-			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 強襲飛翔棍", },
-		},
-		-- チン・シンザン
-		{
-			{ id = 0x01, ver = 0x0600, bs = true , name = "気雷砲（前方）", },
-			{ id = 0x02, ver = 0x0600, bs = true , name = "気雷砲（対空）", },
-			{ id = 0x03, ver = 0x0600, bs = false, name = "超太鼓腹打ち", },
-			-- { id = 0x00, ver = 0x06FF, bs = false, name = "満腹対空", },
-			{ id = 0x04, ver = 0x0600, bs = true , name = "小 破岩撃", },
-			{ id = 0x05, ver = 0x0600, bs = true , name = "大 破岩撃", },
-			{ id = 0x06, ver = 0x0600, bs = false, name = "軟体オヤジ", },
-			{ id = 0x07, ver = 0x0600, bs = false, name = "クッサメ砲", },
-			{ id = 0x10, ver = 0x0600, bs = true , name = "爆雷砲", },
-			{ id = 0x12, ver = 0x0600, bs = false, name = "ホエホエ弾", },
-			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 破岩撃", },
-			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント クッサメ砲", },
-		},
-		-- タン・フー・ルー,
-		{
-			{ id = 0x01, ver = 0x0600, bs = true , name = "衝波", },
-			{ id = 0x02, ver = 0x0600, bs = true , name = "小 箭疾歩", },
-			{ id = 0x03, ver = 0x0600, bs = true , name = "大 箭疾歩", },
-			{ id = 0x04, ver = 0x0600, bs = false, name = "撃放", },
-			{ id = 0x05, ver = 0x0600, bs = true , name = "裂千脚", },
-			{ id = 0x10, ver = 0x0600, bs = false, name = "旋風剛拳", },
-			{ id = 0x12, ver = 0x0600, bs = false, name = "大撃放", },
-			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 旋風剛拳", },
-		},
-		-- ローレンス・ブラッド
-		{
-			{ id = 0x01, ver = 0x0600, bs = true , name = "小 ブラッディスピン", },
-			{ id = 0x02, ver = 0x0600, bs = true , name = "大 ブラッディスピン", },
-			{ id = 0x03, ver = 0x0600, bs = false, name = "ブラッディサーベル", },
-			{ id = 0x04, ver = 0x06FF, bs = false, name = "ブラッディミキサー", },
-			{ id = 0x05, ver = 0x0600, bs = true , name = "ブラッディカッター", },
-			{ id = 0x10, ver = 0x0600, bs = false, name = "ブラッディフラッシュ", },
-			{ id = 0x12, ver = 0x0600, bs = false, name = "ブラッディシャドー", },
-		},
-		-- ヴォルフガング・クラウザー
-		{
-			{ id = 0x01, ver = 0x0600, bs = false, name = "ブリッツボール・上段", },
-			{ id = 0x02, ver = 0x06FF, bs = false, name = "ブリッツボール・下段", },
-			{ id = 0x03, ver = 0x0600, bs = true , name = "レッグトマホーク", },
-			{ id = 0x04, ver = 0x0600, bs = false, name = "フェニックススルー", },
-			{ id = 0x05, ver = 0x0600, bs = false, name = "デンジャラススルー", },
-			{ id = 0x00, ver = 0x06FD, bs = false, name = "グリフォンアッパー", },
-			{ id = 0x06, ver = 0x06FC, bs = false, name = "カイザークロー", },
-			-- { id = 0x07, ver = 0x0600, bs = false, name = "リフトアップブロー", },
-			{ id = 0x10, ver = 0x0600, bs = true , name = "カイザーウェイブ", },
-			{ id = 0x12, ver = 0x0600, bs = false, name = "ギガティックサイクロン", },
-			{ id = 0x13, ver = 0x0600, bs = false, name = "アンリミテッドデザイア", },
-			-- { id = 0x00, ver = 0x06FE, bs = false, name = "アンリミテッドデザイア2", },
-			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ブリッツボール", },
-			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント カイザーウェイブ", },
-		},
-		-- リック・ストラウド
-		{
-			--{ id = 0x28, ver = 0x0600, bs = true , name = "?", },
-			{ id = 0x01, ver = 0x0600, bs = true , name = "小 シューティングスター", },
-			{ id = 0x02, ver = 0x06FF, bs = false, name = "大 シューティングスター", },
-			{ id = 0x03, ver = 0x0600, bs = true , name = "ディバインブラスト", },
-			{ id = 0x04, ver = 0x0600, bs = false, name = "フルムーンフィーバー", },
-			{ id = 0x05, ver = 0x0600, bs = true , name = "ヘリオン", },
-			{ id = 0x06, ver = 0x0600, bs = true , name = "ブレイジングサンバースト", },
-			-- { id = 0x09, ver = 0x0600, bs = false, name = "?", },
-			{ id = 0x10, ver = 0x0600, bs = false, name = "ガイアブレス", },
-			{ id = 0x12, ver = 0x0600, bs = false, name = "ハウリング・ブル", },
-			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント シューティングスター", },
-		},
-		-- 李香緋
-		{
-			--{ id = 0x28, ver = 0x0600, bs = true , name = "?", },
-			--{ id = 0x29, ver = 0x0600, bs = true , name = "?", },
-			{ id = 0x01, ver = 0x0600, bs = true , name = "小 那夢波", },
-			{ id = 0x02, ver = 0x0600, bs = true , name = "大 那夢波", },
-			{ id = 0x03, ver = 0x06FF, bs = false, name = "閃里肘皇", },
-			{ id = 0x00, ver = 0x06FE, bs = false, name = "閃里肘皇・心砕把", },
-			{ id = 0x06, ver = 0x0600, bs = true , name = "天崩山", },
-			{ id = 0x07, ver = 0x0600, bs = true , name = "詠酒・対ジャンプ攻撃", },
-			{ id = 0x08, ver = 0x0600, bs = true , name = "詠酒・対立ち攻撃", },
-			{ id = 0x09, ver = 0x0600, bs = true , name = "詠酒・対しゃがみ攻撃", },
-			{ id = 0x10, ver = 0x0600, bs = true , name = "大鉄神", },
-			{ id = 0x11, ver = 0x06FD, bs = false, name = "超白龍", },
-			-- { id = 0x00, ver = 0x06FD, bs = false, name = "超白龍2", },
-			{ id = 0x12, ver = 0x0600, bs = false, name = "真心牙", },
-			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント 天崩山", },
-			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 大鉄神", },
-		},
-		-- アルフレッド
-		{
-			{ id = 0x01, ver = 0x0600, bs = true , name = "小 クリティカルウィング", },
-			{ id = 0x02, ver = 0x0600, bs = true , name = "大 クリティカルウィング", },
-			{ id = 0x03, ver = 0x0600, bs = true , name = "オーグメンターウィング", },
-			{ id = 0x04, ver = 0x0600, bs = true , name = "ダイバージェンス", },
-			-- { id = 0x05, ver = 0x0600, bs = false, name = "メーデーメーデー", },
-			{ id = 0x06, ver = 0x0600, bs = false, name = "S.TOL", },
-			--{ id = 0x10, ver = 0x0600, bs = false, name = "ショックストール", },
-			{ id = 0x12, ver = 0x0600, bs = false, name = "ウェーブライダー", },
-			{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント クリティカルウィング", },
-			{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント オーグメンターウィング", },
-		},
-	}
-	-- ブレイクショット対応技のみ
-	local char_bs_list = {}
-	for _, list in pairs(char_rvs_list) do
-		for i, cmd in pairs(common_rvs) do
-			table.insert(list, i, cmd)
-		end
-		local bs_list = {}
-		for _, cmd in pairs(list) do
-			if cmd.bs then
-				table.insert(bs_list, cmd)
-			end
-		end
-		table.insert(char_bs_list, bs_list)
-	end
-
-	-- エミュレータ本体の入力取得
-	local use_joy = {
-		{ port = ":edge:joy:JOY1" , field = "P1 Button 1"    , frame = 0, prev = 0, player = 1, get = 0, },
-		{ port = ":edge:joy:JOY1" , field = "P1 Button 2"    , frame = 0, prev = 0, player = 1, get = 0, },
-		{ port = ":edge:joy:JOY1" , field = "P1 Button 3"    , frame = 0, prev = 0, player = 1, get = 0, },
-		{ port = ":edge:joy:JOY1" , field = "P1 Button 4"    , frame = 0, prev = 0, player = 1, get = 0, },
-		{ port = ":edge:joy:JOY1" , field = "P1 Down"        , frame = 0, prev = 0, player = 1, get = 0, },
-		{ port = ":edge:joy:JOY1" , field = "P1 Left"        , frame = 0, prev = 0, player = 1, get = 0, },
-		{ port = ":edge:joy:JOY1" , field = "P1 Right"       , frame = 0, prev = 0, player = 1, get = 0, },
-		{ port = ":edge:joy:JOY1" , field = "P1 Up"          , frame = 0, prev = 0, player = 1, get = 0, },
-		{ port = ":edge:joy:JOY2" , field = "P2 Button 1"    , frame = 0, prev = 0, player = 2, get = 0, },
-		{ port = ":edge:joy:JOY2" , field = "P2 Button 2"    , frame = 0, prev = 0, player = 2, get = 0, },
-		{ port = ":edge:joy:JOY2" , field = "P2 Button 3"    , frame = 0, prev = 0, player = 2, get = 0, },
-		{ port = ":edge:joy:JOY2" , field = "P2 Button 4"    , frame = 0, prev = 0, player = 2, get = 0, },
-		{ port = ":edge:joy:JOY2" , field = "P2 Down"        , frame = 0, prev = 0, player = 2, get = 0, },
-		{ port = ":edge:joy:JOY2" , field = "P2 Left"        , frame = 0, prev = 0, player = 2, get = 0, },
-		{ port = ":edge:joy:JOY2" , field = "P2 Right"       , frame = 0, prev = 0, player = 2, get = 0, },
-		{ port = ":edge:joy:JOY2" , field = "P2 Up"          , frame = 0, prev = 0, player = 2, get = 0, },
-		{ port = ":edge:joy:START", field = "2 Players Start", frame = 0, prev = 0, player = 2, get = 0, },
-		{ port = ":edge:joy:START", field = "1 Player Start" , frame = 0, prev = 0, player = 1, get = 0, },
-	}
-	local get_joy_base = function(prev, exclude_player)
-		local scr = manager:machine().screens[":screen"]
-		local ec = scr:frame_number()
-		local joy_port = {}
-		local joy_val = {}
-		local prev_joy_val = {}
-		for _, joy in ipairs(use_joy) do
-			local state = 0
-			if not joy_port[joy.port] then
-				joy_port[joy.port] = manager:machine():ioport().ports[joy.port]:read()
-			end
-			local field = manager:machine():ioport().ports[joy.port].fields[joy.field]
-			state = ((joy_port[joy.port] & field.mask) ~ field.defvalue)
-			if joy.get < ec then
-				joy.prev = joy.frame
-				if state > 0 then
-					-- on
-					if joy.frame > 0 then
-						joy.frame = joy.frame + 1
-					else
-						joy.frame = 1
-					end
-				else
-					-- off
-					if joy.frame < 0 then
-						joy.frame = joy.frame - 1
-					else
-						joy.frame = -1
-					end
-				end
-			end
-			joy.get = ec
-			if exclude_player ~= joy.player then
-				joy_val[joy.field] = joy.frame
-				prev_joy_val[joy.field] = joy.prev
-				--if "P2 Button 1" == joy.field then
-				--	print(string.format("%s %s %s %s", global.frame_number, joy.field, joy.prev, joy.frame))
-				--end
-			end
-		end
-		return prev and prev_joy_val or joy_val
-	end
-	local get_joy = function(exclude_player)
-		return get_joy_base(false, exclude_player)
-	end
-	local accept_input = function(btn, joy_val, state_past)
-		if 12 < state_past then
-			local p1 = btn == "Start" and "1 Player Start" or ("P1 " .. btn)
-			local p2 = btn == "Start" and "2 Players Start" or ("P2 " .. btn)
-			local pgm = manager:machine().devices[":maincpu"].spaces["program"]
-			if btn == "Up" or btn == "Down" or btn == "Right" or btn == "Left" then
-				if (0 < joy_val[p1]) or (0 < joy_val[p2]) then
-					pgm:write_u32(0x0010D612, 0x00600004)
-					pgm:write_u8(0x0010D713, 0x01)
-					return true
-				end
-			else
-				if (0 < joy_val[p1] and state_past >= joy_val[p1]) or 
-				   (0 < joy_val[p2] and state_past >= joy_val[p2]) then
-					pgm:write_u32(0x0010D612, 0x00610004)
-					pgm:write_u8(0x0010D713, 0x01)
-					return true
-				end
-			end
-		end
-		return false
-	end
-	local is_start_a = function(joy_val, state_past)
-		if 12 < state_past then
-			for i = 1, 2 do
-				local st = i == 1 and "1 Player Start" or "2 Players Start"
-				local pgm = manager:machine().devices[":maincpu"].spaces["program"]
-				if (35 < joy_val[st]) then
-					pgm:write_u32(0x0010D612, 0x00610004)
-					pgm:write_u8(0x0010D713, 0x01)
-					return true
-				end
-			end
-		end
-		return false
-	end
-	local new_next_joy = function()
-		return {
-			["P1 Down" ] = false, ["P1 Button 1"] = false, ["P2 Down" ] = false, ["P2 Button 1"] = false,
-			["P1 Left" ] = false, ["P1 Button 2"] = false, ["P2 Left" ] = false, ["P2 Button 2"] = false,
-			["P1 Right"] = false, ["P1 Button 3"] = false, ["P2 Right"] = false, ["P2 Button 3"] = false,
-			["P1 Up"   ] = false, ["P1 Button 4"] = false, ["P2 Up"   ] = false, ["P2 Button 4"] = false,
-		}
-	end
-	-- 入力の1P、2P反転用のテーブル
-	local rev_joy = {
-		["P1 Button 1"] = "P2 Button 1", ["P2 Button 1"] = "P1 Button 1",
-		["P1 Button 2"] = "P2 Button 2", ["P2 Button 2"] = "P1 Button 2",
-		["P1 Button 3"] = "P2 Button 3", ["P2 Button 3"] = "P1 Button 3",
-		["P1 Button 4"] = "P2 Button 4", ["P2 Button 4"] = "P1 Button 4",
-		["P1 Down"    ] = "P2 Down"    , ["P2 Down"    ] = "P1 Down"    ,
-		["P1 Left"    ] = "P2 Left"    , ["P2 Left"    ] = "P1 Left"    ,
-		["P1 Right"   ] = "P2 Right"   , ["P2 Right"   ] = "P1 Right"   ,
-		["P1 Up"      ] = "P2 Up"      , ["P2 Up"      ] = "P1 Up"      ,
-	}
-	-- 入力から1P、2Pを判定するテーブル
-	local joy_pside = {
-		["P1 Down" ] = 1, ["P1 Button 1"] = 1, ["P2 Down" ] = 2, ["P2 Button 1"] = 2,
-		["P1 Left" ] = 1, ["P1 Button 2"] = 1, ["P2 Left" ] = 2, ["P2 Button 2"] = 2,
-		["P1 Right"] = 1, ["P1 Button 3"] = 1, ["P2 Right"] = 2, ["P2 Button 3"] = 2,
-		["P1 Up"   ] = 1, ["P1 Button 4"] = 1, ["P2 Up"   ] = 2, ["P2 Button 4"] = 2,
-	}
-	-- 入力の左右反転用のテーブル
-	local joy_frontback = {
-		["P1 Left" ] = "P1 Right", ["P2 Left" ] = "P2 Right",
-		["P1 Right"] = "P1 Left" , ["P2 Right"] = "P2 Left" ,
-	}
-	-- MAMEへの入力の無効化
-	local cls_joy = function()
-		for _, joy in ipairs(use_joy) do
-			manager:machine():ioport().ports[joy.port].fields[joy.field]:set_value(0)
-		end
-	end
-
-	-- キー入力
-	local kprops = { "d", "c", "b", "a", "rt", "lt", "dn", "up", "sl", "st", }
- 	local posi_or_pl1 = function(v) return 0 <= v and v + 1 or 1 end
-	local nega_or_mi1 = function(v) return 0 >= v and v - 1 or -1 end
-
-	-- ポーズ
-	local set_freeze = function(frz_expected)
-		local dswport = manager:machine():ioport().ports[":DSW"]
-		local fzfld = dswport.fields["Freeze"]
-		local freez = ((dswport:read() & fzfld.mask) ~ fzfld.defvalue) <= 0
-
-		if mem_0x10FD82 ~= 0x00 then
-			if freez ~= frz_expected then
-				fzfld:set_value(global.frz[global.frzc])
-				global.frzc = global.frzc +1
-				if global.frzc > #global.frz then
-					global.frzc = 1
-				end
-			end
-		else
-			local pgm = manager:machine().devices[":maincpu"].spaces["program"]
-			pgm:write_u8(0x1041D2, frz_expected and 0x00 or 0xFF)
-		end
-	end
-
-	-- 当たり判定
-	local type_ck_push = function(obj, box)
-		obj.height = obj.height or box.bottom - box.top --used for height of ground throwbox
-	end
-	local type_ck_vuln = function(obj, box) if not obj.vulnerable then return true end end
-	local type_ck_gd   = function(obj, box) end
-	local type_ck_atk  = function(obj, box) if obj.harmless then return true end end
-	local type_ck_thw  = function(obj, box) if obj.harmless then return true end end
-	local type_ck_und  = function(obj, box)
-		--print(string.format("%x, unk box id: %x", obj.base, box.id)) --debug
-	end
-	local box_type_base = {
-		a   = { id = 0x00, name = "攻撃",                     enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF00FF, fill = 0x40, outline = 0xFF },
-		fa  = { id = 0x00, name = "攻撃(嘘)",                 enabled = false, type_check = type_ck_und,  type = "attack", color = 0x00FF00, fill = 0x00, outline = 0xFF },
-		da  = { id = 0x00, name = "攻撃(無効)",               enabled = true, type_check = type_ck_und,  type = "attack", color = 0xFF00FF, fill = 0x00, outline = 0xFF },
-
-		aa  = { id = 0x00, name = "攻撃(空中追撃可)",         enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF00FF, fill = 0x40, outline = 0xFF },
-		faa = { id = 0x00, name = "攻撃(嘘、空中追撃可)",     enabled = false, type_check = type_ck_und,  type = "attack", color = 0x00FF00, fill = 0x00, outline = 0xFF },
-		daa = { id = 0x00, name = "攻撃(無効、空中追撃可)",   enabled = true, type_check = type_ck_und,  type = "attack", color = 0xFF00FF, fill = 0x00, outline = 0xFF },
-
-		t3  = { id = 0x00, name = "未使用",                   enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0x8B4513, fill = 0x40, outline = 0xFF },
-
-		pa  = { id = 0x00, name = "飛び道具",                 enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x40, outline = 0xFF },
-		pfa = { id = 0x00, name = "飛び道具(嘘)",             enabled = false, type_check = type_ck_atk,  type = "attack", color = 0x00FF33, fill = 0x00, outline = 0xFF },
-		pda = { id = 0x00, name = "飛び道具(無効)",           enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x00, outline = 0xFF },
-
-		paa = { id = 0x00, name = "飛び道具(空中追撃可)",     enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x40, outline = 0xFF },
-		pfaa= { id = 0x00, name = "飛び道具(嘘、空中追撃可)", enabled = false, type_check = type_ck_atk,  type = "attack", color = 0x00FF33, fill = 0x00, outline = 0xFF },
-		pdaa= { id = 0x00, name = "飛び道具(無効、空中追撃可)",enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x00, outline = 0xFF },
-
-		t   = { id = 0x00, name = "投げ",                     enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
-		at  = { id = 0x00, name = "必殺技投げ",               enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
-		pt  = { id = 0x00, name = "空中投げ",                 enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
-		p   = { id = 0x01, name = "押し合い",                 enabled = true, type_check = type_ck_push, type = "push",   color = 0xDDDDDD, fill = 0x00, outline = 0xFF },
-		v1  = { id = 0x02, name = "食らい1",                  enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x0000FF, fill = 0x40, outline = 0xFF },
-		v2  = { id = 0x03, name = "食らい2",                  enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x0000FF, fill = 0x40, outline = 0xFF },
-		v3  = { id = 0x04, name = "食らい(ダウン追撃のみ可)", enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x00FFFF, fill = 0x80, outline = 0xFF },
-		v4  = { id = 0x05, name = "食らい(空中追撃のみ可)",   enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x00FFFF, fill = 0x80, outline = 0xFF },
-		v5  = { id = 0x06, name = "食らい5(未使用?)",         enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x606060, fill = 0x40, outline = 0xFF },
-		v6  = { id = 0x07, name = "食らい(対ライン上攻撃)",   enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x00FFFF, fill = 0x80, outline = 0xFF },
-		x1  = { id = 0x08, name = "食らい(対ライン下攻撃)",   enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x00FFFF, fill = 0x80, outline = 0xFF },
-		x2  = { id = 0x09, name = "用途不明2",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-		x3  = { id = 0x0A, name = "用途不明3",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-		x4  = { id = 0x0B, name = "用途不明4",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-		x5  = { id = 0x0C, name = "用途不明5",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-		x6  = { id = 0x0D, name = "用途不明6",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-		x7  = { id = 0x0E, name = "用途不明7",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-		x8  = { id = 0x0F, name = "用途不明8",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-		x9  = { id = 0x10, name = "用途不明9",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-		g1  = { id = 0x11, name = "立ガード",                 enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 stand-guard
-		g2  = { id = 0x12, name = "下段ガード",               enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 counch-guard
-		g3  = { id = 0x13, name = "空中ガード",               enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 air-guard
-		g4  = { id = 0x14, name = "上段当身投げ",             enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 j.atemi-nage
-		g5  = { id = 0x15, name = "中段当身投げ",             enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 c.atemi-nage
-		g6  = { id = 0x16, name = "下段当身投げ",             enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 g.ateminage
-		g7  = { id = 0x17, name = "必勝逆襲脚",               enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 h.gyakushu-kyaku
-		g8  = { id = 0x18, name = "サドマゾ",                 enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 sadomazo
-		g9  = { id = 0x19, name = "倍返し",                   enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xFF007F, fill = 0x40, outline = 0xFF },--rbff2 bai-gaeshi
-		g10 = { id = 0x1A, name = "ガード?1",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },
-		g11 = { id = 0x1B, name = "ガード?2",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
-		g12 = { id = 0x1C, name = "ガード?3",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--rbff2 p.throw?
-		g13 = { id = 0x1D, name = "ガード?4",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
-		g14 = { id = 0x1E, name = "フェニックススルー",       enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--?
-		g15 = { id = 0x1F, name = "ガード?6",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
-		g16 = { id = 0x20, name = "ガード?7",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
-		sv1 = { id = 0x02, name = "食らい1(スウェー中)",      enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true },
-		sv2 = { id = 0x03, name = "食らい2(スウェー中)",      enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true, },
-	}
-	local box_types, sway_box_types = {}, {}
-	for _, box in pairs(box_type_base) do
-		if 0 < box.id then
-			if box.sway then
-				sway_box_types[box.id] = box
-			else
-				box_types[box.id] = box
-			end
-		end
-		box.fill    = bit32.lshift(box.fill   , 24) + box.color
-		box.outline = bit32.lshift(box.outline, 24) + box.color
-	end
-
-	-- ボタンの色テーブル
-	local convert = require("data/button_char")
-	local btn_col = { [convert("_A")] = 0xFFCC0000, [convert("_B")] = 0xFFCC8800, [convert("_C")] = 0xFF3333CC, [convert("_D")] = 0xFF336600, }
-	local text_col, shadow_col = 0xFFFFFFFF, 0xFF000000
-
-	local exists = function(name)
-		if type(name)~="string" then return false end
-		return os.rename(name,name) and true or false
-	end
-
-	local is_file = function(name)
-		if type(name)~="string" then return false end
-		if not exists(name) then return false end
-		local f = io.open(name,"r")
-		if f then
-			f:close()
-			return true
-		end
-		return false
-	end
-
-	local base_path = function()
-		return lfs.env_replace(manager:machine():options().entries.homepath:value():match('([^;]+)')) .. '/plugins/' .. exports.name
-	end
-
-	local rom_patch_path = function(filename)
-		local base = base_path() .. '/rom-patch/'
-		local patch = base .. emu.romname() .. '/' .. filename
-		if is_file(patch) then
-			return patch
-		else
-			print(patch .. " NOT found")
-		end
-		return base .. 'rbff2/' .. filename
-	end
-
-	local ram_patch_path = function(filename)
-		local base = base_path() .. '/ram-patch/'
-		local patch = base .. emu.romname() .. '/' .. filename
-		if is_file(patch) then
-			return patch
-		end
-		return base .. 'rbff2/' .. filename
-	end
-
-	local tohex = function(num)
-		local hexstr = '0123456789abcdef'
-		local s = ''
-		while num > 0 do
-			local mod = math.fmod(num, 16)
-			s = string.sub(hexstr, mod+1, mod+1) .. s
-			num = math.floor(num / 16)
-		end
-		if s == '' then s = '0' end
-		return s
-	end
-
-	local tohexnum = function(num)
-		return tonumber(tohex(num))
-	end
-
-	local get_digit = function(num)
-		return string.len(tostring(num))
-	end
-
-	local draw_rtext = function(x, y, str, fgcol, bgcol)
-		if not str then
-			return
-		end
-		if type(str)~="number" then
-			str = "" .. str
-		end
-		local scr = manager:machine().screens[":screen"]
-		local scale = scr:xscale() * scr:width()
-		local xx = x
-		for c in string.gmatch(str, "([%z\1-\127\194-\244][\128-\191]*)") do
-			xx = xx - manager:ui():get_string_width(c, scale)
-		end
-		for c in string.gmatch(str, "([%z\1-\127\194-\244][\128-\191]*)") do
-			scr:draw_text(xx, y, c, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
-			xx = xx + manager:ui():get_string_width(c, scale)
-		end
-	end
-
-	-- コマンド入力表示
-	local draw_cmd = function(p, line, frame, str)
-		local scr = manager:machine().screens[":screen"]
-		local cstr = convert(str)
-
-		local p1 = p == 1
-		local xx = p1 and 15 or 300   -- 1Pと2Pで左右に表示し分ける
-		local yy = (line + 10 - 1) * 8 -- +8はオフセット位置
-
-		if 0 < frame then
-			if 999 < frame then
-				draw_rtext(p1 and 10.5 or 295.5, yy + 0.5, "LOT", shadow_col)
-				draw_rtext(p1 and 10   or 295  ,       yy, "LOT", text_col)
-			else
-				draw_rtext(p1 and 10.5 or 295.5, yy + 0.5, frame, shadow_col)
-				draw_rtext(p1 and 10   or 295  ,       yy, frame, text_col)
-			end
-		end
-		local col = 0xFAFFFFFF
-		if p1 then
-			for i = 1, 50 do
-				scr:draw_line(i, yy, i+1, yy, col)
-				col = col - 0x05000000
-			end
-		else
-			for i = 320, 270, -1 do
-				scr:draw_line(i, yy, i-1, yy, col)
-				col = col - 0x05000000
-			end
-		end
-		-- 変換しつつUnicodeの文字配列に落とし込む
-		for c in string.gmatch(cstr, "([%z\1-\127\194-\244][\128-\191]*)") do
-			-- 文字の影
-			scr:draw_text(xx + 0.5, yy + 0.5, c, 0xFF000000)
-			if btn_col[c] then
-				-- ABCDボタンの場合は黒の●を表示した後ABCDを書いて文字の部分を黒く見えるようにする
-				scr:draw_text(xx, yy, convert("_("), text_col)
-				scr:draw_text(xx, yy, c, btn_col[c])
-			else
-				scr:draw_text(xx, yy, c, text_col)
-			end
-			xx = xx + 5 -- フォントの大きさ問わず5pxずつ表示する
-		end
-	end
-
-	-- 当たり判定表示
-	local accept_atk_only = {
-		[box_type_base.a ] = true,
-		[box_type_base.aa] = true,
-		[box_type_base.fa] = true,
-		[box_type_base.faa] = true,
-		[box_type_base.v3] = true,
-		[box_type_base.v4] = true,
-		[box_type_base.v5] = true,
-		[box_type_base.v6] = true,
-		[box_type_base.x1] = true,
-	}
-	local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fireball, key)
-		local box = {id = id}
-		box.type = nil
-		if box.id + 1 > #box_types then
-			-- 嘘判定   ... 判定出現時点で攻撃能力なし
-			-- 無効判定 ... ヒット後などで判定出現時点では攻撃能力があるが無効化されたもの
-			local fake, harmless = p.hit.fake_hit == true, p.hit.harmless == true
-			-- 家庭用版 012E0E~012E34の処理をベースに空中追撃判定を持つかどうかを判断する
-			local d2, a0, asm, air = box.id - 0x20, 0, 0, false
-			local pgm = manager:machine().devices[":maincpu"].spaces["program"]
-			if d2 >= 0 then
-				d2 = pgm:read_u8(0x94EEC + d2)	
-				d2 = bit32.band(0xFFFF, d2 + d2)
-				d2 = bit32.band(0xFFFF, d2 + d2)
-				a0 = pgm:read_u32(0x13120 + d2)
-				asm = pgm:read_u16(a0)
-				if 0x70FF ~= asm then -- 0x70FF は moveq   #-$1, D0 でヒットしない処理結果を表す--空中追撃できない判定
-					air = true
-				end
-			end
-			if is_fireball and air then
-				if fake then
-					box.type = box_type_base.pfaa -- 飛び道具(空中追撃可、嘘)
-				elseif harmless then
-					box.type = box_type_base.pdaa -- 飛び道具(空中追撃可、無効)
-				else
-					box.type = box_type_base.paa  -- 飛び道具(空中追撃可)
-				end
-			elseif is_fireball and not air then
-				if fake then
-					box.type = box_type_base.pfa -- 飛び道具(嘘)
-				elseif harmless then
-					box.type = box_type_base.pda -- 飛び道具(無効)
-				else
-					box.type = box_type_base.pa  -- 飛び道具
-				end
-			elseif not is_fireball and air then
-				if fake then
-					box.type = box_type_base.faa -- 攻撃(嘘)
-				elseif harmless then
-					box.type = box_type_base.daa -- 攻撃(無効、空中追撃可)
-				else
-					box.type = box_type_base.aa  -- 攻撃(空中追撃可)
-				end
-			else
-				if fake then
-					box.type = box_type_base.fa  -- 攻撃(嘘)
-				elseif harmless then
-					box.type = box_type_base.da  -- 攻撃(無効)
-				else
-					box.type = box_type_base.a   -- 攻撃(空中追撃可)
-				end
-			end
-			--[[
-			print(string.format("hit %x %x %x %x %2s %4s %4s %4s %2s", box.id, d2, a0, asm,
-				harmless and "hm" or "",
-				fake and "fake" or "",
-				p.hit.obsl_hit and "obsl" or "",
-				p.hit.full_hit and "full" or "",
-				p.hit.harmless2 and "h2" or ""))
-			]]
-		else
-			box.type = box_types[box.id + 1]
-			if p.in_sway_line and sway_box_types[box.id + 1] then
-				box.type = sway_box_types[box.id + 1] 
-			end
-		end
-		box.type = box.type or box_type_base.x1
-		--[[ 意味がないので無効化する
-		local accept_atk = accept_atk_only[box.type]
-		if attack_only == true and accept_atk ~= true then
-			return nil
-		elseif attack_only ~= true and accept_atk == true then
-			return nil
-		end
+		{ name = "M.ダイナマイトスウィング", type = act_types.attack, ids = { 0xCC, 0xCD, 0xCE, 0xCF, 0xD0, 0xD1, }, },
+		{ name = "M.タイフーン", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, 0x103, 0x104, 0x105, 0x106, 0x107, 0x116, }, },
+		{ name = "M.エスカレーション", type = act_types.attack, ids = { 0x10B, }, },
+		{ name = "M.トリプルエクスタシー", type = act_types.attack, ids = { 0xD6, 0xD8, 0xD9, 0xDA, 0xDB, 0xDC, 0xDD, 0xDE, 0xDF, }, },
+		{ name = "立ち", type = act_types.free, ids = { 0x109, 0x10A, 0x108, }, },
+		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x24C, }, },
+		{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x251, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x246, }, },
+		{ disp_name = "CA _6C", name = "CA 6C(3段目)", type = act_types.attack, ids = { 0x250, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(3段目)", type = act_types.low_attack, ids = { 0x247, }, },
+		{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x242, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)下Aルート", type = act_types.attack, ids = { 0x241, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)立Aルート", type = act_types.attack, ids = { 0x240, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)立Cルート", type = act_types.attack, ids = { 0x243, 0x244, 0x245, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)立Cルート", type = act_types.attack, ids = { 0x252, 0x253, }, },
+		{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x24D, }, },
+		{ disp_name = "CA _6C", name = "CA 6C(2段目)避け攻撃ルート", type = act_types.attack, ids = { 0x249, 0x24A, 0x24B, }, },
+	},
+	-- フランコ・バッシュ
+	{
+		{ disp_name = "フェイント", name = "フェイント ガッツダンク", type = act_types.any, ids = { 0x113, }, },
+		{ disp_name = "フェイント", name = "フェイント ハルマゲドンバスター", type = act_types.any, ids = { 0x112, }, },
+		{ name = "ゴリラッシュ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
+		{ name = "スマッシュ", type = act_types.attack, ids = { 0x68, }, },
+		{ name = "バッシュトルネード", type = act_types.attack, ids = { 0x6A, }, },
+		{ name = "バロムパンチ", type = act_types.attack, ids = { 0x69, }, },
+		{ name = "ダブルコング", type = act_types.overhead, ids = { 0x86, 0x87, 0x88, 0x89, }, },
+		{ name = "ザッパー", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+		{ name = "ウェービングブロー", type = act_types.attack, ids = { 0x9A, 0x9B, }, },
+		{ name = "ガッツダンク", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xAC, }, },
+		{ name = "ゴールデンボンバー", type = act_types.attack, ids = { 0xAD, 0xAE, 0xAF, 0xB0, 0xB1, }, },
+		{ name = "ファイナルオメガショット", type = act_types.overhead, ids = { 0xFE, 0xFF, 0x100, }, },
+		{ name = "メガトンスクリュー", type = act_types.attack, ids = { 0xF4, 0xF5, 0xF6, 0xF7, 0xFC, 0xF8, }, },
+		{ name = "ハルマゲドンバスター", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, }, },
+		{ disp_name = "CA 立A", name = "CA 立A(3段目)", type = act_types.attack, ids = { 0x248, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x247, }, },
+		{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x242, }, },
+		{ disp_name = "CA 立D", name = "CA 立D(2段目)", type = act_types.attack, ids = { 0x240, }, },
+		{ disp_name = "CA 立B", name = "CA 立B(3段目)", type = act_types.low_attack, ids = { 0x246, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(3段目)", type = act_types.low_attack, ids = { 0x249, }, },
+		{ disp_name = "CA _6C", name = "CA 6C(3段目)", type = act_types.attack, ids = { 0x24A, 0x24B, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.overhead, ids = { 0x24C, }, },
+		{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x24D, }, },
+	},
+	-- 山崎竜二
+	{
+		{ disp_name = "フェイント", name = "フェイント 裁きの匕首", type = act_types.any, ids = { 0x112, }, },
+		{ name = "ブン投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
+		{ name = "目ツブシ", type = act_types.attack, ids = { 0x68, 0x6C, }, },
+		{ name = "カチ上げ", type = act_types.attack, ids = { 0x69, }, },
+		{ name = "ブッ刺し", type = act_types.overhead, ids = { 0x6A, }, },
+		{ name = "昇天", type = act_types.attack, ids = { 0x6B, }, },
+		{ name = "蛇使い・上段", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
+		{ name = "蛇だまし・上段", type = act_types.attack, ids = { 0x89, }, },
+		{ name = "蛇使い・中段", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+		{ name = "蛇だまし・中段", type = act_types.attack, ids = { 0x93, }, },
+		{ name = "蛇使い・下段", type = act_types.low_attack, ids = { 0x9A, 0x9B, 0x9C, }, },
+		{ name = "蛇だまし・下段", type = act_types.low_attack, ids = { 0x9D, }, },
+		{ name = "大蛇", type = act_types.low_attack, ids = { 0x94, }, },
+		{ name = "サドマゾ", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, }, },
+		{ name = "裁きの匕首", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, }, },
+		{ name = "ヤキ入れ", type = act_types.overhead, ids = { 0xAE, 0xAF, 0xB0, 0xB4, }, },
+		{ name = "倍返し", type = act_types.attack, ids = { 0xB8, 0xBA, 0xB9, 0xBB, 0xBC, }, },
+		{ name = "爆弾パチキ", type = act_types.attack, ids = { 0xCC, 0xCD, 0xCE, 0xCF, }, },
+		{ name = "トドメ", type = act_types.attack, ids = { 0xD6, 0xDA, 0xD8, 0xDB, 0xD9, 0xD7, }, },
+		{ name = "ギロチン", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, 0x103, }, },
+		{ name = "ドリル", type = act_types.attack, ids = { 0x101, 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, 0x110, 0xE0, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xEF, 0xF0, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)3Aルート", type = act_types.attack, ids = { 0x245, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)3Aルート", type = act_types.attack, ids = { 0x247, 0x248, 0x249, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x244, }, },
+		{ disp_name = "CA _3C", name = "CA 3C(2段目)", type = act_types.attack, ids = { 0x242, }, },
+		{ disp_name = "CA _6C", name = "CA 6C(2段目)", type = act_types.attack, ids = { 0x241, }, },
+		{ disp_name = "スゥエーC", name = "近スゥエーC", type = act_types.low_attack, ids = { 0x62, 0x63, 0x64, }, },
+		{ disp_name = "スゥエーC", name = "スゥエーC", type = act_types.low_attack, ids = { 0x25A, 0x25B, 0x25C, }, },
+	},
+	-- 秦崇秀
+	{
+		{ disp_name = "フェイント", name = "フェイント 海龍照臨", type = act_types.any, ids = { 0x112, }, },
+		{ name = "発勁龍", type = act_types.any, ids = { 0x6D, 0x6E, }, },
+		{ name = "光輪殺", type = act_types.overhead, ids = { 0x68, }, },
+		{ name = "帝王神足拳", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, 0x8A, }, },
+		{ name = "小 帝王天眼拳", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+		{ name = "大 帝王天眼拳", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
+		{ name = "小 帝王天耳拳", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
+		{ name = "大 帝王天耳拳", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
+		{ name = "帝王神眼拳（その場）", type = act_types.attack, ids = { 0xC2, 0xC3, }, },
+		{ name = "帝王神眼拳（空中）", type = act_types.attack, ids = { 0xCC, 0xCD, 0xCF, }, },
+		{ name = "帝王神眼拳（背後）", type = act_types.attack, ids = { 0xD6, 0xD7, }, },
+		{ name = "帝王空殺神眼拳", type = act_types.attack, ids = { 0xE0, 0xE1, }, },
+		{ name = "竜灯掌", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, }, },
+		{ name = "竜灯掌・幻殺", type = act_types.attack, ids = { 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, }, },
+		{ name = "帝王漏尽拳", type = act_types.attack, ids = { 0xFE, 0xFF, 0x101, 0x100, }, },
+		{ name = "帝王空殺漏尽拳", type = act_types.attack, ids = { 0xEA, 0xEB, 0xEC, 0xEE, 0xEF, 0xED, }, },
+		{ name = "海龍照臨", type = act_types.attack, ids = { 0x108, 0x109, 0x109, 0x10A, 0x10B, }, },
+		{ name = "立ち", type = act_types.free, ids = { 0x6C, }, },
+		{ disp_name = "CA 立A", name = "CA 立A(2段目)", type = act_types.attack, ids = { 0x247, }, },
+		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x246, }, },
+		{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x24B, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x240, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(3段目)", type = act_types.low_attack, ids = { 0x24C, }, },
+		{ disp_name = "CA _6C", name = "CA 6C(3段目)", type = act_types.attack, ids = { 0x242, }, },
+		{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x241, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(2段目)", type = act_types.low_attack, ids = { 0x248, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)Cルート", type = act_types.attack, ids = { 0x245, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)Cルート", type = act_types.attack, ids = { 0x243, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(4段目)Cルート", type = act_types.attack, ids = { 0x244, }, },
+	},
+	-- 秦崇雷,
+	{
+		{ disp_name = "フェイント", name = "フェイント 帝王宿命拳", type = act_types.any, ids = { 0x112, }, },
+		{ name = "発勁龍", type = act_types.any, ids = { 0x6D, 0x6E, }, },
+		{ name = "龍脚殺", type = act_types.overhead, ids = { 0x68, }, },
+		{ name = "帝王神足拳", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
+		{ name = "大 帝王天眼拳", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
+		{ name = "小 帝王天眼拳", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+		{ name = "小 帝王天耳拳", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
+		{ name = "大 帝王天耳拳", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
+		{ name = "帝王漏尽拳", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBB, 0xBA, 0xBC, }, },
+		{ name = "龍転身（前方）", type = act_types.any, ids = { 0xC2, 0xC3, 0xC4, }, },
+		{ name = "龍転身（後方）", type = act_types.any, ids = { 0xCC, 0xCD, 0xCE, }, },
+		{ name = "帝王宿命拳", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, },
+		{ name = "帝王宿命拳", type = act_types.attack, ids = { 0x101, 0x102, 0x104, 0x105, 0x107, 0x115, 0x116, 0x103, 0x106, }, },
+		{ name = "帝王龍声拳", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, }, },
+		{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x243, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)立Bルート", type = act_types.attack, ids = { 0x242, }, },
+		{ disp_name = "CA _8C", name = "CA 8C(3段目)立Bルート", type = act_types.overhead, ids = { 0x244, 0x245, 0x246, }, },
+		{ disp_name = "CA _3C", name = "CA 3C(3段目)立Bルート", type = act_types.attack, ids = { 0x240, }, },
+	},
+	-- ダック・キング
+	{
+		{ disp_name = "フェイント", name = "フェイント ダックダンス", type = act_types.any, ids = { 0x112, }, },
+		{ name = "ローリングネックスルー", type = act_types.attack, ids = { 0x6D, 0x6E, 0x6F, 0x70, 0x71, }, },
+		{ name = "ニードルロー", type = act_types.low_attack, ids = { 0x68, }, },
+		{ name = "マッドスピンハンマー", type = act_types.overhead, ids = { 0x69, }, },
+		{ name = "ショッキングボール", type = act_types.attack, ids = { 0x6A, 0x6B, 0x6C, }, },
+		{ name = "小ヘッドスピンアタック", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, 0x8A, }, },
+		{ name = "大ヘッドスピンアタック", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, 0x95, 0x96, 0x94, }, },
+		{ name = "ヘッドスピンアタック着地", names = { "小ヘッドスピンアタック", "大ヘッドスピンアタック" }, type = act_types.any, ids = { 0x3D, }, },
+		{ name = "フライングスピンアタック", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9E, }, },
+		{ name = "ダンシングダイブ", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xAA, }, },
+		{ name = "ブレイクストーム", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, 0xB6, 0xB4, 0xB5, 0xB3, 0xB7, }, },
+		{ name = "ダックフェイント・地", type = act_types.any, ids = { 0xC2, 0xC3, 0xC4, }, },
+		{ name = "ダックフェイント・空", type = act_types.any, ids = { 0xB8, 0xB9, 0xBA, }, },
+		{ name = "ダイビングパニッシャー", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, }, },
+		{ name = "ローリングパニッシャー", type = act_types.attack, ids = { 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, }, },
+		{ name = "ダンシングキャリバー", type = act_types.attack, ids = { 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0x115, }, },
+		{ name = "ブレイクハリケーン", type = act_types.attack, ids = { 0xEE, 0xEF, 0xF0, 0xF1, 0xF2, 0xF3, 0x116, 0xF4, }, },
+		{ name = "ブレイクスパイラル", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x102, }, },
+		{ disp_name = "ブレイクスパイラルBR", name = "ブレイクスパイラルBR/クレイジーBR", type = act_types.attack, ids = { 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, }, },
+		{ name = "ダックダンス", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, }, },
+		{ name = "スーパーポンピングマシーン", type = act_types.low_attack, ids = { 0x77, 0x78, 0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7F, 0x82, 0x80, 0x81, }, },
+		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x24E, }, },
+		{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x24F, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x243, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(3段目)", type = act_types.low_attack, ids = { 0x24D, }, },
+		{ disp_name = "CA _6C", name = "CA 6C(3段目)", type = act_types.attack, ids = { 0x242, }, },
+		{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x244, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(2段目)", type = act_types.attack, ids = { 0x24C, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(2段目)下Cルート", type = act_types.low_attack, ids = { 0x245, }, },
+		{ disp_name = "旧ブレイクストーム", name = "CA ブレイクストーム", type = act_types.attack, ids = { 0x247, 0x248, 0x249, 0x24A, }, },
+		{ name = "立B", type = act_types.overhead, ids = { 0x45, 0x72, 0x73, 0x74, }, },
+	},
+	-- キム・カッファン
+	{
+		{ disp_name = "フェイント", name = "フェイント 鳳凰脚", type = act_types.any, ids = { 0x112, }, },
+		{ name = "体落とし", type = act_types.any, ids = { 0x6D, 0x6E, }, },
+		{ name = "ネリチャギ", type = act_types.overhead, ids = { 0x68, 0x69, 0x6A, }, },
+		{ name = "飛燕斬", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
+		{ name = "小 半月斬", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+		{ name = "大 半月斬", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
+		{ name = "飛翔脚", type = act_types.low_attack, ids = { 0xA4, 0xA6, 0xA5, 0xA7, }, },
+		{ name = "戒脚", type = act_types.attack, ids = {  0xA8, 0xA9, }, },
+		{ name = "空砂塵", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
+		{ name = "天昇斬", type = act_types.attack, ids = { 0xB2, 0xB3, }, },
+		{ names = { "空砂塵", "天昇斬" }, type = act_types.attack, ids = { 0xB4, }, },
+		{ name = "覇気脚", type = act_types.low_attack, ids = { 0xB8, }, },
+		{ name = "鳳凰天舞脚", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, 0x103, 0x104, 0x105, 0x106, 0x107, }, },
+		{ name = "鳳凰脚", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, 0x110, 0x115, }, },
+		{ name = "CA ネリチャギ", type = act_types.overhead, ids = { 0x24B, 0x24A, 0x24C, }, },
+		{ disp_name = "CA 立A", name = "CA 立A(2段目)立Cルート", type = act_types.attack, ids = { 0x241, }, },
+		{ disp_name = "CA 立B", name = "CA 立B(3段目)立Cルート", type = act_types.attack, ids = { 0x244, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(4段目)立Cルート", type = act_types.attack, ids = { 0x246, 0x247, 0x248, }, },
+		{ disp_name = "CA 立A", name = "CA 立A(2段目)", type = act_types.attack, ids = { 0x240, }, },
+		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x243, }, },
+		{ disp_name = "CA 立B", name = "CA 立B(3段目)", type = act_types.attack, ids = { 0x249, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x242, }, },
+		{ name = "下A", type = act_types.low_attack, ids = { 0x47, }, },
+	},
+	-- ビリー・カーン
+	{
+		{ disp_name = "フェイント", name = "フェイント 強襲飛翔棍", type = act_types.any, ids = { 0x112, }, },
+		{ name = "一本釣り投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
+		{ name = "地獄落とし", type = act_types.any, ids = { 0x81, 0x82, 0x83, 0x84, }, },
+		{ name = "三節棍中段打ち", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, 0x93, }, },
+		{ name = "火炎三節棍中段打ち", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+		{ names = { "三節棍中段打ち", "火炎三節棍中段打ち" }, type = act_types.attack, ids = { 0x93, }, },
+		{ name = "燕落とし", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
+		{ name = "火龍追撃棍", type = act_types.attack, ids = { 0xB8, 0xB9, }, },
+		{ name = "旋風棍", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, }, },
+		{ name = "強襲飛翔棍", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
+		{ name = "超火炎旋風棍", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, },
+		{ name = "紅蓮殺棍", type = act_types.attack, ids = { 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, }, },
+		{ name = "サラマンダーストリーム", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.low_attack, ids = { 0x241, }, },
+		{ disp_name = "CA _6C", name = "CA 6C(2段目)", type = act_types.attack, ids = { 0x248, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(2段目)", type = act_types.attack, ids = { 0x243, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)下Cルート", type = act_types.attack, ids = { 0x245, }, },
+		{ disp_name = "集点連破棍", name = "CA 236C(2段目)下Cルート", type = act_types.attack, ids = { 0x246, }, },
+	},
+	-- チン・シンザン
+	{
+		{ disp_name = "フェイント", name = "フェイント 破岩撃", type = act_types.any, ids = { 0x112, }, },
+		{ disp_name = "フェイント", name = "フェイント クッサメ砲", type = act_types.any, ids = { 0x113, }, },
+		{ name = "合気投げ", type = act_types.attack, ids = { 0x6D, 0x6E, }, },
+		{ name = "頭突殺", type = act_types.attack, ids = { 0x81, 0x83, 0x84, }, },
+		{ name = "発勁裏拳", type = act_types.attack, ids = { 0x68, }, },
+		{ name = "落撃双拳", type = act_types.overhead, ids = { 0x69, }, },
+		{ name = "気雷砲（前方）", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
+		{ name = "気雷砲（対空）", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+		{ name = "小 破岩撃", type = act_types.low_attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, }, },
+		{ name = "大 破岩撃", type = act_types.low_attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, }, },
+		{ name = "超太鼓腹打ち", type = act_types.attack, ids = { 0x9A, 0x9B, }, },
+		{ name = "満腹滞空", type = act_types.attack, ids = { 0x9F, 0xA0, }, },
+		{ names = { "超太鼓腹打ち", "滞空滞空" }, type = act_types.attack, ids = { 0x9D, 0x9E, 0x9C, }, },
+		{ name = "軟体オヤジ", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, }, },
+		{ name = "クッサメ砲", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, }, },
+		{ name = "爆雷砲", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, },
+		{ name = "ホエホエ弾", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x114, 0x115, 0x116, 0x10E, 0x110, 0x10F, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)近立Aルート", type = act_types.low_attack, ids = { 0x24A, }, },
+		{ disp_name = "CA _3C", name = "CA 3C(2段目)近立Aルート", type = act_types.attack, ids = { 0x242, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)立Aルート", type = act_types.attack, ids = { 0x240, }, },
+		{ disp_name = "CA _3C", name = "CA 3C(2段目)立Aルート", type = act_types.attack, ids = { 0x249, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)立Cルート", type = act_types.attack, ids = { 0x241, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(2段目)ライン攻撃ルート", type = act_types.attack, ids = { 0x246, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)ライン攻撃ルート", type = act_types.attack, ids = { 0x24B, 0x24C, 0x24D, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)ライン攻撃ルート", type = act_types.low_attack, ids = { 0x247, }, },
+		{ disp_name = "CA _6_6+B", name = "CA 66B(3段目)ライン攻撃ルート", type = act_types.any, ids = { 0x248, }, },
+		{ disp_name = "CA D", name = "CA D(2段目)", type = act_types.overhead, ids = { 0x243, }, },
+		{ disp_name = "CA _3C", name = "CA 3C(2段目)6Aルート", type = act_types.any, ids = { 0x244, }, },
+		{ disp_name = "CA _1C", name = "CA 1C(2段目)6Aルート", type = act_types.any, ids = { 0x245, }, },
+	},
+	-- タン・フー・ルー,
+	{
+		{ disp_name = "フェイント", name = "フェイント 旋風剛拳", type = act_types.any, ids = { 0x112, }, },
+		{ name = "裂千掌", type = act_types.any, ids = { 0x6D, 0x6E, }, },
+		{ name = "右降龍", type = act_types.attack, ids = { 0x68, }, },
+		{ name = "衝波", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
+		{ name = "小 箭疾歩", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+		{ name = "大 箭疾歩", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
+		{ name = "裂千脚", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, }, },
+		{ name = "撃放", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, }, },
+		{ name = "旋風剛拳", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, }, },
+		{ name = "大撃放", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)避け攻撃ルート", type = act_types.overhead, ids = { 0x247, 0x248, 0x249, }, },
+		{ name = "挑発", type = act_types.provoke, ids = { 0x24A, 0x24B, }, },
+	},
+	-- ローレンス・ブラッド
+	{
+		{ name = "マタドールバスター", type = act_types.any, ids = { 0x6D, 0x6E, 0x6F, }, },
+		{ name = "トルネードキック", type = act_types.attack, ids = { 0x68, }, },
+		{ name = "オーレィ", type = act_types.any, ids = { 0x69, }, },
+		{ name = "小ブラッディスピン", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
+		{ name = "大ブラッディスピン", type = act_types.attack, ids = { 0x90, 0x91, 0x93, 0x94, 0x92, }, },
+		{ names = { "小ブラッディスピン", "大ブラッディスピン" }, type = act_types.attack, ids = { 0x3D, }, },
+		{ name = "ブラッディサーベル", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
+		{ name = "ブラッディカッター", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, }, },
+		{ name = "ブラッディミキサー", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, }, },
+		{ name = "ブラッディフラッシュ", type = act_types.attack, ids = { 0xFF, 0x100, 0x101, 0x102, }, },
+		{ name = "ブラッディシャドー", type = act_types.attack, ids = { 0x108, 0x109, 0x10E, 0x10D, 0x10B, 0x10C, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x245, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x246, }, },
+		{ disp_name = "CA 立D", name = "CA 立D(2段目)", type = act_types.attack, ids = { 0x24C, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)オーレィ", type = act_types.attack, ids = { 0x248, }, },
+		{ disp_name = "CA _6_3_2+C", name = "CA 632C(3段目)オーレィ", type = act_types.overhead, ids = { 0x249, 0x24A, 0x24B, }, },
+	},
+	-- ヴォルフガング・クラウザー
+	{
+		{ disp_name = "フェイント", name = "フェイント ブリッツボール", type = act_types.any, ids = { 0x112, }, },
+		{ disp_name = "フェイント", name = "フェイント カイザーウェイブ", type = act_types.any, ids = { 0x113, }, },
+		{ name = "ニースマッシャー", type = act_types.any, ids = { 0x6D, 0x6E, }, },
+		{ name = "デスハンマー", type = act_types.overhead, ids = { 0x68, }, },
+		{ name = "カイザーボディプレス", type = act_types.attack, ids = { 0x69, 0x72, }, },
+		{ name = "ダイビングエルボー", type = act_types.attack, ids = { 0x6A, 0x73, 0x74, 0x75, }, },
+		{ disp_name = "ブリッツボール", name = "ブリッツボール・上段", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
+		{ disp_name = "ブリッツボール", name = "ブリッツボール・下段", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+		{ name = "レッグトマホーク", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
+		{ name = "デンジャラススルー", type = act_types.attack, ids = { 0xAE, 0xAF, }, },
+		{ name = "グリフォンアッパー", type = act_types.attack, ids = { 0x248, }, },
+		{ name = "リフトアップブロー", type = act_types.attack, ids = { 0xC2, 0xC3, }, },
+		{ name = "フェニックススルー", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
+		{ name = "カイザークロー", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, }, },
+		{ name = "カイザーウェイブ", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, }, },
+		{ name = "ギガティックサイクロン", names = { "アンリミテッドデザイア", "ギガティックサイクロン", "ジャンプ" }, type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0xC, 0x10C, 0x10D, 0x10C, 0x10E, }, },
+		{ name = "アンリミテッドデザイア", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)近立Aルート", type = act_types.attack, ids = { 0x240, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)立Aルート", type = act_types.attack, ids = { 0x24E, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)立Bルート", type = act_types.attack, ids = { 0x242, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)下Aルート", type = act_types.attack, ids = { 0x241, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(2段目)", type = act_types.low_attack, ids = { 0x244, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)近立Cルート", type = act_types.attack, ids = { 0x243, }, },
+		{ disp_name = "CA _2_3_6+C", name = "CA 236C(2段目)近立Cルート", type = act_types.attack, ids = { 0x245, }, },
+		{ disp_name = "CA _3C", name = "CA 3C(2段目)近立Cルート", type = act_types.attack, ids = { 0x247, }, },
+	},
+	-- リック・ストラウド
+	{
+		{ disp_name = "フェイント", name = "フェイント シューティングスター", type = act_types.any, ids = { 0x112, }, },
+		{ name = "ガング・ホー", type = act_types.any, ids = { 0x6D, 0x6E, }, },
+		{ name = "チョッピングライト", type = act_types.overhead, ids = { 0x68, 0x69, }, },
+		{ name = "スマッシュソード", type = act_types.attack, ids = { 0x6A, }, },
+		{ name = "パニッシャー", type = act_types.attack, ids = { 0x6B, }, },
+		{ disp_name = "シューティングスター", name = "小 シューティングスター", type = act_types.attack, ids = { 0x86, 0x87, 0x8C, 0x88, 0x89, 0x8A, 0x8B, }, },
+		{ disp_name = "シューティングスター", name = "大 シューティングスター", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, 0x94, }, },
+		{ name = "シューティングスターEX", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0x3D, }, },
+		{ name = "ブレイジングサンバースト", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, }, },
+		{ name = "ヘリオン", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB1, 0xB0, }, },
+		{ name = "フルムーンフィーバー", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, }, },
+		{ name = "ディバインブラスト/フェイクブラスト", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9F, }, },
+		{ name = "ガイアブレス", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, },
+		{ name = "ハウリング・ブル", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, }, },
+		{ disp_name = "CA 立B", name = "CA 立B(2段目)近立Aルート", type = act_types.attack, ids = { 0x240, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)近立A Cルート", type = act_types.attack, ids = { 0x243, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)近立Aルート", type = act_types.attack, ids = { 0x24D, }, },
+		{ disp_name = "CA 立B", name = "CA 立B(2段目)立A Bルート", type = act_types.attack, ids = { 0x241, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)立Aルート", type = act_types.attack, ids = { 0x244, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)立Aルート", type = act_types.attack, ids = { 0x246, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)近立Bルート", type = act_types.attack, ids = { 0x253, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)近立Bルート 遠Bルート", type = act_types.attack, ids = { 0x251, }, },
+		{ disp_name = "CA 3C(", name = "CA 3C(3段目)近立Bルート", type = act_types.attack, ids = { 0x248, }, },
+		{ disp_name = "CA 下B", name = "CA 下B(2段目)近立Bルート 下Aルート", type = act_types.attack, ids = { 0x242, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(3段目)近立Bルート 下Aルート", type = act_types.low_attack, ids = { 0x247, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)下Aルート", type = act_types.attack, ids = { 0x245, }, },
+		{ disp_name = "CA 立B", name = "CA 立B(2段目)下Bルート", type = act_types.attack, ids = { 0x24C, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(2段目)下Bルート", type = act_types.low_attack, ids = { 0x24A, }, },
+		{ disp_name = "CA C", name = "CA C(3段目)遠立Bルート", type = act_types.attack, ids = { 0x24E, 0x24F, 0x250, }, },
+		{ disp_name = "CA _2_2+C", name = "CA 22C(3段目)遠立Bルート", type = act_types.overhead, ids = { 0xE6, 0xE7, }, },
+		{ disp_name = "CA _3_3+B", name = "CA 33B(2段目)", type = act_types.overhead, ids = { 0xE0, 0xE1, }, },
+		{ disp_name = "CA _4C", name = "CA 4C(2段目)", type = act_types.attack, ids = { 0x249, }, },
+	},
+	-- 李香緋
+	{
+		{ disp_name = "フェイント", name = "フェイント 天崩山", type = act_types.any, ids = { 0x113, }, },
+		{ disp_name = "フェイント", name = "フェイント 大鉄神", type = act_types.any, ids = { 0x112, }, },
+		{ name = "力千後宴", type = act_types.any, ids = { 0x6D, 0x6E, }, },
+		{ name = "裡門頂肘", type = act_types.attack, ids = { 0x68, 0x69, 0x6A, }, },
+		{ name = "後捜腿", type = act_types.attack, ids = { 0x6B, }, },
+		{ name = "小 那夢波", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
+		{ name = "大 那夢波", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, }, },
+		--[[
+			0x9E, 0x9F, 閃里肘皇移動
+			0xA2, 閃里肘皇スカり
+			0xA1, 0xA7, 閃里肘皇ヒット
+			0xAD, 閃里肘皇・心砕把スカり
+			0xA3, 0xA4, 0xA5, 0xA6, 閃里肘皇・貫空
+			0xA8, 0xA9, 0xAA, 0xAB, 0xAC, 閃里肘皇・心砕把
 		]]
-		if (box.type == box_type_base.a or box.type == box_type_base.aa) and
-			(is_fireball == true or (p.hit.harmless == false and p.hit.obsl_hit == false)) then
-			-- 攻撃中のフラグをたてる
-			p.attacking = true
-			p.attack_id = id
+		{ name = "閃里肘皇", type = act_types.attack, ids = { 0x9E, 0x9F, 0xA2, 0xA1, 0xA7, }, },
+		{ name = "閃里肘皇・貫空", type = act_types.attack, ids = { 0xA3, 0xA4, 0xA5, 0xA6, }, },
+		{ name = "閃里肘皇・心砕把", type = act_types.attack, ids = { 0xAD, 0xA8, 0xA9, 0xAA, 0xAB, 0xAC, }, },
+		{ name = "天崩山", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
+		{ name = "詠酒・対ジャンプ攻撃", type = act_types.attack, ids = { 0xB8, }, },
+		{ name = "詠酒・対立ち攻撃", type = act_types.attack, ids = { 0xAE, }, },
+		{ name = "詠酒・対しゃがみ攻撃", type = act_types.attack, ids = { 0xC2, }, },
+		{ name = "大鉄神", type = act_types.attack, ids = { 0xF4, 0xF5, 0xF6, 0xF7, }, },
+		{ name = "超白龍", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, 0x103, }, },
+		{ name = "真心牙", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, 0x110, }, },
+		{ disp_name = "CA 立A", name = "CA 立A(2段目)", type = act_types.attack, ids = { 0x241, }, },
+		{ disp_name = "CA 立A", name = "CA 立A(3段目)", type = act_types.attack, ids = { 0x242, }, },
+		{ disp_name = "CA 立A", name = "CA 立A(4段目)", type = act_types.attack, ids = { 0x243, }, },
+		{ disp_name = "CA 下A", name = "CA 下A(2段目)", type = act_types.attack, ids = { 0x244, }, },
+		{ disp_name = "CA 下A", name = "CA 下A(3段目)", type = act_types.attack, ids = { 0x245, }, },
+		{ disp_name = "CA 下A", name = "CA 下A(4段目)", type = act_types.attack, ids = { 0x246, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目、4段目)", type = act_types.attack, ids = { 0x24C, }, },
+		{ disp_name = "CA 立B", name = "CA 立B(4段目)", type = act_types.attack, ids = { 0x24D, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x24A, }, },
+		{ disp_name = "CA 立A", name = "CA 立A(3段目)Cのあと", type = act_types.attack, ids = { 0x24B, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(4段目)CAのあと", type = act_types.attack, ids = { 0x24C, }, },
+		{ disp_name = "挑発", name = "アッチョンブリケ", type = act_types.provoke, ids = { 0x283, }, },
+		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x246, }, },
+		{ disp_name = "CA 下B", name = "CA 下B(2段目)下Bルート", type = act_types.low_attack, ids = { 0x24E, }, },
+		{ disp_name = "CA 立C", name = "CA 立C(3段目)Bルート", type = act_types.overhead, ids = { 0x249, }, },
+		{ disp_name = "CA _3C", name = "CA 3C(3段目)Bルート", type = act_types.provoke, ids = { 0x250, 0x251, 0x252, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(3段目)Bルート", type = act_types.low_attack, ids = { 0x287, }, },
+		{ disp_name = "CA _6_6+A", name = "CA 66A", type = act_types.attack, ids = { 0x24F, }, },
+	},
+	-- アルフレッド
+	{
+		{ disp_name = "フェイント", name = "フェイント クリティカルウィング", type = act_types.any, ids = { 0x112, }, },
+		{ disp_name = "フェイント", name = "フェイント オーグメンターウィング", type = act_types.any, ids = { 0x113, }, },
+		{ name = "バスタソニックウィング", type = act_types.any, ids = { 0x6D, 0x6E, }, },
+		{ name = "フロントステップキック", type = act_types.attack, ids = { 0x68, }, },
+		{ name = "バックステップキック", type = act_types.attack, ids = { 0x78, }, },
+		{ name = "フォッカー", type = act_types.attack, ids = { 0x69, }, },
+		{ disp_name = "クリティカルウィング", name = "小 クリティカルウィング", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
+		{ disp_name = "クリティカルウィング", name = "大 クリティカルウィング", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, }, },
+		{ name = "オーグメンターウィング", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
+		{ name = "ダイバージェンス", type = act_types.attack, ids = { 0xA4, 0xA5, }, },
+		{ name = "メーデーメーデー", type = act_types.attack, ids = { 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7, 0xAE, 0xAF, 0xB0, 0xB1, }, },
+		{ name = "S.TOL", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF, }, },
+		{ name = "ショックストール", type = act_types.attack, ids = { 0x100, 0x101, 0x102, 0x103, 0x104, 0x105, 0xFE, 0xFF, 0x100, 0xF4, 0xF5, 0xF6, 0xF7, }, },
+		{ name = "ウェーブライダー", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, }, },
+	},
+	{
+		-- 共通行動
+		{ name = "立ち", type = act_types.free, ids = { 0x1, 0x0, 0x23, 0x22, }, },
+		{ name = "立ち振り向き", type = act_types.free, ids = { 0x1D, }, },
+		{ name = "しゃがみ振り向き", type = act_types.free, ids = { 0x1E, }, },
+		{ name = "振り向き中", type = act_types.free, ids = { 0x3D, }, },
+		{ name = "しゃがみ振り向き中", type = act_types.free, ids = { 0x3E, }, },
+		{ name = "しゃがみ", type = act_types.free, ids = { 0x4, 0x24, 0x25, }, },
+		{ name = "しゃがみ途中", type = act_types.free, ids = { 0x5, }, },
+		{ name = "立ち途中", type = act_types.free, ids = { 0x6, }, },
+		{ name = "前歩き", type = act_types.free, ids = { 0x2, }, },
+		{ name = "後歩き", type = act_types.free, ids = { 0x3, }, },
+		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
+		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
+		{ name = "しゃがみ歩き", type = act_types.free, ids = { 0x7, }, },
+		{ disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
+		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
+		{ disp_name = "立ち", name = "スゥエーライン上 立ち", type = act_types.free, ids = { 0x21, 0x40, 0x20, 0x3F, }, },
+		{ disp_name = "前歩き", name = "スゥエーライン上 前歩き", type = act_types.free, ids = { 0x2D, 0x2C, }, },
+		{ disp_name = "後歩き", name = "スゥエーライン上 後歩き", type = act_types.free, ids = { 0x2E, 0x2F, }, },
+		{ disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
+		{ disp_name = "バックステップ", name = "スゥエーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
+		{ disp_name = "スゥエーA", name = "近スゥエーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
+		{ disp_name = "スゥエーB", name = "近スゥエーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
+		{ disp_name = "スゥエーC", name = "近スゥエーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
+		{ disp_name = "スゥエーA", name = "スゥエーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
+		{ disp_name = "スゥエーB", name = "スゥエーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
+		{ disp_name = "スゥエーC", name = "スゥエーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
+		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, 0xB, }, },
+		{ disp_name = "着地", name = "ジャンプ着地", type = act_types.any, ids = { 0x9, }, },
+		{ name = "ジャンプ", type = act_types.any, ids = { 
+			0xB, 0xC, -- 垂直ジャンプ
+			0xD, 0xE, -- 前ジャンプ
+			0xF, 0x10, -- 後ジャンプ
+			0xB, 0x11, 0x12, -- 垂直小ジャンプ
+			0xD, 0x13, 0x14, -- 前小ジャンプ
+			0xF, 0x15, 0x16, -- 後小ジャンプ
+		}, },
+		{ name = "グランドスゥエー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
+		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
+		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
+		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
+		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
+		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
+		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
+		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
+		{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
+		{ disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
+		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
+		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
+		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
+		{ disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
+		{ disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
+		{ disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
+		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
+		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
+		{ name = "ジャンプ振り向き", type = act_types.attack, ids = { 0x1F, }, },
+		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
+		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
+		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
+		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
+		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
+		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
+		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
+		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
+		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
+		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
+		{ name = "投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
+		{ name = "ダウン", type = act_types.any, ids = { 0x192, 0x18E, 0x190,  }, },
+		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
+		{ name = "気絶", type = act_types.any, ids = { 0x194, 0x195, }, },
+		{ name = "ガード", type = act_types.guard, ids = { 0x117, 0x118, 0x119, 0x11A, 0x11B, 0x11C, 0x11D, 0x11E, 0x11F, 0x120, 0x121, 0x122, 0x123, 0x124, 0x125, 0x126, 0x127, 0x128, 0x129, 0x12A, 0x12C, 0x12D, 0x131, 0x132, 0x133, 0x134, 0x135, 0x136, 0x137, 0x139, }, },
+		{ name = "やられ", type = act_types.hit, ids = { 0x13F, 0x140, 0x141, 0x142, 0x143, 0x144, 0x145, 0x146, 0x147, 0x148, 0x149, 0x14A, 0x14B, 0x14C, 0x14C, 0x14D, 0x14E, 0x14F, 0x1E9, 0x239 }, },
+	},
+}
+local char_fireball_base = {
+	-- テリー・ボガード
+	{
+		{ name = "パワーウェイブ", type = act_types.attack, ids = { 0x265, 0x266, 0x26A, }, },
+		{ name = "ラウンドウェイブ", type = act_types.low_attack, ids = { 0x260, }, },
+		{ name = "パワーゲイザー", type = act_types.attack, ids = { 0x261, }, },
+		{ name = "トリプルゲイザー", type = act_types.attack, ids = { 0x267, }, },
+	},
+	-- アンディ・ボガード
+	{
+		{ name = "飛翔拳", type = act_types.attack, ids = { 0x262, 0x263, }, },
+		{ name = "激飛翔拳", type = act_types.attack, ids = { 0x266, 0x267, }, },
+	},
+	-- 東丈
+	{
+		{ name = "ハリケーンアッパー", type = act_types.attack, ids = { 0x267, 0x269, }, },
+		{ name = "スクリューアッパー", type = act_types.attack, ids = { 0x269, 0x26A, 0x26B, }, },
+	},
+	-- 不知火舞
+	{
+		{ name = "花蝶扇", type = act_types.attack, ids = { 0x261, 0x262, 0x263, }, },
+		{ name = "龍炎舞", type = act_types.attack, ids = { 0x264, }, },
+	},
+	-- ギース・ハワード
+	{
+		{ name = "烈風拳", type = act_types.attack, ids = { 0x261, 0x260, 0x276, }, },
+		{ name = "ダブル烈風拳", type = act_types.attack, ids = { 0x262, 0x263, 0x264, 0x265, }, },
+		{ name = "レイジングストーム", type = act_types.attack, ids = { 0x269, 0x26B, 0x26A, }, },
+	},
+	-- 望月双角,
+	{
+		{ name = "雷撃棍", type = act_types.attack, ids = { 0x260, }, },
+		{ name = "野猿狩り/掴み", type = act_types.attack, ids = { 0x277, 0x27C, }, },
+		{ name = "まきびし", type = act_types.low_attack, ids = { 0x274, 0x275, }, },
+		{ name = "憑依弾", type = act_types.attack, ids = { 0x263, 0x266, }, },
+		{ name = "邪棍舞", type = act_types.low_attack, ids = { 0xF4, 0xF5, }, },
+		{ name = "突破", type = act_types.attack, ids = { 0xFA, }, },
+		{ name = "降破", type = act_types.overhead, ids = { 0xF9, }, },
+		{ name = "倒破", type = act_types.low_attack, ids = { 0xF7, }, },
+		{ name = "払破", type = act_types.attack, ids = { 0xF8, }, },
+		{ name = "天破", type = act_types.attack, ids = { 0xF6, }, },
+		{ name = "喝", type = act_types.attack, ids = { 0x282, 0x283, }, },
+		{ name = "いかづち", type = act_types.attack, ids = { 0x286, 0x287, }, },
+	},
+	-- ボブ・ウィルソン
+	{
+	},
+	-- ホンフゥ
+	{
+		{ name = "よかトンハンマー", type = act_types.attack, ids = { 0x26B, }, },
+	},
+	-- ブルー・マリー
+	{
+	},
+	-- フランコ・バッシュ
+	{
+		{ name = "ザッパー", type = act_types.attack, ids = { 0x269, }, },
+		{ name = "ファイナルオメガショット", type = act_types.attack, ids = { 0x26C, }, },
+	},
+	-- 山崎竜二
+	{
+		{ name = "目ツブシ", type = act_types.attack, ids = { 0x261, }, },
+		{ name = "倍返し", type = act_types.attack, ids = { 0x262, 0x263, 0x270, 0x26D, }, },
+	},
+	-- 秦崇秀
+	{
+		{ name = "帝王天眼拳", type = act_types.attack, ids = { 0x262, 0x263, 0x265, }, },
+		{ name = "海龍照臨", type = act_types.attack, ids = { 0x273, 0x274, }, },
+		{ name = "帝王漏尽拳", type = act_types.attack, ids = { 0x26C, }, },
+		{ name = "帝王空殺漏尽拳", type = act_types.attack, ids = { 0x26F, }, },
+	},
+	-- 秦崇雷,
+	{
+		{ name = "帝王漏尽拳", type = act_types.attack, ids = { 0x266, }, },
+		{ name = "帝王天眼拳", type = act_types.attack, ids = { 0x26E, }, },
+		{ name = "帝王宿命拳", type = act_types.attack, ids = { 0x268, 0x273, }, },
+		{ name = "帝王龍声拳", type = act_types.attack, ids = { 0x26B, }, },
+	},
+	-- ダック・キング
+	{
+	},
+	-- キム・カッファン
+	{
+	},
+	-- ビリー・カーン
+	{
+		{ name = "三節棍中段打ち", type = act_types.attack, ids = { 0x266, }, },
+		{ name = "火炎三節棍中段打ち", type = act_types.attack, ids = { 0x267, }, },
+		{ name = "旋風棍", type = act_types.attack, ids = { 0x269, }, },
+		{ name = "超火炎旋風棍", type = act_types.attack, ids = { 0x261, 0x263, 0x262, }, },
+		{ name = "サラマンダーストリーム", type = act_types.attack, ids = { 0x27A, 0x278, }, },
+	},
+	-- チン・シンザン
+	{
+		{ name = "気雷砲", type = act_types.attack, ids = { 0x267, 0x268, 0x26E, }, },
+		{ name = "爆雷砲", type = act_types.attack, ids = { 0x287, 0x272, 0x273, }, },
+		{ name = "ホエホエ弾", type = act_types.attack, ids = { 0x280, 0x281, 0x27E, 0x27F, }, },
+		{ name = "クッサメ砲", type = act_types.attack, ids = { 0x282, }, },
+	},
+	-- タン・フー・ルー,
+	{
+		{ name = "衝波", type = act_types.attack, ids = { 0x265, }, },
+	},
+	-- ローレンス・ブラッド
+	{
+		{ name = "ブラッディサーベル", type = act_types.attack, ids = { 0x282, }, },
+		{ name = "ブラッディミキサー", type = act_types.attack, ids = { 0x284, }, },
+	},
+	-- ヴォルフガング・クラウザー
+	{
+		{ name = "小 ブリッツボール", type = act_types.attack, ids = { 0x263, 0x262, }, },
+		{ name = "大 ブリッツボール", type = act_types.attack, ids = { 0x266, }, },
+		{ name = "カイザーウェイブ1", type = act_types.attack, ids = { 0x26E, 0x26F, }, },
+		{ name = "カイザーウェイブ2", type = act_types.attack, ids = { 0x282, 0x270, }, },
+		{ name = "カイザーウェイブ3", type = act_types.attack, ids = { 0x283, 0x271, }, },
+	},
+	-- リック・ストラウド
+	{
+		{ name = "ガイアブレス", type = act_types.attack, ids = { 0x261, }, },
+		{ name = "ハウリング・ブル", type = act_types.attack, ids = { 0x26A, 0x26B, 0x267, }, },
+	},
+	-- 李香緋
+	{
+		{ name = "那夢波", type = act_types.attack, ids = { 0x263, }, },
+		{ name = "那夢波", type = act_types.attack, ids = { 0x268, }, },
+		{ name = "真心牙", type = act_types.attack, ids = { 0x270, }, },
+	},
+	-- アルフレッド
+	{
+		{ name = "ダイバージェンス", type = act_types.attack, ids = { 0x264, }, },
+	},
+}
+local char_acts, char_1st_acts = {}, {}
+for char, acts_base in pairs(char_acts_base) do
+	char_acts[char], char_1st_acts[char] = {}, {}
+	for i, acts in pairs(acts_base) do
+		for i, id in ipairs(acts.ids) do
+			if acts.type == act_types.guard or acts.type == act_types.hit then
+				-- char_1st_actsには登録しない
+			else
+				char_1st_acts[char][id] = i == 1
+			end
+			char_acts[char][id] = acts
 		end
-
-		box.top    = p.hit.pos_y - bit32.arshift(top    * p.hit.scale * 4, 8)
-		box.bottom = p.hit.pos_y - bit32.arshift(bottom * p.hit.scale * 4, 8)
-		box.left   = p.hit.pos_x - bit32.arshift(left   * p.hit.scale * 4, 8) * p.hit.flip_x
-		box.right  = p.hit.pos_x - bit32.arshift(right  * p.hit.scale * 4, 8) * p.hit.flip_x
-
-		box.top    = (0 > box.top    or 0xFFFF < box.top   ) and bit32.band(0xFFFF, box.top   ) or box.top
-		box.bottom = (0 > box.bottom or 0xFFFF < box.bottom) and bit32.band(0xFFFF, box.bottom) or box.bottom
-		box.left   = (0 > box.left   or 0xFFFF < box.left  ) and bit32.band(0xFFFF, box.left  ) or box.left
-		box.right  = (0 > box.right  or 0xFFFF < box.right ) and bit32.band(0xFFFF, box.right ) or box.right
-
-		if ((box.top <= 0 and box.bottom <=0) or (box.top >= 224 and box.bottom >=224) or (box.left <= 0 and box.right <= 0) or (box.left >= 320 and box.right >= 320)) then
-			--print("OVERFLOW " .. (key or "")) --debug
-			return nil
+	end
+end
+local char_fireballs = { }
+for char, fireballs_base in pairs(char_fireball_base) do
+	char_fireballs [char] = {}
+	for _, fireball in pairs(fireballs_base) do
+		local label = fireball.name
+		local type  = fireball.name
+		for _, id in pairs(fireball.ids) do
+			char_fireballs[char][id] = fireball
 		end
+	end
+end
+local jump_acts = {
+	[0x9] = true,
+	[0x0B] = true, [0x0C] = true,
+	[0x0D] = true, [0x0E] = true,
+	[0x0F] = true, [0x10] = true,
+	[0x0B] = true, [0x11] = true, [0x12] = true,
+	[0x0D] = true, [0x13] = true, [0x14] = true,
+	[0x0F] = true, [0x15] = true, [0x16] = true,
+}
+local wakeup_acts = { [0x193] = true, [0x13B] = true, }
+local down_acts = { [0x190] = true, [0x192] = true, [0x18E] = true, }
 
-		-- はみ出し補正
-		if  p.hit.flip_x == 1 then
-			if box.right > 320 and box.right > box.left then
-				box.right = 0
+-- キー入力2
+local cmd_neutral = function(p, next_joy)
+	next_joy["P" .. p.control .. " Up"] = false
+	next_joy["P" .. p.control .. " Down"] = false
+	next_joy[p.block_side] = false
+	next_joy[p.front_side] = false
+	next_joy["P" .. p.control .. " Button 1"] = false
+	next_joy["P" .. p.control .. " Button 2"] = false
+	next_joy["P" .. p.control .. " Button 3"] = false
+	next_joy["P" .. p.control .. " Button 4"] = false
+end
+local cmd_base = {
+	_5 = cmd_neutral,
+	_7 = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy["P" .. p.control .. " Up"] = true
+		next_joy[p.block_side] = true
+	end,
+	_8 = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy["P" .. p.control .. " Up"] = true
+	end,
+	_9 = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy["P" .. p.control .. " Up"] = true
+		next_joy[p.front_side] = true
+	end,
+	_6 = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy[p.front_side] = true
+	end,
+	_3 = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy[p.front_side] = true
+		next_joy["P" .. p.control .. " Down"] = true
+	end,
+	_2 = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy["P" .. p.control .. " Down"] = true
+	end,
+	_1 = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy["P" .. p.control .. " Down"] = true
+		next_joy[p.block_side] = true
+	end,
+	_4 = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy[p.block_side] = true
+	end,
+	_a = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy["P" .. p.control .. " Button 1"] = true
+	end,
+	_b = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy["P" .. p.control .. " Button 2"] = true
+	end,
+	_c = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy["P" .. p.control .. " Button 3"] = true
+	end,
+	_d = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy["P" .. p.control .. " Button 4"] = true
+	end,
+	_ab = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy["P" .. p.control .. " Button 1"] = true
+		next_joy["P" .. p.control .. " Button 2"] = true
+	end,
+	_bc = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy["P" .. p.control .. " Button 2"] = true
+		next_joy["P" .. p.control .. " Button 3"] = true
+	end,
+	_6a = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy[p.front_side] = true
+		next_joy["P" .. p.control .. " Button 1"] = true
+	end,
+	_3a = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy[p.front_side] = true
+		next_joy["P" .. p.control .. " Down"] = true
+		next_joy["P" .. p.control .. " Button 1"] = true
+	end,
+	_2a = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy["P" .. p.control .. " Down"] = true
+		next_joy["P" .. p.control .. " Button 1"] = true
+	end,
+	_4a = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy[p.block_side] = true
+		next_joy["P" .. p.control .. " Button 1"] = true
+	end,
+	_6b = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy[p.front_side] = true
+		next_joy["P" .. p.control .. " Button 2"] = true
+	end,
+	_3b = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy[p.front_side] = true
+		next_joy["P" .. p.control .. " Down"] = true
+		next_joy["P" .. p.control .. " Button 2"] = true
+	end,
+	_2b = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy["P" .. p.control .. " Down"] = true
+		next_joy["P" .. p.control .. " Button 2"] = true
+	end,
+	_4b = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy[p.block_side] = true
+		next_joy["P" .. p.control .. " Button 2"] = true
+	end,
+	_6c = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy[p.front_side] = true
+		next_joy["P" .. p.control .. " Button 3"] = true
+	end,
+	_3c = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy[p.front_side] = true
+		next_joy["P" .. p.control .. " Down"] = true
+		next_joy["P" .. p.control .. " Button 3"] = true
+	end,
+	_2c = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy["P" .. p.control .. " Down"] = true
+		next_joy["P" .. p.control .. " Button 3"] = true
+	end,
+	_4c = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy[p.block_side] = true
+		next_joy["P" .. p.control .. " Button 3"] = true
+	end,
+	_8d = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy["P" .. p.control .. " Up"] = true
+		next_joy["P" .. p.control .. " Button 4"] = true
+	end,
+	_2d = function(p, next_joy)
+		cmd_neutral(p, next_joy)
+		next_joy["P" .. p.control .. " Down"] = true
+		next_joy["P" .. p.control .. " Button 4"] = true
+	end,
+}
+local rvs_types = {
+	on_wakeup           = 1, -- ダウン起き上がりリバーサル入力
+	jump_landing        = 2, -- 着地リバーサル入力（やられの着地）
+	knock_back_landing  = 3, -- 着地リバーサル入力（通常ジャンプの着地）
+	knock_back_recovery = 4, -- リバーサルじゃない最速入力
+	in_knock_back       = 5, -- のけぞり中のデータをみてのけぞり修了の_2F前に入力確定する
+	dangerous_through   = 6, -- デンジャラススルー用
+	atemi               = 7, -- 当身うち空振りと裏雲隠し用
+}
+-- コマンドテーブル上の技ID
+local common_rvs = {
+	{ cmd = cmd_base._a      , bs = false, name = "立A", },
+	{ cmd = cmd_base._b      , bs = false, name = "立B", },
+	{ cmd = cmd_base._c      , bs = false, name = "立C", },
+	{ cmd = cmd_base._d      , bs = false, name = "立D", },
+	{ cmd = cmd_base._ab     , bs = false, name = "避け攻撃", },
+	{ cmd = cmd_base._6c     , bs = false, name = "投げ", },
+	{ cmd = cmd_base._2a     , bs = false, name = "下A", },
+	{ cmd = cmd_base._2b     , bs = false, name = "下B", },
+	{ cmd = cmd_base._2c     , bs = false, name = "下C", },
+	{ cmd = cmd_base._8      , bs = false, name = "垂直ジャンプ", },
+	{ cmd = cmd_base._9      , bs = false, name = "前ジャンプ", },
+	{ cmd = cmd_base._7      , bs = false, name = "後ジャンプ", },
+	{ id = 0x1E, ver = 0x0600, bs = false, name = "ダッシュ", },
+	{ id = 0x1F, ver = 0x0600, bs = false, name = "飛び退き", },
+}
+local char_rvs_list = {
+	-- テリー・ボガード
+	{
+		{ cmd = cmd_base._3a     , bs = false, name = "ワイルドアッパー", },
+		{ cmd = cmd_base._6b     , bs = false, name = "バックスピンキック", },
+		{ id = 0x01, ver = 0x0600, bs = true , name = "小バーンナックル", },
+		{ id = 0x02, ver = 0x0600, bs = true , name = "大バーンナックル", },
+		{ id = 0x03, ver = 0x0600, bs = true , name = "パワーウェイブ", },
+		{ id = 0x04, ver = 0x0600, bs = true , name = "ランドウェイブ", },
+		{ id = 0x05, ver = 0x0600, bs = true , name = "クラックシュート", },
+		{ id = 0x06, ver = 0x0600, bs = true , name = "ファイヤーキック", },
+		{ id = 0x07, ver = 0x0600, bs = false, name = "パッシングスウェー", },
+		{ id = 0x08, ver = 0x0600, bs = false, name = "ライジングタックル", },
+		{ id = 0x10, ver = 0x0600, bs = true , name = "パワーゲイザー", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "トリプルゲイザー", },
+		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント バーンナックル", },
+		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント パワーゲイザー", },
+	},
+	-- アンディ・ボガード
+	{
+		{ id = 0x01, ver = 0x0600, bs = false, name = "小残影拳", },
+		{ id = 0x02, ver = 0x06FF, bs = false, name = "大残影拳", },
+		{ id = 0x03, ver = 0x0600, bs = true , name = "飛翔拳", },
+		{ id = 0x04, ver = 0x0600, bs = true , name = "激飛翔拳", },
+		{ id = 0x05, ver = 0x0600, bs = true , name = "昇龍弾", },
+		{ id = 0x06, ver = 0x0600, bs = true , name = "空破弾", },
+		-- { id = 0x07, ver = 0x1200, bs = false, name = "幻影不知火", },
+		{ id = 0x10, ver = 0x0600, bs = false, name = "超裂破弾", },
+		{ id = 0x12, ver = 0x0600, bs = true , name = "男打弾", },
+		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 残影拳", },
+		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント 飛翔拳", },
+		{ id = 0x48, ver = 0x0600, bs = false, name = "フェイント 超裂破弾", },
+	},
+	-- 東丈
+	{
+		{ id = 0x01, ver = 0x0600, bs = false, name = "小スラッシュキック", },
+		{ id = 0x02, ver = 0x0600, bs = false, name = "大スラッシュキック", },
+		{ id = 0x03, ver = 0x0600, bs = true , name = "黄金のカカト", },
+		{ id = 0x04, ver = 0x0600, bs = true , name = "タイガーキック", },
+		{ id = 0x05, ver = 0x0C00, bs = true , name = "爆裂拳", },
+		-- { id = 0x00, ver = 0x0CFF, bs = false, name = "爆裂フック", },
+		-- { id = 0x00, ver = 0x0CFE, bs = false, name = "爆裂アッパー", },
+		{ id = 0x06, ver = 0x0600, bs = true , name = "ハリケーンアッパー", },
+		{ id = 0x07, ver = 0x0600, bs = true , name = "爆裂ハリケーン", },
+		{ id = 0x10, ver = 0x0600, bs = false, name = "スクリューアッパー", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "サンダーファイヤー(C)", },
+		{ id = 0x13, ver = 0x0600, bs = false, name = "サンダーファイヤー(D)", },
+		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ハリケーンアッパー", },
+		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント スラッシュキック", },
+	},
+	-- 不知火舞
+	{
+		{ id = 0x01, ver = 0x0600, bs = true , name = "花蝶扇", },
+		{ id = 0x02, ver = 0x0600, bs = true , name = "龍炎舞", },
+		{ id = 0x03, ver = 0x0600, bs = true , name = "小夜千鳥", },
+		{ id = 0x04, ver = 0x0600, bs = true , name = "必殺忍蜂", },
+		-- { id = 0x05, ver = 0x0600, bs = false, name = "ムササビの舞", },
+		{ id = 0x10, ver = 0x0600, bs = false, name = "超必殺忍蜂", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "花嵐", },
+		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 花蝶扇", },
+		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント 花嵐", },
+	},
+	-- ギース・ハワード
+	{
+		{ id = 0x01, ver = 0x0600, bs = true , name = "烈風拳", },
+		{ id = 0x02, ver = 0x06FF, bs = true , name = "ダブル烈風拳", },
+		{ id = 0x03, ver = 0x0600, bs = false, name = "上段当て身投げ", },
+		{ id = 0x04, ver = 0x06FE, bs = false, name = "裏雲隠し", },
+		{ id = 0x05, ver = 0x0600, bs = false, name = "下段当て身打ち", },
+		{ id = 0x06, ver = 0x0600, bs = false, name = "雷鳴豪波投げ", },
+		{ id = 0x07, ver = 0x06FD, bs = false, name = "真空投げ", },
+		{ id = 0x10, ver = 0x0600, bs = false, name = "レイジングストーム", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "羅生門", },
+		{ id = 0x13, ver = 0x0600, bs = true , name = "デッドリーレイブ", },
+		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 烈風拳", },
+		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント レイジングストーム", },
+	},
+	-- 望月双角
+	{
+		{ id = 0x01, ver = 0x0600, bs = true , name = "野猿狩り", },
+		{ id = 0x02, ver = 0x0600, bs = true , name = "まきびし", },
+		{ id = 0x03, ver = 0x0600, bs = true , name = "憑依弾", },
+		{ id = 0x04, ver = 0x06FE, bs = false, name = "鬼門陣", },
+		{ id = 0x05, ver = 0x0CFF, bs = false, name = "邪棍舞", },
+		{ id = 0x06, ver = 0x0600, bs = true , name = "喝", },
+		{ id = 0x07, ver = 0x0600, bs = false, name = "渦炎陣", },
+		{ id = 0x10, ver = 0x0600, bs = false, name = "いかづち", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "無惨弾", },
+		{ id = 0x21, ver = 0x0600, bs = false, name = "雷撃棍", },
+		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント まきびし", },
+		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント いかづち", },
+	},
+	-- ボブ・ウィルソン
+	{
+		{ id = 0x01, ver = 0x0600, bs = true , name = "ローリングタートル", },
+		{ id = 0x02, ver = 0x0600, bs = true , name = "サイドワインダー", },
+		{ id = 0x03, ver = 0x0600, bs = false, name = "バイソンホーン", },
+		{ id = 0x04, ver = 0x0602, bs = true , name = "ワイルドウルフ", },
+		{ id = 0x05, ver = 0x0600, bs = true , name = "モンキーダンス", },
+		{ id = 0x06, ver = 0x06FE, bs = false, name = "フロッグハンティング", },
+		-- { id = 0x00, ver = 0x1EFF, bs = false, name = "ホーネットアタック", },
+		{ id = 0x10, ver = 0x0600, bs = false, name = "デンジャラスウルフ", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "ダンシングバイソン", },
+		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ダンシングバイソン", },
+	},
+	-- ホンフゥ
+	{
+		{ id = 0x01, ver = 0x0600, bs = false, name = "九龍の読み", },
+		{ id = 0x02, ver = 0x0600, bs = true , name = "小 制空烈火棍", },
+		{ id = 0x03, ver = 0x0600, bs = true , name = "大 制空烈火棍", },
+		{ id = 0x04, ver = 0x0600, bs = true , name = "電光石火の地", },
+		--{ id = 0x00, ver = 0x0CFE, bs = false, name = "電光パチキ", },
+		{ id = 0x05, ver = 0x0600, bs = true , name = "電光石火の天", },
+		{ id = 0x06, ver = 0x0600, bs = false, name = "炎の種馬", },
+		{ id = 0x00, ver = 0x0CFF, bs = false, name = "炎の種馬連打", },
+		{ id = 0x07, ver = 0x0600, bs = false, name = "必勝！逆襲拳", },
+		{ id = 0x10, ver = 0x0600, bs = false, name = "爆発ゴロー", },
+		{ id = 0x12, ver = 0x0600, bs = true , name = "よかトンハンマー", },
+		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 制空烈火棍", },
+	},
+	-- ブルー・マリー
+	{
+		{ id = 0x01, ver = 0x06FF, bs = false, name = "M.スパイダー", },
+		{ id = 0x02, ver = 0x06FE, bs = true , name = "M.スナッチャー", },
+		{ id = 0x03, ver = 0x06FD, bs = false, name = "M.クラブクラッチ", },
+		--{ id = 0x00, ver = 0x06FD, bs = false, name = "ダブルクラッチ", },
+		{ id = 0x04, ver = 0x0600, bs = false, name = "M.リアルカウンター", },
+		{ id = 0x05, ver = 0x0600, bs = true , name = "スピンフォール", },
+		{ id = 0x06, ver = 0x0600, bs = true , name = "バーチカルアロー", },
+		{ id = 0x07, ver = 0x0600, bs = true , name = "ストレートスライサー", },
+		{ id = 0x09, ver = 0x0600, bs = false, name = "ヤングダイブ", },
+		{ id = 0x08, ver = 0x06F9, bs = false, name = "M.ダイナマイトスウィング", },
+		{ id = 0x10, ver = 0x0600, bs = false, name = "M.タイフーン", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "M.エスカレーション", },
+		-- { id = 0x28, ver = 0x0600, bs = false, name = "M.トリプルエクスタシー", },
+		-- { id = 0x24, ver = 0x0600, bs = false, name = "レッグプレス", },
+		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント M.スナッチャー", },
+	},
+	-- フランコ・バッシュ
+	{
+		{ id = 0x01, ver = 0x0600, bs = true , name = "ダブルコング", },
+		{ id = 0x02, ver = 0x0600, bs = true , name = "ザッパー", },
+		{ id = 0x03, ver = 0x0600, bs = false, name = "ウェービングブロー", },
+		{ id = 0x04, ver = 0x0600, bs = true , name = "ガッツダンク", },
+		{ id = 0x05, ver = 0x0600, bs = true , name = "ゴールデンボンバー", },
+		{ id = 0x10, ver = 0x0600, bs = true , name = "ファイナルオメガショット", },
+		{ id = 0x11, ver = 0x0600, bs = false, name = "メガトンスクリュー", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "ハルマゲドンバスター", },
+		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ハルマゲドンバスター", },
+		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント ガッツダンク", },
+	},
+	-- 山崎竜二
+	{
+		{ id = 0x01, ver = 0x0600, bs = true , name = "蛇使い・上段", },
+		{ id = 0x02, ver = 0x0600, bs = true , name = "蛇使い・中段", },
+		{ id = 0x03, ver = 0x0600, bs = true , name = "蛇使い・下段", },
+		{ id = 0x04, ver = 0x0600, bs = false, name = "サドマゾ", },
+		{ id = 0x05, ver = 0x0600, bs = false, name = "ヤキ入れ", },
+		{ id = 0x06, ver = 0x0600, bs = false, name = "倍返し", },
+		{ id = 0x07, ver = 0x0600, bs = true , name = "裁きの匕首", },
+		{ id = 0x08, ver = 0x0600, bs = false, name = "爆弾パチキ", },
+		{ id = 0x09, ver = 0x0C00, bs = false, name = "トドメ", },
+		{ id = 0x10, ver = 0x0600, bs = false, name = "ギロチン", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "ドリル", },
+		-- { id = 0x00, ver = 0x06FE, bs = false, name = "ドリル Lv.5", },
+		-- { id = 0x00, ver = 0x06FF, bs = false, name = "?", },
+		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 裁きの匕首", },
+	},
+	-- 秦崇秀
+	{
+		{ id = 0x01, ver = 0x0600, bs = false, name = "帝王神足拳", },
+		{ id = 0x02, ver = 0x0600, bs = true , name = "小 帝王天眼拳", },
+		{ id = 0x03, ver = 0x0600, bs = true , name = "大 帝王天眼拳", },
+		{ id = 0x04, ver = 0x0600, bs = true , name = "小 帝王天耳拳", },
+		{ id = 0x05, ver = 0x0600, bs = true , name = "大 帝王天耳拳", },
+		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 海龍照臨", },
+		{ id = 0x06, ver = 0x0600, bs = false, name = "竜灯掌", },
+		{ id = 0x07, ver = 0x0600, bs = true , name = "帝王神眼拳（その場）", },
+		{ id = 0x08, ver = 0x06FF, bs = true , name = "帝王神眼拳（空中）", },
+		{ id = 0x09, ver = 0x0600, bs = true , name = "帝王神眼拳（背後）", },
+		-- { id = 0x0A, ver = 0x0600, bs = false, name = "帝王空殺神眼拳", },
+		{ id = 0x10, ver = 0x0600, bs = true , name = "帝王漏尽拳", },
+		-- { id = 0x11, ver = 0x0600, bs = false, name = "帝王空殺漏尽拳", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "海龍照臨", },
+	},
+	-- 秦崇雷,
+	{
+		{ id = 0x01, ver = 0x0600, bs = false, name = "帝王神足拳", },
+		{ id = 0x01, ver = 0x06FF, bs = false, name = "真 帝王神足拳", },
+		{ id = 0x02, ver = 0x0600, bs = true , name = "小 帝王天眼拳", },
+		{ id = 0x03, ver = 0x0600, bs = true , name = "大 帝王天眼拳", },
+		{ id = 0x04, ver = 0x0600, bs = true , name = "小 帝王天耳拳", },
+		{ id = 0x05, ver = 0x0600, bs = true , name = "大 帝王天耳拳", },
+		{ id = 0x06, ver = 0x0600, bs = true , name = "帝王漏尽拳", },
+		{ id = 0x07, ver = 0x0600, bs = false, name = "龍転身（前方）", },
+		{ id = 0x08, ver = 0x0600, bs = false, name = "龍転身（後方）", },
+		{ id = 0x10, ver = 0x06FF, bs = false, name = "帝王宿命拳", },
+		--{ id = 0x00, ver = 0x06FE, bs = false, name = "帝王宿命拳(連射)", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "帝王龍声拳", },
+		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 帝王宿命拳", },
+	},
+	-- ダック・キング
+	{
+		{ id = 0x01, ver = 0x0600, bs = true , name = "小ヘッドスピンアタック", },
+		{ id = 0x02, ver = 0x0600, bs = true , name = "大ヘッドスピンアタック", },
+		-- { id = 0x02, ver = 0x06FF, bs = true , name = "大ヘッドスピンアタック", },
+		-- { id = 0x00, ver = 0x06FF, bs = false, name = "ヘッドスピンアタック追撃", },
+		{ id = 0x03, ver = 0x0600, bs = false, name = "フライングスピンアタック", },
+		{ id = 0x04, ver = 0x0600, bs = true , name = "ダンシングダイブ", },
+		{ id = 0x00, ver = 0x06FE, bs = false, name = "リバースダイブ", },
+		{ id = 0x05, ver = 0x06FE, bs = false, name = "ブレイクストーム", },
+		-- { id = 0x00, ver = 0x06FD, bs = false, name = "ブレイクストーム追撃1段階目", },
+		-- { id = 0x00, ver = 0x06FC, bs = false, name = "ブレイクストーム追撃2段階目", },
+		-- { id = 0x00, ver = 0x06FB, bs = false, name = "ブレイクストーム追撃3段階目", },
+		-- { id = 0x06, ver = 0x0600, bs = false, name = "ダックフェイント・空", },
+		-- { id = 0x07, ver = 0x0600, bs = false, name = "ダックフェイント・地", },
+		{ id = 0x08, ver = 0x0600, bs = false, name = "クロスヘッドスピン", },
+		{ id = 0x09, ver = 0x0600, bs = false, name = "ダンシングキャリバー", },
+		{ id = 0x0A, ver = 0x0600, bs = false, name = "ローリングパニッシャー", },
+		{ id = 0x0C, ver = 0x0600, bs = false, name = "ブレイクハリケーン", },
+		{ id = 0x10, ver = 0x0600, bs = false, name = "ブレイクスパイラル", },
+		--{ id = 0x11, ver = 0x06FA, bs = false, name = "ブレイクスパイラルBR", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "ダックダンス", },
+		--{ id = 0x00, ver = 0x06F8, bs = false, name = "ダックダンス継続", },
+		{ id = 0x13, ver = 0x0600, bs = false, name = "スーパーポンピングマシーン", },
+		-- { id = 0x00, ver = 0x06F9, bs = false, name = "ダイビングパニッシャー?", },
+		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ダックダンス", },
+		-- { id = 0x28, ver = 0x0600, bs = false, name = "旧ブレイクストーム", },
+	},
+	-- キム・カッファン
+	{
+		{ id = 0x01, ver = 0x0600, bs = true , name = "飛燕斬・真上", },
+		{ id = 0x01, ver = 0x0601, bs = true , name = "飛燕斬・前方", },
+		{ id = 0x01, ver = 0x0602, bs = true , name = "飛燕斬・後方", },
+		{ id = 0x02, ver = 0x0600, bs = true , name = "小 半月斬", },
+		{ id = 0x03, ver = 0x0600, bs = true , name = "大 半月斬", },
+		{ id = 0x04, ver = 0x0800, bs = false, name = "飛翔脚", },
+		-- { id = 0x00, ver = 0x08FF, bs = false, name = "戒脚", },
+		{ id = 0x05, ver = 0x0600, bs = false, name = "空砂塵", },
+		{ id = 0x00, ver = 0x06FE, bs = false, name = "天昇斬", },
+		{ id = 0x06, ver = 0x0600, bs = true , name = "覇気脚", },
+		-- { id = 0x10, ver = 0x0600, bs = false, name = "鳳凰天舞脚", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "鳳凰脚", },
+		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 鳳凰脚", },
+	},
+	-- ビリー・カーン
+	{
+		{ id = 0x01, ver = 0x0600, bs = false, name = "三節棍中段打ち", },
+		-- { id = 0x00, ver = 0x06FF, bs = false, name = "火炎三節棍中段打ち", },
+		{ id = 0x03, ver = 0x0600, bs = true , name = "雀落とし", },
+		{ id = 0x04, ver = 0x0C00, bs = false, name = "旋風棍", },
+		{ id = 0x05, ver = 0x0600, bs = true , name = "強襲飛翔棍", },
+		{ id = 0x06, ver = 0x0600, bs = true , name = "火龍追撃棍", },
+		{ id = 0x10, ver = 0x0600, bs = false, name = "超火炎旋風棍", },
+		{ id = 0x11, ver = 0x0600, bs = false, name = "紅蓮殺棍", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "サラマンダーストリーム", },
+		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 強襲飛翔棍", },
+	},
+	-- チン・シンザン
+	{
+		{ id = 0x01, ver = 0x0600, bs = true , name = "気雷砲（前方）", },
+		{ id = 0x02, ver = 0x0600, bs = true , name = "気雷砲（対空）", },
+		{ id = 0x03, ver = 0x0600, bs = false, name = "超太鼓腹打ち", },
+		-- { id = 0x00, ver = 0x06FF, bs = false, name = "満腹対空", },
+		{ id = 0x04, ver = 0x0600, bs = true , name = "小 破岩撃", },
+		{ id = 0x05, ver = 0x0600, bs = true , name = "大 破岩撃", },
+		{ id = 0x06, ver = 0x0600, bs = false, name = "軟体オヤジ", },
+		{ id = 0x07, ver = 0x0600, bs = false, name = "クッサメ砲", },
+		{ id = 0x10, ver = 0x0600, bs = true , name = "爆雷砲", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "ホエホエ弾", },
+		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 破岩撃", },
+		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント クッサメ砲", },
+	},
+	-- タン・フー・ルー,
+	{
+		{ id = 0x01, ver = 0x0600, bs = true , name = "衝波", },
+		{ id = 0x02, ver = 0x0600, bs = true , name = "小 箭疾歩", },
+		{ id = 0x03, ver = 0x0600, bs = true , name = "大 箭疾歩", },
+		{ id = 0x04, ver = 0x0600, bs = false, name = "撃放", },
+		{ id = 0x05, ver = 0x0600, bs = true , name = "裂千脚", },
+		{ id = 0x10, ver = 0x0600, bs = false, name = "旋風剛拳", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "大撃放", },
+		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 旋風剛拳", },
+	},
+	-- ローレンス・ブラッド
+	{
+		{ id = 0x01, ver = 0x0600, bs = true , name = "小 ブラッディスピン", },
+		{ id = 0x02, ver = 0x0600, bs = true , name = "大 ブラッディスピン", },
+		{ id = 0x03, ver = 0x0600, bs = false, name = "ブラッディサーベル", },
+		{ id = 0x04, ver = 0x06FF, bs = false, name = "ブラッディミキサー", },
+		{ id = 0x05, ver = 0x0600, bs = true , name = "ブラッディカッター", },
+		{ id = 0x10, ver = 0x0600, bs = false, name = "ブラッディフラッシュ", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "ブラッディシャドー", },
+	},
+	-- ヴォルフガング・クラウザー
+	{
+		{ id = 0x01, ver = 0x0600, bs = false, name = "ブリッツボール・上段", },
+		{ id = 0x02, ver = 0x06FF, bs = false, name = "ブリッツボール・下段", },
+		{ id = 0x03, ver = 0x0600, bs = true , name = "レッグトマホーク", },
+		{ id = 0x04, ver = 0x0600, bs = false, name = "フェニックススルー", },
+		{ id = 0x05, ver = 0x0600, bs = false, name = "デンジャラススルー", },
+		{ id = 0x00, ver = 0x06FD, bs = false, name = "グリフォンアッパー", },
+		{ id = 0x06, ver = 0x06FC, bs = false, name = "カイザークロー", },
+		-- { id = 0x07, ver = 0x0600, bs = false, name = "リフトアップブロー", },
+		{ id = 0x10, ver = 0x0600, bs = true , name = "カイザーウェイブ", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "ギガティックサイクロン", },
+		{ id = 0x13, ver = 0x0600, bs = false, name = "アンリミテッドデザイア", },
+		-- { id = 0x00, ver = 0x06FE, bs = false, name = "アンリミテッドデザイア2", },
+		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ブリッツボール", },
+		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント カイザーウェイブ", },
+	},
+	-- リック・ストラウド
+	{
+		--{ id = 0x28, ver = 0x0600, bs = true , name = "?", },
+		{ id = 0x01, ver = 0x0600, bs = true , name = "小 シューティングスター", },
+		{ id = 0x02, ver = 0x06FF, bs = false, name = "大 シューティングスター", },
+		{ id = 0x03, ver = 0x0600, bs = true , name = "ディバインブラスト", },
+		{ id = 0x04, ver = 0x0600, bs = false, name = "フルムーンフィーバー", },
+		{ id = 0x05, ver = 0x0600, bs = true , name = "ヘリオン", },
+		{ id = 0x06, ver = 0x0600, bs = true , name = "ブレイジングサンバースト", },
+		-- { id = 0x09, ver = 0x0600, bs = false, name = "?", },
+		{ id = 0x10, ver = 0x0600, bs = false, name = "ガイアブレス", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "ハウリング・ブル", },
+		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント シューティングスター", },
+	},
+	-- 李香緋
+	{
+		--{ id = 0x28, ver = 0x0600, bs = true , name = "?", },
+		--{ id = 0x29, ver = 0x0600, bs = true , name = "?", },
+		{ id = 0x01, ver = 0x0600, bs = true , name = "小 那夢波", },
+		{ id = 0x02, ver = 0x0600, bs = true , name = "大 那夢波", },
+		{ id = 0x03, ver = 0x06FF, bs = false, name = "閃里肘皇", },
+		{ id = 0x00, ver = 0x06FE, bs = false, name = "閃里肘皇・心砕把", },
+		{ id = 0x06, ver = 0x0600, bs = true , name = "天崩山", },
+		{ id = 0x07, ver = 0x0600, bs = true , name = "詠酒・対ジャンプ攻撃", },
+		{ id = 0x08, ver = 0x0600, bs = true , name = "詠酒・対立ち攻撃", },
+		{ id = 0x09, ver = 0x0600, bs = true , name = "詠酒・対しゃがみ攻撃", },
+		{ id = 0x10, ver = 0x0600, bs = true , name = "大鉄神", },
+		{ id = 0x11, ver = 0x06FD, bs = false, name = "超白龍", },
+		-- { id = 0x00, ver = 0x06FD, bs = false, name = "超白龍2", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "真心牙", },
+		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント 天崩山", },
+		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 大鉄神", },
+	},
+	-- アルフレッド
+	{
+		{ id = 0x01, ver = 0x0600, bs = true , name = "小 クリティカルウィング", },
+		{ id = 0x02, ver = 0x0600, bs = true , name = "大 クリティカルウィング", },
+		{ id = 0x03, ver = 0x0600, bs = true , name = "オーグメンターウィング", },
+		{ id = 0x04, ver = 0x0600, bs = true , name = "ダイバージェンス", },
+		-- { id = 0x05, ver = 0x0600, bs = false, name = "メーデーメーデー", },
+		{ id = 0x06, ver = 0x0600, bs = false, name = "S.TOL", },
+		--{ id = 0x10, ver = 0x0600, bs = false, name = "ショックストール", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "ウェーブライダー", },
+		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント クリティカルウィング", },
+		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント オーグメンターウィング", },
+	},
+}
+-- ブレイクショット対応技のみ
+local char_bs_list = {}
+for _, list in pairs(char_rvs_list) do
+	for i, cmd in pairs(common_rvs) do
+		table.insert(list, i, cmd)
+	end
+	local bs_list = {}
+	for _, cmd in pairs(list) do
+		if cmd.bs then
+			table.insert(bs_list, cmd)
+		end
+	end
+	table.insert(char_bs_list, bs_list)
+end
+
+-- エミュレータ本体の入力取得
+local use_joy = {
+	{ port = ":edge:joy:JOY1" , field = "P1 Button 1"    , frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1" , field = "P1 Button 2"    , frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1" , field = "P1 Button 3"    , frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1" , field = "P1 Button 4"    , frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1" , field = "P1 Down"        , frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1" , field = "P1 Left"        , frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1" , field = "P1 Right"       , frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1" , field = "P1 Up"          , frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY2" , field = "P2 Button 1"    , frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2" , field = "P2 Button 2"    , frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2" , field = "P2 Button 3"    , frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2" , field = "P2 Button 4"    , frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2" , field = "P2 Down"        , frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2" , field = "P2 Left"        , frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2" , field = "P2 Right"       , frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2" , field = "P2 Up"          , frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:START", field = "2 Players Start", frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:START", field = "1 Player Start" , frame = 0, prev = 0, player = 1, get = 0, },
+}
+local get_joy_base = function(prev, exclude_player)
+	local scr = manager:machine().screens[":screen"]
+	local ec = scr:frame_number()
+	local joy_port = {}
+	local joy_val = {}
+	local prev_joy_val = {}
+	for _, joy in ipairs(use_joy) do
+		local state = 0
+		if not joy_port[joy.port] then
+			joy_port[joy.port] = manager:machine():ioport().ports[joy.port]:read()
+		end
+		local field = manager:machine():ioport().ports[joy.port].fields[joy.field]
+		state = ((joy_port[joy.port] & field.mask) ~ field.defvalue)
+		if joy.get < ec then
+			joy.prev = joy.frame
+			if state > 0 then
+				-- on
+				if joy.frame > 0 then
+					joy.frame = joy.frame + 1
+				else
+					joy.frame = 1
+				end
+			else
+				-- off
+				if joy.frame < 0 then
+					joy.frame = joy.frame - 1
+				else
+					joy.frame = -1
+				end
+			end
+		end
+		joy.get = ec
+		if exclude_player ~= joy.player then
+			joy_val[joy.field] = joy.frame
+			prev_joy_val[joy.field] = joy.prev
+			--if "P2 Button 1" == joy.field then
+			--	print(string.format("%s %s %s %s", global.frame_number, joy.field, joy.prev, joy.frame))
+			--end
+		end
+	end
+	return prev and prev_joy_val or joy_val
+end
+local get_joy = function(exclude_player)
+	return get_joy_base(false, exclude_player)
+end
+local accept_input = function(btn, joy_val, state_past)
+	if 12 < state_past then
+		local p1 = btn == "Start" and "1 Player Start" or ("P1 " .. btn)
+		local p2 = btn == "Start" and "2 Players Start" or ("P2 " .. btn)
+		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+		if btn == "Up" or btn == "Down" or btn == "Right" or btn == "Left" then
+			if (0 < joy_val[p1]) or (0 < joy_val[p2]) then
+				pgm:write_u32(0x0010D612, 0x00600004)
+				pgm:write_u8(0x0010D713, 0x01)
+				return true
 			end
 		else
-			if box.left > 320 and box.left > box.right then
-				box.left = 0
+			if (0 < joy_val[p1] and state_past >= joy_val[p1]) or 
+			   (0 < joy_val[p2] and state_past >= joy_val[p2]) then
+				pgm:write_u32(0x0010D612, 0x00610004)
+				pgm:write_u8(0x0010D713, 0x01)
+				return true
 			end
 		end
-		if box.top > box.bottom then
-			if box.top > (224-screen_top) then
-				box.top = screen_top
+	end
+	return false
+end
+local is_start_a = function(joy_val, state_past)
+	if 12 < state_past then
+		for i = 1, 2 do
+			local st = i == 1 and "1 Player Start" or "2 Players Start"
+			local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+			if (35 < joy_val[st]) then
+				pgm:write_u32(0x0010D612, 0x00610004)
+				pgm:write_u8(0x0010D713, 0x01)
+				return true
 			end
 		end
+	end
+	return false
+end
+local new_next_joy = function()
+	return {
+		["P1 Down" ] = false, ["P1 Button 1"] = false, ["P2 Down" ] = false, ["P2 Button 1"] = false,
+		["P1 Left" ] = false, ["P1 Button 2"] = false, ["P2 Left" ] = false, ["P2 Button 2"] = false,
+		["P1 Right"] = false, ["P1 Button 3"] = false, ["P2 Right"] = false, ["P2 Button 3"] = false,
+		["P1 Up"   ] = false, ["P1 Button 4"] = false, ["P2 Up"   ] = false, ["P2 Button 4"] = false,
+	}
+end
+-- 入力の1P、2P反転用のテーブル
+local rev_joy = {
+	["P1 Button 1"] = "P2 Button 1", ["P2 Button 1"] = "P1 Button 1",
+	["P1 Button 2"] = "P2 Button 2", ["P2 Button 2"] = "P1 Button 2",
+	["P1 Button 3"] = "P2 Button 3", ["P2 Button 3"] = "P1 Button 3",
+	["P1 Button 4"] = "P2 Button 4", ["P2 Button 4"] = "P1 Button 4",
+	["P1 Down"    ] = "P2 Down"    , ["P2 Down"    ] = "P1 Down"    ,
+	["P1 Left"    ] = "P2 Left"    , ["P2 Left"    ] = "P1 Left"    ,
+	["P1 Right"   ] = "P2 Right"   , ["P2 Right"   ] = "P1 Right"   ,
+	["P1 Up"      ] = "P2 Up"      , ["P2 Up"      ] = "P1 Up"      ,
+}
+-- 入力から1P、2Pを判定するテーブル
+local joy_pside = {
+	["P1 Down" ] = 1, ["P1 Button 1"] = 1, ["P2 Down" ] = 2, ["P2 Button 1"] = 2,
+	["P1 Left" ] = 1, ["P1 Button 2"] = 1, ["P2 Left" ] = 2, ["P2 Button 2"] = 2,
+	["P1 Right"] = 1, ["P1 Button 3"] = 1, ["P2 Right"] = 2, ["P2 Button 3"] = 2,
+	["P1 Up"   ] = 1, ["P1 Button 4"] = 1, ["P2 Up"   ] = 2, ["P2 Button 4"] = 2,
+}
+-- 入力の左右反転用のテーブル
+local joy_frontback = {
+	["P1 Left" ] = "P1 Right", ["P2 Left" ] = "P2 Right",
+	["P1 Right"] = "P1 Left" , ["P2 Right"] = "P2 Left" ,
+}
+-- MAMEへの入力の無効化
+local cls_joy = function()
+	for _, joy in ipairs(use_joy) do
+		manager:machine():ioport().ports[joy.port].fields[joy.field]:set_value(0)
+	end
+end
 
-		if box.top == box.bottom and box.left == box.right then
-			box.visible = false
-			--print("FLAT " .. (key or "")) --debug
-			return nil
-		elseif box.type.type_check(p.hit, box) then
-			-- ビリーの旋風棍がヒット、ガードされると判定表示が消えてしまうので飛び道具は状態判断の対象から外す
-			-- ここの判断処理を省いても飛び道具が最大ヒットして無効になった時点で判定が消えるので悪影響はない
-			if is_fireball then
-				box.visible = true
-				return box
+-- キー入力
+local kprops = { "d", "c", "b", "a", "rt", "lt", "dn", "up", "sl", "st", }
+ local posi_or_pl1 = function(v) return 0 <= v and v + 1 or 1 end
+local nega_or_mi1 = function(v) return 0 >= v and v - 1 or -1 end
+
+-- ポーズ
+local set_freeze = function(frz_expected)
+	local dswport = manager:machine():ioport().ports[":DSW"]
+	local fzfld = dswport.fields["Freeze"]
+	local freez = ((dswport:read() & fzfld.mask) ~ fzfld.defvalue) <= 0
+
+	if mem_0x10FD82 ~= 0x00 then
+		if freez ~= frz_expected then
+			fzfld:set_value(global.frz[global.frzc])
+			global.frzc = global.frzc +1
+			if global.frzc > #global.frz then
+				global.frzc = 1
 			end
-			-- フレーム表示や自動ガードで使うため無効状態の判定を返す
-			box.visible = false
-			--print("IGNORE " .. (key or "")) --debug
-			return nil
+		end
+	else
+		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+		pgm:write_u8(0x1041D2, frz_expected and 0x00 or 0xFF)
+	end
+end
+
+-- 当たり判定
+local type_ck_push = function(obj, box)
+	obj.height = obj.height or box.bottom - box.top --used for height of ground throwbox
+end
+local type_ck_vuln = function(obj, box) if not obj.vulnerable then return true end end
+local type_ck_gd   = function(obj, box) end
+local type_ck_atk  = function(obj, box) if obj.harmless then return true end end
+local type_ck_thw  = function(obj, box) if obj.harmless then return true end end
+local type_ck_und  = function(obj, box)
+	--print(string.format("%x, unk box id: %x", obj.base, box.id)) --debug
+end
+local box_type_base = {
+	a   = { id = 0x00, name = "攻撃",                     enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF00FF, fill = 0x40, outline = 0xFF },
+	fa  = { id = 0x00, name = "攻撃(嘘)",                 enabled = false, type_check = type_ck_und,  type = "attack", color = 0x00FF00, fill = 0x00, outline = 0xFF },
+	da  = { id = 0x00, name = "攻撃(無効)",               enabled = true, type_check = type_ck_und,  type = "attack", color = 0xFF00FF, fill = 0x00, outline = 0xFF },
+
+	aa  = { id = 0x00, name = "攻撃(空中追撃可)",         enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF00FF, fill = 0x40, outline = 0xFF },
+	faa = { id = 0x00, name = "攻撃(嘘、空中追撃可)",     enabled = false, type_check = type_ck_und,  type = "attack", color = 0x00FF00, fill = 0x00, outline = 0xFF },
+	daa = { id = 0x00, name = "攻撃(無効、空中追撃可)",   enabled = true, type_check = type_ck_und,  type = "attack", color = 0xFF00FF, fill = 0x00, outline = 0xFF },
+
+	t3  = { id = 0x00, name = "未使用",                   enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0x8B4513, fill = 0x40, outline = 0xFF },
+
+	pa  = { id = 0x00, name = "飛び道具",                 enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x40, outline = 0xFF },
+	pfa = { id = 0x00, name = "飛び道具(嘘)",             enabled = false, type_check = type_ck_atk,  type = "attack", color = 0x00FF33, fill = 0x00, outline = 0xFF },
+	pda = { id = 0x00, name = "飛び道具(無効)",           enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x00, outline = 0xFF },
+
+	paa = { id = 0x00, name = "飛び道具(空中追撃可)",     enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x40, outline = 0xFF },
+	pfaa= { id = 0x00, name = "飛び道具(嘘、空中追撃可)", enabled = false, type_check = type_ck_atk,  type = "attack", color = 0x00FF33, fill = 0x00, outline = 0xFF },
+	pdaa= { id = 0x00, name = "飛び道具(無効、空中追撃可)",enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x00, outline = 0xFF },
+
+	t   = { id = 0x00, name = "投げ",                     enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
+	at  = { id = 0x00, name = "必殺技投げ",               enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
+	pt  = { id = 0x00, name = "空中投げ",                 enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
+	p   = { id = 0x01, name = "押し合い",                 enabled = true, type_check = type_ck_push, type = "push",   color = 0xDDDDDD, fill = 0x00, outline = 0xFF },
+	v1  = { id = 0x02, name = "食らい1",                  enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x0000FF, fill = 0x40, outline = 0xFF },
+	v2  = { id = 0x03, name = "食らい2",                  enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x0000FF, fill = 0x40, outline = 0xFF },
+	v3  = { id = 0x04, name = "食らい(ダウン追撃のみ可)", enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x00FFFF, fill = 0x80, outline = 0xFF },
+	v4  = { id = 0x05, name = "食らい(空中追撃のみ可)",   enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x00FFFF, fill = 0x80, outline = 0xFF },
+	v5  = { id = 0x06, name = "食らい5(未使用?)",         enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x606060, fill = 0x40, outline = 0xFF },
+	v6  = { id = 0x07, name = "食らい(対ライン上攻撃)",   enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x00FFFF, fill = 0x80, outline = 0xFF },
+	x1  = { id = 0x08, name = "食らい(対ライン下攻撃)",   enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x00FFFF, fill = 0x80, outline = 0xFF },
+	x2  = { id = 0x09, name = "用途不明2",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
+	x3  = { id = 0x0A, name = "用途不明3",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
+	x4  = { id = 0x0B, name = "用途不明4",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
+	x5  = { id = 0x0C, name = "用途不明5",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
+	x6  = { id = 0x0D, name = "用途不明6",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
+	x7  = { id = 0x0E, name = "用途不明7",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
+	x8  = { id = 0x0F, name = "用途不明8",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
+	x9  = { id = 0x10, name = "用途不明9",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
+	g1  = { id = 0x11, name = "立ガード",                 enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 stand-guard
+	g2  = { id = 0x12, name = "下段ガード",               enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 counch-guard
+	g3  = { id = 0x13, name = "空中ガード",               enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 air-guard
+	g4  = { id = 0x14, name = "上段当身投げ",             enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 j.atemi-nage
+	g5  = { id = 0x15, name = "中段当身投げ",             enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 c.atemi-nage
+	g6  = { id = 0x16, name = "下段当身投げ",             enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 g.ateminage
+	g7  = { id = 0x17, name = "必勝逆襲脚",               enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 h.gyakushu-kyaku
+	g8  = { id = 0x18, name = "サドマゾ",                 enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 sadomazo
+	g9  = { id = 0x19, name = "倍返し",                   enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xFF007F, fill = 0x40, outline = 0xFF },--rbff2 bai-gaeshi
+	g10 = { id = 0x1A, name = "ガード?1",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },
+	g11 = { id = 0x1B, name = "ガード?2",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
+	g12 = { id = 0x1C, name = "ガード?3",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--rbff2 p.throw?
+	g13 = { id = 0x1D, name = "ガード?4",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
+	g14 = { id = 0x1E, name = "フェニックススルー",       enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--?
+	g15 = { id = 0x1F, name = "ガード?6",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
+	g16 = { id = 0x20, name = "ガード?7",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
+	sv1 = { id = 0x02, name = "食らい1(スウェー中)",      enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true },
+	sv2 = { id = 0x03, name = "食らい2(スウェー中)",      enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true, },
+}
+local box_types, sway_box_types = {}, {}
+for _, box in pairs(box_type_base) do
+	if 0 < box.id then
+		if box.sway then
+			sway_box_types[box.id] = box
 		else
+			box_types[box.id] = box
+		end
+	end
+	box.fill    = bit32.lshift(box.fill   , 24) + box.color
+	box.outline = bit32.lshift(box.outline, 24) + box.color
+end
+
+-- ボタンの色テーブル
+local convert = require("data/button_char")
+local btn_col = { [convert("_A")] = 0xFFCC0000, [convert("_B")] = 0xFFCC8800, [convert("_C")] = 0xFF3333CC, [convert("_D")] = 0xFF336600, }
+local text_col, shadow_col = 0xFFFFFFFF, 0xFF000000
+
+local exists = function(name)
+	if type(name)~="string" then return false end
+	return os.rename(name,name) and true or false
+end
+
+local is_file = function(name)
+	if type(name)~="string" then return false end
+	if not exists(name) then return false end
+	local f = io.open(name,"r")
+	if f then
+		f:close()
+		return true
+	end
+	return false
+end
+
+local base_path = function()
+	return lfs.env_replace(manager:machine():options().entries.homepath:value():match('([^;]+)')) .. '/plugins/' .. exports.name
+end
+
+local rom_patch_path = function(filename)
+	local base = base_path() .. '/rom-patch/'
+	local patch = base .. emu.romname() .. '/' .. filename
+	if is_file(patch) then
+		return patch
+	else
+		print(patch .. " NOT found")
+	end
+	return base .. 'rbff2/' .. filename
+end
+
+local ram_patch_path = function(filename)
+	local base = base_path() .. '/ram-patch/'
+	local patch = base .. emu.romname() .. '/' .. filename
+	if is_file(patch) then
+		return patch
+	end
+	return base .. 'rbff2/' .. filename
+end
+
+local tohex = function(num)
+	local hexstr = '0123456789abcdef'
+	local s = ''
+	while num > 0 do
+		local mod = math.fmod(num, 16)
+		s = string.sub(hexstr, mod+1, mod+1) .. s
+		num = math.floor(num / 16)
+	end
+	if s == '' then s = '0' end
+	return s
+end
+
+local tohexnum = function(num)
+	return tonumber(tohex(num))
+end
+
+local get_digit = function(num)
+	return string.len(tostring(num))
+end
+
+local draw_rtext = function(x, y, str, fgcol, bgcol)
+	if not str then
+		return
+	end
+	if type(str)~="number" then
+		str = "" .. str
+	end
+	local scr = manager:machine().screens[":screen"]
+	local scale = scr:xscale() * scr:width()
+	local xx = x
+	for c in string.gmatch(str, "([%z\1-\127\194-\244][\128-\191]*)") do
+		xx = xx - manager:ui():get_string_width(c, scale)
+	end
+	for c in string.gmatch(str, "([%z\1-\127\194-\244][\128-\191]*)") do
+		scr:draw_text(xx, y, c, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
+		xx = xx + manager:ui():get_string_width(c, scale)
+	end
+end
+
+-- コマンド入力表示
+local draw_cmd = function(p, line, frame, str)
+	local scr = manager:machine().screens[":screen"]
+	local cstr = convert(str)
+
+	local p1 = p == 1
+	local xx = p1 and 15 or 300   -- 1Pと2Pで左右に表示し分ける
+	local yy = (line + 10 - 1) * 8 -- +8はオフセット位置
+
+	if 0 < frame then
+		if 999 < frame then
+			draw_rtext(p1 and 10.5 or 295.5, yy + 0.5, "LOT", shadow_col)
+			draw_rtext(p1 and 10   or 295  ,       yy, "LOT", text_col)
+		else
+			draw_rtext(p1 and 10.5 or 295.5, yy + 0.5, frame, shadow_col)
+			draw_rtext(p1 and 10   or 295  ,       yy, frame, text_col)
+		end
+	end
+	local col = 0xFAFFFFFF
+	if p1 then
+		for i = 1, 50 do
+			scr:draw_line(i, yy, i+1, yy, col)
+			col = col - 0x05000000
+		end
+	else
+		for i = 320, 270, -1 do
+			scr:draw_line(i, yy, i-1, yy, col)
+			col = col - 0x05000000
+		end
+	end
+	-- 変換しつつUnicodeの文字配列に落とし込む
+	for c in string.gmatch(cstr, "([%z\1-\127\194-\244][\128-\191]*)") do
+		-- 文字の影
+		scr:draw_text(xx + 0.5, yy + 0.5, c, 0xFF000000)
+		if btn_col[c] then
+			-- ABCDボタンの場合は黒の●を表示した後ABCDを書いて文字の部分を黒く見えるようにする
+			scr:draw_text(xx, yy, convert("_("), text_col)
+			scr:draw_text(xx, yy, c, btn_col[c])
+		else
+			scr:draw_text(xx, yy, c, text_col)
+		end
+		xx = xx + 5 -- フォントの大きさ問わず5pxずつ表示する
+	end
+end
+
+-- 当たり判定表示
+local accept_atk_only = {
+	[box_type_base.a ] = true,
+	[box_type_base.aa] = true,
+	[box_type_base.fa] = true,
+	[box_type_base.faa] = true,
+	[box_type_base.v3] = true,
+	[box_type_base.v4] = true,
+	[box_type_base.v5] = true,
+	[box_type_base.v6] = true,
+	[box_type_base.x1] = true,
+}
+local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fireball, key)
+	local box = {id = id}
+	box.type = nil
+	if box.id + 1 > #box_types then
+		-- 嘘判定   ... 判定出現時点で攻撃能力なし
+		-- 無効判定 ... ヒット後などで判定出現時点では攻撃能力があるが無効化されたもの
+		local fake, harmless = p.hit.fake_hit == true, p.hit.harmless == true
+		-- 家庭用版 012E0E~012E34の処理をベースに空中追撃判定を持つかどうかを判断する
+		local d2, a0, asm, air = box.id - 0x20, 0, 0, false
+		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+		if d2 >= 0 then
+			d2 = pgm:read_u8(0x94EEC + d2)	
+			d2 = bit32.band(0xFFFF, d2 + d2)
+			d2 = bit32.band(0xFFFF, d2 + d2)
+			a0 = pgm:read_u32(0x13120 + d2)
+			asm = pgm:read_u16(a0)
+			if 0x70FF ~= asm then -- 0x70FF は moveq   #-$1, D0 でヒットしない処理結果を表す--空中追撃できない判定
+				air = true
+			end
+		end
+		if is_fireball and air then
+			if fake then
+				box.type = box_type_base.pfaa -- 飛び道具(空中追撃可、嘘)
+			elseif harmless then
+				box.type = box_type_base.pdaa -- 飛び道具(空中追撃可、無効)
+			else
+				box.type = box_type_base.paa  -- 飛び道具(空中追撃可)
+			end
+		elseif is_fireball and not air then
+			if fake then
+				box.type = box_type_base.pfa -- 飛び道具(嘘)
+			elseif harmless then
+				box.type = box_type_base.pda -- 飛び道具(無効)
+			else
+				box.type = box_type_base.pa  -- 飛び道具
+			end
+		elseif not is_fireball and air then
+			if fake then
+				box.type = box_type_base.faa -- 攻撃(嘘)
+			elseif harmless then
+				box.type = box_type_base.daa -- 攻撃(無効、空中追撃可)
+			else
+				box.type = box_type_base.aa  -- 攻撃(空中追撃可)
+			end
+		else
+			if fake then
+				box.type = box_type_base.fa  -- 攻撃(嘘)
+			elseif harmless then
+				box.type = box_type_base.da  -- 攻撃(無効)
+			else
+				box.type = box_type_base.a   -- 攻撃(空中追撃可)
+			end
+		end
+		--[[
+		print(string.format("hit %x %x %x %x %2s %4s %4s %4s %2s", box.id, d2, a0, asm,
+			harmless and "hm" or "",
+			fake and "fake" or "",
+			p.hit.obsl_hit and "obsl" or "",
+			p.hit.full_hit and "full" or "",
+			p.hit.harmless2 and "h2" or ""))
+		]]
+	else
+		box.type = box_types[box.id + 1]
+		if p.in_sway_line and sway_box_types[box.id + 1] then
+			box.type = sway_box_types[box.id + 1] 
+		end
+	end
+	box.type = box.type or box_type_base.x1
+	--[[ 意味がないので無効化する
+	local accept_atk = accept_atk_only[box.type]
+	if attack_only == true and accept_atk ~= true then
+		return nil
+	elseif attack_only ~= true and accept_atk == true then
+		return nil
+	end
+	]]
+	if (box.type == box_type_base.a or box.type == box_type_base.aa) and
+		(is_fireball == true or (p.hit.harmless == false and p.hit.obsl_hit == false)) then
+		-- 攻撃中のフラグをたてる
+		p.attacking = true
+		p.attack_id = id
+	end
+
+	box.top    = p.hit.pos_y - bit32.arshift(top    * p.hit.scale * 4, 8)
+	box.bottom = p.hit.pos_y - bit32.arshift(bottom * p.hit.scale * 4, 8)
+	box.left   = p.hit.pos_x - bit32.arshift(left   * p.hit.scale * 4, 8) * p.hit.flip_x
+	box.right  = p.hit.pos_x - bit32.arshift(right  * p.hit.scale * 4, 8) * p.hit.flip_x
+
+	box.top    = (0 > box.top    or 0xFFFF < box.top   ) and bit32.band(0xFFFF, box.top   ) or box.top
+	box.bottom = (0 > box.bottom or 0xFFFF < box.bottom) and bit32.band(0xFFFF, box.bottom) or box.bottom
+	box.left   = (0 > box.left   or 0xFFFF < box.left  ) and bit32.band(0xFFFF, box.left  ) or box.left
+	box.right  = (0 > box.right  or 0xFFFF < box.right ) and bit32.band(0xFFFF, box.right ) or box.right
+
+	if ((box.top <= 0 and box.bottom <=0) or (box.top >= 224 and box.bottom >=224) or (box.left <= 0 and box.right <= 0) or (box.left >= 320 and box.right >= 320)) then
+		--print("OVERFLOW " .. (key or "")) --debug
+		return nil
+	end
+
+	-- はみ出し補正
+	if  p.hit.flip_x == 1 then
+		if box.right > 320 and box.right > box.left then
+			box.right = 0
+		end
+	else
+		if box.left > 320 and box.left > box.right then
+			box.left = 0
+		end
+	end
+	if box.top > box.bottom then
+		if box.top > (224-screen_top) then
+			box.top = screen_top
+		end
+	end
+
+	if box.top == box.bottom and box.left == box.right then
+		box.visible = false
+		--print("FLAT " .. (key or "")) --debug
+		return nil
+	elseif box.type.type_check(p.hit, box) then
+		-- ビリーの旋風棍がヒット、ガードされると判定表示が消えてしまうので飛び道具は状態判断の対象から外す
+		-- ここの判断処理を省いても飛び道具が最大ヒットして無効になった時点で判定が消えるので悪影響はない
+		if is_fireball then
 			box.visible = true
-			--print("LIVE " .. (key or "")) --debug
 			return box
 		end
-	end
-
-	local new_throwbox = function(p, box)
-		local scr = manager:machine().screens[":screen"]
-		local height = scr:height() * scr:yscale()
-		p.throwing = true
-		box.flat_throw = box.top == nil
-		box.top    = box.top or p.hit.pos_y - global.throwbox_height
-		box.left   = p.hit.pos_x + (box.left or 0)
-		box.right  = p.hit.pos_x + (box.right or 0)
-		box.top    = box.top and p.hit.pos_y - box.top --air throw
-		box.bottom = box.bottom and (p.hit.pos_y - box.bottom) or height + screen_top - p.hit.pos_z
-		box.type   = box.type or box_type_base.t
+		-- フレーム表示や自動ガードで使うため無効状態の判定を返す
+		box.visible = false
+		--print("IGNORE " .. (key or "")) --debug
+		return nil
+	else
 		box.visible = true
+		--print("LIVE " .. (key or "")) --debug
 		return box
 	end
+end
 
-	-- 当たり判定用のキャラ情報更新と判定表示用の情報作成
-	local update_object = function(p, ec)
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
-		local scr = manager:machine().screens[":screen"]
-		local height = scr:height() * scr:yscale()
+local new_throwbox = function(p, box)
+	local scr = manager:machine().screens[":screen"]
+	local height = scr:height() * scr:yscale()
+	p.throwing = true
+	box.flat_throw = box.top == nil
+	box.top    = box.top or p.hit.pos_y - global.throwbox_height
+	box.left   = p.hit.pos_x + (box.left or 0)
+	box.right  = p.hit.pos_x + (box.right or 0)
+	box.top    = box.top and p.hit.pos_y - box.top --air throw
+	box.bottom = box.bottom and (p.hit.pos_y - box.bottom) or height + screen_top - p.hit.pos_z
+	box.type   = box.type or box_type_base.t
+	box.visible = true
+	return box
+end
 
-		local obj_base = p.addr.base
+-- 当たり判定用のキャラ情報更新と判定表示用の情報作成
+local update_object = function(p, ec)
+	local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+	local scr = manager:machine().screens[":screen"]
+	local height = scr:height() * scr:yscale()
 
-		p.hit.pos_x   = p.pos - screen_left
-		if p.min_pos then
-			p.hit.min_pos_x = p.min_pos - screen_left
-		else
-			p.hit.min_pos_x = nil
-		end
-		if p.max_pos then
-			p.hit.max_pos_x = p.max_pos - screen_left
-		else
-			p.hit.max_pos_x = nil
-		end
-		p.hit.pos_z   = p.pos_z
-		p.hit.pos_y   = height - p.pos_y - p.hit.pos_z
-		p.hit.pos_y   = screen_top + p.hit.pos_y
-		p.hit.on      = pgm:read_u32(obj_base)
+	local obj_base = p.addr.base
 
-		p.hit.flip_x  = pgm:read_i16(obj_base + 0x6A) < 0 and 1 or 0
-		p.hit.flip_x  = bit32.bxor(p.hit.flip_x, bit32.band(pgm:read_u8(obj_base + 0x71), 1))
-		p.hit.flip_x  = p.hit.flip_x > 0 and 1 or -1
-		p.hit.scale   = pgm:read_u8(obj_base + 0x73) + 1
-		p.hit.char_id = pgm:read_u16(obj_base + 0x10)
-		p.hit.base    = obj_base
+	p.hit.pos_x   = p.pos - screen_left
+	if p.min_pos then
+		p.hit.min_pos_x = p.min_pos - screen_left
+	else
+		p.hit.min_pos_x = nil
+	end
+	if p.max_pos then
+		p.hit.max_pos_x = p.max_pos - screen_left
+	else
+		p.hit.max_pos_x = nil
+	end
+	p.hit.pos_z   = p.pos_z
+	p.hit.pos_y   = height - p.pos_y - p.hit.pos_z
+	p.hit.pos_y   = screen_top + p.hit.pos_y
+	p.hit.on      = pgm:read_u32(obj_base)
 
-		p.attacking   = false
-		p.attack_id   = 0
-		p.throwing    = false
+	p.hit.flip_x  = pgm:read_i16(obj_base + 0x6A) < 0 and 1 or 0
+	p.hit.flip_x  = bit32.bxor(p.hit.flip_x, bit32.band(pgm:read_u8(obj_base + 0x71), 1))
+	p.hit.flip_x  = p.hit.flip_x > 0 and 1 or -1
+	p.hit.scale   = pgm:read_u8(obj_base + 0x73) + 1
+	p.hit.char_id = pgm:read_u16(obj_base + 0x10)
+	p.hit.base    = obj_base
 
-		-- ヒットするかどうか
-		p.hit.harmless = p.obsl_hit or p.full_hit or p.harmless2
-		p.hit.fake_hit = p.fake_hit
-		p.hit.obsl_hit = p.obsl_hit
-		p.hit.full_hit = p.full_hit
-		p.hit.harmless2 = p.harmless2
+	p.attacking   = false
+	p.attack_id   = 0
+	p.throwing    = false
 
-		-- 食らい判定かどうか
-		p.hit.vulnerable = false
-		if p.hit.vulnerable1 == 1 then
-			p.hit.vulnerable = true
-		elseif p.hit.vulnerable21 == 1 then
-			p.hit.vulnerable = p.hit.vulnerable22
-		end
+	-- ヒットするかどうか
+	p.hit.harmless = p.obsl_hit or p.full_hit or p.harmless2
+	p.hit.fake_hit = p.fake_hit
+	p.hit.obsl_hit = p.obsl_hit
+	p.hit.full_hit = p.full_hit
+	p.hit.harmless2 = p.harmless2
 
-		-- 判定データ排他用のテーブル
-		local uniq_hitboxes = {}
-		for _, box in ipairs(p.buffer) do
-			local hitbox = new_hitbox(p, box.id, box.top, box.bottom, box.left, box.right, box.attack_only, box.is_fireball, box.key)
-			if hitbox then
-				if not uniq_hitboxes[box.key] then
-					uniq_hitboxes[box.key] = true
-					table.insert(p.hitboxes, hitbox)
-				else
-					--print("DROP " .. box.key) --debug
-				end
+	-- 食らい判定かどうか
+	p.hit.vulnerable = false
+	if p.hit.vulnerable1 == 1 then
+		p.hit.vulnerable = true
+	elseif p.hit.vulnerable21 == 1 then
+		p.hit.vulnerable = p.hit.vulnerable22
+	end
+
+	-- 判定データ排他用のテーブル
+	local uniq_hitboxes = {}
+	for _, box in ipairs(p.buffer) do
+		local hitbox = new_hitbox(p, box.id, box.top, box.bottom, box.left, box.right, box.attack_only, box.is_fireball, box.key)
+		if hitbox then
+			if not uniq_hitboxes[box.key] then
+				uniq_hitboxes[box.key] = true
+				table.insert(p.hitboxes, hitbox)
+			else
+				--print("DROP " .. box.key) --debug
 			end
-		end
-
-		-- 空投げ, 必殺投げ
-		if p.n_throw and p.n_throw.on == 0x1 then
-			table.insert(p.hitboxes, new_throwbox(p, p.n_throw))
-			--print("n throw " .. string.format("%x", p.addr.base) .. " " .. p.n_throw.type.name .. " " .. " " .. p.n_throw.left .. " " .. p.n_throw.right .. " " .. p.n_throw.top .. " " .. p.n_throw.bottom)
-		end
-		if p.air_throw and p.air_throw.on == 0x1 then
-			table.insert(p.hitboxes, new_throwbox(p, p.air_throw))
-		end
-		if p.sp_throw and p.sp_throw.on == 0x1 then
-			table.insert(p.hitboxes, new_throwbox(p, p.sp_throw))
 		end
 	end
 
-	local dummy_gd_type = {
-		none   = 1, -- なし
-		auto   = 2, -- オート
-		bs     = 3, -- ブレイクショット
-		hit1   = 4, -- 1ヒットガード
-		guard1 = 5, -- 1ガード
-		fixed  = 6, -- 常時
-		random = 7, -- ランダム
-	}
-	local wakeup_type = {
-		none = 1, -- なし
-		rvs  = 2, -- リバーサル
-		tech = 3, -- テクニカルライズ
-		sway = 4, -- グランドスウェー
-		atk  = 5, -- 起き上がり攻撃
-	}
+	-- 空投げ, 必殺投げ
+	if p.n_throw and p.n_throw.on == 0x1 then
+		table.insert(p.hitboxes, new_throwbox(p, p.n_throw))
+		--print("n throw " .. string.format("%x", p.addr.base) .. " " .. p.n_throw.type.name .. " " .. " " .. p.n_throw.left .. " " .. p.n_throw.right .. " " .. p.n_throw.top .. " " .. p.n_throw.bottom)
+	end
+	if p.air_throw and p.air_throw.on == 0x1 then
+		table.insert(p.hitboxes, new_throwbox(p, p.air_throw))
+	end
+	if p.sp_throw and p.sp_throw.on == 0x1 then
+		table.insert(p.hitboxes, new_throwbox(p, p.sp_throw))
+	end
+end
+
+local dummy_gd_type = {
+	none   = 1, -- なし
+	auto   = 2, -- オート
+	bs     = 3, -- ブレイクショット
+	hit1   = 4, -- 1ヒットガード
+	guard1 = 5, -- 1ガード
+	fixed  = 6, -- 常時
+	random = 7, -- ランダム
+}
+local wakeup_type = {
+	none = 1, -- なし
+	rvs  = 2, -- リバーサル
+	tech = 3, -- テクニカルライズ
+	sway = 4, -- グランドスウェー
+	atk  = 5, -- 起き上がり攻撃
+}
+
+function rbff2.startplugin()
 	-- プレイヤーの状態など
 	local players = {}
 	for p = 1, 2 do
@@ -2367,8 +2368,8 @@ function rbff2.startplugin()
 			rvs_count        = -1,          -- リバーサルの実施カウント
 
 			life_rec         = true,        -- 自動で体力回復させるときtrue
-			red              = true,        -- 赤体力にするときtrue
-			max              = true,        -- パワーMAXにするときtrue
+			red              = 1,           -- 体力設定
+			max              = 1,           -- パワー設定
 			disp_dmg         = true,        -- ダメージ表示するときtrue
 			disp_cmd         = true,        -- 入力表示するときtrue
 			disp_frm         = true,        -- フレーム数表示するときtrue
@@ -4620,11 +4621,14 @@ function rbff2.startplugin()
 			p.last_state = state
 
 			-- 体力とスタン値とMAXスタン値回復
-			if p.life_rec then
-				local max_life = p.red and 0x60 or 0xC0 -- 赤体力にするかどうか
-
+			local life = { 0xC0, 0x60, 0x00 }
+			local max_life = life[p.red] or (p.red - #life) -- 赤体力にするかどうか
+			if dip_config.infinity_life then
+				pgm:write_u8(p.addr.life, max_life)
+				pgm:write_u8(p.addr.max_stun,  p.init_stun) -- 最大スタン値 
+				pgm:write_u8(p.addr.init_stun, p.init_stun) -- 最大スタン値
+			elseif p.life_rec then
 				-- 回復判定して回復
-				--if p.old_state ~= p.state and max_life ~= p.life then
 				if (math.max(p.update_dmg, op.update_dmg) + 180) <= global.frame_number then
 					-- やられ状態から戻ったときに回復させる
 					pgm:write_u8(p.addr.life, max_life) -- 体力
@@ -4639,8 +4643,15 @@ function rbff2.startplugin()
 			end
 
 			-- パワーゲージ回復
-			local max_pow  = p.max and 0x3C or 0x00 -- パワーMAXにするかどうか
-			if max_pow ~= 0 then
+			-- 0x3C, 0x1E, 0x00
+			local pow = { 0x3C, 0x1E, 0x00 }
+			local max_pow  = pow[p.max] or (p.max - #pow) -- パワーMAXにするかどうか
+			if global.infinity_pow then
+				pgm:write_u8(p.addr.pow, max_pow)
+			elseif p.pow == 0 then
+				pgm:write_u8(p.addr.pow, max_pow)
+			elseif max_pow < p.pow then
+				-- 最大値の方が少ない場合は強制で減らす
 				pgm:write_u8(p.addr.pow, max_pow)
 			end
 		end
@@ -5477,20 +5488,26 @@ function rbff2.startplugin()
 	local menu_to_main_cancel = function()
 		menu_to_main(true)
 	end
+	local life_range = { "最大", "赤", "ゼロ", }
+	for i = 1, 0xC0 do
+		table.insert(life_range, i)
+	end
+	local pow_range = { "最大", "半分", "ゼロ", }
+	for i = 1, 0x3C do
+		table.insert(pow_range, i)
+	end
 	local bar_menu_to_main = function(cancel)
 		local col = bar_menu.pos.col
-		local row = bar_menu.pos.row
 		local p   = players
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
-		local scr = manager:machine().screens[":screen"]
-		local ec = scr:frame_number()
-		--                              1                                 1
-		p[1].red                 = col[ 2] == 2 -- 1P 体力ゲージ          2
-		p[2].red                 = col[ 3] == 2 -- 2P 体力ゲージ          3
-		p[1].max                 = col[ 4] == 2 -- 1P POWゲージ           4
-		p[2].max                 = col[ 5] == 2 -- 2P POWゲージ           5
-		p[1].disp_stun           = col[ 6] == 2 -- 1P スタン表示          6
-		p[2].disp_stun           = col[ 7] == 2 -- 2P スタン表示          7
+		--                              1                                      1
+		p[1].red                 = col[ 2]      -- 1P 体力ゲージ量             2
+		p[2].red                 = col[ 3]      -- 2P 体力ゲージ量             3
+		p[1].max                 = col[ 4]      -- 1P POWゲージ量              4
+		p[2].max                 = col[ 5]      -- 2P POWゲージ量              5
+		p[1].disp_stun           = col[ 6] == 2 -- 1P スタンゲージ表示         6
+		p[2].disp_stun           = col[ 7] == 2 -- 2P スタンゲージ表示         7
+		dip_config.infinity_life = col[ 8] == 2 -- 体力ゲージモード            8
+		global.infinity_pow      = col[ 9] == 2 -- スタンゲージモード          9
 
 		menu_cur = main_menu
 	end
@@ -5515,15 +5532,6 @@ function rbff2.startplugin()
 		global.disp_pos          = col[12] == 2 -- 1P 2P 距離表示        12
 		dip_config.easy_super    = col[13] == 2 -- 簡易超必              13
 		global.mame_debug_wnd    = col[14] == 2 -- MAMEデバッグウィンドウ14
-
-		for _, p in ipairs(players) do
-			local max_life = p.red and 0x60 or 0xC0     -- 赤体力にするかどうか
-			pgm:write_u8(p.addr.life, max_life)         -- 体力
-			pgm:write_u8(p.addr.stun, 0)                -- スタン値
-			pgm:write_u8(p.addr.max_stun,  p.init_stun) -- 最大スタン値 
-			pgm:write_u8(p.addr.init_stun, p.init_stun) -- 最大スタン値
-			pgm:write_u8(p.addr.stun_timer, 0)          -- スタン値タイマー
-		end
 
 		menu_cur = main_menu
 	end
@@ -5655,12 +5663,14 @@ function rbff2.startplugin()
 		local p = players
 		local g = global
 		--   1                                                        1
-		col[ 2] = p[1].red       and 2 or 1 -- 1P 体力ゲージ          2
-		col[ 3] = p[2].red       and 2 or 1 -- 2P 体力ゲージ          3
-		col[ 4] = p[1].max       and 2 or 1 -- 1P POWゲージ           4
-		col[ 5] = p[2].max       and 2 or 1 -- 2P POWゲージ           5
-		col[ 6] = p[1].disp_stun and 2 or 1 -- スタン表示             6
-		col[ 7] = p[2].disp_stun and 2 or 1 -- スタン表示             7
+		col[ 2] = p[1].red                  -- 1P 体力ゲージ量        2
+		col[ 3] = p[2].red                  -- 2P 体力ゲージ量        3
+		col[ 4] = p[1].max                  -- 1P POWゲージ量         4
+		col[ 5] = p[2].max                  -- 2P POWゲージ量         5
+		col[ 6] = p[1].disp_stun and 2 or 1 -- 1P スタンゲージ表示    6
+		col[ 7] = p[2].disp_stun and 2 or 1 -- 2P スタンゲージ表示    7
+		col[ 8] = dip_config.infinity_life and 2 or 1 -- 体力ゲージモード 8
+		col[ 9] = g.infinity_pow and 2 or 1 -- スタンゲージモード     9
 	end
 	local init_ex_menu_config = function()
 		local col = ex_menu.pos.col
@@ -6006,43 +6016,51 @@ function rbff2.startplugin()
 	bar_menu = {
 		list = {
 			{ "                         ゲージ設定" },
-			{ "1P 体力ゲージ"         , { "通常", "赤" }, },
-			{ "2P 体力ゲージ"         , { "通常", "赤" }, },
-			{ "1P POWゲージ"          , { "通常", "無限" }, },
-			{ "2P POWゲージ"          , { "通常", "無限" }, },
-			{ "1P スタンゲージ"       , { "OFF", "ON" }, },
-			{ "2P スタンゲージ"       , { "OFF", "ON" }, },
+			{ "1P 体力ゲージ量"       , life_range, },
+			{ "2P 体力ゲージ量"       , life_range, },
+			{ "1P POWゲージ量"        , pow_range, },
+			{ "2P POWゲージ量"        , pow_range, },
+			{ "1P スタンゲージ表示"   , { "OFF", "ON" }, },
+			{ "2P スタンゲージ表示"   , { "OFF", "ON" }, },
+			{ "体力ゲージモード"      , { "自動回復", "固定" }, },
+			{ "POWゲージモード"       , { "自動回復", "固定" }, },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
 			row = 2,
 			col = {
 				0, -- －ゲージ設定－          1
-				2, -- 1P 体力ゲージ           2
-				2, -- 2P 体力ゲージ           3
-				2, -- 1P POWゲージ            4
-				2, -- 2P POWゲージ            5
-				2, -- 1P スタンゲージ         6
-				2, -- 2P スタンゲージ         7
+				2, -- 1P 体力ゲージ量         2
+				2, -- 2P 体力ゲージ量         3
+				2, -- 1P POWゲージ量          4
+				2, -- 2P POWゲージ量          5
+				2, -- 1P スタンゲージ表示     6
+				2, -- 2P スタンゲージ表示     7
+				2, -- 体力ゲージモード        8
+				2, -- POWゲージモード         9
 			},
 		},
 		on_a = {
-			bar_menu_to_main, -- －ゲージ設定－
-			bar_menu_to_main, -- 1P 体力ゲージ
-			bar_menu_to_main, -- 2P 体力ゲージ
-			bar_menu_to_main, -- 1P POWゲージ
-			bar_menu_to_main, -- 2P POWゲージ
-			bar_menu_to_main, -- 1P スタンゲージ
-			bar_menu_to_main, -- 2P スタンゲージ
+			bar_menu_to_main, -- －ゲージ設定－          1
+			bar_menu_to_main, -- 1P 体力ゲージ量         2
+			bar_menu_to_main, -- 2P 体力ゲージ量         3
+			bar_menu_to_main, -- 1P POWゲージ量          4
+			bar_menu_to_main, -- 2P POWゲージ量          5
+			bar_menu_to_main, -- 1P スタンゲージ表示     6
+			bar_menu_to_main, -- 2P スタンゲージ表示     7
+			bar_menu_to_main, -- 体力ゲージモード        8
+			bar_menu_to_main, -- POWゲージモード         9
 		},
 		on_b = {
-			bar_menu_to_main_cancel, -- －ゲージ設定－
-			bar_menu_to_main_cancel, -- 1P 体力ゲージ
-			bar_menu_to_main_cancel, -- 2P 体力ゲージ
-			bar_menu_to_main_cancel, -- 1P POWゲージ
-			bar_menu_to_main_cancel, -- 2P POWゲージ
-			bar_menu_to_main_cancel, -- 1P スタンゲージ
-			bar_menu_to_main_cancel, -- 2P スタンゲージ
+			bar_menu_to_main_cancel, -- －ゲージ設定－          1
+			bar_menu_to_main_cancel, -- 1P 体力ゲージ量         2
+			bar_menu_to_main_cancel, -- 2P 体力ゲージ量         3
+			bar_menu_to_main_cancel, -- 1P POWゲージ量          4
+			bar_menu_to_main_cancel, -- 2P POWゲージ量          5
+			bar_menu_to_main_cancel, -- 1P スタンゲージ表示     6
+			bar_menu_to_main_cancel, -- 2P スタンゲージ表示     7
+			bar_menu_to_main_cancel, -- 体力ゲージモード        8
+			bar_menu_to_main_cancel, -- POWゲージモード         9
 		},
 	}
 
