@@ -2383,6 +2383,11 @@ function rbff2.startplugin()
 			last_dmg         = 0,           -- ダメージ
 			tmp_stun         = 0,
 			tmp_st_timer     = 0,
+			dmg_scaling      = 1,
+			dmg_scl7         = 0,
+			dmg_scl6         = 0,
+			dmg_scl5         = 0,
+			dmg_scl4         = 0,
 			last_pure_dmg    = 0,
 			last_stun        = 0,
 			last_st_timer    = 0,
@@ -2395,6 +2400,7 @@ function rbff2.startplugin()
 			mv_state         = 0,           -- 動作
 			old_combo        = 0,           -- 前フレームのコンボ数
 			last_combo_dmg   = 0,
+			last_dmg_scaling = 1,
 			last_combo_stun  = 0,
 			last_combo_st_timer = 0,
 			old_state        = 0,           -- 前フレームのやられ状態
@@ -2599,6 +2605,10 @@ function rbff2.startplugin()
 				combo2       = p1 and 0x10B4E5 or 0x10B4E4, -- 最近のコンボ数のアドレス
 				tmp_combo2   = p1 and 0x10B4E1 or 0x10B4E0, -- 一次的なコンボ数のアドレス
 				max_combo2   = p1 and 0x10B4F0 or 0x10B4EF, -- 最大コンボ数のアドレス
+				dmg_scl7     = p1 and 0x10DE50 or 0x10DE51, -- 補正 7/8 の回数
+				dmg_scl6     = p1 and 0x10DE52 or 0x10DE53, -- 補正 6/8 の回数
+				dmg_scl5     = p1 and 0x10DE54 or 0x10DE55, -- 補正 5/8 の回数
+				dmg_scl4     = p1 and 0x10DE56 or 0x10DE57, -- 補正 4/8 の回数
 				last_dmg     = p1 and 0x10048F or 0x10058F, -- 最終ダメージ
 				tmp_dmg      = p1 and 0x10CA10 or 0x10CA11, -- 最終ダメージの更新フック
 				pure_dmg     = p1 and 0x10DDFB or 0x10DDFC, -- 最終ダメージ(補正前)
@@ -3065,6 +3075,23 @@ function rbff2.startplugin()
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05C1E0),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DDFD+((((A4)&$FFFFFF)-$100400)/$80);maincpu.pb@(temp1)=(D0);maincpu.pb@(temp1+$1)=(D1);g"))
+
+			--ダメージ補正 7/8
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x5B1E0),
+				"maincpu.pw@107C22>0",
+				"temp1=$10DE50+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@(temp1)+1;g"))
+			--ダメージ補正 6/8
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x5B1F6),
+				"maincpu.pw@107C22>0",
+				"temp1=$10DE52+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@(temp1)+1;g"))
+			--ダメージ補正 5/8
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x5B20C),
+				"maincpu.pw@107C22>0",
+				"temp1=$10DE54+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@(temp1)+1;g"))
+			--ダメージ補正 4/8
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x5B224),
+				"maincpu.pw@107C22>0",
+				"temp1=$10DE56+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@(temp1)+1;g"))
 		end
 	end
 
@@ -3829,14 +3856,31 @@ function rbff2.startplugin()
 					p.harmless2 and "o" or "-"))
 			end
 			]]
-			if p.blockstun > 0 then
-				print(string.format("%x:%s hit:%s gd:%s", p.addr.base, p.blockstun, p.blockstun, math.max(2, p.blockstun-1)))
-			end
-
 			p.last_dmg       = p.last_dmg or 0
 			p.last_pure_dmg  = p.last_pure_dmg or 0
 			p.last_stun      = p.last_stun or 0
 			p.last_st_timer  = p.last_st_timer or 0
+			p.dmg_scl7       = pgm:read_u8(p.addr.dmg_scl7)
+			p.dmg_scl6       = pgm:read_u8(p.addr.dmg_scl6)
+			p.dmg_scl5       = pgm:read_u8(p.addr.dmg_scl5)
+			p.dmg_scl4       = pgm:read_u8(p.addr.dmg_scl4)
+			pgm:write_u8(p.addr.dmg_scl7, 0)
+			pgm:write_u8(p.addr.dmg_scl6, 0)
+			pgm:write_u8(p.addr.dmg_scl5, 0)
+			pgm:write_u8(p.addr.dmg_scl4, 0)
+			p.dmg_scaling = 1
+			if p.dmg_scl7 > 0 then
+				p.dmg_scaling = p.dmg_scaling * (0.875 ^ p.dmg_scl7)
+			end
+			if p.dmg_scl6 > 0 then
+				p.dmg_scaling = p.dmg_scaling * (0.75 ^ p.dmg_scl6)
+			end
+			if p.dmg_scl5 > 0 then
+				p.dmg_scaling = p.dmg_scaling * (0.625 ^ p.dmg_scl5)
+			end
+			if p.dmg_scl4 > 0 then
+				p.dmg_scaling = p.dmg_scaling * (0.5 ^ p.dmg_scl4)
+			end
 			p.char           = pgm:read_u8(p.addr.char)
 			p.char_4times    = bit32.band(0xFFFF, p.char + p.char)
 			p.char_4times    = bit32.band(0xFFFF, p.char_4times + p.char_4times)
@@ -4604,12 +4648,16 @@ function rbff2.startplugin()
 				p.last_combo_stun_offset = p.stun
 				p.last_combo_st_timer_offset = p.stun_timer
 			end
+			if p.blockstun > 0 then
+				print(string.format("%x:%s hit:%s gd:%s %s %s", p.addr.base, p.blockstun, p.blockstun, math.max(2, p.blockstun-1), p.dmg_scaling, p.tmp_dmg))
+			end
 			if p.tmp_dmg ~= 0x00 then
 				p.last_dmg = p.tmp_dmg
 				p.last_pure_dmg = p.pure_dmg
 				p.tmp_combo_dmg = p.tmp_combo_dmg + p.tmp_dmg
 				p.last_combo = p.tmp_combo
 				p.last_combo_dmg = p.tmp_combo_dmg
+				p.last_dmg_scaling = p.dmg_scaling
 				p.max_dmg = math.max(p.max_dmg, p.tmp_combo_dmg)
 				p.last_stun = p.tmp_stun
 				p.last_st_timer = p.tmp_st_timer
@@ -5122,10 +5170,12 @@ function rbff2.startplugin()
 					end
 
 					-- コンボ表示
+					scr:draw_text(p1 and 228 or  9, 41, "補正:")
 					scr:draw_text(p1 and 228 or  9, 48, "ダメージ:")
 					scr:draw_text(p1 and 228 or  9, 55, "コンボ:")
 					scr:draw_text(p1 and 228 or  9, 62, "スタン値:")
 					scr:draw_text(p1 and 228 or  9, 69, "ｽﾀﾝ値ﾀｲﾏｰ:")
+					draw_rtext(   p1 and 296 or 77, 41, string.format("%s%%", op.last_dmg_scaling * 100))
 					draw_rtext(   p1 and 296 or 77, 48, string.format("%s(+%s/%s)", op.last_combo_dmg, op.last_dmg, op.last_pure_dmg))
 					draw_rtext(   p1 and 296 or 77, 55, op.last_combo)
 					draw_rtext(   p1 and 296 or 77, 62, string.format("%s(+%s)", op.last_combo_stun, op.last_stun))
