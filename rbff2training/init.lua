@@ -3103,14 +3103,30 @@ function rbff2.startplugin()
 				"maincpu.pw@107C22>0",
 				"temp1=$10DE56+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@(temp1)+1;g"))
 
-			-- POWゲージ増加量取得用フック
+			-- POWゲージ増加量取得用フック 通常技
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03BEDA),
+				"maincpu.pw@107C22>0",
+				string.format("PC=%x;g", fix_bp_addr(0x03BEEC))))
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05B3AC),
-				"maincpu.pw@107C22>0",
+				"maincpu.pw@107C22>0&&(maincpu.pb@((A3)+$BF)!=$0||maincpu.pb@((A3)+$BC)==$3C)",
+				"temp1=$10DE58+((((A3)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));" .. string.format("PC=%x", fix_bp_addr(0x05B34E)) .. ";g"))
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05B3AC),
+				"maincpu.pw@107C22>0&&maincpu.pb@((A3)+$BF)==$0&&maincpu.pb@((A3)+$BC)!=$3C",
 				"temp1=$10DE58+((((A3)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g"))
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03C144),
+
+			-- POWゲージ増加量取得用フック 必殺技
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05B34C),
 				"maincpu.pw@107C22>0",
+				string.format("PC=%x;g", fix_bp_addr(0x05B35E))))
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03C144),
+				"maincpu.pw@107C22>0&&maincpu.pb@((A4)+$BF)!=$0",
+				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));" .. string.format("PC=%x", fix_bp_addr(0x03C13A)) .. ";g"))
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03C144),
+				"maincpu.pw@107C22>0&&maincpu.pb@((A4)+$BF)==$0",
 				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g"))
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03BF1A),
+
+			-- POWゲージ増加量取得用フック 倍がえしとか
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03BF04),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g"))
 		end
