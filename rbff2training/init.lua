@@ -4686,10 +4686,15 @@ function rbff2.startplugin()
 			end
 			if p.tmp_pow > 0 then
 				p.last_pow = p.tmp_pow
-				if p.last_normal_state == false and p.normal_state == false then
-					p.tmp_combo_pow = p.tmp_combo_pow + p.tmp_pow
-				else
+				-- TODO: 大バーン→クラックシュートみたいな繋ぎのときにちゃんと加算されない
+				if p.last_normal_state == true and p.normal_state == true  then
 					p.tmp_combo_pow = p.tmp_pow
+				elseif p.last_normal_state == true and p.normal_state == false then
+					p.tmp_combo_pow = p.tmp_pow
+				elseif p.tmp_combo == 1 then
+					p.tmp_combo_pow = p.tmp_pow
+				else
+					p.tmp_combo_pow = p.tmp_combo_pow + p.tmp_pow
 				end
 				p.last_combo_pow = p.tmp_combo_pow
 				p.max_combo_pow = math.max(p.max_combo_pow, p.tmp_combo_pow)
