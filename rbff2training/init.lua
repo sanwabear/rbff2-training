@@ -2370,7 +2370,7 @@ function rbff2.startplugin()
 
 			life_rec         = true,        -- 自動で体力回復させるときtrue
 			red              = 1,           -- 体力設定
-			max              = 1,           -- パワー設定
+			max              = 3,           -- パワー設定
 			disp_dmg         = true,        -- ダメージ表示するときtrue
 			disp_cmd         = true,        -- 入力表示するときtrue
 			disp_frm         = true,        -- フレーム数表示するときtrue
@@ -3104,13 +3104,13 @@ function rbff2.startplugin()
 				"temp1=$10DE56+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@(temp1)+1;g"))
 
 			-- POWゲージ増加量取得用フック
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x5B3AC),
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05B3AC),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DE58+((((A3)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g"))
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x3C164),
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03C144),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g"))
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x3BF1A),
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03BF1A),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g"))
 		end
@@ -3826,12 +3826,10 @@ function rbff2.startplugin()
 			end
 			p.tmp_stun       = pgm:read_u8(p.addr.tmp_stun)             -- スタン値
 			p.tmp_st_timer   = pgm:read_u8(p.addr.tmp_st_timer)         -- スタンタイマー
-if p.tmp_pow > 0 or p.tmp_pow_rsv > 0 then
-	print(i, p.tmp_pow, p.tmp_pow_rsv)
-end
 			pgm:write_u8(p.addr.tmp_dmg, 0)
 			pgm:write_u8(p.addr.pure_dmg, 0)
 			pgm:write_u8(p.addr.tmp_pow, 0)
+			pgm:write_u8(p.addr.tmp_pow_rsv, 0)
 			pgm:write_u8(p.addr.tmp_stun, 0)
 			pgm:write_u8(p.addr.tmp_st_timer, 0)
 			p.tw_threshold   = pgm:read_u8(p.addr.tw_threshold)
@@ -4070,9 +4068,9 @@ end
 						fb.harmless2 and "o" or "-"))
 				end
 				]]
-				if fb.blockstun > 0 then
-					print(string.format("%x:2 hit:%s gd:%s", fb.addr.base, fb.blockstun, math.max(2, fb.blockstun-1)))
-				end
+				--if fb.blockstun > 0 then
+				--	print(string.format("%x:2 hit:%s gd:%s", fb.addr.base, fb.blockstun, math.max(2, fb.blockstun-1)))
+				--end
 			end
 
 			-- 値更新のフック確認
@@ -4661,7 +4659,7 @@ end
 					p.key_hist[k - 1] = p.key_hist[k]
 					p.key_frames[k - 1] = p.key_frames[k]
 				end
-				if 18 ~= #p.key_hist then
+				if 16 ~= #p.key_hist then
 					p.key_hist[#p.key_hist + 1] = lever
 					p.key_frames[#p.key_frames + 1] = 1
 				else
@@ -4677,26 +4675,33 @@ end
 			-- コンボ数とコンボダメージの処理
 			if p.normal_state == true then
 				p.tmp_combo_dmg = 0
-				p.tmp_combo_pow = 0
 				p.last_combo_stun_offset = p.stun
 				p.last_combo_st_timer_offset = p.stun_timer
 			end
-			if p.blockstun > 0 then
-				print(string.format("%x:%s hit:%s gd:%s %s %s", p.addr.base, p.blockstun, p.blockstun, math.max(2, p.blockstun-1), p.dmg_scaling, p.tmp_dmg))
+			--if p.blockstun > 0 then
+			--	print(string.format("%x:%s hit:%s gd:%s %s %s", p.addr.base, p.blockstun, p.blockstun, math.max(2, p.blockstun-1), p.dmg_scaling, p.tmp_dmg))
+			--end
+			if p.tmp_pow_rsv > 0 then
+				p.tmp_pow = p.tmp_pow + p.tmp_pow_rsv
+			end
+			if p.tmp_pow > 0 then
+				p.last_pow = p.tmp_pow
+				if p.last_normal_state == false and p.normal_state == false then
+					p.tmp_combo_pow = p.tmp_combo_pow + p.tmp_pow
+				else
+					p.tmp_combo_pow = p.tmp_pow
+				end
+				p.last_combo_pow = p.tmp_combo_pow
+				p.max_combo_pow = math.max(p.max_combo_pow, p.tmp_combo_pow)
 			end
 			if p.tmp_dmg ~= 0x00 then
 				p.last_dmg = p.tmp_dmg
 				p.last_pure_dmg = p.pure_dmg
-				p.last_pow = p.tmp_pow
 				p.tmp_combo_dmg = p.tmp_combo_dmg + p.tmp_dmg
-				p.tmp_combo_pow = p.tmp_combo_pow + p.tmp_pow
-				-- TODO 必殺技のPOW加算
 				p.last_combo = p.tmp_combo
 				p.last_combo_dmg = p.tmp_combo_dmg
-				p.last_combo_pow = p.tmp_combo_pow
 				p.last_dmg_scaling = p.dmg_scaling
 				p.max_dmg = math.max(p.max_dmg, p.tmp_combo_dmg)
-				p.max_combo_pow = math.max(p.max_combo_pow, p.tmp_combo_pow)
 				p.last_stun = p.tmp_stun
 				p.last_st_timer = p.tmp_st_timer
 				p.last_combo_stun = p.stun - p.last_combo_stun_offset
@@ -5321,7 +5326,7 @@ end
 						draw_frame_groups(p.frm_gap.act_frames2, p.act_frames_total, 30, p1 and 65 or 73, 3, true)
 					end
 					if p.disp_frm then
-						draw_frames(p.act_frames2, p1 and 160 or 285, true , true, p1 and 40 or 165, 63, 8, 18)
+						draw_frames(p.act_frames2, p1 and 160 or 285, true , true, p1 and 40 or 165, 63, 8, 16)
 					end
 				end
 				if global.disp_frmgap > 1 then
@@ -5600,7 +5605,7 @@ end
 		p[1].disp_stun           = col[ 6] == 2 -- 1P スタンゲージ表示         6
 		p[2].disp_stun           = col[ 7] == 2 -- 2P スタンゲージ表示         7
 		dip_config.infinity_life = col[ 8] == 2 -- 体力ゲージモード            8
-		global.pow_mode          = col[ 9]      -- POWモード                   9
+		global.pow_mode          = col[ 9]      -- POWゲージモード             9
 
 		menu_cur = main_menu
 	end
@@ -5763,7 +5768,7 @@ end
 		col[ 6] = p[1].disp_stun and 2 or 1 -- 1P スタンゲージ表示    6
 		col[ 7] = p[2].disp_stun and 2 or 1 -- 2P スタンゲージ表示    7
 		col[ 8] = dip_config.infinity_life and 2 or 1 -- 体力ゲージモード 8
-		col[ 9] = g.pow_mode                -- POWモード              9
+		col[ 9] = g.pow_mode                -- POWゲージモード        9
 	end
 	local init_ex_menu_config = function()
 		local col = ex_menu.pos.col
