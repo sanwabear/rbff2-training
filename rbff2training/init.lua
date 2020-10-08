@@ -114,7 +114,98 @@ local global = {
 	await_neutral    = false,
 	replay_fix_pos   = false,
 	mame_debug_wnd   = false, -- MAMEデバッグウィンドウ表示のときtrue
+	damaged_move     = 1,
 }
+local damaged_moves = {
+	0x00000000,
+	0x00058CA4,
+	0x00058DEC,
+	0x00058DDC,
+	0x00058DFC,
+	0x00058FFE,
+	0x00058E0C,
+	0x0005910A,
+	0x00059D90,
+	0x0005A01A,
+	0x0005A198,
+	0x0005A430,
+	0x000591FA,
+	0x00059316,
+	0x0005940E,
+	0x000593FA,
+	0x00059528,
+	0x00059728,
+	0x0005971C,
+	0x00030638,
+	0x00030008,
+	0x00030150,
+	0x0003053C,
+	0x000307D4,
+	0x00030AE0,
+	0x0005982E,
+	0x00058E72,
+	0x000306FE,
+	0x000595EE,
+	0x00058E28,
+	0x00030F2E,
+	0x00030D94,
+	0x00030E28,
+	0x00031718,
+	0x000317B4,
+	0x000319A6,
+	0x00031846,
+	0x00031606,
+	0x000324E0,
+	0x00032C62,
+	0x000331EE,
+	0x000336D8,
+	0x00033CE2,
+	0x00033EF6,
+	0x00058CA4,
+	0x00032608,
+	0x00058CA4,
+	0x000341CC,
+	0x000313B4,
+	0x00058FE6,
+	0x000590F6,
+	0x000592FA,
+	0x000593E6,
+	0x000593D2,
+	0x00059500,
+	0x00059710,
+	0x00059704,
+	0x0003062C,
+	0x00030148,
+	0x00030536,
+	0x0003077C,
+	0x00030A88,
+	0x00058CA4,
+	0x0003258A,
+	0x00058DAA,
+	0x00058DC0,
+	0x00058DCE,
+	0x000590B0,
+	0x00034700,
+	0x000327AE,
+	0x0003296C,
+	0x00033300,
+	0x00034A12,
+	0x00034D14,
+	0x00034AEC,
+	0x00031AE6,
+	0x00034E60,
+	0x00031CC8,
+	0x00030632,
+	0x00033AE2,
+	0x0003021C,
+	0x00030214,
+	0x0003033A,
+	0x00030332,
+}
+local damaged_move_keys = {}
+for i = 1, #damaged_moves do
+	table.insert(damaged_move_keys, i)
+end
 
 -- DIPスイッチ
 local dip_config ={
@@ -1164,7 +1255,7 @@ local jump_acts = {
 	[0x0F] = true, [0x15] = true, [0x16] = true,
 }
 local wakeup_acts = { [0x193] = true, [0x13B] = true, }
-local down_acts = { [0x190] = true, [0x192] = true, [0x18E] = true, }
+local down_acts = { [0x190] = true,  [0x191] = true, [0x192] = true, [0x18E] = true, }
 
 -- キー入力2
 local cmd_neutral = function(p, next_joy)
@@ -2089,6 +2180,22 @@ local draw_cmd = function(p, line, frame, str)
 	end
 end
 
+-- 当たり判定のオフセット
+local bp_offset = {
+	[0x012C42] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x0  },
+	[0x012C88] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x0  },
+	[0x012D4C] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x0  }, --p1 push 
+	[0x012D92] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x0  }, --p2 push
+	[0x039F2A] = { ["rbff2k"] =   0xC , ["rbff2h"] = 0x20 }, --special throws
+	[0x017300] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x0  }, --solid shadows
+}
+local bp_clone = { ["rbff2k"] = -0x104, ["rbff2h"] = 0x20 }
+local fix_bp_addr = function(addr)
+	local fix1 = bp_clone[emu.romname()] or 0
+	local fix2 = bp_offset[addr] and (bp_offset[addr][emu.romname()] or fix1) or fix1
+	return addr + fix2
+end
+
 -- 当たり判定表示
 local accept_atk_only = {
 	[box_type_base.a ] = true,
@@ -2154,13 +2261,30 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 				box.type = box_type_base.a   -- 攻撃(空中追撃可)
 			end
 		end
+		-- ヒット効果
+		-- 058232(家庭用版)からの処理
+		-- 1004E9のデータ＝5C83Eでセット 技ID
+		-- 1004E9のデータ-0x20 + 0x95C0C のデータがヒット効果の元ネタ D0
+		-- D0 = 0x9だったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
+		-- D0 = 0xAだったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
+		-- D0 x 4 + 579da
+		local d0 = pgm:read_u8(box.id - 0x20 + fix_bp_addr(0x95BEC))
+		--d0 = bit32.band(0xFF, d0 + d0)
+		--d0 = bit32.band(0xFF, d0 + d0)
+		--d0 = fix_bp_addr(0x0579DA + d0)
+		box.effect = d0
 		--[[
-		print(string.format("hit %x %x %x %x %2s %4s %4s %4s %2s", box.id, d2, a0, asm,
+		print(string.format("hit %x %x %x %4x %2s %4s %4s %4s %2s %2s",
+			box.id,
+			d2,
+			a0,
+			asm,
 			harmless and "hm" or "",
 			fake and "fake" or "",
 			p.hit.obsl_hit and "obsl" or "",
 			p.hit.full_hit and "full" or "",
-			p.hit.harmless2 and "h2" or ""))
+			p.hit.harmless2 and "h2" or "",
+			box.effect))
 		]]
 	else
 		box.type = box_types[box.id + 1]
@@ -2855,22 +2979,6 @@ function rbff2.startplugin()
 		end
 	end
 	--
-
-	-- 当たり判定のオフセット
-	local bp_offset = {
-		[0x012C42] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x0  },
-		[0x012C88] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x0  },
-		[0x012D4C] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x0  }, --p1 push 
-		[0x012D92] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x0  }, --p2 push
-		[0x039F2A] = { ["rbff2k"] =   0xC , ["rbff2h"] = 0x20 }, --special throws
-		[0x017300] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x0  }, --solid shadows
-	}
-	local bp_clone = { ["rbff2k"] = -0x104, ["rbff2h"] = 0x20 }
-	local fix_bp_addr = function(addr)
-		local fix1 = bp_clone[emu.romname()] or 0
-		local fix2 = bp_offset[addr] and (bp_offset[addr][emu.romname()] or fix1) or fix1
-		return addr + fix2
-	end
 
 	-- 当たり判定と投げ判定用のブレイクポイントとウォッチポイントのセット
 	local wps = {}
@@ -3998,7 +4106,8 @@ function rbff2.startplugin()
 				p.on_wakeup = global.frame_number
 			end
 			-- ダウンフレーム
-			if down_acts[p.old_act] ~= true and down_acts[p.act] == true then
+			if (down_acts[p.old_act] ~= true and down_acts[p.act] == true) or
+				(p.old_pos_y > 0 and p.pos_y == 0 and down_acts[p.act] == true) then
 				p.on_down = global.frame_number
 			end
 			-- フレーム表示用処理
@@ -5658,6 +5767,20 @@ function rbff2.startplugin()
 		global.disp_pos          = col[12] == 2 -- 1P 2P 距離表示        12
 		dip_config.easy_super    = col[13] == 2 -- 簡易超必              13
 		global.mame_debug_wnd    = col[14] == 2 -- MAMEデバッグウィンドウ14
+		global.damaged_move      = col[15]      -- ヒット効果確認用      15
+
+		local dmove = damaged_moves[global.damaged_move]
+		if dmove and dmove > 0 then
+			for i = 0x0579DA, 0x057B22, 4 do
+				pgm:write_direct_u32(i, dmove)
+			end
+		else
+			local ii = 2
+			for i = 0x0579DA, 0x057B22, 4 do
+				pgm:write_direct_u32(i, damaged_moves[ii])
+				ii = ii + 1
+			end
+		end
 
 		menu_cur = main_menu
 	end
@@ -5816,6 +5939,7 @@ function rbff2.startplugin()
 		col[12] = g.disp_pos    and 2 or 1 -- 1P 2P 距離表示        12
 		col[13] = dip_config.easy_super and 2 or 1 -- 簡易超必      13
 		col[14] = global.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ14
+		col[15] = global.damaged_move      -- ヒット効果確認用      15
 	end
 	local init_auto_menu_config = function()
 		local col = auto_menu.pos.col
@@ -6206,6 +6330,7 @@ function rbff2.startplugin()
 			{ "1P 2P 距離表示"        , { "OFF", "ON" }, },
 			{ "簡易超必"              , { "OFF", "ON" }, },
 			{ "MAMEデバッグウィンドウ", { "OFF", "ON" }, },
+			{ "ヒット効果確認用"      , damaged_move_keys },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
@@ -6225,6 +6350,7 @@ function rbff2.startplugin()
 				1, -- 1P 2P 距離表示         12
 				1, -- 簡易超必               13
 				1, -- MAMEデバッグウィンドウ 14
+				1, -- ヒット効果確認用       15
 			},
 		},
 		on_a = {
@@ -6242,6 +6368,7 @@ function rbff2.startplugin()
 			ex_menu_to_main, -- 1P 2P 距離表示
 			ex_menu_to_main, -- 簡易超必
 			ex_menu_to_main, -- MAMEデバッグウィンドウ
+			ex_menu_to_main, -- ヒット効果確認用
 		},
 		on_b = {
 			ex_menu_to_main_cancel, -- －一般設定－
@@ -6258,6 +6385,7 @@ function rbff2.startplugin()
 			ex_menu_to_main_cancel, -- 1P 2P 距離表示
 			ex_menu_to_main_cancel, -- 簡易超必
 			ex_menu_to_main_cancel, -- MAMEデバッグウィンドウ
+			ex_menu_to_main_cancel, -- ヒット効果確認用
 		},
 	}
 
