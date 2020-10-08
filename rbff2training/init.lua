@@ -2269,9 +2269,7 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		-- D0 = 0xAだったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
 		-- D0 x 4 + 579da
 		local d0 = pgm:read_u8(box.id - 0x20 + fix_bp_addr(0x95BEC))
-		--d0 = bit32.band(0xFF, d0 + d0)
-		--d0 = bit32.band(0xFF, d0 + d0)
-		--d0 = fix_bp_addr(0x0579DA + d0)
+		--d0 = fix_bp_addr(0x0579DA + d0 * 4) --0x0579DA から4バイトのデータの並びがヒット効果の処理アドレスになる
 		box.effect = d0
 		--[[
 		print(string.format("hit %x %x %x %4x %2s %4s %4s %4s %2s %2s",
