@@ -203,8 +203,11 @@ local damaged_moves = {
 	0x00030332,
 }
 local damaged_move_keys = {}
+local damaged_move_map = {}
 for i = 1, #damaged_moves do
-	table.insert(damaged_move_keys, i)
+	local k = i == 1 and "通常" or string.format("全て%2s番", i - 2)
+	table.insert(damaged_move_keys, k)
+	damaged_move_map[k] = damaged_moves[i]
 end
 
 -- DIPスイッチ
@@ -2268,11 +2271,18 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		-- D0 = 0x9だったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
 		-- D0 = 0xAだったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
 		-- D0 x 4 + 579da
-		local d0 = pgm:read_u8(box.id - 0x20 + fix_bp_addr(0x95BEC))
 		--d0 = fix_bp_addr(0x0579DA + d0 * 4) --0x0579DA から4バイトのデータの並びがヒット効果の処理アドレスになる
-		box.effect = d0
-		--[[
-		print(string.format("hit %x %x %x %4x %2s %4s %4s %4s %2s %2s",
+		box.effect = pgm:read_u8(box.id - 0x20 + fix_bp_addr(0x95BEC))
+
+		-- のけぞり時間
+		-- 05AF7C(家庭用版)からの処理
+		d2 = bit32.band(0xF, pgm:read_u8(box.id + fix_bp_addr(0x95CCC)))
+		-- ヒット硬直
+		box.hitstun = pgm:read_u8(0x16 + 0x2 + fix_bp_addr(0x5AF7C) + d2) + 1 + 3
+		-- ガード硬直
+		box.blockstun = pgm:read_u8(0x1A + 0x2 + fix_bp_addr(0x5AF88) + d2) + 1 + 2
+
+		print(string.format("hit %x %x %x %4x %2s %4s %4s %4s %2s %2s %2s %2s",
 			box.id,
 			d2,
 			a0,
@@ -2282,8 +2292,9 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 			p.hit.obsl_hit and "obsl" or "",
 			p.hit.full_hit and "full" or "",
 			p.hit.harmless2 and "h2" or "",
-			box.effect))
-		]]
+			box.effect,
+			box.hitstun,
+			box.blockstun))
 	else
 		box.type = box_types[box.id + 1]
 		if p.in_sway_line and sway_box_types[box.id + 1] then
@@ -2537,8 +2548,8 @@ function rbff2.startplugin()
 			act              = 0,
 			acta             = 0,
 			attack           = 0,           -- 攻撃中のみ変化
-			blockstun_id     = 0,           -- ヒット/ガードしている相手側のattackと同値
-			blockstun       = 0,            -- 攻撃側のガード硬直
+			hitstop_id       = 0,           -- ヒット/ガードしている相手側のattackと同値
+			hitstop          = 0,           -- 攻撃側のガード硬直
 			op_attack        = 0,           -- くらい中のみ変化(ダメージ計算等で利用)
 			pos              = 0,           -- X位置
 			max_pos          = 0,           -- X位置最大
@@ -2727,7 +2738,7 @@ function rbff2.startplugin()
 				act_frame    = p1 and 0x10046F or 0x10056F, -- 現在の行動の残フレーム、ゼロになると次の行動へ
 				act_contact  = p1 and 0x100401 or 0x100501, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
 				attack       = p1 and 0x1004B6 or 0x1005B6, -- 攻撃中のみ変化
-				blockstun_id = p1 and 0x1004EB or 0x1005EB, -- 被害中のみ変化
+				hitstop_id  = p1 and 0x1004EB or 0x1005EB, -- 被害中のみ変化
 				op_attack    = p1 and 0x1005EB or 0x1005B6, -- くらい中のみ変化(ダメージ計算等で利用)
 				char         = p1 and 0x107BA5 or 0x107BA7, -- キャラ()
 				color        = p1 and 0x107BAC or 0x107BAD, -- カラー A=0x00 D=0x01
@@ -2782,11 +2793,11 @@ function rbff2.startplugin()
 				tw_accepted  = p1 and 0x10DDE4 or 0x10DDE5, -- 投げ確定時のフレーム経過
 				tw_muteki    = p1 and 0x1004F6 or 0x1005F6, -- 投げ無敵の残フレーム数
 
-				-- フックできない変わり用
+				-- フックできないかわり用
 				state2       = p1 and 0x10CA0E or 0x10CA0F, -- 状態
 				act2         = p1 and 0x10CA12 or 0x10CA13, -- 行動ID デバッグディップステータス表示のPと同じ
 
-				-- フックできない変わり用-当たり判定
+				-- フックできないかわり用-当たり判定
 				vulnerable1  = p1 and 0x10CB30 or 0x10CB31,
 				vulnerable21 = p1 and 0x10CB32 or 0x10CB33,
 				vulnerable22 = p1 and 0x10CB34 or 0x10CB35, -- 0の時vulnerable=true
@@ -2820,8 +2831,8 @@ function rbff2.startplugin()
 				pos_y          = 0, -- Y位置
 				pos_z          = 0, -- Z位置
 				attack         = 0, -- 攻撃中のみ変化
-				blockstun_id   = 0, -- ガード硬直のID
-				blockstun      = 0, -- ガード硬直
+				hitstop_id     = 0, -- ガード硬直のID
+				hitstop        = 0, -- ガード硬直
 				fake_hit       = false,
 				obsl_hit       = false, -- 嘘判定チェック用
 				full_hit       = false, -- 判定チェック用1
@@ -2850,7 +2861,7 @@ function rbff2.startplugin()
 					pos_y      = base + 0x28, -- Y位置
 	 				pos_z      = base + 0x24, -- Z位置
 					attack     = base + 0xBF, -- デバッグのNO
-					blockstun_id = base + 0xBE, -- ヒット硬直用ID
+					hitstop_id = base + 0xBE, -- ヒット硬直用ID
 					-- ヒットするかどうか
 					fake_hit   = p.fake_hits[base],
 					obsl_hit   = base + 0x6A, -- 嘘判定チェック用 3ビット目が立っていると嘘判定
@@ -3988,12 +3999,12 @@ function rbff2.startplugin()
 			p.knock_back2    = pgm:read_u8(p.addr.knock_back2)
 			p.knock_back3    = pgm:read_u8(p.addr.knock_back3)
 			p.attack         = pgm:read_u8(p.addr.attack)
-			p.blockstun_id         = pgm:read_u8(p.addr.blockstun_id)
+			p.hitstop_id     = pgm:read_u8(p.addr.hitstop_id)
 			if p.attack == 0 then
-				p.blockstun = 0
+				p.hitstop = 0
 			else
-				p.blockstun = bit32.band(0x7F, pgm:read_u8(pgm:read_u32(0x83C58 + p.char_4times) + p.attack))
-				p.blockstun = p.blockstun == 0 and 2 or p.blockstun + 1
+				p.hitstop = bit32.band(0x7F, pgm:read_u8(pgm:read_u32(0x83C58 + p.char_4times) + p.attack))
+				p.hitstop = p.hitstop == 0 and 2 or p.hitstop + 1
 			end
 			p.op_attack      = pgm:read_u8(p.addr.op_attack)
 			p.fake_hit       = bit32.btest(pgm:read_u8(p.addr.fake_hit), 8+3) == false
@@ -4157,12 +4168,12 @@ function rbff2.startplugin()
 				fb.hit.projectile = true
 				fb.asm            = pgm:read_u16(pgm:read_u32(fb.addr.base))
 				fb.attack         = pgm:read_u16(pgm:read_u32(fb.addr.attack))
-				fb.blockstun_id         = pgm:read_u16(fb.addr.blockstun_id)
-				if fb.blockstun_id == 0 then
-					fb.blockstun = 0
+				fb.hitstop_id         = pgm:read_u16(fb.addr.hitstop_id)
+				if fb.hitstop_id == 0 then
+					fb.hitstop = 0
 				else
-					fb.blockstun = pgm:read_u8(0x88512 + fb.blockstun_id)
-					fb.blockstun = fb.blockstun == 0 and 2 or fb.blockstun + 1
+					fb.hitstop = pgm:read_u8(0x88512 + fb.hitstop_id)
+					fb.hitstop = fb.hitstop == 0 and 2 or fb.hitstop + 1
 				end
 				fb.fake_hit       = bit32.btest(pgm:read_u8(fb.addr.fake_hit), 8+3) == false
 				fb.obsl_hit       = bit32.btest(pgm:read_u8(fb.addr.obsl_hit), 8+3) == false
@@ -4183,7 +4194,7 @@ function rbff2.startplugin()
 				else
 					fb.count = 0
 					fb.atk_count = 0
-					fb.blockstun = 0
+					fb.hitstop = 0
 				end
 				--[[
 				if fb.asm ~= 0x4E75 then
@@ -4198,8 +4209,8 @@ function rbff2.startplugin()
 						fb.harmless2 and "o" or "-"))
 				end
 				]]
-				--if fb.blockstun > 0 then
-				--	print(string.format("%x:2 hit:%s gd:%s", fb.addr.base, fb.blockstun, math.max(2, fb.blockstun-1)))
+				--if fb.hitstop > 0 then
+				--	print(string.format("%x:2 hit:%s gd:%s", fb.addr.base, fb.hitstop, math.max(2, fb.hitstop-1)))
 				--end
 			end
 
@@ -4808,8 +4819,8 @@ function rbff2.startplugin()
 				p.last_combo_stun_offset = p.stun
 				p.last_combo_st_timer_offset = p.stun_timer
 			end
-			--if p.blockstun > 0 then
-			--	print(string.format("%x:%s hit:%s gd:%s %s %s", p.addr.base, p.blockstun, p.blockstun, math.max(2, p.blockstun-1), p.dmg_scaling, p.tmp_dmg))
+			--if p.hitstop > 0 then
+			--	print(string.format("%x:%s hit:%s gd:%s %s %s", p.addr.base, p.hitstop, p.hitstop, math.max(2, p.hitstop-1), p.dmg_scaling, p.tmp_dmg))
 			--end
 			if p.tmp_pow_rsv > 0 then
 				p.tmp_pow = p.tmp_pow + p.tmp_pow_rsv
@@ -5385,7 +5396,7 @@ function rbff2.startplugin()
 
 				draw_status(4,  8, string.format("%s %2s %3s %3s", p.state, p.tw_threshold, p.tw_accepted, p.tw_frame))
 				draw_status(4, 15, string.format("%1s %2s %1s", p.hit.vulnerable and "V" or "-", p.tw_muteki, p.tw_muteki2))
-				draw_status(4, 22, string.format("%1s %2x %2x %2x", p.hit.harmless and "-" or "H", p.attack, p.attack_id, p.blockstun_id))
+				draw_status(4, 22, string.format("%1s %2x %2x %2x", p.hit.harmless and "-" or "H", p.attack, p.attack_id, p.hitstop_id))
 				draw_status(4, 29, string.format("%4x %2s %2s", p.act, p.act_count, p.act_frame))
 
 				-- BS状態表示
