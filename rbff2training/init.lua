@@ -2282,7 +2282,7 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		-- ガード硬直
 		box.blockstun = pgm:read_u8(0x1A + 0x2 + fix_bp_addr(0x5AF88) + d2) + 1 + 2
 
-		print(string.format("hit %x %x %x %4x %2s %4s %4s %4s %2s %2s %2s %2s",
+		print(string.format("hit %x %x %x %4x %2s %4s %4s %4s %2s %2s/%2s %2s %2s %2s",
 			box.id,
 			d2,
 			a0,
@@ -2292,6 +2292,8 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 			p.hit.obsl_hit and "obsl" or "",
 			p.hit.full_hit and "full" or "",
 			p.hit.harmless2 and "h2" or "",
+			p.hit.max_hit_nm,
+			p.hit.max_hit_dn,
 			box.effect,
 			box.hitstun,
 			box.blockstun))
@@ -2425,6 +2427,8 @@ local update_object = function(p, ec)
 	p.hit.fake_hit = p.fake_hit
 	p.hit.obsl_hit = p.obsl_hit
 	p.hit.full_hit = p.full_hit
+	p.hit.max_hit_dn = p.max_hit_dn
+	p.hit.max_hit_nm = p.max_hit_nm
 	p.hit.harmless2 = p.harmless2
 
 	-- 食らい判定かどうか
@@ -2738,7 +2742,7 @@ function rbff2.startplugin()
 				act_frame    = p1 and 0x10046F or 0x10056F, -- 現在の行動の残フレーム、ゼロになると次の行動へ
 				act_contact  = p1 and 0x100401 or 0x100501, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
 				attack       = p1 and 0x1004B6 or 0x1005B6, -- 攻撃中のみ変化
-				hitstop_id  = p1 and 0x1004EB or 0x1005EB, -- 被害中のみ変化
+				hitstop_id   = p1 and 0x1004EB or 0x1005EB, -- 被害中のみ変化
 				op_attack    = p1 and 0x1005EB or 0x1005B6, -- くらい中のみ変化(ダメージ計算等で利用)
 				char         = p1 and 0x107BA5 or 0x107BA7, -- キャラ()
 				color        = p1 and 0x107BAC or 0x107BAD, -- カラー A=0x00 D=0x01
@@ -2806,7 +2810,8 @@ function rbff2.startplugin()
 				fake_hit     = p1 and 0x10DDF3 or 0x10DDF4, -- 出だしから嘘判定のフック
 				obsl_hit     = p1 and 0x10046A or 0x10056A, -- 嘘判定チェック用 3ビット目が立っていると嘘判定
 				full_hit     = p1 and 0x1004AA or 0x1005AA, -- 判定チェック用1 0じゃないとき全段攻撃ヒット/ガード
-				harmless2    = p1 and 0x1004B6 or 0x1005B6, -- 判定チェック用2 0のときは何もしていない
+				harmless2    = p1 and 0x1004B6 or 0x1005B6, -- 判定チェック用2 0のときは何もしていない 同一技の連続ヒット数加算
+				max_hit_nm   = p1 and 0x1004AB or 0x1005AB, -- 同一技行動での最大ヒット数 分子
 			},
 		}
 
@@ -2837,6 +2842,8 @@ function rbff2.startplugin()
 				obsl_hit       = false, -- 嘘判定チェック用
 				full_hit       = false, -- 判定チェック用1
 				harmless2      = false, -- 判定チェック用2 飛び道具専用
+				max_hit_dn     = 0,     -- 同一技行動での最大ヒット数 分母
+				max_hit_nm     = 0,     -- 同一技行動での最大ヒット数 分子
 				hitboxes       = {},
 				hit            = {
 					pos_x      = 0,
@@ -2852,6 +2859,8 @@ function rbff2.startplugin()
 					obsl_hit   = false,
 					full_hit   = false,
 					harmless2  = false,
+					max_hit_dn = 0,
+					max_hit_nm = 0,
 				},
 				addr           = {
 					base       = base, -- キャラ状態とかのベースのアドレス
@@ -2867,6 +2876,7 @@ function rbff2.startplugin()
 					obsl_hit   = base + 0x6A, -- 嘘判定チェック用 3ビット目が立っていると嘘判定
 					full_hit   = base + 0xAA, -- 判定チェック用1 0じゃないとき全段攻撃ヒット/ガード
 					harmless2  = base + 0xE7, -- 判定チェック用2 0じゃないときヒット/ガード
+					max_hit_nm = base + 0xAB, -- 同一技行動での最大ヒット数 分子
 				},
 			}
 		end
@@ -3949,6 +3959,9 @@ function rbff2.startplugin()
 		for i, p in ipairs(players) do
 			local op         = players[3-i]
 
+			p.char           = pgm:read_u8(p.addr.char)
+			p.char_4times    = bit32.band(0xFFFF, p.char + p.char)
+			p.char_4times    = bit32.band(0xFFFF, p.char_4times + p.char_4times)
 			p.life           = pgm:read_u8(p.addr.life)                 -- 今の体力
 			p.old_state      = p.state                                  -- 前フレームの状態保存
 			p.state          = pgm:read_u8(p.addr.state)                -- 今の状態
@@ -4003,7 +4016,7 @@ function rbff2.startplugin()
 			if p.attack == 0 then
 				p.hitstop = 0
 			else
-				p.hitstop = bit32.band(0x7F, pgm:read_u8(pgm:read_u32(0x83C58 + p.char_4times) + p.attack))
+				p.hitstop = bit32.band(0x7F, pgm:read_u8(pgm:read_u32(fix_bp_addr(0x83C38) + p.char_4times) + p.attack))
 				p.hitstop = p.hitstop == 0 and 2 or p.hitstop + 1
 			end
 			p.op_attack      = pgm:read_u8(p.addr.op_attack)
@@ -4011,21 +4024,8 @@ function rbff2.startplugin()
 			p.obsl_hit       = bit32.btest(pgm:read_u8(p.addr.obsl_hit), 8+3) == false
 			p.full_hit       = pgm:read_u8(p.addr.full_hit) > 0
 			p.harmless2      = pgm:read_u8(p.addr.harmless2) == 0
-			--[[
-			if 0 < p.attack then
-				print(string.format("%x %1s %2x(%s) %2x(%s) %2x(%s) %2x(%s)",
-					p.addr.base,
-					(p.obsl_hit or p.full_hit or p.harmless2) and "H" or " ",
-					pgm:read_u8(p.addr.fake_hit),
-					p.fake_hit and "o" or "-",
-					pgm:read_u8(p.addr.obsl_hit),
-					p.obsl_hit and "o" or "-",
-					pgm:read_u8(p.addr.full_hit),
-					p.full_hit and "o" or "-",
-					pgm:read_u8(p.addr.harmless2),
-					p.harmless2 and "o" or "-"))
-			end
-			]]
+			p.max_hit_dn     = p.attack > 0 and pgm:read_u8(pgm:read_u32(fix_bp_addr(0x827B8) + p.char_4times) + p.attack) or 0
+			p.max_hit_nm     = pgm:read_u8(p.addr.max_hit_nm)
 			p.last_dmg       = p.last_dmg or 0
 			p.last_pow       = p.last_pow or 0
 			p.last_pure_dmg  = p.last_pure_dmg or 0
@@ -4052,9 +4052,6 @@ function rbff2.startplugin()
 			if p.dmg_scl4 > 0 then
 				p.dmg_scaling = p.dmg_scaling * (0.5 ^ p.dmg_scl4)
 			end
-			p.char           = pgm:read_u8(p.addr.char)
-			p.char_4times    = bit32.band(0xFFFF, p.char + p.char)
-			p.char_4times    = bit32.band(0xFFFF, p.char_4times + p.char_4times)
 			p.pos            = pgm:read_i16(p.addr.pos)
 			p.max_pos        = pgm:read_i16(p.addr.max_pos)
 			if p.max_pos == 0 or p.max_pos == p.pos then
@@ -4179,6 +4176,8 @@ function rbff2.startplugin()
 				fb.obsl_hit       = bit32.btest(pgm:read_u8(fb.addr.obsl_hit), 8+3) == false
 				fb.full_hit       = pgm:read_u8(fb.addr.full_hit ) > 0
 				fb.harmless2      = pgm:read_u8(fb.addr.harmless2) > 0
+				fb.max_hit_dn     = pgm:read_u8(fix_bp_addr(0x885F2) + fb.hitstop_id)
+				fb.max_hit_nm     = pgm:read_u8(fb.addr.max_hit_nm)
 				fb.hitboxes       = {}
 				fb.buffer         = {}
 				fb.act_data_fired = p.act_data -- 発射したタイミングの行動ID
@@ -5703,7 +5702,7 @@ function rbff2.startplugin()
 		elseif global.dummy_mode == 6 then
 			-- リプレイ
 			global.dummy_mode = 1
-			play_menu.pos.col[ 8] = recording.do_repeat and 2 or 1 -- 繰り返し           8
+			play_menu.pos.col[ 8] = recording.do_repeat and 2 or 1   -- 繰り返し           8
 			play_menu.pos.col[ 9] = recording.repeat_interval + 1    -- 繰り返し間隔       9
 			play_menu.pos.col[10] = global.await_neutral and 2 or 1  -- 繰り返し開始条件  10
 			play_menu.pos.col[11] = global.replay_fix_pos and 2 or 1 -- 開始間合い固定    11
@@ -5859,7 +5858,7 @@ function rbff2.startplugin()
 		end
 		recording.do_repeat       = col[ 8] == 2 -- 繰り返し           8
 		recording.repeat_interval = col[ 9] - 1  -- 繰り返し間隔       9
-		global.await_neutral      = col[10] == 2  -- 繰り返し開始条件  10
+		global.await_neutral      = col[10] == 2 -- 繰り返し開始条件  10
 		global.replay_fix_pos     = col[11] == 2 -- 開始間合い固定    11
 		global.repeat_interval    = recording.repeat_interval
 	end
