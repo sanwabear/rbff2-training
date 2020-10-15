@@ -2211,6 +2211,60 @@ local accept_atk_only = {
 	[box_type_base.v6] = true,
 	[box_type_base.x1] = true,
 }
+
+local chip_dmg_types = {
+	zero = function(pure_dmg) -- ゼロ
+		return 0
+	end,
+	rshift4 = function(pure_dmg) -- 1/16
+		return math.max(1, bit32.rshift(pure_dmg, 4))
+	end,
+	rshift5 = function(pure_dmg) -- 1/32
+		return math.max(1, bit32.rshift(pure_dmg, 5))
+	end,
+}
+local chip_dmg_type_tbl = {
+	chip_dmg_types.zero,    --  0 ダメージ無し
+	chip_dmg_types.zero,    --  1 ダメージ無し
+	chip_dmg_types.rshift4, --  2 1/16
+	chip_dmg_types.rshift4, --  3 1/16
+	chip_dmg_types.zero,    --  4 ダメージ無し
+	chip_dmg_types.zero,    --  5 ダメージ無し
+	chip_dmg_types.rshift4, --  6 1/16
+	chip_dmg_types.rshift5, --  7 1/32
+	chip_dmg_types.rshift5, --  8 1/32
+	chip_dmg_types.zero,    --  9 ダメージ無し
+	chip_dmg_types.zero,    -- 10 ダメージ無し
+	chip_dmg_types.rshift4, -- 11 1/16
+	chip_dmg_types.rshift4, -- 12 1/16
+	chip_dmg_types.rshift4, -- 13 1/16
+	chip_dmg_types.rshift4, -- 14 1/16
+	chip_dmg_types.rshift4, -- 15 1/16
+	chip_dmg_types.zero,    -- 16 ダメージ無し
+}
+local get_chip_dmg_type = function(box)
+	local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+	-- 削りダメージ 05B2A4 からの処理
+	-- ガード時
+	-- A0 = 95CEC
+	-- D0 = 0
+	-- A3 = 攻撃側のベースアドレス
+	-- D0 = 100XE9のデータ 攻撃側の技ID
+	-- D0 = A0 + D0 アドレスのデータ
+	-- D0 = F and D0
+	-- D0 = D0 + D0
+	-- D0 = D0 + D0
+	-- A0 = A0 + 05B2C2 + D0
+	-- 05B310: 422C 008F                clr.b   ($8f,A4)              -- ダメージ無し
+	-- 05B316: 08EC 0006 00EE           bset    #$6, ($ee,A4)         -- 1/16
+	-- 05B32A: 08EC 0006 00EE           bset    #$6, ($ee,A4)         -- 1/32
+	local a0 = fix_bp_addr(0x95CCC)
+	local d0 = bit32.band(0xF, pgm:read_u8(a0 + box.id))
+	local func = chip_dmg_type_tbl[d0+1]
+	print(string.format("%x %2s", d0, func and func(96) or -1))
+	return chip_dmg_type_tbl[d0]
+end
+
 local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fireball, key)
 	local box = {id = id}
 	box.type = nil
@@ -2226,7 +2280,7 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 			d2 = bit32.band(0xFFFF, d2 + d2)
 			d2 = bit32.band(0xFFFF, d2 + d2)
 			a0 = pgm:read_u32(0x13120 + d2)
-			asm = pgm:read_u16(a0)
+			asm = pgm:read_u16(a0) -- 該当アドレスのアセンブラコード
 			if 0x70FF ~= asm then -- 0x70FF は moveq   #-$1, D0 でヒットしない処理結果を表す--空中追撃できない判定
 				air = true
 			end
@@ -2273,7 +2327,8 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		-- D0 x 4 + 579da
 		--d0 = fix_bp_addr(0x0579DA + d0 * 4) --0x0579DA から4バイトのデータの並びがヒット効果の処理アドレスになる
 		box.effect = pgm:read_u8(box.id - 0x20 + fix_bp_addr(0x95BEC))
-
+		-- 削りダメージ計算
+		box.chip_dmg_type = get_chip_dmg_type(box)
 		-- のけぞり時間
 		-- 05AF7C(家庭用版)からの処理
 		d2 = bit32.band(0xF, pgm:read_u8(box.id + fix_bp_addr(0x95CCC)))
@@ -2282,7 +2337,15 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		-- ガード硬直
 		box.blockstun = pgm:read_u8(0x1A + 0x2 + fix_bp_addr(0x5AF88) + d2) + 1 + 2
 
-		print(string.format("hit %x %x %x %4x %2s %4s %4s %4s %2s %2s/%2s %2s %2s %2s",
+		box.log_txt = key .. string.format(" hit %8x %4x %4x %2s %2s %2x %2x %2x %x %x %x %4x %2s %4s %4s %4s %2s %2s/%2s %2s %2s %2s",
+			p.addr.base,
+			p.act,
+			p.acta,
+			p.act_count,
+			p.act_frame,
+			p.act_contact,
+			p.attack,
+			p.hitstop_id,
 			box.id,
 			d2,
 			a0,
@@ -2296,7 +2359,7 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 			p.hit.max_hit_dn,
 			box.effect,
 			box.hitstun,
-			box.blockstun))
+			box.blockstun)
 	else
 		box.type = box_types[box.id + 1]
 		if p.in_sway_line and sway_box_types[box.id + 1] then
@@ -2388,7 +2451,7 @@ local new_throwbox = function(p, box)
 end
 
 -- 当たり判定用のキャラ情報更新と判定表示用の情報作成
-local update_object = function(p, ec)
+local update_object = function(p)
 	local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 	local scr = manager:machine().screens[":screen"]
 	local height = scr:height() * scr:yscale()
@@ -2447,6 +2510,9 @@ local update_object = function(p, ec)
 			if not uniq_hitboxes[box.key] then
 				uniq_hitboxes[box.key] = true
 				table.insert(p.hitboxes, hitbox)
+				if hitbox.log_txt then
+					print(hitbox.log_txt)
+				end
 			else
 				--print("DROP " .. box.key) --debug
 			end
@@ -2748,6 +2814,7 @@ function rbff2.startplugin()
 				color        = p1 and 0x107BAC or 0x107BAD, -- カラー A=0x00 D=0x01
 				combo        = p1 and 0x10B4E4 or 0x10B4E5, -- コンボ
 				combo2       = p1 and 0x10B4E5 or 0x10B4E4, -- 最近のコンボ数のアドレス
+				dmg_id       = p1 and 0x1004E9 or 0x1005E9, -- ダメージ算出の技ID(最後にヒット/ガードした技のID)
 				tmp_combo2   = p1 and 0x10B4E1 or 0x10B4E0, -- 一次的なコンボ数のアドレス
 				max_combo2   = p1 and 0x10B4F0 or 0x10B4EF, -- 最大コンボ数のアドレス
 				dmg_scl7     = p1 and 0x10DE50 or 0x10DE51, -- 補正 7/8 の回数
@@ -2831,6 +2898,12 @@ function rbff2.startplugin()
 			p.fireball[base] = {
 				is_fireball    = true,
 				act            = 0,
+				acta           = 0,
+
+				act_count      = 0, -- 現在の行動のカウンタ
+				act_frame      = 0, -- 現在の行動の残フレーム、ゼロになると次の行動へ
+				act_contact    = 0, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
+
 				asm            = 0,
 				pos            = 0, -- X位置
 				pos_y          = 0, -- Y位置
@@ -2866,6 +2939,10 @@ function rbff2.startplugin()
 					base       = base, -- キャラ状態とかのベースのアドレス
 					act        = base + 0x60, -- 技のID デバッグのP
 					acta       = base + 0x62, -- 技のID デバッグのA
+					act_count  = base + 0x66, -- 現在の行動のカウンタ
+					act_frame  = base + 0x6F, -- 現在の行動の残フレーム、ゼロになると次の行動へ
+					act_contact= base + 0x01, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
+					dmg_id     = base + 0xE9, -- ダメージ算出の技ID
 					pos        = base + 0x20, -- X位置
 					pos_y      = base + 0x28, -- Y位置
 	 				pos_z      = base + 0x24, -- Z位置
@@ -3370,8 +3447,6 @@ function rbff2.startplugin()
 	end
 	-- リプレイ開始位置記憶
 	rec_fixpos = function()
-		local scr = manager:machine().screens[":screen"]
-
 		local pos = { get_pos(1), get_pos(2) }
 		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 		local fixpos = { pgm:read_i16(players[1].addr.pos), pgm:read_i16(players[2].addr.pos) }
@@ -3385,8 +3460,6 @@ function rbff2.startplugin()
 	-- 初回入力まち
 	-- 未入力状態を待ちける→入力開始まで待ち受ける
 	rec_await_no_input = function()
-		local scr = manager:machine().screens[":screen"]
-
 		local joy_val = get_joy()
 
 		local no_input = true
@@ -3402,8 +3475,6 @@ function rbff2.startplugin()
 		end
 	end
 	rec_await_1st_input = function()
-		local scr = manager:machine().screens[":screen"]
-
 		local joy_val = get_joy(recording.temp_player)
 
 		local next_val = nil
@@ -3429,8 +3500,6 @@ function rbff2.startplugin()
 	end
 	-- 入力中
 	rec_input = function()
-		local scr = manager:machine().screens[":screen"]
-
 		local joy_val = get_joy(recording.player)
 
 		-- 入力保存
@@ -4159,6 +4228,9 @@ function rbff2.startplugin()
 			for _, fb in pairs(p.fireball) do
 				fb.act            = pgm:read_u16(fb.addr.act)
 				fb.acta           = pgm:read_u16(fb.addr.acta)
+				fb.act_count      = pgm:read_u8(fb.addr.act_count)
+				fb.act_frame      = pgm:read_u8(fb.addr.act_frame)
+				fb.act_contact    = pgm:read_u8(fb.addr.act_contact)
 				fb.pos            = pgm:read_i16(fb.addr.pos)
 				fb.pos_y          = pgm:read_i16(fb.addr.pos_y)
 				fb.pos_z          = pgm:read_i16(fb.addr.pos_z)
@@ -4345,7 +4417,7 @@ function rbff2.startplugin()
 		for _, p in pairs(temp_hits) do
 			-- キャラと飛び道具への当たり判定の反映
 			-- update_objectはキャラの位置情報と当たり判定の情報を読み込んだ後で実行すること
-			update_object(p, global.frame_number)
+			update_object(p)
 		end
 
 		for i, p in ipairs(players) do
