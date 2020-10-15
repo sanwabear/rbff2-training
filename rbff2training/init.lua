@@ -2213,15 +2213,24 @@ local accept_atk_only = {
 }
 
 local chip_dmg_types = {
-	zero = function(pure_dmg) -- ゼロ
-		return 0
-	end,
-	rshift4 = function(pure_dmg) -- 1/16
-		return math.max(1, bit32.rshift(pure_dmg, 4))
-	end,
-	rshift5 = function(pure_dmg) -- 1/32
-		return math.max(1, bit32.rshift(pure_dmg, 5))
-	end,
+	zero = { -- ゼロ
+		name = "zero",
+		calc = function(pure_dmg)
+			return 0
+		end,
+	},
+	rshift4 = { -- 1/16
+		name = "1/16",
+		calc = function(pure_dmg)
+			return math.max(1, bit32.rshift(pure_dmg, 4))
+		end,
+	},
+	rshift5 = { -- 1/32
+		name = "1/32",
+		calc = function(pure_dmg)
+			return math.max(1, bit32.rshift(pure_dmg, 5))
+		end,
+	},
 }
 local chip_dmg_type_tbl = {
 	chip_dmg_types.zero,    --  0 ダメージ無し
@@ -2261,8 +2270,7 @@ local get_chip_dmg_type = function(box)
 	local a0 = fix_bp_addr(0x95CCC)
 	local d0 = bit32.band(0xF, pgm:read_u8(a0 + box.id))
 	local func = chip_dmg_type_tbl[d0+1]
-	print(string.format("%x %2s", d0, func and func(96) or -1))
-	return chip_dmg_type_tbl[d0]
+	return func
 end
 
 local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fireball, key)
@@ -2337,7 +2345,7 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		-- ガード硬直
 		box.blockstun = pgm:read_u8(0x1A + 0x2 + fix_bp_addr(0x5AF88) + d2) + 1 + 2
 
-		box.log_txt = key .. string.format(" hit %8x %4x %4x %2s %2s %2x %2x %2x %x %x %x %4x %2s %4s %4s %4s %2s %2s/%2s %2s %2s %2s",
+		box.log_txt = key .. string.format(" hit %8x %4x %4x %2s %2s %2x %2x %2x %x %x %x %4x %2s %4s %4s %4s %2s %2s/%2s %2s %2s %2s, %4s",
 			p.addr.base,
 			p.act,
 			p.acta,
@@ -2359,7 +2367,8 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 			p.hit.max_hit_dn,
 			box.effect,
 			box.hitstun,
-			box.blockstun)
+			box.blockstun,
+			box.chip_dmg_type.name)
 	else
 		box.type = box_types[box.id + 1]
 		if p.in_sway_line and sway_box_types[box.id + 1] then
