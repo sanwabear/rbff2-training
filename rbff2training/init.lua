@@ -2278,7 +2278,6 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 	if box.id + 1 > #box_types then
 		-- 嘘判定   ... 判定出現時点で攻撃能力なし
 		-- 無効判定 ... ヒット後などで判定出現時点では攻撃能力があるが無効化されたもの
-		local fake, harmless = p.hit.fake_hit == true, p.hit.harmless == true
 		-- 家庭用版 012E0E~012E34の処理をベースに空中追撃判定を持つかどうかを判断する
 		local d2, a0, asm, air = box.id - 0x20, 0, 0, false
 		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
@@ -2293,33 +2292,33 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 			end
 		end
 		if is_fireball and air then
-			if fake then
+			if p.hit.fake_hit then
 				box.type = box_type_base.pfaa -- 飛び道具(空中追撃可、嘘)
-			elseif harmless then
+			elseif p.hit.harmless then
 				box.type = box_type_base.pdaa -- 飛び道具(空中追撃可、無効)
 			else
 				box.type = box_type_base.paa  -- 飛び道具(空中追撃可)
 			end
 		elseif is_fireball and not air then
-			if fake then
+			if p.hit.fake_hit then
 				box.type = box_type_base.pfa -- 飛び道具(嘘)
-			elseif harmless then
+			elseif p.hit.harmless then
 				box.type = box_type_base.pda -- 飛び道具(無効)
 			else
 				box.type = box_type_base.pa  -- 飛び道具
 			end
 		elseif not is_fireball and air then
-			if fake then
+			if p.hit.fake_hit then
 				box.type = box_type_base.faa -- 攻撃(嘘)
-			elseif harmless then
+			elseif p.hit.harmless then
 				box.type = box_type_base.daa -- 攻撃(無効、空中追撃可)
 			else
 				box.type = box_type_base.aa  -- 攻撃(空中追撃可)
 			end
 		else
-			if fake then
+			if p.hit.fake_hit then
 				box.type = box_type_base.fa  -- 攻撃(嘘)
-			elseif harmless then
+			elseif p.hit.harmless then
 				box.type = box_type_base.da  -- 攻撃(無効)
 			else
 				box.type = box_type_base.a   -- 攻撃(空中追撃可)
@@ -2343,8 +2342,9 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		box.hitstun = pgm:read_u8(0x16 + 0x2 + fix_bp_addr(0x5AF7C) + d2) + 1 + 3
 		-- ガード硬直
 		box.blockstun = pgm:read_u8(0x1A + 0x2 + fix_bp_addr(0x5AF88) + d2) + 1 + 2
-
-		box.log_txt = key .. string.format(" hit %8x %4x %4x %2s %2s %2x %2x %2x %x %x %x %4x %2s %4s %4s %4s %2s %2s/%2s %2s %2s %2s, %4s",
+		-- ログ用
+		box.log_txt = string.format(
+			" hit %8x %4x %4x %2s %2s %2x %2x %2x %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s",
 			p.addr.base,
 			p.act,
 			p.acta,
@@ -2354,20 +2354,21 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 			p.attack,
 			p.hitstop_id,
 			box.id,
-			d2,
-			a0,
-			asm,
-			harmless and "hm" or "",
-			fake and "fake" or "",
+			p.hit.harmless and "hm" or "",
+			p.hit.fake_hit and "fake" or "",
 			p.hit.obsl_hit and "obsl" or "",
 			p.hit.full_hit and "full" or "",
 			p.hit.harmless2 and "h2" or "",
-			p.hit.max_hit_nm,
-			p.hit.max_hit_dn,
-			box.effect,
-			box.hitstun,
-			box.blockstun,
-			box.chip_dmg_type.name)
+			p.hit.max_hit_nm,       -- p.act_frame中の行動最大ヒット 分子
+			p.hit.max_hit_dn,       -- p.act_frame中の行動最大ヒット 分母
+			p.pure_dmg,             -- 補正前攻撃力 %3s
+			box.chip_dmg_type.calc(p.pure_dmg), -- 補正前削りダメージ %s
+			box.chip_dmg_type.name, -- 削り補正値 %4s
+			p.hitstop,              -- ヒットストップ %2s
+			p.hitstop_gd,           -- ガード時ヒットストップ %2s
+			box.hitstun,            -- ヒット後硬直F %2s
+			box.blockstun,          -- ガード後硬直F %2s
+			box.effect)             -- ヒット効果 %2s
 	else
 		box.type = box_types[box.id + 1]
 		if p.in_sway_line and sway_box_types[box.id + 1] then
@@ -2423,7 +2424,7 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		end
 	end
 
-	print(string.format("%3s %3s %3s", box.top , box.bottom, screen_top))
+	--print(string.format("%3s %3s %3s", box.top , box.bottom, screen_top))
 
 	if box.top == box.bottom and box.left == box.right then
 		box.visible = false
@@ -2632,7 +2633,6 @@ function rbff2.startplugin()
 			attack           = 0,           -- 攻撃中のみ変化
 			hitstop_id       = 0,           -- ヒット/ガードしている相手側のattackと同値
 			hitstop          = 0,           -- 攻撃側のガード硬直
-			op_attack        = 0,           -- くらい中のみ変化(ダメージ計算等で利用)
 			pos              = 0,           -- X位置
 			max_pos          = 0,           -- X位置最大
 			min_pos          = 0,           -- X位置最小
@@ -2821,7 +2821,6 @@ function rbff2.startplugin()
 				act_contact  = p1 and 0x100401 or 0x100501, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
 				attack       = p1 and 0x1004B6 or 0x1005B6, -- 攻撃中のみ変化
 				hitstop_id   = p1 and 0x1004EB or 0x1005EB, -- 被害中のみ変化
-				op_attack    = p1 and 0x1005EB or 0x1005B6, -- くらい中のみ変化(ダメージ計算等で利用)
 				char         = p1 and 0x107BA5 or 0x107BA7, -- キャラ()
 				color        = p1 and 0x107BAC or 0x107BAD, -- カラー A=0x00 D=0x01
 				combo        = p1 and 0x10B4E4 or 0x10B4E5, -- コンボ
@@ -2949,6 +2948,7 @@ function rbff2.startplugin()
 				},
 				addr           = {
 					base       = base, -- キャラ状態とかのベースのアドレス
+					char       = base + 0x10, -- 技のキャラID
 					act        = base + 0x60, -- 技のID デバッグのP
 					acta       = base + 0x62, -- 技のID デバッグのA
 					act_count  = base + 0x66, -- 現在の行動のカウンタ
@@ -3293,7 +3293,7 @@ function rbff2.startplugin()
 				"temp1=$10DDF3+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(D5);g"))
 
 			-- 補正前ダメージ取得用フック
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05B13A),
+			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05B11A),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DDFB+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@((A4)+$8F);g"))
 
@@ -4052,7 +4052,8 @@ function rbff2.startplugin()
 			p.tmp_combo      = tohexnum(pgm:read_u8(p.addr.tmp_combo2)) -- 一次的なコンボ数
 			p.max_combo      = tohexnum(pgm:read_u8(p.addr.max_combo2)) -- 最大コンボ数
 			p.tmp_dmg        = pgm:read_u8(p.addr.tmp_dmg)              -- ダメージ
-			p.pure_dmg       = pgm:read_u8(p.addr.pure_dmg)             -- ダメージ
+			p.attack         = pgm:read_u8(p.addr.attack)
+			p.pure_dmg       = pgm:read_u8(p.addr.pure_dmg)             -- ダメージ(フック処理)
 			p.tmp_pow        = pgm:read_u8(p.addr.tmp_pow)              -- POWゲージ増加量
 			p.tmp_pow_rsv    = pgm:read_u8(p.addr.tmp_pow_rsv)          -- POWゲージ増加量(予約値)
 			if p.tmp_pow_rsv > 0 then
@@ -4092,15 +4093,18 @@ function rbff2.startplugin()
 			p.knock_back1    = pgm:read_u8(p.addr.knock_back1)
 			p.knock_back2    = pgm:read_u8(p.addr.knock_back2)
 			p.knock_back3    = pgm:read_u8(p.addr.knock_back3)
-			p.attack         = pgm:read_u8(p.addr.attack)
 			p.hitstop_id     = pgm:read_u8(p.addr.hitstop_id)
 			if p.attack == 0 then
-				p.hitstop = 0
+				p.hitstop    = 0
+				p.hitstop_gd = 0
+				p.pure_dmg = 0
 			else
-				p.hitstop = bit32.band(0x7F, pgm:read_u8(pgm:read_u32(fix_bp_addr(0x83C38) + p.char_4times) + p.attack))
-				p.hitstop = p.hitstop == 0 and 2 or p.hitstop + 1
+				p.hitstop    = bit32.band(0x7F, pgm:read_u8(pgm:read_u32(fix_bp_addr(0x83C38) + p.char_4times) + p.attack))
+				p.hitstop    = p.hitstop == 0 and 2 or p.hitstop + 1  -- システムで消費される分を加算
+				p.hitstop_gd = math.max(2, p.hitstop - 1) -- ガード時の補正
+				-- 補正前ダメージ量取得 家庭用 05B118 からの処理
+				p.pure_dmg = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x813F0)) + p.attack)
 			end
-			p.op_attack      = pgm:read_u8(p.addr.op_attack)
 			p.fake_hit       = bit32.btest(pgm:read_u8(p.addr.fake_hit), 8+3) == false
 			p.obsl_hit       = bit32.btest(pgm:read_u8(p.addr.obsl_hit), 8+3) == false
 			p.full_hit       = pgm:read_u8(p.addr.full_hit) > 0
@@ -4249,12 +4253,18 @@ function rbff2.startplugin()
 				fb.hit.projectile = true
 				fb.asm            = pgm:read_u16(pgm:read_u32(fb.addr.base))
 				fb.attack         = pgm:read_u16(pgm:read_u32(fb.addr.attack))
-				fb.hitstop_id         = pgm:read_u16(fb.addr.hitstop_id)
+				fb.hitstop_id     = pgm:read_u16(fb.addr.hitstop_id)
 				if fb.hitstop_id == 0 then
-					fb.hitstop = 0
+					fb.hitstop    = 0
+					fb.hitstop_gd = 0
+					fb.pure_dmg   = 0
 				else
-					fb.hitstop = pgm:read_u8(0x88512 + fb.hitstop_id)
-					fb.hitstop = fb.hitstop == 0 and 2 or fb.hitstop + 1
+					-- ヒットストップ取得 家庭用 061656 からの処理
+					fb.hitstop    = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x884F2))
+					fb.hitstop    = fb.hitstop == 0 and 2 or fb.hitstop + 1 -- システムで消費される分を加算
+					fb.hitstop_gd = math.max(2, fb.hitstop - 1) -- ガード時の補正
+					-- 補正前ダメージ量取得 家庭用 05B146 からの処理
+					fb.pure_dmg   = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x88472))
 				end
 				fb.fake_hit       = bit32.btest(pgm:read_u8(fb.addr.fake_hit), 8+3) == false
 				fb.obsl_hit       = bit32.btest(pgm:read_u8(fb.addr.obsl_hit), 8+3) == false
@@ -4278,6 +4288,7 @@ function rbff2.startplugin()
 					fb.count = 0
 					fb.atk_count = 0
 					fb.hitstop = 0
+					fb.pure_dmg = 0
 				end
 				--[[
 				if fb.asm ~= 0x4E75 then
