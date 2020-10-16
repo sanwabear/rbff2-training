@@ -2272,7 +2272,6 @@ local get_chip_dmg_type = function(box)
 	local func = chip_dmg_type_tbl[d0+1]
 	return func
 end
-
 local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fireball, key)
 	local box = {id = id}
 	box.type = nil
@@ -2391,15 +2390,13 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		p.attack_id = id
 	end
 
-	box.top    = p.hit.pos_y - bit32.arshift(top    * p.hit.scale * 4, 8)
-	box.bottom = p.hit.pos_y - bit32.arshift(bottom * p.hit.scale * 4, 8)
-	box.left   = p.hit.pos_x - bit32.arshift(left   * p.hit.scale * 4, 8) * p.hit.flip_x
-	box.right  = p.hit.pos_x - bit32.arshift(right  * p.hit.scale * 4, 8) * p.hit.flip_x
+	top    = bit32.band(0xFFFF, p.hit.pos_y - bit32.arshift(top    * p.hit.scale, 6))
+	bottom = bit32.band(0xFFFF, p.hit.pos_y - bit32.arshift(bottom * p.hit.scale, 6))
+	left   = bit32.band(0xFFFF, p.hit.pos_x - bit32.arshift(left   * p.hit.scale, 6) * p.hit.flip_x)
+	right  = bit32.band(0xFFFF, p.hit.pos_x - bit32.arshift(right  * p.hit.scale, 6) * p.hit.flip_x)
 
-	box.top    = (0 > box.top    or 0xFFFF < box.top   ) and bit32.band(0xFFFF, box.top   ) or box.top
-	box.bottom = (0 > box.bottom or 0xFFFF < box.bottom) and bit32.band(0xFFFF, box.bottom) or box.bottom
-	box.left   = (0 > box.left   or 0xFFFF < box.left  ) and bit32.band(0xFFFF, box.left  ) or box.left
-	box.right  = (0 > box.right  or 0xFFFF < box.right ) and bit32.band(0xFFFF, box.right ) or box.right
+	box.top , box.bottom = bottom, top
+	box.left, box.right  = left, right
 
 	if ((box.top <= 0 and box.bottom <=0) or (box.top >= 224 and box.bottom >=224) or (box.left <= 0 and box.right <= 0) or (box.left >= 320 and box.right >= 320)) then
 		--print("OVERFLOW " .. (key or "")) --debug
@@ -2417,10 +2414,16 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		end
 	end
 	if box.top > box.bottom then
-		if box.top > (224-screen_top) then
-			box.top = screen_top
+		if box.top > 224 then
+			box.top = 0
+		end
+	else
+		if box.bottom > 224 then
+			box.bottom = 0
 		end
 	end
+
+	print(string.format("%3s %3s %3s", box.top , box.bottom, screen_top))
 
 	if box.top == box.bottom and box.left == box.right then
 		box.visible = false
