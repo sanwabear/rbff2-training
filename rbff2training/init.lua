@@ -2344,7 +2344,7 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		box.blockstun = pgm:read_u8(0x1A + 0x2 + fix_bp_addr(0x5AF88) + d2) + 1 + 2
 		-- ログ用
 		box.log_txt = string.format(
-			" hit %8x %4x %4x %2s %2s %2x %2x %2x %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s",
+			" hit %8x %4x %4x %2s %2s %2x %2x %2x %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s",
 			p.addr.base,
 			p.act,
 			p.acta,
@@ -2368,7 +2368,10 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 			p.hitstop_gd,           -- ガード時ヒットストップ %2s
 			box.hitstun,            -- ヒット後硬直F %2s
 			box.blockstun,          -- ガード後硬直F %2s
-			box.effect)             -- ヒット効果 %2s
+			box.effect,             -- ヒット効果 %2s
+			p.pure_st,              -- スタン値 %2s
+			p.pure_st_tm            -- スタンタイマー %2s
+		)
 	else
 		box.type = box_types[box.id + 1]
 		if p.in_sway_line and sway_box_types[box.id + 1] then
@@ -4097,13 +4100,18 @@ function rbff2.startplugin()
 			if p.attack == 0 then
 				p.hitstop    = 0
 				p.hitstop_gd = 0
-				p.pure_dmg = 0
+				p.pure_dmg   = 0
+				p.pure_st    = 0
+				p.pure_st_tm = 0
 			else
 				p.hitstop    = bit32.band(0x7F, pgm:read_u8(pgm:read_u32(fix_bp_addr(0x83C38) + p.char_4times) + p.attack))
 				p.hitstop    = p.hitstop == 0 and 2 or p.hitstop + 1  -- システムで消費される分を加算
 				p.hitstop_gd = math.max(2, p.hitstop - 1) -- ガード時の補正
 				-- 補正前ダメージ量取得 家庭用 05B118 からの処理
-				p.pure_dmg = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x813F0)) + p.attack)
+				p.pure_dmg   = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x813F0)) + p.attack)
+				-- スタン値とスタンタイマー取得 05C1CA からの処理
+				p.pure_st    = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x85CCA)) + p.attack)
+				p.pure_st_tm = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x85D2A)) + p.attack)
 			end
 			p.fake_hit       = bit32.btest(pgm:read_u8(p.addr.fake_hit), 8+3) == false
 			p.obsl_hit       = bit32.btest(pgm:read_u8(p.addr.obsl_hit), 8+3) == false
@@ -4258,6 +4266,8 @@ function rbff2.startplugin()
 					fb.hitstop    = 0
 					fb.hitstop_gd = 0
 					fb.pure_dmg   = 0
+					fb.pure_st    = 0
+					fb.pure_st_tm = 0
 				else
 					-- ヒットストップ取得 家庭用 061656 からの処理
 					fb.hitstop    = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x884F2))
@@ -4265,6 +4275,9 @@ function rbff2.startplugin()
 					fb.hitstop_gd = math.max(2, fb.hitstop - 1) -- ガード時の補正
 					-- 補正前ダメージ量取得 家庭用 05B146 からの処理
 					fb.pure_dmg   = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x88472))
+					-- スタン値とスタンタイマー取得 家庭用 05C1B0 からの処理
+					fb.pure_st    = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x886F2))
+					fb.pure_st_tm = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x88772))
 				end
 				fb.fake_hit       = bit32.btest(pgm:read_u8(fb.addr.fake_hit), 8+3) == false
 				fb.obsl_hit       = bit32.btest(pgm:read_u8(fb.addr.obsl_hit), 8+3) == false
@@ -4285,10 +4298,12 @@ function rbff2.startplugin()
 					fb.count = (fb.count or 0) +1
 					fb.atk_count = fb.atk_count or 0
 				else
-					fb.count = 0
-					fb.atk_count = 0
-					fb.hitstop = 0
-					fb.pure_dmg = 0
+					fb.count      = 0
+					fb.atk_count  = 0
+					fb.hitstop    = 0
+					fb.pure_dmg   = 0
+					fb.pure_st    = 0
+					fb.pure_st_tm = 0
 				end
 				--[[
 				if fb.asm ~= 0x4E75 then
@@ -5462,7 +5477,7 @@ function rbff2.startplugin()
 					scr:draw_text(p1 and 228 or  9, 69, "ｽﾀﾝ値ﾀｲﾏｰ:")
 					scr:draw_text(p1 and 228 or  9, 76, "POW:")
 					draw_rtext(   p1 and 296 or 77, 41, string.format("%s%%", (op.last_dmg_scaling-1) * 100))
-					draw_rtext(   p1 and 296 or 77, 48, string.format("%s(+%s/%s)", op.last_combo_dmg, op.last_dmg, op.last_pure_dmg))
+					draw_rtext(   p1 and 296 or 77, 48, string.format("%s(+%s)", op.last_combo_dmg, op.last_dmg))
 					draw_rtext(   p1 and 296 or 77, 55, op.last_combo)
 					draw_rtext(   p1 and 296 or 77, 62, string.format("%s(+%s)", op.last_combo_stun, op.last_stun))
 					draw_rtext(   p1 and 296 or 77, 69, string.format("%s(+%s)", op.last_combo_st_timer, op.last_st_timer))
