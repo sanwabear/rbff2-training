@@ -2232,6 +2232,7 @@ local chip_dmg_types = {
 		end,
 	},
 }
+-- 削りダメージ計算種別 補正処理の分岐先の種類分用意する
 local chip_dmg_type_tbl = {
 	chip_dmg_types.zero,    --  0 ダメージ無し
 	chip_dmg_types.zero,    --  1 ダメージ無し
@@ -2251,22 +2252,9 @@ local chip_dmg_type_tbl = {
 	chip_dmg_types.rshift4, -- 15 1/16
 	chip_dmg_types.zero,    -- 16 ダメージ無し
 }
+-- 削りダメージ計算種別取得
 local get_chip_dmg_type = function(box)
 	local pgm = manager:machine().devices[":maincpu"].spaces["program"]
-	-- 削りダメージ 05B2A4 からの処理
-	-- ガード時
-	-- A0 = 95CEC
-	-- D0 = 0
-	-- A3 = 攻撃側のベースアドレス
-	-- D0 = 100XE9のデータ 攻撃側の技ID
-	-- D0 = A0 + D0 アドレスのデータ
-	-- D0 = F and D0
-	-- D0 = D0 + D0
-	-- D0 = D0 + D0
-	-- A0 = A0 + 05B2C2 + D0
-	-- 05B310: 422C 008F                clr.b   ($8f,A4)              -- ダメージ無し
-	-- 05B316: 08EC 0006 00EE           bset    #$6, ($ee,A4)         -- 1/16
-	-- 05B32A: 08EC 0006 00EE           bset    #$6, ($ee,A4)         -- 1/32
 	local a0 = fix_bp_addr(0x95CCC)
 	local d0 = bit32.band(0xF, pgm:read_u8(a0 + box.id))
 	local func = chip_dmg_type_tbl[d0+1]
@@ -2331,17 +2319,14 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		-- D0 = 0x9だったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
 		-- D0 = 0xAだったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
 		-- D0 x 4 + 579da
-		--d0 = fix_bp_addr(0x0579DA + d0 * 4) --0x0579DA から4バイトのデータの並びがヒット効果の処理アドレスになる
+		-- d0 = fix_bp_addr(0x0579DA + d0 * 4) --0x0579DA から4バイトのデータの並びがヒット効果の処理アドレスになる
 		box.effect = pgm:read_u8(box.id - 0x20 + fix_bp_addr(0x95BEC))
-		-- 削りダメージ計算
+		-- 削りダメージ計算種別取得 05B2A4 からの処理
 		box.chip_dmg_type = get_chip_dmg_type(box)
-		-- のけぞり時間
-		-- 05AF7C(家庭用版)からの処理
+		-- のけぞり時間取得 05AF7C(家庭用版)からの処理
 		d2 = bit32.band(0xF, pgm:read_u8(box.id + fix_bp_addr(0x95CCC)))
-		-- ヒット硬直
-		box.hitstun = pgm:read_u8(0x16 + 0x2 + fix_bp_addr(0x5AF7C) + d2) + 1 + 3
-		-- ガード硬直
-		box.blockstun = pgm:read_u8(0x1A + 0x2 + fix_bp_addr(0x5AF88) + d2) + 1 + 2
+		box.hitstun   = pgm:read_u8(0x16 + 0x2 + fix_bp_addr(0x5AF7C) + d2) + 1 + 3 -- ヒット硬直
+		box.blockstun = pgm:read_u8(0x1A + 0x2 + fix_bp_addr(0x5AF88) + d2) + 1 + 2 -- ガード硬直
 		-- ログ用
 		box.log_txt = string.format(
 			" hit %8x %4x %4x %2s %2s %2x %2x %2x %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s",
@@ -2419,12 +2404,15 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 	end
 	if box.top > box.bottom then
 		if box.top > 224 then
-			box.top = 0
+			box.top = 224
 		end
 	else
 		if box.bottom > 224 then
 			box.bottom = 0
 		end
+	end
+	if box.type == box_type_base.p then
+		print(string.format("%x", p.addr.base), screen_top,box.top , box.bottom, box.left, box.right)
 	end
 
 	--print(string.format("%3s %3s %3s", box.top , box.bottom, screen_top))
@@ -2463,6 +2451,7 @@ local new_throwbox = function(p, box)
 	box.bottom = box.bottom and (p.hit.pos_y - box.bottom) or height + screen_top - p.hit.pos_z
 	box.type   = box.type or box_type_base.t
 	box.visible = true
+	print(box.opp_id)
 	return box
 end
 
@@ -2757,7 +2746,7 @@ function rbff2.startplugin()
 				range41      = 0,
 				range42      = 0,
 				range5       = 0,
-				range6       = 0,
+				id           = 0,
 				addr         = {
 					on       = p1 and 0x10CD90 or 0x10CDB0,
 					base     = p1 and 0x10CD91 or 0x10CDB1,
@@ -2771,7 +2760,7 @@ function rbff2.startplugin()
 					range41  = p1 and 0x10CDA4 or 0x10CDC4,
 					range42  = p1 and 0x10CDA5 or 0x10CDC5,
 					range5   = p1 and 0x10CDA6 or 0x10CDC6,
-					range6   = p1 and 0x10CDA7 or 0x10CDC7,
+					id       = p1 and 0x10CDA7 or 0x10CDC7,
 				},
 			},
 
@@ -2783,6 +2772,7 @@ function rbff2.startplugin()
 				opp_base     = 0,
 				opp_id       = 0,
 				side         = 0,
+				id           = 0,
 				addr         = {
 					on       = p1 and 0x10CD00 or 0x10CD20,
 					range_x  = p1 and 0x10CD01 or 0x10CD21,
@@ -2791,6 +2781,7 @@ function rbff2.startplugin()
 					opp_base = p1 and 0x10CD09 or 0x10CD29,
 					opp_id   = p1 and 0x10CD0D or 0x10CD2D,
 					side     = p1 and 0x10CD11 or 0x10CD31,
+					id       = p1 and 0x10CD12 or 0x10CD32,
 				},
 			},
 
@@ -2803,6 +2794,7 @@ function rbff2.startplugin()
 				opp_id       = 0,
 				side         = 0,
 				bottom       = 0,
+				id           = 0,
 				addr         = {
 					on       = p1 and 0x10CD40 or 0x10CD60,
 					front    = p1 and 0x10CD41 or 0x10CD61,
@@ -2812,6 +2804,7 @@ function rbff2.startplugin()
 					opp_id   = p1 and 0x10CD4D or 0x10CD6D,
 					side     = p1 and 0x10CD51 or 0x10CD71,
 					bottom   = p1 and 0x10CD52 or 0x10CD72,
+					id       = p1 and 0x10CD54 or 0x10CD74,
 				},
 			},
 
