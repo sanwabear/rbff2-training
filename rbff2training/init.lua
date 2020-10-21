@@ -2620,7 +2620,10 @@ function rbff2.startplugin()
 			attack           = 0,           -- 攻撃中のみ変化
 			hitstop_id       = 0,           -- ヒット/ガードしている相手側のattackと同値
 			hitstop          = 0,           -- 攻撃側のガード硬直
+			old_pos          = 0,           -- X位置
 			pos              = 0,           -- X位置
+			old_posd         = 0,           -- X位置
+			posd             = 0,           -- X位置
 			max_pos          = 0,           -- X位置最大
 			min_pos          = 0,           -- X位置最小
 			pos_y            = 0,           -- Y位置
@@ -4141,6 +4144,9 @@ function rbff2.startplugin()
 			if p.dmg_scl4 > 0 then
 				p.dmg_scaling = p.dmg_scaling * (0.5 ^ p.dmg_scl4)
 			end
+			p.old_posd       = p.posd
+			p.posd           = pgm:read_i32(p.addr.pos)
+			p.old_pos        = p.pos
 			p.pos            = pgm:read_i16(p.addr.pos)
 			p.max_pos        = pgm:read_i16(p.addr.max_pos)
 			if p.max_pos == 0 or p.max_pos == p.pos then
@@ -5375,7 +5381,9 @@ function rbff2.startplugin()
 
 		for i, p in ipairs(players) do
 			local op = players[3 - i]
-			if p.on_hit == global.frame_number and p.state ~= 0 then
+			if p.no_hit_limit == 1 then
+				pgm:write_u8(p.addr.no_hit, 1)
+			elseif p.on_hit == global.frame_number and p.state ~= 0 then
 				p.no_hit = p.no_hit - 1
 				if p.no_hit == 0 and p.no_hit_limit > 0  then
 					pgm:write_u8(p.addr.no_hit, 1)
@@ -5675,7 +5683,17 @@ function rbff2.startplugin()
 			end
 		end
 		--print(log)
-		--[[ ダッシュ中の投げ不能フレーム数確認ログ
+		--[[
+		for i, p in ipairs(players) do
+			if i == 1 then
+				--print(p.old_pos - p.pos)
+				if p.act_data then
+					print(p.char, p.posd, p.act_data.name, p.old_posd)
+				end
+			end
+		end	
+
+		-- ダッシュ中の投げ不能フレーム数確認ログ
 		for i, p in ipairs(players) do
 			local op = players[3-i]
 			if p.act_data then
@@ -6337,7 +6355,7 @@ function rbff2.startplugin()
 		table.insert(force_y_pos, i - 1)
 	end
 	local no_hit_row = { "OFF", }
-	for i = 2, 99 do
+	for i = 1, 99 do
 		table.insert(no_hit_row, string.format("%s段目で空振り", i))
 	end
 	tra_menu = {
