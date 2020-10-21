@@ -757,8 +757,8 @@ local char_acts_base = {
 		{ name = "ダックフェイント・空", type = act_types.any, ids = { 0xB8, 0xB9, 0xBA, }, },
 		{ name = "ダイビングパニッシャー", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, }, },
 		{ name = "ローリングパニッシャー", type = act_types.attack, ids = { 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, }, },
-		{ name = "ダンシングキャリバー", type = act_types.attack, ids = { 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0x115, }, },
-		{ name = "ブレイクハリケーン", type = act_types.attack, ids = { 0xEE, 0xEF, 0xF0, 0xF1, 0xF2, 0xF3, 0x116, 0xF4, }, },
+		{ name = "ダンシングキャリバー", type = act_types.low_attack, ids = { 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0x115, }, },
+		{ name = "ブレイクハリケーン", type = act_types.low_attack, ids = { 0xEE, 0xEF, 0xF0, 0xF1, 0xF2, 0xF3, 0x116, 0xF4, }, },
 		{ name = "ブレイクスパイラル", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x102, }, },
 		{ disp_name = "ブレイクスパイラルBR", name = "ブレイクスパイラルBR/クレイジーBR", type = act_types.attack, ids = { 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, }, },
 		{ name = "ダックダンス", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, }, },
@@ -1045,7 +1045,7 @@ local char_acts_base = {
 		{ disp_name = "スゥエーC", name = "スゥエーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
 		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, 0xB, }, },
 		{ disp_name = "着地", name = "ジャンプ着地", type = act_types.any, ids = { 0x9, }, },
-		{ name = "ジャンプ", type = act_types.any, ids = { 
+		{ names = { "ジャンプ", "アンリミテッドデザイア", "ギガティックサイクロン", }, type = act_types.any, ids = { 
 			0xB, 0xC, -- 垂直ジャンプ
 			0xD, 0xE, -- 前ジャンプ
 			0xF, 0x10, -- 後ジャンプ
@@ -1083,7 +1083,7 @@ local char_acts_base = {
 		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
 		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
 		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ name = "投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
+		--{ name = "投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 		{ name = "ダウン", type = act_types.any, ids = { 0x192, 0x18E, 0x190,  }, },
 		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ name = "気絶", type = act_types.any, ids = { 0x194, 0x195, }, },
@@ -2411,11 +2411,6 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 			box.bottom = 0
 		end
 	end
-	if box.type == box_type_base.p then
-		print(string.format("%x", p.addr.base), screen_top,box.top , box.bottom, box.left, box.right)
-	end
-
-	--print(string.format("%3s %3s %3s", box.top , box.bottom, screen_top))
 
 	if box.top == box.bottom and box.left == box.right then
 		box.visible = false
@@ -2732,7 +2727,15 @@ function rbff2.startplugin()
 				vulnerable22 = 0,           -- 0の時vulnerable=true
 			},
 
-			n_throw        = {
+			throw            = {
+				x1           = 0,
+				x2           = 0,
+				half_range   = 0,
+				full_range   = 0,
+				in_range     = false,
+			},
+
+			n_throw          = {
 				on           = 0,
 				right        = 0,
 				base         = 0,
@@ -5672,6 +5675,48 @@ function rbff2.startplugin()
 			end
 		end
 		--print(log)
+		--[[ ダッシュ中の投げ不能フレーム数確認ログ
+		for i, p in ipairs(players) do
+			local op = players[3-i]
+			if p.act_data then
+				if     p.old_act_data.name ~= "ダッシュ" and p.act_data.name == "ダッシュ" then
+					p.throw_log = {}
+				elseif p.old_act_data.name == "ダッシュ" and p.act_data.name ~= "ダッシュ" then
+					local twlog = string.format("%x %2s %2s", p.addr.base, p.char, op.char)
+					local cnt = 0
+					for _, f in ipairs(p.throw_log) do
+						if f > 0 then
+							twlog = twlog .. string.format(" o:%s-%s", cnt+1, cnt+math.abs(f))
+						else
+							twlog = twlog .. string.format(" x:%s-%s", cnt+1, cnt+math.abs(f))
+						end
+						cnt = cnt+math.abs(f)
+					end
+					print(twlog)
+				end
+				if p.act_data.name == "ダッシュ" then
+					local len = #p.throw_log
+					if op.throw.in_range == true then
+						if len == 0 then
+							p.throw_log[len+1] = 1
+						elseif p.throw_log[len] > 0 then
+							p.throw_log[len] = p.throw_log[len] + 1
+						else
+							p.throw_log[len+1] = 1
+						end
+					else
+						if len == 0 then
+							p.throw_log[len+1] = -1
+						elseif p.throw_log[len] > 0 then
+							p.throw_log[len+1] = -1
+						else
+							p.throw_log[len] = p.throw_log[len] - 1
+						end
+					end
+				end
+			end
+		end
+		]]
 
 		-- 画面表示
 		if global.no_background then
