@@ -4100,7 +4100,7 @@ function rbff2.startplugin()
 			p.on_sway_line   = (40 == p.pos_z and 40 > p.old_pos_z) and global.frame_number or p.on_sway_line
 			p.on_main_line   = (24 == p.pos_z and 24 < p.old_pos_z) and global.frame_number or p.on_main_line
 			p.sway_status    = pgm:read_u8(p.addr.sway_status) -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
-			if p.sway_status == 0x00 or (p.sway_status == 0x82 and 24 < p.pos_z) then
+			if p.sway_status == 0x00 then
 				p.in_sway_line = false
 			else
 				p.in_sway_line = true
