@@ -463,7 +463,7 @@ local char_acts_base = {
 		{ name = "ワイルドウルフ", type = act_types.overhead, ids = { 0xA4, 0xA5, 0xA6, }, },
 		{ name = "バイソンホーン", type = act_types.low_attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
 		{ name = "フロッグハンティング", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBD, 0xBE, 0xBA, 0xBB, 0xBC, }, },
-		{ name = "デンジャラスウルフ", type = act_types.overhead, ids = { 0xFF, 0x100, 0x101, 0x102, 0x103, 0x104, }, },
+		{ name = "デンジャラスウルフ", type = act_types.overhead, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, 0x103, 0x104, }, },
 		{ name = "ダンシングバイソン", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, }, },
 		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x243, }, },
 		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x240, }, },
@@ -492,7 +492,7 @@ local char_acts_base = {
 		{ name = "必勝！逆襲拳-1", names = { "必勝！逆襲拳" }, type = act_types.low_attack, ids = { 0xCA, 0xCC, }, },
 		{ name = "必勝！逆襲拳-2", names = { "必勝！逆襲拳" }, type = act_types.overhead, ids = { 0xCD, 0xCE, }, },
 		{ name = "必勝！逆襲拳-3", names = { "必勝！逆襲拳" }, type = act_types.attack, ids = { 0xCF, 0xD0, }, },
-		{ name = "爆発ゴロー", type = act_types.attack, ids = { 0xFF, 0x101, 0x9C, 0x102, }, },
+		{ name = "爆発ゴロー", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x9C, 0x102, }, },
 		{ name = "よかトンハンマー", type = act_types.overhead, ids = { 0x108, 0x109, 0x10A, 0x10B, }, },
 		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x245, }, },
 		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x240, }, },
@@ -804,7 +804,7 @@ local char_acts_base = {
 		{ name = "ブラッディサーベル", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
 		{ name = "ブラッディカッター", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, }, },
 		{ name = "ブラッディミキサー", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, }, },
-		{ name = "ブラッディフラッシュ", type = act_types.attack, ids = { 0xFF, 0x100, 0x101, 0x102, }, },
+		{ name = "ブラッディフラッシュ", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, }, },
 		{ name = "ブラッディシャドー", type = act_types.attack, ids = { 0x108, 0x109, 0x10E, 0x10D, 0x10B, 0x10C, }, },
 		{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x245, }, },
 		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x246, }, },
@@ -1380,6 +1380,8 @@ local char_rvs_list = {
 	},
 	-- アンディ・ボガード
 	{
+		{ cmd = cmd_base._3a     , bs = false, name = "上げ面", },
+		{ cmd = cmd_base._6b     , bs = false, name = "浴びせ蹴り", },
 		{ id = 0x01, ver = 0x0600, bs = false, name = "小残影拳", },
 		{ id = 0x02, ver = 0x06FF, bs = false, name = "大残影拳", },
 		{ id = 0x03, ver = 0x0600, bs = true , name = "飛翔拳", },
@@ -1395,6 +1397,9 @@ local char_rvs_list = {
 	},
 	-- 東丈
 	{
+		{ cmd = cmd_base._3c     , bs = false, name = "膝地獄", },
+		{ cmd = cmd_base._3b     , bs = false, name = "上げ面", },
+		{ cmd = cmd_base._4b     , bs = false, name = "ハイキック", },
 		{ id = 0x01, ver = 0x0600, bs = false, name = "小スラッシュキック", },
 		{ id = 0x02, ver = 0x0600, bs = false, name = "大スラッシュキック", },
 		{ id = 0x03, ver = 0x0600, bs = true , name = "黄金のカカト", },
@@ -1412,6 +1417,7 @@ local char_rvs_list = {
 	},
 	-- 不知火舞
 	{
+		{ cmd = cmd_base._4a     , bs = false, name = "龍の舞", },
 		{ id = 0x01, ver = 0x0600, bs = true , name = "花蝶扇", },
 		{ id = 0x02, ver = 0x0600, bs = true , name = "龍炎舞", },
 		{ id = 0x03, ver = 0x0600, bs = true , name = "小夜千鳥", },
@@ -1424,6 +1430,10 @@ local char_rvs_list = {
 	},
 	-- ギース・ハワード
 	{
+		{ cmd = cmd_base._3c     , bs = false, name = "虎殺掌", },
+		{ cmd = cmd_base._3a     , bs = false, name = "昇天明星打ち", },
+		{ cmd = cmd_base._6a     , bs = false, name = "飛燕失脚", },
+		{ cmd = cmd_base._4b     , bs = false, name = "雷光回し蹴り", },
 		{ id = 0x01, ver = 0x0600, bs = true , name = "烈風拳", },
 		{ id = 0x02, ver = 0x06FF, bs = true , name = "ダブル烈風拳", },
 		{ id = 0x03, ver = 0x0600, bs = false, name = "上段当て身投げ", },
@@ -1439,6 +1449,7 @@ local char_rvs_list = {
 	},
 	-- 望月双角
 	{
+		{ cmd = cmd_base._3a     , bs = false, name = "錫杖上段打ち", },
 		{ id = 0x01, ver = 0x0600, bs = true , name = "野猿狩り", },
 		{ id = 0x02, ver = 0x0600, bs = true , name = "まきびし", },
 		{ id = 0x03, ver = 0x0600, bs = true , name = "憑依弾", },
@@ -1454,6 +1465,7 @@ local char_rvs_list = {
 	},
 	-- ボブ・ウィルソン
 	{
+		{ cmd = cmd_base._3a     , bs = false, name = "エレファントタスク", },
 		{ id = 0x01, ver = 0x0600, bs = true , name = "ローリングタートル", },
 		{ id = 0x02, ver = 0x0600, bs = true , name = "サイドワインダー", },
 		{ id = 0x03, ver = 0x0600, bs = false, name = "バイソンホーン", },
@@ -1467,6 +1479,8 @@ local char_rvs_list = {
 	},
 	-- ホンフゥ
 	{
+		{ cmd = cmd_base._3a     , bs = false, name = "ハエタタキ", },
+		{ cmd = cmd_base._6b     , bs = false, name = "踏み込み側蹴り", },
 		{ id = 0x01, ver = 0x0600, bs = false, name = "九龍の読み", },
 		{ id = 0x02, ver = 0x0600, bs = true , name = "小 制空烈火棍", },
 		{ id = 0x03, ver = 0x0600, bs = true , name = "大 制空烈火棍", },
@@ -1482,6 +1496,8 @@ local char_rvs_list = {
 	},
 	-- ブルー・マリー
 	{
+		{ cmd = cmd_base._6b     , bs = false, name = "ヒールフォール", },
+		{ cmd = cmd_base._4b     , bs = false, name = "ダブルローリング", },
 		{ id = 0x01, ver = 0x06FF, bs = false, name = "M.スパイダー", },
 		{ id = 0x02, ver = 0x06FE, bs = true , name = "M.スナッチャー", },
 		{ id = 0x03, ver = 0x06FD, bs = false, name = "M.クラブクラッチ", },
@@ -1500,6 +1516,8 @@ local char_rvs_list = {
 	},
 	-- フランコ・バッシュ
 	{
+		{ cmd = cmd_base._6b     , bs = false, name = "バッシュトルネード", },
+		{ cmd = cmd_base._bc     , bs = false, name = "バロムパンチ", },
 		{ id = 0x01, ver = 0x0600, bs = true , name = "ダブルコング", },
 		{ id = 0x02, ver = 0x0600, bs = true , name = "ザッパー", },
 		{ id = 0x03, ver = 0x0600, bs = false, name = "ウェービングブロー", },
@@ -1513,6 +1531,8 @@ local char_rvs_list = {
 	},
 	-- 山崎竜二
 	{
+		{ cmd = cmd_base._6a     , bs = false, name = "ブッ刺し", },
+		{ cmd = cmd_base._3a     , bs = false, name = "昇天", },
 		{ id = 0x01, ver = 0x0600, bs = true , name = "蛇使い・上段", },
 		{ id = 0x02, ver = 0x0600, bs = true , name = "蛇使い・中段", },
 		{ id = 0x03, ver = 0x0600, bs = true , name = "蛇使い・下段", },
@@ -1530,6 +1550,7 @@ local char_rvs_list = {
 	},
 	-- 秦崇秀
 	{
+		{ cmd = cmd_base._6a     , bs = false, name = "光輪殺", },
 		{ id = 0x01, ver = 0x0600, bs = false, name = "帝王神足拳", },
 		{ id = 0x02, ver = 0x0600, bs = true , name = "小 帝王天眼拳", },
 		{ id = 0x03, ver = 0x0600, bs = true , name = "大 帝王天眼拳", },
@@ -1547,6 +1568,7 @@ local char_rvs_list = {
 	},
 	-- 秦崇雷,
 	{
+		{ cmd = cmd_base._6b     , bs = false, name = "龍殺脚", },
 		{ id = 0x01, ver = 0x0600, bs = false, name = "帝王神足拳", },
 		{ id = 0x01, ver = 0x06FF, bs = false, name = "真 帝王神足拳", },
 		{ id = 0x02, ver = 0x0600, bs = true , name = "小 帝王天眼拳", },
@@ -1563,6 +1585,8 @@ local char_rvs_list = {
 	},
 	-- ダック・キング
 	{
+		{ cmd = cmd_base._3b     , bs = false, name = "ニードルロー", },
+		{ cmd = cmd_base._4a     , bs = false, name = "マッドスピンハンマー", },
 		{ id = 0x01, ver = 0x0600, bs = true , name = "小ヘッドスピンアタック", },
 		{ id = 0x02, ver = 0x0600, bs = true , name = "大ヘッドスピンアタック", },
 		-- { id = 0x02, ver = 0x06FF, bs = true , name = "大ヘッドスピンアタック", },
@@ -1591,6 +1615,7 @@ local char_rvs_list = {
 	},
 	-- キム・カッファン
 	{
+		{ cmd = cmd_base._6b     , bs = false, name = "ネリチャギ", },
 		{ id = 0x01, ver = 0x0600, bs = true , name = "飛燕斬・真上", },
 		{ id = 0x01, ver = 0x0601, bs = true , name = "飛燕斬・前方", },
 		{ id = 0x01, ver = 0x0602, bs = true , name = "飛燕斬・後方", },
@@ -1607,6 +1632,7 @@ local char_rvs_list = {
 	},
 	-- ビリー・カーン
 	{
+		{ cmd = cmd_base._3c     , bs = false, name = "地獄落とし", },
 		{ id = 0x01, ver = 0x0600, bs = false, name = "三節棍中段打ち", },
 		-- { id = 0x00, ver = 0x06FF, bs = false, name = "火炎三節棍中段打ち", },
 		{ id = 0x03, ver = 0x0600, bs = true , name = "雀落とし", },
@@ -1620,6 +1646,8 @@ local char_rvs_list = {
 	},
 	-- チン・シンザン
 	{
+		{ cmd = cmd_base._6a     , bs = false, name = "落撃双拳", },
+		{ cmd = cmd_base._4a     , bs = false, name = "発勁裏拳", },
 		{ id = 0x01, ver = 0x0600, bs = true , name = "気雷砲（前方）", },
 		{ id = 0x02, ver = 0x0600, bs = true , name = "気雷砲（対空）", },
 		{ id = 0x03, ver = 0x0600, bs = false, name = "超太鼓腹打ち", },
@@ -1635,6 +1663,7 @@ local char_rvs_list = {
 	},
 	-- タン・フー・ルー,
 	{
+		{ cmd = cmd_base._3a     , bs = false, name = "右降龍", },
 		{ id = 0x01, ver = 0x0600, bs = true , name = "衝波", },
 		{ id = 0x02, ver = 0x0600, bs = true , name = "小 箭疾歩", },
 		{ id = 0x03, ver = 0x0600, bs = true , name = "大 箭疾歩", },
@@ -1646,6 +1675,8 @@ local char_rvs_list = {
 	},
 	-- ローレンス・ブラッド
 	{
+		{ cmd = cmd_base._6b     , bs = false, name = "トルネードキック", },
+		{ cmd = cmd_base._bc     , bs = false, name = "オーレィ", },
 		{ id = 0x01, ver = 0x0600, bs = true , name = "小 ブラッディスピン", },
 		{ id = 0x02, ver = 0x0600, bs = true , name = "大 ブラッディスピン", },
 		{ id = 0x03, ver = 0x0600, bs = false, name = "ブラッディサーベル", },
@@ -1656,6 +1687,7 @@ local char_rvs_list = {
 	},
 	-- ヴォルフガング・クラウザー
 	{
+		{ cmd = cmd_base._6a     , bs = false, name = "デスハンマー", },
 		{ id = 0x01, ver = 0x0600, bs = false, name = "ブリッツボール・上段", },
 		{ id = 0x02, ver = 0x06FF, bs = false, name = "ブリッツボール・下段", },
 		{ id = 0x03, ver = 0x0600, bs = true , name = "レッグトマホーク", },
@@ -1673,6 +1705,8 @@ local char_rvs_list = {
 	},
 	-- リック・ストラウド
 	{
+		{ cmd = cmd_base._6a     , bs = false, name = "チョッピングライト", },
+		{ cmd = cmd_base._3a     , bs = false, name = "スマッシュソード", },
 		--{ id = 0x28, ver = 0x0600, bs = true , name = "?", },
 		{ id = 0x01, ver = 0x0600, bs = true , name = "小 シューティングスター", },
 		{ id = 0x02, ver = 0x06FF, bs = false, name = "大 シューティングスター", },
@@ -1687,6 +1721,8 @@ local char_rvs_list = {
 	},
 	-- 李香緋
 	{
+		{ cmd = cmd_base._6a     , bs = false, name = "裡門頂肘", },
+		{ cmd = cmd_base._4b     , bs = false, name = "後捜腿", },
 		--{ id = 0x28, ver = 0x0600, bs = true , name = "?", },
 		--{ id = 0x29, ver = 0x0600, bs = true , name = "?", },
 		{ id = 0x01, ver = 0x0600, bs = true , name = "小 那夢波", },
@@ -1706,6 +1742,8 @@ local char_rvs_list = {
 	},
 	-- アルフレッド
 	{
+		{ cmd = cmd_base._6b     , bs = false, name = "フロントステップキック", },
+		{ cmd = cmd_base._4b     , bs = false, name = "バックステップキック", },
 		{ id = 0x01, ver = 0x0600, bs = true , name = "小 クリティカルウィング", },
 		{ id = 0x02, ver = 0x0600, bs = true , name = "大 クリティカルウィング", },
 		{ id = 0x03, ver = 0x0600, bs = true , name = "オーグメンターウィング", },
