@@ -7049,7 +7049,7 @@ function rbff2.startplugin()
 
 	emu.register_frame_done(function()
 		main_or_menu_state.draw()
-		collectgarbage("collect")
+		--collectgarbage("collect")
 	end)
 
 	emu.register_periodic(function()
