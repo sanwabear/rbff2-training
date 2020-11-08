@@ -2400,17 +2400,36 @@ end
 local new_throwbox = function(p, box)
 	local scr = manager:machine().screens[":screen"]
 	local height = scr:height() * scr:yscale()
+	print("a", box.opp_id, box.top, box.bottom, p.hit.flip_x)
 	p.throwing = true
 	box.flat_throw = box.top == nil
-	box.top    = box.top or p.hit.pos_y - global.throwbox_height
+	box.top    = box.top or p.hit.old_pos_y - global.throwbox_height
 	box.left   = p.hit.pos_x + (box.left or 0)
 	box.right  = p.hit.pos_x + (box.right or 0)
-	box.top    = box.top and p.hit.pos_y - box.top --air throw
-	box.bottom = box.bottom and (p.hit.pos_y - box.bottom) or height + screen_top - p.hit.pos_z
+	box.top    = box.top and p.hit.old_pos_y - box.top --air throw
+	box.bottom = box.bottom and (p.hit.old_pos_y - box.bottom) or height + screen_top - p.hit.pos_z
 	box.type   = box.type or box_type_base.t
 	box.visible = true
-	print(box.opp_id)
+	print("b", box.opp_id, box.top, box.bottom, p.hit.flip_x)
 	return box
+end
+
+local get_flip_x = function(p)
+	local obj_base = p.addr.base
+	local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+	local flip_x = pgm:read_i16(obj_base + 0x6A) < 0 and 1 or 0
+	flip_x = bit32.bxor(flip_x, bit32.band(pgm:read_u8(obj_base + 0x71), 1))
+	flip_x = flip_x > 0 and 1 or -1
+	return flip_x
+end
+
+-- 投げ用
+local get_flip_x_tw = function(p)
+	local obj_base = p.addr.base
+	local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+	local flip_x = bit32.band(pgm:read_u8(obj_base + 0x71), 1)
+	flip_x = flip_x > 0 and 1 or -1
+	return flip_x
 end
 
 -- 当たり判定用のキャラ情報更新と判定表示用の情報作成
@@ -2433,13 +2452,13 @@ local update_object = function(p)
 		p.hit.max_pos_x = nil
 	end
 	p.hit.pos_z   = p.pos_z
+	p.hit.old_pos_y = p.hit.pos_y
 	p.hit.pos_y   = height - p.pos_y - p.hit.pos_z
 	p.hit.pos_y   = screen_top + p.hit.pos_y
 	p.hit.on      = pgm:read_u32(obj_base)
 
-	p.hit.flip_x  = pgm:read_i16(obj_base + 0x6A) < 0 and 1 or 0
-	p.hit.flip_x  = bit32.bxor(p.hit.flip_x, bit32.band(pgm:read_u8(obj_base + 0x71), 1))
-	p.hit.flip_x  = p.hit.flip_x > 0 and 1 or -1
+	p.hit.flip_x  = get_flip_x(p)
+	p.hit.flip_x_tw = get_flip_x_tw(p)
 	p.hit.scale   = pgm:read_u8(obj_base + 0x73) + 1
 	p.hit.char_id = pgm:read_u16(obj_base + 0x10)
 	p.hit.base    = obj_base
@@ -2681,6 +2700,7 @@ function rbff2.startplugin()
 				pos_y        = 0,
 				on           = 0,
 				flip_x       = 0,
+				flip_x_tw    = 0,
 				scale        = 0,
 				char_id      = 0,
 				vulnerable   = 0,
@@ -2900,6 +2920,7 @@ function rbff2.startplugin()
 					pos_y      = 0,
 					on         = 0,
 					flip_x     = 0,
+					flip_x_tw  = 0,
 					scale      = 0,
 					char_id    = 0,
 					vulnerable = 0,
@@ -3407,15 +3428,6 @@ function rbff2.startplugin()
 	local rec_await_no_input, rec_await_1st_input, rec_await_play, rec_input, rec_play, rec_repeat_play, rec_play_interval, rec_fixpos
 	local menu_to_tra, menu_to_bar, menu_to_ex, menu_to_col, menu_to_auto
 
-	local get_pos = function(i)
-		local p = players[i]
-		local obj_base = p.addr.base
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
-		local flip_x = pgm:read_i16(obj_base + 0x6A) < 0 and 1 or 0
-		flip_x = bit32.bxor(flip_x, bit32.band(pgm:read_u8(obj_base + 0x71), 1))
-		flip_x = flip_x > 0 and 1 or -1
-		return flip_x
-	end
 	local frame_to_time = function(frame_number)
 		local min = math.floor(frame_number / 3600)
 		local sec = math.floor((frame_number % 3600) / 60)
@@ -3424,7 +3436,7 @@ function rbff2.startplugin()
 	end
 	-- リプレイ開始位置記憶
 	rec_fixpos = function()
-		local pos = { get_pos(1), get_pos(2) }
+		local pos = { get_flip_x(players[1]), get_flip_x(players[2]) }
 		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 		local fixpos = { pgm:read_i16(players[1].addr.pos), pgm:read_i16(players[2].addr.pos) }
 		local fixscr = {
@@ -3455,7 +3467,7 @@ function rbff2.startplugin()
 		local joy_val = get_joy(recording.temp_player)
 
 		local next_val = nil
-		local pos = { get_pos(1), get_pos(2) }
+		local pos = { get_flip_x(players[1]), get_flip_x(players[2]) }
 		for k, f in pairs(joy_val) do
 			if k ~= "1 Player Start" and k ~= "2 Players Start" and f > 0 then
 				if not next_val then
@@ -3481,7 +3493,7 @@ function rbff2.startplugin()
 
 		-- 入力保存
 		local next_val = new_next_joy()
-		local pos = { get_pos(1), get_pos(2) }
+		local pos = { get_flip_x(players[1]), get_flip_x(players[2]) }
 		for k, f in pairs(joy_val) do
 			if k ~= "1 Player Start" and k ~= "2 Players Start" and recording.active_slot.side == joy_pside[rev_joy[k]] then
 				-- レコード中は1Pと2P入力が入れ替わっているので反転させて記憶する
@@ -3607,7 +3619,7 @@ function rbff2.startplugin()
 			stop = true
 		else
 			-- 入力再生
-			local pos = { get_pos(1), get_pos(2) }
+			local pos = { get_flip_x(players[1]), get_flip_x(players[2]) }
 			for _, joy in ipairs(use_joy) do
 				local k = joy.field
 				-- 入力時と向きが変わっている場合は左右反転させて反映する
@@ -4337,7 +4349,7 @@ function rbff2.startplugin()
 			p.air_throw.opp_base = pgm:read_u32(p.air_throw.addr.opp_base)
 			p.air_throw.opp_id   = pgm:read_u16(p.air_throw.addr.opp_id)
 			p.air_throw.side     = p.side
-			p.air_throw.right    = p.air_throw.range_x * p.hit.flip_x
+			p.air_throw.right    = p.air_throw.range_x * p.hit.flip_x_tw
 			p.air_throw.top      = -p.air_throw.range_y
 			p.air_throw.bottom   =  p.air_throw.range_y
 			p.air_throw.type     = box_type_base.at
@@ -4350,18 +4362,21 @@ function rbff2.startplugin()
 			p.sp_throw.bottom    = nil
 			p.sp_throw.on        = pgm:read_u8(p.sp_throw.addr.on)
 			p.sp_throw.front     = pgm:read_i16(p.sp_throw.addr.front)
-			p.sp_throw.top       = pgm:read_i16(p.sp_throw.addr.top)
+			p.sp_throw.top       = -pgm:read_i16(p.sp_throw.addr.top)
 			p.sp_throw.base      = pgm:read_u32(p.sp_throw.addr.base)
 			p.sp_throw.opp_base  = pgm:read_u32(p.sp_throw.addr.opp_base)
 			p.sp_throw.opp_id    = pgm:read_u16(p.sp_throw.addr.opp_id)
 			p.sp_throw.side      = p.side
 			p.sp_throw.bottom    = pgm:read_i16(p.sp_throw.addr.bottom)
-			p.sp_throw.right     = p.sp_throw.front * p.hit.flip_x
+			p.sp_throw.right     = p.sp_throw.front * p.hit.flip_x_tw
 			p.sp_throw.type      = box_type_base.pt
 			p.sp_throw.on = p.addr.base == p.sp_throw.base and p.sp_throw.on or 0
 			if p.sp_throw.top == 0 then
 				p.sp_throw.top    = nil
 				p.sp_throw.bottom = nil
+			end
+			if p.sp_throw.on ~= 0 then
+				print(p.sp_throw.top, p.sp_throw.bottom, p.sp_throw.front, p.sp_throw.side, p.hit.flip_x)
 			end
 
 			-- 当たり判定の構築用バッファのリフレッシュ
@@ -5396,6 +5411,12 @@ function rbff2.startplugin()
 								scr:draw_line(box.right, box.top-8 , box.right, box.bottom+8, box.type.outline)
 							end
 						else
+							if box_type_base.at == box.type then
+							print("box at ", box.left, box.top, box.right, box.bottom)
+							elseif box_type_base.pt == box.type then
+							print("box pt ", box.left, box.top, box.right, box.bottom)
+							end
+
 							if box.visible == true and box.type.enabled == true then
 								scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.fill, box.type.outline)
 							end
