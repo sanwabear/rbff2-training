@@ -940,7 +940,7 @@ local char_acts_base = {
 	},
 	{
 		-- 共通行動
-		{ name = "立ち", type = act_types.free, ids = { 0x1, 0x0, 0x23, 0x22, }, },
+		{ name = "立ち", type = act_types.free, ids = { 0x1, 0x0, 0x23, 0x22, 0x3C, }, },
 		{ name = "立ち振り向き", type = act_types.free, ids = { 0x1D, }, },
 		{ name = "しゃがみ振り向き", type = act_types.free, ids = { 0x1E, }, },
 		{ name = "振り向き中", type = act_types.free, ids = { 0x3D, }, },
