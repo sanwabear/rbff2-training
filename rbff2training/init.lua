@@ -4759,6 +4759,9 @@ function rbff2.startplugin()
 
 			--フレーム差
 			if p.act_normal and op.act_normal then
+				if not p.old_act_normal then
+					p.last_frame_gap = 0
+				end
 				p.frame_gap = 0
 				col, line = 0x00000000, 0x00000000
 			elseif not p.act_normal and not op.act_normal then
