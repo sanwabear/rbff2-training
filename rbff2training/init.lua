@@ -715,7 +715,7 @@ local char_acts_base = {
 		{ name = "覇気脚", type = act_types.low_attack, ids = { 0xB8, }, },
 		{ name = "鳳凰天舞脚", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, 0x103, 0x104, 0x105, 0x106, 0x107, }, },
 		{ name = "鳳凰脚", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, 0x110, 0x115, }, },
-		{ name = "CA ネリチャギ", type = act_types.overhead, ids = { 0x24B, 0x24A, 0x24C, }, },
+		{ name = "CA ネリチャギ", type = act_types.overhead, ids = { 0x24A, 0x24B, 0x24C, }, },
 		{ disp_name = "CA 立A", name = "CA 立A(2段目)立Cルート", type = act_types.attack, ids = { 0x241, }, },
 		{ disp_name = "CA 立B", name = "CA 立B(3段目)立Cルート", type = act_types.attack, ids = { 0x244, }, },
 		{ disp_name = "CA 立C", name = "CA 立C(4段目)立Cルート", type = act_types.attack, ids = { 0x246, 0x247, 0x248, }, },
@@ -2423,15 +2423,6 @@ local get_flip_x = function(p)
 	return flip_x
 end
 
--- 投げ用
-local get_flip_x_tw = function(p)
-	local obj_base = p.addr.base
-	local pgm = manager:machine().devices[":maincpu"].spaces["program"]
-	local flip_x = bit32.band(pgm:read_u8(obj_base + 0x71), 1)
-	flip_x = flip_x > 0 and 1 or -1
-	return flip_x
-end
-
 -- 当たり判定用のキャラ情報更新と判定表示用の情報作成
 local update_object = function(p)
 	local pgm = manager:machine().devices[":maincpu"].spaces["program"]
@@ -2458,7 +2449,6 @@ local update_object = function(p)
 	p.hit.on      = pgm:read_u32(obj_base)
 
 	p.hit.flip_x  = get_flip_x(p)
-	p.hit.flip_x_tw = get_flip_x_tw(p)
 	p.hit.scale   = pgm:read_u8(obj_base + 0x73) + 1
 	p.hit.char_id = pgm:read_u16(obj_base + 0x10)
 	p.hit.base    = obj_base
@@ -2700,7 +2690,6 @@ function rbff2.startplugin()
 				pos_y        = 0,
 				on           = 0,
 				flip_x       = 0,
-				flip_x_tw    = 0,
 				scale        = 0,
 				char_id      = 0,
 				vulnerable   = 0,
@@ -2920,7 +2909,6 @@ function rbff2.startplugin()
 					pos_y      = 0,
 					on         = 0,
 					flip_x     = 0,
-					flip_x_tw  = 0,
 					scale      = 0,
 					char_id    = 0,
 					vulnerable = 0,
@@ -4337,7 +4325,7 @@ function rbff2.startplugin()
 			p.n_throw.right    = p.n_throw.range * p.side
 			p.n_throw.left     = (p.n_throw.range - p.throw.full_range) * p.side
 			p.n_throw.type     = box_type_base.t
-			p.n_throw.on = p.addr.base == p.n_throw.base and p.n_throw.on or 0
+			p.n_throw.on = p.addr.base == p.n_throw.base and p.n_throw.on or 0xFF
 
 			-- 空中投げ判定取得
 			p.air_throw.left     = nil
@@ -4349,11 +4337,11 @@ function rbff2.startplugin()
 			p.air_throw.opp_base = pgm:read_u32(p.air_throw.addr.opp_base)
 			p.air_throw.opp_id   = pgm:read_u16(p.air_throw.addr.opp_id)
 			p.air_throw.side     = p.side
-			p.air_throw.right    = p.air_throw.range_x * p.hit.flip_x_tw
+			p.air_throw.right    = p.air_throw.range_x * p.side
 			p.air_throw.top      = -p.air_throw.range_y
 			p.air_throw.bottom   =  p.air_throw.range_y
 			p.air_throw.type     = box_type_base.at
-			p.air_throw.on = p.addr.base == p.air_throw.base and p.air_throw.on or 0
+			p.air_throw.on = p.addr.base == p.air_throw.base and p.air_throw.on or 0xFF
 
 			-- 必殺投げ判定取得
 			p.sp_throw.left      = nil
@@ -4368,15 +4356,15 @@ function rbff2.startplugin()
 			p.sp_throw.opp_id    = pgm:read_u16(p.sp_throw.addr.opp_id)
 			p.sp_throw.side      = p.side
 			p.sp_throw.bottom    = pgm:read_i16(p.sp_throw.addr.bottom)
-			p.sp_throw.right     = p.sp_throw.front * p.hit.flip_x_tw
+			p.sp_throw.right     = p.sp_throw.front * p.side
 			p.sp_throw.type      = box_type_base.pt
-			p.sp_throw.on = p.addr.base == p.sp_throw.base and p.sp_throw.on or 0
+			p.sp_throw.on        = p.addr.base == p.sp_throw.base and p.sp_throw.on or 0xFF
 			if p.sp_throw.top == 0 then
 				p.sp_throw.top    = nil
 				p.sp_throw.bottom = nil
 			end
-			if p.sp_throw.on ~= 0 then
-				print(p.sp_throw.top, p.sp_throw.bottom, p.sp_throw.front, p.sp_throw.side, p.hit.flip_x)
+			if p.sp_throw.on ~= 0xFF then
+				print(i, p.sp_throw.on, p.sp_throw.top, p.sp_throw.bottom, p.sp_throw.front, p.sp_throw.side, p.hit.flip_x)
 			end
 
 			-- 当たり判定の構築用バッファのリフレッシュ
@@ -4774,11 +4762,11 @@ function rbff2.startplugin()
 				p.frame_gap = 0
 				col, line = 0x00000000, 0x00000000
 			elseif not p.act_normal and not op.act_normal then
-				if p.state == 0 and op.state == 1 then
+				if p.state == 0 and op.state ~= 0 then
 					p.frame_gap = p.frame_gap + 1
 					p.last_frame_gap = p.frame_gap
 					col, line = 0xAA0000FF, 0xDD0000FF
-				elseif p.state == 1 and op.state == 0 then
+				elseif p.state ~= 0 and op.state == 0 then
 					p.frame_gap = p.frame_gap - 1
 					p.last_frame_gap = p.frame_gap
 					col, line = 0xAAFF6347, 0xDDFF6347
