@@ -4759,12 +4759,14 @@ function rbff2.startplugin()
 
 			--フレーム差
 			if p.act_normal and op.act_normal then
-				if not p.old_act_normal then
+				print("g1")
+				if not p.old_act_normal and not op.old_act_normal then
 					p.last_frame_gap = 0
 				end
 				p.frame_gap = 0
 				col, line = 0x00000000, 0x00000000
 			elseif not p.act_normal and not op.act_normal then
+				print("g2")
 				if p.state == 0 and op.state ~= 0 then
 					p.frame_gap = p.frame_gap + 1
 					p.last_frame_gap = p.frame_gap
@@ -4778,6 +4780,7 @@ function rbff2.startplugin()
 					col, line = 0x00000000, 0x00000000
 				end
 			elseif p.act_normal and not op.act_normal then
+				print("g3")
 				-- 直前が行動中ならリセットする
 				if not p.old_act_normal then
 					p.frame_gap = 0
@@ -4786,6 +4789,7 @@ function rbff2.startplugin()
 				p.last_frame_gap = p.frame_gap
 				col, line = 0xAA0000FF, 0xDD0000FF
 			elseif not p.act_normal and op.act_normal then
+				print("g4")
 				-- 直前が行動中ならリセットする
 				if not op.old_act_normal then
 					p.frame_gap = 0
@@ -5573,7 +5577,9 @@ function rbff2.startplugin()
 			-- キャラ間の距離表示
 			local abs_space = math.abs(p_space)
 			if global.disp_pos then
-				draw_rtext(160, 217 - math.floor(get_digit(abs_space)/2), abs_space)
+				local y = 217 - math.floor(get_digit(abs_space)/2)
+				draw_rtext(160.5, y+0.5, abs_space, shadow_col)
+				draw_rtext(160  , y    , abs_space)
 				--print(string.format("%3s %3s %3s %3s xx %3s %3s", players[1].min_pos, players[2].min_pos, players[1].max_pos, players[2].max_pos, players[1].pos, players[2].pos))
 			end
 
