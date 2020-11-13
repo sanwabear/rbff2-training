@@ -97,6 +97,7 @@ local global = {
 		desire      = 1,     -- アンリミテッドデザイア  6
 		drill       = 5,     -- ドリル                  7
 		pairon      = 1,     -- 超白龍                  8
+		real_counter= 1,     -- M.リアルカウンター      9
 	},
 
 	frzc            = 1,
@@ -516,10 +517,12 @@ local char_acts_base = {
 		{ name = "ヒールフォール", type = act_types.overhead, ids = { 0x69, }, },
 		{ name = "ダブルローリング", type = act_types.low_attack, ids = { 0x68, 0x6C, }, },
 		{ name = "レッグプレス", type = act_types.attack, ids = { 0x6A, }, },
-		{ name = "M.リアルカウンター", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xAC, }, },
-		{ disp_name = "M.リアルカウンター", name = "M.リアルカウンターA投げ", type = act_types.attack, ids = { 0xAC, 0xA7, 0xA8, 0xA9, 0xAA, 0xAB, }, },
-		{ disp_name = "M.リアルカウンター", name = "M.リアルカウンターB投げ", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, }, },
-		{ disp_name = "M.リアルカウンター", name = "M.リアルカウンターC投げ", type = act_types.attack, ids = { 0xE5, 0xE6, 0xE7, }, },
+		{ name = "M.リアルカウンター", type = act_types.attack, ids = { 0xA4, 0xA5, }, },
+		{ name = "CA 投げ移行", names = { "CA 投げ移行", "M.リアルカウンター" }, type = act_types.attack, ids = { 0xA6, }, },
+		{ name = "M.リアルカウンター投げ移行", type = act_types.attack, ids = { 0xAC, }, },
+		{ disp_name = "ジャーマンスープレックス", name = "M.リアルカウンターA投げ", type = act_types.attack, ids = { 0xA7, 0xA8, 0xA9, 0xAA, 0xAB, }, },
+		{ disp_name = "フェイスロック", name = "M.リアルカウンターB投げ", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, }, },
+		{ disp_name = "投げっぱなしジャーマンスープレックス", name = "M.リアルカウンターC投げ", type = act_types.attack, ids = { 0xE5, 0xE6, 0xE7, }, },
 		{ name = "ヤングダイブ", type = act_types.overhead, ids = { 0xEA, 0xEB, 0xEC, 0xED, }, },
 		{ name = "リバースキック", type = act_types.overhead, ids = { 0xEE, 0xEF, }, },
 
@@ -4759,14 +4762,12 @@ function rbff2.startplugin()
 
 			--フレーム差
 			if p.act_normal and op.act_normal then
-				print("g1")
 				if not p.old_act_normal and not op.old_act_normal then
 					p.last_frame_gap = 0
 				end
 				p.frame_gap = 0
 				col, line = 0x00000000, 0x00000000
 			elseif not p.act_normal and not op.act_normal then
-				print("g2")
 				if p.state == 0 and op.state ~= 0 then
 					p.frame_gap = p.frame_gap + 1
 					p.last_frame_gap = p.frame_gap
@@ -4780,7 +4781,6 @@ function rbff2.startplugin()
 					col, line = 0x00000000, 0x00000000
 				end
 			elseif p.act_normal and not op.act_normal then
-				print("g3")
 				-- 直前が行動中ならリセットする
 				if not p.old_act_normal then
 					p.frame_gap = 0
@@ -4789,7 +4789,6 @@ function rbff2.startplugin()
 				p.last_frame_gap = p.frame_gap
 				col, line = 0xAA0000FF, 0xDD0000FF
 			elseif not p.act_normal and op.act_normal then
-				print("g4")
 				-- 直前が行動中ならリセットする
 				if not op.old_act_normal then
 					p.frame_gap = 0
@@ -5136,51 +5135,54 @@ function rbff2.startplugin()
 					end
 				end
 
-				-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
-				if p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs then
-					-- ダウン起き上がりリバーサル入力
-					if wakeup_acts[p.act] and (p.on_wakeup+wakeup_frms[p.char] - 2) <= global.frame_number then
-						input_rvs(rvs_types.on_wakeup)
-					end
-					-- 着地リバーサル入力（やられの着地）
-					if 1 < p.pos_y_down and p.old_pos_y > p.pos_y and p.pos_y == 0 then
-						input_rvs(rvs_types.knock_back_landing)
-					end
-					-- 着地リバーサル入力（通常ジャンプの着地）
-					if p.act == 0x9 and (p.act_frame == 2 or p.act_frame == 0) then
-						input_rvs(rvs_types.jump_landing)
-					end
-					-- リバーサルじゃない最速入力
-					if p.state == 0 and p.act_data.name ~= "やられ" and p.old_act_data.name == "やられ" then
-						input_rvs(rvs_types.knock_back_recovery)
-					end
-					-- のけぞりのリバーサル入力
-					if (p.state == 1 or p.state == 2) and p.stop == 0 then
-						-- のけぞり中のデータをみてのけぞり修了の_2F前に入力確定する
-						if p.knock_back3 == 0x80 and p.knock_back1 == 0 then
-							input_rvs(rvs_types.in_knock_back)
+				-- ヒットストップ中は無視
+				if not p.skip_frame then
+					-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
+					if p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs then
+						-- ダウン起き上がりリバーサル入力
+						if wakeup_acts[p.act] and (p.on_wakeup+wakeup_frms[p.char] - 2) <= global.frame_number then
+							input_rvs(rvs_types.on_wakeup)
 						end
-						-- デンジャラススルー用
-						if p.knock_back3 == 0x0 and p.stop < 3 then
-							input_rvs(rvs_types.dangerous_through)
+						-- 着地リバーサル入力（やられの着地）
+						if 1 < p.pos_y_down and p.old_pos_y > p.pos_y and p.pos_y == 0 then
+							input_rvs(rvs_types.knock_back_landing)
 						end
-					elseif p.state == 3 and p.stop == 0 and p.knock_back2 <= 1 then
-						-- 当身うち空振りと裏雲隠し用
-						input_rvs(rvs_types.atemi)
-					end
-					--print(string.format("%s %s -> %s %s %s", i, p.old_pos_y, p.pos_y, p.pos_y_down, p.pos_y_peek))
-				elseif p.on_down == global.frame_number then
-					if p.dummy_wakeup == wakeup_type.tech then
-						-- テクニカルライズ入力
-						cmd_base._2d(p, next_joy)
-					elseif p.dummy_wakeup == wakeup_type.sway then
-						-- グランドスウェー入力
-						cmd_base._8d(p, next_joy)
-					elseif p.dummy_wakeup == wakeup_type.atk then
-						-- 起き上がり攻撃入力
-						-- 舞、ボブ、フランコ、山崎のみなのでキャラをチェックする
-						if p.char == 0x04 or p.char == 0x07 or p.char == 0x0A or p.char == 0x0B then
-							p.write_bs_hook({ id = 0x23, ver = 0x7800, bs = false, name = "起き上がり攻撃", })
+						-- 着地リバーサル入力（通常ジャンプの着地）
+						if p.act == 0x9 and (p.act_frame == 2 or p.act_frame == 0) then
+							input_rvs(rvs_types.jump_landing)
+						end
+						-- リバーサルじゃない最速入力
+						if p.state == 0 and p.act_data.name ~= "やられ" and p.old_act_data.name == "やられ" then
+							input_rvs(rvs_types.knock_back_recovery)
+						end
+						-- のけぞりのリバーサル入力
+						if (p.state == 1 or p.state == 2) and p.stop == 0 then
+							-- のけぞり中のデータをみてのけぞり修了の_2F前に入力確定する
+							if p.knock_back3 == 0x80 and p.knock_back1 == 0 then
+								input_rvs(rvs_types.in_knock_back)
+							end
+							-- デンジャラススルー用
+							if p.knock_back3 == 0x0 and p.stop < 3 then
+								input_rvs(rvs_types.dangerous_through)
+							end
+						elseif p.state == 3 and p.stop == 0 and p.knock_back2 <= 1 then
+							-- 当身うち空振りと裏雲隠し用
+							input_rvs(rvs_types.atemi)
+						end
+						--print(string.format("%s %s -> %s %s %s", i, p.old_pos_y, p.pos_y, p.pos_y_down, p.pos_y_peek))
+					elseif p.on_down == global.frame_number then
+						if p.dummy_wakeup == wakeup_type.tech then
+							-- テクニカルライズ入力
+							cmd_base._2d(p, next_joy)
+						elseif p.dummy_wakeup == wakeup_type.sway then
+							-- グランドスウェー入力
+							cmd_base._8d(p, next_joy)
+						elseif p.dummy_wakeup == wakeup_type.atk then
+							-- 起き上がり攻撃入力
+							-- 舞、ボブ、フランコ、山崎のみなのでキャラをチェックする
+							if p.char == 0x04 or p.char == 0x07 or p.char == 0x0A or p.char == 0x0B then
+								p.write_bs_hook({ id = 0x23, ver = 0x7800, bs = false, name = "起き上がり攻撃", })
+							end
 						end
 					end
 				end
@@ -5323,6 +5325,19 @@ function rbff2.startplugin()
 						--p.write_bs_hook({ id = 0x00, ver = 0x06FE, bs = false, name = "閃里肘皇・心砕把", })
 					end
 					--p.write_bs_hook({ id = 0x00, ver = 0x06FD, bs = false, name = "超白龍2", })
+				end
+				-- 自動M.リアルカウンター
+				if 1 < global.auto_input.real_counter and p.char == 9 then
+					if p.act == 0xA5 and p.act_count == 0 then
+						local real_tw = global.auto_input.real_counter == 5 and math.random(2, 4) or global.auto_input.real_counter
+						if 2 == real_tw then
+							cmd_base._a(p, next_joy)
+						elseif 3 == real_tw then
+							cmd_base._b(p, next_joy)
+						elseif 4 == real_tw then
+							cmd_base._c(p, next_joy)
+						end
+					end
 				end
 
 				-- ブレイクショット
@@ -5945,14 +5960,15 @@ function rbff2.startplugin()
 	end
 	local auto_menu_to_main = function()
 		local col = auto_menu.pos.col
-		-- 自動入力設定            1
-		global.auto_input.otg_thw = col[ 2] == 2 -- ダウン投げ              2
-		global.auto_input.otg_atk = col[ 3] == 2 -- ダウン攻撃              3
-		global.auto_input.thw_otg = col[ 4] == 2 -- 通常投げの派生技        4
-		global.auto_input.rave    = col[ 5]      -- デッドリーレイブ        5
-		global.auto_input.desire  = col[ 6]      -- アンリミテッドデザイア  6
-		global.auto_input.drill   = col[ 7]      -- ドリル                  7
-		global.auto_input.pairon  = col[ 8]      -- 超白龍                  8
+		-- 自動入力設定                                                          1
+		global.auto_input.otg_thw      = col[ 2] == 2 -- ダウン投げ              2
+		global.auto_input.otg_atk      = col[ 3] == 2 -- ダウン攻撃              3
+		global.auto_input.thw_otg      = col[ 4] == 2 -- 通常投げの派生技        4
+		global.auto_input.rave         = col[ 5]      -- デッドリーレイブ        5
+		global.auto_input.desire       = col[ 6]      -- アンリミテッドデザイア  6
+		global.auto_input.drill        = col[ 7]      -- ドリル                  7
+		global.auto_input.pairon       = col[ 8]      -- 超白龍                  8
+		global.auto_input.real_counter = col[ 9]      -- M.リアルカウンター      9
 
 		menu_cur = main_menu
 	end
@@ -6105,10 +6121,11 @@ function rbff2.startplugin()
 		col[ 2] = g.auto_input.otg_thw and 2 or 1 -- ダウン投げ              2
 		col[ 3] = g.auto_input.otg_atk and 2 or 1 -- ダウン攻撃              3
 		col[ 4] = g.auto_input.thw_otg and 2 or 1 -- 通常投げの派生技        4
-		col[ 5] = g.auto_input.rave    -- デッドリーレイブ        5
-		col[ 6] = g.auto_input.desire  -- アンリミテッドデザイア  6
-		col[ 7] = g.auto_input.drill   -- ドリル                  7
-		col[ 8] = g.auto_input.pairon  -- 超白龍                  8
+		col[ 5] = g.auto_input.rave               -- デッドリーレイブ        5
+		col[ 6] = g.auto_input.desire             -- アンリミテッドデザイア  6
+		col[ 7] = g.auto_input.drill              -- ドリル                  7
+		col[ 8] = g.auto_input.pairon             -- 超白龍                  8
+		col[ 9] = g.auto_input.real_counter       -- M.リアルカウンター      9
 	end
 	local init_restart_fight = function()
 		local col = tra_menu.pos.col
@@ -6555,6 +6572,7 @@ function rbff2.startplugin()
 			{ "アンリミテッドデザイア", { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "ギガティックサイクロン" }, },
 			{ "ドリル"                , { 1, 2, 3, 4, 5 }, },
 			{ "超白龍"                , { "OFF", "C攻撃-判定発生前", "C攻撃-判定発生後" }, },
+			{ "M.リアルカウンター"    , { "OFF", "ジャーマン", "フェイスロック", "投げっぱなしジャーマン" }, },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
@@ -6568,6 +6586,7 @@ function rbff2.startplugin()
 				1, -- アンリミテッドデザイア  6
 				1, -- ドリル                  7
 				1, -- 超白龍                  8
+				1, -- M.リアルカウンター      9
 			},
 		},
 		on_a = {
@@ -6579,6 +6598,7 @@ function rbff2.startplugin()
 			auto_menu_to_main, -- アンリミテッドデザイア  6
 			auto_menu_to_main, -- ドリル                  7
 			auto_menu_to_main, -- 超白龍                  8
+			auto_menu_to_main, -- M.リアルカウンター      9
 		},
 		on_b = {
 			auto_menu_to_main_cancel, -- 自動入力設定            1
@@ -6589,6 +6609,7 @@ function rbff2.startplugin()
 			auto_menu_to_main_cancel, -- アンリミテッドデザイア  6
 			auto_menu_to_main_cancel, -- ドリル                  7
 			auto_menu_to_main_cancel, -- 超白龍                  8
+			auto_menu_to_main_cancel, -- リアルカウンター        9
 		},
 	}
 
