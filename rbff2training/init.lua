@@ -2226,17 +2226,44 @@ local get_chip_dmg_type = function(box)
 	local func = chip_dmg_type_tbl[d0+1]
 	return func
 end
-local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fireball, key)
+local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fireball, gd_hl_type)
 	local box = {id = id}
 	box.type = nil
 	if box.id + 1 > #box_types then
 		-- 嘘判定   ... 判定出現時点で攻撃能力なし
 		-- 無効判定 ... ヒット後などで判定出現時点では攻撃能力があるが無効化されたもの
 		-- 家庭用版 012E0E~012E34の処理をベースに空中追撃判定を持つかどうかを判断する
-		local d2, a0, asm, air = box.id - 0x20, 0, 0, false
 		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+		local memo = ""
+		for i, a in ipairs({ 
+			0x94D2C, -- 
+			0x94E0C, -- ダウン追い打ち
+			0x94EEC, -- 空中追い打ち
+			0x94FCC, --
+			0x95A4C, --
+			0x95B2C, --
+			0x950AC, --
+			0x9518C, --
+			0x9526C, --
+		}) do
+			local d2, a0, asm, air = box.id - 0x20, 0, 0, false
+			if d2 >= 0 then
+				d2 = pgm:read_u8(a + d2)
+				d2 = bit32.band(0xFFFF, d2 + d2)
+				d2 = bit32.band(0xFFFF, d2 + d2)
+				a0 = pgm:read_u32(0x13120 + d2)
+				asm = pgm:read_u16(a0) -- 該当アドレスのアセンブラコード
+				if 0x70FF ~= asm then -- 0x70FF は moveq   #-$1, D0 でヒットしない処理結果を表す--空中追撃できない判定
+					--print(string.format(" ext attack %x %x %x %x", id, a, a0, asm))
+					memo = memo .. "v"
+				else
+					memo = memo .. "-"
+				end
+			end
+		end
+		local d2, a0, asm, air = box.id - 0x20, 0, 0, false
 		if d2 >= 0 then
-			d2 = pgm:read_u8(0x94EEC + d2)	
+			d2 = pgm:read_u8(0x94EEC + d2)
 			d2 = bit32.band(0xFFFF, d2 + d2)
 			d2 = bit32.band(0xFFFF, d2 + d2)
 			a0 = pgm:read_u32(0x13120 + d2)
@@ -2289,13 +2316,14 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		box.effect = pgm:read_u8(box.id - 0x20 + fix_bp_addr(0x95BEC))
 		-- 削りダメージ計算種別取得 05B2A4 からの処理
 		box.chip_dmg_type = get_chip_dmg_type(box)
-		-- のけぞり時間取得 05AF7C(家庭用版)からの処理
+		-- のけぞり時間取得 05AF7C(家庭用版)からの処    理
 		d2 = bit32.band(0xF, pgm:read_u8(box.id + fix_bp_addr(0x95CCC)))
 		box.hitstun   = pgm:read_u8(0x16 + 0x2 + fix_bp_addr(0x5AF7C) + d2) + 1 + 3 -- ヒット硬直
 		box.blockstun = pgm:read_u8(0x1A + 0x2 + fix_bp_addr(0x5AF88) + d2) + 1 + 2 -- ガード硬直
+		box.gd_hl_type= gd_hl_type or 0 -- 上中下とか防御属性
 		-- ログ用
 		box.log_txt = string.format(
-			" hit %8x %4x %4x %2s %2s %2x %2x %2x %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s",
+			" hit %8x %4x %4x %2s %3s %2x %2x %2x %8x %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s "..memo,
 			p.addr.base,
 			p.act,
 			p.acta,
@@ -2304,6 +2332,7 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 			p.act_contact,
 			p.attack,
 			p.hitstop_id,
+			box.gd_hl_type,
 			box.id,
 			p.hit.harmless and "hm" or "",
 			p.hit.fake_hit and "fake" or "",
@@ -2376,6 +2405,12 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		if box.bottom > 224 then
 			box.bottom = 0
 		end
+	end
+
+	-- 座標補正後にキー情報を作成する
+	box.key = string.format("%x %x id:%x x1:%x x2:%x y1:%x y2:%x", global.frame_number, p.addr.base, box.id, box.top, box.bottom, box.left, box.right)
+	if box.log_txt then
+		box.log_txt = box.log_txt .. " " .. box.key
 	end
 
 	if box.top == box.bottom and box.left == box.right then
@@ -2480,10 +2515,10 @@ local update_object = function(p)
 	-- 判定データ排他用のテーブル
 	local uniq_hitboxes = {}
 	for _, box in ipairs(p.buffer) do
-		local hitbox = new_hitbox(p, box.id, box.top, box.bottom, box.left, box.right, box.attack_only, box.is_fireball, box.key)
+		local hitbox = new_hitbox(p, box.id, box.top, box.bottom, box.left, box.right, box.attack_only, box.is_fireball, box.gd_hl_type)
 		if hitbox then
-			if not uniq_hitboxes[box.key] then
-				uniq_hitboxes[box.key] = true
+			if not uniq_hitboxes[hitbox.key] then
+				uniq_hitboxes[hitbox.key] = true
 				table.insert(p.hitboxes, hitbox)
 				if hitbox.log_txt then
 					print(hitbox.log_txt)
@@ -3174,12 +3209,12 @@ function rbff2.startplugin()
 			--判定追加1 攻撃判定
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x012C42),
 				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100F00)",
-				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
+				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pd@(temp0+$B)=maincpu.pd@((A2)+$5);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
 
 			--判定追加2 攻撃判定
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x012C88),
 				"(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100F00)",
-				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$01;maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
+				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$01;maincpu.pd@(temp0+$B)=maincpu.pd@((A1)+$5);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
 
 			--判定追加3 1P押し合い判定
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x012D4C),
@@ -4367,7 +4402,7 @@ function rbff2.startplugin()
 				p.sp_throw.bottom = nil
 			end
 			if p.sp_throw.on ~= 0xFF then
-				print(i, p.sp_throw.on, p.sp_throw.top, p.sp_throw.bottom, p.sp_throw.front, p.sp_throw.side, p.hit.flip_x)
+				--print(i, p.sp_throw.on, p.sp_throw.top, p.sp_throw.bottom, p.sp_throw.front, p.sp_throw.side, p.hit.flip_x)
 			end
 
 			-- 当たり判定の構築用バッファのリフレッシュ
@@ -4414,9 +4449,9 @@ function rbff2.startplugin()
 				base        = pgm:read_u32(addr+0x6),
 				attack_only = (pgm:read_u8(addr+0xA) == 1),
 				attack_only_val = pgm:read_u8(addr+0xA),
+				gd_hl_type  = pgm:read_u32(addr+0xB),
 			}
 			if box.on ~= 0xFF and temp_hits[box.base] then
-				box.key = string.format("%x %x id:%x x1:%x x2:%x y1:%x y2:%x", global.frame_number, box.base, box.id, box.top, box.bottom, box.left, box.right)
 				box.is_fireball = temp_hits[box.base].is_fireball == true
 				table.insert(temp_hits[box.base].buffer, box)
 			else
@@ -5421,11 +5456,13 @@ function rbff2.startplugin()
 								scr:draw_line(box.right, box.top-8 , box.right, box.bottom+8, box.type.outline)
 							end
 						else
+							--[[
 							if box_type_base.at == box.type then
-							print("box at ", box.left, box.top, box.right, box.bottom)
+								print("box at ", box.left, box.top, box.right, box.bottom)
 							elseif box_type_base.pt == box.type then
-							print("box pt ", box.left, box.top, box.right, box.bottom)
+								print("box pt ", box.left, box.top, box.right, box.bottom)
 							end
+							]]
 
 							if box.visible == true and box.type.enabled == true then
 								scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.fill, box.type.outline)
@@ -6232,6 +6269,7 @@ function rbff2.startplugin()
 		on_b = {
 			menu_exit, -- ダミー設定
 			menu_exit, -- ゲージ設定
+			menu_exit,  -- 一般設定
 			menu_exit, -- 判定個別設定
 			menu_exit, -- 自動入力設定
 			menu_exit, -- プレイヤーセレクト画面
@@ -6872,9 +6910,33 @@ function rbff2.startplugin()
 			local c1, c2, c3, c4, c5
 			-- 選択行とそうでない行の色分け判断
 			if i == menu_cur.pos.row then
-				c1, c2, c3, c4, c5 = 0xFFEE3300, 0xFFDD2200, 0xFFFFFF00, 0xCC000000, 0xAAFFFFFF
+				c1, c2, c3, c4, c5 = 0xFF332200, 0xFF662200, 0xFFFFFF00, 0xCC000000, 0xAAFFFFFF
+				local deep, _ = math.modf((scr:frame_number() / 5) % 20) + 1
+				local c1s = {
+					0xFFDD2200,
+					0xFFCC2200,
+					0xFFBB2200,
+					0xFFAA2200,
+					0xFF992200,
+					0xFF882200,
+					0xFF772200,
+					0xFF662200,
+					0xFF552200,
+					0xFF442200,
+					0xFF442200,
+					0xFF552200,
+					0xFF662200,
+					0xFF772200,
+					0xFF882200,
+					0xFF992200,
+					0xFFAA2200,
+					0xFFBB2200,
+					0xFFCC2200,
+					0xFFDD2200,
+				}
+				c1 = c1s[deep]
 			else
-				c1, c2, c3, c4, c5 = 0xFFC0C0C0, 0xFFC0C0C0, 0xFF000000, 0x00000000, 0xFF000000
+				c1, c2, c3, c4, c5 = 0xFFC0C0C0, 0xFFB0B0B0, 0xFF000000, 0x00000000, 0xFF000000
 			end
 			if is_label_line(row[1]) then
 				-- ラベルだけ行
@@ -6882,6 +6944,13 @@ function rbff2.startplugin()
 			else
 				-- 通常行 ラベル部分
 				scr:draw_box (90  , y+0.5, 230   , y+8.5, c1, c2)
+				if i == menu_cur.pos.row then
+					scr:draw_line(90  , y+0.5, 230 , y+0.5, 0xFFDD2200)
+					scr:draw_line(90  , y+0.5, 90  , y+8.5, 0xFFDD2200)
+				else
+					scr:draw_box (90  , y+7.0, 230 , y+8.5, 0xFFB8B8B8, 0xFFB8B8B8)
+					scr:draw_box (90  , y+8.0, 230 , y+8.5, 0xFFA8A8A8, 0xFFA8A8A8)
+				end
 				scr:draw_text(96.5, y+1.5, row[1], c4)
 				scr:draw_text(96  , y+1  , row[1], c3)
 				if row[2] then
