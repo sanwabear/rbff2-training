@@ -472,6 +472,8 @@ local char_acts_base = {
 		{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x245, }, },
 		{ disp_name = "CA _6C", name = "CA 6C(3段目)", type = act_types.attack, ids = { 0x247, }, },
 		{ disp_name = "CA _8C", name = "CA 8C(3段目)", type = act_types.overhead, ids = { 0x24A, 0x24B, 0x24C, }, },
+		{ disp_name = "CA 下C", name = "CA CA 下B(2段目)3Aルート", type = act_types.attack, ids = { 0x249, }, },
+		{ disp_name = "CA 下C", name = "CA CA 下C(3段目)3Aルート", type = act_types.low_attack, ids = { 0x248, }, },
 	},
 	-- ホンフゥ
 	{
@@ -532,7 +534,7 @@ local char_acts_base = {
 		{ name = "ダブルスパイダー", names = { "M.スパイダー", "デンジャラススパイダー", "ダブルスパイダー" }, type = act_types.attack, ids = { 0x87, 0x88, 0x89, 0x8A, 0x8B, }, },
 
 		{ name = "M.スナッチャー", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-		{ name = "バーチカルアロー", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, }, },
+		{ name = "バーチカルアロー", type = act_types.overhead, ids = { 0xB8, 0xB9, 0xBA, 0xBB, }, },
 		{ name = "ダブルスナッチャー", names = { "M.スナッチャー", "ダブルスナッチャー" }, type = act_types.attack, ids = { 0x93, 0x94, 0x95, 0x96, }, },
 
 		{ name = "M.クラブクラッチ", type = act_types.low_attack, ids = { 0x9A, 0x9B, }, },
@@ -2236,17 +2238,17 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 		local memo = ""
 		for i, a in ipairs({ 
-			0x94D2C, -- 
-			0x94E0C, -- ダウン追い打ち
-			0x94EEC, -- 空中追い打ち
-			0x94FCC, --
-			0x95A4C, --
-			0x95B2C, --
-			0x950AC, --
-			0x9518C, --
-			0x9526C, --
+			0x94D2C, -- 空中の相手へヒット処理
+			0x94E0C, -- ダウン中の相手へのヒット処理
+			0x94EEC, -- 空中追撃のヒット処理
+			0x94FCC, -- 不明
+			0x95A4C, -- 下段ヒット処理？
+			0x95B2C, -- 上段ヒット処理？
+			0x950AC, -- 上段ガード処理
+			0x9518C, -- 下段ガード処理
+			0x9526C, -- 空中ガード処理
 		}) do
-			local d2, a0, asm, air = box.id - 0x20, 0, 0, false
+			local d2, a0, asm = box.id - 0x20, 0, 0
 			if d2 >= 0 then
 				d2 = pgm:read_u8(a + d2)
 				d2 = bit32.band(0xFFFF, d2 + d2)
@@ -2254,7 +2256,7 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 				a0 = pgm:read_u32(0x13120 + d2)
 				asm = pgm:read_u16(a0) -- 該当アドレスのアセンブラコード
 				if 0x70FF ~= asm then -- 0x70FF は moveq   #-$1, D0 でヒットしない処理結果を表す--空中追撃できない判定
-					--print(string.format(" ext attack %x %x %x %x", id, a, a0, asm))
+					print(string.format(" ext attack %x %s %x %x %x %x", p.addr.base, i, id, a, a0, asm))
 					memo = memo .. "v"
 				else
 					memo = memo .. "-"
@@ -3364,6 +3366,11 @@ function rbff2.startplugin()
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03BF04),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g"))
+
+			--table.insert(bps, cpu:debug():bpset(0x012DC8, "1", "PC=12DE0;g")) -- 空中ヒット
+
+			--table.insert(bps, cpu:debug():bpset(0x012E60, "1", "PC=012E84;g"))-- 下段ヒット処理？
+			--table.insert(bps, cpu:debug():bpset(0x012E84, "1", "PC=012EA8;g"))-- 下段ヒット処理？
 		end
 	end
 
