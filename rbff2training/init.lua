@@ -2228,41 +2228,69 @@ local get_chip_dmg_type = function(box)
 	local func = chip_dmg_type_tbl[d0+1]
 	return func
 end
+-- ヒット処理の飛び先 家庭用版 0x13120 からのデータテーブル 5種類
+local hit_proc_types = {
+	none      = nil,
+	same_line = "main",
+	diff_line = "sway",
+	unknown   = "?",
+	air_onry  = "air",
+}
+local hit_sub_procs = {
+	[0x01311C] = hit_proc_types.none,      -- 空振り
+	[0x012FF0] = hit_proc_types.same_line, -- → 013038 同一ライン上の攻撃
+	[0x012FFE] = hit_proc_types.diff_line, -- → 013054 ライン関係の攻撃
+	[0x01300A] = hit_proc_types.unknown,   -- → 013018
+	[0x012FE2] = hit_proc_types.air_onry,  -- → 012ff0 → 013038 カイザークロー
+}
+-- 判定枠のチェック処理種類
+local hit_box_proc = function(id, addr)
+	-- 嘘判定   ... 判定出現時点で攻撃能力なし
+	-- 無効判定 ... ヒット後などで判定出現時点では攻撃能力があるが無効化されたもの
+	-- 家庭用版 012E0E~012E34の処理をベースに判定＆属性チェック
+	local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+	local d2, a0, asm = id - 0x20, 0, 0
+	if d2 >= 0 then
+		d2 = pgm:read_u8(addr + d2)
+		d2 = bit32.band(0xFFFF, d2 + d2)
+		d2 = bit32.band(0xFFFF, d2 + d2)
+		a0 = pgm:read_u32(0x13120 + d2)
+		local hit_sub_proc = hit_sub_procs[a0]
+		if hit_sub_proc then
+			--print(string.format(" ext attack %x %x %s", id, addr, hit_sub_proc))
+			return hit_sub_proc
+		else
+			return "x"
+		end
+	end
+end
+local hit_box_procs = {
+	normal_hit = function(id) return hit_box_proc(id, 0x94D2C) end, -- 通常状態へのヒット処理
+	down_hit   = function(id) return hit_box_proc(id, 0x94E0C) end, -- ダウン状態へのヒット処理
+	air_hit    = function(id) return hit_box_proc(id, 0x94EEC) end, -- 空中追撃可能状態へのヒット処理
+	up_guard   = function(id) return hit_box_proc(id, 0x950AC) end, -- 上段ガード処理
+	low_guard  = function(id) return hit_box_proc(id, 0x9518C) end, -- 下段ガード処理
+	air_guard  = function(id) return hit_box_proc(id, 0x9526C) end, -- 空中ガード処理
+	unknown1   = function(id) return hit_box_proc(id, 0x94FCC) end, -- 不明処理、未使用？
+	unknown2   = function(id) return hit_box_proc(id, 0x95A4C) end, -- 不明処理、未使用？
+	unknown3   = function(id) return hit_box_proc(id, 0x95B2C) end, -- 不明処理、未使用？
+}
 local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fireball, gd_hl_type)
 	local box = {id = id}
 	box.type = nil
 	if box.id + 1 > #box_types then
-		-- 嘘判定   ... 判定出現時点で攻撃能力なし
-		-- 無効判定 ... ヒット後などで判定出現時点では攻撃能力があるが無効化されたもの
-		-- 家庭用版 012E0E~012E34の処理をベースに空中追撃判定を持つかどうかを判断する
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 		local memo = ""
-		for i, a in ipairs({ 
-			0x94D2C, -- 空中の相手へヒット処理
-			0x94E0C, -- ダウン中の相手へのヒット処理
-			0x94EEC, -- 空中追撃のヒット処理
-			0x94FCC, -- 不明
-			0x95A4C, -- 下段ヒット処理？
-			0x95B2C, -- 上段ヒット処理？
-			0x950AC, -- 上段ガード処理
-			0x9518C, -- 下段ガード処理
-			0x9526C, -- 空中ガード処理
-		}) do
-			local d2, a0, asm = box.id - 0x20, 0, 0
-			if d2 >= 0 then
-				d2 = pgm:read_u8(a + d2)
-				d2 = bit32.band(0xFFFF, d2 + d2)
-				d2 = bit32.band(0xFFFF, d2 + d2)
-				a0 = pgm:read_u32(0x13120 + d2)
-				asm = pgm:read_u16(a0) -- 該当アドレスのアセンブラコード
-				if 0x70FF ~= asm then -- 0x70FF は moveq   #-$1, D0 でヒットしない処理結果を表す--空中追撃できない判定
-					print(string.format(" ext attack %x %s %x %x %x %x", p.addr.base, i, id, a, a0, asm))
-					memo = memo .. "v"
-				else
-					memo = memo .. "-"
-				end
-			end
-		end
+		memo = memo .. " nml=" .. hit_box_procs.normal_hit(box.id)
+		memo = memo .. " dwn="   .. hit_box_procs.down_hit(box.id)
+		memo = memo .. " air="    .. hit_box_procs.air_hit(box.id)
+		memo = memo .. " ugd="   .. hit_box_procs.up_guard(box.id)
+		memo = memo .. " lgd="  .. hit_box_procs.low_guard(box.id)
+		memo = memo .. " agd="  .. hit_box_procs.air_guard(box.id)
+		memo = memo .. " ?1="   .. hit_box_procs.unknown1(box.id)
+		memo = memo .. " ?2="   .. hit_box_procs.unknown2(box.id)
+		memo = memo .. " ?3="   .. hit_box_procs.unknown3(box.id)
+
+		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 		local d2, a0, asm, air = box.id - 0x20, 0, 0, false
 		if d2 >= 0 then
 			d2 = pgm:read_u8(0x94EEC + d2)
@@ -7081,6 +7109,21 @@ function rbff2.startplugin()
 
 			-- 逆襲拳、サドマゾの初段で相手の状態変更しない（相手が投げられなくなる事象が解消する）
 			-- pgm:write_direct_u8(0x57F43, 0x00)
+
+			--[[
+			当たり判定チェック
+			013120: 0001 311C                ori.b   #$1c, D1           -- ヒット処理の飛び先1 01311C 空振り
+			013124: 0001 2FF0                ori.b   #$f0, D1           -- ヒット処理の飛び先2 012FF0 → 013038 同一ライン上の攻撃
+			013128: 0001 2FFE                ori.b   #$fe, D1           -- ヒット処理の飛び先3 012FFE → 013054 ライン関係の攻撃
+			01312C: 0001 300A                ori.b   #$a, D1            -- ヒット処理の飛び先4 01300A → 013018
+			013130: 0001 2FE2                ori.b   #$e2, D1           -- ヒット処理の飛び先5 012FE2 → 012ff0 → 013038 カイザークロー
+			local hoge = 0x01300A
+			pgm:write_direct_u32(0x013120, hoge)
+			pgm:write_direct_u32(0x013124, hoge)
+			pgm:write_direct_u32(0x013128, hoge)
+			pgm:write_direct_u32(0x01312C, hoge)
+			pgm:write_direct_u32(0x013130, hoge)
+			]]
 		end
 
 		-- 強制的に家庭用モードに変更
