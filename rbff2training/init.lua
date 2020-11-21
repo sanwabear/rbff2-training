@@ -1983,7 +1983,7 @@ local box_type_base = {
 	v6  = { id = 0x07, name = "食らい(対ライン上攻撃)",   enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x00FFFF, fill = 0x80, outline = 0xFF },
 	x1  = { id = 0x08, name = "食らい(対ライン下攻撃)",   enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x00FFFF, fill = 0x80, outline = 0xFF },
 	x2  = { id = 0x09, name = "用途不明2",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-	x3  = { id = 0x0A, name = "用途不明3",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
+	x3  = { id = 0x0A, name = "用途不明3",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF }, -- 1311C
 	x4  = { id = 0x0B, name = "用途不明4",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
 	x5  = { id = 0x0C, name = "用途不明5",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
 	x6  = { id = 0x0D, name = "用途不明6",                enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
@@ -1993,17 +1993,17 @@ local box_type_base = {
 	g1  = { id = 0x11, name = "立ガード",                 enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 stand-guard
 	g2  = { id = 0x12, name = "下段ガード",               enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 counch-guard
 	g3  = { id = 0x13, name = "空中ガード",               enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 air-guard
-	g4  = { id = 0x14, name = "上段当身投げ",             enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 j.atemi-nage
-	g5  = { id = 0x15, name = "中段当身投げ",             enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 c.atemi-nage
-	g6  = { id = 0x16, name = "下段当身投げ",             enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 g.ateminage
-	g7  = { id = 0x17, name = "必勝逆襲脚",               enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 h.gyakushu-kyaku
-	g8  = { id = 0x18, name = "サドマゾ",                 enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 sadomazo
-	g9  = { id = 0x19, name = "倍返し",                   enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xFF007F, fill = 0x40, outline = 0xFF },--rbff2 bai-gaeshi
-	g10 = { id = 0x1A, name = "ガード?1",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },
+	g4  = { id = 0x14, name = "上段当身投げ",             enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 j.atemi-nage        012DBC
+	g5  = { id = 0x15, name = "裏雲隠し",                 enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 c.atemi-nage        012DBC
+	g6  = { id = 0x16, name = "下段当身打ち",             enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 g.ateminage         012DBC
+	g7  = { id = 0x17, name = "必勝逆襲脚",               enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 h.gyakushu-kyaku    012DBC
+	g8  = { id = 0x18, name = "サドマゾ",                 enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 sadomazo            012DBC
+	g9  = { id = 0x19, name = "倍返し",                   enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xFF007F, fill = 0x40, outline = 0xFF },--rbff2 bai-gaeshi          012DBC
+	g12 = { id = 0x1A, name = "ガード?1",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
 	g11 = { id = 0x1B, name = "ガード?2",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
-	g12 = { id = 0x1C, name = "ガード?3",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--rbff2 p.throw?
+	g10 = { id = 0x1C, name = "フェニックススルー",       enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 p.throw?            012DBC
 	g13 = { id = 0x1D, name = "ガード?4",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
-	g14 = { id = 0x1E, name = "フェニックススルー",       enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--?
+	g14 = { id = 0x1E, name = "ガード?5",                 enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
 	g15 = { id = 0x1F, name = "ガード?6",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
 	g16 = { id = 0x20, name = "ガード?7",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
 	sv1 = { id = 0x02, name = "食らい1(スウェー中)",      enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true },
@@ -2167,19 +2167,6 @@ local fix_bp_addr = function(addr)
 	return addr + fix2
 end
 
--- 当たり判定表示
-local accept_atk_only = {
-	[box_type_base.a ] = true,
-	[box_type_base.aa] = true,
-	[box_type_base.fa] = true,
-	[box_type_base.faa] = true,
-	[box_type_base.v3] = true,
-	[box_type_base.v4] = true,
-	[box_type_base.v5] = true,
-	[box_type_base.v6] = true,
-	[box_type_base.x1] = true,
-}
-
 local chip_dmg_types = {
 	zero = { -- ゼロ
 		name = "zero",
@@ -2230,78 +2217,62 @@ local get_chip_dmg_type = function(box)
 end
 -- ヒット処理の飛び先 家庭用版 0x13120 からのデータテーブル 5種類
 local hit_proc_types = {
-	none      = nil,
-	same_line = "main",
-	diff_line = "sway",
-	unknown   = "?",
-	air_onry  = "air",
+	none      = nil,    -- 常に判定しない
+	same_line = "main", -- 同一ライン同士なら判定する
+	diff_line = "sway", -- 異なるライン同士でも判定する
+	unknown   = "?",    -- 不明
+	air_onry  = "air",  -- 相手が空中にいれば判定する
 }
 local hit_sub_procs = {
-	[0x01311C] = hit_proc_types.none,      -- 空振り
-	[0x012FF0] = hit_proc_types.same_line, -- → 013038 同一ライン上の攻撃
-	[0x012FFE] = hit_proc_types.diff_line, -- → 013054 ライン関係の攻撃
-	[0x01300A] = hit_proc_types.unknown,   -- → 013018
-	[0x012FE2] = hit_proc_types.air_onry,  -- → 012ff0 → 013038 カイザークロー
+	[0x01311C] = hit_proc_types.none,      -- 常に判定しない
+	[0x012FF0] = hit_proc_types.same_line, -- → 013038 同一ライン同士なら判定する
+	[0x012FFE] = hit_proc_types.diff_line, -- → 013054 異なるライン同士でも判定する
+	[0x01300A] = hit_proc_types.unknown,   -- → 013018 不明
+	[0x012FE2] = hit_proc_types.air_onry,  -- → 012ff0 → 013038 相手が空中にいれば判定する
 }
 -- 判定枠のチェック処理種類
 local hit_box_proc = function(id, addr)
-	-- 嘘判定   ... 判定出現時点で攻撃能力なし
-	-- 無効判定 ... ヒット後などで判定出現時点では攻撃能力があるが無効化されたもの
-	-- 家庭用版 012E0E~012E34の処理をベースに判定＆属性チェック
+	-- 家庭用版 012DBC~012F04のデータ取得処理をベースに判定＆属性チェック
 	local pgm = manager:machine().devices[":maincpu"].spaces["program"]
-	local d2, a0, asm = id - 0x20, 0, 0
+	local d2 = id - 0x20
 	if d2 >= 0 then
 		d2 = pgm:read_u8(addr + d2)
 		d2 = bit32.band(0xFFFF, d2 + d2)
 		d2 = bit32.band(0xFFFF, d2 + d2)
-		a0 = pgm:read_u32(0x13120 + d2)
-		local hit_sub_proc = hit_sub_procs[a0]
-		if hit_sub_proc then
-			--print(string.format(" ext attack %x %x %s", id, addr, hit_sub_proc))
-			return hit_sub_proc
-		else
-			return "x"
-		end
+		local a0 = pgm:read_u32(0x13120 + d2)
+		--print(string.format(" ext attack %x %x %s", id, addr, hit_sub_procs[a0] or "none"))
+		return hit_sub_procs[a0]
 	end
+	return hit_proc_types.none
 end
 local hit_box_procs = {
-	normal_hit = function(id) return hit_box_proc(id, 0x94D2C) end, -- 通常状態へのヒット処理
-	down_hit   = function(id) return hit_box_proc(id, 0x94E0C) end, -- ダウン状態へのヒット処理
-	air_hit    = function(id) return hit_box_proc(id, 0x94EEC) end, -- 空中追撃可能状態へのヒット処理
-	up_guard   = function(id) return hit_box_proc(id, 0x950AC) end, -- 上段ガード処理
-	low_guard  = function(id) return hit_box_proc(id, 0x9518C) end, -- 下段ガード処理
-	air_guard  = function(id) return hit_box_proc(id, 0x9526C) end, -- 空中ガード処理
-	unknown1   = function(id) return hit_box_proc(id, 0x94FCC) end, -- 不明処理、未使用？
-	unknown2   = function(id) return hit_box_proc(id, 0x95A4C) end, -- 不明処理、未使用？
-	unknown3   = function(id) return hit_box_proc(id, 0x95B2C) end, -- 不明処理、未使用？
+	normal_hit = function(id) return hit_box_proc(id, 0x94D2C) end, -- 012DBC: 012DC8: 通常状態へのヒット判定処理
+	down_hit   = function(id) return hit_box_proc(id, 0x94E0C) end, -- 012DE4: 012DF0: ダウン状態へのヒット判定処理
+	air_hit    = function(id) return hit_box_proc(id, 0x94EEC) end, -- 012E0E: 012E1A: 空中追撃可能状態へのヒット判定処理
+	up_guard   = function(id) return hit_box_proc(id, 0x950AC) end, -- 012EAC: 012EB8: 上段ガード判定処理
+	low_guard  = function(id) return hit_box_proc(id, 0x9518C) end, -- 012ED8: 012EE4: 下段ガード判定処理
+	air_guard  = function(id) return hit_box_proc(id, 0x9526C) end, -- 012F04: 012F16: 空中ガード判定処理
+	unknown1   = function(id) return hit_box_proc(id, 0x94FCC) end, -- 012E38: 012E44: 不明処理、未使用？
+	unknown2   = function(id) return hit_box_proc(id, 0x95A4C) end, -- 012E60: 012E6C: 対ライン上段攻撃ガード判定処理
+	unknown3   = function(id) return hit_box_proc(id, 0x95B2C) end, -- 012E84: 012E90: 対ライン下段攻撃ガード判定処理
 }
 local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fireball, gd_hl_type)
 	local box = {id = id}
 	box.type = nil
 	if box.id + 1 > #box_types then
 		local memo = ""
-		memo = memo .. " nml=" .. hit_box_procs.normal_hit(box.id)
-		memo = memo .. " dwn="   .. hit_box_procs.down_hit(box.id)
-		memo = memo .. " air="    .. hit_box_procs.air_hit(box.id)
-		memo = memo .. " ugd="   .. hit_box_procs.up_guard(box.id)
-		memo = memo .. " lgd="  .. hit_box_procs.low_guard(box.id)
-		memo = memo .. " agd="  .. hit_box_procs.air_guard(box.id)
-		memo = memo .. " ?1="   .. hit_box_procs.unknown1(box.id)
-		memo = memo .. " ?2="   .. hit_box_procs.unknown2(box.id)
-		memo = memo .. " ?3="   .. hit_box_procs.unknown3(box.id)
+		memo = memo .. " nml=" .. (hit_box_procs.normal_hit(box.id) or "-")
+		memo = memo .. " dwn=" .. (hit_box_procs.down_hit(box.id) or "-")
+		memo = memo .. " air=" .. (hit_box_procs.air_hit(box.id) or "-")
+		memo = memo .. " ugd=" .. (hit_box_procs.up_guard(box.id) or "-")
+		memo = memo .. " lgd=" .. (hit_box_procs.low_guard(box.id) or "-")
+		memo = memo .. " agd=" .. (hit_box_procs.air_guard(box.id) or "-")
+		memo = memo .. " ?1="  .. (hit_box_procs.unknown1(box.id) or "-")
+		memo = memo .. " lugd="  .. (hit_box_procs.unknown2(box.id) or "-")
+		memo = memo .. " llgd="  .. (hit_box_procs.unknown3(box.id) or "-")
 
 		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
-		local d2, a0, asm, air = box.id - 0x20, 0, 0, false
-		if d2 >= 0 then
-			d2 = pgm:read_u8(0x94EEC + d2)
-			d2 = bit32.band(0xFFFF, d2 + d2)
-			d2 = bit32.band(0xFFFF, d2 + d2)
-			a0 = pgm:read_u32(0x13120 + d2)
-			asm = pgm:read_u16(a0) -- 該当アドレスのアセンブラコード
-			if 0x70FF ~= asm then -- 0x70FF は moveq   #-$1, D0 でヒットしない処理結果を表す--空中追撃できない判定
-				air = true
-			end
-		end
+		local air = hit_box_procs.air_hit(box.id) ~= nil
 		if is_fireball and air then
 			if p.hit.fake_hit then
 				box.type = box_type_base.pfaa -- 飛び道具(空中追撃可、嘘)
@@ -2353,7 +2324,7 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		box.gd_hl_type= gd_hl_type or 0 -- 上中下とか防御属性
 		-- ログ用
 		box.log_txt = string.format(
-			" hit %8x %4x %4x %2s %3s %2x %2x %2x %8x %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s "..memo,
+			"hit %6x %3x %3x %2s %3s %2x %2x %2x %8x %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s "..memo,
 			p.addr.base,
 			p.act,
 			p.acta,
@@ -2389,14 +2360,6 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		end
 	end
 	box.type = box.type or box_type_base.x1
-	--[[ 意味がないので無効化する
-	local accept_atk = accept_atk_only[box.type]
-	if attack_only == true and accept_atk ~= true then
-		return nil
-	elseif attack_only ~= true and accept_atk == true then
-		return nil
-	end
-	]]
 	if (box.type == box_type_base.a or box.type == box_type_base.aa) and
 		(is_fireball == true or (p.hit.harmless == false and p.hit.obsl_hit == false)) then
 		-- 攻撃中のフラグをたてる
@@ -2468,7 +2431,7 @@ end
 local new_throwbox = function(p, box)
 	local scr = manager:machine().screens[":screen"]
 	local height = scr:height() * scr:yscale()
-	print("a", box.opp_id, box.top, box.bottom, p.hit.flip_x)
+	--print("a", box.opp_id, box.top, box.bottom, p.hit.flip_x)
 	p.throwing = true
 	box.flat_throw = box.top == nil
 	box.top    = box.top or p.hit.old_pos_y - global.throwbox_height
@@ -2478,7 +2441,7 @@ local new_throwbox = function(p, box)
 	box.bottom = box.bottom and (p.hit.old_pos_y - box.bottom) or height + screen_top - p.hit.pos_z
 	box.type   = box.type or box_type_base.t
 	box.visible = true
-	print("b", box.opp_id, box.top, box.bottom, p.hit.flip_x)
+	--print("b", box.opp_id, box.top, box.bottom, p.hit.flip_x)
 	return box
 end
 
@@ -6945,31 +6908,10 @@ function rbff2.startplugin()
 			local c1, c2, c3, c4, c5
 			-- 選択行とそうでない行の色分け判断
 			if i == menu_cur.pos.row then
-				c1, c2, c3, c4, c5 = 0xFF332200, 0xFF662200, 0xFFFFFF00, 0xCC000000, 0xAAFFFFFF
+				c1, c2, c3, c4, c5 = 0xFFDD2200, 0xFF662200, 0xFFFFFF00, 0xCC000000, 0xAAFFFFFF
+				-- アクティブメニュー項目のビカビカ処理
 				local deep, _ = math.modf((scr:frame_number() / 5) % 20) + 1
-				local c1s = {
-					0xFFDD2200,
-					0xFFCC2200,
-					0xFFBB2200,
-					0xFFAA2200,
-					0xFF992200,
-					0xFF882200,
-					0xFF772200,
-					0xFF662200,
-					0xFF552200,
-					0xFF442200,
-					0xFF442200,
-					0xFF552200,
-					0xFF662200,
-					0xFF772200,
-					0xFF882200,
-					0xFF992200,
-					0xFFAA2200,
-					0xFFBB2200,
-					0xFFCC2200,
-					0xFFDD2200,
-				}
-				c1 = c1s[deep]
+				c1 = c1 - (0x00110000 * math.abs(deep - 10))
 			else
 				c1, c2, c3, c4, c5 = 0xFFC0C0C0, 0xFFB0B0B0, 0xFF000000, 0x00000000, 0xFF000000
 			end
