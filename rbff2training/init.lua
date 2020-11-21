@@ -2253,8 +2253,8 @@ local hit_box_procs = {
 	low_guard  = function(id) return hit_box_proc(id, 0x9518C) end, -- 012ED8: 012EE4: 下段ガード判定処理
 	air_guard  = function(id) return hit_box_proc(id, 0x9526C) end, -- 012F04: 012F16: 空中ガード判定処理
 	unknown1   = function(id) return hit_box_proc(id, 0x94FCC) end, -- 012E38: 012E44: 不明処理、未使用？
-	unknown2   = function(id) return hit_box_proc(id, 0x95A4C) end, -- 012E60: 012E6C: 対ライン上段攻撃ガード判定処理
-	unknown3   = function(id) return hit_box_proc(id, 0x95B2C) end, -- 012E84: 012E90: 対ライン下段攻撃ガード判定処理
+	sway_up_gd = function(id) return hit_box_proc(id, 0x95A4C) end, -- 012E60: 012E6C: 対ライン上段攻撃ガード判定処理
+	sway_low_gd = function(id) return hit_box_proc(id, 0x95B2C) end, -- 012E84: 012E90: 対ライン下段攻撃ガード判定処理
 }
 local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fireball, gd_hl_type)
 	local box = {id = id}
@@ -2268,8 +2268,8 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		memo = memo .. " lgd=" .. (hit_box_procs.low_guard(box.id) or "-")
 		memo = memo .. " agd=" .. (hit_box_procs.air_guard(box.id) or "-")
 		memo = memo .. " ?1="  .. (hit_box_procs.unknown1(box.id) or "-")
-		memo = memo .. " lugd="  .. (hit_box_procs.unknown2(box.id) or "-")
-		memo = memo .. " llgd="  .. (hit_box_procs.unknown3(box.id) or "-")
+		memo = memo .. " sugd=".. (hit_box_procs.sway_up_gd(box.id) or "-")
+		memo = memo .. " slgd=".. (hit_box_procs.sway_low_gd(box.id) or "-")
 
 		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 		local air = hit_box_procs.air_hit(box.id) ~= nil
@@ -4981,7 +4981,7 @@ function rbff2.startplugin()
 				pgm:write_u8(p.addr.init_stun, p.init_stun) -- 最大スタン値
 			elseif p.life_rec then
 				-- 回復判定して回復
-				if (math.max(p.update_dmg, op.update_dmg) + 180) <= global.frame_number then
+				if (math.max(p.update_dmg, op.update_dmg) + 180) <= global.frame_number and p.state == 0 then
 					-- やられ状態から戻ったときに回復させる
 					pgm:write_u8(p.addr.life, max_life) -- 体力
 					pgm:write_u8(p.addr.stun, 0) -- スタン値
