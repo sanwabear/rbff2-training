@@ -1036,7 +1036,8 @@ local char_fireball_base = {
 	},
 	-- 東丈
 	{
-		{ name = "ハリケーンアッパー", type = act_types.attack, ids = { 0x267, 0x269, }, },
+		{ name = "ハリケーンアッパー", type = act_types.attack, ids = { 0x266, 0x267, 0x269, }, },
+		-- { name = "爆裂ハリケーン", type = act_types.attack, ids = {  0x266, 0x267, 0x269, }, },
 		{ name = "スクリューアッパー", type = act_types.attack, ids = { 0x269, 0x26A, 0x26B, }, },
 	},
 	-- 不知火舞
@@ -1144,8 +1145,8 @@ local char_fireball_base = {
 	},
 	-- 李香緋
 	{
-		{ name = "那夢波", type = act_types.attack, ids = { 0x263, }, },
-		{ name = "那夢波", type = act_types.attack, ids = { 0x268, }, },
+		{ name = "小 那夢波", type = act_types.attack, ids = { 0x263, }, },
+		{ name = "大 那夢波", type = act_types.attack, ids = { 0x268, }, },
 		{ name = "真心牙", type = act_types.attack, ids = { 0x270, }, },
 	},
 	-- アルフレッド
@@ -2253,7 +2254,6 @@ local hit_box_procs = {
 	up_guard   = function(id) return hit_box_proc(id, 0x950AC) end, -- 012EAC: 012EB8: 上段ガード判定処理
 	low_guard  = function(id) return hit_box_proc(id, 0x9518C) end, -- 012ED8: 012EE4: 下段ガード判定処理
 	air_guard  = function(id) return hit_box_proc(id, 0x9526C) end, -- 012F04: 012F16: 空中ガード判定処理
-	unknown1   = function(id) return hit_box_proc(id, 0x94FCC) end, -- 012E38: 012E44: 不明処理、未使用？
 	sway_up_gd = function(id) return hit_box_proc(id, 0x95A4C) end, -- 012E60: 012E6C: 対ライン上段の謎処理
 	sway_low_gd= function(id) return hit_box_proc(id, 0x95B2C) end, -- 012F3A: 012E90: 対ライン下段の謎処理
 	j_atm_nage = function(id) return hit_box_proc(id, 0x9534C) end, -- 012F30: 012F82: 上段当身投げの処理
@@ -2263,6 +2263,7 @@ local hit_box_procs = {
 	sadomazo   = function(id) return hit_box_proc(id, 0x956CC) end, -- 012F58: 012F82: サドマゾの処理
 	phx_tw     = function(id) return hit_box_proc(id, 0x9588C) end, -- 012F6C: 012F82: フェニックススルーの処理
 	baigaeshi  = function(id) return hit_box_proc(id, 0x957AC) end, -- 012F62: 012F82: 倍返しの処理
+	unknown1   = function(id) return hit_box_proc(id, 0x94FCC) end, -- 012E38: 012E44: 不明処理、未使用？
 }
 local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fireball, gd_hl_type)
 	local box = {id = id}
@@ -2275,7 +2276,6 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		memo = memo .. " ugd=" .. (hit_box_procs.up_guard(box.id) or "-")
 		memo = memo .. " lgd=" .. (hit_box_procs.low_guard(box.id) or "-")
 		memo = memo .. " agd=" .. (hit_box_procs.air_guard(box.id) or "-")
-		memo = memo .. " ?1="  .. (hit_box_procs.unknown1(box.id) or "-")
 		memo = memo .. " sugd=".. (hit_box_procs.sway_up_gd(box.id) or "-")
 		memo = memo .. " slgd=".. (hit_box_procs.sway_low_gd(box.id) or "-")
 		memo = memo .. " jatm=".. (hit_box_procs.j_atm_nage(box.id) or"-")
@@ -2285,8 +2285,10 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		memo = memo .. " sdmz=".. (hit_box_procs.sadomazo(box.id) or"-")
 		memo = memo .. " phx=" .. (hit_box_procs.phx_tw(box.id) or"-")
 		memo = memo .. " bai=" .. (hit_box_procs.baigaeshi(box.id) or"-")
+		memo = memo .. " ?1="  .. (hit_box_procs.unknown1(box.id) or "-")
 
 		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+
 		local air = hit_box_procs.air_hit(box.id) ~= nil
 		if is_fireball and air then
 			if p.hit.fake_hit then
@@ -2339,7 +2341,7 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		box.gd_hl_type= gd_hl_type or 0 -- 上中下とか防御属性
 		-- ログ用
 		box.log_txt = string.format(
-			"hit %6x %3x %3x %2s %3s %2x %2x %2x %8x %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s "..memo,
+			"hit %6x %3x %3x %2s %3s %2x %2x %2x %8x %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s %2x "..memo,
 			p.addr.base,
 			p.act,
 			p.acta,
@@ -2366,7 +2368,8 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 			box.blockstun,          -- ガード後硬直F %2s
 			box.effect,             -- ヒット効果 %2s
 			p.pure_st,              -- スタン値 %2s
-			p.pure_st_tm            -- スタンタイマー %2s
+			p.pure_st_tm,           -- スタンタイマー %2s
+			p.prj_rank              -- 飛び道具の強さ
 		)
 	else
 		box.type = box_types[box.id + 1]
@@ -2685,6 +2688,7 @@ function rbff2.startplugin()
 			obsl_hit         = false, -- 嘘判定チェック用
 			full_hit         = false, -- 判定チェック用1
 			harmless2        = false, -- 判定チェック用2 飛び道具専用
+			prj_rank         = 0,           -- 飛び道具の強さ
 
 			key_now          = {},          -- 前フレームまでの個別キー入力フレーム
 			key_pre          = {},          -- 個別キー入力フレーム
@@ -2874,6 +2878,7 @@ function rbff2.startplugin()
 				knock_back1  = p1 and 0x100469 or 0x100569, -- のけぞり確認用1(色々)
 				knock_back2  = p1 and 0x100416 or 0x100516, -- のけぞり確認用2(裏雲隠し)
 				knock_back3  = p1 and 0x10047E or 0x10057E, -- のけぞり確認用3(フェニックススルー)
+				prj_rank     = p1 and 0x1004B5 or 0x1005B5, -- 飛び道具の強さ
 
 				no_hit       = p1 and 0x10DDF2 or 0x10DDF1, -- ヒットしないフック
 
@@ -2946,6 +2951,7 @@ function rbff2.startplugin()
 				obsl_hit       = false, -- 嘘判定チェック用
 				full_hit       = false, -- 判定チェック用1
 				harmless2      = false, -- 判定チェック用2 飛び道具専用
+				prj_rank       = 0,     -- 飛び道具の強さ
 				max_hit_dn     = 0,     -- 同一技行動での最大ヒット数 分母
 				max_hit_nm     = 0,     -- 同一技行動での最大ヒット数 分子
 				hitboxes       = {},
@@ -2986,6 +2992,7 @@ function rbff2.startplugin()
 					full_hit   = base + 0xAA, -- 判定チェック用1 0じゃないとき全段攻撃ヒット/ガード
 					harmless2  = base + 0xE7, -- 判定チェック用2 0じゃないときヒット/ガード
 					max_hit_nm = base + 0xAB, -- 同一技行動での最大ヒット数 分子
+					prj_rank   = base + 0xB5, -- 飛び道具の強さ
 				},
 			}
 		end
@@ -3373,10 +3380,7 @@ function rbff2.startplugin()
 				"maincpu.pw@107C22>0",
 				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g"))
 
-			--table.insert(bps, cpu:debug():bpset(0x012DC8, "1", "PC=12DE0;g")) -- 空中ヒット
-
-			--table.insert(bps, cpu:debug():bpset(0x012E60, "1", "PC=012E84;g"))-- 下段ヒット処理？
-			--table.insert(bps, cpu:debug():bpset(0x012E84, "1", "PC=012EA8;g"))-- 下段ヒット処理？
+			-- bp 3B5CE,1,{maincpu.pb@1007B5=0;g} -- 2P 飛び道具の強さ0に
 		end
 	end
 
@@ -4130,6 +4134,7 @@ function rbff2.startplugin()
 			p.obsl_hit       = bit32.btest(pgm:read_u8(p.addr.obsl_hit), 8+3) == false
 			p.full_hit       = pgm:read_u8(p.addr.full_hit) > 0
 			p.harmless2      = pgm:read_u8(p.addr.harmless2) == 0
+			p.prj_rank       = pgm:read_u8(p.addr.prj_rank)
 			p.max_hit_dn     = p.attack > 0 and pgm:read_u8(pgm:read_u32(fix_bp_addr(0x827B8) + p.char_4times) + p.attack) or 0
 			p.max_hit_nm     = pgm:read_u8(p.addr.max_hit_nm)
 			p.last_dmg       = p.last_dmg or 0
@@ -4299,6 +4304,7 @@ function rbff2.startplugin()
 				fb.obsl_hit       = bit32.btest(pgm:read_u8(fb.addr.obsl_hit), 8+3) == false
 				fb.full_hit       = pgm:read_u8(fb.addr.full_hit ) > 0
 				fb.harmless2      = pgm:read_u8(fb.addr.harmless2) > 0
+				fb.prj_rank       = pgm:read_u8(fb.addr.prj_rank)
 				fb.max_hit_dn     = pgm:read_u8(fix_bp_addr(0x885F2) + fb.hitstop_id)
 				fb.max_hit_nm     = pgm:read_u8(fb.addr.max_hit_nm)
 				fb.hitboxes       = {}
