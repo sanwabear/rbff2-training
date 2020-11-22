@@ -1996,7 +1996,7 @@ local box_type_base = {
 	g4  = { id = 0x14, name = "上段当身投げ",             enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 j.atemi-nage        012DBC
 	g5  = { id = 0x15, name = "裏雲隠し",                 enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 c.atemi-nage        012DBC
 	g6  = { id = 0x16, name = "下段当身打ち",             enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 g.ateminage         012DBC
-	g7  = { id = 0x17, name = "必勝逆襲脚",               enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 h.gyakushu-kyaku    012DBC
+	g7  = { id = 0x17, name = "必勝逆襲拳",               enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 h.gyakushu-kyaku    012DBC
 	g8  = { id = 0x18, name = "サドマゾ",                 enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 sadomazo            012DBC
 	g9  = { id = 0x19, name = "倍返し",                   enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xFF007F, fill = 0x40, outline = 0xFF },--rbff2 bai-gaeshi          012DBC
 	g12 = { id = 0x1A, name = "ガード?1",                 enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
@@ -2233,6 +2233,7 @@ local hit_sub_procs = {
 -- 判定枠のチェック処理種類
 local hit_box_proc = function(id, addr)
 	-- 家庭用版 012DBC~012F04のデータ取得処理をベースに判定＆属性チェック
+	-- 家庭用版 012F30~012F96のデータ取得処理をベースに判定＆属性チェック
 	local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 	local d2 = id - 0x20
 	if d2 >= 0 then
@@ -2253,13 +2254,20 @@ local hit_box_procs = {
 	low_guard  = function(id) return hit_box_proc(id, 0x9518C) end, -- 012ED8: 012EE4: 下段ガード判定処理
 	air_guard  = function(id) return hit_box_proc(id, 0x9526C) end, -- 012F04: 012F16: 空中ガード判定処理
 	unknown1   = function(id) return hit_box_proc(id, 0x94FCC) end, -- 012E38: 012E44: 不明処理、未使用？
-	sway_up_gd = function(id) return hit_box_proc(id, 0x95A4C) end, -- 012E60: 012E6C: 対ライン上段攻撃ガード判定処理
-	sway_low_gd = function(id) return hit_box_proc(id, 0x95B2C) end, -- 012E84: 012E90: 対ライン下段攻撃ガード判定処理
+	sway_up_gd = function(id) return hit_box_proc(id, 0x95A4C) end, -- 012E60: 012E6C: 対ライン上段の謎処理
+	sway_low_gd= function(id) return hit_box_proc(id, 0x95B2C) end, -- 012F3A: 012E90: 対ライン下段の謎処理
+	j_atm_nage = function(id) return hit_box_proc(id, 0x9534C) end, -- 012F30: 012F82: 上段当身投げの処理
+	urakumo    = function(id) return hit_box_proc(id, 0x9542C) end, -- 012F30: 012F82: 裏雲隠しの処理
+	g_atm_uchi = function(id) return hit_box_proc(id, 0x9550C) end, -- 012F44: 012F82: 下段当身打ちの処理
+	gyakushu   = function(id) return hit_box_proc(id, 0x955EC) end, -- 012F4E: 012F82: 必勝逆襲拳の処理
+	sadomazo   = function(id) return hit_box_proc(id, 0x956CC) end, -- 012F58: 012F82: サドマゾの処理
+	phx_tw     = function(id) return hit_box_proc(id, 0x9588C) end, -- 012F6C: 012F82: フェニックススルーの処理
+	baigaeshi  = function(id) return hit_box_proc(id, 0x957AC) end, -- 012F62: 012F82: 倍返しの処理
 }
 local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fireball, gd_hl_type)
 	local box = {id = id}
 	box.type = nil
-	if box.id + 1 > #box_types then
+	if (box.id + 1 > #box_types) then
 		local memo = ""
 		memo = memo .. " nml=" .. (hit_box_procs.normal_hit(box.id) or "-")
 		memo = memo .. " dwn=" .. (hit_box_procs.down_hit(box.id) or "-")
@@ -2270,6 +2278,13 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		memo = memo .. " ?1="  .. (hit_box_procs.unknown1(box.id) or "-")
 		memo = memo .. " sugd=".. (hit_box_procs.sway_up_gd(box.id) or "-")
 		memo = memo .. " slgd=".. (hit_box_procs.sway_low_gd(box.id) or "-")
+		memo = memo .. " jatm=".. (hit_box_procs.j_atm_nage(box.id) or"-")
+		memo = memo .. " urkm=".. (hit_box_procs.urakumo(box.id) or"-")
+		memo = memo .. " gatm=".. (hit_box_procs.g_atm_uchi(box.id) or"-")
+		memo = memo .. " gsyu=".. (hit_box_procs.gyakushu(box.id) or"-")
+		memo = memo .. " sdmz=".. (hit_box_procs.sadomazo(box.id) or"-")
+		memo = memo .. " phx=" .. (hit_box_procs.phx_tw(box.id) or"-")
+		memo = memo .. " bai=" .. (hit_box_procs.baigaeshi(box.id) or"-")
 
 		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 		local air = hit_box_procs.air_hit(box.id) ~= nil
