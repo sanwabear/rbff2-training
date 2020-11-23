@@ -3097,6 +3097,10 @@ function rbff2.startplugin()
 			pgm:write_u8(p[2].addr.color, p2col)
 		end
 		pgm:write_u8(0x10A8D5, bgm) --BGM
+
+		-- メニュー用にキャラの番号だけ差し替える
+		players[1].char = p1
+		players[2].char = p2
 	end
 	--
 
