@@ -1965,11 +1965,11 @@ local box_type_base = {
 	t3  = { id = 0x00, name = "未使用",                   enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0x8B4513, fill = 0x40, outline = 0xFF },
 
 	pa  = { id = 0x00, name = "飛び道具",                 enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x40, outline = 0xFF },
-	pfa = { id = 0x00, name = "飛び道具(嘘)",             enabled = false, type_check = type_ck_atk,  type = "attack", color = 0x00FF33, fill = 0x00, outline = 0xFF },
+	pfa = { id = 0x00, name = "飛び道具(嘘)",             enabled = true, type_check = type_ck_atk,  type = "attack", color = 0x00FF33, fill = 0x00, outline = 0xFF },
 	pda = { id = 0x00, name = "飛び道具(無効)",           enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x00, outline = 0xFF },
 
 	paa = { id = 0x00, name = "飛び道具(空中追撃可)",     enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x40, outline = 0xFF },
-	pfaa= { id = 0x00, name = "飛び道具(嘘、空中追撃可)", enabled = false, type_check = type_ck_atk,  type = "attack", color = 0x00FF33, fill = 0x00, outline = 0xFF },
+	pfaa= { id = 0x00, name = "飛び道具(嘘、空中追撃可)", enabled = true, type_check = type_ck_atk,  type = "attack", color = 0x00FF33, fill = 0x00, outline = 0xFF },
 	pdaa= { id = 0x00, name = "飛び道具(無効、空中追撃可)",enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x00, outline = 0xFF },
 
 	t   = { id = 0x00, name = "投げ",                     enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
@@ -7076,21 +7076,6 @@ function rbff2.startplugin()
 
 			-- 逆襲拳、サドマゾの初段で相手の状態変更しない（相手が投げられなくなる事象が解消する）
 			-- pgm:write_direct_u8(0x57F43, 0x00)
-
-			--[[
-			当たり判定チェック
-			013120: 0001 311C                ori.b   #$1c, D1           -- ヒット処理の飛び先1 01311C 空振り
-			013124: 0001 2FF0                ori.b   #$f0, D1           -- ヒット処理の飛び先2 012FF0 → 013038 同一ライン上の攻撃
-			013128: 0001 2FFE                ori.b   #$fe, D1           -- ヒット処理の飛び先3 012FFE → 013054 ライン関係の攻撃
-			01312C: 0001 300A                ori.b   #$a, D1            -- ヒット処理の飛び先4 01300A → 013018
-			013130: 0001 2FE2                ori.b   #$e2, D1           -- ヒット処理の飛び先5 012FE2 → 012ff0 → 013038 カイザークロー
-			local hoge = 0x01300A
-			pgm:write_direct_u32(0x013120, hoge)
-			pgm:write_direct_u32(0x013124, hoge)
-			pgm:write_direct_u32(0x013128, hoge)
-			pgm:write_direct_u32(0x01312C, hoge)
-			pgm:write_direct_u32(0x013130, hoge)
-			]]
 		end
 
 		-- 強制的に家庭用モードに変更
