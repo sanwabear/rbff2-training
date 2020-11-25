@@ -2154,12 +2154,12 @@ end
 
 -- 当たり判定のオフセット
 local bp_offset = {
-	[0x012C42] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x0  },
-	[0x012C88] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x0  },
-	[0x012D4C] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x0  }, --p1 push 
-	[0x012D92] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x0  }, --p2 push
-	[0x039F2A] = { ["rbff2k"] =   0xC , ["rbff2h"] = 0x20 }, --special throws
-	[0x017300] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x0  }, --solid shadows
+	[0x012C42] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x00 },
+	[0x012C88] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x00 },
+	[0x012D4C] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x00 }, --p1 push 
+	[0x012D92] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x00 }, --p2 push
+	[0x039F2A] = { ["rbff2k"] =   0x0C, ["rbff2h"] = 0x20 }, --special throws
+	[0x017300] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x00 }, --solid shadows
 }
 local bp_clone = { ["rbff2k"] = -0x104, ["rbff2h"] = 0x20 }
 local fix_bp_addr = function(addr)
@@ -2168,6 +2168,7 @@ local fix_bp_addr = function(addr)
 	return addr + fix2
 end
 
+-- 削りダメージ補正
 local chip_dmg_types = {
 	zero = { -- ゼロ
 		name = "zero",
@@ -2213,7 +2214,7 @@ local get_chip_dmg_type = function(box)
 	local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 	local a0 = fix_bp_addr(0x95CCC)
 	local d0 = bit32.band(0xF, pgm:read_u8(a0 + box.id))
-	local func = chip_dmg_type_tbl[d0+1]
+	local func = chip_dmg_type_tbl[d0 + 1]
 	return func
 end
 -- ヒット処理の飛び先 家庭用版 0x13120 からのデータテーブル 5種類
@@ -2286,6 +2287,7 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		memo = memo .. " phx=" .. (hit_box_procs.phx_tw(box.id) or"-")
 		memo = memo .. " bai=" .. (hit_box_procs.baigaeshi(box.id) or"-")
 		memo = memo .. " ?1="  .. (hit_box_procs.unknown1(box.id) or "-")
+		memo = memo .. " catch="  .. (p.bai_catch == true and "v" or "-")
 
 		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 
@@ -2369,7 +2371,7 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 			box.effect,             -- ヒット効果 %2s
 			p.pure_st,              -- スタン値 %2s
 			p.pure_st_tm,           -- スタンタイマー %2s
-			p.prj_rank              -- 飛び道具の強さ
+			p.prj_rank             -- 飛び道具の強さ
 		)
 	else
 		box.type = box_types[box.id + 1]
@@ -2952,6 +2954,8 @@ function rbff2.startplugin()
 				full_hit       = false, -- 判定チェック用1
 				harmless2      = false, -- 判定チェック用2 飛び道具専用
 				prj_rank       = 0,     -- 飛び道具の強さ
+				bai_chk1       = 0,     -- 倍返しチェック1
+				bai_chk2       = 0,     -- 倍返しチェック2
 				max_hit_dn     = 0,     -- 同一技行動での最大ヒット数 分母
 				max_hit_nm     = 0,     -- 同一技行動での最大ヒット数 分子
 				hitboxes       = {},
@@ -2993,6 +2997,9 @@ function rbff2.startplugin()
 					harmless2  = base + 0xE7, -- 判定チェック用2 0じゃないときヒット/ガード
 					max_hit_nm = base + 0xAB, -- 同一技行動での最大ヒット数 分子
 					prj_rank   = base + 0xB5, -- 飛び道具の強さ
+
+					bai_chk1   = base + 0x8A, -- 倍返しチェック1
+					bai_chk2   = base + 0xBE, -- 倍返しチェック2
 				},
 			}
 		end
@@ -4309,6 +4316,25 @@ function rbff2.startplugin()
 				fb.full_hit       = pgm:read_u8(fb.addr.full_hit ) > 0
 				fb.harmless2      = pgm:read_u8(fb.addr.harmless2) > 0
 				fb.prj_rank       = pgm:read_u8(fb.addr.prj_rank)
+
+				--[[
+				倍返しチェック
+				05C8CE: 0C2B 0002 008A           cmpi.b  #$2, ($8a,A3)        -- 10078A と 0x2 を比較     飛翔拳は03
+				05C8D4: 6D1A                     blt     $5c8f0               -- 小さかったら 5c8f0 へ
+				05C8D6: 41F9 0008 E940           lea     $8e940.l, A0         -- A0 = 8e940
+				05C8DC: 0C6C 000B 0010           cmpi.w  #$b, ($10,A4)        -- 100410 と 0xB を比較 山崎かどうかチェック
+				05C8E2: 6618                     bne     $5c8fc               -- 違ったら 5c8fc へ
+				05C8E4: 302B 00BE                move.w  ($be,A3), D0         -- D0 = 1007BE              飛翔拳は09
+				05C8E8: D040                     add.w   D0, D0               -- D0 = D0 + D0
+				05C8EA: 4A30 0000                tst.b   (A0,D0.w)            -- 8e940 + D0 の値チェック  データテーブルチェック 8e940 
+																				飛翔拳は01
+				05C8EE: 6754                     beq     $5c944               -- 0だったら 5c944 へ
+				]]
+				fb.bai_chk1       = pgm:read_u8(fb.addr.bai_chk1)
+				fb.bai_chk2       = pgm:read_u16(fb.addr.bai_chk2)
+				fb.bai_chk2       = pgm:read_u8(0x8E940 + bit32.band(0xFFFF, fb.bai_chk2 + fb.bai_chk2))
+				fb.bai_catch = 0x2 >= fb.bai_chk1 and fb.bai_chk2 == 0x01
+
 				fb.max_hit_dn     = pgm:read_u8(fix_bp_addr(0x885F2) + fb.hitstop_id)
 				fb.max_hit_nm     = pgm:read_u8(fb.addr.max_hit_nm)
 				fb.hitboxes       = {}
