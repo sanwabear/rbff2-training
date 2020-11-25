@@ -2344,34 +2344,34 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		-- ログ用
 		box.log_txt = string.format(
 			"hit %6x %3x %3x %2s %3s %2x %2x %2x %8x %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s %2x "..memo,
-			p.addr.base,
-			p.act,
-			p.acta,
-			p.act_count,
-			p.act_frame,
-			p.act_contact,
-			p.attack,
-			p.hitstop_id,
-			box.gd_hl_type,
-			box.id,
-			p.hit.harmless and "hm" or "",
-			p.hit.fake_hit and "fake" or "",
-			p.hit.obsl_hit and "obsl" or "",
-			p.hit.full_hit and "full" or "",
-			p.hit.harmless2 and "h2" or "",
-			p.hit.max_hit_nm,       -- p.act_frame中の行動最大ヒット 分子
-			p.hit.max_hit_dn,       -- p.act_frame中の行動最大ヒット 分母
-			p.pure_dmg,             -- 補正前攻撃力 %3s
+			p.addr.base,                        -- 1P:100400 2P:100500 1P弾:100600 2P弾:100700 1P弾:100800 2P弾:100900 1P弾:100A00 2P弾:100B00
+			p.act,                              --
+			p.acta,                             --
+			p.act_count,                        --
+			p.act_frame,                        --
+			p.act_contact,                      --
+			p.attack,                           --
+			p.hitstop_id,                       -- ガード硬直のID
+			box.gd_hl_type,                     -- 上中下とか防御属性
+			box.id,                             -- 判定のID
+			p.hit.harmless  and "hm"   or "",   -- 無害化
+			p.hit.fake_hit  and "fake" or "",   -- 嘘判定
+			p.hit.obsl_hit  and "obsl" or "",   -- 嘘判定
+			p.hit.full_hit  and "full" or "",   -- 最大ヒット
+			p.hit.harmless2 and "h2"   or "",   -- 無害化
+			p.hit.max_hit_nm,                   -- p.act_frame中の行動最大ヒット 分子
+			p.hit.max_hit_dn,                   -- p.act_frame中の行動最大ヒット 分母
+			p.pure_dmg,                         -- 補正前攻撃力 %3s
 			box.chip_dmg_type.calc(p.pure_dmg), -- 補正前削りダメージ %s
-			box.chip_dmg_type.name, -- 削り補正値 %4s
-			p.hitstop,              -- ヒットストップ %2s
-			p.hitstop_gd,           -- ガード時ヒットストップ %2s
-			box.hitstun,            -- ヒット後硬直F %2s
-			box.blockstun,          -- ガード後硬直F %2s
-			box.effect,             -- ヒット効果 %2s
-			p.pure_st,              -- スタン値 %2s
-			p.pure_st_tm,           -- スタンタイマー %2s
-			p.prj_rank             -- 飛び道具の強さ
+			box.chip_dmg_type.name,             -- 削り補正値 %4s
+			p.hitstop,                          -- ヒットストップ %2s
+			p.hitstop_gd,                       -- ガード時ヒットストップ %2s
+			box.hitstun,                        -- ヒット後硬直F %2s
+			box.blockstun,                      -- ガード後硬直F %2s
+			box.effect,                         -- ヒット効果 %2s
+			p.pure_st,                          -- スタン値 %2s
+			p.pure_st_tm,                       -- スタンタイマー %2s
+			p.prj_rank                          -- 飛び道具の強さ
 		)
 	else
 		box.type = box_types[box.id + 1]
