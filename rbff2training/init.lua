@@ -3738,6 +3738,68 @@ function rbff2.startplugin()
 	end
 	--
 
+	-- TODO データのログ形式を決めて出力できるようにする
+	-- OpenTracing OpenCensus の形みたいにしてグラフ化して出せるのが理想
+	-- 発生、持続のほか、メタデータで各種データを残すとか
+	local log_data = {
+		id,             -- ID
+		parent_id,      -- 親ID
+		frame = {
+			startup , -- 発生
+			total , -- 全体硬直
+			adv_on_hit , -- ヒット時有利不利
+			adv_on_block , --- ガード時有利不利
+			active , -- 持続
+			hit_stop, -- ヒットストップ
+			block_stop, -- ガードストップ
+			hit_stun, -- ヒット後硬直
+			block_stun, -- ガード後硬直
+			strike_invincible, -- 打撃無敵
+			normal_throw_invincible, -- 通常投げ無敵
+			jumping, -- 空中移動まで
+			throw_invincible_threshold, -- 投げ無敵Fしきい値
+			throw_invincible_resettable, -- 投げ無敵Fリセット
+		},
+		attack = {
+			damage , -- 攻撃力
+			chip_ratio, -- 削り補正
+			stun, -- 気絶値
+			stun_timer , -- 気絶タイマー
+			meter_gain , -- パワーゲージ増加量
+		},
+		effect = {
+			name , -- ヒット効果
+			no , -- ヒット効果＃
+			technical_rise_enable , -- テクニカルライズ可
+			ground_sway_enable , -- グランドスウェー可
+			ground_sway_enable , -- 避け攻撃相性
+			projectile_level , -- 飛び道具レベル
+		},
+		main_line = {
+			gound_hit, -- 地上
+			air_hit, -- 空中
+			juggle_hit, -- 追撃
+			gound_block, -- 地上ガード
+			air_block, -- 空中ガード
+		},
+		sway_line = {
+			gound_hit, -- 地上
+			air_hit, -- 空中
+			juggle_hit, -- 追撃
+			gound_block, -- 地上ガード
+			air_block, -- 空中ガード
+		},
+		counter = {
+			jodan_ateminage, -- 上段当身投げ
+			urakumo_kaushi,-- 裏雲隠し
+			gedan_ateminage,-- 下段当身打ち
+			assured_victory_retaliation, -- 必勝！逆襲拳
+			sadomazo, -- サドマゾ
+			phoenix_throw,-- フェニックススルー
+			baigaeshi, -- 倍返し
+		},
+	}
+
 	-- 1Pと2Pともにフレーム数が多すぎる場合は加算をやめる
 	-- グラフの描画最大範囲（画面の横幅）までにとどめる
 	local fix_max_framecount = function()
@@ -4326,14 +4388,13 @@ function rbff2.startplugin()
 				05C8E2: 6618                     bne     $5c8fc               -- 違ったら 5c8fc へ
 				05C8E4: 302B 00BE                move.w  ($be,A3), D0         -- D0 = 1007BE              飛翔拳は09
 				05C8E8: D040                     add.w   D0, D0               -- D0 = D0 + D0
-				05C8EA: 4A30 0000                tst.b   (A0,D0.w)            -- 8e940 + D0 の値チェック  データテーブルチェック 8e940 
-																				飛翔拳は01
+				05C8EA: 4A30 0000                tst.b   (A0,D0.w)            -- 8e940 + D0 の値チェック  データテーブルチェック 8e940 飛翔拳は01
 				05C8EE: 6754                     beq     $5c944               -- 0だったら 5c944 へ
 				]]
 				fb.bai_chk1       = pgm:read_u8(fb.addr.bai_chk1)
 				fb.bai_chk2       = pgm:read_u16(fb.addr.bai_chk2)
 				fb.bai_chk2       = pgm:read_u8(0x8E940 + bit32.band(0xFFFF, fb.bai_chk2 + fb.bai_chk2))
-				fb.bai_catch = 0x2 >= fb.bai_chk1 and fb.bai_chk2 == 0x01
+				fb.bai_catch      = 0x2 >= fb.bai_chk1 and fb.bai_chk2 == 0x01
 
 				fb.max_hit_dn     = pgm:read_u8(fix_bp_addr(0x885F2) + fb.hitstop_id)
 				fb.max_hit_nm     = pgm:read_u8(fb.addr.max_hit_nm)
