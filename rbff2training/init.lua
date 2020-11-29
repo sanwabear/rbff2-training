@@ -1002,7 +1002,7 @@ local char_acts_base = {
 		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.attack, ids = { 0x1F, }, },
+		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
 		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
 		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
 		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
