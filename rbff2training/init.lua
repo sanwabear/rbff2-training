@@ -108,12 +108,12 @@ local global = {
 
 	input_accepted  = 0,
 
-	next_block_grace = 0, -- 1ガードでの持続フレーム数
+	next_block_grace = 0,     -- 1ガードでの持続フレーム数
 	infinity_life2   = true,
-	pow_mode         = 1,  -- POWモード　1:自動回復 2:固定 3:通常動作
+	pow_mode         = 1,     -- POWモード　1:自動回復 2:固定 3:通常動作
 	repeat_interval  = 0,
 	await_neutral    = false,
-	replay_fix_pos   = false,
+	replay_fix_pos   = 1,     -- 開始間合い固定 1:OFF 2:1Pと2P 3:1P 4:2P
 	mame_debug_wnd   = false, -- MAMEデバッグウィンドウ表示のときtrue
 	damaged_move     = 1,
 }
@@ -3613,24 +3613,24 @@ function rbff2.startplugin()
 			global.input_accepted = ec
 
 			local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+
+			-- メインラインでニュートラル状態にする
 			for i, p in ipairs(players) do
-				pgm:write_u8(p.addr.sway_status, 0x00) --fixpos.fixsway[i])
-				pgm:write_u8(p.addr.base + 0x00, 0x00)
-				pgm:write_u8(p.addr.base + 0x01, 0x02)
-				pgm:write_u8(p.addr.base + 0x02, 0x61)
-				pgm:write_u8(p.addr.base + 0x03, 0xA0)
+				pgm:write_u8( p.addr.sway_status, 0x00) --fixpos.fixsway[i])
+				--pgm:write_u32(p.addr.base, 0x000261A0) -- 巣立ち処理
+				pgm:write_u32(p.addr.base, 0x00058D5A) -- やられからの復帰処理
 
-				pgm:write_u8(p.addr.base + 0xC0, 0x80)
-				pgm:write_u8(p.addr.base + 0xC2, 0x00)
-				pgm:write_u8(p.addr.base + 0xFC, 0x00)
-				pgm:write_u8(p.addr.base + 0xFD, 0x00)
+				pgm:write_u8( p.addr.base + 0xC0, 0x80)
+				pgm:write_u8( p.addr.base + 0xC2, 0x00)
+				pgm:write_u8( p.addr.base + 0xFC, 0x00)
+				pgm:write_u8( p.addr.base + 0xFD, 0x00)
 
-				pgm:write_u8(p.addr.base + 0x61, 0x01)
-				pgm:write_u8(p.addr.base + 0x63, 0x02)
-				pgm:write_u8(p.addr.base + 0x65, 0x02)
+				pgm:write_u8( p.addr.base + 0x61, 0x01)
+				pgm:write_u8( p.addr.base + 0x63, 0x02)
+				pgm:write_u8( p.addr.base + 0x65, 0x02)
 
-				pgm:write_i16(p.addr.pos_y, 0x00)
-				pgm:write_i16(p.addr.pos_z, 24)
+				pgm:write_i16(p.addr.pos_y      , 0x00)
+				pgm:write_i16(p.addr.pos_z      , 0x18)
 
 				pgm:write_u32(p.addr.base + 0x28, 0x00)
 				pgm:write_u32(p.addr.base + 0x48, 0x00)
@@ -3645,31 +3645,31 @@ function rbff2.startplugin()
 
 				pgm:write_u16(p.addr.base + 0x60, 0x01)
 				pgm:write_u16(p.addr.base + 0x64, 0xFFFF)
-				pgm:write_u8(p.addr.base + 0x66, 0x00)
+				pgm:write_u8( p.addr.base + 0x66, 0x00)
 				pgm:write_u16(p.addr.base + 0x6E, 0x00)
-				pgm:write_u8(p.addr.base + 0x6A, 0x00)
-				pgm:write_u8(p.addr.base + 0x7E, 0x00)
-				pgm:write_u8(p.addr.base + 0xB0, 0x00)
-				pgm:write_u8(p.addr.base + 0xB1, 0x00)
+				pgm:write_u8( p.addr.base + 0x6A, 0x00)
+				pgm:write_u8( p.addr.base + 0x7E, 0x00)
+				pgm:write_u8( p.addr.base + 0xB0, 0x00)
+				pgm:write_u8( p.addr.base + 0xB1, 0x00)
 			end
 
 			local fixpos = recording.fixpos
 			if fixpos then
-				for i, p in ipairs(players) do
-					-- TODO 1Pのみ、2Pのみ、両方とものオプションを設ける
-					if global.replay_fix_pos then
-						if fixpos.fixpos then
+				-- 開始間合い固定 1:OFF 2:1Pと2P 3:1P 4:2P
+				if fixpos.fixpos then
+					for i, p in ipairs(players) do
+						if global.replay_fix_pos == 2 or (global.replay_fix_pos == 3 and i == 3) or (global.replay_fix_pos == 4 and i == 4) then
 							pgm:write_i16(p.addr.pos, fixpos.fixpos[i])
 						end
-						if fixpos.fixscr then
-							pgm:write_u16(stage_base_addr + offset_pos_x, fixpos.fixscr.x)
-							pgm:write_u16(stage_base_addr + offset_pos_x + 0x30, fixpos.fixscr.x)
-							pgm:write_u16(stage_base_addr + offset_pos_x + 0x2C, fixpos.fixscr.x)
-							pgm:write_u16(stage_base_addr + offset_pos_x + 0x34, fixpos.fixscr.x)
-							pgm:write_u16(stage_base_addr + offset_pos_y, fixpos.fixscr.y)
-							pgm:write_u16(stage_base_addr + offset_pos_z, fixpos.fixscr.z)
-						end
 					end
+				end
+				if fixpos.fixscr then
+					pgm:write_u16(stage_base_addr + offset_pos_x, fixpos.fixscr.x)
+					pgm:write_u16(stage_base_addr + offset_pos_x + 0x30, fixpos.fixscr.x)
+					pgm:write_u16(stage_base_addr + offset_pos_x + 0x2C, fixpos.fixscr.x)
+					pgm:write_u16(stage_base_addr + offset_pos_x + 0x34, fixpos.fixscr.x)
+					pgm:write_u16(stage_base_addr + offset_pos_y, fixpos.fixscr.y)
+					pgm:write_u16(stage_base_addr + offset_pos_z, fixpos.fixscr.z)
 				end
 			end
 			return
@@ -6058,7 +6058,7 @@ function rbff2.startplugin()
 			play_menu.pos.col[ 8] = recording.do_repeat and 2 or 1   -- 繰り返し           8
 			play_menu.pos.col[ 9] = recording.repeat_interval + 1    -- 繰り返し間隔       9
 			play_menu.pos.col[10] = global.await_neutral and 2 or 1  -- 繰り返し開始条件  10
-			play_menu.pos.col[11] = global.replay_fix_pos and 2 or 1 -- 開始間合い固定    11
+			play_menu.pos.col[11] = global.replay_fix_pos            -- 開始間合い固定    11
 			if not cancel and row == 1 then
 				menu_cur = play_menu
 				return
@@ -6214,7 +6214,7 @@ function rbff2.startplugin()
 		recording.do_repeat       = col[ 8] == 2 -- 繰り返し           8
 		recording.repeat_interval = col[ 9] - 1  -- 繰り返し間隔       9
 		global.await_neutral      = col[10] == 2 -- 繰り返し開始条件  10
-		global.replay_fix_pos     = col[11] == 2 -- 開始間合い固定    11
+		global.replay_fix_pos     = col[11]      -- 開始間合い固定    11
 		global.repeat_interval    = recording.repeat_interval
 	end
 	local exit_menu_to_play = function()
@@ -6880,7 +6880,7 @@ function rbff2.startplugin()
 			{ "繰り返し"              , { "OFF", "ON", }, },
 			{ "繰り返し間隔"          , play_interval, },
 			{ "繰り返し開始条件"      , { "なし", "両キャラがニュートラル", }, },
-			{ "開始間合い固定"        , { "OFF", "ON", }, },
+			{ "開始間合い固定"        , { "OFF", "1Pと2P", "1P", "2P", }, },
 			{ "開始間合い"            , { "Aでレコード開始", }, },
 		},
 		pos = { -- メニュー内の選択位置
