@@ -3493,12 +3493,13 @@ function rbff2.startplugin()
 		local pos = { get_flip_x(players[1]), get_flip_x(players[2]) }
 		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 		local fixpos = { pgm:read_i16(players[1].addr.pos), pgm:read_i16(players[2].addr.pos) }
+		local fixsway = { pgm:read_u8(players[1].addr.sway_status), pgm:read_u8(players[2].addr.sway_status) }
 		local fixscr = {
 			x = pgm:read_u16(stage_base_addr + offset_pos_x),
 			y = pgm:read_u16(stage_base_addr + offset_pos_y),
 			z = pgm:read_u16(stage_base_addr + offset_pos_z),
 		}
-		recording.fixpos = { pos = pos, fixpos = fixpos, fixscr = fixscr }
+		recording.fixpos = { pos = pos, fixpos = fixpos, fixscr = fixscr, fixsway = fixsway, fixstate = fixstate, }
 	end
 	-- 初回入力まち
 	-- 未入力状態を待ちける→入力開始まで待ち受ける
@@ -3610,21 +3611,64 @@ function rbff2.startplugin()
 			recording.play_count = 1
 			global.rec_main = rec_play
 			global.input_accepted = ec
-			if global.replay_fix_pos then
-				local fixpos = recording.fixpos
-				if fixpos then
-					local pgm = manager:machine().devices[":maincpu"].spaces["program"]
-					if fixpos.fixpos then
-						pgm:write_i16(players[1].addr.pos, fixpos.fixpos[1])
-						pgm:write_i16(players[2].addr.pos, fixpos.fixpos[2])
-					end
-					if fixpos.fixscr then
-						pgm:write_u16(stage_base_addr + offset_pos_x, fixpos.fixscr.x)
-						pgm:write_u16(stage_base_addr + offset_pos_x + 0x30, fixpos.fixscr.x)
-						pgm:write_u16(stage_base_addr + offset_pos_x + 0x2C, fixpos.fixscr.x)
-						pgm:write_u16(stage_base_addr + offset_pos_x + 0x34, fixpos.fixscr.x)
-						pgm:write_u16(stage_base_addr + offset_pos_y, fixpos.fixscr.y)
-						pgm:write_u16(stage_base_addr + offset_pos_z, fixpos.fixscr.z)
+
+			local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+			for i, p in ipairs(players) do
+				pgm:write_u8(p.addr.sway_status, 0x00) --fixpos.fixsway[i])
+				pgm:write_u8(p.addr.base + 0x00, 0x00)
+				pgm:write_u8(p.addr.base + 0x01, 0x02)
+				pgm:write_u8(p.addr.base + 0x02, 0x61)
+				pgm:write_u8(p.addr.base + 0x03, 0xA0)
+
+				pgm:write_u8(p.addr.base + 0xC0, 0x80)
+				pgm:write_u8(p.addr.base + 0xC2, 0x00)
+				pgm:write_u8(p.addr.base + 0xFC, 0x00)
+				pgm:write_u8(p.addr.base + 0xFD, 0x00)
+
+				pgm:write_u8(p.addr.base + 0x61, 0x01)
+				pgm:write_u8(p.addr.base + 0x63, 0x02)
+				pgm:write_u8(p.addr.base + 0x65, 0x02)
+
+				pgm:write_i16(p.addr.pos_y, 0x00)
+				pgm:write_i16(p.addr.pos_z, 24)
+
+				pgm:write_u32(p.addr.base + 0x28, 0x00)
+				pgm:write_u32(p.addr.base + 0x48, 0x00)
+				pgm:write_u32(p.addr.base + 0xDA, 0x00)
+				pgm:write_u32(p.addr.base + 0xDE, 0x00)
+				pgm:write_u32(p.addr.base + 0x34, 0x00)
+				pgm:write_u32(p.addr.base + 0x38, 0x00)
+				pgm:write_u32(p.addr.base + 0x3C, 0x00)
+				pgm:write_u32(p.addr.base + 0x4C, 0x00)
+				pgm:write_u32(p.addr.base + 0x50, 0x00)
+				pgm:write_u32(p.addr.base + 0x44, 0x00)
+
+				pgm:write_u16(p.addr.base + 0x60, 0x01)
+				pgm:write_u16(p.addr.base + 0x64, 0xFFFF)
+				pgm:write_u8(p.addr.base + 0x66, 0x00)
+				pgm:write_u16(p.addr.base + 0x6E, 0x00)
+				pgm:write_u8(p.addr.base + 0x6A, 0x00)
+				pgm:write_u8(p.addr.base + 0x7E, 0x00)
+				pgm:write_u8(p.addr.base + 0xB0, 0x00)
+				pgm:write_u8(p.addr.base + 0xB1, 0x00)
+			end
+
+			local fixpos = recording.fixpos
+			if fixpos then
+				for i, p in ipairs(players) do
+					-- TODO 1Pのみ、2Pのみ、両方とものオプションを設ける
+					if global.replay_fix_pos then
+						if fixpos.fixpos then
+							pgm:write_i16(p.addr.pos, fixpos.fixpos[i])
+						end
+						if fixpos.fixscr then
+							pgm:write_u16(stage_base_addr + offset_pos_x, fixpos.fixscr.x)
+							pgm:write_u16(stage_base_addr + offset_pos_x + 0x30, fixpos.fixscr.x)
+							pgm:write_u16(stage_base_addr + offset_pos_x + 0x2C, fixpos.fixscr.x)
+							pgm:write_u16(stage_base_addr + offset_pos_x + 0x34, fixpos.fixscr.x)
+							pgm:write_u16(stage_base_addr + offset_pos_y, fixpos.fixscr.y)
+							pgm:write_u16(stage_base_addr + offset_pos_z, fixpos.fixscr.z)
+						end
 					end
 				end
 			end
