@@ -2266,31 +2266,13 @@ local hit_box_procs = {
 	baigaeshi  = function(id) return hit_box_proc(id, 0x957AC) end, -- 012F62: 012F82: 倍返しの処理
 	unknown1   = function(id) return hit_box_proc(id, 0x94FCC) end, -- 012E38: 012E44: 不明処理、未使用？
 }
-local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fireball, gd_hl_type)
+local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fireball)
 	local box = {id = id}
 	box.type = nil
+	local atk = false
+	local pgm = manager:machine().devices[":maincpu"].spaces["program"]
 	if (box.id + 1 > #box_types) then
-		local memo = ""
-		memo = memo .. " nml=" .. (hit_box_procs.normal_hit(box.id) or "-")
-		memo = memo .. " dwn=" .. (hit_box_procs.down_hit(box.id) or "-")
-		memo = memo .. " air=" .. (hit_box_procs.air_hit(box.id) or "-")
-		memo = memo .. " ugd=" .. (hit_box_procs.up_guard(box.id) or "-")
-		memo = memo .. " lgd=" .. (hit_box_procs.low_guard(box.id) or "-")
-		memo = memo .. " agd=" .. (hit_box_procs.air_guard(box.id) or "-")
-		memo = memo .. " sugd=".. (hit_box_procs.sway_up_gd(box.id) or "-")
-		memo = memo .. " slgd=".. (hit_box_procs.sway_low_gd(box.id) or "-")
-		memo = memo .. " jatm=".. (hit_box_procs.j_atm_nage(box.id) or"-")
-		memo = memo .. " urkm=".. (hit_box_procs.urakumo(box.id) or"-")
-		memo = memo .. " gatm=".. (hit_box_procs.g_atm_uchi(box.id) or"-")
-		memo = memo .. " gsyu=".. (hit_box_procs.gyakushu(box.id) or"-")
-		memo = memo .. " sdmz=".. (hit_box_procs.sadomazo(box.id) or"-")
-		memo = memo .. " phx=" .. (hit_box_procs.phx_tw(box.id) or"-")
-		memo = memo .. " bai=" .. (hit_box_procs.baigaeshi(box.id) or"-")
-		memo = memo .. " ?1="  .. (hit_box_procs.unknown1(box.id) or "-")
-		memo = memo .. " catch="  .. (p.bai_catch == true and "v" or "-")
-
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
-
+		atk = true
 		local air = hit_box_procs.air_hit(box.id) ~= nil
 		if is_fireball and air then
 			if p.hit.fake_hit then
@@ -2336,43 +2318,10 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		box.effect = pgm:read_u8(box.id - 0x20 + fix_bp_addr(0x95BEC))
 		-- 削りダメージ計算種別取得 05B2A4 からの処理
 		box.chip_dmg_type = get_chip_dmg_type(box)
-		-- のけぞり時間取得 05AF7C(家庭用版)からの処    理
-		d2 = bit32.band(0xF, pgm:read_u8(box.id + fix_bp_addr(0x95CCC)))
+		-- のけぞり時間取得 05AF7C(家庭用版)からの処理
+		local d2 = bit32.band(0xF, pgm:read_u8(box.id + fix_bp_addr(0x95CCC)))
 		box.hitstun   = pgm:read_u8(0x16 + 0x2 + fix_bp_addr(0x5AF7C) + d2) + 1 + 3 -- ヒット硬直
 		box.blockstun = pgm:read_u8(0x1A + 0x2 + fix_bp_addr(0x5AF88) + d2) + 1 + 2 -- ガード硬直
-		box.gd_hl_type= gd_hl_type or 0 -- 上中下とか防御属性
-		-- ログ用
-		box.log_txt = string.format(
-			"hit %6x %3x %3x %2s %3s %2x %2x %2x %8x %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s %2x "..memo,
-			p.addr.base,                        -- 1P:100400 2P:100500 1P弾:100600 2P弾:100700 1P弾:100800 2P弾:100900 1P弾:100A00 2P弾:100B00
-			p.act,                              --
-			p.acta,                             --
-			p.act_count,                        --
-			p.act_frame,                        --
-			p.act_contact,                      --
-			p.attack,                           --
-			p.hitstop_id,                       -- ガード硬直のID
-			box.gd_hl_type,                     -- 上中下とか防御属性
-			box.id,                             -- 判定のID
-			p.hit.harmless  and "hm"   or "",   -- 無害化
-			p.hit.fake_hit  and "fake" or "",   -- 嘘判定
-			p.hit.obsl_hit  and "obsl" or "",   -- 嘘判定
-			p.hit.full_hit  and "full" or "",   -- 最大ヒット
-			p.hit.harmless2 and "h2"   or "",   -- 無害化
-			p.hit.max_hit_nm,                   -- p.act_frame中の行動最大ヒット 分子
-			p.hit.max_hit_dn,                   -- p.act_frame中の行動最大ヒット 分母
-			p.pure_dmg,                         -- 補正前攻撃力 %3s
-			box.chip_dmg_type.calc(p.pure_dmg), -- 補正前削りダメージ %s
-			box.chip_dmg_type.name,             -- 削り補正値 %4s
-			p.hitstop,                          -- ヒットストップ %2s
-			p.hitstop_gd,                       -- ガード時ヒットストップ %2s
-			box.hitstun,                        -- ヒット後硬直F %2s
-			box.blockstun,                      -- ガード後硬直F %2s
-			box.effect,                         -- ヒット効果 %2s
-			p.pure_st,                          -- スタン値 %2s
-			p.pure_st_tm,                       -- スタンタイマー %2s
-			p.prj_rank                          -- 飛び道具の強さ
-		)
 	else
 		box.type = box_types[box.id + 1]
 		if p.in_sway_line and sway_box_types[box.id + 1] then
@@ -2422,6 +2371,81 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 
 	-- 座標補正後にキー情報を作成する
 	box.key = string.format("%x %x id:%x x1:%x x2:%x y1:%x y2:%x", global.frame_number, p.addr.base, box.id, box.top, box.bottom, box.left, box.right)
+
+	if atk then
+		local memo = ""
+		memo = memo .. " nml=" .. (hit_box_procs.normal_hit(box.id) or "-")
+		memo = memo .. " dwn=" .. (hit_box_procs.down_hit(box.id) or "-")
+		memo = memo .. " air=" .. (hit_box_procs.air_hit(box.id) or "-")
+		memo = memo .. " ugd=" .. (hit_box_procs.up_guard(box.id) or "-")
+		memo = memo .. " lgd=" .. (hit_box_procs.low_guard(box.id) or "-")
+		memo = memo .. " agd=" .. (hit_box_procs.air_guard(box.id) or "-")
+		memo = memo .. " sugd=".. (hit_box_procs.sway_up_gd(box.id) or "-")
+		memo = memo .. " slgd=".. (hit_box_procs.sway_low_gd(box.id) or "-")
+		memo = memo .. " jatm=".. (hit_box_procs.j_atm_nage(box.id) or"-")
+		memo = memo .. " urkm=".. (hit_box_procs.urakumo(box.id) or"-")
+		memo = memo .. " gatm=".. (hit_box_procs.g_atm_uchi(box.id) or"-")
+		memo = memo .. " gsyu=".. (hit_box_procs.gyakushu(box.id) or"-")
+		memo = memo .. " sdmz=".. (hit_box_procs.sadomazo(box.id) or"-")
+		memo = memo .. " phx=" .. (hit_box_procs.phx_tw(box.id) or"-")
+		memo = memo .. " bai=" .. (hit_box_procs.baigaeshi(box.id) or"-")
+		memo = memo .. " ?1="  .. (hit_box_procs.unknown1(box.id) or "-")
+		memo = memo .. " catch="  .. (p.bai_catch == true and "v" or "-")
+
+		local pos          = is_fireball and math.floor(p.parent.pos   - screen_left) or math.floor(p.pos   - screen_left)
+		local pos_y        = is_fireball and math.floor(p.parent.pos_y - screen_top ) or math.floor(p.pos_y - screen_top )
+		local top_reach    = 200 - math.min(box.top, box.bottom) - pos_y
+		local bottom_reach = 200 - math.max(box.top, box.bottom) - pos_y
+		local front_reach, back_reach
+		if p.hit.flip_x == 1 then
+			front_reach = math.max(box.left, box.right) - pos
+			back_reach  = math.min(box.left, box.right) - pos
+		else
+			front_reach = pos - math.min(box.left, box.right)
+			back_reach  = pos - math.max(box.left, box.right)
+		end
+
+		-- ログ用
+		box.log_txt = string.format(
+			"hit %6x %3x %3x %2s %3s %2x %2x %2x %2s %3s %3s %3s %3s %3s %3s %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s %2x "..memo,
+			p.addr.base,                        -- 1P:100400 2P:100500 1P弾:100600 2P弾:100700 1P弾:100800 2P弾:100900 1P弾:100A00 2P弾:100B00
+			p.act,                              --
+			p.acta,                             --
+			p.act_count,                        --
+			p.act_frame,                        --
+			p.act_contact,                      --
+			p.attack,                           --
+			p.hitstop_id,                       -- ガード硬直のID
+
+			p.hit.flip_x,                       -- 1:右向き -1:左向き
+			pos,                                -- X位置
+			pos_y,                              -- Y位置
+			top_reach,                          -- 上のリーチ
+			bottom_reach,                       -- 下のリーチ
+			front_reach,                        -- 前のリーチ
+			back_reach,                         -- 後のリーチ
+
+			box.id,                             -- 判定のID
+			p.hit.harmless  and "hm"   or "",   -- 無害化
+			p.hit.fake_hit  and "fake" or "",   -- 嘘判定
+			p.hit.obsl_hit  and "obsl" or "",   -- 嘘判定
+			p.hit.full_hit  and "full" or "",   -- 最大ヒット
+			p.hit.harmless2 and "h2"   or "",   -- 無害化
+			p.hit.max_hit_nm,                   -- p.act_frame中の行動最大ヒット 分子
+			p.hit.max_hit_dn,                   -- p.act_frame中の行動最大ヒット 分母
+			p.pure_dmg,                         -- 補正前攻撃力 %3s
+			box.chip_dmg_type.calc(p.pure_dmg), -- 補正前削りダメージ %s
+			box.chip_dmg_type.name,             -- 削り補正値 %4s
+			p.hitstop,                          -- ヒットストップ %2s
+			p.hitstop_gd,                       -- ガード時ヒットストップ %2s
+			box.hitstun,                        -- ヒット後硬直F %2s
+			box.blockstun,                      -- ガード後硬直F %2s
+			box.effect,                         -- ヒット効果 %2s
+			p.pure_st,                          -- スタン値 %2s
+			p.pure_st_tm,                       -- スタンタイマー %2s
+			p.prj_rank                          -- 飛び道具の強さ
+		)
+	end
 	if box.log_txt then
 		box.log_txt = box.log_txt .. " " .. box.key
 	end
@@ -2528,7 +2552,7 @@ local update_object = function(p)
 	-- 判定データ排他用のテーブル
 	local uniq_hitboxes = {}
 	for _, box in ipairs(p.buffer) do
-		local hitbox = new_hitbox(p, box.id, box.top, box.bottom, box.left, box.right, box.attack_only, box.is_fireball, box.gd_hl_type)
+		local hitbox = new_hitbox(p, box.id, box.top, box.bottom, box.left, box.right, box.attack_only, box.is_fireball)
 		if hitbox then
 			if not uniq_hitboxes[hitbox.key] then
 				uniq_hitboxes[hitbox.key] = true
@@ -2934,6 +2958,7 @@ function rbff2.startplugin()
 	for i, p in ipairs(players) do
 		for base, _ in pairs(p.fireball_bases) do
 			p.fireball[base] = {
+				parent         = p,
 				is_fireball    = true,
 				act            = 0,
 				acta           = 0,
@@ -4603,7 +4628,6 @@ function rbff2.startplugin()
 				base        = pgm:read_u32(addr+0x6),
 				attack_only = (pgm:read_u8(addr+0xA) == 1),
 				attack_only_val = pgm:read_u8(addr+0xA),
-				gd_hl_type  = pgm:read_u32(addr+0xB),
 			}
 			if box.on ~= 0xFF and temp_hits[box.base] then
 				box.is_fireball = temp_hits[box.base].is_fireball == true
