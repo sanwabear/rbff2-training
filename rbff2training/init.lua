@@ -114,6 +114,7 @@ local global = {
 	repeat_interval  = 0,
 	await_neutral    = false,
 	replay_fix_pos   = 1,     -- 開始間合い固定 1:OFF 2:1Pと2P 3:1P 4:2P
+	replay_reset     = 2,     -- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
 	mame_debug_wnd   = false, -- MAMEデバッグウィンドウ表示のときtrue
 	damaged_move     = 1,
 }
@@ -2372,6 +2373,32 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 	-- 座標補正後にキー情報を作成する
 	box.key = string.format("%x %x id:%x x1:%x x2:%x y1:%x y2:%x", global.frame_number, p.addr.base, box.id, box.top, box.bottom, box.left, box.right)
 
+	local pos          = is_fireball and math.floor(p.parent.pos   - screen_left) or math.floor(p.pos   - screen_left)
+	--local pos_y        = is_fireball and math.floor(p.parent.pos_y - screen_top ) or math.floor(p.pos_y - screen_top )
+	local pos_y        = is_fireball and math.floor(p.parent.pos_y) or math.floor(p.pos_y)
+	local top_reach    = 200 - math.min(box.top, box.bottom) - pos_y
+	local bottom_reach = 200 - math.max(box.top, box.bottom) - pos_y
+	local front_reach, back_reach
+	if p.hit.flip_x == 1 then
+		front_reach = math.max(box.left, box.right) - pos
+		back_reach  = math.min(box.left, box.right) - pos
+	else
+		front_reach = pos - math.min(box.left, box.right)
+		back_reach  = pos - math.max(box.left, box.right)
+	end
+	local reach_memo = string.format("%3s %2s %3s %3s %3s %3s %3s %3s %3s %3s",
+		screen_top,
+		p.hit.flip_x,                       -- 1:右向き -1:左向き
+		pos,                                -- X位置
+		pos_y,                              -- Y位置
+		front_reach,                        -- キャラ本体座標からの前のリーチ
+		back_reach,                         -- キャラ本体座標からの後のリーチ
+		top_reach,                          -- キャラ本体座標からの上のリーチ
+		bottom_reach,                       -- キャラ本体座標からの下のリーチ
+		top_reach    + pos_y,               -- 地面からの上のリーチ
+		bottom_reach + pos_y               -- 地面からの下のリーチ
+	)
+
 	if atk then
 		local memo = ""
 		memo = memo .. " nml=" .. (hit_box_procs.normal_hit(box.id) or "-")
@@ -2392,22 +2419,9 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 		memo = memo .. " ?1="  .. (hit_box_procs.unknown1(box.id) or "-")
 		memo = memo .. " catch="  .. (p.bai_catch == true and "v" or "-")
 
-		local pos          = is_fireball and math.floor(p.parent.pos   - screen_left) or math.floor(p.pos   - screen_left)
-		local pos_y        = is_fireball and math.floor(p.parent.pos_y - screen_top ) or math.floor(p.pos_y - screen_top )
-		local top_reach    = 200 - math.min(box.top, box.bottom) - pos_y
-		local bottom_reach = 200 - math.max(box.top, box.bottom) - pos_y
-		local front_reach, back_reach
-		if p.hit.flip_x == 1 then
-			front_reach = math.max(box.left, box.right) - pos
-			back_reach  = math.min(box.left, box.right) - pos
-		else
-			front_reach = pos - math.min(box.left, box.right)
-			back_reach  = pos - math.max(box.left, box.right)
-		end
-
 		-- ログ用
 		box.log_txt = string.format(
-			"hit %6x %3x %3x %2s %3s %2x %2x %2x %2s %3s %3s %3s %3s %3s %3s %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s %2x "..memo,
+			"hit %6x %3x %3x %2s %3s %2x %2x %2x %s %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s %2x "..memo,
 			p.addr.base,                        -- 1P:100400 2P:100500 1P弾:100600 2P弾:100700 1P弾:100800 2P弾:100900 1P弾:100A00 2P弾:100B00
 			p.act,                              --
 			p.acta,                             --
@@ -2417,13 +2431,7 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 			p.attack,                           --
 			p.hitstop_id,                       -- ガード硬直のID
 
-			p.hit.flip_x,                       -- 1:右向き -1:左向き
-			pos,                                -- X位置
-			pos_y,                              -- Y位置
-			top_reach,                          -- 上のリーチ
-			bottom_reach,                       -- 下のリーチ
-			front_reach,                        -- 前のリーチ
-			back_reach,                         -- 後のリーチ
+			reach_memo,
 
 			box.id,                             -- 判定のID
 			p.hit.harmless  and "hm"   or "",   -- 無害化
@@ -2445,6 +2453,8 @@ local new_hitbox = function(p, id, top, bottom, left, right, attack_only, is_fir
 			p.pure_st_tm,                       -- スタンタイマー %2s
 			p.prj_rank                          -- 飛び道具の強さ
 		)
+	elseif box.type.type_check == type_ck_gd then
+		box.log_txt = string.format("guard %6x %s %x", p.addr.base, reach_memo, box.id)
 	end
 	if box.log_txt then
 		box.log_txt = box.log_txt .. " " .. box.key
@@ -2669,12 +2679,17 @@ function rbff2.startplugin()
 			hitstop          = 0,           -- 攻撃側のガード硬直
 			old_pos          = 0,           -- X位置
 			pos              = 0,           -- X位置
+			pos_frc          = 0,           -- X位置少数部
 			old_posd         = 0,           -- X位置
 			posd             = 0,           -- X位置
 			max_pos          = 0,           -- X位置最大
 			min_pos          = 0,           -- X位置最小
 			pos_y            = 0,           -- Y位置
+			pos_frc_y        = 0,           -- Y位置少数部
 			old_pos_y        = 0,           -- Y位置
+			old_pos_frc_y    = 0,           -- Y位置少数部
+			old_in_air       = false,
+			in_air           = false,
 			force_y_pos      = 0,           -- Y位置強制
 			pos_z            = 0,           -- Z位置
 			old_pos_z        = 0,           -- Z位置
@@ -2893,9 +2908,11 @@ function rbff2.startplugin()
 				max_combo    = p1 and 0x10B4EF or 0x10B4F0, -- 最大コンボ
 				max_stun     = p1 and 0x10B84E or 0x10B856, -- 最大スタン値
 				pos          = p1 and 0x100420 or 0x100520, -- X位置
+				pos_frc      = p1 and 0x100422 or 0x100522, -- X位置 少数部
 				max_pos      = p1 and 0x10DDE6 or 0x10DDE8, -- X位置最大
 				min_pos      = p1 and 0x10DDEA or 0x10DDEC, -- X位置最小
 				pos_y        = p1 and 0x100428 or 0x100528, -- Y位置
+				pos_frc_y    = p1 and 0x10042A or 0x10052A, -- Y位置 少数部
 				pos_z        = p1 and 0x100424 or 0x100524, -- Z位置
 				sway_status  = p1 and 0x100489 or 0x100589, -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
  				side         = p1 and 0x100458 or 0x100558, -- 向き
@@ -3641,41 +3658,44 @@ function rbff2.startplugin()
 
 			-- メインラインでニュートラル状態にする
 			for i, p in ipairs(players) do
-				pgm:write_u8( p.addr.sway_status, 0x00) --fixpos.fixsway[i])
-				--pgm:write_u32(p.addr.base, 0x000261A0) -- 巣立ち処理
-				pgm:write_u32(p.addr.base, 0x00058D5A) -- やられからの復帰処理
+				-- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
+				if global.replay_reset == 2 or (global.replay_reset == 3 and i == 3) or (global.replay_reset == 4 and i == 4) then
+					pgm:write_u8( p.addr.sway_status, 0x00) --fixpos.fixsway[i])
+					--pgm:write_u32(p.addr.base, 0x000261A0) -- 巣立ち処理
+					pgm:write_u32(p.addr.base, 0x00058D5A) -- やられからの復帰処理
 
-				pgm:write_u8( p.addr.base + 0xC0, 0x80)
-				pgm:write_u8( p.addr.base + 0xC2, 0x00)
-				pgm:write_u8( p.addr.base + 0xFC, 0x00)
-				pgm:write_u8( p.addr.base + 0xFD, 0x00)
+					pgm:write_u8( p.addr.base + 0xC0, 0x80)
+					pgm:write_u8( p.addr.base + 0xC2, 0x00)
+					pgm:write_u8( p.addr.base + 0xFC, 0x00)
+					pgm:write_u8( p.addr.base + 0xFD, 0x00)
 
-				pgm:write_u8( p.addr.base + 0x61, 0x01)
-				pgm:write_u8( p.addr.base + 0x63, 0x02)
-				pgm:write_u8( p.addr.base + 0x65, 0x02)
+					pgm:write_u8( p.addr.base + 0x61, 0x01)
+					pgm:write_u8( p.addr.base + 0x63, 0x02)
+					pgm:write_u8( p.addr.base + 0x65, 0x02)
 
-				pgm:write_i16(p.addr.pos_y      , 0x00)
-				pgm:write_i16(p.addr.pos_z      , 0x18)
+					pgm:write_i16(p.addr.pos_y      , 0x00)
+					pgm:write_i16(p.addr.pos_z      , 0x18)
 
-				pgm:write_u32(p.addr.base + 0x28, 0x00)
-				pgm:write_u32(p.addr.base + 0x48, 0x00)
-				pgm:write_u32(p.addr.base + 0xDA, 0x00)
-				pgm:write_u32(p.addr.base + 0xDE, 0x00)
-				pgm:write_u32(p.addr.base + 0x34, 0x00)
-				pgm:write_u32(p.addr.base + 0x38, 0x00)
-				pgm:write_u32(p.addr.base + 0x3C, 0x00)
-				pgm:write_u32(p.addr.base + 0x4C, 0x00)
-				pgm:write_u32(p.addr.base + 0x50, 0x00)
-				pgm:write_u32(p.addr.base + 0x44, 0x00)
+					pgm:write_u32(p.addr.base + 0x28, 0x00)
+					pgm:write_u32(p.addr.base + 0x48, 0x00)
+					pgm:write_u32(p.addr.base + 0xDA, 0x00)
+					pgm:write_u32(p.addr.base + 0xDE, 0x00)
+					pgm:write_u32(p.addr.base + 0x34, 0x00)
+					pgm:write_u32(p.addr.base + 0x38, 0x00)
+					pgm:write_u32(p.addr.base + 0x3C, 0x00)
+					pgm:write_u32(p.addr.base + 0x4C, 0x00)
+					pgm:write_u32(p.addr.base + 0x50, 0x00)
+					pgm:write_u32(p.addr.base + 0x44, 0x00)
 
-				pgm:write_u16(p.addr.base + 0x60, 0x01)
-				pgm:write_u16(p.addr.base + 0x64, 0xFFFF)
-				pgm:write_u8( p.addr.base + 0x66, 0x00)
-				pgm:write_u16(p.addr.base + 0x6E, 0x00)
-				pgm:write_u8( p.addr.base + 0x6A, 0x00)
-				pgm:write_u8( p.addr.base + 0x7E, 0x00)
-				pgm:write_u8( p.addr.base + 0xB0, 0x00)
-				pgm:write_u8( p.addr.base + 0xB1, 0x00)
+					pgm:write_u16(p.addr.base + 0x60, 0x01)
+					pgm:write_u16(p.addr.base + 0x64, 0xFFFF)
+					pgm:write_u8( p.addr.base + 0x66, 0x00)
+					pgm:write_u16(p.addr.base + 0x6E, 0x00)
+					pgm:write_u8( p.addr.base + 0x6A, 0x00)
+					pgm:write_u8( p.addr.base + 0x7E, 0x00)
+					pgm:write_u8( p.addr.base + 0xB0, 0x00)
+					pgm:write_u8( p.addr.base + 0xB1, 0x00)
+				end
 			end
 
 			local fixpos = recording.fixpos
@@ -3688,7 +3708,7 @@ function rbff2.startplugin()
 						end
 					end
 				end
-				if fixpos.fixscr then
+				if fixpos.fixscr and global.replay_fix_pos ~= 1 then
 					pgm:write_u16(stage_base_addr + offset_pos_x, fixpos.fixscr.x)
 					pgm:write_u16(stage_base_addr + offset_pos_x + 0x30, fixpos.fixscr.x)
 					pgm:write_u16(stage_base_addr + offset_pos_x + 0x2C, fixpos.fixscr.x)
@@ -4308,7 +4328,9 @@ function rbff2.startplugin()
 			p.old_posd       = p.posd
 			p.posd           = pgm:read_i32(p.addr.pos)
 			p.old_pos        = p.pos
+			p.old_pos_frc    = p.pos_frc
 			p.pos            = pgm:read_i16(p.addr.pos)
+			p.pos_frc        = pgm:read_i16(p.addr.pos_frc)
 			p.max_pos        = pgm:read_i16(p.addr.max_pos)
 			if p.max_pos == 0 or p.max_pos == p.pos then
 				p.max_pos = nil
@@ -4320,7 +4342,11 @@ function rbff2.startplugin()
 			end
 			pgm:write_i16(p.addr.min_pos, 1000)
 			p.old_pos_y      = p.pos_y
+			p.old_pos_frc_y  = p.pos_frc_y
+			p.old_in_air     = p.in_air
+			p.in_air         = p.pos_y > 0 or p.pos_frc_y > 0
 			p.pos_y          = pgm:read_i16(p.addr.pos_y)
+			p.pos_frc_y      = pgm:read_i16(p.addr.pos_frc_y)
 			if 0 < p.pos_y then
 				p.pos_y_peek = math.max(p.pos_y_peek or 0, p.pos_y)
 			else
@@ -4369,7 +4395,7 @@ function rbff2.startplugin()
 			end
 			-- ダウンフレーム
 			if (down_acts[p.old_act] ~= true and down_acts[p.act] == true) or
-				(p.old_pos_y > 0 and p.pos_y == 0 and down_acts[p.act] == true) then
+				(p.old_in_air ~= true and p.in_air == true and down_acts[p.act] == true) then
 				p.on_down = global.frame_number
 			end
 			-- フレーム表示用処理
@@ -4811,9 +4837,9 @@ function rbff2.startplugin()
 
 			-- ジャンプの遷移ポイントかどうか
 			local chg_air_state = 0
-			if 0 == p.old_pos_y and 0 < p.pos_y then
+			if p.old_in_air ~= true and p.in_air == true then
 				chg_air_state = 1
-			elseif (0 < p.old_pos_y) and 0 == p.pos_y then
+			elseif p.old_in_air == true and p.in_air ~= true then
 				chg_air_state = -1
 			end
 
@@ -5357,7 +5383,7 @@ function rbff2.startplugin()
 							input_rvs(rvs_types.on_wakeup)
 						end
 						-- 着地リバーサル入力（やられの着地）
-						if 1 < p.pos_y_down and p.old_pos_y > p.pos_y and p.pos_y == 0 then
+						if 1 < p.pos_y_down and p.old_pos_y > p.pos_y and p.in_air ~= true then
 							input_rvs(rvs_types.knock_back_landing)
 						end
 						-- 着地リバーサル入力（通常ジャンプの着地）
@@ -5761,14 +5787,14 @@ function rbff2.startplugin()
 				end
 				-- 座標表示
 				if global.disp_hitbox then
-					if 0 == p.pos_y and p.sway_status == 0x00 then
+					if p.in_air ~= true and p.sway_status == 0x00 then
 						local color = (p.throw.in_range and op.sway_status == 0x00) and 0xFFFFFF00 or 0xFFBBBBBB
 						scr:draw_line(p.throw.x1, p.hit.pos_y  , p.throw.x2, p.hit.pos_y  , color)
 						scr:draw_line(p.throw.x1, p.hit.pos_y-4, p.throw.x1, p.hit.pos_y+4, color)
 						scr:draw_line(p.throw.x2, p.hit.pos_y-4, p.throw.x2, p.hit.pos_y+4, color)
 					end
 
-					draw_axis(p.hit.pos_x, 0 < p.pos_y and global.axis_air_color or global.axis_color)
+					draw_axis(p.hit.pos_x, p.in_air == true and global.axis_air_color or global.axis_color)
 					draw_axis(p.hit.max_pos_x, global.axis_internal_color)
 					draw_axis(p.hit.min_pos_x, global.axis_internal_color)
 				end
@@ -6083,6 +6109,7 @@ function rbff2.startplugin()
 			play_menu.pos.col[ 9] = recording.repeat_interval + 1    -- 繰り返し間隔       9
 			play_menu.pos.col[10] = global.await_neutral and 2 or 1  -- 繰り返し開始条件  10
 			play_menu.pos.col[11] = global.replay_fix_pos            -- 開始間合い固定    11
+			play_menu.pos.col[12] = global.replay_reset              -- 状態リセット      12
 			if not cancel and row == 1 then
 				menu_cur = play_menu
 				return
@@ -6239,6 +6266,7 @@ function rbff2.startplugin()
 		recording.repeat_interval = col[ 9] - 1  -- 繰り返し間隔       9
 		global.await_neutral      = col[10] == 2 -- 繰り返し開始条件  10
 		global.replay_fix_pos     = col[11]      -- 開始間合い固定    11
+		global.replay_reset       = col[12]      -- 状態リセット      12
 		global.repeat_interval    = recording.repeat_interval
 	end
 	local exit_menu_to_play = function()
@@ -6905,6 +6933,7 @@ function rbff2.startplugin()
 			{ "繰り返し間隔"          , play_interval, },
 			{ "繰り返し開始条件"      , { "なし", "両キャラがニュートラル", }, },
 			{ "開始間合い固定"        , { "OFF", "1Pと2P", "1P", "2P", }, },
+			{ "状態リセット"          , { "OFF", "1Pと2P", "1P", "2P", }, },
 			{ "開始間合い"            , { "Aでレコード開始", }, },
 		},
 		pos = { -- メニュー内の選択位置
@@ -6921,7 +6950,8 @@ function rbff2.startplugin()
 				1, -- 繰り返し           8
 				1, -- 繰り返し間隔       9
 				1, -- 繰り返し開始条件  10
-				1, -- 開始間合い固定    11
+				global.replay_fix_pos, -- 開始間合い固定    11
+				global.replay_reset,   -- 状態リセット      11
 				1, -- 開始間合い        12
 			},
 		},
@@ -6937,6 +6967,7 @@ function rbff2.startplugin()
 			exit_menu_to_play, -- 繰り返し間隔
 			exit_menu_to_play, -- 繰り返し開始条件
 			exit_menu_to_play, -- 開始間合い固定
+			exit_menu_to_play, -- 状態リセット
 			exit_menu_to_rec_pos, -- 開始間合い
 		},
 		on_b = {
@@ -6951,6 +6982,7 @@ function rbff2.startplugin()
 			exit_menu_to_play_cancel, -- 繰り返し
 			exit_menu_to_play_cancel, -- 繰り返し間隔
 			exit_menu_to_play_cancel, -- 開始間合い固定
+			exit_menu_to_play_cancel, -- 状態リセット
 			exit_menu_to_play_cancel, -- 開始間合い
 		},
 	}
