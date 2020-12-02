@@ -4688,9 +4688,9 @@ function rbff2.startplugin()
 				p.muteki.type = 4 -- スウェー上
 			elseif p.muteki.type == 0 then
 				p.muteki.type = 0 -- 全身無敵
-			elseif 152 <= p.vul_hi and p.pos_y <= 0 then -- 152 ローレンス避け 156 兄龍転身 168 その他避け
+			elseif 152 <= p.vul_hi and p.in_air ~= true then -- 152 ローレンス避け 156 兄龍転身 168 その他避け
 				p.muteki.type = 1 -- 上半身無敵（地上）
-			elseif p.vul_lo <= 172 and p.pos_y <= 0 then -- 160 164 168 172 ダブルローリング サイドワインダー
+			elseif p.vul_lo <= 172 and p.in_air ~= true then -- 160 164 168 172 ダブルローリング サイドワインダー
 				p.muteki.type = 2 -- 足元無敵（地上）
 			else
 				p.muteki.type = 3
