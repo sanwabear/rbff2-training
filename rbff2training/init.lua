@@ -4344,9 +4344,9 @@ function rbff2.startplugin()
 			p.old_pos_y      = p.pos_y
 			p.old_pos_frc_y  = p.pos_frc_y
 			p.old_in_air     = p.in_air
-			p.in_air         = p.pos_y > 0 or p.pos_frc_y > 0
 			p.pos_y          = pgm:read_i16(p.addr.pos_y)
 			p.pos_frc_y      = pgm:read_i16(p.addr.pos_frc_y)
+			p.in_air         = p.pos_y > 0 or p.pos_frc_y > 0
 			if 0 < p.pos_y then
 				p.pos_y_peek = math.max(p.pos_y_peek or 0, p.pos_y)
 			else
