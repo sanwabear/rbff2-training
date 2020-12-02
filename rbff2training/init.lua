@@ -2688,6 +2688,7 @@ function rbff2.startplugin()
 			old_pos_frc_y    = 0,           -- Y位置少数部
 			old_in_air       = false,
 			in_air           = false,
+			chg_air_state    = 0,           -- ジャンプの遷移ポイントかどうか
 			force_y_pos      = 0,           -- Y位置強制
 			pos_z            = 0,           -- Z位置
 			old_pos_z        = 0,           -- Z位置
@@ -4344,7 +4345,15 @@ function rbff2.startplugin()
 			p.old_in_air     = p.in_air
 			p.pos_y          = pgm:read_i16(p.addr.pos_y)
 			p.pos_frc_y      = pgm:read_i16(p.addr.pos_frc_y)
-			p.in_air         = p.pos_y > 0 or p.pos_frc_y > 0
+			p.in_air         = p.pos_y > 0 and p.pos_frc_y > 0
+			-- ジャンプの遷移ポイントかどうか
+			if p.old_in_air ~= true and p.in_air == true then
+				p.chg_air_state = 1
+			elseif p.old_in_air == true and p.in_air ~= true then
+				p.chg_air_state = -1
+			else
+				p.chg_air_state = 0
+			end
 			if 0 < p.pos_y then
 				p.pos_y_peek = math.max(p.pos_y_peek or 0, p.pos_y)
 			else
@@ -4837,14 +4846,6 @@ function rbff2.startplugin()
 		for i, p in ipairs(players) do
 			local op = players[3-i]
 
-			-- ジャンプの遷移ポイントかどうか
-			local chg_air_state = 0
-			if p.old_in_air ~= true and p.in_air == true then
-				chg_air_state = 1
-			elseif p.old_in_air == true and p.in_air ~= true then
-				chg_air_state = -1
-			end
-
 			-- 飛び道具
 			local chg_fireball_state = false
 			for _, fb in pairs(p.fireball) do
@@ -4928,7 +4929,7 @@ function rbff2.startplugin()
 				disp_name = convert(p.act_data.disp_name or concrete_name)
 				chg_act_name = true
 			end
-			if #p.act_frames == 0 or chg_act_name or frame.col ~= col or chg_air_state ~= 0 or chg_fireball_state == true or p.act_1st then
+			if #p.act_frames == 0 or chg_act_name or frame.col ~= col or p.chg_air_state ~= 0 or chg_fireball_state == true or p.act_1st then
 				--行動IDの更新があった場合にフレーム情報追加
 				frame = {
 					act = p.act,
@@ -4938,7 +4939,7 @@ function rbff2.startplugin()
 					disp_name = disp_name,
 					line = line,
 					chg_fireball_state = chg_fireball_state,
-					chg_air_state = chg_air_state,
+					chg_air_state = p.chg_air_state,
 					act_1st = p.act_1st,
 				}
 				table.insert(p.act_frames , frame)
