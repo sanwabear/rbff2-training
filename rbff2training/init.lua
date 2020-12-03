@@ -4345,7 +4345,7 @@ function rbff2.startplugin()
 			p.old_in_air     = p.in_air
 			p.pos_y          = pgm:read_i16(p.addr.pos_y)
 			p.pos_frc_y      = pgm:read_i16(p.addr.pos_frc_y)
-			p.in_air         = p.pos_y > 0 and p.pos_frc_y > 0
+			p.in_air         = 0 < p.pos_y or 0 < p.pos_frc_y
 			-- ジャンプの遷移ポイントかどうか
 			if p.old_in_air ~= true and p.in_air == true then
 				p.chg_air_state = 1
@@ -4354,12 +4354,12 @@ function rbff2.startplugin()
 			else
 				p.chg_air_state = 0
 			end
-			if 0 < p.pos_y then
+			if p.in_air then
 				p.pos_y_peek = math.max(p.pos_y_peek or 0, p.pos_y)
 			else
 				p.pos_y_peek = 0
 			end
-			if p.pos_y < p.old_pos_y then
+			if p.pos_y < p.old_pos_y or (p.pos_y == p.old_pos_y and p.pos_frc_y < p.old_pos_frc_y) then
 				p.pos_y_down = p.pos_y_down and (p.pos_y_down + 1) or 1
 			else
 				p.pos_y_down = 0
