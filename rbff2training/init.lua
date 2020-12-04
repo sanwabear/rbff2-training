@@ -2395,7 +2395,7 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 		top_reach,                          -- キャラ本体座標からの上のリーチ
 		bottom_reach,                       -- キャラ本体座標からの下のリーチ
 		top_reach    + pos_y,               -- 地面からの上のリーチ
-		bottom_reach + pos_y               -- 地面からの下のリーチ
+		bottom_reach + pos_y                -- 地面からの下のリーチ
 	)
 
 	if atk then
@@ -2487,13 +2487,14 @@ local new_throwbox = function(p, box)
 	--print("a", box.opp_id, box.top, box.bottom, p.hit.flip_x)
 	p.throwing = true
 	box.flat_throw = box.top == nil
-	box.top    = box.top or p.hit.old_pos_y - global.throwbox_height
-	box.left   = p.hit.pos_x + (box.left or 0)
-	box.right  = p.hit.pos_x + (box.right or 0)
-	box.top    = box.top and p.hit.old_pos_y - box.top --air throw
-	box.bottom = box.bottom and (p.hit.old_pos_y - box.bottom) or height + screen_top - p.hit.pos_z
+	box.top    = box.top or box.pos_y - global.throwbox_height
+	box.left   = box.pos_x + (box.left or 0)
+	box.right  = box.pos_x + (box.right or 0)
+	box.top    = box.top and box.pos_y - box.top --air throw
+	box.bottom = box.bottom and (box.pos_y - box.bottom) or height + screen_top - p.hit.pos_z
 	box.type   = box.type or box_type_base.t
 	box.visible = true
+print(p.hit.pos_x, box.pos_x, screen_left, p.hit.old_pos_y, box.pos_y, screen_top)
 	--print("b", box.opp_id, box.top, box.bottom, p.hit.flip_x)
 	return box
 end
@@ -2815,6 +2816,8 @@ function rbff2.startplugin()
 				range42      = 0,
 				range5       = 0,
 				id           = 0,
+				pos_x        = 0,
+				pos_y        = 0,
 				addr         = {
 					on       = p1 and 0x10CD90 or 0x10CDB0,
 					base     = p1 and 0x10CD91 or 0x10CDB1,
@@ -2829,6 +2832,8 @@ function rbff2.startplugin()
 					range42  = p1 and 0x10CDA5 or 0x10CDC5,
 					range5   = p1 and 0x10CDA6 or 0x10CDC6,
 					id       = p1 and 0x10CDA7 or 0x10CDC7,
+					pos_x    = p1 and 0x10CDA8 or 0x10CDC8,
+					pos_y    = p1 and 0x100DAA or 0x10CDCA,
 				},
 			},
 
@@ -2841,6 +2846,8 @@ function rbff2.startplugin()
 				opp_id       = 0,
 				side         = 0,
 				id           = 0,
+				pos_x        = 0,
+				pos_y        = 0,
 				addr         = {
 					on       = p1 and 0x10CD00 or 0x10CD20,
 					range_x  = p1 and 0x10CD01 or 0x10CD21,
@@ -2850,6 +2857,8 @@ function rbff2.startplugin()
 					opp_id   = p1 and 0x10CD0D or 0x10CD2D,
 					side     = p1 and 0x10CD11 or 0x10CD31,
 					id       = p1 and 0x10CD12 or 0x10CD32,
+					pos_x    = p1 and 0x10CD13 or 0x10CD33,
+					pos_y    = p1 and 0x10CD15 or 0x10CD35,
 				},
 			},
 
@@ -2863,6 +2872,8 @@ function rbff2.startplugin()
 				side         = 0,
 				bottom       = 0,
 				id           = 0,
+				pos_x        = 0,
+				pos_y        = 0,
 				addr         = {
 					on       = p1 and 0x10CD40 or 0x10CD60,
 					front    = p1 and 0x10CD41 or 0x10CD61,
@@ -2873,6 +2884,8 @@ function rbff2.startplugin()
 					side     = p1 and 0x10CD51 or 0x10CD71,
 					bottom   = p1 and 0x10CD52 or 0x10CD72,
 					id       = p1 and 0x10CD54 or 0x10CD74,
+					pos_x    = p1 and 0x10CD55 or 0x10CD75,
+					pos_y    = p1 and 0x10CD57 or 0x10CD77,
 				},
 			},
 
@@ -3276,37 +3289,37 @@ function rbff2.startplugin()
 			--判定追加1 攻撃判定
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x012C42),
 				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100F00)",
-				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pd@(temp0+$B)=maincpu.pd@((A2)+$5);maincpu.pw@(temp0+$C)=maincpu.pw@((A4)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@((A4)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
+				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pd@(temp0+$B)=maincpu.pd@((A2)+$5);maincpu.pw@(temp0+$C)=maincpu.pw@(((A4)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A4)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
 
 			--判定追加2 攻撃判定
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x012C88),
 				"(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100F00)",
-				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$01;maincpu.pd@(temp0+$B)=maincpu.pd@((A1)+$5);maincpu.pw@(temp0+$C)=maincpu.pw@((A3)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@((A3)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
+				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$01;maincpu.pd@(temp0+$B)=maincpu.pd@((A1)+$5);maincpu.pw@(temp0+$C)=maincpu.pw@(((A3)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A3)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
 
 			--判定追加3 1P押し合い判定
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x012D4C),
 				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100F00)",
-				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pw@(temp0+$C)=maincpu.pw@((A4)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@((A4)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
+				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pw@(temp0+$C)=maincpu.pw@(((A4)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A4)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
 
 			--判定追加4 2P押し合い判定
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x012D92),
 				"(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100F00)",
-				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pw@(temp0+$C)=maincpu.pw@((A3)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@((A3)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
+				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pw@(temp0+$C)=maincpu.pw@(((A3)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A3)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
 
 			-- 地上通常投げ
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05D782),
 				"(maincpu.pw@107C22>0)&&((((D7)&$FFFF)!=0x65))&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100500)",
-				"temp1=$10CD90+((((A4)&$FFFFFF)-$100400)/$8);maincpu.pb@(temp1)=$1;maincpu.pd@(temp1+$1)=((A4)&$FFFFFF);maincpu.pd@(temp1+$5)=maincpu.pd@(((A4)&$FFFFFF)+$96);maincpu.pw@(temp1+$A)=maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10);maincpu.pw@(temp1+$C)=maincpu.pw@(((A4)&$FFFFFF)+$10);maincpu.pb@(temp1+$10)=maincpu.pb@(((A4)&$FFFFFF)+$96+$58);maincpu.pb@(temp1+$11)=maincpu.pb@(((A4)&$FFFFFF)+$58);maincpu.pb@(temp1+$12)=maincpu.pb@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$58);maincpu.pb@(temp1+$13)=maincpu.pb@(maincpu.pd@((PC)+$2));maincpu.pb@(temp1+$14)=maincpu.pb@((maincpu.pd@((PC)+$02))+((maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10))<<3)+$3);maincpu.pb@(temp1+$15)=maincpu.pb@((maincpu.pd@((PC)+$02))+((maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10))<<3)+$4);maincpu.pb@(temp1+$16)=maincpu.pb@((maincpu.pd@((PC)+$2))+((maincpu.pw@(((A4)&$FFFFFF)+$10))<<3)+$3);maincpu.pb@(temp1+$17)=maincpu.pb@((PC)+$D2+(maincpu.pw@((A4)&$FFFFFF)+$10)*4+((((D7)&$FFFF)-$60)&$7));g"))
+				"temp1=$10CD90+((((A4)&$FFFFFF)-$100400)/$8);maincpu.pb@(temp1)=$1;maincpu.pd@(temp1+$1)=((A4)&$FFFFFF);maincpu.pd@(temp1+$5)=maincpu.pd@(((A4)&$FFFFFF)+$96);maincpu.pw@(temp1+$A)=maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10);maincpu.pw@(temp1+$C)=maincpu.pw@(((A4)&$FFFFFF)+$10);maincpu.pb@(temp1+$10)=maincpu.pb@(((A4)&$FFFFFF)+$96+$58);maincpu.pb@(temp1+$11)=maincpu.pb@(((A4)&$FFFFFF)+$58);maincpu.pb@(temp1+$12)=maincpu.pb@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$58);maincpu.pb@(temp1+$13)=maincpu.pb@(maincpu.pd@((PC)+$2));maincpu.pb@(temp1+$14)=maincpu.pb@((maincpu.pd@((PC)+$02))+((maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10))<<3)+$3);maincpu.pb@(temp1+$15)=maincpu.pb@((maincpu.pd@((PC)+$02))+((maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10))<<3)+$4);maincpu.pb@(temp1+$16)=maincpu.pb@((maincpu.pd@((PC)+$2))+((maincpu.pw@(((A4)&$FFFFFF)+$10))<<3)+$3);maincpu.pb@(temp1+$17)=maincpu.pb@((PC)+$D2+(maincpu.pw@((A4)&$FFFFFF)+$10)*4+((((D7)&$FFFF)-$60)&$7));maincpu.pw@(temp1+$18)=maincpu.pw@(($FFFFFF&(A4))+$20);maincpu.pw@(temp1+$1A)=maincpu.pw@(($FFFFFF&(A4))+$28);g"))
 
 			-- 空中投げ
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x060428),
 				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100500)",
-				"temp1=$10CD00+((((A4)&$FFFFFF)-$100400)/$8);maincpu.pb@(temp1)=$1;maincpu.pw@(temp1+$1)=maincpu.pw@(A0);maincpu.pw@(temp1+$3)=maincpu.pw@((A0)+$2);maincpu.pd@(temp1+$5)=$FFFFFF&(A4);maincpu.pd@(temp1+$9)=maincpu.pd@(($FFFFFF&(A4))+$96);maincpu.pw@(temp1+$D)=maincpu.pw@(maincpu.pd@(($FFFFFF&(A4))+$96)+$10);maincpu.pd@(temp1+$11)=maincpu.rb@(($FFFFFF&(A4))+$58);g"))
+				"temp1=$10CD00+((((A4)&$FFFFFF)-$100400)/$8);maincpu.pb@(temp1)=$1;maincpu.pw@(temp1+$1)=maincpu.pw@(A0);maincpu.pw@(temp1+$3)=maincpu.pw@((A0)+$2);maincpu.pd@(temp1+$5)=$FFFFFF&(A4);maincpu.pd@(temp1+$9)=maincpu.pd@(($FFFFFF&(A4))+$96);maincpu.pw@(temp1+$D)=maincpu.pw@(maincpu.pd@(($FFFFFF&(A4))+$96)+$10);maincpu.pd@(temp1+$11)=maincpu.rb@(($FFFFFF&(A4))+$58);maincpu.pw@(temp1+$13)=maincpu.pw@(($FFFFFF&(A4))+$20);maincpu.pw@(temp1+$15)=maincpu.pw@(($FFFFFF&(A4))+$28);g"))
 
 			-- 必殺投げ
 			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x039F2A),
 				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100500)",
-				"temp1=$10CD40+((((A4)&$FFFFFF)-$100400)/$8);maincpu.pb@(temp1)=$1;maincpu.pw@(temp1+$1)=maincpu.pw@(A0);maincpu.pw@(temp1+$3)=maincpu.pw@((A0)+$2);maincpu.pd@(temp1+$5)=$FFFFFF&(A4);maincpu.pd@(temp1+$9)=maincpu.pd@(($FFFFFF&(A4))+$96);maincpu.pw@(temp1+$D)=maincpu.pw@(maincpu.pd@(($FFFFFF&(A4))+$96)+$10);maincpu.pd@(temp1+$11)=maincpu.rb@(($FFFFFF&(A4))+$58);maincpu.pw@(temp1+$12)=maincpu.pw@(A0+$4);g"))
+				"temp1=$10CD40+((((A4)&$FFFFFF)-$100400)/$8);maincpu.pb@(temp1)=$1;maincpu.pw@(temp1+$1)=maincpu.pw@(A0);maincpu.pw@(temp1+$3)=maincpu.pw@((A0)+$2);maincpu.pd@(temp1+$5)=$FFFFFF&(A4);maincpu.pd@(temp1+$9)=maincpu.pd@(($FFFFFF&(A4))+$96);maincpu.pw@(temp1+$D)=maincpu.pw@(maincpu.pd@(($FFFFFF&(A4))+$96)+$10);maincpu.pd@(temp1+$11)=maincpu.rb@(($FFFFFF&(A4))+$58);maincpu.pw@(temp1+$12)=maincpu.pw@(A0+$4);maincpu.pw@(temp1+$15)=maincpu.pw@(($FFFFFF&(A4))+$20);maincpu.pw@(temp1+$17)=maincpu.pw@(($FFFFFF&(A4))+$28);g"))
 
 			-- プレイヤー選択時のカーソル操作表示用データのオフセット
 			-- PC=11EE2のときのA4レジスタのアドレスがプレイヤー選択のアイコンの参照場所
@@ -4567,7 +4580,9 @@ function rbff2.startplugin()
 			p.n_throw.range41  = pgm:read_i8(p.n_throw.addr.range41)
 			p.n_throw.range42  = pgm:read_i8(p.n_throw.addr.range42)
 			p.n_throw.range5   = pgm:read_i8(p.n_throw.addr.range5)
-			p.n_throw.range6   = pgm:read_i8(p.n_throw.addr.range6)
+			p.n_throw.id       = pgm:read_i8(p.n_throw.addr.id)
+			p.n_throw.pos_x    = pgm:read_i16(p.n_throw.addr.pos_x) - screen_left
+			p.n_throw.pos_y    = 200 - pgm:read_i16(p.n_throw.addr.pos_y) + screen_top
 			local range = (p.n_throw.range1 == p.n_throw.range2 and math.abs(p.n_throw.range42*4)) or math.abs(p.n_throw.range41*4)
 			range = range + p.n_throw.range5 * -4
 			range = range + p.throw.half_range
@@ -4586,6 +4601,8 @@ function rbff2.startplugin()
 			p.air_throw.base     = pgm:read_u32(p.air_throw.addr.base)
 			p.air_throw.opp_base = pgm:read_u32(p.air_throw.addr.opp_base)
 			p.air_throw.opp_id   = pgm:read_u16(p.air_throw.addr.opp_id)
+			p.air_throw.pos_x    = pgm:read_i16(p.air_throw.addr.pos_x) - screen_left
+			p.air_throw.pos_y    = 200 - pgm:read_i16(p.air_throw.addr.pos_y) + screen_top
 			p.air_throw.side     = p.side
 			p.air_throw.right    = p.air_throw.range_x * p.side
 			p.air_throw.top      = -p.air_throw.range_y
@@ -4606,6 +4623,8 @@ function rbff2.startplugin()
 			p.sp_throw.opp_id    = pgm:read_u16(p.sp_throw.addr.opp_id)
 			p.sp_throw.side      = p.side
 			p.sp_throw.bottom    = pgm:read_i16(p.sp_throw.addr.bottom)
+			p.sp_throw.pos_x     = pgm:read_i16(p.sp_throw.addr.pos_x) - screen_left
+			p.sp_throw.pos_y     = 200 - pgm:read_i16(p.sp_throw.addr.pos_y) + screen_top
 			p.sp_throw.right     = p.sp_throw.front * p.side
 			p.sp_throw.type      = box_type_base.pt
 			p.sp_throw.on        = p.addr.base == p.sp_throw.base and p.sp_throw.on or 0xFF
@@ -4661,11 +4680,9 @@ function rbff2.startplugin()
 				base        = pgm:read_u32(addr+0x6),
 				attack_only = (pgm:read_u8(addr+0xA) == 1),
 				attack_only_val = pgm:read_u8(addr+0xA),
-				pos_x       = pgm:read_i16(addr+0xC),
-				pos_y       = pgm:read_i16(addr+0xE),
+				pos_x       = pgm:read_i16(addr+0xC) - screen_left,
+				pos_y       = 200 - pgm:read_i16(addr+0xE) + screen_top,
 			}
-			box.pos_x = box.pos_x - screen_left
-			box.pos_y = 200 - box.pos_y + screen_top
 			if box.on ~= 0xFF and temp_hits[box.base] then
 				box.is_fireball = temp_hits[box.base].is_fireball == true
 				table.insert(temp_hits[box.base].buffer, box)
