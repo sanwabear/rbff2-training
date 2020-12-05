@@ -680,7 +680,7 @@ local char_acts_base = {
 		{ name = "ショッキングボール", type = act_types.attack, ids = { 0x6A, 0x6B, 0x6C, }, },
 		{ name = "小ヘッドスピンアタック", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, 0x8A, }, },
 		{ name = "大ヘッドスピンアタック", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, 0x95, 0x96, 0x94, }, },
-		{ name = "ヘッドスピンアタック着地", names = { "小ヘッドスピンアタック", "大ヘッドスピンアタック" }, type = act_types.any, ids = { 0x3D, }, },
+		{ name = "ヘッドスピンアタック着地", names = { "小ヘッドスピンアタック", "大ヘッドスピンアタック", "地上振り向き" }, type = act_types.any, ids = { 0x3D, }, },
 		{ name = "フライングスピンアタック", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9E, }, },
 		{ name = "ダンシングダイブ", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xAA, }, },
 		{ name = "ブレイクストーム", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, 0xB6, 0xB4, 0xB5, 0xB3, 0xB7, }, },
@@ -806,7 +806,7 @@ local char_acts_base = {
 		{ name = "オーレィ", type = act_types.any, ids = { 0x69, }, },
 		{ name = "小ブラッディスピン", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
 		{ name = "大ブラッディスピン", type = act_types.attack, ids = { 0x90, 0x91, 0x93, 0x94, 0x92, }, },
-		{ names = { "小ブラッディスピン", "大ブラッディスピン" }, type = act_types.attack, ids = { 0x3D, }, },
+		{ names = { "小ブラッディスピン", "大ブラッディスピン", "地上振り向き" }, type = act_types.attack, ids = { 0x3D, }, },
 		{ name = "ブラッディサーベル", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
 		{ name = "ブラッディカッター", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, }, },
 		{ name = "ブラッディミキサー", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, }, },
@@ -2494,7 +2494,6 @@ local new_throwbox = function(p, box)
 	box.bottom = box.bottom and (box.pos_y - box.bottom) or height + screen_top - p.hit.pos_z
 	box.type   = box.type or box_type_base.t
 	box.visible = true
-print(p.hit.pos_x, box.pos_x, screen_left, p.hit.old_pos_y, box.pos_y, screen_top)
 	--print("b", box.opp_id, box.top, box.bottom, p.hit.flip_x)
 	return box
 end
@@ -2677,6 +2676,7 @@ function rbff2.startplugin()
 			hitstop_id       = 0,           -- ヒット/ガードしている相手側のattackと同値
 			hitstop          = 0,           -- 攻撃側のガード硬直
 			old_pos          = 0,           -- X位置
+			old_pos_frc      = 0,           -- X位置少数部
 			pos              = 0,           -- X位置
 			pos_frc          = 0,           -- X位置少数部
 			old_posd         = 0,           -- X位置
@@ -4342,7 +4342,7 @@ function rbff2.startplugin()
 			p.old_pos        = p.pos
 			p.old_pos_frc    = p.pos_frc
 			p.pos            = pgm:read_i16(p.addr.pos)
-			p.pos_frc        = pgm:read_i16(p.addr.pos_frc)
+			p.pos_frc        = pgm:read_u16(p.addr.pos_frc)
 			p.max_pos        = pgm:read_i16(p.addr.max_pos)
 			if p.max_pos == 0 or p.max_pos == p.pos then
 				p.max_pos = nil
@@ -4357,8 +4357,9 @@ function rbff2.startplugin()
 			p.old_pos_frc_y  = p.pos_frc_y
 			p.old_in_air     = p.in_air
 			p.pos_y          = pgm:read_i16(p.addr.pos_y)
-			p.pos_frc_y      = pgm:read_i16(p.addr.pos_frc_y)
+			p.pos_frc_y      = pgm:read_u16(p.addr.pos_frc_y)
 			p.in_air         = 0 < p.pos_y or 0 < p.pos_frc_y
+
 			-- ジャンプの遷移ポイントかどうか
 			if p.old_in_air ~= true and p.in_air == true then
 				p.chg_air_state = 1
@@ -4753,6 +4754,8 @@ function rbff2.startplugin()
 				printdata()
 			end
 			]]
+			-- 位置ログ
+			print(string.format("%s %s %s %4d.%05d %4d.%05d", i, char_names[p.char], p.act_data.name, p.pos, p.pos_frc, p.pos_y, p.pos_frc_y))
 
 			if p.hit_skip ~= 0 or mem_0x10D4EA ~= 0 then
 				--停止フレームはフレーム計算しない
