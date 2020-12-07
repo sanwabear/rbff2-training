@@ -342,7 +342,7 @@ local char_acts_base = {
 		{ disp_name = "CA 立A", name = "CA 立A(2段目)", type = act_types.attack, ids = { 0x24B, }, },
 		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x42, }, },
 		{ disp_name = "CA 立B", name = "CA 遠立B(2段目)", type = act_types.attack, ids = { 0x244, }, },
-		{ disp_name = "CA 立C", name = "CA 遠立C(3段目)", type = act_types.attack, ids = { 0x255, }, },
+		{ disp_name = "CA 立C", name = "CA 遠立C(3段目)", type = act_types.attack, ids = { 0x245, }, },
 		{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x48, }, },
 		{ disp_name = "CA 立A", name = "CA 立A(3段目)", type = act_types.attack, ids = { 0x24C, }, },
 		{ disp_name = "CA 立B", name = "CA 立B(3段目)", type = act_types.attack, ids = { 0x45, }, },
@@ -686,6 +686,7 @@ local char_acts_base = {
 		{ name = "ブレイクストーム", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, 0xB6, 0xB4, 0xB5, 0xB3, 0xB7, }, },
 		{ name = "ダックフェイント・地", type = act_types.any, ids = { 0xC2, 0xC3, 0xC4, }, },
 		{ name = "ダックフェイント・空", type = act_types.any, ids = { 0xB8, 0xB9, 0xBA, }, },
+		{ name = "クロスヘッドスピン", type = act_types.attack, ids = { 0xD6, 0xD7, 0xD8, 0xD9, }, },
 		{ name = "ダイビングパニッシャー", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, }, },
 		{ name = "ローリングパニッシャー", type = act_types.attack, ids = { 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, }, },
 		{ name = "ダンシングキャリバー", type = act_types.low_attack, ids = { 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0x115, }, },
@@ -961,6 +962,7 @@ local char_acts_base = {
 		{ name = "しゃがみ歩き", type = act_types.free, ids = { 0x7, }, },
 		{ disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
 		{ disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ name = "スゥエー振り向き移動", type = act_types.free, ids = { 0x2BC, 0x2BD, }, },
 		{ name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
 		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ disp_name = "立ち", name = "スゥエーライン上 立ち", type = act_types.free, ids = { 0x21, 0x40, 0x20, 0x3F, }, },
@@ -4992,7 +4994,7 @@ function rbff2.startplugin()
 			local last_frame = frame
 
 			-- 無敵表示
-			if p.muteki.type== 4 then -- スウェー上
+			if p.muteki.type == 4 then -- スウェー上
 				col, line = 0xAAFFA500, 0xDDAFEEEE
 			elseif p.muteki.type == 0 then -- 全身無敵
 				col, line = 0xAAB0E0E6, 0xDDAFEEEE
