@@ -1162,6 +1162,8 @@ for char, acts_base in pairs(char_acts_base) do
 		for i, id in ipairs(acts.ids) do
 			if acts.type == act_types.guard or acts.type == act_types.hit then
 				-- char_1st_actsには登録しない
+			elseif acts.name == "振り向き中" or acts.name == "しゃがみ振り向き中" then
+				-- char_1st_actsには登録しない
 			else
 				char_1st_acts[char][id] = i == 1
 			end
@@ -1361,6 +1363,7 @@ local common_rvs = {
 	{ cmd = cmd_base._2a     , bs = false, name = "下A", },
 	{ cmd = cmd_base._2b     , bs = false, name = "下B", },
 	{ cmd = cmd_base._2c     , bs = false, name = "下C", },
+	{ cmd = cmd_base._2d     , bs = false, name = "下D", },
 	{ cmd = cmd_base._8      , bs = false, name = "垂直ジャンプ", },
 	{ cmd = cmd_base._9      , bs = false, name = "前ジャンプ", },
 	{ cmd = cmd_base._7      , bs = false, name = "後ジャンプ", },
@@ -2337,6 +2340,7 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 		p.attack_id = id
 	end
 
+	pos_y  = pos_y - p.hit.pos_z
 	top    = bit32.band(0xFFFF, pos_y - bit32.arshift(top    * p.hit.scale, 6))
 	bottom = bit32.band(0xFFFF, pos_y - bit32.arshift(bottom * p.hit.scale, 6))
 	left   = bit32.band(0xFFFF, pos_x - bit32.arshift(left   * p.hit.scale, 6) * p.hit.flip_x)
@@ -4206,6 +4210,7 @@ function rbff2.startplugin()
 		local scr = manager:machine().screens[":screen"]
 		local ec = scr:frame_number()
 		local state_past = ec - global.input_accepted
+		local height = scr:height() * scr:yscale()
 		local width = scr:width() * scr:xscale()
 		local joy_val = get_joy()
 
@@ -4583,7 +4588,7 @@ function rbff2.startplugin()
 			p.n_throw.range5   = pgm:read_i8(p.n_throw.addr.range5)
 			p.n_throw.id       = pgm:read_i8(p.n_throw.addr.id)
 			p.n_throw.pos_x    = pgm:read_i16(p.n_throw.addr.pos_x) - screen_left
-			p.n_throw.pos_y    = 200 - pgm:read_i16(p.n_throw.addr.pos_y) + screen_top
+			p.n_throw.pos_y    = height - pgm:read_i16(p.n_throw.addr.pos_y) + screen_top
 			local range = (p.n_throw.range1 == p.n_throw.range2 and math.abs(p.n_throw.range42*4)) or math.abs(p.n_throw.range41*4)
 			range = range + p.n_throw.range5 * -4
 			range = range + p.throw.half_range
@@ -4603,7 +4608,7 @@ function rbff2.startplugin()
 			p.air_throw.opp_base = pgm:read_u32(p.air_throw.addr.opp_base)
 			p.air_throw.opp_id   = pgm:read_u16(p.air_throw.addr.opp_id)
 			p.air_throw.pos_x    = pgm:read_i16(p.air_throw.addr.pos_x) - screen_left
-			p.air_throw.pos_y    = 200 - pgm:read_i16(p.air_throw.addr.pos_y) + screen_top
+			p.air_throw.pos_y    = height - pgm:read_i16(p.air_throw.addr.pos_y) + screen_top
 			p.air_throw.side     = p.side
 			p.air_throw.right    = p.air_throw.range_x * p.side
 			p.air_throw.top      = -p.air_throw.range_y
@@ -4625,7 +4630,7 @@ function rbff2.startplugin()
 			p.sp_throw.side      = p.side
 			p.sp_throw.bottom    = pgm:read_i16(p.sp_throw.addr.bottom)
 			p.sp_throw.pos_x     = pgm:read_i16(p.sp_throw.addr.pos_x) - screen_left
-			p.sp_throw.pos_y     = 200 - pgm:read_i16(p.sp_throw.addr.pos_y) + screen_top
+			p.sp_throw.pos_y     = height - pgm:read_i16(p.sp_throw.addr.pos_y) + screen_top
 			p.sp_throw.right     = p.sp_throw.front * p.side
 			p.sp_throw.type      = box_type_base.pt
 			p.sp_throw.on        = p.addr.base == p.sp_throw.base and p.sp_throw.on or 0xFF
@@ -4682,7 +4687,7 @@ function rbff2.startplugin()
 				attack_only = (pgm:read_u8(addr+0xA) == 1),
 				attack_only_val = pgm:read_u8(addr+0xA),
 				pos_x       = pgm:read_i16(addr+0xC) - screen_left,
-				pos_y       = 200 - pgm:read_i16(addr+0xE) + screen_top,
+				pos_y       = height - pgm:read_i16(addr+0xE) + screen_top,
 			}
 			if box.on ~= 0xFF and temp_hits[box.base] then
 				box.is_fireball = temp_hits[box.base].is_fireball == true
@@ -4754,8 +4759,6 @@ function rbff2.startplugin()
 				printdata()
 			end
 			]]
-			-- 位置ログ
-			print(string.format("%s %s %s %4d.%05d %4d.%05d", i, char_names[p.char], p.act_data.name, p.pos, p.pos_frc, p.pos_y, p.pos_frc_y))
 
 			if p.hit_skip ~= 0 or mem_0x10D4EA ~= 0 then
 				--停止フレームはフレーム計算しない
@@ -4789,6 +4792,16 @@ function rbff2.startplugin()
 				p.on_guard1 = global.frame_number
 			end
 		end
+
+		-- 位置ログ
+		local pos_log = ""
+		for i, p in ipairs(players) do
+			if i == 1 then
+				pos_log = string.format("%4d.%05d\t%4d.%05d\t%2s\t%3s\t%s", p.pos, p.pos_frc, p.pos_y, p.pos_frc_y, p.act_count, p.act_frame, p.act_data.name)
+			end
+			--pos_log = pos_log .. string.format("%s %s %s %4d.%05d %4d.%05d ", i, char_names[p.char], p.act_data.name, p.pos, p.pos_frc, p.pos_y, p.pos_frc_y)
+		end
+		--print(pos_log)
 
 		for _, p in ipairs(players) do
 			-- リバーサルのランダム選択
