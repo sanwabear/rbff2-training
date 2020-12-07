@@ -962,7 +962,7 @@ local char_acts_base = {
 		{ name = "しゃがみ歩き", type = act_types.free, ids = { 0x7, }, },
 		{ disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
 		{ disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
-		{ name = "スゥエー振り向き移動", type = act_types.free, ids = { 0x2BC, 0x2BD, }, },
+		{ name = "スゥエー振り向き移動", type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
 		{ name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
 		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ disp_name = "立ち", name = "スゥエーライン上 立ち", type = act_types.free, ids = { 0x21, 0x40, 0x20, 0x3F, }, },
