@@ -117,6 +117,12 @@ local global = {
 	replay_reset     = 2,     -- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
 	mame_debug_wnd   = false, -- MAMEデバッグウィンドウ表示のときtrue
 	damaged_move     = 1,
+
+	-- log
+	log              = {
+		poslog       = false, -- 位置ログ
+		atklog       = false, -- 攻撃情報ログ
+	},
 }
 local damaged_moves = {
 	0x00000, 0x58C84, 0x58DCC, 0x58DBC, 0x58DDC, 0x58FDE, 0x58DEC, 0x590EA, 0x59D70, 0x59FFA,
@@ -2574,8 +2580,11 @@ local update_object = function(p)
 			if not uniq_hitboxes[hitbox.key] then
 				uniq_hitboxes[hitbox.key] = true
 				table.insert(p.hitboxes, hitbox)
-				if hitbox.log_txt then
-					print(hitbox.log_txt)
+				-- 攻撃情報ログ
+				if global.log.atklog then
+					if hitbox.log_txt then
+						print(hitbox.log_txt)
+					end
 				end
 			else
 				--print("DROP " .. box.key) --debug
@@ -4799,14 +4808,16 @@ function rbff2.startplugin()
 		end
 
 		-- 位置ログ
-		local pos_log = ""
-		for i, p in ipairs(players) do
-			if i == 1 then
-				pos_log = string.format("%4d.%05d\t%4d.%05d\t%2s\t%3s\t%s", p.pos, p.pos_frc, p.pos_y, p.pos_frc_y, p.act_count, p.act_frame, p.act_data.name)
+		if global.log.poslog then
+			local pos_log = ""
+			for i, p in ipairs(players) do
+				if i == 1 then
+					pos_log = string.format("%4d.%05d\t%4d.%05d\t%2s\t%3s\t%s", p.pos, p.pos_frc, p.pos_y, p.pos_frc_y, p.act_count, p.act_frame, p.act_data.name)
+				end
+				--pos_log = pos_log .. string.format("%s %s %s %4d.%05d %4d.%05d ", i, char_names[p.char], p.act_data.name, p.pos, p.pos_frc, p.pos_y, p.pos_frc_y)
 			end
-			--pos_log = pos_log .. string.format("%s %s %s %4d.%05d %4d.%05d ", i, char_names[p.char], p.act_data.name, p.pos, p.pos_frc, p.pos_y, p.pos_frc_y)
+			print(pos_log)
 		end
-		print(pos_log)
 
 		for _, p in ipairs(players) do
 			-- リバーサルのランダム選択
