@@ -122,6 +122,7 @@ local global = {
 	log              = {
 		poslog       = false, -- 位置ログ
 		atklog       = false, -- 攻撃情報ログ
+		baselog      = false, -- フレーム事の処理アドレスログ
 	},
 }
 local damaged_moves = {
@@ -2132,13 +2133,9 @@ local draw_cmd = function(p, line, frame, str)
 	local yy = (line + 10 - 1) * 8 -- +8はオフセット位置
 
 	if 0 < frame then
-		if 999 < frame then
-			draw_rtext(p1 and 10.5 or 295.5, yy + 0.5, "LOT", shadow_col)
-			draw_rtext(p1 and 10   or 295  ,       yy, "LOT", text_col)
-		else
-			draw_rtext(p1 and 10.5 or 295.5, yy + 0.5, frame, shadow_col)
-			draw_rtext(p1 and 10   or 295  ,       yy, frame, text_col)
-		end
+		local cframe = 999 < frame and "LOT" or frame
+		draw_rtext(p1 and 10.5 or 295.5, yy + 0.5, cframe, shadow_col)
+		draw_rtext(p1 and 10   or 295  ,       yy, cframe, text_col)
 	end
 	local col = 0xFAFFFFFF
 	if p1 then
@@ -2165,6 +2162,24 @@ local draw_cmd = function(p, line, frame, str)
 		end
 		xx = xx + 5 -- フォントの大きさ問わず5pxずつ表示する
 	end
+end
+-- コマンド入力表示
+local draw_base = function(p, line, frame, cstr, act_name)
+	local scr = manager:machine().screens[":screen"]
+
+	local p1 = p == 1
+	local xx = p1 and 90 or 195    -- 1Pと2Pで左右に表示し分ける
+	local yy = (line + 10 - 1) * 8 -- +8はオフセット位置
+
+	if 0 < frame then
+		local cframe = 999 < frame and "LOT" or frame
+		draw_rtext(p1 and 60.5 or 245.5, yy + 0.5, cframe, shadow_col)
+		draw_rtext(p1 and 60   or 245  ,       yy, cframe, text_col)
+	end
+	draw_rtext   (xx + 0.5, yy + 0.5, cstr    , 0xFF000000) -- 文字の影
+	scr:draw_text(xx + 0.5, yy + 0.5, act_name, 0xFF000000) -- 文字の影
+	draw_rtext   (xx, yy, cstr    , text_col)
+	scr:draw_text(xx, yy, act_name, text_col)
 end
 
 -- 当たり判定のオフセット
@@ -2628,6 +2643,9 @@ function rbff2.startplugin()
 	for p = 1, 2 do
 		local p1 = (p == 1)
 		players[p] = {
+			base             = 0x0,
+			bases            = {},
+
 			dummy_act        = 1,           -- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
 			dummy_gd         = dummy_gd_type.none, -- なし, オート, ブレイクショット, 1ヒットガード, 1ガード, 常時, ランダム
 			dummy_wakeup     = wakeup_type.none,  -- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
@@ -2647,6 +2665,7 @@ function rbff2.startplugin()
 			life_rec         = true,        -- 自動で体力回復させるときtrue
 			red              = 1,           -- 体力設定
 			max              = 3,           -- パワー設定
+			disp_base        = false,       -- 処理のアドレスを表示するときtrue
 			disp_dmg         = true,        -- ダメージ表示するときtrue
 			disp_cmd         = true,        -- 入力表示するときtrue
 			disp_frm         = true,        -- フレーム数表示するときtrue
@@ -2999,6 +3018,7 @@ function rbff2.startplugin()
 			players[p].key_hist[i] = ""
 			players[p].key_frames[i] = 0
 			players[p].act_frames[i] = {0,0}
+			players[p].bases[i] = { count = 0, addr = 0x0, act_data = nil, }
 		end
 	end
 	-- 飛び道具領域の作成
@@ -4253,6 +4273,7 @@ function rbff2.startplugin()
 		for i, p in ipairs(players) do
 			local op         = players[3-i]
 
+			p.base           = pgm:read_u32(p.addr.base)
 			p.char           = pgm:read_u8(p.addr.char)
 			p.char_4times    = bit32.band(0xFFFF, p.char + p.char)
 			p.char_4times    = bit32.band(0xFFFF, p.char_4times + p.char_4times)
@@ -4476,6 +4497,18 @@ function rbff2.startplugin()
 			end
 			p.old_act_normal = p.act_normal
 			p.act_normal     = p.act_data.type == act_types.free
+
+			-- アドレス保存
+			if not p.bases[#p.bases] or p.bases[#p.bases].addr ~= p.base then
+				table.insert(p.bases, { addr = p.base, count = 1, act_data = p.act_data, } )
+			else
+				local base = p.bases[#p.bases]
+				base.count = base.count + 1
+			end
+			if 16 < #p.bases then
+				--バッファ長調整
+				table.remove(p.bases, 1)
+			end
 
 			-- 飛び道具の状態読取
 			for _, fb in pairs(p.fireball) do
@@ -5735,7 +5768,7 @@ function rbff2.startplugin()
 				end
 			end
 
-			-- コマンド入力とダメージとコンボ表示
+			-- コマンド入力表示
 			for i, p in ipairs(players) do
 				-- コマンド入力表示
 				if p.disp_cmd then
@@ -5745,7 +5778,31 @@ function rbff2.startplugin()
 					draw_cmd(i, #p.key_hist + 1, 0, "")
 				end
 			end
-			-- コマンド入力とダメージとコンボ表示
+			-- ベースアドレス表示
+			for i, p in ipairs(players) do
+				-- コマンド入力表示
+				for k = 1, #p.bases do
+					local name
+					if p.bases[k].act_data then
+						local act_data = p.bases[k].act_data
+						name = act_data.disp_name or (act_data.names and act_data.names[1] or act_data.name) or act_data.name or ""
+					else
+						name = ""
+					end
+					if p.disp_base then
+						draw_base(i, k, p.bases[k].count, string.format("%8x", p.bases[k].addr), name)
+					end
+					if k == (#p.bases - 1) and p.bases[#p.bases].count == 1 then
+						if global.log.baselog then
+							print(string.format("%s %3s %8x %s", i, 999 < p.bases[k].count and "LOT" or p.bases[k].count, p.bases[k].addr, name))
+						end
+					end
+				end
+				if p.disp_base then
+					draw_base(i, #p.bases + 1, 0, "", "")
+				end
+			end
+			-- ダメージとコンボ表示
 			for i, p in ipairs(players) do
 				local p1 = i == 1
 				local op = players[3-i]
@@ -6228,10 +6285,15 @@ function rbff2.startplugin()
 		global.disp_frmgap       = col[ 9]      -- フレーム差表示         9
 		p[1].disp_frm            = col[10] == 2 -- 1P フレーム数表示     10
 		p[2].disp_frm            = col[11] == 2 -- 2P フレーム数表示     11
-		global.disp_pos          = col[12] == 2 -- 1P 2P 距離表示        12
-		dip_config.easy_super    = col[13] == 2 -- 簡易超必              13
-		global.mame_debug_wnd    = col[14] == 2 -- MAMEデバッグウィンドウ14
-		global.damaged_move      = col[15]      -- ヒット効果確認用      15
+		p[1].disp_base           = col[12] == 2 -- 1P 処理アドレス表示   12
+		p[2].disp_base           = col[13] == 2 -- 2P 処理アドレス表示   13
+		global.disp_pos          = col[14] == 2 -- 1P 2P 距離表示        14
+		dip_config.easy_super    = col[15] == 2 -- 簡易超必              15
+		global.mame_debug_wnd    = col[16] == 2 -- MAMEデバッグウィンドウ16
+		global.damaged_move      = col[17]      -- ヒット効果確認用      17
+		global.log.poslog        = col[18] == 2 -- 位置ログ              18
+		global.log.atklog        = col[19] == 2 -- 攻撃情報ログ          19
+		global.log.baselog       = col[20] == 2 -- 処理アドレスログ      20
 
 		local dmove = damaged_moves[global.damaged_move]
 		if dmove and dmove > 0 then
@@ -6403,10 +6465,15 @@ function rbff2.startplugin()
 		col[ 9] = g.disp_frmgap            -- フレーム差表示         9
 		col[10] = p[1].disp_frm and 2 or 1 -- 1P フレーム数表示     10
 		col[11] = p[2].disp_frm and 2 or 1 -- 2P フレーム数表示     11
-		col[12] = g.disp_pos    and 2 or 1 -- 1P 2P 距離表示        12
-		col[13] = dip_config.easy_super and 2 or 1 -- 簡易超必      13
-		col[14] = global.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ14
-		col[15] = global.damaged_move      -- ヒット効果確認用      15
+		col[12] = p[1].disp_base and 2 or 1 -- 1P 処理アドレス表示  12
+		col[13] = p[2].disp_base and 2 or 1 -- 2P 処理アドレス表示  13
+		col[14] = g.disp_pos    and 2 or 1 -- 1P 2P 距離表示        14
+		col[15] = dip_config.easy_super and 2 or 1 -- 簡易超必      15
+		col[16] = g.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ16
+		col[17] = g.damaged_move           -- ヒット効果確認用      17
+		col[18] = g.log.poslog  and 2 or 1 -- 位置ログ              18
+		col[19] = g.log.atklog  and 2 or 1 -- 攻撃情報ログ          19
+		col[20] = g.log.baselog and 2 or 1 -- 処理アドレスログ      20
 	end
 	local init_auto_menu_config = function()
 		local col = auto_menu.pos.col
@@ -6796,10 +6863,15 @@ function rbff2.startplugin()
 			{ "フレーム差表示"        , { "OFF", "数値とグラフ", "数値" }, },
 			{ "1P フレーム数表示"     , { "OFF", "ON" }, },
 			{ "2P フレーム数表示"     , { "OFF", "ON" }, },
+			{ "1P 処理アドレス表示"   , { "OFF", "ON" }, },
+			{ "2P 処理アドレス表示"   , { "OFF", "ON" }, },
 			{ "1P 2P 距離表示"        , { "OFF", "ON" }, },
 			{ "簡易超必"              , { "OFF", "ON" }, },
 			{ "MAMEデバッグウィンドウ", { "OFF", "ON" }, },
 			{ "ヒット効果確認用"      , damaged_move_keys },
+			{ "位置ログ"              , { "OFF", "ON" }, },
+			{ "攻撃情報ログ"          , { "OFF", "ON" }, },
+			{ "処理アドレスログ"      , { "OFF", "ON" }, },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
@@ -6816,10 +6888,15 @@ function rbff2.startplugin()
 				2, -- フレーム差表示          9
 				1, -- 1P フレーム数表示      10
 				1, -- 2P フレーム数表示      11
-				1, -- 1P 2P 距離表示         12
-				1, -- 簡易超必               13
-				1, -- MAMEデバッグウィンドウ 14
-				1, -- ヒット効果確認用       15
+				1, -- 1P 処理アドレス表示    12
+				1, -- 2P 処理アドレス表示    13
+				1, -- 1P 2P 距離表示         14
+				1, -- 簡易超必               15
+				1, -- MAMEデバッグウィンドウ 16
+				1, -- ヒット効果確認用       17
+				1, -- 位置ログ               18
+				1, -- 攻撃情報ログ           19
+				1, -- 処理アドレスログ       20
 			},
 		},
 		on_a = {
@@ -6834,10 +6911,15 @@ function rbff2.startplugin()
 			ex_menu_to_main, -- フレーム差表示
 			ex_menu_to_main, -- 1P フレーム数表示
 			ex_menu_to_main, -- 2P フレーム数表示
+			ex_menu_to_main, -- 1P 処理アドレス表示
+			ex_menu_to_main, -- 2P 処理アドレス表示
 			ex_menu_to_main, -- 1P 2P 距離表示
 			ex_menu_to_main, -- 簡易超必
 			ex_menu_to_main, -- MAMEデバッグウィンドウ
 			ex_menu_to_main, -- ヒット効果確認用
+			ex_menu_to_main, -- 位置ログ
+			ex_menu_to_main, -- 攻撃情報ログ
+			ex_menu_to_main, -- 処理アドレスログ
 		},
 		on_b = {
 			ex_menu_to_main_cancel, -- －一般設定－
@@ -6851,10 +6933,15 @@ function rbff2.startplugin()
 			ex_menu_to_main_cancel, -- 2P 入力表示
 			ex_menu_to_main_cancel, -- 1P フレーム数表示
 			ex_menu_to_main_cancel, -- 2P フレーム数表示
+			ex_menu_to_main_cancel, -- 1P 処理アドレス表示
+			ex_menu_to_main_cancel, -- 2P 処理アドレス表示
 			ex_menu_to_main_cancel, -- 1P 2P 距離表示
 			ex_menu_to_main_cancel, -- 簡易超必
 			ex_menu_to_main_cancel, -- MAMEデバッグウィンドウ
 			ex_menu_to_main_cancel, -- ヒット効果確認用
+			ex_menu_to_main_cancel, -- 位置ログ
+			ex_menu_to_main_cancel, -- 攻撃情報ログ
+			ex_menu_to_main_cancel, -- 処理アドレスログ
 		},
 	}
 
