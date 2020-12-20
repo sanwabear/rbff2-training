@@ -1794,25 +1794,49 @@ for _, list in pairs(char_rvs_list) do
 end
 
 -- エミュレータ本体の入力取得
+local joyk = {
+	p1 = {
+		dn = "P1 Down"       , -- joyk.p1.dn
+		lt = "P1 Left"       , -- joyk.p1.lt
+		rt = "P1 Right"      , -- joyk.p1.rt
+		up = "P1 Up"         , -- joyk.p1.up
+		a  = "P1 Button 1"   , -- joyk.p1.a
+		b  = "P1 Button 2"   , -- joyk.p1.b
+		c  = "P1 Button 3"   , -- joyk.p1.c
+		d  = "P1 Button 4"   , -- joyk.p1.d
+		st = "1 Player Start", -- joyk.p1.st
+	},
+	p2 = {
+		dn = "P2 Down"        , -- joyk.p2.dn
+		lt = "P2 Left"        , -- joyk.p2.lt
+		rt = "P2 Right"       , -- joyk.p2.rt
+		up = "P2 Up"          , -- joyk.p2.up
+		a  = "P2 Button 1"    , -- joyk.p2.a
+		b  = "P2 Button 2"    , -- joyk.p2.b
+		c  = "P2 Button 3"    , -- joyk.p2.c
+		d  = "P2 Button 4"    , -- joyk.p2.d
+		st = "2 Players Start", -- joyk.p2.st
+	},
+}
 local use_joy = {
-	{ port = ":edge:joy:JOY1" , field = "P1 Button 1"    , frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1" , field = "P1 Button 2"    , frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1" , field = "P1 Button 3"    , frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1" , field = "P1 Button 4"    , frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1" , field = "P1 Down"        , frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1" , field = "P1 Left"        , frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1" , field = "P1 Right"       , frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1" , field = "P1 Up"          , frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY2" , field = "P2 Button 1"    , frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2" , field = "P2 Button 2"    , frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2" , field = "P2 Button 3"    , frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2" , field = "P2 Button 4"    , frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2" , field = "P2 Down"        , frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2" , field = "P2 Left"        , frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2" , field = "P2 Right"       , frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2" , field = "P2 Up"          , frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:START", field = "2 Players Start", frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:START", field = "1 Player Start" , frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1" , field = joyk.p1.a , frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1" , field = joyk.p1.b , frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1" , field = joyk.p1.c , frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1" , field = joyk.p1.d , frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1" , field = joyk.p1.dn, frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1" , field = joyk.p1.lt, frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1" , field = joyk.p1.rt, frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1" , field = joyk.p1.up, frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY2" , field = joyk.p2.a , frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2" , field = joyk.p2.b , frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2" , field = joyk.p2.c , frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2" , field = joyk.p2.d , frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2" , field = joyk.p2.dn, frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2" , field = joyk.p2.lt, frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2" , field = joyk.p2.rt, frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2" , field = joyk.p2.up, frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:START", field = joyk.p2.st, frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:START", field = joyk.p1.st, frame = 0, prev = 0, player = 1, get = 0, },
 }
 local get_joy_base = function(prev, exclude_player)
 	local scr = manager:machine().screens[":screen"]
@@ -1897,34 +1921,34 @@ local is_start_a = function(joy_val, state_past)
 end
 local new_next_joy = function()
 	return {
-		["P1 Down" ] = false, ["P1 Button 1"] = false, ["P2 Down" ] = false, ["P2 Button 1"] = false,
-		["P1 Left" ] = false, ["P1 Button 2"] = false, ["P2 Left" ] = false, ["P2 Button 2"] = false,
-		["P1 Right"] = false, ["P1 Button 3"] = false, ["P2 Right"] = false, ["P2 Button 3"] = false,
-		["P1 Up"   ] = false, ["P1 Button 4"] = false, ["P2 Up"   ] = false, ["P2 Button 4"] = false,
+		[joyk.p1.dn] = false, [joyk.p1.a] = false, [joyk.p2.dn] = false, [joyk.p2.a] = false,
+		[joyk.p1.lt] = false, [joyk.p1.b] = false, [joyk.p2.lt] = false, [joyk.p2.b] = false,
+		[joyk.p1.rt] = false, [joyk.p1.c] = false, [joyk.p2.rt] = false, [joyk.p2.c] = false,
+		[joyk.p1.up] = false, [joyk.p1.d] = false, [joyk.p2.up] = false, [joyk.p2.d] = false,
 	}
 end
 -- 入力の1P、2P反転用のテーブル
 local rev_joy = {
-	["P1 Button 1"] = "P2 Button 1", ["P2 Button 1"] = "P1 Button 1",
-	["P1 Button 2"] = "P2 Button 2", ["P2 Button 2"] = "P1 Button 2",
-	["P1 Button 3"] = "P2 Button 3", ["P2 Button 3"] = "P1 Button 3",
-	["P1 Button 4"] = "P2 Button 4", ["P2 Button 4"] = "P1 Button 4",
-	["P1 Down"    ] = "P2 Down"    , ["P2 Down"    ] = "P1 Down"    ,
-	["P1 Left"    ] = "P2 Left"    , ["P2 Left"    ] = "P1 Left"    ,
-	["P1 Right"   ] = "P2 Right"   , ["P2 Right"   ] = "P1 Right"   ,
-	["P1 Up"      ] = "P2 Up"      , ["P2 Up"      ] = "P1 Up"      ,
+	[joyk.p1.a ] = joyk.p2.a , [joyk.p2.a ] = joyk.p1.a ,
+	[joyk.p1.b ] = joyk.p2.b , [joyk.p2.b ] = joyk.p1.b ,
+	[joyk.p1.c ] = joyk.p2.c , [joyk.p2.c ] = joyk.p1.c ,
+	[joyk.p1.d ] = joyk.p2.d , [joyk.p2.d ] = joyk.p1.d ,
+	[joyk.p1.dn] = joyk.p2.dn, [joyk.p2.dn] = joyk.p1.dn,
+	[joyk.p1.lt] = joyk.p2.lt, [joyk.p2.lt] = joyk.p1.lt,
+	[joyk.p1.rt] = joyk.p2.rt, [joyk.p2.rt] = joyk.p1.rt,
+	[joyk.p1.up] = joyk.p2.up, [joyk.p2.up] = joyk.p1.up,
 }
 -- 入力から1P、2Pを判定するテーブル
 local joy_pside = {
-	["P1 Down" ] = 1, ["P1 Button 1"] = 1, ["P2 Down" ] = 2, ["P2 Button 1"] = 2,
-	["P1 Left" ] = 1, ["P1 Button 2"] = 1, ["P2 Left" ] = 2, ["P2 Button 2"] = 2,
-	["P1 Right"] = 1, ["P1 Button 3"] = 1, ["P2 Right"] = 2, ["P2 Button 3"] = 2,
-	["P1 Up"   ] = 1, ["P1 Button 4"] = 1, ["P2 Up"   ] = 2, ["P2 Button 4"] = 2,
+	[joyk.p1.dn] = 1, [joyk.p1.a] = 1, [joyk.p2.dn] = 2, [joyk.p2.a] = 2,
+	[joyk.p1.lt] = 1, [joyk.p1.b] = 1, [joyk.p2.lt] = 2, [joyk.p2.b] = 2,
+	[joyk.p1.rt] = 1, [joyk.p1.c] = 1, [joyk.p2.rt] = 2, [joyk.p2.c] = 2,
+	[joyk.p1.up] = 1, [joyk.p1.d] = 1, [joyk.p2.up] = 2, [joyk.p2.d] = 2,
 }
 -- 入力の左右反転用のテーブル
 local joy_frontback = {
-	["P1 Left" ] = "P1 Right", ["P2 Left" ] = "P2 Right",
-	["P1 Right"] = "P1 Left" , ["P2 Right"] = "P2 Left" ,
+	[joyk.p1.lt] = joyk.p1.rt, [joyk.p2.lt] = joyk.p2.rt,
+	[joyk.p1.rt] = joyk.p1.lt, [joyk.p2.rt] = joyk.p2.lt,
 }
 -- MAMEへの入力の無効化
 local cls_joy = function()
@@ -1935,7 +1959,7 @@ end
 
 -- キー入力
 local kprops = { "d", "c", "b", "a", "rt", "lt", "dn", "up", "sl", "st", }
- local posi_or_pl1 = function(v) return 0 <= v and v + 1 or 1 end
+local posi_or_pl1 = function(v) return 0 <= v and v + 1 or 1 end
 local nega_or_mi1 = function(v) return 0 >= v and v - 1 or -1 end
 
 -- ポーズ
@@ -3569,6 +3593,99 @@ function rbff2.startplugin()
 			store = {}, -- 入力保存先
 			name = "スロット" .. i,
 		}
+	end
+
+	-- 調査用自動再生スロットの準備
+	recording.slot[#recording.slot] = {
+		side  = 1,
+		store = {},
+		name = "調査用自動再生スロット",
+	}
+	recording.player = 1
+	local research_cmd = function()
+		local make_cmd = function(k)
+			local joy = new_next_joy()
+			if k then
+				for _, k in ipairs(k) do
+					joy[k] = true
+				end
+			end
+			return joy
+		end
+		local times = function(c, t)
+			local ret = {}
+			for i = 1, t do
+				table.insert(ret, c)
+			end
+			return ret
+		end
+		local _1  = make_cmd({ joyk.p1.lt, joyk.p1.dn, })
+		local _2  = make_cmd({ joyk.p1.dn, })
+		local _3  = make_cmd({ joyk.p1.rt, joyk.p1.dn, })
+		local _4  = make_cmd({ joyk.p1.lt, })
+		local _5  = make_cmd()
+		local _6  = make_cmd({ joyk.p1.rt, })
+		local _7  = make_cmd({ joyk.p1.lt, joyk.p1.up, })
+		local _8  = make_cmd({ joyk.p1.up, })
+		local _9  = make_cmd({ joyk.p1.rt, joyk.p1.up, })
+		local _1a = make_cmd({ joyk.p1.a, joyk.p1.lt, joyk.p1.dn, })
+		local _2a = make_cmd({ joyk.p1.a, joyk.p1.dn, })
+		local _3a = make_cmd({ joyk.p1.a, joyk.p1.rt, joyk.p1.dn, })
+		local _4a = make_cmd({ joyk.p1.a, joyk.p1.lt, })
+		local _5a = make_cmd({ joyk.p1.a, })
+		local _6a = make_cmd({ joyk.p1.a, joyk.p1.rt, })
+		local _7a = make_cmd({ joyk.p1.a, joyk.p1.lt, joyk.p1.up, })
+		local _8a = make_cmd({ joyk.p1.a, joyk.p1.up, })
+		local _9a = make_cmd({ joyk.p1.a, joyk.p1.rt, joyk.p1.up, })
+		local _1b = make_cmd({ joyk.p1.b, joyk.p1.lt, joyk.p1.dn, })
+		local _2b = make_cmd({ joyk.p1.b, joyk.p1.dn, })
+		local _3b = make_cmd({ joyk.p1.b, joyk.p1.rt, joyk.p1.dn, })
+		local _4b = make_cmd({ joyk.p1.b, joyk.p1.lt, })
+		local _5b = make_cmd({ joyk.p1.b, })
+		local _6b = make_cmd({ joyk.p1.b, joyk.p1.rt, })
+		local _7b = make_cmd({ joyk.p1.b, joyk.p1.lt, joyk.p1.up, })
+		local _8b = make_cmd({ joyk.p1.b, joyk.p1.up, })
+		local _9b = make_cmd({ joyk.p1.c, joyk.p1.rt, joyk.p1.up, })
+		local _1c = make_cmd({ joyk.p1.c, joyk.p1.lt, joyk.p1.dn, })
+		local _2c = make_cmd({ joyk.p1.c, joyk.p1.dn, })
+		local _3c = make_cmd({ joyk.p1.c, joyk.p1.rt, joyk.p1.dn, })
+		local _4c = make_cmd({ joyk.p1.c, joyk.p1.lt, })
+		local _5c = make_cmd({ joyk.p1.c, })
+		local _6c = make_cmd({ joyk.p1.c, joyk.p1.rt, })
+		local _7c = make_cmd({ joyk.p1.c, joyk.p1.lt, joyk.p1.up, })
+		local _8c = make_cmd({ joyk.p1.c, joyk.p1.up, })
+		local _9c = make_cmd({ joyk.p1.c, joyk.p1.rt, joyk.p1.up, })
+		local await =  times(_5, 60)
+		local join_cmd = function(cmds)
+			local ret = {}
+			for _, cmd in ipairs(cmds) do
+				for _, c in ipairs(cmd) do
+					table.insert(ret, c)
+				end
+			end
+			return ret
+		end
+		return join_cmd({
+			{ _9 , _9 , _9 , _9,  _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
+			{ _9a, _9 , _9 , _9,  _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
+			{ _9 , _9a, _9 , _9,  _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
+			{ _9 , _9 , _9a, _9,  _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
+			{ _9 , _9 , _9 , _9a, _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
+
+			{ _9 , _9 , _9 , _9 , _9 , _8 , _9 , _6 , _9a, }, await, -- 通常ジャンプ
+			{ _9 , _8 , _5 , _5 , _8 , _8b, _5 , _5 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _7 , _5 , _4 , _7 , _8 , _7 , _4 , _7c, }, await, -- 小ジャンプ
+			{ _9 , _5 , _5 , _4 , _1 , _2 , _3 , _6 , _9 , }, await, -- 小ジャンプ
+
+			{ _7 , _7 , _4 , _4 , _1 , _1 , _2 , _2 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _9 , _9 , _9 , _6 , _8 , _9 , _6 , _9a, }, await, -- 小ジャンプ
+			{ _9 , _8 , _5 , _5 , _5 , _8b, _5 , _5 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _7 , _5 , _4 , _7 , _8 , _7 , _4 , _4c, }, await, -- 小ジャンプ
+		})
+	end
+	local research_cmd_pos = { 1, -1 }
+	for _, joy in ipairs(research_cmd()) do
+		table.insert(recording.slot[1].store, { joy = joy, pos = research_cmd_pos })
 	end
 
 	local rec_await_no_input, rec_await_1st_input, rec_await_play, rec_input, rec_play, rec_repeat_play, rec_play_interval, rec_fixpos
