@@ -123,6 +123,7 @@ local global = {
 		poslog       = false, -- 位置ログ
 		atklog       = false, -- 攻撃情報ログ
 		baselog      = false, -- フレーム事の処理アドレスログ
+		keylog       = false, -- 入力ログ
 	},
 }
 local damaged_moves = {
@@ -1205,6 +1206,14 @@ local jump_acts = {
 }
 local wakeup_acts = { [0x193] = true, [0x13B] = true, }
 local down_acts = { [0x190] = true,  [0x191] = true, [0x192] = true, [0x18E] = true, }
+local get_act_name = function(act_data)
+	if act_data then
+		return act_data.disp_name or (act_data.names and act_data.names[1] or act_data.name) or act_data.name or ""
+	else
+		return ""
+	end
+	---return a.disp_name or ((a.names and #a.names > 0) and a.names[1] or a.name)
+end
 
 -- キー入力2
 local cmd_neutral = function(p, next_joy)
@@ -3042,7 +3051,7 @@ function rbff2.startplugin()
 			players[p].key_hist[i] = ""
 			players[p].key_frames[i] = 0
 			players[p].act_frames[i] = {0,0}
-			players[p].bases[i] = { count = 0, addr = 0x0, act_data = nil, }
+			players[p].bases[i] = { count = 0, addr = 0x0, act_data = nil, name = "", }
 		end
 	end
 	-- 飛び道具領域の作成
@@ -3666,31 +3675,31 @@ function rbff2.startplugin()
 			return ret
 		end
 		return join_cmd({
-			--{ _9 , _9 , _9 , _9,  _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			--{ _9 , _5 , _5 , _9 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			--{ _9 , _9 , _5 , _9 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			--{ _9 , _5 , _9 , _9 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			--{ _9 , _9 , _5 , _5 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _9 , _9 , _9,  _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _5 , _5 , _9 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _9 , _5 , _9 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _5 , _9 , _9 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _9 , _5 , _5 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
 
-			--{ _9a, _9 , _9 , _9,  _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
-			--{ _9 , _9a, _9 , _9,  _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
-			--{ _9 , _9 , _9a, _9,  _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
-			--{ _9 , _9 , _9 , _9a, _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
+			{ _9a, _9 , _9 , _9,  _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
+			{ _9 , _9a, _9 , _9,  _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
+			{ _9 , _9 , _9a, _9,  _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
+			{ _9 , _9 , _9 , _9a, _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
 
-			--{ _9 , _5 , _5 , _9a, _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
-			--{ _9a, _5 , _5 , _9 , _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
-			--{ _9 , _9 , _5 , _9a, _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
-			--{ _9 , _5 , _9 , _9a, _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
+			{ _9 , _5 , _5 , _9a, _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
+			{ _9a, _5 , _5 , _9 , _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
+			{ _9 , _9 , _5 , _9a, _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
+			{ _9 , _5 , _9 , _9a, _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
 
-			--{ _9 , _9 , _9 , _9 , _9 , _8 , _9 , _6 , _9a, }, await, -- 通常ジャンプ
-			--{ _9 , _8 , _5 , _5 , _8 , _8b, _5 , _5 , _5 , }, await, -- 小ジャンプ
-			--{ _9 , _7 , _5 , _4 , _7 , _8 , _7 , _4 , _7c, }, await, -- 小ジャンプ
-			--{ _9 , _5 , _5 , _4 , _1 , _2 , _3 , _6 , _9 , }, await, -- 小ジャンプ
+			{ _9 , _9 , _9 , _9 , _9 , _8 , _9 , _6 , _9a, }, await, -- 通常ジャンプ
+			{ _9 , _8 , _5 , _5 , _8 , _8b, _5 , _5 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _7 , _5 , _4 , _7 , _8 , _7 , _4 , _7c, }, await, -- 小ジャンプ
+			{ _9 , _5 , _5 , _4 , _1 , _2 , _3 , _6 , _9 , }, await, -- 小ジャンプ
 
-			--{ _7 , _7 , _4 , _4 , _1 , _1 , _2 , _2 , _5 , }, await, -- 小ジャンプ
-			--{ _9 , _9 , _9 , _9 , _6 , _8 , _9 , _6 , _9a, }, await, -- 小ジャンプ
-			--{ _9 , _8 , _5 , _5 , _5 , _8b, _5 , _5 , _5 , }, await, -- 小ジャンプ
-			--{ _9 , _7 , _5 , _4 , _7 , _8 , _7 , _4 , _4c, }, await, -- 小ジャンプ
+			{ _9 , _9 , _6 , _6 , _3 , _3 , _2 , _2 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _9 , _9 , _9 , _6 , _8 , _9 , _6 , _9a, }, await, -- 小ジャンプ
+			{ _9 , _8 , _5 , _5 , _5 , _8b, _5 , _5 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _7 , _5 , _4 , _7 , _8 , _7 , _4 , _4c, }, await, -- 小ジャンプ
 
 			{ _9 , _6 , _6 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
 			{ _9 , _6 , _6 , _6 , _6 , _6 , _6 , _6 , _5 , }, await, -- 通常ジャンプ
@@ -3701,48 +3710,48 @@ function rbff2.startplugin()
 			{ _9 , _6 , _6 , _5 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
 			{ _9 , _6 , _5 , _5 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
 			{ _9 , _5 , _5 , _5 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			--{ _9 , _9 , _6 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-			--{ _9 , _9 , _9 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-			--{ _9 , _9 , _9 , _9 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-			--{ _9 , _9 , _9 , _9 , _9 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-			--{ _9 , _5 , _6 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-			--{ _9 , _5 , _5 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
-			--{ _9 , _6 , _5 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
+			{ _9 , _9 , _6 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
+			{ _9 , _9 , _9 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
+			{ _9 , _9 , _9 , _9 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
+			{ _9 , _9 , _9 , _9 , _9 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
+			{ _9 , _5 , _6 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
+			{ _9 , _5 , _5 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
+			{ _9 , _6 , _5 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
 
-			--{ _9 , _5 , _9 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-			--{ _9 , _5 , _5 , _9 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-			--{ _9 , _9 , _5 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
-			--{ _9 , _9 , _5 , _9 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
+			{ _9 , _5 , _9 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
+			{ _9 , _5 , _5 , _9 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
+			{ _9 , _9 , _5 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
+			{ _9 , _9 , _5 , _9 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
 
-			--{ _9 , _5 , _9 , _6 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			--{ _9 , _5 , _5 , _9 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			--{ _9 , _9 , _5 , _6 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			--{ _9 , _9 , _5 , _9 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _5 , _9 , _6 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _5 , _5 , _9 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _9 , _5 , _6 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _9 , _5 , _9 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
 
-			--{ _9 , _5 , _9 , _6 , _6 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			--{ _9 , _5 , _5 , _9 , _6 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			--{ _9 , _9 , _5 , _6 , _6 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			--{ _9 , _9 , _5 , _9 , _6 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _5 , _9 , _6 , _6 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _5 , _5 , _9 , _6 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _9 , _5 , _6 , _6 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _9 , _5 , _9 , _6 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
 
-			--{ _9 , _5 , _9 , _6 , _9 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			--{ _9 , _5 , _5 , _9 , _9 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			--{ _9 , _9 , _5 , _6 , _9 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			--{ _9 , _9 , _5 , _9 , _9 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _5 , _9 , _6 , _9 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _5 , _5 , _9 , _9 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _9 , _5 , _6 , _9 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
+			{ _9 , _9 , _5 , _9 , _9 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
 
-			--{ _9 , _5 , _9 , _6 , _9 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-			--{ _9 , _5 , _5 , _9 , _9 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-			--{ _9 , _9 , _5 , _6 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
-			--{ _9 , _9 , _5 , _9 , _9 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
+			{ _9 , _5 , _9 , _6 , _9 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
+			{ _9 , _5 , _5 , _9 , _9 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
+			{ _9 , _9 , _5 , _6 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
+			{ _9 , _9 , _5 , _9 , _9 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
 
-			--{ _9 , _5 , _9 , _5 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
-			--{ _9 , _5 , _5 , _5 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
-			--{ _9 , _9 , _5 , _5 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
-			--{ _9 , _9 , _5 , _5 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
+			{ _9 , _5 , _9 , _5 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
+			{ _9 , _5 , _5 , _5 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
+			{ _9 , _9 , _5 , _5 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
+			{ _9 , _9 , _5 , _5 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
 
-			--{ _9 , _5 , _9 , _8 , _9 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-			--{ _9 , _5 , _5 , _8 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
-			--{ _9 , _9 , _5 , _8 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
-			--{ _9 , _9 , _5 , _8 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
+			{ _9 , _5 , _9 , _8 , _9 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
+			{ _9 , _5 , _5 , _8 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
+			{ _9 , _9 , _5 , _8 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
+			{ _9 , _9 , _5 , _8 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
 		})
 	end
 	local research_cmd_pos = { 1, -1 }
@@ -4679,7 +4688,12 @@ function rbff2.startplugin()
 
 			-- アドレス保存
 			if not p.bases[#p.bases] or p.bases[#p.bases].addr ~= p.base then
-				table.insert(p.bases, { addr = p.base, count = 1, act_data = p.act_data, } )
+				table.insert(p.bases, {
+					addr     = p.base,
+					count    = 1,
+					act_data = p.act_data,
+					name     = get_act_name(p.act_data),
+				} )
 			else
 				local base = p.bases[#p.bases]
 				base.count = base.count + 1
@@ -5019,16 +5033,31 @@ function rbff2.startplugin()
 			end
 		end
 
-		-- 位置ログ
-		if global.log.poslog then
-			local pos_log = ""
-			for i, p in ipairs(players) do
-				if i == 1 then
-					pos_log = string.format("%4d.%05d\t%4d.%05d\t%2s\t%3s\t%s", p.pos, p.pos_frc, p.pos_y, p.pos_frc_y, p.act_count, p.act_frame, p.act_data.name)
-				end
-				--pos_log = pos_log .. string.format("%s %s %s %4d.%05d %4d.%05d ", i, char_names[p.char], p.act_data.name, p.pos, p.pos_frc, p.pos_y, p.pos_frc_y)
+		if global.log.baselog or global.log.keylog or global.log.poslog then
+			local p1, p2 = players[1], players[2]
+			local log1, log2 = string.format("P1 %s ", get_act_name(p1.act_data)), string.format("P2 %s ", get_act_name(p2.act_data))
+
+			-- ベースアドレスログ
+			if global.log.baselog then
+				local b1 = p1.bases[#players[1].bases]
+				local b2 = p2.bases[#players[2].bases]
+				log1 = string.format("%s addr %3s %8x ", log1, 999 < b1.count and "LOT" or b1.count, b1.addr)
+				log2 = string.format("%s addr %3s %8x ", log2, 999 < b2.count and "LOT" or b2.count, b2.addr)
 			end
-			print(pos_log)
+
+			-- 入力ログ
+			if global.log.keylog then
+				log1 = string.format("%s key %s ", log1, p1.key_hist[#p1.key_hist])
+				log2 = string.format("%s key %s ", log2, p2.key_hist[#p2.key_hist])
+			end
+
+			-- 位置ログ
+			if global.log.poslog then
+				log1 = string.format("%s pos %4d.%05d %4d.%05d %2s %3s", log1, p1.pos, p1.pos_frc, p1.pos_y, p1.pos_frc_y, p1.act_count, p1.act_frame)
+				log2 = string.format("%s pos %4d.%05d %4d.%05d %2s %3s", log2, p2.pos, p2.pos_frc, p2.pos_y, p2.pos_frc_y, p2.act_count, p2.act_frame)
+			end
+
+			print(log1, log2)
 		end
 
 		for _, p in ipairs(players) do
@@ -5959,27 +5988,14 @@ function rbff2.startplugin()
 			end
 			-- ベースアドレス表示
 			for i, p in ipairs(players) do
-				-- コマンド入力表示
 				for k = 1, #p.bases do
-					local name
-					if p.bases[k].act_data then
-						local act_data = p.bases[k].act_data
-						name = act_data.disp_name or (act_data.names and act_data.names[1] or act_data.name) or act_data.name or ""
-					else
-						name = ""
-					end
 					if p.disp_base then
-						draw_base(i, k, p.bases[k].count, string.format("%8x", p.bases[k].addr), name)
-					end
-					if k == (#p.bases - 1) and p.bases[#p.bases].count == 1 then
-						if global.log.baselog then
-							print(string.format("%s %3s %8x %s", i, 999 < p.bases[k].count and "LOT" or p.bases[k].count, p.bases[k].addr, name))
-						end
+						draw_base(i, k, p.bases[k].count, string.format("%8x", p.bases[k].addr), p.bases[k].name)
 					end
 				end
-				if p.disp_base then
-					draw_base(i, #p.bases + 1, 0, "", "")
-				end
+				--if p.disp_base then
+				--	draw_base(i, #p.bases + 1, 0, "", "")
+				--end
 			end
 			-- ダメージとコンボ表示
 			for i, p in ipairs(players) do
@@ -6473,6 +6489,7 @@ function rbff2.startplugin()
 		global.log.poslog        = col[18] == 2 -- 位置ログ              18
 		global.log.atklog        = col[19] == 2 -- 攻撃情報ログ          19
 		global.log.baselog       = col[20] == 2 -- 処理アドレスログ      20
+		global.log.keylog        = col[21] == 2 -- 入力ログ              21
 
 		local dmove = damaged_moves[global.damaged_move]
 		if dmove and dmove > 0 then
@@ -6653,6 +6670,7 @@ function rbff2.startplugin()
 		col[18] = g.log.poslog  and 2 or 1 -- 位置ログ              18
 		col[19] = g.log.atklog  and 2 or 1 -- 攻撃情報ログ          19
 		col[20] = g.log.baselog and 2 or 1 -- 処理アドレスログ      20
+		col[21] = g.log.keylog  and 2 or 1 -- 入力ログ              21
 	end
 	local init_auto_menu_config = function()
 		local col = auto_menu.pos.col
@@ -7051,6 +7069,7 @@ function rbff2.startplugin()
 			{ "位置ログ"              , { "OFF", "ON" }, },
 			{ "攻撃情報ログ"          , { "OFF", "ON" }, },
 			{ "処理アドレスログ"      , { "OFF", "ON" }, },
+			{ "入力ログ"              , { "OFF", "ON" }, },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
@@ -7076,6 +7095,7 @@ function rbff2.startplugin()
 				1, -- 位置ログ               18
 				1, -- 攻撃情報ログ           19
 				1, -- 処理アドレスログ       20
+				1, -- 入力ログ               21
 			},
 		},
 		on_a = {
@@ -7099,6 +7119,7 @@ function rbff2.startplugin()
 			ex_menu_to_main, -- 位置ログ
 			ex_menu_to_main, -- 攻撃情報ログ
 			ex_menu_to_main, -- 処理アドレスログ
+			ex_menu_to_main, -- 入力ログ
 		},
 		on_b = {
 			ex_menu_to_main_cancel, -- －一般設定－
@@ -7121,6 +7142,7 @@ function rbff2.startplugin()
 			ex_menu_to_main_cancel, -- 位置ログ
 			ex_menu_to_main_cancel, -- 攻撃情報ログ
 			ex_menu_to_main_cancel, -- 処理アドレスログ
+			ex_menu_to_main_cancel, -- 入力ログ
 		},
 	}
 
