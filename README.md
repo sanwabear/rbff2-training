@@ -15,7 +15,7 @@
 BIOSに関しては UNIVERSAL-BIOS 4.0 をご利用ください。
 
 1. Windows10
-2. MAME 0.222 64-bit
+2. MAME 0.227 64-bit
 3. UNIVERSAL-BIOS 4.0を含む neogeo.zip
 4. rbff2h.zip
 
