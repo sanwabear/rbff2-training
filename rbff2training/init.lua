@@ -56,7 +56,7 @@ local offset_pos_y          = 0x28
 local screen_left           = 0
 local screen_top            = 0
 local bios_test             = function()
-	local cpu = manager:machine().devices[":maincpu"]
+	local cpu = manager.machine.devices[":maincpu"]
 	local pgm = cpu.spaces["program"]
 	for _, addr in ipairs({0x100400, 0x100500}) do
 		local ram_value = pgm:read_u8(addr)
@@ -1848,7 +1848,7 @@ local use_joy = {
 	{ port = ":edge:joy:START", field = joyk.p1.st, frame = 0, prev = 0, player = 1, get = 0, },
 }
 local get_joy_base = function(prev, exclude_player)
-	local scr = manager:machine().screens[":screen"]
+	local scr = manager.machine.screens:at(1)
 	local ec = scr:frame_number()
 	local joy_port = {}
 	local joy_val = {}
@@ -1856,9 +1856,9 @@ local get_joy_base = function(prev, exclude_player)
 	for _, joy in ipairs(use_joy) do
 		local state = 0
 		if not joy_port[joy.port] then
-			joy_port[joy.port] = manager:machine():ioport().ports[joy.port]:read()
+			joy_port[joy.port] = manager.machine.ioport.ports[joy.port]:read()
 		end
-		local field = manager:machine():ioport().ports[joy.port].fields[joy.field]
+		local field = manager.machine.ioport.ports[joy.port].fields[joy.field]
 		state = ((joy_port[joy.port] & field.mask) ~ field.defvalue)
 		if joy.get < ec then
 			joy.prev = joy.frame
@@ -1896,7 +1896,7 @@ local accept_input = function(btn, joy_val, state_past)
 	if 12 < state_past then
 		local p1 = btn == "Start" and "1 Player Start" or ("P1 " .. btn)
 		local p2 = btn == "Start" and "2 Players Start" or ("P2 " .. btn)
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		if btn == "Up" or btn == "Down" or btn == "Right" or btn == "Left" then
 			if (0 < joy_val[p1]) or (0 < joy_val[p2]) then
 				pgm:write_u32(0x0010D612, 0x00600004)
@@ -1918,7 +1918,7 @@ local is_start_a = function(joy_val, state_past)
 	if 12 < state_past then
 		for i = 1, 2 do
 			local st = i == 1 and "1 Player Start" or "2 Players Start"
-			local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+			local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 			if (35 < joy_val[st]) then
 				pgm:write_u32(0x0010D612, 0x00610004)
 				pgm:write_u8(0x0010D713, 0x01)
@@ -1962,7 +1962,7 @@ local joy_frontback = {
 -- MAMEへの入力の無効化
 local cls_joy = function()
 	for _, joy in ipairs(use_joy) do
-		manager:machine():ioport().ports[joy.port].fields[joy.field]:set_value(0)
+		manager.machine.ioport.ports[joy.port].fields[joy.field]:set_value(0)
 	end
 end
 
@@ -1973,7 +1973,7 @@ local nega_or_mi1 = function(v) return 0 >= v and v - 1 or -1 end
 
 -- ポーズ
 local set_freeze = function(frz_expected)
-	local dswport = manager:machine():ioport().ports[":DSW"]
+	local dswport = manager.machine.ioport.ports[":DSW"]
 	local fzfld = dswport.fields["Freeze"]
 	local freez = ((dswport:read() & fzfld.mask) ~ fzfld.defvalue) <= 0
 
@@ -1986,7 +1986,7 @@ local set_freeze = function(frz_expected)
 			end
 		end
 	else
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		pgm:write_u8(0x1041D2, frz_expected and 0x00 or 0xFF)
 	end
 end
@@ -2068,8 +2068,10 @@ for _, box in pairs(box_type_base) do
 			box_types[box.id] = box
 		end
 	end
+	print(string.format("%x %x", bit32.lshift(box.fill   , 24), bit32.lshift(box.outline, 24)))
 	box.fill    = bit32.lshift(box.fill   , 24) + box.color
 	box.outline = bit32.lshift(box.outline, 24) + box.color
+	print(string.format("%x %x", box.fill, box.outline))
 end
 
 -- ボタンの色テーブル
@@ -2094,7 +2096,7 @@ local is_file = function(name)
 end
 
 local base_path = function()
-	return lfs.env_replace(manager:machine():options().entries.homepath:value():match('([^;]+)')) .. '/plugins/' .. exports.name
+	return emu.subst_env(manager.options.entries.homepath:value():match('([^;]+)')) .. '/plugins/' .. exports.name
 end
 
 local rom_patch_path = function(filename)
@@ -2144,21 +2146,21 @@ local draw_rtext = function(x, y, str, fgcol, bgcol)
 	if type(str)~="number" then
 		str = "" .. str
 	end
-	local scr = manager:machine().screens[":screen"]
-	local scale = scr:xscale() * scr:width()
+	local scr = manager.machine.screens:at(1)
+	local scale = scr.xscale * scr.width
 	local xx = x
 	for c in string.gmatch(str, "([%z\1-\127\194-\244][\128-\191]*)") do
-		xx = xx - manager:ui():get_string_width(c, scale)
+		xx = xx - manager.ui:get_string_width(c, scale)
 	end
 	for c in string.gmatch(str, "([%z\1-\127\194-\244][\128-\191]*)") do
 		scr:draw_text(xx, y, c, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
-		xx = xx + manager:ui():get_string_width(c, scale)
+		xx = xx + manager.ui:get_string_width(c, scale)
 	end
 end
 
 -- コマンド入力表示
 local draw_cmd = function(p, line, frame, str)
-	local scr = manager:machine().screens[":screen"]
+	local scr = manager.machine.screens:at(1)
 	local cstr = convert(str)
 
 	local p1 = p == 1
@@ -2198,7 +2200,7 @@ local draw_cmd = function(p, line, frame, str)
 end
 -- コマンド入力表示
 local draw_base = function(p, line, frame, cstr, act_name)
-	local scr = manager:machine().screens[":screen"]
+	local scr = manager.machine.screens:at(1)
 
 	local p1 = p == 1
 	local xx = p1 and 90 or 195    -- 1Pと2Pで左右に表示し分ける
@@ -2274,7 +2276,7 @@ local chip_dmg_type_tbl = {
 }
 -- 削りダメージ計算種別取得
 local get_chip_dmg_type = function(box)
-	local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+	local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 	local a0 = fix_bp_addr(0x95CCC)
 	local d0 = bit32.band(0xF, pgm:read_u8(a0 + box.id))
 	local func = chip_dmg_type_tbl[d0 + 1]
@@ -2299,7 +2301,7 @@ local hit_sub_procs = {
 local hit_box_proc = function(id, addr)
 	-- 家庭用版 012DBC~012F04のデータ取得処理をベースに判定＆属性チェック
 	-- 家庭用版 012F30~012F96のデータ取得処理をベースに判定＆属性チェック
-	local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+	local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 	local d2 = id - 0x20
 	if d2 >= 0 then
 		d2 = pgm:read_u8(addr + d2)
@@ -2333,7 +2335,7 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 	local box = {id = id}
 	box.type = nil
 	local atk = false
-	local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+	local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 	if (box.id + 1 > #box_types) then
 		atk = true
 		local air = hit_box_procs.air_hit(box.id) ~= nil
@@ -2545,8 +2547,8 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 end
 
 local new_throwbox = function(p, box)
-	local scr = manager:machine().screens[":screen"]
-	local height = scr:height() * scr:yscale()
+	local scr = manager.machine.screens:at(1)
+	local height = scr.height * scr.yscale
 	--print("a", box.opp_id, box.top, box.bottom, p.hit.flip_x)
 	p.throwing = true
 	box.flat_throw = box.top == nil
@@ -2563,7 +2565,7 @@ end
 
 local get_flip_x = function(p)
 	local obj_base = p.addr.base
-	local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+	local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 	local flip_x = pgm:read_i16(obj_base + 0x6A) < 0 and 1 or 0
 	flip_x = bit32.bxor(flip_x, bit32.band(pgm:read_u8(obj_base + 0x71), 1))
 	flip_x = flip_x > 0 and 1 or -1
@@ -2572,9 +2574,9 @@ end
 
 -- 当たり判定用のキャラ情報更新と判定表示用の情報作成
 local update_object = function(p)
-	local pgm = manager:machine().devices[":maincpu"].spaces["program"]
-	local scr = manager:machine().screens[":screen"]
-	local height = scr:height() * scr:yscale()
+	local pgm = manager.machine.devices[":maincpu"].spaces["program"]
+	local scr = manager.machine.screens:at(1)
+	local height = scr.height * scr.yscale
 
 	local obj_base = p.addr.base
 
@@ -3180,13 +3182,13 @@ function rbff2.startplugin()
 
 	-- 場面変更
 	local apply_1p2p_active = function()
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		pgm:write_direct_u8(0x100024, 0x03) -- 1P or 2P
 		pgm:write_direct_u8(0x100027, 0x03) -- 1P or 2P
 	end
 
 	local apply_vs_mode = function(continue)
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		apply_1p2p_active()
 		if not continue then
 			pgm:write_direct_u8(0x107BB5, 0x01) -- vs 1st CPU mode
@@ -3194,13 +3196,13 @@ function rbff2.startplugin()
 	end
 
 	local goto_player_select = function()
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		dofile(ram_patch_path("player-select.lua"))
 		apply_vs_mode(false)
 	end
 
 	local restart_fight = function(param)
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		param = param or {}
 		local stg1  = param.next_stage.stg1 or stgs[1].stg1
 		local stg2  = param.next_stage.stg2 or stgs[1].stg2
@@ -3239,12 +3241,12 @@ function rbff2.startplugin()
 	-- ブレイクポイント発動時のデバッグ画面表示と停止をさせない
 	local debug_stop = 0
 	local auto_recovery_debug = function()
-		if manager:machine():debugger() then
-			if manager:machine():debugger().execution_state ~= "run" then
+		if manager.machine.debugger then
+			if manager.machine.debugger.execution_state ~= "run" then
 				debug_stop = debug_stop + 1
 			end
 			if 3 > debug_stop then
-				manager:machine():debugger().execution_state = "run"
+				manager.machine.debugger.execution_state = "run"
 				debug_stop = 0
 			end
 		end
@@ -3254,11 +3256,11 @@ function rbff2.startplugin()
 	-- 当たり判定と投げ判定用のブレイクポイントとウォッチポイントのセット
 	local wps = {}
 	local set_wps = function(reset)
-		local cpu = manager:machine().devices[":maincpu"]
+		local cpu = manager.machine.devices[":maincpu"]
 		local pgm = cpu.spaces["program"]
 		if reset then
 			for i, idx in ipairs(wps) do
-				cpu:debug():bpclr(idx)
+				cpu.debug:bpclr(idx)
 			end
 			wps = {}
 			return
@@ -3266,41 +3268,41 @@ function rbff2.startplugin()
 
 		if #wps == 0 then
 			--debug:wpset(space, type, addr, len, [opt] cond, [opt] act)
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x1006BF, 1, "wpdata!=0", "maincpu.pb@10CA00=1;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x1007BF, 1, "wpdata!=0", "maincpu.pb@10CA01=1;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100620, 1, "wpdata!=0", "maincpu.pb@10CA02=1;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x10062C, 1, "wpdata!=0", "maincpu.pb@10CA03=1;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100820, 1, "wpdata!=0", "maincpu.pb@10CA04=1;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x10082C, 1, "wpdata!=0", "maincpu.pb@10CA05=1;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100A20, 1, "wpdata!=0", "maincpu.pb@10CA06=1;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100A2C, 1, "wpdata!=0", "maincpu.pb@10CA07=1;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100720, 1, "wpdata!=0", "maincpu.pb@10CA08=1;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x10072C, 1, "wpdata!=0", "maincpu.pb@10CA09=1;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100920, 1, "wpdata!=0", "maincpu.pb@10CA0A=1;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x10092C, 1, "wpdata!=0", "maincpu.pb@10CA0B=1;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100B20, 1, "wpdata!=0", "maincpu.pb@10CA0C=1;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100B2C, 1, "wpdata!=0", "maincpu.pb@10CA0D=1;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x10048E, 1, "wpdata!=0", "maincpu.pb@10CA0E=maincpu.pb@10048E;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x10058E, 1, "wpdata!=0", "maincpu.pb@10CA0F=maincpu.pb@10058E;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x10048F, 1, "1", "maincpu.pb@10CA10=wpdata;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x10058F, 1, "1", "maincpu.pb@10CA11=wpdata;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100460, 1, "wpdata!=0", "maincpu.pb@10CA12=1;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100560, 1, "wpdata!=0", "maincpu.pb@10CA13=1;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x1006BF, 1, "wpdata!=0", "maincpu.pb@10CA00=1;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x1007BF, 1, "wpdata!=0", "maincpu.pb@10CA01=1;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100620, 1, "wpdata!=0", "maincpu.pb@10CA02=1;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x10062C, 1, "wpdata!=0", "maincpu.pb@10CA03=1;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100820, 1, "wpdata!=0", "maincpu.pb@10CA04=1;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x10082C, 1, "wpdata!=0", "maincpu.pb@10CA05=1;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100A20, 1, "wpdata!=0", "maincpu.pb@10CA06=1;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100A2C, 1, "wpdata!=0", "maincpu.pb@10CA07=1;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100720, 1, "wpdata!=0", "maincpu.pb@10CA08=1;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x10072C, 1, "wpdata!=0", "maincpu.pb@10CA09=1;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100920, 1, "wpdata!=0", "maincpu.pb@10CA0A=1;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x10092C, 1, "wpdata!=0", "maincpu.pb@10CA0B=1;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100B20, 1, "wpdata!=0", "maincpu.pb@10CA0C=1;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100B2C, 1, "wpdata!=0", "maincpu.pb@10CA0D=1;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x10048E, 1, "wpdata!=0", "maincpu.pb@10CA0E=maincpu.pb@10048E;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x10058E, 1, "wpdata!=0", "maincpu.pb@10CA0F=maincpu.pb@10058E;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x10048F, 1, "1", "maincpu.pb@10CA10=wpdata;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x10058F, 1, "1", "maincpu.pb@10CA11=wpdata;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100460, 1, "wpdata!=0", "maincpu.pb@10CA12=1;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100560, 1, "wpdata!=0", "maincpu.pb@10CA13=1;g"))
 
 			-- X軸のMAXとMIN
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100420, 2, "wpdata>maincpu.pw@10DDE6", "maincpu.pw@10DDE6=wpdata;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100420, 2, "wpdata<maincpu.pw@10DDEA", "maincpu.pw@10DDEA=wpdata;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100520, 2, "wpdata>maincpu.pw@10DDE8", "maincpu.pw@10DDE8=wpdata;g"))
-			table.insert(wps, cpu:debug():wpset(pgm, "w", 0x100520, 2, "wpdata<maincpu.pw@10DDEC", "maincpu.pw@10DDEC=wpdata;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100420, 2, "wpdata>maincpu.pw@10DDE6", "maincpu.pw@10DDE6=wpdata;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100420, 2, "wpdata<maincpu.pw@10DDEA", "maincpu.pw@10DDEA=wpdata;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100520, 2, "wpdata>maincpu.pw@10DDE8", "maincpu.pw@10DDE8=wpdata;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100520, 2, "wpdata<maincpu.pw@10DDEC", "maincpu.pw@10DDEC=wpdata;g"))
 		end
 	end
 
 	local bps = {}
 	local set_bps = function(reset)
-		local cpu = manager:machine().devices[":maincpu"]
+		local cpu = manager.machine.devices[":maincpu"]
 		if reset then
 			for i, idx in ipairs(bps) do
-				cpu:debug():wpclr(idx)
+				cpu.debug:wpclr(idx)
 			end
 			bps = {}
 			return
@@ -3309,17 +3311,17 @@ function rbff2.startplugin()
 		if #bps == 0 then
 			if global.infinity_life2 then
 				--bp 05B480,{(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100500)},{PC=5B48E;g}
-				table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05B460),
+				table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x05B460),
 					"1",
 					string.format("PC=%x;g", fix_bp_addr(0x05B46E))))
-				table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05B466),
+				table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x05B466),
 					"1",
 					string.format("PC=%x;g", fix_bp_addr(0x05B46E))))
 			end
 
 			-- リバーサルとBSモードのフック
 			-- ダッシュとか用
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03957E),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x03957E),
 				"(maincpu.pw@107C22>0)&&((A6)==CB244)&&((($1E<=maincpu.pb@10DDDA)&&(maincpu.pb@10DDDD==$1)&&($100400==((A4)&$FFFFFF)))||(($1E<=maincpu.pb@10DDDE)&&(maincpu.pb@10DDE1==$1)&&($100500==((A4)&$FFFFFF))))",
 				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$40);D1=(maincpu.pb@(temp1));A6=((A6)+1);maincpu.pb@((A4)+$D6)=D1;maincpu.pb@((A4)+$D7)=maincpu.pb@(temp1+1);PC=((PC)+$20);g"))
 			-- 必殺技用
@@ -3328,67 +3330,67 @@ function rbff2.startplugin()
 			-- 0395B2: 1941 00A3                move.b  D1, ($a3,A4) -- 確定した技データ
 			-- 0395B6: 195E 00A4                move.b  (A6)+, ($a4,A4) -- 技データ読込 だいたい06
 			-- 0395BA: 195E 00A5                move.b  (A6)+, ($a5,A4) -- 技データ読込 だいたい00、飛燕斬01、02、03
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03957E),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x03957E),
 				"(maincpu.pw@107C22>0)&&((A6)==CB244)&&((($1E>maincpu.pb@10DDDA)&&(maincpu.pb@10DDDD==$1)&&($100400==((A4)&$FFFFFF)))||(($1E>maincpu.pb@10DDDE)&&(maincpu.pb@10DDE1==$1)&&($100500==((A4)&$FFFFFF))))",
 				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$40);D1=(maincpu.pb@(temp1));A6=((A6)+2);maincpu.pb@((A4)+$A3)=D1;maincpu.pb@((A4)+$A4)=maincpu.pb@(temp1+1);maincpu.pb@((A4)+$A5)=maincpu.pb@(temp1+2);PC=((PC)+$20);g"))
 
 			-- ステージ設定用。メニューでFを設定した場合にのみ動作させる
 			-- ラウンド数を1に初期化→スキップ
-			table.insert(bps, cpu:debug():bpset(0x0F368, "maincpu.pw@((A5)-$448)==$F", "PC=F36E;g"))
+			table.insert(bps, cpu.debug:bpset(0x0F368, "maincpu.pw@((A5)-$448)==$F", "PC=F36E;g"))
 			-- ラウンド2以上の場合の初期化処理→無条件で実施
-			table.insert(bps, cpu:debug():bpset(0x22AD8, "maincpu.pw@((A5)-$448)==$F", "PC=22AF4;g"))
+			table.insert(bps, cpu.debug:bpset(0x22AD8, "maincpu.pw@((A5)-$448)==$F", "PC=22AF4;g"))
 			-- キャラ読込 ラウンド1の時だけ読み込む→無条件で実施
-			table.insert(bps, cpu:debug():bpset(0x22D32, "maincpu.pw@((A5)-$448)==$F", "PC=22D3E;g"))
+			table.insert(bps, cpu.debug:bpset(0x22D32, "maincpu.pw@((A5)-$448)==$F", "PC=22D3E;g"))
 			-- ラウンド2以上の時の処理→データロード直後の状態なので不要。スキップしないとBGMが変わらない
-			table.insert(bps, cpu:debug():bpset(0x0F6AC, "maincpu.pw@((A5)-$448)==$F", "PC=F6B6;g"))
+			table.insert(bps, cpu.debug:bpset(0x0F6AC, "maincpu.pw@((A5)-$448)==$F", "PC=F6B6;g"))
 			-- ラウンド1じゃないときの処理 →スキップ
-			table.insert(bps, cpu:debug():bpset(0x1E39A, "maincpu.pw@((A5)-$448)==$F", "PC=1E3A4;g"))
+			table.insert(bps, cpu.debug:bpset(0x1E39A, "maincpu.pw@((A5)-$448)==$F", "PC=1E3A4;g"))
 			-- ラウンド1の時だけ読み込む →無条件で実施。データを1ラウンド目の値に戻す
-			table.insert(bps, cpu:debug():bpset(0x17694, "maincpu.pw@((A5)-$448)==$F", "maincpu.pw@((A5)-$448)=1;PC=176A0;g"))
+			table.insert(bps, cpu.debug:bpset(0x17694, "maincpu.pw@((A5)-$448)==$F", "maincpu.pw@((A5)-$448)=1;PC=176A0;g"))
 
 			-- 当たり判定用
 			-- 喰らい判定フラグ用
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x5C2DA),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x5C2DA),
 				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100500)",
 				"temp1=$10CB30+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=$01;g"))
 
 			-- 喰らい判定用
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x5C2E6),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x5C2E6),
 				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100500)",
 				"temp1=$10CB32+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=$01;maincpu.pb@(temp1+$2)=(maincpu.pb@(((A4)+$B1)&$FFFFFF));g"))
 
 			--判定追加1 攻撃判定
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x012C42),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x012C42),
 				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100F00)",
 				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pd@(temp0+$B)=maincpu.pd@((A2)+$5);maincpu.pw@(temp0+$C)=maincpu.pw@(((A4)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A4)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
 
 			--判定追加2 攻撃判定
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x012C88),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x012C88),
 				"(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100F00)",
 				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$01;maincpu.pd@(temp0+$B)=maincpu.pd@((A1)+$5);maincpu.pw@(temp0+$C)=maincpu.pw@(((A3)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A3)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
 
 			--判定追加3 1P押し合い判定
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x012D4C),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x012D4C),
 				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100F00)",
 				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pw@(temp0+$C)=maincpu.pw@(((A4)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A4)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
 
 			--判定追加4 2P押し合い判定
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x012D92),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x012D92),
 				"(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100F00)",
 				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pw@(temp0+$C)=maincpu.pw@(((A3)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A3)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
 
 			-- 地上通常投げ
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05D782),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x05D782),
 				"(maincpu.pw@107C22>0)&&((((D7)&$FFFF)!=0x65))&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100500)",
 				"temp1=$10CD90+((((A4)&$FFFFFF)-$100400)/$8);maincpu.pb@(temp1)=$1;maincpu.pd@(temp1+$1)=((A4)&$FFFFFF);maincpu.pd@(temp1+$5)=maincpu.pd@(((A4)&$FFFFFF)+$96);maincpu.pw@(temp1+$A)=maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10);maincpu.pw@(temp1+$C)=maincpu.pw@(((A4)&$FFFFFF)+$10);maincpu.pb@(temp1+$10)=maincpu.pb@(((A4)&$FFFFFF)+$96+$58);maincpu.pb@(temp1+$11)=maincpu.pb@(((A4)&$FFFFFF)+$58);maincpu.pb@(temp1+$12)=maincpu.pb@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$58);maincpu.pb@(temp1+$13)=maincpu.pb@(maincpu.pd@((PC)+$2));maincpu.pb@(temp1+$14)=maincpu.pb@((maincpu.pd@((PC)+$02))+((maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10))<<3)+$3);maincpu.pb@(temp1+$15)=maincpu.pb@((maincpu.pd@((PC)+$02))+((maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10))<<3)+$4);maincpu.pb@(temp1+$16)=maincpu.pb@((maincpu.pd@((PC)+$2))+((maincpu.pw@(((A4)&$FFFFFF)+$10))<<3)+$3);maincpu.pb@(temp1+$17)=maincpu.pb@((PC)+$D2+(maincpu.pw@((A4)&$FFFFFF)+$10)*4+((((D7)&$FFFF)-$60)&$7));maincpu.pw@(temp1+$18)=maincpu.pw@(($FFFFFF&(A4))+$20);maincpu.pw@(temp1+$1A)=maincpu.pw@(($FFFFFF&(A4))+$28);g"))
 
 			-- 空中投げ
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x060428),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x060428),
 				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100500)",
 				"temp1=$10CD00+((((A4)&$FFFFFF)-$100400)/$8);maincpu.pb@(temp1)=$1;maincpu.pw@(temp1+$1)=maincpu.pw@(A0);maincpu.pw@(temp1+$3)=maincpu.pw@((A0)+$2);maincpu.pd@(temp1+$5)=$FFFFFF&(A4);maincpu.pd@(temp1+$9)=maincpu.pd@(($FFFFFF&(A4))+$96);maincpu.pw@(temp1+$D)=maincpu.pw@(maincpu.pd@(($FFFFFF&(A4))+$96)+$10);maincpu.pd@(temp1+$11)=maincpu.rb@(($FFFFFF&(A4))+$58);maincpu.pw@(temp1+$13)=maincpu.pw@(($FFFFFF&(A4))+$20);maincpu.pw@(temp1+$15)=maincpu.pw@(($FFFFFF&(A4))+$28);g"))
 
 			-- 必殺投げ
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x039F2A),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x039F2A),
 				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100500)",
 				"temp1=$10CD40+((((A4)&$FFFFFF)-$100400)/$8);maincpu.pb@(temp1)=$1;maincpu.pw@(temp1+$1)=maincpu.pw@(A0);maincpu.pw@(temp1+$3)=maincpu.pw@((A0)+$2);maincpu.pd@(temp1+$5)=$FFFFFF&(A4);maincpu.pd@(temp1+$9)=maincpu.pd@(($FFFFFF&(A4))+$96);maincpu.pw@(temp1+$D)=maincpu.pw@(maincpu.pd@(($FFFFFF&(A4))+$96)+$10);maincpu.pd@(temp1+$11)=maincpu.rb@(($FFFFFF&(A4))+$58);maincpu.pw@(temp1+$12)=maincpu.pw@(A0+$4);maincpu.pw@(temp1+$15)=maincpu.pw@(($FFFFFF&(A4))+$20);maincpu.pw@(temp1+$17)=maincpu.pw@(($FFFFFF&(A4))+$28);g"))
 
@@ -3396,10 +3398,10 @@ function rbff2.startplugin()
 			-- PC=11EE2のときのA4レジスタのアドレスがプレイヤー選択のアイコンの参照場所
 			-- データの領域を未使用の別メモリ領域に退避して1P操作で2Pカーソル移動ができるようにする
 			-- maincpu.pw@((A4)+$60)=$00F8を付けたすとカーソルをCPUにできる
-			table.insert(bps, cpu:debug():bpset(0x11EE2, --アドレス修正不要
+			table.insert(bps, cpu.debug:bpset(0x11EE2, --アドレス修正不要
 				"(maincpu.pw@((A4)+2)==2D98||maincpu.pw@((A4)+2)==33B8)&&maincpu.pw@100701==10B&&maincpu.pb@10FDAF==2&&maincpu.pw@10FDB6!=0&&maincpu.pb@100026==2",
 				"maincpu.pb@10CDD0=($FF&((maincpu.pb@10CDD0)+1));maincpu.pd@10CDD1=((A4)+$13);g"))
-			table.insert(bps, cpu:debug():bpset(0x11EE2, --アドレス修正不要
+			table.insert(bps, cpu.debug:bpset(0x11EE2, --アドレス修正不要
 				"(maincpu.pw@((A4)+2)==2D98||maincpu.pw@((A4)+2)==33B8)&&maincpu.pw@100701==10B&&maincpu.pb@10FDAF==2&&maincpu.pw@10FDB6!=0&&maincpu.pb@100026==1",
 				"maincpu.pb@10CDD0=($FF&((maincpu.pb@10CDD0)+1));maincpu.pd@10CDD5=((A4)+$13);g"))
 
@@ -3408,10 +3410,10 @@ function rbff2.startplugin()
 			-- PC= 12376 読取反映先=D0 スタートボタンの読取してるけど関係なし
 			-- PC=C096A8 読取反映先=D1 スタートボタンの読取してるけど関係なし
 			-- PC=C1B954 読取反映先=D2 スタートボタンの読取してるとこ 
-			table.insert(bps, cpu:debug():bpset(0xC1B95A,
+			table.insert(bps, cpu.debug:bpset(0xC1B95A,
 				"(maincpu.pb@100024==1&&maincpu.pw@100701==10B&&maincpu.pb@10FDAF==2&&maincpu.pw@10FDB6!=0)&&((((maincpu.pb@300000)&$10)==0)||(((maincpu.pb@300000)&$80)==0))",
 				"D2=($FF^$04);g"))
-			table.insert(bps, cpu:debug():bpset(0xC1B95A,
+			table.insert(bps, cpu.debug:bpset(0xC1B95A,
 				"(maincpu.pb@100024==2&&maincpu.pw@100701==10B&&maincpu.pb@10FDAF==2&&maincpu.pw@10FDB6!=0)&&((((maincpu.pb@340000)&$10)==0)||(((maincpu.pb@340000)&$80)==0))",
 				"D2=($FF^$01);g"))
 
@@ -3420,16 +3422,16 @@ function rbff2.startplugin()
 			--			func = function() memory.pgm:write_u8(gr("a4") + 0x82, 0) end},
 			--solid shadows 01
 			--no    shadows FF
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x017300), "maincpu.pw@107C22>0&&maincpu.pb@10DDF0==FF", "maincpu.pb@((A4)+$82)=$FF;g"))
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x017300), "maincpu.pw@107C22>0&&maincpu.pb@10DDF0==FF", "maincpu.pb@((A4)+$82)=$FF;g"))
 
 			-- 潜在ぜったい投げるマン
-			--table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x039F8C), "1",
+			--table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x039F8C), "1",
 			--	"maincpu.pb@((A3)+$90)=$19;g"))
 			-- 投げ可能判定用フレーム
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x039F90), "maincpu.pw@107C22>0",
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x039F90), "maincpu.pw@107C22>0",
 				"temp1=$10DDE2+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=D7;g"))
 			-- 投げ確定時の判定用フレーム
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x039F96), "maincpu.pw@107C22>0",
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x039F96), "maincpu.pw@107C22>0",
 				"temp1=$10DDE4+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@((A3)+$90);g"))
 
 			-- 判定の接触判定が無視される
@@ -3440,79 +3442,79 @@ function rbff2.startplugin()
 
 			-- 投げ確定時の判定用フレーム
 			--[[
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x012FD0),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x012FD0),
 				"maincpu.pw@107C22>0&&((maincpu.pb@10DDF1>0&&(A4)==100500)||(maincpu.pb@10DDF1>0&&(A4)==100400))",
 				"temp1=$10DDF1+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=0;PC=" .. string.format("%x", fix_bp_addr(0x012FDA)) .. ";g"))
 			]]
 
 			-- N段目で空ぶりさせるフック
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x0130F8),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x0130F8),
 				"maincpu.pw@107C22>0&&((maincpu.pb@10DDF1>0&&(A4)==100500)||(maincpu.pb@10DDF2>0&&(A4)==100400))",
 				"maincpu.pb@(temp1)=0;PC=" .. string.format("%x", fix_bp_addr(0x012FDA)) .. ";g"))
 	
 			-- ヒット後ではなく技の出だしから嘘判定であることの判定用フック
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x011DFE),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x011DFE),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DDF3+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(D5);g"))
 
 			-- 補正前ダメージ取得用フック
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05B11A),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x05B11A),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DDFB+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@((A4)+$8F);g"))
 
 			-- スタン値とスタン値タイマー取得用フック
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05C1E0),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x05C1E0),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DDFD+((((A4)&$FFFFFF)-$100400)/$80);maincpu.pb@(temp1)=(D0);maincpu.pb@(temp1+$1)=(D1);g"))
 
 			--ダメージ補正 7/8
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x5B1E0),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x5B1E0),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DE50+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@(temp1)+1;g"))
 			--ダメージ補正 6/8
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x5B1F6),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x5B1F6),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DE52+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@(temp1)+1;g"))
 			--ダメージ補正 5/8
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x5B20C),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x5B20C),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DE54+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@(temp1)+1;g"))
 			--ダメージ補正 4/8
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x5B224),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x5B224),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DE56+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@(temp1)+1;g"))
 
 			-- POWゲージ増加量取得用フック 通常技
 			-- 中間のチェックをスキップして算出処理へ飛ぶ
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03BEDA),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x03BEDA),
 				"maincpu.pw@107C22>0",
 				string.format("PC=%x;g", fix_bp_addr(0x03BEEC))))
 			-- 中間チェックに抵触するパターンは値採取後にRTSへ移動する
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05B3AC),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x05B3AC),
 				"maincpu.pw@107C22>0&&(maincpu.pb@((A3)+$BF)!=$0||maincpu.pb@((A3)+$BC)==$3C)",
 				"temp1=$10DE58+((((A3)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));" .. string.format("PC=%x", fix_bp_addr(0x05B34E)) .. ";g"))
 			-- 中間チェックに抵触しないパターン
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05B3AC),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x05B3AC),
 				"maincpu.pw@107C22>0&&maincpu.pb@((A3)+$BF)==$0&&maincpu.pb@((A3)+$BC)!=$3C",
 				"temp1=$10DE58+((((A3)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g"))
 
 			-- POWゲージ増加量取得用フック 必殺技
 			-- 中間のチェックをスキップして算出処理へ飛ぶ
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x05B34C),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x05B34C),
 				"maincpu.pw@107C22>0",
 				string.format("PC=%x;g", fix_bp_addr(0x05B35E))))
 			-- 中間チェックに抵触するパターンは値採取後にRTSへ移動する
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03C144),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x03C144),
 				"maincpu.pw@107C22>0&&maincpu.pb@((A4)+$BF)!=$0",
 				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));" .. string.format("PC=%x", fix_bp_addr(0x03C13A)) .. ";g"))
 			-- 中間チェックに抵触しないパターン
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03C144),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x03C144),
 				"maincpu.pw@107C22>0&&maincpu.pb@((A4)+$BF)==$0",
 				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g"))
 
 			-- POWゲージ増加量取得用フック 倍がえしとか
 			-- 中間のチェック以前に値がD0に入っているのでそれを採取する
-			table.insert(bps, cpu:debug():bpset(fix_bp_addr(0x03BF04),
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x03BF04),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g"))
 
@@ -3522,10 +3524,10 @@ function rbff2.startplugin()
 
 	local bps_rg = {}
 	local set_bps_rg = function(reset)
-		local cpu = manager:machine().devices[":maincpu"]
+		local cpu = manager.machine.devices[":maincpu"]
 		if reset then
 			for i, idx in ipairs(bps_rg) do
-				cpu:debug():bpclr(idx)
+				cpu.debug:bpclr(idx)
 			end
 			bps_rg = {}
 			return
@@ -3535,16 +3537,16 @@ function rbff2.startplugin()
 			-- ビリーの判定が出ない(maincpu.pb@((A0)+$B6)==0)な垂直小ジャンプAと垂直小ジャンプBと斜め小ジャンプBときはこのワークアラウンドが動作しないようにする
 			local cond1 = "(maincpu.pw@107C22>0)&&(maincpu.pb@((A0)+$B6)==0)&&(maincpu.pw@((A0)+$60)!=$50)&&(maincpu.pw@((A0)+$60)!=$51)&&(maincpu.pw@((A0)+$60)!=$54)"
 			--check vuln at all times *** setregister for m68000.pc is broken *** --bp 05C2E8, 1, {PC=((PC)+$6);g}
-			table.insert(bps_rg, cpu:debug():bpset(fix_bp_addr(0x5C2E8), cond1.."&&(maincpu.pb@((A3)+$B6)==0)", "PC=((PC)+$6);g"))
+			table.insert(bps_rg, cpu.debug:bpset(fix_bp_addr(0x5C2E8), cond1.."&&(maincpu.pb@((A3)+$B6)==0)", "PC=((PC)+$6);g"))
 			--この条件で動作させると攻撃判定がでてしまってヒットしてしまうのでダメ
 			--[[
 			local cond2 = "(maincpu.pw@107C22>0)&&(maincpu.pb@((A0)+$B6)==0)&&((maincpu.pw@((A0)+$60)==$50)||(maincpu.pw@((A0)+$60)==$51)||(maincpu.pw@((A0)+$60)==$54))"
-			table.insert(bps_rg, cpu:debug():bpset(fix_bp_addr(0x5C2E8), cond2, "maincpu.pb@((A3)+$B6)=1;g"))
+			table.insert(bps_rg, cpu.debug:bpset(fix_bp_addr(0x5C2E8), cond2, "maincpu.pb@((A3)+$B6)=1;g"))
 			]]
 			--check vuln at all times *** hackish workaround *** --bp 05C2E8, 1, {A3=((A3)-$B5);g}
-			table.insert(bps_rg, cpu:debug():bpset(fix_bp_addr(0x5C2E8), cond1, "A3=((A3)-$B5);g"))
+			table.insert(bps_rg, cpu.debug:bpset(fix_bp_addr(0x5C2E8), cond1, "A3=((A3)-$B5);g"))
 			--*** fix for hackish workaround *** --bp 05C2EE, 1, {A3=((A3)+$B5);g}
-			table.insert(bps_rg, cpu:debug():bpset(fix_bp_addr(0x5C2EE), cond1, "A3=((A3)+$B5);g"))
+			table.insert(bps_rg, cpu.debug:bpset(fix_bp_addr(0x5C2EE), cond1, "A3=((A3)+$B5);g"))
 		end
 	end
 
@@ -3556,7 +3558,7 @@ function rbff2.startplugin()
 
 	-- 誤動作防止のためフックで使用する領域を初期化する
 	local cls_hook = function()
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 
 		-- 各種当たり判定のフック
 		-- 0x10CB40 当たり判定の発生個数
@@ -3771,7 +3773,7 @@ function rbff2.startplugin()
 	-- リプレイ開始位置記憶
 	rec_fixpos = function()
 		local pos = { get_flip_x(players[1]), get_flip_x(players[2]) }
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		local fixpos = { pgm:read_i16(players[1].addr.pos), pgm:read_i16(players[2].addr.pos) }
 		local fixsway = { pgm:read_u8(players[1].addr.sway_status), pgm:read_u8(players[2].addr.sway_status) }
 		local fixscr = {
@@ -3841,7 +3843,7 @@ function rbff2.startplugin()
 	end
 	-- リプレイまち
 	rec_await_play = function(force_start_play)
-		local scr = manager:machine().screens[":screen"]
+		local scr = manager.machine.screens:at(1)
 		local ec = scr:frame_number()
 		local state_past = ec - global.input_accepted
 
@@ -3892,7 +3894,7 @@ function rbff2.startplugin()
 			global.rec_main = rec_play
 			global.input_accepted = ec
 
-			local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+			local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 
 			-- メインラインでニュートラル状態にする
 			for i, p in ipairs(players) do
@@ -3980,8 +3982,8 @@ function rbff2.startplugin()
 	end
 	-- リプレイ中
 	rec_play = function(to_joy)
-		local scr = manager:machine().screens[":screen"]
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+		local scr = manager.machine.screens:at(1)
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		local ec = scr:frame_number()
 		local state_past = ec - global.input_accepted
 
@@ -4033,7 +4035,7 @@ function rbff2.startplugin()
 
 	-- リプレイまでの待ち時間
 	rec_play_interval = function(to_joy)
-		local scr = manager:machine().screens[":screen"]
+		local scr = manager.machine.screens:at(1)
 		local ec = scr:frame_number()
 		local state_past = ec - global.input_accepted
 
@@ -4252,7 +4254,7 @@ function rbff2.startplugin()
 					elseif on_gd then
 						scr:draw_text(evx-3, txty+y, "▼")
 					end
-					scr:draw_box(x1, y, x2, y+height, frame.col, frame.line)
+					scr:draw_box(x1, y, x2, y+height, frame.line, frame.col)
 					if show_count then
 						local count_txt = 300 < frame.count and "LOT" or (""..frame.count)
 						if frame.count > 5 then
@@ -4278,7 +4280,7 @@ function rbff2.startplugin()
 		if #frames2 == 0 then
 			return
 		end
-		local scr = manager:machine().screens[":screen"]
+		local scr = manager.machine.screens:at(1)
 		span = span or height
 		local txty = math.max(-2, height-8)
 
@@ -4309,7 +4311,7 @@ function rbff2.startplugin()
 		if #frames2 == 0 then
 			return
 		end
-		local scr = manager:machine().screens[":screen"]
+		local scr = manager.machine.screens:at(1)
 
 		-- 横に描画
 		local xmin = x --30
@@ -4324,7 +4326,7 @@ function rbff2.startplugin()
 				local x2 = math.max(xmin, x1 - frame.count)
 				loopend = x2 <= xmin
 				if (frame.col + frame.line) > 0 then -- 速度かせぎのためカラー無しはスキップする
-					scr:draw_box (x1, y, x2, y+height, frame.col, frame.line)
+					scr:draw_box (x1, y, x2, y+height, frame.line, frame.col)
 					if show_count == true and first == true then
 						first = false
 						local txty = math.max(-2, height-8)
@@ -4351,7 +4353,7 @@ function rbff2.startplugin()
 	-- 1Pと2Pの通常投げ間合い取得
 	-- 0x05D78Cからの実装
 	local get_n_throw = function(p, op)
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		local d0, d1, d4, d5, a0_1, a0_2 = 0, 0, 0, 0, 0x5C9BC, 0x5D874
 		local char1, char2 = pgm:read_u16(p.addr.base + 0x10), pgm:read_u16(op.addr.base + 0x10)
 		local op_pos = op.max_pos or op.min_pos or op.pos -- 投げられ側のX位置は補正前の値
@@ -4428,12 +4430,12 @@ function rbff2.startplugin()
 
 		local next_joy = new_next_joy()
 
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
-		local scr = manager:machine().screens[":screen"]
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
+		local scr = manager.machine.screens:at(1)
 		local ec = scr:frame_number()
 		local state_past = ec - global.input_accepted
-		local height = scr:height() * scr:yscale()
-		local width = scr:width() * scr:xscale()
+		local height = scr.height * scr.yscale
+		local width = scr.width * scr.xscale
 		local joy_val = get_joy()
 
 		global.frame_number = global.frame_number + 1
@@ -5895,7 +5897,7 @@ function rbff2.startplugin()
 		-- ジョイスティック入力の反映
 		for _, joy in ipairs(use_joy) do
 			if next_joy[joy.field] ~= nil then
-				manager:machine():ioport().ports[joy.port].fields[joy.field]:set_value(next_joy[joy.field] and 1 or 0)
+				manager.machine.ioport.ports[joy.port].fields[joy.field]:set_value(next_joy[joy.field] and 1 or 0)
 			end
 		end
 
@@ -5936,8 +5938,8 @@ function rbff2.startplugin()
 	end
 
 	tra_main.draw = function()
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
-		local scr = manager:machine().screens[":screen"]
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
+		local scr = manager.machine.screens:at(1)
 
 		-- メイン処理
 		if match_active then
@@ -5962,14 +5964,14 @@ function rbff2.startplugin()
 							]]
 
 							if box.visible == true and box.type.enabled == true then
-								scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.fill, box.type.outline)
+								scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, box.type.fill)
 							end
 						end
 					end
 					for _, fb in pairs(p.fireball) do
 						for _, box in ipairs(fb.hitboxes) do
 							if box.visible == true and box.type.enabled == true then
-								scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.fill, box.type.outline)
+								scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, box.type.fill)
 							end
 						end
 					end
@@ -6064,15 +6066,15 @@ function rbff2.startplugin()
 
 				-- スタン表示
 				if p.disp_stun then
-					scr:draw_box(p1 and (138 - p.max_stun)   or 180, 29, p1 and 140 or (182 + p.max_stun)  , 34, 0xDDC0C0C0) -- 枠
-					scr:draw_box(p1 and (139 - p.max_stun)   or 181, 30, p1 and 139 or (181 + p.max_stun)  , 33, 0xDD000000) -- 黒背景
-					scr:draw_box(p1 and (139 - p.stun)       or 181, 30, p1 and 139 or (181 + p.stun)      , 33, 0xDDFF0000) -- スタン値
+					scr:draw_box(p1 and (138 - p.max_stun)   or 180, 29, p1 and 140 or (182 + p.max_stun)  , 34, 0, 0xDDC0C0C0) -- 枠
+					scr:draw_box(p1 and (139 - p.max_stun)   or 181, 30, p1 and 139 or (181 + p.max_stun)  , 33, 0, 0xDD000000) -- 黒背景
+					scr:draw_box(p1 and (139 - p.stun)       or 181, 30, p1 and 139 or (181 + p.stun)      , 33, 0, 0xDDFF0000) -- スタン値
 					draw_rtext(p1 and 135.5 or 190.5, 28.5,  p.stun, shadow_col)
 					draw_rtext(p1 and 135   or 190  , 28  ,  p.stun)
 
-					scr:draw_box(p1 and (138 - 90)           or 180, 35, p1 and 140 or (182 + 90)          , 40, 0xDDC0C0C0) -- 枠
-					scr:draw_box(p1 and (139 - 90)           or 181, 36, p1 and 139 or (181 + 90)          , 39, 0xDD000000) -- 黒背景
-					scr:draw_box(p1 and (139 - p.stun_timer) or 181, 36, p1 and 139 or (181 + p.stun_timer), 39, 0xDDFFFF00) -- スタン値
+					scr:draw_box(p1 and (138 - 90)           or 180, 35, p1 and 140 or (182 + 90)          , 40, 0, 0xDDC0C0C0) -- 枠
+					scr:draw_box(p1 and (139 - 90)           or 181, 36, p1 and 139 or (181 + 90)          , 39, 0, 0xDD000000) -- 黒背景
+					scr:draw_box(p1 and (139 - p.stun_timer) or 181, 36, p1 and 139 or (181 + p.stun_timer), 39, 0, 0xDDFFFF00) -- スタン値
 					draw_rtext(p1 and 135.5 or 190.5, 34.5,  p.stun_timer, shadow_col)
 					draw_rtext(p1 and 135   or 190  , 34  ,  p.stun_timer)
 				end
@@ -6085,8 +6087,8 @@ function rbff2.startplugin()
 					if x then
 						scr:draw_line(x, p.hit.pos_y-global.axis_size, x, p.hit.pos_y+global.axis_size, col)
 						scr:draw_line(x-global.axis_size, p.hit.pos_y, x+global.axis_size, p.hit.pos_y, col)
-						scr:draw_text(x-1  , p.hit.pos_y+global.axis_size+0.5, i, shadow_col)
-						scr:draw_text(x-1.5, p.hit.pos_y+global.axis_size    , i, col)
+						scr:draw_text(x-1  , p.hit.pos_y+global.axis_size+0.5, string.format("%d", i), shadow_col)
+						scr:draw_text(x-1.5, p.hit.pos_y+global.axis_size    , string.format("%d", i), col)
 					end
 				end
 				-- 座標表示
@@ -6468,7 +6470,7 @@ function rbff2.startplugin()
 	local ex_menu_to_main = function(cancel)
 		local col = ex_menu.pos.col
 		local p   = players
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		--                              1                                 1
 		global.disp_hitbox       = col[ 2] == 2 -- 判定表示               2
 		global.pause_hit         = col[ 3] == 2 -- ヒット時にポーズ       3
@@ -6552,13 +6554,13 @@ function rbff2.startplugin()
 
 	local menu_rec_to_tra = function() menu_cur = tra_menu end
 	local exit_menu_to_rec = function(slot_no)
-		local scr = manager:machine().screens[":screen"]
+		local scr = manager.machine.screens:at(1)
 		local ec = scr:frame_number()
 		global.dummy_mode = 5
 		global.rec_main = rec_await_no_input
 		global.input_accepted = ec
 		-- 選択したプレイヤー側の反対側の操作をいじる
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		recording.temp_player = (pgm:read_u8(players[1].addr.reg_pcnt) ~= 0xFF) and 2 or 1
 		recording.active_slot = recording.slot[slot_no]
 		menu_cur = main_menu
@@ -6580,7 +6582,7 @@ function rbff2.startplugin()
 		global.repeat_interval    = recording.repeat_interval
 	end
 	local exit_menu_to_play = function()
-		local scr = manager:machine().screens[":screen"]
+		local scr = manager.machine.screens:at(1)
 		local ec = scr:frame_number()
 		global.dummy_mode = 6 -- リプレイモードにする
 		global.rec_main = rec_await_play
@@ -6590,7 +6592,7 @@ function rbff2.startplugin()
 		menu_exit()
  	end
 	local exit_menu_to_play_cancel = function()
-		local scr = manager:machine().screens[":screen"]
+		local scr = manager.machine.screens:at(1)
 		local ec = scr:frame_number()
 		global.dummy_mode = 6 -- リプレイモードにする
 		global.rec_main = rec_await_play
@@ -6599,13 +6601,13 @@ function rbff2.startplugin()
 		menu_to_tra()
 	end
 	local exit_menu_to_rec_pos = function()
-		local scr = manager:machine().screens[":screen"]
+		local scr = manager.machine.screens:at(1)
 		local ec = scr:frame_number()
 		global.dummy_mode = 5 -- レコードモードにする
 		global.rec_main = rec_fixpos
 		global.input_accepted = ec
 		-- 選択したプレイヤー側の反対側の操作をいじる
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		recording.temp_player = (pgm:read_u8(players[1].addr.reg_pcnt) ~= 0xFF) and 2 or 1
 		exit_menu_to_play_common()
 		menu_cur = main_menu
@@ -6806,7 +6808,7 @@ function rbff2.startplugin()
 		},
 	}
 	local update_menu_pos = function()
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		-- メニューの更新
 		main_menu.pos.col[ 8] = math.min(math.max(pgm:read_u8(0x107BA5)  , 1), #char_names)
 		main_menu.pos.col[ 9] = math.min(math.max(pgm:read_u8(0x107BA7)  , 1), #char_names)
@@ -7339,11 +7341,11 @@ function rbff2.startplugin()
 		set_freeze(false)
 	end
 	menu.draw = function()
-		local scr = manager:machine().screens[":screen"]
+		local scr = manager.machine.screens:at(1)
 		local ec = scr:frame_number()
 		local state_past = ec - global.input_accepted
-		local width = scr:width() * scr:xscale()
-		local height = scr:height() * scr:yscale()
+		local width = scr.width * scr.xscale
+		local height = scr.height * scr.yscale
 
 		if not match_active or player_select_active then
 			return
@@ -7472,7 +7474,7 @@ function rbff2.startplugin()
 				scr:draw_text(96  , y+1  , row[1], 0xFFFFFFFF)
 			else
 				-- 通常行 ラベル部分
-				scr:draw_box (90  , y+0.5, 230   , y+8.5, c1, c2)
+				scr:draw_box (90  , y+0.5, 230   , y+8.5, c2, c1)
 				if i == menu_cur.pos.row then
 					scr:draw_line(90  , y+0.5, 230 , y+0.5, 0xFFDD2200)
 					scr:draw_line(90  , y+0.5, 90  , y+8.5, 0xFFDD2200)
@@ -7512,12 +7514,12 @@ function rbff2.startplugin()
 
 	main_or_menu_state = tra_main -- menu or tra_main
 	local main_or_menu = function()
-		if not manager:machine().devices[":maincpu"] then
+		if not manager.machine.devices[":maincpu"] then
 			return
 		end
-		local pgm = manager:machine().devices[":maincpu"].spaces["program"]
-		local scr = manager:machine().screens[":screen"]
-		local width = scr:width() * scr:xscale()
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
+		local scr = manager.machine.screens:at(1)
+		local width = scr.width * scr.xscale
 
 		-- フレーム更新しているかチェック更新
 		local ec = scr:frame_number()
