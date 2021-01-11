@@ -2068,10 +2068,8 @@ for _, box in pairs(box_type_base) do
 			box_types[box.id] = box
 		end
 	end
-	print(string.format("%x %x", bit32.lshift(box.fill   , 24), bit32.lshift(box.outline, 24)))
-	box.fill    = bit32.lshift(box.fill   , 24) + box.color
-	box.outline = bit32.lshift(box.outline, 24) + box.color
-	print(string.format("%x %x", box.fill, box.outline))
+	box.fill    = (0xFFFFFFFF & (box.fill    << 24)) + box.color
+	box.outline = (0xFFFFFFFF & (box.outline << 24)) + box.color
 end
 
 -- ボタンの色テーブル
@@ -2244,13 +2242,13 @@ local chip_dmg_types = {
 	rshift4 = { -- 1/16
 		name = "1/16",
 		calc = function(pure_dmg)
-			return math.max(1, bit32.rshift(pure_dmg, 4))
+			return math.max(1, 0xFFFF & (pure_dmg >> 4))
 		end,
 	},
 	rshift5 = { -- 1/32
 		name = "1/32",
 		calc = function(pure_dmg)
-			return math.max(1, bit32.rshift(pure_dmg, 5))
+			return math.max(1, 0xFFFF & (pure_dmg >> 5))
 		end,
 	},
 }
@@ -2567,7 +2565,7 @@ local get_flip_x = function(p)
 	local obj_base = p.addr.base
 	local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 	local flip_x = pgm:read_i16(obj_base + 0x6A) < 0 and 1 or 0
-	flip_x = bit32.bxor(flip_x, (pgm:read_u8(obj_base + 0x71) & 1))
+	flip_x = flip_x ~ (pgm:read_u8(obj_base + 0x71) & 1)
 	flip_x = flip_x > 0 and 1 or -1
 	return flip_x
 end
@@ -4360,7 +4358,7 @@ function rbff2.startplugin()
 		local p_pos = p.pos                             -- 投げ側のX位置は補正後の値
 
 		d0 = char2                                      -- D0 = 100510アドレスの値(相手のキャラID)
-		d0 = 0xFFFF & bit32.lshift(d0, 3)               -- D0 を3ビット左シフト
+		d0 = 0xFFFF & (d0 << 3)                         -- D0 を3ビット左シフト
 		if p.side == op.side then                       -- 自分の向きと相手の向きが違ったら
 			d0 = pgm:read_u8(0x4 + a0_1 + d0)           -- D0 = A0+4+D0アドレスのデータ(0x5CAC3~)
 		else                                            -- 自分の向きと相手の向きが同じなら
@@ -4378,7 +4376,7 @@ function rbff2.startplugin()
 		local op_d1 = d1
 
 		d5 = char1                                      -- D5 = 100410アドレスの値(キャラID)
-		d5 = 0xFFFF & bit32.lshift(d5, 3)               -- D5 = D5を3ビット左シフト
+		d5 = 0xFFFF & (d5 << 3)                         -- D5 = D5を3ビット左シフト
 		d5 = pgm:read_u8(0x3 + a0_1 + d5)               -- D5 = 3+A0+D5アドレスのデータ
 		d5 = 0xFF00 + d5
 		if 0 > p.side then                              -- 位置がマイナスなら
@@ -4534,8 +4532,8 @@ function rbff2.startplugin()
 				p.pure_st    = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x85CCA)) + p.attack)
 				p.pure_st_tm = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x85D2A)) + p.attack)
 			end
-			p.fake_hit       = bit32.btest(pgm:read_u8(p.addr.fake_hit), 8+3) == false
-			p.obsl_hit       = bit32.btest(pgm:read_u8(p.addr.obsl_hit), 8+3) == false
+			p.fake_hit       = (pgm:read_u8(p.addr.fake_hit) & 0xB) == 0
+			p.obsl_hit       = (pgm:read_u8(p.addr.obsl_hit) & 0xB) == 0
 			p.full_hit       = pgm:read_u8(p.addr.full_hit) > 0
 			p.harmless2      = pgm:read_u8(p.addr.harmless2) == 0
 			p.prj_rank       = pgm:read_u8(p.addr.prj_rank)
@@ -4736,8 +4734,8 @@ function rbff2.startplugin()
 					fb.pure_st    = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x886F2))
 					fb.pure_st_tm = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x88772))
 				end
-				fb.fake_hit       = bit32.btest(pgm:read_u8(fb.addr.fake_hit), 8+3) == false
-				fb.obsl_hit       = bit32.btest(pgm:read_u8(fb.addr.obsl_hit), 8+3) == false
+				fb.fake_hit       = (pgm:read_u8(fb.addr.fake_hit) & 0xB) == 0
+				fb.obsl_hit       = (pgm:read_u8(fb.addr.obsl_hit) & 0xB) == 0
 				fb.full_hit       = pgm:read_u8(fb.addr.full_hit ) > 0
 				fb.harmless2      = pgm:read_u8(fb.addr.harmless2) > 0
 				fb.prj_rank       = pgm:read_u8(fb.addr.prj_rank)
