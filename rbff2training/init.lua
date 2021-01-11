@@ -2400,10 +2400,10 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 	end
 
 	pos_y  = pos_y - p.hit.pos_z
-	top    = 0xFFFF & (pos_y - bit32.arshift(top    * p.hit.scale, 6))
-	bottom = 0xFFFF & (pos_y - bit32.arshift(bottom * p.hit.scale, 6))
-	left   = 0xFFFF & (pos_x - bit32.arshift(left   * p.hit.scale, 6) * p.hit.flip_x)
-	right  = 0xFFFF & (pos_x - bit32.arshift(right  * p.hit.scale, 6) * p.hit.flip_x)
+	top    = 0xFFFF & (pos_y - (0xFFFFF & ((top    * p.hit.scale) >> 6)))
+	bottom = 0xFFFF & (pos_y - (0xFFFFF & ((bottom * p.hit.scale) >> 6)))
+	left   = 0xFFFF & (pos_x - (0xFFFFF & ((left   * p.hit.scale) >> 6)) * p.hit.flip_x)
+	right  = 0xFFFF & (pos_x - (0xFFFFF & ((right  * p.hit.scale) >> 6)) * p.hit.flip_x)
 
 	box.top , box.bottom = bottom, top
 	box.left, box.right  = left, right
