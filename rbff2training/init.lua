@@ -3258,9 +3258,14 @@ function rbff2.startplugin()
 		local pgm = cpu.spaces["program"]
 		if reset then
 			for i, idx in ipairs(wps) do
-				cpu.debug:bpclr(idx)
+				cpu.debug:bpdisable(idx)
 			end
-			wps = {}
+			--wps = {} -- clearではなくdisableにする場合は消さなくてもいい
+			return
+		elseif #wps > 0 then
+			for i, idx in ipairs(wps) do
+				cpu.debug:bpenable(idx)
+			end
 			return
 		end
 
@@ -3300,9 +3305,14 @@ function rbff2.startplugin()
 		local cpu = manager.machine.devices[":maincpu"]
 		if reset then
 			for i, idx in ipairs(bps) do
-				cpu.debug:wpclr(idx)
+				cpu.debug:wpdisable(idx)
 			end
-			bps = {}
+			-- bps = {} -- clearではなくdisableにする場合は消さなくてもいい
+			return
+		elseif #bps > 0 then
+			for i, idx in ipairs(bps) do
+				cpu.debug:wpenable(idx)
+			end
 			return
 		end
 
@@ -3525,11 +3535,17 @@ function rbff2.startplugin()
 		local cpu = manager.machine.devices[":maincpu"]
 		if reset then
 			for i, idx in ipairs(bps_rg) do
-				cpu.debug:bpclr(idx)
+				cpu.debug:bpdisable(idx)
 			end
-			bps_rg = {}
+			-- bps_rg = {} -- clearではなくdisableにする場合は消さなくてもいい
+			return
+		elseif #bps_rg > 0 then
+			for i, idx in ipairs(bps_rg) do
+				cpu.debug:bpenable(idx)
+			end
 			return
 		end
+
 		if #bps_rg == 0 then
 			-- この処理をそのまま有効にすると通常時でも食らい判定が見えるようになるが、MVS版ビリーの本来は攻撃判定無しの垂直ジャンプ攻撃がヒットしてしまう
 			-- ビリーの判定が出ない(maincpu.pb@((A0)+$B6)==0)な垂直小ジャンプAと垂直小ジャンプBと斜め小ジャンプBときはこのワークアラウンドが動作しないようにする
