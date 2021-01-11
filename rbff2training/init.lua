@@ -7488,8 +7488,8 @@ function rbff2.startplugin()
 					-- 通常行 オプション部分
 					local col_pos_num = menu_cur.pos.col[i] or 1
 					if col_pos_num > 0 then
-						scr:draw_text(165.5, y+1.5, row[2][col_pos_num], c4)
-						scr:draw_text(165  , y+1  , row[2][col_pos_num], c3)
+						scr:draw_text(165.5, y+1.5, string.format("%s", row[2][col_pos_num]), c4)
+						scr:draw_text(165  , y+1  , string.format("%s", row[2][col_pos_num]), c3)
 						-- オプション部分の左右移動可否の表示
 						if i == menu_cur.pos.row then
 							scr:draw_text(160, y+1, "◀", col_pos_num == 1       and c5 or c3)

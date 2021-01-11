@@ -19,9 +19,9 @@
 --LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 --OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 --SOFTWARE.
-local cpu = manager:machine().devices[":maincpu"]
+local cpu = manager.machine.devices[":maincpu"]
 local pgm = cpu.spaces["program"]
-local sr = function(reg, value) manager:machine().devices[":maincpu"].state[reg].value = value end
+local sr = function(reg, value) manager.machine.devices[":maincpu"].state[reg].value = value end
 local wb  = function(addr, value) pgm:write_u8(addr, value) end
 for i = 0x100000, 0x10ffff do wb(i, 0) end
 wb(0x100002, 0xec)
