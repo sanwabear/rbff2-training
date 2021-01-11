@@ -60,7 +60,7 @@ local bios_test             = function()
 	local pgm = cpu.spaces["program"]
 	for _, addr in ipairs({0x100400, 0x100500}) do
 		local ram_value = pgm:read_u8(addr)
-		for _, test_value in ipairs({0x5555, 0xAAAA, bit32.band(0xFFFF, addr)}) do
+		for _, test_value in ipairs({0x5555, 0xAAAA, (0xFFFF & addr)}) do
 			if ram_value == test_value then
 				return true
 			end
@@ -2278,7 +2278,7 @@ local chip_dmg_type_tbl = {
 local get_chip_dmg_type = function(box)
 	local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 	local a0 = fix_bp_addr(0x95CCC)
-	local d0 = bit32.band(0xF, pgm:read_u8(a0 + box.id))
+	local d0 = 0xF & pgm:read_u8(a0 + box.id)
 	local func = chip_dmg_type_tbl[d0 + 1]
 	return func
 end
@@ -2305,8 +2305,8 @@ local hit_box_proc = function(id, addr)
 	local d2 = id - 0x20
 	if d2 >= 0 then
 		d2 = pgm:read_u8(addr + d2)
-		d2 = bit32.band(0xFFFF, d2 + d2)
-		d2 = bit32.band(0xFFFF, d2 + d2)
+		d2 = 0xFFFF & (d2 + d2)
+		d2 = 0xFFFF & (d2 + d2)
 		local a0 = pgm:read_u32(0x13120 + d2)
 		--print(string.format(" ext attack %x %x %s", id, addr, hit_sub_procs[a0] or "none"))
 		return hit_sub_procs[a0]
@@ -2384,7 +2384,7 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 		-- 削りダメージ計算種別取得 05B2A4 からの処理
 		box.chip_dmg_type = get_chip_dmg_type(box)
 		-- のけぞり時間取得 05AF7C(家庭用版)からの処理
-		local d2 = bit32.band(0xF, pgm:read_u8(box.id + fix_bp_addr(0x95CCC)))
+		local d2 = 0xF & pgm:read_u8(box.id + fix_bp_addr(0x95CCC))
 		box.hitstun   = pgm:read_u8(0x16 + 0x2 + fix_bp_addr(0x5AF7C) + d2) + 1 + 3 -- ヒット硬直
 		box.blockstun = pgm:read_u8(0x1A + 0x2 + fix_bp_addr(0x5AF88) + d2) + 1 + 2 -- ガード硬直
 	else
@@ -2402,10 +2402,10 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 	end
 
 	pos_y  = pos_y - p.hit.pos_z
-	top    = bit32.band(0xFFFF, pos_y - bit32.arshift(top    * p.hit.scale, 6))
-	bottom = bit32.band(0xFFFF, pos_y - bit32.arshift(bottom * p.hit.scale, 6))
-	left   = bit32.band(0xFFFF, pos_x - bit32.arshift(left   * p.hit.scale, 6) * p.hit.flip_x)
-	right  = bit32.band(0xFFFF, pos_x - bit32.arshift(right  * p.hit.scale, 6) * p.hit.flip_x)
+	top    = 0xFFFF & (pos_y - bit32.arshift(top    * p.hit.scale, 6))
+	bottom = 0xFFFF & (pos_y - bit32.arshift(bottom * p.hit.scale, 6))
+	left   = 0xFFFF & (pos_x - bit32.arshift(left   * p.hit.scale, 6) * p.hit.flip_x)
+	right  = 0xFFFF & (pos_x - bit32.arshift(right  * p.hit.scale, 6) * p.hit.flip_x)
 
 	box.top , box.bottom = bottom, top
 	box.left, box.right  = left, right
@@ -2567,7 +2567,7 @@ local get_flip_x = function(p)
 	local obj_base = p.addr.base
 	local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 	local flip_x = pgm:read_i16(obj_base + 0x6A) < 0 and 1 or 0
-	flip_x = bit32.bxor(flip_x, bit32.band(pgm:read_u8(obj_base + 0x71), 1))
+	flip_x = bit32.bxor(flip_x, (pgm:read_u8(obj_base + 0x71) & 1))
 	flip_x = flip_x > 0 and 1 or -1
 	return flip_x
 end
@@ -4360,7 +4360,7 @@ function rbff2.startplugin()
 		local p_pos = p.pos                             -- 投げ側のX位置は補正後の値
 
 		d0 = char2                                      -- D0 = 100510アドレスの値(相手のキャラID)
-		d0 = bit32.band(0xFFFF, bit32.lshift(d0, 3))    -- D0 を3ビット左シフト
+		d0 = 0xFFFF & bit32.lshift(d0, 3)               -- D0 を3ビット左シフト
 		if p.side == op.side then                       -- 自分の向きと相手の向きが違ったら
 			d0 = pgm:read_u8(0x4 + a0_1 + d0)           -- D0 = A0+4+D0アドレスのデータ(0x5CAC3~)
 		else                                            -- 自分の向きと相手の向きが同じなら
@@ -4370,33 +4370,33 @@ function rbff2.startplugin()
 		if 0 > op.side then                             -- 位置がマイナスなら
 			d0 = 0x10000 - d0                           -- NEG
 		end
-		d0 = bit32.band(0xFFFF, d0 + d0)                -- 2倍値に
-		d0 = bit32.band(0xFFFF, d0 + d0)                -- さらに2倍値に
+		d0 = 0xFFFF & (d0 + d0)                         -- 2倍値に
+		d0 = 0xFFFF & (d0 + d0)                         -- さらに2倍値に
 		d1 = op_pos                                     -- D1 = 相手のX位置
-		d1 = bit32.band(0xFFFF, d1 - d0)                -- 相手との距離計算
+		d1 = 0xFFFF & (d1 - d0)                         -- 相手との距離計算
 		local op_d0 = d0                                -- 投げ間合いの補正値
 		local op_d1 = d1
 
 		d5 = char1                                      -- D5 = 100410アドレスの値(キャラID)
-		d5 = bit32.band(0xFFFF, bit32.lshift(d5, 3))    -- D5 = D5を3ビット左シフト
+		d5 = 0xFFFF & bit32.lshift(d5, 3)               -- D5 = D5を3ビット左シフト
 		d5 = pgm:read_u8(0x3 + a0_1 + d5)               -- D5 = 3+A0+D5アドレスのデータ
 		d5 = 0xFF00 + d5
 		if 0 > p.side then                              -- 位置がマイナスなら
 			d5 = 0x10000 - d5                           -- NEG
 		end
-		d5 = bit32.band(0xFFFF, d5 + d5)                -- 2倍値に
-		d5 = bit32.band(0xFFFF, d5 + d5)                -- さらに2倍値に
+		d5 = 0xFFFF & (d5 + d5)                         -- 2倍値に
+		d5 = 0xFFFF & (d5 + d5)                         -- さらに2倍値に
 		d0 = p_pos                                      -- 自分のX位置
-		d0 = bit32.band(0xFFFF, d0 - d5)                -- 投げ間合いの限界距離
+		d0 = 0xFFFF & (d0 - d5)                         -- 投げ間合いの限界距離
 		local p_d0 = d0
 
 		d0 = d1 > d0 and (d1 - d0) or (d0 - d1)         -- D1(相手との距離) と D0 を比較して差分算出
-		d0 = bit32.band(0xFFFF, d0)
+		d0 = 0xFFFF & d0
 		local gap = d0
 
 		local d1 = char1
-		d1 = bit32.band(0xFFFF, d1 + d1)                -- 2倍値に
-		d1 = bit32.band(0xFFFF, d1 + d1)                -- さらに2倍値に
+		d1 = 0xFFFF & (d1 + d1)                         -- 2倍値に
+		d1 = 0xFFFF & (d1 + d1)                         -- さらに2倍値に
 		d4 = pgm:read_u8(a0_2 + d1)                     -- 投げ間合いから相手座標の距離の±許容幅
 		local ret = d4 >= d0
 		local a = math.abs(op_pos - op_d1)
@@ -4465,8 +4465,8 @@ function rbff2.startplugin()
 
 			p.base           = pgm:read_u32(p.addr.base)
 			p.char           = pgm:read_u8(p.addr.char)
-			p.char_4times    = bit32.band(0xFFFF, p.char + p.char)
-			p.char_4times    = bit32.band(0xFFFF, p.char_4times + p.char_4times)
+			p.char_4times    = 0xFFFF & (p.char + p.char)
+			p.char_4times    = 0xFFFF & (p.char_4times + p.char_4times)
 			p.life           = pgm:read_u8(p.addr.life)                 -- 今の体力
 			p.old_state      = p.state                                  -- 前フレームの状態保存
 			p.state          = pgm:read_u8(p.addr.state)                -- 今の状態
@@ -4499,8 +4499,8 @@ function rbff2.startplugin()
 			p.tw_muteki2     = 0
 			if 0x70 <= p.attack then
 				local d1 = pgm:read_u16(p.addr.base + 0x10)
-				d1 = bit32.band(0xFF, d1 + d1)
-				d1 = bit32.band(0xFF, d1 + d1)
+				d1 = 0xFF & (d1 + d1)
+				d1 = 0xFF & (d1 + d1)
 				local a0 = pgm:read_u32(d1 + 0x89692)
 				local d2 = p.attack - 0x70
 				p.tw_muteki2 = pgm:read_u8(a0 + d2)
@@ -4525,7 +4525,7 @@ function rbff2.startplugin()
 				p.pure_st    = 0
 				p.pure_st_tm = 0
 			else
-				p.hitstop    = bit32.band(0x7F, pgm:read_u8(pgm:read_u32(fix_bp_addr(0x83C38) + p.char_4times) + p.attack))
+				p.hitstop    = 0x7F & pgm:read_u8(pgm:read_u32(fix_bp_addr(0x83C38) + p.char_4times) + p.attack)
 				p.hitstop    = p.hitstop == 0 and 2 or p.hitstop + 1  -- システムで消費される分を加算
 				p.hitstop_gd = math.max(2, p.hitstop - 1) -- ガード時の補正
 				-- 補正前ダメージ量取得 家庭用 05B118 からの処理
@@ -4756,7 +4756,7 @@ function rbff2.startplugin()
 				]]
 				fb.bai_chk1       = pgm:read_u8(fb.addr.bai_chk1)
 				fb.bai_chk2       = pgm:read_u16(fb.addr.bai_chk2)
-				fb.bai_chk2       = pgm:read_u8(0x8E940 + bit32.band(0xFFFF, fb.bai_chk2 + fb.bai_chk2))
+				fb.bai_chk2       = pgm:read_u8(0x8E940 + (0xFFFF & (fb.bai_chk2 + fb.bai_chk2)))
 				fb.bai_catch      = 0x2 >= fb.bai_chk1 and fb.bai_chk2 == 0x01
 
 				fb.max_hit_dn     = pgm:read_u8(fix_bp_addr(0x885F2) + fb.hitstop_id)
@@ -4982,8 +4982,8 @@ function rbff2.startplugin()
 				p.state,                  --1
 				p.stop,                   --2 0x10058D
 				pgm:read_u8(0x100569), 
-				bit32.band(p.stop               , pgm:read_u8(0x10054c)), --  2 24
-				bit32.band(pgm:read_u8(0x100569), pgm:read_u8(0x100550)), --  4 25
+				p.stop                & pgm:read_u8(0x10054c), --  2 24
+				pgm:read_u8(0x100569) & pgm:read_u8(0x100550), --  4 25
 				pgm:read_u8(0x100516),  -- 17 25
 				p.pos_z,
 				p.knock_back3,
@@ -5370,46 +5370,46 @@ function rbff2.startplugin()
 
 			-- 入力表示用の情報構築
 			local key_now = p.key_now
-			key_now.d  = bit32.band(p.reg_pcnt, 0x80) == 0x00 and posi_or_pl1(key_now.d ) or nega_or_mi1(key_now.d ) -- Button D
-			key_now.c  = bit32.band(p.reg_pcnt, 0x40) == 0x00 and posi_or_pl1(key_now.c ) or nega_or_mi1(key_now.c ) -- Button C
-			key_now.b  = bit32.band(p.reg_pcnt, 0x20) == 0x00 and posi_or_pl1(key_now.b ) or nega_or_mi1(key_now.b ) -- Button B
-			key_now.a  = bit32.band(p.reg_pcnt, 0x10) == 0x00 and posi_or_pl1(key_now.a ) or nega_or_mi1(key_now.a ) -- Button A
-			key_now.rt = bit32.band(p.reg_pcnt, 0x08) == 0x00 and posi_or_pl1(key_now.rt) or nega_or_mi1(key_now.rt) -- Right
-			key_now.lt = bit32.band(p.reg_pcnt, 0x04) == 0x00 and posi_or_pl1(key_now.lt) or nega_or_mi1(key_now.lt) -- Left
-			key_now.dn = bit32.band(p.reg_pcnt, 0x02) == 0x00 and posi_or_pl1(key_now.dn) or nega_or_mi1(key_now.dn) -- Down
-			key_now.up = bit32.band(p.reg_pcnt, 0x01) == 0x00 and posi_or_pl1(key_now.up) or nega_or_mi1(key_now.up) -- Up
-			key_now.sl = bit32.band(p.reg_st_b, p1 and 0x02 or 0x08) == 0x00 and posi_or_pl1(key_now.sl) or nega_or_mi1(key_now.sl) -- Select
-			key_now.st = bit32.band(p.reg_st_b, p1 and 0x01 or 0x04) == 0x00 and posi_or_pl1(key_now.st) or nega_or_mi1(key_now.st) -- Start
+			key_now.d  = (p.reg_pcnt & 0x80) == 0x00 and posi_or_pl1(key_now.d ) or nega_or_mi1(key_now.d ) -- Button D
+			key_now.c  = (p.reg_pcnt & 0x40) == 0x00 and posi_or_pl1(key_now.c ) or nega_or_mi1(key_now.c ) -- Button C
+			key_now.b  = (p.reg_pcnt & 0x20) == 0x00 and posi_or_pl1(key_now.b ) or nega_or_mi1(key_now.b ) -- Button B
+			key_now.a  = (p.reg_pcnt & 0x10) == 0x00 and posi_or_pl1(key_now.a ) or nega_or_mi1(key_now.a ) -- Button A
+			key_now.rt = (p.reg_pcnt & 0x08) == 0x00 and posi_or_pl1(key_now.rt) or nega_or_mi1(key_now.rt) -- Right
+			key_now.lt = (p.reg_pcnt & 0x04) == 0x00 and posi_or_pl1(key_now.lt) or nega_or_mi1(key_now.lt) -- Left
+			key_now.dn = (p.reg_pcnt & 0x02) == 0x00 and posi_or_pl1(key_now.dn) or nega_or_mi1(key_now.dn) -- Down
+			key_now.up = (p.reg_pcnt & 0x01) == 0x00 and posi_or_pl1(key_now.up) or nega_or_mi1(key_now.up) -- Up
+			key_now.sl = (p.reg_st_b & (p1 and 0x02 or 0x08)) == 0x00 and posi_or_pl1(key_now.sl) or nega_or_mi1(key_now.sl) -- Select
+			key_now.st = (p.reg_st_b & (p1 and 0x01 or 0x04)) == 0x00 and posi_or_pl1(key_now.st) or nega_or_mi1(key_now.st) -- Start
 			local lever
-			if bit32.band(p.reg_pcnt, 0x01 + 0x04) == 0x00 then
+			if (p.reg_pcnt & 0x05) == 0x00 then
 				lever = "_7"
-			elseif bit32.band(p.reg_pcnt, 0x01 + 0x08) == 0x00 then
+			elseif (p.reg_pcnt & 0x09) == 0x00 then
 				lever = "_9"
-			elseif bit32.band(p.reg_pcnt, 0x02 + 0x04) == 0x00 then
+			elseif (p.reg_pcnt & 0x06) == 0x00 then
 				lever = "_1"
-			elseif bit32.band(p.reg_pcnt, 0x02 + 0x08) == 0x00 then
+			elseif (p.reg_pcnt & 0x0A) == 0x00 then
 				lever = "_3"
-			elseif bit32.band(p.reg_pcnt, 0x01) == 0x00 then
+			elseif (p.reg_pcnt & 0x01) == 0x00 then
 				lever = "_8"
-			elseif bit32.band(p.reg_pcnt, 0x02) == 0x00 then
+			elseif (p.reg_pcnt & 0x02) == 0x00 then
 				lever = "_2"
-			elseif bit32.band(p.reg_pcnt, 0x04) == 0x00 then
+			elseif (p.reg_pcnt & 0x04) == 0x00 then
 				lever = "_4"
-			elseif bit32.band(p.reg_pcnt, 0x08) == 0x00 then
+			elseif (p.reg_pcnt & 0x08) == 0x00 then
 				lever = "_6"
 			else
 				lever = "_N"
 			end
-			if bit32.band(p.reg_pcnt, 0x10) == 0x00 then
+			if (p.reg_pcnt & 0x10) == 0x00 then
 				lever = lever .. "_A"
 			end
-			if bit32.band(p.reg_pcnt, 0x20) == 0x00 then
+			if (p.reg_pcnt & 0x20) == 0x00 then
 				lever = lever .. "_B"
 			end
-			if bit32.band(p.reg_pcnt, 0x40) == 0x00 then
+			if (p.reg_pcnt & 0x40) == 0x00 then
 				lever = lever .. "_C"
 			end
-			if bit32.band(p.reg_pcnt, 0x80) == 0x00 then
+			if (p.reg_pcnt & 0x80) == 0x00 then
 				lever = lever .. "_D"
 			end
 			if p.key_hist[#p.key_hist] ~= lever then
@@ -7615,17 +7615,17 @@ function rbff2.startplugin()
 		-- デバッグDIP
 		local dip1, dip2, dip3 = 0x00, 0x00, 0x00
 		if match_active and dip_config.show_hitbox then
-			--dip1 = bit32.bor(dip1, 0x40)    --cheat "DIP= 1-7 色々な判定表示"
-			dip1 = bit32.bor(dip1, 0x80)    --cheat "DIP= 1-8 当たり判定表示"
+			--dip1 = dip1 | 0x40    --cheat "DIP= 1-7 色々な判定表示"
+			dip1 = dip1 | 0x80    --cheat "DIP= 1-8 当たり判定表示"
 		end
 		if match_active and dip_config.infinity_life then
-			dip1 = bit32.bor(dip1, 0x02)    --cheat "DIP= 1-2 Infinite Energy"
+			dip1 = dip1 | 0x02    --cheat "DIP= 1-2 Infinite Energy"
 		end
 		if match_active and dip_config.easy_super then
-			dip2 = bit32.bor(dip2, 0x01)    --Cheat "DIP 2-1 Eeasy Super"
+			dip2 = dip2 | 0x01    --Cheat "DIP 2-1 Eeasy Super"
 		end
 		if dip_config.infinity_time then
-			dip2 = bit32.bor(dip2, 0x10)    --cheat "DIP= 2-5 Disable Time Over"
+			dip2 = dip2 | 0x10    --cheat "DIP= 2-5 Disable Time Over"
 			-- 家庭用オプションの時間無限大設定
 			pgm:write_u8(0x10E024, 0x03) -- 1:45 2:60 3:90 4:infinity
 			pgm:write_u8(0x107C28, 0xAA) --cheat "Infinite Time"
@@ -7633,16 +7633,16 @@ function rbff2.startplugin()
 			pgm:write_u8(0x107C28, dip_config.fix_time)
 		end
 		if dip_config.stage_select then
-			dip1 = bit32.bor(dip1, 0x04)    --cheat "DIP= 1-3 Stage Select Mode"
+			dip1 = dip1 | 0x04    --cheat "DIP= 1-3 Stage Select Mode"
 		end
 		if player_select_active and dip_config.alfred then
-			dip2 = bit32.bor(dip2, 0x80)    --cheat "DIP= 2-8 Alfred Code (B+C >A)"
+			dip2 = dip2 | 0x80    --cheat "DIP= 2-8 Alfred Code (B+C >A)"
 		end
 		if match_active and dip_config.watch_states then
-			dip2 = bit32.bor(dip2, 0x20)    --cheat "DIP= 2-6 Watch States"
+			dip2 = dip2 | 0x20    --cheat "DIP= 2-6 Watch States"
 		end
 		if match_active and dip_config.cpu_cant_move then
-			dip3 = bit32.bor(dip3, 0x01)    --cheat "DIP= 3-1 CPU Can't Move"
+			dip3 = dip3 | 0x01    --cheat "DIP= 3-1 CPU Can't Move"
 		end
 		pgm:write_u8(0x10E000, dip1)
 		pgm:write_u8(0x10E001, dip2)
@@ -7658,8 +7658,8 @@ function rbff2.startplugin()
 		if player_select_active then
 			--apply_1p2p_active()
 			if pgm:read_u8(mem_0x10CDD0) > 12 then
-				local addr1 = bit32.band(0xFFFFFF, pgm:read_u32(players[1].addr.select_hook))
-				local addr2 = bit32.band(0xFFFFFF, pgm:read_u32(players[2].addr.select_hook))
+				local addr1 = 0xFFFFFF & pgm:read_u32(players[1].addr.select_hook)
+				local addr2 = 0xFFFFFF & pgm:read_u32(players[2].addr.select_hook)
 				if addr1 > 0 then
 					pgm:write_u8(addr1, 2)
 				end
