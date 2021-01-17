@@ -2196,23 +2196,23 @@ local draw_cmd = function(p, line, frame, str)
 		xx = xx + 5 -- フォントの大きさ問わず5pxずつ表示する
 	end
 end
--- コマンド入力表示
-local draw_base = function(p, line, frame, cstr, act_name)
+-- 処理アドレス表示
+local draw_base = function(p, line, frame, addr, act_name, xmov)
 	local scr = manager.machine.screens:at(1)
 
 	local p1 = p == 1
-	local xx = p1 and 90 or 195    -- 1Pと2Pで左右に表示し分ける
+	local xx = p1 and 60 or 195    -- 1Pと2Pで左右に表示し分ける
 	local yy = (line + 10 - 1) * 8 -- +8はオフセット位置
-
+	
+	local cframe
 	if 0 < frame then
-		local cframe = 999 < frame and "LOT" or frame
-		draw_rtext(p1 and 60.5 or 245.5, yy + 0.5, cframe, shadow_col)
-		draw_rtext(p1 and 60   or 245  ,       yy, cframe, text_col)
+		cframe = 999 < frame and "LOT" or frame
+	else
+		cframe = "0"
 	end
-	draw_rtext   (xx + 0.5, yy + 0.5, cstr    , 0xFF000000) -- 文字の影
-	scr:draw_text(xx + 0.5, yy + 0.5, act_name, 0xFF000000) -- 文字の影
-	draw_rtext   (xx, yy, cstr    , text_col)
-	scr:draw_text(xx, yy, act_name, text_col)
+	local sline = string.format("%3s %8x %3s %s", cframe, addr, xmov, act_name)
+	scr:draw_text(xx + 0.5, yy + 0.5, sline, 0xFF000000) -- 文字の影
+	scr:draw_text(xx, yy, sline, text_col)
 end
 
 -- 当たり判定のオフセット
@@ -3051,7 +3051,7 @@ function rbff2.startplugin()
 			players[p].key_hist[i] = ""
 			players[p].key_frames[i] = 0
 			players[p].act_frames[i] = {0,0}
-			players[p].bases[i] = { count = 0, addr = 0x0, act_data = nil, name = "", }
+			players[p].bases[i] = { count = 0, addr = 0x0, act_data = nil, name = "", pos1 = 0, pos2 = 0, xmov = 0, }
 		end
 	end
 	-- 飛び道具領域の作成
@@ -4709,10 +4709,15 @@ function rbff2.startplugin()
 					count    = 1,
 					act_data = p.act_data,
 					name     = get_act_name(p.act_data),
+					pos1     = p.pos,
+					pos2     = p.pos,
+					xmov     = 0,
 				} )
 			else
 				local base = p.bases[#p.bases]
 				base.count = base.count + 1
+				base.pos2  = p.pos
+				base.xmov  = base.pos2 - base.pos1
 			end
 			if 16 < #p.bases then
 				--バッファ長調整
@@ -5057,8 +5062,8 @@ function rbff2.startplugin()
 			if global.log.baselog then
 				local b1 = p1.bases[#players[1].bases]
 				local b2 = p2.bases[#players[2].bases]
-				log1 = string.format("%s addr %3s %8x ", log1, 999 < b1.count and "LOT" or b1.count, b1.addr)
-				log2 = string.format("%s addr %3s %8x ", log2, 999 < b2.count and "LOT" or b2.count, b2.addr)
+				log1 = string.format("%s addr %3s %8x %3s ", log1, 999 < b1.count and "LOT" or b1.count, b1.addr, b1.xmov)
+				log2 = string.format("%s addr %3s %8x %3s ", log2, 999 < b2.count and "LOT" or b2.count, b2.addr, b2.xmov)
 			end
 
 			-- 入力ログ
@@ -6006,7 +6011,7 @@ function rbff2.startplugin()
 			for i, p in ipairs(players) do
 				for k = 1, #p.bases do
 					if p.disp_base then
-						draw_base(i, k, p.bases[k].count, string.format("%8x", p.bases[k].addr), p.bases[k].name)
+						draw_base(i, k, p.bases[k].count, p.bases[k].addr, p.bases[k].name, p.bases[k].xmov)
 					end
 				end
 				--if p.disp_base then
