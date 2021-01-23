@@ -2141,19 +2141,12 @@ local draw_rtext = function(x, y, str, fgcol, bgcol)
 	if not str then
 		return
 	end
-	if type(str)~="number" then
+	if type(str) == "number" then
 		str = "" .. str
 	end
 	local scr = manager.machine.screens:at(1)
-	local scale = scr.xscale * scr.width
-	local xx = x
-	for c in string.gmatch(str, "([%z\1-\127\194-\244][\128-\191]*)") do
-		xx = xx - manager.ui:get_string_width(c, scale)
-	end
-	for c in string.gmatch(str, "([%z\1-\127\194-\244][\128-\191]*)") do
-		scr:draw_text(xx, y, c, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
-		xx = xx + manager.ui:get_string_width(c, scale)
-	end
+	local scale = scr.xscale * scr.height
+	scr:draw_text(x - manager.ui:get_string_width(str, scale), y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
 end
 
 -- コマンド入力表示
