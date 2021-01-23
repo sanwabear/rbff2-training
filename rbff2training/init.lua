@@ -2141,12 +2141,11 @@ local draw_rtext = function(x, y, str, fgcol, bgcol)
 	if not str then
 		return
 	end
-	if type(x) ~= "string" then
-		str = "" .. str
+	if type(str) ~= "string" then
+		str = string.format("%s", str)
 	end
 	local scr = manager.machine.screens:at(1)
-	local scale = scr.xscale * scr.height
-	scr:draw_text(x - manager.ui:get_string_width(str, scale), y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
+	scr:draw_text(x - manager.ui:get_string_width(str, scr.xscale * scr.height), y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
 end
 
 -- コマンド入力表示
@@ -2155,13 +2154,13 @@ local draw_cmd = function(p, line, frame, str)
 	local cstr = convert(str)
 
 	local p1 = p == 1
-	local xx = p1 and 15 or 300   -- 1Pと2Pで左右に表示し分ける
+	local xx = p1 and 12 or 294   -- 1Pと2Pで左右に表示し分ける
 	local yy = (line + 10 - 1) * 8 -- +8はオフセット位置
 
 	if 0 < frame then
 		local cframe = 999 < frame and "LOT" or frame
-		draw_rtext(p1 and 10.5 or 295.5, yy + 0.5, cframe, shadow_col)
-		draw_rtext(p1 and 10   or 295  ,       yy, cframe, text_col)
+		draw_rtext(p1 and 10.5 or 292.5, yy + 0.5, cframe, shadow_col)
+		draw_rtext(p1 and 10   or 292  ,       yy, cframe, text_col)
 	end
 	local col = 0xFAFFFFFF
 	if p1 then
@@ -5469,9 +5468,11 @@ function rbff2.startplugin()
 				p.last_combo_pow = p.tmp_combo_pow
 				p.max_combo_pow = math.max(p.max_combo_pow, p.tmp_combo_pow)
 			end
+			if p.pure_dmg > 0 then -- ヒットしなくても算出しているのでp.tmp_dmgでチェックしない
+				p.last_pure_dmg = p.pure_dmg
+			end
 			if p.tmp_dmg ~= 0x00 then
 				p.last_dmg = p.tmp_dmg
-				p.last_pure_dmg = p.pure_dmg
 				p.tmp_combo_dmg = p.tmp_combo_dmg + p.tmp_dmg
 				p.last_combo = p.tmp_combo
 				p.last_combo_dmg = p.tmp_combo_dmg
@@ -6033,7 +6034,7 @@ function rbff2.startplugin()
 					scr:draw_text(p1 and 228 or  9, 62, "スタン値:")
 					scr:draw_text(p1 and 228 or  9, 69, "ｽﾀﾝ値ﾀｲﾏｰ:")
 					scr:draw_text(p1 and 228 or  9, 76, "POW:")
-					draw_rtext(   p1 and 296 or 77, 41, string.format("%s%%", (op.last_dmg_scaling-1) * 100))
+					draw_rtext(   p1 and 296 or 77, 41, string.format("%s %s%%", p.last_pure_dmg, (op.last_dmg_scaling-1) * 100))
 					draw_rtext(   p1 and 296 or 77, 48, string.format("%s(+%s)", op.last_combo_dmg, op.last_dmg))
 					draw_rtext(   p1 and 296 or 77, 55, op.last_combo)
 					draw_rtext(   p1 and 296 or 77, 62, string.format("%s(+%s)", op.last_combo_stun, op.last_stun))
@@ -6047,23 +6048,37 @@ function rbff2.startplugin()
 					draw_rtext(   p1 and 311 or 92, 76, op.max_combo_pow)
 				end
 
-				local draw_status = function(x, y, text)
-					if p1 then
-						scr:draw_text(x, y, text)
-					else
-						draw_rtext(320-x-5, y, text)
-					end
-				end
 				if p1 then
-					scr:draw_box(  3, 7,  40,  36, 0x80404040, 0x80404040)
+					scr:draw_box(  2, 7,  40,  36, 0x80404040, 0x80404040)
 				else
-					scr:draw_box(279, 7, 316,  36, 0x80404040, 0x80404040)
+					scr:draw_box(277, 7, 316,  36, 0x80404040, 0x80404040)
 				end
 
-				draw_status(4,  8, string.format("%s %2s %3s %3s", p.state, p.tw_threshold, p.tw_accepted, p.tw_frame))
-				draw_status(4, 15, string.format("%1s %2s %1s", p.hit.vulnerable and "V" or "-", p.tw_muteki, p.tw_muteki2))
-				draw_status(4, 22, string.format("%1s %2x %2x %2x", p.hit.harmless and "-" or "H", p.attack, p.attack_id, p.hitstop_id))
-				draw_status(4, 29, string.format("%4x %2s %2s", p.act, p.act_count, p.act_frame))
+				local n_throwable = p.state == 0 and p.tw_muteki == 0 and p.tw_muteki2 == 0 -- 通常投げ可能
+				local throwable   = p.state ~= 0 -- 投げ可能
+
+				scr:draw_text( p1 and  4 or 278,  8, string.format("%s", p.state))
+				draw_rtext(    p1 and 16 or 290,  8, string.format("%s", p.tw_threshold))
+				draw_rtext(    p1 and 28 or 302,  8, string.format("%s", p.tw_accepted))
+				draw_rtext(    p1 and 40 or 314,  8, string.format("%s", p.tw_frame))
+
+				scr:draw_text( p1 and  4 or 278, 15, p.hit.vulnerable and "V" or "-")
+				draw_rtext(    p1 and 16 or 290, 15, string.format("%s", p.tw_muteki2))
+				draw_rtext(    p1 and 28 or 302, 15, string.format("%s", p.tw_muteki))
+
+				scr:draw_text( p1 and  4 or 278, 22, p.hit.harmless and "-" or "H")
+				draw_rtext(    p1 and 16 or 290, 22, string.format("%s", p.attack))
+				draw_rtext(    p1 and 28 or 302, 22, string.format("%s", p.attack_id))
+				draw_rtext(    p1 and 40 or 314, 22, string.format("%s", p.hitstop_id))
+
+				draw_rtext(    p1 and 16 or 290, 29, string.format("%s", p.act))
+				draw_rtext(    p1 and 28 or 302, 29, string.format("%s", p.act_count))
+				draw_rtext(    p1 and 40 or 314, 29, string.format("%s", p.act_frame))
+
+				--draw_status(4,  8, string.format("%s %2s %3s %3s", p.state, p.tw_threshold, p.tw_accepted, p.tw_frame))
+				--draw_status(4, 15, string.format("%1s %2s %1s", p.hit.vulnerable and "V" or "-", p.tw_muteki, p.tw_muteki2))
+				--draw_status(4, 22, string.format("%1s %2x %2x %2x", p.hit.harmless and "-" or "H", p.attack, p.attack_id, p.hitstop_id))
+				--draw_status(4, 29, string.format("%4x %2s %2s", p.act, p.act_count, p.act_frame))
 
 				-- BS状態表示
 				if p.dummy_gd == dummy_gd_type.bs then
