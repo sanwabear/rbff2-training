@@ -2141,7 +2141,7 @@ local draw_rtext = function(x, y, str, fgcol, bgcol)
 	if not str then
 		return
 	end
-	if type(str) == "number" then
+	if type(x) ~= "string" then
 		str = "" .. str
 	end
 	local scr = manager.machine.screens:at(1)
