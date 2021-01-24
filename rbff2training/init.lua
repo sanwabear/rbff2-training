@@ -6062,6 +6062,7 @@ function rbff2.startplugin()
 				scr:draw_text( p1 and  4 or 278,  8, p.hit.vulnerable and "V" or "-")
 				draw_rtext(    p1 and 16 or 290,  8, string.format("%s", p.tw_muteki2))
 				draw_rtext(    p1 and 28 or 302,  8, string.format("%s", p.tw_muteki))
+				draw_rtext(    p1 and 40 or 314,  8, string.format("%2x", p.sway_status))
 
 				scr:draw_text( p1 and  4 or 278, 15, p.hit.harmless and "-" or "H")
 				draw_rtext(    p1 and 16 or 290, 15, string.format("%2x", p.attack))
@@ -6072,7 +6073,7 @@ function rbff2.startplugin()
 				draw_rtext(    p1 and 28 or 302, 22, string.format("%2x", p.act_count))
 				draw_rtext(    p1 and 40 or 314, 22, string.format("%2x", p.act_frame))
 
-				local throwable   = p.state == 0 and op.state == 0 and p.tw_frame > 24 -- 投げ可能ベース
+				local throwable   = p.state == 0 and op.state == 0 and p.tw_frame > 24 and p.sway_status == 0x00 -- 投げ可能ベース
 				local n_throwable = throwable and p.tw_muteki == 0 and p.tw_muteki2 == 0 -- 通常投げ可能
 				--[[
 					p.tw_frame のしきい値。しきい値より大きければ投げ処理継続可能。
@@ -6081,22 +6082,19 @@ function rbff2.startplugin()
 					20 M.リアルカウンター投げ
 					24 通常投げ しんさいは
 				]]
-				local throw_col = 0xFFFFFFFF
-				local throw_txt = ""
+				local throw_txt = throwable and "投" or ""
 				if p.tw_frame <= 10 then
-					--throw_col = 0xFFFF0033 -- 赤
-					throw_txt = "投<<"
-				elseif p.tw_frame <= 20 then
-					--throw_col = 0xFFFF7F00 -- 黄
-					throw_txt = "投<"
-				elseif p.tw_frame <= 24 then
-					--throw_col = 0xFFFFFFFF -- 白
-					throw_txt = "投"
+					throw_txt = throw_txt .. "<"
 				end
-				scr:draw_text( p1 and  1 or 275, 29, "無敵")
-				scr:draw_text( p1 and 15 or 289, 29, p.hit.vulnerable and "" or "打")
-				scr:draw_text( p1 and 24 or 298, 29, n_throwable and "" or "通")
-				scr:draw_text( p1 and 30 or 304, 29, throwable and "" or throw_txt, throw_col)
+				if p.tw_frame <= 20 then
+					throw_txt = throw_txt .. "<"
+				end
+				if not p.hit.vulnerable or not n_throwable or not throwable then
+					scr:draw_text( p1 and  1 or 275, 29, "無敵")
+					scr:draw_text( p1 and 15 or 289, 29, p.hit.vulnerable and "" or "打")
+					scr:draw_text( p1 and 24 or 298, 29, n_throwable and "" or "通")
+					scr:draw_text( p1 and 30 or 304, 29, throwable and "" or throw_txt)
+				end
 
 				--draw_status(4,  8, string.format("%s %2s %3s %3s", p.state, p.tw_threshold, p.tw_accepted, p.tw_frame))
 				--draw_status(4, 15, string.format("%1s %2s %1s", p.hit.vulnerable and "V" or "-", p.tw_muteki, p.tw_muteki2))
