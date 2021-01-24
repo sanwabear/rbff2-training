@@ -6051,7 +6051,7 @@ function rbff2.startplugin()
 				if p1 then
 					scr:draw_box(  2, 1,  40,  36, 0x80404040, 0x80404040)
 				else
-					scr:draw_box(277, 7, 316,  36, 0x80404040, 0x80404040)
+					scr:draw_box(277, 1, 316,  36, 0x80404040, 0x80404040)
 				end
 
 				scr:draw_text( p1 and  4 or 278,  1, string.format("%s", p.state))
@@ -6061,8 +6061,9 @@ function rbff2.startplugin()
 
 				scr:draw_text( p1 and  4 or 278,  8, p.hit.vulnerable and "V" or "-")
 				draw_rtext(    p1 and 16 or 290,  8, string.format("%s", p.tw_muteki2))
-				draw_rtext(    p1 and 28 or 302,  8, string.format("%s", p.tw_muteki))
-				draw_rtext(    p1 and 40 or 314,  8, string.format("%2x", p.sway_status))
+				draw_rtext(    p1 and 24 or 298,  8, string.format("%s", p.tw_muteki))
+				draw_rtext(    p1 and 32 or 306,  8, string.format("%2x", p.sway_status))
+				scr:draw_text( p1 and 36 or 310,  8, p.in_air and "A" or "G")
 
 				scr:draw_text( p1 and  4 or 278, 15, p.hit.harmless and "-" or "H")
 				draw_rtext(    p1 and 16 or 290, 15, string.format("%2x", p.attack))
@@ -6082,14 +6083,14 @@ function rbff2.startplugin()
 					20 M.リアルカウンター投げ
 					24 通常投げ しんさいは
 				]]
-				local throw_txt = throwable and "投" or ""
-				if p.tw_frame <= 10 then
-					throw_txt = throw_txt .. "<"
-				end
-				if p.tw_frame <= 20 then
-					throw_txt = throw_txt .. "<"
-				end
 				if not p.hit.vulnerable or not n_throwable or not throwable then
+					local throw_txt = throwable and "" or "投"
+					if p.tw_frame <= 10 then
+						throw_txt = throw_txt .. "<"
+					end
+					if p.tw_frame <= 20 then
+						throw_txt = throw_txt .. "<"
+					end
 					scr:draw_text( p1 and  1 or 275, 29, "無敵")
 					scr:draw_text( p1 and 15 or 289, 29, p.hit.vulnerable and "" or "打")
 					scr:draw_text( p1 and 24 or 298, 29, n_throwable and "" or "通")
