@@ -6049,31 +6049,54 @@ function rbff2.startplugin()
 				end
 
 				if p1 then
-					scr:draw_box(  2, 7,  40,  36, 0x80404040, 0x80404040)
+					scr:draw_box(  2, 1,  40,  36, 0x80404040, 0x80404040)
 				else
 					scr:draw_box(277, 7, 316,  36, 0x80404040, 0x80404040)
 				end
 
-				local n_throwable = p.state == 0 and p.tw_muteki == 0 and p.tw_muteki2 == 0 -- 通常投げ可能
-				local throwable   = p.state ~= 0 -- 投げ可能
+				scr:draw_text( p1 and  4 or 278,  1, string.format("%s", p.state))
+				draw_rtext(    p1 and 16 or 290,  1, string.format("%2s", p.tw_threshold))
+				draw_rtext(    p1 and 28 or 302,  1, string.format("%3s", p.tw_accepted))
+				draw_rtext(    p1 and 40 or 314,  1, string.format("%3s", p.tw_frame))
 
-				scr:draw_text( p1 and  4 or 278,  8, string.format("%s", p.state))
-				draw_rtext(    p1 and 16 or 290,  8, string.format("%s", p.tw_threshold))
-				draw_rtext(    p1 and 28 or 302,  8, string.format("%s", p.tw_accepted))
-				draw_rtext(    p1 and 40 or 314,  8, string.format("%s", p.tw_frame))
+				scr:draw_text( p1 and  4 or 278,  8, p.hit.vulnerable and "V" or "-")
+				draw_rtext(    p1 and 16 or 290,  8, string.format("%s", p.tw_muteki2))
+				draw_rtext(    p1 and 28 or 302,  8, string.format("%s", p.tw_muteki))
 
-				scr:draw_text( p1 and  4 or 278, 15, p.hit.vulnerable and "V" or "-")
-				draw_rtext(    p1 and 16 or 290, 15, string.format("%s", p.tw_muteki2))
-				draw_rtext(    p1 and 28 or 302, 15, string.format("%s", p.tw_muteki))
+				scr:draw_text( p1 and  4 or 278, 15, p.hit.harmless and "-" or "H")
+				draw_rtext(    p1 and 16 or 290, 15, string.format("%2x", p.attack))
+				draw_rtext(    p1 and 28 or 302, 15, string.format("%2x", p.attack_id))
+				draw_rtext(    p1 and 40 or 314, 15, string.format("%2x", p.hitstop_id))
 
-				scr:draw_text( p1 and  4 or 278, 22, p.hit.harmless and "-" or "H")
-				draw_rtext(    p1 and 16 or 290, 22, string.format("%s", p.attack))
-				draw_rtext(    p1 and 28 or 302, 22, string.format("%s", p.attack_id))
-				draw_rtext(    p1 and 40 or 314, 22, string.format("%s", p.hitstop_id))
+				draw_rtext(    p1 and 16 or 290, 22, string.format("%4x", p.act))
+				draw_rtext(    p1 and 28 or 302, 22, string.format("%2x", p.act_count))
+				draw_rtext(    p1 and 40 or 314, 22, string.format("%2x", p.act_frame))
 
-				draw_rtext(    p1 and 16 or 290, 29, string.format("%s", p.act))
-				draw_rtext(    p1 and 28 or 302, 29, string.format("%s", p.act_count))
-				draw_rtext(    p1 and 40 or 314, 29, string.format("%s", p.act_frame))
+				local throwable   = p.state == 0 and op.state == 0 and p.tw_frame > 24 -- 投げ可能ベース
+				local n_throwable = throwable and p.tw_muteki == 0 and p.tw_muteki2 == 0 -- 通常投げ可能
+				--[[
+					p.tw_frame のしきい値。しきい値より大きければ投げ処理継続可能。
+					0  空投げ M.スナッチャー0
+					10 真空投げ 羅生門 鬼門陣 M.タイフーン M.スパイダー 爆弾パチキ ドリル ブレスパ ブレスパBR リフトアップブロー デンジャラススルー ギガティックサイクロン マジンガ STOL
+					20 M.リアルカウンター投げ
+					24 通常投げ しんさいは
+				]]
+				local throw_col = 0xFFFFFFFF
+				local throw_txt = ""
+				if p.tw_frame <= 10 then
+					--throw_col = 0xFFFF0033 -- 赤
+					throw_txt = "投<<"
+				elseif p.tw_frame <= 20 then
+					--throw_col = 0xFFFF7F00 -- 黄
+					throw_txt = "投<"
+				elseif p.tw_frame <= 24 then
+					--throw_col = 0xFFFFFFFF -- 白
+					throw_txt = "投"
+				end
+				scr:draw_text( p1 and  1 or 275, 29, "無敵")
+				scr:draw_text( p1 and 15 or 289, 29, p.hit.vulnerable and "" or "打")
+				scr:draw_text( p1 and 24 or 298, 29, n_throwable and "" or "通")
+				scr:draw_text( p1 and 30 or 304, 29, throwable and "" or throw_txt, throw_col)
 
 				--draw_status(4,  8, string.format("%s %2s %3s %3s", p.state, p.tw_threshold, p.tw_accepted, p.tw_frame))
 				--draw_status(4, 15, string.format("%1s %2s %1s", p.hit.vulnerable and "V" or "-", p.tw_muteki, p.tw_muteki2))
