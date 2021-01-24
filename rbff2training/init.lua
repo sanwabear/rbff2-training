@@ -85,7 +85,7 @@ local global = {
 
 	disp_pos        = true, -- 1P 2P 距離表示
 	disp_hitbox     = true, -- 判定表示
-	disp_frmgap     = 2, -- フレーム差表示
+	disp_frmgap     = 3, -- フレーム差表示
 	pause_hit       = false, -- ヒット時にポーズ
 	pausethrow      = false, -- 投げ判定表示時にポーズ
 
@@ -2695,6 +2695,7 @@ function rbff2.startplugin()
 			disp_cmd         = true,        -- 入力表示するときtrue
 			disp_frm         = true,        -- フレーム数表示するときtrue
 			disp_stun        = true,        -- スタン表示
+			disp_sts         = true,        -- 状態表示
 
 			no_hit           = 0,           -- Nヒット目に空ぶるカウントのカウンタ
 			no_hit_limit     = 0,           -- Nヒット目に空ぶるカウントの上限
@@ -6034,7 +6035,7 @@ function rbff2.startplugin()
 					scr:draw_text(p1 and 228 or  9, 62, "スタン値:")
 					scr:draw_text(p1 and 228 or  9, 69, "ｽﾀﾝ値ﾀｲﾏｰ:")
 					scr:draw_text(p1 and 228 or  9, 76, "POW:")
-					draw_rtext(   p1 and 296 or 77, 41, string.format("%s %s%%", p.last_pure_dmg, (op.last_dmg_scaling-1) * 100))
+					draw_rtext(   p1 and 296 or 77, 41, string.format("%s>%s(%s%%)", p.last_pure_dmg, op.last_dmg, (op.last_dmg_scaling-1) * 100))
 					draw_rtext(   p1 and 296 or 77, 48, string.format("%s(+%s)", op.last_combo_dmg, op.last_dmg))
 					draw_rtext(   p1 and 296 or 77, 55, op.last_combo)
 					draw_rtext(   p1 and 296 or 77, 62, string.format("%s(+%s)", op.last_combo_stun, op.last_stun))
@@ -6048,59 +6049,56 @@ function rbff2.startplugin()
 					draw_rtext(   p1 and 311 or 92, 76, op.max_combo_pow)
 				end
 
-				if p1 then
-					scr:draw_box(  2, 1,  40,  36, 0x80404040, 0x80404040)
-				else
-					scr:draw_box(277, 1, 316,  36, 0x80404040, 0x80404040)
-				end
-
-				scr:draw_text( p1 and  4 or 278,  1, string.format("%s", p.state))
-				draw_rtext(    p1 and 16 or 290,  1, string.format("%2s", p.tw_threshold))
-				draw_rtext(    p1 and 28 or 302,  1, string.format("%3s", p.tw_accepted))
-				draw_rtext(    p1 and 40 or 314,  1, string.format("%3s", p.tw_frame))
-
-				scr:draw_text( p1 and  4 or 278,  8, p.hit.vulnerable and "V" or "-")
-				draw_rtext(    p1 and 16 or 290,  8, string.format("%s", p.tw_muteki2))
-				draw_rtext(    p1 and 24 or 298,  8, string.format("%s", p.tw_muteki))
-				draw_rtext(    p1 and 32 or 306,  8, string.format("%2x", p.sway_status))
-				scr:draw_text( p1 and 36 or 310,  8, p.in_air and "A" or "G")
-
-				scr:draw_text( p1 and  4 or 278, 15, p.hit.harmless and "-" or "H")
-				draw_rtext(    p1 and 16 or 290, 15, string.format("%2x", p.attack))
-				draw_rtext(    p1 and 28 or 302, 15, string.format("%2x", p.attack_id))
-				draw_rtext(    p1 and 40 or 314, 15, string.format("%2x", p.hitstop_id))
-
-				draw_rtext(    p1 and 16 or 290, 22, string.format("%4x", p.act))
-				draw_rtext(    p1 and 28 or 302, 22, string.format("%2x", p.act_count))
-				draw_rtext(    p1 and 40 or 314, 22, string.format("%2x", p.act_frame))
-
-				local throwable   = p.state == 0 and op.state == 0 and p.tw_frame > 24 and p.sway_status == 0x00 -- 投げ可能ベース
-				local n_throwable = throwable and p.tw_muteki == 0 and p.tw_muteki2 == 0 -- 通常投げ可能
-				--[[
-					p.tw_frame のしきい値。しきい値より大きければ投げ処理継続可能。
-					0  空投げ M.スナッチャー0
-					10 真空投げ 羅生門 鬼門陣 M.タイフーン M.スパイダー 爆弾パチキ ドリル ブレスパ ブレスパBR リフトアップブロー デンジャラススルー ギガティックサイクロン マジンガ STOL
-					20 M.リアルカウンター投げ
-					24 通常投げ しんさいは
-				]]
-				if not p.hit.vulnerable or not n_throwable or not throwable then
-					local throw_txt = throwable and "" or "投"
-					if p.tw_frame <= 10 then
-						throw_txt = throw_txt .. "<"
+				if p.disp_sts then
+					if p1 then
+						scr:draw_box(  2, 1,  40,  36, 0x80404040, 0x80404040)
+					else
+						scr:draw_box(277, 1, 316,  36, 0x80404040, 0x80404040)
 					end
-					if p.tw_frame <= 20 then
-						throw_txt = throw_txt .. "<"
-					end
-					scr:draw_text( p1 and  1 or 275, 29, "無敵")
-					scr:draw_text( p1 and 15 or 289, 29, p.hit.vulnerable and "" or "打")
-					scr:draw_text( p1 and 24 or 298, 29, n_throwable and "" or "通")
-					scr:draw_text( p1 and 30 or 304, 29, throwable and "" or throw_txt)
-				end
 
-				--draw_status(4,  8, string.format("%s %2s %3s %3s", p.state, p.tw_threshold, p.tw_accepted, p.tw_frame))
-				--draw_status(4, 15, string.format("%1s %2s %1s", p.hit.vulnerable and "V" or "-", p.tw_muteki, p.tw_muteki2))
-				--draw_status(4, 22, string.format("%1s %2x %2x %2x", p.hit.harmless and "-" or "H", p.attack, p.attack_id, p.hitstop_id))
-				--draw_status(4, 29, string.format("%4x %2s %2s", p.act, p.act_count, p.act_frame))
+					scr:draw_text( p1 and  4 or 278,  1, string.format("%s", p.state))
+					draw_rtext(    p1 and 16 or 290,  1, string.format("%2s", p.tw_threshold))
+					draw_rtext(    p1 and 28 or 302,  1, string.format("%3s", p.tw_accepted))
+					draw_rtext(    p1 and 40 or 314,  1, string.format("%3s", p.tw_frame))
+
+					scr:draw_text( p1 and  4 or 278,  8, p.hit.vulnerable and "V" or "-")
+					draw_rtext(    p1 and 16 or 290,  8, string.format("%s", p.tw_muteki2))
+					draw_rtext(    p1 and 24 or 298,  8, string.format("%s", p.tw_muteki))
+					draw_rtext(    p1 and 32 or 306,  8, string.format("%2x", p.sway_status))
+					scr:draw_text( p1 and 36 or 310,  8, p.in_air and "A" or "G")
+
+					scr:draw_text( p1 and  4 or 278, 15, p.hit.harmless and "-" or "H")
+					draw_rtext(    p1 and 16 or 290, 15, string.format("%2x", p.attack))
+					draw_rtext(    p1 and 28 or 302, 15, string.format("%2x", p.attack_id))
+					draw_rtext(    p1 and 40 or 314, 15, string.format("%2x", p.hitstop_id))
+
+					draw_rtext(    p1 and 16 or 290, 22, string.format("%4x", p.act))
+					draw_rtext(    p1 and 28 or 302, 22, string.format("%2x", p.act_count))
+					draw_rtext(    p1 and 40 or 314, 22, string.format("%2x", p.act_frame))
+
+					local throwable   = p.state == 0 and op.state == 0 and p.tw_frame > 24 and p.sway_status == 0x00 -- 投げ可能ベース
+					local n_throwable = throwable and p.tw_muteki == 0 and p.tw_muteki2 == 0 -- 通常投げ可能
+					--[[
+						p.tw_frame のしきい値。しきい値より大きければ投げ処理継続可能。
+						0  空投げ M.スナッチャー0
+						10 真空投げ 羅生門 鬼門陣 M.タイフーン M.スパイダー 爆弾パチキ ドリル ブレスパ ブレスパBR リフトアップブロー デンジャラススルー ギガティックサイクロン マジンガ STOL
+						20 M.リアルカウンター投げ
+						24 通常投げ しんさいは
+					]]
+					if not p.hit.vulnerable or not n_throwable or not throwable then
+						local throw_txt = throwable and "" or "投"
+						if p.tw_frame <= 10 then
+							throw_txt = throw_txt .. "<"
+						end
+						if p.tw_frame <= 20 then
+							throw_txt = throw_txt .. "<"
+						end
+						scr:draw_text( p1 and  1 or 275, 29, "無敵")
+						scr:draw_text( p1 and 15 or 289, 29, p.hit.vulnerable and "" or "打")
+						scr:draw_text( p1 and 24 or 298, 29, n_throwable and "" or "通")
+						scr:draw_text( p1 and 30 or 304, 29, throwable and "" or throw_txt)
+					end
+				end
 
 				-- BS状態表示
 				if p.dummy_gd == dummy_gd_type.bs then
@@ -6531,16 +6529,18 @@ function rbff2.startplugin()
 		global.disp_frmgap       = col[ 9]      -- フレーム差表示         9
 		p[1].disp_frm            = col[10] == 2 -- 1P フレーム数表示     10
 		p[2].disp_frm            = col[11] == 2 -- 2P フレーム数表示     11
-		p[1].disp_base           = col[12] == 2 -- 1P 処理アドレス表示   12
-		p[2].disp_base           = col[13] == 2 -- 2P 処理アドレス表示   13
-		global.disp_pos          = col[14] == 2 -- 1P 2P 距離表示        14
-		dip_config.easy_super    = col[15] == 2 -- 簡易超必              15
-		global.mame_debug_wnd    = col[16] == 2 -- MAMEデバッグウィンドウ16
-		global.damaged_move      = col[17]      -- ヒット効果確認用      17
-		global.log.poslog        = col[18] == 2 -- 位置ログ              18
-		global.log.atklog        = col[19] == 2 -- 攻撃情報ログ          19
-		global.log.baselog       = col[20] == 2 -- 処理アドレスログ      20
-		global.log.keylog        = col[21] == 2 -- 入力ログ              21
+		p[1].disp_sts            = col[12] == 2 -- 1P 状態表示           12
+		p[2].disp_sts            = col[13] == 2 -- 2P 状態表示           13
+		p[1].disp_base           = col[14] == 2 -- 1P 処理アドレス表示   14
+		p[2].disp_base           = col[15] == 2 -- 2P 処理アドレス表示   15
+		global.disp_pos          = col[16] == 2 -- 1P 2P 距離表示        16
+		dip_config.easy_super    = col[17] == 2 -- 簡易超必              17
+		global.mame_debug_wnd    = col[18] == 2 -- MAMEデバッグウィンドウ18
+		global.damaged_move      = col[19]      -- ヒット効果確認用      19
+		global.log.poslog        = col[20] == 2 -- 位置ログ              20
+		global.log.atklog        = col[21] == 2 -- 攻撃情報ログ          21
+		global.log.baselog       = col[22] == 2 -- 処理アドレスログ      22
+		global.log.keylog        = col[23] == 2 -- 入力ログ              23
 
 		local dmove = damaged_moves[global.damaged_move]
 		if dmove and dmove > 0 then
@@ -6712,16 +6712,18 @@ function rbff2.startplugin()
 		col[ 9] = g.disp_frmgap            -- フレーム差表示         9
 		col[10] = p[1].disp_frm and 2 or 1 -- 1P フレーム数表示     10
 		col[11] = p[2].disp_frm and 2 or 1 -- 2P フレーム数表示     11
-		col[12] = p[1].disp_base and 2 or 1 -- 1P 処理アドレス表示  12
-		col[13] = p[2].disp_base and 2 or 1 -- 2P 処理アドレス表示  13
-		col[14] = g.disp_pos    and 2 or 1 -- 1P 2P 距離表示        14
-		col[15] = dip_config.easy_super and 2 or 1 -- 簡易超必      15
-		col[16] = g.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ16
-		col[17] = g.damaged_move           -- ヒット効果確認用      17
-		col[18] = g.log.poslog  and 2 or 1 -- 位置ログ              18
-		col[19] = g.log.atklog  and 2 or 1 -- 攻撃情報ログ          19
-		col[20] = g.log.baselog and 2 or 1 -- 処理アドレスログ      20
-		col[21] = g.log.keylog  and 2 or 1 -- 入力ログ              21
+		col[12] = p[1].disp_sts and 2 or 1 -- 1P 状態表示           12
+		col[13] = p[2].disp_sts and 2 or 1 -- 2P 状態表示           13
+		col[14] = p[1].disp_base and 2 or 1 -- 1P 処理アドレス表示  14
+		col[15] = p[2].disp_base and 2 or 1 -- 2P 処理アドレス表示  15
+		col[16] = g.disp_pos    and 2 or 1 -- 1P 2P 距離表示        16
+		col[17] = dip_config.easy_super and 2 or 1 -- 簡易超必      17
+		col[18] = g.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ18
+		col[19] = g.damaged_move           -- ヒット効果確認用      19
+		col[20] = g.log.poslog  and 2 or 1 -- 位置ログ              20
+		col[21] = g.log.atklog  and 2 or 1 -- 攻撃情報ログ          21
+		col[22] = g.log.baselog and 2 or 1 -- 処理アドレスログ      22
+		col[23] = g.log.keylog  and 2 or 1 -- 入力ログ              23
 	end
 	local init_auto_menu_config = function()
 		local col = auto_menu.pos.col
@@ -7111,6 +7113,8 @@ function rbff2.startplugin()
 			{ "フレーム差表示"        , { "OFF", "数値とグラフ", "数値" }, },
 			{ "1P フレーム数表示"     , { "OFF", "ON" }, },
 			{ "2P フレーム数表示"     , { "OFF", "ON" }, },
+			{ "1P 状態表示"           , { "OFF", "ON" }, },
+			{ "2P 状態表示"           , { "OFF", "ON" }, },
 			{ "1P 処理アドレス表示"   , { "OFF", "ON" }, },
 			{ "2P 処理アドレス表示"   , { "OFF", "ON" }, },
 			{ "1P 2P 距離表示"        , { "OFF", "ON" }, },
@@ -7134,19 +7138,21 @@ function rbff2.startplugin()
 				1, -- 2P ダメージ表示         6
 				1, -- 1P 入力表示             7
 				1, -- 2P 入力表示             8
-				2, -- フレーム差表示          9
+				3, -- フレーム差表示          9
 				1, -- 1P フレーム数表示      10
 				1, -- 2P フレーム数表示      11
-				1, -- 1P 処理アドレス表示    12
-				1, -- 2P 処理アドレス表示    13
-				1, -- 1P 2P 距離表示         14
-				1, -- 簡易超必               15
-				1, -- MAMEデバッグウィンドウ 16
-				1, -- ヒット効果確認用       17
-				1, -- 位置ログ               18
-				1, -- 攻撃情報ログ           19
-				1, -- 処理アドレスログ       20
-				1, -- 入力ログ               21
+				1, -- 1P 状態表示            12
+				1, -- 2P 状態表示            13
+				1, -- 1P 処理アドレス表示    14
+				1, -- 2P 処理アドレス表示    15
+				1, -- 1P 2P 距離表示         16
+				1, -- 簡易超必               17
+				1, -- MAMEデバッグウィンドウ 18
+				1, -- ヒット効果確認用       19
+				1, -- 位置ログ               20
+				1, -- 攻撃情報ログ           21
+				1, -- 処理アドレスログ       22
+				1, -- 入力ログ               23
 			},
 		},
 		on_a = {
@@ -7161,6 +7167,8 @@ function rbff2.startplugin()
 			ex_menu_to_main, -- フレーム差表示
 			ex_menu_to_main, -- 1P フレーム数表示
 			ex_menu_to_main, -- 2P フレーム数表示
+			ex_menu_to_main, -- 1P 状態表示
+			ex_menu_to_main, -- 2P 状態表示
 			ex_menu_to_main, -- 1P 処理アドレス表示
 			ex_menu_to_main, -- 2P 処理アドレス表示
 			ex_menu_to_main, -- 1P 2P 距離表示
@@ -7184,6 +7192,8 @@ function rbff2.startplugin()
 			ex_menu_to_main_cancel, -- 2P 入力表示
 			ex_menu_to_main_cancel, -- 1P フレーム数表示
 			ex_menu_to_main_cancel, -- 2P フレーム数表示
+			ex_menu_to_main_cancel, -- 1P 状態表示
+			ex_menu_to_main_cancel, -- 2P 状態表示
 			ex_menu_to_main_cancel, -- 1P 処理アドレス表示
 			ex_menu_to_main_cancel, -- 2P 処理アドレス表示
 			ex_menu_to_main_cancel, -- 1P 2P 距離表示
