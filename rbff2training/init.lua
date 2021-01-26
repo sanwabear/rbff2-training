@@ -6186,9 +6186,29 @@ function rbff2.startplugin()
 			-- キャラ間の距離表示
 			local abs_space = math.abs(p_space)
 			if global.disp_pos then
-				local y = 217 - math.floor(get_digit(abs_space)/2)
-				draw_rtext(160.5, y+0.5, abs_space, shadow_col)
-				draw_rtext(160  , y    , abs_space)
+				local y = 217 -- math.floor(get_digit(abs_space)/2)
+				draw_rtext(167.5, y+0.5, abs_space, shadow_col)
+				draw_rtext(167  , y    , abs_space)
+
+				-- キャラの向き
+				for i, p in ipairs(players) do
+					local p1 = i == 1
+					local op = players[3-i]
+
+					-- 1:右向き -1:左向き
+					local flip_x = p.hit.flip_x == 1 and ">" or "<"
+					local side   = p.side       == 1 and "(>)" or "(<)"
+					local postxt = p.posd == op.posd and "=" or p.posd < op.posd  and "L" or "R"
+					if p1 then
+						local txt = string.format("%s%s%s", flip_x, side, postxt)
+						draw_rtext(   150.5, y+0.5, txt, shadow_col)
+						draw_rtext(   150  , y    , txt)
+					else
+						local txt = string.format("%s%s%s", postxt, side, flip_x)
+						scr:draw_text(170.5, y+0.5, txt, shadow_col)
+						scr:draw_text(170  , y    , txt)
+					end
+				end
 				--print(string.format("%3s %3s %3s %3s xx %3s %3s", players[1].min_pos, players[2].min_pos, players[1].max_pos, players[2].max_pos, players[1].pos, players[2].pos))
 			end
 
