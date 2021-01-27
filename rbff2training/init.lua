@@ -3250,15 +3250,10 @@ function rbff2.startplugin()
 		local cpu = manager.machine.devices[":maincpu"]
 		local pgm = cpu.spaces["program"]
 		if reset then
-			for i, idx in ipairs(wps) do
-				cpu.debug:bpdisable(idx)
-			end
-			--wps = {} -- clearではなくdisableにする場合は消さなくてもいい
+			cpu.debug:bpdisable()
 			return
 		elseif #wps > 0 then
-			for i, idx in ipairs(wps) do
-				cpu.debug:bpenable(idx)
-			end
+			cpu.debug:bpenable()
 			return
 		end
 
@@ -3297,15 +3292,11 @@ function rbff2.startplugin()
 	local set_bps = function(reset)
 		local cpu = manager.machine.devices[":maincpu"]
 		if reset then
-			for i, idx in ipairs(bps) do
-				cpu.debug:wpdisable(idx)
-			end
+			cpu.debug:wpdisable()
 			-- bps = {} -- clearではなくdisableにする場合は消さなくてもいい
 			return
 		elseif #bps > 0 then
-			for i, idx in ipairs(bps) do
-				cpu.debug:wpenable(idx)
-			end
+			cpu.debug:wpenable()
 			return
 		end
 
@@ -3527,15 +3518,11 @@ function rbff2.startplugin()
 	local set_bps_rg = function(reset)
 		local cpu = manager.machine.devices[":maincpu"]
 		if reset then
-			for i, idx in ipairs(bps_rg) do
-				cpu.debug:bpdisable(idx)
-			end
+			cpu.debug:bpdisable()
 			-- bps_rg = {} -- clearではなくdisableにする場合は消さなくてもいい
 			return
 		elseif #bps_rg > 0 then
-			for i, idx in ipairs(bps_rg) do
-				cpu.debug:bpenable(idx)
-			end
+			cpu.debug:bpenable()
 			return
 		end
 
@@ -3557,10 +3544,21 @@ function rbff2.startplugin()
 		end
 	end
 
+	local hook_reset = nil
 	local set_hook = function(reset)
-		set_wps(reset)
-		set_bps(reset)
-		set_bps_rg(reset)
+		if reset == true then
+			if hook_reset == true then
+				return
+			end
+		else
+			if hook_reset == false then
+				return
+			end
+		end
+		hook_reset = reset == true
+		set_wps(hook_reset)
+		set_bps(hook_reset)
+		set_bps_rg(hook_reset)
 	end
 
 	-- 誤動作防止のためフックで使用する領域を初期化する
