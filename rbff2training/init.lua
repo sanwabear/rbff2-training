@@ -259,7 +259,40 @@ local names = {}
 for _, stg in ipairs(stgs) do
 	table.insert(names, stg.name)
 end
-
+local sts_flg_names = {
+	"01:未確認",             -- 01
+	"02:ダウン",             -- 02
+	"03:立→屈途中",         -- 03
+	"04:奥後退",             -- 04
+	"05:奥前進",             -- 05
+	"06:未確認",             -- 06
+	"07:屈振向",             -- 07
+	"08:立振向",             -- 08
+	"09:奥後ダッシュ～戻り", -- 09
+	"10:奥前ダッシュ～戻り", -- 10
+	"11:奥→メイン",         -- 11
+	"12:奥立",               -- 12
+	"13:メイン→奥移動中",   -- 13
+	"14:奥維持",             -- 14
+	"15:未確認",             -- 15
+	"16:未確認",             -- 16
+	"17:着地",               -- 17
+	"18:J移行",              -- 18
+	"19:後小J",              -- 19
+	"20:前小J",              -- 20
+	"21:垂小J",              -- 21
+	"22:後J",                -- 22
+	"23:前J",                -- 23
+	"24:垂J",                -- 24
+	"25:ダッシュ",           -- 25
+	"26:バックステップ",     -- 26
+	"27:屈前進",             -- 27
+	"28:屈→立途中",         -- 28
+	"29:屈",                 -- 29
+	"30:後退",               -- 30
+	"31:前進",               -- 31
+	"32:立",                 -- 32
+}
 local char_acts_base = {
 	-- テリー・ボガード
 	{
@@ -2133,6 +2166,18 @@ local tohexnum = function(num)
 	return tonumber(tohex(num))
 end
 
+-- tableで返す
+local tobits = function(num)
+	-- returns a table of bits, least significant first.
+    local t, rest = {}, 0 -- will contain the bits
+    while num > 0 do
+		rest = math.fmod(num, 2)
+		table.insert(t, rest)
+        num = (num - rest) / 2
+    end
+    return t
+end
+
 local get_digit = function(num)
 	return string.len(tostring(num))
 end
@@ -2762,6 +2807,7 @@ function rbff2.startplugin()
 			sway_status      = 0,           --
 			side             = 0,           -- 向き
 			state            = 0,           -- いまのやられ状態
+			state_flags      = 0,           -- 処理で使われているフラグ群
 			tmp_combo        = 0,           -- 一次的なコンボ数
 			tmp_combo_dmg    = 0,
 			tmp_combo_pow    = 0,
@@ -2992,6 +3038,7 @@ function rbff2.startplugin()
 				sway_status  = p1 and 0x100489 or 0x100589, -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
  				side         = p1 and 0x100458 or 0x100558, -- 向き
 				state        = p1 and 0x10048E or 0x10058E, -- 状態
+				state_flags  = p1 and 0x1004C0 or 0x1005C0, -- フラグ群
 				stop         = p1 and 0x10048D or 0x10058D, -- ヒットストップ
 				knock_back1  = p1 and 0x100469 or 0x100569, -- のけぞり確認用1(色々)
 				knock_back2  = p1 and 0x100416 or 0x100516, -- のけぞり確認用2(裏雲隠し)
@@ -4420,6 +4467,27 @@ function rbff2.startplugin()
 			in_range = ret,
 		}
 	end
+	-- 0:攻撃無し 1:ガード継続小 1:ガード継続大
+	local get_gd_strength = function(p)
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
+		local char  = pgm:read_u16(p.addr.base + 0x10)
+		local char_4times = 0xFFFF & (char + char)
+		char_4times = 0xFFFF & (char_4times + char_4times)
+		local block_cond1 = pgm:read_u8(p.addr.base + 0xA2) -- ガード判断用 0のときは何もしていない
+		local block_cond2 = pgm:read_u8(p.addr.base + 0xB6) -- ガード判断用 0のときは何もしていない
+		local ret = 0
+		if block_cond1 ~= 0 then
+			ret = 1
+		elseif block_cond2 ~= 0 then
+			--local b1 = 0x80 == (0x80 & pgm:read_u8(pgm:read_u32(0x83C58 + char_4times) + block_cond2))
+			local b2 = 0x80 == (0x80 & pgm:read_u8(pgm:read_u32(0x8C9E2 + char_4times) + block_cond2))
+			ret = b2 and 2 or 1
+		end
+		if ret ~= 0 and (p.addr.base == 0x100400 or p.addr.base == 0x100500) then
+			print(string.format("%s %x %s",  global.frame_number, p.addr.base, ret))
+		end
+		return ret
+	end
 
 	-- トレモのメイン処理
 	tra_main = {}
@@ -4475,6 +4543,7 @@ function rbff2.startplugin()
 			p.life           = pgm:read_u8(p.addr.life)                 -- 今の体力
 			p.old_state      = p.state                                  -- 前フレームの状態保存
 			p.state          = pgm:read_u8(p.addr.state)                -- 今の状態
+			p.state_flags    = pgm:read_u32(p.addr.state_flags)        -- フラグ群
 			p.last_normal_state = p.normal_state
 			p.normal_state   = p.state == 0 -- 素立ち
 			p.combo          = tohexnum(pgm:read_u8(p.addr.combo2))     -- 最近のコンボ数
@@ -4519,6 +4588,7 @@ function rbff2.startplugin()
 			p.act_frame      = pgm:read_u8(p.addr.act_frame)
 			p.provoke        = 0x0196 == p.act --挑発中
 			p.stop           = pgm:read_u8(p.addr.stop)
+			p.gd_strength    = get_gd_strength(p)
 			p.knock_back1    = pgm:read_u8(p.addr.knock_back1)
 			p.knock_back2    = pgm:read_u8(p.addr.knock_back2)
 			p.knock_back3    = pgm:read_u8(p.addr.knock_back3)
@@ -4726,6 +4796,7 @@ function rbff2.startplugin()
 				fb.pos_y          = pgm:read_i16(fb.addr.pos_y)
 				fb.pos_z          = pgm:read_i16(fb.addr.pos_z)
 				fb.hit.projectile = true
+				fb.gd_strength    = get_gd_strength(fb)
 				fb.asm            = pgm:read_u16(pgm:read_u32(fb.addr.base))
 				fb.attack         = pgm:read_u16(pgm:read_u32(fb.addr.attack))
 				fb.hitstop_id     = pgm:read_u16(fb.addr.hitstop_id)
@@ -6095,6 +6166,41 @@ function rbff2.startplugin()
 						scr:draw_text( p1 and 15 or 289, 29, p.hit.vulnerable and "" or "打")
 						scr:draw_text( p1 and 24 or 298, 29, n_throwable and "" or "通")
 						scr:draw_text( p1 and 30 or 304, 29, throwable and "" or throw_txt)
+					end
+
+					-- 状態フラグ
+					local flgtbl = tobits(p.state_flags)
+					local flgtxt = ""
+					for j = 32, 1, -1  do
+						if flgtbl[j] == 1 then
+							flgtxt = flgtxt .. sts_flg_names[j] .. " "
+						end
+						--[[
+						local num = string.format("%s", j % 10)
+						local txt = flgtbl[j] == 1 and "1" or "-"
+						if p1 then
+							local x = 147 - (j * 3)
+							scr:draw_text(x+0.5, 1.5, num, shadow_col)
+							scr:draw_text(x    , 1    , num)
+							scr:draw_text(x+0.5, 8.5, txt, shadow_col)
+							scr:draw_text(x    , 8    , txt)
+						else
+							local x = 269 - (j * 3)
+							scr:draw_text(x+0.5, 1+0.5, num, shadow_col)
+							scr:draw_text(x    , 1    , num)
+							scr:draw_text(x+0.5, 8+0.5, txt, shadow_col)
+							scr:draw_text(x    , 8    , txt)
+						end
+						]]
+					end
+					if p1 then
+						local x = 148
+						draw_rtext(x+0.5, 1.5  , flgtxt, shadow_col)
+						draw_rtext(x    , 1    , flgtxt)
+					else
+						local x = 176
+						scr:draw_text(x+0.5, 1+0.5, flgtxt, shadow_col)
+						scr:draw_text(x    , 1    , flgtxt)
 					end
 				end
 
