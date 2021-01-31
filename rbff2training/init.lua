@@ -262,7 +262,7 @@ end
 local sts_flg_names = {
 	"01:未確認",             -- 01
 	"02:ダウン",             -- 02
-	"03:立→屈途中",         -- 03
+	"03:屈途中",             -- 03
 	"04:奥後退",             -- 04
 	"05:奥前進",             -- 05
 	"06:未確認",             -- 06
@@ -287,7 +287,7 @@ local sts_flg_names = {
 	"25:ダッシュ",           -- 25
 	"26:バックステップ",     -- 26
 	"27:屈前進",             -- 27
-	"28:屈→立途中",         -- 28
+	"28:立途中",             -- 28
 	"29:屈",                 -- 29
 	"30:後退",               -- 30
 	"31:前進",               -- 31
@@ -2520,7 +2520,7 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 
 		-- ログ用
 		box.log_txt = string.format(
-			"hit %6x %3x %3x %2s %3s %2x %2x %2x %s %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s %2x "..memo,
+			"hit %6x %3x %3x %2s %3s %2x %2x %2x %s %s %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s %2x "..memo,
 			p.addr.base,                        -- 1P:100400 2P:100500 1P弾:100600 2P弾:100700 1P弾:100800 2P弾:100900 1P弾:100A00 2P弾:100B00
 			p.act,                              --
 			p.acta,                             --
@@ -2529,6 +2529,7 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 			p.act_contact,                      --
 			p.attack,                           --
 			p.hitstop_id,                       -- ガード硬直のID
+			p.gd_strength,                      -- 相手のガード持続の種類
 
 			reach_memo,
 
@@ -4469,21 +4470,26 @@ function rbff2.startplugin()
 	end
 	-- 0:攻撃無し 1:ガード継続小 1:ガード継続大
 	local get_gd_strength = function(p)
+		if p.addr.base ~= 0x100400 and p.addr.base ~= 0x100500 then
+			return 0
+		end
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		local char  = pgm:read_u16(p.addr.base + 0x10)
 		local char_4times = 0xFFFF & (char + char)
 		char_4times = 0xFFFF & (char_4times + char_4times)
-		local block_cond1 = pgm:read_u8(p.addr.base + 0xA2) -- ガード判断用 0のときは何もしていない
-		local block_cond2 = pgm:read_u8(p.addr.base + 0xB6) -- ガード判断用 0のときは何もしていない
+		-- 家庭用0271FCからの処理
+		local cond1 = pgm:read_u8(p.addr.base + 0xA2) -- ガード判断用 0のときは何もしていない
+		local cond2 = pgm:read_u8(p.addr.base + 0xB6) -- ガード判断用 0のときは何もしていない
 		local ret = 0
-		if block_cond1 ~= 0 then
+		if cond1 ~= 0 then
 			ret = 1
-		elseif block_cond2 ~= 0 then
-			--local b1 = 0x80 == (0x80 & pgm:read_u8(pgm:read_u32(0x83C58 + char_4times) + block_cond2))
-			local b2 = 0x80 == (0x80 & pgm:read_u8(pgm:read_u32(0x8C9E2 + char_4times) + block_cond2))
+		elseif cond2 ~= 0 then
+			--local b1 = 0x80 == (0x80 & pgm:read_u8(pgm:read_u32(0x83C58 + char_4times) + cond2))
+			local b2 = 0x80 == (0x80 & pgm:read_u8(pgm:read_u32(0x8C9E2 + char_4times) + cond2))
 			ret = b2 and 2 or 1
 		end
-		if ret ~= 0 and (p.addr.base == 0x100400 or p.addr.base == 0x100500) then
+		-- 飛び道具は無視
+		if ret ~= 0 then
 			print(string.format("%s %x %s",  global.frame_number, p.addr.base, ret))
 		end
 		return ret
@@ -6176,6 +6182,7 @@ function rbff2.startplugin()
 							flgtxt = flgtxt .. sts_flg_names[j] .. " "
 						end
 						--[[
+						-- ビット値の表示版
 						local num = string.format("%s", j % 10)
 						local txt = flgtbl[j] == 1 and "1" or "-"
 						if p1 then
