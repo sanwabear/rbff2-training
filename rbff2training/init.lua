@@ -6200,6 +6200,29 @@ function rbff2.startplugin()
 						end
 						]]
 					end
+
+					-- 16ビット値を0.999上限の数値に変える
+					local int16dec = function(int16v)
+						if int16v and type(int16v) == "number" then
+							return math.floor(int16v / 0xFFFF * 999) / 1000
+						end
+						return 0
+					end
+					local draw_rtext_col = function(x, y, fmt, dec)
+						local txt = string.format(fmt, dec)
+						draw_rtext(x, y, txt, shadow_col)
+						local col = 0xFFFFFFFF
+						if dec < 0 then
+							col = 0xFFFF0033
+						elseif dec > 0 then
+							col = 0xFF0000FF
+						end
+						draw_rtext(x, y, txt, col)
+					end
+					draw_rtext_col(p1 and  70 or 200, 8, "%0.03f", pgm:read_i16(p.addr.base + 0xDA) + int16dec(pgm:read_u16(p.addr.base + 0xDC)))
+					draw_rtext_col(p1 and  90 or 220, 8, "%0.03f", pgm:read_i16(p.addr.base + 0x34) + int16dec(pgm:read_u16(p.addr.base + 0x36)))
+					draw_rtext_col(p1 and 110 or 240, 8, "%0.03f", (p.pos + int16dec(p.pos_frc)) - (p.old_pos + int16dec(p.old_pos_frc)))
+
 					if p1 then
 						local x = 148
 						draw_rtext(x+0.5, 1.5  , flgtxt, shadow_col)
