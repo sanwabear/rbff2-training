@@ -2182,6 +2182,14 @@ local get_digit = function(num)
 	return string.len(tostring(num))
 end
 
+-- 16ビット値を0.999上限の数値に変える
+local int16tofloat = function(int16v)
+	if int16v and type(int16v) == "number" then
+		return math.floor(int16v / 0xFFFF * 999) / 1000
+	end
+	return 0
+end
+
 local draw_rtext = function(x, y, str, fgcol, bgcol)
 	if not str then
 		return
@@ -4654,6 +4662,10 @@ function rbff2.startplugin()
 			p.old_pos_frc    = p.pos_frc
 			p.pos            = pgm:read_i16(p.addr.pos)
 			p.pos_frc        = pgm:read_u16(p.addr.pos_frc)
+			p.thrust        = pgm:read_i16(p.addr.base + 0x34) + int16tofloat(pgm:read_u16(p.addr.base + 0x36))
+			p.inertia       = pgm:read_i16(p.addr.base + 0xDA) + int16tofloat(pgm:read_u16(p.addr.base + 0xDC))
+			p.pos_total     = p.pos + int16tofloat(p.pos_frc)
+			p.old_pos_total = p.old_pos + int16tofloat(p.old_pos_frc)
 			p.max_pos        = pgm:read_i16(p.addr.max_pos)
 			if p.max_pos == 0 or p.max_pos == p.pos then
 				p.max_pos = nil
@@ -6201,13 +6213,6 @@ function rbff2.startplugin()
 						]]
 					end
 
-					-- 16ビット値を0.999上限の数値に変える
-					local int16dec = function(int16v)
-						if int16v and type(int16v) == "number" then
-							return math.floor(int16v / 0xFFFF * 999) / 1000
-						end
-						return 0
-					end
 					local draw_rtext_col = function(x, y, fmt, dec)
 						local txt = string.format(fmt, dec)
 						draw_rtext(x + 0.5, y + 0.5, txt, shadow_col)
@@ -6219,9 +6224,9 @@ function rbff2.startplugin()
 						end
 						draw_rtext(x, y, txt, col)
 					end
-					draw_rtext_col(p1 and  70 or 200, 8, "%0.03f", pgm:read_i16(p.addr.base + 0xDA) + int16dec(pgm:read_u16(p.addr.base + 0xDC)))
-					draw_rtext_col(p1 and  90 or 220, 8, "%0.03f", pgm:read_i16(p.addr.base + 0x34) + int16dec(pgm:read_u16(p.addr.base + 0x36)))
-					draw_rtext_col(p1 and 110 or 240, 8, "%0.03f", (p.pos + int16dec(p.pos_frc)) - (p.old_pos + int16dec(p.old_pos_frc)))
+					draw_rtext_col(p1 and  70 or 200, 8, "%0.03f", p.inertia)
+					draw_rtext_col(p1 and  90 or 220, 8, "%0.03f", p.thrust)
+					draw_rtext_col(p1 and 110 or 240, 8, "%0.03f", p.pos_total - p.old_pos_total)
 
 					if p1 then
 						local x = 148
