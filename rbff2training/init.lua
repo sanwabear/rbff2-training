@@ -4470,6 +4470,7 @@ function rbff2.startplugin()
 	end
 	-- 0:攻撃無し 1:ガード継続小 1:ガード継続大
 	local get_gd_strength = function(p)
+		-- 飛び道具は無視
 		if p.addr.base ~= 0x100400 and p.addr.base ~= 0x100500 then
 			return 0
 		end
@@ -4488,10 +4489,9 @@ function rbff2.startplugin()
 			local b2 = 0x80 == (0x80 & pgm:read_u8(pgm:read_u32(0x8C9E2 + char_4times) + cond2))
 			ret = b2 and 2 or 1
 		end
-		-- 飛び道具は無視
-		if ret ~= 0 then
-			print(string.format("%s %x %s",  global.frame_number, p.addr.base, ret))
-		end
+		-- if ret ~= 0 then
+		-- 	print(string.format("%s %x %s",  global.frame_number, p.addr.base, ret))
+		-- end
 		return ret
 	end
 
