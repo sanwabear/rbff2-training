@@ -6210,7 +6210,7 @@ function rbff2.startplugin()
 					end
 					local draw_rtext_col = function(x, y, fmt, dec)
 						local txt = string.format(fmt, dec)
-						draw_rtext(x, y, txt, shadow_col)
+						draw_rtext(x + 0.5, y + 0.5, txt, shadow_col)
 						local col = 0xFFFFFFFF
 						if dec < 0 then
 							col = 0xFFFF0033
