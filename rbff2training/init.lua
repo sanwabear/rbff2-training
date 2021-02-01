@@ -1064,7 +1064,7 @@ local char_acts_base = {
 		{ name = "ダウン", type = act_types.any, ids = { 0x192, 0x18E, 0x190,  }, },
 		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ name = "気絶", type = act_types.any, ids = { 0x194, 0x195, }, },
-		{ name = "ガード", type = act_types.guard, ids = { 0x117, 0x118, 0x119, 0x11A, 0x11B, 0x11C, 0x11D, 0x11E, 0x11F, 0x120, 0x121, 0x122, 0x123, 0x124, 0x125, 0x126, 0x127, 0x128, 0x129, 0x12A, 0x12C, 0x12D, 0x131, 0x132, 0x133, 0x134, 0x135, 0x136, 0x137, 0x139, }, },
+		{ name = "ガード", type = act_types.guard, ids = { 0x117, 0x118, 0x119, 0x11A, 0x11B, 0x11C, 0x11D, 0x11E, 0x11F, 0x120, 0x121, 0x122, 0x123, 0x124, 0x125, 0x126, 0x127, 0x128, 0x129, 0x12A, 0x12B, 0x12C, 0x12C, 0x12D, 0x131, 0x132, 0x133, 0x134, 0x135, 0x136, 0x137, 0x139, }, },
 		{ name = "やられ", type = act_types.hit, ids = { 0x13F, 0x140, 0x141, 0x142, 0x143, 0x144, 0x145, 0x146, 0x147, 0x148, 0x149, 0x14A, 0x14B, 0x14C, 0x14C, 0x14D, 0x14E, 0x14F, 0x1E9, 0x239 }, },
 	},
 }
@@ -2255,7 +2255,7 @@ local draw_base = function(p, line, frame, addr, act_name, xmov)
 	else
 		cframe = "0"
 	end
-	local sline = string.format("%3s %8x %3s %s", cframe, addr, xmov, act_name)
+	local sline = string.format("%3s %8x %0.03f %s", cframe, addr, xmov, act_name)
 	scr:draw_text(xx + 0.5, yy + 0.5, sline, 0xFF000000) -- 文字の影
 	scr:draw_text(xx, yy, sline, text_col)
 end
@@ -4788,14 +4788,14 @@ function rbff2.startplugin()
 					count    = 1,
 					act_data = p.act_data,
 					name     = get_act_name(p.act_data),
-					pos1     = p.pos,
-					pos2     = p.pos,
+					pos1     = p.pos_total,
+					pos2     = p.pos_total,
 					xmov     = 0,
 				} )
 			else
 				local base = p.bases[#p.bases]
 				base.count = base.count + 1
-				base.pos2  = p.pos
+				base.pos2  = p.pos_total
 				base.xmov  = base.pos2 - base.pos1
 			end
 			if 16 < #p.bases then
@@ -5142,8 +5142,8 @@ function rbff2.startplugin()
 			if global.log.baselog then
 				local b1 = p1.bases[#players[1].bases]
 				local b2 = p2.bases[#players[2].bases]
-				log1 = string.format("%s addr %3s %8x %3s ", log1, 999 < b1.count and "LOT" or b1.count, b1.addr, b1.xmov)
-				log2 = string.format("%s addr %3s %8x %3s ", log2, 999 < b2.count and "LOT" or b2.count, b2.addr, b2.xmov)
+				log1 = string.format("%s addr %3s %8x %0.03f ", log1, 999 < b1.count and "LOT" or b1.count, b1.addr, b1.xmov)
+				log2 = string.format("%s addr %3s %8x %0.03f ", log2, 999 < b2.count and "LOT" or b2.count, b2.addr, b2.xmov)
 			end
 
 			-- 入力ログ
