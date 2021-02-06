@@ -304,14 +304,14 @@ local char_acts_base = {
 		{ name = "チャージキック", type = act_types.overhead, ids = { 0x6A, }, },
 		{ disp_name = "バーンナックル", name = "小バーンナックル", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
 		{ disp_name = "バーンナックル", name = "大バーンナックル", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-		{ name = "パワーウェイブ", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
-		{ name = "ランドウェイブ", type = act_types.low_attack, ids = { 0xA4, 0xA5, 0xA6, }, },
+		{ name = "パワーウェイブ", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, firing = true, },
+		{ name = "ランドウェイブ", type = act_types.low_attack, ids = { 0xA4, 0xA5, 0xA6, }, firing = true, },
 		{ name = "ファイヤーキック", type = act_types.low_attack, ids = { 0xB8, 0xB9, 0xBC, 0xBA, 0xBB, }, },
 		{ name = "クラックシュート", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, }, },
 		{ name = "ライジングタックル", type = act_types.attack, ids = { 0xCC, 0xCD, 0xCE, 0xCF, 0xD0, }, },
 		{ name = "パッシングスウェー", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, }, },
-		{ name = "パワーゲイザー", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, },
-		{ name = "トリプルゲイザー", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, }, },
+		{ name = "パワーゲイザー", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, firing = true, },
+		{ name = "トリプルゲイザー", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, }, firing = true, },
 		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x241, }, },
 		{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x242, }, },
 		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x244, }, },
@@ -337,13 +337,13 @@ local char_acts_base = {
 		{ name = "浴びせ蹴り", type = act_types.attack, ids = { 0x68, }, },
 		{ name = "小残影拳", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, 0x8A, }, },
 		{ name = "大残影拳/疾風裏拳", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, 0x94, 0x95, }, },
-		{ name = "飛翔拳", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
-		{ name = "激飛翔拳", type = act_types.attack, ids = { 0xA7, 0xA4, 0xA5, 0xA6, }, },
+		{ name = "飛翔拳", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, firing = true },
+		{ name = "激飛翔拳", type = act_types.attack, ids = { 0xA7, 0xA4, 0xA5, 0xA6, }, firing = true, },
 		{ name = "昇龍弾", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
 		{ name = "空破弾", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, }, },
 		{ name = "幻影不知火", type = act_types.attack, ids = { 0xC8, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, }, },
 		{ name = "超裂破弾", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, }, },
-		{ name = "男打弾", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10E, 0x10F, 0x10B, 0x10C, 0x10D, }, },
+		{ name = "男打弾", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10E, 0x10F, 0x10B, 0x10C, 0x10D, }, firing = true, },
 		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x240, }, },
 		{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x241, }, },
 		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x242, }, },
@@ -375,8 +375,8 @@ local char_acts_base = {
 		{ name = "爆裂拳", type = act_types.attack, ids = { 0xAE, 0xB0, 0xB1, 0xB2, 0xAF, }, },
 		{ name = "爆裂フック", type = act_types.attack, ids = { 0xB3, 0xB4, 0xB5, }, },
 		{ name = "爆裂アッパー", type = act_types.attack, ids = { 0xF8, 0xF9, 0xFA, 0xFB, }, },
-		{ name = "ハリケーンアッパー", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, }, },
-		{ name = "爆裂ハリケーン", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, }, },
+		{ name = "ハリケーンアッパー", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, }, firing = true, },
+		{ name = "爆裂ハリケーン", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, }, firing = true, },
 		{ name = "スクリューアッパー", type = act_types.attack, ids = { 0xFE, 0xFF, }, },
 		{ disp_name = "サンダーファイヤー", name = "サンダーファイヤー(C)", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, 0x110, 0x111, }, },
 		{ disp_name = "サンダーファイヤー", name = "サンダーファイヤー(D)", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, }, },
@@ -404,8 +404,8 @@ local char_acts_base = {
 		{ name = "跳ね蹴り", type = act_types.attack, ids = { 0x68, }, },
 		{ name = "三角跳び", type = act_types.attack, ids = { 0x69, }, },
 		{ name = "龍の舞", type = act_types.attack, ids = { 0x6A, }, },
-		{ name = "花蝶扇", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
-		{ name = "龍炎舞", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+		{ name = "花蝶扇", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, firing = true, },
+		{ name = "龍炎舞", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, firing = true, },
 		{ name = "小夜千鳥", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
 		{ name = "必殺忍蜂", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
 		{ name = "ムササビの舞", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, }, },
@@ -434,14 +434,14 @@ local char_acts_base = {
 		{ name = "昇天明星打ち", type = act_types.attack, ids = { 0x69, }, },
 		{ name = "飛燕失脚", type = act_types.overhead, ids = { 0x68, 0x6B, 0x6C, }, },
 		{ name = "雷光回し蹴り", type = act_types.attack, ids = { 0x6A, }, },
-		{ name = "烈風拳", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
-		{ name = "ダブル烈風拳", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+		{ name = "烈風拳", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, firing = true, },
+		{ name = "ダブル烈風拳", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, firing = true, },
 		{ name = "下段当て身打ち", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
 		{ name = "裏雲隠し", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
 		{ name = "上段当て身投げ", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
 		{ name = "雷鳴豪波投げ", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, }, },
 		{ name = "真空投げ", type = act_types.attack, ids = { 0xC2, 0xC3, }, },
-		{ name = "レイジングストーム", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, },
+		{ name = "レイジングストーム", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, firing = true, },
 		{ name = "羅生門", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, }, },
 		{ name = "デッドリーレイブ", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, }, },
 		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x241, }, },
@@ -471,18 +471,18 @@ local char_acts_base = {
 		{ name = "雷撃棍", type = act_types.attack, ids = { 0x69, 0x6A, 0x6B, }, },
 		{ name = "錫杖上段打ち", type = act_types.attack, ids = { 0x68, }, },
 		{ name = "野猿狩り", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
-		{ name = "まきびし", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-		{ name = "憑依弾", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
+		{ name = "まきびし", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, firing = true, },
+		{ name = "憑依弾", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, firing = true, },
 		{ name = "鬼門陣", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
 		{ name = "邪棍舞", type = act_types.low_attack, ids = { 0xAE, 0xAF, 0xB0, }, },
-		{ name = "喝", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, }, },
+		{ name = "喝", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, }, firing = true, },
 		{ name = "渦炎陣", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, }, },
-		{ name = "いかづち", type = act_types.attack, ids = { 0xFE, 0xFF, 0x103, 0x100, 0x101, }, },
+		{ name = "いかづち", type = act_types.attack, ids = { 0xFE, 0xFF, 0x103, 0x100, 0x101, }, firing = true, },
 		{ name = "無惨弾", type = act_types.overhead, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, }, },
 		{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x241, }, },
 		{ disp_name = "CA 立C", name = "CA 近立C(2段目)", type = act_types.attack, ids = { 0x240, }, },
 		{ disp_name = "CA _6C", name = "CA 6C(2段目)", type = act_types.attack, ids = { 0x243, }, },
-		{ disp_name = "CA _2_2C", name = "CA 雷撃棍(3段目)", type = act_types.attack, ids = { 0x24B, }, },
+		{ disp_name = "CA _2_2C", name = "CA 雷撃棍(3段目)", type = act_types.attack, ids = { 0x24B, }, firing = true, },
 		{ disp_name = "CA 6B", name = "CA 6B(2段目)", type = act_types.attack, ids = { 0x247, }, },
 		{ disp_name = "CA _6_2_3+A", name = "CA 623A(3段目)", type = act_types.attack, ids = { 0x242, }, },
 		{ disp_name = "CA 下C", name = "CA 下C(2段目)立Aルート", type = act_types.low_attack, ids = { 0x244, }, },
@@ -538,7 +538,7 @@ local char_acts_base = {
 		{ name = "必勝！逆襲拳-1", names = { "必勝！逆襲拳" }, type = act_types.low_attack, ids = { 0xCA, 0xCC, }, },
 		{ name = "必勝！逆襲拳-2", names = { "必勝！逆襲拳" }, type = act_types.overhead, ids = { 0xCD, 0xCE, }, },
 		{ name = "必勝！逆襲拳-3", names = { "必勝！逆襲拳" }, type = act_types.attack, ids = { 0xCF, 0xD0, 0xCB, }, },
-		{ name = "爆発ゴロー", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, }, },
+		{ name = "爆発ゴロー", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, }, firing = true, },
 		{ name = "よかトンハンマー", type = act_types.overhead, ids = { 0x108, 0x109, 0x10A, 0x10B, }, },
 		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x245, }, },
 		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x240, }, },
@@ -612,11 +612,11 @@ local char_acts_base = {
 		{ name = "バッシュトルネード", type = act_types.attack, ids = { 0x6A, }, },
 		{ name = "バロムパンチ", type = act_types.attack, ids = { 0x69, }, },
 		{ name = "ダブルコング", type = act_types.overhead, ids = { 0x86, 0x87, 0x88, 0x89, }, },
-		{ name = "ザッパー", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+		{ name = "ザッパー", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, firing = true, },
 		{ name = "ウェービングブロー", type = act_types.attack, ids = { 0x9A, 0x9B, }, },
 		{ name = "ガッツダンク", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xAC, }, },
 		{ name = "ゴールデンボンバー", type = act_types.attack, ids = { 0xAD, 0xAE, 0xAF, 0xB0, 0xB1, }, },
-		{ name = "ファイナルオメガショット", type = act_types.overhead, ids = { 0xFE, 0xFF, 0x100, }, },
+		{ name = "ファイナルオメガショット", type = act_types.overhead, ids = { 0xFE, 0xFF, 0x100, }, firing = true, },
 		{ name = "メガトンスクリュー", type = act_types.attack, ids = { 0xF4, 0xF5, 0xF6, 0xF7, 0xFC, 0xF8, }, },
 		{ name = "ハルマゲドンバスター", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, }, },
 		{ disp_name = "CA 立A", name = "CA 立A(3段目)", type = act_types.attack, ids = { 0x248, }, },
@@ -647,7 +647,7 @@ local char_acts_base = {
 		{ name = "サドマゾ", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, }, },
 		{ name = "裁きの匕首", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, }, },
 		{ name = "ヤキ入れ", type = act_types.overhead, ids = { 0xAE, 0xAF, 0xB0, 0xB4, }, },
-		{ name = "倍返し", type = act_types.attack, ids = { 0xB8, 0xBA, 0xB9, 0xBB, 0xBC, }, },
+		{ name = "倍返し", type = act_types.attack, ids = { 0xB8, 0xBA, 0xB9, 0xBB, 0xBC, }, firing = true, },
 		{ name = "爆弾パチキ", type = act_types.attack, ids = { 0xCC, 0xCD, 0xCE, 0xCF, }, },
 		{ name = "トドメ", type = act_types.attack, ids = { 0xD6, 0xDA, 0xD8, 0xDB, 0xD9, 0xD7, }, },
 		{ name = "ギロチン", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, 0x103, }, },
@@ -666,8 +666,8 @@ local char_acts_base = {
 		{ name = "発勁龍", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 		{ name = "光輪殺", type = act_types.overhead, ids = { 0x68, }, },
 		{ name = "帝王神足拳", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, 0x8A, }, },
-		{ name = "小 帝王天眼拳", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-		{ name = "大 帝王天眼拳", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
+		{ name = "小 帝王天眼拳", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, firing = true, },
+		{ name = "大 帝王天眼拳", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, firing = true, },
 		{ name = "小 帝王天耳拳", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
 		{ name = "大 帝王天耳拳", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
 		{ name = "帝王神眼拳（その場）", type = act_types.attack, ids = { 0xC2, 0xC3, }, },
@@ -676,9 +676,9 @@ local char_acts_base = {
 		{ name = "帝王空殺神眼拳", type = act_types.attack, ids = { 0xE0, 0xE1, }, },
 		{ name = "竜灯掌", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, }, },
 		{ name = "竜灯掌・幻殺", type = act_types.attack, ids = { 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, }, },
-		{ name = "帝王漏尽拳", type = act_types.attack, ids = { 0xFE, 0xFF, 0x101, 0x100, }, },
-		{ name = "帝王空殺漏尽拳", type = act_types.attack, ids = { 0xEA, 0xEB, 0xEC, 0xEE, 0xEF, 0xED, }, },
-		{ name = "海龍照臨", type = act_types.attack, ids = { 0x108, 0x109, 0x109, 0x10A, 0x10B, }, },
+		{ name = "帝王漏尽拳", type = act_types.attack, ids = { 0xFE, 0xFF, 0x101, 0x100, }, firing = true, },
+		{ name = "帝王空殺漏尽拳", type = act_types.attack, ids = { 0xEA, 0xEB, 0xEC, 0xEE, 0xEF, 0xED, }, firing = true, },
+		{ name = "海龍照臨", type = act_types.attack, ids = { 0x108, 0x109, 0x109, 0x10A, 0x10B, }, firing = true, },
 		{ name = "立ち", type = act_types.free, ids = { 0x6C, }, },
 		{ disp_name = "CA 立A", name = "CA 立A(2段目)", type = act_types.attack, ids = { 0x247, }, },
 		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x246, }, },
@@ -698,16 +698,16 @@ local char_acts_base = {
 		{ name = "発勁龍", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 		{ name = "龍脚殺", type = act_types.overhead, ids = { 0x68, }, },
 		{ name = "帝王神足拳", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
-		{ name = "大 帝王天眼拳", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
-		{ name = "小 帝王天眼拳", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+		{ name = "大 帝王天眼拳", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, firing = true, },
+		{ name = "小 帝王天眼拳", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, firing = true, },
 		{ name = "小 帝王天耳拳", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
 		{ name = "大 帝王天耳拳", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
 		{ name = "帝王漏尽拳", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBB, 0xBA, 0xBC, }, },
-		{ name = "龍転身（前方）", type = act_types.any, ids = { 0xC2, 0xC3, 0xC4, }, },
+		{ name = "龍転身（前方）", type = act_types.any, ids = { 0xC2, 0xC3, 0xC4, }, firing = true, },
 		{ name = "龍転身（後方）", type = act_types.any, ids = { 0xCC, 0xCD, 0xCE, }, },
-		{ name = "帝王宿命拳", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, },
+		{ name = "帝王宿命拳", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, firing = true, },
 		{ name = "帝王宿命拳", type = act_types.attack, ids = { 0x101, 0x102, 0x104, 0x105, 0x107, 0x115, 0x116, 0x103, 0x106, }, },
-		{ name = "帝王龍声拳", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, }, },
+		{ name = "帝王龍声拳", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, }, firing = true, },
 		{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x243, }, },
 		{ disp_name = "CA 立C", name = "CA 立C(2段目)立Bルート", type = act_types.attack, ids = { 0x242, }, },
 		{ disp_name = "CA _8C", name = "CA 8C(3段目)立Bルート", type = act_types.overhead, ids = { 0x244, 0x245, 0x246, }, },
@@ -779,16 +779,16 @@ local char_acts_base = {
 		{ disp_name = "フェイント", name = "フェイント 強襲飛翔棍", type = act_types.any, ids = { 0x112, }, },
 		{ name = "一本釣り投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 		{ name = "地獄落とし", type = act_types.any, ids = { 0x81, 0x82, 0x83, 0x84, }, },
-		{ name = "三節棍中段打ち", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, 0x93, }, },
+		{ name = "三節棍中段打ち", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, 0x93, }, firing = true, },
 		{ name = "火炎三節棍中段打ち", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
 		{ names = { "三節棍中段打ち", "火炎三節棍中段打ち" }, type = act_types.attack, ids = { 0x93, }, },
 		{ name = "燕落とし", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
 		{ name = "火龍追撃棍", type = act_types.attack, ids = { 0xB8, 0xB9, }, },
 		{ name = "旋風棍", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, }, },
 		{ name = "強襲飛翔棍", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
-		{ name = "超火炎旋風棍", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, },
+		{ name = "超火炎旋風棍", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, firing = true, },
 		{ name = "紅蓮殺棍", type = act_types.attack, ids = { 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, }, },
-		{ name = "サラマンダーストリーム", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, }, },
+		{ name = "サラマンダーストリーム", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, }, firing = true, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, 0x6C, }, },
 		{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.low_attack, ids = { 0x241, }, },
 		{ disp_name = "CA 立C 2段", name = "CA 立C(2段目)送りルート", type = act_types.low_attack, ids = { 0x242, }, },
@@ -805,8 +805,8 @@ local char_acts_base = {
 		{ name = "頭突殺", type = act_types.attack, ids = { 0x81, 0x83, 0x84, }, },
 		{ name = "発勁裏拳", type = act_types.attack, ids = { 0x68, }, },
 		{ name = "落撃双拳", type = act_types.overhead, ids = { 0x69, }, },
-		{ name = "気雷砲（前方）", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
-		{ name = "気雷砲（対空）", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+		{ name = "気雷砲（前方）", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, firing = true, },
+		{ name = "気雷砲（対空）", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, firing = true, },
 		{ name = "小 破岩撃", type = act_types.low_attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, }, },
 		{ name = "大 破岩撃", type = act_types.low_attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, }, },
 		{ name = "超太鼓腹打ち", type = act_types.attack, ids = { 0x9A, 0x9B, }, },
@@ -814,8 +814,8 @@ local char_acts_base = {
 		{ names = { "超太鼓腹打ち", "滞空滞空" }, type = act_types.attack, ids = { 0x9D, 0x9E, 0x9C, }, },
 		{ name = "軟体オヤジ", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, }, },
 		{ name = "クッサメ砲", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, }, },
-		{ name = "爆雷砲", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, },
-		{ name = "ホエホエ弾", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x114, 0x115, 0x116, 0x10E, 0x110, 0x10F, }, },
+		{ name = "爆雷砲", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, firing = true, },
+		{ name = "ホエホエ弾", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x114, 0x115, 0x116, 0x10E, 0x110, 0x10F, }, firing = true, },
 		{ disp_name = "CA 立C", name = "CA 立C(2段目)近立Aルート", type = act_types.low_attack, ids = { 0x24A, }, },
 		{ disp_name = "CA _3C", name = "CA 3C(2段目)近立Aルート", type = act_types.attack, ids = { 0x242, }, },
 		{ disp_name = "CA 立C", name = "CA 立C(2段目)立Aルート", type = act_types.attack, ids = { 0x240, }, },
@@ -834,7 +834,7 @@ local char_acts_base = {
 		{ disp_name = "フェイント", name = "フェイント 旋風剛拳", type = act_types.any, ids = { 0x112, }, },
 		{ name = "裂千掌", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 		{ name = "右降龍", type = act_types.attack, ids = { 0x68, }, },
-		{ name = "衝波", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
+		{ name = "衝波", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, firing = true, },
 		{ name = "小 箭疾歩", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
 		{ name = "大 箭疾歩", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
 		{ name = "裂千脚", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, }, },
@@ -852,9 +852,9 @@ local char_acts_base = {
 		{ name = "小ブラッディスピン", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
 		{ name = "大ブラッディスピン", type = act_types.attack, ids = { 0x90, 0x91, 0x93, 0x94, 0x92, }, },
 		{ names = { "小ブラッディスピン", "大ブラッディスピン", "地上振り向き" }, type = act_types.attack, ids = { 0x3D, }, },
-		{ name = "ブラッディサーベル", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
+		{ name = "ブラッディサーベル", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, firing = true, },
 		{ name = "ブラッディカッター", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, }, },
-		{ name = "ブラッディミキサー", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, }, },
+		{ name = "ブラッディミキサー", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, }, firing = true, },
 		{ name = "ブラッディフラッシュ", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, }, },
 		{ name = "ブラッディシャドー", type = act_types.attack, ids = { 0x108, 0x109, 0x10E, 0x10D, 0x10B, 0x10C, }, },
 		{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x245, }, },
@@ -871,15 +871,15 @@ local char_acts_base = {
 		{ name = "デスハンマー", type = act_types.overhead, ids = { 0x68, }, },
 		{ name = "カイザーボディプレス", type = act_types.attack, ids = { 0x69, 0x72, }, },
 		{ name = "ダイビングエルボー", type = act_types.attack, ids = { 0x6A, 0x73, 0x74, 0x75, }, },
-		{ disp_name = "ブリッツボール", name = "ブリッツボール・上段", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
-		{ disp_name = "ブリッツボール", name = "ブリッツボール・下段", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
+		{ disp_name = "ブリッツボール", name = "ブリッツボール・上段", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, firing = true, },
+		{ disp_name = "ブリッツボール", name = "ブリッツボール・下段", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, firing = true, },
 		{ name = "レッグトマホーク", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
 		{ name = "デンジャラススルー", type = act_types.attack, ids = { 0xAE, 0xAF, }, },
 		{ name = "グリフォンアッパー", type = act_types.attack, ids = { 0x248, }, },
 		{ name = "リフトアップブロー", type = act_types.attack, ids = { 0xC2, 0xC3, }, },
 		{ name = "フェニックススルー", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
 		{ name = "カイザークロー", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, }, },
-		{ name = "カイザーウェイブ", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, }, },
+		{ name = "カイザーウェイブ", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, }, firing = true, },
 		{ name = "ギガティックサイクロン", names = { "アンリミテッドデザイア", "ギガティックサイクロン", "ジャンプ" }, type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0xC, 0x10C, 0x10D, 0x10C, 0x10E, }, },
 		{ name = "アンリミテッドデザイア", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, }, },
 		{ disp_name = "CA 立C", name = "CA 立C(2段目)近立Aルート", type = act_types.attack, ids = { 0x240, }, },
@@ -905,8 +905,8 @@ local char_acts_base = {
 		{ name = "ヘリオン", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB1, 0xB0, }, },
 		{ name = "フルムーンフィーバー", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, }, },
 		{ name = "ディバインブラスト/フェイクブラスト", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9F, }, },
-		{ name = "ガイアブレス", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, },
-		{ name = "ハウリング・ブル", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, }, },
+		{ name = "ガイアブレス", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, firing = true, },
+		{ name = "ハウリング・ブル", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, }, firing = true, },
 		{ disp_name = "CA 立B", name = "CA 立B(2段目)近立Aルート", type = act_types.attack, ids = { 0x240, }, },
 		{ disp_name = "CA 立C", name = "CA 立C(2段目)近立A Cルート", type = act_types.attack, ids = { 0x243, }, },
 		{ disp_name = "CA 立C", name = "CA 立C(3段目)近立Aルート", type = act_types.attack, ids = { 0x24D, }, },
@@ -933,8 +933,8 @@ local char_acts_base = {
 		{ name = "力千後宴", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 		{ name = "裡門頂肘", type = act_types.attack, ids = { 0x68, 0x69, 0x6A, }, },
 		{ name = "後捜腿", type = act_types.attack, ids = { 0x6B, }, },
-		{ name = "小 那夢波", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
-		{ name = "大 那夢波", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, }, },
+		{ name = "小 那夢波", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, firing = true, },
+		{ name = "大 那夢波", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, }, firing = true, },
 		--[[
 			0x9E, 0x9F, 閃里肘皇移動
 			0xA2, 閃里肘皇スカり
@@ -952,7 +952,7 @@ local char_acts_base = {
 		{ name = "詠酒・対しゃがみ攻撃", type = act_types.attack, ids = { 0xC2, }, },
 		{ name = "大鉄神", type = act_types.attack, ids = { 0xF4, 0xF5, 0xF6, 0xF7, }, },
 		{ name = "超白龍", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, 0x103, }, },
-		{ name = "真心牙", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, 0x110, }, },
+		{ name = "真心牙", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, 0x110, }, firing = true, },
 		{ disp_name = "CA 立A", name = "CA 立A(2段目)", type = act_types.attack, ids = { 0x241, }, },
 		{ disp_name = "CA 立A", name = "CA 立A(3段目)", type = act_types.attack, ids = { 0x242, }, },
 		{ disp_name = "CA 立A", name = "CA 立A(4段目)", type = act_types.attack, ids = { 0x243, }, },
@@ -983,7 +983,7 @@ local char_acts_base = {
 		{ disp_name = "クリティカルウィング", name = "小 クリティカルウィング", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
 		{ disp_name = "クリティカルウィング", name = "大 クリティカルウィング", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, }, },
 		{ name = "オーグメンターウィング", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, },
-		{ name = "ダイバージェンス", type = act_types.attack, ids = { 0xA4, 0xA5, }, },
+		{ name = "ダイバージェンス", type = act_types.attack, ids = { 0xA4, 0xA5, }, firing = true, },
 		{ name = "メーデーメーデー", type = act_types.attack, ids = { 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7, 0xAE, 0xAF, 0xB0, 0xB1, }, },
 		{ name = "S.TOL", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xBF, }, },
 		{ name = "ショックストール", type = act_types.attack, ids = { 0x100, 0x101, 0x102, 0x103, 0x104, 0x105, 0xFE, 0xFF, 0x100, 0xF4, 0xF5, 0xF6, 0xF7, }, },
@@ -4354,6 +4354,13 @@ function rbff2.startplugin()
 			local frame_group = frames2[j]
 			dodraw(x1, y + span, frame_group, true, height, xmax, show_name, show_count, x, scr, txty)
 			for _, frame in ipairs(frame_group) do
+				if frame.fireball then
+					for _, fb in pairs(frame.fireball) do
+						for _, sub_group in ipairs(fb) do
+							dodraw(x1+sub_group.parent_count, y + 0 + span, sub_group, false, height-3, xmax, show_name, show_count, x+sub_group.parent_count, scr, txty-1)
+						end
+					end
+				end
 				if frame.frm_gap then
 					for _, sub_group in ipairs(frame.frm_gap) do
 						dodraw(x1, y + 6 + span, sub_group, false, height-3, xmax, show_name, show_count, x, scr, txty-1)
@@ -5239,11 +5246,12 @@ function rbff2.startplugin()
 
 			-- 飛び道具
 			local chg_fireball_state = false
-			for _, fb in pairs(p.fireball) do
-				local atk = false -- 攻撃判定 発生中
+			local fb_upd_groups, fb_atk = {}, {}
+			for fb_base, fb in pairs(p.fireball) do
+				fb_atk[fb_base] = false -- 攻撃判定 発生中
 				for _, box in pairs(fb.hitboxes) do
-					if box.visible then
-						atk = true
+					if box.asm ~= 0x4E75 then
+						fb_atk[fb_base] = true
 						fb.atk_count = (fb.atk_count or 0) + 1 -- 攻撃判定発生のカウント
 						if fb.atk_count == 1 and fb.act_data_fired.name == p.act_data.name then
 							chg_fireball_state = true
@@ -5251,25 +5259,6 @@ function rbff2.startplugin()
 						break
 					end
 				end
-
-				local frame = fb.act_frames[#fb.act_frames]
-				if #fb.act_frames == 0 or (frame == nil) or frame.atk ~= atk then
-					local col, line
-					if atk then
-						col, line = 0xAAFF1493, 0xDDFF1493
-					else
-						col, line = 0x00000000, 0x00000000
-					end
-					-- 軽量化のため攻撃の有無だけで記録を残す
-					frame = { act = atk and 1 or 0, count = 1, col = col, name = atk and "A" or "", atk = atk, line = line, }
-					-- 関数の使いまわすためact_framesは配列にするが明細を表示ないので1個しかもたなくていい
-					fb.act_frames[1] = frame
-				else
-					-- 同一行動IDが継続している場合はフレーム値加算
-					frame.count = frame.count + 1
-				end
-				-- 技名でグループ化したフレームデータの配列をマージ生成する
-				fb.act_frames2, _ = frame_groups(frame, fb.act_frames2 or {})
 			end
 
 			--ガード移行できない行動は色替えする
@@ -5458,6 +5447,58 @@ function rbff2.startplugin()
 			if upd_group then
 				last_frame.frm_gap = last_frame.frm_gap or {}
 				table.insert(last_frame.frm_gap, p.frm_gap.act_frames2[#p.frm_gap.act_frames2])
+			end
+
+			-- 飛び道具2
+			for fb_base, fb in pairs(p.fireball) do
+				local frame = fb.act_frames[#fb.act_frames]
+				local reset = false
+				if p.act_data.firing then
+					if p.act_1st and last_frame.act_1st and last_frame.count == 1 then
+						reset = true
+					elseif not frame or frame.name ~= fb.act_data_fired.name then
+						reset = true
+					end
+				elseif fb.act == 0 and (not frame or frame.name ~= "") then
+					reset = true
+				end
+
+				if #fb.act_frames == 0 or (frame == nil) or frame.atk ~= fb_atk[fb_base] or reset then
+					local col, line
+					if fb_atk[fb_base] then
+						col, line = 0xAAFF1493, 0xDDFF1493
+					else
+						col, line = 0x00000000, 0x00000000
+					end
+					-- 軽量化のため攻撃の有無だけで記録を残す
+					frame = {
+						act = fb_atk[fb_base] and 1 or 0,
+						count = 1,
+						col = col,
+						name = not p.act_data.firing and fb.act == 0 and "" or fb.act_data_fired.name,
+						atk = fb_atk[fb_base],
+						line = line,
+						act_1st = reset,
+					}
+					-- 関数の使いまわすためact_framesは配列にするが明細を表示ないので1個しかもたなくていい
+					fb.act_frames[1] = frame
+				else
+					-- 同一行動IDが継続している場合はフレーム値加算
+					frame.count = frame.count + 1
+				end
+				-- 技名でグループ化したフレームデータの配列をマージ生成する
+				fb.act_frames2, fb_upd_groups[fb_base] = frame_groups(frame, fb.act_frames2 or {})
+			end
+
+			-- メインフレーム表示からの描画開始位置を記憶させる
+			for fb_base, fb_upd_group in pairs(fb_upd_groups) do
+				if fb_upd_group then
+					last_frame.fireball = last_frame.fireball or {}
+					last_frame.fireball[fb_base] = last_frame.fireball[fb_upd_group] or {}
+					local last_fb_frame = last_frame.fireball[fb_base]
+					table.insert(last_fb_frame, p.fireball[fb_base].act_frames2[# p.fireball[fb_base].act_frames2])
+					last_fb_frame[#last_fb_frame].parent_count = last_frame.last_total
+				end
 			end
 		end
 		--1Pと2Pともにフレーム数が多すぎる場合は加算をやめる
