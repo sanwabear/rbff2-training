@@ -376,8 +376,8 @@ local char_acts_base = {
 		{ name = "爆裂フック", type = act_types.attack, ids = { 0xB3, 0xB4, 0xB5, }, },
 		{ name = "爆裂アッパー", type = act_types.attack, ids = { 0xF8, 0xF9, 0xFA, 0xFB, }, },
 		{ name = "ハリケーンアッパー", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, }, firing = true, },
-		{ name = "爆裂ハリケーン", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, }, firing = true, },
-		{ name = "スクリューアッパー", type = act_types.attack, ids = { 0xFE, 0xFF, }, },
+		{ name = "爆裂ハリケーン", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, }, },
+		{ name = "スクリューアッパー", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, firing = true, },
 		{ disp_name = "サンダーファイヤー", name = "サンダーファイヤー(C)", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, 0x110, 0x111, }, },
 		{ disp_name = "サンダーファイヤー", name = "サンダーファイヤー(D)", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, }, },
 		{ disp_name = "CA 立A", name = "CA 立A(2段目)", type = act_types.attack, ids = { 0x24B, }, },
@@ -474,7 +474,7 @@ local char_acts_base = {
 		{ name = "まきびし", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, firing = true, },
 		{ name = "憑依弾", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, 0x9D, }, firing = true, },
 		{ name = "鬼門陣", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
-		{ name = "邪棍舞", type = act_types.low_attack, ids = { 0xAE, 0xAF, 0xB0, }, },
+		{ name = "邪棍舞", type = act_types.low_attack, ids = { 0xAE, 0xAF, 0xB0, }, firing = true, },
 		{ name = "喝", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, }, firing = true, },
 		{ name = "渦炎陣", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, }, },
 		{ name = "いかづち", type = act_types.attack, ids = { 0xFE, 0xFF, 0x103, 0x100, 0x101, }, firing = true, },
@@ -702,11 +702,11 @@ local char_acts_base = {
 		{ name = "小 帝王天眼拳", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, firing = true, },
 		{ name = "小 帝王天耳拳", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
 		{ name = "大 帝王天耳拳", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
-		{ name = "帝王漏尽拳", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBB, 0xBA, 0xBC, }, },
+		{ name = "帝王漏尽拳", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBB, 0xBA, 0xBC, }, firing = true, },
 		{ name = "龍転身（前方）", type = act_types.any, ids = { 0xC2, 0xC3, 0xC4, }, firing = true, },
 		{ name = "龍転身（後方）", type = act_types.any, ids = { 0xCC, 0xCD, 0xCE, }, },
 		{ name = "帝王宿命拳", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, firing = true, },
-		{ name = "帝王宿命拳", type = act_types.attack, ids = { 0x101, 0x102, 0x104, 0x105, 0x107, 0x115, 0x116, 0x103, 0x106, }, },
+		{ name = "帝王宿命拳", type = act_types.attack, ids = { 0x101, 0x102, 0x104, 0x105, 0x107, 0x115, 0x116, 0x103, 0x106, }, firing = true, },
 		{ name = "帝王龍声拳", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, }, firing = true, },
 		{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x243, }, },
 		{ disp_name = "CA 立C", name = "CA 立C(2段目)立Bルート", type = act_types.attack, ids = { 0x242, }, },
@@ -5246,12 +5246,13 @@ function rbff2.startplugin()
 
 			-- 飛び道具
 			local chg_fireball_state = false
-			local fb_upd_groups, fb_atk = {}, {}
+			local fb_upd_groups, fb_atk, fb_fake = {}, {}, {}
 			for fb_base, fb in pairs(p.fireball) do
 				fb_atk[fb_base] = false -- 攻撃判定 発生中
 				for _, box in pairs(fb.hitboxes) do
-					if box.asm ~= 0x4E75 then
-						fb_atk[fb_base] = true
+					fb_atk [fb_base] = box.asm ~= 0x4E75
+					fb_fake[fb_base] = fb.harmless2 or fb.obsl_hit or fb.fake_hit
+					if fb_atk[fb_base] then
 						fb.atk_count = (fb.atk_count or 0) + 1 -- 攻撃判定発生のカウント
 						if fb.atk_count == 1 and fb.act_data_fired.name == p.act_data.name then
 							chg_fireball_state = true
@@ -5452,7 +5453,7 @@ function rbff2.startplugin()
 			-- 飛び道具2
 			for fb_base, fb in pairs(p.fireball) do
 				local frame = fb.act_frames[#fb.act_frames]
-				local reset = false
+				local reset, no_name = false, false
 				if p.act_data.firing then
 					if p.act_1st and last_frame.act_1st and last_frame.count == 1 then
 						reset = true
@@ -5461,22 +5462,26 @@ function rbff2.startplugin()
 					end
 				elseif fb.act == 0 and (not frame or frame.name ~= "") then
 					reset = true
+					no_name = true
+				end
+				local col, line
+				if fb_fake[fb_base] then
+					col, line = 0xAA00FF33, 0xDD00FF33
+				elseif fb_atk[fb_base] then
+					col, line = 0xAAFF1493, 0xDDFF1493
+				else
+					col, line = 0x00000000, 0x00000000
 				end
 
-				if #fb.act_frames == 0 or (frame == nil) or frame.atk ~= fb_atk[fb_base] or reset then
-					local col, line
-					if fb_atk[fb_base] then
-						col, line = 0xAAFF1493, 0xDDFF1493
-					else
-						col, line = 0x00000000, 0x00000000
-					end
+				if #fb.act_frames == 0 or (frame == nil) or frame.col ~= col or reset then
 					-- 軽量化のため攻撃の有無だけで記録を残す
 					frame = {
-						act = fb_atk[fb_base] and 1 or 0,
+						act = fb_fake[fb_base] and 2 or fb_atk[fb_base] and 1 or 0,
 						count = 1,
 						col = col,
-						name = not p.act_data.firing and fb.act == 0 and "" or fb.act_data_fired.name,
+						name = no_name and "" or fb.act_data_fired.name,
 						atk = fb_atk[fb_base],
+						fake = fb_fake[fb_base],
 						line = line,
 						act_1st = reset,
 					}
