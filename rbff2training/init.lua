@@ -3846,7 +3846,7 @@ function rbff2.startplugin()
 	end
 	-- 初回入力まち
 	-- 未入力状態を待ちける→入力開始まで待ち受ける
-	rec_await_no_input = function()
+	rec_await_no_input = function(to_joy)
 		local joy_val = get_joy()
 
 		local no_input = true
@@ -3859,9 +3859,10 @@ function rbff2.startplugin()
 		if no_input then
 			-- 状態変更
 			global.rec_main = rec_await_1st_input
+			print(global.frame_number .. " rec_await_no_input -> rec_await_1st_input")
 		end
 	end
-	rec_await_1st_input = function()
+	rec_await_1st_input = function(to_joy)
 		local joy_val = get_joy(recording.temp_player)
 
 		local next_val = nil
@@ -3879,6 +3880,7 @@ function rbff2.startplugin()
 
 					-- 状態変更
 					global.rec_main = rec_input
+					print(global.frame_number .. " rec_await_1st_input -> rec_input")
 				end
 				-- レコード中は1Pと2P入力が入れ替わっているので反転させて記憶する
 				next_val[rev_joy[k]] = f > 0
@@ -3886,7 +3888,7 @@ function rbff2.startplugin()
 		end
 	end
 	-- 入力中
-	rec_input = function()
+	rec_input = function(to_joy)
 		local joy_val = get_joy(recording.player)
 
 		-- 入力保存
@@ -3903,7 +3905,9 @@ function rbff2.startplugin()
 		table.insert(recording.active_slot.store, { joy = new_next_joy(), pos = pos })
 	end
 	-- リプレイまち
-	rec_await_play = function(force_start_play)
+	rec_await_play = function(to_joy)
+		local force_start_play = global.rec_force_start_play
+		global.rec_force_start_play = false -- 初期化
 		local scr = manager.machine.screens:at(1)
 		local ec = scr:frame_number()
 		local state_past = ec - global.input_accepted
@@ -4022,7 +4026,7 @@ function rbff2.startplugin()
 		end
 	end
 	-- 繰り返しリプレイ待ち
-	rec_repeat_play= function()
+	rec_repeat_play= function(to_joy)
 		-- 繰り返し前の行動が完了するまで待つ
 		local p = players[3-recording.player]
 		local op = players[recording.player]
@@ -4036,7 +4040,10 @@ function rbff2.startplugin()
 				-- リプレイ側が通常状態まで待つ
 				if op.act_normal and op.state == 0 then
 					-- 状態変更
-					rec_await_play(true)
+					global.rec_main = rec_await_play
+					global.rec_force_start_play = true -- 一時的な強制初期化フラグをON
+					print(global.frame_number .. " rec_repeat_play -> rec_await_play(force)")
+					return
 				end
 			end
 		end
@@ -4054,7 +4061,8 @@ function rbff2.startplugin()
 			-- 状態変更
 			global.rec_main = rec_await_play
 			global.input_accepted = ec
-			return 
+			print(global.frame_number .. " rec_play -> rec_await_play")
+			return
 		end
 
 		local stop = false
@@ -4090,6 +4098,7 @@ function rbff2.startplugin()
 			global.repeat_interval = recording.repeat_interval
 			-- 状態変更
 			global.rec_main = rec_play_interval
+			print(global.frame_number .. " rec_play -> rec_play_interval")
 		end
 	end
 	--
@@ -4106,7 +4115,8 @@ function rbff2.startplugin()
 			-- 状態変更
 			global.rec_main = rec_await_play
 			global.input_accepted = ec
-			return 
+			print(global.frame_number .. " rec_play_interval -> rec_await_play")
+			return
 		end
 
 		global.repeat_interval = math.max(0, global.repeat_interval - 1)
@@ -4120,9 +4130,13 @@ function rbff2.startplugin()
 				recording.last_act = players[3-recording.player].act
 				recording.last_pos_y = players[3-recording.player].pos_y
 				global.rec_main = rec_repeat_play
+				print(global.frame_number .. " rec_play_interval -> rec_repeat_play")
+				return
 			else
 				-- 状態変更
 				global.rec_main = rec_await_play
+				print(global.frame_number .. " rec_play_interval -> rec_await_play")
+				return
 			end
 		end
 	end
@@ -6041,7 +6055,12 @@ function rbff2.startplugin()
 
 		-- レコード＆リプレイ
 		if global.dummy_mode == 5 or global.dummy_mode == 6 then
-			global.rec_main(next_joy)
+			local prev_rec_main, called = nil, {}
+			repeat
+				prev_rec_main = global.rec_main
+				called[prev_rec_main] = true
+				global.rec_main(next_joy)
+			until global.rec_main == prev_rec_main or called[global.rec_main] == true
 		end
 
 		-- ジョイスティック入力の反映
