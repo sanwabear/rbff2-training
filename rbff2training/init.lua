@@ -4357,7 +4357,7 @@ function rbff2.startplugin()
 				if frame.fireball then
 					for _, fb in pairs(frame.fireball) do
 						for _, sub_group in ipairs(fb) do
-							dodraw(x1+sub_group.parent_count, y + 0 + span, sub_group, false, height-3, xmax, show_name, show_count, x+sub_group.parent_count, scr, txty-1)
+							dodraw(x1+sub_group.parent_count, y + 0 + span, sub_group, false, height, xmax, show_name, show_count, x+sub_group.parent_count, scr, txty-1)
 						end
 					end
 				end
@@ -5246,12 +5246,11 @@ function rbff2.startplugin()
 
 			-- 飛び道具
 			local chg_fireball_state = false
-			local fb_upd_groups, fb_atk, fb_fake = {}, {}, {}
+			local fb_upd_groups, fb_atk = {}, {}
 			for fb_base, fb in pairs(p.fireball) do
 				fb_atk[fb_base] = false -- 攻撃判定 発生中
 				for _, box in pairs(fb.hitboxes) do
 					fb_atk [fb_base] = box.asm ~= 0x4E75
-					fb_fake[fb_base] = fb.harmless2 or fb.obsl_hit or fb.fake_hit
 					if fb_atk[fb_base] then
 						fb.atk_count = (fb.atk_count or 0) + 1 -- 攻撃判定発生のカウント
 						if fb.atk_count == 1 and fb.act_data_fired.name == p.act_data.name then
@@ -5453,7 +5452,11 @@ function rbff2.startplugin()
 			-- 飛び道具2
 			for fb_base, fb in pairs(p.fireball) do
 				local frame = fb.act_frames[#fb.act_frames]
-				local reset, no_name = false, false
+				local reset, new_name, hasbox = false, fb.act_data_fired.name, false
+				for _, _ in ipairs(fb.hitboxes) do
+					hasbox = true
+					break
+				end
 				if p.act_data.firing then
 					if p.act_1st and last_frame.act_1st and last_frame.count == 1 then
 						reset = true
@@ -5462,26 +5465,25 @@ function rbff2.startplugin()
 					end
 				elseif fb.act == 0 and (not frame or frame.name ~= "") then
 					reset = true
-					no_name = true
+					new_name = ""
 				end
-				local col, line
-				if fb_fake[fb_base] then
-					col, line = 0xAA00FF33, 0xDD00FF33
+				local col, line, act
+				if hasbox and (fb.harmless2 or fb.full_hit) then
+					col, line, act = 0xAA888888, 0xDD888888, 3
+				elseif hasbox and fb.fake_hit then
+					col, line, act = 0xAA00FF33, 0xDD00FF33, 2
 				elseif fb_atk[fb_base] then
-					col, line = 0xAAFF1493, 0xDDFF1493
+					col, line, act = 0xAAFF1493, 0xDDFF1493, 1
 				else
-					col, line = 0x00000000, 0x00000000
+					col, line, act = 0x00000000, 0x00000000, 0
 				end
-
 				if #fb.act_frames == 0 or (frame == nil) or frame.col ~= col or reset then
 					-- 軽量化のため攻撃の有無だけで記録を残す
 					frame = {
-						act = fb_fake[fb_base] and 2 or fb_atk[fb_base] and 1 or 0,
+						act = act,
 						count = 1,
 						col = col,
-						name = no_name and "" or fb.act_data_fired.name,
-						atk = fb_atk[fb_base],
-						fake = fb_fake[fb_base],
+						name = new_name,
 						line = line,
 						act_1st = reset,
 					}
