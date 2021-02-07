@@ -779,9 +779,7 @@ local char_acts_base = {
 		{ disp_name = "フェイント", name = "フェイント 強襲飛翔棍", type = act_types.any, ids = { 0x112, }, },
 		{ name = "一本釣り投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 		{ name = "地獄落とし", type = act_types.any, ids = { 0x81, 0x82, 0x83, 0x84, }, },
-		{ name = "三節棍中段打ち", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, 0x93, }, firing = true, },
-		{ name = "火炎三節棍中段打ち", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
-		{ names = { "三節棍中段打ち", "火炎三節棍中段打ち" }, type = act_types.attack, ids = { 0x93, }, },
+		{ name = "三節棍中段打ち", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, 0x90, 0x91, 0x92, 0x93, }, firing = true, },
 		{ name = "燕落とし", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
 		{ name = "火龍追撃棍", type = act_types.attack, ids = { 0xB8, 0xB9, }, },
 		{ name = "旋風棍", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, }, },
@@ -872,7 +870,7 @@ local char_acts_base = {
 		{ name = "カイザーボディプレス", type = act_types.attack, ids = { 0x69, 0x72, }, },
 		{ name = "ダイビングエルボー", type = act_types.attack, ids = { 0x6A, 0x73, 0x74, 0x75, }, },
 		{ disp_name = "ブリッツボール", name = "ブリッツボール・上段", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, firing = true, },
-		{ disp_name = "ブリッツボール", name = "ブリッツボール・下段", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, firing = true, },
+		{ disp_name = "ブリッツボール", name = "ブリッツボール・下段", type = act_types.low_attack, ids = { 0x90, 0x91, 0x92, }, firing = true, },
 		{ name = "レッグトマホーク", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
 		{ name = "デンジャラススルー", type = act_types.attack, ids = { 0xAE, 0xAF, }, },
 		{ name = "グリフォンアッパー", type = act_types.attack, ids = { 0x248, }, },
@@ -1209,6 +1207,8 @@ for char, acts_base in pairs(char_acts_base) do
 			if acts.type == act_types.guard or acts.type == act_types.hit then
 				-- char_1st_actsには登録しない
 			elseif acts.name == "振り向き中" or acts.name == "しゃがみ振り向き中" then
+				-- char_1st_actsには登録しない
+			elseif acts.names then
 				-- char_1st_actsには登録しない
 			else
 				char_1st_acts[char][id] = i == 1
@@ -5013,6 +5013,7 @@ function rbff2.startplugin()
 					if char_fireballs[p.char][fb.act] then
 						-- 双角だけ中段と下段の飛び道具がある
 						act_type = char_fireballs[p.char][fb.act].type
+						fb.char_fireball = char_fireballs[p.char][fb.act]
 					end
 					op.need_block     = op.need_block or (act_type == act_types.low_attack) or (act_type == act_types.attack) or (act_type == act_types.overhead)
 					op.need_low_block = op.need_low_block or (act_type == act_types.low_attack)
@@ -5253,7 +5254,7 @@ function rbff2.startplugin()
 					fb_atk [fb_base] = box.asm ~= 0x4E75
 					if fb_atk[fb_base] then
 						fb.atk_count = (fb.atk_count or 0) + 1 -- 攻撃判定発生のカウント
-						if fb.atk_count == 1 and fb.act_data_fired.name == p.act_data.name then
+						if fb.atk_count == 1 and get_act_name(fb.act_data_fired) == get_act_name(p.act_data) then
 							chg_fireball_state = true
 						end
 						break
@@ -5452,15 +5453,15 @@ function rbff2.startplugin()
 			-- 飛び道具2
 			for fb_base, fb in pairs(p.fireball) do
 				local frame = fb.act_frames[#fb.act_frames]
-				local reset, new_name, hasbox = false, fb.act_data_fired.name, false
+				local reset, new_name, hasbox = false, get_act_name(fb.act_data_fired), false
 				for _, _ in ipairs(fb.hitboxes) do
 					hasbox = true
 					break
 				end
 				if p.act_data.firing then
-					if p.act_1st and last_frame.act_1st and last_frame.count == 1 then
+					if p.act_1st then
 						reset = true
-					elseif not frame or frame.name ~= fb.act_data_fired.name then
+					elseif not frame or frame.name ~= get_act_name(fb.act_data_fired) then
 						reset = true
 					end
 				elseif fb.act == 0 and (not frame or frame.name ~= "") then
@@ -5468,7 +5469,7 @@ function rbff2.startplugin()
 					new_name = ""
 				end
 				local col, line, act
-				if hasbox and (fb.harmless2 or fb.full_hit) then
+				if hasbox and fb.full_hit then -- fb.harmless2は無視する
 					col, line, act = 0xAA888888, 0xDD888888, 3
 				elseif hasbox and fb.fake_hit then
 					col, line, act = 0xAA00FF33, 0xDD00FF33, 2
