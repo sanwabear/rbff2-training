@@ -2482,34 +2482,42 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 	-- 座標補正後にキー情報を作成する
 	box.key = string.format("%x %x id:%x x1:%x x2:%x y1:%x y2:%x", global.frame_number, p.addr.base, box.id, box.top, box.bottom, box.left, box.right)
 
+	local fb_pos_x, fb_pos_y = pos_x, pos_y
 	pos_x              = is_fireball and math.floor(p.parent.pos - screen_left) or pos_x
 	pos_y              = is_fireball and math.floor(p.parent.pos_y) or pos_y
-	pos_y              = pos_y
-	local top_reach    = pos_y - math.min(box.top, box.bottom)
-	local bottom_reach = pos_y - math.max(box.top, box.bottom)
-	local front_reach, back_reach
-	if p.hit.flip_x == 1 then
-		front_reach = math.max(box.left, box.right) - pos_x
-		back_reach  = math.min(box.left, box.right) - pos_x
-	else
-		front_reach = pos_x - math.min(box.left, box.right)
-		back_reach  = pos_x - math.max(box.left, box.right)
+
+	local get_reach = function(pos_x, pos_y)
+		local top_reach    = pos_y - math.min(box.top, box.bottom)
+		local bottom_reach = pos_y - math.max(box.top, box.bottom)
+		local front_reach, back_reach
+		if p.hit.flip_x == 1 then
+			front_reach = math.max(box.left, box.right) - pos_x
+			back_reach  = math.min(box.left, box.right) - pos_x
+		else
+			front_reach = pos_x - math.min(box.left, box.right)
+			back_reach  = pos_x - math.max(box.left, box.right)
+		end
+		local reach_memo1 = string.format("%3s %3s %3s %3s",
+			front_reach,                        -- キャラ本体座標からの前のリーチ
+			back_reach,                         -- キャラ本体座標からの後のリーチ
+			top_reach,                          -- キャラ本体座標からの上のリーチ
+			bottom_reach                        -- キャラ本体座標からの下のリーチ
+		)
+		local reach_memo = string.format("%3s %2s %3s %3s %s %3s %3s",
+			screen_top,
+			p.hit.flip_x,                       -- 1:右向き -1:左向き
+			pos_x,                              -- X位置
+			pos_y,                              -- Y位置
+			reach_memo1,                        -- リーチ
+			top_reach    + pos_y,               -- 地面からの上のリーチ
+			bottom_reach + pos_y                -- 地面からの下のリーチ
+		)
+		return reach_memo1, reach_memo
 	end
-	local reach_memo1 = string.format("%3s %3s %3s %3s",
-		front_reach,                        -- キャラ本体座標からの前のリーチ
-		back_reach,                         -- キャラ本体座標からの後のリーチ
-		top_reach,                          -- キャラ本体座標からの上のリーチ
-		bottom_reach                        -- キャラ本体座標からの下のリーチ
-	)
-	local reach_memo = string.format("%3s %2s %3s %3s %s %3s %3s",
-		screen_top,
-		p.hit.flip_x,                       -- 1:右向き -1:左向き
-		pos_x,                              -- X位置
-		pos_y,                              -- Y位置
-		reach_memo1,                        -- リーチ
-		top_reach    + pos_y,               -- 地面からの上のリーチ
-		bottom_reach + pos_y                -- 地面からの下のリーチ
-	)
+	local reach_memo1, reach_memo = get_reach(pos_x, pos_y)
+	if is_fireball then
+		reach_memo1 = get_reach(fb_pos_x, fb_pos_y)
+	end
 
 	if atk then
 		if p.reach_tbl[reach_memo1] ~= true then
@@ -3167,6 +3175,7 @@ function rbff2.startplugin()
 					char       = base + 0x10, -- 技のキャラID
 					act        = base + 0x60, -- 技のID デバッグのP
 					acta       = base + 0x62, -- 技のID デバッグのA
+					actb       = base + 0x64, -- 技のID?
 					act_count  = base + 0x66, -- 現在の行動のカウンタ
 					act_frame  = base + 0x6F, -- 現在の行動の残フレーム、ゼロになると次の行動へ
 					act_contact= base + 0x01, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
@@ -4842,6 +4851,7 @@ function rbff2.startplugin()
 			for _, fb in pairs(p.fireball) do
 				fb.act            = pgm:read_u16(fb.addr.act)
 				fb.acta           = pgm:read_u16(fb.addr.acta)
+				fb.actb           = pgm:read_u16(fb.addr.actb)
 				fb.act_count      = pgm:read_u8(fb.addr.act_count)
 				fb.act_frame      = pgm:read_u8(fb.addr.act_frame)
 				fb.act_contact    = pgm:read_u8(fb.addr.act_contact)
@@ -5515,7 +5525,12 @@ function rbff2.startplugin()
 				else
 					col, line, act = 0x00000000, 0x00000000, 0
 				end
-				if #fb.act_frames == 0 or (frame == nil) or frame.col ~= col or reset then
+
+				local reach_memo = fb.reach_memo
+				local act_count  = fb.actb
+				local max_hit_dn = fb.hit.max_hit_dn
+
+				if #fb.act_frames == 0 or (frame == nil) or frame.col ~= col or reset or frame.reach_memo ~= reach_memo  or (max_hit_dn > 1 and frame.act_count ~= act_count)  then
 					-- 軽量化のため攻撃の有無だけで記録を残す
 					frame = {
 						act = act,
@@ -5524,6 +5539,9 @@ function rbff2.startplugin()
 						name = new_name,
 						line = line,
 						act_1st = reset,
+						reach_memo = reach_memo,
+						act_count  = act_count,
+						max_hit_dn = max_hit_dn,
 					}
 					-- 関数の使いまわすためact_framesは配列にするが明細を表示ないので1個しかもたなくていい
 					fb.act_frames[1] = frame
