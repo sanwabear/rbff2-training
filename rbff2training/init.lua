@@ -4314,11 +4314,18 @@ function rbff2.startplugin()
 		return frames2, upd
 	end
 	-- グラフでフレームデータを表示する
-	local dodraw = function(x1, y, frame_group, main_frame, height, xmax, show_name, show_count, x, scr, txty)
+	local dodraw = function(x1, y, frame_group, main_frame, height, xmin, xmax, show_name, show_count, x, scr, txty)
 		local grp_len = #frame_group
+		local overflow = 0
 		if 0 < grp_len then
 			-- 最終フレームに記録された全フレーム数を記憶
-			x1 = math.min((frame_group[grp_len].last_total or 0) + frame_group[grp_len].count + x, xmax)
+			local pre_x = (frame_group[grp_len].last_total or 0) + frame_group[grp_len].count + x
+			if pre_x > xmax then
+				x1 = xmax
+				overflow = pre_x - xmax
+			else
+				x1 = pre_x
+			end
 			-- グループの名称を描画
 			if show_name and main_frame then
 				if (frame_group[1].col + frame_group[1].line) > 0 then
@@ -4332,8 +4339,11 @@ function rbff2.startplugin()
 				local frame = frame_group[k]
 				local x2 = x1 - frame.count
 				local on_fb, on_ar, on_gd = false, false, false
-				if x2 < x then
-					x2 = x
+				if x2 < xmin then
+					if x2 + x1 < xmin then
+						break
+					end
+					x2 = xmin
 				else
 					on_fb = frame.chg_fireball_state == true
 					on_ar = frame.chg_air_state == 1
@@ -4371,6 +4381,7 @@ function rbff2.startplugin()
 				x1 = x2
 			end
 		end
+		return overflow
 	end
 	local draw_frames = function(frames2, xmax, show_name, show_count, x, y, height, span)
 		if #frames2 == 0 then
@@ -4387,23 +4398,24 @@ function rbff2.startplugin()
 		end
 		for j = #frames2 - math.min(#frames2 - 1, 6), #frames2 do
 			local frame_group = frames2[j]
-			dodraw(x1, y + span, frame_group, true, height, xmax, show_name, show_count, x, scr, txty)
+			local overflow = dodraw(x1, y + span, frame_group, true, height, x, xmax, show_name, show_count, x, scr, txty)
+		
 			for _, frame in ipairs(frame_group) do
 				if frame.fireball then
 					for _, fb in pairs(frame.fireball) do
 						for _, sub_group in ipairs(fb) do
-							dodraw(x1+sub_group.parent_count, y + 0 + span, sub_group, false, height, xmax, show_name, show_count, x+sub_group.parent_count, scr, txty-1)
+							dodraw(x1, y + 0 + span, sub_group, false, height, x, xmax, show_name, show_count, x+sub_group.parent_count-overflow, scr, txty-1)
 						end
 					end
 				end
 				if frame.frm_gap then
 					for _, sub_group in ipairs(frame.frm_gap) do
-						dodraw(x1, y + 6 + span, sub_group, false, height-3, xmax, show_name, show_count, x, scr, txty-1)
+						dodraw(x1, y + 6 + span, sub_group, false, height-3, x, xmax, show_name, show_count, x, scr, txty-1)
 					end
 				end
 				if frame.muteki then
 					for _, sub_group in ipairs(frame.muteki) do
-						dodraw(x1, y + 11 + span, sub_group, false, height-3, xmax, show_name, show_count, x, scr, txty-1)
+						dodraw(x1, y + 11 + span, sub_group, false, height-3, x, xmax, show_name, show_count, x, scr, txty-1)
 					end
 				end
 			end
@@ -5516,8 +5528,10 @@ function rbff2.startplugin()
 					new_name = ""
 				end
 				local col, line, act
-				if hasbox and fb.full_hit then -- fb.harmless2は無視する
-					col, line, act = 0xAA888888, 0xDD888888, 3
+				if p.skip_frame then
+					col, line, act = 0x00000000, 0x00000000, 0
+				elseif hasbox and fb.obsl_hit or fb.full_hit or fb.harmless2 then
+					col, line, act = 0x00000000, 0xDDFF1493, 0
 				elseif hasbox and fb.fake_hit then
 					col, line, act = 0xAA00FF33, 0xDD00FF33, 2
 				elseif fb_atk[fb_base] then
