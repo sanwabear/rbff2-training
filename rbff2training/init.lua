@@ -423,6 +423,7 @@ local char_acts_base = {
 		{ disp_name = "CA B", name = "CA B(5段目)", type = act_types.overhead, ids = { 0x24D, 0x24E, }, },
 		{ disp_name = "CA C", name = "CA C(5段目)", type = act_types.overhead, ids = { 0x24F, 0x250, }, },
 		{ disp_name = "CA 下C", name = "CA 下C(2段目)下Bルート", type = act_types.attack, ids = { 0x247, }, },
+		{ disp_name = "立C", name = "立C", type = act_types.low_attack, ids = { 0x46, 0xF4, }, },
 	},
 	-- ギース・ハワード
 	{
@@ -2483,8 +2484,9 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 
 	pos_x              = is_fireball and math.floor(p.parent.pos - screen_left) or pos_x
 	pos_y              = is_fireball and math.floor(p.parent.pos_y) or pos_y
-	local top_reach    = 200 - math.min(box.top, box.bottom) - pos_y
-	local bottom_reach = 200 - math.max(box.top, box.bottom) - pos_y
+	pos_y              = pos_y
+	local top_reach    = pos_y - math.min(box.top, box.bottom)
+	local bottom_reach = pos_y - math.max(box.top, box.bottom)
 	local front_reach, back_reach
 	if p.hit.flip_x == 1 then
 		front_reach = math.max(box.left, box.right) - pos_x
@@ -2493,20 +2495,28 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 		front_reach = pos_x - math.min(box.left, box.right)
 		back_reach  = pos_x - math.max(box.left, box.right)
 	end
-	local reach_memo = string.format("%3s %2s %3s %3s %3s %3s %3s %3s %3s %3s",
+	local reach_memo1 = string.format("%3s %3s %3s %3s",
+		front_reach,                        -- キャラ本体座標からの前のリーチ
+		back_reach,                         -- キャラ本体座標からの後のリーチ
+		top_reach,                          -- キャラ本体座標からの上のリーチ
+		bottom_reach                        -- キャラ本体座標からの下のリーチ
+	)
+	local reach_memo = string.format("%3s %2s %3s %3s %s %3s %3s",
 		screen_top,
 		p.hit.flip_x,                       -- 1:右向き -1:左向き
 		pos_x,                              -- X位置
 		pos_y,                              -- Y位置
-		front_reach,                        -- キャラ本体座標からの前のリーチ
-		back_reach,                         -- キャラ本体座標からの後のリーチ
-		top_reach,                          -- キャラ本体座標からの上のリーチ
-		bottom_reach,                       -- キャラ本体座標からの下のリーチ
+		reach_memo1,                        -- リーチ
 		top_reach    + pos_y,               -- 地面からの上のリーチ
 		bottom_reach + pos_y                -- 地面からの下のリーチ
 	)
 
 	if atk then
+		if p.reach_tbl[reach_memo1] ~= true then
+			p.reach_tbl[reach_memo1] = true
+			p.reach_memo = p.reach_memo .. "," .. reach_memo1
+		end
+
 		local memo = ""
 		memo = memo .. " nml=" .. (hit_box_procs.normal_hit(box.id) or "-")
 		memo = memo .. " dwn=" .. (hit_box_procs.down_hit(box.id) or "-")
@@ -2538,9 +2548,7 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 			p.attack,                           --
 			p.hitstop_id,                       -- ガード硬直のID
 			p.gd_strength,                      -- 相手のガード持続の種類
-
 			reach_memo,
-
 			box.id,                             -- 判定のID
 			p.hit.harmless  and "hm"   or "",   -- 無害化
 			p.hit.fake_hit  and "fake" or "",   -- 嘘判定
@@ -2804,6 +2812,8 @@ function rbff2.startplugin()
 			pos_frc_y        = 0,           -- Y位置少数部
 			old_pos_y        = 0,           -- Y位置
 			old_pos_frc_y    = 0,           -- Y位置少数部
+			reach_memo       = "",          -- リーチ
+			reach_tbl        = {},          -- リーチ排他
 			old_in_air       = false,
 			in_air           = false,
 			chg_air_state    = 0,           -- ジャンプの遷移ポイントかどうか
@@ -3119,6 +3129,8 @@ function rbff2.startplugin()
 				asm            = 0,
 				pos            = 0, -- X位置
 				pos_y          = 0, -- Y位置
+				reach_memo     = "", -- リーチ
+				reach_tbl      = {}, -- リーチ排他
 				pos_z          = 0, -- Z位置
 				attack         = 0, -- 攻撃中のみ変化
 				hitstop_id     = 0, -- ガード硬直のID
@@ -4703,6 +4715,8 @@ function rbff2.startplugin()
 			p.pos_y          = pgm:read_i16(p.addr.pos_y)
 			p.pos_frc_y      = pgm:read_u16(p.addr.pos_frc_y)
 			p.in_air         = 0 < p.pos_y or 0 < p.pos_frc_y
+			p.reach_memo     = ""
+			p.reach_tbl      = {}
 
 			-- ジャンプの遷移ポイントかどうか
 			if p.old_in_air ~= true and p.in_air == true then
@@ -4833,6 +4847,8 @@ function rbff2.startplugin()
 				fb.act_contact    = pgm:read_u8(fb.addr.act_contact)
 				fb.pos            = pgm:read_i16(fb.addr.pos)
 				fb.pos_y          = pgm:read_i16(fb.addr.pos_y)
+				fb.reach_memo     = ""
+				fb.reach_tbl      = {}
 				fb.pos_z          = pgm:read_i16(fb.addr.pos_z)
 				fb.hit.projectile = true
 				fb.gd_strength    = get_gd_strength(fb)
@@ -5288,6 +5304,10 @@ function rbff2.startplugin()
 				col, line = 0x44FFFFFF, 0xDDFFFFFF
 			end
 
+			local reach_memo = p.attacking and p.reach_memo or ""
+			local act_count  = p.attacking and p.act_count  or 0
+			local max_hit_dn = p.attacking and p.hit.max_hit_dn or 0
+
 			-- 行動が変わったかのフラグ
 			local frame = p.act_frames[#p.act_frames]
 			--[[
@@ -5324,7 +5344,7 @@ function rbff2.startplugin()
 				disp_name = convert(p.act_data.disp_name or concrete_name)
 				chg_act_name = true
 			end
-			if #p.act_frames == 0 or chg_act_name or frame.col ~= col or p.chg_air_state ~= 0 or chg_fireball_state == true or p.act_1st then
+			if #p.act_frames == 0 or chg_act_name or frame.col ~= col or p.chg_air_state ~= 0 or chg_fireball_state == true or p.act_1st or frame.reach_memo ~= reach_memo  or (max_hit_dn > 1 and frame.act_count ~= act_count) then
 				--行動IDの更新があった場合にフレーム情報追加
 				frame = {
 					act = p.act,
@@ -5336,6 +5356,9 @@ function rbff2.startplugin()
 					chg_fireball_state = chg_fireball_state,
 					chg_air_state = p.chg_air_state,
 					act_1st = p.act_1st,
+					reach_memo = reach_memo,
+					act_count = act_count,
+					max_hit_dn = max_hit_dn,
 				}
 				table.insert(p.act_frames , frame)
 				if 180 < #p.act_frames then
