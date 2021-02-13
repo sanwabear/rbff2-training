@@ -4314,7 +4314,7 @@ function rbff2.startplugin()
 		return frames2, upd
 	end
 	-- グラフでフレームデータを表示する
-	local dodraw = function(x1, y, frame_group, main_frame, height, xmin, xmax, show_name, show_count, x, scr, txty)
+	local dodraw = function(x1, y, frame_group, main_frame, height, xmin, xmax, show_name, show_count, x, scr, txty, draw_if_overflow)
 		local grp_len = #frame_group
 		local overflow = 0
 		if 0 < grp_len then
@@ -4340,7 +4340,7 @@ function rbff2.startplugin()
 				local x2 = x1 - frame.count
 				local on_fb, on_ar, on_gd = false, false, false
 				if x2 < xmin then
-					if x2 + x1 < xmin then
+					if x2 + x1 < xmin and not main_frame then
 						break
 					end
 					x2 = xmin
