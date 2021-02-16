@@ -3845,6 +3845,7 @@ function rbff2.startplugin()
 	end
 
 	local rec_await_no_input, rec_await_1st_input, rec_await_play, rec_input, rec_play, rec_repeat_play, rec_play_interval, rec_fixpos
+	local do_recover
 	local menu_to_tra, menu_to_bar, menu_to_ex, menu_to_col, menu_to_auto
 
 	local frame_to_time = function(frame_number)
@@ -3985,6 +3986,8 @@ function rbff2.startplugin()
 
 			-- メインラインでニュートラル状態にする
 			for i, p in ipairs(players) do
+				local op = players[3 - i]
+
 				-- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
 				if global.replay_reset == 2 or (global.replay_reset == 3 and i == 3) or (global.replay_reset == 4 and i == 4) then
 					pgm:write_u8( p.addr.sway_status, 0x00) --fixpos.fixsway[i])
@@ -4022,6 +4025,8 @@ function rbff2.startplugin()
 					pgm:write_u8( p.addr.base + 0x7E, 0x00)
 					pgm:write_u8( p.addr.base + 0xB0, 0x00)
 					pgm:write_u8( p.addr.base + 0xB1, 0x00)
+
+					do_recover(p, op, true)
 				end
 			end
 
@@ -4043,6 +4048,12 @@ function rbff2.startplugin()
 					pgm:write_u16(stage_base_addr + offset_pos_y, fixpos.fixscr.y)
 					pgm:write_u16(stage_base_addr + offset_pos_z, fixpos.fixscr.z)
 				end
+			end
+
+			-- 入力リセット
+			local next_joy = new_next_joy()
+			for _, joy in ipairs(use_joy) do
+				to_joy[joy.field] = next_joy[joy.field] or false
 			end
 			return
 		end
@@ -4463,6 +4474,45 @@ function rbff2.startplugin()
 				x1 = x2
 			end
 			if loopend then break end
+		end
+	end
+
+	do_recover = function(p, op, force)
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
+		-- 体力とスタン値とMAXスタン値回復
+		local life = { 0xC0, 0x60, 0x00 }
+		local max_life = life[p.red] or (p.red - #life) -- 赤体力にするかどうか
+		if dip_config.infinity_life then
+			pgm:write_u8(p.addr.life, max_life)
+			pgm:write_u8(p.addr.max_stun,  p.init_stun) -- 最大スタン値 
+			pgm:write_u8(p.addr.init_stun, p.init_stun) -- 最大スタン値
+		elseif p.life_rec then
+			-- 回復判定して回復
+			if force or ((math.max(p.update_dmg, op.update_dmg) + 180) <= global.frame_number and p.state == 0) then
+				-- やられ状態から戻ったときに回復させる
+				pgm:write_u8(p.addr.life, max_life) -- 体力
+				pgm:write_u8(p.addr.stun, 0) -- スタン値
+				pgm:write_u8(p.addr.max_stun,  p.init_stun) -- 最大スタン値 
+				pgm:write_u8(p.addr.init_stun, p.init_stun) -- 最大スタン値
+				pgm:write_u8(p.addr.stun_timer, 0) -- スタン値タイマー
+			elseif max_life < p.life then
+				-- 最大値の方が少ない場合は強制で減らす
+				pgm:write_u8(p.addr.life, max_life)
+			end
+		end
+
+		-- パワーゲージ回復
+		-- 0x3C, 0x1E, 0x00
+		local pow = { 0x3C, 0x1E, 0x00 }
+		local max_pow  = pow[p.max] or (p.max - #pow) -- パワーMAXにするかどうか
+		-- POWモード　1:自動回復 2:固定 3:通常動作
+		if global.pow_mode == 2 then
+			pgm:write_u8(p.addr.pow, max_pow)
+		elseif global.pow_mode == 1 and p.pow == 0 then
+			pgm:write_u8(p.addr.pow, max_pow)
+		elseif global.pow_mode ~= 3 and max_pow < p.pow then
+			-- 最大値の方が少ない場合は強制で減らす
+			pgm:write_u8(p.addr.pow, max_pow)
 		end
 	end
 
@@ -5694,41 +5744,7 @@ function rbff2.startplugin()
 				p.max_st_timer = math.max(p.max_st_timer, p.last_combo_st_timer)
 			end
 
-			-- 体力とスタン値とMAXスタン値回復
-			local life = { 0xC0, 0x60, 0x00 }
-			local max_life = life[p.red] or (p.red - #life) -- 赤体力にするかどうか
-			if dip_config.infinity_life then
-				pgm:write_u8(p.addr.life, max_life)
-				pgm:write_u8(p.addr.max_stun,  p.init_stun) -- 最大スタン値 
-				pgm:write_u8(p.addr.init_stun, p.init_stun) -- 最大スタン値
-			elseif p.life_rec then
-				-- 回復判定して回復
-				if (math.max(p.update_dmg, op.update_dmg) + 180) <= global.frame_number and p.state == 0 then
-					-- やられ状態から戻ったときに回復させる
-					pgm:write_u8(p.addr.life, max_life) -- 体力
-					pgm:write_u8(p.addr.stun, 0) -- スタン値
-					pgm:write_u8(p.addr.max_stun,  p.init_stun) -- 最大スタン値 
-					pgm:write_u8(p.addr.init_stun, p.init_stun) -- 最大スタン値
-					pgm:write_u8(p.addr.stun_timer, 0) -- スタン値タイマー
-				elseif max_life < p.life then
-					-- 最大値の方が少ない場合は強制で減らす
-					pgm:write_u8(p.addr.life, max_life)
-				end
-			end
-
-			-- パワーゲージ回復
-			-- 0x3C, 0x1E, 0x00
-			local pow = { 0x3C, 0x1E, 0x00 }
-			local max_pow  = pow[p.max] or (p.max - #pow) -- パワーMAXにするかどうか
-			-- POWモード　1:自動回復 2:固定 3:通常動作
-			if global.pow_mode == 2 then
-				pgm:write_u8(p.addr.pow, max_pow)
-			elseif global.pow_mode == 1 and p.pow == 0 then
-				pgm:write_u8(p.addr.pow, max_pow)
-			elseif global.pow_mode ~= 3 and max_pow < p.pow then
-				-- 最大値の方が少ない場合は強制で減らす
-				pgm:write_u8(p.addr.pow, max_pow)
-			end
+			do_recover(p, op)
 		end
 
 		-- プレイヤー操作
