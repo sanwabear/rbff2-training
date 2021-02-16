@@ -1020,7 +1020,7 @@ local char_acts_base = {
 		{ disp_name = "スゥエーB", name = "スゥエーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スゥエーC", name = "スゥエーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
 		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, 0xB, }, },
-		{ disp_name = "着地", name = "ジャンプ着地", type = act_types.any, ids = { 0x9, }, },
+		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
 		{ names = { "ジャンプ", "アンリミテッドデザイア", "ギガティックサイクロン", }, type = act_types.any, ids = { 
 			0xB, 0xC, -- 垂直ジャンプ
 			0xD, 0xE, -- 前ジャンプ
@@ -1060,7 +1060,7 @@ local char_acts_base = {
 		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
 		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
 		--{ name = "投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
-		{ name = "ダウン", type = act_types.any, ids = { 0x192, 0x18E, 0x190,  }, },
+		{ name = "ダウン", type = act_types.any, ids = { 0x18E, 0x192, 0x190, }, },
 		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ name = "気絶", type = act_types.any, ids = { 0x194, 0x195, }, },
 		{ name = "ガード", type = act_types.guard, ids = { 0x117, 0x118, 0x119, 0x11A, 0x11B, 0x11C, 0x11D, 0x11E, 0x11F, 0x120, 0x121, 0x122, 0x123, 0x124, 0x125, 0x126, 0x127, 0x128, 0x129, 0x12A, 0x12B, 0x12C, 0x12C, 0x12D, 0x12E, 0x131, 0x132, 0x133, 0x134, 0x135, 0x136, 0x137, 0x139, }, },
@@ -1222,8 +1222,6 @@ local char_fireballs = { }
 for char, fireballs_base in pairs(char_fireball_base) do
 	char_fireballs [char] = {}
 	for _, fireball in pairs(fireballs_base) do
-		local label = fireball.name
-		local type  = fireball.name
 		for _, id in pairs(fireball.ids) do
 			char_fireballs[char][id] = fireball
 		end
@@ -2858,6 +2856,8 @@ function rbff2.startplugin()
 			hit_skip         = 0,
 			old_skip_frame   = false,
 			skip_frame       = false,
+			last_blockstun   = 0,
+			last_hitstop     = 0,
 
 			knock_back1      = 0, -- のけぞり確認用1(色々)
 			knock_back2      = 0, -- のけぞり確認用2(裏雲隠し)
@@ -3035,6 +3035,7 @@ function rbff2.startplugin()
 				act_contact  = p1 and 0x100401 or 0x100501, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
 				attack       = p1 and 0x1004B6 or 0x1005B6, -- 攻撃中のみ変化
 				hitstop_id   = p1 and 0x1004EB or 0x1005EB, -- 被害中のみ変化
+				ophit_base   = p1 and 0x10049E or 0x10059E, -- ヒットさせた相手側のベースアドレス
 				char         = p1 and 0x107BA5 or 0x107BA7, -- キャラ()
 				color        = p1 and 0x107BAC or 0x107BAD, -- カラー A=0x00 D=0x01
 				combo        = p1 and 0x10B4E4 or 0x10B4E5, -- コンボ
@@ -4827,10 +4828,23 @@ function rbff2.startplugin()
 			p.max_stun       = pgm:read_u8(p.addr.max_stun)
 			p.stun           = pgm:read_u8(p.addr.stun)
 			p.stun_timer     = pgm:read_u16(p.addr.stun_timer)
+			p.act_contact    = pgm:read_u8(p.addr.act_contact)
+			p.ophit_base     = pgm:read_u32(p.addr.ophit_base)
+			p.ophit          = nil
+			if p.ophit_base == 0x100400 or p.ophit_base == 0x100500 then
+				p.ophit = op
+			else
+				p.ophit = op.fireball[p.ophit_base]
+			end
 
 			--フレーム数
 			p.frame_gap      = p.frame_gap or 0
 			p.last_frame_gap = p.last_frame_gap or 0
+			p.last_blockstun = p.last_blockstun or 0
+			p.last_hitstop   = p.last_hitstop   or 0
+			p.on_hit         = p.on_hit or 0
+			p.on_guard       = p.on_guard or 0
+			p.hit_skip       = p.hit_skip or 0
 			if mem_0x10B862 ~= 0 and p.act_contact ~= 0 then
 				if p.state == 2 then
 					p.on_guard = global.frame_number
@@ -4860,9 +4874,6 @@ function rbff2.startplugin()
 			p.frm_gap.act_frames   = p.frm_gap.act_frames  or {}
 			p.frm_gap.act_frames2  = p.frm_gap.act_frames2 or {}
 
-			p.act_contact    = pgm:read_u8(p.addr.act_contact)
-			p.on_guard       = p.on_guard or 0
-			p.hit_skip       = p.hit_skip or 0
 			p.old_act_data   = p.act_data or { name = "", type = act_types.any, }
 			if char_acts[p.char] and char_acts[p.char][p.act] then
 				p.act_data   = char_acts[p.char][p.act]
@@ -5155,6 +5166,50 @@ function rbff2.startplugin()
 			update_object(p)
 		end
 
+		for i, p in ipairs(players) do
+			local op         = players[3-i]
+
+			--フレーム数
+			p.frame_gap      = p.frame_gap or 0
+			p.last_frame_gap = p.last_frame_gap or 0
+			if mem_0x10B862 ~= 0 and p.act_contact ~= 0 then
+				local hitstun, blockstun = 0, 0
+				if p.ophit and p.ophit.hitboxes then
+					for _, box in pairs(p.ophit.hitboxes) do
+						if box.type.type == "attack" then
+							hitstun, blockstun = box.hitstun, box.blockstun
+							break
+						end
+					end
+				end
+				if p.on_guard == global.frame_number then
+					if p.ophit then
+						p.last_blockstun = blockstun + p.ophit.hitstop_gd
+					end
+					p.last_hitstop = p.ophit.hitstop_gd
+				elseif p.on_hit == global.frame_number then
+					if p.ophit then
+						p.last_blockstun = hitstun + p.ophit.hitstop
+					end
+					p.last_hitstop = p.ophit.hitstop
+				end
+			elseif op.char == 20 and op.act == 0x00AF and op.act_count == 0x00 and op.act_frame == 0x09 then
+				-- デンジャラススルー専用
+				p.last_blockstun = p.stop + 2
+				p.last_hitstop = p.stop
+			elseif op.char == 5 and op.act == 0x00A7 and op.act_count == 0x00 and op.act_frame == 0x06 then
+				-- 裏雲隠し専用
+				p.last_blockstun = p.knock_back2 + 3
+				p.last_hitstop = 0
+			end
+			if p.last_blockstun > 0 then
+				p.last_blockstun = p.last_blockstun - 1
+			end
+			if p.last_hitstop > 0 then
+				p.last_hitstop = p.last_hitstop - 1
+			end
+		end
+		
 		for i, p in ipairs(players) do
 			-- 無敵表示
 			p.muteki.type = 0 -- 無敵
@@ -5471,7 +5526,7 @@ function rbff2.startplugin()
 					act = p.act,
 					count = 1,
 					col = col,
-					name = p.act_data.name,
+					name = concrete_name,
 					disp_name = disp_name,
 					line = line,
 					act_1st = p.act_1st,
@@ -5539,7 +5594,7 @@ function rbff2.startplugin()
 					act = p.act,
 					count = 1,
 					col = col,
-					name = p.act_data.name,
+					name = concrete_name,
 					disp_name = disp_name,
 					line = line,
 					act_1st = p.act_1st,
@@ -6482,8 +6537,18 @@ function rbff2.startplugin()
 				end
 				if global.disp_frmgap > 1 then
 					--フレーム差表示
-					draw_rtext(p1 and 135.5 or 190.5, 40.5,  p.last_frame_gap, shadow_col)
-					draw_rtext(p1 and 135   or 190  , 40  ,  p.last_frame_gap)
+					scr:draw_box(p1 and (138 - 90)           or 180, 41, p1 and 140 or (182 + 90)          , 41+5, 0, 0xDDC0C0C0) -- 枠
+					scr:draw_box(p1 and (139 - 90)           or 181, 42, p1 and 139 or (181 + 90)          , 42+3, 0, 0xDD000000) -- 黒背景
+					scr:draw_box(p1 and (139 - p.last_blockstun) or 181, 42, p1 and 139 or (181 + p.last_blockstun), 42+3, 0, 0xDDFF007F)
+					draw_rtext(p1 and 135.5 or 190.5, 40.5,  p.last_blockstun, shadow_col)
+					draw_rtext(p1 and 135   or 190  , 40  ,  p.last_blockstun)
+
+					draw_rtext(p1 and 155.5 or 170.5, 40.5,  p.last_frame_gap, shadow_col)
+					draw_rtext(p1 and 155   or 170  , 40  ,  p.last_frame_gap)
+					--draw_rtext(p1 and 135.5 or 190.5, 47.5,  p.last_blockstun, shadow_col)
+					--draw_rtext(p1 and 135   or 190  , 47  ,  p.last_blockstun)
+					--draw_rtext(p1 and 135.5 or 190.5, 54.5,  p.last_hitstop, shadow_col)
+					--draw_rtext(p1 and 135   or 190  , 54  ,  p.last_hitstop)
 				end
 			end
 
