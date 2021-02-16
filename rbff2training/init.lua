@@ -84,7 +84,7 @@ local global = {
 	sync_pos_x      = 1, -- 1: OFF, 2:1Pと同期, 3:2Pと同期
 
 	disp_pos        = true, -- 1P 2P 距離表示
-	disp_hitbox     = 3, -- 判定表示
+	disp_hitbox     = 4, -- 判定表示
 	disp_frmgap     = 3, -- フレーム差表示
 	pause_hit       = false, -- ヒット時にポーズ
 	pausethrow      = false, -- 投げ判定表示時にポーズ
@@ -2517,7 +2517,8 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 		reach_memo1 = get_reach(fb_pos_x, fb_pos_y)
 	end
 
-	if global.disp_hitbox == 1 or (global.disp_hitbox == 3 and atk) or (global.disp_hitbox == 4 and not atk) then
+	-- 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
+	if global.disp_hitbox == 3 or (global.disp_hitbox == 4 and atk) or (global.disp_hitbox == 5 and not atk) then
 		if p.reach_tbl[reach_memo1] ~= true then
 			p.reach_tbl[reach_memo1] = true
 			p.reach_memo = p.reach_memo .. "," .. reach_memo1
@@ -7512,7 +7513,7 @@ function rbff2.startplugin()
 	ex_menu = {
 		list = {
 			{ "                          一般設定" },
-			{ "判定表示"              , { "OFF", "ON", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
+			{ "判定表示"              , { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
 			{ "ヒット時にポーズ"      , { "OFF", "ON" }, },
 			{ "投げ判定発生時にポーズ", { "OFF", "ON" }, },
 			{ "1P ダメージ表示"       , { "OFF", "ON" }, },
@@ -7540,7 +7541,7 @@ function rbff2.startplugin()
 			row = 2,
 			col = {
 				0, -- －一般設定－            1
-				3, -- 判定表示                2
+				4, -- 判定表示                2
 				1, -- ヒット時にポーズ        3
 				1, -- 投げ判定ポーズ          4
 				1, -- 1P ダメージ表示         5
