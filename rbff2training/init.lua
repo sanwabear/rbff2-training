@@ -6537,9 +6537,9 @@ function rbff2.startplugin()
 				end
 				if global.disp_frmgap > 1 then
 					--フレーム差表示
-					scr:draw_box(p1 and (138 - 90)           or 180, 41, p1 and 140 or (182 + 90)          , 41+5, 0, 0xDDC0C0C0) -- 枠
-					scr:draw_box(p1 and (139 - 90)           or 181, 42, p1 and 139 or (181 + 90)          , 42+3, 0, 0xDD000000) -- 黒背景
-					scr:draw_box(p1 and (139 - p.last_blockstun) or 181, 42, p1 and 139 or (181 + p.last_blockstun), 42+3, 0, 0xDDFF007F)
+					--scr:draw_box(p1 and (138 - 90)           or 180, 41, p1 and 140 or (182 + 90)          , 41+5, 0, 0xDDC0C0C0) -- 枠
+					--scr:draw_box(p1 and (139 - 90)           or 181, 42, p1 and 139 or (181 + 90)          , 42+3, 0, 0xDD000000) -- 黒背景
+					scr:draw_box(p1 and (139 - p.last_blockstun) or 181, 41, p1 and 139 or (181 + p.last_blockstun), 41+5, 0, 0xDDFF007F)
 					draw_rtext(p1 and 135.5 or 190.5, 40.5,  p.last_blockstun, shadow_col)
 					draw_rtext(p1 and 135   or 190  , 40  ,  p.last_blockstun)
 
