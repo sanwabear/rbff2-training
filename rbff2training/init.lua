@@ -84,7 +84,7 @@ local global = {
 	sync_pos_x      = 1, -- 1: OFF, 2:1Pと同期, 3:2Pと同期
 
 	disp_pos        = true, -- 1P 2P 距離表示
-	disp_hitbox     = true, -- 判定表示
+	disp_hitbox     = 3, -- 判定表示
 	disp_frmgap     = 3, -- フレーム差表示
 	pause_hit       = false, -- ヒット時にポーズ
 	pausethrow      = false, -- 投げ判定表示時にポーズ
@@ -1412,7 +1412,7 @@ local common_rvs = {
 	{ cmd = cmd_base._c      , bs = false, name = "立C", },
 	{ cmd = cmd_base._d      , bs = false, name = "立D", },
 	{ cmd = cmd_base._ab     , bs = false, name = "避け攻撃", },
-	{ cmd = cmd_base._6c     , bs = false, name = "投げ", },
+	{ cmd = cmd_base._6c     , bs = false, name = "投げ", throw = true, },
 	{ cmd = cmd_base._2a     , bs = false, name = "下A", },
 	{ cmd = cmd_base._2b     , bs = false, name = "下B", },
 	{ cmd = cmd_base._2c     , bs = false, name = "下C", },
@@ -1503,9 +1503,9 @@ local char_rvs_list = {
 		{ id = 0x04, ver = 0x06FE, bs = false, name = "裏雲隠し", },
 		{ id = 0x05, ver = 0x0600, bs = false, name = "下段当て身打ち", },
 		{ id = 0x06, ver = 0x0600, bs = false, name = "雷鳴豪波投げ", },
-		{ id = 0x07, ver = 0x06FD, bs = false, name = "真空投げ", },
+		{ id = 0x07, ver = 0x06FD, bs = false, name = "真空投げ", throw = true, },
 		{ id = 0x10, ver = 0x0600, bs = false, name = "レイジングストーム", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "羅生門", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "羅生門", throw = true, },
 		{ id = 0x13, ver = 0x0600, bs = true , name = "デッドリーレイブ", },
 		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 烈風拳", },
 		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント レイジングストーム", },
@@ -1516,7 +1516,7 @@ local char_rvs_list = {
 		{ id = 0x01, ver = 0x0600, bs = true , name = "野猿狩り", },
 		{ id = 0x02, ver = 0x0600, bs = true , name = "まきびし", },
 		{ id = 0x03, ver = 0x0600, bs = true , name = "憑依弾", },
-		{ id = 0x04, ver = 0x06FE, bs = false, name = "鬼門陣", },
+		{ id = 0x04, ver = 0x06FE, bs = false, name = "鬼門陣", throw = true, },
 		{ id = 0x05, ver = 0x0CFF, bs = false, name = "邪棍舞", },
 		{ id = 0x06, ver = 0x0600, bs = true , name = "喝", },
 		{ id = 0x07, ver = 0x0600, bs = false, name = "渦炎陣", },
@@ -1603,10 +1603,10 @@ local char_rvs_list = {
 		{ id = 0x05, ver = 0x0600, bs = false, name = "ヤキ入れ", },
 		{ id = 0x06, ver = 0x0600, bs = false, name = "倍返し", },
 		{ id = 0x07, ver = 0x0600, bs = true , name = "裁きの匕首", },
-		{ id = 0x08, ver = 0x0600, bs = false, name = "爆弾パチキ", },
+		{ id = 0x08, ver = 0x0600, bs = false, name = "爆弾パチキ", throw = true, },
 		{ id = 0x09, ver = 0x0C00, bs = false, name = "トドメ", },
 		{ id = 0x10, ver = 0x0600, bs = false, name = "ギロチン", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "ドリル", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "ドリル", throw = true, },
 		-- { id = 0x00, ver = 0x06FE, bs = false, name = "ドリル Lv.5", },
 		-- { id = 0x00, ver = 0x06FF, bs = false, name = "?", },
 		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 裁きの匕首", },
@@ -1667,7 +1667,7 @@ local char_rvs_list = {
 		{ id = 0x09, ver = 0x0600, bs = false, name = "ダンシングキャリバー", },
 		{ id = 0x0A, ver = 0x0600, bs = false, name = "ローリングパニッシャー", },
 		{ id = 0x0C, ver = 0x0600, bs = false, name = "ブレイクハリケーン", },
-		{ id = 0x10, ver = 0x0600, bs = false, name = "ブレイクスパイラル", },
+		{ id = 0x10, ver = 0x0600, bs = false, name = "ブレイクスパイラル", throw = true, },
 		--{ id = 0x11, ver = 0x06FA, bs = false, name = "ブレイクスパイラルBR", },
 		{ id = 0x12, ver = 0x0600, bs = false, name = "ダックダンス", },
 		--{ id = 0x00, ver = 0x06F8, bs = false, name = "ダックダンス継続", },
@@ -1754,13 +1754,13 @@ local char_rvs_list = {
 		{ id = 0x01, ver = 0x0600, bs = false, name = "ブリッツボール・上段", },
 		{ id = 0x02, ver = 0x06FF, bs = false, name = "ブリッツボール・下段", },
 		{ id = 0x03, ver = 0x0600, bs = true , name = "レッグトマホーク", },
-		{ id = 0x04, ver = 0x0600, bs = false, name = "フェニックススルー", },
-		{ id = 0x05, ver = 0x0600, bs = false, name = "デンジャラススルー", },
+		{ id = 0x04, ver = 0x0600, bs = false, name = "フェニックススルー", throw = true, },
+		{ id = 0x05, ver = 0x0600, bs = false, name = "デンジャラススルー", throw = true, },
 		-- { id = 0x00, ver = 0x06FD, bs = false, name = "グリフォンアッパー", },
 		{ id = 0x06, ver = 0x06FC, bs = false, name = "カイザークロー", },
 		{ id = 0x07, ver = 0x0600, bs = false, name = "リフトアップブロー", },
 		{ id = 0x10, ver = 0x0600, bs = true , name = "カイザーウェイブ", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "ギガティックサイクロン", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "ギガティックサイクロン", throw = true, },
 		{ id = 0x13, ver = 0x0600, bs = false, name = "アンリミテッドデザイア", },
 		-- { id = 0x00, ver = 0x06FE, bs = false, name = "アンリミテッドデザイア2", },
 		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ブリッツボール", },
@@ -1799,7 +1799,7 @@ local char_rvs_list = {
 		{ id = 0x10, ver = 0x0600, bs = true , name = "大鉄神", },
 		{ id = 0x11, ver = 0x06FD, bs = false, name = "超白龍", },
 		-- { id = 0x00, ver = 0x06FD, bs = false, name = "超白龍2", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "真心牙", },
+		{ id = 0x12, ver = 0x0600, bs = false, name = "真心牙", throw = true, },
 		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント 天崩山", },
 		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 大鉄神", },
 	},
@@ -2517,12 +2517,14 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 		reach_memo1 = get_reach(fb_pos_x, fb_pos_y)
 	end
 
-	if atk then
+	if global.disp_hitbox == 1 or (global.disp_hitbox == 3 and atk) or (global.disp_hitbox == 4 and not atk) then
 		if p.reach_tbl[reach_memo1] ~= true then
 			p.reach_tbl[reach_memo1] = true
 			p.reach_memo = p.reach_memo .. "," .. reach_memo1
 		end
+	end
 
+	if atk then
 		local memo = ""
 		memo = memo .. " nml=" .. (hit_box_procs.normal_hit(box.id) or "-")
 		memo = memo .. " dwn=" .. (hit_box_procs.down_hit(box.id) or "-")
@@ -3123,6 +3125,8 @@ function rbff2.startplugin()
 			players[p].bases[i] = { count = 0, addr = 0x0, act_data = nil, name = "", pos1 = 0, pos2 = 0, xmov = 0, }
 		end
 	end
+	players[1].op = players[2]
+	players[2].op = players[1]
 	-- 飛び道具領域の作成
 	for i, p in ipairs(players) do
 		for base, _ in pairs(p.fireball_bases) do
@@ -3590,6 +3594,13 @@ function rbff2.startplugin()
 				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g"))
 
 			-- bp 3B5CE,1,{maincpu.pb@1007B5=0;g} -- 2P 飛び道具の強さ0に
+
+			--[[
+			-- 1P ダッシュとバックステップを抑止する
+			table.insert(bps, cpu.debug:bpset(0x026216, "(A4)==$100400", "PC=$02622A;g"))
+			-- 2P ダッシュとバックステップを抑止する
+			table.insert(bps, cpu.debug:bpset(0x026216, "(A4)==$100500", "PC=$02622A;g"))
+			]]
 		end
 	end
 
@@ -5433,8 +5444,8 @@ function rbff2.startplugin()
 				col, line = 0x44FFFFFF, 0xDDFFFFFF
 			end
 
-			local reach_memo = p.attacking and p.reach_memo or ""
-			local act_count  = p.attacking and p.act_count  or 0
+			local reach_memo = p.reach_memo or ""
+			local act_count  = p.act_count  or 0
 			local max_hit_dn = p.attacking and p.hit.max_hit_dn or 0
 
 			-- 行動が変わったかのフラグ
@@ -5952,6 +5963,15 @@ function rbff2.startplugin()
 					p.write_bs_hook(p.dummy_bs)
 				end
 				local input_rvs = function(rvs_type)
+					if p.dummy_rvs.throw then
+						if op.in_air then
+							return
+						end
+						if p.dummy_rvs.cmd and p.throw.in_range and op.sway_status == 0x00 then
+						else
+							return
+						end
+					end
 					if p.dummy_rvs.cmd then
 						if rvs_types.knock_back_recovery ~= rvs_type then
 							p.dummy_rvs.cmd(p, next_joy)
@@ -6248,7 +6268,7 @@ function rbff2.startplugin()
 		-- メイン処理
 		if match_active then
 			-- 判定表示（キャラ、飛び道具）
-			if global.disp_hitbox then
+			if global.disp_hitbox > 1 then
 				for _, p in ipairs(players) do
 					for _, box in ipairs(p.hitboxes) do
 						if box.flat_throw then
@@ -6498,7 +6518,7 @@ function rbff2.startplugin()
 					end
 				end
 				-- 座標表示
-				if global.disp_hitbox then
+				if global.disp_hitbox > 1 then
 					if p.in_air ~= true and p.sway_status == 0x00 then
 						local color = (p.throw.in_range and op.sway_status == 0x00) and 0xFFFFFF00 or 0xFFBBBBBB
 						scr:draw_line(p.throw.x1, p.hit.pos_y  , p.throw.x2, p.hit.pos_y  , color)
@@ -6908,7 +6928,7 @@ function rbff2.startplugin()
 		local p   = players
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		--                              1                                 1
-		global.disp_hitbox       = col[ 2] == 2 -- 判定表示               2
+		global.disp_hitbox       = col[ 2]      -- 判定表示               2
 		global.pause_hit         = col[ 3] == 2 -- ヒット時にポーズ       3
 		global.pausethrow        = col[ 4] == 2 -- 投げ判定発生時にポーズ 4
 		p[1].disp_dmg            = col[ 5] == 2 -- 1P ダメージ表示        5
@@ -7091,7 +7111,7 @@ function rbff2.startplugin()
 		local p = players
 		local g = global
 		--   1                                                       1
-		col[ 2] = g.disp_hitbox and 2 or 1 -- 判定表示               2
+		col[ 2] = g.disp_hitbox            -- 判定表示               2
 		col[ 3] = g.pause_hit   and 2 or 1 -- ヒット時にポーズ       3
 		col[ 4] = g.pausethrow  and 2 or 1 -- 投げ判定発生時にポーズ 4
 		col[ 5] = p[1].disp_dmg and 2 or 1 -- 1P ダメージ表示        5
@@ -7492,7 +7512,7 @@ function rbff2.startplugin()
 	ex_menu = {
 		list = {
 			{ "                          一般設定" },
-			{ "判定表示"              , { "OFF", "ON" }, },
+			{ "判定表示"              , { "OFF", "ON", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
 			{ "ヒット時にポーズ"      , { "OFF", "ON" }, },
 			{ "投げ判定発生時にポーズ", { "OFF", "ON" }, },
 			{ "1P ダメージ表示"       , { "OFF", "ON" }, },
@@ -7520,7 +7540,7 @@ function rbff2.startplugin()
 			row = 2,
 			col = {
 				0, -- －一般設定－            1
-				1, -- 判定表示                2
+				3, -- 判定表示                2
 				1, -- ヒット時にポーズ        3
 				1, -- 投げ判定ポーズ          4
 				1, -- 1P ダメージ表示         5
