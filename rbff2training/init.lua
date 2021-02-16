@@ -515,7 +515,7 @@ local char_acts_base = {
 		{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x245, }, },
 		{ disp_name = "CA _6C", name = "CA 6C(3段目)", type = act_types.attack, ids = { 0x247, }, },
 		{ disp_name = "CA _8C", name = "CA 8C(3段目)", type = act_types.overhead, ids = { 0x24A, 0x24B, 0x24C, }, },
-		{ disp_name = "CA 下C", name = "CA CA 下B(2段目)3Aルート", type = act_types.attack, ids = { 0x249, }, },
+		{ disp_name = "CA 下B", name = "CA CA 下B(2段目)3Aルート", type = act_types.attack, ids = { 0x249, }, },
 		{ disp_name = "CA 下C", name = "CA CA 下C(3段目)3Aルート", type = act_types.low_attack, ids = { 0x248, }, },
 	},
 	-- ホンフゥ
@@ -2788,6 +2788,7 @@ function rbff2.startplugin()
 			last_stun        = 0,
 			last_st_timer    = 0,
 			last_normal_state = true,
+			last_effects     = {},
 			life             = 0,           -- いまの体力
 			max_combo        = 0,           -- 最大コンボ数
 			max_dmg          = 0,
@@ -3987,7 +3988,7 @@ function rbff2.startplugin()
 				-- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
 				if global.replay_reset == 2 or (global.replay_reset == 3 and i == 3) or (global.replay_reset == 4 and i == 4) then
 					pgm:write_u8( p.addr.sway_status, 0x00) --fixpos.fixsway[i])
-					--pgm:write_u32(p.addr.base, 0x000261A0) -- 巣立ち処理
+					--pgm:write_u32(p.addr.base, 0x000261A0) -- 素立ち処理
 					pgm:write_u32(p.addr.base, 0x00058D5A) -- やられからの復帰処理
 
 					pgm:write_u8( p.addr.base + 0xC0, 0x80)
@@ -4689,6 +4690,7 @@ function rbff2.startplugin()
 			p.last_pure_dmg  = p.last_pure_dmg or 0
 			p.last_stun      = p.last_stun or 0
 			p.last_st_timer  = p.last_st_timer or 0
+			p.last_effects   = p.last_effects or {}
 			p.dmg_scl7       = pgm:read_u8(p.addr.dmg_scl7)
 			p.dmg_scl6       = pgm:read_u8(p.addr.dmg_scl6)
 			p.dmg_scl5       = pgm:read_u8(p.addr.dmg_scl5)
@@ -5895,32 +5897,39 @@ function rbff2.startplugin()
 						-- ダウン起き上がりリバーサル入力
 						if wakeup_acts[p.act] and (p.on_wakeup+wakeup_frms[p.char] - 2) <= global.frame_number then
 							input_rvs(rvs_types.on_wakeup)
+							-- print("ダウン起き上がりリバーサル入力")
 						end
 						-- 着地リバーサル入力（やられの着地）
 						if 1 < p.pos_y_down and p.old_pos_y > p.pos_y and p.in_air ~= true then
 							input_rvs(rvs_types.knock_back_landing)
+							-- print("着地リバーサル入力（やられの着地）")
 						end
 						-- 着地リバーサル入力（通常ジャンプの着地）
 						if p.act == 0x9 and (p.act_frame == 2 or p.act_frame == 0) then
 							input_rvs(rvs_types.jump_landing)
+							-- print("着地リバーサル入力（通常ジャンプの着地）")
 						end
 						-- リバーサルじゃない最速入力
-						if p.state == 0 and p.act_data.name ~= "やられ" and p.old_act_data.name == "やられ" then
+						if p.state == 0 and p.act_data.name ~= "やられ" and p.old_act_data.name == "やられ" and p.knock_back1 == 0 then
 							input_rvs(rvs_types.knock_back_recovery)
+							-- print("リバーサルじゃない最速入力")
 						end
 						-- のけぞりのリバーサル入力
 						if (p.state == 1 or p.state == 2) and p.stop == 0 then
-							-- のけぞり中のデータをみてのけぞり修了の_2F前に入力確定する
+							-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する
 							if p.knock_back3 == 0x80 and p.knock_back1 == 0 then
 								input_rvs(rvs_types.in_knock_back)
+								-- print("のけぞり中のデータをみてのけぞり終了の2F前に入力確定する")
 							end
 							-- デンジャラススルー用
-							if p.knock_back3 == 0x0 and p.stop < 3 then
+							if p.knock_back3 == 0x0 and p.stop < 3 and p.base == 0x34538 then
 								input_rvs(rvs_types.dangerous_through)
+								-- print("デンジャラススルー用")
 							end
 						elseif p.state == 3 and p.stop == 0 and p.knock_back2 <= 1 then
 							-- 当身うち空振りと裏雲隠し用
 							input_rvs(rvs_types.atemi)
+							-- print("当身うち空振りと裏雲隠し用")
 						end
 						--print(string.format("%s %s -> %s %s %s", i, p.old_pos_y, p.pos_y, p.pos_y_down, p.pos_y_peek))
 					elseif p.on_down == global.frame_number then
@@ -6251,12 +6260,29 @@ function rbff2.startplugin()
 					draw_rtext(   p1 and 296 or 77, 62, string.format("%s(+%s)", op.last_combo_stun, op.last_stun))
 					draw_rtext(   p1 and 296 or 77, 69, string.format("%s(+%s)", op.last_combo_st_timer, op.last_st_timer))
 					draw_rtext(   p1 and 296 or 77, 76, string.format("%s(+%s)", op.last_combo_pow, op.last_pow))
-					scr:draw_text(p1 and 299 or 80, 41, "最大")
+					scr:draw_text(p1 and 301 or 82, 41, "最大")
 					draw_rtext(   p1 and 311 or 92, 48, op.max_dmg)
 					draw_rtext(   p1 and 311 or 92, 55, op.max_combo)
 					draw_rtext(   p1 and 311 or 92, 62, op.max_disp_stun)
 					draw_rtext(   p1 and 311 or 92, 69, op.max_st_timer)
 					draw_rtext(   p1 and 311 or 92, 76, op.max_combo_pow)
+
+					-- TODO 実験的
+					local bi = 1
+					for _, box in ipairs(p.hitboxes) do
+						if box.hitstun then
+							draw_rtext(   p1 and 296 or 77, 76+bi*7, string.format("%2s/%2s/%2s", box.hitstun, box.blockstun, box.effect))
+							bi = bi + 1
+						end
+					end
+					for _, fb in pairs(p.fireball) do
+						for _, box in ipairs(fb.hitboxes) do
+							if box.hitstun then
+								draw_rtext(   p1 and 296 or 77, 76+bi*7, string.format("%2s/%2s/%2s", box.hitstun, box.blockstun, box.effect))
+								bi = bi + 1
+							end
+						end
+					end
 				end
 
 				if p.disp_sts then
