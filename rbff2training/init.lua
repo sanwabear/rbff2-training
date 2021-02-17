@@ -2865,6 +2865,9 @@ function rbff2.startplugin()
 			knock_back1      = 0, -- のけぞり確認用1(色々)
 			knock_back2      = 0, -- のけぞり確認用2(裏雲隠し)
 			knock_back3      = 0, -- のけぞり確認用3(フェニックススルー)
+			old_knock_back1  = 0, -- のけぞり確認用1(色々)
+			old_knock_back2  = 0, -- のけぞり確認用2(裏雲隠し)
+			old_knock_back3  = 0, -- のけぞり確認用3(フェニックススルー)
 			fake_hit         = false,
 			obsl_hit         = false, -- 嘘判定チェック用
 			full_hit         = false, -- 判定チェック用1
@@ -4721,6 +4724,9 @@ function rbff2.startplugin()
 			p.provoke        = 0x0196 == p.act --挑発中
 			p.stop           = pgm:read_u8(p.addr.stop)
 			p.gd_strength    = get_gd_strength(p)
+			p.old_knock_back1= p.knock_back1
+			p.old_knock_back2= p.knock_back2
+			p.old_knock_back3= p.knock_back3
 			p.knock_back1    = pgm:read_u8(p.addr.knock_back1)
 			p.knock_back2    = pgm:read_u8(p.addr.knock_back2)
 			p.knock_back3    = pgm:read_u8(p.addr.knock_back3)
@@ -6011,7 +6017,10 @@ function rbff2.startplugin()
 							-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する
 							if p.knock_back3 == 0x80 and p.knock_back1 == 0 then
 								input_rvs(rvs_types.in_knock_back)
-								-- print("のけぞり中のデータをみてのけぞり終了の2F前に入力確定する")
+								-- print("のけぞり中のデータをみてのけぞり終了の2F前に入力確定する1")
+							elseif p.old_knock_back1 > 0 and p.knock_back1 == 0 then
+								input_rvs(rvs_types.in_knock_back)
+								-- print("のけぞり中のデータをみてのけぞり終了の2F前に入力確定する2")
 							end
 							-- デンジャラススルー用
 							if p.knock_back3 == 0x0 and p.stop < 3 and p.base == 0x34538 then
@@ -6023,7 +6032,7 @@ function rbff2.startplugin()
 							input_rvs(rvs_types.atemi)
 							-- print("当身うち空振りと裏雲隠し用")
 						end
-						--print(string.format("%s %s -> %s %s %s", i, p.old_pos_y, p.pos_y, p.pos_y_down, p.pos_y_peek))
+						--print(p.state, p.knock_back1, p.knock_back2, p.knock_back3, p.stop)
 					elseif p.on_down == global.frame_number then
 						if p.dummy_wakeup == wakeup_type.tech then
 							-- テクニカルライズ入力
@@ -6560,7 +6569,7 @@ function rbff2.startplugin()
 					--フレーム差表示
 					--scr:draw_box(p1 and (138 - 90)           or 180, 41, p1 and 140 or (182 + 90)          , 41+5, 0, 0xDDC0C0C0) -- 枠
 					--scr:draw_box(p1 and (139 - 90)           or 181, 42, p1 and 139 or (181 + 90)          , 42+3, 0, 0xDD000000) -- 黒背景
-					scr:draw_box(p1 and (139 - p.last_blockstun) or 181, 41, p1 and 139 or (181 + p.last_blockstun), 41+5, 0, 0xDDFF007F)
+					scr:draw_box(p1 and (139 - p.last_blockstun) or 181, 41, p1 and 139 or (181 + p.last_blockstun), 41+5, 0, p.skip_frame and 0xDDC0C0C0 or 0xDDFF007F)
 					draw_rtext(p1 and 135.5 or 190.5, 40.5,  p.last_blockstun, shadow_col)
 					draw_rtext(p1 and 135   or 190  , 40  ,  p.last_blockstun)
 
