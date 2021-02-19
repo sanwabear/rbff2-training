@@ -2816,6 +2816,7 @@ function rbff2.startplugin()
 			pos_frc          = 0,           -- X位置少数部
 			old_posd         = 0,           -- X位置
 			posd             = 0,           -- X位置
+			poslr            = "L",         -- 右側か左側か
 			max_pos          = 0,           -- X位置最大
 			min_pos          = 0,           -- X位置最小
 			pos_y            = 0,           -- Y位置
@@ -2873,6 +2874,7 @@ function rbff2.startplugin()
 			full_hit         = false, -- 判定チェック用1
 			harmless2        = false, -- 判定チェック用2 飛び道具専用
 			prj_rank         = 0,           -- 飛び道具の強さ
+			esaka_range      = 0,           -- 詠酒の間合いチェック用
 
 			key_now          = {},          -- 前フレームまでの個別キー入力フレーム
 			key_pre          = {},          -- 個別キー入力フレーム
@@ -3079,6 +3081,7 @@ function rbff2.startplugin()
 				knock_back2  = p1 and 0x100416 or 0x100516, -- のけぞり確認用2(裏雲隠し)
 				knock_back3  = p1 and 0x10047E or 0x10057E, -- のけぞり確認用3(フェニックススルー)
 				prj_rank     = p1 and 0x1004B5 or 0x1005B5, -- 飛び道具の強さ
+				esaka_range  = p1 and 0x1004B6 or 0x1005B6, -- 詠酒の間合いチェック用
 
 				no_hit       = p1 and 0x10DDF2 or 0x10DDF1, -- ヒットしないフック
 
@@ -4704,7 +4707,7 @@ function rbff2.startplugin()
 			p.tw_accepted    = pgm:read_u8(p.addr.tw_accepted)
 			p.tw_frame       = pgm:read_u8(p.addr.tw_frame)
 			p.tw_muteki      = pgm:read_u8(p.addr.tw_muteki)
-			-- 通常投げ無敵 その2(HOME 039FC6から03A000の処理を再現して投げ無敵の値を求める)
+			-- 通常投げ無��� その2(HOME 039FC6から03A000の処理を再現して投げ無敵の値を求める)
 			p.tw_muteki2     = 0
 			if 0x70 <= p.attack then
 				local d1 = pgm:read_u16(p.addr.base + 0x10)
@@ -4752,6 +4755,16 @@ function rbff2.startplugin()
 			p.full_hit       = pgm:read_u8(p.addr.full_hit) > 0
 			p.harmless2      = pgm:read_u8(p.addr.harmless2) == 0
 			p.prj_rank       = pgm:read_u8(p.addr.prj_rank)
+			p.esaka_range    = -1
+			if 0x58 > p.attack then
+				-- 家庭用 0236F0 からの処理
+				local d1 = pgm:read_u8(p.addr.esaka_range)
+				local d0 = pgm:read_u16(pgm:read_u32(p.char_4times + 0x23750) + ((d1 + d1) & 0xFFFF)) & 0x1FFF
+				if d0 ~= 0 then
+					p.esaka_range = d0
+					-- print("esaka_range: " .. p.esaka_range)
+				end
+			end
 			p.max_hit_dn     = p.attack > 0 and pgm:read_u8(pgm:read_u32(fix_bp_addr(0x827B8) + p.char_4times) + p.attack) or 0
 			p.max_hit_nm     = pgm:read_u8(p.addr.max_hit_nm)
 			p.last_dmg       = p.last_dmg or 0
@@ -4783,6 +4796,7 @@ function rbff2.startplugin()
 			end
 			p.old_posd       = p.posd
 			p.posd           = pgm:read_i32(p.addr.pos)
+			p.poslr          = p.posd == op.posd and "=" or p.posd < op.posd  and "L" or "R"
 			p.old_pos        = p.pos
 			p.old_pos_frc    = p.pos_frc
 			p.pos            = pgm:read_i16(p.addr.pos)
@@ -6527,6 +6541,14 @@ function rbff2.startplugin()
 						scr:draw_text(x-1.5, p.hit.pos_y+global.axis_size    , string.format("%d", i), col)
 					end
 				end
+				local draw_esaka = function(x, col)
+					if x then
+						local y1, y2 = 0, 200+global.axis_size
+						scr:draw_line(x, y1, x, y2, col)
+						scr:draw_text(x-1  , y2+0.5, string.format("え%d", i), shadow_col)
+						scr:draw_text(x-1.5, y2    , string.format("え%d", i), col)
+					end
+				end
 				-- 座標表示
 				if global.disp_hitbox > 1 then
 					if p.in_air ~= true and p.sway_status == 0x00 then
@@ -6539,6 +6561,16 @@ function rbff2.startplugin()
 					draw_axis(p.hit.pos_x, p.in_air == true and global.axis_air_color or global.axis_color)
 					draw_axis(p.hit.max_pos_x, global.axis_internal_color)
 					draw_axis(p.hit.min_pos_x, global.axis_internal_color)
+
+					-- 詠酒範囲
+					if p.esaka_range > 0 then
+						if p.poslr ~= "R" then
+							draw_esaka(p.hit.pos_x + p.esaka_range, global.axis_internal_color)
+						end
+						if p.poslr ~= "L" then
+							draw_esaka(p.hit.pos_x - p.esaka_range, global.axis_internal_color)
+						end
+					end
 				end
 			end
 			-- コマンド入力とダメージとコンボ表示
@@ -6594,10 +6626,21 @@ function rbff2.startplugin()
 					local p1 = i == 1
 					local op = players[3-i]
 
+					-- 詠酒発動可能範囲
+					if p.esaka_range > 0 then
+						if p1 then
+							draw_rtext(   130.5, y+0.5, p.esaka_range, shadow_col)
+							draw_rtext(   130  , y    , p.esaka_range, global.axis_internal_color)
+						else
+							draw_rtext(   190.5, y+0.5, p.esaka_range, shadow_col)
+							draw_rtext(   190  , y    , p.esaka_range, global.axis_internal_color)
+						end
+					end
+
 					-- 1:右向き -1:左向き
 					local flip_x = p.hit.flip_x == 1 and ">" or "<"
 					local side   = p.side       == 1 and "(>)" or "(<)"
-					local postxt = p.posd == op.posd and "=" or p.posd < op.posd  and "L" or "R"
+					local postxt = p.poslr
 					if p1 then
 						local txt = string.format("%s%s%s", flip_x, side, postxt)
 						draw_rtext(   150.5, y+0.5, txt, shadow_col)
