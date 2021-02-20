@@ -50,6 +50,7 @@ local mem_0x10CDD0          = 0x10CDD0 -- プレイヤー選択のハック用
 local p_space               = 0      -- 1Pと2Pの間隔
 local prev_p_space          = 0      -- 1Pと2Pの間隔(前フレーム)
 local stage_base_addr       = 0x100E00
+local close_far_offset      = 0x02AE08 -- 近距離技と遠距離技判断用のデータの開始位置
 local offset_pos_x          = 0x20
 local offset_pos_z          = 0x24
 local offset_pos_y          = 0x28
@@ -76,6 +77,7 @@ local global = {
 	axis_air_color  = 0xFFFF00FF,
 	axis_internal_color = 0xFF00FFFF,
 	axis_size       = 12,
+	axis_size2      = 5,
 	no_alpha        = true, --fill = 0x00, outline = 0xFF for all box types
 	throwbox_height = 200, --default for ground throws
 	no_background   = false,
@@ -98,6 +100,8 @@ local global = {
 		drill       = 5,     -- ドリル                  7
 		pairon      = 1,     -- 超白龍                  8
 		real_counter= 1,     -- M.リアルカウンター      9
+		-- 入力設定
+		esaka_check = false, -- 詠酒距離チェック       11
 	},
 
 	frzc            = 1,
@@ -124,6 +128,7 @@ local global = {
 		atklog       = false, -- 攻撃情報ログ
 		baselog      = false, -- フレーム事の処理アドレスログ
 		keylog       = false, -- 入力ログ
+		rvslog       = true , -- リバサログ
 	},
 }
 local damaged_moves = {
@@ -2510,12 +2515,31 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 			top_reach    + pos_y,               -- 地面からの上のリーチ
 			bottom_reach + pos_y                -- 地面からの下のリーチ
 		)
-		return reach_memo1, reach_memo
+		local reach_data = {
+			front    = math.floor(front_reach),             -- キャラ本体座標からの前のリーチ
+			back     = math.floor(back_reach),              -- キャラ本体座標からの後のリーチ
+			top      = math.floor(top_reach),               -- キャラ本体座標からの上のリーチ
+			bottom   = math.floor(bottom_reach),            -- キャラ本体座標からの下のリーチ
+			top_g    = math.floor(top_reach    + pos_y),    -- 地面からの上のリーチ
+			bottom_g = math.floor(bottom_reach + pos_y),    -- 地面からの下のリーチ
+		}
+		return reach_memo1, reach_memo, reach_data
 	end
-	local reach_memo1, reach_memo = get_reach(pos_x, pos_y)
+	local reach_memo1, reach_memo, reach_data = get_reach(pos_x, pos_y)
+	box.reach = reach_data
 	if is_fireball then
 		reach_memo1 = get_reach(fb_pos_x, fb_pos_y)
 	end
+
+	p.hit.reach_edge = p.hit.reach_edge or {}
+	local reach_edge = p.hit.reach_edge[box.type.type] or {}
+	p.hit.reach_edge[box.type.type] = reach_edge
+	reach_edge.front    = math.max(box.reach.front   , reach_edge.front    or 0)
+	reach_edge.back     = math.min(box.reach.back    , reach_edge.back     or 0)
+	reach_edge.top      = math.max(box.reach.top     , reach_edge.top      or 0)
+	reach_edge.bottom   = math.min(box.reach.bottom  , reach_edge.bottom   or 0)
+	reach_edge.top_g    = math.max(box.reach.top_g   , reach_edge.top_g    or 0)
+	reach_edge.bottom_g = math.min(box.reach.bottom_g, reach_edge.bottom_g or 0)
 
 	-- 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
 	if global.disp_hitbox == 3 or (global.disp_hitbox == 4 and atk) or (global.disp_hitbox == 5 and not atk) then
@@ -2805,6 +2829,12 @@ function rbff2.startplugin()
 			last_combo_st_timer = 0,
 			old_state        = 0,           -- 前フレームのやられ状態
 			char             = 0,
+			close_far        = {
+				a = 0,
+				b = 0,
+				c = 0,
+				--d = 0,
+			},
 			act              = 0,
 			acta             = 0,
 			attack           = 0,           -- 攻撃中のみ変化
@@ -2874,7 +2904,7 @@ function rbff2.startplugin()
 			full_hit         = false, -- 判定チェック用1
 			harmless2        = false, -- 判定チェック用2 飛び道具専用
 			prj_rank         = 0,           -- 飛び道具の強さ
-			esaka_range      = 0,           -- 詠酒の間合いチェック用
+			esaka_range      = nil,           -- 詠酒の間合いチェック用
 
 			key_now          = {},          -- 前フレームまでの個別キー入力フレーム
 			key_pre          = {},          -- 個別キー入力フレーム
@@ -2936,6 +2966,7 @@ function rbff2.startplugin()
 				vulnerable1  = 0,
 				vulnerable21 = 0,
 				vulnerable22 = 0,           -- 0の時vulnerable=true
+				reach_edge   = {},
 			},
 
 			throw            = {
@@ -3334,6 +3365,50 @@ function rbff2.startplugin()
 	end
 	--
 
+	-- ダッシュとバックステップを抑止する
+	local set_step = function(p, enabled)
+		local cpu = manager.machine.devices[":maincpu"]
+		if enabled then
+			if p.step_bp == nil then
+				p.step_bp = cpu.debug:bpset(0x026216, "(A4)==$" .. string.format("%x", p.addr.base), "PC=$02622A;g")
+			end
+			cpu.debug:bpenable(p.step_bp)
+		else
+			if p.step_bp then
+				cpu.debug:bpdisable(p.step_bp)
+			end
+		end
+	end
+
+	-- 地上通常技の近距離間合い
+	-- char 0=テリー
+	local get_close_far_pos = function(char)
+		local cpu = manager.machine.devices[":maincpu"]
+		local pgm = cpu.spaces["program"]
+		local char_close_far_offset = close_far_offset + (char * 4)
+		return {
+			a = pgm:read_u8(char_close_far_offset),
+			b = pgm:read_u8(char_close_far_offset + 1),
+			c = pgm:read_u8(char_close_far_offset + 2),
+			--d = pgm:read_u8(char_close_far_offset + 3),
+		}
+	end
+
+	-- 詠酒の距離チェックを飛ばす
+	local set_skip_esaka_check = function(p, enabled)
+		local cpu = manager.machine.devices[":maincpu"]
+		if enabled then
+			if p.skip_esaka_check == nil then
+				p.skip_esaka_check = cpu.debug:bpset(0x0236F2, "(A4)==$" .. string.format("%x", p.addr.base), "PC=2374C;g")
+			end
+			cpu.debug:bpenable(p.skip_esaka_check)
+		else
+			if p.skip_esaka_check then
+				cpu.debug:bpdisable(p.skip_esaka_check)
+			end
+		end
+	end
+
 	-- 当たり判定と投げ判定用のブレイクポイントとウォッチポイントのセット
 	local wps = {}
 	local set_wps = function(reset)
@@ -3601,13 +3676,6 @@ function rbff2.startplugin()
 				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g"))
 
 			-- bp 3B5CE,1,{maincpu.pb@1007B5=0;g} -- 2P 飛び道具の強さ0に
-
-			--[[
-			-- 1P ダッシュとバックステップを抑止する
-			table.insert(bps, cpu.debug:bpset(0x026216, "(A4)==$100400", "PC=$02622A;g"))
-			-- 2P ダッシュとバックステップを抑止する
-			table.insert(bps, cpu.debug:bpset(0x026216, "(A4)==$100500", "PC=$02622A;g"))
-			]]
 		end
 	end
 
@@ -4678,6 +4746,7 @@ function rbff2.startplugin()
 			p.char           = pgm:read_u8(p.addr.char)
 			p.char_4times    = 0xFFFF & (p.char + p.char)
 			p.char_4times    = 0xFFFF & (p.char_4times + p.char_4times)
+			p.close_far      = get_close_far_pos(p.char - 1)
 			p.life           = pgm:read_u8(p.addr.life)                 -- 今の体力
 			p.old_state      = p.state                                  -- 前フレームの状態保存
 			p.state          = pgm:read_u8(p.addr.state)                -- 今の状態
@@ -4755,14 +4824,13 @@ function rbff2.startplugin()
 			p.full_hit       = pgm:read_u8(p.addr.full_hit) > 0
 			p.harmless2      = pgm:read_u8(p.addr.harmless2) == 0
 			p.prj_rank       = pgm:read_u8(p.addr.prj_rank)
-			p.esaka_range    = -1
+			p.esaka_range    = nil
 			if 0x58 > p.attack then
 				-- 家庭用 0236F0 からの処理
 				local d1 = pgm:read_u8(p.addr.esaka_range)
 				local d0 = pgm:read_u16(pgm:read_u32(p.char_4times + 0x23750) + ((d1 + d1) & 0xFFFF)) & 0x1FFF
 				if d0 ~= 0 then
 					p.esaka_range = d0
-					-- print("esaka_range: " .. p.esaka_range)
 				end
 			end
 			p.max_hit_dn     = p.attack > 0 and pgm:read_u8(pgm:read_u32(fix_bp_addr(0x827B8) + p.char_4times) + p.attack) or 0
@@ -5062,6 +5130,9 @@ function rbff2.startplugin()
 			p.hit.vulnerable1  = pgm:read_u8(p.addr.vulnerable1)
 			p.hit.vulnerable21 = pgm:read_u8(p.addr.vulnerable21)
 			p.hit.vulnerable22 = pgm:read_u8(p.addr.vulnerable22) == 0 --0の時vulnerable=true
+
+			-- リーチ
+			p.hit.reach_edge   = {}
 
 			-- 投げ判定取得
 			get_n_throw(p, op)
@@ -5983,7 +6054,11 @@ function rbff2.startplugin()
 				local input_bs = function()
 					p.write_bs_hook(p.dummy_bs)
 				end
-				local input_rvs = function(rvs_type)
+				local input_rvs = function(rvs_type, logtxt)
+					if global.log.rvslog and logtxt then
+						print(logtxt)
+					end
+					-- set_step(p, true)
 					if p.dummy_rvs.throw then
 						if op.in_air then
 							return
@@ -6002,51 +6077,48 @@ function rbff2.startplugin()
 					end
 				end
 
+				-- print(p.state, p.knock_back1, p.knock_back2, p.knock_back3, p.stop, rvs_types.in_knock_back, p.last_blockstun, string.format("%x", p.act), p.act_count, p.act_frame)
 				-- ヒットストップ中は無視
 				if not p.skip_frame then
 					-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
 					if p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs then
 						-- ダウン起き上がりリバーサル入力
 						if wakeup_acts[p.act] and (p.on_wakeup+wakeup_frms[p.char] - 2) <= global.frame_number then
-							input_rvs(rvs_types.on_wakeup)
-							-- print("ダウン起き上がりリバーサル入力")
+							input_rvs(rvs_types.on_wakeup, "ダウン起き上がりリバーサル入力")
 						end
 						-- 着地リバーサル入力（やられの着地）
 						if 1 < p.pos_y_down and p.old_pos_y > p.pos_y and p.in_air ~= true then
-							input_rvs(rvs_types.knock_back_landing)
-							-- print("着地リバーサル入力（やられの着地）")
+							input_rvs(rvs_types.knock_back_landing, "着地リバーサル入力（やられの着地）")
 						end
 						-- 着地リバーサル入力（通常ジャンプの着地）
 						if p.act == 0x9 and (p.act_frame == 2 or p.act_frame == 0) then
-							input_rvs(rvs_types.jump_landing)
-							-- print("着地リバーサル入力（通常ジャンプの着地）")
+							input_rvs(rvs_types.jump_landing, "着地リバーサル入力（通常ジャンプの着地）")
 						end
 						-- リバーサルじゃない最速入力
 						if p.state == 0 and p.act_data.name ~= "やられ" and p.old_act_data.name == "やられ" and p.knock_back1 == 0 then
-							input_rvs(rvs_types.knock_back_recovery)
-							-- print("リバーサルじゃない最速入力")
+							input_rvs(rvs_types.knock_back_recovery, "リバーサルじゃない最速入力")
 						end
 						-- のけぞりのリバーサル入力
 						if (p.state == 1 or p.state == 2) and p.stop == 0 then
 							-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する
-							if p.knock_back3 == 0x80 and p.knock_back1 == 0 then
-								input_rvs(rvs_types.in_knock_back)
-								-- print("のけぞり中のデータをみてのけぞり終了の2F前に入力確定する1")
+							-- 奥ラインへ送った場合だけ無視する（p.act ~= 0x14A）
+							if p.knock_back3 == 0x80 and p.knock_back1 == 0 and p.act ~= 0x14A then
+								input_rvs(rvs_types.in_knock_back, "のけぞり中のデータをみてのけぞり終了の2F前に入力確定する1")
 							elseif p.old_knock_back1 > 0 and p.knock_back1 == 0 then
-								input_rvs(rvs_types.in_knock_back)
-								-- print("のけぞり中のデータをみてのけぞり終了の2F前に入力確定する2")
+								input_rvs(rvs_types.in_knock_back, "のけぞり中のデータをみてのけぞり終了の2F前に入力確定する2")
 							end
 							-- デンジャラススルー用
 							if p.knock_back3 == 0x0 and p.stop < 3 and p.base == 0x34538 then
-								input_rvs(rvs_types.dangerous_through)
-								-- print("デンジャラススルー用")
+								input_rvs(rvs_types.dangerous_through, "デンジャラススルー用")
 							end
 						elseif p.state == 3 and p.stop == 0 and p.knock_back2 <= 1 then
 							-- 当身うち空振りと裏雲隠し用
-							input_rvs(rvs_types.atemi)
-							-- print("当身うち空振りと裏雲隠し用")
+							input_rvs(rvs_types.atemi, "当身うち空振りと裏雲隠し用")
 						end
-						--print(p.state, p.knock_back1, p.knock_back2, p.knock_back3, p.stop)
+						-- 奥ラインへ送ったあとのリバサ
+						if p.act == 0x14A and p.act_count == 5  and p.act_frame == 0 and p.tw_frame == 1 then
+							input_rvs(rvs_types.in_knock_back, "奥ラインへ送ったあとのリバサ")
+						end
 					elseif p.on_down == global.frame_number then
 						if p.dummy_wakeup == wakeup_type.tech then
 							-- テクニカルライズ入力
@@ -6545,31 +6617,46 @@ function rbff2.startplugin()
 					if x then
 						local y1, y2 = 0, 200+global.axis_size
 						scr:draw_line(x, y1, x, y2, col)
-						scr:draw_text(x-1  , y2+0.5, string.format("え%d", i), shadow_col)
-						scr:draw_text(x-1.5, y2    , string.format("え%d", i), col)
+						scr:draw_text(x-2  , y2+0.5, string.format("え%d", i), shadow_col)
+						scr:draw_text(x-2.5, y2    , string.format("え%d", i), col)
+					end
+				end
+				local draw_close_far = function(btn, x, col)
+					if x and x > 0 then
+						scr:draw_line(x, p.hit.pos_y-global.axis_size2, x, p.hit.pos_y+global.axis_size2, col)
+						scr:draw_line(x-global.axis_size2, p.hit.pos_y, x+global.axis_size2, p.hit.pos_y, col)
+						scr:draw_text(x-2  , p.hit.pos_y+global.axis_size2+0.5, string.format("%s%d", btn, i), shadow_col)
+						scr:draw_text(x-2.5, p.hit.pos_y+global.axis_size2    , string.format("%s%d", btn, i), col)
 					end
 				end
 				-- 座標表示
 				if global.disp_hitbox > 1 then
 					if p.in_air ~= true and p.sway_status == 0x00 then
+						-- 通常投げ間合い
 						local color = (p.throw.in_range and op.sway_status == 0x00) and 0xFFFFFF00 or 0xFFBBBBBB
 						scr:draw_line(p.throw.x1, p.hit.pos_y  , p.throw.x2, p.hit.pos_y  , color)
 						scr:draw_line(p.throw.x1, p.hit.pos_y-4, p.throw.x1, p.hit.pos_y+4, color)
 						scr:draw_line(p.throw.x2, p.hit.pos_y-4, p.throw.x2, p.hit.pos_y+4, color)
+						scr:draw_text(p.throw.x1+2.5, p.hit.pos_y+4.5, string.format("投%d", i), shadow_col)
+						scr:draw_text(p.throw.x1+2.5, p.hit.pos_y+4  , string.format("投%d", i), color)
+
+						-- 地上通常技の遠近判断距離
+						for btn, range in pairs(p.close_far) do
+							local in_range = math.abs(p.pos - op.pos) <= range
+							color = (in_range and op.sway_status == 0x00) and 0xFFFFFF00 or 0xFFBBBBBB
+							draw_close_far(string.upper(btn), p.hit.pos_x + range * p.side, color)
+						end
 					end
 
+					-- 中心座標
 					draw_axis(p.hit.pos_x, p.in_air == true and global.axis_air_color or global.axis_color)
 					draw_axis(p.hit.max_pos_x, global.axis_internal_color)
 					draw_axis(p.hit.min_pos_x, global.axis_internal_color)
 
 					-- 詠酒範囲
-					if p.esaka_range > 0 then
-						if p.poslr ~= "R" then
-							draw_esaka(p.hit.pos_x + p.esaka_range, global.axis_internal_color)
-						end
-						if p.poslr ~= "L" then
-							draw_esaka(p.hit.pos_x - p.esaka_range, global.axis_internal_color)
-						end
+					if p.esaka_range then
+						draw_esaka(p.hit.pos_x + p.esaka_range, global.axis_internal_color)
+						draw_esaka(p.hit.pos_x - p.esaka_range, global.axis_internal_color)
 					end
 				end
 			end
@@ -6626,14 +6713,15 @@ function rbff2.startplugin()
 					local p1 = i == 1
 					local op = players[3-i]
 
-					-- 詠酒発動可能範囲
-					if p.esaka_range > 0 then
-						if p1 then
-							draw_rtext(   130.5, y+0.5, p.esaka_range, shadow_col)
-							draw_rtext(   130  , y    , p.esaka_range, global.axis_internal_color)
-						else
-							draw_rtext(   190.5, y+0.5, p.esaka_range, shadow_col)
-							draw_rtext(   190  , y    , p.esaka_range, global.axis_internal_color)
+					-- 詠酒発動可能範囲、最大リーチ、最大やられ
+					local atk_reach, vuln_reach = p.hit.reach_edge["attack"] or {}, p.hit.reach_edge["vuln"] or {}
+					local label = {"E:%3d","A:%3d","V:%3d",}
+					for j, v in ipairs({p.esaka_range, atk_reach.front, vuln_reach.front}) do
+						if v and v > 0 then
+							local x = (p1 and 140 or 180) + ((18 * j) * (p1 and - 1 or 1))
+							local txt = string.format(label[j], v)
+							draw_rtext(x+0.5, y+0.5, txt, shadow_col)
+							draw_rtext(x    , y    , txt, global.axis_internal_color)
 						end
 					end
 
@@ -7003,6 +7091,7 @@ function rbff2.startplugin()
 		global.log.atklog        = col[21] == 2 -- 攻撃情報ログ          21
 		global.log.baselog       = col[22] == 2 -- 処理アドレスログ      22
 		global.log.keylog        = col[23] == 2 -- 入力ログ              23
+		global.log.rvslog        = col[24] == 2 -- リバサログ            24
 
 		local dmove = damaged_moves[global.damaged_move]
 		if dmove and dmove > 0 then
@@ -7023,7 +7112,8 @@ function rbff2.startplugin()
 	local ex_menu_to_main_cancel = function()
 		ex_menu_to_main(true)
 	end
-	local auto_menu_to_main = function()
+	local auto_menu_to_main = function(cancel)
+		local p   = players
 		local col = auto_menu.pos.col
 		-- 自動入力設定                                                          1
 		global.auto_input.otg_thw      = col[ 2] == 2 -- ダウン投げ              2
@@ -7034,6 +7124,11 @@ function rbff2.startplugin()
 		global.auto_input.drill        = col[ 7]      -- ドリル                  7
 		global.auto_input.pairon       = col[ 8]      -- 超白龍                  8
 		global.auto_input.real_counter = col[ 9]      -- M.リアルカウンター      9
+		-- 入力設定                                                             10
+		global.auto_input.esaka_check  = col[11] == 2 -- 詠酒距離チェック       11
+
+		set_skip_esaka_check(p[1], global.auto_input.esaka_check)
+		set_skip_esaka_check(p[2], global.auto_input.esaka_check)
 
 		menu_cur = main_menu
 	end
@@ -7186,12 +7281,13 @@ function rbff2.startplugin()
 		col[21] = g.log.atklog  and 2 or 1 -- 攻撃情報ログ          21
 		col[22] = g.log.baselog and 2 or 1 -- 処理アドレスログ      22
 		col[23] = g.log.keylog  and 2 or 1 -- 入力ログ              23
+		col[24] = g.log.rvslog  and 2 or 1 -- リバサログ            24
 	end
 	local init_auto_menu_config = function()
 		local col = auto_menu.pos.col
 		local p = players
 		local g = global
-		-- 自動入力設定            1
+		                                          -- 自動入力設定            1
 		col[ 2] = g.auto_input.otg_thw and 2 or 1 -- ダウン投げ              2
 		col[ 3] = g.auto_input.otg_atk and 2 or 1 -- ダウン攻撃              3
 		col[ 4] = g.auto_input.thw_otg and 2 or 1 -- 通常投げの派生技        4
@@ -7200,6 +7296,8 @@ function rbff2.startplugin()
 		col[ 7] = g.auto_input.drill              -- ドリル                  7
 		col[ 8] = g.auto_input.pairon             -- 超白龍                  8
 		col[ 9] = g.auto_input.real_counter       -- M.リアルカウンター      9
+		                                          -- 入力設定               10
+		col[11] = g.auto_input.esaka_check        -- 詠酒距離チェック       11
 	end
 	local init_restart_fight = function()
 		local col = tra_menu.pos.col
@@ -7587,6 +7685,7 @@ function rbff2.startplugin()
 			{ "攻撃情報ログ"          , { "OFF", "ON" }, },
 			{ "処理アドレスログ"      , { "OFF", "ON" }, },
 			{ "入力ログ"              , { "OFF", "ON" }, },
+			{ "リバサログ"            , { "OFF", "ON" }, },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
@@ -7615,6 +7714,7 @@ function rbff2.startplugin()
 				1, -- 攻撃情報ログ           21
 				1, -- 処理アドレスログ       22
 				1, -- 入力ログ               23
+				1, -- リバサログ             24
 			},
 		},
 		on_a = {
@@ -7641,6 +7741,7 @@ function rbff2.startplugin()
 			ex_menu_to_main, -- 攻撃情報ログ
 			ex_menu_to_main, -- 処理アドレスログ
 			ex_menu_to_main, -- 入力ログ
+			ex_menu_to_main, -- リバサログ
 		},
 		on_b = {
 			ex_menu_to_main_cancel, -- －一般設定－
@@ -7666,6 +7767,7 @@ function rbff2.startplugin()
 			ex_menu_to_main_cancel, -- 攻撃情報ログ
 			ex_menu_to_main_cancel, -- 処理アドレスログ
 			ex_menu_to_main_cancel, -- 入力ログ
+			ex_menu_to_main_cancel, -- リバサログ
 		},
 	}
 
@@ -7680,6 +7782,8 @@ function rbff2.startplugin()
 			{ "ドリル"                , { 1, 2, 3, 4, 5 }, },
 			{ "超白龍"                , { "OFF", "C攻撃-判定発生前", "C攻撃-判定発生後" }, },
 			{ "M.リアルカウンター"    , { "OFF", "ジャーマン", "フェイスロック", "投げっぱなしジャーマン", "ランダム", }, },
+			{ "                          入力設定" },
+			{ "詠酒距離チェック"      , { "OFF", "ON" }, }
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
@@ -7694,6 +7798,8 @@ function rbff2.startplugin()
 				1, -- ドリル                  7
 				1, -- 超白龍                  8
 				1, -- M.リアルカウンター      9
+				0, -- 入力設定               10
+				1, -- 詠酒距離チェック       11
 			},
 		},
 		on_a = {
@@ -7706,6 +7812,8 @@ function rbff2.startplugin()
 			auto_menu_to_main, -- ドリル                  7
 			auto_menu_to_main, -- 超白龍                  8
 			auto_menu_to_main, -- M.リアルカウンター      9
+			auto_menu_to_main, -- 入力設定               10
+			auto_menu_to_main, -- 詠酒距離チェック       11
 		},
 		on_b = {
 			auto_menu_to_main_cancel, -- 自動入力設定            1
@@ -7717,6 +7825,8 @@ function rbff2.startplugin()
 			auto_menu_to_main_cancel, -- ドリル                  7
 			auto_menu_to_main_cancel, -- 超白龍                  8
 			auto_menu_to_main_cancel, -- リアルカウンター        9
+			auto_menu_to_main_cancel, -- 入力設定               10
+			auto_menu_to_main_cancel, -- 詠酒距離チェック       11
 		},
 	}
 
