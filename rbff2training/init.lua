@@ -51,6 +51,7 @@ local p_space               = 0      -- 1Pと2Pの間隔
 local prev_p_space          = 0      -- 1Pと2Pの間隔(前フレーム)
 local stage_base_addr       = 0x100E00
 local close_far_offset      = 0x02AE08 -- 近距離技と遠距離技判断用のデータの開始位置
+local close_far_offset_d    = 0x02DDAA -- 対ラインの近距離技と遠距離技判断用のデータの開始位置
 local offset_pos_x          = 0x20
 local offset_pos_z          = 0x24
 local offset_pos_y          = 0x28
@@ -2571,7 +2572,7 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 
 		-- ログ用
 		box.log_txt = string.format(
-			"hit %6x %3x %3x %2s %3s %2x %2x %2x %s %s %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s %2x "..memo,
+			"hit %6x %3x %3x %2s %3s %2x %2x %2x %s %s %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s %2x %3s "..memo,
 			p.addr.base,                        -- 1P:100400 2P:100500 1P弾:100600 2P弾:100700 1P弾:100800 2P弾:100900 1P弾:100A00 2P弾:100B00
 			p.act,                              --
 			p.acta,                             --
@@ -2600,7 +2601,8 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 			box.effect,                         -- ヒット効果 %2s
 			p.pure_st,                          -- スタン値 %2s
 			p.pure_st_tm,                       -- スタンタイマー %2s
-			p.prj_rank                          -- 飛び道具の強さ
+			p.prj_rank,                         -- 飛び道具の強さ
+			p.esaka_range or "-"                -- 詠酒範囲
 		)
 	elseif box.type.type_check == type_ck_gd then
 		box.log_txt = string.format("guard %6x %s %x", p.addr.base, reach_memo, box.id)
@@ -2833,7 +2835,7 @@ function rbff2.startplugin()
 				a = 0,
 				b = 0,
 				c = 0,
-				--d = 0,
+				d = 0,
 			},
 			act              = 0,
 			acta             = 0,
@@ -3380,17 +3382,21 @@ function rbff2.startplugin()
 		end
 	end
 
+	-- 対スウェーライン攻撃の近距離間合い
 	-- 地上通常技の近距離間合い
 	-- char 0=テリー
 	local get_close_far_pos = function(char)
+		char =  char - 1
 		local cpu = manager.machine.devices[":maincpu"]
 		local pgm = cpu.spaces["program"]
-		local char_close_far_offset = close_far_offset + (char * 4)
+		local abc_offset = close_far_offset + (char * 4)
+		-- 家庭用02DD02からの処理
+		local d_offset = close_far_offset_d + (char * 2)
 		return {
-			a = pgm:read_u8(char_close_far_offset),
-			b = pgm:read_u8(char_close_far_offset + 1),
-			c = pgm:read_u8(char_close_far_offset + 2),
-			--d = pgm:read_u8(char_close_far_offset + 3),
+			a = pgm:read_u8(abc_offset),
+			b = pgm:read_u8(abc_offset + 1),
+			c = pgm:read_u8(abc_offset + 2),
+			d = pgm:read_u16(d_offset),
 		}
 	end
 
@@ -4746,7 +4752,7 @@ function rbff2.startplugin()
 			p.char           = pgm:read_u8(p.addr.char)
 			p.char_4times    = 0xFFFF & (p.char + p.char)
 			p.char_4times    = 0xFFFF & (p.char_4times + p.char_4times)
-			p.close_far      = get_close_far_pos(p.char - 1)
+			p.close_far      = get_close_far_pos(p.char)
 			p.life           = pgm:read_u8(p.addr.life)                 -- 今の体力
 			p.old_state      = p.state                                  -- 前フレームの状態保存
 			p.state          = pgm:read_u8(p.addr.state)                -- 今の状態
@@ -6614,7 +6620,7 @@ function rbff2.startplugin()
 					end
 				end
 				local draw_esaka = function(x, col)
-					if x then
+					if x and 0 <= x then
 						local y1, y2 = 0, 200+global.axis_size
 						scr:draw_line(x, y1, x, y2, col)
 						scr:draw_text(x-2  , y2+0.5, string.format("え%d", i), shadow_col)
@@ -6625,8 +6631,13 @@ function rbff2.startplugin()
 					if x and x > 0 then
 						scr:draw_line(x, p.hit.pos_y-global.axis_size2, x, p.hit.pos_y+global.axis_size2, col)
 						scr:draw_line(x-global.axis_size2, p.hit.pos_y, x+global.axis_size2, p.hit.pos_y, col)
-						scr:draw_text(x-2  , p.hit.pos_y+global.axis_size2+0.5, string.format("%s%d", btn, i), shadow_col)
-						scr:draw_text(x-2.5, p.hit.pos_y+global.axis_size2    , string.format("%s%d", btn, i), col)
+						if btn then
+							scr:draw_text(x-2  , p.hit.pos_y+global.axis_size2+0.5, string.format("%s%d", btn, i), shadow_col)
+							scr:draw_text(x-2.5, p.hit.pos_y+global.axis_size2    , string.format("%s%d", btn, i), col)
+						else
+							scr:draw_text(x    , p.hit.pos_y+global.axis_size2+0.5, string.format("%d", i), shadow_col)
+							scr:draw_text(x-0.5, p.hit.pos_y+global.axis_size2    , string.format("%d", i), col)
+						end
 					end
 				end
 				-- 座標表示
@@ -6643,9 +6654,13 @@ function rbff2.startplugin()
 						-- 地上通常技の遠近判断距離
 						for btn, range in pairs(p.close_far) do
 							local in_range = math.abs(p.pos - op.pos) <= range
-							color = (in_range and op.sway_status == 0x00) and 0xFFFFFF00 or 0xFFBBBBBB
+							color = in_range and 0xFFFFFF00 or 0xFFBBBBBB
 							draw_close_far(string.upper(btn), p.hit.pos_x + range * p.side, color)
 						end
+					elseif p.sway_status ~= 0x00 then
+						local in_range = math.abs(p.pos - op.pos) <= 72
+						local color = in_range and 0xFFFFFF00 or 0xFFBBBBBB
+						draw_close_far(nil, p.hit.pos_x + 72 * p.side, color)
 					end
 
 					-- 中心座標
