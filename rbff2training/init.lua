@@ -2190,7 +2190,7 @@ end
 -- 16ビット値を0.999上限の数値に変える
 local int16tofloat = function(int16v)
 	if int16v and type(int16v) == "number" then
-		return math.floor(int16v / 0xFFFF * 999) / 1000
+		return int16v / 0x10000
 	end
 	return 0
 end
@@ -2832,10 +2832,16 @@ function rbff2.startplugin()
 			old_state        = 0,           -- 前フレームのやられ状態
 			char             = 0,
 			close_far        = {
-				a = 0,
-				b = 0,
-				c = 0,
-				d = 0,
+				a = { x1 = 0, x2 = 0 },
+				b = { x1 = 0, x2 = 0 },
+				c = { x1 = 0, x2 = 0 },
+				d = { x1 = 0, x2 = 0 },
+			},
+			close_far_lma    = {
+				["1"] = { x1 = 0, x2 = 0 },
+				["2"] = { x1 = 0, x2 = 0 },
+				["M"] = { x1 = 0, x2 = 0 },
+				["C"] = { x1 = 0, x2 = 0 },
 			},
 			act              = 0,
 			acta             = 0,
@@ -3393,11 +3399,41 @@ function rbff2.startplugin()
 		-- 家庭用02DD02からの処理
 		local d_offset = close_far_offset_d + (char * 2)
 		return {
-			a = pgm:read_u8(abc_offset),
-			b = pgm:read_u8(abc_offset + 1),
-			c = pgm:read_u8(abc_offset + 2),
-			d = pgm:read_u16(d_offset),
+			a = { x1 = 0, x2 = pgm:read_u8(abc_offset)     },
+			b = { x1 = 0, x2 = pgm:read_u8(abc_offset + 1) },
+			c = { x1 = 0, x2 = pgm:read_u8(abc_offset + 2) },
+			d = { x1 = 0, x2 = pgm:read_u16(d_offset)      },
 		}
+	end
+
+	local get_close_far_pos_line_move_attack = function(char, logging)
+		-- 家庭用2EC72,2EDEE,2E1FEからの処理
+		local cpu = manager.machine.devices[":maincpu"]
+		local pgm = cpu.spaces["program"]
+		local offset = 0x2EE06
+		local d1 = 0x2A000 -- 整数部上部4バイト、少数部下部4バイト
+		local decd1 = int16tofloat(d1)
+		local ret = {}
+		-- 0:近A 1:遠A 2:近B 3:遠B 4:近C 5:遠C
+		for i, act_name in ipairs({"近A", "遠A", "近B", "遠B", "近C", "遠C"}) do
+			local d0 = pgm:read_u8(pgm:read_u32(offset + (i-1) * 4) + char * 6)
+			-- データが近距離、遠距離の2種類しかないのと実質的に意味があるのが近距離のものなので最初のデータだけ返す
+			if i == 1 then
+				local intd1 = math.floor(decd1)
+				local x1, x2 = 0, 0
+				for d = 1, intd1 do
+					x2 = d * d0
+					ret["" .. d-1] = { x1 = x1, x2 = x2-1}
+					x1 = x2
+				end
+				ret["" .. intd1]  = { x1 = x1, x2 = math.floor(d0 * decd1) } -- 1Fあたりの最大移動量になる距離
+				ret["近"]  = { x1 =  0, x2 = 72         } -- 近距離攻撃になる距離
+			end
+			if logging then
+				print(string.format("%s %s %x %s %x %s",char_names[char], act_name, d0, d0, d1, decd1))
+			end
+		end
+		return ret
 	end
 
 	-- 詠酒の距離チェックを飛ばす
@@ -3682,6 +3718,11 @@ function rbff2.startplugin()
 				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g"))
 
 			-- bp 3B5CE,1,{maincpu.pb@1007B5=0;g} -- 2P 飛び道具の強さ0に
+
+			-- ライン移動攻撃の移動量のしきい値 調査用
+			table.insert(bps, cpu.debug:bpset(0x029768,
+				"1",
+				"printf \"CH=%D D0=%X D1=%X PREF_ADDR=%X\",maincpu.pw@((A4)+10), D0,D1,PREF_ADDR;g"))
 		end
 	end
 
@@ -4753,6 +4794,7 @@ function rbff2.startplugin()
 			p.char_4times    = 0xFFFF & (p.char + p.char)
 			p.char_4times    = 0xFFFF & (p.char_4times + p.char_4times)
 			p.close_far      = get_close_far_pos(p.char)
+			p.close_far_lma  = get_close_far_pos_line_move_attack(p.char)
 			p.life           = pgm:read_u8(p.addr.life)                 -- 今の体力
 			p.old_state      = p.state                                  -- 前フレームの状態保存
 			p.state          = pgm:read_u8(p.addr.state)                -- 今の状態
@@ -6627,17 +6669,18 @@ function rbff2.startplugin()
 						scr:draw_text(x-2.5, y2    , string.format("え%d", i), col)
 					end
 				end
-				local draw_close_far = function(btn, x, col)
-					if x and x > 0 then
-						scr:draw_line(x, p.hit.pos_y-global.axis_size2, x, p.hit.pos_y+global.axis_size2, col)
-						scr:draw_line(x-global.axis_size2, p.hit.pos_y, x+global.axis_size2, p.hit.pos_y, col)
-						if btn then
-							scr:draw_text(x-2  , p.hit.pos_y+global.axis_size2+0.5, string.format("%s%d", btn, i), shadow_col)
-							scr:draw_text(x-2.5, p.hit.pos_y+global.axis_size2    , string.format("%s%d", btn, i), col)
-						else
-							scr:draw_text(x    , p.hit.pos_y+global.axis_size2+0.5, string.format("%d", i), shadow_col)
-							scr:draw_text(x-0.5, p.hit.pos_y+global.axis_size2    , string.format("%d", i), col)
-						end
+				local draw_close_far = function(btn, x1, x2)
+					if x1 and x2 then
+						local diff = math.abs(p.pos - op.pos)
+						local in_range = x1 <= diff and diff <= x2 
+						x1 = p.hit.pos_x + x1 * p.side
+						x2 = p.hit.pos_x + x2 * p.side
+						-- 間合い
+						local color = in_range and 0xFFFFFF00 or 0xFFBBBBBB
+						scr:draw_line(x2-2, p.hit.pos_y  , x2+2, p.hit.pos_y  , color)
+						scr:draw_line(x2  , p.hit.pos_y-2, x2  , p.hit.pos_y+2, color)
+						scr:draw_text(x2-2.5, p.hit.pos_y+4.5, string.format("%s%d", btn, i), shadow_col)
+						scr:draw_text(x2-2.5, p.hit.pos_y+4  , string.format("%s%d", btn, i), color)
 					end
 				end
 				-- 座標表示
@@ -6653,14 +6696,13 @@ function rbff2.startplugin()
 
 						-- 地上通常技の遠近判断距離
 						for btn, range in pairs(p.close_far) do
-							local in_range = math.abs(p.pos - op.pos) <= range
-							color = in_range and 0xFFFFFF00 or 0xFFBBBBBB
-							draw_close_far(string.upper(btn), p.hit.pos_x + range * p.side, color)
+							draw_close_far(string.upper(btn), range.x1, range.x2)
 						end
-					elseif p.sway_status ~= 0x00 then
-						local in_range = math.abs(p.pos - op.pos) <= 72
-						local color = in_range and 0xFFFFFF00 or 0xFFBBBBBB
-						draw_close_far(nil, p.hit.pos_x + 72 * p.side, color)
+					elseif p.sway_status == 0x80 then
+						-- ライン移動技の遠近判断距離
+						for btn, range in pairs(p.close_far_lma) do
+							draw_close_far(string.upper(btn), range.x1, range.x2)
+						end
 					end
 
 					-- 中心座標
