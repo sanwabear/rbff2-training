@@ -3406,7 +3406,27 @@ function rbff2.startplugin()
 		}
 	end
 
+	local get_lmo_range_internal = function(ret, name, d0, d1, incl_last)
+		local decd1 = int16tofloat(d1)
+		local intd1 = math.floor(decd1)
+		local x1, x2 = 0, 0
+		for d = 1, intd1 do
+			x2 = d * d0
+			ret[name .. d-1] = { x1 = x1, x2 = x2-1}
+			x1 = x2
+		end
+		if incl_last then
+			ret[name .. intd1]  = { x1 = x1, x2 = math.floor(d0 * decd1) } -- 1Fあたりの最大移動量になる距離
+		end
+		return ret
+	end
+
+	local cache_close_far_pos_lmo = {} 
 	local get_close_far_pos_line_move_attack = function(char, logging)
+		if cache_close_far_pos_lmo[char] then
+			return cache_close_far_pos_lmo[char]
+		end
+
 		-- 家庭用2EC72,2EDEE,2E1FEからの処理
 		local cpu = manager.machine.devices[":maincpu"]
 		local pgm = cpu.spaces["program"]
@@ -3419,20 +3439,22 @@ function rbff2.startplugin()
 			local d0 = pgm:read_u8(pgm:read_u32(offset + (i-1) * 4) + char * 6)
 			-- データが近距離、遠距離の2種類しかないのと実質的に意味があるのが近距離のものなので最初のデータだけ返す
 			if i == 1 then
-				local intd1 = math.floor(decd1)
-				local x1, x2 = 0, 0
-				for d = 1, intd1 do
-					x2 = d * d0
-					ret["" .. d-1] = { x1 = x1, x2 = x2-1}
-					x1 = x2
-				end
-				ret["" .. intd1]  = { x1 = x1, x2 = math.floor(d0 * decd1) } -- 1Fあたりの最大移動量になる距離
+				get_lmo_range_internal(ret, "", d0, d1, true)
 				ret["近"]  = { x1 =  0, x2 = 72         } -- 近距離攻撃になる距離
+
+				if char == 6 then
+					-- 渦炎陣
+					get_lmo_range_internal(ret, "必", 24, 0x40000)
+				elseif char == 14 then
+					-- クロスヘッドスピン
+					get_lmo_range_internal(ret, "必", 24, 0x80000)
+				end
 			end
 			if logging then
 				print(string.format("%s %s %x %s %x %s",char_names[char], act_name, d0, d0, d1, decd1))
 			end
 		end
+		cache_close_far_pos_lmo[char] = ret
 		return ret
 	end
 
@@ -6679,20 +6701,24 @@ function rbff2.startplugin()
 						local color = in_range and 0xFFFFFF00 or 0xFFBBBBBB
 						scr:draw_line(x2-2, p.hit.pos_y  , x2+2, p.hit.pos_y  , color)
 						scr:draw_line(x2  , p.hit.pos_y-2, x2  , p.hit.pos_y+2, color)
-						scr:draw_text(x2-2.5, p.hit.pos_y+4.5, string.format("%s%d", btn, i), shadow_col)
-						scr:draw_text(x2-2.5, p.hit.pos_y+4  , string.format("%s%d", btn, i), color)
+						if in_range then
+							scr:draw_text(x2-2.5, p.hit.pos_y+4.5, string.format("%s%d", btn, i), shadow_col)
+							scr:draw_text(x2-2.5, p.hit.pos_y+4  , string.format("%s%d", btn, i), color)
+						end
 					end
 				end
 				-- 座標表示
 				if global.disp_hitbox > 1 then
 					if p.in_air ~= true and p.sway_status == 0x00 then
 						-- 通常投げ間合い
-						local color = (p.throw.in_range and op.sway_status == 0x00) and 0xFFFFFF00 or 0xFFBBBBBB
+						local color = p.throw.in_range and 0xFFFFFF00 or 0xFFBBBBBB
 						scr:draw_line(p.throw.x1, p.hit.pos_y  , p.throw.x2, p.hit.pos_y  , color)
 						scr:draw_line(p.throw.x1, p.hit.pos_y-4, p.throw.x1, p.hit.pos_y+4, color)
 						scr:draw_line(p.throw.x2, p.hit.pos_y-4, p.throw.x2, p.hit.pos_y+4, color)
-						scr:draw_text(p.throw.x1+2.5, p.hit.pos_y+4.5, string.format("投%d", i), shadow_col)
-						scr:draw_text(p.throw.x1+2.5, p.hit.pos_y+4  , string.format("投%d", i), color)
+						if p.throw.in_range then
+							scr:draw_text(p.throw.x1+2.5, p.hit.pos_y+4.5, string.format("投%d", i), shadow_col)
+							scr:draw_text(p.throw.x1+2.5, p.hit.pos_y+4  , string.format("投%d", i), color)
+						end
 
 						-- 地上通常技の遠近判断距離
 						for btn, range in pairs(p.close_far) do
