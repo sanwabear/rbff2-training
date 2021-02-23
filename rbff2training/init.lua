@@ -115,7 +115,7 @@ local global = {
 
 	next_block_grace = 0,     -- 1ガードでの持続フレーム数
 	infinity_life2   = true,
-	pow_mode         = 1,     -- POWモード　1:自動回復 2:固定 3:通常動作
+	pow_mode         = 2,     -- POWモード　1:自動回復 2:固定 3:通常動作
 	repeat_interval  = 0,
 	await_neutral    = false,
 	replay_fix_pos   = 1,     -- 開始間合い固定 1:OFF 2:1Pと2P 3:1P 4:2P
@@ -2785,8 +2785,8 @@ function rbff2.startplugin()
 			rvs_count        = -1,          -- リバーサルの実施カウント
 
 			life_rec         = true,        -- 自動で体力回復させるときtrue
-			red              = 1,           -- 体力設定
-			max              = 3,           -- パワー設定
+			red              = 2,           -- 体力設定     	--"最大", "赤", "ゼロ" ...
+			max              = 1,           -- パワー設定       --"最大", "半分", "ゼロ" ...
 			disp_base        = false,       -- 処理のアドレスを表示するときtrue
 			disp_dmg         = true,        -- ダメージ表示するときtrue
 			disp_cmd         = true,        -- 入力表示するときtrue
@@ -3837,7 +3837,7 @@ function rbff2.startplugin()
 		do_repeat    = false,
 		repeat_interval = 0,
 	}
-	for i = 1, 5 do
+	for i = 1, 8 do
 		recording.slot[i] = {
 			side  = 1, -- レコーディング対象のプレイヤー番号 1=1P, 2=2P
 			store = {}, -- 入力保存先
@@ -3853,152 +3853,246 @@ function rbff2.startplugin()
 	}
 	recording.player = 1
 	local research_cmd = function()
-		local make_cmd = function(k)
+		local make_cmd = function(joykp, ...)
 			local joy = new_next_joy()
-			if k then
-				for _, k in ipairs(k) do
-					joy[k] = true
+			if ... then
+				for _, k in ipairs({...}) do
+					joy[joykp[k]] = true
 				end
 			end
 			return joy
 		end
-		local times = function(c, t)
-			local ret = {}
-			for i = 1, t do
-				table.insert(ret, c)
-			end
-			return ret
-		end
-		local _1  = make_cmd({ joyk.p1.lt, joyk.p1.dn, })
-		local _2  = make_cmd({ joyk.p1.dn, })
-		local _3  = make_cmd({ joyk.p1.rt, joyk.p1.dn, })
-		local _4  = make_cmd({ joyk.p1.lt, })
-		local _5  = make_cmd()
-		local _6  = make_cmd({ joyk.p1.rt, })
-		local _7  = make_cmd({ joyk.p1.lt, joyk.p1.up, })
-		local _8  = make_cmd({ joyk.p1.up, })
-		local _9  = make_cmd({ joyk.p1.rt, joyk.p1.up, })
-		local _1a = make_cmd({ joyk.p1.a, joyk.p1.lt, joyk.p1.dn, })
-		local _2a = make_cmd({ joyk.p1.a, joyk.p1.dn, })
-		local _3a = make_cmd({ joyk.p1.a, joyk.p1.rt, joyk.p1.dn, })
-		local _4a = make_cmd({ joyk.p1.a, joyk.p1.lt, })
-		local _5a = make_cmd({ joyk.p1.a, })
-		local _6a = make_cmd({ joyk.p1.a, joyk.p1.rt, })
-		local _7a = make_cmd({ joyk.p1.a, joyk.p1.lt, joyk.p1.up, })
-		local _8a = make_cmd({ joyk.p1.a, joyk.p1.up, })
-		local _9a = make_cmd({ joyk.p1.a, joyk.p1.rt, joyk.p1.up, })
-		local _1b = make_cmd({ joyk.p1.b, joyk.p1.lt, joyk.p1.dn, })
-		local _2b = make_cmd({ joyk.p1.b, joyk.p1.dn, })
-		local _3b = make_cmd({ joyk.p1.b, joyk.p1.rt, joyk.p1.dn, })
-		local _4b = make_cmd({ joyk.p1.b, joyk.p1.lt, })
-		local _5b = make_cmd({ joyk.p1.b, })
-		local _6b = make_cmd({ joyk.p1.b, joyk.p1.rt, })
-		local _7b = make_cmd({ joyk.p1.b, joyk.p1.lt, joyk.p1.up, })
-		local _8b = make_cmd({ joyk.p1.b, joyk.p1.up, })
-		local _9b = make_cmd({ joyk.p1.c, joyk.p1.rt, joyk.p1.up, })
-		local _1c = make_cmd({ joyk.p1.c, joyk.p1.lt, joyk.p1.dn, })
-		local _2c = make_cmd({ joyk.p1.c, joyk.p1.dn, })
-		local _3c = make_cmd({ joyk.p1.c, joyk.p1.rt, joyk.p1.dn, })
-		local _4c = make_cmd({ joyk.p1.c, joyk.p1.lt, })
-		local _5c = make_cmd({ joyk.p1.c, })
-		local _6c = make_cmd({ joyk.p1.c, joyk.p1.rt, })
-		local _7c = make_cmd({ joyk.p1.c, joyk.p1.lt, joyk.p1.up, })
-		local _8c = make_cmd({ joyk.p1.c, joyk.p1.up, })
-		local _9c = make_cmd({ joyk.p1.c, joyk.p1.rt, joyk.p1.up, })
-		local await =  times(_5, 60)
-		local join_cmd = function(cmds)
-			local ret = {}
-			for _, cmd in ipairs(cmds) do
-				for _, c in ipairs(cmd) do
-					table.insert(ret, c)
+		local _1  = function(joykp) return make_cmd(joykp, "lt", "dn") end
+		local _1a  = function(joykp) return make_cmd(joykp, "lt", "dn", "a") end
+		local _1b  = function(joykp) return make_cmd(joykp, "lt", "dn", "b") end
+		local _1ab  = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "b") end
+		local _1c  = function(joykp) return make_cmd(joykp, "lt", "dn", "c") end
+		local _1ac  = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "c") end
+		local _1bc  = function(joykp) return make_cmd(joykp, "lt", "dn", "b", "c") end
+		local _1abc  = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "b", "c") end
+		local _1d  = function(joykp) return make_cmd(joykp, "lt", "dn", "d") end
+		local _1ad  = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "d") end
+		local _1bd  = function(joykp) return make_cmd(joykp, "lt", "dn", "b", "d") end
+		local _1abd  = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "b", "d") end
+		local _1cd  = function(joykp) return make_cmd(joykp, "lt", "dn", "c", "d") end
+		local _1acd  = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "c", "d") end
+		local _1bcd  = function(joykp) return make_cmd(joykp, "lt", "dn", "b", "c", "d") end
+		local _1abcd  = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "b", "c", "d") end
+		local _2  = function(joykp) return make_cmd(joykp, "dn") end
+		local _2a  = function(joykp) return make_cmd(joykp, "dn", "a") end
+		local _2b  = function(joykp) return make_cmd(joykp, "dn", "b") end
+		local _2ab  = function(joykp) return make_cmd(joykp, "dn", "a", "b") end
+		local _2c  = function(joykp) return make_cmd(joykp, "dn", "c") end
+		local _2ac  = function(joykp) return make_cmd(joykp, "dn", "a", "c") end
+		local _2bc  = function(joykp) return make_cmd(joykp, "dn", "b", "c") end
+		local _2abc  = function(joykp) return make_cmd(joykp, "dn", "a", "b", "c") end
+		local _2d  = function(joykp) return make_cmd(joykp, "dn", "d") end
+		local _2ad  = function(joykp) return make_cmd(joykp, "dn", "a", "d") end
+		local _2bd  = function(joykp) return make_cmd(joykp, "dn", "b", "d") end
+		local _2abd  = function(joykp) return make_cmd(joykp, "dn", "a", "b", "d") end
+		local _2cd  = function(joykp) return make_cmd(joykp, "dn", "c", "d") end
+		local _2acd  = function(joykp) return make_cmd(joykp, "dn", "a", "c", "d") end
+		local _2bcd  = function(joykp) return make_cmd(joykp, "dn", "b", "c", "d") end
+		local _2abcd  = function(joykp) return make_cmd(joykp, "dn", "a", "b", "c", "d") end
+		local _3  = function(joykp) return make_cmd(joykp, "rt", "dn") end
+		local _3a  = function(joykp) return make_cmd(joykp, "rt", "dn", "a") end
+		local _3b  = function(joykp) return make_cmd(joykp, "rt", "dn", "b") end
+		local _3ab  = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "b") end
+		local _3c  = function(joykp) return make_cmd(joykp, "rt", "dn", "c") end
+		local _3ac  = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "c") end
+		local _3bc  = function(joykp) return make_cmd(joykp, "rt", "dn", "b", "c") end
+		local _3abc  = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "b", "c") end
+		local _3d  = function(joykp) return make_cmd(joykp, "rt", "dn", "d") end
+		local _3ad  = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "d") end
+		local _3bd  = function(joykp) return make_cmd(joykp, "rt", "dn", "b", "d") end
+		local _3abd  = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "b", "d") end
+		local _3cd  = function(joykp) return make_cmd(joykp, "rt", "dn", "c", "d") end
+		local _3acd  = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "c", "d") end
+		local _3bcd  = function(joykp) return make_cmd(joykp, "rt", "dn", "b", "c", "d") end
+		local _3abcd  = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "b", "c", "d") end
+		local _4  = function(joykp) return make_cmd(joykp, "lt") end
+		local _4a  = function(joykp) return make_cmd(joykp, "lt", "a") end
+		local _4b  = function(joykp) return make_cmd(joykp, "lt", "b") end
+		local _4ab  = function(joykp) return make_cmd(joykp, "lt", "a", "b") end
+		local _4c  = function(joykp) return make_cmd(joykp, "lt", "c") end
+		local _4ac  = function(joykp) return make_cmd(joykp, "lt", "a", "c") end
+		local _4bc  = function(joykp) return make_cmd(joykp, "lt", "b", "c") end
+		local _4abc  = function(joykp) return make_cmd(joykp, "lt", "a", "b", "c") end
+		local _4d  = function(joykp) return make_cmd(joykp, "lt", "d") end
+		local _4ad  = function(joykp) return make_cmd(joykp, "lt", "a", "d") end
+		local _4bd  = function(joykp) return make_cmd(joykp, "lt", "b", "d") end
+		local _4abd  = function(joykp) return make_cmd(joykp, "lt", "a", "b", "d") end
+		local _4cd  = function(joykp) return make_cmd(joykp, "lt", "c", "d") end
+		local _4acd  = function(joykp) return make_cmd(joykp, "lt", "a", "c", "d") end
+		local _4bcd  = function(joykp) return make_cmd(joykp, "lt", "b", "c", "d") end
+		local _4abcd  = function(joykp) return make_cmd(joykp, "lt", "a", "b", "c", "d") end
+		local _5  = function(joykp) return make_cmd(joykp) end
+		local _5a  = function(joykp) return make_cmd(joykp, "a") end
+		local _5b  = function(joykp) return make_cmd(joykp, "b") end
+		local _5ab  = function(joykp) return make_cmd(joykp, "a", "b") end
+		local _5c  = function(joykp) return make_cmd(joykp, "c") end
+		local _5ac  = function(joykp) return make_cmd(joykp, "a", "c") end
+		local _5bc  = function(joykp) return make_cmd(joykp, "b", "c") end
+		local _5abc  = function(joykp) return make_cmd(joykp, "a", "b", "c") end
+		local _5d  = function(joykp) return make_cmd(joykp, "d") end
+		local _5ad  = function(joykp) return make_cmd(joykp, "a", "d") end
+		local _5bd  = function(joykp) return make_cmd(joykp, "b", "d") end
+		local _5abd  = function(joykp) return make_cmd(joykp, "a", "b", "d") end
+		local _5cd  = function(joykp) return make_cmd(joykp, "c", "d") end
+		local _5acd  = function(joykp) return make_cmd(joykp, "a", "c", "d") end
+		local _5bcd  = function(joykp) return make_cmd(joykp, "b", "c", "d") end
+		local _5abcd  = function(joykp) return make_cmd(joykp, "a", "b", "c", "d") end
+		local _6  = function(joykp) return make_cmd(joykp, "rt") end
+		local _6a  = function(joykp) return make_cmd(joykp, "rt", "a") end
+		local _6b  = function(joykp) return make_cmd(joykp, "rt", "b") end
+		local _6ab  = function(joykp) return make_cmd(joykp, "rt", "a", "b") end
+		local _6c  = function(joykp) return make_cmd(joykp, "rt", "c") end
+		local _6ac  = function(joykp) return make_cmd(joykp, "rt", "a", "c") end
+		local _6bc  = function(joykp) return make_cmd(joykp, "rt", "b", "c") end
+		local _6abc  = function(joykp) return make_cmd(joykp, "rt", "a", "b", "c") end
+		local _6d  = function(joykp) return make_cmd(joykp, "rt", "d") end
+		local _6ad  = function(joykp) return make_cmd(joykp, "rt", "a", "d") end
+		local _6bd  = function(joykp) return make_cmd(joykp, "rt", "b", "d") end
+		local _6abd  = function(joykp) return make_cmd(joykp, "rt", "a", "b", "d") end
+		local _6cd  = function(joykp) return make_cmd(joykp, "rt", "c", "d") end
+		local _6acd  = function(joykp) return make_cmd(joykp, "rt", "a", "c", "d") end
+		local _6bcd  = function(joykp) return make_cmd(joykp, "rt", "b", "c", "d") end
+		local _6abcd  = function(joykp) return make_cmd(joykp, "rt", "a", "b", "c", "d") end
+		local _7  = function(joykp) return make_cmd(joykp, "lt", "up") end
+		local _7a  = function(joykp) return make_cmd(joykp, "lt", "up", "a") end
+		local _7b  = function(joykp) return make_cmd(joykp, "lt", "up", "b") end
+		local _7ab  = function(joykp) return make_cmd(joykp, "lt", "up", "a", "b") end
+		local _7c  = function(joykp) return make_cmd(joykp, "lt", "up", "c") end
+		local _7ac  = function(joykp) return make_cmd(joykp, "lt", "up", "a", "c") end
+		local _7bc  = function(joykp) return make_cmd(joykp, "lt", "up", "b", "c") end
+		local _7abc  = function(joykp) return make_cmd(joykp, "lt", "up", "a", "b", "c") end
+		local _7d  = function(joykp) return make_cmd(joykp, "lt", "up", "d") end
+		local _7ad  = function(joykp) return make_cmd(joykp, "lt", "up", "a", "d") end
+		local _7bd  = function(joykp) return make_cmd(joykp, "lt", "up", "b", "d") end
+		local _7abd  = function(joykp) return make_cmd(joykp, "lt", "up", "a", "b", "d") end
+		local _7cd  = function(joykp) return make_cmd(joykp, "lt", "up", "c", "d") end
+		local _7acd  = function(joykp) return make_cmd(joykp, "lt", "up", "a", "c", "d") end
+		local _7bcd  = function(joykp) return make_cmd(joykp, "lt", "up", "b", "c", "d") end
+		local _7abcd  = function(joykp) return make_cmd(joykp, "lt", "up", "a", "b", "c", "d") end
+		local _8  = function(joykp) return make_cmd(joykp, "up") end
+		local _8a  = function(joykp) return make_cmd(joykp, "up", "a") end
+		local _8b  = function(joykp) return make_cmd(joykp, "up", "b") end
+		local _8ab  = function(joykp) return make_cmd(joykp, "up", "a", "b") end
+		local _8c  = function(joykp) return make_cmd(joykp, "up", "c") end
+		local _8ac  = function(joykp) return make_cmd(joykp, "up", "a", "c") end
+		local _8bc  = function(joykp) return make_cmd(joykp, "up", "b", "c") end
+		local _8abc  = function(joykp) return make_cmd(joykp, "up", "a", "b", "c") end
+		local _8d  = function(joykp) return make_cmd(joykp, "up", "d") end
+		local _8ad  = function(joykp) return make_cmd(joykp, "up", "a", "d") end
+		local _8bd  = function(joykp) return make_cmd(joykp, "up", "b", "d") end
+		local _8abd  = function(joykp) return make_cmd(joykp, "up", "a", "b", "d") end
+		local _8cd  = function(joykp) return make_cmd(joykp, "up", "c", "d") end
+		local _8acd  = function(joykp) return make_cmd(joykp, "up", "a", "c", "d") end
+		local _8bcd  = function(joykp) return make_cmd(joykp, "up", "b", "c", "d") end
+		local _8abcd  = function(joykp) return make_cmd(joykp, "up", "a", "b", "c", "d") end
+		local _9  = function(joykp) return make_cmd(joykp, "rt", "up") end
+		local _9a  = function(joykp) return make_cmd(joykp, "rt", "up", "a") end
+		local _9b  = function(joykp) return make_cmd(joykp, "rt", "up", "b") end
+		local _9ab  = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b") end
+		local _9c  = function(joykp) return make_cmd(joykp, "rt", "up", "c") end
+		local _9ac  = function(joykp) return make_cmd(joykp, "rt", "up", "a", "c") end
+		local _9bc  = function(joykp) return make_cmd(joykp, "rt", "up", "b", "c") end
+		local _9abc  = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b", "c") end
+		local _9d  = function(joykp) return make_cmd(joykp, "rt", "up", "d") end
+		local _9ad  = function(joykp) return make_cmd(joykp, "rt", "up", "a", "d") end
+		local _9bd  = function(joykp) return make_cmd(joykp, "rt", "up", "b", "d") end
+		local _9abd  = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b", "d") end
+		local _9cd  = function(joykp) return make_cmd(joykp, "rt", "up", "c", "d") end
+		local _9acd  = function(joykp) return make_cmd(joykp, "rt", "up", "a", "c", "d") end
+		local _9bcd  = function(joykp) return make_cmd(joykp, "rt", "up", "b", "c", "d") end
+		local _9abcd  = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b", "c", "d") end
+		local extract_cmd = function(joyk, cmd_ary)
+			local ret, prev = {}, _5(joyk)
+			for _, cmd in ipairs(cmd_ary) do
+				local typename = type(cmd)
+				if typename == "number" and cmd > 0 then
+					for i = 1, cmd do
+						table.insert(ret, prev)
+					end
+				elseif typename == "function" then
+					prev = cmd(joyk)
+					table.insert(ret, prev)
 				end
 			end
 			return ret
 		end
-		return join_cmd({
-			{ _9 , _9 , _9 , _9,  _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _5 , _5 , _9 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _9 , _5 , _9 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _5 , _9 , _9 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _9 , _5 , _5 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-
-			{ _9a, _9 , _9 , _9,  _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
-			{ _9 , _9a, _9 , _9,  _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
-			{ _9 , _9 , _9a, _9,  _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
-			{ _9 , _9 , _9 , _9a, _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
-
-			{ _9 , _5 , _5 , _9a, _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
-			{ _9a, _5 , _5 , _9 , _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
-			{ _9 , _9 , _5 , _9a, _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
-			{ _9 , _5 , _9 , _9a, _5 , _5 , _5 , _5 , _5 , }, await, -- 通常ジャンプ
-
-			{ _9 , _9 , _9 , _9 , _9 , _8 , _9 , _6 , _9a, }, await, -- 通常ジャンプ
-			{ _9 , _8 , _5 , _5 , _8 , _8b, _5 , _5 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _7 , _5 , _4 , _7 , _8 , _7 , _4 , _7c, }, await, -- 小ジャンプ
-			{ _9 , _5 , _5 , _4 , _1 , _2 , _3 , _6 , _9 , }, await, -- 小ジャンプ
-
-			{ _9 , _9 , _6 , _6 , _3 , _3 , _2 , _2 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _9 , _9 , _9 , _6 , _8 , _9 , _6 , _9a, }, await, -- 小ジャンプ
-			{ _9 , _8 , _5 , _5 , _5 , _8b, _5 , _5 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _7 , _5 , _4 , _7 , _8 , _7 , _4 , _4c, }, await, -- 小ジャンプ
-
-			{ _9 , _6 , _6 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-			{ _9 , _6 , _6 , _6 , _6 , _6 , _6 , _6 , _5 , }, await, -- 通常ジャンプ
-			{ _9 , _6 , _6 , _6 , _6 , _6 , _6 , _5 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _6 , _6 , _6 , _6 , _6 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _6 , _6 , _6 , _6 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _6 , _6 , _6 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _6 , _6 , _5 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _6 , _5 , _5 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _5 , _5 , _5 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _9 , _6 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-			{ _9 , _9 , _9 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-			{ _9 , _9 , _9 , _9 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-			{ _9 , _9 , _9 , _9 , _9 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-			{ _9 , _5 , _6 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-			{ _9 , _5 , _5 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
-			{ _9 , _6 , _5 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
-
-			{ _9 , _5 , _9 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-			{ _9 , _5 , _5 , _9 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-			{ _9 , _9 , _5 , _6 , _6 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
-			{ _9 , _9 , _5 , _9 , _6 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-
-			{ _9 , _5 , _9 , _6 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _5 , _5 , _9 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _9 , _5 , _6 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _9 , _5 , _9 , _5 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-
-			{ _9 , _5 , _9 , _6 , _6 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _5 , _5 , _9 , _6 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _9 , _5 , _6 , _6 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _9 , _5 , _9 , _6 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-
-			{ _9 , _5 , _9 , _6 , _9 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _5 , _5 , _9 , _9 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _9 , _5 , _6 , _9 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-			{ _9 , _9 , _5 , _9 , _9 , _5 , _5 , _5 , _5 , }, await, -- 小ジャンプ
-
-			{ _9 , _5 , _9 , _6 , _9 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-			{ _9 , _5 , _5 , _9 , _9 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-			{ _9 , _9 , _5 , _6 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
-			{ _9 , _9 , _5 , _9 , _9 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-
-			{ _9 , _5 , _9 , _5 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
-			{ _9 , _5 , _5 , _5 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
-			{ _9 , _9 , _5 , _5 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
-			{ _9 , _9 , _5 , _5 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
-
-			{ _9 , _5 , _9 , _8 , _9 , _6 , _6 , _6 , _6 , }, await, -- 通常ジャンプ
-			{ _9 , _5 , _5 , _8 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
-			{ _9 , _9 , _5 , _8 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
-			{ _9 , _9 , _5 , _8 , _9 , _6 , _6 , _6 , _6 , }, await, -- 小ジャンプ
-		})
+		local merge_cmd = function(cmd_ary1, cmd_ary2)
+			local keys1, keys2 = extract_cmd(joyk.p1, cmd_ary1), extract_cmd(joyk.p2, cmd_ary2)
+			local ret, max = {}, math.max(#keys1, #keys2)
+			for i = 1, max do
+				local joy = new_next_joy()
+				for _, key in ipairs({keys1[i] or {}, keys2[i] or {}}) do
+					for k, v in pairs(key) do
+						if v then
+							joy[k] = v
+						end
+					end
+				end
+				table.insert(ret, joy)
+			end
+			return ret
+		end
+		local rec1, rec2, rec3, rec4, rec5 = {}, {}, {}, {}, {}
+		-- LINNさんネタの確認 ... リバサバクステキャンセルサイクロンで重ね飛燕失脚の迎撃
+		--[[ バクステ回避
+		rec1 = merge_cmd(
+			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, },
+			{ _8, _5, 45, _2, 14, _2 , _5, 111, _8, _4, _2, _6, _5, _4, _5, _4, })
+		]]
+		--[[ サイクロン成立
+		rec2 = merge_cmd(
+			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, },
+			{ _8, _5, 45, _2, 14, _2 , _5, 111, _8, _4, _2, _6, _5, _4, _5, _4, _5, 1, _5c, })
+		rec3 = merge_cmd(
+			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, },
+			{ _8, _5, 45, _2, 14, _2 , _5, 111, _8, _4, _2, _6, _5, _4, _5, _4, _5, 2, _5c, })
+		rec4 = merge_cmd(
+			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, },
+			{ _8, _5, 45, _2, 14, _2 , _5, 111, _8, _4, _2, _6, _5, _4, _5, _4, _5, 3, _5c, })
+		rec5 = merge_cmd(
+			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, },
+			{ _8, _5, 45, _2, 14, _2 , _5, 111, _8, _4, _2, _6, _5, _4, _5, _4, _5, 4, _5c, })
+		rec3 = merge_cmd(
+			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, },
+			{ _8, _5, 45, _2, 14, _2 , _5, 110, _8, _4, _2, _6, _5, _4, _5, _4, _5, 5, _5c, })
+		rec4 = merge_cmd(
+			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, },
+			{ _8, _5, 45, _2, 14, _2 , _5, 109, _8, _4, _2, _6, _5, _4, _5, _4, _5, 6, _5c, })
+		rec1 = merge_cmd( -- リバサバクステキャンセルデザイア
+			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, },
+			{ _8, _5, 45, _2, 14, _2 , _5, 109, _6, _3, _2, _1, _4, _6, _5, _4, _5, _4, _5, 4, _5a, })
+		]]
+		rec1 = merge_cmd( -- リバササイクロンが飛燕失脚を投げられない状態でCがでて喰らう
+			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, },
+			{ _8, _5, 45, _2, 14, _2 , _5, 111, _8, _4, _2, _6, _5, _4, _5, _4, _5, 0, _5c, })
+		rec2 = merge_cmd( -- リバサバクステ
+			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, },
+			{ _8, _5, 45, _2, 14, _2 , _5, 111, _8, _4, _2, _6, _5, _4, _5, _4, _5, 1, _5c, })
+		rec3 = merge_cmd( -- リバサバクステキャンセルサイクロン
+			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, },
+			{ _8, _5, 45, _2, 14, _2 , _5, 111, _8, _4, _2, _6, _5, _4, _5, _4, _5, 2, _5c, })
+		rec4 = merge_cmd( -- リバサバクステキャンセルサイクロン
+			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, },
+			{ _8, _5, 45, _2, 14, _2 , _5, 111, _8, _4, _2, _6, _5, _4, _5, _4, _5, 3, _5c, })
+		rec5 = merge_cmd( -- リバサバクステキャンセルサイクロン
+			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, },
+			{ _8, _5, 45, _2, 14, _2 , _5, 111, _8, _4, _2, _6, _5, _4, _5, _4, _5, 4, _5c, })
+		return { rec1, rec2, rec3, rec4, rec5 }
+		end
+	for i, preset_cmd in ipairs(research_cmd()) do
+		local store = recording.slot[i].store
+		for _, joy in ipairs(preset_cmd) do
+			table.insert(store, { joy = joy, pos = { 1, -1 } })
+		end
 	end
-	local research_cmd_pos = { 1, -1 }
-	for _, joy in ipairs(research_cmd()) do
-		table.insert(recording.slot[1].store, { joy = joy, pos = research_cmd_pos })
-	end
+	recording.cleanup = false
+	recording.active_slot = recording.slot[1]
+	recording.active_slot.side = 1
 
 	local rec_await_no_input, rec_await_1st_input, rec_await_play, rec_input, rec_play, rec_repeat_play, rec_play_interval, rec_fixpos
 	local do_recover
@@ -4264,7 +4358,16 @@ function rbff2.startplugin()
 			for _, joy in ipairs(use_joy) do
 				local k = joy.field
 				-- 入力時と向きが変わっている場合は左右反転させて反映する
+				local opside = 3 - recording.active_slot.side
 				if recording.active_slot.side == joy_pside[k] then
+					if joy_frontback[k] and joy_pside[k] then
+						local now_side = pos[joy_pside[k]]
+						local next_side = store.pos[joy_pside[k]]
+						if now_side ~= next_side then
+							k = joy_frontback[k]
+						end
+					end
+				elseif opside == joy_pside[k] then
 					if joy_frontback[k] and joy_pside[k] then
 						local now_side = pos[joy_pside[k]]
 						local next_side = store.pos[joy_pside[k]]
@@ -7091,11 +7194,11 @@ function rbff2.startplugin()
 		elseif global.dummy_mode == 6 then
 			-- リプレイ
 			global.dummy_mode = 1
-			play_menu.pos.col[ 8] = recording.do_repeat and 2 or 1   -- 繰り返し           8
-			play_menu.pos.col[ 9] = recording.repeat_interval + 1    -- 繰り返し間隔       9
-			play_menu.pos.col[10] = global.await_neutral and 2 or 1  -- 繰り返し開始条件  10
-			play_menu.pos.col[11] = global.replay_fix_pos            -- 開始間合い固定    11
-			play_menu.pos.col[12] = global.replay_reset              -- 状態リセット      12
+			play_menu.pos.col[11] = recording.do_repeat and 2 or 1   -- 繰り返し          11
+			play_menu.pos.col[12] = recording.repeat_interval + 1    -- 繰り返し間隔      12
+			play_menu.pos.col[13] = global.await_neutral and 2 or 1  -- 繰り返し開始条件  13
+			play_menu.pos.col[14] = global.replay_fix_pos            -- 開始間合い固定    14
+			play_menu.pos.col[15] = global.replay_reset              -- 状態リセット      15
 			if not cancel and row == 1 then
 				menu_cur = play_menu
 				return
@@ -7263,11 +7366,11 @@ function rbff2.startplugin()
 				table.insert(recording.live_slots, i-1)
 			end
 		end
-		recording.do_repeat       = col[ 8] == 2 -- 繰り返し           8
-		recording.repeat_interval = col[ 9] - 1  -- 繰り返し間隔       9
-		global.await_neutral      = col[10] == 2 -- 繰り返し開始条件  10
-		global.replay_fix_pos     = col[11]      -- 開始間合い固定    11
-		global.replay_reset       = col[12]      -- 状態リセット      12
+		recording.do_repeat       = col[11] == 2 -- 繰り返し          11
+		recording.repeat_interval = col[12] - 1  -- 繰り返し間隔      12
+		global.await_neutral      = col[13] == 2 -- 繰り返し開始条件  13
+		global.replay_fix_pos     = col[14]      -- 開始間合い固定    14
+		global.replay_reset       = col[15]      -- 状態リセット      15
 		global.repeat_interval    = recording.repeat_interval
 	end
 	local exit_menu_to_play = function()
@@ -7695,10 +7798,10 @@ function rbff2.startplugin()
 	bar_menu = {
 		list = {
 			{ "                         ゲージ設定" },
-			{ "1P 体力ゲージ量"       , life_range, },
-			{ "2P 体力ゲージ量"       , life_range, },
-			{ "1P POWゲージ量"        , pow_range, },
-			{ "2P POWゲージ量"        , pow_range, },
+			{ "1P 体力ゲージ量"       , life_range, }, 	-- "最大", "赤", "ゼロ" ...
+			{ "2P 体力ゲージ量"       , life_range, }, 	-- "最大", "赤", "ゼロ" ...
+			{ "1P POWゲージ量"        , pow_range, },   -- "最大", "半分", "ゼロ" ...
+			{ "2P POWゲージ量"        , pow_range, },   -- "最大", "半分", "ゼロ" ...
 			{ "1P スタンゲージ表示"   , { "OFF", "ON" }, },
 			{ "2P スタンゲージ表示"   , { "OFF", "ON" }, },
 			{ "体力ゲージモード"      , { "自動回復", "固定" }, },
@@ -7942,6 +8045,9 @@ function rbff2.startplugin()
 			{ "スロット3"             , { "Aでレコード開始", }, },
 			{ "スロット4"             , { "Aでレコード開始", }, },
 			{ "スロット5"             , { "Aでレコード開始", }, },
+			{ "スロット6"             , { "Aでレコード開始", }, },
+			{ "スロット7"             , { "Aでレコード開始", }, },
+			{ "スロット8"             , { "Aでレコード開始", }, },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
@@ -7953,6 +8059,9 @@ function rbff2.startplugin()
 				1, -- スロット3          4
 				1, -- スロット4          5
 				1, -- スロット5          6
+				1, -- スロット6          7
+				1, -- スロット7          8
+				1, -- スロット8          9
 			},
 		},
 		on_a = {
@@ -7962,6 +8071,9 @@ function rbff2.startplugin()
 			function() exit_menu_to_rec(3) end, -- スロット3
 			function() exit_menu_to_rec(4) end, -- スロット4
 			function() exit_menu_to_rec(5) end, -- スロット5
+			function() exit_menu_to_rec(6) end, -- スロット6
+			function() exit_menu_to_rec(7) end, -- スロット7
+			function() exit_menu_to_rec(8) end, -- スロット8
 		},
 		on_b = {
 			menu_rec_to_tra, -- 説明
@@ -7970,6 +8082,9 @@ function rbff2.startplugin()
 			menu_to_tra, -- スロット3
 			menu_to_tra, -- スロット4
 			menu_to_tra, -- スロット5
+			menu_to_tra, -- スロット6
+			menu_to_tra, -- スロット7
+			menu_to_tra, -- スロット8
 		},
 	}
 	local play_interval = {}
@@ -7984,6 +8099,9 @@ function rbff2.startplugin()
 			{ "スロット3"             , { "OFF", "ON", }, },
 			{ "スロット4"             , { "OFF", "ON", }, },
 			{ "スロット5"             , { "OFF", "ON", }, },
+			{ "スロット6"             , { "OFF", "ON", }, },
+			{ "スロット7"             , { "OFF", "ON", }, },
+			{ "スロット8"             , { "OFF", "ON", }, },
 			{ "                        リプレイ設定" },
 			{ "繰り返し"              , { "OFF", "ON", }, },
 			{ "繰り返し間隔"          , play_interval, },
@@ -8002,13 +8120,16 @@ function rbff2.startplugin()
 				2, -- スロット3          4
 				2, -- スロット4          5
 				2, -- スロット5          6
-				0, -- リプレイ設定       7
-				1, -- 繰り返し           8
-				1, -- 繰り返し間隔       9
-				1, -- 繰り返し開始条件  10
-				global.replay_fix_pos, -- 開始間合い固定    11
-				global.replay_reset,   -- 状態リセット      11
-				1, -- 開始間合い        12
+				2, -- スロット6          7
+				2, -- スロット7          8
+				2, -- スロット8          9
+				0, -- リプレイ設定      10
+				1, -- 繰り返し          11
+				1, -- 繰り返し間隔      12
+				1, -- 繰り返し開始条件  13
+				global.replay_fix_pos, -- 開始間合い固定    14
+				global.replay_reset,   -- 状態リセット      15
+				1, -- 開始間合い        16
 			},
 		},
 		on_a = {
@@ -8018,6 +8139,9 @@ function rbff2.startplugin()
 			exit_menu_to_play, -- スロット3
 			exit_menu_to_play, -- スロット4
 			exit_menu_to_play, -- スロット5
+			exit_menu_to_play, -- スロット6
+			exit_menu_to_play, -- スロット7
+			exit_menu_to_play, -- スロット8
 			exit_menu_to_play, -- リプレイ設定
 			exit_menu_to_play, -- 繰り返し
 			exit_menu_to_play, -- 繰り返し間隔
@@ -8034,6 +8158,9 @@ function rbff2.startplugin()
 			exit_menu_to_play_cancel, -- スロット3
 			exit_menu_to_play_cancel, -- スロット4
 			exit_menu_to_play_cancel, -- スロット5
+			exit_menu_to_play_cancel, -- スロット6
+			exit_menu_to_play_cancel, -- スロット7
+			exit_menu_to_play_cancel, -- スロット8
 			exit_menu_to_play_cancel, -- リプレイ設定
 			exit_menu_to_play_cancel, -- 繰り返し
 			exit_menu_to_play_cancel, -- 繰り返し間隔
@@ -8169,8 +8296,8 @@ function rbff2.startplugin()
 
 		-- メニュー表示本体
 		scr:draw_box (0, 0, width, height, 0xC0000000, 0xC0000000)
-		local row_num = 1
-		for i = menu_cur.pos.offset, math.min(menu_cur.pos.offset+menu_max_row, #menu_cur.list) do
+		local row_num, menu_max = 1, math.min(menu_cur.pos.offset+menu_max_row, #menu_cur.list)
+		for i = menu_cur.pos.offset, menu_max do
 			local row = menu_cur.list[i]
 			local y = 48+10*row_num
 			local c1, c2, c3, c4, c5
