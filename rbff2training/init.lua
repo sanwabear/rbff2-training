@@ -122,6 +122,7 @@ local global = {
 	replay_reset     = 2,     -- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
 	mame_debug_wnd   = false, -- MAMEデバッグウィンドウ表示のときtrue
 	damaged_move     = 1,
+	disp_replay      = true,  -- レコードリプレイガイド表示
 
 	-- log
 	log              = {
@@ -3741,6 +3742,8 @@ function rbff2.startplugin()
 
 			-- bp 3B5CE,1,{maincpu.pb@1007B5=0;g} -- 2P 飛び道具の強さ0に
 
+			-- bp 39db0,1,{PC=39db4;g} -- 必殺投げの高度チェックを無視
+
 			-- ライン移動攻撃の移動量のしきい値 調査用
 			table.insert(bps, cpu.debug:bpset(0x029768,
 				"1",
@@ -3846,12 +3849,6 @@ function rbff2.startplugin()
 	end
 
 	-- 調査用自動再生スロットの準備
-	recording.slot[#recording.slot] = {
-		side  = 1,
-		store = {},
-		name = "調査用自動再生スロット",
-	}
-	recording.player = 1
 	local research_cmd = function()
 		local make_cmd = function(joykp, ...)
 			local joy = new_next_joy()
@@ -4007,6 +4004,9 @@ function rbff2.startplugin()
 		local _9bcd  = function(joykp) return make_cmd(joykp, "rt", "up", "b", "c", "d") end
 		local _9abcd  = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b", "c", "d") end
 		local extract_cmd = function(joyk, cmd_ary)
+			if not cmd_ary then
+				return {}
+			end
 			local ret, prev = {}, _5(joyk)
 			for _, cmd in ipairs(cmd_ary) do
 				local typename = type(cmd)
@@ -4066,31 +4066,44 @@ function rbff2.startplugin()
 		rec1 = merge_cmd( -- リバサバクステキャンセルデザイア
 			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, },
 			{ _8, _5, 45, _2, 14, _2 , _5, 109, _6, _3, _2, _1, _4, _6, _5, _4, _5, _4, _5, 4, _5a, })
-		]]
 		rec1 = merge_cmd( -- リバササイクロンが飛燕失脚を投げられない状態でCがでて喰らう
-			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, },
+			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, }, -- 通常投げ→飛燕失脚重ね
 			{ _8, _5, 45, _2, 14, _2 , _5, 111, _8, _4, _2, _6, _5, _4, _5, _4, _5, 0, _5c, })
-		rec2 = merge_cmd( -- リバサバクステ
-			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, },
+		rec2 = merge_cmd( -- リバササイクロンが飛燕失脚を投げられない状態でバクステがでる
+			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, }, -- 通常投げ→飛燕失脚重ね
 			{ _8, _5, 45, _2, 14, _2 , _5, 111, _8, _4, _2, _6, _5, _4, _5, _4, _5, 1, _5c, })
 		rec3 = merge_cmd( -- リバサバクステキャンセルサイクロン
-			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, },
+			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, }, -- 通常投げ→飛燕失脚重ね
 			{ _8, _5, 45, _2, 14, _2 , _5, 111, _8, _4, _2, _6, _5, _4, _5, _4, _5, 2, _5c, })
 		rec4 = merge_cmd( -- リバサバクステキャンセルサイクロン
-			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, },
+			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, }, -- 通常投げ→飛燕失脚重ね
 			{ _8, _5, 45, _2, 14, _2 , _5, 111, _8, _4, _2, _6, _5, _4, _5, _4, _5, 3, _5c, })
 		rec5 = merge_cmd( -- リバサバクステキャンセルサイクロン
-			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, },
+			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, }, -- 通常投げ→飛燕失脚重ね
 			{ _8, _5, 45, _2, 14, _2 , _5, 111, _8, _4, _2, _6, _5, _4, _5, _4, _5, 4, _5c, })
+		]]
+
+		rec1 = merge_cmd( -- リバサバクステキャンセルサイクロン
+			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, }, -- 通常投げ→飛燕失脚重ね
+			{ _8, _5, 45, _2, 14, _2 , _5, 111, _8, _4, _2, _6, _5, _4, _5, _4, _5, 4, _5c, })
+
+		rec2 = merge_cmd( -- リバサバクステキャンセルレイブ
+			{ _8, _5, 45, _2a, _5, 4, _2c, _5, 14, _6, _5, _4, _1, _2, _3, _5bc, _5, 154, _9, _5, 28, _5b, _1, 80, _5, },
+			{ _8, _5, 45, _2, 14, _2 , _5, 190, _4, _1, _2, _3, _6, _4, _5, _6, _5, _6, _5, 3, _5a, })
+
+		rec3 = merge_cmd( -- リバサバクステキャンセル真空投げ
+			{ _8, _5, 45, _2a, _5, 4, _2c, _5, 14, _6, _5, _4, _1, _2, _3, _5bc, _5, 154, _9, _5, 28, _5b, _1, 80, _5, },
+			{ _8, _5, 45, _2, 14, _2 , _5, 190, _2, _4, _8, _6, _2, _4, _5, _6, _5, _6, _5, 3, _5a, })
+
 		return { rec1, rec2, rec3, rec4, rec5 }
-		end
+	end
 	for i, preset_cmd in ipairs(research_cmd()) do
 		local store = recording.slot[i].store
 		for _, joy in ipairs(preset_cmd) do
 			table.insert(store, { joy = joy, pos = { 1, -1 } })
 		end
 	end
-	recording.cleanup = false
+	recording.player = 1
 	recording.active_slot = recording.slot[1]
 	recording.active_slot.side = 1
 
@@ -4108,9 +4121,9 @@ function rbff2.startplugin()
 	rec_fixpos = function()
 		local pos = { get_flip_x(players[1]), get_flip_x(players[2]) }
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
-		local fixpos = { pgm:read_i16(players[1].addr.pos), pgm:read_i16(players[2].addr.pos) }
+		local fixpos  = { pgm:read_i16(players[1].addr.pos)       , pgm:read_i16(players[2].addr.pos)        }
 		local fixsway = { pgm:read_u8(players[1].addr.sway_status), pgm:read_u8(players[2].addr.sway_status) }
-		local fixscr = {
+		local fixscr  = {
 			x = pgm:read_u16(stage_base_addr + offset_pos_x),
 			y = pgm:read_u16(stage_base_addr + offset_pos_y),
 			z = pgm:read_u16(stage_base_addr + offset_pos_z),
@@ -4192,8 +4205,11 @@ function rbff2.startplugin()
 			end
 		end
 
+		recording.active_slot = { store = {}, name = "空" }
 		if not empty and #recording.live_slots > 0 then
-			while true do
+			local count = #recording.live_slots
+			while count > 0 do
+				count = count - 1
 				local random_i = math.random(#recording.live_slots)
 				local slot_no = recording.live_slots[random_i]
 				recording.active_slot = recording.slot[slot_no]
@@ -4201,8 +4217,6 @@ function rbff2.startplugin()
 					break
 				end
 			end
-		else
-			recording.active_slot = { store = {}, name = "空" }
 		end
 
 		-- 冗長な未入力を省く
@@ -4290,7 +4304,7 @@ function rbff2.startplugin()
 						end
 					end
 				end
-				if fixpos.fixscr and global.replay_fix_pos ~= 1 then
+				if fixpos.fixscr and global.replay_fix_pos and global.replay_fix_pos ~= 1 then
 					pgm:write_u16(stage_base_addr + offset_pos_x, fixpos.fixscr.x)
 					pgm:write_u16(stage_base_addr + offset_pos_x + 0x30, fixpos.fixscr.x)
 					pgm:write_u16(stage_base_addr + offset_pos_x + 0x2C, fixpos.fixscr.x)
@@ -4949,7 +4963,7 @@ function rbff2.startplugin()
 			p.tw_accepted    = pgm:read_u8(p.addr.tw_accepted)
 			p.tw_frame       = pgm:read_u8(p.addr.tw_frame)
 			p.tw_muteki      = pgm:read_u8(p.addr.tw_muteki)
-			-- 通常投げ無��� その2(HOME 039FC6から03A000の処理を再現して投げ無敵の値を求める)
+			-- 通常投げ無敵判断 その2(HOME 039FC6から03A000の処理を再現して投げ無敵の値を求める)
 			p.tw_muteki2     = 0
 			if 0x70 <= p.attack then
 				local d1 = pgm:read_u16(p.addr.base + 0x10)
@@ -6672,8 +6686,8 @@ function rbff2.startplugin()
 					draw_rtext(    p1 and 28 or 302, 22, string.format("%2x", p.act_count))
 					draw_rtext(    p1 and 40 or 314, 22, string.format("%2x", p.act_frame))
 
-					local throwable   = p.state == 0 and op.state == 0 and p.tw_frame > 24 and p.sway_status == 0x00 -- 投げ可能ベース
-					local n_throwable = throwable and p.tw_muteki == 0 and p.tw_muteki2 == 0 -- 通常投げ可能
+					local throwable   = p.state == 0 and op.state == 0 and p.tw_frame > 24 and p.sway_status == 0x00 and p.tw_muteki == 0 -- 投げ可能ベース
+					local n_throwable = throwable and p.tw_muteki2 == 0 -- 通常投げ可能
 					--[[
 						p.tw_frame のしきい値。しきい値より大きければ投げ処理継続可能。
 						0  空投げ M.スナッチャー0
@@ -6929,7 +6943,7 @@ function rbff2.startplugin()
 			end
 
 			-- レコーディング状態表示
-			if global.dummy_mode == 5 or global.dummy_mode == 6 then
+			if global.disp_replay and (global.dummy_mode == 5 or global.dummy_mode == 6) then
 				scr:draw_box (260-25, 208-8, 320-5, 224, 0xBB404040, 0xBB404040)
 				if global.rec_main == rec_await_1st_input then
 					-- 初回入力まち
@@ -7199,6 +7213,7 @@ function rbff2.startplugin()
 			play_menu.pos.col[13] = global.await_neutral and 2 or 1  -- 繰り返し開始条件  13
 			play_menu.pos.col[14] = global.replay_fix_pos            -- 開始間合い固定    14
 			play_menu.pos.col[15] = global.replay_reset              -- 状態リセット      15
+			play_menu.pos.col[16] = global.disp_replay and 2 or 1    -- ガイド表示        16
 			if not cancel and row == 1 then
 				menu_cur = play_menu
 				return
@@ -7361,9 +7376,10 @@ function rbff2.startplugin()
 	local exit_menu_to_play_common = function()
 		local col = play_menu.pos.col
 		recording.live_slots = {}
-		for i = 2, 6 do
-			if col[i] == 2 then
-				table.insert(recording.live_slots, i-1)
+		for i = 1, #recording.slot do
+			if col[i+1] == 2 then
+print("recording slot active [" .. i .. "]")
+				table.insert(recording.live_slots, i)
 			end
 		end
 		recording.do_repeat       = col[11] == 2 -- 繰り返し          11
@@ -7371,6 +7387,7 @@ function rbff2.startplugin()
 		global.await_neutral      = col[13] == 2 -- 繰り返し開始条件  13
 		global.replay_fix_pos     = col[14]      -- 開始間合い固定    14
 		global.replay_reset       = col[15]      -- 状態リセット      15
+		global.disp_replay        = col[16] == 2 -- ガイド表示        16
 		global.repeat_interval    = recording.repeat_interval
 	end
 	local exit_menu_to_play = function()
@@ -8108,6 +8125,7 @@ function rbff2.startplugin()
 			{ "繰り返し開始条件"      , { "なし", "両キャラがニュートラル", }, },
 			{ "開始間合い固定"        , { "OFF", "1Pと2P", "1P", "2P", }, },
 			{ "状態リセット"          , { "OFF", "1Pと2P", "1P", "2P", }, },
+			{ "ガイド表示"            , { "OFF", "ON", }, },
 			{ "開始間合い"            , { "Aでレコード開始", }, },
 		},
 		pos = { -- メニュー内の選択位置
@@ -8129,7 +8147,8 @@ function rbff2.startplugin()
 				1, -- 繰り返し開始条件  13
 				global.replay_fix_pos, -- 開始間合い固定    14
 				global.replay_reset,   -- 状態リセット      15
-				1, -- 開始間合い        16
+				2, -- ガイド表示        16
+				1, -- 開始間合い        17
 			},
 		},
 		on_a = {
@@ -8148,6 +8167,7 @@ function rbff2.startplugin()
 			exit_menu_to_play, -- 繰り返し開始条件
 			exit_menu_to_play, -- 開始間合い固定
 			exit_menu_to_play, -- 状態リセット
+			exit_menu_to_play, -- ガイド表示
 			exit_menu_to_rec_pos, -- 開始間合い
 		},
 		on_b = {
@@ -8166,6 +8186,7 @@ function rbff2.startplugin()
 			exit_menu_to_play_cancel, -- 繰り返し間隔
 			exit_menu_to_play_cancel, -- 開始間合い固定
 			exit_menu_to_play_cancel, -- 状態リセット
+			exit_menu_to_play_cancel, -- ガイド表示
 			exit_menu_to_play_cancel, -- 開始間合い
 		},
 	}
