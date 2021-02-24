@@ -1945,8 +1945,10 @@ local accept_input = function(btn, joy_val, state_past)
 		else
 			if (0 < joy_val[p1] and state_past >= joy_val[p1]) or 
 			   (0 < joy_val[p2] and state_past >= joy_val[p2]) then
-				pgm:write_u32(0x0010D612, 0x00610004)
-				pgm:write_u8(0x0010D713, 0x01)
+				if global.disp_replay then
+					pgm:write_u32(0x0010D612, 0x00610004)
+					pgm:write_u8(0x0010D713, 0x01)
+				end
 				return true
 			end
 		end
@@ -3859,150 +3861,165 @@ function rbff2.startplugin()
 			end
 			return joy
 		end
-		local _1  = function(joykp) return make_cmd(joykp, "lt", "dn") end
-		local _1a  = function(joykp) return make_cmd(joykp, "lt", "dn", "a") end
-		local _1b  = function(joykp) return make_cmd(joykp, "lt", "dn", "b") end
-		local _1ab  = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "b") end
-		local _1c  = function(joykp) return make_cmd(joykp, "lt", "dn", "c") end
-		local _1ac  = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "c") end
-		local _1bc  = function(joykp) return make_cmd(joykp, "lt", "dn", "b", "c") end
+		local _1     = function(joykp) return make_cmd(joykp, "lt", "dn") end
+		local _1a    = function(joykp) return make_cmd(joykp, "lt", "dn", "a") end
+		local _1b    = function(joykp) return make_cmd(joykp, "lt", "dn", "b") end
+		local _1ab   = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "b") end
+		local _1c    = function(joykp) return make_cmd(joykp, "lt", "dn", "c") end
+		local _1ac   = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "c") end
+		local _1bc   = function(joykp) return make_cmd(joykp, "lt", "dn", "b", "c") end
 		local _1abc  = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "b", "c") end
-		local _1d  = function(joykp) return make_cmd(joykp, "lt", "dn", "d") end
-		local _1ad  = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "d") end
-		local _1bd  = function(joykp) return make_cmd(joykp, "lt", "dn", "b", "d") end
+		local _1d    = function(joykp) return make_cmd(joykp, "lt", "dn", "d") end
+		local _1ad   = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "d") end
+		local _1bd   = function(joykp) return make_cmd(joykp, "lt", "dn", "b", "d") end
 		local _1abd  = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "b", "d") end
-		local _1cd  = function(joykp) return make_cmd(joykp, "lt", "dn", "c", "d") end
+		local _1cd   = function(joykp) return make_cmd(joykp, "lt", "dn", "c", "d") end
 		local _1acd  = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "c", "d") end
 		local _1bcd  = function(joykp) return make_cmd(joykp, "lt", "dn", "b", "c", "d") end
-		local _1abcd  = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "b", "c", "d") end
-		local _2  = function(joykp) return make_cmd(joykp, "dn") end
-		local _2a  = function(joykp) return make_cmd(joykp, "dn", "a") end
-		local _2b  = function(joykp) return make_cmd(joykp, "dn", "b") end
-		local _2ab  = function(joykp) return make_cmd(joykp, "dn", "a", "b") end
-		local _2c  = function(joykp) return make_cmd(joykp, "dn", "c") end
-		local _2ac  = function(joykp) return make_cmd(joykp, "dn", "a", "c") end
-		local _2bc  = function(joykp) return make_cmd(joykp, "dn", "b", "c") end
+		local _1abcd = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "b", "c", "d") end
+		local _2     = function(joykp) return make_cmd(joykp, "dn") end
+		local _2a    = function(joykp) return make_cmd(joykp, "dn", "a") end
+		local _2b    = function(joykp) return make_cmd(joykp, "dn", "b") end
+		local _2ab   = function(joykp) return make_cmd(joykp, "dn", "a", "b") end
+		local _2c    = function(joykp) return make_cmd(joykp, "dn", "c") end
+		local _2ac   = function(joykp) return make_cmd(joykp, "dn", "a", "c") end
+		local _2bc   = function(joykp) return make_cmd(joykp, "dn", "b", "c") end
 		local _2abc  = function(joykp) return make_cmd(joykp, "dn", "a", "b", "c") end
-		local _2d  = function(joykp) return make_cmd(joykp, "dn", "d") end
-		local _2ad  = function(joykp) return make_cmd(joykp, "dn", "a", "d") end
-		local _2bd  = function(joykp) return make_cmd(joykp, "dn", "b", "d") end
+		local _2d    = function(joykp) return make_cmd(joykp, "dn", "d") end
+		local _2ad   = function(joykp) return make_cmd(joykp, "dn", "a", "d") end
+		local _2bd   = function(joykp) return make_cmd(joykp, "dn", "b", "d") end
 		local _2abd  = function(joykp) return make_cmd(joykp, "dn", "a", "b", "d") end
-		local _2cd  = function(joykp) return make_cmd(joykp, "dn", "c", "d") end
+		local _2cd   = function(joykp) return make_cmd(joykp, "dn", "c", "d") end
 		local _2acd  = function(joykp) return make_cmd(joykp, "dn", "a", "c", "d") end
 		local _2bcd  = function(joykp) return make_cmd(joykp, "dn", "b", "c", "d") end
-		local _2abcd  = function(joykp) return make_cmd(joykp, "dn", "a", "b", "c", "d") end
-		local _3  = function(joykp) return make_cmd(joykp, "rt", "dn") end
-		local _3a  = function(joykp) return make_cmd(joykp, "rt", "dn", "a") end
-		local _3b  = function(joykp) return make_cmd(joykp, "rt", "dn", "b") end
-		local _3ab  = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "b") end
-		local _3c  = function(joykp) return make_cmd(joykp, "rt", "dn", "c") end
-		local _3ac  = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "c") end
-		local _3bc  = function(joykp) return make_cmd(joykp, "rt", "dn", "b", "c") end
+		local _2abcd = function(joykp) return make_cmd(joykp, "dn", "a", "b", "c", "d") end
+		local _3     = function(joykp) return make_cmd(joykp, "rt", "dn") end
+		local _3a    = function(joykp) return make_cmd(joykp, "rt", "dn", "a") end
+		local _3b    = function(joykp) return make_cmd(joykp, "rt", "dn", "b") end
+		local _3ab   = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "b") end
+		local _3c    = function(joykp) return make_cmd(joykp, "rt", "dn", "c") end
+		local _3ac   = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "c") end
+		local _3bc   = function(joykp) return make_cmd(joykp, "rt", "dn", "b", "c") end
 		local _3abc  = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "b", "c") end
-		local _3d  = function(joykp) return make_cmd(joykp, "rt", "dn", "d") end
-		local _3ad  = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "d") end
-		local _3bd  = function(joykp) return make_cmd(joykp, "rt", "dn", "b", "d") end
+		local _3d    = function(joykp) return make_cmd(joykp, "rt", "dn", "d") end
+		local _3ad   = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "d") end
+		local _3bd   = function(joykp) return make_cmd(joykp, "rt", "dn", "b", "d") end
 		local _3abd  = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "b", "d") end
-		local _3cd  = function(joykp) return make_cmd(joykp, "rt", "dn", "c", "d") end
+		local _3cd   = function(joykp) return make_cmd(joykp, "rt", "dn", "c", "d") end
 		local _3acd  = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "c", "d") end
 		local _3bcd  = function(joykp) return make_cmd(joykp, "rt", "dn", "b", "c", "d") end
-		local _3abcd  = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "b", "c", "d") end
-		local _4  = function(joykp) return make_cmd(joykp, "lt") end
-		local _4a  = function(joykp) return make_cmd(joykp, "lt", "a") end
-		local _4b  = function(joykp) return make_cmd(joykp, "lt", "b") end
-		local _4ab  = function(joykp) return make_cmd(joykp, "lt", "a", "b") end
-		local _4c  = function(joykp) return make_cmd(joykp, "lt", "c") end
-		local _4ac  = function(joykp) return make_cmd(joykp, "lt", "a", "c") end
-		local _4bc  = function(joykp) return make_cmd(joykp, "lt", "b", "c") end
+		local _3abcd = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "b", "c", "d") end
+		local _4     = function(joykp) return make_cmd(joykp, "lt") end
+		local _4a    = function(joykp) return make_cmd(joykp, "lt", "a") end
+		local _4b    = function(joykp) return make_cmd(joykp, "lt", "b") end
+		local _4ab   = function(joykp) return make_cmd(joykp, "lt", "a", "b") end
+		local _4c    = function(joykp) return make_cmd(joykp, "lt", "c") end
+		local _4ac   = function(joykp) return make_cmd(joykp, "lt", "a", "c") end
+		local _4bc   = function(joykp) return make_cmd(joykp, "lt", "b", "c") end
 		local _4abc  = function(joykp) return make_cmd(joykp, "lt", "a", "b", "c") end
-		local _4d  = function(joykp) return make_cmd(joykp, "lt", "d") end
-		local _4ad  = function(joykp) return make_cmd(joykp, "lt", "a", "d") end
-		local _4bd  = function(joykp) return make_cmd(joykp, "lt", "b", "d") end
+		local _4d    = function(joykp) return make_cmd(joykp, "lt", "d") end
+		local _4ad   = function(joykp) return make_cmd(joykp, "lt", "a", "d") end
+		local _4bd   = function(joykp) return make_cmd(joykp, "lt", "b", "d") end
 		local _4abd  = function(joykp) return make_cmd(joykp, "lt", "a", "b", "d") end
-		local _4cd  = function(joykp) return make_cmd(joykp, "lt", "c", "d") end
+		local _4cd   = function(joykp) return make_cmd(joykp, "lt", "c", "d") end
 		local _4acd  = function(joykp) return make_cmd(joykp, "lt", "a", "c", "d") end
 		local _4bcd  = function(joykp) return make_cmd(joykp, "lt", "b", "c", "d") end
-		local _4abcd  = function(joykp) return make_cmd(joykp, "lt", "a", "b", "c", "d") end
-		local _5  = function(joykp) return make_cmd(joykp) end
-		local _5a  = function(joykp) return make_cmd(joykp, "a") end
-		local _5b  = function(joykp) return make_cmd(joykp, "b") end
-		local _5ab  = function(joykp) return make_cmd(joykp, "a", "b") end
-		local _5c  = function(joykp) return make_cmd(joykp, "c") end
-		local _5ac  = function(joykp) return make_cmd(joykp, "a", "c") end
-		local _5bc  = function(joykp) return make_cmd(joykp, "b", "c") end
+		local _4abcd = function(joykp) return make_cmd(joykp, "lt", "a", "b", "c", "d") end
+		local _5     = function(joykp) return make_cmd(joykp) end
+		local _5a    = function(joykp) return make_cmd(joykp, "a") end
+		local _5b    = function(joykp) return make_cmd(joykp, "b") end
+		local _5ab   = function(joykp) return make_cmd(joykp, "a", "b") end
+		local _5c    = function(joykp) return make_cmd(joykp, "c") end
+		local _5ac   = function(joykp) return make_cmd(joykp, "a", "c") end
+		local _5bc   = function(joykp) return make_cmd(joykp, "b", "c") end
 		local _5abc  = function(joykp) return make_cmd(joykp, "a", "b", "c") end
-		local _5d  = function(joykp) return make_cmd(joykp, "d") end
-		local _5ad  = function(joykp) return make_cmd(joykp, "a", "d") end
-		local _5bd  = function(joykp) return make_cmd(joykp, "b", "d") end
+		local _5d    = function(joykp) return make_cmd(joykp, "d") end
+		local _5ad   = function(joykp) return make_cmd(joykp, "a", "d") end
+		local _5bd   = function(joykp) return make_cmd(joykp, "b", "d") end
 		local _5abd  = function(joykp) return make_cmd(joykp, "a", "b", "d") end
-		local _5cd  = function(joykp) return make_cmd(joykp, "c", "d") end
+		local _5cd   = function(joykp) return make_cmd(joykp, "c", "d") end
 		local _5acd  = function(joykp) return make_cmd(joykp, "a", "c", "d") end
 		local _5bcd  = function(joykp) return make_cmd(joykp, "b", "c", "d") end
-		local _5abcd  = function(joykp) return make_cmd(joykp, "a", "b", "c", "d") end
-		local _6  = function(joykp) return make_cmd(joykp, "rt") end
-		local _6a  = function(joykp) return make_cmd(joykp, "rt", "a") end
-		local _6b  = function(joykp) return make_cmd(joykp, "rt", "b") end
-		local _6ab  = function(joykp) return make_cmd(joykp, "rt", "a", "b") end
-		local _6c  = function(joykp) return make_cmd(joykp, "rt", "c") end
-		local _6ac  = function(joykp) return make_cmd(joykp, "rt", "a", "c") end
-		local _6bc  = function(joykp) return make_cmd(joykp, "rt", "b", "c") end
+		local _5abcd = function(joykp) return make_cmd(joykp, "a", "b", "c", "d") end
+		local _a     = _5a
+		local _b     = _5b
+		local _ab    = _5ab
+		local _c     = _5c
+		local _ac    = _5ac
+		local _bc    = _5bc
+		local _abc   = _5abc
+		local _d     = _5d
+		local _ad    = _5ad
+		local _bd    = _5bd
+		local _abd   = _5abd
+		local _cd    = _5cd
+		local _acd   = _5acd
+		local _bcd   = _5bcd
+		local _abcd  = _5abcd
+		local _6     = function(joykp) return make_cmd(joykp, "rt") end
+		local _6a    = function(joykp) return make_cmd(joykp, "rt", "a") end
+		local _6b    = function(joykp) return make_cmd(joykp, "rt", "b") end
+		local _6ab   = function(joykp) return make_cmd(joykp, "rt", "a", "b") end
+		local _6c    = function(joykp) return make_cmd(joykp, "rt", "c") end
+		local _6ac   = function(joykp) return make_cmd(joykp, "rt", "a", "c") end
+		local _6bc   = function(joykp) return make_cmd(joykp, "rt", "b", "c") end
 		local _6abc  = function(joykp) return make_cmd(joykp, "rt", "a", "b", "c") end
-		local _6d  = function(joykp) return make_cmd(joykp, "rt", "d") end
-		local _6ad  = function(joykp) return make_cmd(joykp, "rt", "a", "d") end
-		local _6bd  = function(joykp) return make_cmd(joykp, "rt", "b", "d") end
+		local _6d    = function(joykp) return make_cmd(joykp, "rt", "d") end
+		local _6ad   = function(joykp) return make_cmd(joykp, "rt", "a", "d") end
+		local _6bd   = function(joykp) return make_cmd(joykp, "rt", "b", "d") end
 		local _6abd  = function(joykp) return make_cmd(joykp, "rt", "a", "b", "d") end
-		local _6cd  = function(joykp) return make_cmd(joykp, "rt", "c", "d") end
+		local _6cd   = function(joykp) return make_cmd(joykp, "rt", "c", "d") end
 		local _6acd  = function(joykp) return make_cmd(joykp, "rt", "a", "c", "d") end
 		local _6bcd  = function(joykp) return make_cmd(joykp, "rt", "b", "c", "d") end
-		local _6abcd  = function(joykp) return make_cmd(joykp, "rt", "a", "b", "c", "d") end
-		local _7  = function(joykp) return make_cmd(joykp, "lt", "up") end
-		local _7a  = function(joykp) return make_cmd(joykp, "lt", "up", "a") end
-		local _7b  = function(joykp) return make_cmd(joykp, "lt", "up", "b") end
-		local _7ab  = function(joykp) return make_cmd(joykp, "lt", "up", "a", "b") end
-		local _7c  = function(joykp) return make_cmd(joykp, "lt", "up", "c") end
-		local _7ac  = function(joykp) return make_cmd(joykp, "lt", "up", "a", "c") end
-		local _7bc  = function(joykp) return make_cmd(joykp, "lt", "up", "b", "c") end
+		local _6abcd = function(joykp) return make_cmd(joykp, "rt", "a", "b", "c", "d") end
+		local _7     = function(joykp) return make_cmd(joykp, "lt", "up") end
+		local _7a    = function(joykp) return make_cmd(joykp, "lt", "up", "a") end
+		local _7b    = function(joykp) return make_cmd(joykp, "lt", "up", "b") end
+		local _7ab   = function(joykp) return make_cmd(joykp, "lt", "up", "a", "b") end
+		local _7c    = function(joykp) return make_cmd(joykp, "lt", "up", "c") end
+		local _7ac   = function(joykp) return make_cmd(joykp, "lt", "up", "a", "c") end
+		local _7bc   = function(joykp) return make_cmd(joykp, "lt", "up", "b", "c") end
 		local _7abc  = function(joykp) return make_cmd(joykp, "lt", "up", "a", "b", "c") end
-		local _7d  = function(joykp) return make_cmd(joykp, "lt", "up", "d") end
-		local _7ad  = function(joykp) return make_cmd(joykp, "lt", "up", "a", "d") end
-		local _7bd  = function(joykp) return make_cmd(joykp, "lt", "up", "b", "d") end
+		local _7d    = function(joykp) return make_cmd(joykp, "lt", "up", "d") end
+		local _7ad   = function(joykp) return make_cmd(joykp, "lt", "up", "a", "d") end
+		local _7bd   = function(joykp) return make_cmd(joykp, "lt", "up", "b", "d") end
 		local _7abd  = function(joykp) return make_cmd(joykp, "lt", "up", "a", "b", "d") end
-		local _7cd  = function(joykp) return make_cmd(joykp, "lt", "up", "c", "d") end
+		local _7cd   = function(joykp) return make_cmd(joykp, "lt", "up", "c", "d") end
 		local _7acd  = function(joykp) return make_cmd(joykp, "lt", "up", "a", "c", "d") end
 		local _7bcd  = function(joykp) return make_cmd(joykp, "lt", "up", "b", "c", "d") end
-		local _7abcd  = function(joykp) return make_cmd(joykp, "lt", "up", "a", "b", "c", "d") end
-		local _8  = function(joykp) return make_cmd(joykp, "up") end
-		local _8a  = function(joykp) return make_cmd(joykp, "up", "a") end
-		local _8b  = function(joykp) return make_cmd(joykp, "up", "b") end
-		local _8ab  = function(joykp) return make_cmd(joykp, "up", "a", "b") end
-		local _8c  = function(joykp) return make_cmd(joykp, "up", "c") end
-		local _8ac  = function(joykp) return make_cmd(joykp, "up", "a", "c") end
-		local _8bc  = function(joykp) return make_cmd(joykp, "up", "b", "c") end
+		local _7abcd = function(joykp) return make_cmd(joykp, "lt", "up", "a", "b", "c", "d") end
+		local _8     = function(joykp) return make_cmd(joykp, "up") end
+		local _8a    = function(joykp) return make_cmd(joykp, "up", "a") end
+		local _8b    = function(joykp) return make_cmd(joykp, "up", "b") end
+		local _8ab   = function(joykp) return make_cmd(joykp, "up", "a", "b") end
+		local _8c    = function(joykp) return make_cmd(joykp, "up", "c") end
+		local _8ac   = function(joykp) return make_cmd(joykp, "up", "a", "c") end
+		local _8bc   = function(joykp) return make_cmd(joykp, "up", "b", "c") end
 		local _8abc  = function(joykp) return make_cmd(joykp, "up", "a", "b", "c") end
-		local _8d  = function(joykp) return make_cmd(joykp, "up", "d") end
-		local _8ad  = function(joykp) return make_cmd(joykp, "up", "a", "d") end
-		local _8bd  = function(joykp) return make_cmd(joykp, "up", "b", "d") end
+		local _8d    = function(joykp) return make_cmd(joykp, "up", "d") end
+		local _8ad   = function(joykp) return make_cmd(joykp, "up", "a", "d") end
+		local _8bd   = function(joykp) return make_cmd(joykp, "up", "b", "d") end
 		local _8abd  = function(joykp) return make_cmd(joykp, "up", "a", "b", "d") end
-		local _8cd  = function(joykp) return make_cmd(joykp, "up", "c", "d") end
+		local _8cd   = function(joykp) return make_cmd(joykp, "up", "c", "d") end
 		local _8acd  = function(joykp) return make_cmd(joykp, "up", "a", "c", "d") end
 		local _8bcd  = function(joykp) return make_cmd(joykp, "up", "b", "c", "d") end
-		local _8abcd  = function(joykp) return make_cmd(joykp, "up", "a", "b", "c", "d") end
-		local _9  = function(joykp) return make_cmd(joykp, "rt", "up") end
-		local _9a  = function(joykp) return make_cmd(joykp, "rt", "up", "a") end
-		local _9b  = function(joykp) return make_cmd(joykp, "rt", "up", "b") end
-		local _9ab  = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b") end
-		local _9c  = function(joykp) return make_cmd(joykp, "rt", "up", "c") end
-		local _9ac  = function(joykp) return make_cmd(joykp, "rt", "up", "a", "c") end
-		local _9bc  = function(joykp) return make_cmd(joykp, "rt", "up", "b", "c") end
+		local _8abcd = function(joykp) return make_cmd(joykp, "up", "a", "b", "c", "d") end
+		local _9     = function(joykp) return make_cmd(joykp, "rt", "up") end
+		local _9a    = function(joykp) return make_cmd(joykp, "rt", "up", "a") end
+		local _9b    = function(joykp) return make_cmd(joykp, "rt", "up", "b") end
+		local _9ab   = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b") end
+		local _9c    = function(joykp) return make_cmd(joykp, "rt", "up", "c") end
+		local _9ac   = function(joykp) return make_cmd(joykp, "rt", "up", "a", "c") end
+		local _9bc   = function(joykp) return make_cmd(joykp, "rt", "up", "b", "c") end
 		local _9abc  = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b", "c") end
-		local _9d  = function(joykp) return make_cmd(joykp, "rt", "up", "d") end
-		local _9ad  = function(joykp) return make_cmd(joykp, "rt", "up", "a", "d") end
-		local _9bd  = function(joykp) return make_cmd(joykp, "rt", "up", "b", "d") end
+		local _9d    = function(joykp) return make_cmd(joykp, "rt", "up", "d") end
+		local _9ad   = function(joykp) return make_cmd(joykp, "rt", "up", "a", "d") end
+		local _9bd   = function(joykp) return make_cmd(joykp, "rt", "up", "b", "d") end
 		local _9abd  = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b", "d") end
-		local _9cd  = function(joykp) return make_cmd(joykp, "rt", "up", "c", "d") end
+		local _9cd   = function(joykp) return make_cmd(joykp, "rt", "up", "c", "d") end
 		local _9acd  = function(joykp) return make_cmd(joykp, "rt", "up", "a", "c", "d") end
 		local _9bcd  = function(joykp) return make_cmd(joykp, "rt", "up", "b", "c", "d") end
-		local _9abcd  = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b", "c", "d") end
+		local _9abcd = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b", "c", "d") end
 		local extract_cmd = function(joyk, cmd_ary)
 			if not cmd_ary then
 				return {}
@@ -4037,7 +4054,7 @@ function rbff2.startplugin()
 			end
 			return ret
 		end
-		local rec1, rec2, rec3, rec4, rec5 = {}, {}, {}, {}, {}
+		local rec1, rec2, rec3, rec4, rec5, rec6, rec7, rec8 = {}, {}, {}, {}, {}, {}, {}, {}
 		-- LINNさんネタの確認 ... リバサバクステキャンセルサイクロンで重ね飛燕失脚の迎撃
 		--[[ バクステ回避
 		rec1 = merge_cmd(
@@ -4082,20 +4099,16 @@ function rbff2.startplugin()
 			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, }, -- 通常投げ→飛燕失脚重ね
 			{ _8, _5, 45, _2, 14, _2 , _5, 111, _8, _4, _2, _6, _5, _4, _5, _4, _5, 4, _5c, })
 		]]
-
-		rec1 = merge_cmd( -- リバサバクステキャンセルサイクロン
+		rec1 = merge_cmd( -- ガー不飛燕失脚 リバサバクステキャンセルサイクロン
 			{ _8, _5, 45, _6, 14, _6c, _5,  86, _6, _6a, }, -- 通常投げ→飛燕失脚重ね
 			{ _8, _5, 45, _2, 14, _2 , _5, 111, _8, _4, _2, _6, _5, _4, _5, _4, _5, 4, _5c, })
-
-		rec2 = merge_cmd( -- リバサバクステキャンセルレイブ
+		rec2 = merge_cmd( -- ガー不ジャンプB リバサバクステキャンセルレイブ
 			{ _8, _5, 45, _2a, _5, 4, _2c, _5, 14, _6, _5, _4, _1, _2, _3, _5bc, _5, 154, _9, _5, 28, _5b, _1, 80, _5, },
 			{ _8, _5, 45, _2, 14, _2 , _5, 190, _4, _1, _2, _3, _6, _4, _5, _6, _5, _6, _5, 3, _5a, })
-
-		rec3 = merge_cmd( -- リバサバクステキャンセル真空投げ
+		rec3 = merge_cmd( -- ガー不ジャンプB リバサバクステキャンセル真空投げ
 			{ _8, _5, 45, _2a, _5, 4, _2c, _5, 14, _6, _5, _4, _1, _2, _3, _5bc, _5, 154, _9, _5, 28, _5b, _1, 80, _5, },
 			{ _8, _5, 45, _2, 14, _2 , _5, 190, _2, _4, _8, _6, _2, _4, _5, _6, _5, _6, _5, 3, _5a, })
-
-		return { rec1, rec2, rec3, rec4, rec5 }
+		return { rec1, rec2, rec3, rec4, rec5, rec6, rec7, rec8 }
 	end
 	for i, preset_cmd in ipairs(research_cmd()) do
 		local store = recording.slot[i].store
@@ -7378,7 +7391,6 @@ function rbff2.startplugin()
 		recording.live_slots = {}
 		for i = 1, #recording.slot do
 			if col[i+1] == 2 then
-print("recording slot active [" .. i .. "]")
 				table.insert(recording.live_slots, i)
 			end
 		end
