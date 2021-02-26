@@ -91,6 +91,7 @@ local global = {
 	disp_frmgap     = 3, -- フレーム差表示
 	pause_hit       = false, -- ヒット時にポーズ
 	pausethrow      = false, -- 投げ判定表示時にポーズ
+	replay_stop_on_dmg = false, -- ダメージでリプレイ中段
 
 	auto_input      = {
 		otg_thw     = false, -- ダウン投げ              2
@@ -4101,6 +4102,9 @@ function rbff2.startplugin()
 		rec2 = merge_cmd( -- ガー不ジャンプB リバサバクステキャンセルレイブ
 			{ _8, _5, 46, _2a, _5, 5, _2c, _5, 15, _6, _5, _4, _1, _2, _3, _bc, _5, 155, _9, _5, 29, _b, _1, 81, _5, },
 			{ _8, _5, 46, _2, 15, _2 , _5, 191, _4, _1, _2, _3, _6, _4, _5, _6, _5, _6, _5, 4, _a, })
+		rec2 = merge_cmd( -- ガー不ジャンプB リバサバクステキャンセルレイブ
+			{ _8, _5, 46, _2a, _5, 5, _2c, _5, 15, _6, _5, _4, _1, _2, _3, _bc, _5, 155, _9, _5, 29, _b, _1, 81, _1, 289, _6, _5, _4, _1, _2, _3, _5, _4, _5, _4, _5, 3, _bc, _5, 178, _4, 23, _5, 26, _cd, _5, 51, _2, _1, _4, _5, _4, _5, _4, 3, _c, _5, 40, _cd, _5 },
+			{ _8, _5, 46, _2, 15, _2 , _5, 191, _4, _1, _2, _3, _6, _4, _5, _6, _5, _6, _5, 4, _a, _5, 340, _4a, _5, 270, _6, _2, _3, _6, _c, _5, 76, _cd, _5  })
 		rec3 = merge_cmd( -- ガー不ジャンプB リバサバクステキャンセル真空投げ
 			{ _8, _5, 46, _2a, _5, 5, _2c, _5, 15, _6, _5, _4, _1, _2, _3, _bc, _5, 155, _9, _5, 29, _b, _1, 81, _5, },
 			{ _8, _5, 46, _2, 15, _2 , _5, 191, _2, _4, _8, _6, _2, _4, _5, _6, _5, _6, _5, 4, _5a, })
@@ -4373,7 +4377,7 @@ function rbff2.startplugin()
 
 		local stop = false
 		local store = recording.active_slot.store[recording.play_count]
-		if store == nil or pgm:read_u8(players[recording.player].addr.state) == 1 then
+		if store == nil or (global.replay_stop_on_dmg and pgm:read_u8(players[recording.player].addr.state) == 1) then
 			stop = true
 		else
 			-- 入力再生
@@ -7223,6 +7227,7 @@ function rbff2.startplugin()
 			play_menu.pos.col[14] = global.replay_fix_pos            -- 開始間合い固定    14
 			play_menu.pos.col[15] = global.replay_reset              -- 状態リセット      15
 			play_menu.pos.col[16] = global.disp_replay and 2 or 1    -- ガイド表示        16
+			play_menu.pos.col[17] = global.replay_stop_on_dmg  and 2 or 1 -- ダメージでリプレイ中止 17
 			if not cancel and row == 1 then
 				menu_cur = play_menu
 				return
@@ -7396,6 +7401,7 @@ function rbff2.startplugin()
 		global.replay_fix_pos     = col[14]      -- 開始間合い固定    14
 		global.replay_reset       = col[15]      -- 状態リセット      15
 		global.disp_replay        = col[16] == 2 -- ガイド表示        16
+		global.replay_stop_on_dmg = col[17] == 2 -- ダメージでリプレイ中止 17
 		global.repeat_interval    = recording.repeat_interval
 	end
 	local exit_menu_to_play = function()
@@ -8134,6 +8140,7 @@ function rbff2.startplugin()
 			{ "開始間合い固定"        , { "OFF", "1Pと2P", "1P", "2P", }, },
 			{ "状態リセット"          , { "OFF", "1Pと2P", "1P", "2P", }, },
 			{ "ガイド表示"            , { "OFF", "ON", }, },
+			{ "ダメージでリプレイ中止", { "OFF", "ON", }, },
 			{ "開始間合い"            , { "Aでレコード開始", }, },
 		},
 		pos = { -- メニュー内の選択位置
@@ -8156,7 +8163,8 @@ function rbff2.startplugin()
 				global.replay_fix_pos, -- 開始間合い固定    14
 				global.replay_reset,   -- 状態リセット      15
 				2, -- ガイド表示        16
-				1, -- 開始間合い        17
+				2, -- ダメージでリプレイ中止 17
+				1, -- 開始間合い        18
 			},
 		},
 		on_a = {
@@ -8176,6 +8184,7 @@ function rbff2.startplugin()
 			exit_menu_to_play, -- 開始間合い固定
 			exit_menu_to_play, -- 状態リセット
 			exit_menu_to_play, -- ガイド表示
+			exit_menu_to_play, -- ダメージでリプレイ中止
 			exit_menu_to_rec_pos, -- 開始間合い
 		},
 		on_b = {
@@ -8195,6 +8204,7 @@ function rbff2.startplugin()
 			exit_menu_to_play_cancel, -- 開始間合い固定
 			exit_menu_to_play_cancel, -- 状態リセット
 			exit_menu_to_play_cancel, -- ガイド表示
+			exit_menu_to_play_cancel, -- ダメージでリプレイ中止
 			exit_menu_to_play_cancel, -- 開始間合い
 		},
 	}
