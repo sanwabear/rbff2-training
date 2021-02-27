@@ -2033,6 +2033,46 @@ local set_freeze = function(frz_expected)
 	end
 end
 
+local new_ggkey_set = function(p1)
+	local xoffset, yoffset = p1 and 50 or 245, 200
+	local pt0, pt2, ptS, ptP, ptP1, ptP2 , ptP3, ptP4 = 0, 1, math.sin(1), 9, 8.4, 8.7, 9.3, 9.6
+	local oct_vt = {
+		{ x =  pt0, y  = pt2, no = 1, op = 5, dg1 = 4, dg2 = 6, },  -- 1:レバー2
+		{ x =  ptS, y =  ptS, no = 2, op = 6, dg1 = 5, dg2 = 7, },  -- 2:レバー3
+		{ x =  pt2, y =  pt0, no = 3, op = 7, dg1 = 6, dg2 = 8, },  -- 3:レバー6
+		{ x =  ptS, y = -ptS, no = 4, op = 8, dg1 = 1, dg2 = 7, },  -- 4:レバー9
+		{ x =  pt0, y = -pt2, no = 5, op = 1, dg1 = 2, dg2 = 8, },  -- 5:レバー8
+		{ x = -ptS, y = -ptS, no = 6, op = 2, dg1 = 1, dg2 = 3, },  -- 6:レバー7
+		{ x = -pt2, y =  pt0, no = 7, op = 3, dg1 = 2, dg2 = 4, },  -- 7:レバー4
+		{ x = -ptS, y =  ptS, no = 8, op = 4, dg1 = 3, dg2 = 5, },  -- 8:レバー1
+		{ x =  pt0, y =  pt0, no = 9, op = 9, dg1 = 9, dg2 = 9, },  -- 9:レバー5
+	}
+	for _, xy in ipairs(oct_vt) do
+		xy.x1, xy.y1 = xy.x * ptP1 + xoffset, xy.y * ptP1 + yoffset
+		xy.x2, xy.y2 = xy.x * ptP2 + xoffset, xy.y * ptP2 + yoffset
+		xy.x3, xy.y3 = xy.x * ptP3 + xoffset, xy.y * ptP3 + yoffset
+		xy.x4, xy.y4 = xy.x * ptP3 + xoffset, xy.y * ptP4 + yoffset
+		xy.x , xy.y  = xy.x * ptP  + xoffset, xy.y * ptP  + yoffset -- 座標の中心
+		xy.xt, xy.yt = xy.x - 2.5           , xy.y -3               -- レバーの丸表示用
+	end
+	local key_xy = {
+		oct_vt[8],  -- 8:レバー1
+		oct_vt[1],  -- 1:レバー2
+		oct_vt[2],  -- 2:レバー3
+		oct_vt[7],  -- 7:レバー4
+		oct_vt[9],  -- 9:レバー5
+		oct_vt[3],  -- 3:レバー6
+		oct_vt[6],  -- 6:レバー7
+		oct_vt[5],  -- 5:レバー8
+		oct_vt[4],  -- 4:レバー9
+	}
+	return { xoffset = xoffset, yoffset = yoffset, oct_vt = oct_vt, key_xy = key_xy, }
+end
+local ggkey_set = {
+	new_ggkey_set(true),
+	new_ggkey_set(false)
+}
+
 -- 当たり判定
 local type_ck_push = function(obj, box)
 	obj.height = obj.height or box.bottom - box.top --used for height of ground throwbox
@@ -6046,7 +6086,7 @@ function rbff2.startplugin()
 				btn_d = true
 			end
 			table.insert(p.ggkey_hist, { l = lever_no, a = btn_a, b = btn_b, c = btn_c, d = btn_d, })
-			while 20 < #p.ggkey_hist do
+			while 60 < #p.ggkey_hist do
 				--バッファ長調整
 				table.remove(p.ggkey_hist, 1)
 			end
@@ -6972,45 +7012,21 @@ function rbff2.startplugin()
 			for i, p in ipairs(players) do
 				local p1 = i == 1
 				if p.disp_cmd then
-					local xoffset, yoffset = p1 and 50 or 245, 200
+					local ggkey = ggkey_set[i]
+					local xoffset, yoffset = ggkey.xoffset, ggkey.yoffset
+					local oct_vt = ggkey.oct_vt
+					local key_xy = ggkey.key_xy
 					scr:draw_box(xoffset - 13, yoffset-13, xoffset+35, yoffset+13, 0x80404040, 0x80404040)
-					local pt0, pt2, ptS, ptP, ptP1, ptP2 = 0, 1, math.sin(1), 9, 8.7, 9.3
-					local oct_vt = {
-						{ x =  pt0, y  = pt2, },  -- 1:レバー2
-						{ x =  ptS, y =  ptS, },  -- 2:レバー3
-						{ x =  pt2, y =  pt0, },  -- 3:レバー6
-						{ x =  ptS, y = -ptS, },  -- 4:レバー9
-						{ x =  pt0, y = -pt2, },  -- 5:レバー8
-						{ x = -ptS, y = -ptS, },  -- 6:レバー7
-						{ x = -pt2, y =  pt0, },  -- 7:レバー4
-						{ x = -ptS, y =  ptS, },  -- 8:レバー1
-						{ x =  pt0, y =  pt0, },  -- 9:レバー5
-					}
-					for _, xy in ipairs(oct_vt) do
-						xy.x1, xy.y1 = xy.x * ptP1 + xoffset, xy.y * ptP1 + yoffset
-						xy.x2, xy.y2 = xy.x * ptP2 + xoffset, xy.y * ptP2 + yoffset
-						xy.x , xy.y  = xy.x * ptP  + xoffset, xy.y * ptP  + yoffset
-						xy.xt, xy.yt = xy.x - 2.5           , xy.y -3
-					end
-					local key_xy = {
-						oct_vt[8],  -- 8:レバー1
-						oct_vt[1],  -- 1:レバー2
-						oct_vt[2],  -- 2:レバー3
-						oct_vt[7],  -- 7:レバー4
-						oct_vt[9],  -- 9:レバー5
-						oct_vt[3],  -- 3:レバー6
-						oct_vt[6],  -- 6:レバー7
-						oct_vt[5],  -- 5:レバー8
-						oct_vt[4],  -- 4:レバー9
-					}
 					for ni = 1, #oct_vt - 1 do
 						local prev = ni > 1 and ni - 1 or #oct_vt - 1
 						local xy1, xy2 = oct_vt[ni], oct_vt[prev]
 						scr:draw_line(xy1.x , xy1.y , xy2.x , xy2.y , 0xDDCCCCCC)
 						scr:draw_line(xy1.x1, xy1.y1, xy2.x1, xy2.y1, 0xDDCCCCCC)
 						scr:draw_line(xy1.x2, xy1.y2, xy2.x2, xy2.y2, 0xDDCCCCCC)
+						scr:draw_line(xy1.x3, xy1.y3, xy2.x3, xy2.y3, 0xDDCCCCCC)
+						scr:draw_line(xy1.x4, xy1.y4, xy2.x4, xy2.y4, 0xDDCCCCCC)
 					end
-					local tracks = {}
+					local tracks = {} -- 軌跡をつくる
 					for j = 1, #p.ggkey_hist - 1 do
 						local k = j + 1
 						local xy1, xy2 = key_xy[p.ggkey_hist[j].l], key_xy[p.ggkey_hist[k].l]
@@ -7018,16 +7034,28 @@ function rbff2.startplugin()
 							table.insert(tracks, { xy1 = xy1, xy2 = xy2, })
 						end
 					end
-					while #tracks > 6 do
+					while #tracks > 6 do -- 軌跡は6個まで
 						table.remove(tracks, 1)
 					end
 					local fixj = 6 - #tracks
 					for j, track in ipairs(tracks) do
-						local col = 0xFF0000FF + 0x002A0000 * (fixj+j)
+						local col = 0xFF0000FF + 0x002A0000 * (fixj+j) -- 青→ピンクのグラデーション
 						local xy1, xy2 = track.xy1, track.xy2
-						scr:draw_line(xy1.x , xy1.y , xy2.x , xy2.y , col)
-						scr:draw_line(xy1.x1, xy1.y1, xy2.x1, xy2.y1, col)
-						scr:draw_line(xy1.x2, xy1.y2, xy2.x2, xy2.y2, col)
+						if xy1.x == xy2.x then
+							scr:draw_box (xy1.x-0.7, xy1.y , xy2.x+0.7, xy2.y, col, col)
+						elseif xy1.y == xy2.y then
+							scr:draw_box (xy1.x, xy1.y-0.7, xy2.x, xy2.y+0.7, col, col)
+						elseif xy1.op == xy2.no or xy1.dg1 == xy2.no or xy1.dg2 == xy2.no or xy1.no == 9 or xy2.no == 9 then
+							for k = -0.6, 0.6, 0.3 do
+								scr:draw_line(xy1.x+k, xy1.y+k, xy2.x+k, xy2.y+k, col)
+							end
+						else
+							scr:draw_line(xy1.x , xy1.y , xy2.x , xy2.y , col)
+							scr:draw_line(xy1.x1, xy1.y1, xy2.x1, xy2.y1, col)
+							scr:draw_line(xy1.x2, xy1.y2, xy2.x2, xy2.y2, col)
+							scr:draw_line(xy1.x3, xy1.y3, xy2.x3, xy2.y3, col)
+							scr:draw_line(xy1.x4, xy1.y4, xy2.x4, xy2.y4, col)
+						end
 					end
 
 					local ggkey = p.ggkey_hist[#p.ggkey_hist]
