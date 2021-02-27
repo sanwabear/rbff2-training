@@ -2918,9 +2918,10 @@ function rbff2.startplugin()
 			prj_rank         = 0,           -- 飛び道具の強さ
 			esaka_range      = nil,           -- 詠酒の間合いチェック用
 
-			key_now          = {},          -- 前フレームまでの個別キー入力フレーム
-			key_pre          = {},          -- 個別キー入力フレーム
+			key_now          = {},          -- 個別キー入力フレーム
+			key_pre          = {},          -- 前フレームまでの個別キー入力フレーム
 			key_hist         = {},
+			ggkey_hist       = {},
 			key_frames       = {},
 			act_frame        = 0,
 			act_frames       = {},
@@ -6007,37 +6008,47 @@ function rbff2.startplugin()
 			key_now.up = (p.reg_pcnt & 0x01) == 0x00 and posi_or_pl1(key_now.up) or nega_or_mi1(key_now.up) -- Up
 			key_now.sl = (p.reg_st_b & (p1 and 0x02 or 0x08)) == 0x00 and posi_or_pl1(key_now.sl) or nega_or_mi1(key_now.sl) -- Select
 			key_now.st = (p.reg_st_b & (p1 and 0x01 or 0x04)) == 0x00 and posi_or_pl1(key_now.st) or nega_or_mi1(key_now.st) -- Start
-			local lever
+			local lever, lever_no
 			if (p.reg_pcnt & 0x05) == 0x00 then
-				lever = "_7"
+				lever, lever_no = "_7", 7
 			elseif (p.reg_pcnt & 0x09) == 0x00 then
-				lever = "_9"
+				lever, lever_no  = "_9", 9
 			elseif (p.reg_pcnt & 0x06) == 0x00 then
-				lever = "_1"
+				lever, lever_no  = "_1", 1
 			elseif (p.reg_pcnt & 0x0A) == 0x00 then
-				lever = "_3"
+				lever, lever_no  = "_3", 3
 			elseif (p.reg_pcnt & 0x01) == 0x00 then
-				lever = "_8"
+				lever, lever_no  = "_8", 8
 			elseif (p.reg_pcnt & 0x02) == 0x00 then
-				lever = "_2"
+				lever, lever_no  = "_2", 2
 			elseif (p.reg_pcnt & 0x04) == 0x00 then
-				lever = "_4"
+				lever, lever_no  = "_4", 4
 			elseif (p.reg_pcnt & 0x08) == 0x00 then
-				lever = "_6"
+				lever, lever_no  = "_6", 6
 			else
-				lever = "_N"
+				lever, lever_no  = "_N", 5
 			end
+			local btn_a, btn_b, btn_c, btn_d = false, false, false, false
 			if (p.reg_pcnt & 0x10) == 0x00 then
 				lever = lever .. "_A"
+				btn_a = true
 			end
 			if (p.reg_pcnt & 0x20) == 0x00 then
 				lever = lever .. "_B"
+				btn_b = true
 			end
 			if (p.reg_pcnt & 0x40) == 0x00 then
 				lever = lever .. "_C"
+				btn_c = true
 			end
 			if (p.reg_pcnt & 0x80) == 0x00 then
 				lever = lever .. "_D"
+				btn_d = true
+			end
+			table.insert(p.ggkey_hist, { l = lever_no, a = btn_a, b = btn_b, c = btn_c, d = btn_d, })
+			while 20 < #p.ggkey_hist do
+				--バッファ長調整
+				table.remove(p.ggkey_hist, 1)
 			end
 			if p.key_hist[#p.key_hist] ~= lever then
 				for k = 2, #p.key_hist do
@@ -6600,6 +6611,7 @@ function rbff2.startplugin()
 
 			-- コマンド入力表示
 			for i, p in ipairs(players) do
+				local p1 = i == 1
 				-- コマンド入力表示
 				if p.disp_cmd then
 					for k = 1, #p.key_hist do
@@ -6608,6 +6620,7 @@ function rbff2.startplugin()
 					draw_cmd(i, #p.key_hist + 1, 0, "")
 				end
 			end
+
 			-- ベースアドレス表示
 			for i, p in ipairs(players) do
 				for k = 1, #p.bases do
@@ -6953,6 +6966,109 @@ function rbff2.startplugin()
 					end
 				end
 				--print(string.format("%3s %3s %3s %3s xx %3s %3s", players[1].min_pos, players[2].min_pos, players[1].max_pos, players[2].max_pos, players[1].pos, players[2].pos))
+			end
+
+			-- GG風コマンド入力表示
+			for i, p in ipairs(players) do
+				local p1 = i == 1
+				if p.disp_cmd then
+					local xoffset, yoffset = p1 and 50 or 245, 200
+					scr:draw_box(xoffset - 13, yoffset-13, xoffset+35, yoffset+13, 0x80404040, 0x80404040)
+					local pt0, pt2, ptS, ptP, ptP1, ptP2 = 0, 1, math.sin(1), 9, 8.7, 9.3
+					local oct_vt = {
+						{ x =  pt0, y  = pt2, },  -- 1:レバー2
+						{ x =  ptS, y =  ptS, },  -- 2:レバー3
+						{ x =  pt2, y =  pt0, },  -- 3:レバー6
+						{ x =  ptS, y = -ptS, },  -- 4:レバー9
+						{ x =  pt0, y = -pt2, },  -- 5:レバー8
+						{ x = -ptS, y = -ptS, },  -- 6:レバー7
+						{ x = -pt2, y =  pt0, },  -- 7:レバー4
+						{ x = -ptS, y =  ptS, },  -- 8:レバー1
+						{ x =  pt0, y =  pt0, },  -- 9:レバー5
+					}
+					for _, xy in ipairs(oct_vt) do
+						xy.x1, xy.y1 = xy.x * ptP1 + xoffset, xy.y * ptP1 + yoffset
+						xy.x2, xy.y2 = xy.x * ptP2 + xoffset, xy.y * ptP2 + yoffset
+						xy.x , xy.y  = xy.x * ptP  + xoffset, xy.y * ptP  + yoffset
+						xy.xt, xy.yt = xy.x - 2.5           , xy.y -3
+					end
+					local key_xy = {
+						oct_vt[8],  -- 8:レバー1
+						oct_vt[1],  -- 1:レバー2
+						oct_vt[2],  -- 2:レバー3
+						oct_vt[7],  -- 7:レバー4
+						oct_vt[9],  -- 9:レバー5
+						oct_vt[3],  -- 3:レバー6
+						oct_vt[6],  -- 6:レバー7
+						oct_vt[5],  -- 5:レバー8
+						oct_vt[4],  -- 4:レバー9
+					}
+					for ni = 1, #oct_vt - 1 do
+						local prev = ni > 1 and ni - 1 or #oct_vt - 1
+						local xy1, xy2 = oct_vt[ni], oct_vt[prev]
+						scr:draw_line(xy1.x , xy1.y , xy2.x , xy2.y , 0xDDCCCCCC)
+						scr:draw_line(xy1.x1, xy1.y1, xy2.x1, xy2.y1, 0xDDCCCCCC)
+						scr:draw_line(xy1.x2, xy1.y2, xy2.x2, xy2.y2, 0xDDCCCCCC)
+					end
+					local tracks = {}
+					for j = 1, #p.ggkey_hist - 1 do
+						local k = j + 1
+						local xy1, xy2 = key_xy[p.ggkey_hist[j].l], key_xy[p.ggkey_hist[k].l]
+						if xy1.x ~= xy2.x or xy1.y ~= xy2.y then
+							table.insert(tracks, { xy1 = xy1, xy2 = xy2, })
+						end
+					end
+					while #tracks > 6 do
+						table.remove(tracks, 1)
+					end
+					local fixj = 6 - #tracks
+					for j, track in ipairs(tracks) do
+						local col = 0xFF0000FF + 0x002A0000 * (fixj+j)
+						local xy1, xy2 = track.xy1, track.xy2
+						scr:draw_line(xy1.x , xy1.y , xy2.x , xy2.y , col)
+						scr:draw_line(xy1.x1, xy1.y1, xy2.x1, xy2.y1, col)
+						scr:draw_line(xy1.x2, xy1.y2, xy2.x2, xy2.y2, col)
+					end
+
+					local ggkey = p.ggkey_hist[#p.ggkey_hist]
+					if ggkey then
+						local xy = key_xy[ggkey.l]
+						scr:draw_text(xy.xt, xy.yt, convert("_("), 0xFFCC0000)
+						scr:draw_text(xy.xt, xy.yt, convert("_)"))
+						local xx, yy, btn = key_xy[5].x + 11, key_xy[5].y, convert("_A")
+						if ggkey.a then
+							scr:draw_text(xx, yy, convert("_("))
+							scr:draw_text(xx, yy, btn, btn_col[btn])
+						else
+							scr:draw_text(xx, yy, convert("_("), 0xDDCCCCCC)
+							scr:draw_text(xx, yy, btn, 0xDD444444)
+						end
+						xx, yy, btn = xx + 5, yy - 3, convert("_B")
+						if ggkey.b then
+							scr:draw_text(xx, yy, convert("_("))
+							scr:draw_text(xx, yy, btn, btn_col[btn])
+						else
+							scr:draw_text(xx, yy, convert("_("), 0xDDCCCCCC)
+							scr:draw_text(xx, yy, btn, 0xDD444444)
+						end
+						xx, yy, btn = xx + 5, yoffset - 3, convert("_C")
+						if ggkey.c then
+							scr:draw_text(xx, yy, convert("_("))
+							scr:draw_text(xx, yy, btn, btn_col[btn])
+						else
+							scr:draw_text(xx, yy, convert("_("), 0xDDCCCCCC)
+							scr:draw_text(xx, yy, btn, 0xDD444444)
+						end
+						xx, yy, btn = xx + 5, yy + 1, convert("_D")
+						if ggkey.d then
+							scr:draw_text(xx, yy, convert("_("))
+							scr:draw_text(xx, yy, btn, btn_col[btn])
+						else
+							scr:draw_text(xx, yy, convert("_("), 0xDDCCCCCC)
+							scr:draw_text(xx, yy, btn, 0xDD444444)
+						end
+					end
+				end
 			end
 
 			-- レコーディング状態表示
