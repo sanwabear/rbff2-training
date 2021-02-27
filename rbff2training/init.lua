@@ -7012,13 +7012,13 @@ function rbff2.startplugin()
 			for i, p in ipairs(players) do
 				local p1 = i == 1
 				if p.disp_cmd then
-					local ggkey = ggkey_set[i]
-					local xoffset, yoffset = ggkey.xoffset, ggkey.yoffset
-					local oct_vt = ggkey.oct_vt
-					local key_xy = ggkey.key_xy
+					local xoffset, yoffset = ggkey_set[i].xoffset, ggkey_set[i].yoffset
+					local oct_vt = ggkey_set[i].oct_vt
+					local key_xy = ggkey_set[i].key_xy
+					local tracks, max_track = {}, 6 -- 軌跡をつくる 軌跡は6個まで
 					scr:draw_box(xoffset - 13, yoffset-13, xoffset+35, yoffset+13, 0x80404040, 0x80404040)
-					for ni = 1, #oct_vt - 1 do
-						local prev = ni > 1 and ni - 1 or #oct_vt - 1
+					for ni = 1, 8 do -- 八角形描画
+						local prev = ni > 1 and ni - 1 or 8
 						local xy1, xy2 = oct_vt[ni], oct_vt[prev]
 						scr:draw_line(xy1.x , xy1.y , xy2.x , xy2.y , 0xDDCCCCCC)
 						scr:draw_line(xy1.x1, xy1.y1, xy2.x1, xy2.y1, 0xDDCCCCCC)
@@ -7026,25 +7026,24 @@ function rbff2.startplugin()
 						scr:draw_line(xy1.x3, xy1.y3, xy2.x3, xy2.y3, 0xDDCCCCCC)
 						scr:draw_line(xy1.x4, xy1.y4, xy2.x4, xy2.y4, 0xDDCCCCCC)
 					end
-					local tracks = {} -- 軌跡をつくる
-					for j = 1, #p.ggkey_hist - 1 do
-						local k = j + 1
+					for j = #p.ggkey_hist, 2, -1 do -- 軌跡採取
+						local k = j - 1
 						local xy1, xy2 = key_xy[p.ggkey_hist[j].l], key_xy[p.ggkey_hist[k].l]
 						if xy1.x ~= xy2.x or xy1.y ~= xy2.y then
-							table.insert(tracks, { xy1 = xy1, xy2 = xy2, })
+							table.insert(tracks, 1, { xy1 = xy1, xy2 = xy2, })
+							if #tracks >= max_track then
+								break
+							end
 						end
 					end
-					while #tracks > 6 do -- 軌跡は6個まで
-						table.remove(tracks, 1)
-					end
-					local fixj = 6 - #tracks
+					local fixj = max_track - #tracks -- 軌跡の上限補正用
 					for j, track in ipairs(tracks) do
 						local col = 0xFF0000FF + 0x002A0000 * (fixj+j) -- 青→ピンクのグラデーション
 						local xy1, xy2 = track.xy1, track.xy2
 						if xy1.x == xy2.x then
-							scr:draw_box (xy1.x-0.7, xy1.y , xy2.x+0.7, xy2.y, col, col)
+							scr:draw_box (xy1.x-0.6, xy1.y , xy2.x+0.6, xy2.y, col, col)
 						elseif xy1.y == xy2.y then
-							scr:draw_box (xy1.x, xy1.y-0.7, xy2.x, xy2.y+0.7, col, col)
+							scr:draw_box (xy1.x, xy1.y-0.6, xy2.x, xy2.y+0.6, col, col)
 						elseif xy1.op == xy2.no or xy1.dg1 == xy2.no or xy1.dg2 == xy2.no or xy1.no == 9 or xy2.no == 9 then
 							for k = -0.6, 0.6, 0.3 do
 								scr:draw_line(xy1.x+k, xy1.y+k, xy2.x+k, xy2.y+k, col)
@@ -7059,7 +7058,7 @@ function rbff2.startplugin()
 					end
 
 					local ggkey = p.ggkey_hist[#p.ggkey_hist]
-					if ggkey then
+					if ggkey then -- ボタン描画
 						local xy = key_xy[ggkey.l]
 						scr:draw_text(xy.xt, xy.yt, convert("_("), 0xFFCC0000)
 						scr:draw_text(xy.xt, xy.yt, convert("_)"))
