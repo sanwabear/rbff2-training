@@ -2833,7 +2833,7 @@ function rbff2.startplugin()
 			max              = 1,           -- パワー設定       --"最大", "半分", "ゼロ" ...
 			disp_base        = false,       -- 処理のアドレスを表示するときtrue
 			disp_dmg         = true,        -- ダメージ表示するときtrue
-			disp_cmd         = true,        -- 入力表示するときtrue
+			disp_cmd         = 2,           -- 入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
 			disp_frm         = true,        -- フレーム数表示するときtrue
 			disp_stun        = true,        -- スタン表示
 			disp_sts         = true,        -- 状態表示
@@ -5114,6 +5114,7 @@ function rbff2.startplugin()
 			p.inertia       = pgm:read_i16(p.addr.base + 0xDA) + int16tofloat(pgm:read_u16(p.addr.base + 0xDC))
 			p.pos_total     = p.pos + int16tofloat(p.pos_frc)
 			p.old_pos_total = p.old_pos + int16tofloat(p.old_pos_frc)
+			p.diff_pos_total = p.pos_total - p.old_pos_total
 			p.max_pos        = pgm:read_i16(p.addr.max_pos)
 			if p.max_pos == 0 or p.max_pos == p.pos then
 				p.max_pos = nil
@@ -6652,8 +6653,8 @@ function rbff2.startplugin()
 			-- コマンド入力表示
 			for i, p in ipairs(players) do
 				local p1 = i == 1
-				-- コマンド入力表示
-				if p.disp_cmd then
+				-- コマンド入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
+				if p.disp_cmd == 2 or p.disp_cmd == 3 then
 					for k = 1, #p.key_hist do
 						draw_cmd(i, k, p.key_frames[k], p.key_hist[k])
 					end
@@ -6805,17 +6806,22 @@ function rbff2.startplugin()
 					local draw_rtext_col = function(x, y, fmt, dec)
 						local txt = string.format(fmt, dec)
 						draw_rtext(x + 0.5, y + 0.5, txt, shadow_col)
-						local col = 0xFFFFFFFF
-						if dec < 0 then
-							col = 0xFFFF0033
-						elseif dec > 0 then
-							col = 0xFF0000FF
-						end
-						draw_rtext(x, y, txt, col)
+						draw_rtext(x, y, txt)
 					end
-					draw_rtext_col(p1 and  70 or 200, 8, "%0.03f", p.inertia)
-					draw_rtext_col(p1 and  90 or 220, 8, "%0.03f", p.thrust)
-					draw_rtext_col(p1 and 110 or 240, 8, "%0.03f", p.pos_total - p.old_pos_total)
+
+					--
+					scr:draw_box(p1 and (138 - 32)           or 180,  9, p1 and 140 or (182 + 32)          , 14, 0, 0xDDC0C0C0) -- 枠
+					scr:draw_box(p1 and (139 - 32)           or 181, 10, p1 and 139 or (181 + 32)          , 13, 0, 0xDD000000) -- 黒背景
+
+					scr:draw_box(p1 and (124 + p.thrust) or 197, 9, p1 and 124 or (197 - p.thrust), 14, 0, 0x80FF0022)
+					scr:draw_box(p1 and (124 + p.inertia) or 197, 9, p1 and 124 or (197 - p.inertia), 14, 0, 0x80FF8C00)
+					scr:draw_box(p1 and (124 + p.diff_pos_total) or 197, 10, p1 and 124 or (197 - p.diff_pos_total), 13, 0, 0xDDFFFF00)
+					draw_rtext_col(p1 and 105 or 262, 8, "M %0.03f", p.diff_pos_total) -- 移動距離
+					if p.thrust > 0 then
+						draw_rtext_col(p1 and  83 or 240, 8, "T %0.03f", p.thrust) -- 進力とみなす値
+					else
+						draw_rtext_col(p1 and  83 or 240, 8, "I %0.03f", p.inertia) -- 慣性とみなす値
+					end
 
 					if p1 then
 						local x = 148
@@ -7011,7 +7017,8 @@ function rbff2.startplugin()
 			-- GG風コマンド入力表示
 			for i, p in ipairs(players) do
 				local p1 = i == 1
-				if p.disp_cmd then
+				-- コマンド入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
+				if p.disp_cmd == 2 or p.disp_cmd == 4 then
 					local xoffset, yoffset = ggkey_set[i].xoffset, ggkey_set[i].yoffset
 					local oct_vt = ggkey_set[i].oct_vt
 					local key_xy = ggkey_set[i].key_xy
@@ -7432,8 +7439,8 @@ function rbff2.startplugin()
 		global.pausethrow        = col[ 4] == 2 -- 投げ判定発生時にポーズ 4
 		p[1].disp_dmg            = col[ 5] == 2 -- 1P ダメージ表示        5
 		p[2].disp_dmg            = col[ 6] == 2 -- 2P ダメージ表示        6
-		p[1].disp_cmd            = col[ 7] == 2 -- 1P 入力表示            7
-		p[2].disp_cmd            = col[ 8] == 2 -- 2P 入力表示            8
+		p[1].disp_cmd            = col[ 7]      -- 1P 入力表示            7
+		p[2].disp_cmd            = col[ 8]      -- 2P 入力表示            8
 		global.disp_frmgap       = col[ 9]      -- フレーム差表示         9
 		p[1].disp_frm            = col[10] == 2 -- 1P フレーム数表示     10
 		p[2].disp_frm            = col[11] == 2 -- 2P フレーム数表示     11
@@ -7624,8 +7631,8 @@ function rbff2.startplugin()
 		col[ 4] = g.pausethrow  and 2 or 1 -- 投げ判定発生時にポーズ 4
 		col[ 5] = p[1].disp_dmg and 2 or 1 -- 1P ダメージ表示        5
 		col[ 6] = p[2].disp_dmg and 2 or 1 -- 2P ダメージ表示        6
-		col[ 7] = p[1].disp_cmd and 2 or 1 -- 1P 入力表示            7
-		col[ 8] = p[2].disp_cmd and 2 or 1 -- 2P 入力表示            8
+		col[ 7] = p[1].disp_cmd            -- 1P 入力表示            7
+		col[ 8] = p[2].disp_cmd            -- 2P 入力表示            8
 		col[ 9] = g.disp_frmgap            -- フレーム差表示         9
 		col[10] = p[1].disp_frm and 2 or 1 -- 1P フレーム数表示     10
 		col[11] = p[2].disp_frm and 2 or 1 -- 2P フレーム数表示     11
@@ -8028,8 +8035,8 @@ function rbff2.startplugin()
 			{ "投げ判定発生時にポーズ", { "OFF", "ON" }, },
 			{ "1P ダメージ表示"       , { "OFF", "ON" }, },
 			{ "2P ダメージ表示"       , { "OFF", "ON" }, },
-			{ "1P 入力表示"           , { "OFF", "ON" }, },
-			{ "2P 入力表示"           , { "OFF", "ON" }, },
+			{ "1P 入力表示"           , { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
+			{ "2P 入力表示"           , { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
 			{ "フレーム差表示"        , { "OFF", "数値とグラフ", "数値" }, },
 			{ "1P フレーム数表示"     , { "OFF", "ON" }, },
 			{ "2P フレーム数表示"     , { "OFF", "ON" }, },
