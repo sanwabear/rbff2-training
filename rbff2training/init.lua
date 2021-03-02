@@ -2250,6 +2250,21 @@ local draw_rtext = function(x, y, str, fgcol, bgcol)
 	scr:draw_text(x - manager.ui:get_string_width(str, scr.xscale * scr.height), y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
 end
 
+local draw_text_with_shadow = function(x, y, str, fgcol, bgcol)
+	local scr = manager.machine.screens:at(1)
+	scr:draw_text(x + 0.5, y + 0.5, str, shadow_col, bgcol or 0x00000000)
+	scr:draw_text(x, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
+end
+
+local draw_rtext_with_shadow = function(x, y, str, fgcol, bgcol)
+	draw_rtext(x + 0.5, y + 0.5, str, shadow_col, bgcol)
+	draw_rtext(x, y, str, fgcol, bgcol)
+end
+
+local draw_fmt_rtext = function(x, y, fmt, dec)
+	draw_rtext_with_shadow(x, y, string.format(fmt, dec))
+end
+
 -- コマンド入力表示
 local draw_cmd = function(p, line, frame, str)
 	local scr = manager.machine.screens:at(1)
@@ -2261,8 +2276,7 @@ local draw_cmd = function(p, line, frame, str)
 
 	if 0 < frame then
 		local cframe = 999 < frame and "LOT" or frame
-		draw_rtext(p1 and 10.5 or 292.5, yy + 0.5, cframe, shadow_col)
-		draw_rtext(p1 and 10   or 292  ,       yy, cframe, text_col)
+		draw_rtext_with_shadow(p1 and 10   or 292  ,       yy, cframe, text_col)
 	end
 	local col = 0xFAFFFFFF
 	if p1 then
@@ -4669,8 +4683,7 @@ function rbff2.startplugin()
 			if show_name and main_frame then
 				if (frame_group[1].col + frame_group[1].line) > 0 then
 					local disp_name = frame_group[1].disp_name or frame_group[1].name
-					scr:draw_text(x+12.5, txty+y+ 0.5, disp_name, shadow_col)
-					scr:draw_text(x+12  , txty+y     , disp_name, 0xFFC0C0C0)
+					draw_text_with_shadow(x+12  , txty+y     , disp_name, 0xFFC0C0C0)
 				end
 			end
 			-- グループのフレーム数を末尾から描画
@@ -4703,14 +4716,11 @@ function rbff2.startplugin()
 					if show_count then
 						local count_txt = 300 < frame.count and "LOT" or (""..frame.count)
 						if frame.count > 5 then
-							scr:draw_text(x2+1.5, txty+y+0.5, count_txt, shadow_col)
-							scr:draw_text(x2+1  , txty+y    , count_txt)
+							draw_text_with_shadow(x2+1  , txty+y    , count_txt)
 						elseif 3 > frame.count then
-							scr:draw_text(x2-0.5, txty+y+0.5, count_txt, shadow_col)
-							scr:draw_text(x2-1  , txty+y    , count_txt)
+							draw_text_with_shadow(x2-1  , txty+y    , count_txt)
 						else
-							scr:draw_text(x2    , txty+y+0.5, count_txt, shadow_col)
-							scr:draw_text(x2    , txty+y    , count_txt)
+							draw_text_with_shadow(x2    , txty+y    , count_txt)
 						end
 					end
 				end
@@ -4786,14 +4796,11 @@ function rbff2.startplugin()
 						local txty = math.max(-2, height-8)
 						local count_txt = 300 < frame.count and "LOT" or (""..frame.count)
 						if frame.count > 5 then
-							scr:draw_text(x2+1.5, txty+y+0.5, count_txt, shadow_col)
-							scr:draw_text(x2+1  , txty+y    , count_txt)
+							draw_text_with_shadow(x2+1  , txty+y    , count_txt)
 						elseif 3 > frame.count then
-							scr:draw_text(x2-0.5, txty+y+0.5, count_txt, shadow_col)
-							scr:draw_text(x2-1  , txty+y    , count_txt)
+							draw_text_with_shadow(x2-1  , txty+y    , count_txt)
 						else
-							scr:draw_text(x2    , txty+y+0.5, count_txt, shadow_col)
-							scr:draw_text(x2    , txty+y    , count_txt)
+							draw_text_with_shadow(x2    , txty+y    , count_txt)
 						end
 					end
 				end
@@ -6789,24 +6796,14 @@ function rbff2.startplugin()
 						local txt = flgtbl[j] == 1 and "1" or "-"
 						if p1 then
 							local x = 147 - (j * 3)
-							scr:draw_text(x+0.5, 1.5, num, shadow_col)
-							scr:draw_text(x    , 1    , num)
-							scr:draw_text(x+0.5, 8.5, txt, shadow_col)
-							scr:draw_text(x    , 8    , txt)
+							draw_text_with_shadow(x    , 1    , num)
+							draw_text_with_shadow(x    , 8    , txt)
 						else
 							local x = 269 - (j * 3)
-							scr:draw_text(x+0.5, 1+0.5, num, shadow_col)
-							scr:draw_text(x    , 1    , num)
-							scr:draw_text(x+0.5, 8+0.5, txt, shadow_col)
-							scr:draw_text(x    , 8    , txt)
+							draw_text_with_shadow(x    , 1    , num)
+							draw_text_with_shadow(x    , 8    , txt)
 						end
 						]]
-					end
-
-					local draw_rtext_col = function(x, y, fmt, dec)
-						local txt = string.format(fmt, dec)
-						draw_rtext(x + 0.5, y + 0.5, txt, shadow_col)
-						draw_rtext(x, y, txt)
 					end
 
 					--
@@ -6816,22 +6813,14 @@ function rbff2.startplugin()
 					scr:draw_box(p1 and (124 + p.thrust) or 197, 9, p1 and 124 or (197 - p.thrust), 14, 0, 0x80FF0022)
 					scr:draw_box(p1 and (124 + p.inertia) or 197, 9, p1 and 124 or (197 - p.inertia), 14, 0, 0x80FF8C00)
 					scr:draw_box(p1 and (124 + p.diff_pos_total) or 197, 10, p1 and 124 or (197 - p.diff_pos_total), 13, 0, 0xDDFFFF00)
-					draw_rtext_col(p1 and 105 or 262, 8, "M %0.03f", p.diff_pos_total) -- 移動距離
+					draw_fmt_rtext(p1 and 105 or 262, 8, "M %0.03f", p.diff_pos_total) -- 移動距離
 					if p.thrust > 0 then
-						draw_rtext_col(p1 and  83 or 240, 8, "T %0.03f", p.thrust) -- 進力とみなす値
+						draw_fmt_rtext(p1 and  83 or 240, 8, "T %0.03f", p.thrust) -- 進力とみなす値
 					else
-						draw_rtext_col(p1 and  83 or 240, 8, "I %0.03f", p.inertia) -- 慣性とみなす値
+						draw_fmt_rtext(p1 and  83 or 240, 8, "I %0.03f", p.inertia) -- 慣性とみなす値
 					end
 
-					if p1 then
-						local x = 148
-						draw_rtext(x+0.5, 1.5  , flgtxt, shadow_col)
-						draw_rtext(x    , 1    , flgtxt)
-					else
-						local x = 176
-						scr:draw_text(x+0.5, 1+0.5, flgtxt, shadow_col)
-						scr:draw_text(x    , 1    , flgtxt)
-					end
+					draw_rtext_with_shadow(p1 and 148 or 176, 1, flgtxt)
 				end
 
 				-- BS状態表示
@@ -6850,14 +6839,12 @@ function rbff2.startplugin()
 					scr:draw_box(p1 and (138 - p.max_stun)   or 180, 29, p1 and 140 or (182 + p.max_stun)  , 34, 0, 0xDDC0C0C0) -- 枠
 					scr:draw_box(p1 and (139 - p.max_stun)   or 181, 30, p1 and 139 or (181 + p.max_stun)  , 33, 0, 0xDD000000) -- 黒背景
 					scr:draw_box(p1 and (139 - p.stun)       or 181, 30, p1 and 139 or (181 + p.stun)      , 33, 0, 0xDDFF0000) -- スタン値
-					draw_rtext(p1 and 135.5 or 190.5, 28.5,  p.stun, shadow_col)
-					draw_rtext(p1 and 135   or 190  , 28  ,  p.stun)
+					draw_rtext_with_shadow(p1 and 135   or 190  , 28  ,  p.stun)
 
 					scr:draw_box(p1 and (138 - 90)           or 180, 35, p1 and 140 or (182 + 90)          , 40, 0, 0xDDC0C0C0) -- 枠
 					scr:draw_box(p1 and (139 - 90)           or 181, 36, p1 and 139 or (181 + 90)          , 39, 0, 0xDD000000) -- 黒背景
 					scr:draw_box(p1 and (139 - p.stun_timer) or 181, 36, p1 and 139 or (181 + p.stun_timer), 39, 0, 0xDDFFFF00) -- スタン値
-					draw_rtext(p1 and 135.5 or 190.5, 34.5,  p.stun_timer, shadow_col)
-					draw_rtext(p1 and 135   or 190  , 34  ,  p.stun_timer)
+					draw_rtext_with_shadow(p1 and 135   or 190  , 34  ,  p.stun_timer)
 				end
 			end
 
@@ -6868,16 +6855,14 @@ function rbff2.startplugin()
 					if x then
 						scr:draw_line(x, p.hit.pos_y-global.axis_size, x, p.hit.pos_y+global.axis_size, col)
 						scr:draw_line(x-global.axis_size, p.hit.pos_y, x+global.axis_size, p.hit.pos_y, col)
-						scr:draw_text(x-1  , p.hit.pos_y+global.axis_size+0.5, string.format("%d", i), shadow_col)
-						scr:draw_text(x-1.5, p.hit.pos_y+global.axis_size    , string.format("%d", i), col)
+						draw_text_with_shadow(x-1.5, p.hit.pos_y+global.axis_size    , string.format("%d", i), col)
 					end
 				end
 				local draw_esaka = function(x, col)
 					if x and 0 <= x then
 						local y1, y2 = 0, 200+global.axis_size
 						scr:draw_line(x, y1, x, y2, col)
-						scr:draw_text(x-2  , y2+0.5, string.format("え%d", i), shadow_col)
-						scr:draw_text(x-2.5, y2    , string.format("え%d", i), col)
+						draw_text_with_shadow(x-2.5, y2    , string.format("え%d", i), col)
 					end
 				end
 				local draw_close_far = function(btn, x1, x2)
@@ -6891,8 +6876,7 @@ function rbff2.startplugin()
 						scr:draw_line(x2-2, p.hit.pos_y  , x2+2, p.hit.pos_y  , color)
 						scr:draw_line(x2  , p.hit.pos_y-2, x2  , p.hit.pos_y+2, color)
 						if in_range then
-							scr:draw_text(x2-2.5, p.hit.pos_y+4.5, string.format("%s%d", btn, i), shadow_col)
-							scr:draw_text(x2-2.5, p.hit.pos_y+4  , string.format("%s%d", btn, i), color)
+							draw_text_with_shadow(x2-2.5, p.hit.pos_y+4  , string.format("%s%d", btn, i), color)
 						end
 					end
 				end
@@ -6905,8 +6889,7 @@ function rbff2.startplugin()
 						scr:draw_line(p.throw.x1, p.hit.pos_y-4, p.throw.x1, p.hit.pos_y+4, color)
 						scr:draw_line(p.throw.x2, p.hit.pos_y-4, p.throw.x2, p.hit.pos_y+4, color)
 						if p.throw.in_range then
-							scr:draw_text(p.throw.x1+2.5, p.hit.pos_y+4.5, string.format("投%d", i), shadow_col)
-							scr:draw_text(p.throw.x1+2.5, p.hit.pos_y+4  , string.format("投%d", i), color)
+							draw_text_with_shadow(p.throw.x1+2.5, p.hit.pos_y+4  , string.format("投%d", i), color)
 						end
 
 						-- 地上通常技の遠近判断距離
@@ -6961,15 +6944,11 @@ function rbff2.startplugin()
 					--scr:draw_box(p1 and (138 - 90)           or 180, 41, p1 and 140 or (182 + 90)          , 41+5, 0, 0xDDC0C0C0) -- 枠
 					--scr:draw_box(p1 and (139 - 90)           or 181, 42, p1 and 139 or (181 + 90)          , 42+3, 0, 0xDD000000) -- 黒背景
 					scr:draw_box(p1 and (139 - p.last_blockstun) or 181, 41, p1 and 139 or (181 + p.last_blockstun), 41+5, 0, p.skip_frame and 0xDDC0C0C0 or 0xDDFF007F)
-					draw_rtext(p1 and 135.5 or 190.5, 40.5,  p.last_blockstun, shadow_col)
-					draw_rtext(p1 and 135   or 190  , 40  ,  p.last_blockstun)
+					draw_rtext_with_shadow(p1 and 135   or 190  , 40  ,  p.last_blockstun)
 
-					draw_rtext(p1 and 155.5 or 170.5, 40.5,  p.last_frame_gap, shadow_col)
-					draw_rtext(p1 and 155   or 170  , 40  ,  p.last_frame_gap)
-					--draw_rtext(p1 and 135.5 or 190.5, 47.5,  p.last_blockstun, shadow_col)
-					--draw_rtext(p1 and 135   or 190  , 47  ,  p.last_blockstun)
-					--draw_rtext(p1 and 135.5 or 190.5, 54.5,  p.last_hitstop, shadow_col)
-					--draw_rtext(p1 and 135   or 190  , 54  ,  p.last_hitstop)
+					draw_rtext_with_shadow(p1 and 155   or 170  , 40  ,  p.last_frame_gap)
+					--draw_rtext_with_shadow(p1 and 135   or 190  , 47  ,  p.last_blockstun)
+					--draw_rtext_with_shadow(p1 and 135   or 190  , 54  ,  p.last_hitstop)
 				end
 			end
 
@@ -6977,8 +6956,7 @@ function rbff2.startplugin()
 			local abs_space = math.abs(p_space)
 			if global.disp_pos then
 				local y = 217 -- math.floor(get_digit(abs_space)/2)
-				draw_rtext(167.5, y+0.5, abs_space, shadow_col)
-				draw_rtext(167  , y    , abs_space)
+				draw_rtext_with_shadow(167  , y    , abs_space)
 
 				-- キャラの向き
 				for i, p in ipairs(players) do
@@ -6992,8 +6970,7 @@ function rbff2.startplugin()
 						if v and v > 0 then
 							local x = (p1 and 140 or 180) + ((18 * j) * (p1 and - 1 or 1))
 							local txt = string.format(label[j], v)
-							draw_rtext(x+0.5, y+0.5, txt, shadow_col)
-							draw_rtext(x    , y    , txt, global.axis_internal_color)
+							draw_rtext_with_shadow(x    , y    , txt, global.axis_internal_color)
 						end
 					end
 
@@ -7003,12 +6980,10 @@ function rbff2.startplugin()
 					local postxt = p.poslr
 					if p1 then
 						local txt = string.format("%s%s%s", flip_x, side, postxt)
-						draw_rtext(   150.5, y+0.5, txt, shadow_col)
-						draw_rtext(   150  , y    , txt)
+						draw_rtext_with_shadow(   150  , y    , txt)
 					else
 						local txt = string.format("%s%s%s", postxt, side, flip_x)
-						scr:draw_text(170.5, y+0.5, txt, shadow_col)
-						scr:draw_text(170  , y    , txt)
+						draw_text_with_shadow(170  , y    , txt)
 					end
 				end
 				--print(string.format("%3s %3s %3s %3s xx %3s %3s", players[1].min_pos, players[2].min_pos, players[1].max_pos, players[2].max_pos, players[1].pos, players[2].pos))
