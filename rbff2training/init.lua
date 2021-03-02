@@ -89,7 +89,7 @@ local global = {
 	disp_pos        = true, -- 1P 2P 距離表示
 	disp_hitbox     = 4, -- 判定表示
 	disp_frmgap     = 3, -- フレーム差表示
-	pause_hit       = 2, -- ヒット時にポーズ 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:ガードのみ
+	pause_hit       = 1, -- ヒット時にポーズ 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:ガードのみ
 	pausethrow      = false, -- 投げ判定表示時にポーズ
 	replay_stop_on_dmg = false, -- ダメージでリプレイ中段
 
