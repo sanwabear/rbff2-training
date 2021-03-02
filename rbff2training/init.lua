@@ -89,7 +89,7 @@ local global = {
 	disp_pos        = true, -- 1P 2P 距離表示
 	disp_hitbox     = 4, -- 判定表示
 	disp_frmgap     = 3, -- フレーム差表示
-	pause_hit       = false, -- ヒット時にポーズ
+	pause_hit       = 2, -- ヒット時にポーズ 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:ガードのみ
 	pausethrow      = false, -- 投げ判定表示時にポーズ
 	replay_stop_on_dmg = false, -- ダメージでリプレイ中段
 
@@ -4432,9 +4432,14 @@ function rbff2.startplugin()
 
 		local stop = false
 		local store = recording.active_slot.store[recording.play_count]
-		if store == nil or (global.replay_stop_on_dmg and pgm:read_u8(players[recording.player].addr.state) == 1) then
+		if store == nil then
 			stop = true
-		else
+		elseif pgm:read_u8(players[recording.player].addr.state) == 1 then
+			if global.replay_stop_on_dmg then
+				stop = true
+			end
+		end
+		if not stop then
 			-- 入力再生
 			local pos = { get_flip_x(players[1]), get_flip_x(players[2]) }
 			for _, joy in ipairs(use_joy) do
@@ -7245,8 +7250,15 @@ function rbff2.startplugin()
 			end
 
 			-- ヒット時にポーズさせる
-			if p.state ~= 0 and p.state ~= p.old_state and global.pause_hit then
-				pause = true
+			if p.state ~= 0 and p.state ~= p.old_state and global.pause_hit > 0 then
+				-- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:ガードのみ
+				if global.pause_hit == 2 then
+					pause = true
+				elseif global.pause_hit == 4 and p.state == 2 then
+					pause = true
+				elseif global.pause_hit == 3 and p.state ~= 2 then
+					pause = true
+				end
 			end
 
 			if pause then
@@ -7410,7 +7422,7 @@ function rbff2.startplugin()
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		--                              1                                 1
 		global.disp_hitbox       = col[ 2]      -- 判定表示               2
-		global.pause_hit         = col[ 3] == 2 -- ヒット時にポーズ       3
+		global.pause_hit         = col[ 3]      -- ヒット時にポーズ       3
 		global.pausethrow        = col[ 4] == 2 -- 投げ判定発生時にポーズ 4
 		p[1].disp_dmg            = col[ 5] == 2 -- 1P ダメージ表示        5
 		p[2].disp_dmg            = col[ 6] == 2 -- 2P ダメージ表示        6
@@ -7602,7 +7614,7 @@ function rbff2.startplugin()
 		local g = global
 		--   1                                                       1
 		col[ 2] = g.disp_hitbox            -- 判定表示               2
-		col[ 3] = g.pause_hit   and 2 or 1 -- ヒット時にポーズ       3
+		col[ 3] = g.pause_hit              -- ヒット時にポーズ       3
 		col[ 4] = g.pausethrow  and 2 or 1 -- 投げ判定発生時にポーズ 4
 		col[ 5] = p[1].disp_dmg and 2 or 1 -- 1P ダメージ表示        5
 		col[ 6] = p[2].disp_dmg and 2 or 1 -- 2P ダメージ表示        6
@@ -8006,7 +8018,7 @@ function rbff2.startplugin()
 		list = {
 			{ "                          一般設定" },
 			{ "判定表示"              , { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
-			{ "ヒット時にポーズ"      , { "OFF", "ON" }, },
+			{ "ヒット時にポーズ"      , { "OFF", "ON", "ON:やられのみ", "ON:ガードのみ", }, },
 			{ "投げ判定発生時にポーズ", { "OFF", "ON" }, },
 			{ "1P ダメージ表示"       , { "OFF", "ON" }, },
 			{ "2P ダメージ表示"       , { "OFF", "ON" }, },
