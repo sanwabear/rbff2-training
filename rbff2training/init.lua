@@ -4111,6 +4111,7 @@ function rbff2.startplugin()
 			return ret
 		end
 		local rec1, rec2, rec3, rec4, rec5, rec6, rec7, rec8 = {}, {}, {}, {}, {}, {}, {}, {}
+		--[[
 		-- LINNさんネタの確認 ... リバサバクステキャンセルサイクロンで重ね飛燕失脚の迎撃
 		rec1 = merge_cmd( -- バクステ回避
 			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, },
@@ -4163,6 +4164,7 @@ function rbff2.startplugin()
 		rec3 = merge_cmd( -- ガー不ジャンプB リバサバクステキャンセル真空投げ
 			{ _8, _5, 46, _2a, _5, 5, _2c, _5, 15, _6, _5, _4, _1, _2, _3, _bc, _5, 155, _9, _5, 29, _b, _1, 81, _5, },
 			{ _8, _5, 46, _2, 15, _2 , _5, 191, _2, _4, _8, _6, _2, _4, _5, _6, _5, _6, _5, 4, _5a, })
+		]]
 		return { rec1, rec2, rec3, rec4, rec5, rec6, rec7, rec8 }
 	end
 	for i, preset_cmd in ipairs(research_cmd()) do
