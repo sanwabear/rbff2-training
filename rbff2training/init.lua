@@ -3727,11 +3727,17 @@ function rbff2.startplugin()
 				"temp1=$10DDF1+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=0;PC=" .. string.format("%x", fix_bp_addr(0x012FDA)) .. ";g"))
 			]]
 
-			-- N段目で空ぶりさせるフック
+			-- N段目で強制空ぶりさせるフック
 			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x0130F8),
-				"maincpu.pw@107C22>0&&((maincpu.pb@10DDF1>0&&(A4)==100500)||(maincpu.pb@10DDF2>0&&(A4)==100400))",
+				"maincpu.pw@107C22>0&&((D7)<$FFFF)&&((maincpu.pb@10DDF1!=$FF&&(A4)==100500&&maincpu.pb@10DDF1<=maincpu.pb@10B4E0)||(maincpu.pb@10DDF2!=$FF&&(A4)==100400&&maincpu.pb@10DDF2<=maincpu.pb@10B4E1))",
 				"maincpu.pb@(temp1)=0;PC=" .. string.format("%x", fix_bp_addr(0x012FDA)) .. ";g"))
-	
+
+			--[[
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x0130F8),
+				"maincpu.pw@107C22>0&&((D7)<$FFFF)&&((A4)==100500||(A4)==100400)",
+				"printf \"A4=%X 1=%X 2=%X E0=%X E1=%X\",(A4),maincpu.pb@10DDF1,maincpu.pb@10DDF2,maincpu.pb@10B4E0,maincpu.pb@10B4E1;g"))
+			]]
+
 			-- ヒット後ではなく技の出だしから嘘判定であることの判定用フック
 			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x011DFE),
 				"maincpu.pw@107C22>0",
@@ -3802,10 +3808,30 @@ function rbff2.startplugin()
 
 			-- bp 39db0,1,{PC=39db4;g} -- 必殺投げの高度チェックを無視
 
-			-- ライン移動攻撃の移動量のしきい値 調査用
+			--[[ ライン移動攻撃の移動量のしきい値 調査用
 			table.insert(bps, cpu.debug:bpset(0x029768,
 				"1",
 				"printf \"CH=%D D0=%X D1=%X PREF_ADDR=%X\",maincpu.pw@((A4)+10), D0,D1,PREF_ADDR;g"))
+			]]
+
+			--[[ 投げ無敵調査用
+			for xi, addr in ipairs({
+				0x00039DAE, -- 投げチェック処理
+				0x00039D52, -- 爆弾パチキ ドリル M.カウンター投げ M.タイフーン 真心牙 S.TOL 鬼門陣
+				0x0003A0D4, -- 真空投げ
+				0x0003A0E6, -- 羅生門
+				0x0003A266, -- ブレイクスパイラル
+				0x0003A426, -- リフトアップブロー
+				0x0003A438, -- デンジャラススルー
+				0x0003A44A, -- ギガティックサイクロン
+				0x00039F36, -- 投げ成立
+				0x00039DFA, -- 無敵Fチェック
+			}) do
+				table.insert(bps, cpu.debug:bpset(addr,
+				"1",
+				"printf \"A4=%X CH=%D PC=%X PREF_ADDR=%X A0=%X D7=%X\",(A4),maincpu.pw@((A4)+10),PC,PREF_ADDR,(A0),(D7);g"))
+			end
+			]]
 		end
 	end
 
@@ -4111,6 +4137,16 @@ function rbff2.startplugin()
 			return ret
 		end
 		local rec1, rec2, rec3, rec4, rec5, rec6, rec7, rec8 = {}, {}, {}, {}, {}, {}, {}, {}
+		rec1 = merge_cmd(  -- ガード解除直前のNのあと2とNの繰り返しでガード硬直延長,をさらに投げる
+			{ _8, _5, 46, _1, 20, _2, 27, _5, 6, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1,
+			_5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1,},
+			{ _8, _5, 46, _2b, _5, 12, _2b, _5, 50, _4, _5, _4, _5, _7, 6, _7d, _5, 15, _c, _5, }
+		)
+		rec1 = merge_cmd(  -- ガード解除直前のNのあと2とNの繰り返しでガード硬直延長,をさらに投げる
+			{ _8, _5, 46, _1, 20, _2, 27, _5, 6, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1,
+			_5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1,},
+			{ _8, _5, 46, _2b, _5, 12, _2b, _5, 50, _4, _5, _4, _5, _7, 6, _7d, _5, 41, _c, _5, }
+		)
 		--[[
 		rec1 = merge_cmd(  -- ガード解除直前のNでガード硬直延長
 			{ _8, _5, 46, _1, 20, _2, 27, _5, },
@@ -6598,24 +6634,7 @@ function rbff2.startplugin()
 		end
 
 		for i, p in ipairs(players) do
-			local op = players[3 - i]
-			if p.no_hit_limit == 1 then
-				pgm:write_u8(p.addr.no_hit, 1)
-			elseif p.on_hit == global.frame_number and p.state ~= 0 then
-				p.no_hit = p.no_hit - 1
-				if p.no_hit == 0 and p.no_hit_limit > 0  then
-					pgm:write_u8(p.addr.no_hit, 1)
-					--print(string.format("nohit %x %x %s", p.addr.base, p.no_hit, op.attack))
-				else
-					--print(string.format("hit   %x %x %s", p.addr.base, p.no_hit, op.attack))
-				end
-			elseif op.attack == 0 then
-				p.no_hit = p.no_hit_limit
-				pgm:write_u8(p.addr.no_hit, 0)
-				if p.no_hit ~= p.no_hit_limit then
-					--print(string.format("reset %x %x %s", p.addr.base, p.no_hit, op.attack))
-				end
-			end
+			pgm:write_u8(p.addr.no_hit, p.no_hit_limit == 0 and 0xFF or (p.no_hit_limit - 1))
 		end
 
 		-- Y座標強制
