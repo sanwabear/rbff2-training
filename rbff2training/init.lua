@@ -1111,12 +1111,12 @@ local char_fireball_base = {
 		{ name = "野猿狩り/掴み", type = act_types.attack, ids = { 0x277, 0x27C, }, },
 		{ name = "まきびし", type = act_types.low_attack, ids = { 0x274, 0x275, }, },
 		{ name = "憑依弾", type = act_types.attack, ids = { 0x263, 0x266, }, },
-		{ name = "邪棍舞", type = act_types.low_attack, ids = { 0xF4, 0xF5, }, },
-		{ name = "突破", type = act_types.attack, ids = { 0xFA, }, },
-		{ name = "降破", type = act_types.overhead, ids = { 0xF9, }, },
-		{ name = "倒破", type = act_types.overhead, ids = { 0xF7, }, },
-		{ name = "払破", type = act_types.low_attack, ids = { 0xF8, }, },
+		{ name = "邪棍舞", type = act_types.attack, ids = { 0xF4, 0xF5, }, },
 		{ name = "天破", type = act_types.attack, ids = { 0xF6, }, },
+		{ name = "払破", type = act_types.low_attack, ids = { 0xF7, }, },
+		{ name = "倒破", type = act_types.overhead, ids = { 0xF8, }, },
+		{ name = "降破", type = act_types.overhead, ids = { 0xF9, }, },
+		{ name = "突破", type = act_types.attack, ids = { 0xFA, }, },
 		{ name = "喝", type = act_types.attack, ids = { 0x282, 0x283, }, },
 		{ name = "いかづち", type = act_types.attack, ids = { 0x286, 0x287, }, },
 	},
@@ -1840,6 +1840,26 @@ for _, list in pairs(char_rvs_list) do
 		end
 	end
 	table.insert(char_bs_list, bs_list)
+end
+
+local get_next_rvs = function(p, excludes)
+	local ex, list = excludes or {}, {}
+	for _, rvs in ipairs(p.dummy_rvs_list) do
+		if not ex[rvs] then
+			table.insert(list, rvs)
+		end
+	end
+	return list[math.random(#list)]
+end
+
+local get_next_bs = function(p, excludes)
+	local ex, list = excludes or {}, {}
+	for _, bs in ipairs(p.dummy_bs_list) do
+		if not ex[bs] then
+			table.insert(list, bs)
+		end
+	end
+	return list[math.random(#list)]
 end
 
 -- エミュレータ本体の入力取得
@@ -2832,13 +2852,13 @@ function rbff2.startplugin()
 
 			dummy_bs         = nil,         -- ランダムで選択されたブレイクショット
 			dummy_bs_list    = {},          -- ブレイクショットのコマンドテーブル上の技ID
-			dummy_bs_cnt     = 1,           -- ブレイクショットのカウンタ
+			dummy_bs_cnt     = -1,          -- ブレイクショットのカウンタ
 			dummy_bs_chr     = 0,           -- ブレイクショットの設定をした時のキャラID
 			bs_count         = -1,          -- ブレイクショットの実施カウント
 
 			dummy_rvs        = nil,         -- ランダムで選択されたリバーサル
 			dummy_rvs_list   = {},          -- リバーサルのコマンドテーブル上の技ID
-			dummy_rvs_cnt    = 1,           -- リバーサルのカウンタ
+			dummy_rvs_cnt    = -1,          -- リバーサルのカウンタ
 			dummy_rvs_chr    = 0,           -- リバーサルの設定をした時のキャラID
 			rvs_count        = -1,          -- リバーサルの実施カウント
 
@@ -5100,6 +5120,8 @@ function rbff2.startplugin()
 				p.tw_muteki2 = pgm:read_u8(a0 + d2)
 				--print(string.format("%x", a0 + d2))
 			end
+			p.throwable      = p.state == 0 and op.state == 0 and p.tw_frame > 24 and p.sway_status == 0x00 and p.tw_muteki == 0 -- 投げ可能ベース
+			p.n_throwable    = p.throwable and p.tw_muteki2 == 0 -- 通常投げ可能
 
 			p.old_act        = p.act or 0x00
 			p.act            = pgm:read_u16(p.addr.act)
@@ -5546,6 +5568,7 @@ function rbff2.startplugin()
 						-- 双角だけ中段と下段の飛び道具がある
 						act_type = char_fireballs[p.char][fb.act].type
 						fb.char_fireball = char_fireballs[p.char][fb.act]
+						--print(fb.char_fireball.name, string.format("%x", fb.act))
 					end
 					op.need_block     = op.need_block or (act_type == act_types.low_attack) or (act_type == act_types.attack) or (act_type == act_types.overhead)
 					op.need_low_block = op.need_low_block or (act_type == act_types.low_attack)
@@ -5750,7 +5773,7 @@ function rbff2.startplugin()
 			p.dummy_rvs = nil
 			if p.dummy_bs_chr == p.char then
 				if p.dummy_wakeup == wakeup_type.rvs and #p.dummy_rvs_list > 0 then
-					p.dummy_rvs = p.dummy_rvs_list[math.random(#p.dummy_rvs_list)]
+					p.dummy_rvs = get_next_rvs(p)
 				end
 			end
 			-- ブレイクショットのランダム選択
@@ -5758,7 +5781,7 @@ function rbff2.startplugin()
 			if p.dummy_rvs_chr == p.char then
 				if p.dummy_gd == dummy_gd_type.bs and #p.dummy_bs_list > 0 then
 					if p.state == 2 and p.skip_frame then
-						p.dummy_bs = p.dummy_bs_list[math.random(#p.dummy_bs_list)]
+						p.dummy_bs = get_next_bs(p)
 					end
 				end
 			end
@@ -6385,12 +6408,13 @@ function rbff2.startplugin()
 					-- set_step(p, true)
 					if p.dummy_rvs.throw then
 						if op.in_air then
-							print("unthrowable")
+							return
+						end
+						if op.sway_status ~= 0x00 then -- 全投げ無敵
 							return
 						end
 						if p.dummy_rvs.cmd then -- 通常投げ
-							if not p.throw.in_range or op.sway_status ~= 0x00 then
-								print("unthrowable",  p.dummy_rvs.cmd, p.throw.in_range, op.sway_status)
+							if not  p.n_throwable or not p.throw.in_range then
 								return
 							end
 						end
@@ -6811,8 +6835,6 @@ function rbff2.startplugin()
 					draw_rtext(    p1 and 28 or 302, 22, string.format("%2x", p.act_count))
 					draw_rtext(    p1 and 40 or 314, 22, string.format("%2x", p.act_frame))
 
-					local throwable   = p.state == 0 and op.state == 0 and p.tw_frame > 24 and p.sway_status == 0x00 and p.tw_muteki == 0 -- 投げ可能ベース
-					local n_throwable = throwable and p.tw_muteki2 == 0 -- 通常投げ可能
 					--[[
 						p.tw_frame のしきい値。しきい値より大きければ投げ処理継続可能。
 						0  空投げ M.スナッチャー0
@@ -6820,8 +6842,8 @@ function rbff2.startplugin()
 						20 M.リアルカウンター投げ
 						24 通常投げ しんさいは
 					]]
-					if not p.hit.vulnerable or not n_throwable or not throwable then
-						local throw_txt = throwable and "" or "投"
+					if not p.hit.vulnerable or not p.n_throwable or not p.throwable then
+						local throw_txt = p.throwable and "" or "投"
 						if p.tw_frame <= 10 then
 							throw_txt = throw_txt .. "<"
 						end
@@ -6830,8 +6852,8 @@ function rbff2.startplugin()
 						end
 						scr:draw_text( p1 and  1 or 275, 29, "無敵")
 						scr:draw_text( p1 and 15 or 289, 29, p.hit.vulnerable and "" or "打")
-						scr:draw_text( p1 and 24 or 298, 29, n_throwable and "" or "通")
-						scr:draw_text( p1 and 30 or 304, 29, throwable and "" or throw_txt)
+						scr:draw_text( p1 and 24 or 298, 29, p.n_throwable and "" or "通")
+						scr:draw_text( p1 and 30 or 304, 29, p.throwable and "" or throw_txt)
 					end
 
 					-- 状態フラグ
@@ -7325,31 +7347,12 @@ function rbff2.startplugin()
 	-- メニュー表示
 	local menu_max_row = 13
 	local menu_nop = function() end
-	local menu_to_main = function(cancel)
-		local col = tra_menu.pos.col
-		local row = tra_menu.pos.row
-		local p   = players
-
-		global.dummy_mode        = col[ 1]      -- ダミーモード           1
-		--                              2          レコード・リプレイ設定 2
-		p[1].dummy_act           = col[ 3]      -- 1P アクション          3
-		p[2].dummy_act           = col[ 4]      -- 2P アクション          4
-		p[1].dummy_gd            = col[ 5]      -- 1P ガード              5
-		p[2].dummy_gd            = col[ 6]      -- 2P ガード              6
-		global.next_block_grace  = col[ 7] - 1  -- 1ガード持続フレーム数  7
-		p[1].dummy_wakeup        = col[ 8]      -- 1P やられ時行動        8
-		p[2].dummy_wakeup        = col[ 9]      -- 2P やられ時行動        9
-		p[2].no_hit_limit        = col[10] - 1  -- 1P 強制空振り         10
-		p[1].no_hit_limit        = col[11] - 1  -- 2P 強制空振り         11
-		p[1].fwd_prov            = col[12] == 2 -- 1P 挑発で前進         12
-		p[2].fwd_prov            = col[13] == 2 -- 2P 挑発で前進         13
-		p[1].force_y_pos         = col[14] - 1  -- 1P Y座標強制          14
-		p[2].force_y_pos         = col[15] - 1  -- 2P Y座標強制          15
-		global.sync_pos_x        = col[16]      -- X座標同期             16
-
+	local setup_char_manu = function()
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		-- キャラにあわせたメニュー設定
 		for i, p in ipairs(players) do
 			-- ブレイクショット
+			p.char = pgm:read_u8(p.addr.char)
 			p.dummy_bs_chr = p.char
 			p.dummy_bs_list = {}
 			local bs_menu = bs_menus[i][p.char]
@@ -7379,6 +7382,28 @@ function rbff2.startplugin()
 				p.dummy_rvs_cnt = -1
 			end
 		end
+	end
+	local menu_to_main = function(cancel)
+		local col = tra_menu.pos.col
+		local row = tra_menu.pos.row
+		local p   = players
+
+		global.dummy_mode        = col[ 1]      -- ダミーモード           1
+		--                              2          レコード・リプレイ設定 2
+		p[1].dummy_act           = col[ 3]      -- 1P アクション          3
+		p[2].dummy_act           = col[ 4]      -- 2P アクション          4
+		p[1].dummy_gd            = col[ 5]      -- 1P ガード              5
+		p[2].dummy_gd            = col[ 6]      -- 2P ガード              6
+		global.next_block_grace  = col[ 7] - 1  -- 1ガード持続フレーム数  7
+		p[1].dummy_wakeup        = col[ 8]      -- 1P やられ時行動        8
+		p[2].dummy_wakeup        = col[ 9]      -- 2P やられ時行動        9
+		p[2].no_hit_limit        = col[10] - 1  -- 1P 強制空振り         10
+		p[1].no_hit_limit        = col[11] - 1  -- 2P 強制空振り         11
+		p[1].fwd_prov            = col[12] == 2 -- 1P 挑発で前進         12
+		p[2].fwd_prov            = col[13] == 2 -- 2P 挑発で前進         13
+		p[1].force_y_pos         = col[14] - 1  -- 1P Y座標強制          14
+		p[2].force_y_pos         = col[15] - 1  -- 2P Y座標強制          15
+		global.sync_pos_x        = col[16]      -- X座標同期             16
 
 		for _, p in ipairs(players) do
 			if p.dummy_gd == dummy_gd_type.hit1 then
@@ -7818,6 +7843,7 @@ function rbff2.startplugin()
 			menu_exit, -- リスタート
 		},
 	}
+	menu_cur = main_menu -- デフォルト設定
 	local update_menu_pos = function()
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		-- メニューの更新
@@ -7844,6 +7870,8 @@ function rbff2.startplugin()
 				main_menu.pos.col[13] = bgm.name_idx
 			end
 		end
+
+		setup_char_manu()
 	end
 	-- ブレイクショットメニュー
 	bs_menus, rvs_menus = {}, {}
@@ -7879,7 +7907,7 @@ function rbff2.startplugin()
 			table.insert(on_ab, menu_bs_to_tra_menu)
 			table.insert(col, 1)
 
-			local bs_menu = {
+			local a_bs_menu = {
 				list = list,
 				pos = { -- メニュー内の選択位置
 					offset = 1,
@@ -7889,7 +7917,7 @@ function rbff2.startplugin()
 				on_a = on_ab,
 				on_b = on_ab,
 			}
-			table.insert(pbs, bs_menu)
+			table.insert(pbs, a_bs_menu)
 		end
 		for _, rvs_list in pairs(char_rvs_list) do
 			local list, on_ab, col = {}, {}, {}
@@ -7905,7 +7933,7 @@ function rbff2.startplugin()
 			table.insert(on_ab, menu_rvs_to_tra_menu)
 			table.insert(col, 0)
 
-			local rvs_menu = {
+			local a_rvs_menu = {
 				list = list,
 				pos = { -- メニュー内の選択位置
 					offset = 1,
@@ -7915,7 +7943,7 @@ function rbff2.startplugin()
 				on_a = on_ab,
 				on_b = on_ab,
 			}
-			table.insert(prvs, rvs_menu)
+			table.insert(prvs, a_rvs_menu)
 		end
 	end
 	local gd_frms = {}
@@ -8740,13 +8768,6 @@ function rbff2.startplugin()
 
 		-- メニュー切替のタイミングでフック用に記録した値が状態変更後に謝って読みこまれないように常に初期化する
 		cls_hook()
-	end
-
-	-- メニューの初期化
-	if menu_cur == nil then
-		menu_cur = main_menu
-		--bar_menu_to_main()
-		--menu_to_main()
 	end
 
 	emu.register_frame_done(function()
