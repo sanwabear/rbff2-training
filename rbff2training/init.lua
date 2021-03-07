@@ -506,7 +506,7 @@ local char_acts_base = {
 		{ name = "イーグルキャッチ", type = act_types.any, ids = { 0x72, 0x73, 0x74, }, },
 		{ name = "フライングフィッシュ", type = act_types.attack, ids = { 0x68, 0x77, 0x78, }, },
 		{ name = "イーグルステップ", type = act_types.attack, ids = { 0x69, }, },
-		{ name = "レッグプレス", type = act_types.attack, ids = { 0x6A, 0x7A, 0x7B, }, },
+		{ name = "リンクスファング", type = act_types.attack, ids = { 0x6A, 0x7A, 0x7B, }, },
 		{ name = "エレファントタスク", type = act_types.attack, ids = { 0x6B, }, },
 		{ name = "H・ヘッジホック", type = act_types.attack, ids = { 0x6C, }, },
 		{ name = "ローリングタートル", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
@@ -3573,6 +3573,19 @@ function rbff2.startplugin()
 			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100420, 2, "wpdata<maincpu.pw@10DDEA", "maincpu.pw@10DDEA=wpdata;g"))
 			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100520, 2, "wpdata>maincpu.pw@10DDE8", "maincpu.pw@10DDE8=wpdata;g"))
 			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100520, 2, "wpdata<maincpu.pw@10DDEC", "maincpu.pw@10DDEC=wpdata;g"))
+
+			for i, p in ipairs(players) do
+				-- コマンド成立の確認用
+				--[[
+				table.insert(wps, cpu.debug:wpset(pgm, "w", p.addr.base + 0xA4, 2, "wpdata>0",
+					"printf \"wpdata=%X CH=%X CH4=%D PC=%X PREF_ADDR=%X A4=%X A6=%X D1=%X\",wpdata,maincpu.pw@((A4)+10),maincpu.pw@((A4)+10),PC,PREF_ADDR,(A4),(A6),(D1);g"))
+				]]
+				-- 投げ持続フレームの解除の確認用
+				--[[
+				table.insert(wps, cpu.debug:wpset(pgm, "w", p.addr.base + 0xA4, 2, "wpdata==0&&maincpu.pb@" ..  string.format("%x", p.addr.base) .. ">0",
+					"printf \"wpdata=%X CH=%X CH4=%D PC=%X PREF_ADDR=%X A4=%X A6=%X D1=%X\",wpdata,maincpu.pw@((A4)+10),maincpu.pw@((A4)+10),PC,PREF_ADDR,(A4),(A6),(D1);g"))
+				]]
+			end
 		end
 	end
 
@@ -3731,8 +3744,7 @@ function rbff2.startplugin()
 			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x0130F8),
 				"maincpu.pw@107C22>0&&((D7)<$FFFF)&&((maincpu.pb@10DDF1!=$FF&&(A4)==100500&&maincpu.pb@10DDF1<=maincpu.pb@10B4E0)||(maincpu.pb@10DDF2!=$FF&&(A4)==100400&&maincpu.pb@10DDF2<=maincpu.pb@10B4E1))",
 				"maincpu.pb@(temp1)=0;PC=" .. string.format("%x", fix_bp_addr(0x012FDA)) .. ";g"))
-
-			--[[
+			--[[ 空振りフック時の状態確認用
 			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x0130F8),
 				"maincpu.pw@107C22>0&&((D7)<$FFFF)&&((A4)==100500||(A4)==100400)",
 				"printf \"A4=%X 1=%X 2=%X E0=%X E1=%X\",(A4),maincpu.pb@10DDF1,maincpu.pb@10DDF2,maincpu.pb@10B4E0,maincpu.pb@10B4E1;g"))
@@ -3815,7 +3827,7 @@ function rbff2.startplugin()
 			]]
 
 			--[[ 投げ無敵調査用
-			for xi, addr in ipairs({
+			for _, addr in ipairs({
 				0x00039DAE, -- 投げチェック処理
 				0x00039D52, -- 爆弾パチキ ドリル M.カウンター投げ M.タイフーン 真心牙 S.TOL 鬼門陣
 				0x0003A0D4, -- 真空投げ
@@ -3831,7 +3843,7 @@ function rbff2.startplugin()
 				"1",
 				"printf \"A4=%X CH=%D PC=%X PREF_ADDR=%X A0=%X D7=%X\",(A4),maincpu.pw@((A4)+10),PC,PREF_ADDR,(A0),(D7);g"))
 			end
-			]]
+			--]]
 		end
 	end
 
@@ -6373,11 +6385,14 @@ function rbff2.startplugin()
 					-- set_step(p, true)
 					if p.dummy_rvs.throw then
 						if op.in_air then
+							print("unthrowable")
 							return
 						end
-						if p.dummy_rvs.cmd and p.throw.in_range and op.sway_status == 0x00 then
-						else
-							return
+						if p.dummy_rvs.cmd then -- 通常投げ
+							if not p.throw.in_range or op.sway_status ~= 0x00 then
+								print("unthrowable",  p.dummy_rvs.cmd, p.throw.in_range, op.sway_status)
+								return
+							end
 						end
 					end
 					if p.dummy_rvs.cmd then
