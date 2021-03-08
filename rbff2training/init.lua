@@ -455,6 +455,7 @@ local char_acts_base = {
 		{ name = "デッドリーレイブ", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, }, },
 		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x241, }, },
 		{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x242, }, },
+		{ disp_name = "CA 下C", name = "CA 下C(立から3段目)", type = act_types.low_attack, ids = { 0x243, }, },
 		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x245, }, },
 		{ disp_name = "CA 下C", name = "CA 下C(3段目)", type = act_types.low_attack, ids = { 0x247, }, },
 		{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x246, }, },
@@ -4478,6 +4479,9 @@ function rbff2.startplugin()
 					pgm:write_u8( p.addr.base + 0xB1, 0x00)
 
 					do_recover(p, op, true)
+
+					p.last_blockstun = 0
+					p.last_frame_gap = 0
 				end
 			end
 
@@ -4952,7 +4956,7 @@ function rbff2.startplugin()
 				pgm:write_u8(p.addr.stun, 0) -- スタン値
 				pgm:write_u8(p.addr.max_stun,  p.init_stun) -- 最大スタン値 
 				pgm:write_u8(p.addr.init_stun, p.init_stun) -- 最大スタン値
-				pgm:write_u8(p.addr.stun_timer, 0) -- スタン値タイマー
+				pgm:write_u16(p.addr.stun_timer, 0) -- スタン値タイマー
 			elseif max_life < p.life then
 				-- 最大値の方が少ない場合は強制で減らす
 				pgm:write_u8(p.addr.life, max_life)
