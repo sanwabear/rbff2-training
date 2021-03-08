@@ -1842,24 +1842,57 @@ for _, list in pairs(char_rvs_list) do
 	table.insert(char_bs_list, bs_list)
 end
 
-local get_next_rvs = function(p, excludes)
-	local ex, list = excludes or {}, {}
-	for _, rvs in ipairs(p.dummy_rvs_list) do
+local get_next_counter = function(targets, p, excludes)
+	local ex, list, len = excludes or {}, {}, 0
+	for _, rvs in ipairs(targets) do
 		if not ex[rvs] then
+			len = len + 1
 			table.insert(list, rvs)
 		end
 	end
-	return list[math.random(#list)]
+	if len == 0 then
+		return nil
+	elseif len == 1 then
+		return list[1]
+	else
+		return list[math.random(len)]
+	end
+end
+
+local get_next_rvs = function(p, excludes)
+	local i = p.addr.base == 0x100400 and 1 or 2
+	local rvs_menu = rvs_menus[i][p.char]
+	if not rvs_menu then
+		return nil
+	end
+	p.dummy_rvs_cnt = rvs_menu.pos.col[#rvs_menu.pos.col]
+	for j, rvs in pairs(char_rvs_list[p.char]) do
+		if rvs_menu.pos.col[j+1] == 2 then
+			table.insert(p.dummy_rvs_list, rvs)
+		end
+	end
+
+	local ret = get_next_counter(p.dummy_rvs_list, p, excludes)
+	--print(string.format("get_next_rvs %x", p.addr.base), ret == nil and "" or ret.name, #p.dummy_rvs_list)
+	return ret
 end
 
 local get_next_bs = function(p, excludes)
-	local ex, list = excludes or {}, {}
-	for _, bs in ipairs(p.dummy_bs_list) do
-		if not ex[bs] then
-			table.insert(list, bs)
+	local i = p.addr.base == 0x100400 and 1 or 2
+	local bs_menu = bs_menus[i][p.char]
+	if not bs_menu then
+		return nil
+	end
+	p.dummy_bs_cnt = bs_menu.pos.col[#bs_menu.pos.col]
+	for j, bs in pairs(char_bs_list[p.char]) do
+		if bs_menu.pos.col[j+1] == 2 then
+			table.insert(p.dummy_bs_list, bs)
 		end
 	end
-	return list[math.random(#list)]
+
+	local ret = get_next_counter(p.dummy_bs_list, p, excludes)
+	--print(string.format("get_next_bs %x", p.addr.base), ret == nil and "" or ret.name, #p.dummy_bs_list)
+	return ret
 end
 
 -- エミュレータ本体の入力取得
@@ -3751,7 +3784,11 @@ function rbff2.startplugin()
 			-- bp 13118,1,{PC=1311C;g}
 
 			-- 攻撃のヒットをむりやりガードに変更する
-			-- bp 0580F4,1,{pc=5810a;g}
+			--[[
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x0580D4),
+				"maincpu.pw@107C22>0&&((maincpu.pb@10DDF1>0&&(A4)==100500)||(maincpu.pb@10DDF1>0&&(A4)==100400))",
+				"PC=" .. string.format("%x", fix_bp_addr(0x0580EA)) .. ";g"))
+			]]
 
 			-- 投げ確定時の判定用フレーム
 			--[[
@@ -7351,35 +7388,22 @@ function rbff2.startplugin()
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		-- キャラにあわせたメニュー設定
 		for i, p in ipairs(players) do
+			local tmp_chr = pgm:read_u8(p.addr.char)
+
 			-- ブレイクショット
-			p.char = pgm:read_u8(p.addr.char)
-			p.dummy_bs_chr = p.char
-			p.dummy_bs_list = {}
-			local bs_menu = bs_menus[i][p.char]
-			if bs_menu then
-				p.dummy_bs_cnt = bs_menu.pos.col[#bs_menu.pos.col]
-				for j, bs in pairs(char_bs_list[p.char]) do
-					if bs_menu.pos.col[j+1] == 2 then
-						table.insert(p.dummy_bs_list, bs)
-					end
-				end
-			else
-				p.dummy_bs_cnt = -1
+			if not p.dummy_bs_chr or p.dummy_bs_chr ~= tmp_chr then
+				p.char = tmp_chr
+				p.dummy_bs_chr = p.char
+				p.dummy_bs_list = {}
+				p.dummy_bs = get_next_bs(p)
 			end
 
 			-- リバーサル
-			p.dummy_rvs_chr = p.char
-			p.dummy_rvs_list = {}
-			local rvs_menu = rvs_menus[i][p.char]
-			if rvs_menu then
-				p.dummy_rvs_cnt = rvs_menu.pos.col[#rvs_menu.pos.col]
-				for j, rvs in pairs(char_rvs_list[p.char]) do
-					if rvs_menu.pos.col[j+1] == 2 then
-						table.insert(p.dummy_rvs_list, rvs)
-					end
-				end
-			else
-				p.dummy_rvs_cnt = -1
+			if not p.dummy_rvs_chr or p.dummy_rvs_chr ~= tmp_chr then
+				p.char = tmp_chr
+				p.dummy_rvs_chr = tmp_chr
+				p.dummy_rvs_list = {}
+				p.dummy_rvs = get_next_rvs(p)
 			end
 		end
 	end
@@ -7416,6 +7440,8 @@ function rbff2.startplugin()
 			p.bs_count = -1 -- BSガードカウンター初期化
 			p.rvs_count = -1 -- リバサカウンター初期化
 			p.guard1 = 0
+			p.dummy_rvs = get_next_rvs(p)
+			p.dummy_bs = get_next_bs(p)
 		end
 
 		if global.dummy_mode == 5 then
