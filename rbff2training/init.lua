@@ -1866,6 +1866,7 @@ local get_next_rvs = function(p, excludes)
 		return nil
 	end
 	p.dummy_rvs_cnt = rvs_menu.pos.col[#rvs_menu.pos.col]
+	p.dummy_rvs_list = {}
 	for j, rvs in pairs(char_rvs_list[p.char]) do
 		if rvs_menu.pos.col[j+1] == 2 then
 			table.insert(p.dummy_rvs_list, rvs)
@@ -1884,6 +1885,7 @@ local get_next_bs = function(p, excludes)
 		return nil
 	end
 	p.dummy_bs_cnt = bs_menu.pos.col[#bs_menu.pos.col]
+	p.dummy_bs_list = {}
 	for j, bs in pairs(char_bs_list[p.char]) do
 		if bs_menu.pos.col[j+1] == 2 then
 			table.insert(p.dummy_bs_list, bs)
@@ -6940,8 +6942,10 @@ function rbff2.startplugin()
 					else
 						scr:draw_box(169, 40, 213,  50, 0x80404040, 0x80404040)
 					end
-					scr:draw_text(p1 and 115 or 180, 41, "回ガードでBS")
-					draw_rtext(   p1 and 115 or 180, 41, p.dummy_bs_cnt - math.max(p.bs_count, 0))
+					if p.dummy_bs then
+						scr:draw_text(p1 and 115 or 180, 41, "回ガードでBS")
+						draw_rtext(   p1 and 115 or 180, 41, p.dummy_bs_cnt - math.max(p.bs_count, 0))
+					end
 				end
 
 				-- スタン表示
@@ -7440,7 +7444,9 @@ function rbff2.startplugin()
 			p.bs_count = -1 -- BSガードカウンター初期化
 			p.rvs_count = -1 -- リバサカウンター初期化
 			p.guard1 = 0
+			p.dummy_rvs_chr = p.char
 			p.dummy_rvs = get_next_rvs(p)
+			p.dummy_bs_chr = p.char
 			p.dummy_bs = get_next_bs(p)
 		end
 
