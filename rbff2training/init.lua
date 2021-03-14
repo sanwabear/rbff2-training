@@ -7116,6 +7116,9 @@ function rbff2.startplugin()
 					end
 					-- set_step(p, true)
 					if p.dummy_rvs.throw then
+						if p.act == 0x9 and p.act_frame > 1 then -- 着地硬直は投げでないのでスルー
+							return
+						end
 						if op.in_air then
 							return
 						end
