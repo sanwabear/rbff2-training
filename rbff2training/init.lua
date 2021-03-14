@@ -1234,24 +1234,77 @@ local char_acts_base = {
 	},
 	-- 秦崇雷,
 	{
-		{ disp_name = "フェイント", name = "フェイント 帝王宿命拳", type = act_types.any, ids = { 0x112, }, },
-		{ name = "発勁龍", type = act_types.any, ids = { 0x6D, 0x6E, }, },
-		{ name = "龍脚殺", type = act_types.overhead, ids = { 0x68, }, },
-		{ name = "帝王神足拳", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
-		{ name = "大 帝王天眼拳", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, firing = true, },
-		{ name = "小 帝王天眼拳", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, firing = true, },
-		{ name = "小 帝王天耳拳", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
-		{ name = "大 帝王天耳拳", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
-		{ name = "帝王漏尽拳", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBB, 0xBA, 0xBC, }, firing = true, },
-		{ name = "龍転身（前方）", type = act_types.any, ids = { 0xC2, 0xC3, 0xC4, }, firing = true, },
-		{ name = "龍転身（後方）", type = act_types.any, ids = { 0xCC, 0xCD, 0xCE, }, },
-		{ name = "帝王宿命拳", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, firing = true, },
-		{ name = "帝王宿命拳", type = act_types.attack, ids = { 0x101, 0x102, 0x104, 0x105, 0x107, 0x115, 0x116, 0x103, 0x106, }, firing = true, },
-		{ name = "帝王龍声拳", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, }, firing = true, },
-		{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x243, }, },
-		{ disp_name = "CA 立C", name = "CA 立C(2段目)立Bルート", type = act_types.attack, ids = { 0x242, }, },
-		{ disp_name = "CA _8C", name = "CA 8C(3段目)立Bルート", type = act_types.overhead, ids = { 0x244, 0x245, 0x246, }, },
-		{ disp_name = "CA _3C", name = "CA 3C(3段目)立Bルート", type = act_types.attack, ids = { 0x240, }, },
+		{ f = 23, name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
+		{ f = 25, name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
+		{ f = 26, disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, }, },
+		{ f = 23, disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 36, name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
+		{ f = 34, name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
+		{ f = 45, disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
+		{ f = 46, disp_name = "バックステップ", name = "スゥエーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
+		{ names = { "スゥエー戻り", "ダッシュ", "スゥエーライン上 ダッシュ", "バックステップ", "スゥエーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
+		{ names = { "スゥエー振り向き移動", "ダッシュ", "スゥエーライン上 ダッシュ", "バックステップ", "スゥエーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
+		{ f = 36, disp_name = "スゥエーA", name = "近スゥエーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
+		{ f = 36, disp_name = "スゥエーB", name = "近スゥエーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
+		{ f = 37, disp_name = "スゥエーC", name = "近スゥエーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
+		{ f = 38, disp_name = "スゥエーA", name = "スゥエーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
+		{ f = 38, disp_name = "スゥエーB", name = "スゥエーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
+		{ f = 37, disp_name = "スゥエーC", name = "スゥエーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
+		{ f = 24, names = { "スゥエーC", "近スゥエーC", }, type = act_types.any, ids = { 0x25D, }, },
+		{ f = 3, name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
+		{ f = 4, names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
+		{ f = 31, name = "グランドスゥエー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
+		{ f = 18, name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
+		{ f = 31, name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
+		{ f = 16, name = "近立A", type = act_types.attack, ids = { 0x41, }, },
+		{ f = 20, name = "近立B", type = act_types.attack, ids = { 0x42, }, },
+		{ f = 33, name = "近立C", type = act_types.attack, ids = { 0x43, }, },
+		{ f = 16, name = "立A", type = act_types.attack, ids = { 0x44, }, },
+		{ f = 20, name = "立B", type = act_types.attack, ids = { 0x45, }, },
+		{ f = 33, name = "立C", type = act_types.attack, ids = { 0x46, }, },
+		{ f = 29, disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
+		{ f = 16, name = "下A", type = act_types.attack, ids = { 0x47, }, },
+		{ f = 20, name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
+		{ f = 30, name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
+		{ f = 29, disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
+		{ f = 6, disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
+		{ f = 8, disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 38, disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
+		{ f = 38, disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
+		{ f = 38, disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
+		{ f = 38, name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
+		{ f = 38, name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
+		{ f = 38, name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
+		{ f = 38, name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
+		{ f = 32, disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
+		{ f = 32, disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
+		{ f = 32, disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
+		{ f = 32, name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
+		{ f = 32, name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
+		{ f = 32, name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
+		{ f = 85, name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
+		{ f = 20, disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
+		{ f = 27, disp_name = "フェイント", name = "フェイント 帝王宿命拳", type = act_types.any, ids = { 0x112, }, },
+		{ f = 65, name = "発勁龍", type = act_types.any, ids = { 0x6D, 0x6E, }, },
+		{ f = 46, name = "龍脚殺", type = act_types.overhead, ids = { 0x68, }, },
+		{ f = 43, name = "帝王神足拳", type = act_types.attack, ids = { 0x86, 0x87, 0x89, }, },
+		{ f = 1+18+29, names = { "帝王神足拳", }, type = act_types.attack, ids = { 0x88, }, },
+		-- TODO 真と帝王神足拳の差がわかるもの
+		{ f = 52, name = "大 帝王天眼拳", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, firing = true, },
+		{ f = 55, name = "小 帝王天眼拳", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, firing = true, },
+		{ f = 56, name = "小 帝王天耳拳", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
+		{ f = 73, name = "大 帝王天耳拳", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
+		{ f = 122, name = "帝王漏尽拳", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBB, 0xBA, 0xBC, }, firing = true, },
+		{ f = 41, name = "龍転身（前方）", type = act_types.any, ids = { 0xC2, 0xC3, 0xC4, }, firing = true, },
+		{ f = 41, name = "龍転身（後方）", type = act_types.any, ids = { 0xCC, 0xCD, 0xCE, }, },
+		-- TODO 延長しないときのフレーム数
+		{ f = 85, name = "帝王宿命拳", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, firing = true, },
+		{ f = 0, name = "帝王宿命拳", type = act_types.attack, ids = { 0x101, 0x102, 0x104, 0x105, 0x107, 0x115, 0x116, 0x103, 0x106, }, firing = true, },
+		{ f = 89, name = "帝王龍声拳", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, }, firing = true, },
+		{ f = 0, disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x243, }, },
+		{ f = 0, disp_name = "CA 立C", name = "CA 立C(2段目)立Bルート", type = act_types.attack, ids = { 0x242, }, },
+		{ f = 0, disp_name = "CA _8C", name = "CA 8C(3段目)立Bルート", type = act_types.overhead, ids = { 0x244, 0x245, 0x246, }, },
+		{ f = 0, disp_name = "CA _3C", name = "CA 3C(3段目)立Bルート", type = act_types.attack, ids = { 0x240, }, },
 	},
 	-- ダック・キング
 	{
@@ -3752,6 +3805,9 @@ function rbff2.startplugin()
 			},
 
 			addr           = {
+				-- 100486 コマンド入力でのキャラ向きチェック用 00:左側 80:右側
+				-- 100482 100483 キー入力
+				-- 1004B7 0:端以外 1:画面端 3:端押し付け
 				base         = p1 and 0x100400 or 0x100500, -- キャラ状態とかのベースのアドレス
 				act          = p1 and 0x100460 or 0x100560, -- 行動ID デバッグディップステータス表示のPと同じ
 				acta         = p1 and 0x100462 or 0x100562, -- 行動ID デバッグディップステータス表示のAと同じ
@@ -4193,12 +4249,13 @@ function rbff2.startplugin()
 			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100520, 2, "wpdata>maincpu.pw@10DDE8", "maincpu.pw@10DDE8=wpdata;g"))
 			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100520, 2, "wpdata<maincpu.pw@10DDEC", "maincpu.pw@10DDEC=wpdata;g"))
 
+			-- コマンド入力状態の記憶場所 A1
+			-- bp 39488,{(A4)==100400},{printf "PC=%X A4=%X A1=%X",PC,(A4),(A1);g}
+
 			for i, p in ipairs(players) do
 				-- コマンド成立の確認用
-				--[[
 				table.insert(wps, cpu.debug:wpset(pgm, "w", p.addr.base + 0xA4, 2, "wpdata>0",
 					"printf \"wpdata=%X CH=%X CH4=%D PC=%X PREF_ADDR=%X A4=%X A6=%X D1=%X\",wpdata,maincpu.pw@((A4)+10),maincpu.pw@((A4)+10),PC,PREF_ADDR,(A4),(A6),(D1);g"))
-				]]
 				-- 投げ持続フレームの解除の確認用
 				--[[
 				table.insert(wps, cpu.debug:wpset(pgm, "w", p.addr.base + 0xA4, 2, "wpdata==0&&maincpu.pb@" ..  string.format("%x", p.addr.base) .. ">0",
@@ -4772,6 +4829,7 @@ function rbff2.startplugin()
 			return ret
 		end
 		local rec1, rec2, rec3, rec4, rec5, rec6, rec7, rec8 = {}, {}, {}, {}, {}, {}, {}, {}
+		--[[
 		rec1 = merge_cmd(  -- ガード解除直前のNのあと2とNの繰り返しでガード硬直延長,をさらに投げる
 			{ _8, _5, 46, _1, 20, _2, 27, _5, 6, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1,
 			_5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1,},
@@ -4782,6 +4840,15 @@ function rbff2.startplugin()
 			_5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1,},
 			{ _8, _5, 46, _2b, _5, 12, _2b, _5, 50, _4, _5, _4, _5, _7, 6, _7d, _5, 41, _c, _5, }
 		)
+		]]
+		-- 真神足拳調査
+		--[[
+		rec8 = merge_cmd( --神足拳 ギリギリ遅らせ入力
+			{ _8, _5, 46, _6, 17, _5, 17, _6, _5, 6, _a, _5, 2, _6, _5, },
+			{ }
+		)
+		]]
+
 		--[[
 		rec1 = merge_cmd(  -- ガード解除直前のNでガード硬直延長
 			{ _8, _5, 46, _1, 20, _2, 27, _5, },
