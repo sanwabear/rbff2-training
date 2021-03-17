@@ -1974,8 +1974,8 @@ local create_input_states = function()
 			{ name = "フェイント超裂破弾"              , addr = 0x42, cmd = _2bc, type = input_state_types.faint, },
 		},
 		{ --東丈
-			{ name = "小スラッシュキック"              , addr = 0x08, cmd = _16b, },
-			{ name = "大スラッシュキック"              , addr = 0x0C, cmd = _16c, },
+			{ name = "小スラッシュキック"              , addr = 0x06, cmd = _16b, },
+			{ name = "大スラッシュキック"              , addr = 0x0A, cmd = _16c, },
 			{ name = "黄金のカカト"                    , addr = 0x0E, cmd = _214b, },
 			{ name = "タイガーキック"                  , addr = 0x12, cmd = _623b, },
 			{ name = "爆裂拳"                          , addr = 0x16, cmd = _aaaa, },
@@ -1989,7 +1989,7 @@ local create_input_states = function()
 			{ name = "ダッシュ"                        , addr = 0x36, cmd = _66, type = input_state_types.step, },
 			{ name = "バックステップ"                  , addr = 0x3A, cmd = _44, type = input_state_types.step, },
 			{ name = "炎の指先"                        , addr = 0x42, cmd = _2c, type = input_state_types.followup, },
-			{ name = "CA _2_3_6_C"                     , addr = 0x46, cmd = _236c, },
+			{ name = "CA _2_3_6_C"                     , addr = 0x46, cmd = _236c, type = input_state_types.faint, },
 			{ name = "フェイントハリケーンアッパー"    , addr = 0x4E, cmd = _2ac, type = input_state_types.faint, },
 			{ name = "フェイントスラッシュキック"      , addr = 0x52, cmd = _6ac, type = input_state_types.faint, },
 		},
@@ -2060,9 +2060,9 @@ local create_input_states = function()
 			{ name = "地獄門"                          , addr = 0x5A, cmd = _632c, },
 			{ name = "CA一回転 左回し"                 , addr = 0x5E, cmd = _5555c, },
 			{ name = "CA 錫杖上段打ち"                 , addr = 0x62, cmd = _623a, },
+			{ name = "CA 雷撃棍"                       , addr = 0x66, cmd = _22c, },
 			{ name = "フェイントまきびし"              , addr = 0x6A, cmd = _2ac, type = input_state_types.faint, },
 			{ name = "フェイントいかづち"              , addr = 0x6E, cmd = _2bc, type = input_state_types.faint, },
-			-- TODO CA 雷撃棍
 		},
 		{ --ボブ・ウィルソン
 			{ name = "ローリングタートル"              , addr = 0x02, cmd = _214b, },
@@ -2380,7 +2380,7 @@ local create_input_states = function()
 		},
 	}
 	--for ti = 2, 160, 2 do
-	for ti = 120, 240, 2 do -- 調査用 2～
+	for ti = 80, 240, 2 do -- 調査用 2～
 		table.insert(input_states[#input_states], {
 			name = string.format("%x", ti),
 			addr = ti,
@@ -6421,7 +6421,7 @@ function rbff2.startplugin()
 			p.input_states   = {}
 			p.input_estab    = p.input_estab or {}
 			local states = input_states[p.char]
-			--local all_input_states = input_states[#input_states] -- 調査用
+			local all_input_states = input_states[#input_states] -- 調査用
 			for ti, tbl in ipairs(states) do
 				local old = p.old_input_states[ti]
 				local on = pgm:read_u8(tbl.addr + p.input_offset - 1)
