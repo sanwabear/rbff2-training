@@ -22,6 +22,10 @@
 
 local exports = {}
 require('lfs')
+local convert_lib = require("data/button_char")
+local convert = function(str)
+	return str and convert_lib(str) or str
+end
 
 exports.name = "rbff2training"
 exports.version = "0.0.1"
@@ -89,6 +93,7 @@ local global = {
 	disp_pos        = true, -- 1P 2P 距離表示
 	disp_hitbox     = 4, -- 判定表示
 	disp_frmgap     = 3, -- フレーム差表示
+	disp_input_sts  = 1, -- コマンド入力状態表示 1:OFF 2:1P 3:2P
 	pause_hit       = 1, -- ヒット時にポーズ 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:ガードのみ
 	pausethrow      = false, -- 投げ判定表示時にポーズ
 	replay_stop_on_dmg = false, -- ダメージでリプレイ中段
@@ -1845,6 +1850,557 @@ local get_act_name = function(act_data)
 	end
 	---return a.disp_name or ((a.names and #a.names > 0) and a.names[1] or a.name)
 end
+local input_state_types = {
+	step = 1,
+	faint = 2,
+	charge = 3,
+	unknown = 4,
+	followup = 5,
+}
+local create_input_states = function()
+	local _236a = "_2|_3|_6|_A"
+	local _236b = "_2|_3|_6|_B"
+	local _236c = "_2|_3|_6|_C"
+	local _236d = "_2|_3|_6|_D"
+	local _214a = "_2|_1|_4|_A"
+	local _214b = "_2|_1|_4|_B"
+	local _214c = "_2|_1|_4|_C"
+	local _214d = "_2|_1|_4|_D"
+	local _623a = "_6|_2|_3|_A"
+	local _623b = "_6|_2|_3|_B"
+	local _623c = "_6|_2|_3|_C"
+	local _632146a = "_6|_3|_2|_1|_4|_6|_A"
+	local _41236a = "_4|_1|_2|_3|_6|_A"
+	local _41236b = "_4|_1|_2|_3|_6|_B"
+	local _41236c = "_4|_1|_2|_3|_6|_C"
+	local _41236d = "_4|_1|_2|_3|_6|_D"
+	local _63214a = "_6|_3|_2|_1|_4|_A"
+	local _63214b = "_6|_3|_2|_1|_4|_B"
+	local _63214c = "_6|_3|_2|_1|_4|_C"
+	local _21416bc = "_2|_1|_4|_1|_6|_B+_C"
+	local _21416c = "_2|_1|_4|_1|_6|_C"
+	local _64123bc = "_6|_4|_1|_2|_3|_B+_C"
+	local _64123c = "_6|_4|_1|_2|_3|_C"
+	local _64123d = "_6|_4|_1|_2|_3|_D"
+	local _2chg8a = "_2|^2|_8|_A"
+	local _2chg8b = "_2|^2|_8|_B"
+	local _2chg8c = "_2|^2|_8|_C"
+	local _2ac = "_2|_A+_C"
+	local _6ac = "_6|_A+_C"
+	local _4ac = "_4|_A+_C"
+	local _2bc = "_2|_B+_C"
+	local _66 = "_6|_N|_6"
+	local _44 = "_4|_N|_4"
+	local _2c = "_2|_N|_C"
+	local _2ab = "_2|_N|_A+_B"
+	local _16a = "_1|_6|_A"
+	local _16b = "_1|_6|_B"
+	local _16c = "_1|_6|_C"
+	local _82d = "_8|_2|_D"
+	local _1236b = "_1|_2|_3|_6|_B"
+	local _aaaa = "_A|_A|_A|_A"
+	local _bbbb = "_B|_B|_B|_B"
+	local _cccc = "_C|_C|_C|_C"
+	local _8624a = "_8|_6|_2|_4|_A"
+	local _6248a = "_6|_2|_4|_8|_A"
+	local _2486a = "_2|_4|_8|_6|_A"
+	local _4862a = "_4|_8|_6|_2|_A"
+	local _8426a = "_8|_4|_2|_6|_A"
+	local _4268a = "_4|_2|_6|_8|_A"
+	local _2684a = "_2|_6|_8|_4|_A"
+	local _6842a = "_6|_8|_4|_2|_A"
+	local _8624c = "_8|_6|_2|_4|_C"
+	local _6248c = "_6|_2|_4|_8|_C"
+	local _2486c = "_2|_4|_8|_6|_C"
+	local _4862c = "_4|_8|_6|_2|_C"
+	local _8426c = "_8|_4|_2|_6|_C"
+	local _4268c = "_4|_2|_6|_8|_C"
+	local _2684c = "_2|_6|_8|_4|_C"
+	local _6842c = "_6|_8|_4|_2|_C"
+	local _632c = "_6|_3|_2|_C"
+	local _5555a = "_5|_5|_5|_5|_A"
+	local _5555c = "_5|_5|_5|_5|_C"
+	local _646c = "_6|_4|_6|_C"
+	local _4chg6b = "_4|^4|_6|_B"
+	local _466bc = "_4|_6|_N|_6|_B+_C"
+	local _33c = "_3|_N|_3|_C"
+	local _33b = "_3|_N|_3|_B"
+	local _22c = "_2|_N|_2|_C"
+	local _8c = "_8|_N|_C"
+	local _2b = "_2|N|_B"
+	local _4chg6a =  "_4|^_1|_6|_A"
+	local _4chc6b = "_4|^_4|_6|_B"
+	local _46b = "_4|_6|_B"
+	local _1chg6b = "_1|^_1|_6|_B"
+	local _2369b = "_2|_3|_6|_9|_B"
+	local _1chg6c = "_2|_3|_6|_9|_B"
+	local _63214bc = "_6|_3|_2|_1|_4|_B+_C"
+	local _6428c = "_6|_4|_2|_8|_C"
+	local _a8 = "_A|_8"
+	local _a6 = "_A|_6"
+	local _a2 = "_A|_2"
+
+	local input_states = {
+		{ --テリー・ボガード
+			{ name = "小バーンナックル"                , addr = 0x02, cmd = _214a, },
+			{ name = "大バーンナックル"                , addr = 0x06, cmd = _214c, },
+			{ name = "パワーウェイブ"                  , addr = 0x0A, cmd = _236a, },
+			{ name = "ラウンドウェイブ"                , addr = 0x0E, cmd = _236c, },
+			{ name = "クラックシュート"                , addr = 0x12, cmd = _214b, },
+			{ name = "ファイヤーキック"                , addr = 0x16, cmd = _236b, },
+			{ name = "パッシングスウェー"              , addr = 0x1A, cmd = _236d, },
+			{ name = "ライジングタックル"              , addr = 0x1E, cmd = _2chg8a, type = input_state_types.charge, },
+			{ name = "パワーゲイザー"                  , addr = 0x22, cmd = _21416bc, },
+			{ name = "トリプルゲイザー"                , addr = 0x26, cmd = _21416c, },
+			{ name = "ダッシュ"                        , addr = 0x2A, cmd = _66, type = input_state_types.step, },
+			{ name = "バックステップ"                  , addr = 0x2E, cmd = _44, type = input_state_types.step, },
+			{ name = "フェイントバーンナックル"        , addr = 0x3E, cmd = _6ac, type = input_state_types.faint, },
+			{ name = "フェイントパワーゲイザー"        , addr = 0x42, cmd = _2bc, type = input_state_types.faint, },
+		},
+		{ --アンディ・ボガード
+			{ name = "小残影拳"                        , addr = 0x02, cmd = _16a, },
+			{ name = "大残影拳"                        , addr = 0x06, cmd = _16c, },
+			{ name = "飛翔拳"                          , addr = 0x0A, cmd = _214a, },
+			{ name = "激飛翔拳"                        , addr = 0x0E, cmd = _214c, },
+			{ name = "昇龍弾"                          , addr = 0x14, cmd = _623c, },
+			{ name = "空破弾"                          , addr = 0x16, cmd = _1236b, },
+			{ name = "幻影不知火"                      , addr = 0x1A, cmd = _214d, },
+			{ name = "超裂破弾"                        , addr = 0x1E, cmd = _21416bc, },
+			{ name = "男打弾"                          , addr = 0x22, cmd = _21416c, },
+			{ name = "ダッシュ"                        , addr = 0x26, cmd = _66, type = input_state_types.step, },
+			{ name = "バックステップ"                  , addr = 0x2A, cmd = _44, type = input_state_types.step, },
+			{ name = "フェイント斬影拳"                , addr = 0x3A, cmd = _6ac, type = input_state_types.faint, },
+			{ name = "フェイント飛翔拳"                , addr = 0x3E, cmd = _2ac, type = input_state_types.faint, },
+			{ name = "フェイント超裂破弾"              , addr = 0x42, cmd = _2bc, type = input_state_types.faint, },
+		},
+		{ --東丈
+			{ name = "小スラッシュキック"              , addr = 0x08, cmd = _16b, },
+			{ name = "大スラッシュキック"              , addr = 0x0C, cmd = _16c, },
+			{ name = "黄金のカカト"                    , addr = 0x0E, cmd = _214b, },
+			{ name = "タイガーキック"                  , addr = 0x12, cmd = _623b, },
+			{ name = "爆裂拳"                          , addr = 0x16, cmd = _aaaa, },
+			{ name = "爆裂フック"                      , addr = 0x1A, cmd = _236a, },
+			{ name = "爆裂アッパー"                    , addr = 0x1E, cmd = _236c, },
+			{ name = "ハリケーンアッパー"              , addr = 0x22, cmd = _41236a, },
+			{ name = "爆裂ハリケーン"                  , addr = 0x26, cmd = _41236c, },
+			{ name = "スクリューアッパー"              , addr = 0x2A, cmd = _64123bc, },
+			{ name = "サンダーファイヤーC"             , addr = 0x2E, cmd = _64123c, },
+			{ name = "サンダーファイヤーD"             , addr = 0x32, cmd = _64123d, },
+			{ name = "ダッシュ"                        , addr = 0x36, cmd = _66, type = input_state_types.step, },
+			{ name = "バックステップ"                  , addr = 0x3A, cmd = _44, type = input_state_types.step, },
+			{ name = "炎の指先"                        , addr = 0x42, cmd = _2c, type = input_state_types.followup, },
+			{ name = "CA _2_3_6_C"                     , addr = 0x46, cmd = _236c, },
+			{ name = "フェイントハリケーンアッパー"    , addr = 0x4E, cmd = _2ac, type = input_state_types.faint, },
+			{ name = "フェイントスラッシュキック"      , addr = 0x52, cmd = _6ac, type = input_state_types.faint, },
+		},
+		{ --不知火舞
+			{ name = "花蝶扇"                          , addr = 0x02, cmd = _236a, },
+			{ name = "龍炎舞"                          , addr = 0x06, cmd = _214a, },
+			{ name = "小夜千鳥"                        , addr = 0x0A, cmd = _214c, },
+			{ name = "必殺忍蜂"                        , addr = 0x0E, cmd = _41236c, },
+			{ name = "ムササビの舞"                    , addr = 0x12, cmd = _2ab, },
+			{ name = "超必殺忍蜂"                      , addr = 0x16, cmd = _64123bc },
+			{ name = "花嵐"                            , addr = 0x1A, cmd = _64123c, },
+			{ name = "ダッシュ"                        , addr = 0x1E, cmd = _66, type = input_state_types.step, },
+			{ name = "バックステップ"                  , addr = 0x22, cmd = _44, type = input_state_types.step, },
+			{ name = "跳ね蹴り"                        , addr = 0x2A, cmd = _cccc, },
+			{ name = "フェイント花蝶扇"                , addr = 0x36, cmd = _2ac, type = input_state_types.faint, },
+			{ name = "フェイント花嵐"                  , addr = 0x3A, cmd = _2bc, type = input_state_types.faint, },
+		},
+		{ --ギース・ハワード
+			{ name = "雷鳴豪破投げ"                    , addr = 0x02, cmd = _2c, type = input_state_types.followup, },
+			{ name = "烈風拳"                          , addr = 0x06, cmd = _214a, },
+			{ name = "ダブル烈風拳"                    , addr = 0x0A, cmd = _214c, },
+			{ name = "上段当身投げ"                    , addr = 0x0E, cmd = _41236b, },
+			{ name = "裏雲隠し"                        , addr = 0x12, cmd = _41236c, },
+			{ name = "下段当身打ち"                    , addr = 0x16, cmd = _41236a, },
+			{ name = "デッドリーレイブ"                , addr = 0x1E, cmd = _632146a, },
+			{ name = "真空投げ↑→↓←"                , addr = 0x22, cmd = _8624a, },
+			{ name = "真空投げ→↓←↑"                , addr = 0x26, cmd = _6248a, },
+			{ name = "真空投げ↓←↑→"                , addr = 0x2A, cmd = _2486a, },
+			{ name = "真空投げ←↑→↓"                , addr = 0x2E, cmd = _4862a, },
+			{ name = "真空投げ↑←↓→"                , addr = 0x32, cmd = _8426a, },
+			{ name = "真空投げ←↓→↑"                , addr = 0x36, cmd = _4268a, },
+			{ name = "真空投げ↓→↑←"                , addr = 0x3A, cmd = _2684a, },
+			{ name = "真空投げ→↑←↓"                , addr = 0x3E, cmd = _6842a, },
+			{ name = "羅生門↑→↓←"                  , addr = 0x42, cmd = _8624c, },
+			{ name = "羅生門→↓←↑"                  , addr = 0x42, cmd = _6248c, },
+			{ name = "羅生門↓←↑→"                  , addr = 0x42, cmd = _2486c, },
+			{ name = "羅生門←↑→↓"                  , addr = 0x42, cmd = _4862c, },
+			{ name = "羅生門↑←↓→"                  , addr = 0x52, cmd = _8426c, },
+			{ name = "羅生門←↓→↑"                  , addr = 0x56, cmd = _4268c, },
+			{ name = "羅生門↓→↑←"                  , addr = 0x5A, cmd = _2684c, },
+			{ name = "羅生門→↑←↓"                  , addr = 0x5E, cmd = _6842c, },
+			{ name = "ダッシュ"                        , addr = 0x62, cmd = _66, type = input_state_types.step, },
+			{ name = "バックステップ"                  , addr = 0x66, cmd = _44, type = input_state_types.step, },
+			{ name = "絶命人中打ち"                    , addr = 0x76, cmd = _632c, },
+			{ name = "フェイント烈風拳"                , addr = 0x7E, cmd = _2ac, type = input_state_types.faint, },
+			{ name = "フェイントレイジングストーム"    , addr = 0x82, cmd = _2bc, type = input_state_types.faint, },
+		},
+		{ --望月双角,
+			{ name = "野猿狩り"                        , addr = 0x02, cmd = _214a, },
+			{ name = "まきびし"                        , addr = 0x06, cmd = _236a, },
+			{ name = "憑依弾"                          , addr = 0x0A, cmd = _646c, },
+			{ name = "邪棍舞"                          , addr = 0x0E, cmd = _aaaa, },
+			{ name = "喝"                              , addr = 0x12, cmd = _63214b, },
+			{ name = "禍炎陣"                          , addr = 0x16, cmd = _82d, },
+			{ name = "いかづち"                        , addr = 0x1A, cmd = _64123bc, },
+			{ name = "無残弾"                          , addr = 0x1E, cmd = _64123c, },
+			{ name = "鬼門陣↑→↓←"                  , addr = 0x22, cmd = _8624c, },
+			{ name = "鬼門陣→↓←↑"                  , addr = 0x26, cmd = _6248c, },
+			{ name = "鬼門陣↓←↑→"                  , addr = 0x2A, cmd = _2486c, },
+			{ name = "鬼門陣←↑→↓"                  , addr = 0x2E, cmd = _4862c, },
+			{ name = "鬼門陣↑←↓→"                  , addr = 0x32, cmd = _8426c, },
+			{ name = "鬼門陣←↓→↑"                  , addr = 0x36, cmd = _4268c, },
+			{ name = "鬼門陣↓→↑←"                  , addr = 0x3A, cmd = _2684c, },
+			{ name = "鬼門陣→↑←↓"                  , addr = 0x3E, cmd = _6842c, },
+			{ name = "ダッシュ"                        , addr = 0x42, cmd = _66, type = input_state_types.step, },
+			{ name = "バックダッシュ"                  , addr = 0x46, cmd = _44, type = input_state_types.step, },
+			{ name = "雷撃棍"                          , addr = 0x4E, cmd = _2c, type = input_state_types.followup, },
+			{ name = "地獄門"                          , addr = 0x5A, cmd = _632c, },
+			{ name = "CA一回転 左回し"                 , addr = 0x5E, cmd = _5555c, },
+			{ name = "CA 錫杖上段打ち"                 , addr = 0x62, cmd = _623a, },
+			{ name = "フェイントまきびし"              , addr = 0x6A, cmd = _2ac, type = input_state_types.faint, },
+			{ name = "フェイントいかづち"              , addr = 0x6E, cmd = _2bc, type = input_state_types.faint, },
+			-- TODO CA 雷撃棍
+		},
+		{ --ボブ・ウィルソン
+			{ name = "ローリングタートル"              , addr = 0x02, cmd = _214b, },
+			{ name = "サイドワインダー"                , addr = 0x06, cmd = _214c, },
+			{ name = "バイソンホーン"                  , addr = 0x0A, cmd = _2chg8c, type = input_state_types.charge, },
+			{ name = "ワイルドウルフ"                  , addr = 0x0E, cmd = _4chg6b, type = input_state_types.charge, },
+			{ name = "モンキーダンス"                  , addr = 0x12, cmd = _623b, },
+			{ name = "フロッグハンティング"            , addr = 0x16, cmd = _466bc, },
+			{ name = "デンジャラスウルフ"              , addr = 0x1A, cmd = _64123bc },
+			{ name = "ダンシングバイソン"              , addr = 0x1E, cmd = _64123c, },
+			{ name = "ホーネットアタック"              , addr = 0x22, cmd = _33c, type = input_state_types.followup, },
+			{ name = "ダッシュ"                        , addr = 0x26, cmd = _66, type = input_state_types.step, },
+			{ name = "バックステップ"                  , addr = 0x2A, cmd = _44, type = input_state_types.step, },
+			{ name = "フライングフィッシュ"            , addr = 0x32, cmd = _cccc, },
+			{ name = "リンクスファング"                , addr = 0x36, cmd = _8c, type = input_state_types.faint, },
+			{ name = "フェイントダンシングバイソン"    , addr = 0x42, cmd = _2bc, type = input_state_types.faint, },
+		},
+		{ --ホンフゥ
+			{ name = "九龍の読み/黒龍"                 , addr = 0x02, cmd = _41236c, },
+			{ name = "小制空烈火棍"                    , addr = 0x06, cmd = _623a, },
+			{ name = "大制空烈火棍"                    , addr = 0x0A, cmd = _623c, },
+			{ name = "電光石火の地"                    , addr = 0x0E, cmd = _1chg6b, type = input_state_types.charge, },
+			{ name = "電光パチキ"                      , addr = 0x12, cmd = _bbbb, },
+			{ name = "電光石火の天"                    , addr = 0x16, cmd = _214b, },
+			{ name = "炎の種馬"                        , addr = 0x1A, cmd = _214a, },
+			{ name = "炎の種馬 連打"                   , addr = 0x1E, cmd = _aaaa, },
+			{ name = "必勝！逆襲拳"                    , addr = 0x22, cmd = _214c, },
+			{ name = "爆発ゴロー"                      , addr = 0x26, cmd = _21416bc, },
+			{ name = "よかトンハンマー"                , addr = 0x2A, cmd = _21416c, },
+			{ name = "ダッシュ"                        , addr = 0x2E, cmd = _66, type = input_state_types.step, },
+			{ name = "バックステップ"                  , addr = 0x32, cmd = _44, type = input_state_types.step, },
+			{ name = "トドメヌンチャク"                , addr = 0x3A, cmd = _2c, type = input_state_types.followup, },
+			{ name = "フェイント制空烈火棍"            , addr = 0x46, cmd = _6ac, type = input_state_types.faint, },
+		},
+		{  --ブルー・マリー
+			{ name = "M.ダイナマイトスイング"          , addr = 0x02, cmd = _2c, },
+			{ name = "スピンフォール"                  , addr = 0x06, cmd = _236a, },
+			{ name = "M.スナッチャー"                  , addr = 0x0A, cmd = _623b, },
+			{ name = "ダブルクラッチ"                  , addr = 0x0E, cmd = _46b, },
+			{ name = "M.クラブクラッチ"                , addr = 0x12, cmd = _4chc6b, type = input_state_types.charge, },
+			{ name = "M.リアルカウンター"              , addr = 0x16, cmd = _214a, },
+			{ name = "バーチカルアロー"                , addr = 0x1A, cmd = _623a, },
+			{ name = "ストレートスライサー"            , addr = 0x1E, cmd = _4chg6a, type = input_state_types.charge, },
+			{ name = "ヤングダイブ"                    , addr = 0x22, cmd = _2chg8c, type = input_state_types.charge, },
+			{ name = "M.タイフーン"                    , addr = 0x26, cmd = _64123bc, },
+			{ name = "M.エスカレーション"              , addr = 0x2A, cmd = _64123c, },
+			{ name = "CA ジャーマンスープレックス"     , addr = 0x2E, cmd = _33c, },
+			{ name = "アキレスホールド"                , addr = 0x32, cmd = _632c, },
+			{ name = "ダッシュ"                        , addr = 0x3A, cmd = _66, type = input_state_types.step, },
+			{ name = "バックステップ"                  , addr = 0x3E, cmd = _44, type = input_state_types.step, },
+			{ name = "レッグプレス"                    , addr = 0x46, cmd = _2b, type = input_state_types.followup, },
+			{ name = "フェイントM.スナッチャー"        , addr = 0x52, cmd = _4ac, type = input_state_types.faint, },
+		},
+		{ --フランコ・バッシュ
+			{ name = "ダブルコング"                    , addr = 0x06, cmd = _214a, },
+			{ name = "ザッパー"                        , addr = 0x0A, cmd = _236a, },
+			{ name = "ウエービングブロー"              , addr = 0x0E, cmd = _236d, },
+			{ name = "ガッツダンク"                    , addr = 0x12, cmd = _2369b, },
+			{ name = "ゴールデンボンバー"              , addr = 0x16, cmd = _1chg6c, type = input_state_types.charge, },
+			{ name = "ファイナルオメガショット"        , addr = 0x1A, cmd = _64123bc, },
+			{ name = "メガトンスクリュー"              , addr = 0x1E, cmd = _63214bc, },
+			{ name = "ハルマゲドンバスター"            , addr = 0x22, cmd = _64123c, },
+			{ name = "ダッシュ"                        , addr = 0x26, cmd = _66, type = input_state_types.step, },
+			{ name = "バックステップ"                  , addr = 0x2A, cmd = _44, type = input_state_types.step, },
+			{ name = "スマッシュ"                      , addr = 0x32, cmd = _cccc, },
+			{ name = "フェイントハルマゲドンバスター"  , addr = 0x3A, cmd = _2bc, type = input_state_types.faint, },
+			{ name = "フェイントガッツダンク"          , addr = 0x3E, cmd = _6ac, type = input_state_types.faint, },
+		},
+		{ --山崎竜二
+			{ name = "トドメ"                          , addr = 0x06, cmd = _22c, },
+			{ name = "蛇使い・上段 "                   , addr = 0x0A, cmd = _214a, },
+			{ name = "蛇使い・中段"                    , addr = 0x0E, cmd = _214b, },
+			{ name = "蛇使い・下段"                    , addr = 0x12, cmd = _214c, },
+			{ name = "サドマゾ"                        , addr = 0x16, cmd = _41236b, },
+			{ name = "ヤキ入れ"                        , addr = 0x1A, cmd = _623b, },
+			{ name = "倍返し"                          , addr = 0x1E, cmd = _236c, },
+			{ name = "裁きの匕首"                      , addr = 0x22, cmd = _623a, },
+			{ name = "爆弾パチキ"                      , addr = 0x26, cmd = _6428c, },
+			{ name = "ギロチン"                        , addr = 0x2E, cmd = _64123bc, },
+			{ name = "ドリル↑→↓←"                  , addr = 0x32, cmd = _8624c, },
+			{ name = "ドリル→↓←↑"                  , addr = 0x36, cmd = _6248c, },
+			{ name = "ドリル↓←↑→"                  , addr = 0x3A, cmd = _2486c, },
+			{ name = "ドリル←↑→↓"                  , addr = 0x3E, cmd = _4862c, },
+			{ name = "ドリル↑←↓→"                  , addr = 0x42, cmd = _8426c, },
+			{ name = "ドリル←↓→↑"                  , addr = 0x46, cmd = _4268c, },
+			{ name = "ドリル↓→↑←"                  , addr = 0x4A, cmd = _2684c, },
+			{ name = "ドリル→↑←↓"                  , addr = 0x4E, cmd = _6842c, },
+			{ name = "ダッシュ"                        , addr = 0x52, cmd = _66, type = input_state_types.step, },
+			{ name = "バックステップ"                  , addr = 0x56, cmd = _44, type = input_state_types.step, },
+			{ name = "砂かけ"                          , addr = 0x5E, cmd = _cccc, },
+			{ name = "フェイント裁きの匕首"            , addr = 0x6A, cmd = _6ac, type = input_state_types.faint, },
+		},
+		{ --秦崇秀
+			{ name = "帝王神足拳"                      , addr = 0x02, cmd = "", },
+			{ name = "小帝王天眼拳"                    , addr = 0x06, cmd = "", },
+			{ name = "大帝王天眼拳"                    , addr = 0x0A, cmd = "", },
+			{ name = "小帝王天耳拳"                    , addr = 0x0E, cmd = "", },
+			{ name = "大帝王天耳拳"                    , addr = 0x12, cmd = "", },
+			{ name = "竜灯掌・幻殺"                    , addr = 0x16, cmd = "", },
+			{ name = "竜灯掌"                          , addr = 0x1A, cmd = "", },
+			{ name = "帝王神眼拳A"                     , addr = 0x1E, cmd = "", },
+			{ name = "帝王神眼拳B"                     , addr = 0x22, cmd = "", },
+			{ name = "帝王神眼拳C"                     , addr = 0x26, cmd = "", },
+			{ name = "帝王漏尽拳"                      , addr = 0x2A, cmd = "", },
+			{ name = "帝王空殺漏尽拳"                  , addr = 0x2E, cmd = "", },
+			{ name = "海龍照臨"                        , addr = 0x32, cmd = "", },
+			{ name = "ダッシュ"                        , addr = 0x36, cmd = _66, type = input_state_types.step, },
+			{ name = "バックステップ"                  , addr = 0x3A, cmd = _44, type = input_state_types.step, },
+			{ name = "CA _6_4_C"                       , addr = 0x42, cmd = "", },
+			{ name = "フェイント海龍照臨"              , addr = 0x4E, cmd = _2bc, type = input_state_types.faint, },
+		},
+		{ --秦崇雷
+			{ name = "帝王神足拳"                      , addr = 0x02, cmd = "", },
+			{ name = "真・帝王神足拳"                  , addr = 0x06, cmd = "", },
+			{ name = "小帝王天眼拳"                    , addr = 0x0A, cmd = "", },
+			{ name = "大帝王天眼拳"                    , addr = 0x0E, cmd = "", },
+			{ name = "小帝王天耳拳"                    , addr = 0x12, cmd = "", },
+			{ name = "大帝王天耳拳"                    , addr = 0x14, cmd = "", },
+			{ name = "帝王漏尽拳"                      , addr = 0x1A, cmd = "", },
+			{ name = "龍転身（前方）"                  , addr = 0x1E, cmd = "", },
+			{ name = "龍転身（後方）"                  , addr = 0x22, cmd = "", },
+			{ name = "帝王宿命拳"                      , addr = 0x26, cmd = "", },
+			{ name = "帝王宿命拳 連射"                 , addr = 0x2A, cmd = "", },
+			{ name = "帝王龍声拳"                      , addr = 0x2E, cmd = "", },
+			{ name = "ダッシュ"                        , addr = 0x32, cmd = _66, type = input_state_types.step, },
+			{ name = "バックステップ"                  , addr = 0x36, cmd = _44, type = input_state_types.step, },
+			{ name = "フェイント帝王宿命拳"            , addr = 0x46, cmd = _2bc, type = input_state_types.faint, },
+		},
+		{ --ダック・キング
+			{ name = "小ヘッドスピンアタック"          , addr = 0x06, cmd = "", },
+			{ name = "大ヘッドスピンアタック"          , addr = 0x0A, cmd = "", },
+			{ name = "オーバーヘッドキック"            , addr = 0x0E, cmd = "", },
+			{ name = "フライングスピンアタック"        , addr = 0x12, cmd = "", },
+			{ name = "ダンシングダイブ"                , addr = 0x16, cmd = "", },
+			{ name = "リバースダイブ"                  , addr = 0x1A, cmd = "", },
+			{ name = "ブレイクストーム"                , addr = 0x1E, cmd = "", },
+			{ name = "ブレイクストームB連打1"          , addr = 0x26, cmd = "", },
+			{ name = "ブレイクストームB連打2"          , addr = 0x2A, cmd = "", },
+			{ name = "ブレイクストームB連打3"          , addr = 0x2C, cmd = "", },
+			{ name = "ダックフェイント・空"            , addr = 0x2E, cmd = "", },
+			{ name = "クロスヘッドスピン"              , addr = 0x32, cmd = "", },
+			{ name = "ダイビングパニッシャー"          , addr = 0x36, cmd = "", },
+			{ name = "ローリングパニッシャー"          , addr = 0x3A, cmd = "", },
+			{ name = "ブレイクハリケーン"              , addr = 0x3E, cmd = "", },
+			{ name = "ブレイクスパイラル↑→↓←"      , addr = 0x42, cmd = "", },
+			{ name = "ブレイクスパイラル→↓←↑"      , addr = 0x46, cmd = "", },
+			{ name = "ブレイクスパイラル↓←↑→"      , addr = 0x4A, cmd = "", },
+			{ name = "ブレイクスパイラル←↑→↓"      , addr = 0x4E, cmd = "", },
+			{ name = "ブレイクスパイラル↑←↓→"      , addr = 0x52, cmd = "", },
+			{ name = "ブレイクスパイラル←↓→↑"      , addr = 0x56, cmd = "", },
+			{ name = "ブレイクスパイラル↓→↑←"      , addr = 0x5A, cmd = "", },
+			{ name = "ブレイクスパイラル→↑←↓"      , addr = 0x5E, cmd = "", },
+			{ name = "クレイジーブラザー"              , addr = 0x62, cmd = "", },
+			{ name = "ダックダンス"                    , addr = 0x6E, cmd = "", },
+			{ name = "ダックダンスC連打"               , addr = 0x72, cmd = "", },
+			{ name = "ダッシュ"                        , addr = 0x76, cmd = _66, type = input_state_types.step, },
+			{ name = "バックステップ"                  , addr = 0x7A, cmd = _44, type = input_state_types.step, },
+			{ name = "ショッキングボール"              , addr = 0x8A, cmd = "", type = input_state_types.followup, },
+			{ name = "CA ブレイクストーム"             , addr = 0x8E, cmd = "", },
+			{ name = "クレイジーブラザー"              , addr = 0x92, cmd = "", },
+			{ name = "フェイントダックダンス"          , addr = 0x92, cmd = "", type = input_state_types.faint, },
+		},
+		{ --キム・カッファン
+			{ name = "飛燕斬"                          , addr = 0x02, cmd = "", type = input_state_types.charge, },
+			{ name = "飛燕斬"                          , addr = 0x06, cmd = "", type = input_state_types.charge, },
+			{ name = "飛燕斬"                          , addr = 0x0A, cmd = "", type = input_state_types.charge, },
+			{ name = "飛翔脚"                          , addr = 0x0E, cmd = "", },
+			{ name = "戒脚"                            , addr = 0x12, cmd = "", },
+			{ name = "小半月斬"                        , addr = 0x16, cmd = "", },
+			{ name = "大半月斬"                        , addr = 0x1A, cmd = "", },
+			{ name = "空砂塵"                          , addr = 0x1E, cmd = "", type = input_state_types.charge, },
+			{ name = "天昇斬"                          , addr = 0x22, cmd = "", },
+			{ name = "覇気脚"                          , addr = 0x26, cmd = "", },
+			{ name = "鳳凰天舞脚"                      , addr = 0x2A, cmd = "", },
+			{ name = "鳳凰脚"                          , addr = 0x2E, cmd = "", },
+			{ name = "ダッシュ"                        , addr = 0x32, cmd = _66, type = input_state_types.step, },
+			{ name = "バックステップ"                  , addr = 0x36, cmd = _44, type = input_state_types.step, },
+			{ name = "フェイント鳳凰脚"                , addr = 0x46, cmd = _2bc, type = input_state_types.faint, },
+		},
+		{ --ビリー・カーン
+			{ name = "三節棍中段打ち"                  , addr = 0x02, cmd = "", type = input_state_types.charge, },
+			{ name = "火炎三節棍中段打ち"              , addr = 0x06, cmd = "", },
+			{ name = "雀落とし"                        , addr = 0x0A, cmd = "", },
+			{ name = "旋風棍"                          , addr = 0x0E, cmd = "", },
+			{ name = "強襲飛翔棍"                      , addr = 0x12, cmd = "", },
+			{ name = "超火炎旋風棍"                    , addr = 0x1E, cmd = "", },
+			{ name = "紅蓮殺棍"                        , addr = 0x1E, cmd = "", },
+			{ name = "サラマンダーストーム"            , addr = 0x22, cmd = "", },
+			{ name = "ダッシュ"                        , addr = 0x26, cmd = _66, type = input_state_types.step, },
+			{ name = "バックステップ"                  , addr = 0x2A, cmd = _44, type = input_state_types.step, },
+			{ name = "CA 集点連破棍"                   , addr = 0x3A, cmd = "", },
+			{ name = "フェイント強襲飛翔棍"            , addr = 0x3E, cmd = "", type = input_state_types.faint, },
+		},
+		{ --チン・シンザン
+			{ name = "氣雷砲（前方）"                  , addr = 0x02, cmd = "", },
+			{ name = "氣雷砲（対空）"                  , addr = 0x06, cmd = "", },
+			{ name = "超太鼓腹打ち"                    , addr = 0x0A, cmd = "", type = input_state_types.charge, },
+			{ name = "満腹滞空"                        , addr = 0x0E, cmd = "", },
+			{ name = "小破岩撃"                        , addr = 0x12, cmd = "", type = input_state_types.charge, },
+			{ name = "大破岩撃"                        , addr = 0x16, cmd = "", type = input_state_types.charge, },
+			{ name = "軟体オヤジ"                      , addr = 0x1A, cmd = "", },
+			{ name = "クッサメ砲"                      , addr = 0x1E, cmd = "", },
+			{ name = "爆雷砲"                          , addr = 0x22, cmd = "", },
+			{ name = "ホエホエ弾"                      , addr = 0x26, cmd = "", },
+			{ name = "ダッシュ"                        , addr = 0x2A, cmd = _66, type = input_state_types.step, },
+			{ name = "バックステップ"                  , addr = 0x2E, cmd = _44, type = input_state_types.step, },
+			{ name = "フェイント破岩撃"                , addr = 0x42, cmd = "", type = input_state_types.faint, },
+			{ name = "フェイントクッサメ砲"            , addr = 0x46, cmd = "", type = input_state_types.faint, },
+		},
+		{ --タン・フー・ルー,
+			{ name = "衝波"                            , addr = 0x02, cmd = "", },
+			{ name = "小箭疾歩"                        , addr = 0x06, cmd = "", },
+			{ name = "大箭疾歩"                        , addr = 0x0A, cmd = "", },
+			{ name = "撃放"                            , addr = 0x0E, cmd = "", },
+			{ name = "烈千脚"                          , addr = 0x12, cmd = "", },
+			{ name = "旋風剛拳"                        , addr = 0x16, cmd = "", },
+			{ name = "大撃砲"                          , addr = 0x1A, cmd = "", },
+			{ name = "ダッシュ"                        , addr = 0x1E, cmd = _66, type = input_state_types.step, },
+			{ name = "バックステップ"                  , addr = 0x22, cmd = _44, type = input_state_types.step, },
+			{ name = "フェイント旋風剛拳"              , addr = 0x3A, cmd = _2bc, type = input_state_types.faint, },
+		},
+		{ --ローレンス・ブラッド
+			{ name = "小ブラッディスピン"              , addr = 0x02, cmd = "", },
+			{ name = "大ブラッディスピン"              , addr = 0x06, cmd = "", },
+			{ name = "ブラッディサーベル"              , addr = 0x0A, cmd = "", type = input_state_types.charge, },
+			{ name = "ブラッディミキサー"              , addr = 0x0E, cmd = "", },
+			{ name = "ブラッディカッター"              , addr = 0x12, cmd = "", type = input_state_types.charge, },
+			{ name = "ブラッディフラッシュ"            , addr = 0x16, cmd = "", },
+			{ name = "ブラッディシャドー"              , addr = 0x1A, cmd = "", },
+			{ name = "ダッシュ"                        , addr = 0x1E, cmd = _66, type = input_state_types.step, },
+			{ name = "バックステップ"                  , addr = 0x22, cmd = _44, type = input_state_types.step, },
+			{ name = "CA _6_3_2_C"                     , addr = 0x2A, cmd = "", },
+		},
+		{ --ヴォルフガング・クラウザー
+			{ name = "小ブリッツボール"                , addr = 0x06, cmd = "", },
+			{ name = "大ブリッツボール"                , addr = 0x0A, cmd = "", },
+			{ name = "レッグトマホーク"                , addr = 0x0E, cmd = "", },
+			{ name = "フェニックススルー"              , addr = 0x12, cmd = "", },
+			{ name = "デンジャラススルー"              , addr = 0x16, cmd = "", },
+			{ name = "カイザークロー"                  , addr = 0x1E, cmd = "", },
+			{ name = "リフトアップブロー"              , addr = 0x22, cmd = "", },
+			{ name = "カイザーウェーブ"                , addr = 0x26, cmd = "", type = input_state_types.charge, },
+			{ name = "ギガティックサイクロン↑→↓←"  , addr = 0x2A, cmd = "", },
+			{ name = "ギガティックサイクロン→↓←↑"  , addr = 0x2E, cmd = "", },
+			{ name = "ギガティックサイクロン↓←↑→"  , addr = 0x32, cmd = "", },
+			{ name = "ギガティックサイクロン←↑→↓"  , addr = 0x36, cmd = "", },
+			{ name = "ギガティックサイクロン↑←↓→"  , addr = 0x3A, cmd = "", },
+			{ name = "ギガティックサイクロン←↓→↑"  , addr = 0x3E, cmd = "", },
+			{ name = "ギガティックサイクロン↓→↑←"  , addr = 0x42, cmd = "", },
+			{ name = "ギガティックサイクロン→↑←↓"  , addr = 0x46, cmd = "", },
+			{ name = "アンリミテッドデザイア"          , addr = 0x4A, cmd = "", },
+			{ name = "ダッシュ"                        , addr = 0x4E, cmd = _66, type = input_state_types.step, },
+			{ name = "バックステップ"                  , addr = 0x52, cmd = _44, type = input_state_types.step, },
+			{ name = "ダイビングエルボー"              , addr = 0x62, cmd = _2c, type = input_state_types.followup, },
+			{ name = "CA _2_3_6_C"                     , addr = 0x66, cmd = _236c, },
+			{ name = "フェイントブリッツボール"        , addr = 0x6A, cmd = _2ac, type = input_state_types.faint, },
+			{ name = "フェイントカイザーウェーブ"      , addr = 0x6E, cmd = _2bc, type = input_state_types.faint, },
+		},
+		{ --リック・ストラウド
+			{ name = "小シューティングスター"          , addr = 0x02, cmd = _236a, },
+			{ name = "大シューティングスター"          , addr = 0x06, cmd = _236c, },
+			{ name = "ディバインブラスト"              , addr = 0x0A, cmd = _214c, },
+			{ name = "フルムーンフィーバー"            , addr = 0x0E, cmd = _214b, },
+			{ name = "ヘリオン"                        , addr = 0x12, cmd = _623a, },
+			{ name = "ブレイジングサンバースト"        , addr = 0x16, cmd = _214a, },
+			{ name = "ガイアブレス"                    , addr = 0x1A, cmd = _64123bc, },
+			{ name = "ハウリング・ブル"                , addr = 0x1E, cmd = _64123c, },
+			{ name = "ダッシュ"                        , addr = 0x22, cmd = _66, type = input_state_types.step, },
+			{ name = "バックステップ"                  , addr = 0x26, cmd = _44, type = input_state_types.step, },
+			{ name = "CA _3_3_B"                       , addr = 0x36, cmd = _33b, },
+			{ name = "CA _2_2_C"                       , addr = 0x3A, cmd = _22c, },
+			{ name = "フェイントシューティングスター"  , addr = 0x3E, cmd = _6ac, type = input_state_types.faint, },
+		},
+	 	{ --李香緋
+			{ name = "詠酒・対ジャンプ攻撃"            , addr = 0x02, cmd = _a8, },
+			{ name = "詠酒・対立ち攻撃"                , addr = 0x06, cmd = _a6, },
+			{ name = "詠酒・対しゃがみ攻撃 "           , addr = 0x0A, cmd = _a2, },
+			{ name = "小那夢波"                        , addr = 0x0E, cmd = "", },
+			{ name = "大那夢波"                        , addr = 0x12, cmd = "", },
+			{ name = "閃里肘皇"                        , addr = 0x16, cmd = "", },
+			{ name = "閃里肘皇・心砕把"                , addr = 0x1A, cmd = "", },
+			{ name = "天崩山"                          , addr = 0x1E, cmd = "", },
+			{ name = "大鉄神"                          , addr = 0x22, cmd = "", },
+			{ name = "超白龍"                          , addr = 0x26, cmd = "", },
+			{ name = "真心牙↑→↓←"                  , addr = 0x2E, cmd = "", },
+			{ name = "真心牙→↓←↑"                  , addr = 0x32, cmd = "", },
+			{ name = "真心牙↓←↑→"                  , addr = 0x36, cmd = "", },
+			{ name = "真心牙←↑→↓"                  , addr = 0x3A, cmd = "", },
+			{ name = "真心牙↑←↓→"                  , addr = 0x3E, cmd = "", },
+			{ name = "真心牙←↓→↑"                  , addr = 0x42, cmd = "", },
+			{ name = "真心牙↓→↑←"                  , addr = 0x46, cmd = "", },
+			{ name = "真心牙→↑←↓"                  , addr = 0x4A, cmd = "", },
+			{ name = "ダッシュ"                        , addr = 0x4E, cmd = _66, type = input_state_types.step, },
+			{ name = "バックステップ"                  , addr = 0x52, cmd = _44, type = input_state_types.step, },
+			{ name = "CA _6_6_A"                       , addr = 0x62, cmd = "", },
+			{ name = "フェイント天崩山"                , addr = 0x66, cmd = "", type = input_state_types.faint, },
+			{ name = "フェイント大鉄神"                , addr = 0x6A, cmd = _2bc, type = input_state_types.faint, },
+		},
+		{ --アルフレッド
+			{ name = "小クリティカルウィング"          , addr = 0x02, cmd = "", },
+			{ name = "大クリティカルウィング"          , addr = 0x06, cmd = "", },
+			{ name = "オーグメンターウィング"          , addr = 0x0A, cmd = "", },
+			{ name = "ダイバージェンス"                , addr = 0x0E, cmd = "", },
+			{ name = "メーデーメーデー"                , addr = 0x12, cmd = "", },
+			{ name = "メーデーメーデー追加"            , addr = 0x16, cmd = "", },
+			{ name = "S.TOL"                           , addr = 0x1A, cmd = "", },
+			{ name = "ショックストール"                , addr = 0x1E, cmd = "", },
+			{ name = "ウェーブライダー"                , addr = 0x22, cmd = "", },
+			{ name = "ダッシュ"                        , addr = 0x26, cmd = _66, type = input_state_types.step, },
+			{ name = "バックステップ"                  , addr = 0x2A, cmd = _44, type = input_state_types.step, },
+			{ name = "フェイントクリティカルウィング"  , addr = 0x3A, cmd = "", type = input_state_types.faint, },
+			{ name = "フェイントオーグメンターウィング", addr = 0x3E, cmd = "", type = input_state_types.faint, },
+		},
+		{ -- all 調査用
+		},
+	}
+	--for ti = 2, 160, 2 do
+	for ti = 120, 240, 2 do -- 調査用 2～
+		table.insert(input_states[#input_states], {
+			name = string.format("%x", ti),
+			addr = ti,
+			cmd = "?",
+			type = input_state_types.unknown,
+		})
+	end
+	for _, char_tbl in ipairs(input_states) do
+		for _, tbl in ipairs(char_tbl) do
+			tbl.cmd = convert(tbl.cmd)
+			local cmds = {}
+			for c in string.gmatch(tbl.cmd, "([^|]+)") do
+				table.insert(cmds, c)
+			end
+			tbl.cmds = cmds
+		end
+	end
+	return input_states
+end
+local input_states = create_input_states()
 
 -- キー入力2
 local cmd_neutral = function(p, next_joy)
@@ -2826,7 +3382,6 @@ for _, box in pairs(box_type_base) do
 end
 
 -- ボタンの色テーブル
-local convert = require("data/button_char")
 local btn_col = { [convert("_A")] = 0xFFCC0000, [convert("_B")] = 0xFFCC8800, [convert("_C")] = 0xFF3333CC, [convert("_D")] = 0xFF336600, }
 local text_col, shadow_col = 0xFFFFFFFF, 0xFF000000
 
@@ -2918,28 +3473,47 @@ local draw_rtext = function(x, y, str, fgcol, bgcol)
 		str = string.format("%s", str)
 	end
 	local scr = manager.machine.screens:at(1)
-	scr:draw_text(x - manager.ui:get_string_width(str, scr.xscale * scr.height), y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
+	local xx = - manager.ui:get_string_width(str, scr.xscale * scr.height)
+	scr:draw_text(x + xx, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
+	return xx
 end
 
 local draw_text_with_shadow = function(x, y, str, fgcol, bgcol)
 	local scr = manager.machine.screens:at(1)
 	scr:draw_text(x + 0.5, y + 0.5, str, shadow_col, bgcol or 0x00000000)
 	scr:draw_text(x, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
+	return manager.ui:get_string_width(str, scr.xscale * scr.height)
 end
 
 local draw_rtext_with_shadow = function(x, y, str, fgcol, bgcol)
 	draw_rtext(x + 0.5, y + 0.5, str, shadow_col, bgcol)
-	draw_rtext(x, y, str, fgcol, bgcol)
+	return draw_rtext(x, y, str, fgcol, bgcol)
 end
 
 local draw_fmt_rtext = function(x, y, fmt, dec)
-	draw_rtext_with_shadow(x, y, string.format(fmt, dec))
+	return draw_rtext_with_shadow(x, y, string.format(fmt, dec))
 end
-
+-- コマンド文字列表示
+local draw_cmd_text_with_shadow = function(x, y, str, fgcol, bgcol)
+	local scr = manager.machine.screens:at(1)
+	-- 変換しつつUnicodeの文字配列に落とし込む
+	local cstr, xx = convert(str), x
+	for c in string.gmatch(cstr, "([%z\1-\127\194-\244][\128-\191]*)") do
+		-- 文字の影
+		scr:draw_text(xx + 0.5, y + 0.5, c, 0xFF000000)
+		if btn_col[c] then
+			-- ABCDボタンの場合は黒の●を表示した後ABCDを書いて文字の部分を黒く見えるようにする
+			scr:draw_text(xx, y, convert("_("), text_col)
+			scr:draw_text(xx, y, c, fgcol or btn_col[c])
+		else
+			scr:draw_text(xx, y, c, fgcol or text_col)
+		end
+		xx = xx + 5 -- フォントの大きさ問わず5pxずつ表示する
+	end
+end
 -- コマンド入力表示
 local draw_cmd = function(p, line, frame, str)
 	local scr = manager.machine.screens:at(1)
-	local cstr = convert(str)
 
 	local p1 = p == 1
 	local xx = p1 and 12 or 294   -- 1Pと2Pで左右に表示し分ける
@@ -2961,19 +3535,7 @@ local draw_cmd = function(p, line, frame, str)
 			col = col - 0x05000000
 		end
 	end
-	-- 変換しつつUnicodeの文字配列に落とし込む
-	for c in string.gmatch(cstr, "([%z\1-\127\194-\244][\128-\191]*)") do
-		-- 文字の影
-		scr:draw_text(xx + 0.5, yy + 0.5, c, 0xFF000000)
-		if btn_col[c] then
-			-- ABCDボタンの場合は黒の●を表示した後ABCDを書いて文字の部分を黒く見えるようにする
-			scr:draw_text(xx, yy, convert("_("), text_col)
-			scr:draw_text(xx, yy, c, btn_col[c])
-		else
-			scr:draw_text(xx, yy, c, text_col)
-		end
-		xx = xx + 5 -- フォントの大きさ問わず5pxずつ表示する
-	end
+	draw_cmd_text_with_shadow(xx, yy, str)
 end
 -- 処理アドレス表示
 local draw_base = function(p, line, frame, addr, act_name, xmov)
@@ -3855,7 +4417,7 @@ function rbff2.startplugin()
 				knock_back3  = p1 and 0x10047E or 0x10057E, -- のけぞり確認用3(フェニックススルー)
 				prj_rank     = p1 and 0x1004B5 or 0x1005B5, -- 飛び道具の強さ
 				esaka_range  = p1 and 0x1004B6 or 0x1005B6, -- 詠酒の間合いチェック用
-
+				input_offset = p1 and 0x0394C4 or 0x0394C8, -- コマンド入力状態のオフセットアドレス
 				no_hit       = p1 and 0x10DDF2 or 0x10DDF1, -- ヒットしないフック
 
 				stun         = p1 and 0x10B850 or 0x10B858, -- 現在スタン値
@@ -4251,6 +4813,9 @@ function rbff2.startplugin()
 
 			-- コマンド入力状態の記憶場所 A1
 			-- bp 39488,{(A4)==100400},{printf "PC=%X A4=%X A1=%X",PC,(A4),(A1);g}
+
+			-- タメ状態の調査用
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x10B548, 160, "wpdata!=FF&&wpdata>0&&maincpu.pb@(wpaddr)==0", "printf \"pos=%X addr=%X wpdata=%X\", (wpaddr - $10B548),wpaddr,wpdata;g"))
 
 			for i, p in ipairs(players) do
 				-- コマンド成立の確認用
@@ -4928,6 +5493,15 @@ function rbff2.startplugin()
 	local rec_await_no_input, rec_await_1st_input, rec_await_play, rec_input, rec_play, rec_repeat_play, rec_play_interval, rec_fixpos
 	local do_recover
 	local menu_to_tra, menu_to_bar, menu_to_ex, menu_to_col, menu_to_auto
+
+	-- 状態クリア
+	local cls_ps = function()
+		for i, p in ipairs(players) do
+			local op = players[3 - i]
+			p.input_estab = {}
+			do_recover(p, op, true)
+		end
+	end
 
 	local frame_to_time = function(frame_number)
 		local min = math.floor(frame_number / 3600)
@@ -5841,6 +6415,81 @@ function rbff2.startplugin()
 				if d0 ~= 0 then
 					p.esaka_range = d0
 				end
+			end
+			p.input_offset   = pgm:read_u32(p.addr.input_offset)
+			p.old_input_states = p.input_states or {}
+			p.input_states   = {}
+			p.input_estab    = p.input_estab or {}
+			local states = input_states[p.char]
+			--local all_input_states = input_states[#input_states] -- 調査用
+			for ti, tbl in ipairs(states) do
+				local old = p.old_input_states[ti]
+				local on = pgm:read_u8(tbl.addr + p.input_offset - 1)
+				local chg_remain = pgm:read_u8(tbl.addr + p.input_offset)
+				local input_estab = p.input_estab[ti] or false
+				-- コマンド種類ごとの表示用の補正
+				local reset = false
+				local force_reset = false
+				if tbl.type == input_state_types.step then
+					on = math.max(on - 2, 0)
+					if old then
+						reset = old.on == 2 and old.chg_remain > 0
+					end
+				elseif tbl.type == input_state_types.faint then
+					on = math.max(on - 2, 0)
+					if old then
+						reset = old.on == 1 and old.chg_remain > 0
+						if on == 0 and chg_remain > 0 then
+							force_reset = true
+						end
+					end
+				elseif tbl.type == input_state_types.charge then
+					if on == 1 and chg_remain == 0 then
+						on = 3
+					elseif on > 1 then
+						on = on + 1
+					end
+					if old then
+						reset = old.on == #tbl.cmds and old.chg_remain > 0 
+					end
+				elseif tbl.type == input_state_types.followup then
+					on = math.max(on - 1, 0)
+					if on == 1 then
+						on = 0
+					end
+					if old then
+						reset = old.on == #tbl.cmds and old.chg_remain > 0
+						if on == 0 and chg_remain > 0 then
+							force_reset = true
+						end
+					end
+				elseif tbl.type == input_state_types.unknown then
+					if old then
+						reset = old.on > 0 and old.chg_remain > 0 
+					end
+				else
+					if old then
+						reset = old.on == #tbl.cmds and old.chg_remain > 0 
+					end
+				end
+				if old then
+					if p.char ~= old.char or on == 1 then
+						input_estab = false
+					elseif chg_remain == 0 and on == 0 and reset then
+						input_estab = true
+					end
+					if force_reset then
+						input_estab = false
+					end
+				end
+				local tmp = {
+					char = p.char,
+					chg_remain = chg_remain,
+					on = on,
+					tbl = tbl,
+				}
+				p.input_estab[ti] = input_estab
+				table.insert(p.input_states, tmp)
 			end
 			p.max_hit_dn     = p.attack > 0 and pgm:read_u8(pgm:read_u32(fix_bp_addr(0x827B8) + p.char_4times) + p.attack) or 0
 			p.max_hit_nm     = pgm:read_u8(p.addr.max_hit_nm)
@@ -7612,6 +8261,30 @@ function rbff2.startplugin()
 					end
 
 					draw_rtext_with_shadow(p1 and 148 or 176, 1, flgtxt)
+
+					--
+					if global.disp_input_sts - 1 == i then
+						for ti, input_state in ipairs(p.input_states) do
+							local x = 124
+							local y = 50 + ti * 5
+							draw_text_with_shadow (x + 15, y - 2, input_state.tbl.name,
+								p.input_estab[ti] == true and 0xC0FF8800 or 0xC0FFFFFF)
+							if input_state.on > 0 then
+								scr:draw_box(x + input_state.chg_remain * 2, y, 124, y + 4, 0, 0xC0FFFF00)
+							end
+							local cmdx = x - 50
+							y = y - 2
+							for ci, c in ipairs(input_state.tbl.cmds) do
+								cmdx = cmdx + math.max(5.5, 
+									draw_text_with_shadow(cmdx, y, c,
+										p.input_estab[ti] == true and 0xFFFF8800 or 
+										input_state.on > ci and 0xFFFF0000 or
+										(ci == 1 and input_state.on >= ci) and 0xFFFF0000 or nil))
+							end
+							draw_rtext_with_shadow(x +  8, y, input_state.chg_remain)
+							draw_rtext_with_shadow(x + 15, y, input_state.on)
+						end
+					end
 				end
 
 				-- BS状態表示
@@ -8211,22 +8884,23 @@ function rbff2.startplugin()
 		p[2].disp_dmg            = col[ 6] == 2 -- 2P ダメージ表示        6
 		p[1].disp_cmd            = col[ 7]      -- 1P 入力表示            7
 		p[2].disp_cmd            = col[ 8]      -- 2P 入力表示            8
-		global.disp_frmgap       = col[ 9]      -- フレーム差表示         9
-		p[1].disp_frm            = col[10] == 2 -- 1P フレーム数表示     10
-		p[2].disp_frm            = col[11] == 2 -- 2P フレーム数表示     11
-		p[1].disp_sts            = col[12] == 2 -- 1P 状態表示           12
-		p[2].disp_sts            = col[13] == 2 -- 2P 状態表示           13
-		p[1].disp_base           = col[14] == 2 -- 1P 処理アドレス表示   14
-		p[2].disp_base           = col[15] == 2 -- 2P 処理アドレス表示   15
-		global.disp_pos          = col[16] == 2 -- 1P 2P 距離表示        16
-		dip_config.easy_super    = col[17] == 2 -- 簡易超必              17
-		global.mame_debug_wnd    = col[18] == 2 -- MAMEデバッグウィンドウ18
-		global.damaged_move      = col[19]      -- ヒット効果確認用      19
-		global.log.poslog        = col[20] == 2 -- 位置ログ              20
-		global.log.atklog        = col[21] == 2 -- 攻撃情報ログ          21
-		global.log.baselog       = col[22] == 2 -- 処理アドレスログ      22
-		global.log.keylog        = col[23] == 2 -- 入力ログ              23
-		global.log.rvslog        = col[24] == 2 -- リバサログ            24
+		global.disp_input_sts    = col[ 9]      -- コマンド入力状態表示   9
+		global.disp_frmgap       = col[10]      -- フレーム差表示        10
+		p[1].disp_frm            = col[11] == 2 -- 1P フレーム数表示     11
+		p[2].disp_frm            = col[12] == 2 -- 2P フレーム数表示     12
+		p[1].disp_sts            = col[13] == 2 -- 1P 状態表示           13
+		p[2].disp_sts            = col[14] == 2 -- 2P 状態表示           14
+		p[1].disp_base           = col[15] == 2 -- 1P 処理アドレス表示   15
+		p[2].disp_base           = col[16] == 2 -- 2P 処理アドレス表示   16
+		global.disp_pos          = col[17] == 2 -- 1P 2P 距離表示        17
+		dip_config.easy_super    = col[18] == 2 -- 簡易超必              18
+		global.mame_debug_wnd    = col[19] == 2 -- MAMEデバッグウィンドウ19
+		global.damaged_move      = col[20]      -- ヒット効果確認用      20
+		global.log.poslog        = col[21] == 2 -- 位置ログ              21
+		global.log.atklog        = col[22] == 2 -- 攻撃情報ログ          22
+		global.log.baselog       = col[23] == 2 -- 処理アドレスログ      23
+		global.log.keylog        = col[24] == 2 -- 入力ログ              24
+		global.log.rvslog        = col[25] == 2 -- リバサログ            25
 
 		local dmove = damaged_moves[global.damaged_move]
 		if dmove and dmove > 0 then
@@ -8403,22 +9077,23 @@ function rbff2.startplugin()
 		col[ 6] = p[2].disp_dmg and 2 or 1 -- 2P ダメージ表示        6
 		col[ 7] = p[1].disp_cmd            -- 1P 入力表示            7
 		col[ 8] = p[2].disp_cmd            -- 2P 入力表示            8
-		col[ 9] = g.disp_frmgap            -- フレーム差表示         9
-		col[10] = p[1].disp_frm and 2 or 1 -- 1P フレーム数表示     10
-		col[11] = p[2].disp_frm and 2 or 1 -- 2P フレーム数表示     11
-		col[12] = p[1].disp_sts and 2 or 1 -- 1P 状態表示           12
-		col[13] = p[2].disp_sts and 2 or 1 -- 2P 状態表示           13
-		col[14] = p[1].disp_base and 2 or 1 -- 1P 処理アドレス表示  14
-		col[15] = p[2].disp_base and 2 or 1 -- 2P 処理アドレス表示  15
-		col[16] = g.disp_pos    and 2 or 1 -- 1P 2P 距離表示        16
-		col[17] = dip_config.easy_super and 2 or 1 -- 簡易超必      17
-		col[18] = g.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ18
-		col[19] = g.damaged_move           -- ヒット効果確認用      19
-		col[20] = g.log.poslog  and 2 or 1 -- 位置ログ              20
-		col[21] = g.log.atklog  and 2 or 1 -- 攻撃情報ログ          21
-		col[22] = g.log.baselog and 2 or 1 -- 処理アドレスログ      22
-		col[23] = g.log.keylog  and 2 or 1 -- 入力ログ              23
-		col[24] = g.log.rvslog  and 2 or 1 -- リバサログ            24
+		col[ 9] = g.disp_input_sts         -- コマンド入力状態表示      9
+		col[10] = g.disp_frmgap            -- フレーム差表示           10
+		col[11] = p[1].disp_frm and 2 or 1 -- 1P フレーム数表示        11
+		col[12] = p[2].disp_frm and 2 or 1 -- 2P フレーム数表示        12
+		col[13] = p[1].disp_sts and 2 or 1 -- 1P 状態表示              13
+		col[14] = p[2].disp_sts and 2 or 1 -- 2P 状態表示              14
+		col[15] = p[1].disp_base and 2 or 1 -- 1P 処理アドレス表示     15
+		col[16] = p[2].disp_base and 2 or 1 -- 2P 処理アドレス表示     16
+		col[17] = g.disp_pos    and 2 or 1 -- 1P 2P 距離表示           17
+		col[18] = dip_config.easy_super and 2 or 1 -- 簡易超必         18
+		col[19] = g.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ19
+		col[20] = g.damaged_move           -- ヒット効果確認用         20
+		col[21] = g.log.poslog  and 2 or 1 -- 位置ログ                 21
+		col[22] = g.log.atklog  and 2 or 1 -- 攻撃情報ログ             22
+		col[23] = g.log.baselog and 2 or 1 -- 処理アドレスログ         23
+		col[24] = g.log.keylog  and 2 or 1 -- 入力ログ                 24
+		col[25] = g.log.rvslog  and 2 or 1 -- リバサログ               25
 	end
 	local init_auto_menu_config = function()
 		local col = auto_menu.pos.col
@@ -8450,12 +9125,14 @@ function rbff2.startplugin()
 		-- Bボタンでトレーニングモードへ切り替え
 		main_or_menu_state = tra_main
 		cls_joy()
+		cls_ps()
 	end
 	local menu_player_select = function()
 		main_menu.pos.row = 1
 		cls_hook()
 		goto_player_select()
 		cls_joy()
+		cls_ps()
 		-- 初期化
 		global.dummy_mode = 1
 		tra_menu.pos.col[1] = 1
@@ -8475,6 +9152,7 @@ function rbff2.startplugin()
 			next_bgm      = bgms[main_menu.pos.col[13]].id, -- BGMセレクト
 		})
 		cls_joy()
+		cls_ps()
 		-- 初期化
 		global.dummy_mode = 1
 		tra_menu.pos.col[1] = 1
@@ -8810,6 +9488,7 @@ function rbff2.startplugin()
 			{ "2P ダメージ表示"       , { "OFF", "ON" }, },
 			{ "1P 入力表示"           , { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
 			{ "2P 入力表示"           , { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
+			{ "コマンド入力状態表示"  , { "OFF", "1P", "2P", }, },
 			{ "フレーム差表示"        , { "OFF", "数値とグラフ", "数値" }, },
 			{ "1P フレーム数表示"     , { "OFF", "ON" }, },
 			{ "2P フレーム数表示"     , { "OFF", "ON" }, },
@@ -8839,22 +9518,23 @@ function rbff2.startplugin()
 				1, -- 2P ダメージ表示         6
 				1, -- 1P 入力表示             7
 				1, -- 2P 入力表示             8
-				3, -- フレーム差表示          9
-				1, -- 1P フレーム数表示      10
-				1, -- 2P フレーム数表示      11
-				1, -- 1P 状態表示            12
-				1, -- 2P 状態表示            13
-				1, -- 1P 処理アドレス表示    14
-				1, -- 2P 処理アドレス表示    15
-				1, -- 1P 2P 距離表示         16
-				1, -- 簡易超必               17
-				1, -- MAMEデバッグウィンドウ 18
-				1, -- ヒット効果確認用       19
-				1, -- 位置ログ               20
-				1, -- 攻撃情報ログ           21
-				1, -- 処理アドレスログ       22
-				1, -- 入力ログ               23
-				1, -- リバサログ             24
+				1, -- コマンド入力状態表示    9
+				3, -- フレーム差表示         10
+				1, -- 1P フレーム数表示      11
+				1, -- 2P フレーム数表示      12
+				1, -- 1P 状態表示            13
+				1, -- 2P 状態表示            14
+				1, -- 1P 処理アドレス表示    15
+				1, -- 2P 処理アドレス表示    16
+				1, -- 1P 2P 距離表示         17
+				1, -- 簡易超必               18
+				1, -- MAMEデバッグウィンドウ 19
+				1, -- ヒット効果確認用       20
+				1, -- 位置ログ               21
+				1, -- 攻撃情報ログ           22
+				1, -- 処理アドレスログ       23
+				1, -- 入力ログ               24
+				1, -- リバサログ             25
 			},
 		},
 		on_a = {
@@ -8866,6 +9546,7 @@ function rbff2.startplugin()
 			ex_menu_to_main, -- 2P ダメージ表示
 			ex_menu_to_main, -- 1P 入力表示
 			ex_menu_to_main, -- 2P 入力表示
+			ex_menu_to_main, -- コマンド入力状態表示
 			ex_menu_to_main, -- フレーム差表示
 			ex_menu_to_main, -- 1P フレーム数表示
 			ex_menu_to_main, -- 2P フレーム数表示
@@ -8893,6 +9574,7 @@ function rbff2.startplugin()
 			ex_menu_to_main_cancel, -- 2P ダメージ表示
 			ex_menu_to_main_cancel, -- 1P 入力表示
 			ex_menu_to_main_cancel, -- 2P 入力表示
+			ex_menu_to_main_cancel, -- コマンド入力状態表示
 			ex_menu_to_main_cancel, -- 1P フレーム数表示
 			ex_menu_to_main_cancel, -- 2P フレーム数表示
 			ex_menu_to_main_cancel, -- 1P 状態表示
