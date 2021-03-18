@@ -3517,6 +3517,9 @@ end
 
 local draw_text_with_shadow = function(x, y, str, fgcol, bgcol)
 	local scr = manager.machine.screens:at(1)
+	if type(str) ~= "string" then
+		str = string.format("%s", str)
+	end
 	scr:draw_text(x + 0.5, y + 0.5, str, shadow_col, bgcol or 0x00000000)
 	scr:draw_text(x, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
 	return manager.ui:get_string_width(str, scr.xscale * scr.height)
@@ -5535,7 +5538,7 @@ function rbff2.startplugin()
 	local cls_ps = function()
 		for i, p in ipairs(players) do
 			local op = players[3 - i]
-			p.input_estab = {}
+			p.input_states = {}
 			do_recover(p, op, true)
 		end
 	end
@@ -6456,7 +6459,6 @@ function rbff2.startplugin()
 			p.input_offset   = pgm:read_u32(p.addr.input_offset)
 			p.old_input_states = p.input_states or {}
 			p.input_states   = {}
-			p.input_estab    = p.input_estab or {}
 			local debug = false
 			local all_input_states = input_states[#input_states] -- 調査用
 			local states = debug and all_input_states or input_states[p.char]
@@ -6465,7 +6467,8 @@ function rbff2.startplugin()
 				local on = pgm:read_u8(tbl.addr + p.input_offset - 1)
 				local on_debug = on
 				local chg_remain = pgm:read_u8(tbl.addr + p.input_offset)
-				local input_estab = p.input_estab[ti] or false
+				local input_estab = old and old.input_estab or false
+				local charging = false
 				-- コマンド種類ごとの表示用の補正
 				local reset = false
 				local force_reset = false
@@ -6488,6 +6491,7 @@ function rbff2.startplugin()
 					elseif on > 1 then
 						on = on + 1
 					end
+					charging = on == 1
 					if old then
 						reset = old.on == #tbl.cmds and old.chg_remain > 0 
 					end
@@ -6553,8 +6557,10 @@ function rbff2.startplugin()
 					on_debug = on_debug, -- 加工前の入力のすすみの数値
 					tbl = tbl,
 					debug = debug,
+					input_estab = input_estab,
+					charging = charging,
+					max =  (old and old.on_debug == on_debug) and old.max or chg_remain,
 				}
-				p.input_estab[ti] = input_estab
 				table.insert(p.input_states, tmp)
 			end
 			p.max_hit_dn     = p.attack > 0 and pgm:read_u8(pgm:read_u32(fix_bp_addr(0x827B8) + p.char_4times) + p.attack) or 0
@@ -8335,9 +8341,14 @@ function rbff2.startplugin()
 						local x = 147
 						local y = 50 + ti * 5
 						draw_text_with_shadow (x + 15, y - 2, input_state.tbl.name,
-							p.input_estab[ti] == true and 0xC0FF8800 or 0xC0FFFFFF)
-						if input_state.on > 0 then
-							scr:draw_box(x + input_state.chg_remain * 2, y, x, y + 4, 0, 0xC0FFFF00)
+							input_state.input_estab == true and 0xC0FF8800 or 0xC0FFFFFF)
+						if input_state.on > 0 and input_state.chg_remain > 0 then
+							scr:draw_box(x - 8 + input_state.max * 2, y, x - 8, y + 4,
+								input_state.charging == true and 0xFF7FFF00 or 0xFFFFFF00,
+								0)
+							scr:draw_box(x - 8 + input_state.chg_remain * 2, y, x - 8, y + 4,
+								0, 
+								input_state.charging == true and 0xC07FFF00 or 0xC0FFFF00)
 						end
 						local cmdx = x - 50
 						y = y - 2
@@ -8345,15 +8356,17 @@ function rbff2.startplugin()
 							if c ~= "" then
 								cmdx = cmdx + math.max(5.5, 
 									draw_text_with_shadow(cmdx, y, c,
-										p.input_estab[ti] == true and 0xFFFF8800 or 
+										input_state.input_estab == true and 0xFFFF8800 or 
 										input_state.on > ci and 0xFFFF0000 or
 										(ci == 1 and input_state.on >= ci) and 0xFFFF0000 or nil))
 							end
 						end
-						draw_rtext_with_shadow(x +  8, y, input_state.chg_remain)
+						draw_rtext_with_shadow(x + 1, y, input_state.chg_remain)
+						draw_text_with_shadow (x + 4, y, "/")
+						draw_text_with_shadow (x + 7, y, input_state.max)
 						if input_state.debug then
-							draw_rtext_with_shadow(x + 15, y, input_state.on)
-							draw_rtext_with_shadow(x + 30, y, input_state.on_debug)
+							draw_rtext_with_shadow(x + 25, y, input_state.on)
+							draw_rtext_with_shadow(x + 40, y, input_state.on_debug)
 						end
 					end
 				end
