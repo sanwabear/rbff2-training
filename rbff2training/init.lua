@@ -1921,7 +1921,6 @@ local create_input_states = function()
 	local _4862bc = "_4|_8|_6|_2|_B+_C"
 	local _4862c = "_4|_8|_6|_2|_C"
 	local _4ac = "_4|_A+_C"
-	local _4chc6b = "_4|^4|_6|_B"
 	local _4chg6a =  "_4|^4|_6|_A"
 	local _4chg6b = "_4|^4|_6|_B"
 	local _4chg6bc = "_4|^4|_6|_B+_C"
@@ -2136,7 +2135,7 @@ local create_input_states = function()
 			{ name = "スピンフォール"                  , addr = 0x06, cmd = _236c, },
 			{ name = "M.スナッチャー"                  , addr = 0x0A, cmd = _623b, },
 			{ name = "ダブルクラッチ"                  , addr = 0x0E, cmd = _46b, },
-			{ name = "M.クラブクラッチ"                , addr = 0x12, cmd = _4chc6b, type = input_state_types.charge, },
+			{ name = "M.クラブクラッチ"                , addr = 0x12, cmd = _4chg6b, type = input_state_types.charge, },
 			{ name = "M.リアルカウンター"              , addr = 0x16, cmd = _214a, },
 			{ name = "バーチカルアロー"                , addr = 0x1A, cmd = _623a, },
 			{ name = "ストレートスライサー"            , addr = 0x1E, cmd = _4chg6a, type = input_state_types.charge, },
