@@ -1925,7 +1925,7 @@ local create_input_states = function()
 	local _4chg6b = "_4|^4|_6|_B"
 	local _4chg6bc = "_4|^4|_6|_B+_C"
 	local _4chg6c = "_4|^4|_6|_C"
-	local _616bc = "_6|_1|_6|_B+_C"
+	local _616ab = "_6|_1|_6|_A+_B"
 	local _623a = "_6|_2|_3|_A"
 	local _623b = "_6|_2|_3|_B"
 	local _623bc = "_6|_2|_3|_B+_C"
@@ -1993,7 +1993,7 @@ local create_input_states = function()
 		},
 		{ --アンディ・ボガード
 			{ name = "小残影拳"                        , addr = 0x02, cmd = _16a, },
-			{ name = "大残影拳"                        , addr = 0x06, cmd = _16c, },
+			{ name = "大残影拳 or 疾風裏拳"            , addr = 0x06, cmd = _16c, },
 			{ name = "飛翔拳"                          , addr = 0x0A, cmd = _214a, },
 			{ name = "激飛翔拳"                        , addr = 0x0E, cmd = _214c, },
 			{ name = "昇龍弾"                          , addr = 0x12, cmd = _623c, },
@@ -2023,7 +2023,7 @@ local create_input_states = function()
 			{ name = "ダッシュ"                        , addr = 0x36, cmd = _66, type = input_state_types.step, },
 			{ name = "バックステップ"                  , addr = 0x3A, cmd = _44, type = input_state_types.step, },
 			{ name = "炎の指先"                        , addr = 0x42, cmd = _2c, type = input_state_types.faint, },
-			{ name = "CA _2_3_6_C"                     , addr = 0x46, cmd = _236c, type = input_state_types.faint, },--?
+			{ name = "CA _2_3_6+_C"                    , addr = 0x46, cmd = _236c, type = input_state_types.faint, },--?
 			{ name = "フェイントハリケーンアッパー"    , addr = 0x4E, cmd = _2ac, type = input_state_types.faint, },
 			{ name = "フェイントスラッシュキック"      , addr = 0x52, cmd = _6ac, type = input_state_types.faint, },
 		},
@@ -2049,14 +2049,14 @@ local create_input_states = function()
 			{ name = "裏雲隠し"                        , addr = 0x12, cmd = _41236c, },
 			{ name = "下段当身打ち"                    , addr = 0x16, cmd = _41236a, },
 			{ name = "デッドリーレイブ"                , addr = 0x1E, cmd = _632146a, },
-			{ name = "真空投げ_8_6_2_4"                , addr = 0x22, cmd = _8624a, },
-			{ name = "真空投げ_6_2_4_8"                , addr = 0x26, cmd = _6248a, },
-			{ name = "真空投げ_2_4_8_6"                , addr = 0x2A, cmd = _2486a, },
-			{ name = "真空投げ_4_8_6_2"                , addr = 0x2E, cmd = _4862a, },
-			{ name = "真空投げ_8_4_2_6"                , addr = 0x32, cmd = _8426a, },
-			{ name = "真空投げ_4_2_6_8"                , addr = 0x36, cmd = _4268a, },
-			{ name = "真空投げ_2_6_8_4"                , addr = 0x3A, cmd = _2684a, },
-			{ name = "真空投げ_6_8_4_2"                , addr = 0x3E, cmd = _6842a, },
+			{ name = "真空投げ_8_6_2_4 or CA 真空投げ" , addr = 0x22, cmd = _8624a, },
+			{ name = "真空投げ_6_2_4_8 or CA 真空投げ" , addr = 0x26, cmd = _6248a, },
+			{ name = "真空投げ_2_4_8_6 or CA 真空投げ" , addr = 0x2A, cmd = _2486a, },
+			{ name = "真空投げ_4_8_6_2 or CA 真空投げ" , addr = 0x2E, cmd = _4862a, },
+			{ name = "真空投げ_8_4_2_6 or CA 真空投げ" , addr = 0x32, cmd = _8426a, },
+			{ name = "真空投げ_4_2_6_8 or CA 真空投げ" , addr = 0x36, cmd = _4268a, },
+			{ name = "真空投げ_2_6_8_4 or CA 真空投げ" , addr = 0x3A, cmd = _2684a, },
+			{ name = "真空投げ_6_8_4_2 or CA 真空投げ" , addr = 0x3E, cmd = _6842a, },
 			{ name = "羅生門_8_6_2_4"                  , addr = 0x42, cmd = _8624c, },
 			{ name = "羅生門_6_2_4_8"                  , addr = 0x42, cmd = _6248c, },
 			{ name = "羅生門_2_4_8_6"                  , addr = 0x42, cmd = _2486c, },
@@ -2080,20 +2080,20 @@ local create_input_states = function()
 			{ name = "禍炎陣"                          , addr = 0x16, cmd = _82d, },
 			{ name = "いかづち"                        , addr = 0x1A, cmd = _64123bc, },
 			{ name = "無残弾"                          , addr = 0x1E, cmd = _64123c, },
-			{ name = "鬼門陣_8_6_2_4"                  , addr = 0x22, cmd = _8624c, },
-			{ name = "鬼門陣_6_2_4_8"                  , addr = 0x26, cmd = _6248c, },
-			{ name = "鬼門陣_2_4_8_6"                  , addr = 0x2A, cmd = _2486c, },
-			{ name = "鬼門陣_4_8_6_2"                  , addr = 0x2E, cmd = _4862c, },
-			{ name = "鬼門陣_8_4_2_6"                  , addr = 0x32, cmd = _8426c, },
-			{ name = "鬼門陣_4_2_6_8"                  , addr = 0x36, cmd = _4268c, },
-			{ name = "鬼門陣_2_6_8_4"                  , addr = 0x3A, cmd = _2684c, },
-			{ name = "鬼門陣_6_8_4_2"                  , addr = 0x3E, cmd = _6842c, },
+			{ name = "鬼門陣_8_6_2_4 or 喝CAの投げ"    , addr = 0x22, cmd = _8624c, },
+			{ name = "鬼門陣_6_2_4_8 or 喝CAの投げ"    , addr = 0x26, cmd = _6248c, },
+			{ name = "鬼門陣_2_4_8_6 or 喝CAの投げ"    , addr = 0x2A, cmd = _2486c, },
+			{ name = "鬼門陣_4_8_6_2 or 喝CAの投げ"    , addr = 0x2E, cmd = _4862c, },
+			{ name = "鬼門陣_8_4_2_6 or 喝CAの投げ"    , addr = 0x32, cmd = _8426c, },
+			{ name = "鬼門陣_4_2_6_8 or 喝CAの投げ"    , addr = 0x36, cmd = _4268c, },
+			{ name = "鬼門陣_2_6_8_4 or 喝CAの投げ"    , addr = 0x3A, cmd = _2684c, },
+			{ name = "鬼門陣_6_8_4_2 or 喝CAの投げ"    , addr = 0x3E, cmd = _6842c, },
 			{ name = "ダッシュ"                        , addr = 0x42, cmd = _66, type = input_state_types.step, },
 			{ name = "バックダッシュ"                  , addr = 0x46, cmd = _44, type = input_state_types.step, },
 			{ name = "雷撃棍"                          , addr = 0x4E, cmd = _2c, type = input_state_types.faint, },
 			{ name = "地獄門"                          , addr = 0x5A, cmd = _632c, },
-			{ name = "CA 錫杖上段打ち"                 , addr = 0x62, cmd = _623a, },
-			{ name = "CA 雷撃棍"                       , addr = 0x66, cmd = _22c, type =  input_state_types.todome, },
+			{ name = "CA _6_2_3+_A"                    , addr = 0x62, cmd = _623a, },
+			{ name = "CA _2_2+_C"                      , addr = 0x66, cmd = _22c, type =  input_state_types.todome, },
 			{ name = "フェイントまきびし"              , addr = 0x6A, cmd = _2ac, type = input_state_types.faint, },
 			{ name = "フェイントいかづち"              , addr = 0x6E, cmd = _2bc, type = input_state_types.faint, },
 		},
@@ -2132,8 +2132,8 @@ local create_input_states = function()
 		},
 		{  --ブルー・マリー
 			{ name = "M.ダイナマイトスイング"          , addr = 0x02, cmd = _2c, type = input_state_types.faint, },
-			{ name = "スピンフォール"                  , addr = 0x06, cmd = _236c, },
-			{ name = "M.スナッチャー"                  , addr = 0x0A, cmd = _623b, },
+			{ name = "M.ｽﾊﾟｲﾀﾞｰ or ｽﾋﾟﾝﾌｫｰﾙ or ﾀﾞﾌﾞﾙｽﾊﾟｲﾀﾞｰ", addr = 0x06, cmd = _236c, },
+			{ name = "M.スナッチャー or ダブルスナッチャー", addr = 0x0A, cmd = _623b, },
 			{ name = "ダブルクラッチ"                  , addr = 0x0E, cmd = _46b, },
 			{ name = "M.クラブクラッチ"                , addr = 0x12, cmd = _4chg6b, type = input_state_types.charge, },
 			{ name = "M.リアルカウンター"              , addr = 0x16, cmd = _214a, },
@@ -2197,14 +2197,14 @@ local create_input_states = function()
 			{ name = "空中 帝王神眼拳"                 , addr = 0x16, cmd = _214b, },
 			{ name = "竜灯掌"                          , addr = 0x1A, cmd = _236b, },
 			{ name = "帝王神眼拳A"                     , addr = 0x1E, cmd = _63214a, },
-			{ name = "帝王神眼拳B"                     , addr = 0x22, cmd = _63214b, },
+			{ name = "帝王神眼拳B or 竜灯掌・幻殺"     , addr = 0x22, cmd = _63214b, },
 			{ name = "帝王神眼拳C"                     , addr = 0x26, cmd = _63214c, },
 			{ name = "帝王漏尽拳"                      , addr = 0x2A, cmd = _64123bc, },
 			{ name = "帝王空殺漏尽拳"                  , addr = 0x2E, cmd = _2146bc, },
 			{ name = "海龍照臨"                        , addr = 0x32, cmd = _64123c, },
 			{ name = "ダッシュ"                        , addr = 0x36, cmd = _66, type = input_state_types.step, },
 			{ name = "バックステップ"                  , addr = 0x3A, cmd = _44, type = input_state_types.step, },
-			{ name = "CA _6_4_C"                       , addr = 0x42, cmd = _64c, },
+			{ name = "CA _6_4+_C"                      , addr = 0x42, cmd = _64c, },
 			{ name = "フェイント海龍照臨"              , addr = 0x4E, cmd = _2bc, type = input_state_types.faint, },
 		},
 		{ --秦崇雷
@@ -2248,7 +2248,7 @@ local create_input_states = function()
 			{ name = "ブレイクスパイラル_4_2_6_8"      , addr = 0x56, cmd = _4268bc, },
 			{ name = "ブレイクスパイラル_2_6_8_4"      , addr = 0x5A, cmd = _2684bc, },
 			{ name = "ブレイクスパイラル_6_8_4_2"      , addr = 0x5E, cmd = _6842bc, },
-			{ name = "クレイジーブラザー"              , addr = 0x62, cmd = _41236bc, },
+			{ name = "ﾌﾞﾚｲｸｽﾊﾟｲﾗﾙﾌﾞﾗｻﾞｰ or ｸﾚｲｼﾞｰBR"   , addr = 0x62, cmd = _41236bc, },
 			{ name = "ダックダンス"                    , addr = 0x6E, cmd = _64123c, },
 			{ name = "ダックダンスC連打"               , addr = 0x72, cmd = _cccc, },
 			{ name = "ダッシュ"                        , addr = 0x76, cmd = _66, type = input_state_types.step, },
@@ -2376,11 +2376,11 @@ local create_input_states = function()
 			{ name = "詠酒・対しゃがみ攻撃 "           , addr = 0x0A, cmd = _a2, },
 			{ name = "小那夢波"                        , addr = 0x0E, cmd = _236a, },
 			{ name = "大那夢波"                        , addr = 0x12, cmd = _236c, },
-			{ name = "閃里肘皇"                        , addr = 0x16, cmd = _236b, },
+			{ name = "閃里肘皇 or 閃里肘皇・貫空"      , addr = 0x16, cmd = _236b, },
 			{ name = "閃里肘皇・心砕把"                , addr = 0x1A, cmd = _214b, },
 			{ name = "天崩山"                          , addr = 0x1E, cmd = _623b, },
 			{ name = "大鉄神"                          , addr = 0x22, cmd = _64123bc, },
-			{ name = "超白龍"                          , addr = 0x26, cmd = _616bc, },
+			{ name = "超白龍"                          , addr = 0x26, cmd = _616ab, },
 			{ name = "真心牙_8_6_2_4"                  , addr = 0x2E, cmd = _8624c, },
 			{ name = "真心牙_6_2_4_8"                  , addr = 0x32, cmd = _6248c, },
 			{ name = "真心牙_2_4_8_6"                  , addr = 0x36, cmd = _2486c, },
@@ -4407,9 +4407,6 @@ function rbff2.startplugin()
 			},
 
 			addr           = {
-				-- 100486 コマンド入力でのキャラ向きチェック用 00:左側 80:右側
-				-- 100482 100483 キー入力
-				-- 1004B7 0:端以外 1:画面端 3:端押し付け
 				base         = p1 and 0x100400 or 0x100500, -- キャラ状態とかのベースのアドレス
 				act          = p1 and 0x100460 or 0x100560, -- 行動ID デバッグディップステータス表示のPと同じ
 				acta         = p1 and 0x100462 or 0x100562, -- 行動ID デバッグディップステータス表示のAと同じ
@@ -4440,6 +4437,7 @@ function rbff2.startplugin()
 				life         = p1 and 0x10048B or 0x10058B, -- 体力
 				max_combo    = p1 and 0x10B4EF or 0x10B4F0, -- 最大コンボ
 				max_stun     = p1 and 0x10B84E or 0x10B856, -- 最大スタン値
+				corner       = p1 and 0x1004B7 or 0x1005B7, -- 画面端状態 0:端以外 1:画面端 3:端押し付け
 				pos          = p1 and 0x100420 or 0x100520, -- X位置
 				pos_frc      = p1 and 0x100422 or 0x100522, -- X位置 少数部
 				max_pos      = p1 and 0x10DDE6 or 0x10DDE8, -- X位置最大
@@ -4449,12 +4447,16 @@ function rbff2.startplugin()
 				pos_z        = p1 and 0x100424 or 0x100524, -- Z位置
 				sway_status  = p1 and 0x100489 or 0x100589, -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
  				side         = p1 and 0x100458 or 0x100558, -- 向き
+				input_side   = p1 and 0x100486 or 0x100586, -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
+				input1       = p1 and 0x100482 or 0x100582, -- キー入力 直近Fの入力
+				input2       = p1 and 0x100483 or 0x100583, -- キー入力 1F前の入力
 				state        = p1 and 0x10048E or 0x10058E, -- 状態
 				state_flags  = p1 and 0x1004C0 or 0x1005C0, -- フラグ群
 				stop         = p1 and 0x10048D or 0x10058D, -- ヒットストップ
 				knock_back1  = p1 and 0x100469 or 0x100569, -- のけぞり確認用1(色々)
 				knock_back2  = p1 and 0x100416 or 0x100516, -- のけぞり確認用2(裏雲隠し)
 				knock_back3  = p1 and 0x10047E or 0x10057E, -- のけぞり確認用3(フェニックススルー)
+				additional   = p1 and 0x1004A5 or 0x1005A5, -- 追加入力のデータ
 				prj_rank     = p1 and 0x1004B5 or 0x1005B5, -- 飛び道具の強さ
 				esaka_range  = p1 and 0x1004B6 or 0x1005B6, -- 詠酒の間合いチェック用
 				input_offset = p1 and 0x0394C4 or 0x0394C8, -- コマンド入力状態のオフセットアドレス
@@ -4855,12 +4857,19 @@ function rbff2.startplugin()
 			-- bp 39488,{(A4)==100400},{printf "PC=%X A4=%X A1=%X",PC,(A4),(A1);g}
 
 			-- タメ状態の調査用
-			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x10B548, 160, "wpdata!=FF&&wpdata>0&&maincpu.pb@(wpaddr)==0", "printf \"pos=%X addr=%X wpdata=%X\", (wpaddr - $10B548),wpaddr,wpdata;g"))
+			-- table.insert(wps, cpu.debug:wpset(pgm, "w", 0x10B548, 160, "wpdata!=FF&&wpdata>0&&maincpu.pb@(wpaddr)==0", "printf \"pos=%X addr=%X wpdata=%X\", (wpaddr - $10B548),wpaddr,wpdata;g"))
+
+			-- 必殺技追加入力の調査用
+			-- wp 1004A5,1,r,wpdata!=FF,{printf "PC=%X data=%X",PC,wpdata;g} -- 追加入力チェックまたは技処理内での消去
+			-- wp 1004A5,1,w,wpdata==0,{printf "PC=%X data=%X CLS",PC,wpdata;g} -- 更新 追加技入力時
+			-- wp 1004A5,1,w,wpdata!=maincpu.pb@(wpaddr),{printf "PC=%X data=%X W",PC,wpdata;g} -- 消去（毎フレーム）
 
 			for i, p in ipairs(players) do
 				-- コマンド成立の確認用
+				--[[
 				table.insert(wps, cpu.debug:wpset(pgm, "w", p.addr.base + 0xA4, 2, "wpdata>0",
 					"printf \"wpdata=%X CH=%X CH4=%D PC=%X PREF_ADDR=%X A4=%X A6=%X D1=%X\",wpdata,maincpu.pw@((A4)+10),maincpu.pw@((A4)+10),PC,PREF_ADDR,(A4),(A6),(D1);g"))
+				]]
 				-- 投げ持続フレームの解除の確認用
 				--[[
 				table.insert(wps, cpu.debug:wpset(pgm, "w", p.addr.base + 0xA4, 2, "wpdata==0&&maincpu.pb@" ..  string.format("%x", p.addr.base) .. ">0",
@@ -4892,8 +4901,13 @@ function rbff2.startplugin()
 					"1",
 					string.format("PC=%x;g", fix_bp_addr(0x05B46E))))
 			end
+			
+			-- wp CB23E,16,r,{A4==100400},{printf "A4=%X PC=%X A6=%X D1=%X data=%X",A4,PC,A6,D1,wpdata;g}
 
 			-- リバーサルとBSモードのフック
+			local bp_cond = "(maincpu.pw@107C22>0)&&((($1E>maincpu.pb@10DDDA)&&(maincpu.pb@10DDDD==$1)&&($100400==((A4)&$FFFFFF)))||(($1E>maincpu.pb@10DDDE)&&(maincpu.pb@10DDE1==$1)&&($100500==((A4)&$FFFFFF))))"
+			--BPモードON 未入力で技発動するように
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x039512), "((A6)==CB242)&&"..bp_cond, "D1=0;g"))
 			-- ダッシュとか用
 			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x03957E),
 				"(maincpu.pw@107C22>0)&&((A6)==CB244)&&((($1E<=maincpu.pb@10DDDA)&&(maincpu.pb@10DDDD==$1)&&($100400==((A4)&$FFFFFF)))||(($1E<=maincpu.pb@10DDDE)&&(maincpu.pb@10DDE1==$1)&&($100500==((A4)&$FFFFFF))))",
@@ -4904,8 +4918,7 @@ function rbff2.startplugin()
 			-- 0395B2: 1941 00A3                move.b  D1, ($a3,A4) -- 確定した技データ
 			-- 0395B6: 195E 00A4                move.b  (A6)+, ($a4,A4) -- 技データ読込 だいたい06
 			-- 0395BA: 195E 00A5                move.b  (A6)+, ($a5,A4) -- 技データ読込 だいたい00、飛燕斬01、02、03
-			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x03957E),
-				"(maincpu.pw@107C22>0)&&((A6)==CB244)&&((($1E>maincpu.pb@10DDDA)&&(maincpu.pb@10DDDD==$1)&&($100400==((A4)&$FFFFFF)))||(($1E>maincpu.pb@10DDDE)&&(maincpu.pb@10DDE1==$1)&&($100500==((A4)&$FFFFFF))))",
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x03957E), "((A6)==CB244)&&"..bp_cond,
 				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$40);D1=(maincpu.pb@(temp1));A6=((A6)+2);maincpu.pb@((A4)+$A3)=D1;maincpu.pb@((A4)+$A4)=maincpu.pb@(temp1+1);maincpu.pb@((A4)+$A5)=maincpu.pb@(temp1+2);PC=((PC)+$20);g"))
 
 			-- ステージ設定用。メニューでFを設定した場合にのみ動作させる
@@ -6410,6 +6423,7 @@ function rbff2.startplugin()
 			end
 			p.throwable      = p.state == 0 and op.state == 0 and p.tw_frame > 24 and p.sway_status == 0x00 and p.tw_muteki == 0 -- 投げ可能ベース
 			p.n_throwable    = p.throwable and p.tw_muteki2 == 0 -- 通常投げ可能
+			p.additional     = pgm:read_u8(p.addr.additional)
 
 			p.old_act        = p.act or 0x00
 			p.act            = pgm:read_u16(p.addr.act)
@@ -6467,6 +6481,7 @@ function rbff2.startplugin()
 				local on = pgm:read_u8(tbl.addr + p.input_offset - 1)
 				local on_debug = on
 				local chg_remain = pgm:read_u8(tbl.addr + p.input_offset)
+				local max =  (old and old.on_debug == on_debug) and old.max or chg_remain
 				local input_estab = old and old.input_estab or false
 				local charging = false
 				-- コマンド種類ごとの表示用の補正
@@ -6559,7 +6574,7 @@ function rbff2.startplugin()
 					debug = debug,
 					input_estab = input_estab,
 					charging = charging,
-					max =  (old and old.on_debug == on_debug) and old.max or chg_remain,
+					max =  max,
 				}
 				table.insert(p.input_states, tmp)
 			end
@@ -6652,6 +6667,10 @@ function rbff2.startplugin()
 				p.in_sway_line = true
 			end
 			p.side           = pgm:read_i8(p.addr.side) < 0 and -1 or 1
+			p.corner         = pgm:read_u8(p.corner)     -- 画面端状態 0:端以外 1:画面端 3:端押し付け
+			p.input_side     = pgm:read_u8(p.input_side) -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
+			p.input1         = pgm:read_u8(p.input1)
+			p.input2         = pgm:read_u8(p.input2)
 
 			p.life           = pgm:read_u8(p.addr.life)
 			p.pow            = pgm:read_u8(p.addr.pow)
@@ -8249,9 +8268,9 @@ function rbff2.startplugin()
 
 				if p.disp_sts then
 					if p1 then
-						scr:draw_box(  2, 1,  40,  36, 0x80404040, 0x80404040)
+						scr:draw_box(  2, 0,  40,  36, 0x80404040, 0x80404040)
 					else
-						scr:draw_box(277, 1, 316,  36, 0x80404040, 0x80404040)
+						scr:draw_box(277, 0, 316,  36, 0x80404040, 0x80404040)
 					end
 
 					scr:draw_text( p1 and  4 or 278,  1, string.format("%s", p.state))
@@ -8259,20 +8278,22 @@ function rbff2.startplugin()
 					draw_rtext(    p1 and 28 or 302,  1, string.format("%3s", p.tw_accepted))
 					draw_rtext(    p1 and 40 or 314,  1, string.format("%3s", p.tw_frame))
 
-					scr:draw_text( p1 and  4 or 278,  8, p.hit.vulnerable and "V" or "-")
-					draw_rtext(    p1 and 16 or 290,  8, string.format("%s", p.tw_muteki2))
-					draw_rtext(    p1 and 24 or 298,  8, string.format("%s", p.tw_muteki))
-					draw_rtext(    p1 and 32 or 306,  8, string.format("%2x", p.sway_status))
-					scr:draw_text( p1 and 36 or 310,  8, p.in_air and "A" or "G")
+					scr:draw_text( p1 and  4 or 278,  7, p.hit.vulnerable and "V" or "-")
+					draw_rtext(    p1 and 16 or 290,  7, string.format("%s", p.tw_muteki2))
+					draw_rtext(    p1 and 24 or 298,  7, string.format("%s", p.tw_muteki))
+					draw_rtext(    p1 and 32 or 306,  7, string.format("%2x", p.sway_status))
+					scr:draw_text( p1 and 36 or 310,  7, p.in_air and "A" or "G")
 
-					scr:draw_text( p1 and  4 or 278, 15, p.hit.harmless and "-" or "H")
-					draw_rtext(    p1 and 16 or 290, 15, string.format("%2x", p.attack))
-					draw_rtext(    p1 and 28 or 302, 15, string.format("%2x", p.attack_id))
-					draw_rtext(    p1 and 40 or 314, 15, string.format("%2x", p.hitstop_id))
+					scr:draw_text( p1 and  4 or 278, 13, p.hit.harmless and "-" or "H")
+					draw_rtext(    p1 and 16 or 290, 13, string.format("%2x", p.attack))
+					draw_rtext(    p1 and 28 or 302, 13, string.format("%2x", p.attack_id))
+					draw_rtext(    p1 and 40 or 314, 13, string.format("%2x", p.hitstop_id))
 
-					draw_rtext(    p1 and 16 or 290, 22, string.format("%4x", p.act))
-					draw_rtext(    p1 and 28 or 302, 22, string.format("%2x", p.act_count))
-					draw_rtext(    p1 and 40 or 314, 22, string.format("%2x", p.act_frame))
+					draw_rtext(    p1 and 16 or 290, 19, string.format("%4x", p.act))
+					draw_rtext(    p1 and 28 or 302, 19, string.format("%2x", p.act_count))
+					draw_rtext(    p1 and 40 or 314, 19, string.format("%2x", p.act_frame))
+
+					draw_rtext(    p1 and 16 or 290, 25, string.format("%2x", p.additional))
 
 					--[[
 						p.tw_frame のしきい値。しきい値より大きければ投げ処理継続可能。
@@ -8289,10 +8310,10 @@ function rbff2.startplugin()
 						if p.tw_frame <= 20 then
 							throw_txt = throw_txt .. "<"
 						end
-						scr:draw_text( p1 and  1 or 275, 29, "無敵")
-						scr:draw_text( p1 and 15 or 289, 29, p.hit.vulnerable and "" or "打")
-						scr:draw_text( p1 and 24 or 298, 29, p.n_throwable and "" or "通")
-						scr:draw_text( p1 and 30 or 304, 29, p.throwable and "" or throw_txt)
+						scr:draw_text( p1 and  1 or 275, 31, "無敵")
+						scr:draw_text( p1 and 15 or 289, 31, p.hit.vulnerable and "" or "打")
+						scr:draw_text( p1 and 24 or 298, 31, p.n_throwable and "" or "通")
+						scr:draw_text( p1 and 30 or 304, 31, p.throwable and "" or throw_txt)
 					end
 
 					-- 状態フラグ
@@ -10163,14 +10184,13 @@ function rbff2.startplugin()
 			--時間の値にアイコン用のオフセット値を足しむ処理で空表示にする 0632DA: 0640 00EE                addi.w  #$ee, D0
 			pgm:write_direct_u16(0x632DC, 0x0DD7)
 
-			-- リバーサルとBSモードの仕込み部分
-			-- 実質効いていない避け攻撃ぽいコマンドデータを1発BS用の入れ物に使う
-			-- 0xCB243の読込後にD1を技IDに差し替えれば未入力(00)で技が出る。下は例。
-			-- bp 03957E,{((A6)==CB244)&&((A4)==100400)&&(maincpu.pb@10048E==2)},{D1=1;g}
-			-- bp 03957E,{((A6)==CB244)&&((A4)==100500)&&(maincpu.pb@10058E==2)},{D1=1;g}
-			-- 末尾1バイトの20は技のIDになるが、プログラム中で1Eまでの値しか通さないのと、00だと無害。
-			pgm:write_direct_u32(0xCB240, 0xF000FF00)
-			pgm:write_direct_u16(0xCB244, 0x0000)
+			-- 0xCB240から16バイト実質効いていない避け攻撃ぽいコマンドデータ
+			-- ここを1発BS用のリバーサルとBSモードの入れ物に使う
+			-- BSモードONの時は CB241 を 00 にして未入力で技データを読み込ませる
+			-- 技データ希望の技IDを設定していれば技が出る
+			pgm:write_direct_u16(0xCB240, 0xF020) -- F0 は入力データ起点    20 はあり得ない入力
+			pgm:write_direct_u16(0xCB242, 0xFF01) -- FF は技データへの繋ぎ  00 は技データ（なにもしない）
+			pgm:write_direct_u16(0xCB244, 0x0600) -- 追加技データ
 
 			-- 逆襲拳、サドマゾの初段で相手の状態変更しない（相手が投げられなくなる事象が解消する）
 			-- pgm:write_direct_u8(0x57F43, 0x00)
