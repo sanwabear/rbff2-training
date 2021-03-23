@@ -136,7 +136,7 @@ local global = {
 		atklog       = false, -- 攻撃情報ログ
 		baselog      = false, -- フレーム事の処理アドレスログ
 		keylog       = false, -- 入力ログ
-		rvslog       = true , -- リバサログ
+		rvslog       = false, -- リバサログ
 	},
 }
 local damaged_moves = {
@@ -342,8 +342,10 @@ local char_acts_base = {
 		{ f = 20,  name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
 		{ f = 33,  name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
 		{ f = 24,  disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ f = 6,  disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-		{ f = 8,  disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.attack, ids = { 0x5A, }, },
 		{ f = 37,  disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 37,  disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 37,  disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -369,7 +371,7 @@ local char_acts_base = {
 		{ f = 71,  disp_name = "バーンナックル", name = "大バーンナックル", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
 		{ f = 56,  name = "パワーウェイブ", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, firing = true, },
 		{ f = 55,  name = "ランドウェイブ", type = act_types.low_attack, ids = { 0xA4, 0xA5, 0xA6, }, firing = true, },
-		{ f = 44, hit_f = -1,  disp_name = "ファイヤーキック", name = "ファイヤーキック突進", type = act_types.low_attack, ids = { 0xB8, 0xB9, 0xBC, }, },
+		{ f = 44,  disp_name = "ファイヤーキック", name = "ファイヤーキック突進", type = act_types.low_attack, ids = { 0xB8, 0xB9, 0xBC, }, },
 		{ f = 30,  names = { "ファイヤーキック" }, type = act_types.low_attack, ids = { 0xBA, 0xBB, }, },
 		{ f = 43,  name = "クラックシュート", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, }, },
 		{ f = 77,  name = "ライジングタックル", type = act_types.attack, ids = { 0xCC, 0xCD, 0xCE, 0xCF, 0xD0, }, },
@@ -427,8 +429,10 @@ local char_acts_base = {
 		{ f = 20,  name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
 		{ f = 33,  name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
 		{ f = 33,  disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ f = 6,  disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-		{ f = 8,  disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.attack, ids = { 0x5A, }, },
 		{ f = 38,  disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 38,  disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 38,  disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -517,8 +521,10 @@ local char_acts_base = {
 		{ f = 20, name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
 		{ f = 30, name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
 		{ f = 31, disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ f = 6, disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-		{ f = 8, disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.attack, ids = { 0x5A, }, },
 		{ f = 38, disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 38, disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 38, disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -606,8 +612,10 @@ local char_acts_base = {
 		{ f = 19, name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
 		{ f = 33, name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
 		{ f = 25, disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ f = 6, disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-		{ f = 8, disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.attack, ids = { 0x5A, }, },
 		{ f = 40, disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 40, disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 40, disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -684,8 +692,10 @@ local char_acts_base = {
 		{ f = 21, name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
 		{ f = 37, name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
 		{ f = 24, disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ f = 6, disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-		{ f = 8, disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.attack, ids = { 0x5A, }, },
 		{ f = 42, disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 42, disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 42, disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -782,8 +792,10 @@ local char_acts_base = {
 		{ f = 20, name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
 		{ f = 35, name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
 		{ f = 24, disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ f = 6, disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-		{ f = 8, disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.attack, ids = { 0x5A, }, },
 		{ f = 46, disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 46, disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 46, disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -860,8 +872,10 @@ local char_acts_base = {
 		{ f = 20, name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
 		{ f = 30, name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
 		{ f = 25, disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ f = 6, disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-		{ f = 8, disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.attack, ids = { 0x5A, }, },
 		{ f = 38, disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 38, disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 38, disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -938,8 +952,10 @@ local char_acts_base = {
 		{ f = 20, name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
 		{ f = 30, name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
 		{ f = 27, disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ f = 6, disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-		{ f = 8, disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.attack, ids = { 0x5A, }, },
 		{ f = 34, disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 34, disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 34, disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -1034,8 +1050,10 @@ local char_acts_base = {
 		{ f = 26, name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
 		{ f = 31, name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
 		{ f = 25, disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ f = 6, disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-		{ f = 8, disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.attack, ids = { 0x5A, }, },
 		{ f = 36, disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 36, disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 36, disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -1130,8 +1148,10 @@ local char_acts_base = {
 		{ f = 23, name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
 		{ f = 36, name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
 		{ f = 30, disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ f = 6, disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-		{ f = 8, disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.attack, ids = { 0x5A, }, },
 		{ f = 36, disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 36, disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 36, disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -1207,8 +1227,10 @@ local char_acts_base = {
 		{ f = 22, name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
 		{ f = 35, name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
 		{ f = 34, disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ f = 6, disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-		{ f = 8, disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.attack, ids = { 0x5A, }, },
 		{ f = 36, disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 36, disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 36, disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -1294,8 +1316,10 @@ local char_acts_base = {
 		{ f = 20, name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
 		{ f = 32, name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
 		{ f = 29, disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ f =  6, disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-		{ f =  8, disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.attack, ids = { 0x5A, }, },
 		{ f = 39, disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 39, disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 39, disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -1377,8 +1401,10 @@ local char_acts_base = {
 		{ f = 20, name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
 		{ f = 30, name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
 		{ f = 29, disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ f = 6, disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-		{ f = 8, disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.attack, ids = { 0x5A, }, },
 		{ f = 38, disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 38, disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 38, disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -1452,8 +1478,10 @@ local char_acts_base = {
 		{ f = 19, name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
 		{ f = 39, name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
 		{ f = 30, disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ f = 6, disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-		{ f = 8, disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.attack, ids = { 0x5A, }, },
 		{ f = 40, disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 40, disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 40, disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -1547,8 +1575,10 @@ local char_acts_base = {
 		{ f = 22, name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
 		{ f = 33, name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
 		{ f = 19, disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ f = 6, disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-		{ f = 8, disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.attack, ids = { 0x5A, }, },
 		{ f = 38, disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 38, disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 38, disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -1625,8 +1655,10 @@ local char_acts_base = {
 		{ f = 21, name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
 		{ f = 46, name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
 		{ f = 35, disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ f = 6, disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-		{ f = 8, disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.attack, ids = { 0x5A, }, },
 		{ f = 44, disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 44, disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 44, disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -1699,8 +1731,10 @@ local char_acts_base = {
 		{ f = 22, name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
 		{ f = 51, name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
 		{ f = 24, disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ f = 6, disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-		{ f = 8, disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.attack, ids = { 0x5A, }, },
 		{ f = 40, disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 40, disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 40, disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -1786,8 +1820,10 @@ local char_acts_base = {
 		{ f = 15, name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
 		{ f = 33, name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
 		{ f = 24, disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ f = 6, disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-		{ f = 8, disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.attack, ids = { 0x5A, }, },
 		{ f = 40, disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 40, disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 40, disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -1932,8 +1968,10 @@ local char_acts_base = {
 		{ f = 24, name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
 		{ f = 32, name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
 		{ f = 31, disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ f = 6, disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-		{ f = 8, disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.attack, ids = { 0x5A, }, },
 		{ f = 38, disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 38, disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 38, disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -2022,8 +2060,10 @@ local char_acts_base = {
 		{ f = 22, name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
 		{ f = 37, name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
 		{ f = 33, disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ f = 6, disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-		{ f = 8, disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
+		{ f = 6,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.attack, ids = { 0x5A, }, },
 		{ f = 37, disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 37, disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 37, disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -2113,9 +2153,10 @@ local char_acts_base = {
 		{ f = 21, name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
 		{ f = 42, name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
 		{ f = 32, disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ f = 5, disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-		{ f = 8, disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
-		{ f = 5, disp_name = "着地", name = "小ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57,  }, },
+		{ f = 5,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
+		{ f = 5,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
+		{ f = 5,  disp_name = "着地", name = "小ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57,  }, },
 		{ f = 37, disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 37, disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 37, disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -2214,8 +2255,10 @@ local char_acts_base = {
 		{ f = 20, name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
 		{ f = 33, name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
 		{ f = 10, disp_name = "対スゥエーライン攻撃", name = "対スゥエーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ f = 7, disp_name = "着地", name = "ジャンプ着地(小攻撃後)", type = act_types.attack, ids = { 0x56, 0x59, }, },
-		{ f = 7, disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 7,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
+		{ f = 7,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
+		{ f = 7,  disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
+		{ f = 7,  disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.attack, ids = { 0x5A, }, },
 		{ f = 38, disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 38, disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 38, disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -2422,24 +2465,29 @@ local char_fireball_base = {
 		{ name = "ダイバージェンス", type = act_types.attack, ids = { 0x264, }, },
 	},
 }
-local char_acts, char_1st_acts = {}, {}
+local char_acts, char_1st_acts, char_1st_f = {}, {}, {}
 for char, acts_base in pairs(char_acts_base) do
 	-- キャラごとのテーブル作成
-	char_acts[char], char_1st_acts[char] = {}, {}
+	char_acts[char], char_1st_acts[char], char_1st_f[char] = {}, {}, {}
 	for _, acts in pairs(acts_base) do
 		for i, id in ipairs(acts.ids) do
 			-- 補完
 			acts.f = acts.f or 0
-			acts.hit_f = acts.hit_f or 0
 
-			if acts.type == act_types.guard or acts.type == act_types.hit then
-				-- char_1st_actsには登録しない
-			elseif acts.name == "振り向き中" or acts.name == "しゃがみ振り向き中" then
-				-- char_1st_actsには登録しない
-			elseif acts.names then
-				-- char_1st_actsには登録しない
+			if i == 1 then
+				char_1st_f[char][id] = acts.f
+				if acts.type == act_types.guard or acts.type == act_types.hit then
+					-- char_1st_actsには登録しない
+				elseif acts.name == "振り向き中" or acts.name == "しゃがみ振り向き中" then
+					-- char_1st_actsには登録しない
+				elseif acts.names then
+					-- char_1st_actsには登録しない
+				else
+					char_1st_acts[char][id] = true
+				end
 			else
-				char_1st_acts[char][id] = i == 1
+				char_1st_f[char][id] = -1
+				char_1st_acts[char][id] = false
 			end
 			char_acts[char][id] = acts
 		end
@@ -5105,7 +5153,7 @@ function rbff2.startplugin()
 
 				-- フックできないかわり用
 				state2       = p1 and 0x10CA0E or 0x10CA0F, -- 状態
-				act2         = p1 and 0x10CA12 or 0x10CA13, -- 行動ID デバッグディップステータス表示のPと同じ
+				act2         = p1 and 0x10CA12 or 0x10CA14, -- 行動ID デバッグディップステータス表示のPと同じ
 
 				-- フックできないかわり用-当たり判定
 				vulnerable1  = p1 and 0x10CB30 or 0x10CB31,
@@ -5467,8 +5515,8 @@ function rbff2.startplugin()
 			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x10058E, 1, "wpdata!=0", "maincpu.pb@10CA0F=maincpu.pb@10058E;g"))
 			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x10048F, 1, "1", "maincpu.pb@10CA10=wpdata;g"))
 			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x10058F, 1, "1", "maincpu.pb@10CA11=wpdata;g"))
-			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100460, 1, "wpdata!=0", "maincpu.pb@10CA12=1;g"))
-			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100560, 1, "wpdata!=0", "maincpu.pb@10CA13=1;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100460, 1, "wpdata!=0", "maincpu.pw@10CA12=wpdata;g"))
+			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100560, 1, "wpdata!=0", "maincpu.pw@10CA14=wpdata;g"))
 
 			-- X軸のMAXとMIN
 			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x100420, 2, "wpdata>maincpu.pw@10DDE6", "maincpu.pw@10DDE6=wpdata;g"))
@@ -5833,7 +5881,7 @@ function rbff2.startplugin()
 
 		for i, p in ipairs(players) do
 			pgm:write_u8(p.addr.state2, 0x00)               -- ステータス更新フック
-			pgm:write_u8(p.addr.act2, 0x00)                 -- 技ID更新フック
+			pgm:write_u16(p.addr.act2, 0x00)                 -- 技ID更新フック
 
 			pgm:write_u8(p.addr.vulnerable1 , 0xFF)         -- 食らい判定のフック
 			pgm:write_u8(p.addr.vulnerable21, 0xFF)         -- 食らい判定のフック
@@ -6996,6 +7044,7 @@ function rbff2.startplugin()
 
 		-- プレイヤーと飛び道具のベースアドレスをキー、オブジェクトを値にするバッファ
 		local temp_hits = {}
+		local upd_last_frame_gap2 = false
 
 		-- 1Pと2Pの状態読取
 		for i, p in ipairs(players) do
@@ -7353,6 +7402,12 @@ function rbff2.startplugin()
 			p.frm_gap.act_frames2  = p.frm_gap.act_frames2 or {}
 
 			p.old_act_data   = p.act_data or { name = "", type = act_types.any, }
+			if char_1st_f[p.char] and char_1st_f[p.char][p.act] then
+				p.act_1st_f = char_1st_f[p.char][p.act]
+			else
+				p.act_1st_f = -1
+			end
+
 			if char_acts[p.char] and char_acts[p.char][p.act] then
 				p.act_data   = char_acts[p.char][p.act]
 				p.act_1st    = char_1st_acts[p.char][p.act] or false
@@ -7377,13 +7432,6 @@ function rbff2.startplugin()
 			end
 			p.old_act_normal = p.act_normal
 			p.act_normal     = p.act_data.type == act_types.free
-
-			-- 硬直フレーム設定
-			if p.act_1st and p.old_act_data ~= p.act_data then
-				p.last_blockstun = p.act_data.f or 0
-			else
-				p.last_blockstun = p.last_blockstun or 0
-			end
 
 			-- アドレス保存
 			if not p.bases[#p.bases] or p.bases[#p.bases].addr ~= p.base then
@@ -7508,8 +7556,12 @@ function rbff2.startplugin()
 			-- 値更新のフック確認
 			p.update_sts = (pgm:read_u8(p.addr.state2) ~= 0) and global.frame_number or p.update_sts
 			p.update_dmg = (p.tmp_dmg ~= 0) and global.frame_number or p.update_dmg
-			p.update_act = (pgm:read_u8(p.addr.act2) ~= 0) and global.frame_number or p.update_act
+			p.act2       = pgm:read_u16(p.addr.act2)
+			p.update_act = (p.act2 ~= 0) and global.frame_number or p.update_act
 			p.act_1st    = p.update_act == global.frame_number and p.act_1st == true
+
+			-- 硬直フレーム設定
+			p.last_blockstun = p.last_blockstun or 0
 
 			-- 当たり判定のフック確認
 			p.hit.vulnerable1  = pgm:read_u8(p.addr.vulnerable1)
@@ -7655,7 +7707,6 @@ function rbff2.startplugin()
 			update_object(p)
 		end
 
-		local upd_last_frame_gap2 = false
 		for i, p in ipairs(players) do
 			local op         = players[3-i]
 
@@ -7675,29 +7726,18 @@ function rbff2.startplugin()
 				if p.on_guard == global.frame_number then
 					-- ガード時硬直
 					if p.ophit then
-						p.last_blockstun = blockstun + p.ophit.hitstop_gd
+						p.last_blockstun = blockstun
 						upd_last_frame_gap2 = true
 						p.last_hitstop = p.ophit.hitstop_gd
+						op.last_hitstop = p.ophit.hitstop
 					end
 				elseif p.on_hit == global.frame_number then
 					-- ヒット時硬直
 					if p.ophit then
-						p.last_blockstun = hitstun + p.ophit.hitstop
+						p.last_blockstun = hitstun
 						upd_last_frame_gap2 = true
 						p.last_hitstop = p.ophit.hitstop
-					end
-				end
-				-- 攻撃側の硬直フレーム数更新
-				if upd_last_frame_gap2 then
-					if op.act_data.hit_f then
-						if op.act_data.hit_f > 0 then
-							op.last_blockstun = op.act_data.hit_f
-						elseif op.act_data.hit_f < 0 then
-							op.last_blockstun = op.last_blockstun + op.act_data.hit_f
-						end
-					end
-					if p.ophit then
-						op.last_blockstun = op.last_blockstun + p.ophit.hitstop
+						op.last_hitstop = p.ophit.hitstop
 					end
 				end
 			elseif op.char == 20 and op.act == 0x00AF and op.act_count == 0x00 and op.act_frame == 0x09 then
@@ -7708,21 +7748,6 @@ function rbff2.startplugin()
 				-- 裏雲隠し専用
 				p.last_blockstun = p.knock_back2 + 3
 				p.last_hitstop = 0
-			end
-		end
-		-- 硬直差の算出
-		if upd_last_frame_gap2 then
-			local p1, p2 = players[1], players[2]
-			p1.last_frame_gap2 = p2.last_blockstun - p1.last_blockstun
-			p2.last_frame_gap2 = p1.last_blockstun - p2.last_blockstun
-		end
-		-- フレーム経過による硬直差の減少
-		for i, p in ipairs(players) do
-			if p.last_blockstun > 0 then
-				p.last_blockstun = p.last_blockstun - 1
-			end
-			if p.last_hitstop > 0 then
-				p.last_hitstop = p.last_hitstop - 1
 			end
 		end
 
@@ -8130,6 +8155,12 @@ function rbff2.startplugin()
 			if upd_group then
 				last_frame.frm_gap = last_frame.frm_gap or {}
 				table.insert(last_frame.frm_gap, p.frm_gap.act_frames2[#p.frm_gap.act_frames2])
+
+				-- 硬直フレーム設定
+				if p.act_1st_f >= 0 then
+					p.last_blockstun = p.act_1st_f
+					upd_last_frame_gap2 = true
+				end
 			end
 
 			-- 飛び道具2
@@ -8203,6 +8234,22 @@ function rbff2.startplugin()
 		end
 		--1Pと2Pともにフレーム数が多すぎる場合は加算をやめる
 		fix_max_framecount()
+
+		-- フレーム経過による硬直差の減少
+		for i, p in ipairs(players) do
+			if p.last_hitstop > 0 then
+				p.last_hitstop = p.last_hitstop - 1
+			elseif p.last_blockstun > 0 then
+				p.last_blockstun = p.last_blockstun - 1
+			end
+		end
+		-- 硬直差の算出
+		if upd_last_frame_gap2 then
+			local p1, p2 = players[1], players[2]
+			p1.last_frame_gap2 = (p2.last_blockstun - p1.last_blockstun) + (p2.last_hitstop - p1.last_hitstop)
+			p2.last_frame_gap2 = (p1.last_blockstun - p2.last_blockstun) + (p1.last_hitstop - p2.last_hitstop)
+			-- print("upd gap", p1.last_blockstun, p1.last_hitstop, p2.last_blockstun, p2.last_hitstop)
+		end
 
 		for i, p in ipairs(players) do
 			local p1 = i == 1
@@ -8501,10 +8548,10 @@ function rbff2.startplugin()
 					if p.dummy_rvs.cmd then
 						if rvs_types.knock_back_recovery ~= rvs_type then
 							if (((p.state_flags | p.old_state_flags) & 0x2 == 0x2) or pre_down_acts[p.act]) and p.dummy_rvs.cmd == cmd_base._2d then
-								print("NO", p.state_flags, p.dummy_rvs.name, string.format("%x", p.act))
+								-- print("NO", p.state_flags, p.dummy_rvs.name, string.format("%x", p.act))
 									-- no act
 							else
-								print("do", p.state_flags, p.dummy_rvs.name, string.format("%x", p.act))
+								-- print("do", p.state_flags, p.dummy_rvs.name, string.format("%x", p.act))
 								p.dummy_rvs.cmd(p, next_joy)
 							end
 						end
@@ -9138,11 +9185,12 @@ function rbff2.startplugin()
 					end
 				end
 				if global.disp_frmgap > 1 then
+					local len = p.last_hitstop + p.last_blockstun
 					--フレーム差表示
 					--scr:draw_box(p1 and (138 - 90)           or 180, 41, p1 and 140 or (182 + 90)          , 41+5, 0, 0xDDC0C0C0) -- 枠
 					--scr:draw_box(p1 and (139 - 90)           or 181, 42, p1 and 139 or (181 + 90)          , 42+3, 0, 0xDD000000) -- 黒背景
-					scr:draw_box(p1 and (139 - p.last_blockstun) or 181, 41, p1 and 139 or (181 + p.last_blockstun), 41+5, 0, p.skip_frame and 0xDDC0C0C0 or 0xDDFF007F)
-					draw_rtext_with_shadow(p1 and 135   or 190  , 40  ,  p.last_blockstun)
+					scr:draw_box(p1 and (139 - len) or 181, 41, p1 and 139 or (181 + len), 41+5, 0, p.skip_frame and 0xDDC0C0C0 or 0xDDFF007F)
+					draw_rtext_with_shadow(p1 and 135   or 190  , 40  ,  len)
 
 					draw_rtext_with_shadow(p1 and 155   or 170  , 40  ,  p.last_frame_gap)
 					draw_rtext_with_shadow(p1 and 155   or 170  , 47  ,  p.last_frame_gap2)
