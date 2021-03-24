@@ -1350,7 +1350,9 @@ local char_acts_base = {
 		{ f = 74, name = "帝王空殺神眼拳", type = act_types.attack, ids = { 0xE0, 0xE1, }, },
 		{ f = 48, name = "竜灯掌", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, }, },
 		{ f = 110, name = "竜灯掌・幻殺", type = act_types.attack, ids = { 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, }, },
-		{ f = 87, name = "帝王漏尽拳", type = act_types.attack, ids = { 0xFE, 0xFF, 0x101, 0x100, }, firing = true, },
+		{ f = 87, name = "帝王漏尽拳", type = act_types.attack, ids = { 0xFE, 0xFF, }, firing = true, },
+		{ f = 7, names = { "帝王漏尽拳", }, type = act_types.any, ids = { 0x100, }, firing = true, },
+		{ f = 62, names = { "帝王漏尽拳", }, type = act_types.any, ids = { 0x101, }, firing = true, },
 		{ f = 109, name = "帝王空殺漏尽拳", type = act_types.attack, ids = { 0xEA, 0xEB, 0xEC, 0xEE, 0xEF, 0xED, }, firing = true, },
 		{ f = 117, name = "海龍照臨", type = act_types.attack, ids = { 0x108, 0x109, 0x109, 0x10A, 0x10B, }, firing = true, },
 		{ f = 0, name = "立ち", type = act_types.free, ids = { 0x6C, }, },
@@ -7723,22 +7725,20 @@ function rbff2.startplugin()
 						end
 					end
 				end
-				if p.on_guard == global.frame_number then
-					-- ガード時硬直
-					if p.ophit then
-						p.last_blockstun = blockstun
-						upd_last_frame_gap2 = true
-						p.last_hitstop = p.ophit.hitstop_gd
-						op.last_hitstop = p.ophit.hitstop
+				local on_hit = p.on_hit == global.frame_number
+				local on_guard = p.on_guard == global.frame_number
+				if p.ophit and (on_guard or on_hit) then
+					-- ガード時硬直, ヒット時硬直
+					p.last_blockstun = on_guard and blockstun or hitstun
+					p.last_hitstop   = on_guard and p.ophit.hitstop_gd or p.ophit.hitstop
+					if not p.ophit.is_fireball or pgm:read_u16(p.ophit.addr.base + 0xF2) == 0 then
+						op.last_hitstop = p.ophit.is_fireball and p.ophit.hitstop_gd or p.ophit.hitstop
+					
+						print(string.format("%x %x",
+						 pgm:read_u16(p.ophit.addr.base + 0xF2), pgm:read_u16(p.ophit.addr.base + 0xB4)))
+
 					end
-				elseif p.on_hit == global.frame_number then
-					-- ヒット時硬直
-					if p.ophit then
-						p.last_blockstun = hitstun
-						upd_last_frame_gap2 = true
-						p.last_hitstop = p.ophit.hitstop
-						op.last_hitstop = p.ophit.hitstop
-					end
+					upd_last_frame_gap2 = true
 				end
 			elseif op.char == 20 and op.act == 0x00AF and op.act_count == 0x00 and op.act_frame == 0x09 then
 				-- デンジャラススルー専用
@@ -8235,6 +8235,17 @@ function rbff2.startplugin()
 		--1Pと2Pともにフレーム数が多すぎる場合は加算をやめる
 		fix_max_framecount()
 
+		-- 硬直差の算出
+		if upd_last_frame_gap2 then
+			local p1, p2 = players[1], players[2]
+
+			if p1.last_blockstun > 0 and p2.last_blockstun > 0 then
+				p1.last_frame_gap2 = (p2.last_blockstun - p1.last_blockstun) + (p2.last_hitstop - p1.last_hitstop)
+				p2.last_frame_gap2 = (p1.last_blockstun - p2.last_blockstun) + (p1.last_hitstop - p2.last_hitstop)
+				-- print("upd gap", p1.last_blockstun, p1.last_hitstop, p2.last_blockstun, p2.last_hitstop)
+			end
+		end
+
 		-- フレーム経過による硬直差の減少
 		for i, p in ipairs(players) do
 			if p.last_hitstop > 0 then
@@ -8242,13 +8253,6 @@ function rbff2.startplugin()
 			elseif p.last_blockstun > 0 then
 				p.last_blockstun = p.last_blockstun - 1
 			end
-		end
-		-- 硬直差の算出
-		if upd_last_frame_gap2 then
-			local p1, p2 = players[1], players[2]
-			p1.last_frame_gap2 = (p2.last_blockstun - p1.last_blockstun) + (p2.last_hitstop - p1.last_hitstop)
-			p2.last_frame_gap2 = (p1.last_blockstun - p2.last_blockstun) + (p1.last_hitstop - p2.last_hitstop)
-			-- print("upd gap", p1.last_blockstun, p1.last_hitstop, p2.last_blockstun, p2.last_hitstop)
 		end
 
 		for i, p in ipairs(players) do
@@ -9194,8 +9198,12 @@ function rbff2.startplugin()
 
 					draw_rtext_with_shadow(p1 and 155   or 170  , 40  ,  p.last_frame_gap)
 					draw_rtext_with_shadow(p1 and 155   or 170  , 47  ,  p.last_frame_gap2)
-					--draw_rtext_with_shadow(p1 and 135   or 190  , 47  ,  p.last_blockstun)
-					--draw_rtext_with_shadow(p1 and 135   or 190  , 54  ,  p.last_hitstop)
+					--[[
+					draw_rtext_with_shadow(p1 and 135   or 190  , 54  ,  p.last_blockstun)
+					draw_rtext_with_shadow(p1 and 135   or 190  , 61  ,  p.last_hitstop)
+					draw_rtext_with_shadow(p1 and 135   or 190  , 68  ,  p.hit_skip)
+					draw_rtext_with_shadow(p1 and 135   or 190  , 85  ,  p.stop)
+					]]
 				end
 			end
 
