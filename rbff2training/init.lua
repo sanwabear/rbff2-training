@@ -2958,7 +2958,7 @@ local create_input_states = function()
 			{ name = "火龍追撃棍"                      , addr = 0x16, cmd = _214b, },
 			{ name = "旋風棍"                          , addr = 0x0E, cmd = _aaaa, },
 			{ name = "強襲飛翔棍"                      , addr = 0x12, cmd = _1236b, },
-			{ name = "超火炎旋風棍"                    , addr = 0x1E, cmd = _64123bc, },--？
+			{ name = "超火炎旋風棍"                    , addr = 0x1A, cmd = _64123bc, },
 			{ name = "紅蓮殺棍"                        , addr = 0x1E, cmd = _632c, },
 			{ name = "サラマンダーストーム"            , addr = 0x22, cmd = _64123c, },
 			{ name = "ダッシュ"                        , addr = 0x26, cmd = _66, type = input_state_types.step, },
@@ -3103,13 +3103,21 @@ local create_input_states = function()
 	end
 	for _, char_tbl in ipairs(input_states) do
 		for _, tbl in ipairs(char_tbl) do
-			tbl.cmd = convert(tbl.cmd)
-			tbl.name = convert(tbl.name)
-			local cmds = {}
-			for c in string.gmatch(tbl.cmd, "([^|]*)|?") do
+			-- 左右反転コマンド表示用
+			tbl.r_cmd = string.gsub(tbl.cmd, "[134679]", { 
+				["1"] = "3", ["3"] = "1", ["4"] = "6", ["6"] = "4", ["7"] = "9", ["9"] = "7",
+			})
+			local r_cmds, cmds = {}, {}
+			for c in string.gmatch(convert(tbl.r_cmd), "([^|]*)|?") do
+				table.insert(r_cmds, c)
+			end
+			for c in string.gmatch(convert(tbl.cmd), "([^|]*)|?") do
 				table.insert(cmds, c)
 			end
+			-- コマンドの右向き左向きをあらわすデータ値をキーにしたテーブルを用意
+			tbl.lr_cmds = { [0x00] = cmds, [0x80] = r_cmds, }
 			tbl.cmds = cmds
+			tbl.name = convert(tbl.name)
 		end
 	end
 	return input_states
@@ -6131,10 +6139,12 @@ function rbff2.startplugin()
 			return ret
 		end
 		local rec1, rec2, rec3, rec4, rec5, rec6, rec7, rec8 = {}, {}, {}, {}, {}, {}, {}, {}
+		--[[
 		rec1 = merge_cmd(  -- ガード解除直前のNのあと2とNの繰り返しでガード硬直延長,をさらに投げる
 			{ _8, _5, 46, _6, 15, _5, 13, _4, _1, 5, _2, 2, _3, 4, _6, 6, _4c, 4, _c, 102, _5, 36, _c, 12, _5, _c, 11, _5, },
 			{ _5, }
 		)
+		]]
 
 		--[[
 		rec1 = merge_cmd(  -- ガード解除直前のNのあと2とNの繰り返しでガード硬直延長,をさらに投げる
@@ -6253,7 +6263,8 @@ function rbff2.startplugin()
 	end
 	-- リプレイ開始位置記憶
 	rec_fixpos = function()
-		local pos = { get_flip_x(players[1]), get_flip_x(players[2]) }
+		local pos = { players[1].input_side, players[2].input_side }
+		--local pos = { players[1].disp_side, players[2].disp_side }
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		local fixpos  = { pgm:read_i16(players[1].addr.pos)       , pgm:read_i16(players[2].addr.pos)        }
 		local fixsway = { pgm:read_u8(players[1].addr.sway_status), pgm:read_u8(players[2].addr.sway_status) }
@@ -6286,13 +6297,13 @@ function rbff2.startplugin()
 		local joy_val = get_joy(recording.temp_player)
 
 		local next_val = nil
-		local pos = { get_flip_x(players[1]), get_flip_x(players[2]) }
+		local pos = { players[1].input_side, players[2].input_side }
 		for k, f in pairs(joy_val) do
 			if k ~= "1 Player Start" and k ~= "2 Players Start" and f > 0 then
 				if not next_val then
 					next_val = new_next_joy()
 					recording.player = recording.temp_player
-					recording.cleanup = false
+					recording.active_slot.cleanup = false
 					recording.active_slot.side = joy_pside[rev_joy[k]] -- レコーディング対象のプレイヤー番号 1=1P, 2=2P
 					recording.active_slot.store = {} -- 入力保存先
 					table.insert(recording.active_slot.store, { joy = next_val      , pos = pos })
@@ -6313,7 +6324,7 @@ function rbff2.startplugin()
 
 		-- 入力保存
 		local next_val = new_next_joy()
-		local pos = { get_flip_x(players[1]), get_flip_x(players[2]) }
+		local pos = { players[1].input_side, players[2].input_side }
 		for k, f in pairs(joy_val) do
 			if k ~= "1 Player Start" and k ~= "2 Players Start" and recording.active_slot.side == joy_pside[rev_joy[k]] then
 				-- レコード中は1Pと2P入力が入れ替わっているので反転させて記憶する
@@ -6332,44 +6343,37 @@ function rbff2.startplugin()
 		local ec = scr:frame_number()
 		local state_past = ec - global.input_accepted
 
-		local empty = true
-		for i = 1, #recording.slot do
-			if #recording.slot[i].store > 0 then
-				empty = false
-			end
-		end
-
-		recording.active_slot = { store = {}, name = "空" }
-		if not empty and #recording.live_slots > 0 then
-			local count = #recording.live_slots
-			while count > 0 do
-				count = count - 1
-				local random_i = math.random(#recording.live_slots)
-				local slot_no = recording.live_slots[random_i]
-				recording.active_slot = recording.slot[slot_no]
-				if #recording.slot[slot_no].store > 0 then
-					break
-				end
-			end
-		end
-
-		-- 冗長な未入力を省く
-		if not recording.cleanup then
-			for i = #recording.active_slot.store, 1, -1 do
-				local empty = true
-				for k, v in pairs(recording.active_slot.store[i].joy) do
-					if v then
-						empty = false
+		local tmp_slots = {}
+		for j, slot in ipairs(recording.slot) do
+			-- 冗長な未入力を省く
+			if not slot.cleanup then
+				for i = #slot.store, 1, -1 do
+					local empty = true
+					for k, v in pairs(slot.store[i].joy) do
+						if v then
+							empty = false
+							break
+						end
+					end
+					if empty then
+						slot.store[i] = nil
+					else
 						break
 					end
 				end
-				if empty then
-					recording.active_slot.store[i] = nil
-				else
-					break
-				end
+				slot.cleanup = true
 			end
-			recording.cleanup = true
+			-- コマンド登録があってメニューONになっているスロットを一時保存
+			if #slot.store > 0 and recording.live_slots[j] == true then
+				table.insert(tmp_slots, slot)
+			end
+		end
+
+		-- ランダムで1つ選定
+		if #tmp_slots > 0 then
+			recording.active_slot = tmp_slots[math.random(#tmp_slots)]
+		else
+			recording.active_slot = { store = {}, name = "空" }
 		end
 
 		local joy_val = get_joy()
@@ -6450,6 +6454,10 @@ function rbff2.startplugin()
 					pgm:write_u16(stage_base_addr + offset_pos_z, fixpos.fixscr.z)
 				end
 			end
+			players[1].input_side     = pgm:read_u8(players[1].addr.input_side)
+			players[2].input_side     = pgm:read_u8(players[2].addr.input_side)
+			players[1].disp_side      = get_flip_x(players[1])
+			players[2].disp_side      = get_flip_x(players[2])
 
 			-- 入力リセット
 			local next_joy = new_next_joy()
@@ -6510,7 +6518,8 @@ function rbff2.startplugin()
 		end
 		if not stop then
 			-- 入力再生
-			local pos = { get_flip_x(players[1]), get_flip_x(players[2]) }
+			local pos = { players[1].input_side, players[2].input_side }
+			--local pos = { players[1].disp_side, players[2].disp_side }
 			for _, joy in ipairs(use_joy) do
 				local k = joy.field
 				-- 入力時と向きが変わっている場合は左右反転させて反映する
@@ -6616,7 +6625,7 @@ function rbff2.startplugin()
 			damage , -- 攻撃力
 			chip_ratio, -- 削り補正
 			stun, -- 気絶値
-			stun_timer , -- 気絶タイ��ー
+			stun_timer , -- 気絶値タイマー
 			meter_gain , -- パワーゲージ増加量
 		},
 		effect = {
@@ -7361,10 +7370,11 @@ function rbff2.startplugin()
 				p.in_sway_line = true
 			end
 			p.side           = pgm:read_i8(p.addr.side) < 0 and -1 or 1
-			p.corner         = pgm:read_u8(p.corner)     -- 画面端状態 0:端以外 1:画面端 3:端押し付け
-			p.input_side     = pgm:read_u8(p.input_side) -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
-			p.input1         = pgm:read_u8(p.input1)
-			p.input2         = pgm:read_u8(p.input2)
+			p.corner         = pgm:read_u8(p.addr.corner)     -- 画面端状態 0:端以外 1:画面端 3:端押し付け
+			p.input_side     = pgm:read_u8(p.addr.input_side) -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
+			p.disp_side      = get_flip_x(players[1])
+			p.input1         = pgm:read_u8(p.addr.input1)
+			p.input2         = pgm:read_u8(p.addr.input2)
 
 			p.life           = pgm:read_u8(p.addr.life)
 			p.pow            = pgm:read_u8(p.addr.pow)
@@ -8395,18 +8405,17 @@ function rbff2.startplugin()
 				end
 
 				-- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
+				-- { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" },
 				-- レコード中、リプレイ中は行動しない
 				if accept_control then
 					if     p.dummy_act == 1 then
-					elseif p.dummy_act == 2 then
+					elseif p.dummy_act == 2 and p.sway_status == 0x00 then
 						next_joy["P" .. p.control .. " Down"] = true
-					elseif p.dummy_act == 3 then
+					elseif p.dummy_act == 3 and p.sway_status == 0x00 then
 						next_joy["P" .. p.control .. " Up"] = true
-					elseif p.dummy_act == 4 then
+					elseif p.dummy_act == 4 and p.sway_status == 0x00 and p.state_bits[18] ~= 1 then
 						-- 地上のジャンプ移行モーション以外だったら上入力
-						if p.act < 8 then
-							next_joy["P" .. p.control .. " Up"] = true
-						end
+						next_joy["P" .. p.control .. " Up"] = true
 					elseif p.dummy_act == 5 then
 						if not p.in_sway_line and p.state == 0 then
 							if joy_val["P" .. p.control .. " Button 4"] < 0 then
@@ -9044,7 +9053,7 @@ function rbff2.startplugin()
 						end
 						local cmdx = x - 50
 						y = y - 2
-						for ci, c in ipairs(input_state.tbl.cmds) do
+						for ci, c in ipairs(input_state.tbl.lr_cmds[p.input_side]) do
 							if c ~= "" then
 								cmdx = cmdx + math.max(5.5, 
 									draw_text_with_shadow(cmdx, y, c,
@@ -9751,11 +9760,9 @@ function rbff2.startplugin()
 	end
 	local exit_menu_to_play_common = function()
 		local col = play_menu.pos.col
-		recording.live_slots = {}
+		recording.live_slots = recording.live_slots or {}
 		for i = 1, #recording.slot do
-			if col[i+1] == 2 then
-				table.insert(recording.live_slots, i)
-			end
+			recording.live_slots[i] = (col[i+1] == 2)
 		end
 		recording.do_repeat       = col[11] == 2 -- 繰り返し          11
 		recording.repeat_interval = col[12] - 1  -- 繰り返し間隔      12
