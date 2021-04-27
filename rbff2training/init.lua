@@ -7688,9 +7688,12 @@ function rbff2.startplugin()
 			op.need_low_block = false
 			op.need_ovh_block = false
 			if p.act ~= 0 and 0 < p.char and p.char < 25 then
-				op.need_block     = (p.act_data.type == act_types.low_attack) or (p.act_data.type == act_types.attack) or (p.act_data.type == act_types.overhead)
-				op.need_low_block = p.act_data.type == act_types.low_attack
-				op.need_ovh_block = p.act_data.type == act_types.overhead
+				if p.hit.full_hit or p.hit.harmless2 then
+				else
+					op.need_block     = (p.act_data.type == act_types.low_attack) or (p.act_data.type == act_types.attack) or (p.act_data.type == act_types.overhead)
+					op.need_low_block = p.act_data.type == act_types.low_attack
+					op.need_ovh_block = p.act_data.type == act_types.overhead
+				end
 			end
 			for _, fb in pairs(p.fireball) do
 				-- 飛び道具の状態チェック
@@ -8199,7 +8202,7 @@ function rbff2.startplugin()
 				local col, line, act
 				if p.skip_frame then
 					col, line, act = 0x00000000, 0x00000000, 0
-				elseif hasbox and fb.obsl_hit or fb.full_hit or fb.harmless2 then
+				elseif hasbox and (fb.obsl_hit or fb.full_hit or fb.harmless2) then
 					col, line, act = 0x00000000, 0xDDFF1493, 0
 				elseif hasbox and fb.fake_hit then
 					col, line, act = 0xAA00FF33, 0xDD00FF33, 2
