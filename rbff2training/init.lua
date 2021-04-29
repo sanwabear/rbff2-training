@@ -4905,6 +4905,7 @@ function rbff2.startplugin()
 
 			frame_gap        = 0,
 			last_frame_gap   = 0,
+			hist_frame_gap   = { 0 },
 			act_contact      = 0,
 			guard1           = 0,          -- ガード時（硬直前後）フレームの判断用
 			on_guard         = 0,          -- ガード時（硬直前）フレーム
@@ -8133,7 +8134,27 @@ function rbff2.startplugin()
 				table.insert(last_frame.muteki, p.muteki.act_frames2[#p.muteki.act_frames2])
 			end
 
-			--フレーム差
+			-- フレーム差
+			-- フレーム差のバッファ
+			local old_last_frame_gap = p.last_frame_gap
+			local save_frame_gap = function()
+				local upd = false
+				if old_last_frame_gap > 0 and old_last_frame_gap > p.last_frame_gap then
+					upd = true
+				elseif old_last_frame_gap < 0 and old_last_frame_gap < p.last_frame_gap then
+					upd = true
+				elseif old_last_frame_gap ~= 0 and p.last_frame_gap == 0 then
+					upd = true
+				end
+				if upd then
+					table.insert(p.hist_frame_gap, old_last_frame_gap)
+					if 10 < #p.hist_frame_gap then
+						--バッファ長調整
+						table.remove(p.hist_frame_gap, 1)
+					end
+				end
+			end
+			-- フレーム差の更新
 			if p.act_normal and op.act_normal then
 				if not p.old_act_normal and not op.old_act_normal then
 					p.last_frame_gap = 0
@@ -8170,6 +8191,7 @@ function rbff2.startplugin()
 				p.last_frame_gap = p.frame_gap
 				col, line = 0xAAFF6347, 0xDDFF6347
 			end
+			save_frame_gap()
 
 			frame = p.frm_gap.act_frames[#p.frm_gap.act_frames]
 			if frame == nil or chg_act_name or (frame.col ~= col and (p.frame_gap == 0 or p.frame_gap == -1 or p.frame_gap == 1)) or p.act_1st then
@@ -9219,7 +9241,17 @@ function rbff2.startplugin()
 				end
 				--フレーム差表示
 				if global.disp_frmgap > 1 then
-					draw_rtext_with_shadow(p1 and 155   or 170  , 40  ,  p.last_frame_gap)
+					local col = function(gap)
+						if gap == 0 then
+							return 0xFFFFFFFF
+						elseif gap > 0 then
+							return 0xFF00FFFF
+						else
+							return 0xFFFF0000
+						end
+					end
+					draw_rtext_with_shadow(p1 and 155 or 170, 40, p.last_frame_gap, col(p.last_frame_gap))
+					draw_rtext_with_shadow(p1 and 155 or 170, 47, p.hist_frame_gap[#p.hist_frame_gap], col(p.hist_frame_gap[#p.hist_frame_gap]))
 				end
 			end
 
