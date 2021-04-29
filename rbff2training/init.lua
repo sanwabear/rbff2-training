@@ -311,8 +311,8 @@ local char_acts_base = {
 	{
 		{ f = 28,  name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 31,  name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 29,  disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ f = 25,  disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 29,  name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 25,  name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 30,  name = "スゥエー戻り", type = act_types.any, ids = { 0x36, }, },
 		{ f = 37,  name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 23+28,  disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -3319,11 +3319,11 @@ local common_rvs = {
 	{ cmd = cmd_base._2b     , bs = false, name = "下B", },
 	{ cmd = cmd_base._2c     , bs = false, name = "下C", },
 	{ cmd = cmd_base._2d     , bs = false, name = "下D", },
-	{ cmd = cmd_base._8      , bs = false, name = "垂直ジャンプ", },
-	{ cmd = cmd_base._9      , bs = false, name = "前ジャンプ", },
-	{ cmd = cmd_base._7      , bs = false, name = "後ジャンプ", },
+	{ cmd = cmd_base._8      , bs = false, name = "垂直ジャンプ", jump = true, },
+	{ cmd = cmd_base._9      , bs = false, name = "前ジャンプ", jump = true, },
+	{ cmd = cmd_base._7      , bs = false, name = "後ジャンプ", jump = true, },
 	{ id = 0x1E, ver = 0x0600, bs = false, name = "ダッシュ", },
-	{ id = 0x1F, ver = 0x0600, bs = false, name = "飛び退き", },
+	{ id = 0x1F, ver = 0x0600, bs = false, name = "バックステップ", },
 }
 local char_rvs_list = {
 	-- テリー・ボガード
@@ -5593,14 +5593,18 @@ function rbff2.startplugin()
 			-- wp CB23E,16,r,{A4==100400},{printf "A4=%X PC=%X A6=%X D1=%X data=%X",A4,PC,A6,D1,wpdata;g}
 
 			-- リバーサルとBSモードのフック
-			local bp_cond = "(maincpu.pw@107C22>0)&&((($1E>maincpu.pb@10DDDA)&&(maincpu.pb@10DDDD==$1)&&($100400==((A4)&$FFFFFF)))||(($1E>maincpu.pb@10DDDE)&&(maincpu.pb@10DDE1==$1)&&($100500==((A4)&$FFFFFF))))"
-			--BPモードON 未入力で技発動するように
-			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x039512), "((A6)==CB242)&&"..bp_cond, "D1=0;g"))
+			local bp_cond = "(maincpu.pw@107C22>0)&&((($1E> maincpu.pb@10DDDA)&&(maincpu.pb@10DDDD==$1)&&($100400==((A4)&$FFFFFF)))||(($1E> maincpu.pb@10DDDE)&&(maincpu.pb@10DDE1==$1)&&($100500==((A4)&$FFFFFF))))"
+			local bp_cnd2 = "(maincpu.pw@107C22>0)&&((($1E<=maincpu.pb@10DDDA)&&(maincpu.pb@10DDDD==$1)&&($100400==((A4)&$FFFFFF)))||(($1E<=maincpu.pb@10DDDE)&&(maincpu.pb@10DDE1==$1)&&($100500==((A4)&$FFFFFF))))"
 			-- ダッシュとか用
-			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x03957E),
-				"(maincpu.pw@107C22>0)&&((A6)==CB244)&&((($1E<=maincpu.pb@10DDDA)&&(maincpu.pb@10DDDD==$1)&&($100400==((A4)&$FFFFFF)))||(($1E<=maincpu.pb@10DDDE)&&(maincpu.pb@10DDE1==$1)&&($100500==((A4)&$FFFFFF))))",
+			-- BPモードON 未入力で技発動するように
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x039512), "((A6)==CB242)&&"..bp_cnd2, "D1=0;g"))
+			-- 技入力データの読み込み
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x03957E), "((A6)==CB244)&&"..bp_cnd2,
 				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$40);D1=(maincpu.pb@(temp1));A6=((A6)+1);maincpu.pb@((A4)+$D6)=D1;maincpu.pb@((A4)+$D7)=maincpu.pb@(temp1+1);PC=((PC)+$20);g"))
 			-- 必殺技用
+			-- BPモードON 未入力で技発動するように
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x039512), "((A6)==CB242)&&"..bp_cond, "D1=0;g"))
+			-- 技入力データの読み込み
 			-- bp 03957E,{((A6)==CB244)&&((A4)==100400)&&(maincpu.pb@10048E==2)},{D1=1;g}
 			-- bp 03957E,{((A6)==CB244)&&((A4)==100500)&&(maincpu.pb@10058E==2)},{D1=1;g}
 			-- 0395B2: 1941 00A3                move.b  D1, ($a3,A4) -- 確定した技データ
@@ -6139,6 +6143,21 @@ function rbff2.startplugin()
 			return ret
 		end
 		local rec1, rec2, rec3, rec4, rec5, rec6, rec7, rec8 = {}, {}, {}, {}, {}, {}, {}, {}
+
+		--[[
+		rec1 = merge_cmd( -- 対ビリー 自動ガード+リバサ立A向けの炎の種馬相打ちコンボ
+			{ _4, 11, _2a, 7, _2, 1, _3, 2, _6, 7, _6a, 2, _5, 38, _1a, 15, _5, 7, _6ac, 3, _5, 13, _1a, 6, _5, 16, _5c, 7, _5, 12, _5c, 5, _5, 12, _4, 3, _2, 3, _1c, 3, _5, 76, _4, 15, _5, 16, _2, 3, _5c, 2, _5, 1, },
+			{ _5, }
+		)
+		rec1 = merge_cmd( -- 対アンディ 自動ガード+リバサ立A向けの炎の種馬相打ちコンボ
+			{ _4, 11, _2a, 4, _2, 1, _3, 2, _6, 7, _6a, 2, _5, 40, _2a, 6, _2c, 5, _5, 5, _6ac, 3, _5, 28, _1a, 6, _5, 16, _5c, 7, _5, 20, _5c, 5, _5, 23, _4, 6, _2, 4, _1c, 3, _5, 68, _5b, 3, _5, 4, _5b, 4, _5, 33, _2, 3, _5c, 2, _5, 1, },
+			{ _5, }
+		)
+		rec1 = merge_cmd( -- 対ギース 自動ガード+リバサ下A向けの炎の種馬相打ちコンボ
+			{ _4, 11, _2a, 4, _2, 1, _3, 2, _6, 7, _6a, 2, _5, 38, _2b, 6, _2c, 5, _5, 9, _6ac, 3, _5, 28, _1a, 6, _5, 16, _5c, 7, _5, 15, _5c, 5, _5, 15, _4, 6, _2, 4, _1c, 3, _5, 76, _4, 15, _5, 16, _2, 3, _5c, 2, _5, 1, },
+			{ _5, }
+		)
+		]]
 		--[[
 		rec1 = merge_cmd(  -- ガード解除直前のNのあと2とNの繰り返しでガード硬直延長,をさらに投げる
 			{ _8, _5, 46, _6, 15, _5, 13, _4, _1, 5, _2, 2, _3, 4, _6, 6, _4c, 4, _c, 102, _5, 36, _c, 12, _5, _c, 11, _5, },
@@ -8553,6 +8572,11 @@ function rbff2.startplugin()
 							if not  p.n_throwable or not p.throw.in_range then
 								return
 							end
+						end
+					elseif p.dummy_rvs.jump then
+						if p.state == 0 and p.old_state == 0 and  (p.state_flags | p.old_state_flags) & 0x10000 == 0x10000 then
+							-- 連続通常ジャンプを繰り返さない
+							return
 						end
 					end
 					if p.dummy_rvs.cmd then
