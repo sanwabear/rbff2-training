@@ -9128,7 +9128,7 @@ function rbff2.startplugin()
 					else
 						scr:draw_box(169, 40, 213,  50, 0x80404040, 0x80404040)
 					end
-					if p.dummy_bs then
+					if p.dummy_gd == dummy_gd_type.bs then
 						scr:draw_text(p1 and 115 or 180, 41, "回ガードでBS")
 						draw_rtext(   p1 and 115 or 180, 41, p.dummy_bs_cnt - math.max(p.bs_count, 0))
 					end
