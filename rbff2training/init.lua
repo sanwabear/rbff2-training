@@ -37,6 +37,7 @@ local rbff2 = exports
 
 local main_or_menu_state, prev_main_or_menu_state
 local menu_cur, main_menu, tra_menu, rec_menu, play_menu, menu, tra_main, menu_exit, bs_menus, rvs_menus, bar_menu, ex_menu, col_menu, auto_menu
+local update_menu_pos, reset_menu_pos
 
 local mem_last_time         = 0      -- 最終読込フレーム(キャッシュ用)
 local mem_0x100701          = 0      -- 場面判定用
@@ -3308,22 +3309,22 @@ local pre_down_acts = {
 }
 -- コマンドテーブル上の技ID
 local common_rvs = {
-	{ cmd = cmd_base._3      , bs = false, name = "斜め下前入れ", },
-	{ cmd = cmd_base._a      , bs = false, name = "立A", },
-	{ cmd = cmd_base._b      , bs = false, name = "立B", },
-	{ cmd = cmd_base._c      , bs = false, name = "立C", },
-	{ cmd = cmd_base._d      , bs = false, name = "立D", },
-	{ cmd = cmd_base._ab     , bs = false, name = "避け攻撃", },
-	{ cmd = cmd_base._6c     , bs = false, name = "投げ", throw = true, },
-	{ cmd = cmd_base._2a     , bs = false, name = "下A", },
-	{ cmd = cmd_base._2b     , bs = false, name = "下B", },
-	{ cmd = cmd_base._2c     , bs = false, name = "下C", },
-	{ cmd = cmd_base._2d     , bs = false, name = "下D", },
-	{ cmd = cmd_base._8      , bs = false, name = "垂直ジャンプ", jump = true, },
-	{ cmd = cmd_base._9      , bs = false, name = "前ジャンプ", jump = true, },
-	{ cmd = cmd_base._7      , bs = false, name = "後ジャンプ", jump = true, },
-	{ id = 0x1E, ver = 0x0600, bs = false, name = "ダッシュ", },
-	{ id = 0x1F, ver = 0x0600, bs = false, name = "バックステップ", },
+	{ cmd = cmd_base._3      , bs = false, common = true, name = "斜め下前入れ", },
+	{ cmd = cmd_base._a      , bs = false, common = true, name = "立A", },
+	{ cmd = cmd_base._b      , bs = false, common = true, name = "立B", },
+	{ cmd = cmd_base._c      , bs = false, common = true, name = "立C", },
+	{ cmd = cmd_base._d      , bs = false, common = true, name = "立D", },
+	{ cmd = cmd_base._ab     , bs = false, common = true, name = "避け攻撃", },
+	{ cmd = cmd_base._6c     , bs = false, common = true, name = "投げ", throw = true, },
+	{ cmd = cmd_base._2a     , bs = false, common = true, name = "下A", },
+	{ cmd = cmd_base._2b     , bs = false, common = true, name = "下B", },
+	{ cmd = cmd_base._2c     , bs = false, common = true, name = "下C", },
+	{ cmd = cmd_base._2d     , bs = false, common = true, name = "下D", },
+	{ cmd = cmd_base._8      , bs = false, common = true, name = "垂直ジャンプ", jump = true, },
+	{ cmd = cmd_base._9      , bs = false, common = true, name = "前ジャンプ", jump = true, },
+	{ cmd = cmd_base._7      , bs = false, common = true, name = "後ジャンプ", jump = true, },
+	{ id = 0x1E, ver = 0x0600, bs = false, common = true, name = "ダッシュ", },
+	{ id = 0x1F, ver = 0x0600, bs = false, common = true, name = "バックステップ", },
 }
 local char_rvs_list = {
 	-- テリー・ボガード
@@ -7057,6 +7058,10 @@ function rbff2.startplugin()
 			return
 		end
 
+		if reset_menu_pos then
+			update_menu_pos()
+		end
+
 		local next_joy = new_next_joy()
 
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
@@ -9973,6 +9978,7 @@ function rbff2.startplugin()
 		-- メニューを抜ける
 		main_or_menu_state = tra_main
 		prev_main_or_menu_state = nil
+		reset_menu_pos = true
 	end
 	local menu_restart_fight = function()
 		main_menu.pos.row = 1
@@ -9992,6 +9998,7 @@ function rbff2.startplugin()
 		tra_menu.pos.col[1] = 1
 		-- メニューを抜ける
 		main_or_menu_state = tra_main
+		reset_menu_pos = true
 	end
 	-- 半角スペースで始まっているメニューはラベル行とみなす
 	local is_label_line = function(str)
@@ -10068,13 +10075,15 @@ function rbff2.startplugin()
 		},
 	}
 	menu_cur = main_menu -- デフォルト設定
-	local update_menu_pos = function()
+	update_menu_pos = function()
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		-- メニューの更新
 		main_menu.pos.col[ 8] = math.min(math.max(pgm:read_u8(0x107BA5)  , 1), #char_names)
 		main_menu.pos.col[ 9] = math.min(math.max(pgm:read_u8(0x107BA7)  , 1), #char_names)
 		main_menu.pos.col[10] = math.min(math.max(pgm:read_u8(0x107BAC)+1, 1), 2)
 		main_menu.pos.col[11] = math.min(math.max(pgm:read_u8(0x107BAD)+1, 1), 2)
+
+		reset_menu_pos = false
 
 		local stg1 = pgm:read_u8(0x107BB1)
 		local stg2 = pgm:read_u8(0x107BB7)
@@ -10107,6 +10116,29 @@ function rbff2.startplugin()
 		menu_to_tra()
 	end
 	local menu_rvs_to_tra_menu = function()
+		-- 共通行動の設定を全キャラにコピー反映
+		local common_enables = {}
+		for pi, prvs in ipairs(rvs_menus) do
+			for char, a_bs_menu in ipairs(prvs) do
+				if menu_cur == a_bs_menu then
+					for _, rvs in ipairs(menu_cur.list) do
+						if rvs.common then
+							common_enables[rvs.row] = menu_cur.pos.col[rvs.row]
+						end
+					end
+					break
+				end
+			end
+		end
+		for pi, prvs in ipairs(rvs_menus) do
+			for char, a_bs_menu in ipairs(prvs) do
+				for _, rvs in ipairs(a_bs_menu.list) do
+					if rvs.common then
+						a_bs_menu.pos.col[rvs.row] = common_enables[rvs.row]
+					end
+				end
+			end
+		end
 		menu_to_tra()
 	end
 	for i = 1, 2 do
@@ -10119,7 +10151,7 @@ function rbff2.startplugin()
 			table.insert(on_ab, menu_bs_to_tra_menu)
 			table.insert(col, 0)
 			for _, bs in pairs(bs_list) do
-				table.insert(list, { bs.name, { "OFF", "ON", }, })
+				table.insert(list, { bs.name, { "OFF", "ON", }, common = bs.common == true, row = #list, })
 				table.insert(on_ab, menu_bs_to_tra_menu)
 				table.insert(col, 1)
 			end
@@ -10149,7 +10181,7 @@ function rbff2.startplugin()
 			table.insert(on_ab, menu_rvs_to_tra_menu)
 			table.insert(col, 0)
 			for _, bs in pairs(rvs_list) do
-				table.insert(list, { bs.name, { "OFF", "ON", }, })
+				table.insert(list, { bs.name, { "OFF", "ON", }, common = bs.common == true, row = #list, })
 				table.insert(on_ab, menu_rvs_to_tra_menu)
 				table.insert(col, 1)
 			end
