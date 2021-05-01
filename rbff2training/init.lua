@@ -4800,6 +4800,7 @@ function rbff2.startplugin()
 			dummy_rvs_cnt    = -1,          -- リバーサルのカウンタ
 			dummy_rvs_chr    = 0,           -- リバーサルの設定をした時のキャラID
 			rvs_count        = -1,          -- リバーサルの実施カウント
+			gd_rvs_enabled   = false,       -- ガードリバーサルの実行可否
 
 			life_rec         = true,        -- 自動で体力回復させるときtrue
 			red              = 2,           -- 体力設定     	--"最大", "赤", "ゼロ" ...
@@ -8621,6 +8622,17 @@ function rbff2.startplugin()
 					end
 				end
 
+				-- ガードリバーサル
+				if p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs and p.on_guard == global.frame_number then
+					p.rvs_count = (p.rvs_count < 1) and 1 or p.rvs_count + 1
+					if p.dummy_rvs_cnt <= p.rvs_count and p.dummy_rvs then
+						p.gd_rvs_enabled = true
+						p.rvs_count = -1
+					else
+						p.gd_rvs_enabled = p.dummy_rvs_cnt == 1
+					end
+				end
+				
 				-- print(p.state, p.knock_back1, p.knock_back2, p.knock_back3, p.stop, rvs_types.in_knock_back, p.last_blockstun, string.format("%x", p.act), p.act_count, p.act_frame)
 				-- ヒットストップ中は無視
 				if not p.skip_frame then
@@ -8643,7 +8655,7 @@ function rbff2.startplugin()
 							input_rvs(rvs_types.knock_back_recovery, p, "リバーサルじゃない最速入力")
 						end
 						-- のけぞりのリバーサル入力
-						if (p.state == 1 or p.state == 2) and p.stop == 0 then
+						if (p.state == 1 or (p.state == 2 and p.gd_rvs_enabled)) and p.stop == 0 then
 							-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する
 							-- 奥ラインへ送った場合だけ無視する（p.act ~= 0x14A）
 							if p.knock_back3 == 0x80 and p.knock_back1 == 0 and p.act ~= 0x14A then
@@ -8835,11 +8847,7 @@ function rbff2.startplugin()
 
 				-- ブレイクショット
 				if p.dummy_gd == dummy_gd_type.bs and p.on_guard == global.frame_number then
-					if p.bs_count < 1 then
-						p.bs_count = 1
-					else
-						p.bs_count = p.bs_count + 1
-					end
+					p.bs_count = (p.bs_count < 1) and 1 or p.bs_count + 1
 					if p.dummy_bs_cnt <= p.bs_count and p.dummy_bs then
 						input_bs()
 						p.bs_count = -1
@@ -9133,10 +9141,19 @@ function rbff2.startplugin()
 					else
 						scr:draw_box(169, 40, 213,  50, 0x80404040, 0x80404040)
 					end
-					if p.dummy_gd == dummy_gd_type.bs then
-						scr:draw_text(p1 and 115 or 180, 41, "回ガードでBS")
-						draw_rtext(   p1 and 115 or 180, 41, p.dummy_bs_cnt - math.max(p.bs_count, 0))
+					scr:draw_text(p1 and 115 or 180, 41, "回ガードでBS")
+					draw_rtext(   p1 and 115 or 180, 41, p.dummy_bs_cnt - math.max(p.bs_count, 0))
+				end
+
+				-- ガードリバーサル状態表示
+				if p.dummy_wakeup == wakeup_type.rvs then
+					if p1 then
+						scr:draw_box(106, 50, 150,  60, 0x80404040, 0x80404040)
+					else
+						scr:draw_box(169, 50, 213,  60, 0x80404040, 0x80404040)
 					end
+					scr:draw_text(p1 and 115 or 180, 51, "回ガードでガードリバーサル")
+					draw_rtext(   p1 and 115 or 180, 51, p.dummy_rvs_cnt - math.max(p.rvs_count, 0))
 				end
 
 				-- スタン表示
@@ -10108,9 +10125,10 @@ function rbff2.startplugin()
 	end
 	-- ブレイクショットメニュー
 	bs_menus, rvs_menus = {}, {}
-	local bs_guards = {}
+	local bs_guards, rvs_guards = {}, {}
 	for i = 1, 60 do
-		table.insert(bs_guards, string.format("%s回ガード後に発動", i))
+		table.insert(bs_guards , string.format("%s回ガード後に発動", i))
+		table.insert(rvs_guards, string.format("%s回ガード後に発動", i))
 	end
 	local menu_bs_to_tra_menu = function()
 		menu_to_tra()
@@ -10185,9 +10203,13 @@ function rbff2.startplugin()
 				table.insert(on_ab, menu_rvs_to_tra_menu)
 				table.insert(col, 1)
 			end
-			table.insert(list, { "                   ブレイクショット設定" })
+			table.insert(list, { "                   リバーサル設定" })
 			table.insert(on_ab, menu_rvs_to_tra_menu)
 			table.insert(col, 0)
+
+			table.insert(list, { "タイミング", rvs_guards })
+			table.insert(on_ab, menu_rvs_to_tra_menu)
+			table.insert(col, 1)
 
 			local a_rvs_menu = {
 				list = list,
