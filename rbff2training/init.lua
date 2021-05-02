@@ -3760,7 +3760,13 @@ local get_next_rvs = function(p, excludes)
 	if not rvs_menu then
 		return nil
 	end
+	local prev_rvs_cnt = p.dummy_rvs_cnt
 	p.dummy_rvs_cnt = rvs_menu.pos.col[#rvs_menu.pos.col]
+	-- 更新時はリセット
+	if prev_rvs_cnt ~= p.dummy_rvs_cnt then
+		p.gd_rvs_enabled = false
+		p.rvs_count      = -1
+	end
 	p.dummy_rvs_list = {}
 	for j, rvs in pairs(char_rvs_list[p.char]) do
 		if rvs_menu.pos.col[j+1] == 2 then
@@ -8623,14 +8629,17 @@ function rbff2.startplugin()
 				end
 
 				-- ガードリバーサル
-				if p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs and p.on_guard == global.frame_number then
+				if p.dummy_rvs_cnt == 1 then
+					p.gd_rvs_enabled = true
+				elseif p.gd_rvs_enabled ~= true and p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs and p.on_guard == global.frame_number then
 					p.rvs_count = (p.rvs_count < 1) and 1 or p.rvs_count + 1
 					if p.dummy_rvs_cnt <= p.rvs_count and p.dummy_rvs then
 						p.gd_rvs_enabled = true
 						p.rvs_count = -1
-					else
-						p.gd_rvs_enabled = p.dummy_rvs_cnt == 1
 					end
+				elseif p.gd_rvs_enabled and p.state ~= 2 then
+					-- ガード状態が解除されたらリバサ解除
+					p.gd_rvs_enabled = false
 				end
 				
 				-- print(p.state, p.knock_back1, p.knock_back2, p.knock_back3, p.stop, rvs_types.in_knock_back, p.last_blockstun, string.format("%x", p.act), p.act_count, p.act_frame)
@@ -9141,7 +9150,7 @@ function rbff2.startplugin()
 					else
 						scr:draw_box(169, 40, 213,  50, 0x80404040, 0x80404040)
 					end
-					scr:draw_text(p1 and 115 or 180, 41, "回ガードでBS")
+					scr:draw_text(p1 and 115 or 180, 41, "回ガードでB.S.")
 					draw_rtext(   p1 and 115 or 180, 41, p.dummy_bs_cnt - math.max(p.bs_count, 0))
 				end
 
@@ -9152,8 +9161,14 @@ function rbff2.startplugin()
 					else
 						scr:draw_box(169, 50, 213,  60, 0x80404040, 0x80404040)
 					end
-					scr:draw_text(p1 and 115 or 180, 51, "回ガードでガードリバーサル")
-					draw_rtext(   p1 and 115 or 180, 51, p.dummy_rvs_cnt - math.max(p.rvs_count, 0))
+					scr:draw_text(p1 and 115 or 180, 51, "回ガードでG.R.")
+					local count = 0
+					if p.gd_rvs_enabled and p.dummy_rvs_cnt > 1 then
+						count = 0
+					else
+						count = p.dummy_rvs_cnt - math.max(p.rvs_count, 0)
+					end
+					draw_rtext(   p1 and 115 or 180, 51, count)
 				end
 
 				-- スタン表示
@@ -9620,6 +9635,10 @@ function rbff2.startplugin()
 				p.dummy_rvs_list = {}
 				p.dummy_rvs = get_next_rvs(p)
 			end
+
+			p.dummy_rvs_cnt  = -1
+			p.gd_rvs_enabled = false
+			p.rvs_count      = -1
 		end
 	end
 	local menu_to_main = function(cancel)
