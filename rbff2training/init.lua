@@ -10155,6 +10155,7 @@ function rbff2.startplugin()
 	local menu_rvs_to_tra_menu = function()
 		-- 共通行動の設定を全キャラにコピー反映
 		local common_enables = {}
+		local count = 1
 		for pi, prvs in ipairs(rvs_menus) do
 			for char, a_bs_menu in ipairs(prvs) do
 				if menu_cur == a_bs_menu then
@@ -10163,6 +10164,7 @@ function rbff2.startplugin()
 							common_enables[rvs.row] = menu_cur.pos.col[rvs.row]
 						end
 					end
+					count = menu_cur.pos.col[#menu_cur.pos.col]
 					break
 				end
 			end
@@ -10174,6 +10176,7 @@ function rbff2.startplugin()
 						a_bs_menu.pos.col[rvs.row] = common_enables[rvs.row]
 					end
 				end
+				a_bs_menu.pos.col[#a_bs_menu.pos.col] = count
 			end
 		end
 		menu_to_tra()
