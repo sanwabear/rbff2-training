@@ -7160,6 +7160,9 @@ function rbff2.startplugin()
 			p.n_throwable    = p.throwable and p.tw_muteki2 == 0 -- 通常投げ可能
 			p.additional     = pgm:read_u8(p.addr.additional)
 
+			p.dummy_rvs_cnt  = p.dummy_rvs_cnt or -1
+			p.dummy_bs_cnt   = p.dummy_rvs_cnt or -1
+
 			p.old_act        = p.act or 0x00
 			p.act            = pgm:read_u16(p.addr.act)
 			p.acta           = pgm:read_u16(p.addr.acta)
@@ -10154,29 +10157,34 @@ function rbff2.startplugin()
 	end
 	local menu_rvs_to_tra_menu = function()
 		-- 共通行動の設定を全キャラにコピー反映
-		local common_enables = {}
-		local count = 1
+		local common_col = {}
+		local count = {}
+		local cur_char = 0
 		for pi, prvs in ipairs(rvs_menus) do
+			common_col[pi] = common_col[pi] or {}
 			for char, a_bs_menu in ipairs(prvs) do
 				if menu_cur == a_bs_menu then
-					for _, rvs in ipairs(menu_cur.list) do
+					cur_char = char
+					for _, rvs in ipairs(a_bs_menu.list) do
 						if rvs.common then
-							common_enables[rvs.row] = menu_cur.pos.col[rvs.row]
+							common_col[pi][rvs.row] = a_bs_menu.pos.col[rvs.row]
 						end
 					end
-					count = menu_cur.pos.col[#menu_cur.pos.col]
+					count[pi] = a_bs_menu.pos.col[#a_bs_menu.pos.col]
 					break
 				end
 			end
 		end
 		for pi, prvs in ipairs(rvs_menus) do
 			for char, a_bs_menu in ipairs(prvs) do
-				for _, rvs in ipairs(a_bs_menu.list) do
-					if rvs.common then
-						a_bs_menu.pos.col[rvs.row] = common_enables[rvs.row]
+				if cur_char == char then
+					for _, rvs in ipairs(a_bs_menu.list) do
+						if rvs.common then
+							a_bs_menu.pos.col[rvs.row] = common_col[pi][rvs.row]
+						end
 					end
+					a_bs_menu.pos.col[#a_bs_menu.pos.col] = count[pi]
 				end
-				a_bs_menu.pos.col[#a_bs_menu.pos.col] = count
 			end
 		end
 		menu_to_tra()
