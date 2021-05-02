@@ -120,6 +120,7 @@ local global = {
 	frz             = {0x1, 0x0},  -- DIPによる停止操作用の値とカウンタ
 
 	dummy_mode      = 1,
+	old_dummy_mode  = 1,
 	rec_main        = nil,
 
 	input_accepted  = 0,
@@ -5925,6 +5926,7 @@ function rbff2.startplugin()
 		temp_player  = nil,
 		play_count   = 1,
 
+		last_slot    = nil,
 		active_slot  = nil,
 		slot         = {}, -- スロット
 		live_slots   = {}, -- ONにされたスロット
@@ -9675,6 +9677,8 @@ function rbff2.startplugin()
 			p.dummy_bs = get_next_bs(p)
 		end
 
+		global.old_dummy_mode = global.dummy_mode
+
 		if global.dummy_mode == 5 then
 			-- レコード
 			-- 設定でレコーディングに入らずに抜けたとき用にモードを1に戻しておく
@@ -9685,6 +9689,7 @@ function rbff2.startplugin()
 			end
 		elseif global.dummy_mode == 6 then
 			-- リプレイ
+			-- 設定でリプレイに入らずに抜けたとき用にモードを1に戻しておく
 			global.dummy_mode = 1
 			play_menu.pos.col[11] = recording.do_repeat and 2 or 1   -- 繰り返し          11
 			play_menu.pos.col[12] = recording.repeat_interval + 1    -- 繰り返し間隔      12
@@ -9849,6 +9854,7 @@ function rbff2.startplugin()
 		-- 選択したプレイヤー側の反対側の操作をいじる
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		recording.temp_player = (pgm:read_u8(players[1].addr.reg_pcnt) ~= 0xFF) and 2 or 1
+		recording.last_slot   = slot_no
 		recording.active_slot = recording.slot[slot_no]
 		menu_cur = main_menu
 		menu_exit()
@@ -10006,12 +10012,19 @@ function rbff2.startplugin()
 		cls_joy()
 		cls_ps()
 		-- 初期化
-		global.dummy_mode = 1
-		tra_menu.pos.col[1] = 1
+		menu_to_main()
 		-- メニューを抜ける
 		main_or_menu_state = tra_main
 		prev_main_or_menu_state = nil
 		reset_menu_pos = true
+		-- レコード＆リプレイ用の初期化
+		if global.old_dummy_mode == 5 then
+			-- レコード
+			exit_menu_to_rec(recording.last_slot or 1)
+		elseif global.old_dummy_mode == 6 then
+			-- リプレイ
+			exit_menu_to_play()
+		end
 	end
 	local menu_restart_fight = function()
 		main_menu.pos.row = 1
@@ -10027,11 +10040,18 @@ function rbff2.startplugin()
 		cls_joy()
 		cls_ps()
 		-- 初期化
-		global.dummy_mode = 1
-		tra_menu.pos.col[1] = 1
+		menu_to_main()
 		-- メニューを抜ける
 		main_or_menu_state = tra_main
 		reset_menu_pos = true
+		-- レコード＆リプレイ用の初期化
+		if global.old_dummy_mode == 5 then
+			-- レコード
+			exit_menu_to_rec(recording.last_slot or 1)
+		elseif global.old_dummy_mode == 6 then
+			-- リプレイ
+			exit_menu_to_play()
+		end
 	end
 	-- 半角スペースで始まっているメニューはラベル行とみなす
 	local is_label_line = function(str)
