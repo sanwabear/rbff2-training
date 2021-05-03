@@ -130,7 +130,7 @@ local global = {
 	pow_mode         = 2,     -- POWモード　1:自動回復 2:固定 3:通常動作
 	repeat_interval  = 0,
 	await_neutral    = false,
-	replay_fix_pos   = 1,     -- 開始間合い固定 1:OFF 2:1Pと2P 3:1P 4:2P
+	replay_fix_pos   = 1,     -- 開始間合い固定 1:OFF 2:位置記憶 3:1Pと2P 4:1P 5:2P
 	replay_reset     = 2,     -- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
 	mame_debug_wnd   = false, -- MAMEデバッグウィンドウ表示のときtrue
 	damaged_move     = 1,
@@ -6465,10 +6465,10 @@ function rbff2.startplugin()
 
 			local fixpos = recording.fixpos
 			if fixpos then
-				-- 開始間合い固定 1:OFF 2:1Pと2P 3:1P 4:2P
+				-- 開始間合い固定 1:OFF 2:位置記憶 3:1Pと2P 4:1P 5:2P
 				if fixpos.fixpos then
 					for i, p in ipairs(players) do
-						if global.replay_fix_pos == 2 or (global.replay_fix_pos == 3 and i == 3) or (global.replay_fix_pos == 4 and i == 4) then
+						if global.replay_fix_pos == 3 or (global.replay_fix_pos == 4 and i == 3) or (global.replay_fix_pos == 5 and i == 4) then
 							pgm:write_i16(p.addr.pos, fixpos.fixpos[i])
 						end
 					end
@@ -9878,7 +9878,27 @@ function rbff2.startplugin()
 		global.replay_stop_on_dmg = col[17] == 2 -- ダメージでリプレイ中止 17
 		global.repeat_interval    = recording.repeat_interval
 	end
+	local exit_menu_to_rec_pos = function()
+		local scr = manager.machine.screens:at(1)
+		local ec = scr:frame_number()
+		global.dummy_mode = 5 -- レコードモードにする
+		global.rec_main = rec_fixpos
+		global.input_accepted = ec
+		-- 選択したプレイヤー側の反対側の操作をいじる
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
+		recording.temp_player = (pgm:read_u8(players[1].addr.reg_pcnt) ~= 0xFF) and 2 or 1
+		exit_menu_to_play_common()
+		menu_cur = main_menu
+		menu_exit()
+	end
 	local exit_menu_to_play = function()
+		local col = play_menu.pos.col
+
+		if play_menu.pos.row == 14 and col[14] == 2 then -- 開始間合い固定 / 記憶
+			exit_menu_to_rec_pos()
+			return
+		end
+
 		local scr = manager.machine.screens:at(1)
 		local ec = scr:frame_number()
 		global.dummy_mode = 6 -- リプレイモードにする
@@ -9896,19 +9916,6 @@ function rbff2.startplugin()
 		global.input_accepted = ec
 		exit_menu_to_play_common()
 		menu_to_tra()
-	end
-	local exit_menu_to_rec_pos = function()
-		local scr = manager.machine.screens:at(1)
-		local ec = scr:frame_number()
-		global.dummy_mode = 5 -- レコードモードにする
-		global.rec_main = rec_fixpos
-		global.input_accepted = ec
-		-- 選択したプレイヤー側の反対側の操作をいじる
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
-		recording.temp_player = (pgm:read_u8(players[1].addr.reg_pcnt) ~= 0xFF) and 2 or 1
-		exit_menu_to_play_common()
-		menu_cur = main_menu
-		menu_exit()
 	end
 	local init_menu_config = function()
 		local col = tra_menu.pos.col
@@ -10672,11 +10679,10 @@ function rbff2.startplugin()
 			{ "繰り返し"              , { "OFF", "ON", }, },
 			{ "繰り返し間隔"          , play_interval, },
 			{ "繰り返し開始条件"      , { "なし", "両キャラがニュートラル", }, },
-			{ "開始間合い固定"        , { "OFF", "1Pと2P", "1P", "2P", }, },
+			{ "開始間合い固定"        , { "OFF", "Aでレコード開始", "1Pと2P", "1P", "2P", }, },
 			{ "状態リセット"          , { "OFF", "1Pと2P", "1P", "2P", }, },
 			{ "ガイド表示"            , { "OFF", "ON", }, },
 			{ "ダメージでリプレイ中止", { "OFF", "ON", }, },
-			{ "開始間合い"            , { "Aでレコード開始", }, },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
@@ -10699,7 +10705,6 @@ function rbff2.startplugin()
 				global.replay_reset,   -- 状態リセット      15
 				2, -- ガイド表示        16
 				2, -- ダメージでリプレイ中止 17
-				1, -- 開始間合い        18
 			},
 		},
 		on_a = {
@@ -10720,7 +10725,6 @@ function rbff2.startplugin()
 			exit_menu_to_play, -- 状態リセット
 			exit_menu_to_play, -- ガイド表示
 			exit_menu_to_play, -- ダメージでリプレイ中止
-			exit_menu_to_rec_pos, -- 開始間合い
 		},
 		on_b = {
 			-- TODO キャンセル時にも間合い固定の設定とかが変わるように
@@ -10741,7 +10745,6 @@ function rbff2.startplugin()
 			exit_menu_to_play_cancel, -- 状態リセット
 			exit_menu_to_play_cancel, -- ガイド表示
 			exit_menu_to_play_cancel, -- ダメージでリプレイ中止
-			exit_menu_to_play_cancel, -- 開始間合い
 		},
 	}
 	init_auto_menu_config()
