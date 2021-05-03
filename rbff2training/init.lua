@@ -6334,6 +6334,10 @@ function rbff2.startplugin()
 					table.insert(recording.active_slot.store, { joy = new_next_joy(), pos = pos })
 
 					-- 状態変更
+					-- 初回のみ開始記憶
+					if recording.fixpos == nil then
+						rec_fixpos()
+					end
 					global.rec_main = rec_input
 					print(global.frame_number .. " rec_await_1st_input -> rec_input")
 				end
@@ -10732,6 +10736,7 @@ function rbff2.startplugin()
 			exit_menu_to_play_cancel, -- リプレイ設定
 			exit_menu_to_play_cancel, -- 繰り返し
 			exit_menu_to_play_cancel, -- 繰り返し間隔
+			exit_menu_to_play_cancel, -- 繰り返し開始条件
 			exit_menu_to_play_cancel, -- 開始間合い固定
 			exit_menu_to_play_cancel, -- 状態リセット
 			exit_menu_to_play_cancel, -- ガイド表示
