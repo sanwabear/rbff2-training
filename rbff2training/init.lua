@@ -43,7 +43,7 @@ local mem_last_time         = 0      -- 最終読込フレーム(キャッシュ
 local mem_0x100701          = 0      -- 場面判定用
 local mem_0x107C22          = 0      -- 場面判定用
 local mem_0x10B862          = 0      -- ガードヒット=FF
-local mem_0x10D4EA          = 0      -- 潜在発動時の停止時間
+local mem_0x100F56          = 0      -- 潜在発動時の停止時間
 local mem_0x10FD82          = 0      -- console 0x00, mvs 0x01
 local mem_0x10FDAF          = 0      -- 場面判定用
 local mem_0x10FDB6          = 0      -- P1 P2 開始判定用
@@ -1374,7 +1374,7 @@ local char_acts_base = {
 		{ f = 32, disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x241, }, },
 		{ f = 36, disp_name = "龍回頭", name = "CA 下C(2段目) 龍回頭", type = act_types.low_attack, ids = { 0x248, }, },
 		{ f = 6+6+23, disp_name = "CA 立C", name = "CA 立C(2段目)Cルート", type = act_types.attack, ids = { 0x245, }, },
-		{ f = 6+16+14, disp_name = "CA 立C", name = "CA ���C(3段目)Cルート", type = act_types.attack, ids = { 0x243, }, },
+		{ f = 6+16+14, disp_name = "CA 立C", name = "CA C(3段目)Cルート", type = act_types.attack, ids = { 0x243, }, },
 		{ f = 12+9+5, disp_name = "CA _6_4C", name = "CA 立C(4段目)Cルート", type = act_types.attack, ids = { 0x244, }, },
 	},
 	-- 秦崇雷,
@@ -5470,7 +5470,7 @@ function rbff2.startplugin()
 			-- データが近距離、遠距離の2種類しかないのと実質的に意味があるのが近距離のものなので最初のデータだけ返す
 			if i == 1 then
 				get_lmo_range_internal(ret, "", d0, d1, true)
-				ret["近"]  = { x1 =  0, x2 = 72         } -- 近距離攻撃になる距離
+				ret["近"]  = { x1 = 0, x2 = 72 } -- 近距離攻撃になる距離
 
 				if char == 6 then
 					-- 渦炎陣
@@ -7837,7 +7837,7 @@ function rbff2.startplugin()
 
 			--停止演出のチェック
 			p.old_skip_frame = p.skip_frame
-			p.skip_frame = p.hit_skip ~= 0 or p.stop ~= 0 or mem_0x10D4EA ~= 0
+			p.skip_frame = p.hit_skip ~= 0 or p.stop ~= 0 or mem_0x100F56 ~= 0
 
 			--[[調査用ログ
 			local printdata = function()
@@ -7865,7 +7865,7 @@ function rbff2.startplugin()
 			end
 			]]
 
-			if p.hit_skip ~= 0 or mem_0x10D4EA ~= 0 then
+			if p.hit_skip ~= 0 or mem_0x100F56 ~= 0 then
 				--停止フレームはフレーム計算しない
 				if p.hit_skip ~= 0 then
 					--ヒットストップの減算
@@ -9305,8 +9305,8 @@ function rbff2.startplugin()
 
 					-- 詠酒発動可能範囲、最大リーチ、最大やられ
 					local atk_reach, vuln_reach = p.hit.reach_edge["attack"] or {}, p.hit.reach_edge["vuln"] or {}
-					local label = {"E:%3d","A:%3d","V:%3d",}
-					for j, v in ipairs({p.esaka_range, atk_reach.front, vuln_reach.front}) do
+					local label = {"E:%3d","V:%3d","A:%3d",}
+					for j, v in ipairs({p.esaka_range, vuln_reach.front, atk_reach.front}) do
 						if v and v > 0 then
 							local x = (p1 and 140 or 180) + ((18 * j) * (p1 and - 1 or 1))
 							local txt = string.format(label[j], v)
@@ -10951,7 +10951,7 @@ function rbff2.startplugin()
 		mem_0x100701  = pgm:read_u16(0x100701) -- 22e 22f 対戦中
 		mem_0x107C22  = pgm:read_u16(0x107C22) -- 対戦中4400
 		mem_0x10B862  = pgm:read_u8(0x10B862) -- 対戦中00
-		mem_0x10D4EA  = pgm:read_u8(0x10D4EA)
+		mem_0x100F56  = pgm:read_u32(0x100F56) --100F56 100F58
 		mem_0x10FD82  = pgm:read_u8(0x10FD82)
 		mem_0x10FDAF  = pgm:read_u8(0x10FDAF)
 		mem_0x10FDB6  = pgm:read_u16(0x10FDB6)
@@ -10980,7 +10980,6 @@ function rbff2.startplugin()
 				--print("player_select_active = true")
 			end
 			player_select_active = true
-			pgm:write_u8(mem_0x10D4EA, 0x00)
 		else
 			if player_select_active then
 				--print("player_select_active = false")
