@@ -6276,6 +6276,29 @@ function rbff2.startplugin()
 			local op = players[3 - i]
 			p.input_states = {}
 			do_recover(p, op, true)
+
+			p.last_pure_dmg = 0
+			p.last_dmg = 0
+			p.last_dmg_scaling = 0
+			p.last_combo_dmg = 0
+			p.last_dmg = 0
+			p.last_combo = 0
+			p.last_combo_stun = 0
+			p.last_stun = 0
+			p.last_combo_st_timer = 0
+			p.last_st_timer = 0
+			p.last_combo_pow = 0
+			p.last_pow = 0
+			p.tmp_combo      = 0
+			p.tmp_dmg        = 0
+			p.tmp_pow        = 0
+			p.tmp_pow_rsv    = 0
+			p.tmp_pow_atc    = 0
+			p.tmp_stun       = 0
+			p.tmp_st_timer   = 0
+			p.tmp_pow = 0
+			p.tmp_pow_rsv = 0
+			p.tmp_combo_pow = 0
 		end
 	end
 
@@ -10979,6 +11002,7 @@ function rbff2.startplugin()
 			if not player_select_active then
 				--print("player_select_active = true")
 			end
+			pgm:write_u32(mem_0x100F56, 0x00000000)
 			player_select_active = true
 		else
 			if player_select_active then
