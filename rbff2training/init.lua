@@ -491,7 +491,6 @@ local char_acts_base = {
 		{ f = 46,  disp_name = "上げ面追加 C", name = "CA 上げ面追加C(3段目)", type = act_types.overhead, ids = { 0x24D, 0x24E, }, },
 		{ f = 26,  disp_name = "上げ面追加 立C", name = "CA 上げ面追加近C(2段目)", type = act_types.attack, ids = { 0x247, }, },
 		{ f = 27,  disp_name = "上げ面追加 立C", name = "CA 上げ面追加近C(3段目)", type = act_types.attack, ids = { 0x248, }, },
-		{ f = 33,  disp_name = "上げ面追加 下C", name = "CA 上げ面追加下C(2段目)", type = act_types.attack, ids = { 0x246, }, },
 	},
 	-- 東丈
 	{
@@ -7860,7 +7859,7 @@ function rbff2.startplugin()
 
 			--停止演出のチェック
 			p.old_skip_frame = p.skip_frame
-			p.skip_frame = p.hit_skip ~= 0 or p.stop ~= 0 or mem_0x100F56 ~= 0
+			p.skip_frame = p.hit_skip ~= 0 or p.stop ~= 0 or (mem_0x100F56 == 0xFFFFFFFF or mem_0x100F56 == 0x0000FFFF)
 
 			--[[調査用ログ
 			local printdata = function()
