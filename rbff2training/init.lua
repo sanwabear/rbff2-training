@@ -4909,6 +4909,17 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 				if real_bottom < 48 then
 					summary.anti_away3 = true -- 避けつぶし ローレンス用
 				end
+				if real_bottom < 60 then
+					summary.punish_head1 = true -- 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
+				end
+				if real_bottom < 64 then
+					summary.punish_head2 = true -- 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
+				end
+				if real_bottom < 68 then
+					summary.punish_head3 = true -- 68 屈 ローレンス
+				end
+				-- 76 屈 フランコ
+				-- 80 屈 クラウザー
 
 				-- 上段当身投げ
 				summary.range_j_atm_nage = in_range(real_top, real_bottom, 112, 40)
@@ -4930,18 +4941,38 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 				summary.head_inv1 = false
 				summary.head_inv2 = false
 				summary.head_inv3 = false
+				summary.head_inv4 = false
+				summary.head_inv5 = false
+				summary.head_inv6 = false
+				summary.head_inv7 = false
+				summary.head_inv8 = false
 				summary.low_inv1 = false
 				summary.low_inv2 = false
 				summary.low_inv3 = false
 
 				if real_top <= 32 then
-					summary.head_inv1 = true -- 上半身無敵 避け
+					summary.head_inv1 = true -- 32 上半身無敵 避け
 				end
 				if real_top <= 40 then
-					summary.head_inv2 = true -- 上半身無敵 ウェービングブロー,龍転身,ダブルローリング
+					summary.head_inv2 = true -- 40 上半身無敵 ウェービングブロー,龍転身,ダブルローリング
 				end
 				if real_top <= 48 then
-					summary.head_inv3 = true -- 上半身無敵 ローレンス避け
+					summary.head_inv3 = true -- 48 上半身無敵 ローレンス避け
+				end
+				if real_top <= 60 then
+					summary.head_inv4 = true -- 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
+				end
+				if real_top <= 64 then
+					summary.head_inv5 = true -- 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
+				end
+				if real_top <= 68 then
+					summary.head_inv6 = true -- 68 屈 ローレンス
+				end
+				if real_top <= 76 then
+					summary.head_inv7 = true -- 76 屈 フランコ
+				end
+				if real_top <= 80 then
+					summary.head_inv8 = true -- 80 屈 クラウザー
 				end
 
 				if real_bottom >= 40 then
@@ -7472,6 +7503,9 @@ function rbff2.startplugin()
 			anti_away1 = false, -- 避けつぶし
 			anti_away2 = false, -- ウェービングブロー,龍転身,ダブルローリングつぶし
 			anti_away3 = false, -- 避けつぶし ローレンス用
+			punish_head1 = false, -- 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
+			punish_head2 = false, -- 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
+			punish_head3 = false, -- 68 屈 ローレンス
 			head_inv1 = false, -- 上半身無敵 避け
 			head_inv2 = false, -- 上半身無敵 ウェービングブロー,龍転身,ダブルローリング
 			head_inv3 = false, -- 上半身無敵 ローレンス避け
@@ -9358,17 +9392,23 @@ function rbff2.startplugin()
 			end
 		end
 		-- 避け攻撃つぶし
-		local anti_away_label = "×"
+		local anti_away_label = "上方"
 		if summary.normal_hit == hit_proc_types.same_line or summary.normal_hit == hit_proc_types.diff_line then
 			if summary.anti_away1 then
 				-- ALL
-				anti_away_label = "〇"
+				anti_away_label = "避け攻撃つぶし"
 			elseif summary.anti_away2 then
 				-- ウェービングブロー,龍転身,ダブルローリング
-				anti_away_label = "×ローレンスのみ1"
+				anti_away_label = "避け攻撃つぶし(ローレンスのみ1)"
 			elseif summary.anti_away3 then
 				-- ローレンスのみ
-				anti_away_label = "×ローレンスのみ2"
+				anti_away_label = "避け攻撃つぶし(ローレンスのみ2)"
+			elseif summary.punish_head1 then
+				anti_away_label = "屈ヒット1"
+			elseif summary.punish_head2 then
+				anti_away_label = "屈ヒット2"
+			elseif summary.punish_head3 then
+				anti_away_label = "屈ヒット3"
 			end
 		end
 		local followups = {}
@@ -9484,7 +9524,7 @@ function rbff2.startplugin()
 			{"ガード継続種類:", gd_strength_label   },
 			{"当て身投げ:"    , atemi_label},
 
-			{"避け攻撃潰し:"  , anti_away_label},
+			{"攻撃高さ:"      , anti_away_label},
 			{"ガー不可能性:"  , unblock_label},
 			{"最大リーチ:"    , reach_label},
 			{"最大ヒット数:"  , string.format("%s/%s", summary.max_hit_nm, summary.max_hit_dn) },
@@ -9530,6 +9570,21 @@ function rbff2.startplugin()
 			elseif summary.head_inv3 then
 				-- 上半身無敵 ローレンス避け
 				hurt_label = "上半身無敵3"
+			elseif summary.head_inv4 then
+			 	-- 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
+				 hurt_label = "頭部無敵1"
+			elseif summary.head_inv5 then
+				-- 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
+				hurt_label = "頭部無敵2"
+			elseif summary.head_inv6 then
+				-- 68 屈 ローレンス
+				hurt_label = "頭部無敵3"
+			elseif summary.head_inv7 then
+				-- 76 屈 フランコ
+				--hurt_label = "頭部無敵4"
+			elseif summary.head_inv8 then
+				-- 80 屈 クラウザー
+				--hurt_label = "頭部無敵5"
 			end
 			if summary.low_inv1 then
 				-- 足元無敵 対アンディ屈C
