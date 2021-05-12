@@ -157,174 +157,174 @@ local damaged_moves = {
 	0x301FC, 0x301F4, 0x3031A, 0x30312,
 }
 local hit_effects = {
-	"のけぞり",
-	"のけぞり",
-	"のけぞり",
-	"のけぞり",
+	"",
+	"",
+	"",
+	"",
 	"ダウン(ダ)",
-	"強制立ちのけぞり",
-	"吹き飛びダウン(ダ)",
-	"のけぞり",
-	"のけぞり",
+	"強制立たせ",
+	"ダウン(ダ)",
+	"",
+	"",
 	"スウェーライン送り",
-	"スウェーライン送り吹き飛びダウン(ダ)",
-	"吹き飛び",
-	"吹き飛びダウン(ダ)",
-	"のけぞり",
-	"のけぞり",
-	"のけぞり",
-	"吹き飛びダウン(ダ)",
-	"吹き飛びダウン(ダ)",
-	"きりもみダウン(ダ)",
-	"吹き飛び",
-	"吹き飛びダウン",
-	"引き込みダウン(ダ)",
-	"燃焼ダウン",
-	"感電ダウン",
-	"その場ダウン",
-	"後ろ向きのけぞり",
-	"真上吹き飛びダウン(空,ダ)",
-	"その場ダウン(ダ)",
-	"燃焼のけぞり",
-	"回転吹き飛びダウン(空,ダ)",
-	"のけぞり",
-	"回転吹き飛びダウン(空,ダ)",
-	"強制立ち引き込み",
-	"引き込みダウン(空,ダ)",
+	"スウェーライン送りダウン(ダ)",
+	"",
+	"ダウン(ダ)",
+	"",
+	"",
+	"",
+	"ダウン(ダ)",
+	"ダウン(ダ)",
+	"ダウン(ダ)",
+	"",
+	"ダウン",
+	"ダウン(ダ)",
+	"ダウン",
+	"ダウン",
+	"ダウン",
+	"",
+	"ダウン(空,ダ)",
+	"ダウン(ダ)",
+	"燃焼",
+	"ダウン(空,ダ)",
+	"",
+	"ダウン(空,ダ)",
+	"強制立たせ",
+	"ダウン(空,ダ)",
 	"特殊",
 	"特殊(空)",
-	"吹き飛びダウン(ダ)",
-	"真上吹き飛びダウン(空,ダ)",
-	"吹き飛びくっつき",
-	"その場回転ダウン(ダ)",
-	"吹き飛びダウン(ダ)",
+	"ダウン(ダ)",
+	"ダウン(空,ダ)",
+	"くっつき",
+	"ダウン(ダ)",
+	"ダウン(ダ)",
 	"特殊",
 	"特殊",
-	"のけぞり",
-	"真上吹き飛び～気絶",
-	"のけぞり",
+	"",
+	"強制気絶",
+	"",
 	"特殊",
 	"特殊",
-	"吹き飛びダウン(空,ダ)",
-	"吹き飛びダウン(空,ダ)",
-	"吹き飛びダウン(空,ダ)",
-	"のけぞり",
-	"のけぞり",
-	"のけぞり",
-	"吹き飛びダウン(ダ)",
-	"吹き飛びダウン(ダ)",
-	"きりもみダウン(空,ダ)",
-	"吹き飛びダウン(空,ダ)",
-	"引き込みダウン(空,ダ)",
-	"燃焼ダウン(空,ダ)",
-	"感電吹き飛びダウン(空,ダ)",
-	"のけぞり",
-	"上吹き飛びダウン(空,ダ)",
-	"のけぞり",
-	"のけぞり",
-	"後ろ向きのけぞり(空)",
-	"吹き飛びダウン(空,ダ)",
+	"ダウン(空,ダ)",
+	"ダウン(空,ダ)",
+	"ダウン(空,ダ)",
+	"",
+	"",
+	"",
+	"ダウン(ダ)",
+	"ダウン(ダ)",
+	"ダウン(空,ダ)",
+	"ダウン(空,ダ)",
+	"ダウン(空,ダ)",
+	"ダウン(空,ダ)",
+	"ダウン(空,ダ)",
+	"",
+	"ダウン(空,ダ)",
+	"",
+	"",
+	"ダウン(空)",
+	"ダウン(空,ダ)",
 	"特殊",
 	"ダウン(ダ)",
 	"特殊",
-	"青色のけぞり",
-	"浮遊のけぞり～ダウン(空,ダ)",
-	"壁吹き飛びっとびダウン",
-	"滑り空中のけぞりダウン(空)",
+	"青色",
+	"ダウン(空,ダ)",
+	"ダウン",
+	"ダウン(空)",
 	"特殊",
 	"特殊",
 	"特殊",
-	"きりもみダウン(空,ダ)",
+	"ダウン(空,ダ)",
 	"特殊",
-	"吹き飛びダウン(ダ)",
-	"吹き飛びダウン(空,ダ)",
-	"吹き飛びダウン(ダ)",
-	"吹き飛びダウン(空,ダ)",
+	"ダウン(ダ)",
+	"ダウン(空,ダ)",
+	"ダウン(ダ)",
+	"ダウン(空,ダ)",
 }
 local air_hit_effects = {
-	"吹き飛び",
-	"吹き飛び",
-	"吹き飛び",
-	"吹き飛び",
+	"",
+	"",
+	"",
+	"",
 	"ダウン(ダ)",
-	"吹き飛び",
-	"吹き飛びダウン(ダ)",
-	"吹き飛び",
-	"吹き飛び",
-	"スウェーライン送り吹き飛びダウン(ダ)",
-	"スウェーライン送り吹き飛びダウン(ダ)",
-	"吹き飛び",
-	"吹き飛びダウン(ダ)",
-	"叩きつけダウン(ダ)",
-	"叩きつけダウン(ダ)",
-	"叩きつけダウン(ダ)",
-	"吹き飛びダウン(ダ)",
-	"吹き飛びダウン(ダ)",
-	"きりもみダウン(ダ)",
-	"吹き飛び",
-	"吹き飛びダウン",
-	"引き込みダウン(ダ)",
-	"燃焼ダウン",
-	"感電ダウン",
-	"その場ダウン",
-	"吹き飛び",
-	"真上吹き飛びダウン(空,ダ)",
-	"その場ダウン(ダ)",
-	"燃焼ダウン",
-	"回転吹き飛びダウン(空,ダ)",
+	"",
+	"ダウン(ダ)",
+	"",
+	"",
+	"スウェーライン送りダウン(ダ)",
+	"スウェーライン送りダウン(ダ)",
+	"",
+	"ダウン(ダ)",
+	"ダウン(ダ)",
+	"ダウン(ダ)",
+	"ダウン(ダ)",
+	"ダウン(ダ)",
+	"ダウン(ダ)",
+	"ダウン(ダ)",
+	"",
 	"ダウン",
-	"回転吹き飛びダウン(空,ダ)",
-	"強制立ち引き込み",
-	"引き込みダウン(空,ダ)",
-	"無敵のけぞり 硬直",
-	"吹き飛びダウン(空,ダ)",
-	"吹き飛びダウン(ダ)",
-	"真上吹き飛びダウン(空,ダ)",
-	"吹き飛びくっつき",
-	"その場回転ダウン(ダ)",
-	"吹き飛びダウン(ダ)",
+	"ダウン(ダ)",
+	"ダウン",
+	"ダウン",
+	"ダウン",
+	"",
+	"ダウン(空,ダ)",
+	"ダウン(ダ)",
+	"ダウン",
+	"ダウン(空,ダ)",
+	"ダウン",
+	"ダウン(空,ダ)",
+	"強制立たせ",
+	"ダウン(空,ダ)",
+	"特殊",
+	"ダウン(空,ダ)",
+	"ダウン(ダ)",
+	"ダウン(空,ダ)",
+	"くっつき",
+	"ダウン(ダ)",
+	"ダウン(ダ)",
 	"特殊",
 	"特殊",
-	"吹き飛び",
-	"真上吹き飛び～気絶(ダ)",
-	"吹き飛び",
-	"吹き飛びダウン(ダ)",
+	"",
+	"強制気絶",
+	"",
+	"ダウン(ダ)",
 	"特殊(ダ)",
-	"吹き飛びダウン(空,ダ)",
-	"吹き飛びダウン(空,ダ)",
-	"吹き飛びダウン(空,ダ)",
+	"ダウン(空,ダ)",
+	"ダウン(空,ダ)",
+	"ダウン(空,ダ)",
 	"ダウン(ダ)",
 	"ダウン(ダ)",
 	"ダウン(ダ)",
-	"吹き飛びダウン(ダ)",
-	"吹き飛びダウン(ダ)",
-	"きりもみダウン(空,ダ)",
-	"吹き飛びダウン(空,ダ)",
-	"引き込みダウン(空,ダ)",
-	"燃焼ダウン(空,ダ)",
-	"感電吹き飛びダウン(空,ダ)",
-	"吹き飛び",
-	"上吹き飛びダウン(空,ダ)",
-	"吹き飛びダウン(空,ダ)",
-	"吹き飛びダウン(空,ダ)",
-	"吹き飛びダウン(空,ダ)",
-	"吹き飛びダウン(空,ダ)",
+	"ダウン(ダ)",
+	"ダウン(ダ)",
+	"ダウン(空,ダ)",
+	"ダウン(空,ダ)",
+	"ダウン(空,ダ)",
+	"ダウン(空,ダ)",
+	"ダウン(空,ダ)",
+	"",
+	"ダウン(空,ダ)",
+	"ダウン(空,ダ)",
+	"ダウン(空,ダ)",
+	"ダウン(空,ダ)",
+	"ダウン(空,ダ)",
 	"特殊",
 	"ダウン(ダ)",
 	"特殊",
-	"青色のけぞり(ダ)",
-	"浮遊のけぞり～ダウン(空,ダ)",
-	"壁吹き飛びっとびダウン",
+	"ダウン",
+	"ダウン(空,ダ)",
+	"壁っとびダウン",
 	"滑り空中のけぞりダウン(空)",
 	"特殊",
 	"特殊",
 	"特殊",
-	"きりもみダウン(空,ダ)",
+	"ダウン(空,ダ)",
 	"特殊(ダ)",
-	"吹き飛びダウン(ダ)",
-	"吹き飛びダウン(空,ダ)",
-	"吹き飛びダウン(ダ)",
-	"吹き飛びダウン(空,ダ)",
+	"ダウン(ダ)",
+	"ダウン(空,ダ)",
+	"ダウン(ダ)",
+	"ダウン(空,ダ)",
 }
 local damaged_move_keys = {}
 local damaged_move_map = {}
@@ -4675,6 +4675,10 @@ local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, atta
 
 	-- 座標補正後にキー情報を作成する
 	box.key = string.format("%x %x id:%x x1:%x x2:%x y1:%x y2:%x", global.frame_number, p.addr.base, box.id, box.top, box.bottom, box.left, box.right)
+	if p.uniq_hitboxes[box.key] then
+		return nil
+	end
+	p.uniq_hitboxes[box.key] = true
 
 	if box.top == box.bottom and box.left == box.right then
 		box.visible = false
@@ -4709,28 +4713,13 @@ local get_reach = function(p, box, pos_x, pos_y)
 		front_reach = pos_x - math.min(box.left, box.right)
 		back_reach  = pos_x - math.max(box.left, box.right)
 	end
-	local reach_memo1 = string.format("%3s %3s %3s %3s",
-		front_reach,                        -- キャラ本体座標からの前のリーチ
-		back_reach,                         -- キャラ本体座標からの後のリーチ
-		top_reach,                          -- キャラ本体座標からの上のリーチ
-		bottom_reach                        -- キャラ本体座標からの下のリーチ
-	)
-	local reach_memo = string.format("%3s %2s %3s %3s %s %3s %3s",
-		screen_top,
-		p.hit.flip_x,                       -- 1:右向き -1:左向き
-		pos_x,                              -- X位置
-		pos_y,                              -- Y位置
-		reach_memo1,                        -- リーチ
-		top_reach    + pos_y,               -- 地面からの上のリーチ
-		bottom_reach + pos_y                -- 地面からの下のリーチ
-	)
 	local reach_data = {
 		front    = math.floor(front_reach),             -- キャラ本体座標からの前のリーチ
 		back     = math.floor(back_reach),              -- キャラ本体座標からの後のリーチ
 		top      = math.floor(top_reach)    - 24,       -- キャラ本体座標からの上のリーチ
 		bottom   = math.floor(bottom_reach) - 24,       -- キャラ本体座標からの下のリーチ
 	}
-	return reach_memo1, reach_memo, reach_data
+	return reach_data
 end
 
 local in_range = function(top, bottom, atop, abottom)
@@ -4750,14 +4739,19 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 		box.pos_x = is_fireball and math.floor(p.parent.pos - screen_left) or pos_x
 		box.pos_y = is_fireball and math.floor(p.parent.pos_y) or pos_y
 	
-		local reach_memo1, reach_memo
 		if is_fireball then
-			reach_memo1, reach_memo, box.reach  = get_reach(p, box, box.pos_x, box.fb_pos_y)
+			box.reach = get_reach(p, box, box.pos_x, box.fb_pos_y)
 		else
-			reach_memo1, reach_memo, box.reach  = get_reach(p, box, box.pos_x, box.pos_y)
+			box.reach = get_reach(p, box, box.pos_x, box.pos_y)
 		end
 
 		-- 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
+		local reach_memo1 = string.format("%s %s %s %s",
+			box.reach.front_reach, -- キャラ本体座標からの前のリーチ
+			box.reach.back_reach,  -- キャラ本体座標からの後のリーチ
+			box.reach.top_reach,   -- キャラ本体座標からの上のリーチ
+			box.reach.bottom_reach -- キャラ本体座標からの下のリーチ
+		)
 		if global.disp_hitbox == 3 or (global.disp_hitbox == 4 and box.atk) or (global.disp_hitbox == 5 and not box.atk) then
 			if p.reach_tbl[reach_memo1] ~= true then
 				p.reach_tbl[reach_memo1] = true
@@ -4800,9 +4794,9 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 			summary.hitstop     = summary.hitstop     or p.hitstop      -- ヒットストップ
 			summary.hitstop_gd  = summary.hitstop_gd  or p.hitstop_gd   -- ガード時ヒットストップ
 			if is_fireball == true then
-				summary.prj_rank    = summary.prj_rank    or p.prj_rank -- 飛び道具の強さ
+				summary.prj_rank = summary.prj_rank   or p.prj_rank -- 飛び道具の強さ
 			else
-				summary.prj_rank    = nil -- 飛び道具の強さ
+				summary.prj_rank = nil -- 飛び道具の強さ
 			end
 		end
 		if box.type == box_type_base.a or -- 攻撃
@@ -4864,6 +4858,7 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 			summary.parry = true
 			edge = summary.edge.parry
 		end
+		-- 各判定の最大数値の保存
 		if edge then
 			edge.front    = math.max(box.reach.front , edge.front  or 0)
 			edge.back     = math.min(box.reach.back  , edge.back   or 999)
@@ -4872,69 +4867,82 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 			-- boxごとに評価
 			if edge == summary.edge.hit then
 				local real_top, real_bottom = box.reach.top + p.pos_y, box.reach.bottom + p.pos_y
-				-- 相手キャラ寄りのboxで判定下段かどうかを判断する
-				-- 双角の一部CAなど当たらない位置にある下段判定を無視する
-				if summary.last_hitbox_frame ~= global.frame_number or summary.last_hitbox == nil or summary.last_hitbox.reach.front < box.reach.front then
-					summary.pos_low1 = false -- 判定位置下段
-					summary.pos_low2 = false -- 判定位置下段 タン用
-					summary.unblock_pot = false -- タン以外ガード不能可能性あり
 
-					if real_top <= 48 then
-						summary.pos_low1 = true -- 判定位置下段
-					end
-					if real_top <= 36 then
-						summary.pos_low2 = true -- 判定位置下段 タン用
-					end
-					if edge.top <= 48 then
-						summary.unblock_pot = true -- タン以外ガード不能可能性あり
-					end
+				box.info = box.info or {
+					pos_low1 = false, -- 判定位置下段
+					pos_low2 = false, -- 判定位置下段 タン用]
+					unblock_pot = false, -- タン以外ガード不能可能性あり
+					sway_pos_low1 = false, -- 対スウェー判定位置下段
+					sway_pos_low2 = false, -- 対スウェー判定位置下段 タン用
+					punish_away1 = false, -- 避けつぶし
+					punish_away2 = false, -- ウェービングブロー,龍転身,ダブルローリングつぶし
+					punish_away3 = false, -- 避けつぶし ローレンス用
+					punish_head1 = false, -- 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
+					punish_head2 = false, -- 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
+					punish_head3 = false, -- 68 屈 ローレンス
+					range_j_atm_nage = true,
+					range_urakumo = true,
+					range_g_atm_uchi = true,
+					range_gyakushu = true,
+					range_sadomazo = true,
+					range_baigaeshi = true,
+					range_phx_tw = true,
+				}
+				local info = box.info
+
+				if real_top <= 48 then
+					info.pos_low1 = true -- 判定位置下段
 				end
-				summary.last_hitbox = box
-				summary.last_hitbox_frame = global.frame_number
+				if real_top <= 36 then
+					info.pos_low2 = true -- 判定位置下段 タン用
+				end
+				if real_top <= 48 then
+					info.unblock_pot = true -- タン以外ガード不能可能性あり
+				end
 
 				if summary.normal_hit == hit_proc_types.diff_line then
 					if real_top <= 59 then
-						summary.sway_pos_low1 = true -- 対スウェー判定位置下段
+						info.sway_pos_low1 = true -- 対スウェー判定位置下段
 					end
 					if real_top <= 48 then
-						summary.sway_pos_low2 = true -- 対スウェー判定位置下段 タン用
+						info.sway_pos_low2 = true -- 対スウェー判定位置下段 タン用
 					end
 				end
 				if real_bottom < 32 then
-					summary.anti_away1 = true -- 避けつぶし
+					info.punish_away1 = true -- 避けつぶし
 				end
 				if real_bottom < 40 then
-					summary.anti_away2 = true -- ウェービングブロー,龍転身,ダブルローリングつぶし
+					info.punish_away2 = true -- ウェービングブロー,龍転身,ダブルローリングつぶし
 				end
 				if real_bottom < 48 then
-					summary.anti_away3 = true -- 避けつぶし ローレンス用
+					info.punish_away3 = true -- 避けつぶし ローレンス用
 				end
 				if real_bottom < 60 then
-					summary.punish_head1 = true -- 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
+					info.punish_head1 = true -- 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
 				end
 				if real_bottom < 64 then
-					summary.punish_head2 = true -- 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
+					info.punish_head2 = true -- 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
 				end
 				if real_bottom < 68 then
-					summary.punish_head3 = true -- 68 屈 ローレンス
+					info.punish_head3 = true -- 68 屈 ローレンス
 				end
 				-- 76 屈 フランコ
 				-- 80 屈 クラウザー
 
 				-- 上段当身投げ
-				summary.range_j_atm_nage = in_range(real_top, real_bottom, 112, 40)
+				info.range_j_atm_nage = summary.j_atm_nage and in_range(real_top, real_bottom, 112, 40)
 				-- 裏雲隠し
-				summary.range_urakumo = in_range(real_top, real_bottom, 104, 40) 
+				info.range_urakumo = summary.urakumo and in_range(real_top, real_bottom, 104, 40) 
 				-- 下段当身打ち
-				summary.range_g_atm_uchi = in_range(real_top, real_bottom, 44, 0)
+				info.range_g_atm_uchi = summary.g_atm_uchi and in_range(real_top, real_bottom, 44, 0)
 				-- 必勝逆襲拳
-				summary.range_gyakushu = in_range(real_top,real_bottom, 72, 32)
+				info.range_gyakushu = summary.gyakushu and in_range(real_top,real_bottom, 72, 32)
 				-- サドマゾ
-				summary.range_sadomazo = in_range(real_top, real_bottom, 96, 36)
+				info.range_sadomazo = summary.sadomazo and in_range(real_top, real_bottom, 96, 36)
 				-- 倍返し
-				summary.range_baigaeshi = in_range(real_top, real_bottom, 84, 0)
+				info.range_baigaeshi = summary.baigaeshi and in_range(real_top, real_bottom, 84, 0)
 				-- フェニックススルー
-				summary.range_phx_tw = in_range(real_top, real_bottom, 120, 56)
+				info.range_phx_tw =  summary.phx_tw and in_range(real_top, real_bottom, 120, 56)
 			elseif edge == summary.edge.hurt then
 				local real_top, real_bottom = edge.top + p.pos_y, edge.bottom + p.pos_y
 
@@ -5068,6 +5076,7 @@ local new_throwbox = function(p, box)
 	return box
 end
 
+-- 1:右向き -1:左向き
 local get_flip_x = function(p)
 	local obj_base = p.addr.base
 	local pgm = manager.machine.devices[":maincpu"].spaces["program"]
@@ -5128,21 +5137,15 @@ local update_object = function(p)
 	end
 
 	-- 判定データ排他用のテーブル
-	local uniq_hitboxes = {}
 	for _, box in ipairs(p.buffer) do
 		local hitbox = new_hitbox(p, box.id, box.pos_x, box.pos_y, box.top, box.bottom, box.left, box.right, box.attack_only, box.is_fireball)
 		if hitbox then
-			if not uniq_hitboxes[hitbox.key] then
-				uniq_hitboxes[hitbox.key] = true
-				table.insert(p.hitboxes, hitbox)
-				-- 攻撃情報ログ
-				if global.log.atklog then
-					if hitbox.log_txt then
-						print(hitbox.log_txt)
-					end
+			table.insert(p.hitboxes, hitbox)
+			-- 攻撃情報ログ
+			if global.log.atklog then
+				if hitbox.log_txt then
+					print(hitbox.log_txt)
 				end
-			else
-				--print("DROP " .. box.key) --debug
 			end
 		end
 	end
@@ -5372,6 +5375,7 @@ function rbff2.startplugin()
 
 			hitboxes         = {},
 			buffer           = {},
+			uniq_hitboxes    = {}, -- key + boolean
 			fireball_bases   = p1 and { [0x100600] = true, [0x100800] = true, [0x100A00] = true, } or
 			                          { [0x100700] = true, [0x100900] = true, [0x100B00] = true, },
 			fake_hits        = p1 and { [0x100600] = 0x10DDF5, [0x100800] = 0x10DDF7, [0x100A00] = 0x10DDF9, } or
@@ -5633,6 +5637,8 @@ function rbff2.startplugin()
 				max_hit_dn     = 0,     -- 同一技行動での最大ヒット数 分母
 				max_hit_nm     = 0,     -- 同一技行動での最大ヒット数 分子
 				hitboxes       = {},
+				buffer         = {},
+				uniq_hitboxes  = {}, -- key + boolean
 				hit            = {
 					pos_x      = 0,
 					pos_z      = 0,
@@ -6547,6 +6553,19 @@ function rbff2.startplugin()
 		end
 		local rec1, rec2, rec3, rec4, rec5, rec6, rec7, rec8 = {}, {}, {}, {}, {}, {}, {}, {}
 
+		--[[
+		rec1 = merge_cmd( -- ボブ対クラウザー100% ラグがでると落ちる
+			{ 
+				_4, 4, _5, 4, _4, 6, _7, 17, _5, 8, _5a, 7, _5c, 12, _4, 30, _5c, 3, _5, 5, _5c, 5, _5, 47, _5a, 5, _5b, 5, _5, 25, _1c, 5, _5, 20, _2bc, 4, _5, 2, _2, 5, _3, 5, _6, 5, _5b, 5, _4, 2,
+				_5, 64, _2, 5, _3, 5, _6, 5, _5b, 5,
+				_5, 64, _2, 5, _3, 5, _6, 6, _5b, 5, _4, 2,
+				_5, 64, _2, 5, _3, 5, _6, 5, _5b, 5,
+				_5, 64, _2, 5, _3, 5, _6, 5, _5b, 5,
+				_5, 53, _4, 16, _5, 2, _6, 5, _3, 5, _2, 5, _1, 5, _5c, 5, _5, 180, _8c, 2, _5, 1,
+			},
+			{ _5, }
+		)
+		]]
 		--[[
 		rec1 = merge_cmd( -- 対ビリー 自動ガード+リバサ立A向けの炎の種馬相打ちコンボ
 			{ _4, 11, _2a, 7, _2, 1, _3, 2, _6, 7, _6a, 2, _5, 38, _1a, 15, _5, 7, _6ac, 3, _5, 13, _1a, 6, _5, 16, _5c, 7, _5, 12, _5c, 5, _5, 12, _4, 3, _2, 3, _1c, 3, _5, 76, _4, 15, _5, 16, _2, 3, _5c, 2, _5, 1, },
@@ -7495,31 +7514,12 @@ function rbff2.startplugin()
 				parry = {},
 				throw = {},
 			},
-			pos_low1 = false, -- 判定位置下段
-			pos_low2 = false, -- 判定位置下段 タン用]
-			unblock_pot = false, -- タン以外ガード不能可能性あり
-			sway_pos_low1 = false, -- 対スウェー判定位置下段
-			sway_pos_low2 = false, -- 対スウェー判定位置下段 タン用
-			anti_away1 = false, -- 避けつぶし
-			anti_away2 = false, -- ウェービングブロー,龍転身,ダブルローリングつぶし
-			anti_away3 = false, -- 避けつぶし ローレンス用
-			punish_head1 = false, -- 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
-			punish_head2 = false, -- 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
-			punish_head3 = false, -- 68 屈 ローレンス
 			head_inv1 = false, -- 上半身無敵 避け
 			head_inv2 = false, -- 上半身無敵 ウェービングブロー,龍転身,ダブルローリング
 			head_inv3 = false, -- 上半身無敵 ローレンス避け
 			low_inv1 = false, -- 足元無敵 対アンディ屈C
 			low_inv2 = false, -- 足元無敵 対ギース屈C
 			low_inv3 = false, -- 足元無敵 対だいたいの屈B（キムとボブとホンフゥ以外）
-
-			range_j_atm_nage = true,
-			range_urakumo = true,
-			range_g_atm_uchi = true,
-			range_gyakushu = true,
-			range_sadomazo = true,
-			range_baigaeshi = true,
-			range_phx_tw = true,
 		}
 	end
 
@@ -8050,6 +8050,7 @@ function rbff2.startplugin()
 				fb.max_hit_nm     = pgm:read_u8(fb.addr.max_hit_nm)
 				fb.hitboxes       = {}
 				fb.buffer         = {}
+				fb.uniq_hitboxes  = {} -- key + boolean
 				fb.act_data_fired = p.act_data -- 発射したタイミングの行動ID
 
 				fb.act_frames     = fb.act_frames  or {}
@@ -8183,7 +8184,9 @@ function rbff2.startplugin()
 			end
 
 			-- 当たり判定の構築用バッファのリフレッシュ
-			p.hitboxes, p.buffer = {}, {}
+			p.hitboxes             = {}
+			p.buffer               = {}
+			p.uniq_hitboxes        = {} -- key + boolean
 			temp_hits[p.addr.base] = p
 
 			--攻撃種類,ガード要否
@@ -9384,33 +9387,6 @@ function rbff2.startplugin()
 		return false
 	end
 	local make_hit_summary = function(i, p, summary)
-		-- ガー不能
-		local unblock_label = "-"
-		if summary.unblock_pot and summary.normal_hit then
-			if not summary.low_guard then
-				unblock_label = "〇"
-			end
-		end
-		-- 避け攻撃つぶし
-		local anti_away_label = "上方"
-		if summary.normal_hit == hit_proc_types.same_line or summary.normal_hit == hit_proc_types.diff_line then
-			if summary.anti_away1 then
-				-- ALL
-				anti_away_label = "避け攻撃つぶし"
-			elseif summary.anti_away2 then
-				-- ウェービングブロー,龍転身,ダブルローリング
-				anti_away_label = "避け攻撃つぶし(ローレンスのみ1)"
-			elseif summary.anti_away3 then
-				-- ローレンスのみ
-				anti_away_label = "避け攻撃つぶし(ローレンスのみ2)"
-			elseif summary.punish_head1 then
-				anti_away_label = "屈ヒット1"
-			elseif summary.punish_head2 then
-				anti_away_label = "屈ヒット2"
-			elseif summary.punish_head3 then
-				anti_away_label = "屈ヒット3"
-			end
-		end
 		local followups = {}
 		if summary.down_hit then
 			-- ダウン追撃可能
@@ -9420,70 +9396,116 @@ function rbff2.startplugin()
 			-- 空中追撃可能
 			table.insert(followups, "空中追撃")
 		end
-		local blocks = {}
-		if summary.up_guard then
-			-- 判定位置下段
-			if summary.pos_low2 then
-				-- ALL
-			elseif summary.pos_low1 then
-				-- タン以外
-				table.insert(blocks, "立(タンのみ)")
-			else
-				table.insert(blocks, "立")
+
+		local atk_count = 0
+		for _, box in ipairs(p.hitboxes) do
+			if box.atk then
+				atk_count = atk_count + 1
+				local info = box.info
+				summary.boxes = summary.boxes or {}
+   
+			   -- 避け攻撃つぶし
+			   local punish_away_label = "上方"
+			   if summary.normal_hit == hit_proc_types.same_line or summary.normal_hit == hit_proc_types.diff_line then
+				   if info.punish_away1 then
+					   -- ALL
+					   punish_away_label = "避け攻撃つぶし"
+				   elseif info.punish_away2 then
+					   -- ウェービングブロー,龍転身,ダブルローリング
+					   punish_away_label = "避け攻撃つぶし(ローレンスのみ1)"
+				   elseif info.punish_away3 then
+					   -- ローレンスのみ
+					   punish_away_label = "避け攻撃つぶし(ローレンスのみ2)"
+				   elseif info.punish_head1 then
+					   punish_away_label = "屈ヒット1"
+				   elseif info.punish_head2 then
+					   punish_away_label = "屈ヒット2"
+				   elseif info.punish_head3 then
+					   punish_away_label = "屈ヒット3"
+				   end
+			   end
+   
+			   local blocks = {}
+			   if summary.up_guard then
+				   -- 判定位置下段
+				   if info.pos_low2 then
+					   -- ALL
+				   elseif info.pos_low1 then
+					   -- タン以外
+					   table.insert(blocks, "立(タンのみ)")
+				   else
+					   table.insert(blocks, "立")
+				   end
+			   end
+			   if summary.low_guard then
+				   table.insert(blocks, "屈")
+			   end
+			   if summary.air_guard then
+				   table.insert(blocks, "空")
+			   end
+			   if info.unblock_pot and summary.normal_hit then
+				   if not summary.low_guard then
+					   table.insert(blocks, "ガー不可能性あり")
+				   end
+			   end
+			   local sway_blocks = {}
+			   if summary.normal_hit == hit_proc_types.diff_line then
+				   if summary.sway_up_gd == hit_proc_types.diff_line then
+					   -- 対スウェー判定位置下段
+					   if info.sway_pos_low2 then
+						   -- ALL
+					   elseif info.sway_pos_low1 then
+						   -- タン以外
+						   table.insert(sway_blocks, "立(タンのみ)")
+					   else
+						   table.insert(sway_blocks, "立")
+					   end
+				   end
+				   if summary.sway_low_gd == hit_proc_types.diff_line then
+					   table.insert(sway_blocks, "屈")
+				   end
+			   end
+			   local parry = {}
+			   if info.range_j_atm_nage == true then
+				   -- 上段当て身投げ可能
+				   table.insert(parry, "上")
+			   end
+			   if info.range_urakumo == true then
+				   -- 裏雲隠し可能
+				   table.insert(parry, "中")
+			   end
+			   if info.range_g_atm_uchi == true then
+				   -- 下段当て身打ち可能
+				   table.insert(parry, "下")
+			   end
+			   if info.range_gyakushu == true then
+				   -- 逆襲拳可能
+				   table.insert(parry, "逆")
+			   end
+			   if info.range_sadomazo == true then
+				   -- サドマゾ可能
+				   table.insert(parry, "サ")
+			   end
+			   if info.range_phx_tw == true then
+				   -- フェニックススルー可能
+				   table.insert(parry, "フ")
+			   end
+			   if info.range_baigaeshi == true then
+				   -- 倍返し可能
+				   table.insert(parry, "倍")
+			   end
+   
+			   -- TODO 二重登録をインデックス指定で回避しておく
+			   summary.boxes[atk_count] = {
+				   punish_away_label = punish_away_label,
+				   block_label = #blocks == 0 and "ガード不能" or table.concat(blocks, ","),
+				   sway_block_label = #sway_blocks == 0 and "-" or table.concat(sway_blocks, ","),
+				   parry_label = #parry == 0 and "不可" or table.concat(parry, ","),
+				   reach_label = string.format("前%s/上%s/下%s/後%s", box.reach.front, box.reach.top + p.pos_y, box.reach.bottom + p.pos_y, box.reach.back)
+			   }
 			end
 		end
-		if summary.low_guard then
-			table.insert(blocks, "屈")
-		end
-		if summary.air_guard then
-			table.insert(blocks, "空")
-		end
-		local sway_blocks = {}
-		if summary.normal_hit == hit_proc_types.diff_line then
-			if summary.sway_up_gd == hit_proc_types.diff_line then
-				-- 対スウェー判定位置下段
-				if summary.sway_pos_low2 then
-					-- ALL
-				elseif summary.sway_pos_low1 then
-					-- タン以外
-					table.insert(sway_blocks, "立(タンのみ)")
-				else
-					table.insert(sway_blocks, "立")
-				end
-			end
-			if summary.sway_low_gd == hit_proc_types.diff_line then
-				table.insert(sway_blocks, "屈")
-			end
-		end
-		local atemi = {}
-		if summary.j_atm_nage and summary.range_j_atm_nage == true then
-			-- 上段当て身投げ可能
-			table.insert(atemi, "上")
-		end
-		if summary.urakumo and summary.range_urakumo == true then
-			-- 裏雲隠し可能
-			table.insert(atemi, "中")
-		end
-		if summary.g_atm_uchi and summary.range_g_atm_uchi == true then
-			-- 下段当て身打ち可能
-			table.insert(atemi, "下")
-		end
-		if summary.gyakushu and summary.range_gyakushu == true then
-			-- 逆襲拳可能
-			table.insert(atemi, "逆")
-		end
-		if summary.sadomazo and summary.range_sadomazo == true then
-			-- サドマゾ可能
-			table.insert(atemi, "サ")
-		end
-		if summary.phx_tw and summary.range_phx_tw == true then
-			-- フェニックススルー可能
-			table.insert(atemi, "フ")
-		end
-		if summary.baigaeshi and summary.range_baigaeshi == true then
-			-- 倍返し可能
-			table.insert(atemi, "倍")
-		end
+
 		local gd_strength_label = "-"
 		if summary.gd_strength == 1 then
 			gd_strength_label = "短"
@@ -9491,9 +9513,6 @@ function rbff2.startplugin()
 			gd_strength_label = "長"
 		end
 
-		local block_label = #blocks == 0 and "ガード不能" or table.concat(blocks, ",")
-		local sway_block_label = #sway_blocks == 0 and "-" or table.concat(sway_blocks, ",")
-		local atemi_label = #atemi == 0 and "不可" or table.concat(atemi, ",")
 		local followup_label = #followups == 0 and "-" or table.concat(followups, ",")
 		local stun_sec = 0
 		if summary.pure_st_tm then
@@ -9511,25 +9530,26 @@ function rbff2.startplugin()
 			{"攻撃範囲:"      , summary.normal_hit or summary.down_hit or summary.air_hit or "-"},
 			{"地上ヒット効果:", summary.effect .. " " .. hit_effects[summary.effect+1]},
 			{"空中ヒット効果:", summary.effect .. " " .. air_hit_effects[summary.effect+1]},
-			{"追撃:"          , followup_label},
+			{"追撃能力:"      , followup_label},
 
 			{"気絶値:"        , summary.pure_st     },
 			{"気絶値継続:"    , stun_sec },
 
-			{"ガード方向:"    , block_label},
-			{"スウェー上:"    , sway_block_label},
-
-			{"ヒット硬直:"    , string.format("ヒット%sF/ガード%sF", summary.hitstun, summary.blockstun) },
 			{"ヒットストップ:", string.format("自･ヒット%sF/ガード･BS猶予%sF", summary.hitstop, summary.hitstop_gd) },
+			{"ヒット硬直:"    , string.format("ヒット%sF/ガード%sF", summary.hitstun, summary.blockstun) },
 			{"ガード継続種類:", gd_strength_label   },
-			{"当て身投げ:"    , atemi_label},
-
-			{"攻撃高さ:"      , anti_away_label},
-			{"ガー不可能性:"  , unblock_label},
-			{"最大リーチ:"    , reach_label},
-			{"最大ヒット数:"  , string.format("%s/%s", summary.max_hit_nm, summary.max_hit_dn) },
-			{"弾強度:"        , summary.prj_rank or "-" },
+		--	{"最大リーチ:"    , reach_label},
 		}
+		-- TODO レイアウト検討
+		for box_no, box in ipairs(summary.boxes) do
+			table.insert(hit_summary, {box_no .. " ガード方向:"    , box.block_label})
+			table.insert(hit_summary, {box_no .. " スウェー上:"    , box.sway_block_label})
+			table.insert(hit_summary, {box_no .. " 当て身投げ:"    , box.parry_label})
+			table.insert(hit_summary, {box_no .. " 攻撃高さ:"      , box.punish_away_label})
+			table.insert(hit_summary, {box_no .. " 最大リーチ:"    , box.reach_label})
+		end
+		table.insert(hit_summary, {"最大ヒット数:"  , string.format("%s/%s", summary.max_hit_nm, summary.max_hit_dn) })
+		table.insert(hit_summary, {"弾強度:"        , summary.prj_rank or "-" })
 		return hit_summary
 	end
 	local draw_summary = function(i, summary)
@@ -10036,10 +10056,9 @@ function rbff2.startplugin()
 
 			for i, p in ipairs(players) do
 				if p.disp_sts == 3 then
-					local summary = p.hit.box_summary
 					local last_hit_summary = p.hit.old_hit_summary
-					if check_edge(i, "hit"  , summary.edge.hit  , p.pos_y) then
-						last_hit_summary = make_hit_summary(i, p, summary)
+					if check_edge(i, "hit"  , p.hit.box_summary.edge.hit  , p.pos_y) then
+						last_hit_summary = make_hit_summary(i, p, p.hit.box_summary)
 					end
 					--[[
 					draw_reach(i, "hurt" , summary.edge.hurt , p.pos_y)
@@ -10054,7 +10073,7 @@ function rbff2.startplugin()
 							end
 						end
 					end
-					local hurt_summary = make_hurt_summary(i, p, summary)
+					local hurt_summary = make_hurt_summary(i, p, p.hit.box_summary)
 					if last_hit_summary then
 						for _, row in ipairs(last_hit_summary) do
 							table.insert(hurt_summary, row)
