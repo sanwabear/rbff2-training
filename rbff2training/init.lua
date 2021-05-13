@@ -4745,20 +4745,6 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 			box.reach = get_reach(p, box, box.pos_x, box.pos_y)
 		end
 
-		-- 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
-		local reach_memo1 = string.format("%s %s %s %s",
-			box.reach.front_reach, -- キャラ本体座標からの前のリーチ
-			box.reach.back_reach,  -- キャラ本体座標からの後のリーチ
-			box.reach.top_reach,   -- キャラ本体座標からの上のリーチ
-			box.reach.bottom_reach -- キャラ本体座標からの下のリーチ
-		)
-		if global.disp_hitbox == 3 or (global.disp_hitbox == 4 and box.atk) or (global.disp_hitbox == 5 and not box.atk) then
-			if p.reach_tbl[reach_memo1] ~= true then
-				p.reach_tbl[reach_memo1] = true
-				p.reach_memo = p.reach_memo .. "," .. reach_memo1
-			end
-		end
-
 		local summary, edge = p.hit.box_summary, nil
 		if box.atk then
 			summary.normal_hit  = summary.normal_hit  or hit_box_procs.normal_hit(box.id)
@@ -4785,6 +4771,7 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 
 			summary.chip_dmg    = summary.chip_dmg    or box.chip_dmg_type.calc(p.pure_dmg) -- 削りダメージ
 			summary.effect      = summary.effect      or box.effect -- ヒット効果
+			summary.can_techrise= summary.can_techrise or p.can_techrise -- 受け身行動可否
 			summary.gd_strength = summary.gd_strength or p.gd_strength -- 相手のガード持続の種類
 			summary.max_hit_nm  = summary.max_hit_nm  or p.hit.max_hit_nm -- p.act_frame中の行動最大ヒット 分子
 			summary.max_hit_dn  = summary.max_hit_dn  or p.hit.max_hit_dn -- p.act_frame中の行動最大ヒット 分母
@@ -4995,6 +4982,21 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 			end
 		end
 
+		-- 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
+		local reach_memo1 = string.format("%4x %2x %2x %2x %2x",
+			box.type.id,     -- 種類
+			box.reach.front, -- キャラ本体座標からの前のリーチ
+			box.reach.back,  -- キャラ本体座標からの後のリーチ
+			box.reach.top,   -- キャラ本体座標からの上のリーチ
+			box.reach.bottom -- キャラ本体座標からの下のリーチ
+		)
+		if global.disp_hitbox == 3 or (global.disp_hitbox == 4 and box.atk) or (global.disp_hitbox == 5 and not box.atk) then
+			if p.reach_tbl[reach_memo1] ~= true then
+				p.reach_tbl[reach_memo1] = true
+				p.reach_memo = p.reach_memo .. "," .. reach_memo1
+			end
+		end
+
 		if box.atk then
 			local memo = ""
 			memo = memo .. " nml=" .. (summary.normal_hit or "-")
@@ -5027,7 +5029,7 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 				p.attack,                           --
 				p.hitstop_id,                       -- ガード硬直のID
 				p.gd_strength,                      -- 相手のガード持続の種類
-				reach_memo,
+				reach_memo1,
 				box.id,                             -- 判定のID
 				p.hit.harmless  and "hm"   or "",   -- 無害化
 				p.hit.fake_hit  and "fake" or "",   -- 嘘判定
@@ -5050,7 +5052,7 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 				p.esaka_range or "-"                -- 詠酒範囲
 			)
 		elseif box.type.type_check == type_ck_gd then
-			box.log_txt = string.format("guard %6x %s %x", p.addr.base, reach_memo, box.id)
+			box.log_txt = string.format("guard %6x %s %x", p.addr.base, reach_memo1, box.id)
 		end
 		if box.log_txt then
 			box.log_txt = box.log_txt .. " " .. box.key
@@ -5267,6 +5269,7 @@ function rbff2.startplugin()
 			acta             = 0,
 			attack           = 0,           -- 攻撃中のみ変化
 			hitstop_id       = 0,           -- ヒット/ガードしている相手側のattackと同値
+			can_techrise     = false,       -- 受け身行動可否
 			hitstop          = 0,           -- 攻撃側のガード硬直
 			old_pos          = 0,           -- X位置
 			old_pos_frc      = 0,           -- X位置少数部
@@ -5508,6 +5511,7 @@ function rbff2.startplugin()
 				act_contact  = p1 and 0x100401 or 0x100501, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
 				attack       = p1 and 0x1004B6 or 0x1005B6, -- 攻撃中のみ変化
 				hitstop_id   = p1 and 0x1004EB or 0x1005EB, -- 被害中のみ変化
+				can_techrise = p1 and 0x100492 or 0x100592, -- 受け身行動可否チェック用
 				ophit_base   = p1 and 0x10049E or 0x10059E, -- ヒットさせた相手側のベースアドレス
 				char         = p1 and 0x107BA5 or 0x107BA7, -- キャラ()
 				color        = p1 and 0x107BAC or 0x107BAD, -- カラー A=0x00 D=0x01
@@ -5626,6 +5630,7 @@ function rbff2.startplugin()
 				pos_z          = 0, -- Z位置
 				attack         = 0, -- 攻撃中のみ変化
 				hitstop_id     = 0, -- ガード硬直のID
+				can_techrise   = false, -- 受け身行動可否
 				hitstop        = 0, -- ガード硬直
 				fake_hit       = false,
 				obsl_hit       = false, -- 嘘判定チェック用
@@ -5671,6 +5676,7 @@ function rbff2.startplugin()
 	 				pos_z      = base + 0x24, -- Z位置
 					attack     = base + 0xBF, -- デバッグのNO
 					hitstop_id = base + 0xBE, -- ヒット硬直用ID
+					can_techrise = base + 0x92, -- 受け身行動可否チェック用
 					-- ヒットするかどうか
 					fake_hit   = p.fake_hits[base],
 					obsl_hit   = base + 0x6A, -- 嘘判定チェック用 3ビット目が立っていると嘘判定
@@ -7645,6 +7651,7 @@ function rbff2.startplugin()
 			p.knock_back2    = pgm:read_u8(p.addr.knock_back2)
 			p.knock_back3    = pgm:read_u8(p.addr.knock_back3)
 			p.hitstop_id     = pgm:read_u8(p.addr.hitstop_id)
+			p.can_techrise   = 2 > pgm:read_u8(0x88A12 + p.attack)
 			if p.attack == 0 then
 				p.hitstop    = 0
 				p.hitstop_gd = 0
@@ -8023,6 +8030,8 @@ function rbff2.startplugin()
 					fb.pure_st    = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x886F2))
 					fb.pure_st_tm = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x88772))
 				end
+				-- 受け身行動可否 家庭用 05A9B8 からの処理
+				fb.can_techrise   = 2 > pgm:read_u8(0x88A12 + fb.attack) 
 				fb.fake_hit       = (pgm:read_u8(fb.addr.fake_hit) & 0xB) == 0
 				fb.obsl_hit       = (pgm:read_u8(fb.addr.obsl_hit) & 0xB) == 0
 				fb.full_hit       = pgm:read_u8(fb.addr.full_hit ) > 0
@@ -9528,25 +9537,23 @@ function rbff2.startplugin()
 			{"攻撃値(削り):"  , dmg_label},
 
 			{"攻撃範囲:"      , summary.normal_hit or summary.down_hit or summary.air_hit or "-"},
-			{"地上ヒット効果:", summary.effect .. " " .. hit_effects[summary.effect+1]},
-			{"空中ヒット効果:", summary.effect .. " " .. air_hit_effects[summary.effect+1]},
+			-- TODO 追い打ち等の強制ダウン技では不可にしないといけない 05A9B8 に行く前にチェックしてる？
+			{"受け身行動可否:", summary.can_techrise == true and "受け身可" or "受け身不可" },
+			{"ヒット効果:"    , string.format("%s 地:%s/空:%s", summary.effect, hit_effects[summary.effect+1], air_hit_effects[summary.effect+1])},
 			{"追撃能力:"      , followup_label},
 
-			{"気絶値:"        , summary.pure_st     },
-			{"気絶値継続:"    , stun_sec },
+			{"気絶値:"        , string.format("%s/継続:%s", summary.pure_st, stun_sec) },
 
 			{"ヒットストップ:", string.format("自･ヒット%sF/ガード･BS猶予%sF", summary.hitstop, summary.hitstop_gd) },
-			{"ヒット硬直:"    , string.format("ヒット%sF/ガード%sF", summary.hitstun, summary.blockstun) },
-			{"ガード継続種類:", gd_strength_label   },
-		--	{"最大リーチ:"    , reach_label},
+			{"ヒット硬直:"    , string.format("ヒット%sF/ガード%sF/継続:%s", summary.hitstun, summary.blockstun, gd_strength_label) },
+			{"最大攻撃範囲:"  , reach_label},
 		}
 		-- TODO レイアウト検討
 		for box_no, box in ipairs(summary.boxes) do
-			table.insert(hit_summary, {box_no .. " ガード方向:"    , box.block_label})
-			table.insert(hit_summary, {box_no .. " スウェー上:"    , box.sway_block_label})
+			table.insert(hit_summary, {box_no .. " ガード方向:"    , string.format("メイン:%s/スウェー:%s", box.block_label, box.sway_block_label)})
 			table.insert(hit_summary, {box_no .. " 当て身投げ:"    , box.parry_label})
 			table.insert(hit_summary, {box_no .. " 攻撃高さ:"      , box.punish_away_label})
-			table.insert(hit_summary, {box_no .. " 最大リーチ:"    , box.reach_label})
+			table.insert(hit_summary, {box_no .. " 攻撃範囲:"      , box.reach_label})
 		end
 		table.insert(hit_summary, {"最大ヒット数:"  , string.format("%s/%s", summary.max_hit_nm, summary.max_hit_dn) })
 		table.insert(hit_summary, {"弾強度:"        , summary.prj_rank or "-" })
@@ -9573,32 +9580,27 @@ function rbff2.startplugin()
 		end
 	end
 	local make_hurt_summary = function(i, p, summary)
-		local hurt_label = nil
-		if summary.hurt_otg then
-			-- ダウン追撃用くらい判定あり
-			hurt_label = "ダウン追撃"
-		elseif summary.hurt_juggle then
-			-- 空中追撃用くらい判定あり
-			hurt_label = "空中追撃"
-		elseif summary.hurt == true or p.hit.vulnerable == true then
+		local hurt_labels = {}
+		if summary.hurt == true or p.hit.vulnerable == true then
+			local temp_hurt = nil
 			if summary.head_inv1 then
 				-- 上半身無敵 避け
-				hurt_label = "上半身無敵1"
+				temp_hurt = "上半身無敵1"
 			elseif summary.head_inv2 then
 				-- 上半身無敵 ウェービングブロー,龍転身,ダブルローリング
-				hurt_label = "上半身無敵2"
+				temp_hurt = "上半身無敵2"
 			elseif summary.head_inv3 then
 				-- 上半身無敵 ローレンス避け
-				hurt_label = "上半身無敵3"
+				temp_hurt = "上半身無敵3"
 			elseif summary.head_inv4 then
 			 	-- 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
-				 hurt_label = "頭部無敵1"
+				 temp_hurt = "頭部無敵1"
 			elseif summary.head_inv5 then
 				-- 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
-				hurt_label = "頭部無敵2"
+				temp_hurt = "頭部無敵2"
 			elseif summary.head_inv6 then
 				-- 68 屈 ローレンス
-				hurt_label = "頭部無敵3"
+				temp_hurt = "頭部無敵3"
 			elseif summary.head_inv7 then
 				-- 76 屈 フランコ
 				--hurt_label = "頭部無敵4"
@@ -9608,31 +9610,45 @@ function rbff2.startplugin()
 			end
 			if summary.low_inv1 then
 				-- 足元無敵 対アンディ屈C
-				hurt_label = "足元無敵1"
+				temp_hurt = "足元無敵1"
 			elseif summary.low_inv2 then
 				-- 足元無敵 対ギース屈C
-				hurt_label = "足元無敵2"
+				temp_hurt = "足元無敵2"
 			elseif summary.low_inv3 then
 				-- 足元無敵 対だいたいの屈B（キムとボブ以外）
-				hurt_label = "足元無敵3"
+				temp_hurt = "足元無敵3"
 			end
 			if summary.main_inv then
 				-- メインライン攻撃無敵  main line attack invincible
-				hurt_label = "メインライン攻撃無敵"
+				temp_hurt = "メインライン攻撃無敵"
 			end
 			if summary.line_shift_oh_inv then
 				-- ライン移動中段攻撃無敵 line shift overhead attack invincible
-				hurt_label = "ライン移動中段攻撃無敵"
+				temp_hurt = "ライン移動中段攻撃無敵"
 			end
 			if summary.line_shift_lo_inv then
 				-- ライン移動下段攻撃無敵 line shift low attack invincible
-				hurt_label = "ライン移動下段攻撃無敵"
+				temp_hurt = "ライン移動下段攻撃無敵"
 			end
-			hurt_label = hurt_label or ""
+			if temp_hurt then
+				table.insert(hurt_labels, temp_hurt)
+			end
 		else
-			-- くらい判定
-			hurt_label = "全身無敵"
+			if summary.hurt_otg or summary.hurt_juggle then
+			else
+				-- くらい判定
+				table.insert(hurt_labels, "全身無敵")
+			end
 		end
+		if summary.hurt_otg then
+			-- ダウン追撃用くらい判定あり
+			table.insert(hurt_labels, "ダウン追撃")
+		end
+		if summary.hurt_juggle then
+			-- 空中追撃用くらい判定あり
+			table.insert(hurt_labels, "空中追撃")
+		end
+		local hurt_label = table.concat(hurt_labels, ",")
 
 		local throw_invincibles = {}
 		if p.state ~= 0 or p.op.state ~= 0 then
