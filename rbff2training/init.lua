@@ -4765,6 +4765,16 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 			summary.unknown1    = summary.unknown1    or hit_box_procs.unknown1(box.id)
 			summary.bai_catch   = summary.bai_catch   or p.bai_catch == true and "v" or nil
 
+			if is_fireball then
+				summary.pow_up      = summary.pow_up      or p.parent.pow_up
+				summary.pow_up_hit  = summary.pow_up_hit  or p.parent.pow_up_hit
+				summary.pow_up_gd   = summary.pow_up_gd   or p.parent.pow_up_gd
+			else
+				summary.pow_up      = summary.pow_up      or p.pow_up
+				summary.pow_up_hit  = summary.pow_up_hit  or p.pow_up_hit
+				summary.pow_up_gd   = summary.pow_up_gd   or p.pow_up_gd
+			end
+
 			summary.pure_dmg    = summary.pure_dmg    or p.pure_dmg -- 補正前攻撃力
 			summary.pure_st     = summary.pure_st     or p.pure_st -- スタン値
 			summary.pure_st_tm  = summary.pure_st_tm  or p.pure_st_tm -- スタンタイマー
@@ -6218,7 +6228,7 @@ function rbff2.startplugin()
 				"maincpu.pw@107C22>0&&maincpu.pb@((A4)+$BF)==$0",
 				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g"))
 
-			-- POWゲージ増加量取得用フック 倍がえしとか
+			-- POWゲージ増加量取得用フック 倍返しとか
 			-- 中間のチェック以前に値がD0に入っているのでそれを採取する
 			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x03BF04),
 				"maincpu.pw@107C22>0",
@@ -7479,8 +7489,8 @@ function rbff2.startplugin()
 			return 1
 		end
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
-		local char  = pgm:read_u16(p.addr.base + 0x10)
-		local char_4times = 0xFFFF & (char + char)
+		local char_id  = pgm:read_u16(p.addr.base + 0x10)
+		local char_4times = 0xFFFF & (char_id + char_id)
 		char_4times = 0xFFFF & (char_4times + char_4times)
 		-- 家庭用0271FCからの処理
 		local cond1 = pgm:read_u8(p.addr.base + 0xA2) -- ガード判断用 0のときは何もしていない
@@ -7652,6 +7662,9 @@ function rbff2.startplugin()
 			p.knock_back3    = pgm:read_u8(p.addr.knock_back3)
 			p.hitstop_id     = pgm:read_u8(p.addr.hitstop_id)
 			p.can_techrise   = 2 > pgm:read_u8(0x88A12 + p.attack)
+			p.pow_up_hit     = 0
+			p.pow_up_gd      = 0
+			p.pow_up         = 0
 			if p.attack == 0 then
 				p.hitstop    = 0
 				p.hitstop_gd = 0
@@ -7667,6 +7680,38 @@ function rbff2.startplugin()
 				-- スタン値とスタンタイマー取得 05C1CA からの処理
 				p.pure_st    = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x85CCA)) + p.attack)
 				p.pure_st_tm = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x85D2A)) + p.attack)
+
+				-- 家庭用 05B37E からの処理
+				if 0x58 > p.attack then
+					local d0
+					if 0x27 < p.attack then
+						--CA
+						local a0 = pgm:read_u32(0x8C18C + p.char_4times)
+						d0 = p.attack - 0x27
+						d0 = pgm:read_u8(d0 + a0)
+					else
+						-- 通常技
+						local a0 = 0x8C274
+						if 0xC ~= p.char and 0x10 ~= p.char then
+							a0 = 0x8C24C -- ビリーとチョンシュ
+						end
+						d0 = pgm:read_u8(a0 + p.attack)
+					end
+					-- d0 ヒット時増加量、ガード時増加量 d0の右1ビットシフト=1/2
+					p.pow_up_hit = d0
+					p.pow_up_gd  = math.floor(d0 / 2)
+				else
+					-- 家庭用 03C140 からの処理
+					local a0 = pgm:read_u32(0x8C1EC + p.char_4times)
+					local d0 = pgm:read_u8(p.addr.base + 0xBC)
+					if d0 ~= 0 then
+						d0 = pgm:read_u8(a0 + d0 - 1)
+					end
+					p.pow_up = d0
+				end
+				-- TODO マリーの技がちゃんと取れない
+				-- TODO トドメ=ヒットで+7、雷撃棍=発生で+5、倍返し=返しで+7、吸収で+20 は個別に設定が必要
+				-- TODO 動作が継続する必殺技の値が途中で値が変わる
 			end
 			p.fake_hit       = (pgm:read_u8(p.addr.fake_hit) & 0xB) == 0
 			p.obsl_hit       = (pgm:read_u8(p.addr.obsl_hit) & 0xB) == 0
@@ -9533,6 +9578,7 @@ function rbff2.startplugin()
 			summary.edge.hit.top + p.pos_y,
 			summary.edge.hit.bottom + p.pos_y,
 			summary.edge.hit.back, p.esaka_range or "-")
+
 		local hit_summary = {
 			{"攻撃値(削り):"  , dmg_label},
 
@@ -9543,6 +9589,7 @@ function rbff2.startplugin()
 			{"追撃能力:"      , followup_label},
 
 			{"気絶値:"        , string.format("%s/継続:%s", summary.pure_st, stun_sec) },
+			{"POW増加量:"     , string.format("空%s/当%s/防%s", summary.pow_up, summary.pow_up_hit, summary.pow_up_gd) },
 
 			{"ヒットストップ:", string.format("自･ヒット%sF/ガード･BS猶予%sF", summary.hitstop, summary.hitstop_gd) },
 			{"ヒット硬直:"    , string.format("ヒット%sF/ガード%sF/継続:%s", summary.hitstun, summary.blockstun, gd_strength_label) },
