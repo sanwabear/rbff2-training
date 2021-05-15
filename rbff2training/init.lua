@@ -7703,8 +7703,16 @@ function rbff2.startplugin()
 				if spid ~= 0 then
 					p.pow_up = pgm:read_u8(pgm:read_u32(0x8C1EC + p.char_4times) + spid - 1)
 				end
-				-- トドメ=ヒットで+7、雷撃棍=発生で+5、倍返し=返しで+7、吸収で+20 は個別に設定が必要
-				if p.char == 0x6 then
+				-- トドメ=ヒットで+7、雷撃棍=発生で+5、倍返し=返しで+7、吸収で+20、蛇使い は個別に設定が必要
+				local yama_pows = {
+					[0x06] = true, [0x70] = true, [0x71] = true, [0x75] = true,
+					[0x76] = true, [0x77] = true, [0x7C] = true, [0x7D] = true,
+				}
+				if p.char == 0x6 and p.attack == 0x28 then
+					p.pow_up_hit     = 0
+					p.pow_up_gd      = 0
+					p.pow_up         = 5
+				elseif p.char == 0xB and yama_pows[p.attack] then
 					p.pow_up_hit     = 0
 					p.pow_up_gd      = 0
 					p.pow_up         = 5
