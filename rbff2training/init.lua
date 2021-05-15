@@ -4765,16 +4765,6 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 			summary.unknown1    = summary.unknown1    or hit_box_procs.unknown1(box.id)
 			summary.bai_catch   = summary.bai_catch   or p.bai_catch == true and "v" or nil
 
-			if is_fireball then
-				summary.pow_up      = summary.pow_up      or p.parent.pow_up
-				summary.pow_up_hit  = summary.pow_up_hit  or p.parent.pow_up_hit
-				summary.pow_up_gd   = summary.pow_up_gd   or p.parent.pow_up_gd
-			else
-				summary.pow_up      = summary.pow_up      or p.pow_up
-				summary.pow_up_hit  = summary.pow_up_hit  or p.pow_up_hit
-				summary.pow_up_gd   = summary.pow_up_gd   or p.pow_up_gd
-			end
-
 			summary.pure_dmg    = summary.pure_dmg    or p.pure_dmg -- 補正前攻撃力
 			summary.pure_st     = summary.pure_st     or p.pure_st -- スタン値
 			summary.pure_st_tm  = summary.pure_st_tm  or p.pure_st_tm -- スタンタイマー
@@ -5278,6 +5268,7 @@ function rbff2.startplugin()
 			act              = 0,
 			acta             = 0,
 			attack           = 0,           -- 攻撃中のみ変化
+			old_attack       = 0,
 			hitstop_id       = 0,           -- ヒット/ガードしている相手側のattackと同値
 			can_techrise     = false,       -- 受け身行動可否
 			hitstop          = 0,           -- 攻撃側のガード硬直
@@ -6730,7 +6721,6 @@ function rbff2.startplugin()
 			p.tmp_stun       = 0
 			p.tmp_st_timer   = 0
 			p.tmp_pow = 0
-			p.tmp_pow_rsv = 0
 			p.tmp_combo_pow = 0
 		end
 	end
@@ -7612,6 +7602,7 @@ function rbff2.startplugin()
 			p.tmp_combo      = tohexnum(pgm:read_u8(p.addr.tmp_combo2)) -- 一次的なコンボ数
 			p.max_combo      = tohexnum(pgm:read_u8(p.addr.max_combo2)) -- 最大コンボ数
 			p.tmp_dmg        = pgm:read_u8(p.addr.tmp_dmg)              -- ダメージ
+			p.old_attack     = p.attack
 			p.attack         = pgm:read_u8(p.addr.attack)
 			p.pure_dmg       = pgm:read_u8(p.addr.pure_dmg)             -- ダメージ(フック処理)
 			p.tmp_pow        = pgm:read_u8(p.addr.tmp_pow)              -- POWゲージ増加量
@@ -7619,6 +7610,7 @@ function rbff2.startplugin()
 			if p.tmp_pow_rsv > 0 then
 				p.tmp_pow_atc = p.attack                                -- POWゲージ増加量(予約時の行動)
 			end
+
 			p.tmp_stun       = pgm:read_u8(p.addr.tmp_stun)             -- スタン値
 			p.tmp_st_timer   = pgm:read_u8(p.addr.tmp_st_timer)         -- スタンタイマー
 			pgm:write_u8(p.addr.tmp_dmg, 0)
@@ -7665,6 +7657,9 @@ function rbff2.startplugin()
 			p.pow_up_hit     = 0
 			p.pow_up_gd      = 0
 			p.pow_up         = 0
+			p.pow_revenge    = nil
+			p.pow_absorb     = nil
+			p.esaka_range    = nil
 			if p.attack == 0 then
 				p.hitstop    = 0
 				p.hitstop_gd = 0
@@ -7681,52 +7676,56 @@ function rbff2.startplugin()
 				p.pure_st    = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x85CCA)) + p.attack)
 				p.pure_st_tm = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x85D2A)) + p.attack)
 
+				if 0x58 > p.attack then -- 家庭用 0236F0 からの処理
+					local d1 = pgm:read_u8(p.addr.esaka_range)
+					local d0 = pgm:read_u16(pgm:read_u32(p.char_4times + 0x23750) + ((d1 + d1) & 0xFFFF)) & 0x1FFF
+					if d0 ~= 0 then
+						p.esaka_range = d0
+					end
+				end
+
 				-- 家庭用 05B37E からの処理
 				if 0x58 > p.attack then
-					local d0
-					if 0x27 < p.attack then
-						--CA
-						local a0 = pgm:read_u32(0x8C18C + p.char_4times)
-						d0 = p.attack - 0x27
-						d0 = pgm:read_u8(d0 + a0)
-					else
-						-- 通常技
-						local a0 = 0x8C274
-						if 0xC ~= p.char and 0x10 ~= p.char then
-							a0 = 0x8C24C -- ビリーとチョンシュ
-						end
-						d0 = pgm:read_u8(a0 + p.attack)
+					if 0x27 < p.attack then --CA
+						p.pow_up_hit = pgm:read_u8(p.attack - 0x27 + pgm:read_u32(0x8C18C + p.char_4times))
+					else -- 通常技 ビリーとチョンシュか、それ以外でアドレスが違う
+						local a0 = (0xC ~= p.char and 0x10 ~= p.char) and 0x8C24C or 0x8C274
+						p.pow_up_hit = pgm:read_u8(a0 + p.attack)
 					end
-					-- d0 ヒット時増加量、ガード時増加量 d0の右1ビットシフト=1/2
-					p.pow_up_hit = d0
-					p.pow_up_gd  = math.floor(d0 / 2)
-				else
-					-- 家庭用 03C140 からの処理
-					local a0 = pgm:read_u32(0x8C1EC + p.char_4times)
-					local d0 = pgm:read_u8(p.addr.base + 0xBC)
-					if d0 ~= 0 then
-						d0 = pgm:read_u8(a0 + d0 - 1)
-					end
-					p.pow_up = d0
+					-- ガード時増加量 d0の右1ビットシフト=1/2
+					p.pow_up_gd  = math.floor(p.pow_up_hit / 2)
 				end
-				-- TODO マリーの技がちゃんと取れない
-				-- TODO トドメ=ヒットで+7、雷撃棍=発生で+5、倍返し=返しで+7、吸収で+20 は個別に設定が必要
-				-- TODO 動作が継続する必殺技の値が途中で値が変わる
+
+				-- 必殺技のパワー増加 家庭用 03C140 からの処理
+				-- base+A3の値は技発動時の処理中にしか採取できないのでこの処理は機能しない
+				-- local d0, a0 = pgm:read_u8(p.addr.base + 0xA3), 0
+				local spid = pgm:read_u8(p.addr.base + 0xB8) -- 技コマンド成立時の技のID
+				if spid ~= 0 then
+					p.pow_up = pgm:read_u8(pgm:read_u32(0x8C1EC + p.char_4times) + spid - 1)
+				end
+				-- トドメ=ヒットで+7、雷撃棍=発生で+5、倍返し=返しで+7、吸収で+20 は個別に設定が必要
+				if p.char == 0x6 then
+					p.pow_up_hit     = 0
+					p.pow_up_gd      = 0
+					p.pow_up         = 5
+				elseif p.char == 0xB and p.attack == 0x8E then
+					p.pow_up_hit     = 0
+					p.pow_up_gd      = 0
+					p.pow_up         = 0
+					p.pow_revenge    = 7
+					p.pow_absorb     = 20
+				elseif p.char == 0xB and p.attack == 0xA0 then
+					p.pow_up_hit     = 7
+					p.pow_up_gd      = 0
+					p.pow_up         = 0
+				end
 			end
+
 			p.fake_hit       = (pgm:read_u8(p.addr.fake_hit) & 0xB) == 0
 			p.obsl_hit       = (pgm:read_u8(p.addr.obsl_hit) & 0xB) == 0
 			p.full_hit       = pgm:read_u8(p.addr.full_hit) > 0
 			p.harmless2      = pgm:read_u8(p.addr.harmless2) == 0
 			p.prj_rank       = pgm:read_u8(p.addr.prj_rank)
-			p.esaka_range    = nil
-			if 0x58 > p.attack then
-				-- 家庭用 0236F0 からの処理
-				local d1 = pgm:read_u8(p.addr.esaka_range)
-				local d0 = pgm:read_u16(pgm:read_u32(p.char_4times + 0x23750) + ((d1 + d1) & 0xFFFF)) & 0x1FFF
-				if d0 ~= 0 then
-					p.esaka_range = d0
-				end
-			end
 			p.input_offset   = pgm:read_u32(p.addr.input_offset)
 			p.old_input_states = p.input_states or {}
 			p.input_states   = {}
@@ -9453,110 +9452,111 @@ function rbff2.startplugin()
 
 		local atk_count = 0
 		for _, box in ipairs(p.hitboxes) do
-			if box.atk then
+			if box.atk and box.info then
 				atk_count = atk_count + 1
 				local info = box.info
 				summary.boxes = summary.boxes or {}
-   
-			   -- 避け攻撃つぶし
-			   local punish_away_label = "上方"
-			   if summary.normal_hit == hit_proc_types.same_line or summary.normal_hit == hit_proc_types.diff_line then
-				   if info.punish_away1 then
-					   -- ALL
-					   punish_away_label = "避け攻撃つぶし"
-				   elseif info.punish_away2 then
-					   -- ウェービングブロー,龍転身,ダブルローリング
-					   punish_away_label = "避け攻撃つぶし(ローレンスのみ1)"
-				   elseif info.punish_away3 then
-					   -- ローレンスのみ
-					   punish_away_label = "避け攻撃つぶし(ローレンスのみ2)"
-				   elseif info.punish_head1 then
-					   punish_away_label = "屈ヒット1"
-				   elseif info.punish_head2 then
-					   punish_away_label = "屈ヒット2"
-				   elseif info.punish_head3 then
-					   punish_away_label = "屈ヒット3"
-				   end
-			   end
-   
-			   local blocks = {}
-			   if summary.up_guard then
-				   -- 判定位置下段
-				   if info.pos_low2 then
-					   -- ALL
-				   elseif info.pos_low1 then
-					   -- タン以外
-					   table.insert(blocks, "立(タンのみ)")
-				   else
-					   table.insert(blocks, "立")
-				   end
-			   end
-			   if summary.low_guard then
-				   table.insert(blocks, "屈")
-			   end
-			   if summary.air_guard then
-				   table.insert(blocks, "空")
-			   end
-			   if info.unblock_pot and summary.normal_hit then
-				   if not summary.low_guard then
-					   table.insert(blocks, "ガー不可能性あり")
-				   end
-			   end
-			   local sway_blocks = {}
-			   if summary.normal_hit == hit_proc_types.diff_line then
-				   if summary.sway_up_gd == hit_proc_types.diff_line then
-					   -- 対スウェー判定位置下段
-					   if info.sway_pos_low2 then
-						   -- ALL
-					   elseif info.sway_pos_low1 then
-						   -- タン以外
-						   table.insert(sway_blocks, "立(タンのみ)")
-					   else
-						   table.insert(sway_blocks, "立")
-					   end
-				   end
-				   if summary.sway_low_gd == hit_proc_types.diff_line then
-					   table.insert(sway_blocks, "屈")
-				   end
-			   end
-			   local parry = {}
-			   if info.range_j_atm_nage == true then
-				   -- 上段当て身投げ可能
-				   table.insert(parry, "上")
-			   end
-			   if info.range_urakumo == true then
-				   -- 裏雲隠し可能
-				   table.insert(parry, "中")
-			   end
-			   if info.range_g_atm_uchi == true then
-				   -- 下段当て身打ち可能
-				   table.insert(parry, "下")
-			   end
-			   if info.range_gyakushu == true then
-				   -- 逆襲拳可能
-				   table.insert(parry, "逆")
-			   end
-			   if info.range_sadomazo == true then
-				   -- サドマゾ可能
-				   table.insert(parry, "サ")
-			   end
-			   if info.range_phx_tw == true then
-				   -- フェニックススルー可能
-				   table.insert(parry, "フ")
-			   end
-			   if info.range_baigaeshi == true then
-				   -- 倍返し可能
-				   table.insert(parry, "倍")
-			   end
-   
-			   -- TODO 二重登録をインデックス指定で回避しておく
-			   summary.boxes[atk_count] = {
-				   punish_away_label = punish_away_label,
-				   block_label = #blocks == 0 and "ガード不能" or table.concat(blocks, ","),
-				   sway_block_label = #sway_blocks == 0 and "-" or table.concat(sway_blocks, ","),
-				   parry_label = #parry == 0 and "不可" or table.concat(parry, ","),
-				   reach_label = string.format("前%s/上%s/下%s/後%s", box.reach.front, box.reach.top + p.pos_y, box.reach.bottom + p.pos_y, box.reach.back)
-			   }
+
+				-- 避け攻撃つぶし
+				local punish_away_label
+				if summary.normal_hit == hit_proc_types.same_line or summary.normal_hit == hit_proc_types.diff_line then
+					punish_away_label = "上方"
+					if info.punish_away1 then
+						-- ALL
+						punish_away_label = "避け攻撃つぶし"
+					elseif info.punish_away2 then
+						-- ウェービングブロー,龍転身,ダブルローリング
+						punish_away_label = "避け攻撃つぶし(ローレンスのみ1)"
+					elseif info.punish_away3 then
+						-- ローレンスのみ
+						punish_away_label = "避け攻撃つぶし(ローレンスのみ2)"
+					elseif info.punish_head1 then
+						punish_away_label = "屈ヒット1"
+					elseif info.punish_head2 then
+						punish_away_label = "屈ヒット2"
+					elseif info.punish_head3 then
+						punish_away_label = "屈ヒット3"
+					end
+				end
+
+				local blocks = {}
+				if summary.up_guard then
+					-- 判定位置下段
+					if info.pos_low2 then
+						-- ALL
+					elseif info.pos_low1 then
+						-- タン以外
+						table.insert(blocks, "立(タンのみ)")
+					else
+						table.insert(blocks, "立")
+					end
+				end
+				if summary.low_guard then
+					table.insert(blocks, "屈")
+				end
+				if summary.air_guard then
+					table.insert(blocks, "空")
+				end
+				if info.unblock_pot and summary.normal_hit then
+					if not summary.low_guard then
+						table.insert(blocks, "ガー不可能性あり")
+					end
+				end
+				local sway_blocks = {}
+				if summary.normal_hit == hit_proc_types.diff_line then
+					if summary.sway_up_gd == hit_proc_types.diff_line then
+						-- 対スウェー判定位置下段
+						if info.sway_pos_low2 then
+							-- ALL
+						elseif info.sway_pos_low1 then
+							-- タン以外
+							table.insert(sway_blocks, "立(タンのみ)")
+						else
+							table.insert(sway_blocks, "立")
+						end
+					end
+					if summary.sway_low_gd == hit_proc_types.diff_line then
+						table.insert(sway_blocks, "屈")
+					end
+				end
+				local parry = {}
+				if info.range_j_atm_nage == true then
+					-- 上段当て身投げ可能
+					table.insert(parry, "上")
+				end
+				if info.range_urakumo == true then
+					-- 裏雲隠し可能
+					table.insert(parry, "中")
+				end
+				if info.range_g_atm_uchi == true then
+					-- 下段当て身打ち可能
+					table.insert(parry, "下")
+				end
+				if info.range_gyakushu == true then
+					-- 逆襲拳可能
+					table.insert(parry, "逆")
+				end
+				if info.range_sadomazo == true then
+					-- サドマゾ可能
+					table.insert(parry, "サ")
+				end
+				if info.range_phx_tw == true then
+					-- フェニックススルー可能
+					table.insert(parry, "フ")
+				end
+				if info.range_baigaeshi == true then
+					-- 倍返し可能
+					table.insert(parry, "倍")
+				end
+
+				-- TODO 二重登録をインデックス指定で回避しておく
+				summary.boxes[atk_count] = {
+					punish_away_label = punish_away_label,
+					block_label = #blocks == 0 and "ガード不能" or table.concat(blocks, ","),
+					sway_block_label = #sway_blocks == 0 and "-" or table.concat(sway_blocks, ","),
+					parry_label = #parry == 0 and "不可" or table.concat(parry, ","),
+					reach_label = string.format("前%s/上%s/下%s/後%s", box.reach.front, box.reach.top + p.pos_y, box.reach.bottom + p.pos_y, box.reach.back)
+				}
 			end
 		end
 
@@ -9573,23 +9573,31 @@ function rbff2.startplugin()
 			stun_sec = string.format("%4.3f秒(%sF)", summary.pure_st_tm / 60, summary.pure_st_tm)
 		end
 		local dmg_label = string.format("%s(%s)", summary.pure_dmg, summary.chip_dmg)
-		local reach_label = string.format("前%s/上%s/下%s/後%s/詠酒%s", 
-			summary.edge.hit.front,
-			summary.edge.hit.top + p.pos_y,
-			summary.edge.hit.bottom + p.pos_y,
-			summary.edge.hit.back, p.esaka_range or "-")
-
+		local reach_label
+		if summary.edge.hit.front then
+			reach_label = string.format("前%s/上%s/下%s/後%s", 
+				summary.edge.hit.front,
+				summary.edge.hit.top + p.pos_y,
+				summary.edge.hit.bottom + p.pos_y,
+				summary.edge.hit.back, p.esaka_range or "-")
+		else
+			reach_label = string.format("前-/上-/下-/後-", 
+				p.esaka_range or "-")
+		end
+		local effect_label = "-"
+		if summary.effect then
+			effect_label = string.format("%s 地:%s/空:%s", summary.effect, hit_effects[summary.effect+1], air_hit_effects[summary.effect+1])
+		end
 		local hit_summary = {
 			{"攻撃値(削り):"  , dmg_label},
 
 			{"攻撃範囲:"      , summary.normal_hit or summary.down_hit or summary.air_hit or "-"},
 			-- TODO 追い打ち等の強制ダウン技では不可にしないといけない 05A9B8 に行く前にチェックしてる？
 			{"受け身行動可否:", summary.can_techrise == true and "受け身可" or "受け身不可" },
-			{"ヒット効果:"    , string.format("%s 地:%s/空:%s", summary.effect, hit_effects[summary.effect+1], air_hit_effects[summary.effect+1])},
+			{"ヒット効果:"    , effect_label},
 			{"追撃能力:"      , followup_label},
 
 			{"気絶値:"        , string.format("%s/継続:%s", summary.pure_st, stun_sec) },
-			{"POW増加量:"     , string.format("空%s/当%s/防%s", summary.pow_up, summary.pow_up_hit, summary.pow_up_gd) },
 
 			{"ヒットストップ:", string.format("自･ヒット%sF/ガード･BS猶予%sF", summary.hitstop, summary.hitstop_gd) },
 			{"ヒット硬直:"    , string.format("ヒット%sF/ガード%sF/継続:%s", summary.hitstun, summary.blockstun, gd_strength_label) },
@@ -9625,6 +9633,18 @@ function rbff2.startplugin()
 			end
 			y = y + 8
 		end
+	end
+	local make_atk_summary = function(i, p, summary)
+		local pow_label = string.format("空%s/当%s/防%s", p.pow_up, p.pow_up_hit or 0, p.pow_up_gd or 0)
+		if p.pow_revenge or p.pow_absorb then
+			pow_label = pow_label .. string.format("/返%s/吸%s", p.pow_revenge or 0, p.pow_absorb or 0)
+		end
+		local esaka_label = p.esaka_range or "-"
+		local atk_summary = {
+			{"POW増加量:"     , pow_label },
+			{"詠酒:"          , esaka_label },
+		}
+		return atk_summary
 	end
 	local make_hurt_summary = function(i, p, summary)
 		local hurt_labels = {}
@@ -10136,14 +10156,21 @@ function rbff2.startplugin()
 							end
 						end
 					end
-					local hurt_summary = make_hurt_summary(i, p, p.hit.box_summary)
-					if last_hit_summary then
-						for _, row in ipairs(last_hit_summary) do
-							table.insert(hurt_summary, row)
-						end
+					local all_summary = make_hurt_summary(i, p, p.hit.box_summary)
+					
+					local atk_summary = p.old_atk_summary or {}
+					if p.old_attack ~= p.attack then
+						atk_summary = make_atk_summary(i, p, p.hit.box_summary)
 					end
-					draw_summary(i, hurt_summary)
+					for _, row in ipairs(atk_summary) do
+						table.insert(all_summary, row)
+					end
+					for _, row in ipairs(last_hit_summary or {}) do
+						table.insert(all_summary, row)
+					end
+					draw_summary(i, all_summary)
 					p.hit.old_hit_summary = last_hit_summary
+					p.old_atk_summary     = atk_summary
 				end
 			end
 
@@ -10157,35 +10184,6 @@ function rbff2.startplugin()
 				for i, p in ipairs(players) do
 					local p1 = i == 1
 					local op = players[3-i]
-
-					if p.disp_sts == 3 then
-						local summary = p.hit.box_summary
-						local last_hit_summary = p.hit.old_hit_summary
-						if check_edge(i, "hit"  , summary.edge.hit  , p.pos_y) then
-							last_hit_summary = make_hit_summary(i, p, summary)
-						end
-						--[[
-						draw_reach(i, "hurt" , summary.edge.hurt , p.pos_y)
-						draw_reach(i, "block", summary.edge.block, p.pos_y)
-						draw_reach(i, "parry", summary.edge.parry, p.pos_y)
-						draw_reach(i, "throw", summary.edge.throw, p.pos_y)
-						]]
-						for _, fb in pairs(p.fireball) do
-							if fb.alive then
-								if check_edge(i, "prj", fb.hit.box_summary.edge.hit, fb.pos_y) then
-									last_hit_summary = make_hit_summary(i, fb, fb.hit.box_summary)
-								end
-							end
-						end
-						local hurt_summary = make_hurt_summary(i, p, summary)
-						if last_hit_summary then
-							for _, row in ipairs(last_hit_summary) do
-								table.insert(hurt_summary, row)
-							end
-						end
-						draw_summary(i, hurt_summary)
-						p.hit.old_hit_summary = last_hit_summary
-					end
 
 					-- 1:右向き -1:左向き
 					local flip_x = p.hit.flip_x == 1 and ">" or "<"
