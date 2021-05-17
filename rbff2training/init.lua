@@ -4555,13 +4555,20 @@ local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, atta
 	end
 
 	pos_y  = pos_y - p.hit.pos_z
-	top    = 0xFFFF & (pos_y - (0xFFFFF & ((top    * p.hit.scale) >> 6)))
-	bottom = 0xFFFF & (pos_y - (0xFFFFF & ((bottom * p.hit.scale) >> 6)))
-	left   = 0xFFFF & (pos_x - (0xFFFFF & ((left   * p.hit.scale) >> 6)) * p.hit.flip_x)
-	right  = 0xFFFF & (pos_x - (0xFFFFF & ((right  * p.hit.scale) >> 6)) * p.hit.flip_x)
+
+	top    = pos_y - (0xFFFF & ((top    * p.hit.scale) >> 6))
+	bottom = pos_y - (0xFFFF & ((bottom * p.hit.scale) >> 6))
+	if is_fireball then
+		top = top & 0xFFFF
+		bottom = bottom & 0xFFFF
+	end
+	left   = 0xFFFF & (pos_x - (0xFFFF & ((left   * p.hit.scale) >> 6)) * p.hit.flip_x)
+	right  = 0xFFFF & (pos_x - (0xFFFF & ((right  * p.hit.scale) >> 6)) * p.hit.flip_x)
 
 	box.top , box.bottom = bottom, top
 	box.left, box.right  = left, right
+	box.plain_top , box.plain_bottom = bottom, top
+	box.plain_left, box.plain_right  = left, right
 
 	if ((box.top <= 0 and box.bottom <=0) or (box.top >= 224 and box.bottom >=224) or (box.left <= 0 and box.right <= 0) or (box.left >= 320 and box.right >= 320)) then
 		--print("OVERFLOW " .. (key or "")) --debug
@@ -4634,7 +4641,30 @@ local get_reach = function(p, box, pos_x, pos_y)
 		top      = math.floor(top_reach)    - 24,       -- キャラ本体座標からの上のリーチ
 		bottom   = math.floor(bottom_reach) - 24,       -- キャラ本体座標からの下のリーチ
 	}
-	return reach_data
+
+	local x, y
+	if p.is_fireball then
+		x, y = p.pos, p.pos_y
+	else
+		x, y = box.pos_x, box.pos_y
+	end
+	top_reach    = y - math.min(box.plain_top, box.plain_bottom)
+	bottom_reach = y - math.max(box.plain_top, box.plain_bottom)
+	if p.hit.flip_x == 1 then
+		front_reach = math.max(box.plain_left, box.plain_right) - x
+		back_reach  = math.min(box.plain_left, box.plain_right) - x
+	else
+		front_reach = x - math.min(box.plain_left, box.plain_right)
+		back_reach  = x - math.max(box.plain_left, box.plain_right)
+	end
+	local reach_memo1 = string.format("%4x %3d %3d %3d %3d",
+		box.type.id,            -- 種類
+		math.floor(front_reach),-- キャラ本体座標からの前のリーチ
+		math.floor(back_reach), -- キャラ本体座標からの後のリーチ
+		math.floor(top_reach),  -- キャラ本体座標からの上のリーチ
+		math.floor(bottom_reach)-- キャラ本体座標からの下のリーチ
+	)
+	return reach_data, reach_memo1
 end
 
 local in_range = function(top, bottom, atop, abottom)
@@ -4653,13 +4683,12 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 		box.fb_pos_x, box.fb_pos_y = pos_x, pos_y
 		box.pos_x = is_fireball and math.floor(p.parent.pos - screen_left) or pos_x
 		box.pos_y = is_fireball and math.floor(p.parent.pos_y) or pos_y
-	
-		local fb_reach 
+
+		local reach_memo1
 		if is_fireball then
-			box.reach = get_reach(p, box, box.pos_x, box.fb_pos_y)
-			fb_reach  = get_reach(p, box, box.fb_pos_x, box.fb_pos_y)
+			box.reach, reach_memo1 = get_reach(p, box, box.pos_x, box.fb_pos_y)
 		else
-			box.reach = get_reach(p, box, box.pos_x, box.pos_y)
+			box.reach, reach_memo1 = get_reach(p, box, box.pos_x, box.pos_y)
 		end
 
 		local summary, edge = p.hit_summary, nil
@@ -4900,24 +4929,6 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 		end
 
 		-- 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
-		local reach_memo1
-		if is_fireball then
-			reach_memo1 = string.format("%4x %2x %2x %2x %2x",
-				box.type.id,     -- 種類
-				fb_reach.front, -- キャラ本体座標からの前のリーチ
-				fb_reach.back,  -- キャラ本体座標からの後のリーチ
-				fb_reach.top,   -- キャラ本体座標からの上のリーチ
-				fb_reach.bottom -- キャラ本体座標からの下のリーチ
-			)
-		else
-			reach_memo1 = string.format("%4x %2x %2x %2x %2x",
-				box.type.id,     -- 種類
-				box.reach.front, -- キャラ本体座標からの前のリーチ
-				box.reach.back,  -- キャラ本体座標からの後のリーチ
-				box.reach.top,   -- キャラ本体座標からの上のリーチ
-				box.reach.bottom -- キャラ本体座標からの下のリーチ
-			)
-		end
 		if global.disp_hitbox == 3 or (global.disp_hitbox == 4 and box.atk) or (global.disp_hitbox == 5 and not box.atk) then
 			if p.reach_tbl[reach_memo1] ~= true then
 				p.reach_tbl[reach_memo1] = true
@@ -7587,14 +7598,15 @@ function rbff2.startplugin()
 		if summary.effect then
 			local e = summary.effect + 1
 			effect_label = string.format("%s 地:%s/空:%s", summary.effect, hit_effects[e][1], hit_effects[e][2])
+			if summary.can_techrise == true then
+				effect_label = string.gsub(effect_label, "ダウン", "強制ダウン")
+			end
 		end
 
 		local hit_summary = {
 			{"攻撃値(削り):"  , dmg_label},
 
 			{"攻撃範囲:"      , summary.normal_hit or summary.down_hit or summary.air_hit or "-"},
-			-- TODO 追い打ち等の強制ダウン技では不可にしないといけない 05A9B8 に行く前にチェックしてる？
-			{"受け身行動可否:", summary.can_techrise == true and "受け身可" or "受け身不可" },
 			{"ヒット効果:"    , effect_label},
 			{"追撃能力:"      , followup_label},
 
@@ -9772,7 +9784,7 @@ function rbff2.startplugin()
 			return summary
 		end
 		local scr = manager.machine.screens:at(1)
-		local x, y = i == 1 and 170 or 20, 41
+		local x, y = i == 1 and 170 or 20, 4
 		scr:draw_box(x-2, y-2, x+130, y+2+8*#summary, 0x80404040, 0x80404040)
 		for _, row in ipairs(summary) do
 			local k, v = row[1], row[2]
