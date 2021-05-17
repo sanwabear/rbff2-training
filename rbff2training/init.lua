@@ -5324,6 +5324,7 @@ function rbff2.startplugin()
 			hitboxes         = {},
 			buffer           = {},
 			uniq_hitboxes    = {}, -- key + boolean
+			type_boxes       = {}, -- key + count
 			fireball_bases   = p1 and { [0x100600] = true, [0x100800] = true, [0x100A00] = true, } or
 			                          { [0x100700] = true, [0x100900] = true, [0x100B00] = true, },
 			fake_hits        = p1 and { [0x100600] = 0x10DDF5, [0x100800] = 0x10DDF7, [0x100A00] = 0x10DDF9, } or
@@ -7568,6 +7569,7 @@ function rbff2.startplugin()
 					parry_label = #parry == 0 and "不可" or table.concat(parry, ","),
 					reach_label = string.format("前%s/上%s/下%s/後%s", box.reach.front, box.reach.top + p.pos_y, box.reach.bottom + p.pos_y, box.reach.back)
 				})
+				box.type_count = #summary.boxes
 			end
 		end
 
@@ -7778,6 +7780,7 @@ function rbff2.startplugin()
 						type_label  = type_label,
 						reach_label = string.format("前%s/上%s/下%s/後%s", box.reach.front, box.reach.top + p.pos_y, box.reach.bottom + p.pos_y, box.reach.back)
 					})
+					box.type_count = #summary.hurt_boxes
 				end
 			end
 		end
@@ -8408,6 +8411,7 @@ function rbff2.startplugin()
 				fb.hitboxes       = {}
 				fb.buffer         = {}
 				fb.uniq_hitboxes  = {} -- key + boolean
+				fb.type_boxes     = {}
 				fb.act_data_fired = p.act_data -- 発射したタイミングの行動ID
 
 				fb.act_frames     = fb.act_frames  or {}
@@ -8544,6 +8548,7 @@ function rbff2.startplugin()
 			p.hitboxes             = {}
 			p.buffer               = {}
 			p.uniq_hitboxes        = {} -- key + boolean
+			p.type_boxes           = {}
 			temp_hits[p.addr.base] = p
 
 			--攻撃種類,ガード要否
@@ -9799,6 +9804,39 @@ function rbff2.startplugin()
 			y = y + 8
 		end
 	end
+	local draw_axis = function(i, p, x, col)
+		local scr = manager.machine.screens:at(1)
+		if x then
+			scr:draw_line(x, p.hit.pos_y-global.axis_size, x, p.hit.pos_y+global.axis_size, col)
+			scr:draw_line(x-global.axis_size, p.hit.pos_y, x+global.axis_size, p.hit.pos_y, col)
+			draw_text_with_shadow(x-1.5, p.hit.pos_y+global.axis_size    , string.format("%d", i), col)
+		end
+	end
+	local draw_esaka = function(i, x, col)
+		local scr = manager.machine.screens:at(1)
+		if x and 0 <= x then
+			local y1, y2 = 0, 200+global.axis_size
+			scr:draw_line(x, y1, x, y2, col)
+			draw_text_with_shadow(x-2.5, y2    , string.format("え%d", i), col)
+		end
+	end
+	local draw_close_far = function(p, btn, x1, x2)
+		local op = p.op
+		local scr = manager.machine.screens:at(1)
+		if x1 and x2 then
+			local diff = math.abs(p.pos - op.pos)
+			local in_range = x1 <= diff and diff <= x2 
+			x1 = p.hit.pos_x + x1 * p.side
+			x2 = p.hit.pos_x + x2 * p.side
+			-- 間合い
+			local color = in_range and 0xFFFFFF00 or 0xFFBBBBBB
+			scr:draw_line(x2-2, p.hit.pos_y  , x2+2, p.hit.pos_y  , color)
+			scr:draw_line(x2  , p.hit.pos_y-2, x2  , p.hit.pos_y+2, color)
+			if in_range then
+				draw_text_with_shadow(x2-2.5, p.hit.pos_y+4  , string.format("%s%d", btn, i), color)
+			end
+		end
+	end
 
 	tra_main.draw = function()
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
@@ -9808,6 +9846,41 @@ function rbff2.startplugin()
 		if match_active then
 			-- 判定表示（キャラ、飛び道具）
 			if global.disp_hitbox > 1 then
+				-- 座標表示
+				for i, p in ipairs(players) do
+					if p.in_air ~= true and p.sway_status == 0x00 then
+						-- 通常投げ間合い
+						local color = p.throw.in_range and 0xFFFFFF00 or 0xFFBBBBBB
+						scr:draw_line(p.throw.x1, p.hit.pos_y  , p.throw.x2, p.hit.pos_y  , color)
+						scr:draw_line(p.throw.x1, p.hit.pos_y-4, p.throw.x1, p.hit.pos_y+4, color)
+						scr:draw_line(p.throw.x2, p.hit.pos_y-4, p.throw.x2, p.hit.pos_y+4, color)
+						if p.throw.in_range then
+							draw_text_with_shadow(p.throw.x1+2.5, p.hit.pos_y+4  , string.format("投%d", i), color)
+						end
+
+						-- 地上通常技の遠近判断距離
+						for btn, range in pairs(p.close_far) do
+							draw_close_far(p, string.upper(btn), range.x1, range.x2)
+						end
+					elseif p.sway_status == 0x80 then
+						-- ライン移動技の遠近判断距離
+						for btn, range in pairs(p.close_far_lma) do
+							draw_close_far(p, string.upper(btn), range.x1, range.x2)
+						end
+					end
+
+					-- 中心座標
+					draw_axis(i, p, p.hit.pos_x, p.in_air == true and global.axis_air_color or global.axis_color)
+					draw_axis(i, p, p.hit.max_pos_x, global.axis_internal_color)
+					draw_axis(i, p, p.hit.min_pos_x, global.axis_internal_color)
+
+					-- 詠酒範囲
+					if p.esaka_range > 0 then
+						draw_esaka(i, p.hit.pos_x + p.esaka_range, global.axis_internal_color)
+						draw_esaka(i, p.hit.pos_x - p.esaka_range, global.axis_internal_color)
+					end
+				end
+
 				for _, p in ipairs(players) do
 					for _, box in ipairs(p.hitboxes) do
 						if box.flat_throw then
@@ -9828,6 +9901,15 @@ function rbff2.startplugin()
 
 							if box.visible == true and box.type.enabled == true then
 								scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, box.type.fill)
+								--scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, 0x00000000)
+								if box.type_count then
+									local x1, x2 = math.min(box.left, box.right), math.max(box.left, box.right)
+									local y1, y2 = math.min(box.top, box.bottom), math.max(box.top, box.bottom)
+									local x = math.floor((x2 - x1) / 2) + x1 - 2
+									local y = math.floor((y2 - y1) / 2) + y1 - 4
+									scr:draw_text(x+0.5, y+0.5, box.type_count.."", shadow_col)
+									scr:draw_text(x, y, box.type_count.."", box.type.outline)
+								end
 							end
 						end
 					end
@@ -10067,73 +10149,6 @@ function rbff2.startplugin()
 				end
 			end
 
-			-- コマンド入力とダメージとコンボ表示
-			for i, p in ipairs(players) do
-				local op = players[3-i]
-				local draw_axis = function(x, col)
-					if x then
-						scr:draw_line(x, p.hit.pos_y-global.axis_size, x, p.hit.pos_y+global.axis_size, col)
-						scr:draw_line(x-global.axis_size, p.hit.pos_y, x+global.axis_size, p.hit.pos_y, col)
-						draw_text_with_shadow(x-1.5, p.hit.pos_y+global.axis_size    , string.format("%d", i), col)
-					end
-				end
-				local draw_esaka = function(x, col)
-					if x and 0 <= x then
-						local y1, y2 = 0, 200+global.axis_size
-						scr:draw_line(x, y1, x, y2, col)
-						draw_text_with_shadow(x-2.5, y2    , string.format("え%d", i), col)
-					end
-				end
-				local draw_close_far = function(btn, x1, x2)
-					if x1 and x2 then
-						local diff = math.abs(p.pos - op.pos)
-						local in_range = x1 <= diff and diff <= x2 
-						x1 = p.hit.pos_x + x1 * p.side
-						x2 = p.hit.pos_x + x2 * p.side
-						-- 間合い
-						local color = in_range and 0xFFFFFF00 or 0xFFBBBBBB
-						scr:draw_line(x2-2, p.hit.pos_y  , x2+2, p.hit.pos_y  , color)
-						scr:draw_line(x2  , p.hit.pos_y-2, x2  , p.hit.pos_y+2, color)
-						if in_range then
-							draw_text_with_shadow(x2-2.5, p.hit.pos_y+4  , string.format("%s%d", btn, i), color)
-						end
-					end
-				end
-				-- 座標表示
-				if global.disp_hitbox > 1 then
-					if p.in_air ~= true and p.sway_status == 0x00 then
-						-- 通常投げ間合い
-						local color = p.throw.in_range and 0xFFFFFF00 or 0xFFBBBBBB
-						scr:draw_line(p.throw.x1, p.hit.pos_y  , p.throw.x2, p.hit.pos_y  , color)
-						scr:draw_line(p.throw.x1, p.hit.pos_y-4, p.throw.x1, p.hit.pos_y+4, color)
-						scr:draw_line(p.throw.x2, p.hit.pos_y-4, p.throw.x2, p.hit.pos_y+4, color)
-						if p.throw.in_range then
-							draw_text_with_shadow(p.throw.x1+2.5, p.hit.pos_y+4  , string.format("投%d", i), color)
-						end
-
-						-- 地上通常技の遠近判断距離
-						for btn, range in pairs(p.close_far) do
-							draw_close_far(string.upper(btn), range.x1, range.x2)
-						end
-					elseif p.sway_status == 0x80 then
-						-- ライン移動技の遠近判断距離
-						for btn, range in pairs(p.close_far_lma) do
-							draw_close_far(string.upper(btn), range.x1, range.x2)
-						end
-					end
-
-					-- 中心座標
-					draw_axis(p.hit.pos_x, p.in_air == true and global.axis_air_color or global.axis_color)
-					draw_axis(p.hit.max_pos_x, global.axis_internal_color)
-					draw_axis(p.hit.min_pos_x, global.axis_internal_color)
-
-					-- 詠酒範囲
-					if p.esaka_range > 0 then
-						draw_esaka(p.hit.pos_x + p.esaka_range, global.axis_internal_color)
-						draw_esaka(p.hit.pos_x - p.esaka_range, global.axis_internal_color)
-					end
-				end
-			end
 			-- コマンド入力とダメージとコンボ表示
 			for i, p in ipairs(players) do
 				local p1 = i == 1
