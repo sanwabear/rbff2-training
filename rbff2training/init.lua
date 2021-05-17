@@ -4558,10 +4558,10 @@ local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, atta
 
 	top    = pos_y - (0xFFFF & ((top    * p.hit.scale) >> 6))
 	bottom = pos_y - (0xFFFF & ((bottom * p.hit.scale) >> 6))
-	if is_fireball then
+	--if is_fireball then
 		top = top & 0xFFFF
 		bottom = bottom & 0xFFFF
-	end
+	--end
 	left   = 0xFFFF & (pos_x - (0xFFFF & ((left   * p.hit.scale) >> 6)) * p.hit.flip_x)
 	right  = 0xFFFF & (pos_x - (0xFFFF & ((right  * p.hit.scale) >> 6)) * p.hit.flip_x)
 
@@ -9820,7 +9820,7 @@ function rbff2.startplugin()
 			draw_text_with_shadow(x-2.5, y2    , string.format("え%d", i), col)
 		end
 	end
-	local draw_close_far = function(p, btn, x1, x2)
+	local draw_close_far = function(i, p, btn, x1, x2)
 		local op = p.op
 		local scr = manager.machine.screens:at(1)
 		if x1 and x2 then
@@ -9860,12 +9860,12 @@ function rbff2.startplugin()
 
 						-- 地上通常技の遠近判断距離
 						for btn, range in pairs(p.close_far) do
-							draw_close_far(p, string.upper(btn), range.x1, range.x2)
+							draw_close_far(i, p, string.upper(btn), range.x1, range.x2)
 						end
 					elseif p.sway_status == 0x80 then
 						-- ライン移動技の遠近判断距離
 						for btn, range in pairs(p.close_far_lma) do
-							draw_close_far(p, string.upper(btn), range.x1, range.x2)
+							draw_close_far(i, p, string.upper(btn), range.x1, range.x2)
 						end
 					end
 
@@ -9900,8 +9900,11 @@ function rbff2.startplugin()
 							]]
 
 							if box.visible == true and box.type.enabled == true then
-								scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, box.type.fill)
-								--scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, 0x00000000)
+								if global.no_background then
+									scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, 0x00000000)
+								else
+									scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, box.type.fill)
+								end
 								if box.type_count then
 									local x1, x2 = math.min(box.left, box.right), math.max(box.left, box.right)
 									local y1, y2 = math.min(box.top, box.bottom), math.max(box.top, box.bottom)
