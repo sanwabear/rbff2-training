@@ -4556,8 +4556,11 @@ local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, atta
 
 	pos_y  = pos_y - p.hit.pos_z
 
+	local ppp = top
+
 	top    = pos_y - (0xFFFF & ((top    * p.hit.scale) >> 6))
 	bottom = pos_y - (0xFFFF & ((bottom * p.hit.scale) >> 6))
+
 	--if is_fireball then
 		top = top & 0xFFFF
 		bottom = bottom & 0xFFFF
@@ -4594,13 +4597,6 @@ local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, atta
 			box.bottom = 0
 		end
 	end
-
-	-- 座標補正後にキー情報を作成する
-	box.key = string.format("%x %x id:%x x1:%x x2:%x y1:%x y2:%x", global.frame_number, p.addr.base, box.id, box.top, box.bottom, box.left, box.right)
-	if p.uniq_hitboxes[box.key] then
-		return nil
-	end
-	p.uniq_hitboxes[box.key] = true
 
 	if box.top == box.bottom and box.left == box.right then
 		box.visible = false
@@ -4676,8 +4672,8 @@ local in_range = function(top, bottom, atop, abottom)
 	return false
 end
 
-local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attack_only, is_fireball)
-	local box = new_hitbox1(p, id, pos_x, pos_y, top, bottom, left, right, attack_only, is_fireball)
+local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attack_only, is_fireball, key)
+	local box = new_hitbox1(p, id, pos_x, pos_y, top, bottom, left, right, attack_only, is_fireball, key)
 	-- 判定ができてからのログ情報の作成
 	if box then
 		box.fb_pos_x, box.fb_pos_y = pos_x, pos_y
@@ -4988,13 +4984,13 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 				p.pure_st,                          -- スタン値 %2s
 				p.pure_st_tm,                       -- スタンタイマー %2s
 				p.prj_rank,                         -- 飛び道具の強さ
-				p.esaka_range                      -- 詠酒範囲
+				p.esaka_range                       -- 詠酒範囲
 			)
 		elseif box.type.type_check == type_ck_gd then
 			box.log_txt = string.format("guard %6x %s %x", p.addr.base, reach_memo1, box.id)
 		end
 		if box.log_txt then
-			box.log_txt = box.log_txt .. " " .. box.key
+			box.log_txt = box.log_txt
 		end
 	end
 	return box
@@ -5079,7 +5075,7 @@ local update_object = function(p)
 
 	-- 判定データ排他用のテーブル
 	for _, box in ipairs(p.buffer) do
-		local hitbox = new_hitbox(p, box.id, box.pos_x, box.pos_y, box.top, box.bottom, box.left, box.right, box.attack_only, box.is_fireball)
+		local hitbox = new_hitbox(p, box.id, box.pos_x, box.pos_y, box.top, box.bottom, box.left, box.right, box.attack_only, box.is_fireball, box.key)
 		if hitbox then
 			table.insert(p.hitboxes, hitbox)
 			-- 攻撃情報ログ
@@ -8601,7 +8597,14 @@ function rbff2.startplugin()
 			}
 			if box.on ~= 0xFF and temp_hits[box.base] then
 				box.is_fireball = temp_hits[box.base].is_fireball == true
-				table.insert(temp_hits[box.base].buffer, box)
+				local p = temp_hits[box.base]
+				box.key = string.format("%x %x %x %x %x %x %x %x %x",
+					global.frame_number, p.addr.base, box.id,
+					box.pos_x, box.pos_y, box.top, box.bottom, box.left, box.right)
+				if p.uniq_hitboxes[box.key] == nil then
+					p.uniq_hitboxes[box.key] = true
+					table.insert(p.buffer, box)
+				end
 			else
 				--print("DROP " .. box.key) --debug
 			end
