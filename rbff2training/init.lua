@@ -262,7 +262,7 @@ local dip_config ={
 	cpu_cant_move = false,
 }
 
--- 最大スタン値の初期値
+-- 最大気絶値の初期値
 -- 配列のインデックス=キャラID
 local init_stuns =  {
 	32 --[[ TERRY ]] ,31 --[[ ANDY ]] ,32 --[[ JOE ]], 29 --[[ MAI ]], 33 --[[ GEESE ]], 32 --[[ SOKAKU ]],
@@ -4123,61 +4123,61 @@ local type_ck_und  = function(obj, box)
 	--print(string.format("%x, unk box id: %x", obj.base, box.id)) --debug
 end
 local box_type_base = {
-	a   = { id = 0x00, name = "攻撃",                      enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF00FF, fill = 0x40, outline = 0xFF },
-	fa  = { id = 0x00, name = "攻撃(嘘)",                  enabled = false,type_check = type_ck_und,  type = "attack", color = 0x00FF00, fill = 0x00, outline = 0xFF },
-	da  = { id = 0x00, name = "攻撃(無効)",                enabled = true, type_check = type_ck_und,  type = "attack", color = 0xFF00FF, fill = 0x00, outline = 0xFF },
+	a   = { id = 0x00, name = "攻撃",                      enabled = true, type_check = type_ck_atk,  type = "attack", sort =  4, color = 0xFF00FF, fill = 0x40, outline = 0xFF },
+	fa  = { id = 0x00, name = "攻撃(嘘)",                  enabled = false,type_check = type_ck_und,  type = "attack", sort =  4, color = 0x00FF00, fill = 0x00, outline = 0xFF },
+	da  = { id = 0x00, name = "攻撃(無効)",                enabled = true, type_check = type_ck_und,  type = "attack", sort =  4, color = 0xFF00FF, fill = 0x00, outline = 0xFF },
 
-	aa  = { id = 0x00, name = "攻撃(空中追撃可)",          enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF00FF, fill = 0x40, outline = 0xFF },
-	faa = { id = 0x00, name = "攻撃(嘘、空中追撃可)",      enabled = false,type_check = type_ck_und,  type = "attack", color = 0x00FF00, fill = 0x00, outline = 0xFF },
-	daa = { id = 0x00, name = "攻撃(無効、空中追撃可)",    enabled = true, type_check = type_ck_und,  type = "attack", color = 0xFF00FF, fill = 0x00, outline = 0xFF },
+	aa  = { id = 0x00, name = "攻撃(空中追撃可)",          enabled = true, type_check = type_ck_atk,  type = "attack", sort =  4, color = 0xFF00FF, fill = 0x40, outline = 0xFF },
+	faa = { id = 0x00, name = "攻撃(嘘、空中追撃可)",      enabled = false,type_check = type_ck_und,  type = "attack", sort =  4, color = 0x00FF00, fill = 0x00, outline = 0xFF },
+	daa = { id = 0x00, name = "攻撃(無効、空中追撃可)",    enabled = true, type_check = type_ck_und,  type = "attack", sort =  4, color = 0xFF00FF, fill = 0x00, outline = 0xFF },
 
-	t3  = { id = 0x00, name = "未使用",                    enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0x8B4513, fill = 0x40, outline = 0xFF },
+	t3  = { id = 0x00, name = "未使用",                    enabled = true, type_check = type_ck_thw,  type = "throw",  sort = -1, color = 0x8B4513, fill = 0x40, outline = 0xFF },
 
-	pa  = { id = 0x00, name = "飛び道具",                  enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x40, outline = 0xFF },
-	pfa = { id = 0x00, name = "飛び道具(嘘)",              enabled = true, type_check = type_ck_atk,  type = "attack", color = 0x00FF33, fill = 0x00, outline = 0xFF },
-	pda = { id = 0x00, name = "飛び道具(無効)",            enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x00, outline = 0xFF },
+	pa  = { id = 0x00, name = "飛び道具",                  enabled = true, type_check = type_ck_atk,  type = "attack", sort =  5, color = 0xFF0033, fill = 0x40, outline = 0xFF },
+	pfa = { id = 0x00, name = "飛び道具(嘘)",              enabled = true, type_check = type_ck_atk,  type = "attack", sort =  5, color = 0x00FF33, fill = 0x00, outline = 0xFF },
+	pda = { id = 0x00, name = "飛び道具(無効)",            enabled = true, type_check = type_ck_atk,  type = "attack", sort =  5, color = 0xFF0033, fill = 0x00, outline = 0xFF },
 
-	paa = { id = 0x00, name = "飛び道具(空中追撃可)",      enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x40, outline = 0xFF },
-	pfaa= { id = 0x00, name = "飛び道具(嘘、空中追撃可)",  enabled = true, type_check = type_ck_atk,  type = "attack", color = 0x00FF33, fill = 0x00, outline = 0xFF },
-	pdaa= { id = 0x00, name = "飛び道具(無効、空中追撃可)",enabled = true, type_check = type_ck_atk,  type = "attack", color = 0xFF0033, fill = 0x00, outline = 0xFF },
+	paa = { id = 0x00, name = "飛び道具(空中追撃可)",      enabled = true, type_check = type_ck_atk,  type = "attack", sort =  5, color = 0xFF0033, fill = 0x40, outline = 0xFF },
+	pfaa= { id = 0x00, name = "飛び道具(嘘、空中追撃可)",  enabled = true, type_check = type_ck_atk,  type = "attack", sort =  5, color = 0x00FF33, fill = 0x00, outline = 0xFF },
+	pdaa= { id = 0x00, name = "飛び道具(無効、空中追撃可)",enabled = true, type_check = type_ck_atk,  type = "attack", sort =  5, color = 0xFF0033, fill = 0x00, outline = 0xFF },
 
-	t   = { id = 0x00, name = "投げ",                      enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
-	at  = { id = 0x00, name = "必殺技投げ",                enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
-	pt  = { id = 0x00, name = "空中投げ",                  enabled = true, type_check = type_ck_thw,  type = "throw",  color = 0xFFFF00, fill = 0x40, outline = 0xFF },
-	p   = { id = 0x01, name = "押し合い",                  enabled = true, type_check = type_ck_push, type = "push",   color = 0xDDDDDD, fill = 0x00, outline = 0xFF },
-	v1  = { id = 0x02, name = "食らい1",                   enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x0000FF, fill = 0x40, outline = 0xFF },
-	v2  = { id = 0x03, name = "食らい2",                   enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x0000FF, fill = 0x40, outline = 0xFF },
-	v3  = { id = 0x04, name = "食らい(ダウン追撃のみ可)",  enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x00FFFF, fill = 0x80, outline = 0xFF },
-	v4  = { id = 0x05, name = "食らい(空中追撃のみ可)",    enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x00FFFF, fill = 0x80, outline = 0xFF },
-	v5  = { id = 0x06, name = "食らい5(未使用?)",          enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x606060, fill = 0x40, outline = 0xFF },
-	v6  = { id = 0x07, name = "食らい(対ライン上攻撃)",    enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x00FFFF, fill = 0x80, outline = 0xFF },
-	x1  = { id = 0x08, name = "食らい(対ライン下攻撃)",    enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x00FFFF, fill = 0x80, outline = 0xFF },
-	x2  = { id = 0x09, name = "用途不明2",                 enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-	x3  = { id = 0x0A, name = "用途不明3",                 enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF }, -- 1311C
-	x4  = { id = 0x0B, name = "用途不明4",                 enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-	x5  = { id = 0x0C, name = "用途不明5",                 enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-	x6  = { id = 0x0D, name = "用途不明6",                 enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-	x7  = { id = 0x0E, name = "用途不明7",                 enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-	x8  = { id = 0x0F, name = "用途不明8",                 enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-	x9  = { id = 0x10, name = "用途不明9",                 enabled = true, type_check = type_ck_und,  type = "unkown", color = 0x00FF00, fill = 0x40, outline = 0xFF },
-	g1  = { id = 0x11, name = "立ガード",                  enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 stand-guard
-	g2  = { id = 0x12, name = "下段ガード",                enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 counch-guard
-	g3  = { id = 0x13, name = "空中ガード",                enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 air-guard
-	g4  = { id = 0x14, name = "上段当身投げ",              enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 j.atemi-nage        012DBC
-	g5  = { id = 0x15, name = "裏雲隠し",                  enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 c.atemi-nage        012DBC
-	g6  = { id = 0x16, name = "下段当身打ち",              enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 g.ateminage         012DBC
-	g7  = { id = 0x17, name = "必勝逆襲拳",                enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 h.gyakushu-kyaku    012DBC
-	g8  = { id = 0x18, name = "サドマゾ",                  enabled = true, type_check = type_ck_gd,   type = "atemi",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 sadomazo            012DBC
-	g9  = { id = 0x19, name = "倍返し",                    enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xFF007F, fill = 0x40, outline = 0xFF },--rbff2 bai-gaeshi          012DBC
-	g12 = { id = 0x1A, name = "ガード?1",                  enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
-	g11 = { id = 0x1B, name = "ガード?2",                  enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
-	g10 = { id = 0x1C, name = "フェニックススルー",        enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 p.throw?            012DBC
-	g13 = { id = 0x1D, name = "ガード?4",                  enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
-	g14 = { id = 0x1E, name = "ガード?5",                  enabled = true, type_check = type_ck_gd,   type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
-	g15 = { id = 0x1F, name = "ガード?6",                  enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
-	g16 = { id = 0x20, name = "ガード?7",                  enabled = true, type_check = type_ck_und,  type = "guard",  color = 0x006400, fill = 0x40, outline = 0xFF },--?
-	sv1 = { id = 0x02, name = "食らい1(スウェー中)",       enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true },
-	sv2 = { id = 0x03, name = "食らい2(スウェー中)",       enabled = true, type_check = type_ck_vuln, type = "vuln",   color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true, },
+	t   = { id = 0x00, name = "投げ",                      enabled = true, type_check = type_ck_thw,  type = "throw",  sort =  6, color = 0xFFFF00, fill = 0x40, outline = 0xFF },
+	at  = { id = 0x00, name = "必殺技投げ",                enabled = true, type_check = type_ck_thw,  type = "throw",  sort =  6, color = 0xFFFF00, fill = 0x40, outline = 0xFF },
+	pt  = { id = 0x00, name = "空中投げ",                  enabled = true, type_check = type_ck_thw,  type = "throw",  sort =  6, color = 0xFFFF00, fill = 0x40, outline = 0xFF },
+	p   = { id = 0x01, name = "押し合い",                  enabled = true, type_check = type_ck_push, type = "push",   sort =  1, color = 0xDDDDDD, fill = 0x00, outline = 0xFF },
+	v1  = { id = 0x02, name = "食らい1",                   enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x0000FF, fill = 0x40, outline = 0xFF },
+	v2  = { id = 0x03, name = "食らい2",                   enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x0000FF, fill = 0x40, outline = 0xFF },
+	v3  = { id = 0x04, name = "食らい(ダウン追撃のみ可)",  enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x00FFFF, fill = 0x80, outline = 0xFF },
+	v4  = { id = 0x05, name = "食らい(空中追撃のみ可)",    enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x00FFFF, fill = 0x80, outline = 0xFF },
+	v5  = { id = 0x06, name = "食らい5(未使用?)",          enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x606060, fill = 0x40, outline = 0xFF },
+	v6  = { id = 0x07, name = "食らい(対ライン上攻撃)",    enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x00FFFF, fill = 0x80, outline = 0xFF },
+	x1  = { id = 0x08, name = "食らい(対ライン下攻撃)",    enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x00FFFF, fill = 0x80, outline = 0xFF },
+	x2  = { id = 0x09, name = "用途不明2",                 enabled = true, type_check = type_ck_und,  type = "unkown", sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF },
+	x3  = { id = 0x0A, name = "用途不明3",                 enabled = true, type_check = type_ck_und,  type = "unkown", sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF }, -- 1311C
+	x4  = { id = 0x0B, name = "用途不明4",                 enabled = true, type_check = type_ck_und,  type = "unkown", sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF },
+	x5  = { id = 0x0C, name = "用途不明5",                 enabled = true, type_check = type_ck_und,  type = "unkown", sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF },
+	x6  = { id = 0x0D, name = "用途不明6",                 enabled = true, type_check = type_ck_und,  type = "unkown", sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF },
+	x7  = { id = 0x0E, name = "用途不明7",                 enabled = true, type_check = type_ck_und,  type = "unkown", sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF },
+	x8  = { id = 0x0F, name = "用途不明8",                 enabled = true, type_check = type_ck_und,  type = "unkown", sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF },
+	x9  = { id = 0x10, name = "用途不明9",                 enabled = true, type_check = type_ck_und,  type = "unkown", sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF },
+	g1  = { id = 0x11, name = "立ガード",                  enabled = true, type_check = type_ck_gd,   type = "guard",  sort =  3, color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 stand-guard
+	g2  = { id = 0x12, name = "下段ガード",                enabled = true, type_check = type_ck_gd,   type = "guard",  sort =  3, color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 counch-guard
+	g3  = { id = 0x13, name = "空中ガード",                enabled = true, type_check = type_ck_gd,   type = "guard",  sort =  3, color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 air-guard
+	g4  = { id = 0x14, name = "上段当身投げ",              enabled = true, type_check = type_ck_gd,   type = "atemi",  sort =  3, color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 j.atemi-nage        012DBC
+	g5  = { id = 0x15, name = "裏雲隠し",                  enabled = true, type_check = type_ck_gd,   type = "atemi",  sort =  3, color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 c.atemi-nage        012DBC
+	g6  = { id = 0x16, name = "下段当身打ち",              enabled = true, type_check = type_ck_gd,   type = "atemi",  sort =  3, color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 g.ateminage         012DBC
+	g7  = { id = 0x17, name = "必勝逆襲拳",                enabled = true, type_check = type_ck_gd,   type = "atemi",  sort =  3, color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 h.gyakushu-kyaku    012DBC
+	g8  = { id = 0x18, name = "サドマゾ",                  enabled = true, type_check = type_ck_gd,   type = "atemi",  sort =  3, color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 sadomazo            012DBC
+	g9  = { id = 0x19, name = "倍返し",                    enabled = true, type_check = type_ck_gd,   type = "guard",  sort =  3, color = 0xFF007F, fill = 0x40, outline = 0xFF },--rbff2 bai-gaeshi          012DBC
+	g12 = { id = 0x1A, name = "ガード?1",                  enabled = true, type_check = type_ck_und,  type = "guard",  sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF },--?
+	g11 = { id = 0x1B, name = "ガード?2",                  enabled = true, type_check = type_ck_und,  type = "guard",  sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF },--?
+	g10 = { id = 0x1C, name = "フェニックススルー",        enabled = true, type_check = type_ck_gd,   type = "atemi",  sort =  3, color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 p.throw?            012DBC
+	g13 = { id = 0x1D, name = "ガード?4",                  enabled = true, type_check = type_ck_und,  type = "guard",  sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF },--?
+	g14 = { id = 0x1E, name = "ガード?5",                  enabled = true, type_check = type_ck_gd,   type = "guard",  sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF },--?
+	g15 = { id = 0x1F, name = "ガード?6",                  enabled = true, type_check = type_ck_und,  type = "guard",  sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF },--?
+	g16 = { id = 0x20, name = "ガード?7",                  enabled = true, type_check = type_ck_und,  type = "guard",  sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF },--?
+	sv1 = { id = 0x02, name = "食らい1(スウェー中)",       enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true },
+	sv2 = { id = 0x03, name = "食らい2(スウェー中)",       enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true, },
 }
 local box_types, sway_box_types = {}, {}
 for _, box in pairs(box_type_base) do
@@ -4570,8 +4570,8 @@ local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, atta
 
 	box.top , box.bottom = bottom, top
 	box.left, box.right  = left, right
-	box.plain_top , box.plain_bottom = bottom, top
-	box.plain_left, box.plain_right  = left, right
+	box.asis_top , box.asis_bottom = bottom, top
+	box.asis_left, box.asis_right  = left, right
 
 	if ((box.top <= 0 and box.bottom <=0) or (box.top >= 224 and box.bottom >=224) or (box.left <= 0 and box.right <= 0) or (box.left >= 320 and box.right >= 320)) then
 		--print("OVERFLOW " .. (key or "")) --debug
@@ -4631,12 +4631,6 @@ local get_reach = function(p, box, pos_x, pos_y)
 		front_reach = pos_x - math.min(box.left, box.right)
 		back_reach  = pos_x - math.max(box.left, box.right)
 	end
-	local reach_data = {
-		front    = math.floor(front_reach),             -- キャラ本体座標からの前のリーチ
-		back     = math.floor(back_reach),              -- キャラ本体座標からの後のリーチ
-		top      = math.floor(top_reach)    - 24,       -- キャラ本体座標からの上のリーチ
-		bottom   = math.floor(bottom_reach) - 24,       -- キャラ本体座標からの下のリーチ
-	}
 
 	local x, y
 	if p.is_fireball then
@@ -4644,22 +4638,33 @@ local get_reach = function(p, box, pos_x, pos_y)
 	else
 		x, y = box.pos_x, box.pos_y
 	end
-	top_reach    = y - math.min(box.plain_top, box.plain_bottom)
-	bottom_reach = y - math.max(box.plain_top, box.plain_bottom)
+	local asis_top_reach    = y - math.min(box.asis_top, box.asis_bottom)
+	local asis_bottom_reach = y - math.max(box.asis_top, box.asis_bottom)
+	local asis_front_reach, asis_back_reach
 	if p.hit.flip_x == 1 then
-		front_reach = math.max(box.plain_left, box.plain_right) - x
-		back_reach  = math.min(box.plain_left, box.plain_right) - x
+		asis_front_reach = math.max(box.asis_left, box.asis_right) - x
+		asis_back_reach  = math.min(box.asis_left, box.asis_right) - x
 	else
-		front_reach = x - math.min(box.plain_left, box.plain_right)
-		back_reach  = x - math.max(box.plain_left, box.plain_right)
+		asis_front_reach = x - math.min(box.asis_left, box.asis_right)
+		asis_back_reach  = x - math.max(box.asis_left, box.asis_right)
 	end
 	local reach_memo1 = string.format("%4x %3d %3d %3d %3d",
 		box.type.id,            -- 種類
-		math.floor(front_reach),-- キャラ本体座標からの前のリーチ
-		math.floor(back_reach), -- キャラ本体座標からの後のリーチ
-		math.floor(top_reach),  -- キャラ本体座標からの上のリーチ
-		math.floor(bottom_reach)-- キャラ本体座標からの下のリーチ
+		math.floor(asis_front_reach),-- キャラ本体座標からの前のリーチ
+		math.floor(asis_back_reach), -- キャラ本体座標からの後のリーチ
+		math.floor(asis_top_reach),  -- キャラ本体座標からの上のリーチ
+		math.floor(asis_bottom_reach)-- キャラ本体座標からの下のリーチ
 	)
+	local reach_data = {
+		front    = math.floor(front_reach),             -- キャラ本体座標からの前のリーチ
+		back     = math.floor(back_reach),              -- キャラ本体座標からの後のリーチ
+		top      = math.floor(top_reach)    - 24,       -- キャラ本体座標からの上のリーチ
+		bottom   = math.floor(bottom_reach) - 24,       -- キャラ本体座標からの下のリーチ
+		asis_front  = math.floor(asis_front_reach),
+		asis_back   = math.floor(asis_back_reach),
+		asis_top    = math.floor(asis_top_reach) - 24,
+		asis_bottom = math.floor(asis_bottom_reach) - 24,
+	}
 	return reach_data, reach_memo1
 end
 
@@ -4708,8 +4713,8 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 			summary.bai_catch   = summary.bai_catch   or p.bai_catch == true and "v" or nil
 
 			summary.pure_dmg    = summary.pure_dmg    or p.pure_dmg -- 補正前攻撃力
-			summary.pure_st     = summary.pure_st     or p.pure_st -- スタン値
-			summary.pure_st_tm  = summary.pure_st_tm  or p.pure_st_tm -- スタンタイマー
+			summary.pure_st     = summary.pure_st     or p.pure_st -- 気絶値
+			summary.pure_st_tm  = summary.pure_st_tm  or p.pure_st_tm -- 気絶タイマー
 
 			summary.chip_dmg    = summary.chip_dmg    or box.chip_dmg_type.calc(p.pure_dmg) -- 削りダメージ
 			summary.effect      = summary.effect      or box.effect -- ヒット効果
@@ -4981,8 +4986,8 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 				box.hitstun,                        -- ヒット後硬直F %2s
 				box.blockstun,                      -- ガード後硬直F %2s
 				box.effect,                         -- ヒット効果 %2s
-				p.pure_st,                          -- スタン値 %2s
-				p.pure_st_tm,                       -- スタンタイマー %2s
+				p.pure_st,                          -- 気絶値 %2s
+				p.pure_st_tm,                       -- 気絶タイマー %2s
 				p.prj_rank,                         -- 飛び道具の強さ
 				p.esaka_range                       -- 詠酒範囲
 			)
@@ -5148,7 +5153,7 @@ function rbff2.startplugin()
 			disp_dmg         = true,        -- ダメージ表示するときtrue
 			disp_cmd         = 2,           -- 入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
 			disp_frm         = true,        -- フレーム数表示するときtrue
-			disp_stun        = true,        -- スタン表示
+			disp_stun        = true,        -- 気絶表示
 			disp_sts         = 2,           -- 状態表示 "OFF", "小表示", "大表示"
 
 			no_hit           = 0,           -- Nヒット目に空ぶるカウントのカウンタ
@@ -5475,11 +5480,11 @@ function rbff2.startplugin()
 				pure_dmg     = p1 and 0x10DDFB or 0x10DDFC, -- 最終ダメージ(補正前)
 				tmp_pow      = p1 and 0x10DE59 or 0x10DE58, -- POWゲージ増加量
 				tmp_pow_rsv  = p1 and 0x10DE5B or 0x10DE5A, -- POWゲージ増加量(予約値)
-				tmp_stun     = p1 and 0x10DDFD or 0x10DDFF, -- 最終スタン値
-				tmp_st_timer = p1 and 0x10DDFE or 0x10DE00, -- 最終スタンタイマー
+				tmp_stun     = p1 and 0x10DDFD or 0x10DDFF, -- 最終気絶値
+				tmp_st_timer = p1 and 0x10DDFE or 0x10DE00, -- 最終気絶タイマー
 				life         = p1 and 0x10048B or 0x10058B, -- 体力
 				max_combo    = p1 and 0x10B4EF or 0x10B4F0, -- 最大コンボ
-				max_stun     = p1 and 0x10B84E or 0x10B856, -- 最大スタン値
+				max_stun     = p1 and 0x10B84E or 0x10B856, -- 最大気絶値
 				corner       = p1 and 0x1004B7 or 0x1005B7, -- 画面端状態 0:端以外 1:画面端 3:端押し付け
 				pos          = p1 and 0x100420 or 0x100520, -- X位置
 				pos_frc      = p1 and 0x100422 or 0x100522, -- X位置 少数部
@@ -5506,8 +5511,8 @@ function rbff2.startplugin()
 				input_offset = p1 and 0x0394C4 or 0x0394C8, -- コマンド入力状態のオフセットアドレス
 				no_hit       = p1 and 0x10DDF2 or 0x10DDF1, -- ヒットしないフック
 
-				stun         = p1 and 0x10B850 or 0x10B858, -- 現在スタン値
- 				stun_timer   = p1 and 0x10B854 or 0x10B85C, -- スタン値ゼロ化までの残フレーム数
+				stun         = p1 and 0x10B850 or 0x10B858, -- 現在気絶値
+ 				stun_timer   = p1 and 0x10B854 or 0x10B85C, -- 気絶値ゼロ化までの残フレーム数
  				tmp_combo    = p1 and 0x10B4E0 or 0x10B4E1, -- コンボテンポラリ
 				pow          = p1 and 0x1004BC or 0x1005BC, -- パワーアドレス
 				reg_pcnt     = p1 and 0x300000 or 0x340000, -- キー入力 REG_P1CNT or REG_P2CNT アドレス
@@ -6115,7 +6120,7 @@ function rbff2.startplugin()
 				"maincpu.pw@107C22>0",
 				"temp1=$10DDFB+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@((A4)+$8F);g"))
 
-			-- スタン値とスタン値タイマー取得用フック
+			-- 気絶値と気絶値タイマー取得用フック
 			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x05C1E0),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DDFD+((((A4)&$FFFFFF)-$100400)/$80);maincpu.pb@(temp1)=(D0);maincpu.pb@(temp1+$1)=(D1);g"))
@@ -7019,68 +7024,6 @@ function rbff2.startplugin()
 	end
 	--
 
-	-- TODO データのログ形式を決めて出力できるようにする
-	-- OpenTracing OpenCensus の形みたいにしてグラフ化して出せるのが理想
-	-- 発生、持続のほか、メタデータで各種データを残すとか
-	local log_data = {
-		id,             -- ID
-		parent_id,      -- 親ID
-		frame = {
-			startup , -- 発生
-			total , -- 全体硬直
-			adv_on_hit , -- ヒット時有利不利
-			adv_on_block , --- ガード時有利不利
-			active , -- 持続
-			hit_stop, -- ヒットストップ
-			block_stop, -- ガードストップ
-			hit_stun, -- ヒット後硬直
-			block_stun, -- ガード後硬直
-			strike_invincible, -- 打撃無敵
-			normal_throw_invincible, -- 通常投げ無敵
-			jumping, -- 空中移動まで
-			throw_invincible_threshold, -- 投げ無敵Fしきい値
-			throw_invincible_resettable, -- 投げ無敵Fリセット
-		},
-		attack = {
-			damage , -- 攻撃力
-			chip_ratio, -- 削り補正
-			stun, -- 気絶値
-			stun_timer , -- 気絶値タイマー
-			meter_gain , -- パワーゲージ増加量
-		},
-		effect = {
-			name , -- ヒット効果
-			no , -- ヒット効果＃
-			technical_rise_enable , -- テクニカルライズ可
-			ground_sway_enable , -- グランドスウェー可
-			ground_sway_enable , -- 避け攻撃相性
-			projectile_level , -- 飛び道具レベル
-		},
-		main_line = {
-			gound_hit, -- 地上
-			air_hit, -- 空中
-			juggle_hit, -- 追撃
-			gound_block, -- 地上ガード
-			air_block, -- 空中ガード
-		},
-		sway_line = {
-			gound_hit, -- 地上
-			air_hit, -- 空中
-			juggle_hit, -- 追撃
-			gound_block, -- 地上ガード
-			air_block, -- 空中ガード
-		},
-		counter = {
-			jodan_ateminage, -- 上段当身投げ
-			urakumo_kaushi,-- 裏雲隠し
-			gedan_ateminage,-- 下段当身打ち
-			assured_victory_retaliation, -- 必勝！逆襲拳
-			sadomazo, -- サドマゾ
-			phoenix_throw,-- フェニックススルー
-			baigaeshi, -- 倍返し
-		},
-	}
-
 	-- 1Pと2Pともにフレーム数が多すぎる場合は加算をやめる
 	-- グラフの描画最大範囲（画面の横幅）までにとどめる
 	local fix_max_framecount = function()
@@ -7316,22 +7259,22 @@ function rbff2.startplugin()
 
 	do_recover = function(p, op, force)
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
-		-- 体力とスタン値とMAXスタン値回復
+		-- 体力と気絶値とMAX気絶値回復
 		local life = { 0xC0, 0x60, 0x00 }
 		local max_life = life[p.red] or (p.red - #life) -- 赤体力にするかどうか
 		if dip_config.infinity_life then
 			pgm:write_u8(p.addr.life, max_life)
-			pgm:write_u8(p.addr.max_stun,  p.init_stun) -- 最大スタン値 
-			pgm:write_u8(p.addr.init_stun, p.init_stun) -- 最大スタン値
+			pgm:write_u8(p.addr.max_stun,  p.init_stun) -- 最大気絶値 
+			pgm:write_u8(p.addr.init_stun, p.init_stun) -- 最大気絶値
 		elseif p.life_rec then
 			-- 回復判定して回復
 			if force or ((math.max(p.update_dmg, op.update_dmg) + 180) <= global.frame_number and p.state == 0) then
 				-- やられ状態から戻ったときに回復させる
 				pgm:write_u8(p.addr.life, max_life) -- 体力
-				pgm:write_u8(p.addr.stun, 0) -- スタン値
-				pgm:write_u8(p.addr.max_stun,  p.init_stun) -- 最大スタン値 
-				pgm:write_u8(p.addr.init_stun, p.init_stun) -- 最大スタン値
-				pgm:write_u16(p.addr.stun_timer, 0) -- スタン値タイマー
+				pgm:write_u8(p.addr.stun, 0) -- 気絶値
+				pgm:write_u8(p.addr.max_stun,  p.init_stun) -- 最大気絶値 
+				pgm:write_u8(p.addr.init_stun, p.init_stun) -- 最大気絶値
+				pgm:write_u16(p.addr.stun_timer, 0) -- 気絶値タイマー
 			elseif max_life < p.life then
 				-- 最大値の方が少ない場合は強制で減らす
 				pgm:write_u8(p.addr.life, max_life)
@@ -7563,7 +7506,13 @@ function rbff2.startplugin()
 					block_label = #blocks == 0 and "ガード不能" or table.concat(blocks, ","),
 					sway_block_label = #sway_blocks == 0 and "-" or table.concat(sway_blocks, ","),
 					parry_label = #parry == 0 and "不可" or table.concat(parry, ","),
-					reach_label = string.format("前%s/上%s/下%s/後%s", box.reach.front, box.reach.top + p.pos_y, box.reach.bottom + p.pos_y, box.reach.back)
+					reach_label = string.format("前%s/上%s(%s)/下%s(%s)/後%s",
+						box.reach.front,
+						box.reach.top + p.pos_y,
+						box.reach.top,
+						box.reach.bottom + p.pos_y,
+						box.reach.bottom,
+						box.reach.back)
 				})
 				box.type_count = #summary.boxes
 			end
@@ -7753,7 +7702,13 @@ function rbff2.startplugin()
 				summary.hurt_boxes = summary.hurt_boxes or {}
 				local type_label = nil
 				if box.type == box_type_base.p then
-					push_label = string.format("前%s/上%s/下%s/後%s", box.reach.front, box.reach.top + p.pos_y, box.reach.bottom + p.pos_y, box.reach.back)
+					push_label = string.format("前%s/上%s(%s)/下%s(%s)/後%s",
+						box.reach.front,
+						box.reach.top + p.pos_y,
+						box.reach.top,
+						box.reach.bottom + p.pos_y,
+						box.reach.bottom,
+						box.reach.back)
 				elseif box.type == box_type_base.v1 or box.type == box_type_base.v2 then
 					normal = normal + 1
 					type_label = normal .. " やられ:"
@@ -7774,7 +7729,13 @@ function rbff2.startplugin()
 				if type_label then
 					table.insert(summary.hurt_boxes, {
 						type_label  = type_label,
-						reach_label = string.format("前%s/上%s/下%s/後%s", box.reach.front, box.reach.top + p.pos_y, box.reach.bottom + p.pos_y, box.reach.back)
+						reach_label = string.format("前%s/上%s(%s)/下%s(%s)/後%s",
+							box.reach.front,
+							box.reach.top + p.pos_y,
+							box.reach.top,
+							box.reach.bottom + p.pos_y,
+							box.reach.bottom,
+							box.reach.back)
 					})
 					box.type_count = #summary.hurt_boxes
 				end
@@ -7906,8 +7867,8 @@ function rbff2.startplugin()
 				p.tmp_pow_atc = p.attack                                -- POWゲージ増加量(予約時の行動)
 			end
 
-			p.tmp_stun       = pgm:read_u8(p.addr.tmp_stun)             -- スタン値
-			p.tmp_st_timer   = pgm:read_u8(p.addr.tmp_st_timer)         -- スタンタイマー
+			p.tmp_stun       = pgm:read_u8(p.addr.tmp_stun)             -- 気絶値
+			p.tmp_st_timer   = pgm:read_u8(p.addr.tmp_st_timer)         -- 気絶タイマー
 			pgm:write_u8(p.addr.tmp_dmg, 0)
 			pgm:write_u8(p.addr.pure_dmg, 0)
 			pgm:write_u8(p.addr.tmp_pow, 0)
@@ -7967,7 +7928,7 @@ function rbff2.startplugin()
 				p.hitstop_gd = math.max(2, p.hitstop - 1) -- ガード時の補正
 				-- 補正前ダメージ量取得 家庭用 05B118 からの処理
 				p.pure_dmg   = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x813F0)) + p.attack)
-				-- スタン値とスタンタイマー取得 05C1CA からの処理
+				-- 気絶値と気絶タイマー取得 05C1CA からの処理
 				p.pure_st    = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x85CCA)) + p.attack)
 				p.pure_st_tm = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x85D2A)) + p.attack)
 
@@ -8373,7 +8334,7 @@ function rbff2.startplugin()
 					fb.hitstop_gd = math.max(2, fb.hitstop - 1) -- ガード時の補正
 					-- 補正前ダメージ量取得 家庭用 05B146 からの処理
 					fb.pure_dmg   = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x88472))
-					-- スタン値とスタンタイマー取得 家庭用 05C1B0 からの処理
+					-- 気絶値と気絶タイマー取得 家庭用 05C1B0 からの処理
 					fb.pure_st    = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x886F2))
 					fb.pure_st_tm = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x88772))
 				end
@@ -9841,6 +9802,12 @@ function rbff2.startplugin()
 		end
 	end
 
+	local table_add_all = function(t1, t2)
+		for _, r in ipairs(t2) do
+			table.insert(t1, r)
+		end
+	end
+
 	tra_main.draw = function()
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		local scr = manager.machine.screens:at(1)
@@ -9849,6 +9816,51 @@ function rbff2.startplugin()
 		if match_active then
 			-- 判定表示（キャラ、飛び道具）
 			if global.disp_hitbox > 1 then
+				local hitboxes = {}
+				for _, p in ipairs(players) do
+					table_add_all(hitboxes, p.hitboxes)
+					for _, fb in pairs(p.fireball) do
+						table_add_all(hitboxes, fb.hitboxes)
+					end
+				end
+				table.sort(hitboxes, function(box1, box2)
+					return (box1.type.sort < box2.type.sort)
+				end)
+				for _, box in ipairs(hitboxes) do
+					if box.flat_throw then
+						if box.visible == true and box.type.enabled == true then
+							scr:draw_box (box.left , box.top-8 , box.right, box.bottom+8, box.type.fill, box.type.fill)
+							scr:draw_line(box.left , box.bottom, box.right, box.bottom  , box.type.outline)
+							scr:draw_line(box.left , box.top-8 , box.left , box.bottom+8, box.type.outline)
+							scr:draw_line(box.right, box.top-8 , box.right, box.bottom+8, box.type.outline)
+						end
+					else
+						--[[
+						if box_type_base.at == box.type then
+							print("box at ", box.left, box.top, box.right, box.bottom)
+						elseif box_type_base.pt == box.type then
+							print("box pt ", box.left, box.top, box.right, box.bottom)
+						end
+						]]
+
+						if box.visible == true and box.type.enabled == true then
+							if global.no_background then
+								scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, 0x00000000)
+							else
+								scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, box.type.fill)
+							end
+							if box.type_count then
+								local x1, x2 = math.min(box.left, box.right), math.max(box.left, box.right)
+								local y1, y2 = math.min(box.top, box.bottom), math.max(box.top, box.bottom)
+								local x = math.floor((x2 - x1) / 2) + x1 - 2
+								local y = math.floor((y2 - y1) / 2) + y1 - 4
+								scr:draw_text(x+0.5, y+0.5, box.type_count.."", shadow_col)
+								scr:draw_text(x, y, box.type_count.."", box.type.outline)
+							end
+						end
+					end
+				end
+
 				-- 座標表示
 				for i, p in ipairs(players) do
 					if p.in_air ~= true and p.sway_status == 0x00 then
@@ -9881,50 +9893,6 @@ function rbff2.startplugin()
 					if p.esaka_range > 0 then
 						draw_esaka(i, p.hit.pos_x + p.esaka_range, global.axis_internal_color)
 						draw_esaka(i, p.hit.pos_x - p.esaka_range, global.axis_internal_color)
-					end
-				end
-
-				for _, p in ipairs(players) do
-					for _, box in ipairs(p.hitboxes) do
-						if box.flat_throw then
-							if box.visible == true and box.type.enabled == true then
-								scr:draw_box (box.left , box.top-8 , box.right, box.bottom+8, box.type.fill, box.type.fill)
-								scr:draw_line(box.left , box.bottom, box.right, box.bottom  , box.type.outline)
-								scr:draw_line(box.left , box.top-8 , box.left , box.bottom+8, box.type.outline)
-								scr:draw_line(box.right, box.top-8 , box.right, box.bottom+8, box.type.outline)
-							end
-						else
-							--[[
-							if box_type_base.at == box.type then
-								print("box at ", box.left, box.top, box.right, box.bottom)
-							elseif box_type_base.pt == box.type then
-								print("box pt ", box.left, box.top, box.right, box.bottom)
-							end
-							]]
-
-							if box.visible == true and box.type.enabled == true then
-								if global.no_background then
-									scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, 0x00000000)
-								else
-									scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, box.type.fill)
-								end
-								if box.type_count then
-									local x1, x2 = math.min(box.left, box.right), math.max(box.left, box.right)
-									local y1, y2 = math.min(box.top, box.bottom), math.max(box.top, box.bottom)
-									local x = math.floor((x2 - x1) / 2) + x1 - 2
-									local y = math.floor((y2 - y1) / 2) + y1 - 4
-									scr:draw_text(x+0.5, y+0.5, box.type_count.."", shadow_col)
-									scr:draw_text(x, y, box.type_count.."", box.type.outline)
-								end
-							end
-						end
-					end
-					for _, fb in pairs(p.fireball) do
-						for _, box in ipairs(fb.hitboxes) do
-							if box.visible == true and box.type.enabled == true then
-								scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, box.type.fill)
-							end
-						end
 					end
 				end
 			end
@@ -9971,8 +9939,8 @@ function rbff2.startplugin()
 					scr:draw_text(p1 and 228 or  9, 41, "補正:")
 					scr:draw_text(p1 and 228 or  9, 48, "ダメージ:")
 					scr:draw_text(p1 and 228 or  9, 55, "コンボ:")
-					scr:draw_text(p1 and 228 or  9, 62, "スタン値:")
-					scr:draw_text(p1 and 228 or  9, 69, "ｽﾀﾝ値ﾀｲﾏｰ:")
+					scr:draw_text(p1 and 228 or  9, 62, "気絶値:")
+					scr:draw_text(p1 and 228 or  9, 69, "気絶値持続:")
 					scr:draw_text(p1 and 228 or  9, 76, "POW:")
 					draw_rtext(   p1 and 296 or 77, 41, string.format("%s>%s(%s%%)", p.last_pure_dmg, op.last_dmg, (op.last_dmg_scaling-1) * 100))
 					draw_rtext(   p1 and 296 or 77, 48, string.format("%s(+%s)", op.last_combo_dmg, op.last_dmg))
@@ -10141,16 +10109,16 @@ function rbff2.startplugin()
 					draw_rtext(   p1 and 115 or 180, 51, count)
 				end
 
-				-- スタン表示
+				-- 気絶表示
 				if p.disp_stun then
 					scr:draw_box(p1 and (138 - p.max_stun)   or 180, 29, p1 and 140 or (182 + p.max_stun)  , 34, 0, 0xDDC0C0C0) -- 枠
 					scr:draw_box(p1 and (139 - p.max_stun)   or 181, 30, p1 and 139 or (181 + p.max_stun)  , 33, 0, 0xDD000000) -- 黒背景
-					scr:draw_box(p1 and (139 - p.stun)       or 181, 30, p1 and 139 or (181 + p.stun)      , 33, 0, 0xDDFF0000) -- スタン値
+					scr:draw_box(p1 and (139 - p.stun)       or 181, 30, p1 and 139 or (181 + p.stun)      , 33, 0, 0xDDFF0000) -- 気絶値
 					draw_rtext_with_shadow(p1 and 135   or 190  , 28  ,  p.stun)
 
 					scr:draw_box(p1 and (138 - 90)           or 180, 35, p1 and 140 or (182 + 90)          , 40, 0, 0xDDC0C0C0) -- 枠
 					scr:draw_box(p1 and (139 - 90)           or 181, 36, p1 and 139 or (181 + 90)          , 39, 0, 0xDD000000) -- 黒背景
-					scr:draw_box(p1 and (139 - p.stun_timer) or 181, 36, p1 and 139 or (181 + p.stun_timer), 39, 0, 0xDDFFFF00) -- スタン値
+					scr:draw_box(p1 and (139 - p.stun_timer) or 181, 36, p1 and 139 or (181 + p.stun_timer), 39, 0, 0xDDFFFF00) -- 気絶値
 					draw_rtext_with_shadow(p1 and 135   or 190  , 34  ,  p.stun_timer)
 				end
 			end
@@ -10641,8 +10609,8 @@ function rbff2.startplugin()
 		p[2].red                 = col[ 3]      -- 2P 体力ゲージ量             3
 		p[1].max                 = col[ 4]      -- 1P POWゲージ量              4
 		p[2].max                 = col[ 5]      -- 2P POWゲージ量              5
-		p[1].disp_stun           = col[ 6] == 2 -- 1P スタンゲージ表示         6
-		p[2].disp_stun           = col[ 7] == 2 -- 2P スタンゲージ表示         7
+		p[1].disp_stun           = col[ 6] == 2 -- 1P 気絶ゲージ表示         6
+		p[2].disp_stun           = col[ 7] == 2 -- 2P 気絶ゲージ表示         7
 		dip_config.infinity_life = col[ 8] == 2 -- 体力ゲージモード            8
 		global.pow_mode          = col[ 9]      -- POWゲージモード             9
 
@@ -10847,8 +10815,8 @@ function rbff2.startplugin()
 		col[ 3] = p[2].red                  -- 2P 体力ゲージ量        3
 		col[ 4] = p[1].max                  -- 1P POWゲージ量         4
 		col[ 5] = p[2].max                  -- 2P POWゲージ量         5
-		col[ 6] = p[1].disp_stun and 2 or 1 -- 1P スタンゲージ表示    6
-		col[ 7] = p[2].disp_stun and 2 or 1 -- 2P スタンゲージ表示    7
+		col[ 6] = p[1].disp_stun and 2 or 1 -- 1P 気絶ゲージ表示    6
+		col[ 7] = p[2].disp_stun and 2 or 1 -- 2P 気絶ゲージ表示    7
 		col[ 8] = dip_config.infinity_life and 2 or 1 -- 体力ゲージモード 8
 		col[ 9] = g.pow_mode                -- POWゲージモード        9
 	end
@@ -11269,8 +11237,8 @@ function rbff2.startplugin()
 			{ "2P 体力ゲージ量"       , life_range, }, 	-- "最大", "赤", "ゼロ" ...
 			{ "1P POWゲージ量"        , pow_range, },   -- "最大", "半分", "ゼロ" ...
 			{ "2P POWゲージ量"        , pow_range, },   -- "最大", "半分", "ゼロ" ...
-			{ "1P スタンゲージ表示"   , { "OFF", "ON" }, },
-			{ "2P スタンゲージ表示"   , { "OFF", "ON" }, },
+			{ "1P 気絶ゲージ表示"   , { "OFF", "ON" }, },
+			{ "2P 気絶ゲージ表示"   , { "OFF", "ON" }, },
 			{ "体力ゲージモード"      , { "自動回復", "固定" }, },
 			{ "POWゲージモード"       , { "自動回復", "固定", "通常動作" }, },
 		},
@@ -11283,8 +11251,8 @@ function rbff2.startplugin()
 				2, -- 2P 体力ゲージ量         3
 				2, -- 1P POWゲージ量          4
 				2, -- 2P POWゲージ量          5
-				2, -- 1P スタンゲージ表示     6
-				2, -- 2P スタンゲージ表示     7
+				2, -- 1P 気絶ゲージ表示     6
+				2, -- 2P 気絶ゲージ表示     7
 				2, -- 体力ゲージモード        8
 				2, -- POWゲージモード         9
 			},
@@ -11295,8 +11263,8 @@ function rbff2.startplugin()
 			bar_menu_to_main, -- 2P 体力ゲージ量         3
 			bar_menu_to_main, -- 1P POWゲージ量          4
 			bar_menu_to_main, -- 2P POWゲージ量          5
-			bar_menu_to_main, -- 1P スタンゲージ表示     6
-			bar_menu_to_main, -- 2P スタンゲージ表示     7
+			bar_menu_to_main, -- 1P 気絶ゲージ表示     6
+			bar_menu_to_main, -- 2P 気絶ゲージ表示     7
 			bar_menu_to_main, -- 体力ゲージモード        8
 			bar_menu_to_main, -- POWゲージモード         9
 		},
@@ -11306,8 +11274,8 @@ function rbff2.startplugin()
 			bar_menu_to_main_cancel, -- 2P 体力ゲージ量         3
 			bar_menu_to_main_cancel, -- 1P POWゲージ量          4
 			bar_menu_to_main_cancel, -- 2P POWゲージ量          5
-			bar_menu_to_main_cancel, -- 1P スタンゲージ表示     6
-			bar_menu_to_main_cancel, -- 2P スタンゲージ表示     7
+			bar_menu_to_main_cancel, -- 1P 気絶ゲージ表示     6
+			bar_menu_to_main_cancel, -- 2P 気絶ゲージ表示     7
 			bar_menu_to_main_cancel, -- 体力ゲージモード        8
 			bar_menu_to_main_cancel, -- POWゲージモード         9
 		},
