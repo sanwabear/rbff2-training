@@ -36,7 +36,7 @@ exports.author = { name = "Sanwabear" }
 local rbff2 = exports
 
 local main_or_menu_state, prev_main_or_menu_state
-local menu_cur, main_menu, tra_menu, rec_menu, play_menu, menu, tra_main, menu_exit, bs_menus, rvs_menus, bar_menu, ex_menu, col_menu, auto_menu
+local menu_cur, main_menu, tra_menu, rec_menu, play_menu, menu, tra_main, menu_exit, bs_menus, rvs_menus, bar_menu, disp_menu, ex_menu, col_menu, auto_menu
 local update_menu_pos, reset_menu_pos
 
 local mem_last_time         = 0      -- 最終読込フレーム(キャッシュ用)
@@ -6646,7 +6646,7 @@ function rbff2.startplugin()
 
 	local rec_await_no_input, rec_await_1st_input, rec_await_play, rec_input, rec_play, rec_repeat_play, rec_play_interval, rec_fixpos
 	local do_recover
-	local menu_to_tra, menu_to_bar, menu_to_ex, menu_to_col, menu_to_auto
+	local menu_to_tra, menu_to_bar, menu_to_disp, menu_to_ex, menu_to_col, menu_to_auto
 
 	-- 状態クリア
 	local cls_ps = function()
@@ -10630,25 +10630,23 @@ function rbff2.startplugin()
 		p[2].red                 = col[ 3]      -- 2P 体力ゲージ量             3
 		p[1].max                 = col[ 4]      -- 1P POWゲージ量              4
 		p[2].max                 = col[ 5]      -- 2P POWゲージ量              5
-		p[1].disp_stun           = col[ 6] == 2 -- 1P 気絶ゲージ表示           6
-		p[2].disp_stun           = col[ 7] == 2 -- 2P 気絶ゲージ表示           7
-		dip_config.infinity_life = col[ 8] == 2 -- 体力ゲージモード            8
-		global.pow_mode          = col[ 9]      -- POWゲージモード             9
+		dip_config.infinity_life = col[ 6] == 2 -- 体力ゲージモード            6
+		global.pow_mode          = col[ 7]      -- POWゲージモード             7
 
 		menu_cur = main_menu
 	end
 	local bar_menu_to_main_cancel = function()
 		bar_menu_to_main(true)
 	end
-	local ex_menu_to_main = function(cancel)
+	local disp_menu_to_main = function(cancel)
 		local col = ex_menu.pos.col
 		local p   = players
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		--                              1                                 1
 		global.disp_hitbox       = col[ 2]      -- 判定表示               2
 		global.disp_range        = col[ 3]      -- 間合い表示             3
-		global.pause_hit         = col[ 4]      -- ヒット時にポーズ       4
-		global.pause_hitbox      = col[ 5]      -- 判定発生時にポーズ     5
+		p[1].disp_stun           = col[ 4] == 2 -- 1P 気絶ゲージ表示      4
+		p[2].disp_stun           = col[ 5] == 2 -- 2P 気絶ゲージ表示      5
 		p[1].disp_dmg            = col[ 6] == 2 -- 1P ダメージ表示        6
 		p[2].disp_dmg            = col[ 7] == 2 -- 2P ダメージ表示        7
 		p[1].disp_cmd            = col[ 8]      -- 1P 入力表示            8
@@ -10662,14 +10660,27 @@ function rbff2.startplugin()
 		p[1].disp_base           = col[16] == 2 -- 1P 処理アドレス表示   16
 		p[2].disp_base           = col[17] == 2 -- 2P 処理アドレス表示   17
 		global.disp_pos          = col[18] == 2 -- 1P 2P 距離表示        18
-		dip_config.easy_super    = col[19] == 2 -- 簡易超必              19
-		global.mame_debug_wnd    = col[20] == 2 -- MAMEデバッグウィンドウ20
-		global.damaged_move      = col[21]      -- ヒット効果確認用      21
-		global.log.poslog        = col[22] == 2 -- 位置ログ              22
-		global.log.atklog        = col[23] == 2 -- 攻撃情報ログ          23
-		global.log.baselog       = col[24] == 2 -- 処理アドレスログ      24
-		global.log.keylog        = col[25] == 2 -- 入力ログ              25
-		global.log.rvslog        = col[26] == 2 -- リバサログ            26
+
+		menu_cur = main_menu
+	end
+	local disp_menu_to_main_cancel = function()
+		disp_menu_to_main(true)
+	end
+	local ex_menu_to_main = function(cancel)
+		local col = ex_menu.pos.col
+		local p   = players
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
+		--                              1                                 1
+		dip_config.easy_super    = col[ 2] == 2 -- 簡易超必               2
+		global.pause_hit         = col[ 3]      -- ヒット時にポーズ       3
+		global.pause_hitbox      = col[ 4]      -- 判定発生時にポーズ     4
+		global.mame_debug_wnd    = col[ 5] == 2 -- MAMEデバッグウィンドウ 5
+		global.damaged_move      = col[ 6]      -- ヒット効果確認用       6
+		global.log.poslog        = col[ 7] == 2 -- 位置ログ               7
+		global.log.atklog        = col[ 8] == 2 -- 攻撃情報ログ           8
+		global.log.baselog       = col[ 9] == 2 -- 処理アドレスログ       9
+		global.log.keylog        = col[10] == 2 -- 入力ログ              10
+		global.log.rvslog        = col[11] == 2 -- リバサログ            11
 
 		local dmove = damaged_moves[global.damaged_move]
 		if dmove and dmove > 0 then
@@ -10837,45 +10848,49 @@ function rbff2.startplugin()
 		col[ 3] = p[2].red                  -- 2P 体力ゲージ量        3
 		col[ 4] = p[1].max                  -- 1P POWゲージ量         4
 		col[ 5] = p[2].max                  -- 2P POWゲージ量         5
-		col[ 6] = p[1].disp_stun and 2 or 1 -- 1P 気絶ゲージ表示      6
-		col[ 7] = p[2].disp_stun and 2 or 1 -- 2P 気絶ゲージ表示      7
-		col[ 8] = dip_config.infinity_life and 2 or 1 -- 体力ゲージモード 8
-		col[ 9] = g.pow_mode                -- POWゲージモード        9
+		col[ 6] = dip_config.infinity_life and 2 or 1 -- 体力ゲージモード 6
+		col[ 7] = g.pow_mode                -- POWゲージモード        7
 	end
-	local init_ex_menu_config = function()
+	local init_disp_menu_config = function()
 		local col = ex_menu.pos.col
 		local p = players
 		local g = global
+		--   1                                                         1
+		col[ 2] = g.disp_hitbox             -- 判定表示                2
+		col[ 3] = g.disp_range              -- 間合い表示              3
+		col[ 6] = p[1].disp_stun and 2 or 1 -- 1P 気絶ゲージ表示       6
+		col[ 7] = p[2].disp_stun and 2 or 1 -- 2P 気絶ゲージ表示       7
+		col[ 6] = p[1].disp_dmg and 2 or 1  -- 1P ダメージ表示         6
+		col[ 7] = p[2].disp_dmg and 2 or 1  -- 2P ダメージ表示         7
+		col[ 8] = p[1].disp_cmd             -- 1P 入力表示             8
+		col[ 9] = p[2].disp_cmd             -- 2P 入力表示             9
+		col[10] = g.disp_input_sts          -- コマンド入力状態表示   10
+		col[11] = g.disp_frmgap             -- フレーム差表示         11
+		col[12] = p[1].disp_frm and 2 or 1  -- 1P フレーム数表示      12
+		col[13] = p[2].disp_frm and 2 or 1  -- 2P フレーム数表示      13
+		col[14] = p[1].disp_sts             -- 1P 状態表示            14
+		col[15] = p[2].disp_sts             -- 2P 状態表示            15
+		col[16] = p[1].disp_base and 2 or 1 -- 1P 処理アドレス表示    16
+		col[17] = p[2].disp_base and 2 or 1 -- 2P 処理アドレス表示    17
+		col[18] = g.disp_pos    and 2 or 1  -- 1P 2P 距離表示         18
+	end
+	local init_ex_menu_config = function()
+		local col = ex_menu.pos.col
+		local g = global
 		--   1                                                          1
-		col[ 2] = g.disp_hitbox            -- 判定表示                  2
-		col[ 3] = g.disp_range             -- 間合い表示                3
-		col[ 4] = g.pause_hit              -- ヒット時にポーズ          4
-		col[ 5] = g.pause_hitbox           -- 判定発生時にポーズ        5
-		col[ 6] = p[1].disp_dmg and 2 or 1 -- 1P ダメージ表示           6
-		col[ 7] = p[2].disp_dmg and 2 or 1 -- 2P ダメージ表示           7
-		col[ 8] = p[1].disp_cmd            -- 1P 入力表示               8
-		col[ 9] = p[2].disp_cmd            -- 2P 入力表示               9
-		col[10] = g.disp_input_sts         -- コマンド入力状態表示     10
-		col[11] = g.disp_frmgap            -- フレーム差表示           11
-		col[12] = p[1].disp_frm and 2 or 1 -- 1P フレーム数表示        12
-		col[13] = p[2].disp_frm and 2 or 1 -- 2P フレーム数表示        13
-		col[14] = p[1].disp_sts            -- 1P 状態表示              14
-		col[15] = p[2].disp_sts            -- 2P 状態表示              15
-		col[16] = p[1].disp_base and 2 or 1 -- 1P 処理アドレス表示     16
-		col[17] = p[2].disp_base and 2 or 1 -- 2P 処理アドレス表示     17
-		col[18] = g.disp_pos    and 2 or 1 -- 1P 2P 距離表示           18
-		col[19] = dip_config.easy_super and 2 or 1 -- 簡易超必         19
-		col[20] = g.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ20
-		col[21] = g.damaged_move           -- ヒット効果確認用         21
-		col[22] = g.log.poslog  and 2 or 1 -- 位置ログ                 22
-		col[23] = g.log.atklog  and 2 or 1 -- 攻撃情報ログ             23
-		col[24] = g.log.baselog and 2 or 1 -- 処理アドレスログ         24
-		col[25] = g.log.keylog  and 2 or 1 -- 入力ログ                 25
-		col[26] = g.log.rvslog  and 2 or 1 -- リバサログ               26
+		col[ 2] = dip_config.easy_super and 2 or 1 -- 簡易超必          2
+		col[ 3] = g.pause_hit              -- ヒット時にポーズ          3
+		col[ 4] = g.pause_hitbox           -- 判定発生時にポーズ        4
+		col[ 5] = g.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ 5
+		col[ 6] = g.damaged_move           -- ヒット効果確認用          6
+		col[ 7] = g.log.poslog  and 2 or 1 -- 位置ログ                  7
+		col[ 8] = g.log.atklog  and 2 or 1 -- 攻撃情報ログ              8
+		col[ 9] = g.log.baselog and 2 or 1 -- 処理アドレスログ          9
+		col[10] = g.log.keylog  and 2 or 1 -- 入力ログ                 10
+		col[11] = g.log.rvslog  and 2 or 1 -- リバサログ               11
 	end
 	local init_auto_menu_config = function()
 		local col = auto_menu.pos.col
-		local p = players
 		local g = global
 		                                          -- 自動入力設定            1
 		col[ 2] = g.auto_input.otg_thw and 2 or 1 -- ダウン投げ              2
@@ -10890,12 +10905,10 @@ function rbff2.startplugin()
 		col[11] = g.auto_input.esaka_check        -- 詠酒距離チェック       11
 	end
 	local init_restart_fight = function()
-		local col = tra_menu.pos.col
-		local p = players
-		local g = global
 	end
 	menu_to_tra  = function() menu_cur = tra_menu end
 	menu_to_bar  = function() menu_cur = bar_menu end
+	menu_to_disp = function() menu_cur = disp_menu end
 	menu_to_ex   = function() menu_cur = ex_menu end
 	menu_to_auto = function() menu_cur = auto_menu end
 	menu_to_col  = function() menu_cur = col_menu end
@@ -10929,14 +10942,14 @@ function rbff2.startplugin()
 	local menu_restart_fight = function()
 		main_menu.pos.row = 1
 		cls_hook()
-		global.disp_gauge = main_menu.pos.col[14] == 2 -- 体力,POWゲージ表示
+		global.disp_gauge = main_menu.pos.col[15] == 2 -- 体力,POWゲージ表示
 		restart_fight({
-			next_p1       =      main_menu.pos.col[ 8]  , -- 1P セレクト
-			next_p2       =      main_menu.pos.col[ 9]  , -- 2P セレクト
-			next_p1col    =      main_menu.pos.col[10]-1, -- 1P カラー
-			next_p2col    =      main_menu.pos.col[11]-1, -- 2P カラー
-			next_stage    = stgs[main_menu.pos.col[12]], -- ステージセレクト
-			next_bgm      = bgms[main_menu.pos.col[13]].id, -- BGMセレクト
+			next_p1       =      main_menu.pos.col[ 9]  , -- 1P セレクト
+			next_p2       =      main_menu.pos.col[10]  , -- 2P セレクト
+			next_p1col    =      main_menu.pos.col[11]-1, -- 1P カラー
+			next_p2col    =      main_menu.pos.col[12]-1, -- 2P カラー
+			next_stage    = stgs[main_menu.pos.col[13]], -- ステージセレクト
+			next_bgm      = bgms[main_menu.pos.col[14]].id, -- BGMセレクト
 		})
 		cls_joy()
 		cls_ps()
@@ -10962,7 +10975,8 @@ function rbff2.startplugin()
 		list = {
 			{ "ダミー設定" },
 			{ "ゲージ設定" },
-			{ "一般設定" },
+			{ "表示設定" },
+			{ "特殊設定" },
 			{ "自動入力設定" },
 			{ "判定個別設定" },
 			{ "プレイヤーセレクト画面" },
@@ -10982,7 +10996,8 @@ function rbff2.startplugin()
 			col = {
 				0, -- ダミー設定
 				0, -- ゲージ設定
-				0, -- 一般設定
+				0, -- 表示設定
+				0, -- 特殊設定
 				0, -- 自動入力設定
 				0, -- 判定個別設定
 				0, -- プレイヤーセレクト画面
@@ -11000,7 +11015,8 @@ function rbff2.startplugin()
 		on_a = {
 			menu_to_tra, -- ダミー設定
 			menu_to_bar, -- ゲージ設定
-			menu_to_ex,  -- 一般設定
+			menu_to_disp, -- 表示設定
+			menu_to_ex, -- 特殊設定
 			menu_to_auto, -- 自動入力設定
 			menu_to_col, -- 判定個別設定
 			menu_player_select, -- プレイヤーセレクト画面
@@ -11017,7 +11033,8 @@ function rbff2.startplugin()
 		on_b = {
 			menu_exit, -- ダミー設定
 			menu_exit, -- ゲージ設定
-			menu_exit,  -- 一般設定
+			menu_exit, -- 表示設定
+			menu_exit, -- 特殊設定
 			menu_exit, -- 判定個別設定
 			menu_exit, -- 自動入力設定
 			menu_exit, -- プレイヤーセレクト画面
@@ -11036,25 +11053,25 @@ function rbff2.startplugin()
 	update_menu_pos = function()
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		-- メニューの更新
-		main_menu.pos.col[ 8] = math.min(math.max(pgm:read_u8(0x107BA5)  , 1), #char_names)
-		main_menu.pos.col[ 9] = math.min(math.max(pgm:read_u8(0x107BA7)  , 1), #char_names)
-		main_menu.pos.col[10] = math.min(math.max(pgm:read_u8(0x107BAC)+1, 1), 2)
-		main_menu.pos.col[11] = math.min(math.max(pgm:read_u8(0x107BAD)+1, 1), 2)
+		main_menu.pos.col[ 9] = math.min(math.max(pgm:read_u8(0x107BA5)  , 1), #char_names)
+		main_menu.pos.col[10] = math.min(math.max(pgm:read_u8(0x107BA7)  , 1), #char_names)
+		main_menu.pos.col[11] = math.min(math.max(pgm:read_u8(0x107BAC)+1, 1), 2)
+		main_menu.pos.col[12] = math.min(math.max(pgm:read_u8(0x107BAD)+1, 1), 2)
 
 		reset_menu_pos = false
 
 		local stg1 = pgm:read_u8(0x107BB1)
 		local stg2 = pgm:read_u8(0x107BB7)
 		local stg3 = pgm:read_u8(0x107BB9) == 1 and 0x01 or 0x0F
-		main_menu.pos.col[12] = 1
+		main_menu.pos.col[13] = 1
 		for i, data in ipairs(stgs) do
 			if data.stg1 == stg1 and data.stg2 == stg2 and data.stg3 == stg3 and global.no_background == data.no_background then
-				main_menu.pos.col[12] = i
+				main_menu.pos.col[13] = i
 				break
 			end
 		end
 
-		main_menu.pos.col[13] = 1
+		main_menu.pos.col[14] = 1
 		local bgmid = math.max(pgm:read_u8(0x10A8D5), 1)
 		for i, bgm in ipairs(bgms) do
 			if bgmid == bgm.id then
@@ -11062,7 +11079,7 @@ function rbff2.startplugin()
 			end
 		end
 
-		main_menu.pos.col[14] = global.disp_gauge and 2 or 1 -- 体力,POWゲージ表示
+		main_menu.pos.col[15] = global.disp_gauge and 2 or 1 -- 体力,POWゲージ表示
 
 		setup_char_manu()
 	end
@@ -11267,8 +11284,6 @@ function rbff2.startplugin()
 			{ "2P 体力ゲージ量"       , life_range, }, 	-- "最大", "赤", "ゼロ" ...
 			{ "1P POWゲージ量"        , pow_range, },   -- "最大", "半分", "ゼロ" ...
 			{ "2P POWゲージ量"        , pow_range, },   -- "最大", "半分", "ゼロ" ...
-			{ "1P 気絶ゲージ表示"     , { "OFF", "ON" }, },
-			{ "2P 気絶ゲージ表示"     , { "OFF", "ON" }, },
 			{ "体力ゲージモード"      , { "自動回復", "固定" }, },
 			{ "POWゲージモード"       , { "自動回復", "固定", "通常動作" }, },
 		},
@@ -11281,10 +11296,8 @@ function rbff2.startplugin()
 				2, -- 2P 体力ゲージ量         3
 				2, -- 1P POWゲージ量          4
 				2, -- 2P POWゲージ量          5
-				2, -- 1P 気絶ゲージ表示       6
-				2, -- 2P 気絶ゲージ表示       7
-				2, -- 体力ゲージモード        8
-				2, -- POWゲージモード         9
+				2, -- 体力ゲージモード        6
+				2, -- POWゲージモード         7
 			},
 		},
 		on_a = {
@@ -11293,10 +11306,8 @@ function rbff2.startplugin()
 			bar_menu_to_main, -- 2P 体力ゲージ量         3
 			bar_menu_to_main, -- 1P POWゲージ量          4
 			bar_menu_to_main, -- 2P POWゲージ量          5
-			bar_menu_to_main, -- 1P 気絶ゲージ表示       6
-			bar_menu_to_main, -- 2P 気絶ゲージ表示       7
-			bar_menu_to_main, -- 体力ゲージモード        8
-			bar_menu_to_main, -- POWゲージモード         9
+			bar_menu_to_main, -- 体力ゲージモード        6
+			bar_menu_to_main, -- POWゲージモード         7
 		},
 		on_b = {
 			bar_menu_to_main_cancel, -- －ゲージ設定－          1
@@ -11304,20 +11315,18 @@ function rbff2.startplugin()
 			bar_menu_to_main_cancel, -- 2P 体力ゲージ量         3
 			bar_menu_to_main_cancel, -- 1P POWゲージ量          4
 			bar_menu_to_main_cancel, -- 2P POWゲージ量          5
-			bar_menu_to_main_cancel, -- 1P 気絶ゲージ表示       6
-			bar_menu_to_main_cancel, -- 2P 気絶ゲージ表示       7
-			bar_menu_to_main_cancel, -- 体力ゲージモード        8
-			bar_menu_to_main_cancel, -- POWゲージモード         9
+			bar_menu_to_main_cancel, -- 体力ゲージモード        6
+			bar_menu_to_main_cancel, -- POWゲージモード         7
 		},
 	}
 
-	ex_menu = {
+	disp_menu = {
 		list = {
-			{ "                          一般設定" },
+			{ "                          表示設定" },
 			{ "判定表示"              , { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
 			{ "間合い表示"            , { "OFF", "ON", "ON:投げ", "ON:遠近攻撃", "ON:詠酒", }, },
-			{ "ヒット時にポーズ"      , { "OFF", "ON", "ON:やられのみ", "ON:ガードのみ", }, },
-			{ "判定発生時にポーズ"    , { "OFF", "投げ", "攻撃", }, },
+			{ "1P 気絶ゲージ表示"     , { "OFF", "ON" }, },
+			{ "2P 気絶ゲージ表示"     , { "OFF", "ON" }, },
 			{ "1P ダメージ表示"       , { "OFF", "ON" }, },
 			{ "2P ダメージ表示"       , { "OFF", "ON" }, },
 			{ "1P 入力表示"           , { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
@@ -11344,11 +11353,11 @@ function rbff2.startplugin()
 			offset = 1,
 			row = 2,
 			col = {
-				0, -- －一般設定－            1
+				0, -- －表示設定－            1
 				4, -- 判定表示                2
 				2, -- 間合い表示              3
-				1, -- ヒット時にポーズ        4
-				1, -- 投げ判定ポーズ          5
+				2, -- 1P 気絶ゲージ表示       4
+				2, -- 2P 気絶ゲージ表示       5
 				1, -- 1P ダメージ表示         6
 				1, -- 2P ダメージ表示         7
 				1, -- 1P 入力表示             8
@@ -11362,36 +11371,86 @@ function rbff2.startplugin()
 				1, -- 1P 処理アドレス表示    16
 				1, -- 2P 処理アドレス表示    17
 				1, -- 1P 2P 距離表示         18
-				1, -- 簡易超必               19
-				1, -- MAMEデバッグウィンドウ 20
-				1, -- ヒット効果確認用       21
-				1, -- 位置ログ               22
-				1, -- 攻撃情報ログ           23
-				1, -- 処理アドレスログ       24
-				1, -- 入力ログ               25
-				1, -- リバサログ             26
 			},
 		},
 		on_a = {
-			ex_menu_to_main, -- －一般設定－
-			ex_menu_to_main, -- 判定表示
-			ex_menu_to_main, -- 間合い表示
+			disp_menu_to_main, -- －表示設定－
+			disp_menu_to_main, -- 判定表示
+			disp_menu_to_main, -- 間合い表示
+			disp_menu_to_main, -- 1P 気絶ゲージ表示
+			disp_menu_to_main, -- 2P 気絶ゲージ表示
+			disp_menu_to_main, -- 1P ダメージ表示
+			disp_menu_to_main, -- 2P ダメージ表示
+			disp_menu_to_main, -- 1P 入力表示
+			disp_menu_to_main, -- 2P 入力表示
+			disp_menu_to_main, -- コマンド入力状態表示
+			disp_menu_to_main, -- フレーム差表示
+			disp_menu_to_main, -- 1P フレーム数表示
+			disp_menu_to_main, -- 2P フレーム数表示
+			disp_menu_to_main, -- 1P 状態表示
+			disp_menu_to_main, -- 2P 状態表示
+			disp_menu_to_main, -- 1P 処理アドレス表示
+			disp_menu_to_main, -- 2P 処理アドレス表示
+			disp_menu_to_main, -- 1P 2P 距離表示
+		},
+		on_b = {
+			disp_menu_to_main_cancel, -- －表示設定－
+			disp_menu_to_main_cancel, -- 判定表示
+			disp_menu_to_main_cancel, -- 間合い表示
+			disp_menu_to_main_cancel, -- 1P 気絶ゲージ表示
+			disp_menu_to_main_cancel, -- 2P 気絶ゲージ表示
+			disp_menu_to_main_cancel, -- フレーム差表示
+			disp_menu_to_main_cancel, -- 1P ダメージ表示
+			disp_menu_to_main_cancel, -- 2P ダメージ表示
+			disp_menu_to_main_cancel, -- 1P 入力表示
+			disp_menu_to_main_cancel, -- 2P 入力表示
+			disp_menu_to_main_cancel, -- コマンド入力状態表示
+			disp_menu_to_main_cancel, -- 1P フレーム数表示
+			disp_menu_to_main_cancel, -- 2P フレーム数表示
+			disp_menu_to_main_cancel, -- 1P 状態表示
+			disp_menu_to_main_cancel, -- 2P 状態表示
+			disp_menu_to_main_cancel, -- 1P 処理アドレス表示
+			disp_menu_to_main_cancel, -- 2P 処理アドレス表示
+			disp_menu_to_main_cancel, -- 1P 2P 距離表示
+		},
+	}
+
+	ex_menu = {
+		list = {
+			{ "                          特殊設定" },
+			{ "簡易超必"              , { "OFF", "ON" }, },
+			{ "ヒット時にポーズ"      , { "OFF", "ON", "ON:やられのみ", "ON:ガードのみ", }, },
+			{ "判定発生時にポーズ"    , { "OFF", "投げ", "攻撃", }, },
+			{ "MAMEデバッグウィンドウ", { "OFF", "ON" }, },
+			{ "ヒット効果確認用"      , damaged_move_keys },
+			{ "位置ログ"              , { "OFF", "ON" }, },
+			{ "攻撃情報ログ"          , { "OFF", "ON" }, },
+			{ "処理アドレスログ"      , { "OFF", "ON" }, },
+			{ "入力ログ"              , { "OFF", "ON" }, },
+			{ "リバサログ"            , { "OFF", "ON" }, },
+		},
+		pos = { -- メニュー内の選択位置
+			offset = 1,
+			row = 2,
+			col = {
+				0, -- －特殊設定－            1
+				1, -- 簡易超必                2
+				1, -- ヒット時にポーズ        3
+				1, -- 投げ判定ポーズ          4
+				1, -- MAMEデバッグウィンドウ  5
+				1, -- ヒット効果確認用        6
+				1, -- 位置ログ                7
+				1, -- 攻撃情報ログ            8
+				1, -- 処理アドレスログ        9
+				1, -- 入力ログ               10
+				1, -- リバサログ             11
+			},
+		},
+		on_a = {
+			ex_menu_to_main, -- －特殊設定－
+			ex_menu_to_main, -- 簡易超必
 			ex_menu_to_main, -- ヒット時にポーズ
 			ex_menu_to_main, -- 投げ判定ポーズ
-			ex_menu_to_main, -- 1P ダメージ表示
-			ex_menu_to_main, -- 2P ダメージ表示
-			ex_menu_to_main, -- 1P 入力表示
-			ex_menu_to_main, -- 2P 入力表示
-			ex_menu_to_main, -- コマンド入力状態表示
-			ex_menu_to_main, -- フレーム差表示
-			ex_menu_to_main, -- 1P フレーム数表示
-			ex_menu_to_main, -- 2P フレーム数表示
-			ex_menu_to_main, -- 1P 状態表示
-			ex_menu_to_main, -- 2P 状態表示
-			ex_menu_to_main, -- 1P 処理アドレス表示
-			ex_menu_to_main, -- 2P 処理アドレス表示
-			ex_menu_to_main, -- 1P 2P 距離表示
-			ex_menu_to_main, -- 簡易超必
 			ex_menu_to_main, -- MAMEデバッグウィンドウ
 			ex_menu_to_main, -- ヒット効果確認用
 			ex_menu_to_main, -- 位置ログ
@@ -11402,24 +11461,9 @@ function rbff2.startplugin()
 		},
 		on_b = {
 			ex_menu_to_main_cancel, -- －一般設定－
-			ex_menu_to_main_cancel, -- 判定表示
-			ex_menu_to_main_cancel, -- 間合い表示
+			ex_menu_to_main_cancel, -- 簡易超必
 			ex_menu_to_main_cancel, -- ヒット時にポーズ
 			ex_menu_to_main_cancel, -- 投げ判定ポーズ
-			ex_menu_to_main_cancel, -- フレーム差表示
-			ex_menu_to_main_cancel, -- 1P ダメージ表示
-			ex_menu_to_main_cancel, -- 2P ダメージ表示
-			ex_menu_to_main_cancel, -- 1P 入力表示
-			ex_menu_to_main_cancel, -- 2P 入力表示
-			ex_menu_to_main_cancel, -- コマンド入力状態表示
-			ex_menu_to_main_cancel, -- 1P フレーム数表示
-			ex_menu_to_main_cancel, -- 2P フレーム数表示
-			ex_menu_to_main_cancel, -- 1P 状態表示
-			ex_menu_to_main_cancel, -- 2P 状態表示
-			ex_menu_to_main_cancel, -- 1P 処理アドレス表示
-			ex_menu_to_main_cancel, -- 2P 処理アドレス表示
-			ex_menu_to_main_cancel, -- 1P 2P 距離表示
-			ex_menu_to_main_cancel, -- 簡易超必
 			ex_menu_to_main_cancel, -- MAMEデバッグウィンドウ
 			ex_menu_to_main_cancel, -- ヒット効果確認用
 			ex_menu_to_main_cancel, -- 位置ログ
@@ -11648,6 +11692,7 @@ function rbff2.startplugin()
 		},
 	}
 	init_auto_menu_config()
+	init_disp_menu_config()
 	init_ex_menu_config()
 	init_bar_menu_config()
 	init_menu_config()
