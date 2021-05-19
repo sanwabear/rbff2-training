@@ -7400,6 +7400,52 @@ function rbff2.startplugin()
 		return ret
 	end
 
+	local summary_rows, summary_sort_key = {
+		"打撃無敵",
+		"投げ無敵",
+		"追撃能力",
+		"攻撃範囲",
+		"攻撃値(削り)",
+		"気絶値",
+		"POW増加量",
+		"ヒットストップ",
+		"ヒット効果",
+		"ヒット硬直",
+		"押し合い判定",
+		"最大やられ範囲",
+		"最大当たり範囲",
+		"詠酒発動範囲",
+		"最大ヒット数",
+		"弾強度",
+
+		"1 ガード方向",
+		"2 ガード方向",
+		"3 ガード方向",
+		"1 当たり高さ",
+		"2 当たり高さ",
+		"3 当たり高さ",
+		"1 当て身投げ",
+		"2 当て身投げ",
+		"3 当て身投げ",
+
+		"1 やられ範囲",
+		"2 やられ範囲",
+		"3 やられ範囲",
+		"1 当たり範囲",
+		"2 当たり範囲",
+		"3 当たり範囲",
+	}, {}
+	for i, k in ipairs(summary_rows) do
+		summary_sort_key[k..":"] = i
+	end
+	local sort_summary = function(summary)
+		table.sort(summary, function(row1, row2)
+			local k1 = summary_sort_key[row1[1]] or 100
+			local k2 = summary_sort_key[row2[1]] or 100
+			return (k1 < k2)
+		end)
+		return summary
+	end
 	local check_edge = function(edge)
 		if edge.front and edge.top and edge.bottom and edge.back then
 			return true
@@ -7427,30 +7473,30 @@ function rbff2.startplugin()
 					punish_away_label = "上方"
 					asis_punish_away_label = "上方"
 					if info.punish_away == 1 then
-						punish_away_label = "避け攻撃つぶし"
+						punish_away_label = "〇避け攻撃"
 					elseif info.punish_away == 2 then
-						punish_away_label = "避け攻撃つぶし(ローレンスのみ1)"
+						punish_away_label = "〇避け攻撃ロ1"
 					elseif info.punish_away == 3 then
-						punish_away_label = "避け攻撃つぶし(ローレンスのみ2)"
+						punish_away_label = "〇避け攻撃ロ2"
 					elseif info.punish_away == 4 then
-						punish_away_label = "屈ヒット1"
+						punish_away_label = "〇屈1"
 					elseif info.punish_away == 5 then
-						punish_away_label = "屈ヒット2"
+						punish_away_label = "〇屈2"
 					elseif info.punish_away == 6 then
-						punish_away_label = "屈ヒット3"
+						punish_away_label = "〇屈3"
 					end
 					if info.asis_punish_away == 1 then
-						asis_punish_away_label = "避け攻撃つぶし"
+						asis_punish_away_label = "〇避け攻撃"
 					elseif info.asis_punish_away == 2 then
-						asis_punish_away_label = "避け攻撃つぶし(ローレンスのみ1)"
+						asis_punish_away_label = "〇避け攻撃ロ1"
 					elseif info.asis_punish_away == 3 then
-						asis_punish_away_label = "避け攻撃つぶし(ローレンスのみ2)"
+						asis_punish_away_label = "〇避け攻撃ロ2"
 					elseif info.asis_punish_away == 4 then
-						asis_punish_away_label = "屈ヒット1"
+						asis_punish_away_label = "〇屈1"
 					elseif info.asis_punish_away == 5 then
-						asis_punish_away_label = "屈ヒット2"
+						asis_punish_away_label = "〇屈2"
 					elseif info.asis_punish_away == 6 then
-						asis_punish_away_label = "屈ヒット3"
+						asis_punish_away_label = "〇屈3"
 					end
 				end
 
@@ -7585,7 +7631,7 @@ function rbff2.startplugin()
 
 			{"ヒットストップ:", string.format("自･ヒット%sF/ガード･BS猶予%sF", summary.hitstop, summary.hitstop_gd) },
 			{"ヒット硬直:"    , string.format("ヒット%sF/ガード%sF/継続:%s", summary.hitstun, summary.blockstun, gd_strength_label) },
-			{"最大攻撃範囲:"  , reach_label},
+			{"最大当たり範囲:"  , reach_label},
 		}
 		-- TODO レイアウト検討
 		for box_no, box in ipairs(summary.boxes) do
@@ -7595,8 +7641,8 @@ function rbff2.startplugin()
 			if box.punish_away_label ~= box.asis_punish_away_label then
 				label = label .. "/" .. box.asis_punish_away_label
 			end
-			table.insert(hit_summary, {box_no .. " 攻撃高さ:"      , label})
-			table.insert(hit_summary, {box_no .. " 攻撃範囲:"      , box.reach_label})
+			table.insert(hit_summary, {box_no .. " 当たり高さ:"      , label})
+			table.insert(hit_summary, {box_no .. " 当たり範囲:"      , box.reach_label})
 		end
 		table.insert(hit_summary, {"最大ヒット数:"  , string.format("%s/%s", summary.max_hit_nm, summary.max_hit_dn) })
 		table.insert(hit_summary, {"弾強度:"        , summary.prj_rank or "-" })
@@ -7616,7 +7662,8 @@ function rbff2.startplugin()
 	end
 	local make_hurt_summary = function(p, summary)
 		local hurt_labels = {}
-		if summary.hurt == true or p.hit.vulnerable == true then
+		local has_hurt = check_edge(summary.edge.hurt)
+		if has_hurt == true and summary.hurt == true or p.hit.vulnerable == true then
 			local temp_hurt = {}
 			if summary.head_inv1 then
 				-- 上半身無敵 避け
@@ -7715,19 +7762,18 @@ function rbff2.startplugin()
 		end
 		local throw_label = table.concat(throw_invincibles, ",")
 		local reach_label = ""
-		if summary.edge.hurt.front then
+		if has_hurt == true then
 			reach_label = string.format("前%s/上%s/下%s/後%s", 
 				summary.edge.hurt.front,
 				summary.edge.hurt.top + p.pos_y,
 				summary.edge.hurt.bottom + p.pos_y,
 				summary.edge.hurt.back)
 		end
-
 		local normal, otg, juggle, up, low = 0, 0, 0, 0, 0
 		local push_label = "なし"
+		summary.hurt_boxes = summary.hurt_boxes or {}
 		for _, box in ipairs(p.hitboxes) do
 			if not box.atk then
-				summary.hurt_boxes = summary.hurt_boxes or {}
 				local type_label = nil
 				if box.type == box_type_base.p then
 					push_label = string.format("前%s/上%s(%s)/下%s(%s)/後%s",
@@ -7739,7 +7785,7 @@ function rbff2.startplugin()
 						box.reach.back)
 				elseif box.type == box_type_base.v1 or box.type == box_type_base.v2 then
 					normal = normal + 1
-					type_label = normal .. " やられ:"
+					type_label = normal .. " やられ範囲:"
 				elseif box.type == box_type_base.v3 then
 					otg = otg + 1
 					type_label = otg .. " ダウン追撃:"
@@ -7769,11 +7815,10 @@ function rbff2.startplugin()
 				end
 			end
 		end
-
 		local hurt_sumamry = {
 			{ "打撃無敵:"      , hurt_label  },
 			{ "投げ無敵:"      , throw_label },
-			{ "押し合い判定"   , push_label  },
+			{ "押し合い判定:"  , push_label  },
 			{ "最大やられ範囲:", reach_label },
 		}
 		for _, box in ipairs(summary.hurt_boxes) do
@@ -9171,12 +9216,7 @@ function rbff2.startplugin()
 
 		for i, p in ipairs(players) do
 			-- くらい判定等の常時更新するサマリ情報
-			local all_summary
-			if check_edge(p.hit_summary.edge.hurt) then
-				all_summary = make_hurt_summary(p, p.hit_summary)
-			else
-				all_summary = {}
-			end
+			local all_summary = make_hurt_summary(p, p.hit_summary)
 
 			-- 攻撃判定のサマリ情報
 			local last_hit_summary = nil
@@ -9210,7 +9250,7 @@ function rbff2.startplugin()
 				table.insert(all_summary, row)
 			end
 
-			p.all_summary = all_summary
+			p.all_summary = sort_summary(all_summary)
 		end
 
 		for i, p in ipairs(players) do
@@ -11100,7 +11140,7 @@ function rbff2.startplugin()
 		local bgmid = math.max(pgm:read_u8(0x10A8D5), 1)
 		for i, bgm in ipairs(bgms) do
 			if bgmid == bgm.id then
-				main_menu.pos.col[13] = bgm.name_idx
+				main_menu.pos.col[14] = bgm.name_idx
 			end
 		end
 
