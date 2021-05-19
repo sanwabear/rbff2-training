@@ -4814,11 +4814,10 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 					punish_away = 0, -- 1:避けつぶし
 									-- 2:ウェービングブロー,龍転身,ダブルローリングつぶし
 									-- 3:避けつぶし ローレンス用
+									-- 4:60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
+									-- 5:64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
+									-- 6:68 屈 ローレンス
 					asis_punish_away = 0,
-					punish_head = 0, -- 1:60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
-									-- 2:64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
-									-- 3:68 屈 ローレンス
-					asis_punish_head = 0,
 					range_j_atm_nage = true,
 					range_urakumo = true,
 					range_g_atm_uchi = true,
@@ -4835,7 +4834,7 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 				if real_top <= 36 then
 					info.pos_low2 = true -- 判定位置下段 タン用
 				end
-				if real_top <= 48 then
+				if box.reach.top <= 48 then
 					info.unblock_pot = true -- タン以外ガード不能可能性あり
 				end
 
@@ -4853,6 +4852,12 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 					info.punish_away = 2 -- ウェービングブロー,龍転身,ダブルローリングつぶし
 				elseif real_bottom < 48 then
 					info.punish_away = 3 -- 避けつぶし ローレンス用
+				elseif real_bottom < 60 then
+					info.punish_away = 4 -- 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
+				elseif real_bottom < 64 then
+					info.punish_away = 5 -- 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
+				elseif real_bottom < 68 then
+					info.punish_away = 6 -- 68 屈 ローレンス
 				end
 				if box.reach.bottom < 32 then
 					info.asis_punish_away = 1 -- 避けつぶし
@@ -4860,20 +4865,12 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 					info.asis_punish_away = 2 -- ウェービングブロー,龍転身,ダブルローリングつぶし
 				elseif box.reach.bottom < 48 then
 					info.asis_punish_away = 3 -- 避けつぶし ローレンス用
-				end
-				if real_bottom < 60 then
-					info.punish_head = 1 -- 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
-				elseif real_bottom < 64 then
-					info.punish_head = 2 -- 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
-				elseif real_bottom < 68 then
-					info.punish_head = 3 -- 68 屈 ローレンス
-				end
-				if box.reach.bottom < 60 then
-					info.asis_punish_head = 1 -- 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
+				elseif box.reach.bottom < 60 then
+					info.asis_punish_away = 4 -- 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
 				elseif box.reach.bottom < 64 then
-					info.asis_punish_head = 2 -- 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
+					info.asis_punish_away = 5 -- 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
 				elseif box.reach.bottom < 68 then
-					info.asis_punish_head = 3 -- 68 屈 ローレンス
+					info.asis_punish_away = 6 -- 68 屈 ローレンス
 				end
 				-- 76 屈 フランコ
 				-- 80 屈 クラウザー
@@ -7435,11 +7432,11 @@ function rbff2.startplugin()
 						punish_away_label = "避け攻撃つぶし(ローレンスのみ1)"
 					elseif info.punish_away == 3 then
 						punish_away_label = "避け攻撃つぶし(ローレンスのみ2)"
-					elseif info.punish_head1 then
+					elseif info.punish_away == 4 then
 						punish_away_label = "屈ヒット1"
-					elseif info.punish_head2 then
+					elseif info.punish_away == 5 then
 						punish_away_label = "屈ヒット2"
-					elseif info.punish_head3 then
+					elseif info.punish_away == 6 then
 						punish_away_label = "屈ヒット3"
 					end
 					if info.asis_punish_away == 1 then
@@ -7448,11 +7445,11 @@ function rbff2.startplugin()
 						asis_punish_away_label = "避け攻撃つぶし(ローレンスのみ1)"
 					elseif info.asis_punish_away == 3 then
 						asis_punish_away_label = "避け攻撃つぶし(ローレンスのみ2)"
-					elseif info.asis_punish_head == 1 then
+					elseif info.asis_punish_away == 4 then
 						asis_punish_away_label = "屈ヒット1"
-					elseif info.asis_punish_head == 2 then
+					elseif info.asis_punish_away == 5 then
 						asis_punish_away_label = "屈ヒット2"
-					elseif info.asis_punish_head == 3 then
+					elseif info.asis_punish_away == 6 then
 						asis_punish_away_label = "屈ヒット3"
 					end
 				end
