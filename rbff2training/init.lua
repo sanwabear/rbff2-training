@@ -93,10 +93,12 @@ local global = {
 
 	disp_pos        = true, -- 1P 2P 距離表示
 	disp_hitbox     = 4, -- 判定表示
+	disp_range      = 2, -- 間合い表示
 	disp_frmgap     = 3, -- フレーム差表示
 	disp_input_sts  = 1, -- コマンド入力状態表示 1:OFF 2:1P 3:2P
 	pause_hit       = 1, -- ヒット時にポーズ 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:ガードのみ
-	pausethrow      = false, -- 投げ判定表示時にポーズ
+	pause_hitbox    = 1, -- 判定表示時にポーズ
+	pause           = false,
 	replay_stop_on_dmg = false, -- ダメージでリプレイ中段
 
 	-- リバーサルとブレイクショットの設定
@@ -128,6 +130,7 @@ local global = {
 	next_block_grace = 0,     -- 1ガードでの持続フレーム数
 	infinity_life2   = true,
 	pow_mode         = 2,     -- POWモード　1:自動回復 2:固定 3:通常動作
+	disp_gauge       = true,
 	repeat_interval  = 0,
 	await_neutral    = false,
 	replay_fix_pos   = 1,     -- 開始間合い固定 1:OFF 2:位置記憶 3:1Pと2P 4:1P 5:2P
@@ -348,7 +351,7 @@ local stgs = {
 	{ stg1 = 0x06, stg2 = 0x01, stg3 = 0x01, name = "アメリカ1 [2]"     , no_background = false, }, -- ブルー・マリー
 	{ stg1 = 0x07, stg2 = 0x00, stg3 = 0x01, name = "アメリカ2 [1]"     , no_background = false, }, -- テリー・ボガード
 	{ stg1 = 0x07, stg2 = 0x01, stg3 = 0x01, name = "アメリカ2 [2]"     , no_background = false, }, -- リック・ストラウド
-	{ stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, name = "アメリカ2 [2]"     , no_background = false, }, -- アルフレッド
+	{ stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, name = "アメリカ2 [3]"     , no_background = false, }, -- アルフレッド
 	{ stg1 = 0x08, stg2 = 0x00, stg3 = 0x01, name = "タイ [1]"          , no_background = false, }, -- ボブ・ウィルソン
 	{ stg1 = 0x08, stg2 = 0x01, stg3 = 0x01, name = "タイ [2]"          , no_background = false, }, -- フランコ・バッシュ
 	{ stg1 = 0x08, stg2 = 0x02, stg3 = 0x01, name = "タイ [3]"          , no_background = false, }, -- 東丈
@@ -5154,7 +5157,7 @@ function rbff2.startplugin()
 			disp_cmd         = 2,           -- 入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
 			disp_frm         = true,        -- フレーム数表示するときtrue
 			disp_stun        = true,        -- 気絶表示
-			disp_sts         = 2,           -- 状態表示 "OFF", "小表示", "大表示"
+			disp_sts         = 3,           -- 状態表示 "OFF", "ON", "ON:小表示", "ON:大表示"
 
 			no_hit           = 0,           -- Nヒット目に空ぶるカウントのカウンタ
 			no_hit_limit     = 0,           -- Nヒット目に空ぶるカウントの上限
@@ -7788,6 +7791,30 @@ function rbff2.startplugin()
 	-- トレモのメイン処理
 	tra_main = {}
 	tra_main.proc = function()
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
+		-- 画面表示
+		if global.no_background or global.disp_gauge == false then
+			if pgm:read_u8(0x107BB9) == 0x01 then
+				local match = pgm:read_u8(0x107C22)
+				if match == 0x38 then --HUD
+					pgm:write_u8(0x107C22, 0x33)
+				end
+				if match > 0 then --BG layers
+					if global.no_background then
+						pgm:write_u8(0x107762, 0x00)
+					end
+					pgm:write_u8(0x107765, 0x01)
+				end
+			end
+			if global.no_background then
+				--pgm:write_u16(0x401FFE, 0x8F8F)
+				pgm:write_u16(0x401FFE, 0x5ABB)
+				pgm:write_u8(global.no_background_addr, 0xFF)
+			end
+		else
+			pgm:write_u8(global.no_background_addr, 0x00)
+		end
+
 		-- メイン処理
 		if not match_active then
 			return
@@ -7803,7 +7830,6 @@ function rbff2.startplugin()
 
 		local next_joy = new_next_joy()
 
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		local scr = manager.machine.screens:at(1)
 		local ec = scr:frame_number()
 		local state_past = ec - global.input_accepted
@@ -9746,6 +9772,37 @@ function rbff2.startplugin()
 			pgm:write_i16(players[to].addr.pos, players[from].pos)
 			pgm:write_i16(players[to].addr.pos_y, 240)
 		end
+
+		global.pause = false
+		for i, p in ipairs(players) do
+			-- 判定が出たらポーズさせる
+			for _, box in ipairs(p.hitboxes) do
+				if (box.type.type == "throw" and global.pause_hitbox == 2) or
+					((box.type.type == "attack" or box.type.type == "atemi") and global.pause_hitbox == 3) then
+					global.pause = true
+					break
+				end
+			end
+			for _, fb in pairs(p.fireball) do
+				for _, box in ipairs(fb.hitboxes) do
+					if (box.type.type == "throw" and global.pause_hitbox == 2) or
+						(box.type.type == "attack" and global.pause_hitbox == 3) then
+						global.pause = true
+						break
+					end
+				end
+			end
+
+			-- ヒット時にポーズさせる
+			if p.state ~= 0 and p.state ~= p.old_state and global.pause_hit > 0 then
+				-- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:ガードのみ
+				if global.pause_hit == 2 or
+					(global.pause_hit == 4 and p.state == 2) or
+					(global.pause_hit == 3 and p.state ~= 2) then
+					global.pause = true
+				end
+			end
+		end
 	end
 
 	local draw_summary = function(i, summary)
@@ -9865,22 +9922,36 @@ function rbff2.startplugin()
 				for i, p in ipairs(players) do
 					if p.in_air ~= true and p.sway_status == 0x00 then
 						-- 通常投げ間合い
-						local color = p.throw.in_range and 0xFFFFFF00 or 0xFFBBBBBB
-						scr:draw_line(p.throw.x1, p.hit.pos_y  , p.throw.x2, p.hit.pos_y  , color)
-						scr:draw_line(p.throw.x1, p.hit.pos_y-4, p.throw.x1, p.hit.pos_y+4, color)
-						scr:draw_line(p.throw.x2, p.hit.pos_y-4, p.throw.x2, p.hit.pos_y+4, color)
-						if p.throw.in_range then
-							draw_text_with_shadow(p.throw.x1+2.5, p.hit.pos_y+4  , string.format("投%d", i), color)
+						if global.disp_range == 2 or global.disp_range == 3 then
+							local color = p.throw.in_range and 0xFFFFFF00 or 0xFFBBBBBB
+							scr:draw_line(p.throw.x1, p.hit.pos_y  , p.throw.x2, p.hit.pos_y  , color)
+							scr:draw_line(p.throw.x1, p.hit.pos_y-4, p.throw.x1, p.hit.pos_y+4, color)
+							scr:draw_line(p.throw.x2, p.hit.pos_y-4, p.throw.x2, p.hit.pos_y+4, color)
+							if p.throw.in_range then
+								draw_text_with_shadow(p.throw.x1+2.5, p.hit.pos_y+4  , string.format("投%d", i), color)
+							end
 						end
 
 						-- 地上通常技の遠近判断距離
-						for btn, range in pairs(p.close_far) do
-							draw_close_far(i, p, string.upper(btn), range.x1, range.x2)
+						if global.disp_range == 2 or global.disp_range == 4 then
+							for btn, range in pairs(p.close_far) do
+								draw_close_far(i, p, string.upper(btn), range.x1, range.x2)
+							end
 						end
 					elseif p.sway_status == 0x80 then
 						-- ライン移動技の遠近判断距離
-						for btn, range in pairs(p.close_far_lma) do
-							draw_close_far(i, p, string.upper(btn), range.x1, range.x2)
+						if global.disp_range == 2 or global.disp_range == 4 then
+							for btn, range in pairs(p.close_far_lma) do
+								draw_close_far(i, p, string.upper(btn), range.x1, range.x2)
+							end
+						end
+					end
+
+					-- 詠酒範囲
+					if global.disp_range == 2 or global.disp_range == 5 then
+						if p.esaka_range > 0 then
+							draw_esaka(i, p.hit.pos_x + p.esaka_range, global.axis_internal_color)
+							draw_esaka(i, p.hit.pos_x - p.esaka_range, global.axis_internal_color)
 						end
 					end
 
@@ -9888,12 +9959,6 @@ function rbff2.startplugin()
 					draw_axis(i, p, p.hit.pos_x, p.in_air == true and global.axis_air_color or global.axis_color)
 					draw_axis(i, p, p.hit.max_pos_x, global.axis_internal_color)
 					draw_axis(i, p, p.hit.min_pos_x, global.axis_internal_color)
-
-					-- 詠酒範囲
-					if p.esaka_range > 0 then
-						draw_esaka(i, p.hit.pos_x + p.esaka_range, global.axis_internal_color)
-						draw_esaka(i, p.hit.pos_x - p.esaka_range, global.axis_internal_color)
-					end
 				end
 			end
 
@@ -9956,7 +10021,7 @@ function rbff2.startplugin()
 					draw_rtext(   p1 and 311 or 92, 76, op.max_combo_pow)
 				end
 
-				if p.disp_sts > 1 then
+				if p.disp_sts == 2 or p.disp_sts == 3 then
 					if p1 then
 						scr:draw_box(  2, 0,  40,  36, 0x80404040, 0x80404040)
 					else
@@ -10164,7 +10229,7 @@ function rbff2.startplugin()
 			end
 
 			for i, p in ipairs(players) do
-				if p.disp_sts == 3 then
+				if p.disp_sts == 2 or p.disp_sts == 4 then
 					draw_summary(i, p.all_summary)
 				end
 			end
@@ -10420,52 +10485,8 @@ function rbff2.startplugin()
 		end
 		]]
 
-		-- 画面表示
-		if global.no_background then
-			if pgm:read_u8(0x107BB9) == 0x01 then
-				local match = pgm:read_u8(0x107C22)
-				if match == 0x38 then --HUD
-					pgm:write_u8(0x107C22, 0x33)
-				end
-				if match > 0 then --BG layers
-					pgm:write_u8(0x107762, 0x00)
-					pgm:write_u8(0x107765, 0x01)
-				end
-			end
-			--pgm:write_u16(0x401FFE, 0x8F8F)
-			pgm:write_u16(0x401FFE, 0x5ABB)
-			pgm:write_u8(global.no_background_addr, 0xFF)
-		else
-			pgm:write_u8(global.no_background_addr, 0x00)
-		end
-
-		for i, p in ipairs(players) do
-			local pause = false
-
-			-- 投げ判定が出たらポーズさせる
-			for _, box in ipairs(p.hitboxes) do
-				if box.type.type == "throw" and global.pausethrow then
-					pause = true
-					break
-				end
-			end
-
-			-- ヒット時にポーズさせる
-			if p.state ~= 0 and p.state ~= p.old_state and global.pause_hit > 0 then
-				-- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:ガードのみ
-				if global.pause_hit == 2 then
-					pause = true
-				elseif global.pause_hit == 4 and p.state == 2 then
-					pause = true
-				elseif global.pause_hit == 3 and p.state ~= 2 then
-					pause = true
-				end
-			end
-
-			if pause then
-				emu.pause()
-				break
-			end
+		if global.pause then
+			emu.pause()
 		end
 	end
 
@@ -10609,8 +10630,8 @@ function rbff2.startplugin()
 		p[2].red                 = col[ 3]      -- 2P 体力ゲージ量             3
 		p[1].max                 = col[ 4]      -- 1P POWゲージ量              4
 		p[2].max                 = col[ 5]      -- 2P POWゲージ量              5
-		p[1].disp_stun           = col[ 6] == 2 -- 1P 気絶ゲージ表示         6
-		p[2].disp_stun           = col[ 7] == 2 -- 2P 気絶ゲージ表示         7
+		p[1].disp_stun           = col[ 6] == 2 -- 1P 気絶ゲージ表示           6
+		p[2].disp_stun           = col[ 7] == 2 -- 2P 気絶ゲージ表示           7
 		dip_config.infinity_life = col[ 8] == 2 -- 体力ゲージモード            8
 		global.pow_mode          = col[ 9]      -- POWゲージモード             9
 
@@ -10625,29 +10646,30 @@ function rbff2.startplugin()
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		--                              1                                 1
 		global.disp_hitbox       = col[ 2]      -- 判定表示               2
-		global.pause_hit         = col[ 3]      -- ヒット時にポーズ       3
-		global.pausethrow        = col[ 4] == 2 -- 投げ判定発生時にポーズ 4
-		p[1].disp_dmg            = col[ 5] == 2 -- 1P ダメージ表示        5
-		p[2].disp_dmg            = col[ 6] == 2 -- 2P ダメージ表示        6
-		p[1].disp_cmd            = col[ 7]      -- 1P 入力表示            7
-		p[2].disp_cmd            = col[ 8]      -- 2P 入力表示            8
-		global.disp_input_sts    = col[ 9]      -- コマンド入力状態表示   9
-		global.disp_frmgap       = col[10]      -- フレーム差表示        10
-		p[1].disp_frm            = col[11] == 2 -- 1P フレーム数表示     11
-		p[2].disp_frm            = col[12] == 2 -- 2P フレーム数表示     12
-		p[1].disp_sts            = col[13]      -- 1P 状態表示           13
-		p[2].disp_sts            = col[14]      -- 2P 状態表示           14
-		p[1].disp_base           = col[15] == 2 -- 1P 処理アドレス表示   15
-		p[2].disp_base           = col[16] == 2 -- 2P 処理アドレス表示   16
-		global.disp_pos          = col[17] == 2 -- 1P 2P 距離表示        17
-		dip_config.easy_super    = col[18] == 2 -- 簡易超必              18
-		global.mame_debug_wnd    = col[19] == 2 -- MAMEデバッグウィンドウ19
-		global.damaged_move      = col[20]      -- ヒット効果確認用      20
-		global.log.poslog        = col[21] == 2 -- 位置ログ              21
-		global.log.atklog        = col[22] == 2 -- 攻撃情報ログ          22
-		global.log.baselog       = col[23] == 2 -- 処理アドレスログ      23
-		global.log.keylog        = col[24] == 2 -- 入力ログ              24
-		global.log.rvslog        = col[25] == 2 -- リバサログ            25
+		global.disp_range        = col[ 3]      -- 間合い表示             3
+		global.pause_hit         = col[ 4]      -- ヒット時にポーズ       4
+		global.pause_hitbox      = col[ 5]      -- 判定発生時にポーズ     5
+		p[1].disp_dmg            = col[ 6] == 2 -- 1P ダメージ表示        6
+		p[2].disp_dmg            = col[ 7] == 2 -- 2P ダメージ表示        7
+		p[1].disp_cmd            = col[ 8]      -- 1P 入力表示            8
+		p[2].disp_cmd            = col[ 9]      -- 2P 入力表示            9
+		global.disp_input_sts    = col[10]      -- コマンド入力状態表示  10
+		global.disp_frmgap       = col[11]      -- フレーム差表示        11
+		p[1].disp_frm            = col[12] == 2 -- 1P フレーム数表示     12
+		p[2].disp_frm            = col[13] == 2 -- 2P フレーム数表示     13
+		p[1].disp_sts            = col[14]      -- 1P 状態表示           14
+		p[2].disp_sts            = col[15]      -- 2P 状態表示           15
+		p[1].disp_base           = col[16] == 2 -- 1P 処理アドレス表示   16
+		p[2].disp_base           = col[17] == 2 -- 2P 処理アドレス表示   17
+		global.disp_pos          = col[18] == 2 -- 1P 2P 距離表示        18
+		dip_config.easy_super    = col[19] == 2 -- 簡易超必              19
+		global.mame_debug_wnd    = col[20] == 2 -- MAMEデバッグウィンドウ20
+		global.damaged_move      = col[21]      -- ヒット効果確認用      21
+		global.log.poslog        = col[22] == 2 -- 位置ログ              22
+		global.log.atklog        = col[23] == 2 -- 攻撃情報ログ          23
+		global.log.baselog       = col[24] == 2 -- 処理アドレスログ      24
+		global.log.keylog        = col[25] == 2 -- 入力ログ              25
+		global.log.rvslog        = col[26] == 2 -- リバサログ            26
 
 		local dmove = damaged_moves[global.damaged_move]
 		if dmove and dmove > 0 then
@@ -10815,8 +10837,8 @@ function rbff2.startplugin()
 		col[ 3] = p[2].red                  -- 2P 体力ゲージ量        3
 		col[ 4] = p[1].max                  -- 1P POWゲージ量         4
 		col[ 5] = p[2].max                  -- 2P POWゲージ量         5
-		col[ 6] = p[1].disp_stun and 2 or 1 -- 1P 気絶ゲージ表示    6
-		col[ 7] = p[2].disp_stun and 2 or 1 -- 2P 気絶ゲージ表示    7
+		col[ 6] = p[1].disp_stun and 2 or 1 -- 1P 気絶ゲージ表示      6
+		col[ 7] = p[2].disp_stun and 2 or 1 -- 2P 気絶ゲージ表示      7
 		col[ 8] = dip_config.infinity_life and 2 or 1 -- 体力ゲージモード 8
 		col[ 9] = g.pow_mode                -- POWゲージモード        9
 	end
@@ -10824,31 +10846,32 @@ function rbff2.startplugin()
 		local col = ex_menu.pos.col
 		local p = players
 		local g = global
-		--   1                                                       1
-		col[ 2] = g.disp_hitbox            -- 判定表示               2
-		col[ 3] = g.pause_hit              -- ヒット時にポーズ       3
-		col[ 4] = g.pausethrow  and 2 or 1 -- 投げ判定発生時にポーズ 4
-		col[ 5] = p[1].disp_dmg and 2 or 1 -- 1P ダメージ表示        5
-		col[ 6] = p[2].disp_dmg and 2 or 1 -- 2P ダメージ表示        6
-		col[ 7] = p[1].disp_cmd            -- 1P 入力表示            7
-		col[ 8] = p[2].disp_cmd            -- 2P 入力表示            8
-		col[ 9] = g.disp_input_sts         -- コマンド入力状態表示      9
-		col[10] = g.disp_frmgap            -- フレーム差表示           10
-		col[11] = p[1].disp_frm and 2 or 1 -- 1P フレーム数表示        11
-		col[12] = p[2].disp_frm and 2 or 1 -- 2P フレーム数表示        12
-		col[13] = p[1].disp_sts            -- 1P 状態表示              13
-		col[14] = p[2].disp_sts            -- 2P 状態表示              14
-		col[15] = p[1].disp_base and 2 or 1 -- 1P 処理アドレス表示     15
-		col[16] = p[2].disp_base and 2 or 1 -- 2P 処理アドレス表示     16
-		col[17] = g.disp_pos    and 2 or 1 -- 1P 2P 距離表示           17
-		col[18] = dip_config.easy_super and 2 or 1 -- 簡易超必         18
-		col[19] = g.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ19
-		col[20] = g.damaged_move           -- ヒット効果確認用         20
-		col[21] = g.log.poslog  and 2 or 1 -- 位置ログ                 21
-		col[22] = g.log.atklog  and 2 or 1 -- 攻撃情報ログ             22
-		col[23] = g.log.baselog and 2 or 1 -- 処理アドレスログ         23
-		col[24] = g.log.keylog  and 2 or 1 -- 入力ログ                 24
-		col[25] = g.log.rvslog  and 2 or 1 -- リバサログ               25
+		--   1                                                          1
+		col[ 2] = g.disp_hitbox            -- 判定表示                  2
+		col[ 3] = g.disp_range             -- 間合い表示                3
+		col[ 4] = g.pause_hit              -- ヒット時にポーズ          4
+		col[ 5] = g.pause_hitbox           -- 判定発生時にポーズ        5
+		col[ 6] = p[1].disp_dmg and 2 or 1 -- 1P ダメージ表示           6
+		col[ 7] = p[2].disp_dmg and 2 or 1 -- 2P ダメージ表示           7
+		col[ 8] = p[1].disp_cmd            -- 1P 入力表示               8
+		col[ 9] = p[2].disp_cmd            -- 2P 入力表示               9
+		col[10] = g.disp_input_sts         -- コマンド入力状態表示     10
+		col[11] = g.disp_frmgap            -- フレーム差表示           11
+		col[12] = p[1].disp_frm and 2 or 1 -- 1P フレーム数表示        12
+		col[13] = p[2].disp_frm and 2 or 1 -- 2P フレーム数表示        13
+		col[14] = p[1].disp_sts            -- 1P 状態表示              14
+		col[15] = p[2].disp_sts            -- 2P 状態表示              15
+		col[16] = p[1].disp_base and 2 or 1 -- 1P 処理アドレス表示     16
+		col[17] = p[2].disp_base and 2 or 1 -- 2P 処理アドレス表示     17
+		col[18] = g.disp_pos    and 2 or 1 -- 1P 2P 距離表示           18
+		col[19] = dip_config.easy_super and 2 or 1 -- 簡易超必         19
+		col[20] = g.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ20
+		col[21] = g.damaged_move           -- ヒット効果確認用         21
+		col[22] = g.log.poslog  and 2 or 1 -- 位置ログ                 22
+		col[23] = g.log.atklog  and 2 or 1 -- 攻撃情報ログ             23
+		col[24] = g.log.baselog and 2 or 1 -- 処理アドレスログ         24
+		col[25] = g.log.keylog  and 2 or 1 -- 入力ログ                 25
+		col[26] = g.log.rvslog  and 2 or 1 -- リバサログ               26
 	end
 	local init_auto_menu_config = function()
 		local col = auto_menu.pos.col
@@ -10906,6 +10929,7 @@ function rbff2.startplugin()
 	local menu_restart_fight = function()
 		main_menu.pos.row = 1
 		cls_hook()
+		global.disp_gauge = main_menu.pos.col[14] == 2 -- 体力,POWゲージ表示
 		restart_fight({
 			next_p1       =      main_menu.pos.col[ 8]  , -- 1P セレクト
 			next_p2       =      main_menu.pos.col[ 9]  , -- 2P セレクト
@@ -10949,6 +10973,7 @@ function rbff2.startplugin()
 			{ "2P カラー"             , { "A", "D" } },
 			{ "ステージセレクト"      , names },
 			{ "BGMセレクト"           , bgm_names },
+			{ "体力,POWゲージ表示"    , { "OFF", "ON" }, },
 			{ "リスタート" },
 		},
 		pos = { -- メニュー内の選択位置
@@ -10968,6 +10993,7 @@ function rbff2.startplugin()
 				1, -- 2P カラー
 				1, -- ステージセレクト
 				1, -- BGMセレクト
+				1, -- 体力,POWゲージ表示
 				0, -- リスタート
 			},
 		},
@@ -10985,6 +11011,7 @@ function rbff2.startplugin()
 			menu_restart_fight, -- 2P カラー
 			menu_restart_fight, -- ステージセレクト
 			menu_restart_fight, -- BGMセレクト
+			menu_restart_fight, -- 体力,POWゲージ表示
 			menu_restart_fight, -- リスタート
 		},
 		on_b = {
@@ -11001,6 +11028,7 @@ function rbff2.startplugin()
 			menu_exit, -- 2P カラー
 			menu_exit, -- ステージセレクト
 			menu_exit, -- BGMセレクト
+			menu_exit, -- 体力,POWゲージ表示
 			menu_exit, -- リスタート
 		},
 	}
@@ -11020,7 +11048,7 @@ function rbff2.startplugin()
 		local stg3 = pgm:read_u8(0x107BB9) == 1 and 0x01 or 0x0F
 		main_menu.pos.col[12] = 1
 		for i, data in ipairs(stgs) do
-			if data.stg1 == stg1 and data.stg2 == stg2 and data.stg3 == stg3 then
+			if data.stg1 == stg1 and data.stg2 == stg2 and data.stg3 == stg3 and global.no_background == data.no_background then
 				main_menu.pos.col[12] = i
 				break
 			end
@@ -11033,6 +11061,8 @@ function rbff2.startplugin()
 				main_menu.pos.col[13] = bgm.name_idx
 			end
 		end
+
+		main_menu.pos.col[14] = global.disp_gauge and 2 or 1 -- 体力,POWゲージ表示
 
 		setup_char_manu()
 	end
@@ -11237,8 +11267,8 @@ function rbff2.startplugin()
 			{ "2P 体力ゲージ量"       , life_range, }, 	-- "最大", "赤", "ゼロ" ...
 			{ "1P POWゲージ量"        , pow_range, },   -- "最大", "半分", "ゼロ" ...
 			{ "2P POWゲージ量"        , pow_range, },   -- "最大", "半分", "ゼロ" ...
-			{ "1P 気絶ゲージ表示"   , { "OFF", "ON" }, },
-			{ "2P 気絶ゲージ表示"   , { "OFF", "ON" }, },
+			{ "1P 気絶ゲージ表示"     , { "OFF", "ON" }, },
+			{ "2P 気絶ゲージ表示"     , { "OFF", "ON" }, },
 			{ "体力ゲージモード"      , { "自動回復", "固定" }, },
 			{ "POWゲージモード"       , { "自動回復", "固定", "通常動作" }, },
 		},
@@ -11251,8 +11281,8 @@ function rbff2.startplugin()
 				2, -- 2P 体力ゲージ量         3
 				2, -- 1P POWゲージ量          4
 				2, -- 2P POWゲージ量          5
-				2, -- 1P 気絶ゲージ表示     6
-				2, -- 2P 気絶ゲージ表示     7
+				2, -- 1P 気絶ゲージ表示       6
+				2, -- 2P 気絶ゲージ表示       7
 				2, -- 体力ゲージモード        8
 				2, -- POWゲージモード         9
 			},
@@ -11263,8 +11293,8 @@ function rbff2.startplugin()
 			bar_menu_to_main, -- 2P 体力ゲージ量         3
 			bar_menu_to_main, -- 1P POWゲージ量          4
 			bar_menu_to_main, -- 2P POWゲージ量          5
-			bar_menu_to_main, -- 1P 気絶ゲージ表示     6
-			bar_menu_to_main, -- 2P 気絶ゲージ表示     7
+			bar_menu_to_main, -- 1P 気絶ゲージ表示       6
+			bar_menu_to_main, -- 2P 気絶ゲージ表示       7
 			bar_menu_to_main, -- 体力ゲージモード        8
 			bar_menu_to_main, -- POWゲージモード         9
 		},
@@ -11274,8 +11304,8 @@ function rbff2.startplugin()
 			bar_menu_to_main_cancel, -- 2P 体力ゲージ量         3
 			bar_menu_to_main_cancel, -- 1P POWゲージ量          4
 			bar_menu_to_main_cancel, -- 2P POWゲージ量          5
-			bar_menu_to_main_cancel, -- 1P 気絶ゲージ表示     6
-			bar_menu_to_main_cancel, -- 2P 気絶ゲージ表示     7
+			bar_menu_to_main_cancel, -- 1P 気絶ゲージ表示       6
+			bar_menu_to_main_cancel, -- 2P 気絶ゲージ表示       7
 			bar_menu_to_main_cancel, -- 体力ゲージモード        8
 			bar_menu_to_main_cancel, -- POWゲージモード         9
 		},
@@ -11285,8 +11315,9 @@ function rbff2.startplugin()
 		list = {
 			{ "                          一般設定" },
 			{ "判定表示"              , { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
+			{ "間合い表示"            , { "OFF", "ON", "ON:投げ", "ON:遠近攻撃", "ON:詠酒", }, },
 			{ "ヒット時にポーズ"      , { "OFF", "ON", "ON:やられのみ", "ON:ガードのみ", }, },
-			{ "投げ判定発生時にポーズ", { "OFF", "ON" }, },
+			{ "判定発生時にポーズ"    , { "OFF", "投げ", "攻撃", }, },
 			{ "1P ダメージ表示"       , { "OFF", "ON" }, },
 			{ "2P ダメージ表示"       , { "OFF", "ON" }, },
 			{ "1P 入力表示"           , { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
@@ -11295,8 +11326,8 @@ function rbff2.startplugin()
 			{ "フレーム差表示"        , { "OFF", "数値とグラフ", "数値" }, },
 			{ "1P フレーム数表示"     , { "OFF", "ON" }, },
 			{ "2P フレーム数表示"     , { "OFF", "ON" }, },
-			{ "1P 状態表示"           , { "OFF", "小表示", "大表示" }, },
-			{ "2P 状態表示"           , { "OFF", "小表示", "大表示" }, },
+			{ "1P 状態表示"           , { "OFF", "ON", "ON:小表示", "ON:大表示" }, },
+			{ "2P 状態表示"           , { "OFF", "ON", "ON:小表示", "ON:大表示" }, },
 			{ "1P 処理アドレス表示"   , { "OFF", "ON" }, },
 			{ "2P 処理アドレス表示"   , { "OFF", "ON" }, },
 			{ "1P 2P 距離表示"        , { "OFF", "ON" }, },
@@ -11315,34 +11346,36 @@ function rbff2.startplugin()
 			col = {
 				0, -- －一般設定－            1
 				4, -- 判定表示                2
-				1, -- ヒット時にポーズ        3
-				1, -- 投げ判定ポーズ          4
-				1, -- 1P ダメージ表示         5
-				1, -- 2P ダメージ表示         6
-				1, -- 1P 入力表示             7
-				1, -- 2P 入力表示             8
-				1, -- コマンド入力状態表示    9
-				3, -- フレーム差表示         10
-				1, -- 1P フレーム数表示      11
-				1, -- 2P フレーム数表示      12
-				1, -- 1P 状態表示            13
-				1, -- 2P 状態表示            14
-				1, -- 1P 処理アドレス表示    15
-				1, -- 2P 処理アドレス表示    16
-				1, -- 1P 2P 距離表示         17
-				1, -- 簡易超必               18
-				1, -- MAMEデバッグウィンドウ 19
-				1, -- ヒット効果確認用       20
-				1, -- 位置ログ               21
-				1, -- 攻撃情報ログ           22
-				1, -- 処理アドレスログ       23
-				1, -- 入力ログ               24
-				1, -- リバサログ             25
+				2, -- 間合い表示              3
+				1, -- ヒット時にポーズ        4
+				1, -- 投げ判定ポーズ          5
+				1, -- 1P ダメージ表示         6
+				1, -- 2P ダメージ表示         7
+				1, -- 1P 入力表示             8
+				1, -- 2P 入力表示             9
+				1, -- コマンド入力状態表示   10
+				3, -- フレーム差表示         11
+				1, -- 1P フレーム数表示      12
+				1, -- 2P フレーム数表示      13
+				1, -- 1P 状態表示            14
+				1, -- 2P 状態表示            15
+				1, -- 1P 処理アドレス表示    16
+				1, -- 2P 処理アドレス表示    17
+				1, -- 1P 2P 距離表示         18
+				1, -- 簡易超必               19
+				1, -- MAMEデバッグウィンドウ 20
+				1, -- ヒット効果確認用       21
+				1, -- 位置ログ               22
+				1, -- 攻撃情報ログ           23
+				1, -- 処理アドレスログ       24
+				1, -- 入力ログ               25
+				1, -- リバサログ             26
 			},
 		},
 		on_a = {
 			ex_menu_to_main, -- －一般設定－
 			ex_menu_to_main, -- 判定表示
+			ex_menu_to_main, -- 間合い表示
 			ex_menu_to_main, -- ヒット時にポーズ
 			ex_menu_to_main, -- 投げ判定ポーズ
 			ex_menu_to_main, -- 1P ダメージ表示
@@ -11370,6 +11403,7 @@ function rbff2.startplugin()
 		on_b = {
 			ex_menu_to_main_cancel, -- －一般設定－
 			ex_menu_to_main_cancel, -- 判定表示
+			ex_menu_to_main_cancel, -- 間合い表示
 			ex_menu_to_main_cancel, -- ヒット時にポーズ
 			ex_menu_to_main_cancel, -- 投げ判定ポーズ
 			ex_menu_to_main_cancel, -- フレーム差表示
@@ -11852,7 +11886,7 @@ function rbff2.startplugin()
 				--print("player_select_active = false")
 			end
 			player_select_active = false -- 状態リセット
-			pgm:write_u8(mem_0x10CDD0)
+			pgm:write_u8(mem_0x10CDD0, 0x00)
 			pgm:write_u32(players[1].addr.select_hook)
 			pgm:write_u32(players[2].addr.select_hook)
 		end
