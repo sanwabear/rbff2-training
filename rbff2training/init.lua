@@ -92,7 +92,7 @@ local global = {
 	sync_pos_x      = 1, -- 1: OFF, 2:1Pと同期, 3:2Pと同期
 
 	disp_pos        = true, -- 1P 2P 距離表示
-	disp_hitbox     = 4, -- 判定表示
+	disp_hitbox     = true, -- 判定表示
 	disp_range      = 2, -- 間合い表示
 	disp_frmgap     = 3, -- フレーム差表示
 	disp_input_sts  = 1, -- コマンド入力状態表示 1:OFF 2:1P 3:2P
@@ -4933,7 +4933,7 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 		end
 
 		-- 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
-		if global.disp_hitbox == 3 or (global.disp_hitbox == 4 and box.atk) or (global.disp_hitbox == 5 and not box.atk) then
+		if p.disp_frm == 3 or (p.disp_frm == 4 and box.atk) or (p.disp_frm == 5 and not box.atk) then
 			if p.reach_tbl[reach_memo1] ~= true then
 				p.reach_tbl[reach_memo1] = true
 				p.reach_memo = p.reach_memo .. "," .. reach_memo1
@@ -5155,7 +5155,7 @@ function rbff2.startplugin()
 			disp_base        = false,       -- 処理のアドレスを表示するときtrue
 			disp_dmg         = true,        -- ダメージ表示するときtrue
 			disp_cmd         = 2,           -- 入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
-			disp_frm         = true,        -- フレーム数表示するときtrue
+			disp_frm         = 4,           -- フレーム数表示するときtrue
 			disp_stun        = true,        -- 気絶表示
 			disp_sts         = 3,           -- 状態表示 "OFF", "ON", "ON:小表示", "ON:大表示"
 
@@ -9872,7 +9872,7 @@ function rbff2.startplugin()
 		-- メイン処理
 		if match_active then
 			-- 判定表示（キャラ、飛び道具）
-			if global.disp_hitbox > 1 then
+			if global.disp_hitbox then
 				local hitboxes = {}
 				for _, p in ipairs(players) do
 					table_add_all(hitboxes, p.hitboxes)
@@ -10193,7 +10193,7 @@ function rbff2.startplugin()
 				local p1 = i == 1
 
 				--行動IDとフレーム数表示
-				if global.disp_frmgap > 1 or p.disp_frm then
+				if global.disp_frmgap > 1 or p.disp_frm > 1 then
 					if global.disp_frmgap == 2 then
 						draw_frame_groups(p.act_frames2, p.act_frames_total, 30, p1 and 64 or 72, 8)
 						local j = 0
@@ -10208,7 +10208,7 @@ function rbff2.startplugin()
 						draw_frame_groups(p.muteki.act_frames2 , p.act_frames_total, 30, p1 and 68 or 76, 3)
 						draw_frame_groups(p.frm_gap.act_frames2, p.act_frames_total, 30, p1 and 65 or 73, 3, true)
 					end
-					if p.disp_frm then
+					if p.disp_frm > 1 then
 						draw_frames(p.act_frames2, p1 and 160 or 285, true , true, p1 and 40 or 165, 63, 8, 16)
 					end
 				end
@@ -10639,11 +10639,11 @@ function rbff2.startplugin()
 		bar_menu_to_main(true)
 	end
 	local disp_menu_to_main = function(cancel)
-		local col = ex_menu.pos.col
+		local col = disp_menu.pos.col
 		local p   = players
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		--                              1                                 1
-		global.disp_hitbox       = col[ 2]      -- 判定表示               2
+		global.disp_hitbox       = col[ 2] == 2 -- 判定表示               2
 		global.disp_range        = col[ 3]      -- 間合い表示             3
 		p[1].disp_stun           = col[ 4] == 2 -- 1P 気絶ゲージ表示      4
 		p[2].disp_stun           = col[ 5] == 2 -- 2P 気絶ゲージ表示      5
@@ -10653,8 +10653,8 @@ function rbff2.startplugin()
 		p[2].disp_cmd            = col[ 9]      -- 2P 入力表示            9
 		global.disp_input_sts    = col[10]      -- コマンド入力状態表示  10
 		global.disp_frmgap       = col[11]      -- フレーム差表示        11
-		p[1].disp_frm            = col[12] == 2 -- 1P フレーム数表示     12
-		p[2].disp_frm            = col[13] == 2 -- 2P フレーム数表示     13
+		p[1].disp_frm            = col[12]      -- 1P フレーム数表示     12
+		p[2].disp_frm            = col[13]      -- 2P フレーム数表示     13
 		p[1].disp_sts            = col[14]      -- 1P 状態表示           14
 		p[2].disp_sts            = col[15]      -- 2P 状態表示           15
 		p[1].disp_base           = col[16] == 2 -- 1P 処理アドレス表示   16
@@ -10852,11 +10852,11 @@ function rbff2.startplugin()
 		col[ 7] = g.pow_mode                -- POWゲージモード        7
 	end
 	local init_disp_menu_config = function()
-		local col = ex_menu.pos.col
+		local col = disp_menu.pos.col
 		local p = players
 		local g = global
 		--   1                                                         1
-		col[ 2] = g.disp_hitbox             -- 判定表示                2
+		col[ 2] = g.disp_hitbox and 2 or 1  -- 判定表示                2
 		col[ 3] = g.disp_range              -- 間合い表示              3
 		col[ 6] = p[1].disp_stun and 2 or 1 -- 1P 気絶ゲージ表示       6
 		col[ 7] = p[2].disp_stun and 2 or 1 -- 2P 気絶ゲージ表示       7
@@ -10866,8 +10866,8 @@ function rbff2.startplugin()
 		col[ 9] = p[2].disp_cmd             -- 2P 入力表示             9
 		col[10] = g.disp_input_sts          -- コマンド入力状態表示   10
 		col[11] = g.disp_frmgap             -- フレーム差表示         11
-		col[12] = p[1].disp_frm and 2 or 1  -- 1P フレーム数表示      12
-		col[13] = p[2].disp_frm and 2 or 1  -- 2P フレーム数表示      13
+		col[12] = p[1].disp_frm             -- 1P フレーム数表示      12
+		col[13] = p[2].disp_frm             -- 2P フレーム数表示      13
 		col[14] = p[1].disp_sts             -- 1P 状態表示            14
 		col[15] = p[2].disp_sts             -- 2P 状態表示            15
 		col[16] = p[1].disp_base and 2 or 1 -- 1P 処理アドレス表示    16
@@ -11323,7 +11323,7 @@ function rbff2.startplugin()
 	disp_menu = {
 		list = {
 			{ "                          表示設定" },
-			{ "判定表示"              , { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
+			{ "判定表示"              , { "OFF", "ON", }, },
 			{ "間合い表示"            , { "OFF", "ON", "ON:投げ", "ON:遠近攻撃", "ON:詠酒", }, },
 			{ "1P 気絶ゲージ表示"     , { "OFF", "ON" }, },
 			{ "2P 気絶ゲージ表示"     , { "OFF", "ON" }, },
@@ -11333,28 +11333,20 @@ function rbff2.startplugin()
 			{ "2P 入力表示"           , { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
 			{ "コマンド入力状態表示"  , { "OFF", "1P", "2P", }, },
 			{ "フレーム差表示"        , { "OFF", "数値とグラフ", "数値" }, },
-			{ "1P フレーム数表示"     , { "OFF", "ON" }, },
-			{ "2P フレーム数表示"     , { "OFF", "ON" }, },
+			{ "1P フレーム数表示"     , { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
+			{ "2P フレーム数表示"     , { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
 			{ "1P 状態表示"           , { "OFF", "ON", "ON:小表示", "ON:大表示" }, },
 			{ "2P 状態表示"           , { "OFF", "ON", "ON:小表示", "ON:大表示" }, },
 			{ "1P 処理アドレス表示"   , { "OFF", "ON" }, },
 			{ "2P 処理アドレス表示"   , { "OFF", "ON" }, },
 			{ "1P 2P 距離表示"        , { "OFF", "ON" }, },
-			{ "簡易超必"              , { "OFF", "ON" }, },
-			{ "MAMEデバッグウィンドウ", { "OFF", "ON" }, },
-			{ "ヒット効果確認用"      , damaged_move_keys },
-			{ "位置ログ"              , { "OFF", "ON" }, },
-			{ "攻撃情報ログ"          , { "OFF", "ON" }, },
-			{ "処理アドレスログ"      , { "OFF", "ON" }, },
-			{ "入力ログ"              , { "OFF", "ON" }, },
-			{ "リバサログ"            , { "OFF", "ON" }, },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
 			row = 2,
 			col = {
 				0, -- －表示設定－            1
-				4, -- 判定表示                2
+				2, -- 判定表示                2
 				2, -- 間合い表示              3
 				2, -- 1P 気絶ゲージ表示       4
 				2, -- 2P 気絶ゲージ表示       5
@@ -11364,8 +11356,8 @@ function rbff2.startplugin()
 				1, -- 2P 入力表示             9
 				1, -- コマンド入力状態表示   10
 				3, -- フレーム差表示         11
-				1, -- 1P フレーム数表示      12
-				1, -- 2P フレーム数表示      13
+				4, -- 1P フレーム数表示      12
+				4, -- 2P フレーム数表示      13
 				1, -- 1P 状態表示            14
 				1, -- 2P 状態表示            15
 				1, -- 1P 処理アドレス表示    16
