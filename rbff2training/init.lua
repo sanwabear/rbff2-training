@@ -7408,9 +7408,10 @@ function rbff2.startplugin()
 		"攻撃値(削り)",
 		"気絶値",
 		"POW増加量",
-		"ヒットストップ",
 		"ヒット効果",
+		"ヒットストップ",
 		"ヒット硬直",
+		"キャンセル時",
 		"押し合い判定",
 		"最大やられ範囲",
 		"最大当たり範囲",
@@ -7446,6 +7447,31 @@ function rbff2.startplugin()
 		end)
 		return summary
 	end
+	local faint_cancels = {
+		{ { name = "F", f = 18 }, }, -- テリー
+		{ { name = "F", f = 18 }, }, -- アンディ
+		{ { name = "F", f = 18 }, }, -- 東
+		{ { name = "F", f = 18 }, }, -- 舞
+		{ { name = "F", f = 19 }, }, -- ギース
+		{ { name = "F", f = 18 }, }, -- 双角
+		{ { name = "F", f = 19 }, }, -- ボブ
+		{ { name = "F", f = 16 }, }, -- ホンフゥ
+		{ { name = "F", f = 41 }, }, -- マリー
+		{ { name = "F", f = 15 }, }, -- フランコ
+		{ { name = "F", f = 18 }, { name = "中蛇", f =  9, } }, -- 山崎
+		{ { name = "F", f = 57 }, { name = "真眼", f = 47, } }, -- 崇秀
+		{ { name = "F", f = 27 }, { name = "龍転", f = 25, } }, -- 崇雷
+		{ { name = "F", f = 47 }, },                 -- ダック
+		{ { name = "F", f = 19 }, { name = "覇気", f = 28, } }, -- キム
+		{ { name = "F", f = 42 }, }, -- ビリー
+		{ { name = "F", f = 23 }, { name = "軟体", f = 20, } },-- チン
+		{ { name = "F", f = 19 }, }, -- タン
+		{ }, -- ローレンス
+		{ { name = "F", f = 17 }, }, -- クラウザー
+		{ { name = "F", f = 18 }, }, -- リック
+		{ { name = "F", f = 22 }, }, -- シャンフェイ
+		{ { name = "F", f = 13 }, }, -- アルフレッド
+	}
 	local check_edge = function(edge)
 		if edge.front and edge.top and edge.bottom and edge.back then
 			return true
@@ -7469,7 +7495,8 @@ function rbff2.startplugin()
 
 				-- 避け攻撃つぶし
 				local punish_away_label, asis_punish_away_label
-				if summary.normal_hit == hit_proc_types.same_line or summary.normal_hit == hit_proc_types.diff_line then
+				if summary.normal_hit == hit_proc_types.same_line or
+					summary.normal_hit == hit_proc_types.diff_line then
 					punish_away_label = "上方"
 					asis_punish_away_label = "上方"
 					if info.punish_away == 1 then
@@ -7615,10 +7642,21 @@ function rbff2.startplugin()
 		if summary.effect then
 			local e = summary.effect + 1
 			effect_label = string.format("%s 地:%s/空:%s", summary.effect, hit_effects[e][1], hit_effects[e][2])
-			if summary.can_techrise == true then
+			if summary.can_techrise == false then
 				effect_label = string.gsub(effect_label, "ダウン", "強制ダウン")
 			end
 		end
+
+		local cancel_advs = {}
+		if faint_cancels[p.char] then
+			for _, fc in ipairs(faint_cancels[p.char]) do
+				local p1  = 1 + summary.hitstop + fc.f
+				local p2h = summary.hitstop + summary.hitstun
+				local p2g = summary.hitstop_gd + summary.blockstun
+				table.insert(cancel_advs, fc.name .. ":当" .. (p2h - p1) .. "/防" .. (p2g - p1))
+			end
+		end
+		local cancel_advs_label = table.concat(cancel_advs, ",")
 
 		local hit_summary = {
 			{"攻撃値(削り):"  , dmg_label},
@@ -7631,7 +7669,8 @@ function rbff2.startplugin()
 
 			{"ヒットストップ:", string.format("自･ヒット%sF/ガード･BS猶予%sF", summary.hitstop, summary.hitstop_gd) },
 			{"ヒット硬直:"    , string.format("ヒット%sF/ガード%sF/継続:%s", summary.hitstun, summary.blockstun, gd_strength_label) },
-			{"最大当たり範囲:"  , reach_label},
+			{"キャンセル時:"  , cancel_advs_label },
+			{"最大当たり範囲:", reach_label},
 		}
 		-- TODO レイアウト検討
 		for box_no, box in ipairs(summary.boxes) do
@@ -7639,7 +7678,7 @@ function rbff2.startplugin()
 			table.insert(hit_summary, {box_no .. " 当て身投げ:"    , box.parry_label})
 			local label = box.punish_away_label
 			if box.punish_away_label ~= box.asis_punish_away_label then
-				label = label .. "/" .. box.asis_punish_away_label
+				label = label .. "(" .. box.asis_punish_away_label .. ")"
 			end
 			table.insert(hit_summary, {box_no .. " 当たり高さ:"      , label})
 			table.insert(hit_summary, {box_no .. " 当たり範囲:"      , box.reach_label})
@@ -9221,11 +9260,9 @@ function rbff2.startplugin()
 			-- 攻撃判定のサマリ情報
 			local last_hit_summary = nil
 			for _, fb in pairs(p.fireball) do
-				if fb.alive then
-					if check_edge(fb.hit_summary.edge.hit) then
-						last_hit_summary = make_hit_summary(fb, fb.hit_summary)
-						break
-					end
+				if fb.alive and check_edge(fb.hit_summary.edge.hit) then
+					last_hit_summary = make_hit_summary(fb, fb.hit_summary)
+					break
 				end
 			end
 			if last_hit_summary == nil then
