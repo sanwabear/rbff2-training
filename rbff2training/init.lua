@@ -1875,7 +1875,7 @@ local char_acts_base = {
 		{ f = 35, disp_name = "CA 立C", name = "CA 立C(2段目)立Aルート", type = act_types.attack, ids = { 0x240, }, },
 		{ f = 59, disp_name = "CA _3C(遠)", name = "CA 3C(2段目)立Aルート", type = act_types.attack, ids = { 0x249, }, },
 		{ f = 46, disp_name = "CA 立C", name = "CA 立C(2段目)立Cルート", type = act_types.attack, ids = { 0x241, }, },
-		{ f = 51, disp_name = "CA 下C", name = "CA 下C(2段目)ライン攻撃ルート", type = act_types.attack, ids = { 0x246, }, },
+		{ f = 51, disp_name = "CA 下C", name = "CA 下C(2段目)ライン攻撃ルート", type = act_types.low_attack, ids = { 0x246, }, },
 		{ f = 61, disp_name = "CA 立C2", name = "CA 立C(2段目)ライン攻撃ルート", type = act_types.attack, ids = { 0x24B, 0x24C, 0x24D, }, },
 		{ f = 33, disp_name = "CA 立C3", name = "CA 立C(3段目)ライン攻撃ルート", type = act_types.low_attack, ids = { 0x247, }, },
 		{ f = 34, disp_name = "CA _6_6+B", name = "CA 66B(3段目)ライン攻撃ルート", type = act_types.any, ids = { 0x248, }, },
@@ -4725,6 +4725,7 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 			summary.gd_strength = summary.gd_strength or p.gd_strength -- 相手のガード持続の種類
 			summary.max_hit_nm  = summary.max_hit_nm  or p.hit.max_hit_nm -- p.act_frame中の行動最大ヒット 分子
 			summary.max_hit_dn  = summary.max_hit_dn  or p.hit.max_hit_dn -- p.act_frame中の行動最大ヒット 分母
+			summary.cancelable  = summary.cancelable  or p.cancelable -- キャンセル可否
 
 			summary.hitstun     = summary.hitstun     or box.hitstun    -- ヒット硬直
 			summary.blockstun   = summary.blockstun   or box.blockstun  -- ガード硬直
@@ -5522,6 +5523,8 @@ function rbff2.startplugin()
 				esaka_range  = p1 and 0x1004B6 or 0x1005B6, -- 詠酒の間合いチェック用
 				input_offset = p1 and 0x0394C4 or 0x0394C8, -- コマンド入力状態のオフセットアドレス
 				no_hit       = p1 and 0x10DDF2 or 0x10DDF1, -- ヒットしないフック
+				-- 0x1004E2 or 0x1005E2 -- 距離 0近距離 1中距離 2遠距離
+				cancelable   = p1 and 0x1004AF or 0x1005AF, -- キャンセル可否 00不可 C0可 D0可
 
 				stun         = p1 and 0x10B850 or 0x10B858, -- 現在気絶値
  				stun_timer   = p1 and 0x10B854 or 0x10B85C, -- 気絶値ゼロ化までの残フレーム数
@@ -5592,6 +5595,7 @@ function rbff2.startplugin()
 				reach_tbl      = {}, -- リーチ排他
 				pos_z          = 0, -- Z位置
 				attack         = 0, -- 攻撃中のみ変化
+				cancelable     = 0, -- キャンセル可否
 				hitstop_id     = 0, -- ガード硬直のID
 				can_techrise   = false, -- 受け身行動可否
 				hitstop        = 0, -- ガード硬直
@@ -7411,7 +7415,7 @@ function rbff2.startplugin()
 		"ヒット効果",
 		"ヒットストップ",
 		"ヒット硬直",
-		"キャンセル時",
+		"必キャンセル",
 		"押し合い判定",
 		"最大やられ範囲",
 		"最大当たり範囲",
@@ -7448,29 +7452,29 @@ function rbff2.startplugin()
 		return summary
 	end
 	local faint_cancels = {
-		{ { name = "F", f = 18 }, }, -- テリー
-		{ { name = "F", f = 18 }, }, -- アンディ
-		{ { name = "F", f = 18 }, }, -- 東
-		{ { name = "F", f = 18 }, }, -- 舞
-		{ { name = "F", f = 19 }, }, -- ギース
-		{ { name = "F", f = 18 }, }, -- 双角
-		{ { name = "F", f = 19 }, }, -- ボブ
-		{ { name = "F", f = 16 }, }, -- ホンフゥ
-		{ { name = "F", f = 41 }, }, -- マリー
-		{ { name = "F", f = 15 }, }, -- フランコ
-		{ { name = "F", f = 18 }, { name = "中蛇", f =  9, } }, -- 山崎
-		{ { name = "F", f = 57 }, { name = "真眼", f = 47, } }, -- 崇秀
-		{ { name = "F", f = 27 }, { name = "龍転", f = 25, } }, -- 崇雷
-		{ { name = "F", f = 47 }, },                 -- ダック
-		{ { name = "F", f = 19 }, { name = "覇気", f = 28, } }, -- キム
-		{ { name = "F", f = 42 }, }, -- ビリー
-		{ { name = "F", f = 23 }, { name = "軟体", f = 20, } },-- チン
-		{ { name = "F", f = 19 }, }, -- タン
+		{ { name = "フ", f = 18 }, }, -- テリー
+		{ { name = "フ", f = 18 }, }, -- アンディ
+		{ { name = "フ", f = 18 }, }, -- 東
+		{ { name = "フ", f = 18 }, }, -- 舞
+		{ { name = "フ", f = 19 }, }, -- ギース
+		{ { name = "フ", f = 18 }, }, -- 双角
+		{ { name = "フ", f = 19 }, }, -- ボブ
+		{ { name = "フ", f = 16 }, }, -- ホンフゥ
+		{ { name = "フ", f = 41 }, }, -- マリー
+		{ { name = "フ", f = 15 }, }, -- フランコ
+		{ { name = "フ", f = 18 }, { name = "中蛇", f =  9, } }, -- 山崎
+		{ { name = "フ", f = 57 }, { name = "真眼", f = 47, } }, -- 崇秀
+		{ { name = "フ", f = 27 }, { name = "龍転", f = 25, } }, -- 崇雷
+		{ { name = "フ", f = 47 }, },                 -- ダック
+		{ { name = "フ", f = 19 }, { name = "覇気", f = 28, } }, -- キム
+		{ { name = "フ", f = 42 }, }, -- ビリー
+		{ { name = "フ", f = 23 }, { name = "軟体", f = 20, } },-- チン
+		{ { name = "フ", f = 19 }, }, -- タン
 		{ }, -- ローレンス
-		{ { name = "F", f = 17 }, }, -- クラウザー
-		{ { name = "F", f = 18 }, }, -- リック
-		{ { name = "F", f = 22 }, }, -- シャンフェイ
-		{ { name = "F", f = 13 }, }, -- アルフレッド
+		{ { name = "フ", f = 17 }, }, -- クラウザー
+		{ { name = "フ", f = 18 }, }, -- リック
+		{ { name = "フ", f = 22 }, }, -- シャンフェイ
+		{ { name = "フ", f = 13 }, }, -- アルフレッド
 	}
 	local check_edge = function(edge)
 		if edge.front and edge.top and edge.bottom and edge.back then
@@ -7647,16 +7651,19 @@ function rbff2.startplugin()
 			end
 		end
 
+		local cancel_advs_label = "-"
 		local cancel_advs = {}
-		if faint_cancels[p.char] then
-			for _, fc in ipairs(faint_cancels[p.char]) do
-				local p1  = 1 + summary.hitstop + fc.f
-				local p2h = summary.hitstop + summary.hitstun
-				local p2g = summary.hitstop_gd + summary.blockstun
-				table.insert(cancel_advs, fc.name .. ":当" .. (p2h - p1) .. "/防" .. (p2g - p1))
+		if summary.cancelable and summary.cancelable ~= 0 then
+			if faint_cancels[p.char] then
+				for _, fc in ipairs(faint_cancels[p.char]) do
+					local p1  = 1 + summary.hitstop + fc.f
+					local p2h = summary.hitstop + summary.hitstun
+					local p2g = summary.hitstop_gd + summary.blockstun
+					table.insert(cancel_advs, string.format(fc.name .. ":当%sF/防%sF", p2h - p1, p2g - p1))
+				end
 			end
+			cancel_advs_label = "〇/" .. table.concat(cancel_advs, ",")
 		end
-		local cancel_advs_label = table.concat(cancel_advs, ",")
 
 		local hit_summary = {
 			{"攻撃値(削り):"  , dmg_label},
@@ -7669,7 +7676,7 @@ function rbff2.startplugin()
 
 			{"ヒットストップ:", string.format("自･ヒット%sF/ガード･BS猶予%sF", summary.hitstop, summary.hitstop_gd) },
 			{"ヒット硬直:"    , string.format("ヒット%sF/ガード%sF/継続:%s", summary.hitstun, summary.blockstun, gd_strength_label) },
-			{"キャンセル時:"  , cancel_advs_label },
+			{"必キャンセル:"  , cancel_advs_label },
 			{"最大当たり範囲:", reach_label},
 		}
 		-- TODO レイアウト検討
@@ -7995,6 +8002,13 @@ function rbff2.startplugin()
 			p.tmp_dmg        = pgm:read_u8(p.addr.tmp_dmg)              -- ダメージ
 			p.old_attack     = p.attack
 			p.attack         = pgm:read_u8(p.addr.attack)
+			p.cancelable     = pgm:read_u8(p.addr.cancelable)
+			-- 家庭用2AD90からの処理
+			if p.attack < 0x70 then
+				local d0 = pgm:read_u8(pgm:read_u32(p.char_4times + 0x850D8) + p.attack)
+				p.cancelable = d0
+			end
+
 			p.pure_dmg       = pgm:read_u8(p.addr.pure_dmg)             -- ダメージ(フック処理)
 			p.tmp_pow        = pgm:read_u8(p.addr.tmp_pow)              -- POWゲージ増加量
 			p.tmp_pow_rsv    = pgm:read_u8(p.addr.tmp_pow_rsv)          -- POWゲージ増加量(予約値)
