@@ -7667,7 +7667,11 @@ function rbff2.startplugin()
 					table.insert(cancel_advs, string.format(fc.name .. ":当%sF/防%sF", p2h - p1, p2g - p1))
 				end
 			end
-			cancel_advs_label = "〇/" .. table.concat(cancel_advs, ",")
+			if #cancel_advs > 0 then
+				cancel_advs_label = "〇/" .. table.concat(cancel_advs, ",")
+			else
+				cancel_advs_label = "〇"
+			end
 		end
 
 		local slide_label = "-"
