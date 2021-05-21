@@ -4726,6 +4726,9 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 			summary.max_hit_nm  = summary.max_hit_nm  or p.hit.max_hit_nm -- p.act_frame中の行動最大ヒット 分子
 			summary.max_hit_dn  = summary.max_hit_dn  or p.hit.max_hit_dn -- p.act_frame中の行動最大ヒット 分母
 			summary.cancelable  = summary.cancelable  or p.cancelable -- キャンセル可否
+			if p.state_flags2 then
+				summary.slide_atk = summary.slide_atk  or ((p.state_flags2 & 0x4) == 0x4) -- ダッシュ滑り攻撃
+			end
 
 			summary.hitstun     = summary.hitstun     or box.hitstun    -- ヒット硬直
 			summary.blockstun   = summary.blockstun   or box.blockstun  -- ガード硬直
@@ -5513,7 +5516,8 @@ function rbff2.startplugin()
 				input2       = p1 and 0x100483 or 0x100583, -- キー入力 1F前の入力
 				state        = p1 and 0x10048E or 0x10058E, -- 状態
 				state_flags  = p1 and 0x1004C0 or 0x1005C0, -- フラグ群
-				blkstn_flags = p1 and 0x1004D0 or 0x1005D0, -- フラグ群2
+				state_flags2 = p1 and 0x1004CC or 0x1005CC, -- フラグ群2
+				blkstn_flags = p1 and 0x1004D0 or 0x1005D0, -- フラグ群3
 				stop         = p1 and 0x10048D or 0x10058D, -- ヒットストップ
 				knock_back1  = p1 and 0x100469 or 0x100569, -- のけぞり確認用1(色々)
 				knock_back2  = p1 and 0x100416 or 0x100516, -- のけぞり確認用2(裏雲隠し)
@@ -7415,13 +7419,14 @@ function rbff2.startplugin()
 		"ヒット効果",
 		"ヒットストップ",
 		"ヒット硬直",
+		"滑り攻撃",
+		"弾強度",
 		"必キャンセル",
 		"押し合い判定",
 		"最大やられ範囲",
 		"最大当たり範囲",
 		"詠酒発動範囲",
 		"最大ヒット数",
-		"弾強度",
 
 		"1 ガード方向",
 		"2 ガード方向",
@@ -7665,13 +7670,17 @@ function rbff2.startplugin()
 			cancel_advs_label = "〇/" .. table.concat(cancel_advs, ",")
 		end
 
+		local slide_label = "-"
+		if summary.slide_atk == true then
+			slide_label = "〇"
+		end
+
 		local hit_summary = {
 			{"攻撃値(削り):"  , dmg_label},
 
 			{"攻撃範囲:"      , summary.normal_hit or summary.down_hit or summary.air_hit or "-"},
 			{"ヒット効果:"    , effect_label},
 			{"追撃能力:"      , followup_label},
-
 			{"気絶値:"        , string.format("%s/継続:%s", summary.pure_st, stun_sec) },
 
 			{"ヒットストップ:", string.format("自･ヒット%sF/ガード･BS猶予%sF", summary.hitstop, summary.hitstop_gd) },
@@ -7691,10 +7700,14 @@ function rbff2.startplugin()
 			table.insert(hit_summary, {box_no .. " 当たり範囲:"      , box.reach_label})
 		end
 		table.insert(hit_summary, {"最大ヒット数:"  , string.format("%s/%s", summary.max_hit_nm, summary.max_hit_dn) })
-		table.insert(hit_summary, {"弾強度:"        , summary.prj_rank or "-" })
+		if p.is_fireball == true then
+			table.insert(hit_summary, {"弾強度:"        , summary.prj_rank or "-" })
+		else
+			table.insert(hit_summary, {"滑り攻撃:"      , slide_label })
+		end
 		return hit_summary
 	end
-	local make_atk_summary = function(p)
+	local make_atk_summary = function(p, summary)
 		local pow_label = string.format("空%s/当%s/防%s", p.pow_up, p.pow_up_hit or 0, p.pow_up_gd or 0)
 		if p.pow_revenge > 0 or p.pow_absorb > 0 then
 			pow_label = pow_label .. string.format("/返%s/吸%s", p.pow_revenge or 0, p.pow_absorb or 0)
@@ -7861,6 +7874,7 @@ function rbff2.startplugin()
 				end
 			end
 		end
+
 		local hurt_sumamry = {
 			{ "打撃無敵:"      , hurt_label  },
 			{ "投げ無敵:"      , throw_label },
@@ -7989,10 +8003,23 @@ function rbff2.startplugin()
 			p.state          = pgm:read_u8(p.addr.state)                -- 今の状態
 			p.old_state_flags = p.state_flags
 			p.state_flags    = pgm:read_u32(p.addr.state_flags)        -- フラグ群
+			p.state_flags2   = pgm:read_u32(p.addr.state_flags2)       -- フラグ群2
+			--[[
+				      1 CA技
+				      2 小技
+					  4 ダッシュ技
+				     80 後ろ
+				     40 斜め後ろ
+				  20000 必殺技
+				  80000 挑発
+				 200000 つかみ技
+				 100000 フェイント技
+				8000000 投げ技
+			]]
 			p.state_bits     = tobits(p.state_flags)
 			p.old_blkstn_flags= p.blkstn_flags
 			p.old_blkstn_bits= p.blkstn_bits
-			p.blkstn_flags   = pgm:read_u8(p.addr.blkstn_flags)        -- 硬直系のフラグ群2
+			p.blkstn_flags   = pgm:read_u8(p.addr.blkstn_flags)        -- 硬直系のフラグ群3
 			p.blkstn_bits    = tobits(p.blkstn_flags)
 			p.last_normal_state = p.normal_state
 			p.normal_state   = p.state == 0 -- 素立ち
@@ -9290,7 +9317,7 @@ function rbff2.startplugin()
 
 			-- 攻撃モーション単位で変わるサマリ情報
 			if p.old_attack ~= p.attack then
-				p.atk_summary = make_atk_summary(p)
+				p.atk_summary = make_atk_summary(p, p.hit_summary)
 			end
 
 			-- サマリ情報を結合する
