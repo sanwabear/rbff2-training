@@ -10020,7 +10020,7 @@ function rbff2.startplugin()
 			return summary
 		end
 		local scr = manager.machine.screens:at(1)
-		local x, y = i == 1 and 170 or 20, 4
+		local x, y = i == 1 and 170 or 20, 2
 		scr:draw_box(x-2, y-2, x+130, y+2+8*#summary, 0x80404040, 0x80404040)
 		for _, row in ipairs(summary) do
 			local k, v = row[1], row[2]
@@ -10032,7 +10032,7 @@ function rbff2.startplugin()
 					scr:draw_text(x+42, y, v)
 				end
 			end
-			y = y + 8
+			y = y + 7
 		end
 	end
 	local draw_axis = function(i, p, x, col)
