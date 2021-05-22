@@ -169,8 +169,8 @@ local hit_effects = {
 	{ "ダウン(ダ)", "ダウン(ダ)" },
 	{ "のけぞり", "吹き飛び" },
 	{ "のけぞり", "吹き飛び" },
-	{ "スウェーライン送り", "スウェーライン送りダウン(ダ)" },
-	{ "スウェーライン送りダウン(ダ)", "スウェーライン送りダウン(ダ)" },
+	{ "ライン送り", "ライン送りダウン(ダ)" },
+	{ "ライン送りダウン(ダ)", "ライン送りダウン(ダ)" },
 	{ "吹き飛び", "吹き飛び" },
 	{ "ダウン(ダ)", "ダウン(ダ)" },
 	{ "のけぞり", "ダウン(ダ)" },
@@ -198,15 +198,15 @@ local hit_effects = {
 	{ "特殊(空)", "ダウン(空,ダ)" },
 	{ "ダウン(ダ)", "ダウン(ダ)" },
 	{ "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "特殊", "特殊" },
 	{ "ダウン(ダ)", "ダウン(ダ)" },
 	{ "ダウン(ダ)", "ダウン(ダ)" },
-	{ "特殊", "特殊" },
-	{ "特殊", "特殊" },
+	{ "ダウン(ダ)", "ダウン(ダ)" },
+	{ "ダウン(ダ)", "ダウン(ダ)" },
+	{ "ダウン(ダ)", "ダウン(ダ)" },
 	{ "のけぞり", "吹き飛び" },
 	{ "強制気絶", "強制気絶(ダ)" },
 	{ "のけぞり", "吹き飛び" },
-	{ "特殊", "ダウン(ダ)" },
+	{ "ダウン(ダ)", "ダウン(ダ)" },
 	{ "特殊", "特殊(ダ)" },
 	{ "ダウン(空,ダ)", "ダウン(空,ダ)" },
 	{ "ダウン(空,ダ)", "ダウン(空,ダ)" },
@@ -227,29 +227,27 @@ local hit_effects = {
 	{ "のけぞり(空)", "ダウン(空,ダ)" },
 	{ "後ろ向きのけぞり(空)", "ダウン(空,ダ)" },
 	{ "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "特殊", "特殊" },
+	{ "ダウン(ダ)", "ダウン(ダ)" },
 	{ "ダウン(ダ)", "ダウン(ダ)" },
 	{ "特殊", "特殊" },
-	{ "青色のけぞり", "青色のけぞり(ダ)" },
+	{ "ダウン(ダ)", "ダウン(ダ)" },
 	{ "浮のけぞり～ダウン(空,ダ)", "浮のけぞり～ダウン(空,ダ)" },
 	{ "ダウン", "ダウン" },
 	{ "ダウン(空)", "ダウン(空)" },
 	{ "特殊", "特殊" },
-	{ "特殊", "特殊" },
+	{ "ダウン(空)", "ダウン(空)" },
 	{ "特殊", "特殊" },
 	{ "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "特殊", "特殊(ダ)" },
+	{ "ダウン", "ダウン" },
 	{ "ダウン(ダ)", "ダウン(ダ)" },
 	{ "ダウン(空,ダ)", "ダウン(空,ダ)" },
 	{ "ダウン(ダ)", "ダウン(ダ)" },
 	{ "ダウン(空,ダ)", "ダウン(空,ダ)" },
 }
 local damaged_move_keys = {}
-local damaged_move_map = {}
 for i = 1, #damaged_moves do
 	local k = i == 1 and "通常" or string.format("%2s %s", i - 2, hit_effects[i - 1][1])
 	table.insert(damaged_move_keys, k)
-	damaged_move_map[k] = damaged_moves[i]
 end
 
 -- DIPスイッチ
@@ -4267,6 +4265,11 @@ local tobits = function(num)
     return t
 end
 
+local testbit = function(target, hex)
+	local ret = (target & hex) ~= 0
+	return ret
+end
+
 local get_digit = function(num)
 	return string.len(tostring(num))
 end
@@ -4431,10 +4434,10 @@ local chip_dmg_type_tbl = {
 	chip_dmg_types.zero,    -- 16 ダメージ無し
 }
 -- 削りダメージ計算種別取得
-local get_chip_dmg_type = function(box)
+local get_chip_dmg_type = function(id)
 	local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 	local a0 = fix_bp_addr(0x95CCC)
-	local d0 = 0xF & pgm:read_u8(a0 + box.id)
+	local d0 = 0xF & pgm:read_u8(a0 + id)
 	local func = chip_dmg_type_tbl[d0 + 1]
 	return func
 end
@@ -4528,21 +4531,6 @@ local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, atta
 				box.type = box_type_base.a   -- 攻撃(空中追撃可)
 			end
 		end
-		-- ヒット効果
-		-- 058232(家庭用版)からの処理
-		-- 1004E9のデータ＝5C83Eでセット 技ID
-		-- 1004E9のデータ-0x20 + 0x95C0C のデータがヒット効果の元ネタ D0
-		-- D0 = 0x9だったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
-		-- D0 = 0xAだったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
-		-- D0 x 4 + 579da
-		-- d0 = fix_bp_addr(0x0579DA + d0 * 4) --0x0579DA から4バイトのデータの並びがヒット効果の処理アドレスになる
-		box.effect = pgm:read_u8(box.id - 0x20 + fix_bp_addr(0x95BEC))
-		-- 削りダメージ計算種別取得 05B2A4 からの処理
-		box.chip_dmg_type = get_chip_dmg_type(box)
-		-- のけぞり時間取得 05AF7C(家庭用版)からの処理
-		local d2 = 0xF & pgm:read_u8(box.id + fix_bp_addr(0x95CCC))
-		box.hitstun   = pgm:read_u8(0x16 + 0x2 + fix_bp_addr(0x5AF7C) + d2) + 1 + 3 -- ヒット硬直
-		box.blockstun = pgm:read_u8(0x1A + 0x2 + fix_bp_addr(0x5AF88) + d2) + 1 + 2 -- ガード硬直
 	else
 		box.type = box_types[box.id + 1]
 		if p.in_sway_line and sway_box_types[box.id + 1] then
@@ -4550,16 +4538,8 @@ local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, atta
 		end
 	end
 	box.type = box.type or box_type_base.x1
-	if (box.type == box_type_base.a or box.type == box_type_base.aa) and
-		(is_fireball == true or (p.hit.harmless == false and p.hit.obsl_hit == false)) then
-		-- 攻撃中のフラグをたてる
-		p.attacking = true
-		p.attack_id = id
-	end
 
 	pos_y  = pos_y - p.hit.pos_z
-
-	local ppp = top
 
 	top    = pos_y - (0xFFFF & ((top    * p.hit.scale) >> 6))
 	bottom = pos_y - (0xFFFF & ((bottom * p.hit.scale) >> 6))
@@ -4610,17 +4590,34 @@ local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, atta
 		-- ここの判断処理を省いても飛び道具が最大ヒットして無効になった時点で判定が消えるので悪影響はない
 		if is_fireball then
 			box.visible = true
-			return box
+		else
+			-- フレーム表示や自動ガードで使うため無効状態の判定を返す
+			box.visible = false
+			--print("IGNORE " .. (key or "")) --debug
+			return nil
 		end
-		-- フレーム表示や自動ガードで使うため無効状態の判定を返す
-		box.visible = false
-		--print("IGNORE " .. (key or "")) --debug
-		return nil
 	else
 		box.visible = true
 		--print("LIVE " .. (key or "")) --debug
-		return box
 	end
+
+	local key = string.format("%x %x %x %x %x %x %x %s",
+		global.frame_number, p.addr.base, box.id, box.top, box.bottom, box.left, box.right, box.type.name)
+	if p.uniq_hitboxes[key] == true then
+		return nil
+	end
+	p.uniq_hitboxes[key] = true
+
+	if box.atk then
+		p.attack_id = box.id
+	end
+	if (box.type == box_type_base.a or box.type == box_type_base.aa) and
+		(is_fireball == true or (p.hit.harmless == false and p.hit.obsl_hit == false)) then
+		-- 攻撃中のフラグをたてる
+		p.attacking = true
+	end
+
+	return box
 end
 
 local get_reach = function(p, box, pos_x, pos_y)
@@ -4719,19 +4716,17 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 			summary.pure_st     = summary.pure_st     or p.pure_st -- 気絶値
 			summary.pure_st_tm  = summary.pure_st_tm  or p.pure_st_tm -- 気絶タイマー
 
-			summary.chip_dmg    = summary.chip_dmg    or box.chip_dmg_type.calc(p.pure_dmg) -- 削りダメージ
-			summary.effect      = summary.effect      or box.effect -- ヒット効果
+			summary.chip_dmg    = summary.chip_dmg    or p.chip_dmg_type.calc(p.pure_dmg) -- 削りダメージ
+			summary.effect      = summary.effect      or p.effect -- ヒット効果
 			summary.can_techrise= summary.can_techrise or p.can_techrise -- 受け身行動可否
 			summary.gd_strength = summary.gd_strength or p.gd_strength -- 相手のガード持続の種類
 			summary.max_hit_nm  = summary.max_hit_nm  or p.hit.max_hit_nm -- p.act_frame中の行動最大ヒット 分子
 			summary.max_hit_dn  = summary.max_hit_dn  or p.hit.max_hit_dn -- p.act_frame中の行動最大ヒット 分母
 			summary.cancelable  = summary.cancelable  or p.cancelable -- キャンセル可否
-			if p.state_flags2 then
-				summary.slide_atk = summary.slide_atk  or ((p.state_flags2 & 0x4) == 0x4) -- ダッシュ滑り攻撃
-			end
+			summary.slide_atk   = summary.slide_atk   or p.slide_atk -- ダッシュ滑り攻撃
 
-			summary.hitstun     = summary.hitstun     or box.hitstun    -- ヒット硬直
-			summary.blockstun   = summary.blockstun   or box.blockstun  -- ガード硬直
+			summary.hitstun     = summary.hitstun     or p.hitstun    -- ヒット硬直
+			summary.blockstun   = summary.blockstun   or p.blockstun  -- ガード硬直
 			summary.hitstop     = summary.hitstop     or p.hitstop      -- ヒットストップ
 			summary.hitstop_gd  = summary.hitstop_gd  or p.hitstop_gd   -- ガード時ヒットストップ
 			if is_fireball == true then
@@ -4995,13 +4990,13 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 				p.hit.max_hit_nm,                   -- p.act_frame中の行動最大ヒット 分子
 				p.hit.max_hit_dn,                   -- p.act_frame中の行動最大ヒット 分母
 				p.pure_dmg,                         -- 補正前攻撃力 %3s
-				box.chip_dmg_type.calc(p.pure_dmg), -- 補正前削りダメージ %s
-				box.chip_dmg_type.name,             -- 削り補正値 %4s
+				p.chip_dmg_type.calc(p.pure_dmg),   -- 補正前削りダメージ %s
+				p.chip_dmg_type.name,               -- 削り補正値 %4s
 				p.hitstop,                          -- ヒットストップ %2s
 				p.hitstop_gd,                       -- ガード時ヒットストップ %2s
-				box.hitstun,                        -- ヒット後硬直F %2s
-				box.blockstun,                      -- ガード後硬直F %2s
-				box.effect,                         -- ヒット効果 %2s
+				p.hitstun,                          -- ヒット後硬直F %2s
+				p.blockstun,                        -- ガード後硬直F %2s
+				p.effect,                           -- ヒット効果 %2s
 				p.pure_st,                          -- 気絶値 %2s
 				p.pure_st_tm,                       -- 気絶タイマー %2s
 				p.prj_rank,                         -- 飛び道具の強さ
@@ -5095,6 +5090,7 @@ local update_object = function(p)
 	end
 
 	-- 判定データ排他用のテーブル
+	p.uniq_hitboxes = {}
 	for _, box in ipairs(p.buffer) do
 		local hitbox = new_hitbox(p, box.id, box.pos_x, box.pos_y, box.top, box.bottom, box.left, box.right, box.attack_only, box.is_fireball, box.key)
 		if hitbox then
@@ -5107,6 +5103,7 @@ local update_object = function(p)
 			end
 		end
 	end
+	p.uniq_hitboxes = {}
 
 	-- 空投げ, 必殺投げ
 	if p.n_throw and p.n_throw.on == 0x1 then
@@ -7411,9 +7408,11 @@ function rbff2.startplugin()
 	local summary_rows, summary_sort_key = {
 		"打撃無敵",
 		"投げ無敵",
+		"向き",
 		"追撃能力",
 		"攻撃範囲",
 		"攻撃値(削り)",
+		"攻撃値",
 		"気絶値",
 		"POW増加量",
 		"ヒット効果",
@@ -7636,7 +7635,6 @@ function rbff2.startplugin()
 		if summary.pure_st_tm then
 			stun_sec = string.format("%4.3f秒(%sF)", summary.pure_st_tm / 60, summary.pure_st_tm)
 		end
-		local dmg_label = string.format("%s(%s)", summary.pure_dmg, summary.chip_dmg)
 		local reach_label
 		if summary.edge.hit.front then
 			reach_label = string.format("前%s/上%s/下%s/後%s", 
@@ -7656,32 +7654,7 @@ function rbff2.startplugin()
 			end
 		end
 
-		local cancel_advs_label = "-"
-		local cancel_advs = {}
-		if summary.cancelable and summary.cancelable ~= 0 then
-			if faint_cancels[p.char] then
-				for _, fc in ipairs(faint_cancels[p.char]) do
-					local p1  = 1 + summary.hitstop + fc.f
-					local p2h = summary.hitstop + summary.hitstun
-					local p2g = summary.hitstop_gd + summary.blockstun
-					table.insert(cancel_advs, string.format(fc.name .. ":当%sF/防%sF", p2h - p1, p2g - p1))
-				end
-			end
-			if #cancel_advs > 0 then
-				cancel_advs_label = "〇/" .. table.concat(cancel_advs, ",")
-			else
-				cancel_advs_label = "〇"
-			end
-		end
-
-		local slide_label = "-"
-		if summary.slide_atk == true then
-			slide_label = "〇"
-		end
-
 		local hit_summary = {
-			{"攻撃値(削り):"  , dmg_label},
-
 			{"攻撃範囲:"      , summary.normal_hit or summary.down_hit or summary.air_hit or "-"},
 			{"ヒット効果:"    , effect_label},
 			{"追撃能力:"      , followup_label},
@@ -7689,9 +7662,14 @@ function rbff2.startplugin()
 
 			{"ヒットストップ:", string.format("自･ヒット%sF/ガード･BS猶予%sF", summary.hitstop, summary.hitstop_gd) },
 			{"ヒット硬直:"    , string.format("ヒット%sF/ガード%sF/継続:%s", summary.hitstun, summary.blockstun, gd_strength_label) },
-			{"必キャンセル:"  , cancel_advs_label },
 			{"最大当たり範囲:", reach_label},
 		}
+		if summary.chip_dmg > 0 then
+			table.insert(hit_summary, {"攻撃値(削り):"  , string.format("%s(%s)", summary.pure_dmg, summary.chip_dmg)})
+		else
+			table.insert(hit_summary, {"攻撃値:"  , summary.pure_dmg})
+		end
+
 		-- TODO レイアウト検討
 		for box_no, box in ipairs(summary.boxes) do
 			table.insert(hit_summary, {box_no .. " ガード方向:"    , string.format("メイン:%s/スウェー:%s", box.block_label, box.sway_block_label)})
@@ -7706,8 +7684,6 @@ function rbff2.startplugin()
 		table.insert(hit_summary, {"最大ヒット数:"  , string.format("%s/%s", summary.max_hit_nm, summary.max_hit_dn) })
 		if p.is_fireball == true then
 			table.insert(hit_summary, {"弾強度:"        , summary.prj_rank or "-" })
-		else
-			table.insert(hit_summary, {"滑り攻撃:"      , slide_label })
 		end
 		return hit_summary
 	end
@@ -7716,12 +7692,45 @@ function rbff2.startplugin()
 		if p.pow_revenge > 0 or p.pow_absorb > 0 then
 			pow_label = pow_label .. string.format("/返%s/吸%s", p.pow_revenge or 0, p.pow_absorb or 0)
 		end
-		local esaka_label = p.esaka_range or "-"
+		local esaka_label = (p.esaka_range > 0) and p.esaka_range or "-"
 		local atk_summary = {
 			{"POW増加量:"     , pow_label   },
 			{"詠酒発動範囲:"  , esaka_label },
 		}
 		return atk_summary
+	end
+	local make_atkid_summary = function(p, summary)
+		local cancel_advs_label = "-"
+		local cancel_advs = {}
+		if p.cancelable and p.cancelable ~= 0 then
+			if faint_cancels[p.char] and p.attack_id then
+				for _, fc in ipairs(faint_cancels[p.char]) do
+					local p1  = 1 + p.hitstop + fc.f
+					local p2h = p.hitstop + p.hitstun
+					local p2g = p.hitstop_gd + p.blockstun
+					table.insert(cancel_advs, string.format(fc.name .. ":当%sF/防%sF", p2h - p1, p2g - p1))
+				end
+			end
+			if #cancel_advs > 0 then
+				cancel_advs_label = "〇/" .. table.concat(cancel_advs, ",")
+			else
+				cancel_advs_label = "〇"
+			end
+		end
+
+		local slide_label = "-"
+		if p.slide_atk == true then
+			slide_label = "〇"
+		end
+
+		local atkid_summary = {
+			{"必キャンセル:"  , cancel_advs_label },
+		}
+		if p.is_fireball ~= true then
+			table.insert(atkid_summary, {"滑り攻撃:"      , slide_label })
+		end
+
+		return atkid_summary
 	end
 	local make_hurt_summary = function(p, summary)
 		local hurt_labels = {}
@@ -7879,9 +7888,15 @@ function rbff2.startplugin()
 			end
 		end
 
+		local sides_label -- 00:左側 80:右側
+		sides_label = (p.internal_side == 0x0) and "動作:右" or "動作:左"
+		sides_label = sides_label .. "/" ..  ((p.input_side == 0x0) and "入力:右" or "入力:左")
+		sides_label = sides_label .. "/" ..  ((p.internal_side == p.input_side) and "同" or "違")
+
 		local hurt_sumamry = {
 			{ "打撃無敵:"      , hurt_label  },
 			{ "投げ無敵:"      , throw_label },
+			{ "向き:"          , sides_label },
 			{ "押し合い判定:"  , push_label  },
 			{ "最大やられ範囲:", reach_label },
 		}
@@ -8008,17 +8023,26 @@ function rbff2.startplugin()
 			p.old_state_flags = p.state_flags
 			p.state_flags    = pgm:read_u32(p.addr.state_flags)        -- フラグ群
 			p.state_flags2   = pgm:read_u32(p.addr.state_flags2)       -- フラグ群2
+			p.slide_atk      = testbit(p.state_flags2, 0x4) -- ダッシュ滑り攻撃
 			--[[
-				      1 CA技
-				      2 小技
-					  4 ダッシュ技
-				     80 後ろ
-				     40 斜め後ろ
-				  20000 必殺技
-				  80000 挑発
-				 200000 つかみ技
-				 100000 フェイント技
-				8000000 投げ技
+				       1 CA技
+				       2 小技
+					   4 ダッシュ滑り攻撃
+				      80 後ろ
+				      40 斜め後ろ
+				   80000 挑発
+				  200000 必殺技
+				 1000000 フェイント技
+				 2000000 つかみ技
+				80000000 投げ技
+
+				     100 投げ派生
+				     200 つかまれ
+				     400 なげられ
+				    2000 ダウンまで
+				    6000 吹き飛びダウン
+				    8000 やられ
+				  800000 ダウン
 			]]
 			p.state_bits     = tobits(p.state_flags)
 			p.old_blkstn_flags= p.blkstn_flags
@@ -8033,11 +8057,16 @@ function rbff2.startplugin()
 			p.tmp_dmg        = pgm:read_u8(p.addr.tmp_dmg)              -- ダメージ
 			p.old_attack     = p.attack
 			p.attack         = pgm:read_u8(p.addr.attack)
-			p.cancelable     = pgm:read_u8(p.addr.cancelable)
-			-- 家庭用2AD90からの処理
-			if p.attack < 0x70 then
-				local d0 = pgm:read_u8(pgm:read_u32(p.char_4times + 0x850D8) + p.attack)
-				p.cancelable = d0
+			
+			if testbit(p.state_flags2, 0x200000 | 0x1000000 | 0x80000 | 0x200000 | 0x1000000 | 0x2000000 | 0x80000000) ~= true then
+				p.cancelable = pgm:read_u8(p.addr.cancelable)
+				-- 家庭用2AD90からの処理
+				if p.attack < 0x70 then
+					local d0 = pgm:read_u8(pgm:read_u32(p.char_4times + 0x850D8) + p.attack)
+					p.cancelable = d0
+				end
+			else
+				p.cancelable = 0
 			end
 
 			p.pure_dmg       = pgm:read_u8(p.addr.pure_dmg)             -- ダメージ(フック処理)
@@ -8366,6 +8395,7 @@ function rbff2.startplugin()
 			else
 				p.in_sway_line = true
 			end
+			p.internal_side  = pgm:read_u8(p.addr.side)
 			p.side           = pgm:read_i8(p.addr.side) < 0 and -1 or 1
 			p.corner         = pgm:read_u8(p.addr.corner)     -- 画面端状態 0:端以外 1:画面端 3:端押し付け
 			p.input_side     = pgm:read_u8(p.addr.input_side) -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
@@ -8754,6 +8784,25 @@ function rbff2.startplugin()
 			-- キャラと飛び道具への当たり判定の反映
 			-- update_objectはキャラの位置情報と当たり判定の情報を読み込んだ後で実行すること
 			update_object(p)
+
+			-- ヒット効果、削り補正、硬直
+			-- 複数の攻撃判定を持っていても値は同じになる
+			if p.attack_id then
+				-- 058232(家庭用版)からの処理
+				-- 1004E9のデータ＝5C83Eでセット 技ID
+				-- 1004E9のデータ-0x20 + 0x95C0C のデータがヒット効果の元ネタ D0
+				-- D0 = 0x9だったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
+				-- D0 = 0xAだったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
+				-- D0 x 4 + 579da
+				-- d0 = fix_bp_addr(0x0579DA + d0 * 4) --0x0579DA から4バイトのデータの並びがヒット効果の処理アドレスになる
+				p.effect = pgm:read_u8(p.attack_id - 0x20 + fix_bp_addr(0x95BEC))
+				-- 削りダメージ計算種別取得 05B2A4 からの処理
+				p.chip_dmg_type = get_chip_dmg_type(p.attack_id)
+				-- 硬直時間取得 05AF7C(家庭用版)からの処理
+				local d2 = 0xF & pgm:read_u8(p.attack_id + fix_bp_addr(0x95CCC))
+				p.hitstun   = pgm:read_u8(0x16 + 0x2 + fix_bp_addr(0x5AF7C) + d2) + 1 + 3 -- ヒット硬直
+				p.blockstun = pgm:read_u8(0x1A + 0x2 + fix_bp_addr(0x5AF88) + d2) + 1 + 2 -- ガード硬直
+			end
 		end
 
 		for i, p in ipairs(players) do
@@ -9320,11 +9369,25 @@ function rbff2.startplugin()
 			p.old_hit_summary = last_hit_summary
 
 			-- 攻撃モーション単位で変わるサマリ情報
-			if p.old_attack ~= p.attack then
+			if p.old_attack ~= p.attack and p.attack > 0 then
 				p.atk_summary = make_atk_summary(p, p.hit_summary)
+			else
+				p.atk_summary = p.old_atk_summary or {}
 			end
+			p.old_atk_summary = p.atk_summary
+
+			-- 攻撃モーション単位で変わるサマリ情報
+			if p.attack_id ~= 0 then
+				p.atkid_summary = make_atkid_summary(p, p.hit_summary)
+			else
+				p.atkid_summary = p.old_atkid_summary or {}
+			end
+			p.old_atkid_summary = p.atkid_summary
 
 			-- サマリ情報を結合する
+			for _, row in ipairs(p.atkid_summary) do
+				table.insert(all_summary, row)
+			end
 			for _, row in ipairs(p.atk_summary) do
 				table.insert(all_summary, row)
 			end
