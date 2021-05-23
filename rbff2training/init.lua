@@ -7411,16 +7411,16 @@ function rbff2.startplugin()
 		"向き",
 		"追撃能力",
 		"攻撃範囲",
+		"ダッシュ専用",
+		"弾強度",
 		"攻撃値(削り)",
 		"攻撃値",
 		"気絶値",
 		"POW増加量",
 		"ヒット効果",
+		"必キャンセル",
 		"ヒットストップ",
 		"ヒット硬直",
-		"ダッシュ専用",
-		"弾強度",
-		"必キャンセル",
 		"押し合い判定",
 		"最大やられ範囲",
 		"最大当たり範囲",
@@ -9377,9 +9377,11 @@ function rbff2.startplugin()
 			p.old_atk_summary = p.atk_summary
 
 			-- 攻撃モーション単位で変わるサマリ情報
-			if p.attack_id ~= 0 then
+			if p.attack_id ~= 0 or (p.old_attack ~= p.attack and p.attack > 0) then
+print("p.atkid_summary", p.cancelable, p.attack_id, p.attack)
 				p.atkid_summary = make_atkid_summary(p, p.hit_summary)
 			else
+print("p.old_atkid_summary", p.cancelable, p.attack_id, p.attack)
 				p.atkid_summary = p.old_atkid_summary or {}
 			end
 			p.old_atkid_summary = p.atkid_summary
@@ -10258,7 +10260,8 @@ function rbff2.startplugin()
 					draw_rtext(    p1 and 28 or 302, 19, string.format("%2x", p.act_count))
 					draw_rtext(    p1 and 40 or 314, 19, string.format("%2x", p.act_frame))
 
-					draw_rtext(    p1 and 16 or 290, 25, string.format("%2x", p.additional))
+					draw_rtext(    p1 and  4 or 278, 25, string.format("%2x", p.additional))
+					draw_rtext(    p1 and 40 or 314, 25, string.format("%8x", p.state_flags2))
 
 					--[[
 						p.tw_frame のしきい値。しきい値より大きければ投げ処理継続可能。
