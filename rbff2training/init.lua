@@ -5800,19 +5800,26 @@ function rbff2.startplugin()
 	-- 対スウェーライン攻撃の近距離間合い
 	-- 地上通常技の近距離間合い
 	-- char 0=テリー
+	local cache_close_far_pos = {} 
 	local get_close_far_pos = function(char)
+		if cache_close_far_pos[char] then
+			return cache_close_far_pos[char]
+		end
+		local org_char = char
 		char =  char - 1
 		local cpu = manager.machine.devices[":maincpu"]
 		local pgm = cpu.spaces["program"]
 		local abc_offset = close_far_offset + (char * 4)
 		-- 家庭用02DD02からの処理
 		local d_offset = close_far_offset_d + (char * 2)
-		return {
+		local ret = {
 			a = { x1 = 0, x2 = pgm:read_u8(abc_offset)     },
 			b = { x1 = 0, x2 = pgm:read_u8(abc_offset + 1) },
 			c = { x1 = 0, x2 = pgm:read_u8(abc_offset + 2) },
 			d = { x1 = 0, x2 = pgm:read_u16(d_offset)      },
 		}
+		cache_close_far_pos[org_char]  = ret
+		return ret
 	end
 
 	local get_lmo_range_internal = function(ret, name, d0, d1, incl_last)
@@ -6237,11 +6244,24 @@ function rbff2.startplugin()
 		end
 
 		if #bps_rg == 0 then
-			-- この処理をそのまま有効にすると通常時でも食らい判定が見えるようになるが、MVS版ビリーの本来は攻撃判定無しの垂直ジャンプ攻撃がヒットしてしまう
-			-- ビリーの判定が出ない(maincpu.pb@((A0)+$B6)==0)な垂直小ジャンプAと垂直小ジャンプBと斜め小ジャンプBときはこのワークアラウンドが動作しないようにする
-			local cond1 = "(maincpu.pw@107C22>0)&&(maincpu.pb@((A0)+$B6)==0)&&(maincpu.pw@((A0)+$60)!=$50)&&(maincpu.pw@((A0)+$60)!=$51)&&(maincpu.pw@((A0)+$60)!=$54)"
+			local cond1, cond2
+			if emu.romname() ~= "rbff2" then
+				-- この処理をそのまま有効にすると通常時でも食らい判定が見えるようになるが、MVS版ビリーの本来は攻撃判定無しの垂直ジャンプ攻撃がヒットしてしまう
+				-- ビリーの判定が出ない(maincpu.pb@((A0)+$B6)==0)な垂直小ジャンプAと垂直小ジャンプBと斜め小ジャンプBときはこのワークアラウンドが動作しないようにする
+				cond1 = table.concat({
+					"(maincpu.pw@107C22>0)",
+					"(maincpu.pb@((A0)+$B6)==0)",
+					"(maincpu.pw@((A0)+$60)!=$50)",
+					"(maincpu.pw@((A0)+$60)!=$51)",
+					"(maincpu.pw@((A0)+$60)!=$54)",
+				}, "&&")
+				cond2 = cond1.."&&(maincpu.pb@((A3)+$B6)==0)"
+			else
+				cond1 = "(maincpu.pw@107C22>0)"
+				cond2 = cond1
+			end
 			--check vuln at all times *** setregister for m68000.pc is broken *** --bp 05C2E8, 1, {PC=((PC)+$6);g}
-			table.insert(bps_rg, cpu.debug:bpset(fix_bp_addr(0x5C2E8), cond1.."&&(maincpu.pb@((A3)+$B6)==0)", "PC=((PC)+$6);g"))
+			table.insert(bps_rg, cpu.debug:bpset(fix_bp_addr(0x5C2E8), cond2, "PC=((PC)+$6);g"))
 			--この条件で動作させると攻撃判定がでてしまってヒットしてしまうのでダメ
 			--[[
 			local cond2 = "(maincpu.pw@107C22>0)&&(maincpu.pb@((A0)+$B6)==0)&&((maincpu.pw@((A0)+$60)==$50)||(maincpu.pw@((A0)+$60)==$51)||(maincpu.pw@((A0)+$60)==$54))"
@@ -10269,7 +10289,7 @@ function rbff2.startplugin()
 					draw_rtext(    p1 and 28 or 302, 19, string.format("%2x", p.act_count))
 					draw_rtext(    p1 and 40 or 314, 19, string.format("%2x", p.act_frame))
 
-					draw_rtext(    p1 and  4 or 278, 25, string.format("%2x", p.additional))
+					draw_rtext(    p1 and  8 or 274, 25, string.format("%2x", p.additional))
 					draw_rtext(    p1 and 40 or 314, 25, string.format("%8x", p.state_flags2))
 
 					--[[
@@ -12176,6 +12196,20 @@ function rbff2.startplugin()
 
 			-- 逆襲拳、サドマゾの初段で相手の状態変更しない（相手が投げられなくなる事象が解消する）
 			-- pgm:write_direct_u8(0x57F43, 0x00)
+
+			--[[
+			-- 遠近切替距離のログ
+			for i, name in ipairs(char_names) do
+				local close_far      = get_close_far_pos(i)
+				local close_far_lma  = get_close_far_pos_line_move_attack(i)
+				for btn, range in pairs( close_far) do
+					print(char_names[i], i, "通", string.upper(btn), range.x1, range.x2)
+				end
+				for btn, range in pairs( close_far_lma) do
+					print(char_names[i], i, "ラ", string.upper(btn), range.x1, range.x2)
+				end
+			end
+			]]
 		end
 
 		-- 強制的に家庭用モードに変更
