@@ -7623,13 +7623,6 @@ function rbff2.startplugin()
 			end
 		end
 
-		local gd_strength_label = "-"
-		if summary.gd_strength == 1 then
-			gd_strength_label = "短"
-		elseif summary.gd_strength == 2 then
-			gd_strength_label = "長"
-		end
-
 		local followup_label = #followups == 0 and "-" or table.concat(followups, ",")
 		local stun_sec = 0
 		if summary.pure_st_tm then
@@ -7645,23 +7638,13 @@ function rbff2.startplugin()
 		else
 			reach_label = "-"
 		end
-		local effect_label = "-"
-		if summary.effect then
-			local e = summary.effect + 1
-			effect_label = string.format("%s 地:%s/空:%s", summary.effect, hit_effects[e][1], hit_effects[e][2])
-			if summary.can_techrise == false then
-				effect_label = string.gsub(effect_label, "ダウン", "強制ダウン")
-			end
-		end
 
 		local hit_summary = {
 			{"攻撃範囲:"      , summary.normal_hit or summary.down_hit or summary.air_hit or "-"},
-			{"ヒット効果:"    , effect_label},
 			{"追撃能力:"      , followup_label},
 			{"気絶値:"        , string.format("%s/継続:%s", summary.pure_st, stun_sec) },
 
 			{"ヒットストップ:", string.format("自･ヒット%sF/ガード･BS猶予%sF", summary.hitstop, summary.hitstop_gd) },
-			{"ヒット硬直:"    , string.format("ヒット%sF/ガード%sF/継続:%s", summary.hitstun, summary.blockstun, gd_strength_label) },
 			{"最大当たり範囲:", reach_label},
 		}
 		if summary.chip_dmg > 0 then
@@ -7723,8 +7706,33 @@ function rbff2.startplugin()
 			slide_label = "〇"
 		end
 
+		local effect_label = "-"
+		if p.effect then
+			local e = p.effect + 1
+			effect_label = string.format("%s 地:%s/空:%s", p.effect, hit_effects[e][1], hit_effects[e][2])
+			if summary.can_techrise == false then
+				effect_label = string.gsub(effect_label, "ダウン", "強制ダウン")
+			end
+		end
+
+		local gd_strength_label = "-"
+		if summary.gd_strength == 1 then
+			gd_strength_label = "短"
+		elseif summary.gd_strength == 2 then
+			gd_strength_label = "長"
+		end
+
+		local hitstun_label
+		if p.hitstun then
+			hitstun_label = string.format("ヒット%sF/ガード%sF/継続:%s", p.hitstun, p.blockstun, gd_strength_label)
+		else
+			hitstun_label = string.format("ヒット-/ガード-/継続:%s", gd_strength_label)
+		end
+
 		local atkid_summary = {
 			{"必キャンセル:"  , cancel_advs_label },
+			{"ヒット効果:"    , effect_label},
+			{"ヒット硬直:"    , hitstun_label },
 		}
 		if p.is_fireball ~= true then
 			table.insert(atkid_summary, {"ダッシュ専用:"      , slide_label })
@@ -9377,7 +9385,10 @@ function rbff2.startplugin()
 			p.old_atk_summary = p.atk_summary
 
 			-- 攻撃モーション単位で変わるサマリ情報
-			if p.attack_id ~= 0 or (p.old_attack ~= p.attack and p.attack > 0) then
+			if p.attack_id ~= 0 or -- 判定発生
+				testbit(p.state_flags2, 0x1000000) or -- フェイント
+				((p.old_attack ~= p.attack and p.attack > 0) and -- 有効な攻撃中
+				(p.is_fireball or p.fake_hit ~= true)) then
 				p.atkid_summary = make_atkid_summary(p, p.hit_summary)
 			else
 				p.atkid_summary = p.old_atkid_summary or {}
