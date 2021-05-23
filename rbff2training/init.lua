@@ -5220,6 +5220,7 @@ function rbff2.startplugin()
 			},
 			act              = 0,
 			acta             = 0,
+			atk_count        = 0,
 			attack           = 0,           -- 攻撃中のみ変化
 			old_attack       = 0,
 			hitstop_id       = 0,           -- ヒット/ガードしている相手側のattackと同値
@@ -5584,6 +5585,7 @@ function rbff2.startplugin()
 				is_fireball    = true,
 				act            = 0,
 				acta           = 0,
+				atk_count      = 0,
 
 				act_count      = 0, -- 現在の行動のカウンタ
 				act_frame      = 0, -- 現在の行動の残フレーム、ゼロになると次の行動へ
@@ -7426,6 +7428,7 @@ function rbff2.startplugin()
 	end
 
 	local summary_rows, summary_sort_key = {
+		"動作",
 		"打撃無敵",
 		"投げ無敵",
 		"向き",
@@ -7723,7 +7726,7 @@ function rbff2.startplugin()
 
 		local slide_label = "-"
 		if p.slide_atk == true then
-			slide_label = "〇"
+			slide_label = "〇(CA派生不可)"
 		end
 
 		local effect_label = "-"
@@ -7922,6 +7925,7 @@ function rbff2.startplugin()
 		sides_label = sides_label .. "/" ..  ((p.internal_side == p.input_side) and "同" or "違")
 
 		local hurt_sumamry = {
+			{ "動作:"          , p.atk_count },
 			{ "打撃無敵:"      , hurt_label  },
 			{ "投げ無敵:"      , throw_label },
 			{ "向き:"          , sides_label },
@@ -8616,11 +8620,9 @@ function rbff2.startplugin()
 				if fb.asm ~= 0x4E75 and fb.asm ~= 0x197C then --0x4E75 is rts instruction
 					fb.alive      = true
 					temp_hits[fb.addr.base] = fb
-					fb.count = (fb.count or 0) +1
 					fb.atk_count = fb.atk_count or 0
 				else
 					fb.alive      = false
-					fb.count      = 0
 					fb.atk_count  = 0
 					fb.hitstop    = 0
 					fb.pure_dmg   = 0
@@ -8653,6 +8655,11 @@ function rbff2.startplugin()
 			p.act2       = pgm:read_u16(p.addr.act2)
 			p.update_act = (p.act2 ~= 0) and global.frame_number or p.update_act
 			p.act_1st    = p.update_act == global.frame_number and p.act_1st == true
+			if p.act_1st == true then
+				p.atk_count = 1
+			else
+				p.atk_count = p.atk_count + 1
+			end
 
 			-- 硬直フレーム設定
 			p.last_blockstun = p.last_blockstun or 0
