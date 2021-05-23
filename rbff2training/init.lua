@@ -8613,7 +8613,7 @@ function rbff2.startplugin()
 				fb.act_frames2    = fb.act_frames2 or {}
 
 				-- 当たり判定の構築
-				if fb.asm ~= 0x4E75 then --0x4E75 is rts instruction
+				if fb.asm ~= 0x4E75 and fb.asm ~= 0x197C then --0x4E75 is rts instruction
 					fb.alive      = true
 					temp_hits[fb.addr.base] = fb
 					fb.count = (fb.count or 0) +1
@@ -8830,6 +8830,10 @@ function rbff2.startplugin()
 				local d2 = 0xF & pgm:read_u8(p.attack_id + fix_bp_addr(0x95CCC))
 				p.hitstun   = pgm:read_u8(0x16 + 0x2 + fix_bp_addr(0x5AF7C) + d2) + 1 + 3 -- ヒット硬直
 				p.blockstun = pgm:read_u8(0x1A + 0x2 + fix_bp_addr(0x5AF88) + d2) + 1 + 2 -- ガード硬直
+			end
+
+			if p.is_fireball == true then
+				p.alive = #p.hitboxes > 0
 			end
 		end
 
@@ -9063,18 +9067,13 @@ function rbff2.startplugin()
 
 			-- 飛び道具
 			local chg_fireball_state = false
-			local fb_upd_groups, fb_atk = {}, {}
-			for fb_base, fb in pairs(p.fireball) do
-				fb_atk[fb_base] = false -- 攻撃判定 発生中
-				for _, box in pairs(fb.hitboxes) do
-					fb_atk [fb_base] = box.asm ~= 0x4E75
-					if fb_atk[fb_base] then
-						fb.atk_count = (fb.atk_count or 0) + 1 -- 攻撃判定発生のカウント
-						if fb.atk_count == 1 and get_act_name(fb.act_data_fired) == get_act_name(p.act_data) then
-							chg_fireball_state = true
-						end
-						break
+			local fb_upd_groups = {}
+			for _, fb in pairs(p.fireball) do
+				if fb.alive == true then
+					if fb.atk_count == 1 and get_act_name(fb.act_data_fired) == get_act_name(p.act_data) then
+						chg_fireball_state = true
 					end
+					break
 				end
 			end
 
@@ -9319,7 +9318,7 @@ function rbff2.startplugin()
 					col, line, act = 0x00000000, 0xDDFF1493, 0
 				elseif hasbox and fb.fake_hit then
 					col, line, act = 0xAA00FF33, 0xDD00FF33, 2
-				elseif fb_atk[fb_base] then
+				elseif fb.alive == true then
 					col, line, act = 0xAAFF1493, 0xDDFF1493, 1
 				else
 					col, line, act = 0x00000000, 0x00000000, 0
@@ -9365,9 +9364,9 @@ function rbff2.startplugin()
 		end
 		--1Pと2Pともにフレーム数が多すぎる場合は加算をやめる
 		fix_max_framecount()
-	
+
 		-- フレーム経過による硬直差の減少
-		for i, p in ipairs(players) do
+		for _, p in ipairs(players) do
 			if p.last_hitstop > 0 then
 				p.last_hitstop = p.last_hitstop - 1
 			elseif p.last_blockstun > 0 then
@@ -9382,7 +9381,7 @@ function rbff2.startplugin()
 			-- 攻撃判定のサマリ情報
 			local last_hit_summary = nil
 			for _, fb in pairs(p.fireball) do
-				if fb.alive and check_edge(fb.hit_summary.edge.hit) then
+				if fb.alive == true and check_edge(fb.hit_summary.edge.hit) then
 					last_hit_summary = make_hit_summary(fb, fb.hit_summary)
 					break
 				end
