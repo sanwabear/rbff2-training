@@ -9378,10 +9378,8 @@ function rbff2.startplugin()
 
 			-- 攻撃モーション単位で変わるサマリ情報
 			if p.attack_id ~= 0 or (p.old_attack ~= p.attack and p.attack > 0) then
-print("p.atkid_summary", p.cancelable, p.attack_id, p.attack)
 				p.atkid_summary = make_atkid_summary(p, p.hit_summary)
 			else
-print("p.old_atkid_summary", p.cancelable, p.attack_id, p.attack)
 				p.atkid_summary = p.old_atkid_summary or {}
 			end
 			p.old_atkid_summary = p.atkid_summary
