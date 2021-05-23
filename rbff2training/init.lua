@@ -3400,22 +3400,22 @@ local pre_down_acts = {
 }
 -- コマンドテーブル上の技ID
 local common_rvs = {
-	{ cmd = cmd_base._3      , bs = false, common = true, name = "斜め下前入れ", },
-	{ cmd = cmd_base._a      , bs = false, common = true, name = "立A", },
-	{ cmd = cmd_base._b      , bs = false, common = true, name = "立B", },
-	{ cmd = cmd_base._c      , bs = false, common = true, name = "立C", },
-	{ cmd = cmd_base._d      , bs = false, common = true, name = "立D", },
-	{ cmd = cmd_base._ab     , bs = false, common = true, name = "避け攻撃", },
-	{ cmd = cmd_base._6c     , bs = false, common = true, name = "投げ", throw = true, },
-	{ cmd = cmd_base._2a     , bs = false, common = true, name = "下A", },
-	{ cmd = cmd_base._2b     , bs = false, common = true, name = "下B", },
-	{ cmd = cmd_base._2c     , bs = false, common = true, name = "下C", },
-	{ cmd = cmd_base._2d     , bs = false, common = true, name = "下D", },
-	{ cmd = cmd_base._8      , bs = false, common = true, name = "垂直ジャンプ", jump = true, },
-	{ cmd = cmd_base._9      , bs = false, common = true, name = "前ジャンプ", jump = true, },
-	{ cmd = cmd_base._7      , bs = false, common = true, name = "後ジャンプ", jump = true, },
-	{ id = 0x1E, ver = 0x0600, bs = false, common = true, name = "ダッシュ", },
-	{ id = 0x1F, ver = 0x0600, bs = false, common = true, name = "バックステップ", },
+	{ cmd = cmd_base._3      , bs = false, common = true, name = "[共通] 斜め下前入れ", },
+	{ cmd = cmd_base._a      , bs = false, common = true, name = "[共通] 立A", },
+	{ cmd = cmd_base._b      , bs = false, common = true, name = "[共通] 立B", },
+	{ cmd = cmd_base._c      , bs = false, common = true, name = "[共通] 立C", },
+	{ cmd = cmd_base._d      , bs = false, common = true, name = "[共通] 立D", },
+	{ cmd = cmd_base._ab     , bs = false, common = true, name = "[共通] 避け攻撃", },
+	{ cmd = cmd_base._6c     , bs = false, common = true, name = "[共通] 投げ", throw = true, },
+	{ cmd = cmd_base._2a     , bs = false, common = true, name = "[共通] 下A", },
+	{ cmd = cmd_base._2b     , bs = false, common = true, name = "[共通] 下B", },
+	{ cmd = cmd_base._2c     , bs = false, common = true, name = "[共通] 下C", },
+	{ cmd = cmd_base._2d     , bs = false, common = true, name = "[共通] 下D", },
+	{ cmd = cmd_base._8      , bs = false, common = true, name = "[共通] 垂直ジャンプ", jump = true, },
+	{ cmd = cmd_base._9      , bs = false, common = true, name = "[共通] 前ジャンプ", jump = true, },
+	{ cmd = cmd_base._7      , bs = false, common = true, name = "[共通] 後ジャンプ", jump = true, },
+	{ id = 0x1E, ver = 0x0600, bs = false, common = true, name = "[共通] ダッシュ", },
+	{ id = 0x1F, ver = 0x0600, bs = false, common = true, name = "[共通] バックステップ", },
 }
 local char_rvs_list = {
 	-- テリー・ボガード
@@ -7418,7 +7418,7 @@ function rbff2.startplugin()
 		"ヒット効果",
 		"ヒットストップ",
 		"ヒット硬直",
-		"滑り攻撃",
+		"ダッシュ専用",
 		"弾強度",
 		"必キャンセル",
 		"押し合い判定",
@@ -7727,7 +7727,7 @@ function rbff2.startplugin()
 			{"必キャンセル:"  , cancel_advs_label },
 		}
 		if p.is_fireball ~= true then
-			table.insert(atkid_summary, {"滑り攻撃:"      , slide_label })
+			table.insert(atkid_summary, {"ダッシュ専用:"      , slide_label })
 		end
 
 		return atkid_summary
@@ -8027,7 +8027,7 @@ function rbff2.startplugin()
 			--[[
 				       1 CA技
 				       2 小技
-					   4 ダッシュ滑り攻撃
+					   4 ダッシュ専用攻撃
 				      80 後ろ
 				      40 斜め後ろ
 				   80000 挑発
@@ -10737,7 +10737,7 @@ function rbff2.startplugin()
 			p.rvs_count      = -1
 		end
 	end
-	local menu_to_main = function(cancel)
+	local menu_to_main = function(cancel, do_init)
 		local col = tra_menu.pos.col
 		local row = tra_menu.pos.row
 		local p   = players
@@ -10805,24 +10805,27 @@ function rbff2.startplugin()
 			end
 		end
 
-		-- 設定後にメニュー遷移
-		for i, p in ipairs(players) do
-			-- ブレイクショット ガードのメニュー設定
-			if not cancel and row == (4 + i) and p.dummy_gd == dummy_gd_type.bs then
-				menu_cur = bs_menus[i][p.char]
-				return
-			end
-			-- リバーサル やられ時行動のメニュー設定
-			if not cancel and row == (8 + i) and p.dummy_wakeup == wakeup_type.rvs then
-				menu_cur = rvs_menus[i][p.char]
-				return
+		-- プレイヤー選択しなおしなどで初期化したいときはサブメニュー遷移しない
+		if do_init ~= true then
+			-- 設定後にメニュー遷移
+			for i, p in ipairs(players) do
+				-- ブレイクショット ガードのメニュー設定
+				if not cancel and row == (4 + i) and p.dummy_gd == dummy_gd_type.bs then
+					menu_cur = bs_menus[i][p.char]
+					return
+				end
+				-- リバーサル やられ時行動のメニュー設定
+				if not cancel and row == (8 + i) and p.dummy_wakeup == wakeup_type.rvs then
+					menu_cur = rvs_menus[i][p.char]
+					return
+				end
 			end
 		end
 
 		menu_cur = main_menu
 	end
 	local menu_to_main_cancel = function()
-		menu_to_main(true)
+		menu_to_main(true, false)
 	end
 	local life_range = { "最大", "赤", "ゼロ", }
 	for i = 1, 0xC0 do
@@ -11135,7 +11138,7 @@ function rbff2.startplugin()
 		cls_joy()
 		cls_ps()
 		-- 初期化
-		menu_to_main()
+		menu_to_main(false, true)
 		-- メニューを抜ける
 		main_or_menu_state = tra_main
 		prev_main_or_menu_state = nil
@@ -11164,7 +11167,7 @@ function rbff2.startplugin()
 		cls_joy()
 		cls_ps()
 		-- 初期化
-		menu_to_main()
+		menu_to_main(false, true)
 		-- メニューを抜ける
 		main_or_menu_state = tra_main
 		reset_menu_pos = true
@@ -11304,34 +11307,25 @@ function rbff2.startplugin()
 		menu_to_tra()
 	end
 	local menu_rvs_to_tra_menu = function()
-		-- 共通行動の設定を全キャラにコピー反映
-		local common_col = {}
-		local count = {}
-		local cur_char = 0
-		for pi, prvs in ipairs(rvs_menus) do
-			common_col[pi] = common_col[pi] or {}
-			for char, a_bs_menu in ipairs(prvs) do
+		local cur_prvs = nil
+		for i, prvs in ipairs(rvs_menus) do
+			for _, a_bs_menu in ipairs(prvs) do
 				if menu_cur == a_bs_menu then
-					cur_char = char
-					for _, rvs in ipairs(a_bs_menu.list) do
-						if rvs.common then
-							common_col[pi][rvs.row] = a_bs_menu.pos.col[rvs.row]
-						end
-					end
-					count[pi] = a_bs_menu.pos.col[#a_bs_menu.pos.col]
+					cur_prvs = prvs
 					break
 				end
 			end
+			if cur_prvs then
+				break
+			end
 		end
-		for pi, prvs in ipairs(rvs_menus) do
-			for char, a_bs_menu in ipairs(prvs) do
-				if cur_char == char then
-					for _, rvs in ipairs(a_bs_menu.list) do
-						if rvs.common then
-							a_bs_menu.pos.col[rvs.row] = common_col[pi][rvs.row]
-						end
+		-- 共通行動の設定を全キャラにコピー反映
+		for _, a_bs_menu in ipairs(cur_prvs) do
+			if menu_cur ~= a_bs_menu then
+				for _, rvs in ipairs(a_bs_menu.list) do
+					if rvs.common then
+						a_bs_menu.pos.col[rvs.row] = menu_cur.pos.col[rvs.row]
 					end
-					a_bs_menu.pos.col[#a_bs_menu.pos.col] = count[pi]
 				end
 			end
 		end
