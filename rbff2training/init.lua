@@ -7689,7 +7689,11 @@ function rbff2.startplugin()
 		end
 		table.insert(hit_summary, {"最大ヒット数:"  , string.format("%s/%s", summary.max_hit_nm, summary.max_hit_dn) })
 		if p.is_fireball == true then
-			table.insert(hit_summary, {"弾強度:"        , summary.prj_rank or "-" })
+			local prj_rank_label = summary.prj_rank or "-"
+			if p.fake_hit == true and p.full_hit == false then
+				prj_rank_label = prj_rank_label .. "(被相殺判定のみ)"
+			end
+			table.insert(hit_summary, {"弾強度:"        , prj_rank_label })
 		end
 		return hit_summary
 	end
@@ -7924,8 +7928,15 @@ function rbff2.startplugin()
 		sides_label = sides_label .. "/" ..  ((p.input_side == 0x0) and "入力:右" or "入力:左")
 		sides_label = sides_label .. "/" ..  ((p.internal_side == p.input_side) and "同" or "違")
 
+		local move_label = string.format("本体%sF", p.atk_count)
+		for _, fb in pairs(p.fireball) do
+			if fb.alive == true then
+				move_label = move_label .. string.format("/弾%sF", fb.atk_count)
+			end
+		end
+
 		local hurt_sumamry = {
-			{ "動作:"          , p.atk_count },
+			{ "動作:"          , move_label },
 			{ "打撃無敵:"      , hurt_label  },
 			{ "投げ無敵:"      , throw_label },
 			{ "向き:"          , sides_label },
@@ -8621,6 +8632,7 @@ function rbff2.startplugin()
 					fb.alive      = true
 					temp_hits[fb.addr.base] = fb
 					fb.atk_count = fb.atk_count or 0
+					fb.atk_count = fb.atk_count + 1
 				else
 					fb.alive      = false
 					fb.atk_count  = 0
@@ -9321,10 +9333,10 @@ function rbff2.startplugin()
 				local col, line, act
 				if p.skip_frame then
 					col, line, act = 0x00000000, 0x00000000, 0
-				elseif hasbox and (fb.obsl_hit or fb.full_hit or fb.harmless2) then
-					col, line, act = 0x00000000, 0xDDFF1493, 0
 				elseif hasbox and fb.fake_hit then
 					col, line, act = 0xAA00FF33, 0xDD00FF33, 2
+				elseif hasbox and (fb.obsl_hit or fb.full_hit or fb.harmless2) then
+					col, line, act = 0x00000000, 0xDDFF1493, 0
 				elseif fb.alive == true then
 					col, line, act = 0xAAFF1493, 0xDDFF1493, 1
 				else
