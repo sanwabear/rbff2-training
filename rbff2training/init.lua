@@ -4169,7 +4169,7 @@ local box_type_base = {
 	g6  = { id = 0x16, name = "下段当身打ち",              enabled = true, type_check = type_ck_gd,   type = "atemi",  sort =  3, color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 g.ateminage         012DBC
 	g7  = { id = 0x17, name = "必勝逆襲拳",                enabled = true, type_check = type_ck_gd,   type = "atemi",  sort =  3, color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 h.gyakushu-kyaku    012DBC
 	g8  = { id = 0x18, name = "サドマゾ",                  enabled = true, type_check = type_ck_gd,   type = "atemi",  sort =  3, color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 sadomazo            012DBC
-	g9  = { id = 0x19, name = "倍返し",                    enabled = true, type_check = type_ck_gd,   type = "guard",  sort =  3, color = 0xFF007F, fill = 0x40, outline = 0xFF },--rbff2 bai-gaeshi          012DBC
+	g9  = { id = 0x19, name = "倍返し",                    enabled = true, type_check = type_ck_gd,   type = "atemi",  sort =  3, color = 0xFF007F, fill = 0x40, outline = 0xFF },--rbff2 bai-gaeshi          012DBC
 	g12 = { id = 0x1A, name = "ガード?1",                  enabled = true, type_check = type_ck_und,  type = "guard",  sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF },--?
 	g11 = { id = 0x1B, name = "ガード?2",                  enabled = true, type_check = type_ck_und,  type = "guard",  sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF },--?
 	g10 = { id = 0x1C, name = "フェニックススルー",        enabled = true, type_check = type_ck_gd,   type = "atemi",  sort =  3, color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 p.throw?            012DBC
@@ -4539,6 +4539,7 @@ local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, atta
 	end
 	box.type = box.type or box_type_base.x1
 
+	local orig_posy = pos_y
 	pos_y  = pos_y - p.hit.pos_z
 
 	top    = pos_y - (0xFFFF & ((top    * p.hit.scale) >> 6))
@@ -4617,6 +4618,10 @@ local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, atta
 		p.attacking = true
 	end
 
+	box.fb_pos_x, box.fb_pos_y = pos_x, orig_posy
+	box.pos_x = p.is_fireball and math.floor(p.parent.pos - screen_left) or pos_x
+	box.pos_y = p.is_fireball and math.floor(p.parent.pos_y) or orig_posy
+
 	return box
 end
 
@@ -4655,6 +4660,7 @@ local get_reach = function(p, box, pos_x, pos_y)
 		math.floor(asis_top_reach),  -- キャラ本体座標からの上のリーチ
 		math.floor(asis_bottom_reach)-- キャラ本体座標からの下のリーチ
 	)
+
 	local reach_data = {
 		front    = math.floor(front_reach),             -- キャラ本体座標からの前のリーチ
 		back     = math.floor(back_reach),              -- キャラ本体座標からの後のリーチ
@@ -4665,6 +4671,7 @@ local get_reach = function(p, box, pos_x, pos_y)
 		asis_top    = math.floor(asis_top_reach) - 24,
 		asis_bottom = math.floor(asis_bottom_reach) - 24,
 	}
+
 	return reach_data, reach_memo1
 end
 
@@ -4677,16 +4684,11 @@ local in_range = function(top, bottom, atop, abottom)
 	return false
 end
 
-local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attack_only, is_fireball, key)
-	local box = new_hitbox1(p, id, pos_x, pos_y, top, bottom, left, right, attack_only, is_fireball, key)
+local update_summary = function(p, box)
 	-- 判定ができてからのログ情報の作成
 	if box then
-		box.fb_pos_x, box.fb_pos_y = pos_x, pos_y
-		box.pos_x = is_fireball and math.floor(p.parent.pos - screen_left) or pos_x
-		box.pos_y = is_fireball and math.floor(p.parent.pos_y) or pos_y
-
 		local reach_memo1
-		if is_fireball then
+		if p.is_fireball then
 			box.reach, reach_memo1 = get_reach(p, box, box.pos_x, box.fb_pos_y)
 		else
 			box.reach, reach_memo1 = get_reach(p, box, box.pos_x, box.pos_y)
@@ -4729,7 +4731,7 @@ local new_hitbox = function(p, id, pos_x, pos_y, top, bottom, left, right, attac
 			summary.blockstun   = summary.blockstun   or p.blockstun  -- ガード硬直
 			summary.hitstop     = summary.hitstop     or p.hitstop      -- ヒットストップ
 			summary.hitstop_gd  = summary.hitstop_gd  or p.hitstop_gd   -- ガード時ヒットストップ
-			if is_fireball == true then
+			if p.is_fireball == true then
 				summary.prj_rank = summary.prj_rank   or p.prj_rank -- 飛び道具の強さ
 			else
 				summary.prj_rank = nil -- 飛び道具の強さ
@@ -5026,6 +5028,8 @@ local new_throwbox = function(p, box)
 	box.type   = box.type or box_type_base.t
 	box.visible = true
 	--print("b", box.opp_id, box.top, box.bottom, p.hit.flip_x)
+	box.asis_top , box.asis_bottom = box.bottom, box.top
+	box.asis_left, box.asis_right  = box.left, box.right
 	return box
 end
 
@@ -5092,8 +5096,9 @@ local update_object = function(p)
 	-- 判定データ排他用のテーブル
 	p.uniq_hitboxes = {}
 	for _, box in ipairs(p.buffer) do
-		local hitbox = new_hitbox(p, box.id, box.pos_x, box.pos_y, box.top, box.bottom, box.left, box.right, box.attack_only, box.is_fireball, box.key)
+		local hitbox = new_hitbox1(p, box.id, box.pos_x, box.pos_y, box.top, box.bottom, box.left, box.right, box.attack_only, box.is_fireball, box.key)
 		if hitbox then
+			update_summary(p, hitbox)
 			table.insert(p.hitboxes, hitbox)
 			-- 攻撃情報ログ
 			if global.log.atklog then
@@ -5107,14 +5112,14 @@ local update_object = function(p)
 
 	-- 空投げ, 必殺投げ
 	if p.n_throw and p.n_throw.on == 0x1 then
-		table.insert(p.hitboxes, new_throwbox(p, p.n_throw))
+		table.insert(p.hitboxes, update_summary(p, new_throwbox(p, p.n_throw)))
 		--print("n throw " .. string.format("%x", p.addr.base) .. " " .. p.n_throw.type.name .. " " .. " " .. p.n_throw.left .. " " .. p.n_throw.right .. " " .. p.n_throw.top .. " " .. p.n_throw.bottom)
 	end
 	if p.air_throw and p.air_throw.on == 0x1 then
-		table.insert(p.hitboxes, new_throwbox(p, p.air_throw))
+		table.insert(p.hitboxes,  update_summary(p, new_throwbox(p, p.air_throw)))
 	end
 	if p.sp_throw and p.sp_throw.on == 0x1 then
-		table.insert(p.hitboxes, new_throwbox(p, p.sp_throw))
+		table.insert(p.hitboxes,  update_summary(p,new_throwbox(p, p.sp_throw)))
 	end
 end
 
@@ -5224,6 +5229,9 @@ function rbff2.startplugin()
 			attack           = 0,           -- 攻撃中のみ変化
 			old_attack       = 0,
 			hitstop_id       = 0,           -- ヒット/ガードしている相手側のattackと同値
+			attack_id        = 0,           -- 当たり判定ごとに設定されているID
+			attacking        = false,       -- 攻撃判定発生中の場合true
+			throwing         = false,       -- 投げ判定発生中の場合true
 			can_techrise     = false,       -- 受け身行動可否
 			pow_up           = 0,           -- 状態表示用パワー増加量空振り
 			pow_up_hit       = 0,           -- 状態表示用パワー増加量ヒット
@@ -5333,8 +5341,6 @@ function rbff2.startplugin()
 			backstep_killer  = false,
 			need_block       = false,
 			need_low_block   = false,
-			attacking        = false,
-			throwing         = false,
 
 			hitboxes         = {},
 			buffer           = {},
@@ -5600,6 +5606,8 @@ function rbff2.startplugin()
 				attack         = 0, -- 攻撃中のみ変化
 				cancelable     = 0, -- キャンセル可否
 				hitstop_id     = 0, -- ガード硬直のID
+				attack_id      = 0, -- 当たり判定ごとに設定されているID
+				attacking      = false, -- 攻撃判定発生中の場合true
 				can_techrise   = false, -- 受け身行動可否
 				hitstop        = 0, -- ガード硬直
 				fake_hit       = false,
@@ -6689,6 +6697,8 @@ function rbff2.startplugin()
 		for i, p in ipairs(players) do
 			local op = players[3 - i]
 			p.input_states = {}
+			p.init_stun = init_stuns[p.char]
+
 			do_recover(p, op, true)
 
 			p.last_pure_dmg = 0
@@ -7449,6 +7459,8 @@ function rbff2.startplugin()
 		"最大当たり範囲",
 		"詠酒発動範囲",
 		"最大ヒット数",
+		"投げ間合い",
+		"キャッチ範囲",
 
 		"1 ガード方向",
 		"2 ガード方向",
@@ -7696,6 +7708,30 @@ function rbff2.startplugin()
 			table.insert(hit_summary, {"弾強度:"        , prj_rank_label })
 		end
 		return hit_summary
+	end
+	local make_throw_summary = function(p, summary)
+		local range_label = string.format("前%s/上%s(%s)/下%s(%s)/後%s",
+			summary.edge.throw.front,
+			summary.edge.throw.top + p.pos_y,
+			summary.edge.throw.top,
+			summary.edge.throw.bottom + p.pos_y,
+			summary.edge.throw.bottom,
+			summary.edge.throw.back)
+		local throw_summary = {
+			{"投げ間合い:", range_label},
+		}
+		return throw_summary
+	end
+	local make_parry_summary = function(p, summary)
+		local range_label = string.format("前%s/上%s/下%s/後%s", 
+			summary.edge.parry.front,
+			summary.edge.parry.top + p.pos_y,
+			summary.edge.parry.bottom + p.pos_y,
+			summary.edge.parry.back)
+		local parry_summary = {
+			{"キャッチ範囲:", range_label},
+		}
+		return parry_summary
 	end
 	local make_atk_summary = function(p, summary)
 		local pow_label = string.format("空%s/当%s/防%s", p.pow_up, p.pow_up_hit or 0, p.pow_up_gd or 0)
@@ -8161,6 +8197,11 @@ function rbff2.startplugin()
 			p.knock_back2    = pgm:read_u8(p.addr.knock_back2)
 			p.knock_back3    = pgm:read_u8(p.addr.knock_back3)
 			p.hitstop_id     = pgm:read_u8(p.addr.hitstop_id)
+			p.attack_id      = 0
+			p.old_attacking  = p.attacking
+			p.attacking      = false
+			p.old_throwing   = p.throwing
+			p.throwing       = false
 			p.can_techrise   = 2 > pgm:read_u8(0x88A12 + p.attack)
 			p.pow_up_hit     = 0
 			p.pow_up_gd      = 0
@@ -8574,6 +8615,9 @@ function rbff2.startplugin()
 				fb.asm            = pgm:read_u16(pgm:read_u32(fb.addr.base))
 				fb.attack         = pgm:read_u16(pgm:read_u32(fb.addr.attack))
 				fb.hitstop_id     = pgm:read_u16(fb.addr.hitstop_id)
+				fb.attack_id      = 0
+				fb.old_attacking  = p.attacking
+				fb.attacking      = false
 				if fb.hitstop_id == 0 then
 					fb.hitstop    = 0
 					fb.hitstop_gd = 0
@@ -8669,8 +8713,14 @@ function rbff2.startplugin()
 			p.act_1st    = p.update_act == global.frame_number and p.act_1st == true
 			if p.act_1st == true then
 				p.atk_count = 1
+				p.startup = p.atk_count
+				p.active = 0
+				p.recovery = 0
 			else
 				p.atk_count = p.atk_count + 1
+				p.startup = p.startup or 0
+				p.active = p.active or 0
+				p.recovery = p.recovery or 0
 			end
 
 			-- 硬直フレーム設定
@@ -8851,6 +8901,7 @@ function rbff2.startplugin()
 				p.blockstun = pgm:read_u8(0x1A + 0x2 + fix_bp_addr(0x5AF88) + d2) + 1 + 2 -- ガード硬直
 			end
 
+			-- 飛び道具の有効無効確定
 			if p.is_fireball == true then
 				p.alive = #p.hitboxes > 0
 			end
@@ -9414,6 +9465,20 @@ function rbff2.startplugin()
 			end
 			p.old_hit_summary = last_hit_summary
 
+			if check_edge(p.hit_summary.edge.throw) then
+				p.throw_summary = make_throw_summary(p, p.hit_summary)
+			else
+				p.throw_summary = p.old_throw_summary or {}
+			end
+			p.old_throw_summary = p.throw_summary
+
+			if check_edge(p.hit_summary.edge.parry) then
+				p.parry_summary = make_parry_summary(p, p.hit_summary)
+			else
+				p.parry_summary = p.old_parry_summary or {}
+			end
+			p.old_parry_summary = p.parry_summary
+
 			-- 攻撃モーション単位で変わるサマリ情報
 			if p.old_attack ~= p.attack and p.attack > 0 then
 				p.atk_summary = make_atk_summary(p, p.hit_summary)
@@ -9438,6 +9503,12 @@ function rbff2.startplugin()
 				table.insert(all_summary, row)
 			end
 			for _, row in ipairs(p.atk_summary) do
+				table.insert(all_summary, row)
+			end
+			for _, row in ipairs(p.throw_summary) do
+				table.insert(all_summary, row)
+			end
+			for _, row in ipairs(p.parry_summary) do
 				table.insert(all_summary, row)
 			end
 			for _, row in ipairs(last_hit_summary or {}) do
@@ -9566,6 +9637,7 @@ function rbff2.startplugin()
 				p.last_combo_st_timer = math.max(0, p.stun_timer - p.last_combo_st_timer_offset)
 				p.max_disp_stun = math.max(p.max_disp_stun, p.last_combo_stun)
 				p.max_st_timer = math.max(p.max_st_timer, p.last_combo_st_timer)
+				p.init_stun = init_stuns[p.char]
 			end
 
 			do_recover(p, op)
@@ -12167,15 +12239,19 @@ function rbff2.startplugin()
 			and mem_0x10FDAF == 2
 			and mem_0x10FDB6 ~= 0
 			and mem_0x10E043 == 0 then
+			--[[
 			if not player_select_active then
-				--print("player_select_active = true")
+				print("player_select_active = true")
 			end
+			]]
 			pgm:write_u32(mem_0x100F56, 0x00000000)
 			player_select_active = true
 		else
+			--[[
 			if player_select_active then
-				--print("player_select_active = false")
+				print("player_select_active = false")
 			end
+			]]
 			player_select_active = false -- 状態リセット
 			pgm:write_u8(mem_0x10CDD0, 0x00)
 			pgm:write_u32(players[1].addr.select_hook)
@@ -12187,7 +12263,7 @@ function rbff2.startplugin()
 		local vv = string.format("%x %x %x %x", mem_0x100701, mem_0x107C22, mem_0x10FDAF, mem_0x10FDB6)
 		if not bufuf[vv] and not active_mem_0x100701[mem_0x100701] then
 			bufuf[vv] = vv
-			print(vv)
+			print("tra", vv)
 		end
 		]]
 
