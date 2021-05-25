@@ -4754,10 +4754,18 @@ local update_summary = function(p, box)
 			box.type == box_type_base.pfaa or -- 飛び道具(嘘、空中追撃可)
 			box.type == box_type_base.pdaa then -- 飛び道具(無効、空中追撃可)
 			edge = summary.edge.hit
-		elseif box.type == box_type_base.t or  -- 投げ
-			box.type == box_type_base.at or -- 必殺技投げ
-			box.type == box_type_base.pt then -- 空中投げ
-			summary.throw = true
+		elseif box.type == box_type_base.t then -- 通常投げ
+			summary.n_throw = true
+			summary.tw_threshold = p.tw_threshold
+			edge = summary.edge.throw
+		elseif box.type == box_type_base.at then -- 空中投げ
+			summary.air_throw = true
+			summary.tw_threshold = p.tw_threshold
+			edge = summary.edge.throw
+		elseif box.type == box_type_base.pt then -- 必殺技投げ
+			summary.sp_throw = true
+			summary.sp_throw_id  = p.sp_throw_id
+			summary.tw_threshold = p.tw_threshold
 			edge = summary.edge.throw
 		elseif box.type == box_type_base.v1 or -- 食らい1
 			box.type == box_type_base.v2 then  -- 食らい2
@@ -5526,6 +5534,8 @@ function rbff2.startplugin()
 				knock_back1  = p1 and 0x100469 or 0x100569, -- のけぞり確認用1(色々)
 				knock_back2  = p1 and 0x100416 or 0x100516, -- のけぞり確認用2(裏雲隠し)
 				knock_back3  = p1 and 0x10047E or 0x10057E, -- のけぞり確認用3(フェニックススルー)
+				sp_throw_id  = p1 and 0x1004A3 or 0x1005A3, -- 投げ必殺のID
+				sp_throw_act = p1 and 0x1004A4 or 0x1005A4, -- 投げ必殺の持続残F
 				additional   = p1 and 0x1004A5 or 0x1005A5, -- 追加入力のデータ
 				prj_rank     = p1 and 0x1004B5 or 0x1005B5, -- 飛び道具の強さ
 				esaka_range  = p1 and 0x1004B6 or 0x1005B6, -- 詠酒の間合いチェック用
@@ -7710,13 +7720,91 @@ function rbff2.startplugin()
 		return hit_summary
 	end
 	local make_throw_summary = function(p, summary)
-		local range_label = string.format("前%s/上%s(%s)/下%s(%s)/後%s",
-			summary.edge.throw.front,
-			summary.edge.throw.top + p.pos_y,
-			summary.edge.throw.top,
-			summary.edge.throw.bottom + p.pos_y,
-			summary.edge.throw.bottom,
-			summary.edge.throw.back)
+		local range_label
+		if summary.n_throw == true then
+			range_label = string.format("地/%sF/前%s/後%s",
+				summary.tw_threshold,
+				summary.edge.throw.front,
+				summary.edge.throw.back)
+		elseif summary.air_throw == true then
+			range_label = string.format("空/前%s/上%s(%s)/下%s(%s)/後%s",
+				summary.edge.throw.front,
+				summary.edge.throw.top + p.pos_y,
+				summary.edge.throw.top,
+				summary.edge.throw.bottom + p.pos_y,
+				summary.edge.throw.bottom,
+				summary.edge.throw.back)
+		elseif summary.sp_throw == true then
+			--[[
+				p.act
+					M.スパイダー 86
+					M.スナッチャー 91
+					ジャーマンスープレックス A6
+					フェイスロック  A6
+					投げっぱなしジャーマン A6
+					デンジャラススパイダー F0
+					ダブルスパイダー AF B0
+					ダブルスナッチャー B9 BA
+					ダブルクラッチ  C4 9D
+					M.ダイナマイトスウィング
+					M.タイフーン FF 100
+
+				summary.sp_throw_id
+					05 デンジャラ
+					07 リフトアップ
+					12 Gサイクロン
+					08 爆弾パチキ
+					12 ドリル
+					11 ブレスパBR
+					10 ブレスパ
+					12 まじんが
+					04 きもんじｎ
+					07 真空投げ
+					12 羅生門
+					06 雷鳴ごうは
+					08 ダイナマイトスイング
+			]]
+			local air,inf,otg = false, false, false
+			if p.char == 0x05 then --ギース・ハワード
+				otg = summary.sp_throw_id == 0x06
+			elseif p.char == 0x06 then --望月双角,
+			elseif p.char == 0x09 then --ブルー・マリー
+				air = p.act == 0x91 or -- M.スナッチャー
+					p.act == 0xB9 or p.act == 0xBA -- ダブルスナッチャー
+				inf = p.act == 0xC4 or p.act == 0x9D -- ダブルクラッチ
+				otg = summary.sp_throw_id == 0x08
+			elseif p.char == 0x0B then --山崎竜二
+			elseif p.char == 0x0E then --ダック・キング
+				air = summary.sp_throw_id == 0x11
+			elseif p.char == 0x14 then --ヴォルフガング・クラウザー
+			elseif p.char == 0x16 then --李香緋
+			end
+			if air == true then
+				range_label = string.format("空/%sF/前%s/上%s(%s)/下%s(%s)/後%s",
+					summary.tw_threshold,
+					summary.edge.throw.front,
+					summary.edge.throw.top + p.pos_y,
+					summary.edge.throw.top,
+					summary.edge.throw.bottom + p.pos_y,
+					summary.edge.throw.bottom,
+					summary.edge.throw.back)
+				elseif inf == true then
+					range_label = string.format("地/%sF/前%s/上∞/下∞/後%s",
+						summary.tw_threshold,
+						summary.edge.throw.front,
+						summary.edge.throw.back)
+				elseif otg == true then
+					range_label = string.format("追撃/前%s/後%s",
+						summary.tw_threshold,
+						summary.edge.throw.front,
+						summary.edge.throw.back)
+				else
+					range_label = string.format("地/%sF/前%s/後%s",
+						summary.tw_threshold,
+						summary.edge.throw.front,
+						summary.edge.throw.back)
+				end
+		end
 		local throw_summary = {
 			{"投げ間合い:", range_label},
 		}
@@ -8180,6 +8268,8 @@ function rbff2.startplugin()
 			end
 			p.throwable      = p.state == 0 and op.state == 0 and p.tw_frame > 24 and p.sway_status == 0x00 and p.tw_muteki == 0 -- 投げ可能ベース
 			p.n_throwable    = p.throwable and p.tw_muteki2 == 0 -- 通常投げ可能
+			p.sp_throw_id    = pgm:read_u8(p.addr.sp_throw_id) -- 投げ必殺のID
+			p.sp_throw_act   = pgm:read_u8(p.addr.sp_throw_act) -- 投げ必殺の持続残F
 			p.additional     = pgm:read_u8(p.addr.additional)
 
 			p.old_act        = p.act or 0x00
