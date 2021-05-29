@@ -4617,6 +4617,15 @@ local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, atta
 		-- 攻撃中のフラグをたてる
 		p.attacking = true
 	end
+	if box.type == box_type_base.aa or box.type == box_type_base.daa or box.type == box_type_base.paa or box.type == box_type_base.pdaa then
+		p.juggling = true
+	end
+	if box.type == box_type_base.v3 then
+		p.can_juggle = true
+	end
+	if box.type == box_type_base.v4 then
+		p.can_otg = true
+	end
 
 	box.fb_pos_x, box.fb_pos_y = pos_x, orig_posy
 	box.pos_x = p.is_fireball and math.floor(p.parent.pos - screen_left) or pos_x
@@ -5081,6 +5090,9 @@ local update_object = function(p)
 	p.hit.base    = obj_base
 
 	p.attacking   = false
+	p.juggling    = false
+	p.can_juggle  = false
+	p.can_otg     = false
 	p.attack_id   = 0
 	p.throwing    = false
 
@@ -5239,6 +5251,7 @@ function rbff2.startplugin()
 			hitstop_id       = 0,           -- ヒット/ガードしている相手側のattackと同値
 			attack_id        = 0,           -- 当たり判定ごとに設定されているID
 			attacking        = false,       -- 攻撃判定発生中の場合true
+			juggling         = false,       -- 空中追撃判定発生中の場合true
 			throwing         = false,       -- 投げ判定発生中の場合true
 			can_techrise     = false,       -- 受け身行動可否
 			pow_up           = 0,           -- 状態表示用パワー増加量空振り
@@ -5621,6 +5634,7 @@ function rbff2.startplugin()
 				hitstop_id     = 0, -- ガード硬直のID
 				attack_id      = 0, -- 当たり判定ごとに設定されているID
 				attacking      = false, -- 攻撃判定発生中の場合true
+				juggling       = false, -- 空中追撃判定発生中の場合true
 				can_techrise   = false, -- 受け身行動可否
 				hitstop        = 0, -- ガード硬直
 				fake_hit       = false,
@@ -8379,6 +8393,9 @@ function rbff2.startplugin()
 			p.attack_id      = 0
 			p.old_attacking  = p.attacking
 			p.attacking      = false
+			p.juggling       = false
+			p.can_juggle     = false
+			p.can_otg        = false
 			p.old_throwing   = p.throwing
 			p.throwing       = false
 			p.can_techrise   = 2 > pgm:read_u8(0x88A12 + p.attack)
@@ -9336,9 +9353,17 @@ function rbff2.startplugin()
 			if p.skip_frame then
 				col, line = 0xAA888888, 0xDD888888
 			elseif p.attacking then
-				col, line = 0xAAFF1493, 0xDDFF1493
+				if p.juggling then
+					col, line = 0xAAFF4500, 0xDDFF4500
+				else
+					col, line = 0xAAFF00FF, 0xDDFF00FF
+				end
 			elseif p.throwing then
 				col, line = 0xAAD2691E, 0xDDD2691E
+			elseif p.can_juggle then
+				col, line = 0xAAFFA500, 0xDDFFA500
+			elseif p.can_otg then
+				col, line = 0xAAFFA500, 0xDDFFA500
 			elseif p.act_normal then
 				col, line = 0x44FFFFFF, 0xDDFFFFFF
 			end
@@ -9573,7 +9598,11 @@ function rbff2.startplugin()
 				elseif hasbox and (fb.obsl_hit or fb.full_hit or fb.harmless2) then
 					col, line, act = 0x00000000, 0xDDFF1493, 0
 				elseif fb.alive == true then
-					col, line, act = 0xAAFF1493, 0xDDFF1493, 1
+					if fb.juggling then
+						col, line, act = 0xAAFF4500, 0xDDFF4500, 1
+					else
+						col, line, act = 0xAAFF00FF, 0xDDFF00FF, 1
+					end
 				else
 					col, line, act = 0x00000000, 0x00000000, 0
 				end
