@@ -5529,6 +5529,7 @@ function rbff2.startplugin()
 				state        = p1 and 0x10048E or 0x10058E, -- 状態
 				state_flags  = p1 and 0x1004C0 or 0x1005C0, -- フラグ群
 				state_flags2 = p1 and 0x1004CC or 0x1005CC, -- フラグ群2
+				state_flags3 = p1 and 0x1004C8 or 0x1005C8, -- 必殺技等のフラグ群2
 				blkstn_flags = p1 and 0x1004D0 or 0x1005D0, -- フラグ群3
 				stop         = p1 and 0x10048D or 0x10058D, -- ヒットストップ
 				knock_back1  = p1 and 0x100469 or 0x100569, -- のけぞり確認用1(色々)
@@ -5543,6 +5544,8 @@ function rbff2.startplugin()
 				no_hit       = p1 and 0x10DDF2 or 0x10DDF1, -- ヒットしないフック
 				-- 0x1004E2 or 0x1005E2 -- 距離 0近距離 1中距離 2遠距離
 				cancelable   = p1 and 0x1004AF or 0x1005AF, -- キャンセル可否 00不可 C0可 D0可
+				box_base1    = p1 and 0x100476 or 0x100576,
+				box_base2    = p1 and 0x10047A or 0x10057A,
 
 				stun         = p1 and 0x10B850 or 0x10B858, -- 現在気絶値
  				stun_timer   = p1 and 0x10B854 or 0x10B85C, -- 気絶値ゼロ化までの残フレーム数
@@ -6054,6 +6057,11 @@ function rbff2.startplugin()
 				--"printf \"PC=%X A4=%X A2=%X D0=%X\",PC,A4,A2,D0;"..
 				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pd@(temp0+$B)=maincpu.pd@((A2)+$5);maincpu.pw@(temp0+$C)=maincpu.pw@(((A4)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A4)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
 
+			--[[
+			判定データ調査用
+			bp 0x012C42,1,{printf "0x012C42 %X %X A3=%X A4=%X A1=%X A2=%X 476=%X 47A=%X 576=%X 57A=%X",maincpu.pw@100460,maincpu.pw@10046E,A3,A4,A1,A2,maincpu.pd@100476,maincpu.pd@10047A,maincpu.pd@100576,maincpu.pd@10057A;g}
+			bp 0x012C88,1,{printf "0x012C88 %X %X A3=%X A4=%X A1=%X A2=%X 476=%X 47A=%X 576=%X 57A=%X",maincpu.pw@100460,maincpu.pw@10046E,A3,A4,A1,A2,maincpu.pd@100476,maincpu.pd@10047A,maincpu.pd@100576,maincpu.pd@10057A;g}
+			]]
 			--判定追加2 攻撃判定
 			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x012C88),
 				"(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100F00)",
@@ -6280,6 +6288,13 @@ function rbff2.startplugin()
 				cond1 = "(maincpu.pw@107C22>0)"
 				cond2 = cond1
 			end
+			-- 投げの時だけやられ判定表示（ジョー用）
+			local cond3 = "(maincpu.pw@107C22>0)&&((maincpu.pb@10048E)==$1||(maincpu.pb@10058E)==$1)&&((maincpu.pb@($AA+(A3))|D0)!=0)&&((maincpu.pw@100460)==$70||(maincpu.pw@100560)==$70)&&((maincpu.pw@100410)==$3||(maincpu.pw@100510)==$3)"
+			table.insert(bps_rg, cpu.debug:bpset(fix_bp_addr(0x5C2E2), cond3, "PC=((PC)+$C);g"))
+			-- 投げのときだけやられ判定表示（主にボブ用）
+			local cond4 = "(maincpu.pw@107C22>0)&&((maincpu.pb@10048E)==$3||(maincpu.pb@10058E)==$3)&&(maincpu.pb@($7A+(A3))==0)"
+			table.insert(bps_rg, cpu.debug:bpset(0x12BB0, cond4, "PC=((PC)+$E);g"))
+
 			--check vuln at all times *** setregister for m68000.pc is broken *** --bp 05C2E8, 1, {PC=((PC)+$6);g}
 			table.insert(bps_rg, cpu.debug:bpset(fix_bp_addr(0x5C2E8), cond2, "PC=((PC)+$6);g"))
 			--この条件で動作させると攻撃判定がでてしまってヒットしてしまうのでダメ
@@ -7446,6 +7461,56 @@ function rbff2.startplugin()
 		-- end
 		return ret
 	end
+	-- 押し合い判定のアドレス 家庭用05C5CEからの処理
+	-- 011E22: 1C18                     move.b  (A0)+, D6
+	--[[
+		当たり判定の開始座標
+		011E24: 1946 0076                move.b  D6, ($76,A4)
+		011E28: 0205 0003                andi.b  A0, ($7a,A4)
+	]]
+	local calc_box_a0 = function(p)
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
+		local d0, d1, d2, d3, a0 = p.char, p.state_flags, p.state_flags3, p.pos_y, 0
+		local goto_05C710 = function()
+			d0 = 0xFFFF & ((0xFFFF & d0) << 3)
+			a0 = a0 + d0
+			print(string.format("a0=%x d0=%x d1=%x d2=%x d3=%x", a0, d0, d1, d2, d3)) -- bp 5C712
+			return a0
+		end
+		local goto_05C70C = function()
+			a0 = 0x5C9BC
+			return goto_05C710()
+		end
+		local goto_05C6FE = function()
+			a0 = 0x5CA7C
+			d2 = d1 & 0x14000046
+			if d2 ~= 0 then
+				return goto_05C710()
+			end
+			return goto_05C70C()
+		end
+		if d0 == 0x5 and (d2 & 0xF) == 0xF then
+			return goto_05C70C()
+		end
+		if d1 & 0x1 ~= 0x1 then
+			return goto_05C6FE()
+		end
+		a0 = 0x5cb3c
+		if d3 == 0x0 then
+			return goto_05C6FE()
+		else
+			d3 = d2 & pgm:read_u32(0x05C726 + p.char_4times) -- 空中技チェック
+			if d3 ~= 0 then
+				return goto_05C710()
+			end
+		end
+		d2 = d2 & 0xffff0000   -- 必殺技チェック
+		if d2 == 0 then
+			return goto_05C710()
+		end
+		a0 = 0x5CBFC
+		return goto_05C710()
+	end
 
 	local summary_rows, summary_sort_key = {
 		"動作",
@@ -8190,6 +8255,30 @@ function rbff2.startplugin()
 			p.old_state_flags = p.state_flags
 			p.state_flags    = pgm:read_u32(p.addr.state_flags)        -- フラグ群
 			p.state_flags2   = pgm:read_u32(p.addr.state_flags2)       -- フラグ群2
+			p.state_flags3   = pgm:read_u32(p.addr.state_flags3)       -- 必殺技などの技のフラグ群
+			p.box_base1      = pgm:read_u32(p.addr.box_base1)
+			p.box_base2      = pgm:read_u32(p.addr.box_base2)
+			--[[
+			local logbox = function(box_base)
+				local addr = box_base
+				while true do
+					local id     = pgm:read_u8(addr)
+					if id == 0 then
+						break
+					end
+					local name = box_types[id]
+					name = name and name.name or "-"
+					local top    = pgm:read_i8(addr+0x2)
+					local bottom = pgm:read_i8(addr+0x3)
+					local left   = pgm:read_i8(addr+0x4)
+					local right  = pgm:read_i8(addr+0x5)
+					addr = addr + 0x6
+					print(string.format("%s/%s/%x/上%s/下%s/左%s/右%s", i, name, id, top, bottom, left, right))
+				end
+			end
+			logbox(p.box_base1)
+			logbox(p.box_base2)
+			]]
 			p.slide_atk      = testbit(p.state_flags2, 0x4) -- ダッシュ滑り攻撃
 			--[[
 				       1 CA技
@@ -8591,6 +8680,11 @@ function rbff2.startplugin()
 			else
 				p.ophit = op.fireball[p.ophit_base]
 			end
+
+			--[[
+			calc_box_a0(p)
+			print(string.format("76=%x 7A=%x", p.box_base1, p.box_base2))
+			]]
 
 			--フレーム数
 			p.frame_gap      = p.frame_gap or 0
