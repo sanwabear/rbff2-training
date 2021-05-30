@@ -92,8 +92,6 @@ local global = {
 	sync_pos_x      = 1, -- 1: OFF, 2:1Pと同期, 3:2Pと同期
 
 	disp_pos        = true, -- 1P 2P 距離表示
-	disp_hitbox     = true, -- 判定表示
-	disp_range      = 2, -- 間合い表示
 	disp_frmgap     = 3, -- フレーム差表示
 	disp_input_sts  = 1, -- コマンド入力状態表示 1:OFF 2:1P 3:2P
 	pause_hit       = 1, -- ヒット時にポーズ 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:ガードのみ
@@ -5191,6 +5189,8 @@ function rbff2.startplugin()
 			life_rec         = true,        -- 自動で体力回復させるときtrue
 			red              = 2,           -- 体力設定     	--"最大", "赤", "ゼロ" ...
 			max              = 1,           -- パワー設定       --"最大", "半分", "ゼロ" ...
+			disp_hitbox      = true,        -- 判定表示
+			disp_range       = 2,           -- 間合い表示
 			disp_base        = false,       -- 処理のアドレスを表示するときtrue
 			disp_dmg         = true,        -- ダメージ表示するときtrue
 			disp_cmd         = 2,           -- 入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
@@ -10438,90 +10438,92 @@ function rbff2.startplugin()
 		-- メイン処理
 		if match_active then
 			-- 判定表示（キャラ、飛び道具）
-			if global.disp_hitbox then
-				local hitboxes = {}
-				for _, p in ipairs(players) do
+			local hitboxes = {}
+			for _, p in ipairs(players) do
+				if p.disp_hitbox then
 					table_add_all(hitboxes, p.hitboxes)
 					for _, fb in pairs(p.fireball) do
 						table_add_all(hitboxes, fb.hitboxes)
 					end
 				end
-				table.sort(hitboxes, function(box1, box2)
-					return (box1.type.sort < box2.type.sort)
-				end)
-				for _, box in ipairs(hitboxes) do
-					if box.flat_throw then
-						if box.visible == true and box.type.enabled == true then
-							scr:draw_box (box.left , box.top-8 , box.right, box.bottom+8, box.type.fill, box.type.fill)
-							scr:draw_line(box.left , box.bottom, box.right, box.bottom  , box.type.outline)
-							scr:draw_line(box.left , box.top-8 , box.left , box.bottom+8, box.type.outline)
-							scr:draw_line(box.right, box.top-8 , box.right, box.bottom+8, box.type.outline)
-						end
-					else
-						--[[
-						if box_type_base.at == box.type then
-							print("box at ", box.left, box.top, box.right, box.bottom)
-						elseif box_type_base.pt == box.type then
-							print("box pt ", box.left, box.top, box.right, box.bottom)
-						end
-						]]
+			end
+			table.sort(hitboxes, function(box1, box2)
+				return (box1.type.sort < box2.type.sort)
+			end)
+			for _, box in ipairs(hitboxes) do
+				if box.flat_throw then
+					if box.visible == true and box.type.enabled == true then
+						scr:draw_box (box.left , box.top-8 , box.right, box.bottom+8, box.type.fill, box.type.fill)
+						scr:draw_line(box.left , box.bottom, box.right, box.bottom  , box.type.outline)
+						scr:draw_line(box.left , box.top-8 , box.left , box.bottom+8, box.type.outline)
+						scr:draw_line(box.right, box.top-8 , box.right, box.bottom+8, box.type.outline)
+					end
+				else
+					--[[
+					if box_type_base.at == box.type then
+						print("box at ", box.left, box.top, box.right, box.bottom)
+					elseif box_type_base.pt == box.type then
+						print("box pt ", box.left, box.top, box.right, box.bottom)
+					end
+					]]
 
-						if box.visible == true and box.type.enabled == true then
-							if global.no_background then
-								scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, 0x00000000)
-							else
-								scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, box.type.fill)
-							end
-							if box.type_count then
-								local x1, x2 = math.min(box.left, box.right), math.max(box.left, box.right)
-								local y1, y2 = math.min(box.top, box.bottom), math.max(box.top, box.bottom)
-								local x = math.floor((x2 - x1) / 2) + x1 - 2
-								local y = math.floor((y2 - y1) / 2) + y1 - 4
-								scr:draw_text(x+0.5, y+0.5, box.type_count.."", shadow_col)
-								scr:draw_text(x, y, box.type_count.."", box.type.outline)
-							end
+					if box.visible == true and box.type.enabled == true then
+						if global.no_background then
+							scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, 0x00000000)
+						else
+							scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, box.type.fill)
+						end
+						if box.type_count then
+							local x1, x2 = math.min(box.left, box.right), math.max(box.left, box.right)
+							local y1, y2 = math.min(box.top, box.bottom), math.max(box.top, box.bottom)
+							local x = math.floor((x2 - x1) / 2) + x1 - 2
+							local y = math.floor((y2 - y1) / 2) + y1 - 4
+							scr:draw_text(x+0.5, y+0.5, box.type_count.."", shadow_col)
+							scr:draw_text(x, y, box.type_count.."", box.type.outline)
+						end
+					end
+				end
+			end
+
+			-- 座標表示
+			for i, p in ipairs(players) do
+				if p.in_air ~= true and p.sway_status == 0x00 then
+					-- 通常投げ間合い
+					if p.disp_range == 2 or p.disp_range == 3 then
+						local color = p.throw.in_range and 0xFFFFFF00 or 0xFFBBBBBB
+						scr:draw_line(p.throw.x1, p.hit.pos_y  , p.throw.x2, p.hit.pos_y  , color)
+						scr:draw_line(p.throw.x1, p.hit.pos_y-4, p.throw.x1, p.hit.pos_y+4, color)
+						scr:draw_line(p.throw.x2, p.hit.pos_y-4, p.throw.x2, p.hit.pos_y+4, color)
+						if p.throw.in_range then
+							draw_text_with_shadow(p.throw.x1+2.5, p.hit.pos_y+4  , string.format("投%d", i), color)
+						end
+					end
+
+					-- 地上通常技の遠近判断距離
+					if p.disp_range == 2 or p.disp_range == 4 then
+						for btn, range in pairs(p.close_far) do
+							draw_close_far(i, p, string.upper(btn), range.x1, range.x2)
+						end
+					end
+				elseif p.sway_status == 0x80 then
+					-- ライン移動技の遠近判断距離
+					if p.disp_range == 2 or p.disp_range == 4 then
+						for btn, range in pairs(p.close_far_lma) do
+							draw_close_far(i, p, string.upper(btn), range.x1, range.x2)
 						end
 					end
 				end
 
-				-- 座標表示
-				for i, p in ipairs(players) do
-					if p.in_air ~= true and p.sway_status == 0x00 then
-						-- 通常投げ間合い
-						if global.disp_range == 2 or global.disp_range == 3 then
-							local color = p.throw.in_range and 0xFFFFFF00 or 0xFFBBBBBB
-							scr:draw_line(p.throw.x1, p.hit.pos_y  , p.throw.x2, p.hit.pos_y  , color)
-							scr:draw_line(p.throw.x1, p.hit.pos_y-4, p.throw.x1, p.hit.pos_y+4, color)
-							scr:draw_line(p.throw.x2, p.hit.pos_y-4, p.throw.x2, p.hit.pos_y+4, color)
-							if p.throw.in_range then
-								draw_text_with_shadow(p.throw.x1+2.5, p.hit.pos_y+4  , string.format("投%d", i), color)
-							end
-						end
-
-						-- 地上通常技の遠近判断距離
-						if global.disp_range == 2 or global.disp_range == 4 then
-							for btn, range in pairs(p.close_far) do
-								draw_close_far(i, p, string.upper(btn), range.x1, range.x2)
-							end
-						end
-					elseif p.sway_status == 0x80 then
-						-- ライン移動技の遠近判断距離
-						if global.disp_range == 2 or global.disp_range == 4 then
-							for btn, range in pairs(p.close_far_lma) do
-								draw_close_far(i, p, string.upper(btn), range.x1, range.x2)
-							end
-						end
+				-- 詠酒範囲
+				if p.disp_range == 2 or p.disp_range == 5 then
+					if p.esaka_range > 0 then
+						draw_esaka(i, p.hit.pos_x + p.esaka_range, global.axis_internal_color)
+						draw_esaka(i, p.hit.pos_x - p.esaka_range, global.axis_internal_color)
 					end
+				end
 
-					-- 詠酒範囲
-					if global.disp_range == 2 or global.disp_range == 5 then
-						if p.esaka_range > 0 then
-							draw_esaka(i, p.hit.pos_x + p.esaka_range, global.axis_internal_color)
-							draw_esaka(i, p.hit.pos_x - p.esaka_range, global.axis_internal_color)
-						end
-					end
-
-					-- 中心座標
+				-- 中心座標
+				if p.disp_hitbox then
 					draw_axis(i, p, p.hit.pos_x, p.in_air == true and global.axis_air_color or global.axis_color)
 					draw_axis(i, p, p.hit.max_pos_x, global.axis_internal_color)
 					draw_axis(i, p, p.hit.min_pos_x, global.axis_internal_color)
@@ -11212,24 +11214,26 @@ function rbff2.startplugin()
 		local col = disp_menu.pos.col
 		local p   = players
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
-		--                              1                                 1
-		global.disp_hitbox       = col[ 2] == 2 -- 判定表示               2
-		global.disp_range        = col[ 3]      -- 間合い表示             3
-		p[1].disp_stun           = col[ 4] == 2 -- 1P 気絶ゲージ表示      4
-		p[2].disp_stun           = col[ 5] == 2 -- 2P 気絶ゲージ表示      5
-		p[1].disp_dmg            = col[ 6] == 2 -- 1P ダメージ表示        6
-		p[2].disp_dmg            = col[ 7] == 2 -- 2P ダメージ表示        7
-		p[1].disp_cmd            = col[ 8]      -- 1P 入力表示            8
-		p[2].disp_cmd            = col[ 9]      -- 2P 入力表示            9
-		global.disp_input_sts    = col[10]      -- コマンド入力状態表示  10
-		global.disp_frmgap       = col[11]      -- フレーム差表示        11
-		p[1].disp_frm            = col[12]      -- 1P フレーム数表示     12
-		p[2].disp_frm            = col[13]      -- 2P フレーム数表示     13
-		p[1].disp_sts            = col[14]      -- 1P 状態表示           14
-		p[2].disp_sts            = col[15]      -- 2P 状態表示           15
-		p[1].disp_base           = col[16] == 2 -- 1P 処理アドレス表示   16
-		p[2].disp_base           = col[17] == 2 -- 2P 処理アドレス表示   17
-		global.disp_pos          = col[18] == 2 -- 1P 2P 距離表示        18
+		--                              1                               1
+		p[1].disp_hitbox         = col[ 2] == 2 -- 1P 判定表示          2
+		p[2].disp_hitbox         = col[ 3] == 2 -- 2P 判定表示          3
+		p[1].disp_range          = col[ 4]      -- 1P 間合い表示        4
+		p[2].disp_range          = col[ 5]      -- 2P 間合い表示        5
+		p[1].disp_stun           = col[ 6] == 2 -- 1P 気絶ゲージ表示    6
+		p[2].disp_stun           = col[ 7] == 2 -- 2P 気絶ゲージ表示    7
+		p[1].disp_dmg            = col[ 8] == 2 -- 1P ダメージ表示      8
+		p[2].disp_dmg            = col[ 9] == 2 -- 2P ダメージ表示      9
+		p[1].disp_cmd            = col[10]      -- 1P 入力表示         10
+		p[2].disp_cmd            = col[11]      -- 2P 入力表示         11
+		global.disp_input_sts    = col[12]      -- コマンド入力状態表示12
+		global.disp_frmgap       = col[13]      -- フレーム差表示      13
+		p[1].disp_frm            = col[14]      -- 1P フレーム数表示   14
+		p[2].disp_frm            = col[15]      -- 2P フレーム数表示   15
+		p[1].disp_sts            = col[16]      -- 1P 状態表示         16
+		p[2].disp_sts            = col[17]      -- 2P 状態表示         17
+		p[1].disp_base           = col[18] == 2 -- 1P 処理アドレス表示 18
+		p[2].disp_base           = col[19] == 2 -- 2P 処理アドレス表示 19
+		global.disp_pos          = col[20] == 2 -- 1P 2P 距離表示      20
 
 		menu_cur = main_menu
 	end
@@ -11426,23 +11430,25 @@ function rbff2.startplugin()
 		local p = players
 		local g = global
 		--   1                                                         1
-		col[ 2] = g.disp_hitbox and 2 or 1  -- 判定表示                2
-		col[ 3] = g.disp_range              -- 間合い表示              3
+		col[ 2] = p[1].disp_hitbox and 2 or 1  -- 判定表示             2
+		col[ 3] = p[2].disp_hitbox and 2 or 1  -- 判定表示             3
+		col[ 4] = p[1].disp_range              -- 間合い表示           4
+		col[ 5] = p[2].disp_range              -- 間合い表示          5
 		col[ 6] = p[1].disp_stun and 2 or 1 -- 1P 気絶ゲージ表示       6
 		col[ 7] = p[2].disp_stun and 2 or 1 -- 2P 気絶ゲージ表示       7
-		col[ 6] = p[1].disp_dmg and 2 or 1  -- 1P ダメージ表示         6
-		col[ 7] = p[2].disp_dmg and 2 or 1  -- 2P ダメージ表示         7
-		col[ 8] = p[1].disp_cmd             -- 1P 入力表示             8
-		col[ 9] = p[2].disp_cmd             -- 2P 入力表示             9
-		col[10] = g.disp_input_sts          -- コマンド入力状態表示   10
-		col[11] = g.disp_frmgap             -- フレーム差表示         11
-		col[12] = p[1].disp_frm             -- 1P フレーム数表示      12
-		col[13] = p[2].disp_frm             -- 2P フレーム数表示      13
-		col[14] = p[1].disp_sts             -- 1P 状態表示            14
-		col[15] = p[2].disp_sts             -- 2P 状態表示            15
-		col[16] = p[1].disp_base and 2 or 1 -- 1P 処理アドレス表示    16
-		col[17] = p[2].disp_base and 2 or 1 -- 2P 処理アドレス表示    17
-		col[18] = g.disp_pos    and 2 or 1  -- 1P 2P 距離表示         18
+		col[ 8] = p[1].disp_dmg and 2 or 1  -- 1P ダメージ表示         8
+		col[ 9] = p[2].disp_dmg and 2 or 1  -- 2P ダメージ表示         9
+		col[10] = p[1].disp_cmd             -- 1P 入力表示            10
+		col[11] = p[2].disp_cmd             -- 2P 入力表示            11
+		col[12] = g.disp_input_sts          -- コマンド入力状態表示   12
+		col[13] = g.disp_frmgap             -- フレーム差表示         13
+		col[14] = p[1].disp_frm             -- 1P フレーム数表示      14
+		col[15] = p[2].disp_frm             -- 2P フレーム数表示      15
+		col[16] = p[1].disp_sts             -- 1P 状態表示            16
+		col[17] = p[2].disp_sts             -- 2P 状態表示            17
+		col[18] = p[1].disp_base and 2 or 1 -- 1P 処理アドレス表示    18
+		col[19] = p[2].disp_base and 2 or 1 -- 2P 処理アドレス表示    19
+		col[20] = g.disp_pos    and 2 or 1  -- 1P 2P 距離表示         20
 	end
 	local init_ex_menu_config = function()
 		local col = ex_menu.pos.col
@@ -11884,8 +11890,10 @@ function rbff2.startplugin()
 	disp_menu = {
 		list = {
 			{ "                          表示設定" },
-			{ "判定表示"              , { "OFF", "ON", }, },
-			{ "間合い表示"            , { "OFF", "ON", "ON:投げ", "ON:遠近攻撃", "ON:詠酒", }, },
+			{ "1P 判定表示"           , { "OFF", "ON", }, },
+			{ "2P 判定表示"           , { "OFF", "ON", }, },
+			{ "1P 間合い表示"         , { "OFF", "ON", "ON:投げ", "ON:遠近攻撃", "ON:詠酒", }, },
+			{ "2P 間合い表示"         , { "OFF", "ON", "ON:投げ", "ON:遠近攻撃", "ON:詠酒", }, },
 			{ "1P 気絶ゲージ表示"     , { "OFF", "ON" }, },
 			{ "2P 気絶ゲージ表示"     , { "OFF", "ON" }, },
 			{ "1P ダメージ表示"       , { "OFF", "ON" }, },
@@ -11907,8 +11915,10 @@ function rbff2.startplugin()
 			row = 2,
 			col = {
 				0, -- －表示設定－            1
-				2, -- 判定表示                2
-				2, -- 間合い表示              3
+				2, -- 1P 判定表示             2
+				2, -- 2P 判定表示             2
+				2, -- 1P 間合い表示           3
+				2, -- 2P 間合い表示           3
 				2, -- 1P 気絶ゲージ表示       4
 				2, -- 2P 気絶ゲージ表示       5
 				1, -- 1P ダメージ表示         6
@@ -11928,8 +11938,10 @@ function rbff2.startplugin()
 		},
 		on_a = {
 			disp_menu_to_main, -- －表示設定－
-			disp_menu_to_main, -- 判定表示
-			disp_menu_to_main, -- 間合い表示
+			disp_menu_to_main, -- 1P 判定表示
+			disp_menu_to_main, -- 2P 判定表示
+			disp_menu_to_main, -- 1P 間合い表示
+			disp_menu_to_main, -- 2P 間合い表示
 			disp_menu_to_main, -- 1P 気絶ゲージ表示
 			disp_menu_to_main, -- 2P 気絶ゲージ表示
 			disp_menu_to_main, -- 1P ダメージ表示
@@ -11948,8 +11960,10 @@ function rbff2.startplugin()
 		},
 		on_b = {
 			disp_menu_to_main_cancel, -- －表示設定－
-			disp_menu_to_main_cancel, -- 判定表示
-			disp_menu_to_main_cancel, -- 間合い表示
+			disp_menu_to_main_cancel, -- 1P 判定表示
+			disp_menu_to_main_cancel, -- 2P 判定表示
+			disp_menu_to_main_cancel, -- 1P 間合い表示
+			disp_menu_to_main_cancel, -- 2P 間合い表示
 			disp_menu_to_main_cancel, -- 1P 気絶ゲージ表示
 			disp_menu_to_main_cancel, -- 2P 気絶ゲージ表示
 			disp_menu_to_main_cancel, -- フレーム差表示
