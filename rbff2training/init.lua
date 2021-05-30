@@ -6297,16 +6297,15 @@ function rbff2.startplugin()
 					"(maincpu.pw@((A0)+$60)!=$51)",
 					"(maincpu.pw@((A0)+$60)!=$54)",
 				}, "&&")
-				cond2 = cond1.."&&(maincpu.pb@((A3)+$B6)==0)"
 			else
 				cond1 = "(maincpu.pw@107C22>0)"
-				cond2 = cond1
 			end
+			cond2 = cond1.."&&(maincpu.pb@((A3)+$B6)==0)"
 			-- 投げの時だけやられ判定表示（ジョー用）
-			local cond3 = "(maincpu.pw@107C22>0)&&((maincpu.pb@10048E)==$1||(maincpu.pb@10058E)==$1)&&((maincpu.pb@($AA+(A3))|D0)!=0)&&((maincpu.pw@100460)==$70||(maincpu.pw@100560)==$70)&&((maincpu.pw@100410)==$3||(maincpu.pw@100510)==$3)"
+			local cond3 = "(maincpu.pw@107C22>0)&&((maincpu.pb@($AA+(A3))|D0)!=0)"
 			table.insert(bps_rg, cpu.debug:bpset(fix_bp_addr(0x5C2E2), cond3, "PC=((PC)+$C);g"))
 			-- 投げのときだけやられ判定表示（主にボブ用）
-			local cond4 = "(maincpu.pw@107C22>0)&&((maincpu.pb@10048E)==$3||(maincpu.pb@10058E)==$3)&&(maincpu.pb@($7A+(A3))==0)"
+			local cond4 = "(maincpu.pw@107C22>0)&&(maincpu.pb@($7A+(A3))==0)"
 			table.insert(bps_rg, cpu.debug:bpset(0x12BB0, cond4, "PC=((PC)+$E);g"))
 
 			--check vuln at all times *** setregister for m68000.pc is broken *** --bp 05C2E8, 1, {PC=((PC)+$6);g}
@@ -6320,6 +6319,8 @@ function rbff2.startplugin()
 			table.insert(bps_rg, cpu.debug:bpset(fix_bp_addr(0x5C2E8), cond1, "A3=((A3)-$B5);g"))
 			--*** fix for hackish workaround *** --bp 05C2EE, 1, {A3=((A3)+$B5);g}
 			table.insert(bps_rg, cpu.debug:bpset(fix_bp_addr(0x5C2EE), cond1, "A3=((A3)+$B5);g"))
+			-- 無理やり条件スキップしたので当たり処理に入らないようにする
+			table.insert(bps_rg, cpu.debug:bpset(fix_bp_addr(0x5C2F6), "(maincpu.pb@((A3)+$B6)==0)||((maincpu.pb@($AA+(A3))|D0)!=0)", "PC=((PC)+$8);g"))
 		end
 	end
 
