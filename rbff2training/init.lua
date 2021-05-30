@@ -6276,6 +6276,9 @@ function rbff2.startplugin()
 				"printf \"A4=%X CH=%D PC=%X PREF_ADDR=%X A0=%X D7=%X\",(A4),maincpu.pw@((A4)+10),PC,PREF_ADDR,(A0),(D7);g"))
 			end
 			--]]
+
+			-- 画面表示高さを1Pにあわせる
+			-- bp 013B6E,1,{D0=((maincpu.pw@100428)-(D0));g}
 		end
 	end
 
