@@ -9371,7 +9371,7 @@ function rbff2.startplugin()
 				if p.juggling then
 					col, line = 0x00000000, 0xDDFF4500
 				else
-					col, line = 0x00000000, 0xDDFF1493
+					col, line = 0x00000000, 0xDDFF00FF
 				end
 			elseif p.throwing then
 				col, line = 0xAAD2691E, 0xDDD2691E
