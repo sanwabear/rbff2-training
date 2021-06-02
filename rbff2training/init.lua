@@ -4182,9 +4182,9 @@ local box_types, sway_box_types = {}, {}
 for _, box in pairs(box_type_base) do
 	if 0 < box.id then
 		if box.sway then
-			sway_box_types[box.id] = box
+			sway_box_types[box.id - 1] = box
 		else
-			box_types[box.id] = box
+			box_types[box.id - 1] = box
 		end
 	end
 	box.fill    = (0xFFFFFFFF & (box.fill    << 24)) + box.color
@@ -4491,51 +4491,60 @@ local hit_box_procs = {
 local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, attack_only, is_fireball)
 	local box = {id = id}
 	box.type = nil
-	box.atk = is_fireball
-	local pgm = manager.machine.devices[":maincpu"].spaces["program"]
-	if (box.id + 1 > #box_types) then
+	if (box.id >= #box_types) then
 		box.atk = true
 		local air = hit_box_procs.air_hit(box.id) ~= nil
-		if is_fireball and air then
-			if p.hit.fake_hit then
-				box.type = box_type_base.pfaa -- 飛び道具(空中追撃可、嘘)
-			elseif p.hit.harmless then
-				box.type = box_type_base.pdaa -- 飛び道具(空中追撃可、無効)
+		if is_fireball then
+			p.has_atk_box = true
+			if air then
+				if p.hit.fake_hit then
+					box.type = box_type_base.pfaa -- 飛び道具(空中追撃可、嘘)
+				elseif p.hit.harmless then
+					box.type = box_type_base.pdaa -- 飛び道具(空中追撃可、無効)
+				else
+					box.type = box_type_base.paa  -- 飛び道具(空中追撃可)
+				end
 			else
-				box.type = box_type_base.paa  -- 飛び道具(空中追撃可)
-			end
-		elseif is_fireball and not air then
-			if p.hit.fake_hit then
-				box.type = box_type_base.pfa -- 飛び道具(嘘)
-			elseif p.hit.harmless then
-				box.type = box_type_base.pda -- 飛び道具(無効)
-			else
-				box.type = box_type_base.pa  -- 飛び道具
-			end
-		elseif not is_fireball and air then
-			if p.hit.fake_hit then
-				box.type = box_type_base.faa -- 攻撃(嘘)
-			elseif p.hit.harmless then
-				box.type = box_type_base.daa -- 攻撃(無効、空中追撃可)
-			else
-				box.type = box_type_base.aa  -- 攻撃(空中追撃可)
+				if p.hit.fake_hit then
+					box.type = box_type_base.pfa -- 飛び道具(嘘)
+				elseif p.hit.harmless then
+					box.type = box_type_base.pda -- 飛び道具(無効)
+				else
+					box.type = box_type_base.pa  -- 飛び道具
+				end
 			end
 		else
-			if p.hit.fake_hit then
-				box.type = box_type_base.fa  -- 攻撃(嘘)
-			elseif p.hit.harmless then
-				box.type = box_type_base.da  -- 攻撃(無効)
+			if air then
+				if p.hit.fake_hit then
+					box.type = box_type_base.faa -- 攻撃(嘘)
+				elseif p.hit.harmless then
+					box.type = box_type_base.daa -- 攻撃(無効、空中追撃可)
+				else
+					box.type = box_type_base.aa  -- 攻撃(空中追撃可)
+				end
 			else
-				box.type = box_type_base.a   -- 攻撃(空中追撃可)
+				if p.hit.fake_hit then
+					box.type = box_type_base.fa  -- 攻撃(嘘)
+				elseif p.hit.harmless then
+					box.type = box_type_base.da  -- 攻撃(無効)
+				else
+					box.type = box_type_base.a   -- 攻撃(空中追撃可)
+				end
 			end
 		end
 	else
-		box.type = box_types[box.id + 1]
-		if p.in_sway_line and sway_box_types[box.id + 1] then
-			box.type = sway_box_types[box.id + 1] 
+		if p.in_sway_line and sway_box_types[box.id] then
+			box.type = sway_box_types[box.id]
+		else
+			box.type = box_types[box.id]
 		end
 	end
 	box.type = box.type or box_type_base.x1
+
+	-- 飛び道具の押し合い判定は無視する
+	if is_fireball and box.type.type == "push" then
+		return nil
+	end
 
 	local orig_posy = pos_y
 	pos_y  = pos_y - p.hit.pos_z
@@ -5099,8 +5108,13 @@ local update_object = function(p)
 	p.throwing    = false
 
 	-- ヒットするかどうか
-	p.hit.harmless = p.obsl_hit or p.full_hit or p.harmless2
-	p.hit.fake_hit = p.fake_hit
+	if p.is_fireball then
+		p.hit.harmless = p.obsl_hit or p.full_hit or p.harmless2
+		p.hit.fake_hit = p.fake_hit
+	else
+		p.hit.harmless = p.obsl_hit or p.full_hit
+		p.hit.fake_hit = p.fake_hit or p.harmless2
+	end
 	p.hit.obsl_hit = p.obsl_hit
 	p.hit.full_hit = p.full_hit
 	p.hit.max_hit_dn = p.max_hit_dn
@@ -5189,7 +5203,7 @@ function rbff2.startplugin()
 			life_rec         = true,        -- 自動で体力回復させるときtrue
 			red              = 2,           -- 体力設定     	--"最大", "赤", "ゼロ" ...
 			max              = 1,           -- パワー設定       --"最大", "半分", "ゼロ" ...
-			disp_hitbox      = true,        -- 判定表示
+			disp_hitbox      = 2,           -- 判定表示
 			disp_range       = 2,           -- 間合い表示
 			disp_base        = false,       -- 処理のアドレスを表示するときtrue
 			disp_dmg         = true,        -- ダメージ表示するときtrue
@@ -5283,7 +5297,7 @@ function rbff2.startplugin()
 			old_in_air       = false,
 			in_air           = false,
 			chg_air_state    = 0,           -- ジャンプの遷移ポイントかどうか
-			force_y_pos      = 0,           -- Y位置強制
+			force_y_pos      = 1,           -- Y位置強制
 			pos_z            = 0,           -- Z位置
 			old_pos_z        = 0,           -- Z位置
 			on_main_line     = 0,           -- Z位置メインに移動した瞬間フレーム
@@ -6278,7 +6292,7 @@ function rbff2.startplugin()
 			--]]
 
 			-- 画面表示高さを1Pにあわせる
-			-- bp 013B6E,1,{D0=((maincpu.pw@100428)-(D0));g}
+			-- bp 013B6E,1,{D0=((maincpu.pw@100428)-(D0)+4);g}
 		end
 	end
 
@@ -8193,13 +8207,21 @@ function rbff2.startplugin()
 		}
 	end
 
+	local force_y_pos = { "OFF", 0 }
+	for i = 1, 256 do
+		table.insert(force_y_pos, i)
+	end
+	for i = -1, -256, -1 do
+		table.insert(force_y_pos, i)
+	end
+
 	-- トレモのメイン処理
 	tra_main = {}
 	tra_main.proc = function()
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		-- 画面表示
 		if global.no_background or global.disp_gauge == false then
-			if pgm:read_u8(0x107BB9) == 0x01 then
+			if pgm:read_u8(0x107BB9) == 0x01 or pgm:read_u8(0x107BB9) == 0x0F then
 				local match = pgm:read_u8(0x107C22)
 				if match == 0x38 then --HUD
 					pgm:write_u8(0x107C22, 0x33)
@@ -8885,11 +8907,11 @@ function rbff2.startplugin()
 				fb.act_frames2    = fb.act_frames2 or {}
 
 				-- 当たり判定の構築
+				fb.has_atk_box    = false
 				if fb.asm ~= 0x4E75 and fb.asm ~= 0x197C then --0x4E75 is rts instruction
 					fb.alive      = true
 					temp_hits[fb.addr.base] = fb
 					fb.atk_count = fb.atk_count or 0
-					fb.atk_count = fb.atk_count + 1
 				else
 					fb.alive      = false
 					fb.atk_count  = 0
@@ -9352,7 +9374,8 @@ function rbff2.startplugin()
 			local chg_fireball_state = false
 			local fb_upd_groups = {}
 			for _, fb in pairs(p.fireball) do
-				if fb.alive == true then
+				if fb.has_atk_box == true then
+					fb.atk_count = fb.atk_count + 1
 					if fb.atk_count == 1 and get_act_name(fb.act_data_fired) == get_act_name(p.act_data) then
 						chg_fireball_state = true
 					end
@@ -9593,11 +9616,7 @@ function rbff2.startplugin()
 			-- 飛び道具2
 			for fb_base, fb in pairs(p.fireball) do
 				local frame = fb.act_frames[#fb.act_frames]
-				local reset, new_name, hasbox = false, get_act_name(fb.act_data_fired), false
-				for _, _ in ipairs(fb.hitboxes) do
-					hasbox = true
-					break
-				end
+				local reset, new_name = false, get_act_name(fb.act_data_fired)
 				if p.act_data.firing then
 					if p.act_1st then
 						reset = true
@@ -9611,19 +9630,21 @@ function rbff2.startplugin()
 				local col, line, act
 				if p.skip_frame then
 					col, line, act = 0x00000000, 0x00000000, 0
-				elseif hasbox and fb.fake_hit then
-					col, line, act = 0xAA00FF33, 0xDD00FF33, 2
-				elseif hasbox and (fb.obsl_hit or fb.full_hit or fb.harmless2) then
-					if fb.juggling then
-						col, line, act = 0x00000000, 0xDDFF4500, 1
+				elseif fb.has_atk_box == true then
+					if fb.fake_hit == true then
+						col, line, act = 0xAA00FF33, 0xDD00FF33, 2
+					elseif fb.obsl_hit == true or fb.full_hit == true or fb.harmless2 == true then
+						if fb.juggling then
+							col, line, act = 0x00000000, 0xDDFF4500, 1
+						else
+							col, line, act = 0x00000000, 0xDDFF1493, 0
+						end
 					else
-						col, line, act = 0x00000000, 0xDDFF1493, 0
-					end
-				elseif fb.alive == true then
-					if fb.juggling then
-						col, line, act = 0xAAFF4500, 0xDDFF4500, 1
-					else
-						col, line, act = 0xAAFF00FF, 0xDDFF00FF, 1
+						if fb.juggling then
+							col, line, act = 0xAAFF4500, 0xDDFF4500, 1
+						else
+							col, line, act = 0xAAFF00FF, 0xDDFF00FF, 1
+						end
 					end
 				else
 					col, line, act = 0x00000000, 0x00000000, 0
@@ -10327,8 +10348,8 @@ function rbff2.startplugin()
 
 		-- Y座標強制
 		for i, p in ipairs(players) do
-			if p.force_y_pos ~= 0 and p.state == 0 then
-				pgm:write_i16(p.addr.pos_y, p.force_y_pos)
+			if p.force_y_pos > 1 then
+				pgm:write_i16(p.addr.pos_y, force_y_pos[p.force_y_pos])
 			end
 		end
 		-- X座標同期とY座標をだいぶ上に
@@ -10336,7 +10357,7 @@ function rbff2.startplugin()
 			local from = global.sync_pos_x - 1
 			local to   = 3 - from
 			pgm:write_i16(players[to].addr.pos, players[from].pos)
-			pgm:write_i16(players[to].addr.pos_y, 240)
+			pgm:write_i16(players[to].addr.pos_y, players[from].pos_y-84)
 		end
 
 		global.pause = false
@@ -10377,7 +10398,7 @@ function rbff2.startplugin()
 		end
 		local scr = manager.machine.screens:at(1)
 		local x, y = i == 1 and 170 or 20, 2
-		scr:draw_box(x-2, y-2, x+130, y+2+8*#summary, 0x80404040, 0x80404040)
+		scr:draw_box(x-2, y-2, x+130, y+2+7*#summary, 0x80404040, 0x80404040)
 		for _, row in ipairs(summary) do
 			local k, v = row[1], row[2]
 			scr:draw_text(x, y, k)
@@ -10396,7 +10417,9 @@ function rbff2.startplugin()
 		if x then
 			scr:draw_line(x, p.hit.pos_y-global.axis_size, x, p.hit.pos_y+global.axis_size, col)
 			scr:draw_line(x-global.axis_size, p.hit.pos_y, x+global.axis_size, p.hit.pos_y, col)
-			draw_text_with_shadow(x-1.5, p.hit.pos_y+global.axis_size    , string.format("%d", i), col)
+			if p.disp_hitbox == 2 then
+				draw_text_with_shadow(x-1.5, p.hit.pos_y+global.axis_size    , string.format("%d", i), col)
+			end
 		end
 	end
 	local draw_esaka = function(i, x, col)
@@ -10440,7 +10463,7 @@ function rbff2.startplugin()
 			-- 判定表示（キャラ、飛び道具）
 			local hitboxes = {}
 			for _, p in ipairs(players) do
-				if p.disp_hitbox then
+				if p.disp_hitbox > 1 then
 					table_add_all(hitboxes, p.hitboxes)
 					for _, fb in pairs(p.fireball) do
 						table_add_all(hitboxes, fb.hitboxes)
@@ -10523,7 +10546,7 @@ function rbff2.startplugin()
 				end
 
 				-- 中心座標
-				if p.disp_hitbox then
+				if p.disp_hitbox > 1 then
 					draw_axis(i, p, p.hit.pos_x, p.in_air == true and global.axis_air_color or global.axis_color)
 					draw_axis(i, p, p.hit.max_pos_x, global.axis_internal_color)
 					draw_axis(i, p, p.hit.min_pos_x, global.axis_internal_color)
@@ -11116,8 +11139,8 @@ function rbff2.startplugin()
 		p[1].no_hit_limit        = col[13] - 1  -- 2P 強制空振り         13
 		p[1].fwd_prov            = col[14] == 2 -- 1P 挑発で前進         14
 		p[2].fwd_prov            = col[15] == 2 -- 2P 挑発で前進         15
-		p[1].force_y_pos         = col[16] - 1  -- 1P Y座標強制          16
-		p[2].force_y_pos         = col[17] - 1  -- 2P Y座標強制          17
+		p[1].force_y_pos         = col[16]      -- 1P Y座標強制          16
+		p[2].force_y_pos         = col[17]      -- 2P Y座標強制          17
 		global.sync_pos_x        = col[18]      -- X座標同期             18
 
 		for _, p in ipairs(players) do
@@ -11215,8 +11238,8 @@ function rbff2.startplugin()
 		local p   = players
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		--                              1                               1
-		p[1].disp_hitbox         = col[ 2] == 2 -- 1P 判定表示          2
-		p[2].disp_hitbox         = col[ 3] == 2 -- 2P 判定表示          3
+		p[1].disp_hitbox         = col[ 2]      -- 1P 判定表示          2
+		p[2].disp_hitbox         = col[ 3]      -- 2P 判定表示          3
 		p[1].disp_range          = col[ 4]      -- 1P 間合い表示        4
 		p[2].disp_range          = col[ 5]      -- 2P 間合い表示        5
 		p[1].disp_stun           = col[ 6] == 2 -- 1P 気絶ゲージ表示    6
@@ -11409,8 +11432,8 @@ function rbff2.startplugin()
 		col[13] = p[1].no_hit_limit + 1    -- 2P 強制空振り         13
 		col[14] = p[1].fwd_prov and 2 or 1 -- 1P 挑発で前進         14
 		col[15] = p[2].fwd_prov and 2 or 1 -- 2P 挑発で前進         15
-		col[16] = p[1].force_y_pos + 1     -- 1P Y座標強制          16
-		col[17] = p[2].force_y_pos + 1     -- 2P Y座標強制          17
+		col[16] = p[1].force_y_pos         -- 1P Y座標強制          16
+		col[17] = p[2].force_y_pos         -- 2P Y座標強制          17
 		g.sync_pos_x = col[18]             -- X座標同期             18
 	end
 	local init_bar_menu_config = function()
@@ -11430,8 +11453,8 @@ function rbff2.startplugin()
 		local p = players
 		local g = global
 		--   1                                                         1
-		col[ 2] = p[1].disp_hitbox and 2 or 1  -- 判定表示             2
-		col[ 3] = p[2].disp_hitbox and 2 or 1  -- 判定表示             3
+		col[ 2] = p[1].disp_hitbox             -- 判定表示             2
+		col[ 3] = p[2].disp_hitbox             -- 判定表示             3
 		col[ 4] = p[1].disp_range              -- 間合い表示           4
 		col[ 5] = p[2].disp_range              -- 間合い表示          5
 		col[ 6] = p[1].disp_stun and 2 or 1 -- 1P 気絶ゲージ表示       6
@@ -11749,10 +11772,6 @@ function rbff2.startplugin()
 	for i = 1, 61 do
 		table.insert(gd_frms, string.format("%sF後にガード解除", (i - 1)))
 	end
-	local force_y_pos = {}
-	for i = 1, 256 do
-		table.insert(force_y_pos, i - 1)
-	end
 	local no_hit_row = { "OFF", }
 	for i = 1, 99 do
 		table.insert(no_hit_row, string.format("%s段目で空振り", i))
@@ -11890,8 +11909,8 @@ function rbff2.startplugin()
 	disp_menu = {
 		list = {
 			{ "                          表示設定" },
-			{ "1P 判定表示"           , { "OFF", "ON", }, },
-			{ "2P 判定表示"           , { "OFF", "ON", }, },
+			{ "1P 判定表示"           , { "OFF", "ON", "ON:P番号なし", }, },
+			{ "2P 判定表示"           , { "OFF", "ON", "ON:P番号なし", }, },
 			{ "1P 間合い表示"         , { "OFF", "ON", "ON:投げ", "ON:遠近攻撃", "ON:詠酒", }, },
 			{ "2P 間合い表示"         , { "OFF", "ON", "ON:投げ", "ON:遠近攻撃", "ON:詠酒", }, },
 			{ "1P 気絶ゲージ表示"     , { "OFF", "ON" }, },
