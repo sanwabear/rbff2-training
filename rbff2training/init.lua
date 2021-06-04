@@ -86,8 +86,9 @@ local global = {
 	axis_size2      = 5,
 	no_alpha        = true, --fill = 0x00, outline = 0xFF for all box types
 	throwbox_height = 200, --default for ground throws
-	no_background   = true,
+	no_background   = false,
 	no_background_addr = 0x10DDF0,
+	no_effect_bps   = nil,
 	no_bars         = false,
 	sync_pos_x      = 1, -- 1: OFF, 2:1Pと同期, 3:2Pと同期
 
@@ -6157,7 +6158,7 @@ function rbff2.startplugin()
 			--			func = function() memory.pgm:write_u8(gr("a4") + 0x82, 0) end},
 			--solid shadows 01
 			--no    shadows FF
-			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x017300), "maincpu.pw@107C22>0&&maincpu.pb@10DDF0==FF", "maincpu.pb@((A4)+$82)=$FF;g"))
+			table.insert(bps, cpu.debug:bpset(0x017300, "maincpu.pw@107C22>0&&maincpu.pb@10DDF0==FF", "maincpu.pb@((A4)+$82)=$FF;g"))
 
 			-- 潜在ぜったい投げるマン
 			--table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x039F8C), "1",
@@ -8219,7 +8220,7 @@ function rbff2.startplugin()
 	tra_main = {}
 	tra_main.proc = function()
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
-
+		local cpu = manager.machine.devices[":maincpu"]
 		-- 砂煙、ヒット、ガードマークの色変更実験
 		--[[
 		local transparent = pgm:read_u16(0x401FF0)
@@ -8247,11 +8248,40 @@ function rbff2.startplugin()
 				pgm:write_u16(0x401FFE, 0x5ABB)
 				pgm:write_u8(global.no_background_addr, 0xFF)
 			end
+
 			-- 潜在とBSで残像が出ないようにする
-			pgm:write_u16(0x1004CD, 0x5F)
-			pgm:write_u16(0x1005CD, 0x5F)
+			-- 有効にした場合は投げられなくなるので注意
+			-- pgm:write_u16(0x1004CD, 0x5F)
+			-- pgm:write_u16(0x1005CD, 0x5F)
+
+			if global.no_effect_bps == nil then
+				local bps = {}
+				-- 砂煙抑止
+				-- bp 036162,1,{PC=35756;g}
+				-- bp 03BCC2,1,{PC=3BCC8;g}
+				-- bp 03BB1E,{maincpu.pw@((A3)+$10)==$1&&maincpu.pw@((A3)+$60)==$B8},{PC=3BC00;g}
+				-- bp 0357B0,1,{PC=35756;g}
+				table.insert(bps, cpu.debug:bpset(0x036162, "1", "PC=$35756;g"))
+				table.insert(bps, cpu.debug:bpset(0x03BCC2, "1", "PC=$3BCC8;g"))
+				-- ナッコーとかタイガーキックとか小夜千鳥のエフェクトが出なくなるのを防ぐためにファイヤーキックだけ抑止する
+				table.insert(bps, cpu.debug:bpset(0x03BB1E, "maincpu.pw@((A3)+$10)==$1&&maincpu.pw@((A3)+$60)==$B8", "PC=$3BC00;g"))
+				table.insert(bps, cpu.debug:bpset(0x0357B0, "1", "PC=$35756;g"))
+				-- ヒットマーク抑止
+				-- bp 06115C,1,{PC=61162;g}
+				-- bp 06122C,1,{PC=61260;g}
+				table.insert(bps, cpu.debug:bpset(0x06115C, "1", "PC=$61162;g"))
+				table.insert(bps, cpu.debug:bpset(0x06122C, "1", "PC=$61260;g"))
+				global.no_effect_bps = {}
+			else
+				for _, bp in ipairs(global.no_effect_bps) do
+					cpu.debug:bpenable(bp)
+				end
+			end
 		else
 			pgm:write_u8(global.no_background_addr, 0x00)
+			for _, bp in ipairs(global.no_effect_bps) do
+				cpu.debug:bpdisable(bp)
+			end
 		end
 
 		-- メイン処理
