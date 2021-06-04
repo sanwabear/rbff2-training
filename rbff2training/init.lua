@@ -86,7 +86,7 @@ local global = {
 	axis_size2      = 5,
 	no_alpha        = true, --fill = 0x00, outline = 0xFF for all box types
 	throwbox_height = 200, --default for ground throws
-	no_background   = false,
+	no_background   = true,
 	no_background_addr = 0x10DDF0,
 	no_bars         = false,
 	sync_pos_x      = 1, -- 1: OFF, 2:1Pと同期, 3:2Pと同期
@@ -8219,6 +8219,15 @@ function rbff2.startplugin()
 	tra_main = {}
 	tra_main.proc = function()
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
+
+		-- 砂煙、ヒット、ガードマークの色変更実験
+		--[[
+		local transparent = pgm:read_u16(0x401FF0)
+		for pallete_no = 0x500, 0x55F do
+			pgm:write_u16(0x400000 + pallete_no * 2, 0xF000)
+		end
+		]]
+
 		-- 画面表示
 		if global.no_background or global.disp_gauge == false then
 			if pgm:read_u8(0x107BB9) == 0x01 or pgm:read_u8(0x107BB9) == 0x0F then
@@ -8226,7 +8235,7 @@ function rbff2.startplugin()
 				if match == 0x38 then --HUD
 					pgm:write_u8(0x107C22, 0x33)
 				end
-				if match > 0 then --BG layers
+				if match ~= 0 then --BG layers
 					if global.no_background then
 						pgm:write_u8(0x107762, 0x00)
 					end
@@ -8238,6 +8247,9 @@ function rbff2.startplugin()
 				pgm:write_u16(0x401FFE, 0x5ABB)
 				pgm:write_u8(global.no_background_addr, 0xFF)
 			end
+			-- 潜在とBSで残像が出ないようにする
+			pgm:write_u16(0x1004CD, 0x5F)
+			pgm:write_u16(0x1005CD, 0x5F)
 		else
 			pgm:write_u8(global.no_background_addr, 0x00)
 		end
@@ -8844,7 +8856,6 @@ function rbff2.startplugin()
 				fb.reach_memo     = ""
 				fb.reach_tbl      = {}
 				fb.pos_z          = pgm:read_i16(fb.addr.pos_z)
-				fb.hit.projectile = true
 				fb.gd_strength    = get_gd_strength(fb)
 				fb.asm            = pgm:read_u16(pgm:read_u32(fb.addr.base))
 				fb.attack         = pgm:read_u16(pgm:read_u32(fb.addr.attack))
@@ -9206,7 +9217,13 @@ function rbff2.startplugin()
 
 			--停止演出のチェック
 			p.old_skip_frame = p.skip_frame
-			p.skip_frame = p.hit_skip ~= 0 or p.stop ~= 0 or (mem_0x100F56 == 0xFFFFFFFF or mem_0x100F56 == 0x0000FFFF)
+			if global.no_background then
+				p.skip_frame = p.hit_skip ~= 0 or p.stop ~= 0
+			else
+				-- 停止演出のチェックで背景なしチートの影響箇所をチェックするので背景なしONときは停止演出のチェックを飛ばす
+				p.skip_frame = p.hit_skip ~= 0 or p.stop ~= 0 or
+					(mem_0x100F56 == 0xFFFFFFFF or mem_0x100F56 == 0x0000FFFF)
+			end
 
 			--[[調査用ログ
 			local printdata = function()
@@ -10491,6 +10508,7 @@ function rbff2.startplugin()
 					]]
 
 					if box.visible == true and box.type.enabled == true then
+						-- 背景なしの場合は判定の塗りつぶしをやめる
 						if global.no_background then
 							scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, 0x00000000)
 						else
