@@ -74,6 +74,14 @@ local bios_test             = function()
 		end
 	end
 end
+local fix_scr_tops          = {}
+for i = 1, 140 do
+	if i <= 70 then
+		table.insert(fix_scr_tops, "1P " .. i)
+	else
+		table.insert(fix_scr_tops, "2P " .. (i - 70))
+	end
+end
 
 local global = {
 	frame_number    = 0,
@@ -5433,6 +5441,8 @@ function rbff2.startplugin()
 			hit_summary      = {}, -- 大状態表示のデータ構造の一部
 			old_hit_summary  = {}, -- 大状態表示のデータ構造の一部
 
+			fix_scr_top      = p1 and 20 or 0xFF, -- screen_topの強制フック用
+
 			hit              = {
 				pos_x        = 0,
 				pos_z        = 0,
@@ -5646,6 +5656,9 @@ function rbff2.startplugin()
 				full_hit     = p1 and 0x1004AA or 0x1005AA, -- 判定チェック用1 0じゃないとき全段攻撃ヒット/ガード
 				harmless2    = p1 and 0x1004B6 or 0x1005B6, -- 判定チェック用2 0のときは何もしていない 同一技の連続ヒット数加算
 				max_hit_nm   = p1 and 0x1004AB or 0x1005AB, -- 同一技行動での最大ヒット数 分子
+
+				-- スクショ用
+				fix_scr_top  = p1 and 0x10DE5C or 0x10DE5D, -- screen_topの強制フック用
 			},
 		}
 
@@ -8263,6 +8276,7 @@ function rbff2.startplugin()
 		-- 有効にした場合は投げられなくなるので注意
 		-- pgm:write_u16(0x1004CD, 0x5F)
 		-- pgm:write_u16(0x1005CD, 0x5F)
+
 		if global.no_effect_bps then
 			global.set_bps(global.no_background ~= true, global.no_effect_bps)
 		else
@@ -8285,9 +8299,17 @@ function rbff2.startplugin()
 			table.insert(bps, cpu.debug:bpset(0x06115C, cond, "PC=$61162;g"))
 			table.insert(bps, cpu.debug:bpset(0x06122C, cond, "PC=$61260;g"))
 
-			-- 画面表示高さを1Pにあわせる
+			-- 画面表示高さを1Pか2Pの高いほうにあわせる
 			-- bp 013B6E,1,{D0=((maincpu.pw@100428)-(D0)+4);g}
-			-- table.insert(bps, cpu.debug:bpset(0x013B6E, cond, "D0=((maincpu.pw@100428)-(D0)+4);g"))
+			-- bp 013B6E,1,{D0=((maincpu.pw@100428)-(D0)-24);g}
+			-- bp 013BBA,1,{D0=(maincpu.pw@100428);g}
+			-- bp 013AF0,1,{PC=13B28;g} -- 潜在演出無視
+			-- bp 013AF0,1,{PC=13B76;g} -- 潜在演出強制（上に制限が付く）
+			table.insert(bps, cpu.debug:bpset(0x013B6E, cond.."&&(maincpu.pb@10DE5C)!=0xFF", "D0=((maincpu.pw@100428)+#20-(maincpu.pb@10DE5C));g"))
+			table.insert(bps, cpu.debug:bpset(0x013B6E, cond.."&&(maincpu.pb@10DE5D)!=0xFF", "D0=((maincpu.pw@100528)+#20-(maincpu.pb@10DE5D));g"))
+			table.insert(bps, cpu.debug:bpset(0x013BBA, cond.."&&(maincpu.pw@100428)>=(maincpu.pw@100528)", "D0=(maincpu.pw@100428);g"))
+			table.insert(bps, cpu.debug:bpset(0x013BBA, cond.."&&(maincpu.pw@100428)< (maincpu.pw@100528)", "D0=(maincpu.pw@100528);g"))
+			table.insert(bps, cpu.debug:bpset(0x013AF0, cond, "PC=$13B28;g"))
 		end
 
 		-- メイン処理
@@ -8727,6 +8749,7 @@ function rbff2.startplugin()
 			p.in_air         = 0 < p.pos_y or 0 < p.pos_frc_y
 			p.reach_memo     = ""
 			p.reach_tbl      = {}
+			pgm:write_i8(p.addr.fix_scr_top, p.fix_scr_top)
 
 			-- ジャンプの遷移ポイントかどうか
 			if p.old_in_air ~= true and p.in_air == true then
@@ -11604,6 +11627,14 @@ function rbff2.startplugin()
 			next_stage    = stgs[main_menu.pos.col[13]], -- ステージセレクト
 			next_bgm      = bgms[main_menu.pos.col[14]].id, -- BGMセレクト
 		})
+		local fix_scr_top = main_menu.pos.col[16]
+		if fix_scr_top <= 50 then
+			players[1].fix_scr_top = fix_scr_top
+			players[2].fix_scr_top = 0xFF
+		else
+			players[1].fix_scr_top = 0xFF
+			players[2].fix_scr_top = fix_scr_top - 50
+		end
 		cls_joy()
 		cls_ps()
 		-- 初期化
@@ -11641,28 +11672,30 @@ function rbff2.startplugin()
 			{ "ステージセレクト"      , names },
 			{ "BGMセレクト"           , bgm_names },
 			{ "体力,POWゲージ表示"    , { "OFF", "ON" }, },
+			{ "背景なし時位置補正"    , fix_scr_tops, },
 			{ "リスタート" },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
 			row = 1,
 			col = {
-				0, -- ダミー設定
-				0, -- ゲージ設定
-				0, -- 表示設定
-				0, -- 特殊設定
-				0, -- 自動入力設定
-				0, -- 判定個別設定
-				0, -- プレイヤーセレクト画面
-				0, -- クイックセレクト
-				1, -- 1P セレクト
-				1, -- 2P セレクト
-				1, -- 1P カラー
-				1, -- 2P カラー
-				1, -- ステージセレクト
-				1, -- BGMセレクト
-				1, -- 体力,POWゲージ表示
-				0, -- リスタート
+				0, -- ダミー設定              1
+				0, -- ゲージ設定              2
+				0, -- 表示設定                3
+				0, -- 特殊設定                4
+				0, -- 自動入力設定            5
+				0, -- 判定個別設定            6
+				0, -- プレイヤーセレクト画面  7
+				0, -- クイックセレクト        8
+				1, -- 1P セレクト             9
+				1, -- 2P セレクト            10
+				1, -- 1P カラー              11
+				1, -- 2P カラー              12
+				1, -- ステージセレクト       13
+				1, -- BGMセレクト            14
+				1, -- 体力,POWゲージ表示     15
+				1, -- 背景なし時位置補正     16
+				0, -- リスタート             17
 			},
 		},
 		on_a = {
@@ -11681,6 +11714,7 @@ function rbff2.startplugin()
 			menu_restart_fight, -- ステージセレクト
 			menu_restart_fight, -- BGMセレクト
 			menu_restart_fight, -- 体力,POWゲージ表示
+			menu_restart_fight, -- 背景なし時位置補正
 			menu_restart_fight, -- リスタート
 		},
 		on_b = {
@@ -11699,6 +11733,7 @@ function rbff2.startplugin()
 			menu_exit, -- ステージセレクト
 			menu_exit, -- BGMセレクト
 			menu_exit, -- 体力,POWゲージ表示
+			menu_exit, -- 背景なし時位置補正
 			menu_exit, -- リスタート
 		},
 	}
@@ -11733,6 +11768,14 @@ function rbff2.startplugin()
 		end
 
 		main_menu.pos.col[15] = global.disp_gauge and 2 or 1 -- 体力,POWゲージ表示
+
+		if players[1].fix_scr_top ~= 0xFF then
+			main_menu.pos.col[16] = players[1].fix_scr_top
+		elseif players[2].fix_scr_top ~= 0xFF then
+			main_menu.pos.col[16] = players[2].fix_scr_top
+		else
+			main_menu.pos.col[16] = 1
+		end
 
 		setup_char_manu()
 	end
