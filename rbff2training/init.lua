@@ -75,12 +75,11 @@ local bios_test             = function()
 	end
 end
 local fix_scr_tops          = {}
-for i = 1, 140 do
-	if i <= 70 then
-		table.insert(fix_scr_tops, "1P " .. i)
-	else
-		table.insert(fix_scr_tops, "2P " .. (i - 70))
-	end
+for i = -20, 70 do
+	table.insert(fix_scr_tops, "1P " .. i)
+end
+for i = -20, 70 do
+	table.insert(fix_scr_tops, "2P " .. i)
 end
 
 local global = {
@@ -5441,7 +5440,7 @@ function rbff2.startplugin()
 			hit_summary      = {}, -- 大状態表示のデータ構造の一部
 			old_hit_summary  = {}, -- 大状態表示のデータ構造の一部
 
-			fix_scr_top      = p1 and 20 or 0xFF, -- screen_topの強制フック用
+			fix_scr_top      = p1 and 21 or 0xFF, -- screen_topの強制フック用
 
 			hit              = {
 				pos_x        = 0,
@@ -8268,8 +8267,22 @@ function rbff2.startplugin()
 				pgm:write_u16(0x401FFE, 0x5ABB)
 				pgm:write_u8(global.no_background_addr, 0xFF)
 			end
+
+			local p1, p2 = players[1], players[2]
+			if p1.fix_scr_top == 0xFF then
+				pgm:write_u8(p1.addr.fix_scr_top, 0xFF)
+			else
+				pgm:write_i8(p1.addr.fix_scr_top, p1.fix_scr_top)
+			end
+			if p2.fix_scr_top == 0xFF then
+				pgm:write_u8(p2.addr.fix_scr_top, 0xFF)
+			else
+				pgm:write_i8(p2.addr.fix_scr_top, p2.fix_scr_top - 91)
+			end
 		else
 			pgm:write_u8(global.no_background_addr, 0x00)
+			pgm:write_u8(players[1].addr.fix_scr_top, 0xFF)
+			pgm:write_u8(players[2].addr.fix_scr_top, 0xFF)
 		end
 
 		-- 潜在とBSで残像が出ないようにする
@@ -8305,10 +8318,10 @@ function rbff2.startplugin()
 			-- bp 013BBA,1,{D0=(maincpu.pw@100428);g}
 			-- bp 013AF0,1,{PC=13B28;g} -- 潜在演出無視
 			-- bp 013AF0,1,{PC=13B76;g} -- 潜在演出強制（上に制限が付く）
-			table.insert(bps, cpu.debug:bpset(0x013B6E, cond.."&&(maincpu.pb@10DE5C)!=0xFF", "D0=((maincpu.pw@100428)+#20-(maincpu.pb@10DE5C));g"))
-			table.insert(bps, cpu.debug:bpset(0x013B6E, cond.."&&(maincpu.pb@10DE5D)!=0xFF", "D0=((maincpu.pw@100528)+#20-(maincpu.pb@10DE5D));g"))
-			table.insert(bps, cpu.debug:bpset(0x013BBA, cond.."&&(maincpu.pw@100428)>=(maincpu.pw@100528)", "D0=(maincpu.pw@100428);g"))
-			table.insert(bps, cpu.debug:bpset(0x013BBA, cond.."&&(maincpu.pw@100428)< (maincpu.pw@100528)", "D0=(maincpu.pw@100528);g"))
+			table.insert(bps, cpu.debug:bpset(0x013B6E, cond.."&&(maincpu.pb@10DE5C)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5C)+#40);g"))
+			table.insert(bps, cpu.debug:bpset(0x013B6E, cond.."&&(maincpu.pb@10DE5D)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5D)+#40);g"))
+			table.insert(bps, cpu.debug:bpset(0x013BBA, cond.."&&(maincpu.pb@10DE5C)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5C)+#40);g"))
+			table.insert(bps, cpu.debug:bpset(0x013BBA, cond.."&&(maincpu.pb@10DE5D)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5D)+#40);g"))
 			table.insert(bps, cpu.debug:bpset(0x013AF0, cond, "PC=$13B28;g"))
 		end
 
@@ -8749,7 +8762,6 @@ function rbff2.startplugin()
 			p.in_air         = 0 < p.pos_y or 0 < p.pos_frc_y
 			p.reach_memo     = ""
 			p.reach_tbl      = {}
-			pgm:write_i8(p.addr.fix_scr_top, p.fix_scr_top)
 
 			-- ジャンプの遷移ポイントかどうか
 			if p.old_in_air ~= true and p.in_air == true then
@@ -10428,12 +10440,12 @@ function rbff2.startplugin()
 				pgm:write_i16(p.addr.pos_y, force_y_pos[p.force_y_pos])
 			end
 		end
-		-- X座標同期とY座標をだいぶ上に
+		-- X座標同期とY座標をだいぶ下に
 		if global.sync_pos_x ~= 1 then
 			local from = global.sync_pos_x - 1
 			local to   = 3 - from
 			pgm:write_i16(players[to].addr.pos, players[from].pos)
-			pgm:write_i16(players[to].addr.pos_y, players[from].pos_y-84)
+			pgm:write_i16(players[to].addr.pos_y, players[from].pos_y-124)
 		end
 
 		global.pause = false
@@ -10491,10 +10503,11 @@ function rbff2.startplugin()
 	local draw_axis = function(i, p, x, col)
 		local scr = manager.machine.screens:at(1)
 		if x then
-			scr:draw_line(x, p.hit.pos_y-global.axis_size, x, p.hit.pos_y+global.axis_size, col)
-			scr:draw_line(x-global.axis_size, p.hit.pos_y, x+global.axis_size, p.hit.pos_y, col)
+			local axis = p.disp_hitbox == 2 and global.axis_size or global.axis_size2
+			scr:draw_line(x, p.hit.pos_y - axis, x, p.hit.pos_y + axis, col)
+			scr:draw_line(x - axis, p.hit.pos_y, x + axis, p.hit.pos_y, col)
 			if p.disp_hitbox == 2 then
-				draw_text_with_shadow(x-1.5, p.hit.pos_y+global.axis_size    , string.format("%d", i), col)
+				draw_text_with_shadow(x - 1.5, p.hit.pos_y + axis, string.format("%d", i), col)
 			end
 		end
 	end
@@ -11595,7 +11608,7 @@ function rbff2.startplugin()
 		cls_ps()
 	end
 	local menu_player_select = function()
-		main_menu.pos.row = 1
+		--main_menu.pos.row = 1
 		cls_hook()
 		goto_player_select()
 		cls_joy()
@@ -11616,7 +11629,7 @@ function rbff2.startplugin()
 		end
 	end
 	local menu_restart_fight = function()
-		main_menu.pos.row = 1
+		--main_menu.pos.row = 1
 		cls_hook()
 		global.disp_gauge = main_menu.pos.col[15] == 2 -- 体力,POWゲージ表示
 		restart_fight({
@@ -11628,12 +11641,13 @@ function rbff2.startplugin()
 			next_bgm      = bgms[main_menu.pos.col[14]].id, -- BGMセレクト
 		})
 		local fix_scr_top = main_menu.pos.col[16]
-		if fix_scr_top <= 50 then
+
+		if fix_scr_top <= 91 then
 			players[1].fix_scr_top = fix_scr_top
 			players[2].fix_scr_top = 0xFF
 		else
 			players[1].fix_scr_top = 0xFF
-			players[2].fix_scr_top = fix_scr_top - 50
+			players[2].fix_scr_top = fix_scr_top
 		end
 		cls_joy()
 		cls_ps()
@@ -11892,7 +11906,7 @@ function rbff2.startplugin()
 			{ "2P 挑発で前進"         , { "OFF", "ON" }, },
 			{ "1P Y座標強制"          , force_y_pos, },
 			{ "2P Y座標強制"          , force_y_pos, },
-			{ "画面上に移動"          , { "OFF", "2Pを上に移動", "1Pを上に移動", }, },
+			{ "画面下に移動"          , { "OFF", "2Pを下に移動", "1Pを下に移動", }, },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
