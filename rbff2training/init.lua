@@ -146,6 +146,39 @@ local global = {
 		keylog       = false, -- 入力ログ
 		rvslog       = false, -- リバサログ
 	},
+
+	set_bps          = function(disable, holder, on_init)
+		if holder == nil then
+			holder = { bps = {}, on = true, }
+			on_init(holder.bps)
+		end
+		local cpu = manager.machine.devices[":maincpu"]
+		for _, bp in ipairs(holder.bps) do
+			if disable == true and holder.on == true then
+				cpu.debug:bpdisable(bp)
+			elseif disable ~= true and holder.on ~= true then
+				cpu.debug:bpenable(bp)
+			end
+		end
+		holder.on = not holder.on
+		return holder
+	end,
+	set_wps          = function(disable, holder, on_init)
+		if holder == nil then
+			holder = { wps = {}, on = true, }
+			on_init(holder.wps)
+		end
+		local cpu = manager.machine.devices[":maincpu"]
+		for _, wp in ipairs(holder.wps) do
+			if disable == true and holder.on == true then
+				cpu.debug:wpdisable(wp)
+			elseif disable ~= true and holder.on ~= true then
+				cpu.debug:wpenable(wp)
+			end
+		end
+		holder.on = not holder.on
+		return holder
+	end,
 }
 local damaged_moves = {
 	0x00000, 0x58C84, 0x58DCC, 0x58DBC, 0x58DDC, 0x58FDE, 0x58DEC, 0x590EA, 0x59D70, 0x59FFA,
@@ -5842,17 +5875,10 @@ function rbff2.startplugin()
 
 	-- ダッシュとバックステップを抑止する
 	local set_step = function(p, enabled)
-		local cpu = manager.machine.devices[":maincpu"]
-		if enabled then
-			if p.step_bp == nil then
-				p.step_bp = cpu.debug:bpset(0x026216, "(A4)==$" .. string.format("%x", p.addr.base), "PC=$02622A;g")
-			end
-			cpu.debug:bpenable(p.step_bp)
-		else
-			if p.step_bp then
-				cpu.debug:bpdisable(p.step_bp)
-			end
-		end
+		p.step_bp = global.set_bps(enabled ~= true, p.step_bp, function(bps)
+			local cpu = manager.machine.devices[":maincpu"]
+			table.insert(bps, cpu.debug:bpset(0x026216, "(A4)==$" .. string.format("%x", p.addr.base), "PC=$02622A;g"))
+		end)
 	end
 
 	-- 対スウェーライン攻撃の近距離間合い
@@ -5934,33 +5960,17 @@ function rbff2.startplugin()
 
 	-- 詠酒の距離チェックを飛ばす
 	local set_skip_esaka_check = function(p, enabled)
-		local cpu = manager.machine.devices[":maincpu"]
-		if enabled then
-			if p.skip_esaka_check == nil then
-				p.skip_esaka_check = cpu.debug:bpset(0x0236F2, "(A4)==$" .. string.format("%x", p.addr.base), "PC=2374C;g")
-			end
-			cpu.debug:bpenable(p.skip_esaka_check)
-		else
-			if p.skip_esaka_check then
-				cpu.debug:bpdisable(p.skip_esaka_check)
-			end
-		end
+		p.skip_esaka_check = global.set_bps(enabled ~= true, p.skip_esaka_check, function(bps)
+			local cpu = manager.machine.devices[":maincpu"]
+			table.insert(bps, cpu.debug:bpset(0x0236F2, "(A4)==$" .. string.format("%x", p.addr.base), "PC=2374C;g"))
+		end)
 	end
 
 	-- 当たり判定と投げ判定用のブレイクポイントとウォッチポイントのセット
-	local wps = {}
 	local set_wps = function(reset)
-		local cpu = manager.machine.devices[":maincpu"]
-		local pgm = cpu.spaces["program"]
-		if reset then
-			cpu.debug:bpdisable()
-			return
-		elseif #wps > 0 then
-			cpu.debug:bpenable()
-			return
-		end
-
-		if #wps == 0 then
+		global.wps = global.set_wps(reset, global.wps, function(wps)
+			local cpu = manager.machine.devices[":maincpu"]
+			local pgm = cpu.spaces["program"]
 			--debug:wpset(space, type, addr, len, [opt] cond, [opt] act)
 			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x1006BF, 1, "wpdata!=0", "maincpu.pb@10CA00=1;g"))
 			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x1007BF, 1, "wpdata!=0", "maincpu.pb@10CA01=1;g"))
@@ -6012,22 +6022,12 @@ function rbff2.startplugin()
 					"printf \"wpdata=%X CH=%X CH4=%D PC=%X PREF_ADDR=%X A4=%X A6=%X D1=%X\",wpdata,maincpu.pw@((A4)+10),maincpu.pw@((A4)+10),PC,PREF_ADDR,(A4),(A6),(D1);g"))
 				]]
 			end
-		end
+		end)
 	end
 
-	local bps = {}
 	local set_bps = function(reset)
-		local cpu = manager.machine.devices[":maincpu"]
-		if reset then
-			cpu.debug:wpdisable()
-			-- bps = {} -- clearではなくdisableにする場合は消さなくてもいい
-			return
-		elseif #bps > 0 then
-			cpu.debug:wpenable()
-			return
-		end
-
-		if #bps == 0 then
+		global.bps = global.set_bps(reset, global.bps, function(bps)
+			local cpu = manager.machine.devices[":maincpu"]
 			if global.infinity_life2 then
 				--bp 05B480,{(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100500)},{PC=5B48E;g}
 				table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x05B460),
@@ -6291,25 +6291,12 @@ function rbff2.startplugin()
 				"printf \"A4=%X CH=%D PC=%X PREF_ADDR=%X A0=%X D7=%X\",(A4),maincpu.pw@((A4)+10),PC,PREF_ADDR,(A0),(D7);g"))
 			end
 			--]]
-
-			-- 画面表示高さを1Pにあわせる
-			-- bp 013B6E,1,{D0=((maincpu.pw@100428)-(D0)+4);g}
-		end
+		end)
 	end
 
-	local bps_rg = {}
 	local set_bps_rg = function(reset)
-		local cpu = manager.machine.devices[":maincpu"]
-		if reset then
-			cpu.debug:bpdisable()
-			-- bps_rg = {} -- clearではなくdisableにする場合は消さなくてもいい
-			return
-		elseif #bps_rg > 0 then
-			cpu.debug:bpenable()
-			return
-		end
-
-		if #bps_rg == 0 then
+		global.bps_rg = global.set_bps(reset, global.bps_rg, function(bps_rg)
+			local cpu = manager.machine.devices[":maincpu"]
 			local cond1, cond2
 			if emu.romname() ~= "rbff2" then
 				-- この処理をそのまま有効にすると通常時でも食らい判定が見えるようになるが、MVS版ビリーの本来は攻撃判定無しの垂直ジャンプ攻撃がヒットしてしまう
@@ -6345,7 +6332,7 @@ function rbff2.startplugin()
 			table.insert(bps_rg, cpu.debug:bpset(fix_bp_addr(0x5C2EE), cond1, "A3=((A3)+$B5);g"))
 			-- 無理やり条件スキップしたので当たり処理に入らないようにする
 			table.insert(bps_rg, cpu.debug:bpset(fix_bp_addr(0x5C2F6), "(maincpu.pb@((A3)+$B6)==0)||((maincpu.pb@($AA+(A3))|D0)!=0)", "PC=((PC)+$8);g"))
-		end
+		end)
 	end
 
 	local hook_reset = nil
@@ -8248,41 +8235,35 @@ function rbff2.startplugin()
 				pgm:write_u16(0x401FFE, 0x5ABB)
 				pgm:write_u8(global.no_background_addr, 0xFF)
 			end
-
-			-- 潜在とBSで残像が出ないようにする
-			-- 有効にした場合は投げられなくなるので注意
-			-- pgm:write_u16(0x1004CD, 0x5F)
-			-- pgm:write_u16(0x1005CD, 0x5F)
-
-			if global.no_effect_bps == nil then
-				local bps = {}
-				-- 砂煙抑止
-				-- bp 036162,1,{PC=35756;g}
-				-- bp 03BCC2,1,{PC=3BCC8;g}
-				-- bp 03BB1E,{maincpu.pw@((A3)+$10)==$1&&maincpu.pw@((A3)+$60)==$B8},{PC=3BC00;g}
-				-- bp 0357B0,1,{PC=35756;g}
-				table.insert(bps, cpu.debug:bpset(0x036162, "1", "PC=$35756;g"))
-				table.insert(bps, cpu.debug:bpset(0x03BCC2, "1", "PC=$3BCC8;g"))
-				-- ナッコーとかタイガーキックとか小夜千鳥のエフェクトが出なくなるのを防ぐためにファイヤーキックだけ抑止する
-				table.insert(bps, cpu.debug:bpset(0x03BB1E, "maincpu.pw@((A3)+$10)==$1&&maincpu.pw@((A3)+$60)==$B8", "PC=$3BC00;g"))
-				table.insert(bps, cpu.debug:bpset(0x0357B0, "1", "PC=$35756;g"))
-				-- ヒットマーク抑止
-				-- bp 06115C,1,{PC=61162;g}
-				-- bp 06122C,1,{PC=61260;g}
-				table.insert(bps, cpu.debug:bpset(0x06115C, "1", "PC=$61162;g"))
-				table.insert(bps, cpu.debug:bpset(0x06122C, "1", "PC=$61260;g"))
-				global.no_effect_bps = {}
-			else
-				for _, bp in ipairs(global.no_effect_bps) do
-					cpu.debug:bpenable(bp)
-				end
-			end
 		else
 			pgm:write_u8(global.no_background_addr, 0x00)
-			for _, bp in ipairs(global.no_effect_bps) do
-				cpu.debug:bpdisable(bp)
-			end
 		end
+
+		-- 潜在とBSで残像が出ないようにする
+		-- 有効にした場合は投げられなくなるので注意
+		-- pgm:write_u16(0x1004CD, 0x5F)
+		-- pgm:write_u16(0x1005CD, 0x5F)
+		global.no_effect_bps = global.set_bps(global.no_background ~= true, global.no_effect_bps, function(bps)
+			-- 砂煙抑止
+			-- bp 036162,1,{PC=35756;g}
+			-- bp 03BCC2,1,{PC=3BCC8;g}
+			-- bp 03BB1E,{maincpu.pw@((A3)+$10)==$1&&maincpu.pw@((A3)+$60)==$B8},{PC=3BC00;g}
+			-- bp 0357B0,1,{PC=35756;g}
+			table.insert(bps, cpu.debug:bpset(0x036162, "1", "PC=$35756;g"))
+			table.insert(bps, cpu.debug:bpset(0x03BCC2, "1", "PC=$3BCC8;g"))
+			-- ナッコーとかタイガーキックとか小夜千鳥のエフェクトが出なくなるのを防ぐためにファイヤーキックだけ抑止する
+			table.insert(bps, cpu.debug:bpset(0x03BB1E, "maincpu.pw@((A3)+$10)==$1&&maincpu.pw@((A3)+$60)==$B8", "PC=$3BC00;g"))
+			table.insert(bps, cpu.debug:bpset(0x0357B0, "1", "PC=$35756;g"))
+			-- ヒットマーク抑止
+			-- bp 06115C,1,{PC=61162;g}
+			-- bp 06122C,1,{PC=61260;g}
+			table.insert(bps, cpu.debug:bpset(0x06115C, "1", "PC=$61162;g"))
+			table.insert(bps, cpu.debug:bpset(0x06122C, "1", "PC=$61260;g"))
+
+			-- 画面表示高さを1Pにあわせる
+			-- bp 013B6E,1,{D0=((maincpu.pw@100428)-(D0)+4);g}
+			-- table.insert(bps, cpu.debug:bpset(0x013B6E, "1", "D0=((maincpu.pw@100428)-(D0)+4);g"))
+		end)
 
 		-- メイン処理
 		if not match_active then
