@@ -147,37 +147,37 @@ local global = {
 		rvslog       = false, -- リバサログ
 	},
 
-	set_bps          = function(disable, holder, on_init)
-		if holder == nil then
-			holder = { bps = {}, on = true, }
-			on_init(holder.bps)
-		end
+	new_hook_holder  = function()
+		return { bps = {}, wps = {}, on = true, }
+	end,
+	set_bps          = function(disable, holder)
 		local cpu = manager.machine.devices[":maincpu"]
-		for _, bp in ipairs(holder.bps) do
-			if disable == true and holder.on == true then
+		if disable == true and holder.on == true then
+			for _, bp in ipairs(holder.bps) do
 				cpu.debug:bpdisable(bp)
-			elseif disable ~= true and holder.on ~= true then
+			end
+			holder.on = false
+		elseif disable ~= true and holder.on ~= true then
+			for _, bp in ipairs(holder.bps) do
 				cpu.debug:bpenable(bp)
 			end
+			holder.on = true
 		end
-		holder.on = not holder.on
-		return holder
 	end,
-	set_wps          = function(disable, holder, on_init)
-		if holder == nil then
-			holder = { wps = {}, on = true, }
-			on_init(holder.wps)
-		end
+	set_wps          = function(disable, holder)
 		local cpu = manager.machine.devices[":maincpu"]
-		for _, wp in ipairs(holder.wps) do
-			if disable == true and holder.on == true then
+		if disable == true and holder.on == true then
+			local cpu = manager.machine.devices[":maincpu"]
+			for _, wp in ipairs(holder.wps) do
 				cpu.debug:wpdisable(wp)
-			elseif disable ~= true and holder.on ~= true then
+			end
+			holder.on = false
+		elseif disable ~= true and holder.on ~= true then
+			for _, wp in ipairs(holder.wps) do
 				cpu.debug:wpenable(wp)
 			end
+			holder.on = true
 		end
-		holder.on = not holder.on
-		return holder
 	end,
 }
 local damaged_moves = {
@@ -5875,10 +5875,13 @@ function rbff2.startplugin()
 
 	-- ダッシュとバックステップを抑止する
 	local set_step = function(p, enabled)
-		p.step_bp = global.set_bps(enabled ~= true, p.step_bp, function(bps)
+		if p.step_bp then
+			global.set_bps(enabled ~= true, p.step_bp)
+		else
+			p.step_bp = global.new_hook_holder()
 			local cpu = manager.machine.devices[":maincpu"]
-			table.insert(bps, cpu.debug:bpset(0x026216, "(A4)==$" .. string.format("%x", p.addr.base), "PC=$02622A;g"))
-		end)
+			table.insert(p.step_bp.bps, cpu.debug:bpset(0x026216, "(A4)==$" .. string.format("%x", p.addr.base), "PC=$02622A;g"))
+		end
 	end
 
 	-- 対スウェーライン攻撃の近距離間合い
@@ -5960,15 +5963,22 @@ function rbff2.startplugin()
 
 	-- 詠酒の距離チェックを飛ばす
 	local set_skip_esaka_check = function(p, enabled)
-		p.skip_esaka_check = global.set_bps(enabled ~= true, p.skip_esaka_check, function(bps)
+		if p.skip_esaka_check then
+			global.set_bps(enabled ~= true, p.skip_esaka_check)
+		else
+			p.skip_esaka_check = global.new_hook_holder()
 			local cpu = manager.machine.devices[":maincpu"]
-			table.insert(bps, cpu.debug:bpset(0x0236F2, "(A4)==$" .. string.format("%x", p.addr.base), "PC=2374C;g"))
-		end)
+			table.insert(p.skip_esaka_check.bps, cpu.debug:bpset(0x0236F2, "(A4)==$" .. string.format("%x", p.addr.base), "PC=2374C;g"))
+		end
 	end
 
 	-- 当たり判定と投げ判定用のブレイクポイントとウォッチポイントのセット
 	local set_wps = function(reset)
-		global.wps = global.set_wps(reset, global.wps, function(wps)
+		if global.wps then
+			global.set_wps(reset, global.wps)
+		else
+			global.wps = global.new_hook_holder()
+			local wps = global.wps.wps
 			local cpu = manager.machine.devices[":maincpu"]
 			local pgm = cpu.spaces["program"]
 			--debug:wpset(space, type, addr, len, [opt] cond, [opt] act)
@@ -6022,11 +6032,16 @@ function rbff2.startplugin()
 					"printf \"wpdata=%X CH=%X CH4=%D PC=%X PREF_ADDR=%X A4=%X A6=%X D1=%X\",wpdata,maincpu.pw@((A4)+10),maincpu.pw@((A4)+10),PC,PREF_ADDR,(A4),(A6),(D1);g"))
 				]]
 			end
-		end)
+		end
 	end
 
 	local set_bps = function(reset)
-		global.bps = global.set_bps(reset, global.bps, function(bps)
+		if global.bps then
+			global.set_bps(reset, global.bps)
+		else
+			global.bps = global.new_hook_holder()
+			local bps = global.bps
+
 			local cpu = manager.machine.devices[":maincpu"]
 			if global.infinity_life2 then
 				--bp 05B480,{(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100500)},{PC=5B48E;g}
@@ -6291,11 +6306,16 @@ function rbff2.startplugin()
 				"printf \"A4=%X CH=%D PC=%X PREF_ADDR=%X A0=%X D7=%X\",(A4),maincpu.pw@((A4)+10),PC,PREF_ADDR,(A0),(D7);g"))
 			end
 			--]]
-		end)
+		end
 	end
 
 	local set_bps_rg = function(reset)
-		global.bps_rg = global.set_bps(reset, global.bps_rg, function(bps_rg)
+		if global.bps_rg then
+			global.set_bps(reset, global.bps_rg)
+		else
+			global.bps_rg = global.new_hook_holder()
+			local bps_rg = global.bps_rg.bps
+
 			local cpu = manager.machine.devices[":maincpu"]
 			local cond1, cond2
 			if emu.romname() ~= "rbff2" then
@@ -6332,7 +6352,7 @@ function rbff2.startplugin()
 			table.insert(bps_rg, cpu.debug:bpset(fix_bp_addr(0x5C2EE), cond1, "A3=((A3)+$B5);g"))
 			-- 無理やり条件スキップしたので当たり処理に入らないようにする
 			table.insert(bps_rg, cpu.debug:bpset(fix_bp_addr(0x5C2F6), "(maincpu.pb@((A3)+$B6)==0)||((maincpu.pb@($AA+(A3))|D0)!=0)", "PC=((PC)+$8);g"))
-		end)
+		end
 	end
 
 	local hook_reset = nil
@@ -8243,27 +8263,32 @@ function rbff2.startplugin()
 		-- 有効にした場合は投げられなくなるので注意
 		-- pgm:write_u16(0x1004CD, 0x5F)
 		-- pgm:write_u16(0x1005CD, 0x5F)
-		global.no_effect_bps = global.set_bps(global.no_background ~= true, global.no_effect_bps, function(bps)
+		if global.no_effect_bps then
+			global.set_bps(global.no_background ~= true, global.no_effect_bps)
+		else
+			global.no_effect_bps = global.new_hook_holder()
+			local bps = global.no_effect_bps.bps
+			local cond = "maincpu.pw@107C22>0"
 			-- 砂煙抑止
 			-- bp 036162,1,{PC=35756;g}
 			-- bp 03BCC2,1,{PC=3BCC8;g}
 			-- bp 03BB1E,{maincpu.pw@((A3)+$10)==$1&&maincpu.pw@((A3)+$60)==$B8},{PC=3BC00;g}
 			-- bp 0357B0,1,{PC=35756;g}
-			table.insert(bps, cpu.debug:bpset(0x036162, "1", "PC=$35756;g"))
-			table.insert(bps, cpu.debug:bpset(0x03BCC2, "1", "PC=$3BCC8;g"))
+			table.insert(bps, cpu.debug:bpset(0x036162, cond, "PC=$35756;g"))
+			table.insert(bps, cpu.debug:bpset(0x03BCC2, cond, "PC=$3BCC8;g"))
 			-- ナッコーとかタイガーキックとか小夜千鳥のエフェクトが出なくなるのを防ぐためにファイヤーキックだけ抑止する
-			table.insert(bps, cpu.debug:bpset(0x03BB1E, "maincpu.pw@((A3)+$10)==$1&&maincpu.pw@((A3)+$60)==$B8", "PC=$3BC00;g"))
-			table.insert(bps, cpu.debug:bpset(0x0357B0, "1", "PC=$35756;g"))
+			table.insert(bps, cpu.debug:bpset(0x03BB1E, cond.."&&maincpu.pw@((A3)+$10)==$1&&maincpu.pw@((A3)+$60)==$B8", "PC=$3BC00;g"))
+			table.insert(bps, cpu.debug:bpset(0x0357B0, cond, "PC=$35756;g"))
 			-- ヒットマーク抑止
 			-- bp 06115C,1,{PC=61162;g}
 			-- bp 06122C,1,{PC=61260;g}
-			table.insert(bps, cpu.debug:bpset(0x06115C, "1", "PC=$61162;g"))
-			table.insert(bps, cpu.debug:bpset(0x06122C, "1", "PC=$61260;g"))
+			table.insert(bps, cpu.debug:bpset(0x06115C, cond, "PC=$61162;g"))
+			table.insert(bps, cpu.debug:bpset(0x06122C, cond, "PC=$61260;g"))
 
 			-- 画面表示高さを1Pにあわせる
 			-- bp 013B6E,1,{D0=((maincpu.pw@100428)-(D0)+4);g}
-			-- table.insert(bps, cpu.debug:bpset(0x013B6E, "1", "D0=((maincpu.pw@100428)-(D0)+4);g"))
-		end)
+			-- table.insert(bps, cpu.debug:bpset(0x013B6E, cond, "D0=((maincpu.pw@100428)-(D0)+4);g"))
+		end
 
 		-- メイン処理
 		if not match_active then
