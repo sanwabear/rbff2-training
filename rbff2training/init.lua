@@ -103,7 +103,7 @@ local global = {
 	disp_frmgap     = 3, -- フレーム差表示
 	disp_input_sts  = 1, -- コマンド入力状態表示 1:OFF 2:1P 3:2P
 	pause_hit       = 1, -- ヒット時にポーズ 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:ガードのみ
-	pause_hitbox    = 1, -- 判定表示時にポーズ
+	pause_hitbox    = 1, -- 判定発生時にポーズ
 	pause           = false,
 	replay_stop_on_dmg = false, -- ダメージでリプレイ中段
 
@@ -4220,16 +4220,16 @@ local box_type_base = {
 	sv2 = { id = 0x03, name = "食らい2(スウェー中)",       enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true, },
 }
 local box_types, sway_box_types = {}, {}
-for _, box in pairs(box_type_base) do
-	if 0 < box.id then
-		if box.sway then
-			sway_box_types[box.id - 1] = box
+for _, boxtype in pairs(box_type_base) do
+	if 0 < boxtype.id then
+		if boxtype.sway then
+			sway_box_types[boxtype.id - 1] = boxtype
 		else
-			box_types[box.id - 1] = box
+			box_types[boxtype.id - 1] = boxtype
 		end
 	end
-	box.fill    = (0xFFFFFFFF & (box.fill    << 24)) + box.color
-	box.outline = (0xFFFFFFFF & (box.outline << 24)) + box.color
+	boxtype.fill    = (0xFFFFFFFF & (boxtype.fill    << 24)) + boxtype.color
+	boxtype.outline = (0xFFFFFFFF & (boxtype.outline << 24)) + boxtype.color
 end
 
 -- ボタンの色テーブル
@@ -4529,7 +4529,7 @@ local hit_box_procs = {
 	baigaeshi  = function(id) return hit_box_proc(id, 0x957AC) end, -- 012F62: 012F82: 倍返しの処理
 	unknown1   = function(id) return hit_box_proc(id, 0x94FCC) end, -- 012E38: 012E44: 不明処理、未使用？
 }
-local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, attack_only, is_fireball)
+local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, is_fireball)
 	local box = {id = id}
 	box.type = nil
 	if (box.id >= #box_types) then
@@ -4650,13 +4650,6 @@ local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, atta
 		--print("LIVE " .. (key or "")) --debug
 	end
 
-	local key = string.format("%x %x %x %x %x %x %x %s",
-		global.frame_number, p.addr.base, box.id, box.top, box.bottom, box.left, box.right, box.type.name)
-	if p.uniq_hitboxes[key] == true then
-		return nil
-	end
-	p.uniq_hitboxes[key] = true
-
 	if box.atk then
 		p.attack_id = box.id
 	end
@@ -4713,14 +4706,6 @@ local get_reach = function(p, box, pos_x, pos_y)
 		asis_front_reach = x - math.min(box.asis_left, box.asis_right)
 		asis_back_reach  = x - math.max(box.asis_left, box.asis_right)
 	end
-	local reach_memo1 = string.format("%4x %3d %3d %3d %3d",
-		box.type.id,            -- 種類
-		math.floor(asis_front_reach),-- キャラ本体座標からの前のリーチ
-		math.floor(asis_back_reach), -- キャラ本体座標からの後のリーチ
-		math.floor(asis_top_reach),  -- キャラ本体座標からの上のリーチ
-		math.floor(asis_bottom_reach)-- キャラ本体座標からの下のリーチ
-	)
-
 	local reach_data = {
 		front    = math.floor(front_reach),             -- キャラ本体座標からの前のリーチ
 		back     = math.floor(back_reach),              -- キャラ本体座標からの後のリーチ
@@ -4731,8 +4716,7 @@ local get_reach = function(p, box, pos_x, pos_y)
 		asis_top    = math.floor(asis_top_reach) - 24,
 		asis_bottom = math.floor(asis_bottom_reach) - 24,
 	}
-
-	return reach_data, reach_memo1
+	return reach_data
 end
 
 local in_range = function(top, bottom, atop, abottom)
@@ -4747,11 +4731,10 @@ end
 local update_summary = function(p, box)
 	-- 判定ができてからのログ情報の作成
 	if box then
-		local reach_memo1
 		if p.is_fireball then
-			box.reach, reach_memo1 = get_reach(p, box, box.pos_x, box.fb_pos_y)
+			box.reach = get_reach(p, box, box.pos_x, box.fb_pos_y)
 		else
-			box.reach, reach_memo1 = get_reach(p, box, box.pos_x, box.pos_y)
+			box.reach = get_reach(p, box, box.pos_x, box.pos_y)
 		end
 
 		local summary, edge = p.hit_summary, nil
@@ -5010,14 +4993,6 @@ local update_summary = function(p, box)
 			end
 		end
 
-		-- 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
-		if p.disp_frm == 3 or (p.disp_frm == 4 and box.atk) or (p.disp_frm == 5 and not box.atk) then
-			if p.reach_tbl[reach_memo1] ~= true then
-				p.reach_tbl[reach_memo1] = true
-				p.reach_memo = p.reach_memo .. "," .. reach_memo1
-			end
-		end
-
 		if box.atk then
 			local memo = ""
 			memo = memo .. " nml=" .. (summary.normal_hit or "-")
@@ -5040,7 +5015,7 @@ local update_summary = function(p, box)
 	
 			-- ログ用
 			box.log_txt = string.format(
-				"hit %6x %3x %3x %2s %3s %2x %2x %2x %s %s %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s %2x %3s "..memo,
+				"hit %6x %3x %3x %2s %3s %2x %2x %2x %s %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s %2x %3s "..memo,
 				p.addr.base,                        -- 1P:100400 2P:100500 1P弾:100600 2P弾:100700 1P弾:100800 2P弾:100900 1P弾:100A00 2P弾:100B00
 				p.act,                              --
 				p.acta,                             --
@@ -5050,7 +5025,6 @@ local update_summary = function(p, box)
 				p.attack,                           --
 				p.hitstop_id,                       -- ガード硬直のID
 				p.gd_strength,                      -- 相手のガード持続の種類
-				reach_memo1,
 				box.id,                             -- 判定のID
 				p.hit.harmless  and "hm"   or "",   -- 無害化
 				p.hit.fake_hit  and "fake" or "",   -- 嘘判定
@@ -5073,7 +5047,7 @@ local update_summary = function(p, box)
 				p.esaka_range                       -- 詠酒範囲
 			)
 		elseif box.type.type_check == type_ck_gd then
-			box.log_txt = string.format("guard %6x %s %x", p.addr.base, reach_memo1, box.id)
+			box.log_txt = string.format("guard %6x %x", p.addr.base, box.id)
 		end
 		if box.log_txt then
 			box.log_txt = box.log_txt
@@ -5171,21 +5145,18 @@ local update_object = function(p)
 	end
 
 	-- 判定データ排他用のテーブル
-	p.uniq_hitboxes = {}
 	for _, box in ipairs(p.buffer) do
-		local hitbox = new_hitbox1(p, box.id, box.pos_x, box.pos_y, box.top, box.bottom, box.left, box.right, box.attack_only, box.is_fireball, box.key)
+		local hitbox = new_hitbox1(p, box.id, box.pos_x, box.pos_y, box.top, box.bottom, box.left, box.right, box.is_fireball)
 		if hitbox then
+			p.uniq_hitboxes[box.key] = hitbox.type
 			update_summary(p, hitbox)
 			table.insert(p.hitboxes, hitbox)
 			-- 攻撃情報ログ
-			if global.log.atklog then
-				if hitbox.log_txt then
-					print(hitbox.log_txt)
-				end
+			if global.log.atklog == true and hitbox.log_txt ~= nil then
+				print(hitbox.log_txt)
 			end
 		end
 	end
-	p.uniq_hitboxes = {}
 
 	-- 空投げ, 必殺投げ
 	if p.n_throw and p.n_throw.on == 0x1 then
@@ -5333,8 +5304,6 @@ function rbff2.startplugin()
 			pos_frc_y        = 0,           -- Y位置少数部
 			old_pos_y        = 0,           -- Y位置
 			old_pos_frc_y    = 0,           -- Y位置少数部
-			reach_memo       = "",          -- リーチ
-			reach_tbl        = {},          -- リーチ排他
 			old_in_air       = false,
 			in_air           = false,
 			chg_air_state    = 0,           -- ジャンプの遷移ポイントかどうか
@@ -5426,6 +5395,10 @@ function rbff2.startplugin()
 			hitboxes         = {},
 			buffer           = {},
 			uniq_hitboxes    = {}, -- key + boolean
+			hitbox_txt       = "",
+			hurtbox_txt      = "",
+			chg_hitbox_frm   = 0,
+			chg_hurtbox_frm  = 0,
 			type_boxes       = {}, -- key + count
 			fireball_bases   = p1 and { [0x100600] = true, [0x100800] = true, [0x100A00] = true, } or
 			                          { [0x100700] = true, [0x100900] = true, [0x100B00] = true, },
@@ -5691,8 +5664,6 @@ function rbff2.startplugin()
 				asm            = 0,
 				pos            = 0, -- X位置
 				pos_y          = 0, -- Y位置
-				reach_memo     = "", -- リーチ
-				reach_tbl      = {}, -- リーチ排他
 				pos_z          = 0, -- Z位置
 				attack         = 0, -- 攻撃中のみ変化
 				cancelable     = 0, -- キャンセル可否
@@ -5715,6 +5686,10 @@ function rbff2.startplugin()
 				hitboxes       = {},
 				buffer         = {},
 				uniq_hitboxes  = {}, -- key + boolean
+				hitbox_txt     = "",
+				hurtbox_txt    = "",
+				chg_hitbox_frm = 0,
+				chg_hurtbox_frm= 0,
 				hit_summary    = {}, -- 大状態表示のデータ構造の一部
 				hit            = {
 					pos_x      = 0,
@@ -8766,8 +8741,6 @@ function rbff2.startplugin()
 			p.pos_y          = pgm:read_i16(p.addr.pos_y)
 			p.pos_frc_y      = pgm:read_u16(p.addr.pos_frc_y)
 			p.in_air         = 0 < p.pos_y or 0 < p.pos_frc_y
-			p.reach_memo     = ""
-			p.reach_tbl      = {}
 
 			-- ジャンプの遷移ポイントかどうか
 			if p.old_in_air ~= true and p.in_air == true then
@@ -8930,8 +8903,6 @@ function rbff2.startplugin()
 				fb.act_contact    = pgm:read_u8(fb.addr.act_contact)
 				fb.pos            = pgm:read_i16(fb.addr.pos)
 				fb.pos_y          = pgm:read_i16(fb.addr.pos_y)
-				fb.reach_memo     = ""
-				fb.reach_tbl      = {}
 				fb.pos_z          = pgm:read_i16(fb.addr.pos_z)
 				fb.gd_strength    = get_gd_strength(fb)
 				fb.asm            = pgm:read_u16(pgm:read_u32(fb.addr.base))
@@ -9181,17 +9152,16 @@ function rbff2.startplugin()
 				left        = pgm:read_i8(addr+0x4),
 				right       = pgm:read_i8(addr+0x5),
 				base        = pgm:read_u32(addr+0x6),
-				attack_only = (pgm:read_u8(addr+0xA) == 1),
-				attack_only_val = pgm:read_u8(addr+0xA),
+				--attack_only = (pgm:read_u8(addr+0xA) == 1),
+				--attack_only_val = pgm:read_u8(addr+0xA),
 				pos_x       = pgm:read_i16(addr+0xC) - screen_left,
 				pos_y       = height - pgm:read_i16(addr+0xE) + screen_top,
 			}
 			if box.on ~= 0xFF and temp_hits[box.base] then
 				box.is_fireball = temp_hits[box.base].is_fireball == true
 				local p = temp_hits[box.base]
-				box.key = string.format("%x %x %x %x %x %x %x %x %x",
-					global.frame_number, p.addr.base, box.id,
-					box.pos_x, box.pos_y, box.top, box.bottom, box.left, box.right)
+				local base = ((p.addr.base - 0x100400) / 0x100)
+				box.key = string.format("%x %x %s %s %s %s", base, box.id, box.top, box.bottom, box.left, box.right)
 				if p.uniq_hitboxes[box.key] == nil then
 					p.uniq_hitboxes[box.key] = true
 					table.insert(p.buffer, box)
@@ -9200,6 +9170,7 @@ function rbff2.startplugin()
 				--print("DROP " .. box.key) --debug
 			end
 		end
+
 		for _, p in pairs(temp_hits) do
 			-- キャラと飛び道具への当たり判定の反映
 			-- update_objectはキャラの位置情報と当たり判定の情報を読み込んだ後で実行すること
@@ -9228,6 +9199,29 @@ function rbff2.startplugin()
 			if p.is_fireball == true then
 				p.alive = #p.hitboxes > 0
 			end
+
+			local hitbox_keys = {}
+			local hurtbox_keys = {}
+			for k, boxtype in pairs(p.uniq_hitboxes) do
+				if boxtype == true then
+				elseif boxtype.type == "attack" or  boxtype.type == "atemi" then
+					table.insert(hitbox_keys, k)
+				else
+					table.insert(hurtbox_keys, k)
+				end
+			end
+			table.sort(hitbox_keys)
+			table.sort(hurtbox_keys)
+			local hitbox_txt = string.format("%s %s %s ", p.attack_id, p.hit.fake_hit, p.alive) .. table.concat(hitbox_keys, "&")
+			local hurtbox_txt = table.concat(hurtbox_keys, "&")
+			if p.hitbox_txt ~= hitbox_txt then
+				p.chg_hitbox_frm = global.frame_number
+			end
+			if p.hurtbox_txt ~= hurtbox_txt then
+				p.chg_hurtbox_frm = global.frame_number
+			end
+			p.hitbox_txt = hitbox_txt
+			p.hurtbox_txt = hurtbox_txt
 		end
 
 		for i, p in ipairs(players) do
@@ -9503,7 +9497,16 @@ function rbff2.startplugin()
 				col, line = 0x44FFFFFF, 0xDDFFFFFF
 			end
 
-			local reach_memo = p.reach_memo or ""
+			-- 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
+			local reach_memo = ""
+			if p.disp_frm == 3 then
+				reach_memo = p.hitbox_txt .. "&" .. p.hurtbox_txt
+			elseif p.disp_frm == 4 then
+				reach_memo = p.hitbox_txt
+			elseif p.disp_frm == 5 then
+				reach_memo = p.hurtbox_txt
+			end
+
 			local act_count  = p.act_count  or 0
 			local max_hit_dn = p.attacking and p.hit.max_hit_dn or 0
 
@@ -9744,7 +9747,15 @@ function rbff2.startplugin()
 					col, line, act = 0x00000000, 0x00000000, 0
 				end
 
-				local reach_memo = fb.reach_memo
+				-- 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
+				local reach_memo = ""
+				if fb.disp_frm == 3 then
+					reach_memo = fb.hitbox_txt .. "&" .. fb.hurtbox_txt
+				elseif p.disp_frm == 4 then
+					reach_memo = fb.hitbox_txt
+				elseif p.disp_frm == 5 then
+					reach_memo = fb.hurtbox_txt
+				end
 				local act_count  = fb.actb
 				local max_hit_dn = fb.hit.max_hit_dn
 
@@ -10472,6 +10483,10 @@ function rbff2.startplugin()
 						break
 					end
 				end
+			end
+			-- 判定が変わったらポーズさせる
+			if global.pause_hitbox == 4 and (p.chg_hurtbox_frm == global.frame_number or p.chg_hitbox_frm == global.frame_number) then
+				global.pause = true
 			end
 
 			-- ヒット時にポーズさせる
@@ -12124,7 +12139,7 @@ function rbff2.startplugin()
 			{ "                          特殊設定" },
 			{ "簡易超必"              , { "OFF", "ON" }, },
 			{ "ヒット時にポーズ"      , { "OFF", "ON", "ON:やられのみ", "ON:ガードのみ", }, },
-			{ "判定発生時にポーズ"    , { "OFF", "投げ", "攻撃", }, },
+			{ "判定発生時にポーズ"    , { "OFF", "投げ", "攻撃", "変化時", }, },
 			{ "MAMEデバッグウィンドウ", { "OFF", "ON" }, },
 			{ "ヒット効果確認用"      , damaged_move_keys },
 			{ "位置ログ"              , { "OFF", "ON" }, },
