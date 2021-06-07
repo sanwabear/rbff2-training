@@ -8266,17 +8266,17 @@ function rbff2.startplugin()
 			pgm:write_u8(players[2].addr.fix_scr_top, 0xFF)
 		end
 
-		-- 潜在とBSで残像が出ないようにする
-		-- 有効にした場合は投げられなくなるので注意
-		-- pgm:write_u16(0x1004CD, 0x5F)
-		-- pgm:write_u16(0x1005CD, 0x5F)
-
 		if global.no_effect_bps then
 			global.set_bps(global.no_background ~= true, global.no_effect_bps)
 		else
 			global.no_effect_bps = global.new_hook_holder()
 			local bps = global.no_effect_bps.bps
 			local cond = "maincpu.pw@107C22>0"
+
+			-- 潜在と残影拳とBS等で残像が出ないようにする
+			-- bp 377E0,1,{PC=37B00;g}
+			table.insert(bps, cpu.debug:bpset(0x0377E0, cond, "PC=$37B00;g"))
+
 			-- 砂煙抑止
 			-- bp 036162,1,{PC=35756;g}
 			-- bp 03BCC2,1,{PC=3BCC8;g}
