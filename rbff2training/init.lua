@@ -100,6 +100,8 @@ local global = {
 	sync_pos_x      = 1, -- 1: OFF, 2:1Pと同期, 3:2Pと同期
 
 	disp_pos        = true, -- 1P 2P 距離表示
+	disp_effect     = true, -- ヒットマークなど画面表示するときtrue
+	disp_effect_bps = nil,
 	disp_frmgap     = 3, -- フレーム差表示
 	disp_input_sts  = 1, -- コマンド入力状態表示 1:OFF 2:1P 3:2P
 	pause_hit       = 1, -- ヒット時にポーズ 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:ガードのみ
@@ -1479,6 +1481,7 @@ local char_acts_base = {
 		{ f = 79, name = "大 帝王天耳拳", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
 		{ f = 47, name = "帝王神眼拳（その場）", type = act_types.attack, ids = { 0xC2, 0xC3, }, },
 		{ f = 83, name = "帝王神眼拳（空中）", type = act_types.attack, ids = { 0xCC, 0xCD, 0xCF, }, },
+		{ f = 83, name = "帝王神眼拳（空中攻撃）", type = act_types.attack, ids = { 0xCE, }, },
 		{ f = 47, name = "帝王神眼拳（背後）", type = act_types.attack, ids = { 0xD6, 0xD7, }, },
 		{ f = 74, name = "帝王空殺神眼拳", type = act_types.attack, ids = { 0xE0, 0xE1, }, },
 		{ f = 48, name = "竜灯掌", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, }, },
@@ -5218,6 +5221,8 @@ function rbff2.startplugin()
 			disp_hitbox      = 2,           -- 判定表示
 			disp_range       = 2,           -- 間合い表示
 			disp_base        = false,       -- 処理のアドレスを表示するときtrue
+			disp_char        = true,        -- キャラを画面表示するときtrue
+			disp_char_bps    = nil,
 			disp_dmg         = true,        -- ダメージ表示するときtrue
 			disp_cmd         = 2,           -- 入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
 			disp_frm         = 4,           -- フレーム数表示するときtrue
@@ -8221,13 +8226,6 @@ function rbff2.startplugin()
 	tra_main.proc = function()
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		local cpu = manager.machine.devices[":maincpu"]
-		-- 砂煙、ヒット、ガードマークの色変更実験
-		--[[
-		local transparent = pgm:read_u16(0x401FF0)
-		for pallete_no = 0x500, 0x55F do
-			pgm:write_u16(0x400000 + pallete_no * 2, 0xF000)
-		end
-		]]
 
 		-- 画面表示
 		if global.no_background or global.disp_gauge == false then
@@ -8245,7 +8243,7 @@ function rbff2.startplugin()
 			end
 			if global.no_background then
 				--pgm:write_u16(0x401FFE, 0x8F8F)
-				pgm:write_u16(0x401FFE, 0x5ABB)
+				pgm:write_u16(0x401FFE, bgcol)
 				pgm:write_u8(global.no_background_addr, 0xFF)
 			end
 
@@ -8266,33 +8264,60 @@ function rbff2.startplugin()
 			pgm:write_u8(players[2].addr.fix_scr_top, 0xFF)
 		end
 
+		local cond = "maincpu.pw@107C22>0"
+		local pc = "PC=$4112;g"
+
+		for i, p in ipairs(players) do
+			if p.disp_char_bps then
+				global.set_bps(p.disp_char, p.disp_char_bps)
+			elseif p.disp_char == false then
+				p.disp_char_bps = global.new_hook_holder()
+				local bps = p.disp_char_bps.bps
+				local cond3 = cond.."&&(A3)==$100400"
+				if i == 1 then
+					-- bp 40AE,{(A4)==100400||(A4)==100600||(A4)==100800||(A4)==100A00},{PC=4112;g} -- 2Pだけ消す
+					cond3 = cond3.."&&((A4)==$100400||(A4)==$100600||(A4)==$100800||(A4)==$100A00)"
+				else
+					-- bp 40AE,{(A4)==100500||(A4)==100700||(A4)==100900||(A4)==100B00},{PC=4112;g} -- 1Pだけ消す
+					cond3 = cond3.."&&((A4)==$100500||(A4)==$100700||(A4)==$100900||(A4)==$100B00)"
+				end
+				table.insert(bps, cpu.debug:bpset(0x0040AE, cond3, pc))
+			end
+		end
+
+		if global.disp_effect_bps then
+			global.set_bps(global.disp_effect, global.disp_effect_bps)
+		elseif global.disp_effect == false then
+			global.disp_effect_bps = global.new_hook_holder()
+			local bps = global.disp_effect_bps.bps
+			--pc = "printf \"A3=%X A4=%X PREF=%X\",A3,A4,PREF_ADDR;PC=$4112;g"
+			table.insert(bps, cpu.debug:bpset(0x03BCC2, cond, "PC=$3BCC8;g"))
+			-- ファイヤーキックの砂煙だけ抑止する
+			local cond2 = cond.."&&maincpu.pw@((A3)+$10)==$1&&maincpu.pw@((A3)+$60)==$B8"
+			table.insert(bps, cpu.debug:bpset(0x03BB1E, cond2, "PC=$3BC00;g"))
+			table.insert(bps, cpu.debug:bpset(0x0357B0, cond, "PC=$35756;g"))
+			table.insert(bps, cpu.debug:bpset(0x015A82, cond, pc)) -- rts 015A88
+			table.insert(bps, cpu.debug:bpset(0x015AAC, cond, pc)) -- rts 015AB2
+			table.insert(bps, cpu.debug:bpset(0x015AD8, cond, pc)) -- rts 015ADE
+			table.insert(bps, cpu.debug:bpset(0x0173B2, cond, pc)) -- rts 0173B8 影
+			table.insert(bps, cpu.debug:bpset(0x017750, cond, pc)) -- rts 017756
+			table.insert(bps, cpu.debug:bpset(0x02559E, cond, pc)) -- rts 0255FA
+			table.insert(bps, cpu.debug:bpset(0x0256FA, cond, pc)) -- rts 025700
+			table.insert(bps, cpu.debug:bpset(0x036172, cond, pc)) -- rts 036178
+			table.insert(bps, cpu.debug:bpset(0x03577C, cond2, pc)) -- rts 035782 技エフェクト
+			table.insert(bps, cpu.debug:bpset(0x03BB60, cond2, pc)) -- rts 03BB66 技エフェクト
+			table.insert(bps, cpu.debug:bpset(0x060BDA, cond, pc)) -- rts 060BE0 ヒットマーク
+			table.insert(bps, cpu.debug:bpset(0x060F2C, cond, pc)) -- rts 060F32 ヒットマーク
+			table.insert(bps, cpu.debug:bpset(0x061150, cond, "PC=$061156;g")) -- rts 061156 ヒットマーク、パワーウェイブの一部
+			table.insert(bps, cpu.debug:bpset(0x0610E0, cond, pc)) -- rts 0610E6
+		end
+
 		if global.no_effect_bps then
 			global.set_bps(global.no_background ~= true, global.no_effect_bps)
 		else
 			global.no_effect_bps = global.new_hook_holder()
+			-- bp 0040AE,1,{PC=$4112;g} -- 描画全部無視
 			local bps = global.no_effect_bps.bps
-			local cond = "maincpu.pw@107C22>0"
-
-			-- 潜在と残影拳とBS等で残像が出ないようにする
-			-- bp 377E0,1,{PC=37B00;g}
-			table.insert(bps, cpu.debug:bpset(0x0377E0, cond, "PC=$37B00;g"))
-
-			-- 砂煙抑止
-			-- bp 036162,1,{PC=35756;g}
-			-- bp 03BCC2,1,{PC=3BCC8;g}
-			-- bp 03BB1E,{maincpu.pw@((A3)+$10)==$1&&maincpu.pw@((A3)+$60)==$B8},{PC=3BC00;g}
-			-- bp 0357B0,1,{PC=35756;g}
-			table.insert(bps, cpu.debug:bpset(0x036162, cond, "PC=$35756;g"))
-			table.insert(bps, cpu.debug:bpset(0x03BCC2, cond, "PC=$3BCC8;g"))
-			-- ナッコーとかタイガーキックとか小夜千鳥のエフェクトが出なくなるのを防ぐためにファイヤーキックだけ抑止する
-			table.insert(bps, cpu.debug:bpset(0x03BB1E, cond.."&&maincpu.pw@((A3)+$10)==$1&&maincpu.pw@((A3)+$60)==$B8", "PC=$3BC00;g"))
-			table.insert(bps, cpu.debug:bpset(0x0357B0, cond, "PC=$35756;g"))
-			-- ヒットマーク抑止
-			-- bp 06115C,1,{PC=61162;g}
-			-- bp 06122C,1,{PC=61260;g}
-			table.insert(bps, cpu.debug:bpset(0x06115C, cond, "PC=$61162;g"))
-			table.insert(bps, cpu.debug:bpset(0x06122C, cond, "PC=$61260;g"))
-
 			-- 画面表示高さを1Pか2Pの高いほうにあわせる
 			-- bp 013B6E,1,{D0=((maincpu.pw@100428)-(D0)+4);g}
 			-- bp 013B6E,1,{D0=((maincpu.pw@100428)-(D0)-24);g}
@@ -9204,7 +9229,7 @@ function rbff2.startplugin()
 			local hurtbox_keys = {}
 			for k, boxtype in pairs(p.uniq_hitboxes) do
 				if boxtype == true then
-				elseif boxtype.type == "attack" or  boxtype.type == "atemi" then
+				elseif boxtype.type == "attack" or  boxtype.type == "throw" or boxtype.type == "atemi" then
 					table.insert(hitbox_keys, k)
 				else
 					table.insert(hurtbox_keys, k)
@@ -10484,9 +10509,17 @@ function rbff2.startplugin()
 					end
 				end
 			end
+			local chg_hit = p.chg_hitbox_frm == global.frame_number
+			local chg_hurt = p.chg_hurtbox_frm == global.frame_number
 			-- 判定が変わったらポーズさせる
-			if global.pause_hitbox == 4 and (p.chg_hurtbox_frm == global.frame_number or p.chg_hitbox_frm == global.frame_number) then
+			if global.pause_hitbox == 4 and (chg_hit or chg_hurt) then
 				global.pause = true
+			end
+			-- 判定が変わったらスクショ保存
+			if p.act_normal ~= true and (p.old_act_normal ~= p.act_normal or chg_hit or chg_hurt) then
+				local frame_group = p.act_frames2[#p.act_frames2]
+				local frame = frame_group[#frame_group]
+				print(i, char_names[p.char], frame.name, p.atk_count, p.attacking and "A" or "H")
 			end
 
 			-- ヒット時にポーズさせる
@@ -11368,7 +11401,10 @@ function rbff2.startplugin()
 		p[2].disp_sts            = col[17]      -- 2P 状態表示         17
 		p[1].disp_base           = col[18] == 2 -- 1P 処理アドレス表示 18
 		p[2].disp_base           = col[19] == 2 -- 2P 処理アドレス表示 19
-		global.disp_pos          = col[20] == 2 -- 1P 2P 距離表示      20
+		p[1].disp_char           = col[20] == 2 -- 1P キャラ表示       20
+		p[2].disp_char           = col[21] == 2 -- 2P キャラ表示       21
+		global.disp_effect       = col[22] == 2 -- エフェクト表示      22
+		global.disp_pos          = col[23] == 2 -- 1P 2P 距離表示      23
 
 		menu_cur = main_menu
 	end
@@ -11568,11 +11604,11 @@ function rbff2.startplugin()
 		col[ 2] = p[1].disp_hitbox             -- 判定表示             2
 		col[ 3] = p[2].disp_hitbox             -- 判定表示             3
 		col[ 4] = p[1].disp_range              -- 間合い表示           4
-		col[ 5] = p[2].disp_range              -- 間合い表示          5
+		col[ 5] = p[2].disp_range              -- 間合い表示           5
 		col[ 6] = p[1].disp_stun and 2 or 1 -- 1P 気絶ゲージ表示       6
 		col[ 7] = p[2].disp_stun and 2 or 1 -- 2P 気絶ゲージ表示       7
-		col[ 8] = p[1].disp_dmg and 2 or 1  -- 1P ダメージ表示         8
-		col[ 9] = p[2].disp_dmg and 2 or 1  -- 2P ダメージ表示         9
+		col[ 8] = p[1].disp_dmg  and 2 or 1 -- 1P ダメージ表示         8
+		col[ 9] = p[2].disp_dmg  and 2 or 1 -- 2P ダメージ表示         9
 		col[10] = p[1].disp_cmd             -- 1P 入力表示            10
 		col[11] = p[2].disp_cmd             -- 2P 入力表示            11
 		col[12] = g.disp_input_sts          -- コマンド入力状態表示   12
@@ -11583,7 +11619,10 @@ function rbff2.startplugin()
 		col[17] = p[2].disp_sts             -- 2P 状態表示            17
 		col[18] = p[1].disp_base and 2 or 1 -- 1P 処理アドレス表示    18
 		col[19] = p[2].disp_base and 2 or 1 -- 2P 処理アドレス表示    19
-		col[20] = g.disp_pos    and 2 or 1  -- 1P 2P 距離表示         20
+		col[20] = p[1].disp_char and 2 or 1 -- 1P キャラ表示          20
+		col[21] = p[2].disp_char and 2 or 1 -- 2P キャラ表示          21
+		col[22] = g.disp_effect  and 2 or 1 -- エフェクト表示         22
+		col[20] = g.disp_pos     and 2 or 1 -- 1P 2P 距離表示         20
 	end
 	local init_ex_menu_config = function()
 		local col = ex_menu.pos.col
@@ -11731,7 +11770,7 @@ function rbff2.startplugin()
 				1, -- BGMセレクト            14
 				1, -- 体力,POWゲージ表示     15
 				1, -- 背景なし時位置補正     16
-				0, -- リスタート             17
+				0, -- リスタート             18
 			},
 		},
 		on_a = {
@@ -12060,6 +12099,9 @@ function rbff2.startplugin()
 			{ "2P 状態表示"           , { "OFF", "ON", "ON:小表示", "ON:大表示" }, },
 			{ "1P 処理アドレス表示"   , { "OFF", "ON" }, },
 			{ "2P 処理アドレス表示"   , { "OFF", "ON" }, },
+			{ "1P キャラ表示"         , { "OFF", "ON" }, },
+			{ "2P キャラ表示"         , { "OFF", "ON" }, },
+			{ "エフェクト表示"        , { "OFF", "ON", }, },
 			{ "1P 2P 距離表示"        , { "OFF", "ON" }, },
 		},
 		pos = { -- メニュー内の選択位置
@@ -12085,7 +12127,10 @@ function rbff2.startplugin()
 				1, -- 2P 状態表示            15
 				1, -- 1P 処理アドレス表示    16
 				1, -- 2P 処理アドレス表示    17
-				1, -- 1P 2P 距離表示         18
+				2, -- 1P キャラ表示          18
+				2, -- 2P キャラ表示          19
+				2, -- エフェクト表示         20
+				1, -- 1P 2P 距離表示         21
 			},
 		},
 		on_a = {
@@ -12108,6 +12153,9 @@ function rbff2.startplugin()
 			disp_menu_to_main, -- 2P 状態表示
 			disp_menu_to_main, -- 1P 処理アドレス表示
 			disp_menu_to_main, -- 2P 処理アドレス表示
+			disp_menu_to_main, -- 1P キャラ表示
+			disp_menu_to_main, -- 2P キャラ表示
+			disp_menu_to_main, -- エフェクト表示
 			disp_menu_to_main, -- 1P 2P 距離表示
 		},
 		on_b = {
@@ -12130,6 +12178,9 @@ function rbff2.startplugin()
 			disp_menu_to_main_cancel, -- 2P 状態表示
 			disp_menu_to_main_cancel, -- 1P 処理アドレス表示
 			disp_menu_to_main_cancel, -- 2P 処理アドレス表示
+			disp_menu_to_main_cancel, -- 1P キャラ表示
+			disp_menu_to_main_cancel, -- 2P キャラ表示
+			disp_menu_to_main_cancel, -- エフェクト表示
 			disp_menu_to_main_cancel, -- 1P 2P 距離表示
 		},
 	}
