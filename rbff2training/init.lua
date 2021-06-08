@@ -8243,7 +8243,7 @@ function rbff2.startplugin()
 			end
 			if global.no_background then
 				--pgm:write_u16(0x401FFE, 0x8F8F)
-				pgm:write_u16(0x401FFE, bgcol)
+				pgm:write_u16(0x401FFE, 0x5ABB)
 				pgm:write_u8(global.no_background_addr, 0xFF)
 			end
 
