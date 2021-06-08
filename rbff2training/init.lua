@@ -74,7 +74,7 @@ local bios_test             = function()
 		end
 	end
 end
-local fix_scr_tops          = {}
+local fix_scr_tops          = { "OFF" }
 for i = -20, 70 do
 	table.insert(fix_scr_tops, "1P " .. i)
 end
@@ -95,7 +95,8 @@ local global = {
 	throwbox_height = 200, --default for ground throws
 	no_background   = false,
 	no_background_addr = 0x10DDF0,
-	no_effect_bps   = nil,
+	fix_pos         = false,
+	fix_pos_bps     = nil,
 	no_bars         = false,
 	sync_pos_x      = 1, -- 1: OFF, 2:1Pと同期, 3:2Pと同期
 
@@ -4170,15 +4171,15 @@ local box_type_base = {
 	fa  = { id = 0x00, name = "攻撃(嘘)",                  enabled = false,type_check = type_ck_und,  type = "attack", sort =  4, color = 0x00FF00, fill = 0x00, outline = 0xFF },
 	da  = { id = 0x00, name = "攻撃(無効)",                enabled = true, type_check = type_ck_und,  type = "attack", sort =  4, color = 0xFF00FF, fill = 0x00, outline = 0xFF },
 
-	aa  = { id = 0x00, name = "攻撃(空中追撃可)",          enabled = true, type_check = type_ck_atk,  type = "attack", sort =  4, color = 0xFF00FF, fill = 0x40, outline = 0xFF },
-	faa = { id = 0x00, name = "攻撃(嘘、空中追撃可)",      enabled = false,type_check = type_ck_und,  type = "attack", sort =  4, color = 0x00FF00, fill = 0x00, outline = 0xFF },
-	daa = { id = 0x00, name = "攻撃(無効、空中追撃可)",    enabled = true, type_check = type_ck_und,  type = "attack", sort =  4, color = 0xFF00FF, fill = 0x00, outline = 0xFF },
+	aa  = { id = 0x00, name = "攻撃(空中追撃可)",          enabled = true, type_check = type_ck_atk,  type = "attack", sort =  4, color = 0xFF0033, fill = 0x40, outline = 0xFF },
+	faa = { id = 0x00, name = "攻撃(嘘、空中追撃可)",      enabled = false,type_check = type_ck_und,  type = "attack", sort =  4, color = 0x00FF33, fill = 0x00, outline = 0xFF },
+	daa = { id = 0x00, name = "攻撃(無効、空中追撃可)",    enabled = true, type_check = type_ck_und,  type = "attack", sort =  4, color = 0xFF0033, fill = 0x00, outline = 0xFF },
 
 	t3  = { id = 0x00, name = "未使用",                    enabled = true, type_check = type_ck_thw,  type = "throw",  sort = -1, color = 0x8B4513, fill = 0x40, outline = 0xFF },
 
-	pa  = { id = 0x00, name = "飛び道具",                  enabled = true, type_check = type_ck_atk,  type = "attack", sort =  5, color = 0xFF0033, fill = 0x40, outline = 0xFF },
-	pfa = { id = 0x00, name = "飛び道具(嘘)",              enabled = true, type_check = type_ck_atk,  type = "attack", sort =  5, color = 0x00FF33, fill = 0x00, outline = 0xFF },
-	pda = { id = 0x00, name = "飛び道具(無効)",            enabled = true, type_check = type_ck_atk,  type = "attack", sort =  5, color = 0xFF0033, fill = 0x00, outline = 0xFF },
+	pa  = { id = 0x00, name = "飛び道具",                  enabled = true, type_check = type_ck_atk,  type = "attack", sort =  5, color = 0xFF00FF, fill = 0x40, outline = 0xFF },
+	pfa = { id = 0x00, name = "飛び道具(嘘)",              enabled = true, type_check = type_ck_atk,  type = "attack", sort =  5, color = 0x00FF00, fill = 0x00, outline = 0xFF },
+	pda = { id = 0x00, name = "飛び道具(無効)",            enabled = true, type_check = type_ck_atk,  type = "attack", sort =  5, color = 0xFF00FF, fill = 0x00, outline = 0xFF },
 
 	paa = { id = 0x00, name = "飛び道具(空中追撃可)",      enabled = true, type_check = type_ck_atk,  type = "attack", sort =  5, color = 0xFF0033, fill = 0x40, outline = 0xFF },
 	pfaa= { id = 0x00, name = "飛び道具(嘘、空中追撃可)",  enabled = true, type_check = type_ck_atk,  type = "attack", sort =  5, color = 0x00FF33, fill = 0x00, outline = 0xFF },
@@ -5418,7 +5419,7 @@ function rbff2.startplugin()
 			hit_summary      = {}, -- 大状態表示のデータ構造の一部
 			old_hit_summary  = {}, -- 大状態表示のデータ構造の一部
 
-			fix_scr_top      = p1 and 21 or 0xFF, -- screen_topの強制フック用
+			fix_scr_top      = 0xFF, -- screen_topの強制フック用
 
 			hit              = {
 				pos_x        = 0,
@@ -8246,22 +8247,24 @@ function rbff2.startplugin()
 				pgm:write_u16(0x401FFE, 0x5ABB)
 				pgm:write_u8(global.no_background_addr, 0xFF)
 			end
-
-			local p1, p2 = players[1], players[2]
-			if p1.fix_scr_top == 0xFF then
-				pgm:write_u8(p1.addr.fix_scr_top, 0xFF)
-			else
-				pgm:write_i8(p1.addr.fix_scr_top, p1.fix_scr_top)
-			end
-			if p2.fix_scr_top == 0xFF then
-				pgm:write_u8(p2.addr.fix_scr_top, 0xFF)
-			else
-				pgm:write_i8(p2.addr.fix_scr_top, p2.fix_scr_top - 91)
-			end
 		else
 			pgm:write_u8(global.no_background_addr, 0x00)
-			pgm:write_u8(players[1].addr.fix_scr_top, 0xFF)
-			pgm:write_u8(players[2].addr.fix_scr_top, 0xFF)
+		end
+
+		-- 強制位置補正
+		local p1, p2 = players[1], players[2]
+		global.fix_pos = false
+		if p1.fix_scr_top == 0xFF then
+			pgm:write_u8(p1.addr.fix_scr_top, 0xFF)
+		else
+			pgm:write_i8(p1.addr.fix_scr_top, p1.fix_scr_top - 1)
+			global.fix_pos = true
+		end
+		if p2.fix_scr_top == 0xFF then
+			pgm:write_u8(p2.addr.fix_scr_top, 0xFF)
+		else
+			pgm:write_i8(p2.addr.fix_scr_top, p2.fix_scr_top - 92)
+			global.fix_pos = true
 		end
 
 		local cond = "maincpu.pw@107C22>0"
@@ -8312,12 +8315,12 @@ function rbff2.startplugin()
 			table.insert(bps, cpu.debug:bpset(0x0610E0, cond, pc)) -- rts 0610E6
 		end
 
-		if global.no_effect_bps then
-			global.set_bps(global.no_background ~= true, global.no_effect_bps)
-		else
-			global.no_effect_bps = global.new_hook_holder()
+		if global.fix_pos_bps then
+			global.set_bps(global.fix_pos ~= true, global.fix_pos_bps)
+		elseif global.fix_pos then
+			global.fix_pos_bps = global.new_hook_holder()
 			-- bp 0040AE,1,{PC=$4112;g} -- 描画全部無視
-			local bps = global.no_effect_bps.bps
+			local bps = global.fix_pos_bps.bps
 			-- 画面表示高さを1Pか2Pの高いほうにあわせる
 			-- bp 013B6E,1,{D0=((maincpu.pw@100428)-(D0)+4);g}
 			-- bp 013B6E,1,{D0=((maincpu.pw@100428)-(D0)-24);g}
@@ -11702,8 +11705,10 @@ function rbff2.startplugin()
 			next_bgm      = bgms[main_menu.pos.col[14]].id, -- BGMセレクト
 		})
 		local fix_scr_top = main_menu.pos.col[16]
-
-		if fix_scr_top <= 91 then
+		if fix_scr_top == 1 then
+			players[1].fix_scr_top = 0xFF
+			players[2].fix_scr_top = 0xFF
+		elseif fix_scr_top <= 91 then
 			players[1].fix_scr_top = fix_scr_top
 			players[2].fix_scr_top = 0xFF
 		else
