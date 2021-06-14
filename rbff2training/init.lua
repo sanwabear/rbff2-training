@@ -22,6 +22,7 @@
 
 local exports = {}
 require('lfs')
+require('utf8_filenames')
 local convert_lib = require("data/button_char")
 local convert = function(str)
 	return str and convert_lib(str) or str
@@ -147,6 +148,7 @@ local global = {
 	mame_debug_wnd   = false, -- MAMEデバッグウィンドウ表示のときtrue
 	damaged_move     = 1,
 	disp_replay      = true,  -- レコードリプレイガイド表示
+	save_snapshot    = 1,     -- 技画像保存 1:OFF 2:新規 3:上書き
 
 	-- log
 	log              = {
@@ -4240,14 +4242,8 @@ end
 local btn_col = { [convert("_A")] = 0xFFCC0000, [convert("_B")] = 0xFFCC8800, [convert("_C")] = 0xFF3333CC, [convert("_D")] = 0xFF336600, }
 local text_col, shadow_col = 0xFFFFFFFF, 0xFF000000
 
-local exists = function(name)
-	if type(name)~="string" then return false end
-	return os.rename(name,name) and true or false
-end
-
 local is_file = function(name)
 	if type(name)~="string" then return false end
-	if not exists(name) then return false end
 	local f = io.open(name,"r")
 	if f then
 		f:close()
@@ -4257,7 +4253,9 @@ local is_file = function(name)
 end
 
 local base_path = function()
-	return emu.subst_env(manager.options.entries.homepath:value():match('([^;]+)')) .. '/plugins/' .. exports.name
+	local base = emu.subst_env(manager.options.entries.homepath:value():match('([^;]+)')) .. '/plugins/' .. exports.name
+	local dir = lfs.currentdir()
+	return dir .. "/" .. base
 end
 
 local rom_patch_path = function(filename)
@@ -8481,8 +8479,10 @@ function rbff2.startplugin()
 			p.tw_threshold   = pgm:read_u8(p.addr.tw_threshold)
 			p.tw_accepted    = pgm:read_u8(p.addr.tw_accepted)
 			p.tw_frame       = pgm:read_u8(p.addr.tw_frame)
+			p.old_tw_muteki  = p.tw_muteki or 0
 			p.tw_muteki      = pgm:read_u8(p.addr.tw_muteki)
 			-- 通常投げ無敵判断 その2(HOME 039FC6から03A000の処理を再現して投げ無敵の値を求める)
+			p.old_tw_muteki2 = p.tw_muteki2 or 0
 			p.tw_muteki2     = 0
 			if 0x70 <= p.attack then
 				local d1 = pgm:read_u16(p.addr.base + 0x10)
@@ -10512,17 +10512,36 @@ function rbff2.startplugin()
 					end
 				end
 			end
+			local chg_y = p.chg_air_state ~= 0
 			local chg_hit = p.chg_hitbox_frm == global.frame_number
 			local chg_hurt = p.chg_hurtbox_frm == global.frame_number
-			-- 判定が変わったらポーズさせる
-			if global.pause_hitbox == 4 and (chg_hit or chg_hurt) then
-				global.pause = true
-			end
-			-- 判定が変わったらスクショ保存
-			if p.act_normal ~= true and (p.old_act_normal ~= p.act_normal or chg_hit or chg_hurt) then
+			-- 判定が変わったら
+			if p.act_normal ~= true and (p.old_act_normal ~= p.act_normal or chg_y or chg_hit or chg_hurt) then
+				-- ポーズさせる
+				if global.pause_hitbox == 4 then
+					global.pause = true
+				end
+				-- スクショ保存
 				local frame_group = p.act_frames2[#p.act_frames2]
 				local frame = frame_group[#frame_group]
-				print(i, char_names[p.char], frame.name, p.atk_count, p.attacking and "A" or "H")
+				local name = string.format("%s_%s_%03d", char_names[p.char], frame.name, p.atk_count)
+				if i == 1 and global.save_snapshot > 1 then
+					-- print(i, name, p.attacking and "A" or "-", (p.tw_muteki > 0) and "M" or "-", (p.tw_muteki2 > 0) and "m" or "-")
+					local filename = base_path() .. "/capture/" .. name .. ".png"
+					local exists = is_file(filename)
+					local dowrite = false
+					if exists and global.save_snapshot == 3 then
+						dowrite = true
+						os.remove(filename)
+					elseif global.save_snapshot == 2 and exists == false then
+						dowrite = true
+					end
+					if dowrite then
+						local scr = manager.machine.screens:at(1)
+						scr:snapshot(filename)
+						print("save " .. filename)
+					end
+				end
 			end
 
 			-- ヒット時にポーズさせる
@@ -11422,13 +11441,14 @@ function rbff2.startplugin()
 		dip_config.easy_super    = col[ 2] == 2 -- 簡易超必               2
 		global.pause_hit         = col[ 3]      -- ヒット時にポーズ       3
 		global.pause_hitbox      = col[ 4]      -- 判定発生時にポーズ     4
-		global.mame_debug_wnd    = col[ 5] == 2 -- MAMEデバッグウィンドウ 5
-		global.damaged_move      = col[ 6]      -- ヒット効果確認用       6
-		global.log.poslog        = col[ 7] == 2 -- 位置ログ               7
-		global.log.atklog        = col[ 8] == 2 -- 攻撃情報ログ           8
-		global.log.baselog       = col[ 9] == 2 -- 処理アドレスログ       9
-		global.log.keylog        = col[10] == 2 -- 入力ログ              10
-		global.log.rvslog        = col[11] == 2 -- リバサログ            11
+		global.save_snapshot     = col[ 5]      -- 技画像保存             5
+		global.mame_debug_wnd    = col[ 6] == 2 -- MAMEデバッグウィンドウ 6
+		global.damaged_move      = col[ 7]      -- ヒット効果確認用       7
+		global.log.poslog        = col[ 8] == 2 -- 位置ログ               8
+		global.log.atklog        = col[ 9] == 2 -- 攻撃情報ログ           9
+		global.log.baselog       = col[10] == 2 -- 処理アドレスログ      10
+		global.log.keylog        = col[11] == 2 -- 入力ログ              11
+		global.log.rvslog        = col[12] == 2 -- リバサログ            12
 
 		local dmove = damaged_moves[global.damaged_move]
 		if dmove and dmove > 0 then
@@ -11634,13 +11654,14 @@ function rbff2.startplugin()
 		col[ 2] = dip_config.easy_super and 2 or 1 -- 簡易超必          2
 		col[ 3] = g.pause_hit              -- ヒット時にポーズ          3
 		col[ 4] = g.pause_hitbox           -- 判定発生時にポーズ        4
-		col[ 5] = g.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ 5
-		col[ 6] = g.damaged_move           -- ヒット効果確認用          6
-		col[ 7] = g.log.poslog  and 2 or 1 -- 位置ログ                  7
-		col[ 8] = g.log.atklog  and 2 or 1 -- 攻撃情報ログ              8
-		col[ 9] = g.log.baselog and 2 or 1 -- 処理アドレスログ          9
-		col[10] = g.log.keylog  and 2 or 1 -- 入力ログ                 10
-		col[11] = g.log.rvslog  and 2 or 1 -- リバサログ               11
+		col[ 5] = g.save_snapshot          -- 技画像保存                5
+		col[ 6] = g.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ 6
+		col[ 7] = g.damaged_move           -- ヒット効果確認用          7
+		col[ 8] = g.log.poslog  and 2 or 1 -- 位置ログ                  8
+		col[ 9] = g.log.atklog  and 2 or 1 -- 攻撃情報ログ              9
+		col[10] = g.log.baselog and 2 or 1 -- 処理アドレスログ         10
+		col[11] = g.log.keylog  and 2 or 1 -- 入力ログ                 11
+		col[12] = g.log.rvslog  and 2 or 1 -- リバサログ               12
 	end
 	local init_auto_menu_config = function()
 		local col = auto_menu.pos.col
@@ -12196,6 +12217,7 @@ function rbff2.startplugin()
 			{ "簡易超必"              , { "OFF", "ON" }, },
 			{ "ヒット時にポーズ"      , { "OFF", "ON", "ON:やられのみ", "ON:ガードのみ", }, },
 			{ "判定発生時にポーズ"    , { "OFF", "投げ", "攻撃", "変化時", }, },
+			{ "技画像保存"            , { "OFF", "ON:新規", "ON:上書き", }, },
 			{ "MAMEデバッグウィンドウ", { "OFF", "ON" }, },
 			{ "ヒット効果確認用"      , damaged_move_keys },
 			{ "位置ログ"              , { "OFF", "ON" }, },
@@ -12211,21 +12233,23 @@ function rbff2.startplugin()
 				0, -- －特殊設定－            1
 				1, -- 簡易超必                2
 				1, -- ヒット時にポーズ        3
-				1, -- 投げ判定ポーズ          4
-				1, -- MAMEデバッグウィンドウ  5
-				1, -- ヒット効果確認用        6
-				1, -- 位置ログ                7
-				1, -- 攻撃情報ログ            8
-				1, -- 処理アドレスログ        9
-				1, -- 入力ログ               10
-				1, -- リバサログ             11
+				1, -- 判定発生時にポーズ      4
+				1, -- 技画像保存              5
+				1, -- MAMEデバッグウィンドウ  6
+				1, -- ヒット効果確認用        7
+				1, -- 位置ログ                8
+				1, -- 攻撃情報ログ            9
+				1, -- 処理アドレスログ       10
+				1, -- 入力ログ               11
+				1, -- リバサログ             12
 			},
 		},
 		on_a = {
 			ex_menu_to_main, -- －特殊設定－
 			ex_menu_to_main, -- 簡易超必
 			ex_menu_to_main, -- ヒット時にポーズ
-			ex_menu_to_main, -- 投げ判定ポーズ
+			ex_menu_to_main, -- 判定発生時にポーズ
+			ex_menu_to_main, -- 技画像保存
 			ex_menu_to_main, -- MAMEデバッグウィンドウ
 			ex_menu_to_main, -- ヒット効果確認用
 			ex_menu_to_main, -- 位置ログ
@@ -12238,7 +12262,8 @@ function rbff2.startplugin()
 			ex_menu_to_main_cancel, -- －一般設定－
 			ex_menu_to_main_cancel, -- 簡易超必
 			ex_menu_to_main_cancel, -- ヒット時にポーズ
-			ex_menu_to_main_cancel, -- 投げ判定ポーズ
+			ex_menu_to_main_cancel, -- 判定発生時にポーズ
+			ex_menu_to_main_cancel, -- 技画像保存
 			ex_menu_to_main_cancel, -- MAMEデバッグウィンドウ
 			ex_menu_to_main_cancel, -- ヒット効果確認用
 			ex_menu_to_main_cancel, -- 位置ログ
