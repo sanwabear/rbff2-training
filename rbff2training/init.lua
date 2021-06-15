@@ -87,8 +87,8 @@ local global = {
 	frame_number    = 0,
 
 	-- 当たり判定用
-	axis_color      = 0xFFFFFFFF,
-	axis_air_color  = 0xFFFF00FF,
+	axis_color      = 0xFF797979,
+	axis_air_color  = 0xFFCC00CC,
 	axis_internal_color = 0xFF00FFFF,
 	axis_size       = 12,
 	axis_size2      = 5,
@@ -331,6 +331,10 @@ local char_names = {
 	"ボブ・ウィルソン", "ホンフゥ", "ブルー・マリー", "フランコ・バッシュ", "山崎竜二", "秦崇秀", "秦崇雷",
 	"ダック・キング", "キム・カッファン", "ビリー・カーン", "チン・シンザン", "タン・フー・ルー",
 	"ローレンス・ブラッド", "ヴォルフガング・クラウザー", "リック・ストラウド", "李香緋", "アルフレッド",
+}
+local char_names2 = {
+	"TERRY" ,"ANDY" ,"JOE", "MAI", "GEESE", "SOKAKU", "BOB" ,"HON-FU" ,"MARY" ,"BASH" ,"YAMAZAKI" ,"CHONSHU",
+	"CHONREI" ,"DUCK" ,"KIM" ,"BILLY" ,"CHENG" ,"TUNG", "LAURENCE" ,"KRAUSER" ,"RICK" ,"XIANGFEI" ,"ALFRED",
 }
 local bgms = {
 	{ id = 0x01, name = "クリといつまでも"              , }, --テリー・ボガード
@@ -4190,7 +4194,7 @@ local box_type_base = {
 	t   = { id = 0x00, name = "投げ",                      enabled = true, type_check = type_ck_thw,  type = "throw",  sort =  6, color = 0xFFFF00, fill = 0x40, outline = 0xFF },
 	at  = { id = 0x00, name = "必殺技投げ",                enabled = true, type_check = type_ck_thw,  type = "throw",  sort =  6, color = 0xFFFF00, fill = 0x40, outline = 0xFF },
 	pt  = { id = 0x00, name = "空中投げ",                  enabled = true, type_check = type_ck_thw,  type = "throw",  sort =  6, color = 0xFFFF00, fill = 0x40, outline = 0xFF },
-	p   = { id = 0x01, name = "押し合い",                  enabled = true, type_check = type_ck_push, type = "push",   sort =  1, color = 0xDDDDDD, fill = 0x00, outline = 0xFF },
+	p   = { id = 0x01, name = "押し合い",                  enabled = true, type_check = type_ck_push, type = "push",   sort =  1, color = 0xFEFEFE, fill = 0x00, outline = 0xFF },
 	v1  = { id = 0x02, name = "食らい1",                   enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x0000FF, fill = 0x40, outline = 0xFF },
 	v2  = { id = 0x03, name = "食らい2",                   enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x0000FF, fill = 0x40, outline = 0xFF },
 	v3  = { id = 0x04, name = "食らい(ダウン追撃のみ可)",  enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x00FFFF, fill = 0x80, outline = 0xFF },
@@ -10512,37 +10516,6 @@ function rbff2.startplugin()
 					end
 				end
 			end
-			local chg_y = p.chg_air_state ~= 0
-			local chg_hit = p.chg_hitbox_frm == global.frame_number
-			local chg_hurt = p.chg_hurtbox_frm == global.frame_number
-			-- 判定が変わったら
-			if p.act_normal ~= true and (p.old_act_normal ~= p.act_normal or chg_y or chg_hit or chg_hurt) then
-				-- ポーズさせる
-				if global.pause_hitbox == 4 then
-					global.pause = true
-				end
-				-- スクショ保存
-				local frame_group = p.act_frames2[#p.act_frames2]
-				local frame = frame_group[#frame_group]
-				local name = string.format("%s_%s_%03d", char_names[p.char], frame.name, p.atk_count)
-				if i == 1 and global.save_snapshot > 1 then
-					-- print(i, name, p.attacking and "A" or "-", (p.tw_muteki > 0) and "M" or "-", (p.tw_muteki2 > 0) and "m" or "-")
-					local filename = base_path() .. "/capture/" .. name .. ".png"
-					local exists = is_file(filename)
-					local dowrite = false
-					if exists and global.save_snapshot == 3 then
-						dowrite = true
-						os.remove(filename)
-					elseif global.save_snapshot == 2 and exists == false then
-						dowrite = true
-					end
-					if dowrite then
-						local scr = manager.machine.screens:at(1)
-						scr:snapshot(filename)
-						print("save " .. filename)
-					end
-				end
-			end
 
 			-- ヒット時にポーズさせる
 			if p.state ~= 0 and p.state ~= p.old_state and global.pause_hit > 0 then
@@ -10614,8 +10587,11 @@ function rbff2.startplugin()
 		end
 	end
 
-	local table_add_all = function(t1, t2)
+	local table_add_all = function(t1, t2, pre_add)
 		for _, r in ipairs(t2) do
+			if pre_add then
+				pre_add(r)
+			end
 			table.insert(t1, r)
 		end
 	end
@@ -10630,9 +10606,15 @@ function rbff2.startplugin()
 			local hitboxes = {}
 			for _, p in ipairs(players) do
 				if p.disp_hitbox > 1 then
-					table_add_all(hitboxes, p.hitboxes)
+					local callback = nil
+					if p.disp_hitbox == 3 then
+						callback = function(box)
+							box.type_count = nil
+						end
+					end
+					table_add_all(hitboxes, p.hitboxes, callback)
 					for _, fb in pairs(p.fireball) do
-						table_add_all(hitboxes, fb.hitboxes)
+						table_add_all(hitboxes, fb.hitboxes, callback)
 					end
 				end
 			end
@@ -10642,7 +10624,9 @@ function rbff2.startplugin()
 			for _, box in ipairs(hitboxes) do
 				if box.flat_throw then
 					if box.visible == true and box.type.enabled == true then
-						scr:draw_box (box.left , box.top-8 , box.right, box.bottom+8, box.type.fill, box.type.fill)
+						if global.no_background ~= true then
+							scr:draw_box (box.left , box.top-8 , box.right, box.bottom+8, box.type.fill, box.type.fill)
+						end
 						scr:draw_line(box.left , box.bottom, box.right, box.bottom  , box.type.outline)
 						scr:draw_line(box.left , box.top-8 , box.left , box.bottom+8, box.type.outline)
 						scr:draw_line(box.right, box.top-8 , box.right, box.bottom+8, box.type.outline)
@@ -10659,7 +10643,7 @@ function rbff2.startplugin()
 					if box.visible == true and box.type.enabled == true then
 						-- 背景なしの場合は判定の塗りつぶしをやめる
 						if global.no_background then
-							scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, 0x00000000)
+							scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, 0)
 						else
 							scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, box.type.fill)
 						end
@@ -10717,6 +10701,42 @@ function rbff2.startplugin()
 					draw_axis(i, p, p.hit.pos_x, p.in_air == true and global.axis_air_color or global.axis_color)
 					draw_axis(i, p, p.hit.max_pos_x, global.axis_internal_color)
 					draw_axis(i, p, p.hit.min_pos_x, global.axis_internal_color)
+				end
+			end
+
+			-- スクショ保存
+			for i, p in ipairs(players) do
+				local chg_y = p.chg_air_state ~= 0
+				local chg_hit = p.chg_hitbox_frm == global.frame_number
+				local chg_hurt = p.chg_hurtbox_frm == global.frame_number
+				-- 判定が変わったら
+				if p.act_normal ~= true and (p.old_act_normal ~= p.act_normal or chg_y or chg_hit or chg_hurt) then
+					-- ポーズさせる
+					if global.pause_hitbox == 4 then
+						global.pause = true
+					end
+					-- スクショ保存
+					local frame_group = p.act_frames2[#p.act_frames2]
+					local frame = frame_group[#frame_group]
+					local name = string.format("%s_%s_%03d", char_names2[p.char], frame.name, p.atk_count)
+					if i == 1 and global.save_snapshot > 1 then
+						-- print(i, name, p.attacking and "A" or "-", (p.tw_muteki > 0) and "M" or "-", (p.tw_muteki2 > 0) and "m" or "-")
+						local filename = base_path() .. "/capture/" .. name .. ".png"
+						local exists = is_file(filename)
+						local dowrite = false
+						if exists and global.save_snapshot == 3 then
+							dowrite = true
+							os.remove(filename)
+						elseif global.save_snapshot == 2 and exists == false then
+							dowrite = true
+						end
+						if dowrite then
+							local scr = manager.machine.screens:at(1)
+							scr:snapshot(filename)
+							print("save " .. filename)
+						end
+						break
+					end
 				end
 			end
 
