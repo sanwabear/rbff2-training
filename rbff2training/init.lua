@@ -4194,8 +4194,7 @@ local box_type_base = {
 	t   = { id = 0x00, name = "投げ",                      enabled = true, type_check = type_ck_thw,  type = "throw",  sort =  6, color = 0xFFFF00, fill = 0x40, outline = 0xFF },
 	at  = { id = 0x00, name = "必殺技投げ",                enabled = true, type_check = type_ck_thw,  type = "throw",  sort =  6, color = 0xFFFF00, fill = 0x40, outline = 0xFF },
 	pt  = { id = 0x00, name = "空中投げ",                  enabled = true, type_check = type_ck_thw,  type = "throw",  sort =  6, color = 0xFFFF00, fill = 0x40, outline = 0xFF },
-	p   = { id = 0x01, name = "押し合い",                  enabled = true, type_check = type_ck_push, type = "push",   sort =  1, color = 0xFEFEFE, fill = 0x00, outline = 0xFF },
-	v1  = { id = 0x02, name = "食らい1",                   enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x0000FF, fill = 0x40, outline = 0xFF },
+	p   = { id = 0x01, name = "押し合い",                  enabled = true, type_check = type_ck_push, type = "push",   sort =  1, color = 0xDDDDDD, fill = 0x00, outline = 0xFF },	v1  = { id = 0x02, name = "食らい1",                   enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x0000FF, fill = 0x40, outline = 0xFF },
 	v2  = { id = 0x03, name = "食らい2",                   enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x0000FF, fill = 0x40, outline = 0xFF },
 	v3  = { id = 0x04, name = "食らい(ダウン追撃のみ可)",  enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x00FFFF, fill = 0x80, outline = 0xFF },
 	v4  = { id = 0x05, name = "食らい(空中追撃のみ可)",    enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x00FFFF, fill = 0x80, outline = 0xFF },
@@ -4238,8 +4237,8 @@ for _, boxtype in pairs(box_type_base) do
 			box_types[boxtype.id - 1] = boxtype
 		end
 	end
-	boxtype.fill    = (0xFFFFFFFF & (boxtype.fill    << 24)) + boxtype.color
-	boxtype.outline = (0xFFFFFFFF & (boxtype.outline << 24)) + boxtype.color
+	boxtype.fill    = (0xFFFFFFFF & (boxtype.fill    << 24)) | boxtype.color
+	boxtype.outline = (0xFFFFFFFF & (boxtype.outline << 24)) | boxtype.color
 end
 
 -- ボタンの色テーブル
@@ -8315,6 +8314,10 @@ function rbff2.startplugin()
 			table.insert(bps, cpu.debug:bpset(0x060F2C, cond, pc)) -- rts 060F32 ヒットマーク
 			table.insert(bps, cpu.debug:bpset(0x061150, cond, "PC=$061156;g")) -- rts 061156 ヒットマーク、パワーウェイブの一部
 			table.insert(bps, cpu.debug:bpset(0x0610E0, cond, pc)) -- rts 0610E6
+
+			-- コンボ表示抑制＝ヒット数を2以上にしない
+			-- bp 0252E8,1,{D7=0;PC=0252EA;g}
+			table.insert(bps, cpu.debug:bpset(0x0252E8, "1", "D7=0;PC=0252EA;g"))
 		end
 
 		if global.fix_pos_bps then
@@ -10550,22 +10553,41 @@ function rbff2.startplugin()
 			y = y + 7
 		end
 	end
-	local draw_axis = function(i, p, x, col)
+	
+	local draw_hitbox = function(left, top, right, bottom, outline, fill)
 		local scr = manager.machine.screens:at(1)
+		if outline and 0 < outline then
+			scr:draw_box(left, top, left+1, bottom, 0, outline)
+			scr:draw_box(right+1, top, right, bottom, 0, outline)
+			scr:draw_box(left, top, right,  top+1, 0, outline)
+			scr:draw_box(left, bottom+1, right, bottom, 0, outline)
+		end
+		if fill and 0 < fill then
+			scr:draw_box(left, top, right, bottom, outline, fill)
+		end
+	end
+	local draw_vline = function(x1, y1, y2, color)
+		local scr = manager.machine.screens:at(1)
+		scr:draw_box(x1, y1, x1+1, y2+1, 0, color)
+	end
+	local draw_hline = function(x1, x2, y1, color)
+		local scr = manager.machine.screens:at(1)
+		scr:draw_box(x1, y1, x2+1, y1+1, 0, color)
+	end
+	local draw_axis = function(i, p, x, col)
 		if x then
 			local axis = p.disp_hitbox == 2 and global.axis_size or global.axis_size2
-			scr:draw_line(x, p.hit.pos_y - axis, x, p.hit.pos_y + axis, col)
-			scr:draw_line(x - axis, p.hit.pos_y, x + axis, p.hit.pos_y, col)
+			draw_vline(x, p.hit.pos_y - axis, p.hit.pos_y + axis, col)
+			draw_hline(x - axis, x + axis, p.hit.pos_y, col)
 			if p.disp_hitbox == 2 then
 				draw_text_with_shadow(x - 1.5, p.hit.pos_y + axis, string.format("%d", i), col)
 			end
 		end
 	end
 	local draw_esaka = function(i, x, col)
-		local scr = manager.machine.screens:at(1)
 		if x and 0 <= x then
 			local y1, y2 = 0, 200+global.axis_size
-			scr:draw_line(x, y1, x, y2, col)
+			draw_vline(x, y1, y2, col)
 			draw_text_with_shadow(x-2.5, y2    , string.format("え%d", i), col)
 		end
 	end
@@ -10579,8 +10601,8 @@ function rbff2.startplugin()
 			x2 = p.hit.pos_x + x2 * p.side
 			-- 間合い
 			local color = in_range and 0xFFFFFF00 or 0xFFBBBBBB
-			scr:draw_line(x2-2, p.hit.pos_y  , x2+2, p.hit.pos_y  , color)
-			scr:draw_line(x2  , p.hit.pos_y-2, x2  , p.hit.pos_y+2, color)
+			draw_hline(x2-2, x2+2, p.hit.pos_y  , color)
+			draw_vline(x2  , p.hit.pos_y-2, p.hit.pos_y+2, color)
 			if in_range then
 				draw_text_with_shadow(x2-2.5, p.hit.pos_y+4  , string.format("%s%d", btn, i), color)
 			end
@@ -10625,11 +10647,11 @@ function rbff2.startplugin()
 				if box.flat_throw then
 					if box.visible == true and box.type.enabled == true then
 						if global.no_background ~= true then
-							scr:draw_box (box.left , box.top-8 , box.right, box.bottom+8, box.type.fill, box.type.fill)
+							draw_hitbox(box.left , box.top-8 , box.right, box.bottom+8, box.type.fill, box.type.fill)
 						end
-						scr:draw_line(box.left , box.bottom, box.right, box.bottom  , box.type.outline)
-						scr:draw_line(box.left , box.top-8 , box.left , box.bottom+8, box.type.outline)
-						scr:draw_line(box.right, box.top-8 , box.right, box.bottom+8, box.type.outline)
+						draw_hline(box.left , box.right, box.bottom  , box.type.outline)
+						draw_vline(box.left , box.top-8, box.bottom+8, box.type.outline)
+						draw_vline(box.right, box.top-8, box.bottom+8, box.type.outline)
 					end
 				else
 					--[[
@@ -10643,9 +10665,9 @@ function rbff2.startplugin()
 					if box.visible == true and box.type.enabled == true then
 						-- 背景なしの場合は判定の塗りつぶしをやめる
 						if global.no_background then
-							scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, 0)
+							draw_hitbox(box.left, box.top, box.right, box.bottom, box.type.outline, 0)
 						else
-							scr:draw_box(box.left, box.top, box.right, box.bottom, box.type.outline, box.type.fill)
+							draw_hitbox(box.left, box.top, box.right, box.bottom, box.type.outline, box.type.fill)
 						end
 						if box.type_count then
 							local x1, x2 = math.min(box.left, box.right), math.max(box.left, box.right)
@@ -10665,9 +10687,9 @@ function rbff2.startplugin()
 					-- 通常投げ間合い
 					if p.disp_range == 2 or p.disp_range == 3 then
 						local color = p.throw.in_range and 0xFFFFFF00 or 0xFFBBBBBB
-						scr:draw_line(p.throw.x1, p.hit.pos_y  , p.throw.x2, p.hit.pos_y  , color)
-						scr:draw_line(p.throw.x1, p.hit.pos_y-4, p.throw.x1, p.hit.pos_y+4, color)
-						scr:draw_line(p.throw.x2, p.hit.pos_y-4, p.throw.x2, p.hit.pos_y+4, color)
+						draw_hline(p.throw.x1, p.throw.x2   , p.hit.pos_y  , color)
+						draw_vline(p.throw.x1, p.hit.pos_y-4, p.hit.pos_y+4, color)
+						draw_vline(p.throw.x2, p.hit.pos_y-4, p.hit.pos_y+4, color)
 						if p.throw.in_range then
 							draw_text_with_shadow(p.throw.x1+2.5, p.hit.pos_y+4  , string.format("投%d", i), color)
 						end
@@ -10699,8 +10721,10 @@ function rbff2.startplugin()
 				-- 中心座標
 				if p.disp_hitbox > 1 then
 					draw_axis(i, p, p.hit.pos_x, p.in_air == true and global.axis_air_color or global.axis_color)
-					draw_axis(i, p, p.hit.max_pos_x, global.axis_internal_color)
-					draw_axis(i, p, p.hit.min_pos_x, global.axis_internal_color)
+					if p.disp_hitbox == 2 then
+						draw_axis(i, p, p.hit.max_pos_x, global.axis_internal_color)
+						draw_axis(i, p, p.hit.min_pos_x, global.axis_internal_color)
+					end
 				end
 			end
 
