@@ -4,5 +4,8 @@
 !LICENSE.md
 !.gitignore
 *.bak*
-/rbff2training/capture/*.png
-/rbff2training/capture/tp/*.png
+/rbff2training/capture/*
+/rbff2training/capture/tp/*
+!/rbff2training/capture/.gitkeep
+!/rbff2training/capture/tp.bat
+!/rbff2training/capture/tp/.gitkeep
