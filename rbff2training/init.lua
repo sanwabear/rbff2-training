@@ -52,7 +52,7 @@ local mem_0x10E043          = 0      -- 手動でポーズしたときに00以�
 local mem_biostest          = false  -- 初期化中のときtrue
 local match_active          = false  -- 対戦画面のときtrue
 local player_select_active  = false  -- プレイヤー選択画面のときtrue
-local mem_0x10CDD0          = 0x10CDD0 -- プレイヤー選択のハック用 
+local mem_0x10CDD0          = 0x10CDD0 -- プレイヤー選択のハック用
 local p_space               = 0      -- 1Pと2Pの間隔
 local prev_p_space          = 0      -- 1Pと2Pの間隔(前フレーム)
 local stage_base_addr       = 0x100E00
@@ -375,7 +375,7 @@ for _, bgm in ipairs(bgms) do
 			break
 		end
 	end
-	if not exists then 
+	if not exists then
 		table.insert(bgm_names, bgm.name)
 		bgm.name_idx = #bgm_names
 	end
@@ -2465,7 +2465,7 @@ local char_acts_base = {
 		{ disp_name = "立ち", name = "スゥエーライン上 立ち", type = act_types.free, ids = { 0x21, 0x40, 0x20, 0x3F, }, },
 		{ disp_name = "前歩き", name = "スゥエーライン上 前歩き", type = act_types.free, ids = { 0x2D, 0x2C, }, },
 		{ disp_name = "後歩き", name = "スゥエーライン上 後歩き", type = act_types.free, ids = { 0x2E, 0x2F, }, },
-		{ names = { "ジャンプ", "アンリミテッドデザイア", "ギガティックサイクロン", }, type = act_types.any, ids = { 
+		{ names = { "ジャンプ", "アンリミテッドデザイア", "ギガティックサイクロン", }, type = act_types.any, ids = {
 			0xB, 0xC, -- 垂直ジャンプ
 			0xD, 0xE, -- 前ジャンプ
 			0xF, 0x10, -- 後ジャンプ
@@ -3249,7 +3249,7 @@ local create_input_states = function()
 	for _, char_tbl in ipairs(input_states) do
 		for _, tbl in ipairs(char_tbl) do
 			-- 左右反転コマンド表示用
-			tbl.r_cmd = string.gsub(tbl.cmd, "[134679]", { 
+			tbl.r_cmd = string.gsub(tbl.cmd, "[134679]", {
 				["1"] = "3", ["3"] = "1", ["4"] = "6", ["6"] = "4", ["7"] = "9", ["9"] = "7",
 			})
 			local r_cmds, cmds = {}, {}
@@ -3428,7 +3428,7 @@ local rvs_types = {
 	atemi               = 7, -- 当身うち空振りと裏雲隠し用
 }
 local pre_down_acts = {
-	[0x142] = true, 
+	[0x142] = true,
 	[0x145] = true,
 	[0x156] = true,
 	[0x15A] = true,
@@ -4036,7 +4036,7 @@ local accept_input = function(btn, joy_val, state_past)
 				return true
 			end
 		else
-			if (0 < joy_val[p1] and state_past >= joy_val[p1]) or 
+			if (0 < joy_val[p1] and state_past >= joy_val[p1]) or
 			   (0 < joy_val[p2] and state_past >= joy_val[p2]) then
 				if global.disp_replay then
 					pgm:write_u32(0x0010D612, 0x00610004)
@@ -4412,7 +4412,7 @@ local draw_base = function(p, line, frame, addr, act_name, xmov)
 	local p1 = p == 1
 	local xx = p1 and 60 or 195    -- 1Pと2Pで左右に表示し分ける
 	local yy = (line + 10 - 1) * 8 -- +8はオフセット位置
-	
+
 	local cframe
 	if 0 < frame then
 		cframe = 999 < frame and "LOT" or frame
@@ -4428,7 +4428,7 @@ end
 local bp_offset = {
 	[0x012C42] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x00 },
 	[0x012C88] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x00 },
-	[0x012D4C] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x00 }, --p1 push 
+	[0x012D4C] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x00 }, --p1 push
 	[0x012D92] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x00 }, --p2 push
 	[0x039F2A] = { ["rbff2k"] =   0x0C, ["rbff2h"] = 0x20 }, --special throws
 	[0x017300] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x00 }, --solid shadows
@@ -4591,9 +4591,14 @@ local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, is_f
 	end
 	box.type = box.type or box_type_base.x1
 
-	-- 飛び道具の押し合い判定は無視する
-	if is_fireball and box.type.type == "push" then
-		return nil
+	if box.type.type == "push" then
+		if is_fireball then
+			-- 飛び道具の押し合い判定は無視する
+			return nil
+		elseif left == 0 and right == 0 then
+			-- 投げ中などに出る前後0の判定は無視する
+			return nil
+		end
 	end
 
 	local orig_posy = pos_y
@@ -4602,10 +4607,8 @@ local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, is_f
 	top    = pos_y - (0xFFFF & ((top    * p.hit.scale) >> 6))
 	bottom = pos_y - (0xFFFF & ((bottom * p.hit.scale) >> 6))
 
-	--if is_fireball then
-		top = top & 0xFFFF
-		bottom = bottom & 0xFFFF
-	--end
+	top = top & 0xFFFF
+	bottom = bottom & 0xFFFF
 	left   = 0xFFFF & (pos_x - (0xFFFF & ((left   * p.hit.scale) >> 6)) * p.hit.flip_x)
 	right  = 0xFFFF & (pos_x - (0xFFFF & ((right  * p.hit.scale) >> 6)) * p.hit.flip_x)
 
@@ -4623,19 +4626,23 @@ local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, is_f
 	if  p.hit.flip_x == 1 then
 		if box.right > 320 and box.right > box.left then
 			box.right = 0
+			box.over_right = true
 		end
 	else
 		if box.left > 320 and box.left > box.right then
 			box.left = 0
+			box.over_left = true
 		end
 	end
 	if box.top > box.bottom then
 		if box.top > 224 then
 			box.top = 224
+			box.over_top = true
 		end
 	else
 		if box.bottom > 224 then
 			box.bottom = 0
+			box.over_bottom = true
 		end
 	end
 
@@ -4778,6 +4785,7 @@ local update_summary = function(p, box)
 			summary.max_hit_dn  = summary.max_hit_dn  or p.hit.max_hit_dn -- p.act_frame中の行動最大ヒット 分母
 			summary.cancelable  = summary.cancelable  or p.cancelable -- キャンセル可否
 			summary.slide_atk   = summary.slide_atk   or p.slide_atk -- ダッシュ滑り攻撃
+			summary.bs_atk      = summary.bs_atk      or p.bs_atk -- ブレイクショット
 
 			summary.hitstun     = summary.hitstun     or p.hitstun    -- ヒット硬直
 			summary.blockstun   = summary.blockstun   or p.blockstun  -- ガード硬直
@@ -4939,7 +4947,7 @@ local update_summary = function(p, box)
 				-- 上段当身投げ
 				info.range_j_atm_nage = summary.j_atm_nage and in_range(real_top, real_bottom, 112, 40)
 				-- 裏雲隠し
-				info.range_urakumo = summary.urakumo and in_range(real_top, real_bottom, 104, 40) 
+				info.range_urakumo = summary.urakumo and in_range(real_top, real_bottom, 104, 40)
 				-- 下段当身打ち
 				info.range_g_atm_uchi = summary.g_atm_uchi and in_range(real_top, real_bottom, 44, 0)
 				-- 必勝逆襲拳
@@ -5021,7 +5029,7 @@ local update_summary = function(p, box)
 			memo = memo .. " bai=" .. (summary.baigaeshi or"-")
 			memo = memo .. " ?1="  .. (summary.unknown1 or "-")
 			memo = memo .. " catch="..(summary.bai_catch or "-")
-	
+
 			-- ログ用
 			box.log_txt = string.format(
 				"hit %6x %3x %3x %2s %3s %2x %2x %2x %s %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s %2x %3s "..memo,
@@ -5329,6 +5337,9 @@ function rbff2.startplugin()
 			state            = 0,           -- いまのやられ状態
 			state_flags      = 0,           -- 処理で使われているフラグ群
 			old_state_flags  = 0,           -- 処理で使われているフラグ群
+			state_flags2     = 0,           -- 処理で使われているフラグ群
+			old_state_flags2 = 0,           -- 処理で使われているフラグ群
+			state_flags3     = 0,           -- 処理で使われているフラグ群
 			blkstn_flags     = 0,           -- 処理で使われているフラグ（硬直の判断用）
 			old_blkstn_flags = 0,           -- 処理で使われているフラグ（硬直の判断用）
 			tmp_combo        = 0,           -- 一次的なコンボ数
@@ -5885,7 +5896,7 @@ function rbff2.startplugin()
 	-- 対スウェーライン攻撃の近距離間合い
 	-- 地上通常技の近距離間合い
 	-- char 0=テリー
-	local cache_close_far_pos = {} 
+	local cache_close_far_pos = {}
 	local get_close_far_pos = function(char)
 		if cache_close_far_pos[char] then
 			return cache_close_far_pos[char]
@@ -5922,7 +5933,7 @@ function rbff2.startplugin()
 		return ret
 	end
 
-	local cache_close_far_pos_lmo = {} 
+	local cache_close_far_pos_lmo = {}
 	local get_close_far_pos_line_move_attack = function(char, logging)
 		if cache_close_far_pos_lmo[char] then
 			return cache_close_far_pos_lmo[char]
@@ -6050,7 +6061,7 @@ function rbff2.startplugin()
 					"1",
 					string.format("PC=%x;g", fix_bp_addr(0x05B46E))))
 			end
-			
+
 			-- wp CB23E,16,r,{A4==100400},{printf "A4=%X PC=%X A6=%X D1=%X data=%X",A4,PC,A6,D1,wpdata;g}
 
 			-- リバーサルとBSモードのフック
@@ -6158,7 +6169,7 @@ function rbff2.startplugin()
 			-- PC=  C5D0 読取反映先=?? スタートボタンの読取してるけど関係なし
 			-- PC= 12376 読取反映先=D0 スタートボタンの読取してるけど関係なし
 			-- PC=C096A8 読取反映先=D1 スタートボタンの読取してるけど関係なし
-			-- PC=C1B954 読取反映先=D2 スタートボタンの読取してるとこ 
+			-- PC=C1B954 読取反映先=D2 スタートボタンの読取してるとこ
 			table.insert(bps, cpu.debug:bpset(0xC1B95A,
 				"(maincpu.pb@100024==1&&maincpu.pw@100701==10B&&maincpu.pb@10FDAF==2&&maincpu.pw@10FDB6!=0)&&((((maincpu.pb@300000)&$10)==0)||(((maincpu.pb@300000)&$80)==0))",
 				"D2=($FF^$04);g"))
@@ -6629,7 +6640,7 @@ function rbff2.startplugin()
 
 		--[[
 		rec1 = merge_cmd( -- ボブ対クラウザー100% ラグがでると落ちる
-			{ 
+			{
 				_4, 4, _5, 4, _4, 6, _7, 17, _5, 8, _5a, 7, _5c, 12, _4, 30, _5c, 3, _5, 5, _5c, 5, _5, 47, _5a, 5, _5b, 5, _5, 25, _1c, 5, _5, 20, _2bc, 4, _5, 2, _2, 5, _3, 5, _6, 5, _5b, 5, _4, 2,
 				_5, 64, _2, 5, _3, 5, _6, 5, _5b, 5,
 				_5, 64, _2, 5, _3, 5, _6, 6, _5b, 5, _4, 2,
@@ -7312,7 +7323,7 @@ function rbff2.startplugin()
 		for j = #frames2 - math.min(#frames2 - 1, 6), #frames2 do
 			local frame_group = frames2[j]
 			local overflow = dodraw(x1, y + span, frame_group, true, height, x, xmax, show_name, show_count, x, scr, txty)
-		
+
 			for _, frame in ipairs(frame_group) do
 				if frame.fireball then
 					for _, fb in pairs(frame.fireball) do
@@ -7382,7 +7393,7 @@ function rbff2.startplugin()
 		local max_life = life[p.red] or (p.red - #life) -- 赤体力にするかどうか
 		if dip_config.infinity_life then
 			pgm:write_u8(p.addr.life, max_life)
-			pgm:write_u8(p.addr.max_stun,  p.init_stun) -- 最大気絶値 
+			pgm:write_u8(p.addr.max_stun,  p.init_stun) -- 最大気絶値
 			pgm:write_u8(p.addr.init_stun, p.init_stun) -- 最大気絶値
 		elseif p.life_rec then
 			-- 回復判定して回復
@@ -7390,7 +7401,7 @@ function rbff2.startplugin()
 				-- やられ状態から戻ったときに回復させる
 				pgm:write_u8(p.addr.life, max_life) -- 体力
 				pgm:write_u8(p.addr.stun, 0) -- 気絶値
-				pgm:write_u8(p.addr.max_stun,  p.init_stun) -- 最大気絶値 
+				pgm:write_u8(p.addr.max_stun,  p.init_stun) -- 最大気絶値
 				pgm:write_u8(p.addr.init_stun, p.init_stun) -- 最大気絶値
 				pgm:write_u16(p.addr.stun_timer, 0) -- 気絶値タイマー
 			elseif max_life < p.life then
@@ -7564,6 +7575,7 @@ function rbff2.startplugin()
 		"追撃能力",
 		"攻撃範囲",
 		"ダッシュ専用",
+		"ブレイクショット",
 		"弾強度",
 		"攻撃値(削り)",
 		"攻撃値",
@@ -7790,7 +7802,7 @@ function rbff2.startplugin()
 		end
 		local reach_label
 		if summary.edge.hit.front then
-			reach_label = string.format("前%s/上%s/下%s/後%s", 
+			reach_label = string.format("前%s/上%s/下%s/後%s",
 				summary.edge.hit.front,
 				summary.edge.hit.top + p.pos_y,
 				summary.edge.hit.bottom + p.pos_y,
@@ -7926,7 +7938,7 @@ function rbff2.startplugin()
 		return add_frame_to_summary(throw_summary)
 	end
 	local make_parry_summary = function(p, summary)
-		local range_label = string.format("前%s/上%s/下%s/後%s", 
+		local range_label = string.format("前%s/上%s/下%s/後%s",
 			summary.edge.parry.front,
 			summary.edge.parry.top + p.pos_y,
 			summary.edge.parry.bottom + p.pos_y,
@@ -7942,9 +7954,16 @@ function rbff2.startplugin()
 			pow_label = pow_label .. string.format("/返%s/吸%s", p.pow_revenge or 0, p.pow_absorb or 0)
 		end
 		local esaka_label = (p.esaka_range > 0) and p.esaka_range or "-"
+		
+		local bs_label = "-"
+		if p.bs_atk == true then
+			bs_label = "〇"
+		end
+
 		local atk_summary = {
-			{"POW増加量:"     , pow_label   },
-			{"詠酒発動範囲:"  , esaka_label },
+			{"POW増加量:"         , pow_label   },
+			{"詠酒発動範囲:"      , esaka_label },
+			{"ブレイクショット:"  , bs_label    },
 		}
 		return add_frame_to_summary(atk_summary)
 	end
@@ -8109,7 +8128,7 @@ function rbff2.startplugin()
 		local throw_label = table.concat(throw_invincibles, ",")
 		local reach_label = ""
 		if has_hurt == true then
-			reach_label = string.format("前%s/上%s/下%s/後%s", 
+			reach_label = string.format("前%s/上%s/下%s/後%s",
 				summary.edge.hurt.front,
 				summary.edge.hurt.top + p.pos_y,
 				summary.edge.hurt.bottom + p.pos_y,
@@ -8401,6 +8420,7 @@ function rbff2.startplugin()
 			p.state          = pgm:read_u8(p.addr.state)                -- 今の状態
 			p.old_state_flags = p.state_flags
 			p.state_flags    = pgm:read_u32(p.addr.state_flags)        -- フラグ群
+			p.old_state_flags2 = p.state_flags2
 			p.state_flags2   = pgm:read_u32(p.addr.state_flags2)       -- フラグ群2
 			p.state_flags3   = pgm:read_u32(p.addr.state_flags3)       -- 必殺技などの技のフラグ群
 			p.box_base1      = pgm:read_u32(p.addr.box_base1)
@@ -8427,6 +8447,13 @@ function rbff2.startplugin()
 			logbox(p.box_base2)
 			]]
 			p.slide_atk      = testbit(p.state_flags2, 0x4) -- ダッシュ滑り攻撃
+			-- ブレイクショット
+			if testbit(p.state_flags2, 0x200000) == true and
+				(testbit(p.old_state_flags2, 0x100000) == true or p.bs_atk == true) then
+				p.bs_atk     = true
+			else
+				p.bs_atk     = false
+			end
 			--[[
 				       1 CA技
 				       2 小技
@@ -8434,6 +8461,7 @@ function rbff2.startplugin()
 				      80 後ろ
 				      40 斜め後ろ
 				   80000 挑発
+				  100000 ブレイクショット
 				  200000 必殺技
 				 1000000 フェイント技
 				 2000000 つかみ技
@@ -8460,7 +8488,7 @@ function rbff2.startplugin()
 			p.tmp_dmg        = pgm:read_u8(p.addr.tmp_dmg)              -- ダメージ
 			p.old_attack     = p.attack
 			p.attack         = pgm:read_u8(p.addr.attack)
-			
+
 			if testbit(p.state_flags2, 0x200000 | 0x1000000 | 0x80000 | 0x200000 | 0x1000000 | 0x2000000 | 0x80000000) ~= true then
 				p.cancelable = pgm:read_u8(p.addr.cancelable)
 				-- 家庭用2AD90からの処理
@@ -8653,7 +8681,7 @@ function rbff2.startplugin()
 					end
 					charging = on == 1
 					if old then
-						reset = old.on == #tbl.cmds and old.chg_remain > 0 
+						reset = old.on == #tbl.cmds and old.chg_remain > 0
 					end
 				elseif tbl.type == input_state_types.followup then
 					on = math.max(on - 1, 0)
@@ -8686,18 +8714,18 @@ function rbff2.startplugin()
 						on = on -1
 					end
 					if old then
-						reset = old.on > 0 and old.chg_remain > 0 
+						reset = old.on > 0 and old.chg_remain > 0
 						if on == 0 and chg_remain > 0 then
 							force_reset = true
 						end
 					end
 				elseif tbl.type == input_state_types.unknown then
 					if old then
-						reset = old.on > 0 and old.chg_remain > 0 
+						reset = old.on > 0 and old.chg_remain > 0
 					end
 				else
 					if old then
-						reset = old.on == #tbl.cmds and old.chg_remain > 0 
+						reset = old.on == #tbl.cmds and old.chg_remain > 0
 					end
 				end
 				if old then
@@ -8893,7 +8921,7 @@ function rbff2.startplugin()
 				p.act_1st    = char_1st_acts[#char_acts][p.act] or false
 			else
 				p.act_data   = {
-					name     = (p.state == 1 or p.state == 3) and "やられ" or tohex(p.act), 
+					name     = (p.state == 1 or p.state == 3) and "やられ" or tohex(p.act),
 					type     = act_types.any,
 				}
 				p.act_1st    = false
@@ -8969,7 +8997,7 @@ function rbff2.startplugin()
 					fb.pure_st_tm = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x88772))
 				end
 				-- 受け身行動可否 家庭用 05A9B8 からの処理
-				fb.can_techrise   = 2 > pgm:read_u8(0x88A12 + fb.attack) 
+				fb.can_techrise   = 2 > pgm:read_u8(0x88A12 + fb.attack)
 				fb.fake_hit       = (pgm:read_u8(fb.addr.fake_hit) & 0xB) == 0
 				fb.obsl_hit       = (pgm:read_u8(fb.addr.obsl_hit) & 0xB) == 0
 				fb.full_hit       = pgm:read_u8(fb.addr.full_hit ) > 0
@@ -9337,10 +9365,10 @@ function rbff2.startplugin()
 
 			--[[調査用ログ
 			local printdata = function()
-				print(string.format("%2x %2s %2s %2s %2s %2s %2s %2x %2s %2s %2x", 
+				print(string.format("%2x %2s %2s %2s %2s %2s %2s %2x %2s %2s %2x",
 				p.state,                  --1
 				p.stop,                   --2 0x10058D
-				pgm:read_u8(0x100569), 
+				pgm:read_u8(0x100569),
 				p.stop                & pgm:read_u8(0x10054c), --  2 24
 				pgm:read_u8(0x100569) & pgm:read_u8(0x100550), --  4 25
 				pgm:read_u8(0x100516),  -- 17 25
@@ -10175,7 +10203,7 @@ function rbff2.startplugin()
 					end
 					if global.frame_number == p.on_hit then
 						-- ヒット時はガードに切り替え
-						p.next_block = true	
+						p.next_block = true
 						p.next_block_ec = 75 -- カウンター初期化
 						p.guard1 = 0
 						--print("HIT reset")
@@ -10245,7 +10273,7 @@ function rbff2.startplugin()
 					-- ガード状態が解除されたらリバサ解除
 					p.gd_rvs_enabled = false
 				end
-				
+
 				-- print(p.state, p.knock_back1, p.knock_back2, p.knock_back3, p.stop, rvs_types.in_knock_back, p.last_blockstun, string.format("%x", p.act), p.act_count, p.act_frame)
 				-- ヒットストップ中は無視
 				if not p.skip_frame then
@@ -10557,14 +10585,22 @@ function rbff2.startplugin()
 			y = y + 7
 		end
 	end
-	
-	local draw_hitbox = function(left, top, right, bottom, outline, fill)
+
+	local draw_hitbox = function(left, top, right, bottom, outline, fill, over_left, over_top, over_right, over_bottom)
 		local scr = manager.machine.screens:at(1)
 		if outline and 0 < outline then
-			scr:draw_box(left, top, left+1, bottom, 0, outline)
-			scr:draw_box(right+1, top, right, bottom, 0, outline)
-			scr:draw_box(left, top, right,  top+1, 0, outline)
-			scr:draw_box(left, bottom+1, right, bottom, 0, outline)
+			if over_left ~= true then
+				scr:draw_box(left, top, left+1, bottom, 0, outline)
+			end
+			if over_top ~= true then
+				scr:draw_box(left, top, right,  top+1, 0, outline)
+			end
+			if over_right ~= true then
+				scr:draw_box(right+1, top, right, bottom, 0, outline)
+			end
+			if over_bottom ~= true then
+				scr:draw_box(left, bottom+1, right, bottom, 0, outline)
+			end
 		end
 		if fill and 0 < fill then
 			scr:draw_box(left, top, right, bottom, outline, fill)
@@ -10597,10 +10633,9 @@ function rbff2.startplugin()
 	end
 	local draw_close_far = function(i, p, btn, x1, x2)
 		local op = p.op
-		local scr = manager.machine.screens:at(1)
 		if x1 and x2 then
 			local diff = math.abs(p.pos - op.pos)
-			local in_range = x1 <= diff and diff <= x2 
+			local in_range = x1 <= diff and diff <= x2
 			x1 = p.hit.pos_x + x1 * p.side
 			x2 = p.hit.pos_x + x2 * p.side
 			-- 間合い
@@ -10669,9 +10704,11 @@ function rbff2.startplugin()
 					if box.visible == true and box.type.enabled == true then
 						-- 背景なしの場合は判定の塗りつぶしをやめる
 						if global.no_background then
-							draw_hitbox(box.left, box.top, box.right, box.bottom, box.type.outline, 0)
+							draw_hitbox(box.left, box.top, box.right, box.bottom, box.type.outline, 0,
+								box.over_left, box.over_top, box.over_right, box.over_bottom)
 						else
-							draw_hitbox(box.left, box.top, box.right, box.bottom, box.type.outline, box.type.fill)
+							draw_hitbox(box.left, box.top, box.right, box.bottom, box.type.outline, box.type.fill,
+								box.over_left, box.over_top, box.over_right, box.over_bottom)
 						end
 						if box.type_count then
 							local x1, x2 = math.min(box.left, box.right), math.max(box.left, box.right)
@@ -10754,7 +10791,15 @@ function rbff2.startplugin()
 					-- スクショ保存
 					local frame_group = p.act_frames2[#p.act_frames2]
 					local frame = frame_group[#frame_group]
-					local name = string.format("%s_%x_%s_%03d", char_names2[p.char], p.act_data.id_1st or 0, frame.name, p.atk_count)
+
+					local name
+					if p.slide_atk then
+						name = string.format("%s_SLIDE_%x_%s_%03d", char_names2[p.char], p.act_data.id_1st or 0, frame.name, p.atk_count)
+					elseif p.bs_atk then
+						name = string.format("%s_BS_%x_%s_%03d", char_names2[p.char], p.act_data.id_1st or 0, frame.name, p.atk_count)
+					else
+						name = string.format("%s_%x_%s_%03d", char_names2[p.char], p.act_data.id_1st or 0, frame.name, p.atk_count)
+					end
 					if i == 1 and global.save_snapshot > 1 then
 						-- print(i, name, p.attacking and "A" or "-", (p.tw_muteki > 0) and "M" or "-", (p.tw_muteki2 > 0) and "m" or "-")
 						local filename = base_path() .. "/capture/" .. name .. ".png"
@@ -10803,7 +10848,7 @@ function rbff2.startplugin()
 			for i, p in ipairs(players) do
 				local p1 = i == 1
 				local op = players[3-i]
-			
+
 				-- コンボ表示などの四角枠
 				if p.disp_dmg then
 					if p1 then
@@ -10937,16 +10982,16 @@ function rbff2.startplugin()
 								input_state.charging == true and 0xFF7FFF00 or 0xFFFFFF00,
 								0)
 							scr:draw_box(x - 8 + input_state.chg_remain * 2, y, x - 8, y + 4,
-								0, 
+								0,
 								input_state.charging == true and 0xC07FFF00 or 0xC0FFFF00)
 						end
 						local cmdx = x - 50
 						y = y - 2
 						for ci, c in ipairs(input_state.tbl.lr_cmds[p.input_side]) do
 							if c ~= "" then
-								cmdx = cmdx + math.max(5.5, 
+								cmdx = cmdx + math.max(5.5,
 									draw_text_with_shadow(cmdx, y, c,
-										input_state.input_estab == true and 0xFFFF8800 or 
+										input_state.input_estab == true and 0xFFFF8800 or
 										input_state.on > ci and 0xFFFF0000 or
 										(ci == 1 and input_state.on >= ci) and 0xFFFF0000 or nil))
 							end
@@ -11255,7 +11300,7 @@ function rbff2.startplugin()
 					print(p.char, p.posd, p.act_data.name, p.old_posd)
 				end
 			end
-		end	
+		end
 
 		-- ダッシュ中の投げ不能フレーム数確認ログ
 		for i, p in ipairs(players) do
@@ -11548,7 +11593,7 @@ function rbff2.startplugin()
 	local auto_menu_to_main_cancel = function()
 		auto_menu_to_main(true)
 	end
-	local box_type_col_list = { 
+	local box_type_col_list = {
 		box_type_base.a, box_type_base.fa, box_type_base.da, box_type_base.aa, box_type_base.faa, box_type_base.daa,
 		box_type_base.pa, box_type_base.pfa, box_type_base.pda, box_type_base.paa, box_type_base.pfaa, box_type_base.pdaa,
 		box_type_base.t3, box_type_base.t, box_type_base.at, box_type_base.pt,
