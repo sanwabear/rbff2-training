@@ -510,7 +510,7 @@ local char_acts_base = {
 		{ f = 43,  disp_name = "バーンナックル", name = "小バーンナックル", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
 		{ f = 71,  disp_name = "バーンナックル", name = "大バーンナックル", type = act_types.attack, ids = { 0x90, 0x91, 0x92, }, },
 		{ f = 56,  name = "パワーウェイブ", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, firing = true, },
-		{ f = 55,  name = "ランドウェイブ", type = act_types.low_attack, ids = { 0xA4, 0xA5, 0xA6, }, firing = true, },
+		{ f = 55,  name = "ラウンドウェイブ", type = act_types.low_attack, ids = { 0xA4, 0xA5, 0xA6, }, firing = true, },
 		{ f = 44,  disp_name = "ファイヤーキック", name = "ファイヤーキック突進", type = act_types.low_attack, ids = { 0xB8, 0xB9, }, },
 		{ f = 30,  disp_name = "ファイヤーキック", name = "ファイヤーキック突進隙", type = act_types.low_attack, ids = { 0xBC, }, },
 		{ f = 30,  name = "ファイヤーキック蹴り上げ", type = act_types.low_attack, ids = { 0xBA, 0xBB, }, },
@@ -527,6 +527,7 @@ local char_acts_base = {
 		{ f = 33,  disp_name = "CA 下C", name = "CA 下C(2段目or3段目)", type = act_types.low_attack, ids = { 0x247, }, },
 		{ f = 33,  disp_name = "CA 下C", name = "CA 下C(2段目or3段目)", type = act_types.low_attack, ids = { 0x247, }, },
 		{ f = 33,  disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x240, }, },
+		{ f = 33,  disp_name = "CA 立C", name = "CA B後の近立C(2段目)", type = act_types.attack, ids = { 0x24C, }, },
 		{ f = 33,  disp_name = "CA 下C", name = "CA 下C(2段目)", type = act_types.attack, ids = { 0x243, }, },
 		{ f = 49,  disp_name = "パワーチャージ", name = "CA パワーチャージ", type = act_types.attack, ids = { 0x24D, }, },
 		{ f = 33,  disp_name = "CA 対スゥエーライン攻撃", name = "CA 立D(2段目)", type = act_types.attack, ids = { 0x24A, }, },
@@ -2616,12 +2617,14 @@ for char, acts_base in pairs(char_acts_base) do
 	-- キャラごとのテーブル作成
 	char_acts[char], char_1st_acts[char], char_1st_f[char] = {}, {}, {}
 	for _, acts in pairs(acts_base) do
+		local id_1st = nil
 		for i, id in ipairs(acts.ids) do
 			-- 補完
 			acts.f = acts.f or 0
 
 			if i == 1 then
 				char_1st_f[char][id] = acts.f
+				id_1st = id
 				if acts.type == act_types.guard or acts.type == act_types.hit then
 					-- char_1st_actsには登録しない
 				elseif acts.name == "振り向き中" or acts.name == "しゃがみ振り向き中" then
@@ -2637,6 +2640,7 @@ for char, acts_base in pairs(char_acts_base) do
 			end
 			char_acts[char][id] = acts
 		end
+		acts.id_1st = id_1st
 	end
 end
 local char_fireballs = { }
@@ -10733,8 +10737,16 @@ function rbff2.startplugin()
 				local chg_y = p.chg_air_state ~= 0
 				local chg_hit = p.chg_hitbox_frm == global.frame_number
 				local chg_hurt = p.chg_hurtbox_frm == global.frame_number
+				for _, fb in pairs(p.fireball) do
+					if fb.chg_hitbox_frm == global.frame_number then
+						chg_hit = true
+					end
+					if fb.chg_hurtbox_frm == global.frame_number then
+						chg_hurt = true
+					end
+				end
 				-- 判定が変わったら
-				if p.act_normal ~= true and (p.old_act_normal ~= p.act_normal or chg_y or chg_hit or chg_hurt) then
+				if p.act_normal ~= true and (p.atk_count == 1 or p.old_act_normal ~= p.act_normal or chg_y or chg_hit or chg_hurt) then
 					-- ポーズさせる
 					if global.pause_hitbox == 4 then
 						global.pause = true
@@ -10742,7 +10754,7 @@ function rbff2.startplugin()
 					-- スクショ保存
 					local frame_group = p.act_frames2[#p.act_frames2]
 					local frame = frame_group[#frame_group]
-					local name = string.format("%s_%s_%03d", char_names2[p.char], frame.name, p.atk_count)
+					local name = string.format("%s_%x_%s_%03d", char_names2[p.char], p.act_data.id_1st or 0, frame.name, p.atk_count)
 					if i == 1 and global.save_snapshot > 1 then
 						-- print(i, name, p.attacking and "A" or "-", (p.tw_muteki > 0) and "M" or "-", (p.tw_muteki2 > 0) and "m" or "-")
 						local filename = base_path() .. "/capture/" .. name .. ".png"
@@ -10950,7 +10962,7 @@ function rbff2.startplugin()
 				end
 
 				-- BS状態表示
-				if p.dummy_gd == dummy_gd_type.bs then
+				if p.dummy_gd == dummy_gd_type.bs and global.no_background ~= true then
 					if p1 then
 						scr:draw_box(106, 40, 150,  50, 0x80404040, 0x80404040)
 					else
@@ -10961,7 +10973,7 @@ function rbff2.startplugin()
 				end
 
 				-- ガードリバーサル状態表示
-				if p.dummy_wakeup == wakeup_type.rvs then
+				if p.dummy_wakeup == wakeup_type.rvs and global.no_background ~= true then
 					if p1 then
 						scr:draw_box(106, 50, 150,  60, 0x80404040, 0x80404040)
 					else
