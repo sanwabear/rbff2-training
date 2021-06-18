@@ -5620,6 +5620,7 @@ function rbff2.startplugin()
 				stun         = p1 and 0x10B850 or 0x10B858, -- 現在気絶値
  				stun_timer   = p1 and 0x10B854 or 0x10B85C, -- 気絶値ゼロ化までの残フレーム数
  				tmp_combo    = p1 and 0x10B4E0 or 0x10B4E1, -- コンボテンポラリ
+				-- bs_id        = p1 and 0x1004B9 or 0x1005B9, -- BSの技ID
 				pow          = p1 and 0x1004BC or 0x1005BC, -- パワーアドレス
 				reg_pcnt     = p1 and 0x300000 or 0x340000, -- キー入力 REG_P1CNT or REG_P2CNT アドレス
 				reg_st_b     = 0x380000,                    -- キー入力 REG_STATUS_B アドレス
@@ -6315,6 +6316,9 @@ function rbff2.startplugin()
 				"printf \"A4=%X CH=%D PC=%X PREF_ADDR=%X A0=%X D7=%X\",(A4),maincpu.pw@((A4)+10),PC,PREF_ADDR,(A0),(D7);g"))
 			end
 			--]]
+
+			-- bp 58946,1,{PC=5895A;g} -- BS出ない
+			-- bp 039782,1,{PC=039788;g} -- BS表示でない
 		end
 	end
 
@@ -8341,6 +8345,15 @@ function rbff2.startplugin()
 			-- コンボ表示抑制＝ヒット数を2以上にしない
 			-- bp 0252E8,1,{D7=0;PC=0252EA;g}
 			table.insert(bps, cpu.debug:bpset(0x0252E8, "1", "D7=0;PC=0252EA;g"))
+			-- bp 039782,1,{PC=039788;g} -- BS表示でない
+			table.insert(bps, cpu.debug:bpset(0x039782, "1", "PC=039788;g"))
+			-- bp 03C604,1,{PC=03C60A;g} -- 潜在表示でない
+			table.insert(bps, cpu.debug:bpset(0x03C604, "1", "PC=03C60A;g"))
+			-- bp 039850,1,{PC=039856;g} -- リバサ表示でない
+			table.insert(bps, cpu.debug:bpset(0x039850, "1", "PC=039856;g"))
+			-- いろんな割り込み文字が出ない、開幕にONにしておくと進まない
+			-- bp 2378,1,{PC=2376;g}
+			-- table.insert(bps, cpu.debug:bpset(0x002378, "1", "PC=002376;g"))
 		end
 
 		if global.fix_pos_bps then
