@@ -540,8 +540,8 @@ local char_acts_base = {
 	{
 		{ f = 26,  name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 32,  name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 28,  disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ f = 26,  disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 28,  name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 26,  name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 38,  name = "スゥエー戻り", type = act_types.any, ids = { 0x36, }, },
 		{ f = 36,  name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 25+27,  disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -631,8 +631,8 @@ local char_acts_base = {
 	{
 		{ f = 28, name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 35, name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 29, disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ f = 27, disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 29, name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 27, name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 39, name = "スゥエー戻り", type = act_types.any, ids = { 0x36, }, },
 		{ f = 37, name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 23+28, disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -722,8 +722,8 @@ local char_acts_base = {
 	{
 		{ f = 30, name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 31, name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 27, disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ f = 25, disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 27, name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 25, name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 37, name = "スゥエー戻り", type = act_types.any, ids = { 0x36, }, },
 		{ f = 35, name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 24+26, disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -803,8 +803,8 @@ local char_acts_base = {
 	{
 		{ f = 26, name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 37, name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 30, disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ f = 28, disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 30, name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 28, name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 40, name = "スゥエー戻り", type = act_types.any, ids = { 0x36, }, },
 		{ f = 38, name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 23+29, disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -903,8 +903,8 @@ local char_acts_base = {
 	{
 		{ f = 21, name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 31, name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 30, disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, }, },
-		{ f = 28, disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 30, name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 28, name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 40, name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
 		{ f = 38, name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 23+29, disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -985,8 +985,8 @@ local char_acts_base = {
 	{
 		{ f = 28, name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 41, name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 29, disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, }, },
-		{ f = 27, disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 29, name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 27, name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 39, name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
 		{ f = 37, name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 51, disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -1065,8 +1065,8 @@ local char_acts_base = {
 	{
 		{ f = 28, name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 30, name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 28, disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, }, },
-		{ f = 26, disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 28, name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 26, name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 38, name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
 		{ f = 36, name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 51, disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -1162,8 +1162,8 @@ local char_acts_base = {
 	{
 		{ f = 31, name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 31, name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 27, disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, }, },
-		{ f = 25, disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 27, name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 25, name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 37, name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
 		{ f = 35, name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 49, disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -1260,8 +1260,8 @@ local char_acts_base = {
 	{
 		{ f = 25, name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 32, name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 31, disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, }, },
-		{ f = 29, disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 31, name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 29, name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 41, name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
 		{ f = 39, name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 54, disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -1339,8 +1339,8 @@ local char_acts_base = {
 	{
 		{ f = 24, name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 29, name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 30, disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, }, },
-		{ f = 28, disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 30, name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 28, name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 40, name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
 		{ f = 38, name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 52, disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -1428,8 +1428,8 @@ local char_acts_base = {
 	{
 		{ f = 20, name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 27, name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 26, disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, }, },
-		{ f = 23, disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 26, name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 23, name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 36, name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
 		{ f = 34, name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 45, disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -1516,8 +1516,8 @@ local char_acts_base = {
 	{
 		{ f = 23, name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 25, name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 26, disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, }, },
-		{ f = 23, disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 26, name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 23, name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 36, name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
 		{ f = 34, name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 45, disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -1593,8 +1593,8 @@ local char_acts_base = {
 	{
 		{ f = 24, name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 31, name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 28, disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, }, },
-		{ f = 26, disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 28, name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 26, name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 38, name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
 		{ f = 36, name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 50, disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -1690,8 +1690,8 @@ local char_acts_base = {
 	{
 		{ f = 29, name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 32, name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 29, disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, }, },
-		{ f = 27, disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 29, name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 27, name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 39, name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
 		{ f = 37, name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 52, disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -1770,8 +1770,8 @@ local char_acts_base = {
 	{
 		{ f = 21, name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 29, name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 29, disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, }, },
-		{ f = 27, disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 29, name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 27, name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 39, name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
 		{ f = 37, name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 51, disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -1846,8 +1846,8 @@ local char_acts_base = {
 	{
 		{ f = 31, name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 31, name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 30, disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, }, },
-		{ f = 28, disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 30, name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 28, name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 40, name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
 		{ f = 40, name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 52, disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -1935,8 +1935,8 @@ local char_acts_base = {
 	{
 		{ f = 28, name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 31, name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 28, disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, }, },
-		{ f = 26, disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 28, name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 26, name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 28, name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
 		{ f = 36, name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 46, disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -2006,8 +2006,8 @@ local char_acts_base = {
 	{
 		{ f = 25, name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 29, name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 30, disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, }, },
-		{ f = 40, disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 30, name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 40, name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 28, name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
 		{ f = 38, name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 54, disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -2083,8 +2083,8 @@ local char_acts_base = {
 	{
 		{ f = 29, name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 32, name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 31, disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, }, },
-		{ f = 29, disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 31, name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 29, name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 41, name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
 		{ f = 39, name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 54, disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -2175,8 +2175,8 @@ local char_acts_base = {
 	{
 		{ f = 27, name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 32, name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 29, disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, }, },
-		{ f = 26, disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 29, name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 26, name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 39, name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
 		{ f = 37, name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 53, disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -2269,8 +2269,8 @@ local char_acts_base = {
 	{
 		{ f = 25, name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 32, name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 27, disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, }, },
-		{ f = 25, disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 27, name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 25, name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 37, name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
 		{ f = 30, name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 52, disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -2371,8 +2371,8 @@ local char_acts_base = {
 	{
 		{ f = 19, name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
 		{ f = 17, name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ f = 28, disp_name = "スゥエー移動", name = "スゥエー移動立ち", type = act_types.any, ids = { 0x26, }, },
-		{ f = 25, disp_name = "スゥエー移動", name = "スゥエー移動しゃがみ", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		{ f = 28, name = "立スゥエー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ f = 25, name = "下スゥエー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ f = 32, name = "スゥエー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
 		{ f = 30, name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
 		{ f = 56, disp_name = "ダッシュ", name = "スゥエーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
@@ -6317,7 +6317,7 @@ function rbff2.startplugin()
 			end
 			--]]
 
-			-- bp 58946,1,{PC=5895A;g} -- BS出ない
+			-- bp 058946,1,{PC=5895A;g} -- BS出ない
 			-- bp 039782,1,{PC=039788;g} -- BS表示でない
 		end
 	end
@@ -6963,8 +6963,8 @@ function rbff2.startplugin()
 					pgm:write_u8( p.addr.base + 0x63, 0x02)
 					pgm:write_u8( p.addr.base + 0x65, 0x02)
 
-					pgm:write_i16(p.addr.pos_y      , 0x00)
-					pgm:write_i16(p.addr.pos_z      , 0x18)
+					pgm:write_i16(p.addr.pos_y, 0x00)
+					pgm:write_i16(p.addr.pos_z, 0x18)
 
 					pgm:write_u32(p.addr.base + 0x28, 0x00)
 					pgm:write_u32(p.addr.base + 0x48, 0x00)
