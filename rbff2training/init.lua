@@ -325,7 +325,13 @@ local wakeup_frms = {
 
 -- 行動の種類
 local act_types = { free = -1, attack = 0, low_attack = 1, provoke =  2, any = 3, overhead = 4, guard = 5, hit = 6, }
-
+--- グランドスウェーリバサ行動
+local sway_act_counts = {
+	3 --[[ TERRY ]] ,2 --[[ ANDY ]] ,4 --[[ JOE ]], 3 --[[ MAI ]], 3 --[[ GEESE ]], 2 --[[ SOKAKU ]],
+	2 --[[ BOB ]] ,3 --[[ HON-FU ]] ,3 --[[ MARY ]] ,3 --[[ BASH ]] ,2 --[[ YAMAZAKI ]] ,0xC --[[ CHONSHU ]],
+	0xC --[[ CHONREI ]] ,2 --[[ DUCK ]] ,4 --[[ KIM ]] ,4 --[[ BILLY ]] ,2 --[[ CHENG ]] ,4 --[[ TUNG ]],
+	4 --[[ LAURENCE ]] ,3 --[[ KRAUSER ]] ,7 --[[ RICK ]] ,3 --[[ XIANGFEI ]] ,0 --[[ ALFRED ]]
+}
 local char_names = {
 	"テリー・ボガード", "アンディ・ボガード", "東丈", "不知火舞", "ギース・ハワード", "望月双角",
 	"ボブ・ウィルソン", "ホンフゥ", "ブルー・マリー", "フランコ・バッシュ", "山崎竜二", "秦崇秀", "秦崇雷",
@@ -9467,7 +9473,7 @@ function rbff2.startplugin()
 			-- リバーサルのランダム選択
 			p.dummy_rvs = nil
 			if p.dummy_bs_chr == p.char then
-				if p.dummy_wakeup == wakeup_type.rvs and #p.dummy_rvs_list > 0 then
+				if (p.dummy_wakeup == wakeup_type.tech or p.dummy_wakeup == wakeup_type.sway or p.dummy_wakeup == wakeup_type.rvs) and #p.dummy_rvs_list > 0 then
 					p.dummy_rvs = get_next_rvs(p)
 				end
 			end
@@ -10293,7 +10299,7 @@ function rbff2.startplugin()
 				-- ヒットストップ中は無視
 				if not p.skip_frame then
 					-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
-					if p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs then
+					if (p.dummy_wakeup == wakeup_type.tech or p.dummy_wakeup == wakeup_type.sway or p.dummy_wakeup == wakeup_type.rvs) and p.dummy_rvs then
 						-- ダウン起き上がりリバーサル入力
 						if wakeup_acts[p.act] and (wakeup_frms[p.char] - 3) <= (global.frame_number - p.on_wakeup) then
 							input_rvs(rvs_types.on_wakeup, p, string.format("ダウン起き上がりリバーサル入力1 %s %s", 
@@ -10329,13 +10335,23 @@ function rbff2.startplugin()
 							input_rvs(rvs_types.atemi, p, "当身うち空振りと裏雲隠し用")
 						end
 						-- 奥ラインへ送ったあとのリバサ
-						if p.act == 0x14A and p.act_count == 5 and p.old_act_frame == 0 and p.act_frame == 0 and p.tw_frame == 0 then
-							input_rvs(rvs_types.in_knock_back, p, string.format("奥ラインへ送ったあとのリバサ1 %x %x %x %s", p.act, p.act_count, p.act_frame, p.tw_frame))
+						if p.act == 0x14A and (p.act_count == 4 or p.act_count == 5) and p.old_act_frame == 0 and p.act_frame == 0 and p.tw_frame == 0 then
+							input_rvs(rvs_types.in_knock_back, p, string.format("奥ラインへ送ったあとのリバサ %x %x %x %s", p.act, p.act_count, p.act_frame, p.tw_frame))
 						end
-						if p.act == 0x14A and p.act_count == 4 and p.old_act_frame == 0 and p.act_frame == 0 and p.tw_frame == 0 then
-							input_rvs(rvs_types.in_knock_back, p, string.format("奥ラインへ送ったあとのリバサ2 %x %x %x %s", p.act, p.act_count, p.act_frame, p.tw_frame))
+						-- テクニカルライズのリバサ
+						if p.act == 0x2C9 and p.act_count == 2 and p.act_frame == 0 and p.tw_frame == 0 then
+							input_rvs(rvs_types.in_knock_back, p, string.format("テクニカルライズのリバサ %x %x %x %s", p.act, p.act_count, p.act_frame, p.tw_frame))
 						end
-					elseif p.on_down == global.frame_number then
+						-- グランドスウェー
+						local sway_act_frame = 0
+						if sway_act_counts[p.char] ~= 0 then
+							sway_act_frame = 1
+						end
+						if p.act == 0x13E and p.act_count == sway_act_counts[p.char] and p.act_frame == sway_act_frame then
+							input_rvs(rvs_types.in_knock_back, p, string.format("グランドスウェーのあとのリバサ %x %x %x %s", p.act, p.act_count, p.act_frame, p.tw_frame))
+						end
+					end
+					if (p.dummy_wakeup == wakeup_type.tech or p.dummy_wakeup == wakeup_type.sway) and p.on_down == global.frame_number then
 						if p.dummy_wakeup == wakeup_type.tech then
 							-- テクニカルライズ入力
 							cmd_base._2d(p, next_joy)
@@ -11484,7 +11500,7 @@ function rbff2.startplugin()
 					return
 				end
 				-- リバーサル やられ時行動のメニュー設定
-				if not cancel and row == (8 + i) and p.dummy_wakeup == wakeup_type.rvs then
+				if not cancel and row == (8 + i) and (p.dummy_wakeup == wakeup_type.tech or p.dummy_wakeup == wakeup_type.sway or p.dummy_wakeup == wakeup_type.rvs) then
 					menu_cur = rvs_menus[i][p.char]
 					return
 				end
@@ -12104,8 +12120,8 @@ function rbff2.startplugin()
 			{ "2P ガード"             , { "なし", "オート", "ブレイクショット（Aで選択画面へ）", "1ヒットガード", "1ガード", "常時", "ランダム" }, },
 			{ "1ガード持続フレーム数" , gd_frms, },
 			{ "ブレイクショット設定"  , bs_guards },
-			{ "1P やられ時行動"       , { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ", "グランドスウェー", "起き上がり攻撃", }, },
-			{ "2P やられ時行動"       , { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ", "グランドスウェー", "起き上がり攻撃", }, },
+			{ "1P やられ時行動"       , { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ（Aで選択画面へ）", "グランドスウェー（Aで選択画面へ）", "起き上がり攻撃", }, },
+			{ "2P やられ時行動"       , { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ（Aで選択画面へ）", "グランドスウェー（Aで選択画面へ）", "起き上がり攻撃", }, },
 			{ "ガードリバーサル設定"  , bs_guards },
 			{ "1P 強制空振り"         , no_hit_row, },
 			{ "2P 強制空振り"         , no_hit_row, },
