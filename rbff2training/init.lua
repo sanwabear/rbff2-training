@@ -8555,6 +8555,7 @@ function rbff2.startplugin()
 			p.act            = pgm:read_u16(p.addr.act)
 			p.acta           = pgm:read_u16(p.addr.acta)
 			p.act_count      = pgm:read_u8(p.addr.act_count)
+			p.old_act_frame  = p.act_frame
 			p.act_frame      = pgm:read_u8(p.addr.act_frame)
 			p.provoke        = 0x0196 == p.act --挑発中
 			p.stop           = pgm:read_u8(p.addr.stop)
@@ -10287,14 +10288,16 @@ function rbff2.startplugin()
 					p.gd_rvs_enabled = false
 				end
 
+				-- TODO: ライン送られのリバーサルを修正する。猶予1F
 				-- print(p.state, p.knock_back1, p.knock_back2, p.knock_back3, p.stop, rvs_types.in_knock_back, p.last_blockstun, string.format("%x", p.act), p.act_count, p.act_frame)
 				-- ヒットストップ中は無視
 				if not p.skip_frame then
 					-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
 					if p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs then
 						-- ダウン起き上がりリバーサル入力
-						if wakeup_acts[p.act] and (p.on_wakeup+wakeup_frms[p.char] - 2) <= global.frame_number then
-							input_rvs(rvs_types.on_wakeup, p, "ダウン起き上がりリバーサル入力")
+						if wakeup_acts[p.act] and (wakeup_frms[p.char] - 3) <= (global.frame_number - p.on_wakeup) then
+							input_rvs(rvs_types.on_wakeup, p, string.format("ダウン起き上がりリバーサル入力1 %s %s", 
+								wakeup_frms[p.char], (global.frame_number - p.on_wakeup)))
 						end
 						-- 着地リバーサル入力（やられの着地）
 						if 1 < p.pos_y_down and p.old_pos_y > p.pos_y and p.in_air ~= true then
@@ -10326,8 +10329,11 @@ function rbff2.startplugin()
 							input_rvs(rvs_types.atemi, p, "当身うち空振りと裏雲隠し用")
 						end
 						-- 奥ラインへ送ったあとのリバサ
-						if p.act == 0x14A and p.act_count == 5  and p.act_frame == 0 and p.tw_frame == 1 then
-							input_rvs(rvs_types.in_knock_back, p, "奥ラインへ送ったあとのリバサ")
+						if p.act == 0x14A and p.act_count == 5 and p.old_act_frame == 0 and p.act_frame == 0 and p.tw_frame == 0 then
+							input_rvs(rvs_types.in_knock_back, p, string.format("奥ラインへ送ったあとのリバサ1 %x %x %x %s", p.act, p.act_count, p.act_frame, p.tw_frame))
+						end
+						if p.act == 0x14A and p.act_count == 4 and p.old_act_frame == 0 and p.act_frame == 0 and p.tw_frame == 0 then
+							input_rvs(rvs_types.in_knock_back, p, string.format("奥ラインへ送ったあとのリバサ2 %x %x %x %s", p.act, p.act_count, p.act_frame, p.tw_frame))
 						end
 					elseif p.on_down == global.frame_number then
 						if p.dummy_wakeup == wakeup_type.tech then
