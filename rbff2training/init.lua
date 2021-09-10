@@ -10256,7 +10256,7 @@ function rbff2.startplugin()
 						end
 						if p.dummy_rvs.cmd then -- 通常投げ
 							if not  p.n_throwable or not p.throw.in_range then
-								return
+								--return
 							end
 						end
 					elseif p.dummy_rvs.jump then
