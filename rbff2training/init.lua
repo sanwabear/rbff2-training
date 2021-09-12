@@ -10340,7 +10340,10 @@ function rbff2.startplugin()
 						end
 						-- テクニカルライズのリバサ
 						if p.act == 0x2C9 and p.act_count == 2 and p.act_frame == 0 and p.tw_frame == 0 then
-							input_rvs(rvs_types.in_knock_back, p, string.format("テクニカルライズのリバサ %x %x %x %s", p.act, p.act_count, p.act_frame, p.tw_frame))
+							input_rvs(rvs_types.in_knock_back, p, string.format("テクニカルライズのリバサ1 %x %x %x %s", p.act, p.act_count, p.act_frame, p.tw_frame))
+						end
+						if p.act == 0x2C9 and p.act_count == 0 and p.act_frame == 2 and p.tw_frame == 0 then
+							input_rvs(rvs_types.in_knock_back, p, string.format("テクニカルライズのリバサ2 %x %x %x %s", p.act, p.act_count, p.act_frame, p.tw_frame))
 						end
 						-- グランドスウェー
 						local sway_act_frame = 0
