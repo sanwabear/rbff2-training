@@ -2309,8 +2309,8 @@ local char_acts_base = {
 		{ f = 32, disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
 		{ f = 5,  disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.attack, ids = { 0x56, }, },
 		{ f = 5,  disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.attack, ids = { 0x59, }, },
-		{ f = 8,  disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, }, },
-		{ f = 5,  disp_name = "着地", name = "小ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57,  }, },
+		{ f = 8,  disp_name = "着地", name = "ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
+		{ f = 5,  disp_name = "着地", name = "小ジャンプ着地(大攻撃後)", type = act_types.attack, ids = { 0x57, 0x5A, }, },
 		{ f = 37, disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.attack, ids = { 0x4A, }, },
 		{ f = 37, disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.attack, ids = { 0x4B, }, },
 		{ f = 37, disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.attack, ids = { 0x4C, }, },
@@ -4546,7 +4546,7 @@ local hit_box_procs = {
 	unknown1   = function(id) return hit_box_proc(id, 0x94FCC) end, -- 012E38: 012E44: 不明処理、未使用？
 }
 local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, is_fireball)
-	local box = {id = id}
+	local box = {id = id, p = p,}
 	box.type = nil
 	if (box.id >= #box_types) then
 		box.atk = true
@@ -6121,8 +6121,8 @@ function rbff2.startplugin()
 			--判定追加1 攻撃判定
 			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x012C42),
 				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100F00)",
-				--"printf \"PC=%X A4=%X A2=%X D0=%X\",PC,A4,A2,D0;"..
-				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pd@(temp0+$B)=maincpu.pd@((A2)+$5);maincpu.pw@(temp0+$C)=maincpu.pw@(((A4)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A4)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
+				--"printf \"PC=%X A4=%X A2=%X D0=%X CT=%X\",PC,A4,A2,D0,($1DC000+((maincpu.pb@10CB40)*$10));"..
+				"temp0=($1DC000+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pd@(temp0+$B)=maincpu.pd@((A2)+$5);maincpu.pw@(temp0+$C)=maincpu.pw@(((A4)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A4)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
 
 			--[[
 			判定データ調査用
@@ -6132,20 +6132,20 @@ function rbff2.startplugin()
 			--判定追加2 攻撃判定
 			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x012C88),
 				"(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100F00)",
-				--"printf \"PC=%X A3=%X A1=%X D0=%X\",PC,A3,A1,D0;"..
-				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$01;maincpu.pd@(temp0+$B)=maincpu.pd@((A1)+$5);maincpu.pw@(temp0+$C)=maincpu.pw@(((A3)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A3)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
+				--"printf \"PC=%X A3=%X A1=%X D0=%X CT=%X\",PC,A3,A1,D0,($1DC000+((maincpu.pb@10CB40)*$10));"..
+				"temp0=($1DC000+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$01;maincpu.pd@(temp0+$B)=maincpu.pd@((A1)+$5);maincpu.pw@(temp0+$C)=maincpu.pw@(((A3)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A3)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
 
 			--判定追加3 1P押し合い判定
 			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x012D4C),
-				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100F00)",
-				--"printf \"PC=%X A4=%X A2=%X D0=%X\",PC,A4,A2,D0;"..
-				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pw@(temp0+$C)=maincpu.pw@(((A4)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A4)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
+				"(maincpu.pw@107C22>0)&&($100400==((A4)&$FFFFFF))",
+				--"printf \"PC=%X A4=%X A2=%X D0=%X CT=%X\",PC,A4,A2,D0,($1DC000+((maincpu.pb@10CB40)*$10));"..
+				"temp0=($1DC000+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pw@(temp0+$C)=maincpu.pw@(((A4)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A4)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
 
 			--判定追加4 2P押し合い判定
 			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x012D92),
-				"(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100F00)",
-				--"printf \"PC=%X A3=%X A1=%X D0=%X\",PC,A3,A1,D0;"..
-				"temp0=($10CB41+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pw@(temp0+$C)=maincpu.pw@(((A3)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A3)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
+				"(maincpu.pw@107C22>0)&&($100500<=((A3)&$FFFFFF))",
+				--"printf \"PC=%X A3=%X A1=%X D0=%X CT=%X\",PC,A3,A1,D0,($1DC000+((maincpu.pb@10CB40)*$10));"..
+				"temp0=($1DC000+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pw@(temp0+$C)=maincpu.pw@(((A3)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A3)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g"))
 
 			-- 地上通常投げ
 			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x05D782),
@@ -6398,8 +6398,8 @@ function rbff2.startplugin()
 
 		-- 各種当たり判定のフック
 		-- 0x10CB40 当たり判定の発生個数
-		-- 0x10CB41 から 0x10 間隔で当たり判定をbpsetのフックで記録する
-		for addr = 0x10CB41, 0x10CB41 + pgm:read_u8(0x10CB40) * 0x11 do
+		-- 0x1DC000 から 0x10 間隔で当たり判定をbpsetのフックで記録する
+		for addr = 0x1DC000, 0x1DC000 + pgm:read_u8(0x10CB40) * 0x11 do
 			pgm:write_u8(addr, 0xFF)
 		end
 		pgm:write_u8(0x10CB40, 0x00)
@@ -9231,7 +9231,7 @@ function rbff2.startplugin()
 		end
 
 		-- キャラと飛び道具の当たり判定取得
-		for addr = 0x10CB41, 0x10CB41 + pgm:read_u8(0x10CB40) * 0x10, 0x10 do
+		for addr = 0x1DC000, 0x1DC000 + pgm:read_u8(0x10CB40) * 0x10, 0x10 do
 			local box = {
 				on          = pgm:read_u8(addr),
 				id          = pgm:read_u8(addr+0x1),
@@ -12926,6 +12926,13 @@ function rbff2.startplugin()
 					print(char_names[i], i, "ラ", string.upper(btn), range.x1, range.x2)
 				end
 			end
+			]]
+
+			--[[ WIP
+			-- https://www.neo-geo.com/forums/index.php?threads/universe-bios-released-good-news-for-mvs-owners.41967/page-7
+			-- pgm:write_direct_u8 (0x56D98A, 0x0C)       -- Auto SDM combo (RB2)
+			-- pgm:write_direct_u32(0x55FE5C, 0x46A70500) -- 1P Crazy Yamazaki Return (now he can throw projectile "anytime" with some other bug)
+			-- pgm:write_direct_u16(0x55FE46, 0xC13C)     -- 1P Level 2 Blue Mary
 			]]
 		end
 
