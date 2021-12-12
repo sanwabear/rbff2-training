@@ -2480,6 +2480,7 @@ local char_acts_base = {
 			0xD, 0x13, 0x14, -- 前小ジャンプ
 			0xF, 0x15, 0x16, -- 後小ジャンプ
 		}, },
+		{ name = "空中ガード後", type = act_types.free, ids = { 0x12F, }, },
 		{ name = "ダウン", type = act_types.any, ids = { 0x18E, 0x192, 0x190, }, },
 		{ f = 155,  name = "気絶", type = act_types.any, ids = { 0x194, 0x195, }, },
 		{ name = "ガード", type = act_types.guard, ids = { 0x117, 0x118, 0x119, 0x11A, 0x11B, 0x11C, 0x11D, 0x11E, 0x11F, 0x120, 0x121, 0x122, 0x123, 0x124, 0x125, 0x126, 0x127, 0x128, 0x129, 0x12A, 0x12B, 0x12C, 0x12C, 0x12D, 0x12E, 0x131, 0x132, 0x133, 0x134, 0x135, 0x136, 0x137, 0x139, }, },
@@ -9205,12 +9206,16 @@ function rbff2.startplugin()
 			op.need_low_block = false
 			op.need_ovh_block = false
 			if p.act ~= 0 and 0 < p.char and p.char < 25 then
+				op.need_block     = (p.act_data.type == act_types.low_attack) or (p.act_data.type == act_types.attack) or (p.act_data.type == act_types.overhead)
+				op.need_low_block = p.act_data.type == act_types.low_attack
+				op.need_ovh_block = p.act_data.type == act_types.overhead
+				--[[ 全段ヒットはガードしない場合
 				if p.hit.full_hit or p.hit.harmless2 then
-				else
-					op.need_block     = (p.act_data.type == act_types.low_attack) or (p.act_data.type == act_types.attack) or (p.act_data.type == act_types.overhead)
-					op.need_low_block = p.act_data.type == act_types.low_attack
-					op.need_ovh_block = p.act_data.type == act_types.overhead
+					op.need_block     = false
+					op.need_low_block = false
+					op.need_ovh_block = false
 				end
+				]]
 			end
 			for _, fb in pairs(p.fireball) do
 				-- 飛び道具の状態チェック
@@ -10356,20 +10361,16 @@ function rbff2.startplugin()
 							input_rvs(rvs_types.in_knock_back, p, string.format("グランドスウェーのあとのリバサ %x %x %x %s", p.act, p.act_count, p.act_frame, p.tw_frame))
 						end
 					end
-					if (p.dummy_wakeup == wakeup_type.tech or p.dummy_wakeup == wakeup_type.sway) and p.on_down == global.frame_number then
-						if p.dummy_wakeup == wakeup_type.tech then
-							-- テクニカルライズ入力
-							cmd_base._2d(p, next_joy)
-						elseif p.dummy_wakeup == wakeup_type.sway then
-							-- グランドスウェー入力
-							cmd_base._8d(p, next_joy)
-						elseif p.dummy_wakeup == wakeup_type.atk then
-							-- 起き上がり攻撃入力
-							-- 舞、ボブ、フランコ、山崎のみなのでキャラをチェックする
-							if p.char == 0x04 or p.char == 0x07 or p.char == 0x0A or p.char == 0x0B then
-								p.write_bs_hook({ id = 0x23, ver = 0x7800, bs = false, name = "起き上がり攻撃", })
-							end
-						end
+					if p.dummy_wakeup == wakeup_type.tech and p.on_down == global.frame_number then
+						-- テクニカルライズ入力
+						cmd_base._2d(p, next_joy)
+					elseif p.dummy_wakeup == wakeup_type.sway and p.on_down == global.frame_number then
+						-- グランドスウェー入力
+						cmd_base._8d(p, next_joy)
+					elseif p.dummy_wakeup == wakeup_type.atk and p.on_down == global.frame_number and (p.char == 0x04 or p.char == 0x07 or p.char == 0x0A or p.char == 0x0B) then
+						-- 起き上がり攻撃入力
+						-- 舞、ボブ、フランコ、山崎のみなのでキャラをチェックする
+						p.write_bs_hook({ id = 0x23, ver = 0x7800, bs = false, name = "起き上がり攻撃", })
 					end
 				end
 
@@ -11137,7 +11138,7 @@ function rbff2.startplugin()
 			-- キャラ間の距離表示
 			local abs_space = math.abs(p_space)
 			if global.disp_pos then
-				local y = 217 -- math.floor(get_digit(abs_space)/2)
+				local y = 216 -- math.floor(get_digit(abs_space)/2)
 				draw_rtext_with_shadow(167  , y    , abs_space)
 
 				-- キャラの向き
@@ -11145,16 +11146,14 @@ function rbff2.startplugin()
 					local p1 = i == 1
 					local op = players[3-i]
 
-					-- 1:右向き -1:左向き
-					local flip_x = p.hit.flip_x == 1 and ">" or "<"
-					local side   = p.side       == 1 and "(>)" or "(<)"
-					local postxt = p.poslr
+					-- 
+					local flip_x = p.disp_side  == 1    and  ">"  or  "<"  -- 判定の向き 1:右向き -1:左向き
+					local side   = p.side       == 1    and "(>)" or "(<)" -- 内部の向き 1:右向き -1:左向き
+					local i_side = p.input_side == 0x00 and "[>]" or "[<]" -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側 -- p.poslr
 					if p1 then
-						local txt = string.format("%s%s%s", flip_x, side, postxt)
-						draw_rtext_with_shadow(   150  , y    , txt)
+						draw_rtext_with_shadow(150, y, string.format("%s%s%s", flip_x, side, i_side))
 					else
-						local txt = string.format("%s%s%s", postxt, side, flip_x)
-						draw_text_with_shadow(170  , y    , txt)
+						draw_text_with_shadow (170, y, string.format("%s%s%s", i_side, side, flip_x))
 					end
 				end
 				--print(string.format("%3s %3s %3s %3s xx %3s %3s", players[1].min_pos, players[2].min_pos, players[1].max_pos, players[2].max_pos, players[1].pos, players[2].pos))
@@ -12001,12 +12000,16 @@ function rbff2.startplugin()
 			end
 		end
 
-		main_menu.pos.col[14] = 1
-		local bgmid = math.max(pgm:read_u8(0x10A8D5), 1)
-		for i, bgm in ipairs(bgms) do
+		local bgmid, found = pgm:read_u8(0x10A8D5), false
+		for _, bgm in ipairs(bgms) do
 			if bgmid == bgm.id then
 				main_menu.pos.col[14] = bgm.name_idx
+				found = true
+				break
 			end
+		end
+		if not found then
+			main_menu.pos.col[14] = 1
 		end
 
 		main_menu.pos.col[15] = global.disp_gauge and 2 or 1 -- 体力,POWゲージ表示
