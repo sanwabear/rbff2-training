@@ -10598,8 +10598,8 @@ function rbff2.startplugin()
 				-- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
 				if global.pause_hit == 2 or
 					(global.pause_hit == 6 and p.state == 2) or
-					(global.pause_hit == 5 and p.state == 3) or
-					(global.pause_hit == 4 and p.state == 1) or
+					(global.pause_hit == 5 and p.state == 1) or
+					(global.pause_hit == 4 and p.state == 3) or
 					(global.pause_hit == 3 and p.state ~= 2) then
 					global.pause = true
 				end
