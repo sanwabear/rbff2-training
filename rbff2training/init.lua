@@ -106,7 +106,7 @@ local global = {
 	disp_effect_bps = nil,
 	disp_frmgap     = 3, -- フレーム差表示
 	disp_input_sts  = 1, -- コマンド入力状態表示 1:OFF 2:1P 3:2P
-	pause_hit       = 1, -- ヒット時にポーズ 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:ガードのみ
+	pause_hit       = 1, -- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
 	pause_hitbox    = 1, -- 判定発生時にポーズ
 	pause           = false,
 	replay_stop_on_dmg = false, -- ダメージでリプレイ中段
@@ -10595,9 +10595,11 @@ function rbff2.startplugin()
 
 			-- ヒット時にポーズさせる
 			if p.state ~= 0 and p.state ~= p.old_state and global.pause_hit > 0 then
-				-- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:ガードのみ
+				-- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
 				if global.pause_hit == 2 or
-					(global.pause_hit == 4 and p.state == 2) or
+					(global.pause_hit == 6 and p.state == 2) or
+					(global.pause_hit == 5 and p.state == 3) or
+					(global.pause_hit == 4 and p.state == 1) or
 					(global.pause_hit == 3 and p.state ~= 2) then
 					global.pause = true
 				end
@@ -12359,7 +12361,7 @@ function rbff2.startplugin()
 		list = {
 			{ "                          特殊設定" },
 			{ "簡易超必"              , { "OFF", "ON" }, },
-			{ "ヒット時にポーズ"      , { "OFF", "ON", "ON:やられのみ", "ON:ガードのみ", }, },
+			{ "ヒット時にポーズ"      , { "OFF", "ON", "ON:やられのみ", "ON:投げやられのみ", "ON:打撃やられのみ", "ON:ガードのみ", }, },
 			{ "判定発生時にポーズ"    , { "OFF", "投げ", "攻撃", "変化時", }, },
 			{ "技画像保存"            , { "OFF", "ON:新規", "ON:上書き", }, },
 			{ "MAMEデバッグウィンドウ", { "OFF", "ON" }, },
