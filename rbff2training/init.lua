@@ -5204,6 +5204,7 @@ local dummy_gd_type = {
 	guard1 = 5, -- 1ガード
 	fixed  = 6, -- 常時
 	random = 7, -- ランダム
+	force  = 8, -- 強制
 }
 local wakeup_type = {
 	none = 1, -- なし
@@ -5223,7 +5224,7 @@ function rbff2.startplugin()
 			bases            = {},
 
 			dummy_act        = 1,           -- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
-			dummy_gd         = dummy_gd_type.none, -- なし, オート, ブレイクショット, 1ヒットガード, 1ガード, 常時, ランダム
+			dummy_gd         = dummy_gd_type.none, -- なし, オート, ブレイクショット, 1ヒットガード, 1ガード, 常時, ランダム, 強制
 			dummy_wakeup     = wakeup_type.none,  -- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
 
 			dummy_bs         = nil,         -- ランダムで選択されたブレイクショット
@@ -5662,6 +5663,8 @@ function rbff2.startplugin()
 
 				-- スクショ用
 				fix_scr_top  = p1 and 0x10DE5C or 0x10DE5D, -- screen_topの強制フック用
+
+				force_block  = p1 and 0x10DE5E or 0x10DE5F, -- 強制ガード用
 			},
 		}
 
@@ -6207,13 +6210,10 @@ function rbff2.startplugin()
 			-- bp 13118,1,{PC=1311C;g}
 
 			-- 攻撃のヒットをむりやりガードに変更する
-			--[[
+			-- $10DE5E $10DE5Fにフラグたっているかをチェックする
 			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x0580D4),
-				"maincpu.pw@107C22>0&&((maincpu.pb@10DDF1>0&&(A4)==100500)||(maincpu.pb@10DDF1>0&&(A4)==100400))",
+				"maincpu.pw@107C22>0&&((maincpu.pb@10DDF1>0&&(A4)==100500&&maincpu.pb@10DE5F==1&&(maincpu.pb@10058E==0||maincpu.pb@10058E==2))||(maincpu.pb@10DDF1>0&&(A4)==100400&&maincpu.pb@10DE5E==1&&(maincpu.pb@10048E==0||maincpu.pb@10048E==2)))",
 				"PC=" .. string.format("%x", fix_bp_addr(0x0580EA)) .. ";g"))
-			]]
-
-			-- 投げ確定時の判定用フレーム
 			--[[
 			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x012FD0),
 				"maincpu.pw@107C22>0&&((maincpu.pb@10DDF1>0&&(A4)==100500)||(maincpu.pb@10DDF1>0&&(A4)==100400))",
@@ -10142,7 +10142,12 @@ function rbff2.startplugin()
 					end
 				end
 
-				-- なし, オート, 1ヒットガード, 1ガード, 常時, ランダム
+				-- なし, オート, 1ヒットガード, 1ガード, 常時, ランダム, 強制
+				if p.dummy_gd == dummy_gd_type.force then
+					pgm:write_u8(p.addr.force_block, 0x01)
+				else
+					pgm:write_u8(p.addr.force_block, 0x00)
+				end
 				-- リプレイ中は自動ガードしない
 				if (p.need_block or p.need_low_block or p.need_ovh_block) and accept_control then
 					if jump_acts[p.act] then
@@ -11146,15 +11151,13 @@ function rbff2.startplugin()
 				-- キャラの向き
 				for i, p in ipairs(players) do
 					local p1 = i == 1
-					local op = players[3-i]
-
-					-- 
-					local flip_x = p.disp_side  == 1    and  ">"  or  "<"  -- 判定の向き 1:右向き -1:左向き
 					local side   = p.side       == 1    and "(>)" or "(<)" -- 内部の向き 1:右向き -1:左向き
 					local i_side = p.input_side == 0x00 and "[>]" or "[<]" -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側 -- p.poslr
 					if p1 then
+						local flip_x = p.disp_side  == 1 and  ">"  or  "<"  -- 判定の向き 1:右向き -1:左向き
 						draw_rtext_with_shadow(150, y, string.format("%s%s%s", flip_x, side, i_side))
 					else
+						local flip_x = p.disp_side  == 1 and  "<"  or  ">"  -- 判定の向き 1:左向き -1:右向き
 						draw_text_with_shadow (170, y, string.format("%s%s%s", i_side, side, flip_x))
 					end
 				end
@@ -11787,7 +11790,7 @@ function rbff2.startplugin()
 		col[20] = p[1].disp_char and 2 or 1 -- 1P キャラ表示          20
 		col[21] = p[2].disp_char and 2 or 1 -- 2P キャラ表示          21
 		col[22] = g.disp_effect  and 2 or 1 -- エフェクト表示         22
-		col[20] = g.disp_pos     and 2 or 1 -- 1P 2P 距離表示         20
+		col[23] = g.disp_pos     and 2 or 1 -- 1P 2P 距離表示         23
 	end
 	local init_ex_menu_config = function()
 		local col = ex_menu.pos.col
@@ -12126,8 +12129,8 @@ function rbff2.startplugin()
 			{ "                         ダミー設定" },
 			{ "1P アクション"         , { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
 			{ "2P アクション"         , { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
-			{ "1P ガード"             , { "なし", "オート", "ブレイクショット（Aで選択画面へ）", "1ヒットガード", "1ガード", "常時", "ランダム" }, },
-			{ "2P ガード"             , { "なし", "オート", "ブレイクショット（Aで選択画面へ）", "1ヒットガード", "1ガード", "常時", "ランダム" }, },
+			{ "1P ガード"             , { "なし", "オート", "ブレイクショット（Aで選択画面へ）", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
+			{ "2P ガード"             , { "なし", "オート", "ブレイクショット（Aで選択画面へ）", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
 			{ "1ガード持続フレーム数" , gd_frms, },
 			{ "ブレイクショット設定"  , bs_guards },
 			{ "1P やられ時行動"       , { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ（Aで選択画面へ）", "グランドスウェー（Aで選択画面へ）", "起き上がり攻撃", }, },
