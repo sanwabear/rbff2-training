@@ -12919,6 +12919,16 @@ function rbff2.startplugin()
 			pgm:write_direct_u16(0xCB242, 0xFF01) -- FF は技データへの繋ぎ  00 は技データ（なにもしない）
 			pgm:write_direct_u16(0xCB244, 0x0600) -- 追加技データ
 
+			-- 対戦の双角ステージをビリーステージに変更する
+			pgm:write_direct_u16(0xF290, 0x0004)
+
+			-- 家庭用のクレジット9 maincpu.pw@10E008=0909
+			pgm:write_direct_u16(0x10E008, 0x0909)
+			-- 家庭用のクレジット表示をスキップ bp 00C734,1,{PC=c7c8;g}
+			-- CREDITをCREDITSにする判定をスキップ bp C742,1,{PC=C748;g}
+			-- CREDIT表示のルーチンを即RTS
+			pgm:write_direct_u16(0x00C700, 0x4E75)
+
 			-- 逆襲拳、サドマゾの初段で相手の状態変更しない（相手が投げられなくなる事象が解消する）
 			-- pgm:write_direct_u8(0x57F43, 0x00)
 
