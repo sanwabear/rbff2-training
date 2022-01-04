@@ -12923,30 +12923,31 @@ function rbff2.startplugin()
 			pgm:write_direct_u16(0xCB242, 0xFF01) -- FF は技データへの繋ぎ  00 は技データ（なにもしない）
 			pgm:write_direct_u16(0xCB244, 0x0600) -- 追加技データ
 
+			-- 判定表示
+			-- maincpu.rw@0047B6=6100
+			-- maincpu.rw@004F5C=4E71
+			-- maincpu.rw@004F66=4E71
+
 			-- 乱入されても常にキャラ選択できる
 			-- MVS
-			-- 062910: 422D 8026                -- 元のチェック処理をなくして乱入状態の初期化
-			-- 062914: 422D 39D6                clr.b   ($39d6,A5) -- 対戦状態のチェックは残す
-			-- 062918: 0C2D 0003 8024           cmpi.b  #$3, (-$7fdc,A5)
-			-- 06291E: 6700 003C                beq     $6295c
-			-- 062922: 102D 8026                move.b  (-$7fda,A5), D0
-			-- 062926: 6600 0034                bne     $6295c
-			-- maincpu.rd@062910=422D8026
+			-- maincpu.rb@062E7C=00
 			-- 
 			-- 家庭用
-			-- 062930: 422D 8026                -- 元のチェック処理をなくして乱入状態の初期化
-			-- 062934: 422D 39D6                clr.b   ($39d6,A5) -- 対戦状態のチェックは残す
-			-- 062938: 0C2D 0003 8024           cmpi.b  #$3, (-$7fdc,A5)
-			-- 06293E: 6700 003C                beq     $6297c
-			-- 062942: 102D 8026                move.b  (-$7fda,A5), D0
-			-- 062946: 6600 0034                bne     $6297c
-			-- maincpu.rd@062930=422D8026
+			-- maincpu.rb@062E9D=00
 
 			-- 対戦の双角ステージをビリーステージに変更する MVSと家庭用共通
 			pgm:write_direct_u16(0xF290, 0x0004)
 
-			-- 家庭用のクレジット9 maincpu.pw@10E008=0909
-			pgm:write_direct_u16(0x10E008, 0x0909)
+			-- クレジット消費をNOPにする
+			pgm:write_direct_u32(0x00D238, 0x4E714E71)
+			pgm:write_direct_u32(0x00D270, 0x4E714E71)
+
+			-- 家庭用の初期クレジット9
+			pgm:write_direct_u16(0x00DD54, 0x0009)
+			pgm:write_direct_u16(0x00DD5A, 0x0009)
+			pgm:write_direct_u16(0x00DF70, 0x0009)
+			pgm:write_direct_u16(0x00DF76, 0x0009)
+
 			-- 家庭用のクレジット表示をスキップ bp 00C734,1,{PC=c7c8;g}
 			-- CREDITをCREDITSにする判定をスキップ bp C742,1,{PC=C748;g}
 			-- CREDIT表示のルーチンを即RTS
