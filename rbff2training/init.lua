@@ -12929,12 +12929,15 @@ function rbff2.startplugin()
 			-- maincpu.rw@004F66=4E71
 
 			--[[
-			スタートボタンで判定表示
+			-- スタートボタンで判定表示
 			maincpu.rd@0047B0=08390000;maincpu.rd@0047B4=00380000;maincpu.rd@0047B8=670001C8;maincpu.rd@0047BC=4E714E71;maincpu.rd@0047C0=4E714E71
-			スタートボタンで判定色付け
-			maincpu.rd@004F52=08390000;maincpu.rd@004F56=00380000;maincpu.rw@004F5A=6704
-			maincpu.rd@004F5E=08390000;maincpu.rd@004F62=00401c02;maincpu.rd@004F66=67024E75
+			-- スタートボタンで判定色付けチェックへジャンプ
+			maincpu.rd@004F52=08390000;maincpu.rd@004F56=00380000;maincpu.rw@004F5A=6702
+			-- 判定色のメモリがゼロなら色付け処理へジャンプ
+			maincpu.rd@004F5E=41F90040;maincpu.rd@004F62=1c023210;maincpu.rd@004F66=67024E75
+			-- 判定色付けのメモリ範囲の不足修正
 			maincpu.rw@004F74=7216
+			-- 判定色付け用のメモリ領域の初期化を修正
 			maincpu.rd@0110C4=0000500A
 			]]
 
