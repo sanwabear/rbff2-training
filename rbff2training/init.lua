@@ -12915,7 +12915,7 @@ function rbff2.startplugin()
 			-- 0632D0: 004B -- キャラ選択の時間の内部タイマー初期値1 デフォは4B=75フレーム
 			-- 063332: 004B -- キャラ選択の時間の内部タイマー初期値2 デフォは4B=75フレーム
 
-			-- 0xCB240から16バイト実質効いていない避け攻撃ぽいコマンドデータ
+			-- 0xCB240から16バイト実質効いていない旧避け攻撃ぽいコマンドデータ
 			-- ここを1発BS用のリバーサルとBSモードの入れ物に使う
 			-- BSモードONの時は CB241 を 00 にして未入力で技データを読み込ませる
 			-- 技データ希望の技IDを設定していれば技が出る
@@ -12923,10 +12923,18 @@ function rbff2.startplugin()
 			pgm:write_direct_u16(0xCB242, 0xFF01) -- FF は技データへの繋ぎ  00 は技データ（なにもしない）
 			pgm:write_direct_u16(0xCB244, 0x0600) -- 追加技データ
 
-			-- 判定表示
-			-- maincpu.rw@0047B6=6100
-			-- maincpu.rw@004F5C=4E71
-			-- maincpu.rw@004F66=4E71
+			--[[ 判定の色 座標の色で確認
+			maincpu.rw@500C=100F  -- 青色
+			maincpu.rw@500C=102D  -- 暗い青色
+			maincpu.rw@500C=20F0  -- 緑色
+			maincpu.rw@500C=30FF  -- 水色
+			maincpu.rw@500C=4F00  -- 赤色
+			maincpu.rw@500C=5F0F  -- ドピンク
+			maincpu.rw@500C=6F70  -- オレンジに近い色
+			maincpu.rw@500C=6FF0  -- 黄色
+			maincpu.rw@500C=7F77  -- 薄い朱色
+			maincpu.rw@500C=7FFF  -- 白色
+			]]
 
 			--[[
 			-- スタートボタンで判定表示
@@ -12941,12 +12949,71 @@ function rbff2.startplugin()
 			maincpu.rd@0110C4=0000500A
 			]]
 
+			--[[ 没案
+			-- スタートボタンで無敵表示
+			maincpu.rd@05BCAC=08390000;
+			maincpu.rd@05BCB0=00380000;
+			maincpu.rd@05BCB4=67000004;
+			maincpu.rd@05BCB8=4E7549ED;
+			maincpu.rd@05BCBC=84004E71;
+			maincpu.rd@05BCC0=4E714E71;
+
+			maincpu.rd@05BCD8=4E714E71;
+			maincpu.rd@05BCDC=4E714E71;
+
+			-- デバッグの飛び道具のID表示の代わりに投げ無敵フレームを表示
+			maincpu.rd@05BCAC=08390000;
+			maincpu.rd@05BCB0=00380000;
+			maincpu.rd@05BCB4=67000004;
+			maincpu.rd@05BCB8=4E7549ED;
+			maincpu.rd@05BCBC=84004E71;
+			maincpu.rd@05BCC0=4E714E71;
+			maincpu.rd@05BCC4=363C7107;
+			maincpu.rd@05BCC8=610000E6;
+
+			maincpu.rd@05BCD8=4E714E71;
+			maincpu.rd@05BCDC=4E714E71;
+			maincpu.rd@05BCE0=363C72A7;
+			maincpu.rd@05BCE4=610000CA;
+
+			maincpu.rd@05BDB0=1E2C0090;
+			maincpu.rd@05BDB4=4E714E71;maincpu.rw@05BDB8=4E71;
+			-- 24Fよりおおきいかどうかがわかるようにしたい
+
+			-- 無敵表示位置
+			maincpu.rw@05BCC6=7065
+			maincpu.rw@05BCE2=7445
+			maincpu.rw@05BCCE=7066
+			maincpu.rw@05BCEA=7446
+			-- 無敵表示を-M-表記に
+			maincpu.rw@05BEEC=0002
+			maincpu.rd@05BF2D=2D4D2DFF
+			-- ダメージ表示位置
+			maincpu.rw@05B446=7065
+			maincpu.rw@05B45C=7445
+			-- ダメージ表示を白色
+			maincpu.rw@05BDC0=2F00
+			maincpu.rw@05B44A=2F00
+			maincpu.rw@05B460=2F00
+			]]
+
 			-- 乱入されても常にキャラ選択できる
-			-- MVS
-			-- maincpu.rb@062E7C=00
-			-- 
-			-- 家庭用
-			-- maincpu.rb@062E9D=00
+			-- MVS                    家庭用
+			-- maincpu.rb@062E7C=00   maincpu.rb@062E9D=00
+
+			--[[ 常にCPUレベルMAX
+			MVS                          家庭用
+			maincpu.rd@0500E8=303C0007   maincpu.rd@050108=303C0007
+			maincpu.rd@050118=3E3C0007   maincpu.rd@050138=3E3C0007
+			maincpu.rd@050150=303C0007   maincpu.rd@050170=303C0007
+			maincpu.rd@0501A8=303C0007   maincpu.rd@0501C8=303C0007
+			maincpu.rd@0501CE=303C0007   maincpu.rd@0501EE=303C0007
+			]]
+			pgm:write_direct_u32(fix_bp_addr(0x0500E8), 0x303C0007)
+			pgm:write_direct_u32(fix_bp_addr(0x050118), 0x3E3C0007)
+			pgm:write_direct_u32(fix_bp_addr(0x050150), 0x303C0007)
+			pgm:write_direct_u32(fix_bp_addr(0x0501A8), 0x303C0007)
+			pgm:write_direct_u32(fix_bp_addr(0x0501CE), 0x303C0007)
 
 			-- 対戦の双角ステージをビリーステージに変更する MVSと家庭用共通
 			pgm:write_direct_u16(0xF290, 0x0004)
@@ -13031,6 +13098,12 @@ function rbff2.startplugin()
 		pgm:write_u8(0x10E000, dip1)
 		pgm:write_u8(0x10E001, dip2)
 		pgm:write_u8(0x10E002, dip3)
+
+		-- CPUレベル MAX（ロムハックのほうが楽）
+		-- maincpu.pw@10E792=0007
+		-- maincpu.pw@10E796=0008
+		-- pgm:write_u16(0x10E792, 0x0007)
+		-- pgm:write_u16(0x10E796, 0x0007)
 
 		if match_active then
 			-- 1Pと2Pの操作の設定
