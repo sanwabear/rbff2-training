@@ -22,7 +22,6 @@
 
 local exports = {}
 require('lfs')
-require('utf8_filenames')
 local convert_lib = require("data/button_char")
 local convert = function(str)
 	return str and convert_lib(str) or str
@@ -3284,10 +3283,10 @@ local cmd_neutral = function(p, next_joy)
 	next_joy["P" .. p.control .. " Down"] = false
 	next_joy[p.block_side] = false
 	next_joy[p.front_side] = false
-	next_joy["P" .. p.control .. " Button 1"] = false
-	next_joy["P" .. p.control .. " Button 2"] = false
-	next_joy["P" .. p.control .. " Button 3"] = false
-	next_joy["P" .. p.control .. " Button 4"] = false
+	next_joy["P" .. p.control .. " A"] = false
+	next_joy["P" .. p.control .. " B"] = false
+	next_joy["P" .. p.control .. " C"] = false
+	next_joy["P" .. p.control .. " D"] = false
 end
 local cmd_base = {
 	_5 = cmd_neutral,
@@ -3329,102 +3328,102 @@ local cmd_base = {
 	end,
 	_a = function(p, next_joy)
 		cmd_neutral(p, next_joy)
-		next_joy["P" .. p.control .. " Button 1"] = true
+		next_joy["P" .. p.control .. " A"] = true
 	end,
 	_b = function(p, next_joy)
 		cmd_neutral(p, next_joy)
-		next_joy["P" .. p.control .. " Button 2"] = true
+		next_joy["P" .. p.control .. " B"] = true
 	end,
 	_c = function(p, next_joy)
 		cmd_neutral(p, next_joy)
-		next_joy["P" .. p.control .. " Button 3"] = true
+		next_joy["P" .. p.control .. " C"] = true
 	end,
 	_d = function(p, next_joy)
 		cmd_neutral(p, next_joy)
-		next_joy["P" .. p.control .. " Button 4"] = true
+		next_joy["P" .. p.control .. " D"] = true
 	end,
 	_ab = function(p, next_joy)
 		cmd_neutral(p, next_joy)
-		next_joy["P" .. p.control .. " Button 1"] = true
-		next_joy["P" .. p.control .. " Button 2"] = true
+		next_joy["P" .. p.control .. " A"] = true
+		next_joy["P" .. p.control .. " B"] = true
 	end,
 	_bc = function(p, next_joy)
 		cmd_neutral(p, next_joy)
-		next_joy["P" .. p.control .. " Button 2"] = true
-		next_joy["P" .. p.control .. " Button 3"] = true
+		next_joy["P" .. p.control .. " B"] = true
+		next_joy["P" .. p.control .. " C"] = true
 	end,
 	_6a = function(p, next_joy)
 		cmd_neutral(p, next_joy)
 		next_joy[p.front_side] = true
-		next_joy["P" .. p.control .. " Button 1"] = true
+		next_joy["P" .. p.control .. " A"] = true
 	end,
 	_3a = function(p, next_joy)
 		cmd_neutral(p, next_joy)
 		next_joy[p.front_side] = true
 		next_joy["P" .. p.control .. " Down"] = true
-		next_joy["P" .. p.control .. " Button 1"] = true
+		next_joy["P" .. p.control .. " A"] = true
 	end,
 	_2a = function(p, next_joy)
 		cmd_neutral(p, next_joy)
 		next_joy["P" .. p.control .. " Down"] = true
-		next_joy["P" .. p.control .. " Button 1"] = true
+		next_joy["P" .. p.control .. " A"] = true
 	end,
 	_4a = function(p, next_joy)
 		cmd_neutral(p, next_joy)
 		next_joy[p.block_side] = true
-		next_joy["P" .. p.control .. " Button 1"] = true
+		next_joy["P" .. p.control .. " A"] = true
 	end,
 	_6b = function(p, next_joy)
 		cmd_neutral(p, next_joy)
 		next_joy[p.front_side] = true
-		next_joy["P" .. p.control .. " Button 2"] = true
+		next_joy["P" .. p.control .. " B"] = true
 	end,
 	_3b = function(p, next_joy)
 		cmd_neutral(p, next_joy)
 		next_joy[p.front_side] = true
 		next_joy["P" .. p.control .. " Down"] = true
-		next_joy["P" .. p.control .. " Button 2"] = true
+		next_joy["P" .. p.control .. " B"] = true
 	end,
 	_2b = function(p, next_joy)
 		cmd_neutral(p, next_joy)
 		next_joy["P" .. p.control .. " Down"] = true
-		next_joy["P" .. p.control .. " Button 2"] = true
+		next_joy["P" .. p.control .. " B"] = true
 	end,
 	_4b = function(p, next_joy)
 		cmd_neutral(p, next_joy)
 		next_joy[p.block_side] = true
-		next_joy["P" .. p.control .. " Button 2"] = true
+		next_joy["P" .. p.control .. " B"] = true
 	end,
 	_6c = function(p, next_joy)
 		cmd_neutral(p, next_joy)
 		next_joy[p.front_side] = true
-		next_joy["P" .. p.control .. " Button 3"] = true
+		next_joy["P" .. p.control .. " C"] = true
 	end,
 	_3c = function(p, next_joy)
 		cmd_neutral(p, next_joy)
 		next_joy[p.front_side] = true
 		next_joy["P" .. p.control .. " Down"] = true
-		next_joy["P" .. p.control .. " Button 3"] = true
+		next_joy["P" .. p.control .. " C"] = true
 	end,
 	_2c = function(p, next_joy)
 		cmd_neutral(p, next_joy)
 		next_joy["P" .. p.control .. " Down"] = true
-		next_joy["P" .. p.control .. " Button 3"] = true
+		next_joy["P" .. p.control .. " C"] = true
 	end,
 	_4c = function(p, next_joy)
 		cmd_neutral(p, next_joy)
 		next_joy[p.block_side] = true
-		next_joy["P" .. p.control .. " Button 3"] = true
+		next_joy["P" .. p.control .. " C"] = true
 	end,
 	_8d = function(p, next_joy)
 		cmd_neutral(p, next_joy)
 		next_joy["P" .. p.control .. " Up"] = true
-		next_joy["P" .. p.control .. " Button 4"] = true
+		next_joy["P" .. p.control .. " D"] = true
 	end,
 	_2d = function(p, next_joy)
 		cmd_neutral(p, next_joy)
 		next_joy["P" .. p.control .. " Down"] = true
-		next_joy["P" .. p.control .. " Button 4"] = true
+		next_joy["P" .. p.control .. " D"] = true
 	end,
 }
 local rvs_types = {
@@ -3950,10 +3949,10 @@ local joyk = {
 		lt = "P1 Left"       , -- joyk.p1.lt
 		rt = "P1 Right"      , -- joyk.p1.rt
 		up = "P1 Up"         , -- joyk.p1.up
-		a  = "P1 Button 1"   , -- joyk.p1.a
-		b  = "P1 Button 2"   , -- joyk.p1.b
-		c  = "P1 Button 3"   , -- joyk.p1.c
-		d  = "P1 Button 4"   , -- joyk.p1.d
+		a  = "P1 A"   , -- joyk.p1.a
+		b  = "P1 B"   , -- joyk.p1.b
+		c  = "P1 C"   , -- joyk.p1.c
+		d  = "P1 D"   , -- joyk.p1.d
 		st = "1 Player Start", -- joyk.p1.st
 	},
 	p2 = {
@@ -3961,10 +3960,10 @@ local joyk = {
 		lt = "P2 Left"        , -- joyk.p2.lt
 		rt = "P2 Right"       , -- joyk.p2.rt
 		up = "P2 Up"          , -- joyk.p2.up
-		a  = "P2 Button 1"    , -- joyk.p2.a
-		b  = "P2 Button 2"    , -- joyk.p2.b
-		c  = "P2 Button 3"    , -- joyk.p2.c
-		d  = "P2 Button 4"    , -- joyk.p2.d
+		a  = "P2 A"    , -- joyk.p2.a
+		b  = "P2 B"    , -- joyk.p2.b
+		c  = "P2 C"    , -- joyk.p2.c
+		d  = "P2 D"    , -- joyk.p2.d
 		st = "2 Players Start", -- joyk.p2.st
 	},
 }
@@ -3988,7 +3987,13 @@ local use_joy = {
 	{ port = ":edge:joy:START", field = joyk.p2.st, frame = 0, prev = 0, player = 2, get = 0, },
 	{ port = ":edge:joy:START", field = joyk.p1.st, frame = 0, prev = 0, player = 1, get = 0, },
 }
+
 local get_joy_base = function(prev, exclude_player)
+	-- for pname, port in pairs(manager.machine.ioport.ports) do
+	-- 	for fname, field in pairs(port.fields) do
+	-- 		print(string.format("%s %s", pname, fname))
+	-- 	end
+	-- end
 	local scr = manager.machine.screens:at(1)
 	local ec = scr:frame_number()
 	local joy_port = {}
@@ -3998,6 +4003,7 @@ local get_joy_base = function(prev, exclude_player)
 		local state = 0
 		if not joy_port[joy.port] then
 			joy_port[joy.port] = manager.machine.ioport.ports[joy.port]:read()
+			print(string.format("%s", joy.port))
 		end
 		local field = manager.machine.ioport.ports[joy.port].fields[joy.field]
 		state = ((joy_port[joy.port] & field.mask) ~ field.defvalue)
@@ -4023,7 +4029,7 @@ local get_joy_base = function(prev, exclude_player)
 		if exclude_player ~= joy.player then
 			joy_val[joy.field] = joy.frame
 			prev_joy_val[joy.field] = joy.prev
-			--if "P2 Button 1" == joy.field then
+			--if "P2 A" == joy.field then
 			--	print(string.format("%s %s %s %s", global.frame_number, joy.field, joy.prev, joy.frame))
 			--end
 		end
@@ -10133,8 +10139,8 @@ function rbff2.startplugin()
 						next_joy["P" .. p.control .. " Up"] = true
 					elseif p.dummy_act == 5 then
 						if p.in_sway_line ~= true and p.state == 0 and op.in_sway_line ~= true and op.act ~= 0x65 and op.act ~= 0x66 then
-							if joy_val["P" .. p.control .. " Button 4"] < 0 then
-								next_joy["P" .. p.control .. " Button 4"] = true
+							if joy_val["P" .. p.control .. " D"] < 0 then
+								next_joy["P" .. p.control .. " D"] = true
 							end
 							next_joy["P" .. p.control .. " Down"] = true
 						elseif p.in_sway_line == true then
@@ -12677,11 +12683,11 @@ function rbff2.startplugin()
 		if accept_input("Start", joy_val, state_past) then
 			-- Menu ON/OFF
 			global.input_accepted = ec
-		elseif accept_input("Button 1", joy_val, state_past) then
+		elseif accept_input("A", joy_val, state_past) then
 			-- サブメニューへの遷移（あれば）
 			menu_cur.on_a[menu_cur.pos.row]()
 			global.input_accepted = ec
-		elseif accept_input("Button 2", joy_val, state_past) then
+		elseif accept_input("B", joy_val, state_past) then
 			-- メニューから戻る
 			menu_cur.on_b[menu_cur.pos.row]()
 			global.input_accepted = ec
@@ -12743,7 +12749,7 @@ function rbff2.startplugin()
 				end
 			end
 			global.input_accepted = ec
-		elseif accept_input("Button 3", joy_val, state_past) then
+		elseif accept_input("C", joy_val, state_past) then
 			-- カーソル左10移動
 			local cols = menu_cur.list[menu_cur.pos.row][2]
 			if cols then
@@ -12754,7 +12760,7 @@ function rbff2.startplugin()
 				end
 			end
 			global.input_accepted = ec
-		elseif accept_input("Button 4", joy_val, state_past) then
+		elseif accept_input("D", joy_val, state_past) then
 			-- カーソル右10移動
 			local cols = menu_cur.list[menu_cur.pos.row][2]
 			if cols then
