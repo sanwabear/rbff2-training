@@ -4003,7 +4003,7 @@ local get_joy_base = function(prev, exclude_player)
 		local state = 0
 		if not joy_port[joy.port] then
 			joy_port[joy.port] = manager.machine.ioport.ports[joy.port]:read()
-			print(string.format("%s", joy.port))
+			--print(string.format("%s", joy.port))
 		end
 		local field = manager.machine.ioport.ports[joy.port].fields[joy.field]
 		state = ((joy_port[joy.port] & field.mask) ~ field.defvalue)
