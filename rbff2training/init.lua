@@ -11395,10 +11395,6 @@ function rbff2.startplugin()
 			end
 		end
 		]]
-
-		if global.pause then
-			emu.pause()
-		end
 	end
 
 	emu.register_start(function() math.randomseed(os.time()) end)
@@ -13058,10 +13054,13 @@ function rbff2.startplugin()
 
 			--[[ WIP
 			-- https://www.neo-geo.com/forums/index.php?threads/universe-bios-released-good-news-for-mvs-owners.41967/page-7
-			-- pgm:write_direct_u8 (0x56D98A, 0x0C)       -- Auto SDM combo (RB2)
-			-- pgm:write_direct_u32(0x55FE5C, 0x46A70500) -- 1P Crazy Yamazaki Return (now he can throw projectile "anytime" with some other bug)
-			-- pgm:write_direct_u16(0x55FE46, 0xC13C)     -- 1P Level 2 Blue Mary
+			-- pgm:write_direct_u8 (10E003, 0x0C)       -- Auto SDM combo (RB2) 0x56D98A
+			-- pgm:write_direct_u32(1004D5, 0x46A70500) -- 1P Crazy Yamazaki Return (now he can throw projectile "anytime" with some other bug) 0x55FE5C
+			-- pgm:write_direct_u16(1004BF, 0x3CC1)     -- 1P Level 2 Blue Mary 0x55FE46
+			-- cheat offset NGX 45F987 = MAME 0
 			]]
+
+			-- maincpu.pb@10E003=08 デッドリーレイブとアンリミの自動動作
 		end
 
 		-- 強制的に家庭用モードに変更
@@ -13142,13 +13141,29 @@ function rbff2.startplugin()
 		cls_hook()
 	end
 
-	emu.register_frame_done(function()
+	emu.register_pause(function()
 		main_or_menu_state.draw()
-		--collectgarbage("collect")
+	end) 
+
+	emu.register_resume(function()
+		global.pause = false
+	end)
+
+	emu.register_frame_done(function()
+		if manager.machine.paused == false then
+			main_or_menu_state.draw()
+			--collectgarbage("collect")
+
+			if global.pause then
+				emu.pause()
+			end
+		end
 	end)
 
 	emu.register_periodic(function()
-		main_or_menu()
+		if manager.machine.paused == false then
+			main_or_menu()
+		end
 		if global.mame_debug_wnd == false then
 			auto_recovery_debug()
 		end
