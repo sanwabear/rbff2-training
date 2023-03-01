@@ -7986,28 +7986,30 @@ function rbff2.startplugin()
 		}
 		return add_frame_to_summary(atk_summary)
 	end
-	local make_atkid_summary = function(p, summary)
+	local make_atkid_summary = function(p, summary, prefix)
 		local cancel_advs_label = "-"
-		local cancel_advs = {}
-		if p.cancelable and p.cancelable ~= 0 then
-			if faint_cancels[p.char] and p.attack_id then
-				for _, fc in ipairs(faint_cancels[p.char]) do
-					local p1  = 1 + p.hitstop + fc.f
-					local p2h = p.hitstop + p.hitstun
-					local p2g = p.hitstop_gd + p.blockstun
-					table.insert(cancel_advs, string.format(fc.name .. ":当%sF/防%sF", p2h - p1, p2g - p1))
+		local slide_label = "-"
+		if p.is_fireball ~= true then
+			local cancel_advs = {}
+			if p.cancelable and p.cancelable ~= 0 then
+				if faint_cancels[p.char] and p.attack_id then
+					for _, fc in ipairs(faint_cancels[p.char]) do
+						local p1  = 1 + p.hitstop + fc.f
+						local p2h = p.hitstop + p.hitstun
+						local p2g = p.hitstop_gd + p.blockstun
+						table.insert(cancel_advs, string.format(fc.name .. ":当%sF/防%sF", p2h - p1, p2g - p1))
+					end
+				end
+				if #cancel_advs > 0 then
+					cancel_advs_label = "〇/" .. table.concat(cancel_advs, ",")
+				else
+					cancel_advs_label = "〇"
 				end
 			end
-			if #cancel_advs > 0 then
-				cancel_advs_label = "〇/" .. table.concat(cancel_advs, ",")
-			else
-				cancel_advs_label = "〇"
-			end
-		end
 
-		local slide_label = "-"
-		if p.slide_atk == true then
-			slide_label = "〇(CA派生不可)"
+			if p.slide_atk == true then
+				slide_label = "〇(CA派生不可)"
+			end
 		end
 
 		local effect_label = "-"
@@ -8028,17 +8030,17 @@ function rbff2.startplugin()
 
 		local hitstun_label
 		if p.hitstun then
-			hitstun_label = string.format("ヒット%sF/ガード%sF/継続:%s", p.hitstun, p.blockstun, gd_strength_label)
+			hitstun_label = string.format(prefix .. "ヒット%sF/ガード%sF/継続:%s", p.hitstun, p.blockstun, gd_strength_label)
 		else
-			hitstun_label = string.format("ヒット-/ガード-/継続:%s", gd_strength_label)
+			hitstun_label = string.format(prefix .. "ヒット-/ガード-/継続:%s", gd_strength_label)
 		end
 
 		local atkid_summary = {
-			{"必キャンセル:"  , cancel_advs_label },
-			{"ヒット効果:"    , effect_label},
-			{"ヒット硬直:"    , hitstun_label },
+			{prefix .. "ヒット効果:"    , effect_label},
+			{prefix .. "ヒット硬直:"    , hitstun_label },
 		}
 		if p.is_fireball ~= true then
+			table.insert(atkid_summary, {"必キャンセル:"      , cancel_advs_label })
 			table.insert(atkid_summary, {"ダッシュ専用:"      , slide_label })
 		end
 
@@ -9949,11 +9951,20 @@ function rbff2.startplugin()
 			p.old_atk_summary = p.atk_summary
 
 			-- 攻撃モーション単位で変わるサマリ情報
+			local fb_atkid_summaries = {}
+			local fbno = 0
+			for _, fb in pairs(p.fireball) do
+				fbno = fbno + 1
+				if fb.alive == true and check_edge(fb.hit_summary.edge.hit) then
+					local fb_atkid_summary = make_atkid_summary(fb, fb.hit_summary, "弾" .. fbno)
+					table.insert(fb_atkid_summaries, fb_atkid_summary)
+				end
+			end
 			if p.attack_id ~= 0 or -- 判定発生
 				testbit(p.state_flags2, 0x1000000) or -- フェイント
 				((p.old_attack ~= p.attack and p.attack > 0) and -- 有効な攻撃中
 				(p.is_fireball or p.fake_hit ~= true)) then
-				p.atkid_summary = make_atkid_summary(p, p.hit_summary)
+				p.atkid_summary = make_atkid_summary(p, p.hit_summary, "")
 			else
 				p.atkid_summary = p.old_atkid_summary or {}
 			end
@@ -9962,6 +9973,11 @@ function rbff2.startplugin()
 			-- サマリ情報を結合する
 			for _, row in ipairs(p.atkid_summary) do
 				table.insert(all_summary, row)
+			end
+			for _, fb_atkid_summary in ipairs(fb_atkid_summaries) do
+				for _, row in ipairs(fb_atkid_summary) do
+					table.insert(all_summary, row)
+				end
 			end
 			for _, row in ipairs(p.atk_summary) do
 				table.insert(all_summary, row)
