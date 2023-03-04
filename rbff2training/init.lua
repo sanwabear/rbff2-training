@@ -3167,7 +3167,7 @@ local create_input_states = function()
 			{ name = "デンジャラススルー"              , addr = 0x16, cmd = _41236a, },
 			{ name = "カイザークロー"                  , addr = 0x1E, cmd = _623c, },
 			{ name = "リフトアップブロー"              , addr = 0x22, cmd = _63214b, },
-			{ name = "カイザーウェーブ"                , addr = 0x26, cmd = _4chg6bc, type = input_state_types.charge, },
+			{ name = "カイザーウェイブ"                , addr = 0x26, cmd = _4chg6bc, type = input_state_types.charge, },
 			{ name = "ギガティックサイクロン_8_6_2_4"  , addr = 0x2A, cmd = _8624c, },
 			{ name = "ギガティックサイクロン_6_2_4_8"  , addr = 0x2E, cmd = _6248c, },
 			{ name = "ギガティックサイクロン_2_4_8_6"  , addr = 0x32, cmd = _2486c, },
@@ -3183,7 +3183,7 @@ local create_input_states = function()
 			{ name = "ダイビングエルボー"              , addr = 0x62, cmd = _2c, type = input_state_types.faint, },
 			{ name = "CA _2_3_6_C"                     , addr = 0x66, cmd = _236c, },
 			{ name = "フェイントブリッツボール"        , addr = 0x6A, cmd = _2ac, type = input_state_types.faint, },
-			{ name = "フェイントカイザーウェーブ"      , addr = 0x6E, cmd = _2bc, type = input_state_types.faint, },
+			{ name = "フェイントカイザーウェイブ"      , addr = 0x6E, cmd = _2bc, type = input_state_types.faint, },
 		},
 		{ --リック・ストラウド
 			{ name = "小シューティングスター"          , addr = 0x02, cmd = _236a, },
@@ -5646,6 +5646,7 @@ function rbff2.startplugin()
 				cancelable   = p1 and 0x1004AF or 0x1005AF, -- キャンセル可否 00不可 C0可 D0可
 				box_base1    = p1 and 0x100476 or 0x100576,
 				box_base2    = p1 and 0x10047A or 0x10057A,
+				kaiser_wave  = p1 and 0x1004FB or 0x1005FB, -- カイザーウェイブのレベル
 
 				stun         = p1 and 0x10B850 or 0x10B858, -- 現在気絶値
  				stun_timer   = p1 and 0x10B854 or 0x10B85C, -- 気絶値ゼロ化までの残フレーム数
@@ -7613,11 +7614,12 @@ function rbff2.startplugin()
 		"攻撃値(削り)",
 		"攻撃値",
 		"気絶値",
+		"気絶値(持続)",
 		"POW増加量",
 		"POW(基/当/防)",
 		"POW(基/当/防/返/吸)",
 		"ヒット効果",
-		"効果(地/空)",
+		"効果(ID/地/空)",
 		"必キャンセル",
 		"ヒットストップ",
 		"ヒット硬直",
@@ -7812,7 +7814,7 @@ function rbff2.startplugin()
 		local followup_label = #followups == 0 and "-" or table.concat(followups, ",")
 		local stun_sec = 0
 		if summary.pure_st_tm then
-			stun_sec = string.format("%4.3f秒(%sF)", summary.pure_st_tm / 60, summary.pure_st_tm)
+			stun_sec = string.format("%sF[%4.3f秒]", summary.pure_st_tm, summary.pure_st_tm / 60)
 		end
 		local reach_label
 		if summary.edge.hit.front then
@@ -7828,7 +7830,7 @@ function rbff2.startplugin()
 		local hit_summary = {
 			{"攻撃範囲:"      , summary.normal_hit or summary.down_hit or summary.air_hit or "-"},
 			{"追撃能力:"      , followup_label},
-			{"気絶値:"        , string.format("%s/継続:%s", summary.pure_st, stun_sec) },
+			{"気絶値(持続):"  , string.format("%s(%s)", summary.pure_st, stun_sec) },
 
 			{"ヒットストップ:", string.format("自･ヒット%sF/ガード･BS猶予%sF", summary.hitstop, summary.hitstop_gd) },
 			{"最大当たり範囲:", reach_label},
@@ -8012,7 +8014,7 @@ function rbff2.startplugin()
 		local effect_label = "-"
 		if p.effect then
 			local e = p.effect + 1
-			effect_label = string.format("%s %s/%s", p.effect, hit_effects[e][1], hit_effects[e][2])
+			effect_label = string.format("%s/%s/%s", p.effect, hit_effects[e][1], hit_effects[e][2])
 			if summary.can_techrise == false then
 				effect_label = effect_label .. " 受身不可"
 			end
@@ -8036,7 +8038,7 @@ function rbff2.startplugin()
 		end
 
 		local atkid_summary = {
-			{prefix .. "効果(地/空):"   , effect_label},
+			{prefix .. "効果(ID/地/空):"   , effect_label},
 			{prefix .. "ヒット硬直:"    , hitstun_label },
 		}
 		if p.is_fireball ~= true then
@@ -8455,6 +8457,8 @@ function rbff2.startplugin()
 			p.state_flags3   = pgm:read_u32(p.addr.state_flags3)       -- 必殺技などの技のフラグ群
 			p.box_base1      = pgm:read_u32(p.addr.box_base1)
 			p.box_base2      = pgm:read_u32(p.addr.box_base2)
+			p.old_kaiser_wave = p.kaiser_wave                          -- 前フレームのカイザーウェイブのレベル
+			p.kaiser_wave    = pgm:read_u8(p.addr.kaiser_wave)         -- カイザーウェイブのレベル
 			--[[
 			local logbox = function(box_base)
 				local addr = box_base
@@ -9647,6 +9651,11 @@ function rbff2.startplugin()
 				concrete_name = p.act_data.name
 				disp_name = convert(p.act_data.disp_name or concrete_name)
 				chg_act_name = true
+			end
+			-- カイザーウェイブのレベルアップ
+			if p.old_kaiser_wave ~= p.kaiser_wave then
+				chg_act_name = true
+				p.act_1st = true
 			end
 			if #p.act_frames == 0 or chg_act_name or frame.col ~= col or p.chg_air_state ~= 0 or chg_fireball_state == true or p.act_1st or frame.reach_memo ~= reach_memo  or (max_hit_dn > 1 and frame.act_count ~= act_count) then
 				--行動IDの更新があった場合にフレーム情報追加
