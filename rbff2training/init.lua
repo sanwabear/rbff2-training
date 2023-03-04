@@ -4902,12 +4902,19 @@ local update_summary = function(p, box)
 									-- 5:64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
 									-- 6:68 屈 ローレンス
 					asis_punish_away = 0,
+					j_atm_nage = true,
 					range_j_atm_nage = true,
+					urakumo = true,
 					range_urakumo = true,
+					g_atm_uchi = true,
 					range_g_atm_uchi = true,
+					gyakushu = true,
 					range_gyakushu = true,
+					sadomazo = true,
 					range_sadomazo = true,
+					baigaeshi = true,
 					range_baigaeshi = true,
+					phx_tw = true,
 					range_phx_tw = true,
 				}
 				local info = box.info
@@ -4960,18 +4967,25 @@ local update_summary = function(p, box)
 				-- 80 屈 クラウザー
 
 				-- 上段当身投げ
+				info.j_atm_nage = summary.j_atm_nage
 				info.range_j_atm_nage = summary.j_atm_nage and in_range(real_top, real_bottom, 112, 40)
 				-- 裏雲隠し
+				info.urakumo = summary.urakumo
 				info.range_urakumo = summary.urakumo and in_range(real_top, real_bottom, 104, 40)
 				-- 下段当身打ち
+				info.g_atm_uchi = summary.g_atm_uchi
 				info.range_g_atm_uchi = summary.g_atm_uchi and in_range(real_top, real_bottom, 44, 0)
 				-- 必勝逆襲拳
-				info.range_gyakushu = summary.gyakushu and in_range(real_top,real_bottom, 72, 32)
+				info.gyakushu = summary.gyakushu
+				info.range_gyakushu = summary.gyakushu and in_range(real_top, real_bottom, 72, 32)
 				-- サドマゾ
+				info.sadomazo = summary.sadomazo
 				info.range_sadomazo = summary.sadomazo and in_range(real_top, real_bottom, 96, 36)
 				-- 倍返し
+				info.baigaeshi = summary.baigaeshi
 				info.range_baigaeshi = summary.baigaeshi and in_range(real_top, real_bottom, 84, 0)
 				-- フェニックススルー
+				info.phx_tw = summary.phx_tw
 				info.range_phx_tw =  summary.phx_tw and in_range(real_top, real_bottom, 120, 56)
 			elseif edge == summary.edge.hurt then
 				local real_top, real_bottom = edge.top + p.pos_y, edge.bottom + p.pos_y
@@ -7767,35 +7781,13 @@ function rbff2.startplugin()
 					end
 				end
 				local parry = {}
-				if info.range_j_atm_nage == true then
-					-- 上段当て身投げ可能
-					table.insert(parry, "上")
-				end
-				if info.range_urakumo == true then
-					-- 裏雲隠し可能
-					table.insert(parry, "中")
-				end
-				if info.range_g_atm_uchi == true then
-					-- 下段当て身打ち可能
-					table.insert(parry, "下")
-				end
-				if info.range_gyakushu == true then
-					-- 逆襲拳可能
-					table.insert(parry, "逆")
-				end
-				if info.range_sadomazo == true then
-					-- サドマゾ可能
-					table.insert(parry, "サ")
-				end
-				if info.range_phx_tw == true then
-					-- フェニックススルー可能
-					table.insert(parry, "フ")
-				end
-				if info.range_baigaeshi == true then
-					-- 倍返し可能
-					table.insert(parry, "倍")
-				end
-
+				table.insert(parry, info.range_j_atm_nage and "上" or info.j_atm_nage and "(上)" or nil) -- 上段当て身投げ可能
+				table.insert(parry, info.range_urakumo and "裏" or info.urakumo and "(裏)" or nil)    -- 裏雲隠し可能
+				table.insert(parry, info.range_g_atm_uchi and "下" or info.g_atm_uchi and "(下)" or nil) -- 下段当て身打ち可能
+				table.insert(parry, info.range_gyakushu and "逆" or info.gyakushu and "(逆)" or nil)  -- 逆襲拳可能
+				table.insert(parry, info.range_sadomazo and "サ" or info.sadomazo and "(サ)" or nil)   -- サドマゾ可能
+				table.insert(parry, info.range_phx_tw and "フ" or info.phx_tw and "(フ)" or nil)     -- フェニックススルー可能
+				table.insert(parry, info.range_baigaeshi and "倍" or info.baigaeshi and "(倍)" or nil)  -- 倍返し可能
 				table.insert(summary.boxes, {
 					punish_away_label = punish_away_label,
 					asis_punish_away_label = asis_punish_away_label,
