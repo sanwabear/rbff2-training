@@ -4561,6 +4561,10 @@ local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, is_f
 		local air = hit_box_procs.air_hit(box.id) ~= nil
 		if is_fireball then
 			p.has_atk_box = true
+			if p.atk_count < 0 then
+				p.atk_count = 0
+			end
+			p.atk_count = p.atk_count + 1
 			if air then
 				if p.hit.fake_hit then
 					box.type = box_type_base.pfaa -- 飛び道具(空中追撃可、嘘)
@@ -7299,7 +7303,7 @@ function rbff2.startplugin()
 			for k = #frame_group, 1, -1 do
 				local frame = frame_group[k]
 				local x2 = x1 - frame.count
-				local on_fb, on_ar, on_gd = false, false, false
+				local on_fb, on_prefb, on_ar, on_gd = false, false, false, false
 				if x2 < xmin then
 					if x2 + x1 < xmin and not main_frame then
 						break
@@ -7307,6 +7311,7 @@ function rbff2.startplugin()
 					x2 = xmin
 				else
 					on_fb = frame.chg_fireball_state == true
+					on_prefb = frame.chg_prefireball_state == true
 					on_ar = frame.chg_air_state == 1
 					on_gd = frame.chg_air_state == -1
 				end
@@ -7315,6 +7320,8 @@ function rbff2.startplugin()
 					local evx = math.min(x1, x2)
 					if on_fb then
 						scr:draw_text(evx-1.5, txty+y-1, "●")
+					elseif on_prefb then
+						scr:draw_text(evx-1.5, txty+y-1, "◆")
 					end
 					if on_ar then
 						scr:draw_text(evx-3, txty+y, "▲")
@@ -7619,7 +7626,7 @@ function rbff2.startplugin()
 		"POW(基/当/防)",
 		"POW(基/当/防/返/吸)",
 		"ヒット効果",
-		"効果(ID/地/空)",
+		"効(ID/地/空)",
 		"必キャンセル",
 		"ヒットストップ",
 		"ヒット硬直",
@@ -7811,11 +7818,6 @@ function rbff2.startplugin()
 			end
 		end
 
-		local followup_label = #followups == 0 and "-" or table.concat(followups, ",")
-		local stun_sec = 0
-		if summary.pure_st_tm then
-			stun_sec = string.format("%sF[%4.3f秒]", summary.pure_st_tm, summary.pure_st_tm / 60)
-		end
 		local reach_label
 		if summary.edge.hit.front then
 			reach_label = string.format("前%s/上%s/下%s/後%s",
@@ -7829,8 +7831,8 @@ function rbff2.startplugin()
 
 		local hit_summary = {
 			{"攻撃範囲:"      , summary.normal_hit or summary.down_hit or summary.air_hit or "-"},
-			{"追撃能力:"      , followup_label},
-			{"気絶値(持続):"  , string.format("%s(%s)", summary.pure_st, stun_sec) },
+			{"追撃能力:"      , #followups == 0 and "-" or table.concat(followups, ",")},
+			{"気絶値(持続):"  , string.format("%s/%sF[%4.3f秒]", summary.pure_st, summary.pure_st_tm, summary.pure_st_tm / 60) },
 
 			{"ヒットストップ:", string.format("自･ヒット%sF/ガード･BS猶予%sF", summary.hitstop, summary.hitstop_gd) },
 			{"最大当たり範囲:", reach_label},
@@ -8038,7 +8040,7 @@ function rbff2.startplugin()
 		end
 
 		local atkid_summary = {
-			{prefix .. "効果(ID/地/空):"   , effect_label},
+			{prefix .. "効(ID/地/空):"   , effect_label},
 			{prefix .. "ヒット硬直:"    , hitstun_label },
 		}
 		if p.is_fireball ~= true then
@@ -9565,15 +9567,25 @@ function rbff2.startplugin()
 			local op = players[3-i]
 
 			-- 飛び道具
-			local chg_fireball_state = false
+			local chg_fireball_state, chg_prefireball_state = false, false
 			local fb_upd_groups = {}
 			for _, fb in pairs(p.fireball) do
 				if fb.has_atk_box == true then
-					fb.atk_count = fb.atk_count + 1
 					if fb.atk_count == 1 and get_act_name(fb.act_data_fired) == get_act_name(p.act_data) then
 						chg_fireball_state = true
 					end
 					break
+				end
+			end
+			if chg_fireball_state ~= true then
+				for _, fb in pairs(p.fireball) do
+					if fb.asm ~= 0x4E75 and fb.asm ~= 0x197C and fb.alive ~= true then
+						fb.atk_count = fb.atk_count - 1
+						if fb.atk_count == -1 then
+							print(string.format("%x %x %s", fb.addr.base, fb.asm, fb.atk_count))
+							chg_prefireball_state = true
+						end
+					end
 				end
 			end
 
@@ -9657,7 +9669,7 @@ function rbff2.startplugin()
 				chg_act_name = true
 				p.act_1st = true
 			end
-			if #p.act_frames == 0 or chg_act_name or frame.col ~= col or p.chg_air_state ~= 0 or chg_fireball_state == true or p.act_1st or frame.reach_memo ~= reach_memo  or (max_hit_dn > 1 and frame.act_count ~= act_count) then
+			if #p.act_frames == 0 or chg_act_name or frame.col ~= col or p.chg_air_state ~= 0 or chg_fireball_state == true or chg_prefireball_state == true or p.act_1st or frame.reach_memo ~= reach_memo  or (max_hit_dn > 1 and frame.act_count ~= act_count) then
 				--行動IDの更新があった場合にフレーム情報追加
 				frame = {
 					act = p.act,
@@ -9667,6 +9679,7 @@ function rbff2.startplugin()
 					disp_name = disp_name,
 					line = line,
 					chg_fireball_state = chg_fireball_state,
+					chg_prefireball_state = chg_prefireball_state,
 					chg_air_state = p.chg_air_state,
 					act_1st = p.act_1st,
 					reach_memo = reach_memo,
