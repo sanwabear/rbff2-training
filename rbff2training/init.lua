@@ -5273,7 +5273,8 @@ function rbff2.startplugin()
 			disp_char_bps    = nil,
 			disp_dmg         = true,        -- ダメージ表示するときtrue
 			disp_cmd         = 2,           -- 入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
-			disp_frm         = 4,           -- フレーム数表示するときtrue
+			disp_frm         = 4,           -- フレーム数表示する
+			disp_fbfrm       = true,        -- 弾のフレーム数表示するときtrue
 			disp_stun        = true,        -- 気絶表示
 			disp_sts         = 3,           -- 状態表示 "OFF", "ON", "ON:小表示", "ON:大表示"
 
@@ -7219,7 +7220,7 @@ function rbff2.startplugin()
 				min_count = math.min(min_count, frame1.count)
 			end
 
-			for j, fb in ipairs(p.fireball) do
+			for _, fb in ipairs(p.fireball) do
 				local frame1 = fb.act_frames[#fb.act_frames]
 				if frame1.count <= 332 then
 					return
@@ -7230,7 +7231,7 @@ function rbff2.startplugin()
 		end
 
 		local fix = min_count - 332
-		for i, p in ipairs(players) do
+		for _, p in ipairs(players) do
 			local frame1 = p.act_frames[#p.act_frames]
 			frame1.count = frame1.count - fix
 
@@ -7240,7 +7241,7 @@ function rbff2.startplugin()
 			frame1 = p.frm_gap.act_frames[#p.frm_gap.act_frames]
 			frame1.count = frame1.count - fix
 
-			for j, fb in ipairs(p.fireball) do
+			for _, fb in ipairs(p.fireball) do
 				local frame1 = fb.act_frames[#fb.act_frames]
 				frame1.count = frame1.count - fix
 			end
@@ -7351,7 +7352,7 @@ function rbff2.startplugin()
 		end
 		return overflow
 	end
-	local draw_frames = function(frames2, xmax, show_name, show_count, x, y, height, span)
+	local draw_frames = function(frames2, xmax, show_name, show_count, x, y, height, span, disp_fbfrm)
 		if #frames2 == 0 then
 			return
 		end
@@ -7369,7 +7370,7 @@ function rbff2.startplugin()
 			local overflow = dodraw(x1, y + span, frame_group, true, height, x, xmax, show_name, show_count, x, scr, txty)
 
 			for _, frame in ipairs(frame_group) do
-				if frame.fireball then
+				if frame.fireball and disp_fbfrm == true then
 					for _, fb in pairs(frame.fireball) do
 						for _, sub_group in ipairs(fb) do
 							dodraw(x1, y + 0 + span, sub_group, false, height, x, xmax, show_name, show_count, x+sub_group.parent_count-overflow, scr, txty-1)
@@ -11162,7 +11163,7 @@ function rbff2.startplugin()
 						local j = 0
 						for base, _ in pairs(p.fireball_bases) do
 							local fb = p.fireball[base]
-							if fb.act_frames2 ~= nil then
+							if fb.act_frames2 ~= nil and p.disp_fbfrm == true then
 								-- print(string.format("%x", base) .. " " .. j .. " " .. #fb.act_frames2 ) -- debug
 								draw_frame_groups(fb.act_frames2, p.act_frames_total, 30, p1 and 64 or 70, 8)
 							end
@@ -11172,7 +11173,7 @@ function rbff2.startplugin()
 						draw_frame_groups(p.frm_gap.act_frames2, p.act_frames_total, 30, p1 and 65 or 73, 3, true)
 					end
 					if p.disp_frm > 1 then
-						draw_frames(p.act_frames2, p1 and 160 or 285, true , true, p1 and 40 or 165, 63, 8, 16)
+						draw_frames(p.act_frames2, p1 and 160 or 285, true , true, p1 and 40 or 165, 63, 8, 16, p.disp_fbfrm)
 					end
 				end
 				--フレーム差表示
@@ -11615,14 +11616,16 @@ function rbff2.startplugin()
 		global.disp_frmgap       = col[13]      -- フレーム差表示      13
 		p[1].disp_frm            = col[14]      -- 1P フレーム数表示   14
 		p[2].disp_frm            = col[15]      -- 2P フレーム数表示   15
-		p[1].disp_sts            = col[16]      -- 1P 状態表示         16
-		p[2].disp_sts            = col[17]      -- 2P 状態表示         17
-		p[1].disp_base           = col[18] == 2 -- 1P 処理アドレス表示 18
-		p[2].disp_base           = col[19] == 2 -- 2P 処理アドレス表示 19
-		p[1].disp_char           = col[20] == 2 -- 1P キャラ表示       20
-		p[2].disp_char           = col[21] == 2 -- 2P キャラ表示       21
-		global.disp_effect       = col[22] == 2 -- エフェクト表示      22
-		global.disp_pos          = col[23] == 2 -- 1P 2P 距離表示      23
+		p[1].disp_fbfrm          = col[16] == 2 -- 1P 弾フレーム数表示 16
+		p[2].disp_fbfrm          = col[17] == 2 -- 2P 弾フレーム数表示 17
+		p[1].disp_sts            = col[18]      -- 1P 状態表示         18
+		p[2].disp_sts            = col[19]      -- 2P 状態表示         19
+		p[1].disp_base           = col[20] == 2 -- 1P 処理アドレス表示 20
+		p[2].disp_base           = col[21] == 2 -- 2P 処理アドレス表示 21
+		p[1].disp_char           = col[22] == 2 -- 1P キャラ表示       22
+		p[2].disp_char           = col[23] == 2 -- 2P キャラ表示       23
+		global.disp_effect       = col[24] == 2 -- エフェクト表示      24
+		global.disp_pos          = col[25] == 2 -- 1P 2P 距離表示      25
 
 		menu_cur = main_menu
 	end
@@ -11819,29 +11822,31 @@ function rbff2.startplugin()
 		local col = disp_menu.pos.col
 		local p = players
 		local g = global
-		--   1                                                         1
-		col[ 2] = p[1].disp_hitbox             -- 判定表示             2
-		col[ 3] = p[2].disp_hitbox             -- 判定表示             3
-		col[ 4] = p[1].disp_range              -- 間合い表示           4
-		col[ 5] = p[2].disp_range              -- 間合い表示           5
-		col[ 6] = p[1].disp_stun and 2 or 1 -- 1P 気絶ゲージ表示       6
-		col[ 7] = p[2].disp_stun and 2 or 1 -- 2P 気絶ゲージ表示       7
-		col[ 8] = p[1].disp_dmg  and 2 or 1 -- 1P ダメージ表示         8
-		col[ 9] = p[2].disp_dmg  and 2 or 1 -- 2P ダメージ表示         9
-		col[10] = p[1].disp_cmd             -- 1P 入力表示            10
-		col[11] = p[2].disp_cmd             -- 2P 入力表示            11
-		col[12] = g.disp_input_sts          -- コマンド入力状態表示   12
-		col[13] = g.disp_frmgap             -- フレーム差表示         13
-		col[14] = p[1].disp_frm             -- 1P フレーム数表示      14
-		col[15] = p[2].disp_frm             -- 2P フレーム数表示      15
-		col[16] = p[1].disp_sts             -- 1P 状態表示            16
-		col[17] = p[2].disp_sts             -- 2P 状態表示            17
-		col[18] = p[1].disp_base and 2 or 1 -- 1P 処理アドレス表示    18
-		col[19] = p[2].disp_base and 2 or 1 -- 2P 処理アドレス表示    19
-		col[20] = p[1].disp_char and 2 or 1 -- 1P キャラ表示          20
-		col[21] = p[2].disp_char and 2 or 1 -- 2P キャラ表示          21
-		col[22] = g.disp_effect  and 2 or 1 -- エフェクト表示         22
-		col[23] = g.disp_pos     and 2 or 1 -- 1P 2P 距離表示         23
+		--   1                                                          1
+		col[ 2] = p[1].disp_hitbox             -- 判定表示              2
+		col[ 3] = p[2].disp_hitbox             -- 判定表示              3
+		col[ 4] = p[1].disp_range              -- 間合い表示            4
+		col[ 5] = p[2].disp_range              -- 間合い表示            5
+		col[ 6] = p[1].disp_stun and 2 or 1    -- 1P 気絶ゲージ表示     6
+		col[ 7] = p[2].disp_stun and 2 or 1    -- 2P 気絶ゲージ表示     7
+		col[ 8] = p[1].disp_dmg  and 2 or 1    -- 1P ダメージ表示       8
+		col[ 9] = p[2].disp_dmg  and 2 or 1    -- 2P ダメージ表示       9
+		col[10] = p[1].disp_cmd                -- 1P 入力表示          10
+		col[11] = p[2].disp_cmd                -- 2P 入力表示          11
+		col[12] = g.disp_input_sts             -- コマンド入力状態表示 12
+		col[13] = g.disp_frmgap                -- フレーム差表示       13
+		col[14] = p[1].disp_frm                -- 1P フレーム数表示    14
+		col[15] = p[2].disp_frm                -- 2P フレーム数表示    15
+		col[16] = p[1].disp_fbfrm and 2 or 1   -- 1P 弾フレーム数表示  16
+		col[17] = p[2].disp_fbfrm and 2 or 1   -- 2P 弾フレーム数表示  17
+		col[18] = p[1].disp_sts                -- 1P 状態表示          18
+		col[19] = p[2].disp_sts                -- 2P 状態表示          19
+		col[20] = p[1].disp_base and 2 or 1    -- 1P 処理アドレス表示  20
+		col[21] = p[2].disp_base and 2 or 1    -- 2P 処理アドレス表示  21
+		col[22] = p[1].disp_char and 2 or 1    -- 1P キャラ表示        22
+		col[23] = p[2].disp_char and 2 or 1    -- 2P キャラ表示        23
+		col[24] = g.disp_effect  and 2 or 1    -- エフェクト表示       24
+		col[25] = g.disp_pos     and 2 or 1    -- 1P 2P 距離表示       25
 	end
 	local init_ex_menu_config = function()
 		local col = ex_menu.pos.col
@@ -12321,6 +12326,8 @@ function rbff2.startplugin()
 			{ "フレーム差表示"        , { "OFF", "数値とグラフ", "数値" }, },
 			{ "1P フレーム数表示"     , { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
 			{ "2P フレーム数表示"     , { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
+			{ "1P 弾フレーム数表示"   , { "OFF", "ON" }, },
+			{ "2P 弾フレーム数表示"   , { "OFF", "ON" }, },
 			{ "1P 状態表示"           , { "OFF", "ON", "ON:小表示", "ON:大表示" }, },
 			{ "2P 状態表示"           , { "OFF", "ON", "ON:小表示", "ON:大表示" }, },
 			{ "1P 処理アドレス表示"   , { "OFF", "ON" }, },
@@ -12349,14 +12356,16 @@ function rbff2.startplugin()
 				3, -- フレーム差表示         11
 				4, -- 1P フレーム数表示      12
 				4, -- 2P フレーム数表示      13
-				1, -- 1P 状態表示            14
-				1, -- 2P 状態表示            15
-				1, -- 1P 処理アドレス表示    16
-				1, -- 2P 処理アドレス表示    17
-				2, -- 1P キャラ表示          18
-				2, -- 2P キャラ表示          19
-				2, -- エフェクト表示         20
-				1, -- 1P 2P 距離表示         21
+				2, -- 1P 弾フレーム数表示    14
+				2, -- 1P 弾フレーム数表示    15
+				1, -- 1P 状態表示            16
+				1, -- 2P 状態表示            17
+				1, -- 1P 処理アドレス表示    18
+				1, -- 2P 処理アドレス表示    19
+				2, -- 1P キャラ表示          20
+				2, -- 2P キャラ表示          21
+				2, -- エフェクト表示         22
+				1, -- 1P 2P 距離表示         23
 			},
 		},
 		on_a = {
@@ -12375,6 +12384,8 @@ function rbff2.startplugin()
 			disp_menu_to_main, -- フレーム差表示
 			disp_menu_to_main, -- 1P フレーム数表示
 			disp_menu_to_main, -- 2P フレーム数表示
+			disp_menu_to_main, -- 1P 弾フレーム数表示
+			disp_menu_to_main, -- 2P 弾フレーム数表示
 			disp_menu_to_main, -- 1P 状態表示
 			disp_menu_to_main, -- 2P 状態表示
 			disp_menu_to_main, -- 1P 処理アドレス表示
@@ -12400,6 +12411,8 @@ function rbff2.startplugin()
 			disp_menu_to_main_cancel, -- コマンド入力状態表示
 			disp_menu_to_main_cancel, -- 1P フレーム数表示
 			disp_menu_to_main_cancel, -- 2P フレーム数表示
+			disp_menu_to_main_cancel, -- 1P 弾フレーム数表示
+			disp_menu_to_main_cancel, -- 2P 弾フレーム数表示
 			disp_menu_to_main_cancel, -- 1P 状態表示
 			disp_menu_to_main_cancel, -- 2P 状態表示
 			disp_menu_to_main_cancel, -- 1P 処理アドレス表示
@@ -13108,6 +13121,10 @@ function rbff2.startplugin()
 			-- cheat offset NGX 45F987 = MAME 0
 			]]
 
+			--[[ 補正前のダメージ出力
+			bp 05B1B2,1,{printf "%d",maincpu.pb@(A4+$8f);g}
+			bp 05B1D0,1,{printf "%d",maincpu.pb@(A4+$8f);g}
+			]]
 			-- maincpu.pb@10E003=08 デッドリーレイブとアンリミの自動動作
 		end
 
