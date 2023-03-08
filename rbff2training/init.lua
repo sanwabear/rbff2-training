@@ -5722,6 +5722,8 @@ function rbff2.startplugin()
 				act_contact    = 0, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
 
 				asm            = 0,
+				proc_active    = false,
+				old_proc_act   = false,
 				pos            = 0, -- X位置
 				pos_y          = 0, -- Y位置
 				pos_z          = 0, -- Z位置
@@ -7321,7 +7323,8 @@ function rbff2.startplugin()
 					if on_fb then
 						scr:draw_text(evx-1.5, txty+y-1, "●")
 					elseif on_prefb then
-						scr:draw_text(evx-1.5, txty+y-1, "◆")
+						-- 飛び道具の処理発生ポイント(発生保障や完全消失の候補)
+						scr:draw_text(evx-2.0, txty+y-1, "◆")
 					end
 					if on_ar then
 						scr:draw_text(evx-3, txty+y, "▲")
@@ -9010,6 +9013,8 @@ function rbff2.startplugin()
 				fb.pos_z          = pgm:read_i16(fb.addr.pos_z)
 				fb.gd_strength    = get_gd_strength(fb)
 				fb.asm            = pgm:read_u16(pgm:read_u32(fb.addr.base))
+				fb.old_proc_act   = fb.proc_active
+				fb.proc_active    = (fb.asm ~= 0x4E75 and fb.asm ~= 0x197C)
 				fb.attack         = pgm:read_u16(pgm:read_u32(fb.addr.attack))
 				fb.hitstop_id     = pgm:read_u16(fb.addr.hitstop_id)
 				fb.attack_id      = 0
@@ -9071,7 +9076,7 @@ function rbff2.startplugin()
 
 				-- 当たり判定の構築
 				fb.has_atk_box    = false
-				if fb.asm ~= 0x4E75 and fb.asm ~= 0x197C then --0x4E75 is rts instruction
+				if fb.proc_active == true then --0x4E75 is rts instruction
 					fb.alive      = true
 					temp_hits[fb.addr.base] = fb
 					fb.atk_count = fb.atk_count or 0
@@ -9579,12 +9584,17 @@ function rbff2.startplugin()
 			end
 			if chg_fireball_state ~= true then
 				for _, fb in pairs(p.fireball) do
-					if fb.asm ~= 0x4E75 and fb.asm ~= 0x197C and fb.alive ~= true then
+					if fb.proc_active == true and fb.alive ~= true then
 						fb.atk_count = fb.atk_count - 1
+						--print(string.format("  %x %x %s", fb.addr.base, fb.asm, fb.atk_count))
 						if fb.atk_count == -1 then
-							print(string.format("%x %x %s", fb.addr.base, fb.asm, fb.atk_count))
 							chg_prefireball_state = true
+							break
 						end
+					end
+					if fb.old_proc_act == true and fb.proc_active ~= true then
+						chg_prefireball_state = true
+						break
 					end
 				end
 			end
