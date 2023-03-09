@@ -4764,15 +4764,40 @@ local in_range = function(top, bottom, atop, abottom)
 end
 
 local update_summary = function(p, box)
+	local summary = p.hit_summary
 	-- 判定ができてからのログ情報の作成
+	if p.attack ~= 0 then
+		summary.pure_dmg    = summary.pure_dmg    or p.pure_dmg -- 補正前攻撃力
+		summary.pure_st     = summary.pure_st     or p.pure_st -- 気絶値
+		summary.pure_st_tm  = summary.pure_st_tm  or p.pure_st_tm -- 気絶タイマー
+
+		summary.chip_dmg    = summary.chip_dmg    or (p.chip_dmg_type and p.chip_dmg_type.calc(p.pure_dmg) or 0) -- 削りダメージ
+		summary.effect      = summary.effect      or p.effect -- ヒット効果
+		summary.can_techrise= summary.can_techrise or p.can_techrise -- 受け身行動可否
+		summary.gd_strength = summary.gd_strength or p.gd_strength -- 相手のガード持続の種類
+		summary.max_hit_nm  = summary.max_hit_nm  or p.hit.max_hit_nm -- p.act_frame中の行動最大ヒット 分子
+		summary.max_hit_dn  = summary.max_hit_dn  or p.hit.max_hit_dn -- p.act_frame中の行動最大ヒット 分母
+		summary.cancelable  = summary.cancelable  or p.cancelable -- キャンセル可否
+		summary.slide_atk   = summary.slide_atk   or p.slide_atk -- ダッシュ滑り攻撃
+		summary.bs_atk      = summary.bs_atk      or p.bs_atk -- ブレイクショット
+
+		summary.hitstun     = summary.hitstun     or p.hitstun    -- ヒット硬直
+		summary.blockstun   = summary.blockstun   or p.blockstun  -- ガード硬直
+		summary.hitstop     = summary.hitstop     or p.hitstop      -- ヒットストップ
+		summary.hitstop_gd  = summary.hitstop_gd  or p.hitstop_gd   -- ガード時ヒットストップ
+		if p.is_fireball == true then
+			summary.prj_rank = summary.prj_rank   or p.prj_rank -- 飛び道具の強さ
+		else
+			summary.prj_rank = nil -- 飛び道具の強さ
+		end
+	end
 	if box then
+		local edge = nil
 		if p.is_fireball then
 			box.reach = get_reach(p, box, box.pos_x, box.fb_pos_y)
 		else
 			box.reach = get_reach(p, box, box.pos_x, box.pos_y)
 		end
-
-		local summary, edge = p.hit_summary, nil
 		if box.atk then
 			summary.normal_hit  = summary.normal_hit  or hit_box_procs.normal_hit(box.id)
 			summary.down_hit    = summary.down_hit    or hit_box_procs.down_hit(box.id)
@@ -4791,30 +4816,6 @@ local update_summary = function(p, box)
 			summary.baigaeshi   = summary.baigaeshi   or hit_box_procs.baigaeshi(box.id)
 			summary.unknown1    = summary.unknown1    or hit_box_procs.unknown1(box.id)
 			summary.bai_catch   = summary.bai_catch   or p.bai_catch == true and "v" or nil
-
-			summary.pure_dmg    = summary.pure_dmg    or p.pure_dmg -- 補正前攻撃力
-			summary.pure_st     = summary.pure_st     or p.pure_st -- 気絶値
-			summary.pure_st_tm  = summary.pure_st_tm  or p.pure_st_tm -- 気絶タイマー
-
-			summary.chip_dmg    = summary.chip_dmg    or p.chip_dmg_type.calc(p.pure_dmg) -- 削りダメージ
-			summary.effect      = summary.effect      or p.effect -- ヒット効果
-			summary.can_techrise= summary.can_techrise or p.can_techrise -- 受け身行動可否
-			summary.gd_strength = summary.gd_strength or p.gd_strength -- 相手のガード持続の種類
-			summary.max_hit_nm  = summary.max_hit_nm  or p.hit.max_hit_nm -- p.act_frame中の行動最大ヒット 分子
-			summary.max_hit_dn  = summary.max_hit_dn  or p.hit.max_hit_dn -- p.act_frame中の行動最大ヒット 分母
-			summary.cancelable  = summary.cancelable  or p.cancelable -- キャンセル可否
-			summary.slide_atk   = summary.slide_atk   or p.slide_atk -- ダッシュ滑り攻撃
-			summary.bs_atk      = summary.bs_atk      or p.bs_atk -- ブレイクショット
-
-			summary.hitstun     = summary.hitstun     or p.hitstun    -- ヒット硬直
-			summary.blockstun   = summary.blockstun   or p.blockstun  -- ガード硬直
-			summary.hitstop     = summary.hitstop     or p.hitstop      -- ヒットストップ
-			summary.hitstop_gd  = summary.hitstop_gd  or p.hitstop_gd   -- ガード時ヒットストップ
-			if p.is_fireball == true then
-				summary.prj_rank = summary.prj_rank   or p.prj_rank -- 飛び道具の強さ
-			else
-				summary.prj_rank = nil -- 飛び道具の強さ
-			end
 		end
 		if box.type == box_type_base.a or -- 攻撃
 			box.type == box_type_base.pa then -- 飛び道具
@@ -5193,6 +5194,9 @@ local update_object = function(p)
 	elseif p.hit.vulnerable21 == 1 then
 		p.hit.vulnerable = p.hit.vulnerable22
 	end
+
+	-- 共通情報
+	update_summary(p)
 
 	-- 判定データ排他用のテーブル
 	for _, box in ipairs(p.buffer) do
@@ -9973,7 +9977,7 @@ function rbff2.startplugin()
 				end
 			end
 			if last_hit_summary == nil then
-				if check_edge(p.hit_summary.edge.hit) then
+				if p.attack ~= 0 or check_edge(p.hit_summary.edge.hit) then
 					last_hit_summary = make_hit_summary(p, p.hit_summary)
 				else
 					last_hit_summary = p.old_hit_summary
