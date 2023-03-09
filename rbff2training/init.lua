@@ -5594,6 +5594,7 @@ function rbff2.startplugin()
 				act_frame    = p1 and 0x10046F or 0x10056F, -- 現在の行動の残フレーム、ゼロになると次の行動へ
 				act_contact  = p1 and 0x100401 or 0x100501, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
 				attack       = p1 and 0x1004B6 or 0x1005B6, -- 攻撃中のみ変化
+				attack_b     = p1 and 0x1005EB or 0x1004EB, -- 攻撃中のみ変化
 				hitstop_id   = p1 and 0x1004EB or 0x1005EB, -- 被害中のみ変化
 				can_techrise = p1 and 0x100492 or 0x100592, -- 受け身行動可否チェック用
 				ophit_base   = p1 and 0x10049E or 0x10059E, -- ヒットさせた相手側のベースアドレス
@@ -6264,8 +6265,21 @@ function rbff2.startplugin()
 				"maincpu.pw@107C22>0",
 				"temp1=$10DDF3+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(D5);g"))
 
+
+			--[[ 家庭用 補正前のダメージ出力
+			bp 05B1B2,1,{printf "%d",maincpu.pb@(A4+$8f);g}
+			bp 05B1D0,1,{printf "%d",maincpu.pb@(A4+$8f);g}
+			bp 05B13A,1,{printf "%d",maincpu.pb@(A4+$8f);g}
+			bp 05B15A,1,{printf "%d",maincpu.pb@(A4+$8f);g}
+
+			05B11A MVS
+			05B13A MVS
+			]]
 			-- 補正前ダメージ取得用フック
 			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x05B11A),
+				"maincpu.pw@107C22>0",
+				"temp1=$10DDFB+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@((A4)+$8F);g"))
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x05B13A),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DDFB+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@((A4)+$8F);g"))
 
@@ -8527,7 +8541,12 @@ function rbff2.startplugin()
 			p.max_combo      = tohexnum(pgm:read_u8(p.addr.max_combo2)) -- 最大コンボ数
 			p.tmp_dmg        = pgm:read_u8(p.addr.tmp_dmg)              -- ダメージ
 			p.old_attack     = p.attack
-			p.attack         = pgm:read_u8(p.addr.attack)
+			local tst_atk    = pgm:read_u8(p.addr.attack_b)
+			if tst_atk == 0 then
+				p.attack     = pgm:read_u8(p.addr.attack)
+			else
+				p.attack     = tst_atk
+			end
 
 			if testbit(p.state_flags2, 0x200000 | 0x1000000 | 0x80000 | 0x200000 | 0x1000000 | 0x2000000 | 0x80000000) ~= true then
 				p.cancelable = pgm:read_u8(p.addr.cancelable)
@@ -8620,6 +8639,7 @@ function rbff2.startplugin()
 				p.hitstop    = 0x7F & pgm:read_u8(pgm:read_u32(fix_bp_addr(0x83C38) + p.char_4times) + p.attack)
 				p.hitstop    = p.hitstop == 0 and 2 or p.hitstop + 1  -- システムで消費される分を加算
 				p.hitstop_gd = math.max(2, p.hitstop - 1) -- ガード時の補正
+				
 				-- 補正前ダメージ量取得 家庭用 05B118 からの処理
 				p.pure_dmg   = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x813F0)) + p.attack)
 				-- 気絶値と気絶タイマー取得 05C1CA からの処理
@@ -10984,6 +11004,7 @@ function rbff2.startplugin()
 					draw_rtext(   p1 and 311 or 92, 76, op.max_combo_pow)
 				end
 
+				-- 状態 小表示
 				if p.disp_sts == 2 or p.disp_sts == 3 then
 					if p1 then
 						scr:draw_box(  2, 0,  40,  36, 0x80404040, 0x80404040)
@@ -13119,11 +13140,6 @@ function rbff2.startplugin()
 			-- pgm:write_direct_u32(1004D5, 0x46A70500) -- 1P Crazy Yamazaki Return (now he can throw projectile "anytime" with some other bug) 0x55FE5C
 			-- pgm:write_direct_u16(1004BF, 0x3CC1)     -- 1P Level 2 Blue Mary 0x55FE46
 			-- cheat offset NGX 45F987 = MAME 0
-			]]
-
-			--[[ 補正前のダメージ出力
-			bp 05B1B2,1,{printf "%d",maincpu.pb@(A4+$8f);g}
-			bp 05B1D0,1,{printf "%d",maincpu.pb@(A4+$8f);g}
 			]]
 			-- maincpu.pb@10E003=08 デッドリーレイブとアンリミの自動動作
 		end
