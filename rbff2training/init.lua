@@ -7726,16 +7726,6 @@ function rbff2.startplugin()
 		return summary
 	end
 	local make_hit_summary = function(p, summary)
-		local followups = {}
-		if summary.down_hit then
-			-- ダウン追撃可能
-			table.insert(followups, "ダウン追撃")
-		end
-		if summary.air_hit then
-			-- 空中追撃可能
-			table.insert(followups, "空中追撃")
-		end
-
 		for _, box in ipairs(p.hitboxes) do
 			if box.atk and box.info then
 				local info = box.info
@@ -7853,18 +7843,8 @@ function rbff2.startplugin()
 
 		local hit_summary = {
 			{"攻撃範囲:"      , summary.normal_hit or summary.down_hit or summary.air_hit or "-"},
-			{"追撃能力:"      , #followups == 0 and "-" or table.concat(followups, ",")},
-			{"気絶値(持続):"  , string.format("%s/%sF[%4.3f秒]", summary.pure_st, summary.pure_st_tm, summary.pure_st_tm / 60) },
-
-			{"ヒットストップ:", string.format("自･ヒット%sF/ガード･BS猶予%sF", summary.hitstop, summary.hitstop_gd) },
 			{"最大当たり範囲:", reach_label},
 		}
-		if summary.chip_dmg > 0 then
-			table.insert(hit_summary, {"攻撃値(削り):"  , string.format("%s(%s)", summary.pure_dmg, summary.chip_dmg)})
-		else
-			table.insert(hit_summary, {"攻撃値:"  , summary.pure_dmg})
-		end
-
 		-- TODO レイアウト検討
 		for box_no, box in ipairs(summary.boxes) do
 			table.insert(hit_summary, {box_no .. " ガード方向:"    , string.format("メイン:%s/スウェー:%s", box.block_label, box.sway_block_label)})
@@ -7875,14 +7855,6 @@ function rbff2.startplugin()
 			end
 			table.insert(hit_summary, {box_no .. " 当たり高さ:"      , label})
 			table.insert(hit_summary, {box_no .. " 当たり範囲:"      , box.reach_label})
-		end
-		table.insert(hit_summary, {"最大ヒット数:"  , string.format("%s/%s", summary.max_hit_nm, summary.max_hit_dn) })
-		if p.is_fireball == true then
-			local prj_rank_label = summary.prj_rank or "-"
-			if p.fake_hit == true and p.full_hit == false then
-				prj_rank_label = prj_rank_label .. "(被相殺判定のみ)"
-			end
-			table.insert(hit_summary, {"弾強度:"        , prj_rank_label })
 		end
 		return add_frame_to_summary(hit_summary)
 	end
@@ -8069,6 +8041,32 @@ function rbff2.startplugin()
 			table.insert(atkid_summary, {"必キャンセル:"      , cancel_advs_label })
 			table.insert(atkid_summary, {"ダッシュ専用:"      , slide_label })
 		end
+
+		if summary.chip_dmg > 0 then
+			table.insert(atkid_summary, {prefix .. "攻撃値(削り):"  , string.format("%s(%s)", summary.pure_dmg, summary.chip_dmg)})
+		else
+			table.insert(atkid_summary, {prefix .. "攻撃値:"  , summary.pure_dmg})
+		end
+		table.insert(atkid_summary, {prefix .. "最大ヒット数:"  , string.format("%s/%s", summary.max_hit_nm, summary.max_hit_dn) })
+		if p.is_fireball == true then
+			local prj_rank_label = summary.prj_rank or "-"
+			if p.fake_hit == true and p.full_hit == false then
+				prj_rank_label = prj_rank_label .. "(被相殺判定のみ)"
+			end
+			table.insert(atkid_summary, {prefix .. "弾強度:"        , prj_rank_label })
+		end
+		local followups = {}
+		if summary.down_hit then
+			-- ダウン追撃可能
+			table.insert(followups, "ダウン追撃")
+		end
+		if summary.air_hit then
+			-- 空中追撃可能
+			table.insert(followups, "空中追撃")
+		end
+		table.insert(atkid_summary, {prefix .. "追撃能力:"      , #followups == 0 and "-" or table.concat(followups, ",")})
+		table.insert(atkid_summary, {prefix .. "気絶値(持続):"  , string.format("%s/%sF[%4.3f秒]", summary.pure_st, summary.pure_st_tm, summary.pure_st_tm / 60) })
+		table.insert(atkid_summary, {prefix .. "ヒットストップ:", string.format("自･ヒット%sF/ガード･BS猶予%sF", summary.hitstop, summary.hitstop_gd) })
 
 		return add_frame_to_summary(atkid_summary)
 	end
