@@ -7960,14 +7960,16 @@ function rbff2.startplugin()
 		return add_frame_to_summary(parry_summary)
 	end
 	local make_atk_summary = function(p, summary)
+		-- パワーゲージ
 		local pow_info  = "POW(基/当/防):"
 		local pow_label = string.format("%s/%s/%s", p.pow_up or 0, p.pow_up_hit or 0, p.pow_up_gd or 0)
 		if p.pow_revenge > 0 or p.pow_absorb > 0 then
 			pow_info  = "POW(基/当/防/返/吸):"
 			pow_label = pow_label .. string.format("/%s/%s", p.pow_revenge or 0, p.pow_absorb or 0)
 		end
+		-- 詠酒発動範囲
 		local esaka_label = (p.esaka_range > 0) and p.esaka_range or "-"
-		-- BS
+		-- ブレイクショット
 		local bs_label = "-"
 		if p.bs_atk == true then
 			bs_label = "〇"
@@ -7997,7 +7999,6 @@ function rbff2.startplugin()
 			end
 		end
 		local slide_label = p.slide_atk and "/滑り" or ""
-
 		local atk_summary = {
 			{pow_info             , pow_label   },
 			{"詠酒発動範囲:"      , esaka_label },
@@ -8179,8 +8180,8 @@ function rbff2.startplugin()
 				summary.chip_dmg and (summary.chip_dmg > 0 and summary.chip_dmg or 0) or 0,
 				summary.pure_st,
 				summary.pure_st_tm)})
-			table.insert(atkact_summary, {prefix .. "最大ヒット数:"  , string.format("%s/%s", summary.max_hit_nm, summary.max_hit_dn) })
-			table.insert(atkact_summary, {prefix .. "弾強度:"        , prj_rank_label })
+			table.insert(atkact_summary, {prefix .. "最大ヒット数:"  , string.format("%s/%s", summary.max_hit_nm, summary.max_hit_dn)})
+			table.insert(atkact_summary, {prefix .. "弾強度:"        , prj_rank_label})
 
 			return add_frame_to_summary(atkact_summary)
 		end
@@ -8768,23 +8769,29 @@ function rbff2.startplugin()
 
 				-- 家庭用 05B37E からの処理
 				if 0x58 > p.attack then
-					if 0x27 < p.attack then --CA
-						p.pow_up_hit = pgm:read_u8(p.attack - 0x27 + pgm:read_u32(0x8C18C + p.char_4times))
+					if 0x27 <= p.attack then --CA
+						p.pow_up_hit = pgm:read_u8((0xFF & (p.attack - 0x27)) + pgm:read_u32(0x8C18C + p.char_4times))
 					else -- 通常技 ビリーとチョンシュか、それ以外でアドレスが違う
 						local a0 = (0xC ~= p.char and 0x10 ~= p.char) and 0x8C24C or 0x8C274
 						p.pow_up_hit = pgm:read_u8(a0 + p.attack)
 					end
 					-- ガード時増加量 d0の右1ビットシフト=1/2
-					p.pow_up_gd  = math.floor(p.pow_up_hit / 2)
+					p.pow_up_gd  = 0xFF & (p.pow_up_hit >> 1)
 				end
 
 				-- 必殺技のパワー増加 家庭用 03C140 からの処理
+				-- 03BEF6: 4A2C 00BF                tst.b   ($bf,A4) beqのときのみ
+				-- 03BF00: 082C 0004 00CD           btst    #$4, ($cd,A4) beqのときのみ
 				-- base+A3の値は技発動時の処理中にしか採取できないのでこの処理は機能しない
 				-- local d0, a0 = pgm:read_u8(p.addr.base + 0xA3), 0
-				local spid = pgm:read_u8(p.addr.base + 0xB8) -- 技コマンド成立時の技のID
-				if spid ~= 0 then
-					p.pow_up = pgm:read_u8(pgm:read_u32(0x8C1EC + p.char_4times) + spid - 1)
+				p.pow_up = 0
+				if pgm:read_u8(p.addr.base + 0xB8) ~= 0 and (pgm:read_u8(p.addr.base + 0xCD) & 0x20) == 0x20 then
+					local spid = pgm:read_u8(p.addr.base + 0xB8) -- 技コマンド成立時の技のID
+					if spid ~= 0 then
+						p.pow_up = pgm:read_u8(pgm:read_u32(0x8C1EC + p.char_4times) + spid - 1)
+					end
 				end
+
 				-- トドメ=ヒットで+7、雷撃棍=発生で+5、倍返し=返しで+7、吸収で+20、蛇使い は個別に設定が必要
 				local yama_pows = {
 					[0x06] = true, [0x70] = true, [0x71] = true, [0x75] = true,
@@ -10090,18 +10097,25 @@ function rbff2.startplugin()
 			end
 			p.old_parry_summary = p.parry_summary
 
-			-- 攻撃モーション単位で変わるサマリ情報 本体
+			-- 攻撃モーション単位で変わるサマリ情報
 			p.atk_summary = p.atk_summary or {}
 			p.atkact_summary = p.atkact_summary or {}
-			if p.attack_flag then
-				p.atk_summary = make_atk_summary(p, p.hit_summary)
-				p.atkact_summary = make_atkact_summary(p, p.hit_summary) or p.atkact_summary
-			end
 			-- 攻撃モーション単位で変わるサマリ情報 弾
 			for _, fb in pairs(p.fireball) do
-				if fb.proc_active then
+				if fb.alive then
 					fb.atkact_summary = make_atkact_summary(fb, fb.hit_summary) or fb.atkact_summary
-					p.atkact_summary = fb.atkact_summary -- 表示情報を弾の情報で上書き
+					-- 表示情報を弾の情報で上書き
+					p.atkact_summary = fb.atkact_summary
+					-- 情報を残すために弾中の動作のIDも残す
+					p.summary_p_atk = p.attack > 0 and p.attack or p.summary_p_atk
+				end
+			end
+			-- 攻撃モーション単位で変わるサマリ情報 本体
+			if p.attack_flag then
+				p.atk_summary = make_atk_summary(p, p.hit_summary)
+				if p.attack > 0 and p.summary_p_atk ~= p.attack then
+					p.atkact_summary = make_atkact_summary(p, p.hit_summary) or p.atkact_summary
+					p.summary_p_atk = p.attack
 				end
 			end
 
