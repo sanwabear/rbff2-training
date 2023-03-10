@@ -7981,7 +7981,9 @@ function rbff2.startplugin()
 		}
 		return add_frame_to_summary(atk_summary)
 	end
-	local make_atkid_summary = function(p, summary, prefix)
+	local make_atkid_summary = function(p, summary, fbno)
+		fbno = fbno or 0
+		local prefix = fbno == 0 and "" or ("弾" .. fbno)
 		local cancel_advs_label = "-"
 		local slide_label = "-"
 		if p.is_fireball ~= true then
@@ -9965,22 +9967,6 @@ function rbff2.startplugin()
 			local all_summary = make_hurt_summary(p, p.hit_summary)
 
 			-- 攻撃判定のサマリ情報
-			local last_hit_summary = nil
-			for _, fb in pairs(p.fireball) do
-				if fb.alive == true and check_edge(fb.hit_summary.edge.hit) then
-					last_hit_summary = make_hit_summary(fb, fb.hit_summary)
-					break
-				end
-			end
-			if last_hit_summary == nil then
-				if p.attack ~= 0 or check_edge(p.hit_summary.edge.hit) then
-					last_hit_summary = make_hit_summary(p, p.hit_summary)
-				else
-					last_hit_summary = p.old_hit_summary
-				end
-			end
-			p.old_hit_summary = last_hit_summary
-
 			if check_edge(p.hit_summary.edge.throw) then
 				p.throw_summary = make_throw_summary(p, p.hit_summary)
 			else
@@ -9995,35 +9981,38 @@ function rbff2.startplugin()
 			end
 			p.old_parry_summary = p.parry_summary
 
-			-- 攻撃モーション単位で変わるサマリ情報
-			if p.old_attack ~= p.attack and p.attack > 0 and p.state_flags2 > 0 then
+			local atk_sum = testbit(p.state_flags2, 0x200000 | 0x1000000 | 0x80000 | 0x200000 | 0x1000000 | 0x2000000 | 0x80000000)
+
+			-- 攻撃モーション単位で変わるサマリ情報 弾
+			local last_hit_summary, fb_atkid_summaries, fbno = nil, {}, 0
+			for _, fb in pairs(p.fireball) do
+				fbno = fbno + 1
+				if fb.alive == true and check_edge(fb.hit_summary.edge.hit) then
+					local fb_atkid_summary = make_atkid_summary(fb, fb.hit_summary, fbno)
+					table.insert(fb_atkid_summaries, fb_atkid_summary)
+					last_hit_summary = last_hit_summary or make_hit_summary(fb, fb.hit_summary)
+				end
+			end
+			if p.attack_id ~= 0 or -- 判定発生
+				atk_sum or
+				((p.old_attack ~= p.attack and p.attack > 0) and -- 有効な攻撃中
+				(p.is_fireball or p.fake_hit ~= true)) then
+				p.atkid_summary = make_atkid_summary(p, p.hit_summary)
+				last_hit_summary = last_hit_summary or make_hit_summary(p, p.hit_summary)
+			else
+				p.atkid_summary = p.old_atkid_summary or {}
+			end
+			p.old_atkid_summary = p.atkid_summary
+			last_hit_summary = last_hit_summary or p.old_hit_summary
+			p.old_hit_summary = last_hit_summary
+
+			-- 攻撃モーション単位で変わるサマリ情報 本体
+			if p.old_attack ~= p.attack and p.attack > 0 and atk_sum then
 				p.atk_summary = make_atk_summary(p, p.hit_summary)
 			else
 				p.atk_summary = p.old_atk_summary or {}
 			end
 			p.old_atk_summary = p.atk_summary
-
-			-- 攻撃モーション単位で変わるサマリ情報
-			local fb_atkid_summaries = {}
-			local fbno = 0
-			for _, fb in pairs(p.fireball) do
-				fbno = fbno + 1
-				if fb.alive == true and check_edge(fb.hit_summary.edge.hit) then
-					local fb_atkid_summary = make_atkid_summary(fb, fb.hit_summary, "弾" .. fbno)
-					table.insert(fb_atkid_summaries, fb_atkid_summary)
-				end
-			end
-			if p.attack_id ~= 0 or -- 判定発生
-				testbit(p.state_flags2, 0x1000000) or -- フェイント
-				testbit(p.state_flags2, 0x2000000) or -- つかみ技
-				testbit(p.state_flags2, 0x80000000) or -- 投げ技
-				((p.old_attack ~= p.attack and p.attack > 0) and -- 有効な攻撃中
-				(p.is_fireball or p.fake_hit ~= true)) then
-				p.atkid_summary = make_atkid_summary(p, p.hit_summary, "")
-			else
-				p.atkid_summary = p.old_atkid_summary or {}
-			end
-			p.old_atkid_summary = p.atkid_summary
 
 			-- サマリ情報を結合する
 			for _, row in ipairs(p.atkid_summary) do
