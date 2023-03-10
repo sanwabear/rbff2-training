@@ -10108,12 +10108,13 @@ function rbff2.startplugin()
 					p.atkact_summary = fb.atkact_summary
 					-- 情報を残すために弾中の動作のIDも残す
 					p.summary_p_atk = p.attack > 0 and p.attack or p.summary_p_atk
+					p.atk_summary = make_atk_summary(p, p.hit_summary)
 				end
 			end
 			-- 攻撃モーション単位で変わるサマリ情報 本体
 			if p.attack_flag then
-				p.atk_summary = make_atk_summary(p, p.hit_summary)
 				if p.attack > 0 and p.summary_p_atk ~= p.attack then
+					p.atk_summary = make_atk_summary(p, p.hit_summary)
 					p.atkact_summary = make_atkact_summary(p, p.hit_summary) or p.atkact_summary
 					p.summary_p_atk = p.attack
 				end
