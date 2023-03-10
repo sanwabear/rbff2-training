@@ -10015,6 +10015,8 @@ function rbff2.startplugin()
 			end
 			if p.attack_id ~= 0 or -- 判定発生
 				testbit(p.state_flags2, 0x1000000) or -- フェイント
+				testbit(p.state_flags2, 0x2000000) or -- つかみ技
+				testbit(p.state_flags2, 0x80000000) or -- 投げ技
 				((p.old_attack ~= p.attack and p.attack > 0) and -- 有効な攻撃中
 				(p.is_fireball or p.fake_hit ~= true)) then
 				p.atkid_summary = make_atkid_summary(p, p.hit_summary, "")
