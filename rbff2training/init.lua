@@ -207,85 +207,85 @@ local hit_effects = {
 	{ "の", "吹" },                               -- { "のけぞり", "吹き飛び" },
 	{ "の", "吹" },                               -- { "のけぞり", "吹き飛び" },
 	{ "の", "吹" },                               -- { "のけぞり", "吹き飛び" },
-	{ "ダ", "ダ", "ダウン時追撃可" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
+	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
 	{ "立", "吹" },                               -- { "強制立ちのけぞり", "吹き飛び" },
-	{ "ダ", "ダ", "ダウン時追撃可" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
+	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
 	{ "の", "吹" },                               -- { "のけぞり", "吹き飛び" },
 	{ "の(対スウェー時:ダ)", "吹" },              -- { "のけぞり", "吹き飛び" },
 	{ "送", "送ダ" },                             -- { "スウェーライン送り", "スウェーライン送りダウン(ダ)" },
-	{ "送ダ", "送ダ", "ダウン時追撃可" },         -- { "スウェーライン送りダウン(ダ)", "スウェーライン送りダウン(ダ)" },
+	{ "送ダ", "送ダ", "やられ付ダ" },         -- { "スウェーライン送りダウン(ダ)", "スウェーライン送りダウン(ダ)" },
 	{ "吹", "吹" },                               -- { "吹き飛び", "吹き飛び" },
-	{ "ダ", "ダ", "ダウン時追撃可" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "の", "ダ", "ダウン時追撃可" },             -- { "のけぞり", "ダウン(ダ)" },
-	{ "の", "ダ", "ダウン時追撃可" },             -- { "のけぞり", "ダウン(ダ)" },
-	{ "の", "ダ", "ダウン時追撃可" },             -- { "のけぞり", "ダウン(ダ)" },
-	{ "ダ", "ダ", "ダウン時追撃可" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "ダ", "ダ", "ダウン時追撃可" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "ダ", "ダ", "ダウン時追撃可" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
+	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
+	{ "の", "ダ", "やられ付ダ" },             -- { "のけぞり", "ダウン(ダ)" },
+	{ "の", "ダ", "やられ付ダ" },             -- { "のけぞり", "ダウン(ダ)" },
+	{ "の", "ダ", "やられ付ダ" },             -- { "のけぞり", "ダウン(ダ)" },
+	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
+	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
+	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
 	{ "吹", "吹" },                               -- { "吹き飛び", "吹き飛び" },
 	{ "ダ", "ダ" },                               -- { "ダウン", "ダウン" },
-	{ "ダ", "ダ", "ダウン時追撃可" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
+	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
 	{ "ダ", "ダ" },                               -- { "ダウン", "ダウン" },
 	{ "ダ", "ダ" },                               -- { "ダウン", "ダウン" },
 	{ "ダ", "ダ" },                               -- { "ダウン", "ダウン" },
 	{ "後", "吹" },                               -- { "後ろ向きのけぞり", "吹き飛び" },
-	{ "浮", "浮", "ダウン時追撃可" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "ダ", "ダ", "ダウン時追撃可" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
+	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
+	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
 	{ "の", "ダ" },                               -- { "のけぞり", "ダウン" },
-	{ "浮", "浮", "ダウン時追撃可" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
+	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
 	{ "の", "ダ" },                               -- { "のけぞり", "ダウン" },
-	{ "浮", "浮", "ダウン時追撃可" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
+	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
 	{ "立", "立" },                               -- { "強制立ちのけぞり", "強制立ちのけぞり" },
-	{ "浮", "浮", "ダウン時追撃可" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
+	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
 	{ "特", "特" },                               -- { "特殊", "特殊" },
-	{ "特浮", "浮", "ダウン時追撃可" },           -- { "特殊(空)", "ダウン(空,ダ)" },
-	{ "ダ", "ダ", "ダウン時追撃可" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "浮", "浮", "ダウン時追撃可" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "ダ", "ダ", "ダウン時追撃可" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "ダ", "ダ", "ダウン時追撃可" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "ダ", "ダ", "ダウン時追撃可" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "ダ", "ダ", "ダウン時追撃可" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "ダ", "ダ", "ダウン時追撃可" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
+	{ "特浮", "浮", "やられ付ダ" },           -- { "特殊(空)", "ダウン(空,ダ)" },
+	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
+	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
+	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
+	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
+	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
+	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
+	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
 	{ "の", "吹" },                               -- { "のけぞり", "吹き飛び" },
-	{ "気", "気", "ダウン時追撃可" },             -- { "強制気絶", "強制気絶(ダ)" },
+	{ "気", "気", "やられ付ダ" },             -- { "強制気絶", "強制気絶(ダ)" },
 	{ "の", "吹" },                               -- { "のけぞり", "吹き飛び" },
-	{ "ダ", "ダ", "ダウン時追撃可" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
+	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
 	{ "特", "特" },                               -- { "特殊", "特殊(ダ)" },
-	{ "浮", "浮", "ダウン時追撃可" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "浮", "浮", "ダウン時追撃可" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "浮", "浮", "ダウン時追撃可" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "の", "ダ", "ダウン時追撃可" },             -- { "のけぞり", "ダウン(ダ)" },
-	{ "の", "ダ", "ダウン時追撃可" },             -- { "のけぞり", "ダウン(ダ)" },
-	{ "の", "ダ", "ダウン時追撃可" },             -- { "のけぞり", "ダウン(ダ)" },
-	{ "ダ", "ダ", "ダウン時追撃可" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "ダ", "ダ", "ダウン時追撃可" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "浮", "浮", "ダウン時追撃可" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "浮", "浮", "ダウン時追撃可" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "浮", "浮", "ダウン時追撃可" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "浮", "浮", "ダウン時追撃可" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "浮", "浮", "ダウン時追撃可" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
+	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
+	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
+	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
+	{ "の", "ダ", "やられ付ダ" },             -- { "のけぞり", "ダウン(ダ)" },
+	{ "の", "ダ", "やられ付ダ" },             -- { "のけぞり", "ダウン(ダ)" },
+	{ "の", "ダ", "やられ付ダ" },             -- { "のけぞり", "ダウン(ダ)" },
+	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
+	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
+	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
+	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
+	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
+	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
+	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
 	{ "の", "吹" },                               -- { "のけぞり", "吹き飛び" },
-	{ "浮", "浮", "ダウン時追撃可" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "浮の", "浮", "ダウン時追撃可" },           -- { "のけぞり(空)", "ダウン(空,ダ)" },
-	{ "浮の", "浮", "ダウン時追撃可" },           -- { "のけぞり(空)", "ダウン(空,ダ)" },
-	{ "後浮", "浮", "ダウン時追撃可" },           -- { "後ろ向きのけぞり(空)", "ダウン(空,ダ)" },
-	{ "浮", "浮", "ダウン時追撃可" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "ダ", "ダ", "ダウン時追撃可" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "ダ", "ダ", "ダウン時追撃可" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
+	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
+	{ "浮の", "浮", "やられ付ダ" },           -- { "のけぞり(空)", "ダウン(空,ダ)" },
+	{ "浮の", "浮", "やられ付ダ" },           -- { "のけぞり(空)", "ダウン(空,ダ)" },
+	{ "後浮", "浮", "やられ付ダ" },           -- { "後ろ向きのけぞり(空)", "ダウン(空,ダ)" },
+	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
+	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
+	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
 	{ "特", "特" },                               -- { "特殊", "特殊" },
-	{ "ダ", "ダ", "ダウン時追撃可" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "浮の～浮", "浮の～浮", "ダウン時追撃可" }, -- { "浮のけぞり～ダウン(空,ダ)", "浮のけぞり～ダウン(空,ダ)" },
+	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
+	{ "浮の～浮", "浮の～浮", "やられ付ダ" }, -- { "浮のけぞり～ダウン(空,ダ)", "浮のけぞり～ダウン(空,ダ)" },
 	{ "ダ", "ダ" },                               -- { "ダウン", "ダウン" },
 	{ "浮", "浮" },                               -- { "ダウン(空)", "ダウン(空)" },
 	{ "特", "特" },                               -- { "特殊", "特殊" },
 	{ "浮", "浮" },                               -- { "ダウン(空)", "ダウン(空)" },
 	{ "特", "特" },                               -- { "特殊", "特殊" },
-	{ "浮", "浮", "ダウン時追撃可" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
+	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
 	{ "ダ", "ダ" },                               -- { "ダウン", "ダウン" },
-	{ "ダ", "ダ", "ダウン時追撃可" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "浮", "浮", "ダウン時追撃可" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "ダ", "ダ", "ダウン時追撃可" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "浮", "浮", "ダウン時追撃可" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
+	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
+	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
+	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
+	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
 }
 local damaged_move_keys = {}
 for i = 1, #damaged_moves do
@@ -4763,34 +4763,35 @@ local in_range = function(top, bottom, atop, abottom)
 	return false
 end
 
-local update_summary = function(p, box)
+local update_summary = function(p)
 	local summary = p.hit_summary
 	-- 判定ができてからのログ情報の作成
-	if p.attack ~= 0 then
-		summary.pure_dmg    = summary.pure_dmg    or p.pure_dmg -- 補正前攻撃力
-		summary.pure_st     = summary.pure_st     or p.pure_st -- 気絶値
-		summary.pure_st_tm  = summary.pure_st_tm  or p.pure_st_tm -- 気絶タイマー
+	summary.pure_dmg    = summary.pure_dmg    or p.pure_dmg -- 補正前攻撃力
+	summary.pure_st     = summary.pure_st     or p.pure_st -- 気絶値
+	summary.pure_st_tm  = summary.pure_st_tm  or p.pure_st_tm -- 気絶タイマー
 
-		summary.chip_dmg    = summary.chip_dmg    or (p.chip_dmg_type and p.chip_dmg_type.calc(p.pure_dmg) or 0) -- 削りダメージ
-		summary.effect      = summary.effect      or p.effect -- ヒット効果
-		summary.can_techrise= summary.can_techrise or p.can_techrise -- 受け身行動可否
-		summary.gd_strength = summary.gd_strength or p.gd_strength -- 相手のガード持続の種類
-		summary.max_hit_nm  = summary.max_hit_nm  or p.hit.max_hit_nm -- p.act_frame中の行動最大ヒット 分子
-		summary.max_hit_dn  = summary.max_hit_dn  or p.hit.max_hit_dn -- p.act_frame中の行動最大ヒット 分母
-		summary.cancelable  = summary.cancelable  or p.cancelable -- キャンセル可否
-		summary.slide_atk   = summary.slide_atk   or p.slide_atk -- ダッシュ滑り攻撃
-		summary.bs_atk      = summary.bs_atk      or p.bs_atk -- ブレイクショット
+	summary.chip_dmg    = summary.chip_dmg    or (p.chip_dmg_type and p.chip_dmg_type.calc(p.pure_dmg) or 0) -- 削りダメージ
+	summary.effect      = summary.effect      or p.effect -- ヒット効果
+	summary.can_techrise= summary.can_techrise or p.can_techrise -- 受け身行動可否
+	summary.gd_strength = summary.gd_strength or p.gd_strength -- 相手のガード持続の種類
+	summary.max_hit_nm  = summary.max_hit_nm  or p.hit.max_hit_nm -- p.act_frame中の行動最大ヒット 分子
+	summary.max_hit_dn  = summary.max_hit_dn  or p.hit.max_hit_dn -- p.act_frame中の行動最大ヒット 分母
+	summary.cancelable  = summary.cancelable  or p.cancelable -- キャンセル可否
+	summary.slide_atk   = summary.slide_atk   or p.slide_atk -- ダッシュ滑り攻撃
+	summary.bs_atk      = summary.bs_atk      or p.bs_atk -- ブレイクショット
 
-		summary.hitstun     = summary.hitstun     or p.hitstun    -- ヒット硬直
-		summary.blockstun   = summary.blockstun   or p.blockstun  -- ガード硬直
-		summary.hitstop     = summary.hitstop     or p.hitstop      -- ヒットストップ
-		summary.hitstop_gd  = summary.hitstop_gd  or p.hitstop_gd   -- ガード時ヒットストップ
-		if p.is_fireball == true then
-			summary.prj_rank = summary.prj_rank   or p.prj_rank -- 飛び道具の強さ
-		else
-			summary.prj_rank = nil -- 飛び道具の強さ
-		end
+	summary.hitstun     = summary.hitstun     or p.hitstun    -- ヒット硬直
+	summary.blockstun   = summary.blockstun   or p.blockstun  -- ガード硬直
+	summary.hitstop     = summary.hitstop     or p.hitstop      -- ヒットストップ
+	summary.hitstop_gd  = summary.hitstop_gd  or p.hitstop_gd   -- ガード時ヒットストップ
+	if p.is_fireball == true then
+		summary.prj_rank = summary.prj_rank   or p.prj_rank -- 飛び道具の強さ
+	else
+		summary.prj_rank = nil -- 飛び道具の強さ
 	end
+end
+local update_box_summary = function(p, box)
+	local summary = p.hit_summary
 	if box then
 		local edge = nil
 		if p.is_fireball then
@@ -5196,14 +5197,18 @@ local update_object = function(p)
 	end
 
 	-- 共通情報
-	update_summary(p)
+	if p.is_fireball and p.proc_active then
+		update_summary(p)
+	elseif p.attack_flag then
+		update_summary(p)
+	end
 
 	-- 判定データ排他用のテーブル
 	for _, box in ipairs(p.buffer) do
 		local hitbox = new_hitbox1(p, box.id, box.pos_x, box.pos_y, box.top, box.bottom, box.left, box.right, box.is_fireball)
 		if hitbox then
 			p.uniq_hitboxes[box.key] = hitbox.type
-			update_summary(p, hitbox)
+			update_box_summary(p, hitbox)
 			table.insert(p.hitboxes, hitbox)
 			-- 攻撃情報ログ
 			if global.log.atklog == true and hitbox.log_txt ~= nil then
@@ -5214,14 +5219,14 @@ local update_object = function(p)
 
 	-- 空投げ, 必殺投げ
 	if p.n_throw and p.n_throw.on == 0x1 then
-		table.insert(p.hitboxes, update_summary(p, new_throwbox(p, p.n_throw)))
+		table.insert(p.hitboxes, update_box_summary(p, new_throwbox(p, p.n_throw)))
 		--print("n throw " .. string.format("%x", p.addr.base) .. " " .. p.n_throw.type.name .. " " .. " " .. p.n_throw.left .. " " .. p.n_throw.right .. " " .. p.n_throw.top .. " " .. p.n_throw.bottom)
 	end
 	if p.air_throw and p.air_throw.on == 0x1 then
-		table.insert(p.hitboxes,  update_summary(p, new_throwbox(p, p.air_throw)))
+		table.insert(p.hitboxes,  update_box_summary(p, new_throwbox(p, p.air_throw)))
 	end
 	if p.sp_throw and p.sp_throw.on == 0x1 then
-		table.insert(p.hitboxes,  update_summary(p,new_throwbox(p, p.sp_throw)))
+		table.insert(p.hitboxes,  update_box_summary(p, new_throwbox(p, p.sp_throw)))
 	end
 end
 
@@ -5378,6 +5383,7 @@ function rbff2.startplugin()
 			old_state_flags  = 0,           -- 処理で使われているフラグ群
 			state_flags2     = 0,           -- 処理で使われているフラグ群
 			old_state_flags2 = 0,           -- 処理で使われているフラグ群
+			attack_flag      = false,
 			state_flags3     = 0,           -- 処理で使われているフラグ群
 			blkstn_flags     = 0,           -- 処理で使われているフラグ（硬直の判断用）
 			old_blkstn_flags = 0,           -- 処理で使われているフラグ（硬直の判断用）
@@ -5640,6 +5646,7 @@ function rbff2.startplugin()
 				state_flags  = p1 and 0x1004C0 or 0x1005C0, -- フラグ群
 				state_flags2 = p1 and 0x1004CC or 0x1005CC, -- フラグ群2
 				state_flags3 = p1 and 0x1004C8 or 0x1005C8, -- 必殺技等のフラグ群2
+				state_flags4 = p1 and 0x1004C4 or 0x1005C4, -- フラグ群
 				blkstn_flags = p1 and 0x1004D0 or 0x1005D0, -- フラグ群3
 				stop         = p1 and 0x10048D or 0x10058D, -- ヒットストップ
 				knock_back1  = p1 and 0x100469 or 0x100569, -- のけぞり確認用1(色々)
@@ -5791,7 +5798,7 @@ function rbff2.startplugin()
 	 				pos_z      = base + 0x24, -- Z位置
 					attack     = base + 0xBF, -- デバッグのNO
 					hitstop_id = base + 0xBE, -- ヒット硬直用ID
-					can_techrise = base + 0x92, -- 受け身行動可否チェック用
+					can_techrise = base + 0xBE, -- 受け身行動可否チェック用
 					-- ヒットするかどうか
 					fake_hit   = p.fake_hits[base],
 					obsl_hit   = base + 0x6A, -- 嘘判定チェック用 3ビット目が立っていると嘘判定
@@ -7635,23 +7642,16 @@ function rbff2.startplugin()
 		"打撃無敵",
 		"投げ無敵",
 		"向き",
-		"追撃能力",
 		"攻撃範囲",
 		"ダッシュ専用",
 		"ブレイクショット",
-		"弾強度",
-		"攻撃値(削り)",
-		"攻撃値",
-		"気絶値",
-		"気絶値(持続)",
-		"POW増加量",
+		"攻撃/気絶",
 		"POW(基/当/防)",
 		"POW(基/当/防/返/吸)",
-		"ヒット効果",
-		"効(ID/地/空)",
+		"効果(地/空)",
+		"弾強度",
 		"必キャンセル",
-		"ヒットストップ",
-		"ヒット硬直",
+		"硬直 当/防(BS)",
 		"押し合い判定",
 		"最大やられ範囲",
 		"最大当たり範囲",
@@ -7841,22 +7841,21 @@ function rbff2.startplugin()
 			reach_label = "-"
 		end
 
-		local hit_summary = {
+		local atkid_summary = {
 			{"攻撃範囲:"      , summary.normal_hit or summary.down_hit or summary.air_hit or "-"},
 			{"最大当たり範囲:", reach_label},
 		}
-		-- TODO レイアウト検討
 		for box_no, box in ipairs(summary.boxes) do
-			table.insert(hit_summary, {box_no .. " ガード方向:"    , string.format("メイン:%s/スウェー:%s", box.block_label, box.sway_block_label)})
-			table.insert(hit_summary, {box_no .. " 当て身投げ:"    , box.parry_label})
+			table.insert(atkid_summary, {box_no .. " ガード方向:"    , string.format("メイン:%s/スウェー:%s", box.block_label, box.sway_block_label)})
+			table.insert(atkid_summary, {box_no .. " 当て身投げ:"    , box.parry_label})
 			local label = box.punish_away_label
 			if box.punish_away_label ~= box.asis_punish_away_label then
 				label = label .. "(" .. box.asis_punish_away_label .. ")"
 			end
-			table.insert(hit_summary, {box_no .. " 当たり高さ:"      , label})
-			table.insert(hit_summary, {box_no .. " 当たり範囲:"      , box.reach_label})
+			table.insert(atkid_summary, {box_no .. " 当たり高さ:"      , label})
+			table.insert(atkid_summary, {box_no .. " 当たり範囲:"      , box.reach_label})
 		end
-		return add_frame_to_summary(hit_summary)
+		return add_frame_to_summary(atkid_summary)
 	end
 	local make_throw_summary = function(p, summary)
 		local range_label
@@ -7968,109 +7967,224 @@ function rbff2.startplugin()
 			pow_label = pow_label .. string.format("/%s/%s", p.pow_revenge or 0, p.pow_absorb or 0)
 		end
 		local esaka_label = (p.esaka_range > 0) and p.esaka_range or "-"
-		
+		-- BS
 		local bs_label = "-"
 		if p.bs_atk == true then
 			bs_label = "〇"
 		end
+		-- キャンセル可否
+		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
+		local cancel_advs_label, cancel_advs = "必×", {}
+		p.cancelable = pgm:read_u8(p.addr.cancelable)
+		-- 家庭用2AD90からの処理
+		if p.attack < 0x70 then
+			local d0 = pgm:read_u8(pgm:read_u32(p.char_4times + 0x850D8) + p.attack)
+			p.cancelable = d0
+		end
+		if p.cancelable and p.cancelable ~= 0 then
+			if faint_cancels[p.char] and p.attack_id then
+				for _, fc in ipairs(faint_cancels[p.char]) do
+					local p1  = 1 + p.hitstop + fc.f
+					local p2h = p.hitstop + p.hitstun
+					local p2g = p.hitstop_gd + p.blockstun
+					table.insert(cancel_advs, string.format(fc.name .. ":当%sF/防%sF", p2h - p1, p2g - p1))
+				end
+			end
+			if #cancel_advs > 0 then
+				cancel_advs_label = "必〇/" .. table.concat(cancel_advs, ",")
+			else
+				cancel_advs_label = "必〇"
+			end
+		end
+		local slide_label = p.slide_atk and "/滑り" or ""
 
 		local atk_summary = {
 			{pow_info             , pow_label   },
 			{"詠酒発動範囲:"      , esaka_label },
 			{"ブレイクショット:"  , bs_label    },
+			{"キャンセル:"        , cancel_advs_label ..  "" .. slide_label },
 		}
 		return add_frame_to_summary(atk_summary)
 	end
-	local make_atkid_summary = function(p, summary, fbno)
+	local make_atkact_summary = function(p, summary, fbno)
 		fbno = fbno or 0
 		local prefix = fbno == 0 and "" or ("弾" .. fbno)
-		local cancel_advs_label = "-"
-		local slide_label = "-"
-		if p.is_fireball ~= true then
-			local cancel_advs = {}
-			if p.cancelable and p.cancelable ~= 0 then
-				if faint_cancels[p.char] and p.attack_id then
-					for _, fc in ipairs(faint_cancels[p.char]) do
-						local p1  = 1 + p.hitstop + fc.f
-						local p2h = p.hitstop + p.hitstun
-						local p2g = p.hitstop_gd + p.blockstun
-						table.insert(cancel_advs, string.format(fc.name .. ":当%sF/防%sF", p2h - p1, p2g - p1))
+		local atkact_summary = {}
+		if p.attack_id > 0 or p.is_fireball == true then
+			for _, box in ipairs(p.hitboxes) do
+				if box.atk and box.info then
+					local info = box.info
+	
+					-- 避け攻撃つぶし
+					local punish_away_label, asis_punish_away_label
+					if summary.normal_hit == hit_proc_types.same_line or
+						summary.normal_hit == hit_proc_types.diff_line then
+						punish_away_label = "上方"
+						asis_punish_away_label = "上方"
+						if info.punish_away == 1 then
+							punish_away_label = "〇避け攻撃"
+						elseif info.punish_away == 2 then
+							punish_away_label = "〇避け攻撃ロ1"
+						elseif info.punish_away == 3 then
+							punish_away_label = "〇避け攻撃ロ2"
+						elseif info.punish_away == 4 then
+							punish_away_label = "〇屈1"
+						elseif info.punish_away == 5 then
+							punish_away_label = "〇屈2"
+						elseif info.punish_away == 6 then
+							punish_away_label = "〇屈3"
+						end
+						if info.asis_punish_away == 1 then
+							asis_punish_away_label = "〇避け攻撃"
+						elseif info.asis_punish_away == 2 then
+							asis_punish_away_label = "〇避け攻撃ロ1"
+						elseif info.asis_punish_away == 3 then
+							asis_punish_away_label = "〇避け攻撃ロ2"
+						elseif info.asis_punish_away == 4 then
+							asis_punish_away_label = "〇屈1"
+						elseif info.asis_punish_away == 5 then
+							asis_punish_away_label = "〇屈2"
+						elseif info.asis_punish_away == 6 then
+							asis_punish_away_label = "〇屈3"
+						end
 					end
+	
+					local blocks = {}
+					if summary.up_guard then
+						-- 判定位置下段
+						if info.pos_low2 then
+							-- ALL
+						elseif info.pos_low1 then
+							-- タン以外
+							table.insert(blocks, "立(タンのみ)")
+						else
+							table.insert(blocks, "立")
+						end
+					end
+					if summary.low_guard then
+						table.insert(blocks, "屈")
+					end
+					if summary.air_guard then
+						table.insert(blocks, "空")
+					end
+					if info.unblock_pot and summary.normal_hit then
+						if not summary.low_guard then
+							table.insert(blocks, "ガー不可能性あり")
+						end
+					end
+					local sway_blocks = {}
+					if summary.normal_hit == hit_proc_types.diff_line then
+						if summary.sway_up_gd == hit_proc_types.diff_line then
+							-- 対スウェー判定位置下段
+							if info.sway_pos_low2 then
+								-- ALL
+							elseif info.sway_pos_low1 then
+								-- タン以外
+								table.insert(sway_blocks, "立(タンのみ)")
+							else
+								table.insert(sway_blocks, "立")
+							end
+						end
+						if summary.sway_low_gd == hit_proc_types.diff_line then
+							table.insert(sway_blocks, "屈")
+						end
+					end
+					local parry = {}
+					table.insert(parry, info.range_j_atm_nage and "上" or info.j_atm_nage and "(上)" or nil) -- 上段当て身投げ可能
+					table.insert(parry, info.range_urakumo and "裏" or info.urakumo and "(裏)" or nil)    -- 裏雲隠し可能
+					table.insert(parry, info.range_g_atm_uchi and "下" or info.g_atm_uchi and "(下)" or nil) -- 下段当て身打ち可能
+					table.insert(parry, info.range_gyakushu and "逆" or info.gyakushu and "(逆)" or nil)  -- 逆襲拳可能
+					table.insert(parry, info.range_sadomazo and "サ" or info.sadomazo and "(サ)" or nil)   -- サドマゾ可能
+					table.insert(parry, info.range_phx_tw and "フ" or info.phx_tw and "(フ)" or nil)     -- フェニックススルー可能
+					table.insert(parry, info.range_baigaeshi and "倍" or info.baigaeshi and "(倍)" or nil)  -- 倍返し可能
+					table.insert(summary.boxes, {
+						punish_away_label = punish_away_label,
+						asis_punish_away_label = asis_punish_away_label,
+						block_label = #blocks == 0 and "ガード不能" or table.concat(blocks, ","),
+						sway_block_label = #sway_blocks == 0 and "-" or table.concat(sway_blocks, ","),
+						parry_label = #parry == 0 and "不可" or  string.gsub(table.concat(parry, ","), "%),%(", ","),
+						reach_label = string.format("前%s/上%s(%s)/下%s(%s)/後%s",
+							box.reach.front,
+							box.reach.top + p.pos_y,
+							box.reach.top,
+							box.reach.bottom + p.pos_y,
+							box.reach.bottom,
+							box.reach.back)
+					})
+					box.type_count = #summary.boxes
 				end
-				if #cancel_advs > 0 then
-					cancel_advs_label = "〇/" .. table.concat(cancel_advs, ",")
-				else
-					cancel_advs_label = "〇"
+			end
+			-- 攻撃範囲
+			local reach_label
+			if summary.edge.hit.front then
+				reach_label = string.format("前%s/上%s/下%s/後%s",
+					summary.edge.hit.front,
+					summary.edge.hit.top + p.pos_y,
+					summary.edge.hit.bottom + p.pos_y,
+					summary.edge.hit.back)
+			else
+				reach_label = "-"
+			end
+			-- ヒット効果
+			local effect_label = "-"
+			if p.effect then
+				local e = p.effect + 1
+				effect_label = string.format("%s:%s/%s", p.effect, hit_effects[e][1], hit_effects[e][2])
+				if hit_effects[e][3] then
+					effect_label = effect_label .. " " .. hit_effects[e][3]
+				end
+				if summary.can_techrise == false then
+					effect_label = effect_label .. " 受身不可"
 				end
 			end
-
-			if p.slide_atk == true then
-				slide_label = "〇(CA派生不可)"
+			-- 追撃能力
+			local followups = {}
+			if summary.down_hit then
+				table.insert(followups, "ダウン追撃")
 			end
-		end
-
-		local effect_label = "-"
-		if p.effect then
-			local e = p.effect + 1
-			effect_label = string.format("%s/%s/%s", p.effect, hit_effects[e][1], hit_effects[e][2])
-			if summary.can_techrise == false then
-				effect_label = effect_label .. " 受身不可"
+			if summary.air_hit then
+				table.insert(followups, "空中追撃")
 			end
-			if hit_effects[e][3] then
-				effect_label = effect_label .. " " .. hit_effects[e][3]
-			end
-		end
-
-		local gd_strength_label = "-"
-		if summary.gd_strength == 1 then
-			gd_strength_label = "短"
-		elseif summary.gd_strength == 2 then
-			gd_strength_label = "長"
-		end
-
-		local hitstun_label
-		if p.hitstun then
-			hitstun_label = string.format(prefix .. "ヒット%sF/ガード%sF/継続:%s", p.hitstun, p.blockstun, gd_strength_label)
-		else
-			hitstun_label = string.format(prefix .. "ヒット-/ガード-/継続:%s", gd_strength_label)
-		end
-
-		local atkid_summary = {
-			{prefix .. "効(ID/地/空):"   , effect_label},
-			{prefix .. "ヒット硬直:"    , hitstun_label },
-		}
-		if p.is_fireball ~= true then
-			table.insert(atkid_summary, {"必キャンセル:"      , cancel_advs_label })
-			table.insert(atkid_summary, {"ダッシュ専用:"      , slide_label })
-		end
-
-		if summary.chip_dmg > 0 then
-			table.insert(atkid_summary, {prefix .. "攻撃値(削り):"  , string.format("%s(%s)", summary.pure_dmg, summary.chip_dmg)})
-		else
-			table.insert(atkid_summary, {prefix .. "攻撃値:"  , summary.pure_dmg})
-		end
-		table.insert(atkid_summary, {prefix .. "最大ヒット数:"  , string.format("%s/%s", summary.max_hit_nm, summary.max_hit_dn) })
-		if p.is_fireball == true then
+			local followup_label = #followups == 0 and "" or (table.concat(followups, ","))
+			-- 弾強度
 			local prj_rank_label = summary.prj_rank or "-"
 			if p.fake_hit == true and p.full_hit == false then
 				prj_rank_label = prj_rank_label .. "(被相殺判定のみ)"
 			end
-			table.insert(atkid_summary, {prefix .. "弾強度:"        , prj_rank_label })
-		end
-		local followups = {}
-		if summary.down_hit then
-			-- ダウン追撃可能
-			table.insert(followups, "ダウン追撃")
-		end
-		if summary.air_hit then
-			-- 空中追撃可能
-			table.insert(followups, "空中追撃")
-		end
-		table.insert(atkid_summary, {prefix .. "追撃能力:"      , #followups == 0 and "-" or table.concat(followups, ",")})
-		table.insert(atkid_summary, {prefix .. "気絶値(持続):"  , string.format("%s/%sF[%4.3f秒]", summary.pure_st, summary.pure_st_tm, summary.pure_st_tm / 60) })
-		table.insert(atkid_summary, {prefix .. "ヒットストップ:", string.format("自･ヒット%sF/ガード･BS猶予%sF", summary.hitstop, summary.hitstop_gd) })
 
-		return add_frame_to_summary(atkid_summary)
+			for box_no, box in ipairs(summary.boxes) do
+				table.insert(atkact_summary, {box_no .. " ガード方向:"    , string.format("メイン:%s/スウェー:%s", box.block_label, box.sway_block_label)})
+				table.insert(atkact_summary, {box_no .. " 当て身投げ:"    , box.parry_label})
+				local label = box.punish_away_label
+				if box.punish_away_label ~= box.asis_punish_away_label then
+					label = label .. "(" .. box.asis_punish_away_label .. ")"
+				end
+				table.insert(atkact_summary, {box_no .. " 当たり高さ:"      , label})
+				table.insert(atkact_summary, {box_no .. " 当たり範囲:"      , box.reach_label})
+			end
+			table.insert(atkact_summary, {"攻撃範囲:"      , summary.normal_hit or summary.down_hit or summary.air_hit or "-"})
+			table.insert(atkact_summary, {"最大当たり範囲:", reach_label})
+			table.insert(atkact_summary, {prefix .. "効果(地/空):"   , effect_label .. " " .. followup_label})
+			table.insert(atkact_summary, {prefix .. "硬直 当/防(BS):", 
+				p.hitstun and
+				string.format(prefix .. "%sF(%sF)/%sF(%sF)",
+					p.hitstun and p.hitstun or "-",
+					summary.hitstop,
+					p.blockstun,
+					summary.hitstop_gd) or
+				"-"
+			})
+			table.insert(atkact_summary, {prefix .. "攻撃/気絶:", string.format("%s(%s)/%s(%sF)",
+				summary.pure_dmg,
+				summary.chip_dmg and (summary.chip_dmg > 0 and summary.chip_dmg or 0) or 0,
+				summary.pure_st,
+				summary.pure_st_tm)})
+			table.insert(atkact_summary, {prefix .. "最大ヒット数:"  , string.format("%s/%s", summary.max_hit_nm, summary.max_hit_dn) })
+			table.insert(atkact_summary, {prefix .. "弾強度:"        , prj_rank_label })
+
+			return add_frame_to_summary(atkact_summary)
+		end
+		return nil
 	end
 	local make_hurt_summary = function(p, summary)
 		local hurt_labels = {}
@@ -8233,7 +8347,8 @@ function rbff2.startplugin()
 		sides_label = sides_label .. "/" ..  ((p.input_side == 0x0) and "入力:右" or "入力:左")
 		sides_label = sides_label .. "/" ..  ((p.internal_side == p.input_side) and "同" or "違")
 
-		local move_label = string.format("本体%sF", p.atk_count)
+		--local move_label = string.format("本体%sF %s %s %x", p.atk_count, p.attack, p.attack_id, p.state_flags4)
+		local move_label = string.format("%08x %08x", p.state_flags4, p.state_flags3)
 		for _, fb in pairs(p.fireball) do
 			if fb.alive == true then
 				move_label = move_label .. string.format("/弾%sF", fb.atk_count)
@@ -8479,6 +8594,7 @@ function rbff2.startplugin()
 			p.old_state_flags2 = p.state_flags2
 			p.state_flags2   = pgm:read_u32(p.addr.state_flags2)       -- フラグ群2
 			p.state_flags3   = pgm:read_u32(p.addr.state_flags3)       -- 必殺技などの技のフラグ群
+			p.state_flags4   = pgm:read_u32(p.addr.state_flags4)       -- フラグ群
 			p.box_base1      = pgm:read_u32(p.addr.box_base1)
 			p.box_base2      = pgm:read_u32(p.addr.box_base2)
 			p.old_kaiser_wave = p.kaiser_wave                          -- 前フレームのカイザーウェイブのレベル
@@ -8516,13 +8632,15 @@ function rbff2.startplugin()
 				       1 CA技
 				       2 小技
 					   4 ダッシュ専用攻撃
-				      80 後ろ
+					  20 空中ガード
 				      40 斜め後ろ
+				      80 後ろ
 				   80000 挑発
 				  100000 ブレイクショット
 				  200000 必殺技
 				 1000000 フェイント技
 				 2000000 つかみ技
+				40000000 空中投げ
 				80000000 投げ技
 
 				     100 投げ派生
@@ -8533,6 +8651,7 @@ function rbff2.startplugin()
 				    8000 やられ
 				  800000 ダウン
 			]]
+			p.attack_flag    = testbit(p.state_flags2, 0x4000 | 0x200000 | 0x1000000 | 0x80000 | 0x200000 | 0x1000000 | 0x2000000 | 0x40000000 | 0x80000000)
 			p.state_bits     = tobits(p.state_flags)
 			p.old_blkstn_flags= p.blkstn_flags
 			p.old_blkstn_bits= p.blkstn_bits
@@ -8549,17 +8668,8 @@ function rbff2.startplugin()
 			if p.attack == 0 then
 				p.attack     = pgm:read_u8(p.addr.attack)
 			end
-
-			if testbit(p.state_flags2, 0x200000 | 0x1000000 | 0x80000 | 0x200000 | 0x1000000 | 0x2000000 | 0x80000000) ~= true then
-				p.cancelable = pgm:read_u8(p.addr.cancelable)
-				-- 家庭用2AD90からの処理
-				if p.attack < 0x70 then
-					local d0 = pgm:read_u8(pgm:read_u32(p.char_4times + 0x850D8) + p.attack)
-					p.cancelable = d0
-				end
-			else
-				p.cancelable = 0
-			end
+			p.dmg_id         = pgm:read_u8(p.addr.dmg_id) -- 不要かも
+			p.attack_flag    = p.attack_flag or (p.state_flags3 > 0) or (p.state_flags4 > 0)
 
 			p.pure_dmg       = pgm:read_u8(p.addr.pure_dmg)             -- ダメージ(フック処理)
 			p.tmp_pow        = pgm:read_u8(p.addr.tmp_pow)              -- POWゲージ増加量
@@ -9062,7 +9172,8 @@ function rbff2.startplugin()
 					fb.pure_st_tm = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x88772))
 				end
 				-- 受け身行動可否 家庭用 05A9B8 からの処理
-				fb.can_techrise   = 2 > pgm:read_u8(0x88A12 + fb.attack)
+				fb.can_techrise   = pgm:read_u8(fb.addr.can_techrise)
+				fb.can_techrise   = 2 > pgm:read_u8(0x8E2C0 + fb.can_techrise)
 				fb.fake_hit       = (pgm:read_u8(fb.addr.fake_hit) & 0xB) == 0
 				fb.obsl_hit       = (pgm:read_u8(fb.addr.obsl_hit) & 0xB) == 0
 				fb.full_hit       = pgm:read_u8(fb.addr.full_hit ) > 0
@@ -9313,23 +9424,21 @@ function rbff2.startplugin()
 			update_object(p)
 
 			-- ヒット効果、削り補正、硬直
-			-- 複数の攻撃判定を持っていても値は同じになる
-			if p.attack_id then
-				-- 058232(家庭用版)からの処理
-				-- 1004E9のデータ＝5C83Eでセット 技ID
-				-- 1004E9のデータ-0x20 + 0x95C0C のデータがヒット効果の元ネタ D0
-				-- D0 = 0x9だったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
-				-- D0 = 0xAだったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
-				-- D0 x 4 + 579da
-				-- d0 = fix_bp_addr(0x0579DA + d0 * 4) --0x0579DA から4バイトのデータの並びがヒット効果の処理アドレスになる
-				p.effect = pgm:read_u8(p.attack_id - 0x20 + fix_bp_addr(0x95BEC))
-				-- 削りダメージ計算種別取得 05B2A4 からの処理
-				p.chip_dmg_type = get_chip_dmg_type(p.attack_id)
-				-- 硬直時間取得 05AF7C(家庭用版)からの処理
-				local d2 = 0xF & pgm:read_u8(p.attack_id + fix_bp_addr(0x95CCC))
-				p.hitstun   = pgm:read_u8(0x16 + 0x2 + fix_bp_addr(0x5AF7C) + d2) + 1 + 3 -- ヒット硬直
-				p.blockstun = pgm:read_u8(0x1A + 0x2 + fix_bp_addr(0x5AF88) + d2) + 1 + 2 -- ガード硬直
-			end
+			-- 一動作で複数の攻撃判定を持っていてもIDの値は同じになる
+			-- 058232(家庭用版)からの処理
+			-- 1004E9のデータ＝5C83Eでセット 技ID
+			-- 1004E9のデータ-0x20 + 0x95C0C のデータがヒット効果の元ネタ D0
+			-- D0 = 0x9だったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
+			-- D0 = 0xAだったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
+			-- D0 x 4 + 579da
+			-- d0 = fix_bp_addr(0x0579DA + d0 * 4) --0x0579DA から4バイトのデータの並びがヒット効果の処理アドレスになる
+			p.effect = pgm:read_u8(p.attack_id - 0x20 + fix_bp_addr(0x95BEC))
+			-- 削りダメージ計算種別取得 05B2A4 からの処理
+			p.chip_dmg_type = get_chip_dmg_type(p.attack_id)
+			-- 硬直時間取得 05AF7C(家庭用版)からの処理
+			local d2 = 0xF & pgm:read_u8(p.attack_id + fix_bp_addr(0x95CCC))
+			p.hitstun   = pgm:read_u8(0x16 + 0x2 + fix_bp_addr(0x5AF7C) + d2) + 1 + 3 -- ヒット硬直
+			p.blockstun = pgm:read_u8(0x1A + 0x2 + fix_bp_addr(0x5AF88) + d2) + 1 + 2 -- ガード硬直
 
 			-- 飛び道具の有効無効確定
 			if p.is_fireball == true then
@@ -9962,7 +10071,7 @@ function rbff2.startplugin()
 			end
 		end
 
-		for i, p in ipairs(players) do
+		for _, p in ipairs(players) do
 			-- くらい判定等の常時更新するサマリ情報
 			local all_summary = make_hurt_summary(p, p.hit_summary)
 
@@ -9981,47 +10090,24 @@ function rbff2.startplugin()
 			end
 			p.old_parry_summary = p.parry_summary
 
-			local atk_sum = testbit(p.state_flags2, 0x200000 | 0x1000000 | 0x80000 | 0x200000 | 0x1000000 | 0x2000000 | 0x80000000)
-
+			-- 攻撃モーション単位で変わるサマリ情報 本体
+			p.atk_summary = p.atk_summary or {}
+			p.atkact_summary = p.atkact_summary or {}
+			if p.attack_flag then
+				p.atk_summary = make_atk_summary(p, p.hit_summary)
+				p.atkact_summary = make_atkact_summary(p, p.hit_summary) or p.atkact_summary
+			end
 			-- 攻撃モーション単位で変わるサマリ情報 弾
-			local last_hit_summary, fb_atkid_summaries, fbno = nil, {}, 0
 			for _, fb in pairs(p.fireball) do
-				fbno = fbno + 1
-				if fb.alive == true and check_edge(fb.hit_summary.edge.hit) then
-					local fb_atkid_summary = make_atkid_summary(fb, fb.hit_summary, fbno)
-					table.insert(fb_atkid_summaries, fb_atkid_summary)
-					last_hit_summary = last_hit_summary or make_hit_summary(fb, fb.hit_summary)
+				if fb.proc_active then
+					fb.atkact_summary = make_atkact_summary(fb, fb.hit_summary) or fb.atkact_summary
+					p.atkact_summary = fb.atkact_summary -- 表示情報を弾の情報で上書き
 				end
 			end
-			if p.attack_id ~= 0 or -- 判定発生
-				atk_sum or
-				((p.old_attack ~= p.attack and p.attack > 0) and -- 有効な攻撃中
-				(p.is_fireball or p.fake_hit ~= true)) then
-				p.atkid_summary = make_atkid_summary(p, p.hit_summary)
-				last_hit_summary = last_hit_summary or make_hit_summary(p, p.hit_summary)
-			else
-				p.atkid_summary = p.old_atkid_summary or {}
-			end
-			p.old_atkid_summary = p.atkid_summary
-			last_hit_summary = last_hit_summary or p.old_hit_summary
-			p.old_hit_summary = last_hit_summary
-
-			-- 攻撃モーション単位で変わるサマリ情報 本体
-			if p.old_attack ~= p.attack and p.attack > 0 and atk_sum then
-				p.atk_summary = make_atk_summary(p, p.hit_summary)
-			else
-				p.atk_summary = p.old_atk_summary or {}
-			end
-			p.old_atk_summary = p.atk_summary
 
 			-- サマリ情報を結合する
-			for _, row in ipairs(p.atkid_summary) do
+			for _, row in ipairs(p.atkact_summary) do
 				table.insert(all_summary, row)
-			end
-			for _, fb_atkid_summary in ipairs(fb_atkid_summaries) do
-				for _, row in ipairs(fb_atkid_summary) do
-					table.insert(all_summary, row)
-				end
 			end
 			for _, row in ipairs(p.atk_summary) do
 				table.insert(all_summary, row)
@@ -10030,9 +10116,6 @@ function rbff2.startplugin()
 				table.insert(all_summary, row)
 			end
 			for _, row in ipairs(p.parry_summary) do
-				table.insert(all_summary, row)
-			end
-			for _, row in ipairs(last_hit_summary or {}) do
 				table.insert(all_summary, row)
 			end
 
