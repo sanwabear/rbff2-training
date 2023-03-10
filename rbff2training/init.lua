@@ -7642,40 +7642,36 @@ function rbff2.startplugin()
 		"打撃無敵",
 		"投げ無敵",
 		"向き",
-		"攻撃範囲",
-		"ダッシュ専用",
 		"ブレイクショット",
+		"攻撃対象",
 		"攻撃/気絶",
 		"POW(基/当/防)",
 		"POW(基/当/防/返/吸)",
 		"効果(地/空)",
-		"弾強度",
-		"必キャンセル",
 		"硬直 当/防(BS)",
-		"押し合い判定",
-		"最大やられ範囲",
-		"最大当たり範囲",
-		"詠酒発動範囲",
-		"最大ヒット数",
-		"投げ間合い",
+		"キャンセル",
+		"押し合い範囲",
+		"やられ範囲 最大",
+		"攻撃範囲 最大",
 		"キャッチ範囲",
-
+		"投げ間合い",
+		"詠酒間合い",
+		"ヒット数",
 		"1 ガード方向",
 		"2 ガード方向",
 		"3 ガード方向",
-		"1 当たり高さ",
-		"2 当たり高さ",
-		"3 当たり高さ",
-		"1 当て身投げ",
-		"2 当て身投げ",
-		"3 当て身投げ",
-
+		"1 攻撃高さ",
+		"2 攻撃高さ",
+		"3 攻撃高さ",
+		"1 キャッチ",
+		"2 キャッチ",
+		"3 キャッチ",
 		"1 やられ範囲",
 		"2 やられ範囲",
 		"3 やられ範囲",
-		"1 当たり範囲",
-		"2 当たり範囲",
-		"3 当たり範囲",
+		"1 攻撃範囲",
+		"2 攻撃範囲",
+		"3 攻撃範囲",
 	}, {}
 	for i, k in ipairs(summary_rows) do
 		summary_sort_key[k..":"] = i
@@ -7724,138 +7720,6 @@ function rbff2.startplugin()
 			row[3] = global.frame_number
 		end
 		return summary
-	end
-	local make_hit_summary = function(p, summary)
-		for _, box in ipairs(p.hitboxes) do
-			if box.atk and box.info then
-				local info = box.info
-
-				-- 避け攻撃つぶし
-				local punish_away_label, asis_punish_away_label
-				if summary.normal_hit == hit_proc_types.same_line or
-					summary.normal_hit == hit_proc_types.diff_line then
-					punish_away_label = "上方"
-					asis_punish_away_label = "上方"
-					if info.punish_away == 1 then
-						punish_away_label = "〇避け攻撃"
-					elseif info.punish_away == 2 then
-						punish_away_label = "〇避け攻撃ロ1"
-					elseif info.punish_away == 3 then
-						punish_away_label = "〇避け攻撃ロ2"
-					elseif info.punish_away == 4 then
-						punish_away_label = "〇屈1"
-					elseif info.punish_away == 5 then
-						punish_away_label = "〇屈2"
-					elseif info.punish_away == 6 then
-						punish_away_label = "〇屈3"
-					end
-					if info.asis_punish_away == 1 then
-						asis_punish_away_label = "〇避け攻撃"
-					elseif info.asis_punish_away == 2 then
-						asis_punish_away_label = "〇避け攻撃ロ1"
-					elseif info.asis_punish_away == 3 then
-						asis_punish_away_label = "〇避け攻撃ロ2"
-					elseif info.asis_punish_away == 4 then
-						asis_punish_away_label = "〇屈1"
-					elseif info.asis_punish_away == 5 then
-						asis_punish_away_label = "〇屈2"
-					elseif info.asis_punish_away == 6 then
-						asis_punish_away_label = "〇屈3"
-					end
-				end
-
-				local blocks = {}
-				if summary.up_guard then
-					-- 判定位置下段
-					if info.pos_low2 then
-						-- ALL
-					elseif info.pos_low1 then
-						-- タン以外
-						table.insert(blocks, "立(タンのみ)")
-					else
-						table.insert(blocks, "立")
-					end
-				end
-				if summary.low_guard then
-					table.insert(blocks, "屈")
-				end
-				if summary.air_guard then
-					table.insert(blocks, "空")
-				end
-				if info.unblock_pot and summary.normal_hit then
-					if not summary.low_guard then
-						table.insert(blocks, "ガー不可能性あり")
-					end
-				end
-				local sway_blocks = {}
-				if summary.normal_hit == hit_proc_types.diff_line then
-					if summary.sway_up_gd == hit_proc_types.diff_line then
-						-- 対スウェー判定位置下段
-						if info.sway_pos_low2 then
-							-- ALL
-						elseif info.sway_pos_low1 then
-							-- タン以外
-							table.insert(sway_blocks, "立(タンのみ)")
-						else
-							table.insert(sway_blocks, "立")
-						end
-					end
-					if summary.sway_low_gd == hit_proc_types.diff_line then
-						table.insert(sway_blocks, "屈")
-					end
-				end
-				local parry = {}
-				table.insert(parry, info.range_j_atm_nage and "上" or info.j_atm_nage and "(上)" or nil) -- 上段当て身投げ可能
-				table.insert(parry, info.range_urakumo and "裏" or info.urakumo and "(裏)" or nil)    -- 裏雲隠し可能
-				table.insert(parry, info.range_g_atm_uchi and "下" or info.g_atm_uchi and "(下)" or nil) -- 下段当て身打ち可能
-				table.insert(parry, info.range_gyakushu and "逆" or info.gyakushu and "(逆)" or nil)  -- 逆襲拳可能
-				table.insert(parry, info.range_sadomazo and "サ" or info.sadomazo and "(サ)" or nil)   -- サドマゾ可能
-				table.insert(parry, info.range_phx_tw and "フ" or info.phx_tw and "(フ)" or nil)     -- フェニックススルー可能
-				table.insert(parry, info.range_baigaeshi and "倍" or info.baigaeshi and "(倍)" or nil)  -- 倍返し可能
-				table.insert(summary.boxes, {
-					punish_away_label = punish_away_label,
-					asis_punish_away_label = asis_punish_away_label,
-					block_label = #blocks == 0 and "ガード不能" or table.concat(blocks, ","),
-					sway_block_label = #sway_blocks == 0 and "-" or table.concat(sway_blocks, ","),
-					parry_label = #parry == 0 and "不可" or  string.gsub(table.concat(parry, ","), "%),%(", ","),
-					reach_label = string.format("前%s/上%s(%s)/下%s(%s)/後%s",
-						box.reach.front,
-						box.reach.top + p.pos_y,
-						box.reach.top,
-						box.reach.bottom + p.pos_y,
-						box.reach.bottom,
-						box.reach.back)
-				})
-				box.type_count = #summary.boxes
-			end
-		end
-
-		local reach_label
-		if summary.edge.hit.front then
-			reach_label = string.format("前%s/上%s/下%s/後%s",
-				summary.edge.hit.front,
-				summary.edge.hit.top + p.pos_y,
-				summary.edge.hit.bottom + p.pos_y,
-				summary.edge.hit.back)
-		else
-			reach_label = "-"
-		end
-
-		local atkid_summary = {
-			{"攻撃範囲:"      , summary.normal_hit or summary.down_hit or summary.air_hit or "-"},
-			{"最大当たり範囲:", reach_label},
-		}
-		for box_no, box in ipairs(summary.boxes) do
-			table.insert(atkid_summary, {box_no .. " ガード方向:"    , string.format("メイン:%s/スウェー:%s", box.block_label, box.sway_block_label)})
-			table.insert(atkid_summary, {box_no .. " 当て身投げ:"    , box.parry_label})
-			local label = box.punish_away_label
-			if box.punish_away_label ~= box.asis_punish_away_label then
-				label = label .. "(" .. box.asis_punish_away_label .. ")"
-			end
-			table.insert(atkid_summary, {box_no .. " 当たり高さ:"      , label})
-			table.insert(atkid_summary, {box_no .. " 当たり範囲:"      , box.reach_label})
-		end
-		return add_frame_to_summary(atkid_summary)
 	end
 	local make_throw_summary = function(p, summary)
 		local range_label
@@ -7967,7 +7831,7 @@ function rbff2.startplugin()
 			pow_info  = "POW(基/当/防/返/吸):"
 			pow_label = pow_label .. string.format("/%s/%s", p.pow_revenge or 0, p.pow_absorb or 0)
 		end
-		-- 詠酒発動範囲
+		-- 詠酒間合い
 		local esaka_label = (p.esaka_range > 0) and p.esaka_range or "-"
 		-- ブレイクショット
 		local bs_label = "-"
@@ -8001,7 +7865,7 @@ function rbff2.startplugin()
 		local slide_label = p.slide_atk and "/滑り" or ""
 		local atk_summary = {
 			{pow_info             , pow_label   },
-			{"詠酒発動範囲:"      , esaka_label },
+			{"詠酒間合い:"    , esaka_label },
 			{"ブレイクショット:"  , bs_label    },
 			{"キャンセル:"        , cancel_advs_label ..  "" .. slide_label },
 		}
@@ -8015,7 +7879,7 @@ function rbff2.startplugin()
 			for _, box in ipairs(p.hitboxes) do
 				if box.atk and box.info then
 					local info = box.info
-	
+
 					-- 避け攻撃つぶし
 					local punish_away_label, asis_punish_away_label
 					if summary.normal_hit == hit_proc_types.same_line or
@@ -8049,7 +7913,7 @@ function rbff2.startplugin()
 							asis_punish_away_label = "〇屈3"
 						end
 					end
-	
+
 					local blocks = {}
 					if summary.up_guard then
 						-- 判定位置下段
@@ -8148,23 +8012,23 @@ function rbff2.startplugin()
 			end
 			local followup_label = #followups == 0 and "" or (table.concat(followups, ","))
 			-- 弾強度
-			local prj_rank_label = summary.prj_rank or "-"
+			local prj_rank_label = summary.prj_rank or ""
 			if p.fake_hit == true and p.full_hit == false then
-				prj_rank_label = prj_rank_label .. "(被相殺判定のみ)"
+				prj_rank_label = prj_rank_label .. "(被相殺)"
 			end
 
 			for box_no, box in ipairs(summary.boxes) do
-				table.insert(atkact_summary, {box_no .. " ガード方向:"    , string.format("メイン:%s/スウェー:%s", box.block_label, box.sway_block_label)})
-				table.insert(atkact_summary, {box_no .. " 当て身投げ:"    , box.parry_label})
+				table.insert(atkact_summary, {box_no .. " ガード方向:", string.format("メイン:%s/スウェー:%s", box.block_label, box.sway_block_label)})
+				table.insert(atkact_summary, {box_no .. " キャッチ:"  , box.parry_label})
 				local label = box.punish_away_label
 				if box.punish_away_label ~= box.asis_punish_away_label then
 					label = label .. "(" .. box.asis_punish_away_label .. ")"
 				end
-				table.insert(atkact_summary, {box_no .. " 当たり高さ:"      , label})
-				table.insert(atkact_summary, {box_no .. " 当たり範囲:"      , box.reach_label})
+				table.insert(atkact_summary, {box_no .. " 攻撃高さ:"  , label})
+				table.insert(atkact_summary, {box_no .. " 攻撃範囲:"  , box.reach_label})
 			end
-			table.insert(atkact_summary, {"攻撃範囲:"      , summary.normal_hit or summary.down_hit or summary.air_hit or "-"})
-			table.insert(atkact_summary, {"最大当たり範囲:", reach_label})
+			table.insert(atkact_summary, {"攻撃対象:"    , summary.normal_hit or summary.down_hit or summary.air_hit or "-"})
+			table.insert(atkact_summary, {"攻撃範囲 最大:", reach_label})
 			table.insert(atkact_summary, {prefix .. "効果(地/空):"   , effect_label .. " " .. followup_label})
 			table.insert(atkact_summary, {prefix .. "硬直 当/防(BS):", 
 				p.hitstun and
@@ -8180,11 +8044,11 @@ function rbff2.startplugin()
 				summary.chip_dmg and (summary.chip_dmg > 0 and summary.chip_dmg or 0) or 0,
 				summary.pure_st,
 				summary.pure_st_tm)})
-			table.insert(atkact_summary, {prefix .. "最大ヒット数:"  , string.format("%s/%s", summary.max_hit_nm, summary.max_hit_dn)})
-			table.insert(atkact_summary, {prefix .. "弾強度:"        , prj_rank_label})
+			table.insert(atkact_summary, {prefix .. "ヒット数:"  , string.format("%s/%s 弾強度:%s", summary.max_hit_nm, summary.max_hit_dn, prj_rank_label)})
 
 			return add_frame_to_summary(atkact_summary)
 		end
+print(string.format("nil %s", p.attack_id))
 		return nil
 	end
 	local make_hurt_summary = function(p, summary)
@@ -8361,7 +8225,7 @@ function rbff2.startplugin()
 			{ "打撃無敵:"      , hurt_label  },
 			{ "投げ無敵:"      , throw_label },
 			{ "向き:"          , sides_label },
-			{ "押し合い判定:"  , push_label  },
+			{ "押し合い範囲:"  , push_label  },
 			{ "最大やられ範囲:", reach_label },
 		}
 		for _, box in ipairs(summary.hurt_boxes) do
@@ -10113,10 +9977,12 @@ function rbff2.startplugin()
 			end
 			-- 攻撃モーション単位で変わるサマリ情報 本体
 			if p.attack_flag then
-				if p.attack > 0 and p.summary_p_atk ~= p.attack then
+				if (p.attack > 0 and p.summary_p_atk ~= p.attack) or
+					(p.attack_id > 0 and p.summary_p_atkid ~= p.attack_id) then
 					p.atk_summary = make_atk_summary(p, p.hit_summary)
 					p.atkact_summary = make_atkact_summary(p, p.hit_summary) or p.atkact_summary
 					p.summary_p_atk = p.attack
+					p.summary_p_atkid = p.attack_id
 				end
 			end
 
