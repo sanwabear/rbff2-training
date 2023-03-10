@@ -5653,7 +5653,7 @@ function rbff2.startplugin()
 				input_offset = p1 and 0x0394C4 or 0x0394C8, -- コマンド入力状態のオフセットアドレス
 				no_hit       = p1 and 0x10DDF2 or 0x10DDF1, -- ヒットしないフック
 				-- 0x1004E2 or 0x1005E2 -- 距離 0近距離 1中距離 2遠距離
-				cancelable   = p1 and 0x1004AF or 0x1005AF, -- キャンセル可否 00不可 C0可 D0可
+				cancelable   = p1 and 0x1004AF or 0x1005AF, -- キャンセル可否 00不可 C0可 D0可 正確ではない
 				box_base1    = p1 and 0x100476 or 0x100576,
 				box_base2    = p1 and 0x10047A or 0x10057A,
 				kaiser_wave  = p1 and 0x1004FB or 0x1005FB, -- カイザーウェイブのレベル
@@ -8543,11 +8543,9 @@ function rbff2.startplugin()
 			p.max_combo      = tohexnum(pgm:read_u8(p.addr.max_combo2)) -- 最大コンボ数
 			p.tmp_dmg        = pgm:read_u8(p.addr.tmp_dmg)              -- ダメージ
 			p.old_attack     = p.attack
-			local tst_atk    = pgm:read_u8(p.addr.attack_b)
-			if tst_atk == 0 then
+			p.attack         = pgm:read_u8(p.addr.attack_b)
+			if p.attack == 0 then
 				p.attack     = pgm:read_u8(p.addr.attack)
-			else
-				p.attack     = tst_atk
 			end
 
 			if testbit(p.state_flags2, 0x200000 | 0x1000000 | 0x80000 | 0x200000 | 0x1000000 | 0x2000000 | 0x80000000) ~= true then
@@ -9998,7 +9996,7 @@ function rbff2.startplugin()
 			p.old_parry_summary = p.parry_summary
 
 			-- 攻撃モーション単位で変わるサマリ情報
-			if p.old_attack ~= p.attack and p.attack > 0 then
+			if p.old_attack ~= p.attack and p.attack > 0 and p.state_flags2 > 0 then
 				p.atk_summary = make_atk_summary(p, p.hit_summary)
 			else
 				p.atk_summary = p.old_atk_summary or {}
