@@ -7864,10 +7864,10 @@ function rbff2.startplugin()
 		end
 		local slide_label = p.slide_atk and "/滑り" or ""
 		local atk_summary = {
-			{pow_info             , pow_label   },
-			{"詠酒間合い:"    , esaka_label },
-			{"ブレイクショット:"  , bs_label    },
-			{"キャンセル:"        , cancel_advs_label ..  "" .. slide_label },
+			{pow_info           , pow_label   },
+			{"詠酒間合い:"      , esaka_label },
+			{"ブレイクショット:", bs_label    },
+			{"キャンセル:"      , cancel_advs_label ..  "" .. slide_label },
 		}
 		return add_frame_to_summary(atk_summary)
 	end
@@ -8048,7 +8048,6 @@ function rbff2.startplugin()
 
 			return add_frame_to_summary(atkact_summary)
 		end
-print(string.format("nil %s", p.attack_id))
 		return nil
 	end
 	local make_hurt_summary = function(p, summary)
@@ -8648,7 +8647,6 @@ print(string.format("nil %s", p.attack_id))
 				-- 03BF00: 082C 0004 00CD           btst    #$4, ($cd,A4) beqのときのみ
 				-- base+A3の値は技発動時の処理中にしか採取できないのでこの処理は機能しない
 				-- local d0, a0 = pgm:read_u8(p.addr.base + 0xA3), 0
-				p.pow_up = 0
 				if pgm:read_u8(p.addr.base + 0xB8) ~= 0 and (pgm:read_u8(p.addr.base + 0xCD) & 0x20) == 0x20 then
 					local spid = pgm:read_u8(p.addr.base + 0xB8) -- 技コマンド成立時の技のID
 					if spid ~= 0 then
