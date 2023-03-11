@@ -5644,9 +5644,9 @@ function rbff2.startplugin()
 				input2       = p1 and 0x100483 or 0x100583, -- キー入力 1F前の入力
 				state        = p1 and 0x10048E or 0x10058E, -- 状態
 				state_flags  = p1 and 0x1004C0 or 0x1005C0, -- フラグ群
-				state_flags2 = p1 and 0x1004CC or 0x1005CC, -- フラグ群2
-				state_flags3 = p1 and 0x1004C8 or 0x1005C8, -- 必殺技等のフラグ群2
 				state_flags4 = p1 and 0x1004C4 or 0x1005C4, -- フラグ群
+				state_flags3 = p1 and 0x1004C8 or 0x1005C8, -- 必殺技等のフラグ群2
+				state_flags2 = p1 and 0x1004CC or 0x1005CC, -- フラグ群2
 				blkstn_flags = p1 and 0x1004D0 or 0x1005D0, -- フラグ群3
 				stop         = p1 and 0x10048D or 0x10058D, -- ヒットストップ
 				knock_back1  = p1 and 0x100469 or 0x100569, -- のけぞり確認用1(色々)
@@ -8217,7 +8217,7 @@ function rbff2.startplugin()
 		sides_label = sides_label .. ((p.internal_side == p.input_side) and "" or "＊")
 
 		--local move_label = string.format("本体%sF %s %s %x", p.atk_count, p.attack, p.attack_id, p.state_flags4)
-		local move_label = string.format("%08x %08x", p.state_flags4, p.state_flags3)
+		local move_label = string.format("%08x %08x %08x", p.state_flags4, p.state_flags3, p.state_flags2)
 		for _, fb in pairs(p.fireball) do
 			if fb.alive == true then
 				move_label = move_label .. string.format("/弾%sF", fb.atk_count)
@@ -8500,7 +8500,7 @@ function rbff2.startplugin()
 			--[[
 				       1 CA技
 				       2 小技
-					   4 ダッシュ専用攻撃
+					   4 ダッシュ専用攻撃 滑り攻撃
 					  20 空中ガード
 				      40 斜め後ろ
 				      80 後ろ
@@ -9962,14 +9962,15 @@ function rbff2.startplugin()
 			p.old_parry_summary = p.parry_summary
 
 			-- 攻撃モーション単位で変わるサマリ情報
+			local summary_p_atk = p.attack > 0 and string.format("%x %s %s", p.attack, p.slide_atk, p.bs_atk) or ""
 			p.atk_summary = p.atk_summary or {}
 			p.atkact_summary = p.atkact_summary or {}
 			-- 攻撃モーション単位で変わるサマリ情報 本体
-			if (p.attack_flag and p.attack > 0 and p.summary_p_atk ~= p.attack) or
+			if (p.attack_flag and p.attack > 0 and p.summary_p_atk ~= summary_p_atk) or
 				(p.attack_id > 0 and p.summary_p_atkid ~= p.attack_id) then
 				p.atk_summary = make_atk_summary(p, p.hit_summary)
 				p.atkact_summary = make_atkact_summary(p, p.hit_summary) or p.atkact_summary
-				p.summary_p_atk = p.attack
+				p.summary_p_atk = summary_p_atk
 				p.summary_p_atkid = p.attack_id
 			end
 			-- 攻撃モーション単位で変わるサマリ情報 弾
@@ -9979,7 +9980,7 @@ function rbff2.startplugin()
 					-- 表示情報を弾の情報で上書き
 					p.atkact_summary = fb.atkact_summary
 					-- 情報を残すために弾中の動作のIDも残す
-					p.summary_p_atk = p.attack > 0 and p.attack or p.summary_p_atk
+					p.summary_p_atk = p.attack > 0 and p.attack or summary_p_atk
 				end
 			end
 
