@@ -7641,31 +7641,31 @@ function rbff2.startplugin()
 		"動作",
 		"打撃無敵",
 		"投げ無敵",
-		"向き",
+		"方向(動作/入力)",
 		"ブレイクショット",
+		"押し合い範囲",
 		"攻撃対象",
 		"攻撃/気絶",
-		"POW(基/当/防)",
-		"POW(基/当/防/返/吸)",
-		"効果(地/空)",
 		"硬直 当/防(BS)",
-		"キャンセル",
-		"押し合い範囲",
-		"やられ範囲 最大",
 		"攻撃範囲 最大",
+		"やられ範囲 最大",
 		"キャッチ範囲",
 		"投げ間合い",
-		"詠酒間合い",
 		"ヒット数",
+		"POW(基/当/防)",
+		"POW(基/当/防/返/吸)",
+		"詠酒間合い",
+		"キャンセル",
+		"効果(地/空)",
 		"1 ガード方向",
-		"2 ガード方向",
-		"3 ガード方向",
-		"1 攻撃高さ",
-		"2 攻撃高さ",
-		"3 攻撃高さ",
 		"1 キャッチ",
+		"1 攻撃高さ",
+		"2 ガード方向",
 		"2 キャッチ",
+		"2 攻撃高さ",
+		"3 ガード方向",
 		"3 キャッチ",
+		"3 攻撃高さ",
 		"1 やられ範囲",
 		"2 やられ範囲",
 		"3 やられ範囲",
@@ -7862,12 +7862,12 @@ function rbff2.startplugin()
 				cancel_advs_label = "必〇"
 			end
 		end
-		local slide_label = p.slide_atk and "/滑り" or ""
+		local slide_label = p.slide_atk and "滑(CA×)/" or ""
 		local atk_summary = {
 			{pow_info           , pow_label   },
 			{"詠酒間合い:"      , esaka_label },
 			{"ブレイクショット:", bs_label    },
-			{"キャンセル:"      , cancel_advs_label ..  "" .. slide_label },
+			{"キャンセル:"      , slide_label .. cancel_advs_label },
 		}
 		return add_frame_to_summary(atk_summary)
 	end
@@ -8012,9 +8012,9 @@ function rbff2.startplugin()
 			end
 			local followup_label = #followups == 0 and "" or (table.concat(followups, ","))
 			-- 弾強度
-			local prj_rank_label = summary.prj_rank or ""
-			if p.fake_hit == true and p.full_hit == false then
-				prj_rank_label = prj_rank_label .. "(被相殺)"
+			local prj_rank_label = ""
+			if p.is_fireball then
+				prj_rank_label = string.format("弾強度:%s%s", summary.prj_rank, (p.fake_hit == true and p.full_hit == false) and "(被相殺)" or "")
 			end
 
 			for box_no, box in ipairs(summary.boxes) do
@@ -8044,7 +8044,7 @@ function rbff2.startplugin()
 				summary.chip_dmg and (summary.chip_dmg > 0 and summary.chip_dmg or 0) or 0,
 				summary.pure_st,
 				summary.pure_st_tm)})
-			table.insert(atkact_summary, {prefix .. "ヒット数:"  , string.format("%s/%s 弾強度:%s", summary.max_hit_nm, summary.max_hit_dn, prj_rank_label)})
+			table.insert(atkact_summary, {prefix .. "ヒット数:"  , string.format("%s/%s %s", summary.max_hit_nm, summary.max_hit_dn, prj_rank_label)})
 
 			return add_frame_to_summary(atkact_summary)
 		end
@@ -8123,13 +8123,15 @@ function rbff2.startplugin()
 		local hurt_label = table.concat(hurt_labels, ",")
 
 		local throw_invincibles = {}
+		-- なんらかのやられ状態か
 		if p.state ~= 0 or p.op.state ~= 0 then
-			table.insert(throw_invincibles, "状態")
+			table.insert(throw_invincibles, "やられ状態")
 		end
 		if p.pos_y ~= 0 then
 			-- 高度による地上投げ無敵（めり込みも投げ不可）
 			table.insert(throw_invincibles, "高度")
 		end
+		-- 投げ無敵タイマー
 		if p.tw_frame <= 10 then
 			-- 真空投げ 羅生門 鬼門陣 M.タイフーン M.スパイダー 爆弾パチキ ドリル ブレスパ ブレスパBR リフトアップブロー デンジャラススルー ギガティックサイクロン マジンガ STOL
 			table.insert(throw_invincibles, "タイマー10")
@@ -8144,9 +8146,11 @@ function rbff2.startplugin()
 			-- スウェーによる投げ無敵
 			table.insert(throw_invincibles, "スウェー")
 		end
+		-- 投げ無敵フラグ
 		if p.tw_muteki ~= 0 then
 			table.insert(throw_invincibles, "フラグ1")
 		end
+		-- 投げ無敵フラグ
 		if p.tw_muteki2 ~= 0 then
 			table.insert(throw_invincibles, "フラグ2")
 		end
@@ -8207,9 +8211,10 @@ function rbff2.startplugin()
 		end
 
 		local sides_label -- 00:左側 80:右側
-		sides_label = (p.internal_side == 0x0) and "動作:右" or "動作:左"
-		sides_label = sides_label .. "/" ..  ((p.input_side == 0x0) and "入力:右" or "入力:左")
-		sides_label = sides_label .. "/" ..  ((p.internal_side == p.input_side) and "同" or "違")
+		sides_label = (p.internal_side == 0x0) and "右" or "左"
+		sides_label = sides_label .. ((p.input_side == 0x0) and "/右" or "/左")
+		-- 見た目と入力方向が違う状態
+		sides_label = sides_label .. ((p.internal_side == p.input_side) and "" or "＊")
 
 		--local move_label = string.format("本体%sF %s %s %x", p.atk_count, p.attack, p.attack_id, p.state_flags4)
 		local move_label = string.format("%08x %08x", p.state_flags4, p.state_flags3)
@@ -8220,12 +8225,12 @@ function rbff2.startplugin()
 		end
 
 		local hurt_sumamry = {
-			{ "動作:"          , move_label },
-			{ "打撃無敵:"      , hurt_label  },
-			{ "投げ無敵:"      , throw_label },
-			{ "向き:"          , sides_label },
-			{ "押し合い範囲:"  , push_label  },
-			{ "最大やられ範囲:", reach_label },
+			{ "動作:"           , move_label },
+			{ "打撃無敵:"       , hurt_label  },
+			{ "投げ無敵:"       , throw_label },
+			{ "方向(動作/入力):", sides_label },
+			{ "押し合い範囲:"   , push_label  },
+			{ "やられ範囲 最大:", reach_label },
 		}
 		for _, box in ipairs(summary.hurt_boxes) do
 			table.insert(hurt_sumamry, { box.type_label, box.reach_label })
@@ -8615,24 +8620,23 @@ function rbff2.startplugin()
 				p.hitstop    = 0x7F & pgm:read_u8(pgm:read_u32(fix_bp_addr(0x83C38) + p.char_4times) + p.attack)
 				p.hitstop    = p.hitstop == 0 and 2 or p.hitstop + 1  -- システムで消費される分を加算
 				p.hitstop_gd = math.max(2, p.hitstop - 1) -- ガード時の補正
-				
+
 				-- 補正前ダメージ量取得 家庭用 05B118 からの処理
 				p.pure_dmg   = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x813F0)) + p.attack)
 				-- 気絶値と気絶タイマー取得 05C1CA からの処理
 				p.pure_st    = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x85CCA)) + p.attack)
 				p.pure_st_tm = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x85D2A)) + p.attack)
 
-				if 0x58 > p.attack then -- 家庭用 0236F0 からの処理
+				if 0x58 > p.attack then
+					-- 家庭用 0236F0 からの処理
 					local d1 = pgm:read_u8(p.addr.esaka_range)
 					local d0 = pgm:read_u16(pgm:read_u32(p.char_4times + 0x23750) + ((d1 + d1) & 0xFFFF)) & 0x1FFF
 					if d0 ~= 0 then
 						p.esaka_range = d0
 					end
-				end
 
-				-- 家庭用 05B37E からの処理
-				if 0x58 > p.attack then
-					if 0x27 <= p.attack then --CA
+					-- 家庭用 05B37E からの処理
+					if 0x27 <= p.attack then -- CA技、特殊技かどうかのチェック
 						p.pow_up_hit = pgm:read_u8((0xFF & (p.attack - 0x27)) + pgm:read_u32(0x8C18C + p.char_4times))
 					else -- 通常技 ビリーとチョンシュか、それ以外でアドレスが違う
 						local a0 = (0xC ~= p.char and 0x10 ~= p.char) and 0x8C24C or 0x8C274
@@ -8647,11 +8651,9 @@ function rbff2.startplugin()
 				-- 03BF00: 082C 0004 00CD           btst    #$4, ($cd,A4) beqのときのみ
 				-- base+A3の値は技発動時の処理中にしか採取できないのでこの処理は機能しない
 				-- local d0, a0 = pgm:read_u8(p.addr.base + 0xA3), 0
-				if pgm:read_u8(p.addr.base + 0xB8) ~= 0 and (pgm:read_u8(p.addr.base + 0xCD) & 0x20) == 0x20 then
-					local spid = pgm:read_u8(p.addr.base + 0xB8) -- 技コマンド成立時の技のID
-					if spid ~= 0 then
-						p.pow_up = pgm:read_u8(pgm:read_u32(0x8C1EC + p.char_4times) + spid - 1)
-					end
+				local spid = ((pgm:read_u8(p.addr.base + 0xCD) & 0x20) == 0x20) and pgm:read_u8(p.addr.base + 0xB8) or 0 -- 0xB8=技コマンド成立時の技のID
+				if spid > 0 then
+					p.pow_up = pgm:read_u8(pgm:read_u32(0x8C1EC + p.char_4times) + spid - 1)
 				end
 
 				-- トドメ=ヒットで+7、雷撃棍=発生で+5、倍返し=返しで+7、吸収で+20、蛇使い は個別に設定が必要
@@ -9962,6 +9964,14 @@ function rbff2.startplugin()
 			-- 攻撃モーション単位で変わるサマリ情報
 			p.atk_summary = p.atk_summary or {}
 			p.atkact_summary = p.atkact_summary or {}
+			-- 攻撃モーション単位で変わるサマリ情報 本体
+			if (p.attack_flag and p.attack > 0 and p.summary_p_atk ~= p.attack) or
+				(p.attack_id > 0 and p.summary_p_atkid ~= p.attack_id) then
+				p.atk_summary = make_atk_summary(p, p.hit_summary)
+				p.atkact_summary = make_atkact_summary(p, p.hit_summary) or p.atkact_summary
+				p.summary_p_atk = p.attack
+				p.summary_p_atkid = p.attack_id
+			end
 			-- 攻撃モーション単位で変わるサマリ情報 弾
 			for _, fb in pairs(p.fireball) do
 				if fb.alive then
@@ -9970,17 +9980,6 @@ function rbff2.startplugin()
 					p.atkact_summary = fb.atkact_summary
 					-- 情報を残すために弾中の動作のIDも残す
 					p.summary_p_atk = p.attack > 0 and p.attack or p.summary_p_atk
-					p.atk_summary = make_atk_summary(p, p.hit_summary)
-				end
-			end
-			-- 攻撃モーション単位で変わるサマリ情報 本体
-			if p.attack_flag then
-				if (p.attack > 0 and p.summary_p_atk ~= p.attack) or
-					(p.attack_id > 0 and p.summary_p_atkid ~= p.attack_id) then
-					p.atk_summary = make_atk_summary(p, p.hit_summary)
-					p.atkact_summary = make_atkact_summary(p, p.hit_summary) or p.atkact_summary
-					p.summary_p_atk = p.attack
-					p.summary_p_atkid = p.attack_id
 				end
 			end
 
@@ -10646,17 +10645,17 @@ function rbff2.startplugin()
 			return summary
 		end
 		local scr = manager.machine.screens:at(1)
-		local x, y = i == 1 and 170 or 20, 2
-		scr:draw_box(x-2, y-2, x+130, y+2+7*#summary, 0x80404040, 0x80404040)
+		local x, y = i == 1 and 162 or 2, 2
+		scr:draw_box(x-2, y-2, x+158, y+2+7*#summary, 0x80404040, 0x80404040)
 		for _, row in ipairs(summary) do
 			local k, v, frame = row[1], row[2], row[3] or 0
 			local col = global.frame_number == frame and 0xFF00FFFF or 0xFFFFFFFF
 			scr:draw_text(x, y, k, col)
 			if v then
 				if type(v) == "number" then
-					scr:draw_text(x+42, y, v .."", col)
+					scr:draw_text(x+47, y, v .."", col)
 				else
-					scr:draw_text(x+42, y, v, col)
+					scr:draw_text(x+47, y, v, col)
 				end
 			end
 			y = y + 7
