@@ -13038,6 +13038,22 @@ function rbff2.startplugin()
 			-- MVS                    家庭用
 			-- maincpu.rb@062E7C=00   maincpu.rb@062E9D=00
 
+			--[[ 空振りCAできる
+			オリジナル
+			maincpu.rd@02FA72=00000000
+			maincpu.rd@02FA76=00000000
+			maincpu.rd@02FA7A=FFFFFFFF
+			maincpu.rd@02FA7E=00FFFF00
+			maincpu.rw@02FA82=FFFF
+
+			パッチ（00をFFにするとヒット時限定になる）
+			maincpu.rd@02FA72=00000000
+			maincpu.rd@02FA76=00000000
+			maincpu.rd@02FA7A=00000000
+			maincpu.rd@02FA7E=00000000
+			maincpu.rw@02FA82=0000
+			]]
+
 			--[[ 常にCPUレベルMAX
 			MVS                          家庭用
 			maincpu.rd@0500E8=303C0007   maincpu.rd@050108=303C0007
