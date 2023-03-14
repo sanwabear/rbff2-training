@@ -5354,28 +5354,28 @@ function rbff2.startplugin()
 			pow_revenge      = 0,           -- 状態表示用パワー増加量倍返し反射
 			pow_absorb       = 0,           -- 状態表示用パワー増加量倍返し吸収
 			hitstop          = 0,           -- 攻撃側のガード硬直
-			old_pos          = 0,           -- X位置
-			old_pos_frc      = 0,           -- X位置少数部
-			pos              = 0,           -- X位置
-			pos_frc          = 0,           -- X位置少数部
-			old_posd         = 0,           -- X位置
-			posd             = 0,           -- X位置
+			old_pos          = 0,           -- X座標
+			old_pos_frc      = 0,           -- X座標少数部
+			pos              = 0,           -- X座標
+			pos_frc          = 0,           -- X座標少数部
+			old_posd         = 0,           -- X座標
+			posd             = 0,           -- X座標
 			poslr            = "L",         -- 右側か左側か
-			max_pos          = 0,           -- X位置最大
-			min_pos          = 0,           -- X位置最小
-			pos_y            = 0,           -- Y位置
-			pos_frc_y        = 0,           -- Y位置少数部
-			old_pos_y        = 0,           -- Y位置
-			old_pos_frc_y    = 0,           -- Y位置少数部
+			max_pos          = 0,           -- X座標最大
+			min_pos          = 0,           -- X座標最小
+			pos_y            = 0,           -- Y座標
+			pos_frc_y        = 0,           -- Y座標少数部
+			old_pos_y        = 0,           -- Y座標
+			old_pos_frc_y    = 0,           -- Y座標少数部
 			old_in_air       = false,
 			in_air           = false,
 			chg_air_state    = 0,           -- ジャンプの遷移ポイントかどうか
-			force_y_pos      = 1,           -- Y位置強制
-			pos_z            = 0,           -- Z位置
-			old_pos_z        = 0,           -- Z位置
-			on_main_line     = 0,           -- Z位置メインに移動した瞬間フレーム
-			on_sway_line     = 0,           -- Z位置スウェイに移動した瞬間フレーム
-			in_sway_line     = false,       -- Z位置
+			force_y_pos      = 1,           -- Y座標強制
+			pos_z            = 0,           -- Z座標
+			old_pos_z        = 0,           -- Z座標
+			on_main_line     = 0,           -- Z座標メインに移動した瞬間フレーム
+			on_sway_line     = 0,           -- Z座標スウェイに移動した瞬間フレーム
+			in_sway_line     = false,       -- Z座標
 			sway_status      = 0,           --
 			side             = 0,           -- 向き
 			state            = 0,           -- いまのやられ状態
@@ -5601,6 +5601,7 @@ function rbff2.startplugin()
 				act          = p1 and 0x100460 or 0x100560, -- 行動ID デバッグディップステータス表示のPと同じ
 				acta         = p1 and 0x100462 or 0x100562, -- 行動ID デバッグディップステータス表示のAと同じ
 				act_count    = p1 and 0x100466 or 0x100566, -- 現在の行動のカウンタ
+				act_boxtype  = p1 and 0x100467 or 0x100567, -- 現在の行動の判定種類
 				act_frame    = p1 and 0x10046F or 0x10056F, -- 現在の行動の残フレーム、ゼロになると次の行動へ
 				act_contact  = p1 and 0x100401 or 0x100501, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
 				attack       = p1 and 0x1004B6 or 0x1005B6, -- 攻撃中のみ変化
@@ -5608,7 +5609,7 @@ function rbff2.startplugin()
 				hitstop_id   = p1 and 0x1004EB or 0x1005EB, -- 被害中のみ変化
 				can_techrise = p1 and 0x100492 or 0x100592, -- 受け身行動可否チェック用
 				ophit_base   = p1 and 0x10049E or 0x10059E, -- ヒットさせた相手側のベースアドレス
-				char         = p1 and 0x107BA5 or 0x107BA7, -- キャラ()
+				char         = p1 and 0x107BA5 or 0x107BA7, -- キャラID
 				color        = p1 and 0x107BAC or 0x107BAD, -- カラー A=0x00 D=0x01
 				combo        = p1 and 0x10B4E4 or 0x10B4E5, -- コンボ
 				combo2       = p1 and 0x10B4E5 or 0x10B4E4, -- 最近のコンボ数のアドレス
@@ -5630,15 +5631,17 @@ function rbff2.startplugin()
 				max_combo    = p1 and 0x10B4EF or 0x10B4F0, -- 最大コンボ
 				max_stun     = p1 and 0x10B84E or 0x10B856, -- 最大気絶値
 				corner       = p1 and 0x1004B7 or 0x1005B7, -- 画面端状態 0:端以外 1:画面端 3:端押し付け
-				pos          = p1 and 0x100420 or 0x100520, -- X位置
-				pos_frc      = p1 and 0x100422 or 0x100522, -- X位置 少数部
-				max_pos      = p1 and 0x10DDE6 or 0x10DDE8, -- X位置最大
-				min_pos      = p1 and 0x10DDEA or 0x10DDEC, -- X位置最小
-				pos_y        = p1 and 0x100428 or 0x100528, -- Y位置
-				pos_frc_y    = p1 and 0x10042A or 0x10052A, -- Y位置 少数部
-				pos_z        = p1 and 0x100424 or 0x100524, -- Z位置
+				pos          = p1 and 0x100420 or 0x100520, -- X座標
+				pos_frc      = p1 and 0x100422 or 0x100522, -- X座標 少数部
+				max_pos      = p1 and 0x10DDE6 or 0x10DDE8, -- X座標最大
+				min_pos      = p1 and 0x10DDEA or 0x10DDEC, -- X座標最小
+				pos_y        = p1 and 0x100428 or 0x100528, -- Y座標
+				pos_frc_y    = p1 and 0x10042A or 0x10052A, -- Y座標 少数部
+				pos_z        = p1 and 0x100424 or 0x100524, -- Z座標
 				sway_status  = p1 and 0x100489 or 0x100589, -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
  				side         = p1 and 0x100458 or 0x100558, -- 向き
+				--forward    = p1 and 0x100440 or 0x100540, -- 前移動速度 8バイト
+				--backward   = 0x0022FAE -- 後退のベースアドレス
 				input_side   = p1 and 0x100486 or 0x100586, -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
 				input1       = p1 and 0x100482 or 0x100582, -- キー入力 直近Fの入力
 				input2       = p1 and 0x100483 or 0x100583, -- キー入力 1F前の入力
@@ -5654,7 +5657,7 @@ function rbff2.startplugin()
 				knock_back3  = p1 and 0x10047E or 0x10057E, -- のけぞり確認用3(フェニックススルー)
 				sp_throw_id  = p1 and 0x1004A3 or 0x1005A3, -- 投げ必殺のID
 				sp_throw_act = p1 and 0x1004A4 or 0x1005A4, -- 投げ必殺の持続残F
-				additional   = p1 and 0x1004A5 or 0x1005A5, -- 追加入力のデータ
+				additional   = p1 and 0x1004A5 or 0x1005A5, -- 追加入力成立時のデータ
 				prj_rank     = p1 and 0x1004B5 or 0x1005B5, -- 飛び道具の強さ
 				esaka_range  = p1 and 0x1004B6 or 0x1005B6, -- 詠酒の間合いチェック用
 				input_offset = p1 and 0x0394C4 or 0x0394C8, -- コマンド入力状態のオフセットアドレス
@@ -5737,9 +5740,9 @@ function rbff2.startplugin()
 				asm            = 0,
 				proc_active    = false,
 				old_proc_act   = false,
-				pos            = 0, -- X位置
-				pos_y          = 0, -- Y位置
-				pos_z          = 0, -- Z位置
+				pos            = 0, -- X座標
+				pos_y          = 0, -- Y座標
+				pos_z          = 0, -- Z座標
 				attack         = 0, -- 攻撃中のみ変化
 				cancelable     = 0, -- キャンセル可否
 				hitstop_id     = 0, -- ガード硬直のID
@@ -5790,12 +5793,13 @@ function rbff2.startplugin()
 					acta       = base + 0x62, -- 技のID デバッグのA
 					actb       = base + 0x64, -- 技のID?
 					act_count  = base + 0x66, -- 現在の行動のカウンタ
+					act_boxtype= base + 0x67, -- 現在の行動の判定種類
 					act_frame  = base + 0x6F, -- 現在の行動の残フレーム、ゼロになると次の行動へ
 					act_contact= base + 0x01, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
 					dmg_id     = base + 0xE9, -- ダメージ算出の技ID
-					pos        = base + 0x20, -- X位置
-					pos_y      = base + 0x28, -- Y位置
-	 				pos_z      = base + 0x24, -- Z位置
+					pos        = base + 0x20, -- X座標
+					pos_y      = base + 0x28, -- Y座標
+	 				pos_z      = base + 0x24, -- Z座標
 					attack     = base + 0xBF, -- デバッグのNO
 					hitstop_id = base + 0xBE, -- ヒット硬直用ID
 					can_techrise = base + 0xBE, -- 受け身行動可否チェック用
@@ -5806,6 +5810,9 @@ function rbff2.startplugin()
 					harmless2  = base + 0xE7, -- 判定チェック用2 0じゃないときヒット/ガード
 					max_hit_nm = base + 0xAB, -- 同一技行動での最大ヒット数 分子
 					prj_rank   = base + 0xB5, -- 飛び道具の強さ
+					side       = base + 0x58, -- 向き
+					box_base1  = base + 0x76,
+					box_base2  = base + 0x7A,
 
 					bai_chk1   = base + 0x8A, -- 倍返しチェック1
 					bai_chk2   = base + 0xBE, -- 倍返しチェック2
@@ -7501,8 +7508,8 @@ function rbff2.startplugin()
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		local d0, d1, d4, d5, a0_1, a0_2 = 0, 0, 0, 0, 0x5C9BC, 0x5D874
 		local char1, char2 = pgm:read_u16(p.addr.base + 0x10), pgm:read_u16(op.addr.base + 0x10)
-		local op_pos = op.max_pos or op.min_pos or op.pos -- 投げられ側のX位置は補正前の値
-		local p_pos = p.pos                             -- 投げ側のX位置は補正後の値
+		local op_pos = op.max_pos or op.min_pos or op.pos -- 投げられ側のX座標は補正前の値
+		local p_pos = p.pos                             -- 投げ側のX座標は補正後の値
 
 		d0 = char2                                      -- D0 = 100510アドレスの値(相手のキャラID)
 		d0 = 0xFFFF & (d0 << 3)                         -- D0 を3ビット左シフト
@@ -7517,7 +7524,7 @@ function rbff2.startplugin()
 		end
 		d0 = 0xFFFF & (d0 + d0)                         -- 2倍値に
 		d0 = 0xFFFF & (d0 + d0)                         -- さらに2倍値に
-		d1 = op_pos                                     -- D1 = 相手のX位置
+		d1 = op_pos                                     -- D1 = 相手のX座標
 		d1 = 0xFFFF & (d1 - d0)                         -- 相手との距離計算
 		local op_d0 = d0                                -- 投げ間合いの補正値
 		local op_d1 = d1
@@ -7531,7 +7538,7 @@ function rbff2.startplugin()
 		end
 		d5 = 0xFFFF & (d5 + d5)                         -- 2倍値に
 		d5 = 0xFFFF & (d5 + d5)                         -- さらに2倍値に
-		d0 = p_pos                                      -- 自分のX位置
+		d0 = p_pos                                      -- 自分のX座標
 		d0 = 0xFFFF & (d0 - d5)                         -- 投げ間合いの限界距離
 		local p_d0 = d0
 
@@ -8277,6 +8284,30 @@ function rbff2.startplugin()
 		table.insert(force_y_pos, i)
 	end
 
+	-- 判定データの取得
+	local debug_box = function(p, pgm)
+		-- do_debug_box(p, pgm)
+	end
+	local do_debug_box = function(p, pgm)
+		-- メモリのコピー処理を再現できないかぎり無理
+		-- 家庭用004A76からの処理、必要かどうか不明
+		if pgm:read_u16(0x107EC6) ~= p.act_boxtype then
+		end
+		local d0 = p.side ~ pgm:read_u8(p.addr.base + 0x6A)
+		print(string.format("frame=%s %x %s x=%s y=%s,%s %x %x", global.frame_number, p.addr.base, (0 < d0) and ">" or "<", p.pos, p.pos_y, p.pos_z, p.act_boxtype, pgm:read_u16(0x107EC6)))
+		for d2 = 1, pgm:read_u8(p.addr.box_base2) do
+			local a2 = p.box_base2 + 5 * (d2 - 1)
+			-- 004A9Eからの処理
+			-- local d5 = 0xFFFF & ((0xFF & ((pgm:read_u8(a2) & 0x1F) - 0x20)) * 256)
+			local d5 = pgm:read_u8(a2) & 0x1F
+			local y1, y2 = pgm:read_u8(a2 + 0x1), pgm:read_u8(a2 + 0x2)
+			local x1, x2 = pgm:read_u8(a2 + 0x3), pgm:read_u8(a2 + 0x4)
+			print(string.format(
+				"  %s addr=%x data=%02x%02x%02x%02x%02x type=%03x y1=%s y2=%s x1=%s x2=%s",
+				d2, a2, d5, y1, y2, x1, x2, d5, y1, y2, x1, x2))
+		end
+	end
+
 	-- トレモのメイン処理
 	tra_main = {}
 	tra_main.proc = function()
@@ -8582,6 +8613,8 @@ function rbff2.startplugin()
 			p.act            = pgm:read_u16(p.addr.act)
 			p.acta           = pgm:read_u16(p.addr.acta)
 			p.act_count      = pgm:read_u8(p.addr.act_count)
+			-- 家庭用004A6Aからの処理
+			p.act_boxtype    = 0xFFFF & (pgm:read_u8(p.addr.act_boxtype) & 0xC0 * 4)
 			p.old_act_frame  = p.act_frame
 			p.act_frame      = pgm:read_u8(p.addr.act_frame)
 			p.provoke        = 0x0196 == p.act --挑発中
@@ -9010,6 +9043,8 @@ function rbff2.startplugin()
 				fb.acta           = pgm:read_u16(fb.addr.acta)
 				fb.actb           = pgm:read_u16(fb.addr.actb)
 				fb.act_count      = pgm:read_u8(fb.addr.act_count)
+				-- 家庭用004A6Aからの処理
+				fb.act_boxtype    = 0xFFFF & (pgm:read_u8(fb.addr.act_boxtype) & 0xC0 * 4)
 				fb.act_frame      = pgm:read_u8(fb.addr.act_frame)
 				fb.act_contact    = pgm:read_u8(fb.addr.act_contact)
 				fb.pos            = pgm:read_i16(fb.addr.pos)
@@ -9050,6 +9085,9 @@ function rbff2.startplugin()
 				fb.full_hit       = pgm:read_u8(fb.addr.full_hit ) > 0
 				fb.harmless2      = pgm:read_u8(fb.addr.harmless2) > 0
 				fb.prj_rank       = pgm:read_u8(fb.addr.prj_rank)
+				fb.side           = pgm:read_u8(fb.addr.side)
+				fb.box_base1      = pgm:read_u32(fb.addr.box_base1)
+				fb.box_base2      = pgm:read_u32(fb.addr.box_base2)
 
 				--[[
 				倍返しチェック
@@ -9095,6 +9133,9 @@ function rbff2.startplugin()
 				end
 
 				fb.hit_summary = new_box_summary()
+				if fb.alive then
+					debug_box(fb, pgm)
+				end
 				--[[
 				if fb.asm ~= 0x4E75 then
 					print(string.format("%x %1s  %2x(%s) %2x(%s) %2x(%s)",
@@ -9141,6 +9182,7 @@ function rbff2.startplugin()
 
 			-- リーチ
 			p.hit_summary  = new_box_summary()
+			debug_box(p, pgm)
 
 			-- 投げ判定取得
 			get_n_throw(p, op)
@@ -13150,6 +13192,8 @@ function rbff2.startplugin()
 		if match_active and dip_config.cpu_cant_move then
 			dip3 = dip3 | 0x01    --cheat "DIP= 3-1 CPU Can't Move"
 		end
+		--dip3 = dip3 | 0x10    --cheat "DIP= 3-5 移動速度変更"
+
 		pgm:write_u8(0x10E000, dip1)
 		pgm:write_u8(0x10E001, dip2)
 		pgm:write_u8(0x10E002, dip3)
