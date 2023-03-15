@@ -10004,7 +10004,7 @@ function rbff2.startplugin()
 			p.old_parry_summary = p.parry_summary
 
 			-- 攻撃モーション単位で変わるサマリ情報
-			local summary_p_atk = p.attack > 0 and string.format("%x %s %s", p.attack, p.slide_atk, p.bs_atk) or ""
+			local summary_p_atk = p.attack > 0 and string.format("%x %s %s %s %s", p.attack, p.slide_atk, p.bs_atk, p.hitbox_txt, p.hurtbox_txt) or ""
 			p.atk_summary = p.atk_summary or {}
 			p.atkact_summary = p.atkact_summary or {}
 			-- 攻撃モーション単位で変わるサマリ情報 本体
