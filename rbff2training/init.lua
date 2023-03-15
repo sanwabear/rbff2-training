@@ -7646,7 +7646,6 @@ function rbff2.startplugin()
 
 	local summary_rows, summary_sort_key = {
 		"動作",
-		"打撃無敵",
 		"投げ無敵",
 		"方向(動作/入力)",
 		"ブレイクショット",
@@ -8204,7 +8203,7 @@ function rbff2.startplugin()
 				if type_label then
 					table.insert(summary.hurt_boxes, {
 						type_label  = type_label,
-						reach_label = string.format("前%s/上%s(%s)/下%s(%s)/後%s",
+						reach_label = string.format("前%s/上%s(%s)/下%s(%s)/後%s ",
 							box.reach.front,
 							box.reach.top + p.pos_y,
 							box.reach.top,
@@ -8233,11 +8232,10 @@ function rbff2.startplugin()
 
 		local hurt_sumamry = {
 			{ "動作:"           , move_label },
-			{ "打撃無敵:"       , hurt_label  },
 			{ "投げ無敵:"       , throw_label },
 			{ "方向(動作/入力):", sides_label },
 			{ "押し合い範囲:"   , push_label  },
-			{ "やられ範囲 最大:", reach_label },
+			{ "やられ範囲 最大:", reach_label ..  hurt_label },
 		}
 		for _, box in ipairs(summary.hurt_boxes) do
 			table.insert(hurt_sumamry, { box.type_label, box.reach_label })
@@ -10004,12 +10002,13 @@ function rbff2.startplugin()
 			p.old_parry_summary = p.parry_summary
 
 			-- 攻撃モーション単位で変わるサマリ情報
-			local summary_p_atk = p.attack > 0 and string.format("%x %s %s %s %s", p.attack, p.slide_atk, p.bs_atk, p.hitbox_txt, p.hurtbox_txt) or ""
+			local summary_p_atk = p.attack > 0 and string.format("%x %s %s %s %s", p.attack, p.slide_atk, p.bs_atk, p.hitbox_txt, p.fake_hit) or ""
 			p.atk_summary = p.atk_summary or {}
 			p.atkact_summary = p.atkact_summary or {}
 			-- 攻撃モーション単位で変わるサマリ情報 本体
-			if (p.attack_flag and p.attack > 0 and p.summary_p_atk ~= summary_p_atk) or
-				(p.attack_id > 0 and p.summary_p_atkid ~= p.attack_id) then
+			if ((p.attack_flag and p.attack > 0 and p.summary_p_atk ~= summary_p_atk) or
+				(p.attack_id > 0 and p.summary_p_atkid ~= p.attack_id)) and
+				p.fake_hit == false then
 				p.atk_summary = make_atk_summary(p, p.hit_summary)
 				p.atkact_summary = make_atkact_summary(p, p.hit_summary) or p.atkact_summary
 				p.summary_p_atk = summary_p_atk
