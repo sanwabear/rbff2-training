@@ -10008,15 +10008,16 @@ function rbff2.startplugin()
 			p.old_parry_summary = p.parry_summary
 
 			-- 攻撃モーション単位で変わるサマリ情報
-			local summary_p_atk = p.attack > 0 and string.format("%x %s %s %s %s", p.attack, p.slide_atk, p.bs_atk, p.hitbox_txt, p.fake_hit) or ""
+			local summary_p_atk = p.attack > 0 and string.format("%x %s %s %s", p.attack, p.slide_atk, p.bs_atk, p.hitbox_txt) or ""
 			p.atk_summary = p.atk_summary or {}
 			p.atkact_summary = p.atkact_summary or {}
 			-- 攻撃モーション単位で変わるサマリ情報 本体
-			if ((p.attack_flag and p.attack > 0 and p.summary_p_atk ~= summary_p_atk) or
-				(p.attack_id > 0 and p.summary_p_atkid ~= p.attack_id)) and
-				p.fake_hit == false then
+			if (p.attack_flag and p.attack > 0 and p.summary_p_atk ~= summary_p_atk) or
+				(p.attack_id > 0 and p.summary_p_atkid ~= p.attack_id) then
 				p.atk_summary = make_atk_summary(p, p.hit_summary)
-				p.atkact_summary = make_atkact_summary(p, p.hit_summary) or p.atkact_summary
+				if p.fake_hit == false then
+					p.atkact_summary = make_atkact_summary(p, p.hit_summary) or p.atkact_summary
+				end
 				p.summary_p_atk = summary_p_atk
 				p.summary_p_atkid = p.attack_id
 			end
