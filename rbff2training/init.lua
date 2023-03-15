@@ -4717,7 +4717,13 @@ local get_reach = function(p, box, pos_x, pos_y)
 	local top_reach    = pos_y - math.min(box.top, box.bottom)
 	local bottom_reach = pos_y - math.max(box.top, box.bottom)
 	local front_reach, back_reach
-	if p.hit.flip_x == 1 then
+
+	local flip_x = p.hit.flip_x == 1
+	-- 野猿狩りだけ左右反対
+	if p.is_fireball and (p.act == 0x277 or p.act == 0x27c) and p.parent.char == 0x6 then
+		flip_x = not flip_x 
+	end
+	if flip_x then
 		front_reach = math.max(box.left, box.right) - pos_x
 		back_reach  = math.min(box.left, box.right) - pos_x
 	else
@@ -4734,7 +4740,7 @@ local get_reach = function(p, box, pos_x, pos_y)
 	local asis_top_reach    = y - math.min(box.asis_top, box.asis_bottom)
 	local asis_bottom_reach = y - math.max(box.asis_top, box.asis_bottom)
 	local asis_front_reach, asis_back_reach
-	if p.hit.flip_x == 1 then
+	if flip_x then
 		asis_front_reach = math.max(box.asis_left, box.asis_right) - x
 		asis_back_reach  = math.min(box.asis_left, box.asis_right) - x
 	else
