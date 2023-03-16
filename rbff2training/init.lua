@@ -4506,11 +4506,11 @@ local get_chip_dmg_type = function(id)
 end
 -- ヒット処理の飛び先 家庭用版 0x13120 からのデータテーブル 5種類
 local hit_proc_types = {
-	none      = nil,    -- 常に判定しない
-	same_line = "メインライン", -- 同一ライン同士なら判定する
-	diff_line = "メインライン,スウェーライン", -- 異なるライン同士でも判定する
-	unknown   = "",    -- 不明
-	air_onry  = "空中のみ",  -- 相手が空中にいれば判定する
+	none      = nil,                       -- 常に判定しない
+	same_line = "メイン",                  -- 同一ライン同士なら判定する
+	diff_line = "メイン,スウェー",         -- 異なるライン同士でも判定する
+	unknown   = "",                        -- 不明
+	air_onry  = "空中のみ",                -- 相手が空中にいれば判定する
 }
 local hit_sub_procs = {
 	[0x01311C] = hit_proc_types.none,      -- 常に判定しない
@@ -7664,7 +7664,6 @@ function rbff2.startplugin()
 		"投げ間合い",
 		"ヒット数",
 		"POW(基/当/防)",
-		"POW(基/当/防/返/吸)",
 		"詠酒間合い",
 		"キャンセル",
 		"効果(地/空)",
@@ -10020,7 +10019,7 @@ function rbff2.startplugin()
 			p.atk_summary = p.atk_summary or {}
 			p.atkact_summary = p.atkact_summary or {}
 			-- 攻撃モーション単位で変わるサマリ情報 本体
-			-- TODO ダメージだけ入るケースの対応
+			-- TODO レッグトマホークヒット時にPOW情報が0になる
 			if (p.attack_flag and p.attack > 0 and p.summary_p_atk ~= summary_p_atk) or
 				(p.attack_id > 0 and p.summary_p_atkid ~= p.attack_id) then
 				p.atk_summary = make_atk_summary(p, p.hit_summary)
