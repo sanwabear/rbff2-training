@@ -8054,13 +8054,11 @@ function rbff2.startplugin()
 		fbno = fbno or 0
 		local prefix = fbno == 0 and "" or ("弾" .. fbno)
 		local atkact_summary = {}
-		table.insert(atkact_summary, {prefix .. "攻撃/気絶:", string.format("%s(%s)/%s(%sF) %s/8 %s",
+		table.insert(atkact_summary, {prefix .. "攻撃/気絶:", string.format("%s(%s)/%s(%sF)",
 			summary.pure_dmg,
 			summary.chip_dmg and (summary.chip_dmg > 0 and summary.chip_dmg or 0) or 0,
 			summary.pure_st,
-			summary.pure_st_tm,
-			summary.dmg_scale,
-			summary.dmg_scl_ct)})
+			summary.pure_st_tm)})
 		return add_frame_to_summary(atkact_summary)
 	end
 	local make_hurt_summary = function(p, summary)
