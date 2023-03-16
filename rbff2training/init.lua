@@ -6356,6 +6356,12 @@ function rbff2.startplugin()
 				"maincpu.pw@107C22>0",
 				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g"))
 
+			-- 自動喝CA
+			-- bp 03F94C,1,{PC=03F952;g}
+			-- bp 03F986,1,{PC=3F988;g}
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x03F92C), "1", string.format("PC=%x;g", fix_bp_addr(0x03F932))))
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x03F966), "1", string.format("PC=%x;g", fix_bp_addr(0x03F968))))
+
 			-- bp 3B5CE,1,{maincpu.pb@1007B5=0;g} -- 2P 飛び道具の強さ0に
 
 			-- bp 39db0,1,{PC=39db4;g} -- 必殺投げの高度チェックを無視
@@ -8566,10 +8572,7 @@ function rbff2.startplugin()
 			p.max_combo      = tohexnum(pgm:read_u8(p.addr.max_combo2)) -- 最大コンボ数
 			p.tmp_dmg        = pgm:read_u8(p.addr.tmp_dmg)              -- ダメージ
 			p.old_attack     = p.attack
-			--p.attack         = pgm:read_u8(p.addr.attack_b)
-			--if p.attack == 0 then
-				p.attack     = pgm:read_u8(p.addr.attack)
-			--end
+			p.attack         = pgm:read_u8(p.addr.attack)
 			p.dmg_id         = pgm:read_u8(p.addr.dmg_id) -- 不要かも
 			p.attack_flag    = p.attack_flag or (p.state_flags3 > 0) or (p.state_flags4 > 0)
 
@@ -8645,24 +8648,121 @@ function rbff2.startplugin()
 			p.pow_revenge    = 0
 			p.pow_absorb     = 0
 			p.esaka_range    = 0
-			if p.attack == 0 then
-				p.hitstop    = 0
-				p.hitstop_gd = 0
-				p.pure_dmg   = 0
-				p.pure_st    = 0
-				p.pure_st_tm = 0
+			p.hitstop        = 0
+			p.hitstop_gd     = 0
+			p.pure_dmg       = 0
+			p.pure_st        = 0
+			p.pure_st_tm     = 0
+			p.fake_hit       = (pgm:read_u8(p.addr.fake_hit) & 0xB) == 0
+			p.obsl_hit       = (pgm:read_u8(p.addr.obsl_hit) & 0xB) == 0
+			p.full_hit       = pgm:read_u8(p.addr.full_hit) > 0
+			p.harmless2      = pgm:read_u8(p.addr.attack) == 0
+			p.prj_rank       = pgm:read_u8(p.addr.prj_rank)
+
+			p.old_posd       = p.posd
+			p.posd           = pgm:read_i32(p.addr.pos)
+			p.poslr          = p.posd == op.posd and "=" or p.posd < op.posd  and "L" or "R"
+			p.old_pos        = p.pos
+			p.old_pos_frc    = p.pos_frc
+			p.pos            = pgm:read_i16(p.addr.pos)
+			p.pos_frc        = pgm:read_u16(p.addr.pos_frc)
+			p.thrust        = pgm:read_i16(p.addr.base + 0x34) + int16tofloat(pgm:read_u16(p.addr.base + 0x36))
+			p.inertia       = pgm:read_i16(p.addr.base + 0xDA) + int16tofloat(pgm:read_u16(p.addr.base + 0xDC))
+			p.pos_total     = p.pos + int16tofloat(p.pos_frc)
+			p.old_pos_total = p.old_pos + int16tofloat(p.old_pos_frc)
+			p.diff_pos_total = p.pos_total - p.old_pos_total
+			p.max_pos        = pgm:read_i16(p.addr.max_pos)
+			if p.max_pos == 0 or p.max_pos == p.pos then
+				p.max_pos = nil
+			end
+			pgm:write_i16(p.addr.max_pos, 0)
+			p.min_pos        = pgm:read_i16(p.addr.min_pos)
+			if p.min_pos == 1000 or p.min_pos == p.pos then
+				p.min_pos = nil
+			end
+			pgm:write_i16(p.addr.min_pos, 1000)
+			p.old_pos_y      = p.pos_y
+			p.old_pos_frc_y  = p.pos_frc_y
+			p.old_in_air     = p.in_air
+			p.pos_y          = pgm:read_i16(p.addr.pos_y)
+			p.pos_frc_y      = pgm:read_u16(p.addr.pos_frc_y)
+			p.in_air         = 0 < p.pos_y or 0 < p.pos_frc_y
+
+			-- ジャンプの遷移ポイントかどうか
+			if p.old_in_air ~= true and p.in_air == true then
+				p.chg_air_state = 1
+			elseif p.old_in_air == true and p.in_air ~= true then
+				p.chg_air_state = -1
 			else
-				p.hitstop    = 0x7F & pgm:read_u8(pgm:read_u32(fix_bp_addr(0x83C38) + p.char_4times) + p.attack)
+				p.chg_air_state = 0
+			end
+			if p.in_air then
+				p.pos_y_peek = math.max(p.pos_y_peek or 0, p.pos_y)
+			else
+				p.pos_y_peek = 0
+			end
+			if p.pos_y < p.old_pos_y or (p.pos_y == p.old_pos_y and p.pos_frc_y < p.old_pos_frc_y) then
+				p.pos_y_down = p.pos_y_down and (p.pos_y_down + 1) or 1
+			else
+				p.pos_y_down = 0
+			end
+			p.old_pos_z      = p.pos_z
+			p.pos_z          = pgm:read_i16(p.addr.pos_z)
+			p.on_sway_line   = (40 == p.pos_z and 40 > p.old_pos_z) and global.frame_number or p.on_sway_line
+			p.on_main_line   = (24 == p.pos_z and 24 < p.old_pos_z) and global.frame_number or p.on_main_line
+			p.sway_status    = pgm:read_u8(p.addr.sway_status) -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
+			if p.sway_status == 0x00 then
+				p.in_sway_line = false
+			else
+				p.in_sway_line = true
+			end
+			p.internal_side  = pgm:read_u8(p.addr.side)
+			p.side           = pgm:read_i8(p.addr.side) < 0 and -1 or 1
+			p.corner         = pgm:read_u8(p.addr.corner)     -- 画面端状態 0:端以外 1:画面端 3:端押し付け
+			p.input_side     = pgm:read_u8(p.addr.input_side) -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
+			p.disp_side      = get_flip_x(players[1])
+			p.input1         = pgm:read_u8(p.addr.input1)
+			p.input2         = pgm:read_u8(p.addr.input2)
+
+			p.life           = pgm:read_u8(p.addr.life)
+			p.pow            = pgm:read_u8(p.addr.pow)
+			p.init_stun      = init_stuns[p.char]
+			p.max_stun       = pgm:read_u8(p.addr.max_stun)
+			p.stun           = pgm:read_u8(p.addr.stun)
+			p.stun_timer     = pgm:read_u16(p.addr.stun_timer)
+			p.act_contact    = pgm:read_u8(p.addr.act_contact)
+			p.ophit_base     = pgm:read_u32(p.addr.ophit_base)
+			p.ophit          = nil
+			if p.ophit_base == 0x100400 or p.ophit_base == 0x100500 then
+				p.ophit = op
+			else
+				p.ophit = op.fireball[p.ophit_base]
+			end
+		end
+
+		-- 1Pと2Pの状態読取 ゲージ
+		for i, p in ipairs(players) do
+			local op         = players[3-i]
+
+			local hit_attack = p.attack
+
+			if hit_attack ~= 0 and op.hitstop_id ~= 0 and op.state_flags > 0 and op.state_flags2 > 0 then
+				hit_attack = op.hitstop_id
+				-- print(string.format("%x %x %x %x", op.state_flags, op.state_flags2, op.state_flags3, op.state_flags4))
+			end
+
+			if hit_attack ~= 0 then
+				p.hitstop    = 0x7F & pgm:read_u8(pgm:read_u32(fix_bp_addr(0x83C38) + p.char_4times) + hit_attack)
 				p.hitstop    = p.hitstop == 0 and 2 or p.hitstop + 1  -- システムで消費される分を加算
 				p.hitstop_gd = math.max(2, p.hitstop - 1) -- ガード時の補正
 
 				-- 補正前ダメージ量取得 家庭用 05B118 からの処理
-				p.pure_dmg   = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x813F0)) + p.attack)
+				p.pure_dmg   = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x813F0)) + hit_attack)
 				-- 気絶値と気絶タイマー取得 05C1CA からの処理
-				p.pure_st    = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x85CCA)) + p.attack)
-				p.pure_st_tm = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x85D2A)) + p.attack)
+				p.pure_st    = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x85CCA)) + hit_attack)
+				p.pure_st_tm = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x85D2A)) + hit_attack)
 
-				if 0x58 > p.attack then
+				if 0x58 > hit_attack then
 					-- 家庭用 0236F0 からの処理
 					local d1 = pgm:read_u8(p.addr.attack)
 					local d0 = pgm:read_u16(pgm:read_u32(p.char_4times + 0x23750) + ((d1 + d1) & 0xFFFF)) & 0x1FFF
@@ -8671,11 +8771,11 @@ function rbff2.startplugin()
 					end
 
 					-- 家庭用 05B37E からの処理
-					if 0x27 <= p.attack then -- CA技、特殊技かどうかのチェック
-						p.pow_up_hit = pgm:read_u8((0xFF & (p.attack - 0x27)) + pgm:read_u32(0x8C18C + p.char_4times))
+					if 0x27 <= hit_attack then -- CA技、特殊技かどうかのチェック
+						p.pow_up_hit = pgm:read_u8((0xFF & (hit_attack - 0x27)) + pgm:read_u32(0x8C18C + p.char_4times))
 					else -- 通常技 ビリーとチョンシュか、それ以外でアドレスが違う
 						local a0 = (0xC ~= p.char and 0x10 ~= p.char) and 0x8C24C or 0x8C274
-						p.pow_up_hit = pgm:read_u8(a0 + p.attack)
+						p.pow_up_hit = pgm:read_u8(a0 + hit_attack)
 					end
 					-- ガード時増加量 d0の右1ビットシフト=1/2
 					p.pow_up_gd  = 0xFF & (p.pow_up_hit >> 1)
@@ -8729,11 +8829,41 @@ function rbff2.startplugin()
 				end
 			end
 
-			p.fake_hit       = (pgm:read_u8(p.addr.fake_hit) & 0xB) == 0
-			p.obsl_hit       = (pgm:read_u8(p.addr.obsl_hit) & 0xB) == 0
-			p.full_hit       = pgm:read_u8(p.addr.full_hit) > 0
-			p.harmless2      = pgm:read_u8(p.addr.attack) == 0
-			p.prj_rank       = pgm:read_u8(p.addr.prj_rank)
+			p.max_hit_dn     = p.attack > 0 and pgm:read_u8(pgm:read_u32(fix_bp_addr(0x827B8) + p.char_4times) + p.attack) or 0
+			p.max_hit_nm     = pgm:read_u8(p.addr.max_hit_nm)
+			p.last_dmg       = p.last_dmg or 0
+			p.last_pow       = p.last_pow or 0
+			p.last_pure_dmg  = p.last_pure_dmg or 0
+			p.last_stun      = p.last_stun or 0
+			p.last_st_timer  = p.last_st_timer or 0
+			p.last_effects   = p.last_effects or {}
+			p.dmg_scl7       = pgm:read_u8(p.addr.dmg_scl7)
+			p.dmg_scl6       = pgm:read_u8(p.addr.dmg_scl6)
+			p.dmg_scl5       = pgm:read_u8(p.addr.dmg_scl5)
+			p.dmg_scl4       = pgm:read_u8(p.addr.dmg_scl4)
+			pgm:write_u8(p.addr.dmg_scl7, 0)
+			pgm:write_u8(p.addr.dmg_scl6, 0)
+			pgm:write_u8(p.addr.dmg_scl5, 0)
+			pgm:write_u8(p.addr.dmg_scl4, 0)
+			p.dmg_scaling = 1
+			if p.dmg_scl7 > 0 then
+				p.dmg_scaling = p.dmg_scaling * (0.875 ^ p.dmg_scl7)
+			end
+			if p.dmg_scl6 > 0 then
+				p.dmg_scaling = p.dmg_scaling * (0.75 ^ p.dmg_scl6)
+			end
+			if p.dmg_scl5 > 0 then
+				p.dmg_scaling = p.dmg_scaling * (0.625 ^ p.dmg_scl5)
+			end
+			if p.dmg_scl4 > 0 then
+				p.dmg_scaling = p.dmg_scaling * (0.5 ^ p.dmg_scl4)
+			end
+		end
+
+		-- 1Pと2Pの状態読取 入力
+		for i, p in ipairs(players) do
+			local op         = players[3-i]
+
 			p.input_offset   = pgm:read_u32(p.addr.input_offset)
 			p.old_input_states = p.input_states or {}
 			p.input_states   = {}
@@ -8841,114 +8971,6 @@ function rbff2.startplugin()
 					max =  max,
 				}
 				table.insert(p.input_states, tmp)
-			end
-			p.max_hit_dn     = p.attack > 0 and pgm:read_u8(pgm:read_u32(fix_bp_addr(0x827B8) + p.char_4times) + p.attack) or 0
-			p.max_hit_nm     = pgm:read_u8(p.addr.max_hit_nm)
-			p.last_dmg       = p.last_dmg or 0
-			p.last_pow       = p.last_pow or 0
-			p.last_pure_dmg  = p.last_pure_dmg or 0
-			p.last_stun      = p.last_stun or 0
-			p.last_st_timer  = p.last_st_timer or 0
-			p.last_effects   = p.last_effects or {}
-			p.dmg_scl7       = pgm:read_u8(p.addr.dmg_scl7)
-			p.dmg_scl6       = pgm:read_u8(p.addr.dmg_scl6)
-			p.dmg_scl5       = pgm:read_u8(p.addr.dmg_scl5)
-			p.dmg_scl4       = pgm:read_u8(p.addr.dmg_scl4)
-			pgm:write_u8(p.addr.dmg_scl7, 0)
-			pgm:write_u8(p.addr.dmg_scl6, 0)
-			pgm:write_u8(p.addr.dmg_scl5, 0)
-			pgm:write_u8(p.addr.dmg_scl4, 0)
-			p.dmg_scaling = 1
-			if p.dmg_scl7 > 0 then
-				p.dmg_scaling = p.dmg_scaling * (0.875 ^ p.dmg_scl7)
-			end
-			if p.dmg_scl6 > 0 then
-				p.dmg_scaling = p.dmg_scaling * (0.75 ^ p.dmg_scl6)
-			end
-			if p.dmg_scl5 > 0 then
-				p.dmg_scaling = p.dmg_scaling * (0.625 ^ p.dmg_scl5)
-			end
-			if p.dmg_scl4 > 0 then
-				p.dmg_scaling = p.dmg_scaling * (0.5 ^ p.dmg_scl4)
-			end
-			p.old_posd       = p.posd
-			p.posd           = pgm:read_i32(p.addr.pos)
-			p.poslr          = p.posd == op.posd and "=" or p.posd < op.posd  and "L" or "R"
-			p.old_pos        = p.pos
-			p.old_pos_frc    = p.pos_frc
-			p.pos            = pgm:read_i16(p.addr.pos)
-			p.pos_frc        = pgm:read_u16(p.addr.pos_frc)
-			p.thrust        = pgm:read_i16(p.addr.base + 0x34) + int16tofloat(pgm:read_u16(p.addr.base + 0x36))
-			p.inertia       = pgm:read_i16(p.addr.base + 0xDA) + int16tofloat(pgm:read_u16(p.addr.base + 0xDC))
-			p.pos_total     = p.pos + int16tofloat(p.pos_frc)
-			p.old_pos_total = p.old_pos + int16tofloat(p.old_pos_frc)
-			p.diff_pos_total = p.pos_total - p.old_pos_total
-			p.max_pos        = pgm:read_i16(p.addr.max_pos)
-			if p.max_pos == 0 or p.max_pos == p.pos then
-				p.max_pos = nil
-			end
-			pgm:write_i16(p.addr.max_pos, 0)
-			p.min_pos        = pgm:read_i16(p.addr.min_pos)
-			if p.min_pos == 1000 or p.min_pos == p.pos then
-				p.min_pos = nil
-			end
-			pgm:write_i16(p.addr.min_pos, 1000)
-			p.old_pos_y      = p.pos_y
-			p.old_pos_frc_y  = p.pos_frc_y
-			p.old_in_air     = p.in_air
-			p.pos_y          = pgm:read_i16(p.addr.pos_y)
-			p.pos_frc_y      = pgm:read_u16(p.addr.pos_frc_y)
-			p.in_air         = 0 < p.pos_y or 0 < p.pos_frc_y
-
-			-- ジャンプの遷移ポイントかどうか
-			if p.old_in_air ~= true and p.in_air == true then
-				p.chg_air_state = 1
-			elseif p.old_in_air == true and p.in_air ~= true then
-				p.chg_air_state = -1
-			else
-				p.chg_air_state = 0
-			end
-			if p.in_air then
-				p.pos_y_peek = math.max(p.pos_y_peek or 0, p.pos_y)
-			else
-				p.pos_y_peek = 0
-			end
-			if p.pos_y < p.old_pos_y or (p.pos_y == p.old_pos_y and p.pos_frc_y < p.old_pos_frc_y) then
-				p.pos_y_down = p.pos_y_down and (p.pos_y_down + 1) or 1
-			else
-				p.pos_y_down = 0
-			end
-			p.old_pos_z      = p.pos_z
-			p.pos_z          = pgm:read_i16(p.addr.pos_z)
-			p.on_sway_line   = (40 == p.pos_z and 40 > p.old_pos_z) and global.frame_number or p.on_sway_line
-			p.on_main_line   = (24 == p.pos_z and 24 < p.old_pos_z) and global.frame_number or p.on_main_line
-			p.sway_status    = pgm:read_u8(p.addr.sway_status) -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
-			if p.sway_status == 0x00 then
-				p.in_sway_line = false
-			else
-				p.in_sway_line = true
-			end
-			p.internal_side  = pgm:read_u8(p.addr.side)
-			p.side           = pgm:read_i8(p.addr.side) < 0 and -1 or 1
-			p.corner         = pgm:read_u8(p.addr.corner)     -- 画面端状態 0:端以外 1:画面端 3:端押し付け
-			p.input_side     = pgm:read_u8(p.addr.input_side) -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
-			p.disp_side      = get_flip_x(players[1])
-			p.input1         = pgm:read_u8(p.addr.input1)
-			p.input2         = pgm:read_u8(p.addr.input2)
-
-			p.life           = pgm:read_u8(p.addr.life)
-			p.pow            = pgm:read_u8(p.addr.pow)
-			p.init_stun      = init_stuns[p.char]
-			p.max_stun       = pgm:read_u8(p.addr.max_stun)
-			p.stun           = pgm:read_u8(p.addr.stun)
-			p.stun_timer     = pgm:read_u16(p.addr.stun_timer)
-			p.act_contact    = pgm:read_u8(p.addr.act_contact)
-			p.ophit_base     = pgm:read_u32(p.addr.ophit_base)
-			p.ophit          = nil
-			if p.ophit_base == 0x100400 or p.ophit_base == 0x100500 then
-				p.ophit = op
-			else
-				p.ophit = op.fireball[p.ophit_base]
 			end
 
 			--[[
@@ -10017,9 +10039,13 @@ function rbff2.startplugin()
 			end
 			p.old_parry_summary = p.parry_summary
 
+			--[[
+			if p.pure_dmg > 0 then
+				print(string.format("%s %s %s %s %s %x %x %x", p.attack, p.attack_id, p.attack_flag, p.pure_dmg, p.hit_summary.pure_dmg, p.state_flags2, p.state_flags3, p.state_flags4))
+			end
+			]]
 			p.dmg_summary = p.dmg_summary or {}
 			if p.hit_summary.pure_dmg ~= nil and (p.attack_id > 0 or (p.hit_summary.pure_dmg or 0) > 0) then
-				-- print(string.format("%s %s %s %s", p.attack, p.attack_id, p.attack_flag, p.hit_summary.pure_dmg))
 				p.dmg_summary = make_dmg_summary(p, p.hit_summary) or p.dmg_summary
 			end
 
@@ -10045,6 +10071,11 @@ function rbff2.startplugin()
 			end
 			-- 攻撃モーション単位で変わるサマリ情報 弾
 			for _, fb in pairs(p.fireball) do
+				--[[
+				if fb.pure_dmg > 0 then
+					print(string.format("%s %s %s %s", fb.attack, fb.attack_id, fb.pure_dmg, fb.hit_summary.pure_dmg))
+				end
+				]]
 				if fb.alive then
 					fb.dmg_summary = make_dmg_summary(fb, fb.hit_summary) or fb.dmg_summary
 					p.dmg_summary = fb.dmg_summary
