@@ -4775,7 +4775,6 @@ local update_summary = function(p)
 	summary.pure_dmg    = summary.pure_dmg    or p.pure_dmg -- 補正前攻撃力
 	summary.pure_st     = summary.pure_st     or p.pure_st -- 気絶値
 	summary.pure_st_tm  = summary.pure_st_tm  or p.pure_st_tm -- 気絶タイマー
-
 	summary.chip_dmg    = summary.chip_dmg    or (p.chip_dmg_type and p.chip_dmg_type.calc(p.pure_dmg) or 0) -- 削りダメージ
 	summary.effect      = summary.effect      or p.effect -- ヒット効果
 	summary.can_techrise= summary.can_techrise or p.can_techrise -- 受け身行動可否
@@ -7837,12 +7836,7 @@ function rbff2.startplugin()
 	end
 	local make_atk_summary = function(p, summary)
 		-- パワーゲージ
-		local pow_info  = "POW(基/当/防):"
-		local pow_label = string.format("%s/%s/%s", p.pow_up or 0, p.pow_up_hit or 0, p.pow_up_gd or 0)
-		if p.pow_revenge > 0 or p.pow_absorb > 0 then
-			pow_info  = "POW(基/当/防/返/吸):"
-			pow_label = pow_label .. string.format("/%s/%s", p.pow_revenge or 0, p.pow_absorb or 0)
-		end
+		local pow_label = string.format("%s/%s/%s  返/吸:%s/%s", p.pow_up or 0, p.pow_up_hit or 0, p.pow_up_gd or 0, p.pow_revenge or 0, p.pow_absorb or 0)
 		-- 詠酒間合い
 		local esaka_label = (p.esaka_range > 0) and p.esaka_range or "-"
 		-- ブレイクショット
@@ -7876,10 +7870,10 @@ function rbff2.startplugin()
 		end
 		local slide_label = p.slide_atk and "滑(CA×)/" or ""
 		local atk_summary = {
-			{pow_info           , pow_label   },
-			{"詠酒間合い:"      , esaka_label },
-			{"ブレイクショット:", bs_label    },
-			{"キャンセル:"      , slide_label .. cancel_advs_label },
+			{"POW(基/当/防):"      , pow_label   },
+			{"詠酒間合い:"         , esaka_label },
+			{"ブレイクショット:"   , bs_label    },
+			{"キャンセル:"         , slide_label .. cancel_advs_label },
 		}
 		return add_frame_to_summary(atk_summary)
 	end
@@ -8051,16 +8045,24 @@ function rbff2.startplugin()
 					summary.hitstop_gd) or
 				"-"
 			})
-			table.insert(atkact_summary, {prefix .. "攻撃/気絶:", string.format("%s(%s)/%s(%sF)",
-				summary.pure_dmg,
-				summary.chip_dmg and (summary.chip_dmg > 0 and summary.chip_dmg or 0) or 0,
-				summary.pure_st,
-				summary.pure_st_tm)})
 			table.insert(atkact_summary, {prefix .. "ヒット数:"  , string.format("%s/%s %s", summary.max_hit_nm, summary.max_hit_dn, prj_rank_label)})
 
 			return add_frame_to_summary(atkact_summary)
 		end
 		return nil
+	end
+	local make_dmg_summary = function(p, summary, fbno)
+		fbno = fbno or 0
+		local prefix = fbno == 0 and "" or ("弾" .. fbno)
+		local atkact_summary = {}
+		table.insert(atkact_summary, {prefix .. "攻撃/気絶:", string.format("%s(%s)/%s(%sF) %s/8 %s",
+			summary.pure_dmg,
+			summary.chip_dmg and (summary.chip_dmg > 0 and summary.chip_dmg or 0) or 0,
+			summary.pure_st,
+			summary.pure_st_tm,
+			summary.dmg_scale,
+			summary.dmg_scl_ct)})
+		return add_frame_to_summary(atkact_summary)
 	end
 	local make_hurt_summary = function(p, summary)
 		local hurt_labels = {}
@@ -10007,11 +10009,18 @@ function rbff2.startplugin()
 			end
 			p.old_parry_summary = p.parry_summary
 
+			p.dmg_summary = p.dmg_summary or {}
+			if p.hit_summary.pure_dmg ~= nil and (p.attack_id > 0 or (p.hit_summary.pure_dmg or 0) > 0) then
+				-- print(string.format("%s %s %s %s", p.attack, p.attack_id, p.attack_flag, p.hit_summary.pure_dmg))
+				p.dmg_summary = make_dmg_summary(p, p.hit_summary) or p.dmg_summary
+			end
+
 			-- 攻撃モーション単位で変わるサマリ情報
 			local summary_p_atk = p.attack > 0 and string.format("%x %s %s %s", p.attack, p.slide_atk, p.bs_atk, p.hitbox_txt) or ""
 			p.atk_summary = p.atk_summary or {}
 			p.atkact_summary = p.atkact_summary or {}
 			-- 攻撃モーション単位で変わるサマリ情報 本体
+			-- TODO ダメージだけ入るケースの対応
 			if (p.attack_flag and p.attack > 0 and p.summary_p_atk ~= summary_p_atk) or
 				(p.attack_id > 0 and p.summary_p_atkid ~= p.attack_id) then
 				p.atk_summary = make_atk_summary(p, p.hit_summary)
@@ -10024,6 +10033,9 @@ function rbff2.startplugin()
 			-- 攻撃モーション単位で変わるサマリ情報 弾
 			for _, fb in pairs(p.fireball) do
 				if fb.alive then
+					fb.dmg_summary = make_dmg_summary(fb, fb.hit_summary) or fb.dmg_summary
+					p.dmg_summary = fb.dmg_summary
+
 					fb.atkact_summary = make_atkact_summary(fb, fb.hit_summary) or fb.atkact_summary
 					-- 表示情報を弾の情報で上書き
 					p.atkact_summary = fb.atkact_summary
@@ -10033,6 +10045,9 @@ function rbff2.startplugin()
 			end
 
 			-- サマリ情報を結合する
+			for _, row in ipairs(p.dmg_summary) do
+				table.insert(all_summary, row)
+			end
 			for _, row in ipairs(p.atkact_summary) do
 				table.insert(all_summary, row)
 			end
