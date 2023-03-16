@@ -5799,7 +5799,7 @@ function rbff2.startplugin()
 					act_boxtype= base + 0x67, -- 現在の行動の判定種類
 					act_frame  = base + 0x6F, -- 現在の行動の残フレーム、ゼロになると次の行動へ
 					act_contact= base + 0x01, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
-					dmg_id     = base + 0xE9, -- ダメージ算出の技ID
+					dmg_id     = base + 0xE9, -- 最後にヒット/ガードしたダメージ算出の技ID
 					pos        = base + 0x20, -- X座標
 					pos_y      = base + 0x28, -- Y座標
 	 				pos_z      = base + 0x24, -- Z座標
@@ -8573,7 +8573,7 @@ function rbff2.startplugin()
 			p.tmp_dmg        = pgm:read_u8(p.addr.tmp_dmg)              -- ダメージ
 			p.old_attack     = p.attack
 			p.attack         = pgm:read_u8(p.addr.attack)
-			p.dmg_id         = pgm:read_u8(p.addr.dmg_id) -- 不要かも
+			p.dmg_id         = pgm:read_u8(p.addr.dmg_id)               -- 最後にヒット/ガードした技ID
 			p.attack_flag    = p.attack_flag or (p.state_flags3 > 0) or (p.state_flags4 > 0)
 
 			p.pure_dmg       = pgm:read_u8(p.addr.pure_dmg)             -- ダメージ(フック処理)
@@ -8610,8 +8610,8 @@ function rbff2.startplugin()
 			end
 			p.throwable      = p.state == 0 and op.state == 0 and p.tw_frame > 24 and p.sway_status == 0x00 and p.tw_muteki == 0 -- 投げ可能ベース
 			p.n_throwable    = p.throwable and p.tw_muteki2 == 0 -- 通常投げ可能
-			p.sp_throw_id    = pgm:read_u8(p.addr.sp_throw_id) -- 投げ必殺のID
-			p.sp_throw_act   = pgm:read_u8(p.addr.sp_throw_act) -- 投げ必殺の持続残F
+			p.sp_throw_id    = pgm:read_u8(p.addr.sp_throw_id)   -- 投げ必殺のID
+			p.sp_throw_act   = pgm:read_u8(p.addr.sp_throw_act)  -- 投げ必殺の持続残F
 			p.additional     = pgm:read_u8(p.addr.additional)
 
 			p.old_act        = p.act or 0x00
