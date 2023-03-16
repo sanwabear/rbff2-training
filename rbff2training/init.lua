@@ -4496,9 +4496,8 @@ local chip_dmg_type_tbl = {
 	chip_dmg_types.rshift4, -- 15 1/16
 	chip_dmg_types.zero,    -- 16 ダメージ無し
 }
--- 削りダメージ計算種別取得
-local get_chip_dmg_type = function(id)
-	local pgm = manager.machine.devices[":maincpu"].spaces["program"]
+-- 削りダメージ計算種別取得 05B2A4 からの処理
+local get_chip_dmg_type = function(id, pgm)
 	local a0 = fix_bp_addr(0x95CCC)
 	local d0 = 0xF & pgm:read_u8(a0 + id)
 	local func = chip_dmg_type_tbl[d0 + 1]
@@ -4775,7 +4774,9 @@ local update_summary = function(p)
 	summary.pure_dmg    = summary.pure_dmg    or p.pure_dmg -- 補正前攻撃力
 	summary.pure_st     = summary.pure_st     or p.pure_st -- 気絶値
 	summary.pure_st_tm  = summary.pure_st_tm  or p.pure_st_tm -- 気絶タイマー
-	summary.chip_dmg    = summary.chip_dmg    or (p.chip_dmg_type and p.chip_dmg_type.calc(p.pure_dmg) or 0) -- 削りダメージ
+	summary.chip_dmg    = summary.chip_dmg    or (p.chip_dmg_type and p.chip_dmg_type.calc(summary.pure_dmg) or 0) -- 削りダメージ
+	summary.chip_dmg_nm = summary.chip_dmg_nm or (p.chip_dmg_type and p.chip_dmg_type.name or "0") -- 削りダメージ名
+	summary.attack_id   = summary.attack_id   or p.attack_id
 	summary.effect      = summary.effect      or p.effect -- ヒット効果
 	summary.can_techrise= summary.can_techrise or p.can_techrise -- 受け身行動可否
 	summary.gd_strength = summary.gd_strength or p.gd_strength -- 相手のガード持続の種類
@@ -7834,8 +7835,6 @@ function rbff2.startplugin()
 		return add_frame_to_summary(parry_summary)
 	end
 	local make_atk_summary = function(p, summary)
-		-- パワーゲージ
-		local pow_label = string.format("%s/%s/%s  返/吸:%s/%s", p.pow_up or 0, p.pow_up_hit or 0, p.pow_up_gd or 0, p.pow_revenge or 0, p.pow_absorb or 0)
 		-- 詠酒間合い
 		local esaka_label = (p.esaka_range > 0) and p.esaka_range or "-"
 		-- ブレイクショット
@@ -7869,7 +7868,6 @@ function rbff2.startplugin()
 		end
 		local slide_label = p.slide_atk and "滑(CA×)/" or ""
 		local atk_summary = {
-			{"POW(基/当/防):"      , pow_label   },
 			{"詠酒間合い:"         , esaka_label },
 			{"ブレイクショット:"   , bs_label    },
 			{"キャンセル:"         , slide_label .. cancel_advs_label },
@@ -8054,11 +8052,19 @@ function rbff2.startplugin()
 		fbno = fbno or 0
 		local prefix = fbno == 0 and "" or ("弾" .. fbno)
 		local atkact_summary = {}
+		-- local chip_type = string.format(" %s %s", summary.chip_dmg_nm, summary.attack_id)
 		table.insert(atkact_summary, {prefix .. "攻撃/気絶:", string.format("%s(%s)/%s(%sF)",
 			summary.pure_dmg,
 			summary.chip_dmg and (summary.chip_dmg > 0 and summary.chip_dmg or 0) or 0,
 			summary.pure_st,
 			summary.pure_st_tm)})
+		return add_frame_to_summary(atkact_summary)
+	end
+	local make_pow_summary = function(p, summary)
+		local atkact_summary = {}
+		-- パワーゲージ
+		local pow_label = string.format("%s/%s/%s  返/吸:%s/%s", p.pow_up or 0, p.pow_up_hit or 0, p.pow_up_gd or 0, p.pow_revenge or 0, p.pow_absorb or 0)
+		table.insert(atkact_summary, {"POW(基/当/防):"      , pow_label   })
 		return add_frame_to_summary(atkact_summary)
 	end
 	local make_hurt_summary = function(p, summary)
@@ -9350,7 +9356,7 @@ function rbff2.startplugin()
 			-- d0 = fix_bp_addr(0x0579DA + d0 * 4) --0x0579DA から4バイトのデータの並びがヒット効果の処理アドレスになる
 			p.effect = pgm:read_u8(p.attack_id - 0x20 + fix_bp_addr(0x95BEC))
 			-- 削りダメージ計算種別取得 05B2A4 からの処理
-			p.chip_dmg_type = get_chip_dmg_type(p.attack_id)
+			p.chip_dmg_type = get_chip_dmg_type(p.attack_id, pgm)
 			-- 硬直時間取得 05AF7C(家庭用版)からの処理
 			local d2 = 0xF & pgm:read_u8(p.attack_id + fix_bp_addr(0x95CCC))
 			p.hitstun   = pgm:read_u8(0x16 + 0x2 + fix_bp_addr(0x5AF7C) + d2) + 1 + 3 -- ヒット硬直
@@ -10012,12 +10018,17 @@ function rbff2.startplugin()
 				p.dmg_summary = make_dmg_summary(p, p.hit_summary) or p.dmg_summary
 			end
 
+			-- TODO 必殺技の動作終了タイミングでPOW情報が0になるものがある
+			p.pow_summary = p.pow_summary or {}
+			if p.attack > 0 then
+				p.pow_summary = make_pow_summary(p, p.hit_summary) or p.pow_summary
+			end
+
 			-- 攻撃モーション単位で変わるサマリ情報
 			local summary_p_atk = p.attack > 0 and string.format("%x %s %s %s", p.attack, p.slide_atk, p.bs_atk, p.hitbox_txt) or ""
 			p.atk_summary = p.atk_summary or {}
 			p.atkact_summary = p.atkact_summary or {}
 			-- 攻撃モーション単位で変わるサマリ情報 本体
-			-- TODO レッグトマホークヒット時にPOW情報が0になる
 			if (p.attack_flag and p.attack > 0 and p.summary_p_atk ~= summary_p_atk) or
 				(p.attack_id > 0 and p.summary_p_atkid ~= p.attack_id) then
 				p.atk_summary = make_atk_summary(p, p.hit_summary)
@@ -10043,6 +10054,9 @@ function rbff2.startplugin()
 
 			-- サマリ情報を結合する
 			for _, row in ipairs(p.dmg_summary) do
+				table.insert(all_summary, row)
+			end
+			for _, row in ipairs(p.pow_summary) do
 				table.insert(all_summary, row)
 			end
 			for _, row in ipairs(p.atkact_summary) do
