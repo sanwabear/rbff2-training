@@ -5610,8 +5610,7 @@ function rbff2.startplugin()
 				act_boxtype  = p1 and 0x100467 or 0x100567, -- 現在の行動の判定種類
 				act_frame    = p1 and 0x10046F or 0x10056F, -- 現在の行動の残フレーム、ゼロになると次の行動へ
 				act_contact  = p1 and 0x100401 or 0x100501, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
-				attack       = p1 and 0x1004B6 or 0x1005B6, -- 攻撃中のみ変化
-				attack_b     = p1 and 0x1005EB or 0x1004EB, -- 攻撃中のみ変化
+				attack       = p1 and 0x1004B6 or 0x1005B6, -- 攻撃中のみ変化、判定チェック用2 0のときは何もしていない、 詠酒の間合いチェック用
 				hitstop_id   = p1 and 0x1004EB or 0x1005EB, -- 被害中のみ変化
 				can_techrise = p1 and 0x100492 or 0x100592, -- 受け身行動可否チェック用
 				ophit_base   = p1 and 0x10049E or 0x10059E, -- ヒットさせた相手側のベースアドレス
@@ -5665,10 +5664,9 @@ function rbff2.startplugin()
 				sp_throw_act = p1 and 0x1004A4 or 0x1005A4, -- 投げ必殺の持続残F
 				additional   = p1 and 0x1004A5 or 0x1005A5, -- 追加入力成立時のデータ
 				prj_rank     = p1 and 0x1004B5 or 0x1005B5, -- 飛び道具の強さ
-				esaka_range  = p1 and 0x1004B6 or 0x1005B6, -- 詠酒の間合いチェック用
 				input_offset = p1 and 0x0394C4 or 0x0394C8, -- コマンド入力状態のオフセットアドレス
 				no_hit       = p1 and 0x10DDF2 or 0x10DDF1, -- ヒットしないフック
-				-- 0x1004E2 or 0x1005E2 -- 距離 0近距離 1中距離 2遠距離
+				-- range        = 0x1004E2 or 0x1005E2 -- 距離 0近距離 1中距離 2遠距離
 				cancelable   = p1 and 0x1004AF or 0x1005AF, -- キャンセル可否 00不可 C0可 D0可 正確ではない
 				box_base1    = p1 and 0x100476 or 0x100576,
 				box_base2    = p1 and 0x10047A or 0x10057A,
@@ -5706,7 +5704,6 @@ function rbff2.startplugin()
 				fake_hit     = p1 and 0x10DDF3 or 0x10DDF4, -- 出だしから嘘判定のフック
 				obsl_hit     = p1 and 0x10046A or 0x10056A, -- 嘘判定チェック用 3ビット目が立っていると嘘判定
 				full_hit     = p1 and 0x1004AA or 0x1005AA, -- 判定チェック用1 0じゃないとき全段攻撃ヒット/ガード
-				harmless2    = p1 and 0x1004B6 or 0x1005B6, -- 判定チェック用2 0のときは何もしていない 同一技の連続ヒット数加算
 				max_hit_nm   = p1 and 0x1004AB or 0x1005AB, -- 同一技行動での最大ヒット数 分子
 
 				-- スクショ用
@@ -5807,10 +5804,8 @@ function rbff2.startplugin()
 					pos_y      = base + 0x28, -- Y座標
 	 				pos_z      = base + 0x24, -- Z座標
 					attack     = base + 0xBF, -- デバッグのNO
-					hitstop_id = base + 0xBE, -- ヒット硬直用ID
-					can_techrise = base + 0xBE, -- 受け身行動可否チェック用
-					-- ヒットするかどうか
-					fake_hit   = p.fake_hits[base],
+					hitstop_id = base + 0xBE, -- ヒット硬直用ID、受け身行動可否チェック用、倍返しチェック2
+					fake_hit   = p.fake_hits[base], -- ヒットするかどうか
 					obsl_hit   = base + 0x6A, -- 嘘判定チェック用 3ビット目が立っていると嘘判定
 					full_hit   = base + 0xAA, -- 判定チェック用1 0じゃないとき全段攻撃ヒット/ガード
 					harmless2  = base + 0xE7, -- 判定チェック用2 0じゃないときヒット/ガード
@@ -5819,9 +5814,7 @@ function rbff2.startplugin()
 					side       = base + 0x58, -- 向き
 					box_base1  = base + 0x76,
 					box_base2  = base + 0x7A,
-
 					bai_chk1   = base + 0x8A, -- 倍返しチェック1
-					bai_chk2   = base + 0xBE, -- 倍返しチェック2
 				},
 			}
 		end
@@ -8573,10 +8566,10 @@ function rbff2.startplugin()
 			p.max_combo      = tohexnum(pgm:read_u8(p.addr.max_combo2)) -- 最大コンボ数
 			p.tmp_dmg        = pgm:read_u8(p.addr.tmp_dmg)              -- ダメージ
 			p.old_attack     = p.attack
-			p.attack         = pgm:read_u8(p.addr.attack_b)
-			if p.attack == 0 then
+			--p.attack         = pgm:read_u8(p.addr.attack_b)
+			--if p.attack == 0 then
 				p.attack     = pgm:read_u8(p.addr.attack)
-			end
+			--end
 			p.dmg_id         = pgm:read_u8(p.addr.dmg_id) -- 不要かも
 			p.attack_flag    = p.attack_flag or (p.state_flags3 > 0) or (p.state_flags4 > 0)
 
@@ -8671,7 +8664,7 @@ function rbff2.startplugin()
 
 				if 0x58 > p.attack then
 					-- 家庭用 0236F0 からの処理
-					local d1 = pgm:read_u8(p.addr.esaka_range)
+					local d1 = pgm:read_u8(p.addr.attack)
 					local d0 = pgm:read_u16(pgm:read_u32(p.char_4times + 0x23750) + ((d1 + d1) & 0xFFFF)) & 0x1FFF
 					if d0 ~= 0 then
 						p.esaka_range = d0
@@ -8721,13 +8714,25 @@ function rbff2.startplugin()
 					p.pow_up_hit     = 7
 					p.pow_up_gd      = 0
 					p.pow_up         = 0
+				elseif p.char == 0xB and p.attack == 0x82 then
+					p.pow_revenge    = 6 -- サドマゾ
+				elseif p.char == 0x14 and p.attack == 0x82 then
+					p.pow_revenge    = 6 -- フェニックススルー
+				elseif p.char == 0x8 and p.attack == 0x94 then
+					p.pow_revenge    = 6 -- 逆襲
+				elseif p.char == 0x5 and p.attack == 0x82 then
+					p.pow_revenge    = 6 -- 当身投げ
+				elseif p.char == 0x5 and p.attack == 0x7c then
+					p.pow_revenge    = 6 -- 当身投げ
+				elseif p.char == 0x5 and p.attack == 0x88 then
+					p.pow_revenge    = 6 -- 当身投げ
 				end
 			end
 
 			p.fake_hit       = (pgm:read_u8(p.addr.fake_hit) & 0xB) == 0
 			p.obsl_hit       = (pgm:read_u8(p.addr.obsl_hit) & 0xB) == 0
 			p.full_hit       = pgm:read_u8(p.addr.full_hit) > 0
-			p.harmless2      = pgm:read_u8(p.addr.harmless2) == 0
+			p.harmless2      = pgm:read_u8(p.addr.attack) == 0
 			p.prj_rank       = pgm:read_u8(p.addr.prj_rank)
 			p.input_offset   = pgm:read_u32(p.addr.input_offset)
 			p.old_input_states = p.input_states or {}
@@ -9087,7 +9092,7 @@ function rbff2.startplugin()
 					fb.pure_st_tm = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x88772))
 				end
 				-- 受け身行動可否 家庭用 05A9B8 からの処理
-				fb.can_techrise   = pgm:read_u8(fb.addr.can_techrise)
+				fb.can_techrise   = pgm:read_u8(fb.addr.hitstop_id)
 				fb.can_techrise   = 2 > pgm:read_u8(0x8E2C0 + fb.can_techrise)
 				fb.fake_hit       = (pgm:read_u8(fb.addr.fake_hit) & 0xB) == 0
 				fb.obsl_hit       = (pgm:read_u8(fb.addr.obsl_hit) & 0xB) == 0
@@ -9111,8 +9116,8 @@ function rbff2.startplugin()
 				05C8EE: 6754                     beq     $5c944               -- 0だったら 5c944 へ
 				]]
 				fb.bai_chk1       = pgm:read_u8(fb.addr.bai_chk1)
-				fb.bai_chk2       = pgm:read_u16(fb.addr.bai_chk2)
-				fb.bai_chk2       = pgm:read_u8(0x8E940 + (0xFFFF & (fb.bai_chk2 + fb.bai_chk2)))
+				fb.bai_chk2       = pgm:read_u16(fb.addr.hitstop_id)
+				fb.bai_chk2       = pgm:read_u8(0x8E940 + (0xFFFF & (fb.bai_chk2 + fb.hitstop_id)))
 				fb.bai_catch      = 0x2 >= fb.bai_chk1 and fb.bai_chk2 == 0x01
 
 				fb.max_hit_dn     = pgm:read_u8(fix_bp_addr(0x885F2) + fb.hitstop_id)
