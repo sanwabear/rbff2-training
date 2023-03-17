@@ -5668,8 +5668,8 @@ function rbff2.startplugin()
 				no_hit       = p1 and 0x10DDF2 or 0x10DDF1, -- ヒットしないフック
 				-- range        = 0x1004E2 or 0x1005E2 -- 距離 0近距離 1中距離 2遠距離
 				cancelable   = p1 and 0x1004AF or 0x1005AF, -- キャンセル可否 00不可 C0可 D0可 正確ではない
-				box_base1    = p1 and 0x100476 or 0x100576,
-				box_base2    = p1 and 0x10047A or 0x10057A,
+				box_base1    = p1 and 0x100476 or 0x100576, -- 判定の開始アドレス1、判定データはバンク切替されている場合あり
+				box_base2    = p1 and 0x10047A or 0x10057A, -- 判定の開始アドレス2、判定データはバンク切替されている場合あり
 				kaiser_wave  = p1 and 0x1004FB or 0x1005FB, -- カイザーウェイブのレベル
 
 				stun         = p1 and 0x10B850 or 0x10B858, -- 現在気絶値
@@ -9239,8 +9239,8 @@ function rbff2.startplugin()
 			p.n_throw.range42  = pgm:read_i8(p.n_throw.addr.range42)
 			p.n_throw.range5   = pgm:read_i8(p.n_throw.addr.range5)
 			p.n_throw.id       = pgm:read_i8(p.n_throw.addr.id)
-			p.n_throw.pos_x    = pgm:read_i16(p.n_throw.addr.pos_x) - screen_left
-			p.n_throw.pos_y    = height - pgm:read_i16(p.n_throw.addr.pos_y) + screen_top
+			p.n_throw.pos_x    = p.pos - screen_left
+			p.n_throw.pos_y    = height - p.pos_y - screen_top
 			local range = (p.n_throw.range1 == p.n_throw.range2 and math.abs(p.n_throw.range42*4)) or math.abs(p.n_throw.range41*4)
 			range = range + p.n_throw.range5 * -4
 			range = range + p.throw.half_range
@@ -9251,6 +9251,30 @@ function rbff2.startplugin()
 			p.n_throw.on = p.addr.base == p.n_throw.base and p.n_throw.on or 0xFF
 
 			-- 空中投げ判定取得
+			--[[
+			temp1=$10CD00+((((A4)&$FFFFFF)-$100400)/$8);
+			maincpu.pb@(temp1)=$1;
+			maincpu.pw@(temp1+$1)=maincpu.pw@(A0);
+			maincpu.pw@(temp1+$3)=maincpu.pw@((A0)+$2);
+			maincpu.pd@(temp1+$5)=$FFFFFF&(A4);
+			maincpu.pd@(temp1+$9)=maincpu.pd@(($FFFFFF&(A4))+$96);
+			maincpu.pw@(temp1+$D)=maincpu.pw@(maincpu.pd@(($FFFFFF&(A4))+$96)+$10);
+			maincpu.pd@(temp1+$11)=maincpu.rb@(($FFFFFF&(A4))+$58);
+			maincpu.pw@(temp1+$13)=maincpu.pw@(($FFFFFF&(A4))+$20);
+			maincpu.pw@(temp1+$15)=maincpu.pw@(($FFFFFF&(A4))+$28);
+			g ]]
+			--[[
+			on       = p1 and 0x10CD00 or 0x10CD20,
+			range_x  = p1 and 0x10CD01 or 0x10CD21,
+			range_y  = p1 and 0x10CD03 or 0x10CD23,
+			base     = p1 and 0x10CD05 or 0x10CD25,
+			opp_base = p1 and 0x10CD09 or 0x10CD29,
+			opp_id   = p1 and 0x10CD0D or 0x10CD2D,
+			side     = p1 and 0x10CD11 or 0x10CD31,
+			id       = p1 and 0x10CD12 or 0x10CD32,
+			pos_x    = p1 and 0x10CD13 or 0x10CD33,
+			pos_y    = p1 and 0x10CD15 or 0x10CD35,
+			]]
 			p.air_throw.left     = nil
 			p.air_throw.right    = nil
 			p.air_throw.on       = pgm:read_u8(p.air_throw.addr.on)
@@ -9259,14 +9283,20 @@ function rbff2.startplugin()
 			p.air_throw.base     = pgm:read_u32(p.air_throw.addr.base)
 			p.air_throw.opp_base = pgm:read_u32(p.air_throw.addr.opp_base)
 			p.air_throw.opp_id   = pgm:read_u16(p.air_throw.addr.opp_id)
-			p.air_throw.pos_x    = pgm:read_i16(p.air_throw.addr.pos_x) - screen_left
-			p.air_throw.pos_y    = height - pgm:read_i16(p.air_throw.addr.pos_y) + screen_top
+			p.air_throw.pos_x    = p.pos - screen_left
+			p.air_throw.pos_y    = height - p.pos_y - screen_top
 			p.air_throw.side     = p.side
 			p.air_throw.right    = p.air_throw.range_x * p.side
 			p.air_throw.top      = -p.air_throw.range_y
 			p.air_throw.bottom   =  p.air_throw.range_y
 			p.air_throw.type     = box_type_base.at
 			p.air_throw.on = p.addr.base == p.air_throw.base and p.air_throw.on or 0xFF
+			--[[
+			if p.air_throw.on == 0xFF then
+				print(string.format("x=%s y=%s px=%s py=%s top=%s btm=%s h=%s s=%s", p.air_throw.range_x, p.air_throw.range_y,
+					p.air_throw.pos_x, p.air_throw.pos_y, p.air_throw.top, p.air_throw.bottom, height, screen_top))
+			end
+			]]
 
 			-- 必殺投げ判定取得
 			p.sp_throw.left      = nil
@@ -9281,8 +9311,8 @@ function rbff2.startplugin()
 			p.sp_throw.opp_id    = pgm:read_u16(p.sp_throw.addr.opp_id)
 			p.sp_throw.side      = p.side
 			p.sp_throw.bottom    = pgm:read_i16(p.sp_throw.addr.bottom)
-			p.sp_throw.pos_x     = pgm:read_i16(p.sp_throw.addr.pos_x) - screen_left
-			p.sp_throw.pos_y     = height - pgm:read_i16(p.sp_throw.addr.pos_y) + screen_top
+			p.sp_throw.pos_x     = p.pos - screen_left
+			p.sp_throw.pos_y     = height - p.pos_y - screen_top
 			p.sp_throw.right     = p.sp_throw.front * p.side
 			p.sp_throw.type      = box_type_base.pt
 			p.sp_throw.on        = p.addr.base == p.sp_throw.base and p.sp_throw.on or 0xFF
@@ -9290,9 +9320,11 @@ function rbff2.startplugin()
 				p.sp_throw.top    = nil
 				p.sp_throw.bottom = nil
 			end
+			--[[
 			if p.sp_throw.on ~= 0xFF then
-				--print(i, p.sp_throw.on, p.sp_throw.top, p.sp_throw.bottom, p.sp_throw.front, p.sp_throw.side, p.hit.flip_x)
+				print(i, p.sp_throw.on, p.sp_throw.top, p.sp_throw.bottom, p.sp_throw.front, p.sp_throw.side, p.hit.flip_x)
 			end
+			]]
 
 			-- 当たり判定の構築用バッファのリフレッシュ
 			p.hitboxes             = {}
