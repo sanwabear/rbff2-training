@@ -9248,33 +9248,9 @@ function rbff2.startplugin()
 			p.n_throw.right    = p.n_throw.range * p.side
 			p.n_throw.left     = (p.n_throw.range - p.throw.full_range) * p.side
 			p.n_throw.type     = box_type_base.t
-			p.n_throw.on = p.addr.base == p.n_throw.base and p.n_throw.on or 0xFF
+			p.n_throw.on       = p.addr.base == p.n_throw.base and p.n_throw.on or 0xFF
 
 			-- 空中投げ判定取得
-			--[[
-			temp1=$10CD00+((((A4)&$FFFFFF)-$100400)/$8);
-			maincpu.pb@(temp1)=$1;
-			maincpu.pw@(temp1+$1)=maincpu.pw@(A0);
-			maincpu.pw@(temp1+$3)=maincpu.pw@((A0)+$2);
-			maincpu.pd@(temp1+$5)=$FFFFFF&(A4);
-			maincpu.pd@(temp1+$9)=maincpu.pd@(($FFFFFF&(A4))+$96);
-			maincpu.pw@(temp1+$D)=maincpu.pw@(maincpu.pd@(($FFFFFF&(A4))+$96)+$10);
-			maincpu.pd@(temp1+$11)=maincpu.rb@(($FFFFFF&(A4))+$58);
-			maincpu.pw@(temp1+$13)=maincpu.pw@(($FFFFFF&(A4))+$20);
-			maincpu.pw@(temp1+$15)=maincpu.pw@(($FFFFFF&(A4))+$28);
-			g ]]
-			--[[
-			on       = p1 and 0x10CD00 or 0x10CD20,
-			range_x  = p1 and 0x10CD01 or 0x10CD21,
-			range_y  = p1 and 0x10CD03 or 0x10CD23,
-			base     = p1 and 0x10CD05 or 0x10CD25,
-			opp_base = p1 and 0x10CD09 or 0x10CD29,
-			opp_id   = p1 and 0x10CD0D or 0x10CD2D,
-			side     = p1 and 0x10CD11 or 0x10CD31,
-			id       = p1 and 0x10CD12 or 0x10CD32,
-			pos_x    = p1 and 0x10CD13 or 0x10CD33,
-			pos_y    = p1 and 0x10CD15 or 0x10CD35,
-			]]
 			p.air_throw.left     = nil
 			p.air_throw.right    = nil
 			p.air_throw.on       = pgm:read_u8(p.air_throw.addr.on)
@@ -9290,7 +9266,7 @@ function rbff2.startplugin()
 			p.air_throw.top      = -p.air_throw.range_y
 			p.air_throw.bottom   =  p.air_throw.range_y
 			p.air_throw.type     = box_type_base.at
-			p.air_throw.on = p.addr.base == p.air_throw.base and p.air_throw.on or 0xFF
+			p.air_throw.on       = p.addr.base == p.air_throw.base and p.air_throw.on or 0xFF
 			--[[
 			if p.air_throw.on == 0xFF then
 				print(string.format("x=%s y=%s px=%s py=%s top=%s btm=%s h=%s s=%s", p.air_throw.range_x, p.air_throw.range_y,
