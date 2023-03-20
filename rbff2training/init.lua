@@ -5672,6 +5672,9 @@ function rbff2.startplugin()
 				box_base2    = p1 and 0x10047A or 0x10057A, -- 判定の開始アドレス2、判定データはバンク切替されている場合あり
 				kaiser_wave  = p1 and 0x1004FB or 0x1005FB, -- カイザーウェイブのレベル
 
+				-- キャラ毎の必殺技の番号 0x1004B8
+				-- 技の内部の進行度 0x1004F7
+
 				stun         = p1 and 0x10B850 or 0x10B858, -- 現在気絶値
  				stun_timer   = p1 and 0x10B854 or 0x10B85C, -- 気絶値ゼロ化までの残フレーム数
  				tmp_combo    = p1 and 0x10B4E0 or 0x10B4E1, -- コンボテンポラリ
@@ -6356,11 +6359,28 @@ function rbff2.startplugin()
 				"maincpu.pw@107C22>0",
 				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g"))
 
+			-- 自動 炎の種馬
+			-- bp 04094A,1,{PC=040964;g}
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x04092A), "1", string.format("PC=%x;g", fix_bp_addr(0x040944))))
+
+			-- 必勝！逆襲拳1発キャッチカデンツァ
+			-- bp 0409A6,1,{maincpu.pb@(f7+(A4))=7;D0=7;g}
+			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x040986), "1", "maincpu.pb@(f7+(A4))=7;D0=7;g"))
+
 			-- 自動喝CA
 			-- bp 03F94C,1,{PC=03F952;g}
 			-- bp 03F986,1,{PC=3F988;g}
 			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x03F92C), "1", string.format("PC=%x;g", fix_bp_addr(0x03F932))))
 			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x03F966), "1", string.format("PC=%x;g", fix_bp_addr(0x03F968))))
+
+			-- 全部空振りCA
+			-- bp 02FA5E,1,{PC=02FA6A;g}
+			-- ↓のテーブルを全部00にするのでも可
+			-- 02FA72: 0000 0000   
+			-- 02FA76: 0000 0000
+			-- 02FA7A: FFFF FFFF        
+			-- 02FA7E: 00FF FF00
+			-- 02FA82: FFFF
 
 			-- bp 3B5CE,1,{maincpu.pb@1007B5=0;g} -- 2P 飛び道具の強さ0に
 
@@ -11084,27 +11104,27 @@ function rbff2.startplugin()
 					end
 
 					scr:draw_text( p1 and  4 or 278,  1, string.format("%s", p.state))
-					draw_rtext(    p1 and 16 or 290,  1, string.format("%2s", p.tw_threshold))
-					draw_rtext(    p1 and 28 or 302,  1, string.format("%3s", p.tw_accepted))
-					draw_rtext(    p1 and 40 or 314,  1, string.format("%3s", p.tw_frame))
+					draw_rtext(    p1 and 16 or 290,  1, string.format("%02s", p.tw_threshold))
+					draw_rtext(    p1 and 28 or 302,  1, string.format("%03s", p.tw_accepted))
+					draw_rtext(    p1 and 40 or 314,  1, string.format("%03s", p.tw_frame))
 
 					scr:draw_text( p1 and  4 or 278,  7, p.hit.vulnerable and "V" or "-")
-					draw_rtext(    p1 and 16 or 290,  7, string.format("%s", p.tw_muteki2))
-					draw_rtext(    p1 and 24 or 298,  7, string.format("%s", p.tw_muteki))
-					draw_rtext(    p1 and 32 or 306,  7, string.format("%2x", p.sway_status))
+					draw_rtext(    p1 and 16 or 290,  7, string.format("%0s", p.tw_muteki2))
+					draw_rtext(    p1 and 24 or 298,  7, string.format("%0s", p.tw_muteki))
+					draw_rtext(    p1 and 32 or 306,  7, string.format("%02x", p.sway_status))
 					scr:draw_text( p1 and 36 or 310,  7, p.in_air and "A" or "G")
 
 					scr:draw_text( p1 and  4 or 278, 13, p.hit.harmless and "-" or "H")
-					draw_rtext(    p1 and 16 or 290, 13, string.format("%2x", p.attack))
-					draw_rtext(    p1 and 28 or 302, 13, string.format("%2x", p.attack_id))
-					draw_rtext(    p1 and 40 or 314, 13, string.format("%2x", p.hitstop_id))
+					draw_rtext(    p1 and 16 or 290, 13, string.format("%02x", p.attack))
+					draw_rtext(    p1 and 28 or 302, 13, string.format("%02x", p.attack_id))
+					draw_rtext(    p1 and 40 or 314, 13, string.format("%02x", p.hitstop_id))
 
-					draw_rtext(    p1 and 16 or 290, 19, string.format("%4x", p.act))
-					draw_rtext(    p1 and 28 or 302, 19, string.format("%2x", p.act_count))
-					draw_rtext(    p1 and 40 or 314, 19, string.format("%2x", p.act_frame))
+					draw_rtext(    p1 and 16 or 290, 19, string.format("%04x", p.act))
+					draw_rtext(    p1 and 28 or 302, 19, string.format("%02x", p.act_count))
+					draw_rtext(    p1 and 40 or 314, 19, string.format("%02x", p.act_frame))
 
-					draw_rtext(    p1 and  8 or 274, 25, string.format("%2x", p.additional))
-					draw_rtext(    p1 and 40 or 314, 25, string.format("%8x", p.state_flags2))
+					draw_rtext(    p1 and  8 or 274, 25, string.format("%02x", p.additional))
+					draw_rtext(    p1 and 40 or 314, 25, string.format("%08x", p.state_flags2))
 
 					--[[
 						p.tw_frame のしきい値。しきい値より大きければ投げ処理継続可能。
