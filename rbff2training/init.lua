@@ -115,16 +115,19 @@ local global = {
 	dummy_rvs_cnt   = 1,     -- リバーサルのカウンタ
 
 	auto_input      = {
-		otg_thw     = false, -- ダウン投げ              2
-		otg_atk     = false, -- ダウン攻撃              3
-		thw_otg     = false, -- 通常投げの派生技        4
-		rave        = 1,     -- デッドリーレイブ        5
-		desire      = 1,     -- アンリミテッドデザイア  6
-		drill       = 5,     -- ドリル                  7
-		pairon      = 1,     -- 超白龍                  8
-		real_counter= 1,     -- M.リアルカウンター      9
-		-- 入力設定
-		esaka_check = false, -- 詠酒距離チェック       11
+		otg_thw      = false, -- ダウン投げ              2
+		otg_atk      = false, -- ダウン攻撃              3
+		thw_otg      = false, -- 通常投げの派生技        4
+		rave         = 1,     -- デッドリーレイブ        5
+		desire       = 1,     -- アンリミテッドデザイア  6
+		drill        = 5,     -- ドリル                  7
+		pairon       = 1,     -- 超白龍                  8
+		real_counter = 1,     -- M.リアルカウンター      9
+		auto_taneuma = false, -- 炎の種馬               10
+		auto_katsu   = false, -- 喝CA                   11
+		-- 入力設定                                     12
+		esaka_check  = false, -- 詠酒距離チェック       13
+		fast_kadenzer= false, -- 必勝！逆襲拳           14
 	},
 
 	frzc            = 1,
@@ -298,6 +301,7 @@ local dip_config ={
 	show_hitbox   = false,
 	infinity_life = false,
 	easy_super    = false,
+	semiauto_p    = false,
 	infinity_time = true,
 	fix_time      = 0x99,
 	stage_select  = false,
@@ -6032,15 +6036,45 @@ function rbff2.startplugin()
 		return ret
 	end
 
+	local load_or_set_bps = function(hook_holder, p, enabled, addr, cond, exec)
+		if hook_holder ~= nil then
+			global.set_bps(enabled ~= true, hook_holder)
+		elseif enabled == true then
+			hook_holder = global.new_hook_holder()
+			local cpu = manager.machine.devices[":maincpu"]
+			table.insert(hook_holder.bps, cpu.debug:bpset(addr, cond, exec))
+		end
+		return hook_holder
+	end
+
 	-- 詠酒の距離チェックを飛ばす
 	local set_skip_esaka_check = function(p, enabled)
-		if p.skip_esaka_check then
-			global.set_bps(enabled ~= true, p.skip_esaka_check)
-		else
-			p.skip_esaka_check = global.new_hook_holder()
-			local cpu = manager.machine.devices[":maincpu"]
-			table.insert(p.skip_esaka_check.bps, cpu.debug:bpset(0x0236F2, "(A4)==$" .. string.format("%x", p.addr.base), "PC=2374C;g"))
-		end
+		p.skip_esaka_check = load_or_set_bps(p.skip_esaka_check, p, enabled,
+			0x0236F2, "(A4)==$" .. string.format("%x", p.addr.base), "PC=2374C;g")
+	end
+
+	-- 自動 炎の種馬
+	-- bp 04094A,1,{PC=040964;g}
+	local set_auto_taneuma = function(p, enabled)
+		p.auto_taneuma = load_or_set_bps(p.auto_taneuma, p, enabled,
+			fix_bp_addr(0x04092A), "(A4)==$" .. string.format("%x", p.addr.base), string.format("PC=%x;g", fix_bp_addr(0x040944)))
+	end
+
+	-- 必勝！逆襲拳1発キャッチカデンツァ
+	-- bp 0409A6,1,{maincpu.pb@(f7+(A4))=7;D0=7;g}
+	local set_fast_kadenzer = function(p, enabled)
+		p.fast_kadenze = load_or_set_bps(p.fast_kadenze, p, enabled,
+			fix_bp_addr(0x040986), "(A4)==$" .. string.format("%x", p.addr.base), "maincpu.pb@(f7+(A4))=7;D0=7;g")
+	end
+
+	-- 自動喝CA
+	-- bp 03F94C,1,{PC=03F952;g}
+	-- bp 03F986,1,{PC=3F988;g}
+	local set_auto_katsu = function(p, enabled)
+		p.auto_katsu1 = load_or_set_bps(p.auto_katsu1, p, enabled,
+			fix_bp_addr(0x03F92C), "(A4)==$" .. string.format("%x", p.addr.base), string.format("PC=%x;g", fix_bp_addr(0x03F932)))
+		p.auto_katsu2 = load_or_set_bps(p.auto_katsu2, p, enabled,
+			fix_bp_addr(0x03F966), "(A4)==$" .. string.format("%x", p.addr.base), string.format("PC=%x;g", fix_bp_addr(0x03F968)))
 	end
 
 	-- 当たり判定と投げ判定用のブレイクポイントとウォッチポイントのセット
@@ -6359,21 +6393,15 @@ function rbff2.startplugin()
 				"maincpu.pw@107C22>0",
 				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g"))
 
-			-- 自動 炎の種馬
-			-- bp 04094A,1,{PC=040964;g}
-			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x04092A), "1", string.format("PC=%x;g", fix_bp_addr(0x040944))))
+			--[[ ドリル簡易入力
+			デバッグDIP4-4参照箇所の以下まとめて。
+			bp 042BF8,1,{PC=042BFA;g}
+			bp 042C1A,1,{PC=042C1C;g}
+			bp 04343A,1,{PC=04343C;g}
+			bp 0434AA,1,{PC=434b6;g}
+			]]
 
-			-- 必勝！逆襲拳1発キャッチカデンツァ
-			-- bp 0409A6,1,{maincpu.pb@(f7+(A4))=7;D0=7;g}
-			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x040986), "1", "maincpu.pb@(f7+(A4))=7;D0=7;g"))
-
-			-- 自動喝CA
-			-- bp 03F94C,1,{PC=03F952;g}
-			-- bp 03F986,1,{PC=3F988;g}
-			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x03F92C), "1", string.format("PC=%x;g", fix_bp_addr(0x03F932))))
-			table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x03F966), "1", string.format("PC=%x;g", fix_bp_addr(0x03F968))))
-
-			-- 全部空振りCA
+			-- 空振りCAできる
 			-- bp 02FA5E,1,{PC=02FA6A;g}
 			-- ↓のテーブルを全部00にするのでも可
 			-- 02FA72: 0000 0000   
@@ -11750,16 +11778,17 @@ function rbff2.startplugin()
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		--                              1                                 1
 		dip_config.easy_super    = col[ 2] == 2 -- 簡易超必               2
-		global.pause_hit         = col[ 3]      -- ヒット時にポーズ       3
-		global.pause_hitbox      = col[ 4]      -- 判定発生時にポーズ     4
-		global.save_snapshot     = col[ 5]      -- 技画像保存             5
-		global.mame_debug_wnd    = col[ 6] == 2 -- MAMEデバッグウィンドウ 6
-		global.damaged_move      = col[ 7]      -- ヒット効果確認用       7
-		global.log.poslog        = col[ 8] == 2 -- 位置ログ               8
-		global.log.atklog        = col[ 9] == 2 -- 攻撃情報ログ           9
-		global.log.baselog       = col[10] == 2 -- 処理アドレスログ      10
-		global.log.keylog        = col[11] == 2 -- 入力ログ              11
-		global.log.rvslog        = col[12] == 2 -- リバサログ            12
+		dip_config.semiauto_p    = col[ 3] == 2 -- 半自動潜在能力         3
+		global.pause_hit         = col[ 4]      -- ヒット時にポーズ       4
+		global.pause_hitbox      = col[ 5]      -- 判定発生時にポーズ     5
+		global.save_snapshot     = col[ 6]      -- 技画像保存             6
+		global.mame_debug_wnd    = col[ 7] == 2 -- MAMEデバッグウィンドウ 7
+		global.damaged_move      = col[ 8]      -- ヒット効果確認用       8
+		global.log.poslog        = col[ 9] == 2 -- 位置ログ               9
+		global.log.atklog        = col[10] == 2 -- 攻撃情報ログ          10
+		global.log.baselog       = col[11] == 2 -- 処理アドレスログ      11
+		global.log.keylog        = col[12] == 2 -- 入力ログ              12
+		global.log.rvslog        = col[13] == 2 -- リバサログ            13
 
 		local dmove = damaged_moves[global.damaged_move]
 		if dmove and dmove > 0 then
@@ -11792,11 +11821,23 @@ function rbff2.startplugin()
 		global.auto_input.drill        = col[ 7]      -- ドリル                  7
 		global.auto_input.pairon       = col[ 8]      -- 超白龍                  8
 		global.auto_input.real_counter = col[ 9]      -- M.リアルカウンター      9
-		-- 入力設定                                                             10
-		global.auto_input.esaka_check  = col[11] == 2 -- 詠酒距離チェック       11
+		global.auto_input.auto_taneuma = col[10] == 2 -- 炎の種馬               10
+		global.auto_input.auto_katsu   = col[11] == 2 -- 喝CA                   11
+		-- 入力設定                                                             12
+		global.auto_input.esaka_check  = col[13] == 2 -- 詠酒距離チェック       13
+		global.auto_input.fast_kadenzer= col[14] == 2 -- 必勝！逆襲拳           14
 
 		set_skip_esaka_check(p[1], global.auto_input.esaka_check)
 		set_skip_esaka_check(p[2], global.auto_input.esaka_check)
+
+		set_auto_taneuma(p[1], global.auto_input.auto_taneuma)
+		set_auto_taneuma(p[2], global.auto_input.auto_taneuma)
+
+		set_fast_kadenzer(p[1], global.auto_input.fast_kadenzer)
+		set_fast_kadenzer(p[2], global.auto_input.fast_kadenzer)
+
+		set_auto_katsu(p[1], global.auto_input.auto_katsu)
+		set_auto_katsu(p[2], global.auto_input.auto_katsu)
 
 		menu_cur = main_menu
 	end
@@ -11965,16 +12006,17 @@ function rbff2.startplugin()
 		local g = global
 		--   1                                                          1
 		col[ 2] = dip_config.easy_super and 2 or 1 -- 簡易超必          2
-		col[ 3] = g.pause_hit              -- ヒット時にポーズ          3
-		col[ 4] = g.pause_hitbox           -- 判定発生時にポーズ        4
-		col[ 5] = g.save_snapshot          -- 技画像保存                5
-		col[ 6] = g.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ 6
-		col[ 7] = g.damaged_move           -- ヒット効果確認用          7
-		col[ 8] = g.log.poslog  and 2 or 1 -- 位置ログ                  8
-		col[ 9] = g.log.atklog  and 2 or 1 -- 攻撃情報ログ              9
-		col[10] = g.log.baselog and 2 or 1 -- 処理アドレスログ         10
-		col[11] = g.log.keylog  and 2 or 1 -- 入力ログ                 11
-		col[12] = g.log.rvslog  and 2 or 1 -- リバサログ               12
+		col[ 3] = dip_config.semiauto_p and 2 or 1 -- 半自動潜在能力    3
+		col[ 4] = g.pause_hit              -- ヒット時にポーズ          4
+		col[ 5] = g.pause_hitbox           -- 判定発生時にポーズ        5
+		col[ 6] = g.save_snapshot          -- 技画像保存                6
+		col[ 7] = g.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ 7
+		col[ 8] = g.damaged_move           -- ヒット効果確認用          8
+		col[ 9] = g.log.poslog  and 2 or 1 -- 位置ログ                  9
+		col[10] = g.log.atklog  and 2 or 1 -- 攻撃情報ログ             10
+		col[11] = g.log.baselog and 2 or 1 -- 処理アドレスログ         11
+		col[12] = g.log.keylog  and 2 or 1 -- 入力ログ                 12
+		col[13] = g.log.rvslog  and 2 or 1 -- リバサログ               13
 	end
 	local init_auto_menu_config = function()
 		local col = auto_menu.pos.col
@@ -11988,8 +12030,11 @@ function rbff2.startplugin()
 		col[ 7] = g.auto_input.drill              -- ドリル                  7
 		col[ 8] = g.auto_input.pairon             -- 超白龍                  8
 		col[ 9] = g.auto_input.real_counter       -- M.リアルカウンター      9
-		                                          -- 入力設定               10
-		col[11] = g.auto_input.esaka_check        -- 詠酒距離チェック       11
+		col[10] = global.auto_input.auto_taneuma and 2 or 1 -- 炎の種馬     10
+		col[11] = global.auto_input.auto_katsu   and 2 or 1 -- 喝CA         11
+		-- 入力設定                                                         12
+		col[13] = global.auto_input.esaka_check  and 2 or 1 -- 詠酒距離チェック 13
+		col[14] = global.auto_input.fast_kadenzer and 2 or 1 -- 必勝！逆襲拳 14
 	end
 	local init_restart_fight = function()
 	end
@@ -12540,6 +12585,7 @@ function rbff2.startplugin()
 		list = {
 			{ "                          特殊設定" },
 			{ "簡易超必"              , { "OFF", "ON" }, },
+			{ "半自動潜在能力"        , { "OFF", "ON" }, },
 			{ "ヒット時にポーズ"      , { "OFF", "ON", "ON:やられのみ", "ON:投げやられのみ", "ON:打撃やられのみ", "ON:ガードのみ", }, },
 			{ "判定発生時にポーズ"    , { "OFF", "投げ", "攻撃", "変化時", }, },
 			{ "技画像保存"            , { "OFF", "ON:新規", "ON:上書き", }, },
@@ -12557,16 +12603,17 @@ function rbff2.startplugin()
 			col = {
 				0, -- －特殊設定－            1
 				1, -- 簡易超必                2
-				1, -- ヒット時にポーズ        3
-				1, -- 判定発生時にポーズ      4
-				1, -- 技画像保存              5
-				1, -- MAMEデバッグウィンドウ  6
-				1, -- ヒット効果確認用        7
-				1, -- 位置ログ                8
-				1, -- 攻撃情報ログ            9
-				1, -- 処理アドレスログ       10
-				1, -- 入力ログ               11
-				1, -- リバサログ             12
+				1, -- 半自動潜在能力          3
+				1, -- ヒット時にポーズ        4
+				1, -- 判定発生時にポーズ      5
+				1, -- 技画像保存              6
+				1, -- MAMEデバッグウィンドウ  7
+				1, -- ヒット効果確認用        8
+				1, -- 位置ログ                9
+				1, -- 攻撃情報ログ           10
+				1, -- 処理アドレスログ       11
+				1, -- 入力ログ               12
+				1, -- リバサログ             13
 			},
 		},
 		on_a = {
@@ -12610,8 +12657,11 @@ function rbff2.startplugin()
 			{ "ドリル"                , { 1, 2, 3, 4, 5 }, },
 			{ "超白龍"                , { "OFF", "C攻撃-判定発生前", "C攻撃-判定発生後" }, },
 			{ "M.リアルカウンター"    , { "OFF", "ジャーマン", "フェイスロック", "投げっぱなしジャーマン", "ランダム", }, },
+			{ "炎の種馬"              , { "OFF", "ON" }, },
+			{ "喝CA"                  , { "OFF", "ON" }, },
 			{ "                          入力設定" },
-			{ "詠酒距離チェック"      , { "OFF", "ON" }, }
+			{ "詠酒距離チェック"      , { "OFF", "ON" }, },
+			{ "必勝！逆襲拳"          , { "OFF", "ON" }, }
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
@@ -12626,8 +12676,11 @@ function rbff2.startplugin()
 				1, -- ドリル                  7
 				1, -- 超白龍                  8
 				1, -- M.リアルカウンター      9
-				0, -- 入力設定               10
-				1, -- 詠酒距離チェック       11
+				1, -- 炎の種馬               10
+				1, -- 喝CA                   11
+				0, -- 入力設定               12
+				1, -- 詠酒距離チェック       13
+				1, -- 必勝！逆襲拳           14
 			},
 		},
 		on_a = {
@@ -12640,8 +12693,11 @@ function rbff2.startplugin()
 			auto_menu_to_main, -- ドリル                  7
 			auto_menu_to_main, -- 超白龍                  8
 			auto_menu_to_main, -- M.リアルカウンター      9
-			auto_menu_to_main, -- 入力設定               10
-			auto_menu_to_main, -- 詠酒距離チェック       11
+			auto_menu_to_main, -- 炎の種馬               10
+			auto_menu_to_main, -- 喝CA                   11
+			auto_menu_to_main, -- 入力設定               12
+			auto_menu_to_main, -- 詠酒距離チェック       13
+			auto_menu_to_main, -- 必勝！逆襲拳           14
 		},
 		on_b = {
 			auto_menu_to_main_cancel, -- 自動入力設定            1
@@ -12653,8 +12709,11 @@ function rbff2.startplugin()
 			auto_menu_to_main_cancel, -- ドリル                  7
 			auto_menu_to_main_cancel, -- 超白龍                  8
 			auto_menu_to_main_cancel, -- リアルカウンター        9
-			auto_menu_to_main_cancel, -- 入力設定               10
-			auto_menu_to_main_cancel, -- 詠酒距離チェック       11
+			auto_menu_to_main_cancel, -- 炎の種馬               10
+			auto_menu_to_main_cancel, -- 喝CA                   11
+			auto_menu_to_main_cancel, -- 入力設定               12
+			auto_menu_to_main_cancel, -- 詠酒距離チェック       13
+			auto_menu_to_main_cancel, -- 必勝！逆襲拳           14
 		},
 	}
 
@@ -13257,7 +13316,7 @@ function rbff2.startplugin()
 		end
 
 		-- デバッグDIP
-		local dip1, dip2, dip3 = 0x00, 0x00, 0x00
+		local dip1, dip2, dip3, dip4 = 0x00, 0x00, 0x00, 0x00
 		if match_active and dip_config.show_hitbox then
 			--dip1 = dip1 | 0x40    --cheat "DIP= 1-7 色々な判定表示"
 			dip1 = dip1 | 0x80    --cheat "DIP= 1-8 当たり判定表示"
@@ -13267,6 +13326,9 @@ function rbff2.startplugin()
 		end
 		if match_active and dip_config.easy_super then
 			dip2 = dip2 | 0x01    --Cheat "DIP 2-1 Eeasy Super"
+		end
+		if match_active and dip_config.semiauto_p then
+			dip4 = dip4 | 0x08    -- DIP4-4
 		end
 		if dip_config.infinity_time then
 			dip2 = dip2 | 0x10    --cheat "DIP= 2-5 Disable Time Over"
@@ -13293,6 +13355,7 @@ function rbff2.startplugin()
 		pgm:write_u8(0x10E000, dip1)
 		pgm:write_u8(0x10E001, dip2)
 		pgm:write_u8(0x10E002, dip3)
+		pgm:write_u8(0x10E003, dip4)
 
 		-- CPUレベル MAX（ロムハックのほうが楽）
 		-- maincpu.pw@10E792=0007
