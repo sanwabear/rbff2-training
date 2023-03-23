@@ -128,6 +128,7 @@ local global = {
 		-- 入力設定                                     12
 		esaka_check  = false, -- 詠酒距離チェック       13
 		fast_kadenzer= false, -- 必勝！逆襲拳           14
+		kara_ca      = false, -- 空振りCA               15
 	},
 
 	frzc            = 1,
@@ -6050,21 +6051,21 @@ function rbff2.startplugin()
 	-- 詠酒の距離チェックを飛ばす
 	local set_skip_esaka_check = function(p, enabled)
 		p.skip_esaka_check = load_or_set_bps(p.skip_esaka_check, p, enabled,
-			0x0236F2, "(A4)==$" .. string.format("%x", p.addr.base), "PC=2374C;g")
+			0x0236F2, string.format("(A4)==$%x", p.addr.base), "PC=2374C;g")
 	end
 
 	-- 自動 炎の種馬
 	-- bp 04094A,1,{PC=040964;g}
 	local set_auto_taneuma = function(p, enabled)
 		p.auto_taneuma = load_or_set_bps(p.auto_taneuma, p, enabled,
-			fix_bp_addr(0x04092A), "(A4)==$" .. string.format("%x", p.addr.base), string.format("PC=%x;g", fix_bp_addr(0x040944)))
+			fix_bp_addr(0x04092A), string.format("(A4)==$%x", p.addr.base), string.format("PC=%x;g", fix_bp_addr(0x040944)))
 	end
 
 	-- 必勝！逆襲拳1発キャッチカデンツァ
 	-- bp 0409A6,1,{maincpu.pb@(f7+(A4))=7;D0=7;g}
 	local set_fast_kadenzer = function(p, enabled)
 		p.fast_kadenze = load_or_set_bps(p.fast_kadenze, p, enabled,
-			fix_bp_addr(0x040986), "(A4)==$" .. string.format("%x", p.addr.base), "maincpu.pb@(f7+(A4))=7;D0=7;g")
+			fix_bp_addr(0x040986), string.format("(A4)==$%x", p.addr.base), "maincpu.pb@(f7+(A4))=7;D0=7;g")
 	end
 
 	-- 自動喝CA
@@ -6072,9 +6073,16 @@ function rbff2.startplugin()
 	-- bp 03F986,1,{PC=3F988;g}
 	local set_auto_katsu = function(p, enabled)
 		p.auto_katsu1 = load_or_set_bps(p.auto_katsu1, p, enabled,
-			fix_bp_addr(0x03F92C), "(A4)==$" .. string.format("%x", p.addr.base), string.format("PC=%x;g", fix_bp_addr(0x03F932)))
+			fix_bp_addr(0x03F92C), string.format("(A4)==$%x", p.addr.base), string.format("PC=%x;g", fix_bp_addr(0x03F932)))
 		p.auto_katsu2 = load_or_set_bps(p.auto_katsu2, p, enabled,
-			fix_bp_addr(0x03F966), "(A4)==$" .. string.format("%x", p.addr.base), string.format("PC=%x;g", fix_bp_addr(0x03F968)))
+			fix_bp_addr(0x03F966), string.format("(A4)==$%x", p.addr.base), string.format("PC=%x;g", fix_bp_addr(0x03F968)))
+	end
+
+	-- 空振りCAできる
+	-- bp 02FA5E,1,{PC=02FA6A;g}
+	local set_kara_ca = function(p, enabled)
+		p.kara_ca = load_or_set_bps(p.kara_ca, p, enabled,
+			fix_bp_addr(0x02FA1E), string.format("(A4)==$%x", p.addr.base), string.format("PC=%x;g", fix_bp_addr(0x02FA4A)))
 	end
 
 	-- 当たり判定と投げ判定用のブレイクポイントとウォッチポイントのセット
@@ -11826,6 +11834,7 @@ function rbff2.startplugin()
 		-- 入力設定                                                             12
 		global.auto_input.esaka_check  = col[13] == 2 -- 詠酒距離チェック       13
 		global.auto_input.fast_kadenzer= col[14] == 2 -- 必勝！逆襲拳           14
+		global.auto_input.kara_ca      = col[15] == 2 -- 空振りCA               15
 
 		set_skip_esaka_check(p[1], global.auto_input.esaka_check)
 		set_skip_esaka_check(p[2], global.auto_input.esaka_check)
@@ -11838,6 +11847,9 @@ function rbff2.startplugin()
 
 		set_auto_katsu(p[1], global.auto_input.auto_katsu)
 		set_auto_katsu(p[2], global.auto_input.auto_katsu)
+
+		set_kara_ca(p[1], global.auto_input.kara_ca)
+		set_kara_ca(p[2], global.auto_input.kara_ca)
 
 		menu_cur = main_menu
 	end
@@ -12035,6 +12047,7 @@ function rbff2.startplugin()
 		-- 入力設定                                                         12
 		col[13] = global.auto_input.esaka_check  and 2 or 1 -- 詠酒距離チェック 13
 		col[14] = global.auto_input.fast_kadenzer and 2 or 1 -- 必勝！逆襲拳 14
+		col[15] = global.auto_input.kara_ca      and 2 or 1 -- 空振りCA     15
 	end
 	local init_restart_fight = function()
 	end
@@ -12661,7 +12674,8 @@ function rbff2.startplugin()
 			{ "喝CA"                  , { "OFF", "ON" }, },
 			{ "                          入力設定" },
 			{ "詠酒距離チェック"      , { "OFF", "ON" }, },
-			{ "必勝！逆襲拳"          , { "OFF", "ON" }, }
+			{ "必勝！逆襲拳"          , { "OFF", "ON" }, },
+			{ "空振りCA"              , { "OFF", "ON" }, },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
@@ -12681,6 +12695,7 @@ function rbff2.startplugin()
 				0, -- 入力設定               12
 				1, -- 詠酒距離チェック       13
 				1, -- 必勝！逆襲拳           14
+				1, -- 空振りCA               15
 			},
 		},
 		on_a = {
@@ -12698,6 +12713,7 @@ function rbff2.startplugin()
 			auto_menu_to_main, -- 入力設定               12
 			auto_menu_to_main, -- 詠酒距離チェック       13
 			auto_menu_to_main, -- 必勝！逆襲拳           14
+			auto_menu_to_main, -- 空振りCA               15
 		},
 		on_b = {
 			auto_menu_to_main_cancel, -- 自動入力設定            1
@@ -12714,6 +12730,7 @@ function rbff2.startplugin()
 			auto_menu_to_main_cancel, -- 入力設定               12
 			auto_menu_to_main_cancel, -- 詠酒距離チェック       13
 			auto_menu_to_main_cancel, -- 必勝！逆襲拳           14
+			auto_menu_to_main_cancel, -- 空振りCA               15
 		},
 	}
 
