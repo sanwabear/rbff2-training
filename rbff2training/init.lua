@@ -6040,10 +6040,11 @@ function rbff2.startplugin()
 	local load_or_set_bps = function(hook_holder, p, enabled, addr, cond, exec)
 		if hook_holder ~= nil then
 			global.set_bps(enabled ~= true, hook_holder)
-		elseif enabled == true then
+		else
 			hook_holder = global.new_hook_holder()
 			local cpu = manager.machine.devices[":maincpu"]
 			table.insert(hook_holder.bps, cpu.debug:bpset(addr, cond, exec))
+			global.set_bps(enabled ~= true, hook_holder)
 		end
 		return hook_holder
 	end
@@ -6083,6 +6084,58 @@ function rbff2.startplugin()
 	local set_kara_ca = function(p, enabled)
 		p.kara_ca = load_or_set_bps(p.kara_ca, p, enabled,
 			fix_bp_addr(0x02FA1E), string.format("(A4)==$%x", p.addr.base), string.format("PC=%x;g", fix_bp_addr(0x02FA4A)))
+	end
+
+	local new_empty_table = function(len)
+		local tmp_table = {}
+		for i = 1, len do
+			table.insert(tmp_table, nil)
+		end
+		return tmp_table
+	end
+
+	--  自動デッドリー
+	local set_auto_deadly = function(p, count)
+		p.auto_deadly = p.auto_deadly or new_empty_table(11)
+		--  自動デッドリー最後
+		p.auto_deadly[11] = load_or_set_bps(p.auto_deadly[11], p, count == 10,
+			fix_bp_addr(0x03DBC4), string.format("(A4)==$%x", p.addr.base), string.format("PC=%x;g", fix_bp_addr(0x03DBE2)))
+		--  自動デッドリー途中
+		local check_count = count - 1
+		for i = 1, 10 do
+			p.auto_deadly[i] = load_or_set_bps(p.auto_deadly[i], p, i == check_count,
+				fix_bp_addr(0x03DCE8), string.format("(A4)==$%x&&D1<%x", p.addr.base, i), string.format("PC=%x;g", fix_bp_addr(0x03DD16)))
+		end
+	end
+
+	-- 自動マリートリプルエクスタシー
+	local set_auto_3ecst = function(p, enabled)
+		p.auto_3ecst = load_or_set_bps(p.auto_3ecst, p, enabled,
+			fix_bp_addr(0x041CE0), string.format("(A4)==$%x", p.addr.base), string.format("PC=%x;g", fix_bp_addr(0x041CFC)))
+	end
+
+	-- ドリルLVセット
+	local set_auto_drill = function(p, count)
+		p.auto_drill = p.auto_drill or new_empty_table(5)
+		local check_count = count - 1
+		for i = 1, 5 do
+			p.auto_drill[i] = load_or_set_bps(p.auto_drill[i], p, i == check_count,
+				fix_bp_addr(0x042C10), string.format("(A4)==$%x", p.addr.base), string.format("D7=%x;g", i))
+		end
+	end
+
+	-- 自動アンリミ
+	local set_auto_unlimit = function(p, count)
+		p.auto_unlimit = p.auto_unlimit or new_empty_table(11)
+		-- 自動アンリミサイクロン
+		p.auto_unlimit[11] = load_or_set_bps(p.auto_unlimit[11], p, count == 11,
+			fix_bp_addr(0x049966), string.format("(A4)==$%x", p.addr.base), string.format("PC=%x;g", fix_bp_addr(0x4998A)))
+		-- 自動アンリミ途中
+		local check_count = count == 11 and 9 or (count - 1)
+		for i = 1, 10 do
+			p.auto_unlimit[i] = load_or_set_bps(p.auto_unlimit[i], p, i == check_count,
+				fix_bp_addr(0x049B1C), string.format("(A4)==$%x&&D1<%x", p.addr.base, i), string.format("PC=%x;g", fix_bp_addr(0x049B4E)))
+		end
 	end
 
 	-- 当たり判定と投げ判定用のブレイクポイントとウォッチポイントのセット
@@ -10645,71 +10698,6 @@ function rbff2.startplugin()
 						end
 					end
 				end
-				-- 自動デッドリーレイブ
-				if 1 < global.auto_input.rave and p.char == 5 then
-					-- ギース
-					if p.skip_frame and op.state == 1 then
-						if p.act == 0xE1 and 2 <= global.auto_input.rave then
-							cmd_base._a(p, next_joy)
-						elseif p.act == 0xE3 and 3 <= global.auto_input.rave then
-							cmd_base._a(p, next_joy)
-						elseif p.act == 0xE4 and 4 <= global.auto_input.rave then
-							cmd_base._b(p, next_joy)
-						elseif p.act == 0xE5 and 5 <= global.auto_input.rave then
-							cmd_base._b(p, next_joy)
-						elseif p.act == 0xE6 and 6 <= global.auto_input.rave then
-							cmd_base._b(p, next_joy)
-						elseif p.act == 0xE7 and 7 <= global.auto_input.rave then
-							cmd_base._c(p, next_joy)
-						elseif p.act == 0xE8 and 8 <= global.auto_input.rave then
-							cmd_base._c(p, next_joy)
-						elseif p.act == 0xE9 and 9 <= global.auto_input.rave then
-							cmd_base._c(p, next_joy)
-						elseif p.act == 0xEA and 10 <= global.auto_input.rave then
-							p.write_bs_hook({ id = 0x00, ver = 0x1EFF, bs = false, name = "デッドリーレイブ(フィニッシュ)", })
-						end
-					end
-				end
-				-- 自動アンリミテッドデザイア
-				if 1 < global.auto_input.desire and p.char == 20 then
-					-- クラウザー
-					if p.skip_frame and op.state == 1 then
-						if p.act == 0xE1 and 2 <= global.auto_input.desire then
-							cmd_base._a(p, next_joy)
-						elseif p.act == 0xE3 and 3 <= global.auto_input.desire then
-							cmd_base._b(p, next_joy)
-						elseif p.act == 0xE4 and 4 <= global.auto_input.desire then
-							cmd_base._c(p, next_joy)
-						elseif p.act == 0xE5 and 5 <= global.auto_input.desire then
-							cmd_base._b(p, next_joy)
-						elseif p.act == 0xE6 and 6 <= global.auto_input.desire then
-							cmd_base._c(p, next_joy)
-						elseif p.act == 0xE7 and 7 <= global.auto_input.desire then
-							cmd_base._a(p, next_joy)
-						elseif p.act == 0xE8 and 8 <= global.auto_input.desire then
-							cmd_base._b(p, next_joy)
-						elseif p.act == 0xE9 and 9 <= global.auto_input.desire then
-							cmd_base._c(p, next_joy)
-						elseif p.act == 0xEA and 10 == global.auto_input.desire then
-							cmd_base._c(p, next_joy)
-						elseif p.act == 0xEA and 11 == global.auto_input.desire then
-							p.write_bs_hook({ id = 0x00, ver = 0x06FE, bs = false, name = "アンリミテッドデザイア2", })
-						end
-					end
-				end
-				-- 自動ドリル
-				if 1 < global.auto_input.drill and p.char == 11 and 1 < global.auto_input.drill then
-					if p.act >= 0x108 and p.act <= 0x10D and p.act_frame % 2 == 0 then
-						local lv = pgm:read_u8(p.addr.base + 0x94)
-						if (lv < 9 and 2 <= global.auto_input.drill) or (lv < 10 and 3 <= global.auto_input.drill) or 4 <= global.auto_input.drill then
-							cmd_base._c(p, next_joy)
-						end
-					elseif p.act == 0x10E and p.act_count == 0  and p.act_frame == 0 then
-						if 5 == global.auto_input.drill then
-							p.write_bs_hook({ id = 0x00, ver = 0x06FE, bs = false, name = "ドリル Lv.5", })
-						end
-					end
-				end
 				-- 自動超白龍
 				if 1 < global.auto_input.pairon and p.char == 22 then
 					if p.act == 0x43 and p.act_count >= 0 and p.act_count <= 3 and p.act_frame >= 0 and 2 == global.auto_input.pairon then
@@ -11836,21 +11824,16 @@ function rbff2.startplugin()
 		global.auto_input.fast_kadenzer= col[14] == 2 -- 必勝！逆襲拳           14
 		global.auto_input.kara_ca      = col[15] == 2 -- 空振りCA               15
 
-		set_skip_esaka_check(p[1], global.auto_input.esaka_check)
-		set_skip_esaka_check(p[2], global.auto_input.esaka_check)
-
-		set_auto_taneuma(p[1], global.auto_input.auto_taneuma)
-		set_auto_taneuma(p[2], global.auto_input.auto_taneuma)
-
-		set_fast_kadenzer(p[1], global.auto_input.fast_kadenzer)
-		set_fast_kadenzer(p[2], global.auto_input.fast_kadenzer)
-
-		set_auto_katsu(p[1], global.auto_input.auto_katsu)
-		set_auto_katsu(p[2], global.auto_input.auto_katsu)
-
-		set_kara_ca(p[1], global.auto_input.kara_ca)
-		set_kara_ca(p[2], global.auto_input.kara_ca)
-
+		for i, p in ipairs(players) do
+			set_auto_deadly(p, global.auto_input.rave)
+			set_auto_unlimit(p, global.auto_input.desire)
+			set_auto_drill(p, global.auto_input.drill)
+			set_skip_esaka_check(p, global.auto_input.esaka_check)
+			set_auto_taneuma(p, global.auto_input.auto_taneuma)
+			set_fast_kadenzer(p, global.auto_input.fast_kadenzer)
+			set_auto_katsu(p, global.auto_input.auto_katsu)
+			set_kara_ca(p, global.auto_input.kara_ca)
+		end
 		menu_cur = main_menu
 	end
 	local auto_menu_to_main_cancel = function()
@@ -13300,6 +13283,10 @@ function rbff2.startplugin()
 			-- CREDIT表示のルーチンを即RTS
 			pgm:write_direct_u16(0x00C700, 0x4E75)
 
+			-- 自動アンリミのバグ修正
+			pgm:write_direct_u8(fix_bp_addr(0x049951), 0x2)
+			pgm:write_direct_u8(fix_bp_addr(0x049947), 0x9)
+
 			-- 逆襲拳、サドマゾの初段で相手の状態変更しない（相手が投げられなくなる事象が解消する）
 			-- pgm:write_direct_u8(0x57F43, 0x00)
 
@@ -13324,7 +13311,6 @@ function rbff2.startplugin()
 			-- pgm:write_direct_u16(1004BF, 0x3CC1)     -- 1P Level 2 Blue Mary 0x55FE46
 			-- cheat offset NGX 45F987 = MAME 0
 			]]
-			-- maincpu.pb@10E003=08 デッドリーレイブとアンリミの自動動作
 		end
 
 		-- 強制的に家庭用モードに変更
