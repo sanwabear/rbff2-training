@@ -123,12 +123,13 @@ local global = {
 		drill        = 5,     -- ドリル                  7
 		pairon       = 1,     -- 超白龍                  8
 		real_counter = 1,     -- M.リアルカウンター      9
-		auto_taneuma = false, -- 炎の種馬               10
-		auto_katsu   = false, -- 喝CA                   11
-		-- 入力設定                                     12
-		esaka_check  = false, -- 詠酒距離チェック       13
-		fast_kadenzer= false, -- 必勝！逆襲拳           14
-		kara_ca      = false, -- 空振りCA               15
+		auto_3ecst   = false, -- M.トリプルエクスタシー 10
+		auto_taneuma = false, -- 炎の種馬               11
+		auto_katsu   = false, -- 喝CA                   12
+		-- 入力設定                                     13
+		esaka_check  = false, -- 詠酒距離チェック       14
+		fast_kadenzer= false, -- 必勝！逆襲拳           15
+		kara_ca      = false, -- 空振りCA               16
 	},
 
 	frzc            = 1,
@@ -11817,12 +11818,13 @@ function rbff2.startplugin()
 		global.auto_input.drill        = col[ 7]      -- ドリル                  7
 		global.auto_input.pairon       = col[ 8]      -- 超白龍                  8
 		global.auto_input.real_counter = col[ 9]      -- M.リアルカウンター      9
-		global.auto_input.auto_taneuma = col[10] == 2 -- 炎の種馬               10
-		global.auto_input.auto_katsu   = col[11] == 2 -- 喝CA                   11
-		-- 入力設定                                                             12
-		global.auto_input.esaka_check  = col[13] == 2 -- 詠酒距離チェック       13
-		global.auto_input.fast_kadenzer= col[14] == 2 -- 必勝！逆襲拳           14
-		global.auto_input.kara_ca      = col[15] == 2 -- 空振りCA               15
+		global.auto_input.auto_3ecst   = col[10] == 2 -- M.トリプルエクスタシー  9
+		global.auto_input.auto_taneuma = col[11] == 2 -- 炎の種馬               10
+		global.auto_input.auto_katsu   = col[12] == 2 -- 喝CA                   11
+		-- 入力設定                                                             13
+		global.auto_input.esaka_check  = col[14] == 2 -- 詠酒距離チェック       14
+		global.auto_input.fast_kadenzer= col[15] == 2 -- 必勝！逆襲拳           15
+		global.auto_input.kara_ca      = col[16] == 2 -- 空振りCA               16
 
 		for i, p in ipairs(players) do
 			set_auto_deadly(p, global.auto_input.rave)
@@ -11833,6 +11835,7 @@ function rbff2.startplugin()
 			set_fast_kadenzer(p, global.auto_input.fast_kadenzer)
 			set_auto_katsu(p, global.auto_input.auto_katsu)
 			set_kara_ca(p, global.auto_input.kara_ca)
+			set_auto_3ecst(p, global.auto_input.auto_3ecst)
 		end
 		menu_cur = main_menu
 	end
@@ -12025,12 +12028,13 @@ function rbff2.startplugin()
 		col[ 7] = g.auto_input.drill              -- ドリル                  7
 		col[ 8] = g.auto_input.pairon             -- 超白龍                  8
 		col[ 9] = g.auto_input.real_counter       -- M.リアルカウンター      9
-		col[10] = global.auto_input.auto_taneuma and 2 or 1 -- 炎の種馬     10
-		col[11] = global.auto_input.auto_katsu   and 2 or 1 -- 喝CA         11
-		-- 入力設定                                                         12
-		col[13] = global.auto_input.esaka_check  and 2 or 1 -- 詠酒距離チェック 13
-		col[14] = global.auto_input.fast_kadenzer and 2 or 1 -- 必勝！逆襲拳 14
-		col[15] = global.auto_input.kara_ca      and 2 or 1 -- 空振りCA     15
+		col[10] = g.auto_input.auto_3ecst and 2 or 1 -- M.トリプルエクスタシー 10
+		col[11] = global.auto_input.auto_taneuma and 2 or 1 -- 炎の種馬     11
+		col[12] = global.auto_input.auto_katsu   and 2 or 1 -- 喝CA         12
+		-- 入力設定                                                         13
+		col[14] = global.auto_input.esaka_check  and 2 or 1 -- 詠酒距離チェック 14
+		col[15] = global.auto_input.fast_kadenzer and 2 or 1 -- 必勝！逆襲拳 15
+		col[16] = global.auto_input.kara_ca      and 2 or 1 -- 空振りCA     16
 	end
 	local init_restart_fight = function()
 	end
@@ -12653,6 +12657,7 @@ function rbff2.startplugin()
 			{ "ドリル"                , { 1, 2, 3, 4, 5 }, },
 			{ "超白龍"                , { "OFF", "C攻撃-判定発生前", "C攻撃-判定発生後" }, },
 			{ "M.リアルカウンター"    , { "OFF", "ジャーマン", "フェイスロック", "投げっぱなしジャーマン", "ランダム", }, },
+			{ "M.トリプルエクスタシー", { "OFF", "ON" }, },
 			{ "炎の種馬"              , { "OFF", "ON" }, },
 			{ "喝CA"                  , { "OFF", "ON" }, },
 			{ "                          入力設定" },
@@ -12673,12 +12678,13 @@ function rbff2.startplugin()
 				1, -- ドリル                  7
 				1, -- 超白龍                  8
 				1, -- M.リアルカウンター      9
-				1, -- 炎の種馬               10
-				1, -- 喝CA                   11
-				0, -- 入力設定               12
-				1, -- 詠酒距離チェック       13
-				1, -- 必勝！逆襲拳           14
-				1, -- 空振りCA               15
+				1, -- M.トリプルエクスタシー 10
+				1, -- 炎の種馬               11
+				1, -- 喝CA                   12
+				0, -- 入力設定               13
+				1, -- 詠酒距離チェック       14
+				1, -- 必勝！逆襲拳           15
+				1, -- 空振りCA               16
 			},
 		},
 		on_a = {
@@ -12691,12 +12697,13 @@ function rbff2.startplugin()
 			auto_menu_to_main, -- ドリル                  7
 			auto_menu_to_main, -- 超白龍                  8
 			auto_menu_to_main, -- M.リアルカウンター      9
-			auto_menu_to_main, -- 炎の種馬               10
-			auto_menu_to_main, -- 喝CA                   11
-			auto_menu_to_main, -- 入力設定               12
-			auto_menu_to_main, -- 詠酒距離チェック       13
-			auto_menu_to_main, -- 必勝！逆襲拳           14
-			auto_menu_to_main, -- 空振りCA               15
+			auto_menu_to_main, -- M.トリプルエクスタシー 10
+			auto_menu_to_main, -- 炎の種馬               11
+			auto_menu_to_main, -- 喝CA                   12
+			auto_menu_to_main, -- 入力設定               13
+			auto_menu_to_main, -- 詠酒距離チェック       14
+			auto_menu_to_main, -- 必勝！逆襲拳           15
+			auto_menu_to_main, -- 空振りCA               16
 		},
 		on_b = {
 			auto_menu_to_main_cancel, -- 自動入力設定            1
@@ -12708,12 +12715,13 @@ function rbff2.startplugin()
 			auto_menu_to_main_cancel, -- ドリル                  7
 			auto_menu_to_main_cancel, -- 超白龍                  8
 			auto_menu_to_main_cancel, -- リアルカウンター        9
-			auto_menu_to_main_cancel, -- 炎の種馬               10
-			auto_menu_to_main_cancel, -- 喝CA                   11
-			auto_menu_to_main_cancel, -- 入力設定               12
-			auto_menu_to_main_cancel, -- 詠酒距離チェック       13
-			auto_menu_to_main_cancel, -- 必勝！逆襲拳           14
-			auto_menu_to_main_cancel, -- 空振りCA               15
+			auto_menu_to_main_cancel, -- M.トリプルエクスタシー 10
+			auto_menu_to_main_cancel, -- 炎の種馬               11
+			auto_menu_to_main_cancel, -- 喝CA                   12
+			auto_menu_to_main_cancel, -- 入力設定               13
+			auto_menu_to_main_cancel, -- 詠酒距離チェック       14
+			auto_menu_to_main_cancel, -- 必勝！逆襲拳           15
+			auto_menu_to_main_cancel, -- 空振りCA               16
 		},
 	}
 
