@@ -11056,14 +11056,14 @@ function rbff2.startplugin()
 					dir_name = dir_name .. "/" .. char_names2[p.char]
 					mkdir(dir_name)
 					if p.slide_atk then
-						name = string.format("%s_SLIDE_%x_%s_%03d", char_names2[p.char], p.act_data.id_1st or 0, frame.name, p.atk_count)
-						dir_name = dir_name .. string.format("/SLIDE_%x", p.act_data.id_1st or 0)
+						name = string.format("%s_SLIDE_%04x_%s_%03d", char_names2[p.char], p.act_data.id_1st or 0, frame.name, p.atk_count)
+						dir_name = dir_name .. string.format("/SLIDE_%04x", p.act_data.id_1st or 0)
 					elseif p.bs_atk then
-						name = string.format("%s_BS_%x_%s_%03d", char_names2[p.char], p.act_data.id_1st or 0, frame.name, p.atk_count)
-						dir_name = dir_name .. string.format("/BS_%x", p.act_data.id_1st or 0)
+						name = string.format("%s_BS_%04x_%s_%03d", char_names2[p.char], p.act_data.id_1st or 0, frame.name, p.atk_count)
+						dir_name = dir_name .. string.format("/BS_%04x", p.act_data.id_1st or 0)
 					else
-						name = string.format("%s_%x_%s_%03d", char_names2[p.char], p.act_data.id_1st or 0, frame.name, p.atk_count)
-						dir_name = dir_name .. string.format("/%x", p.act_data.id_1st or 0)
+						name = string.format("%s_%04x_%s_%03d", char_names2[p.char], p.act_data.id_1st or 0, frame.name, p.atk_count)
+						dir_name = dir_name .. string.format("/%04x", p.act_data.id_1st or 0)
 					end
 					mkdir(dir_name)
 					if i == 1 and global.save_snapshot > 1 then
