@@ -21,7 +21,7 @@
 --SOFTWARE.
 
 local exports = {}
-require('lfs')
+local lfs = require("lfs")
 local convert_lib = require("data/button_char")
 local convert = function(str)
 	return str and convert_lib(str) or str
@@ -8727,6 +8727,7 @@ function rbff2.startplugin()
 			p.old_act        = p.act or 0x00
 			p.act            = pgm:read_u16(p.addr.act)
 			p.acta           = pgm:read_u16(p.addr.acta)
+			p.old_act_count  = p.act_count
 			p.act_count      = pgm:read_u8(p.addr.act_count)
 			-- 家庭用004A6Aからの処理
 			p.act_boxtype    = 0xFFFF & (pgm:read_u8(p.addr.act_boxtype) & 0xC0 * 4)
@@ -9570,7 +9571,7 @@ function rbff2.startplugin()
 			end
 		end
 
-		for i, p in ipairs(players) do
+		for _, p in ipairs(players) do
 			-- 無敵表示
 			p.muteki.type = 0 -- 無敵
 			p.vul_hi, p.vul_lo = 240, 0
@@ -11014,6 +11015,8 @@ function rbff2.startplugin()
 				local chg_y = p.chg_air_state ~= 0
 				local chg_hit = p.chg_hitbox_frm == global.frame_number
 				local chg_hurt = p.chg_hurtbox_frm == global.frame_number
+				local chg_sway = p.on_sway_line == global.frame_number or p.on_main_line  == global.frame_number
+				local chg_actc = p.atk_count ~= 1 and (p.old_act_count ~= p.act_count)
 				for _, fb in pairs(p.fireball) do
 					if fb.chg_hitbox_frm == global.frame_number then
 						chg_hit = true
@@ -11023,7 +11026,7 @@ function rbff2.startplugin()
 					end
 				end
 				-- 判定が変わったら
-				if p.act_normal ~= true and (p.atk_count == 1 or p.old_act_normal ~= p.act_normal or chg_y or chg_hit or chg_hurt) then
+				if p.act_normal ~= true and (p.atk_count == 1 or p.old_act_normal ~= p.act_normal or chg_y or chg_hit or chg_hurt or chg_sway) then
 					-- ポーズさせる
 					if global.pause_hitbox == 4 then
 						global.pause = true
@@ -11031,24 +11034,49 @@ function rbff2.startplugin()
 					-- スクショ保存
 					local frame_group = p.act_frames2[#p.act_frames2]
 					local frame = frame_group[#frame_group]
-
-					local name
+					local isDir = function(name)
+						if type(name)~="string" then return false end
+						local cd = lfs.currentdir()
+						local is = lfs.chdir(name) and true or false
+						lfs.chdir(cd)
+						return is
+					end
+					local mkdir = function(path)
+						if isDir(path) then
+							return true, nil
+						end
+						local r, err = lfs.mkdir(path)
+						if not r then
+							print(err)
+						end
+						return r, err
+					end
+					local name, dir_name = nil, base_path() .. "/capture"
+					mkdir(dir_name)
+					dir_name = dir_name .. "/" .. char_names2[p.char]
+					mkdir(dir_name)
 					if p.slide_atk then
 						name = string.format("%s_SLIDE_%x_%s_%03d", char_names2[p.char], p.act_data.id_1st or 0, frame.name, p.atk_count)
+						dir_name = dir_name .. string.format("/SLIDE_%x", p.act_data.id_1st or 0)
 					elseif p.bs_atk then
 						name = string.format("%s_BS_%x_%s_%03d", char_names2[p.char], p.act_data.id_1st or 0, frame.name, p.atk_count)
+						dir_name = dir_name .. string.format("/BS_%x", p.act_data.id_1st or 0)
 					else
 						name = string.format("%s_%x_%s_%03d", char_names2[p.char], p.act_data.id_1st or 0, frame.name, p.atk_count)
+						dir_name = dir_name .. string.format("/%x", p.act_data.id_1st or 0)
 					end
+					mkdir(dir_name)
 					if i == 1 and global.save_snapshot > 1 then
 						-- print(i, name, p.attacking and "A" or "-", (p.tw_muteki > 0) and "M" or "-", (p.tw_muteki2 > 0) and "m" or "-")
-						local filename = base_path() .. "/capture/" .. name .. ".png"
+						local filename = dir_name .. "/" .. name .. ".png"
 						local exists = is_file(filename)
 						local dowrite = false
 						if exists and global.save_snapshot == 3 then
 							dowrite = true
-							os.remove(filename)
-						elseif global.save_snapshot == 2 and exists == false then
+							if exists then
+								os.remove(filename)
+							end
+						elseif (global.save_snapshot == 2 or global.save_snapshot == 3) and exists == false then
 							dowrite = true
 						end
 						if dowrite then
