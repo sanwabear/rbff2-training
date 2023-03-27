@@ -9537,6 +9537,97 @@ function rbff2.startplugin()
 			p.hurtbox_txt = hurtbox_txt
 		end
 
+		for _, p in ipairs(players) do
+			-- くらい判定等の常時更新するサマリ情報
+			local all_summary = make_hurt_summary(p, p.hit_summary)
+
+			-- 攻撃判定のサマリ情報
+			if check_edge(p.hit_summary.edge.throw) then
+				p.throw_summary = make_throw_summary(p, p.hit_summary)
+			else
+				p.throw_summary = p.old_throw_summary or {}
+			end
+			p.old_throw_summary = p.throw_summary
+
+			if check_edge(p.hit_summary.edge.parry) then
+				p.parry_summary = make_parry_summary(p, p.hit_summary)
+			else
+				p.parry_summary = p.old_parry_summary or {}
+			end
+			p.old_parry_summary = p.parry_summary
+
+			--[[
+			if p.pure_dmg > 0 then
+				print(string.format("%s %s %s %s %s %x %x %x", p.attack, p.attack_id, p.attack_flag, p.pure_dmg, p.hit_summary.pure_dmg, p.state_flags2, p.state_flags3, p.state_flags4))
+			end
+			]]
+			p.dmg_summary = p.dmg_summary or {}
+			if p.hit_summary.pure_dmg ~= nil and (p.attack_id > 0 or (p.hit_summary.pure_dmg or 0) > 0) then
+				p.dmg_summary = make_dmg_summary(p, p.hit_summary) or p.dmg_summary
+			end
+
+			-- TODO 必殺技の動作終了タイミングでPOW情報が0になるものがある
+			p.pow_summary = p.pow_summary or {}
+			if p.attack > 0 then
+				p.pow_summary = make_pow_summary(p, p.hit_summary) or p.pow_summary
+			end
+
+			-- 攻撃モーション単位で変わるサマリ情報
+			local summary_p_atk = p.attack > 0 and string.format("%x %s %s %s", p.attack, p.slide_atk, p.bs_atk, p.hitbox_txt) or ""
+			p.atk_summary = p.atk_summary or {}
+			p.atkact_summary = p.atkact_summary or {}
+			-- 攻撃モーション単位で変わるサマリ情報 本体
+			if (p.attack_flag and p.attack > 0 and p.summary_p_atk ~= summary_p_atk) or
+				(p.attack_id > 0 and p.summary_p_atkid ~= p.attack_id) then
+				p.atk_summary = make_atk_summary(p, p.hit_summary)
+				if p.fake_hit == false then
+					p.atkact_summary = make_atkact_summary(p, p.hit_summary) or p.atkact_summary
+				end
+				p.summary_p_atk = summary_p_atk
+				p.summary_p_atkid = p.attack_id
+			end
+			-- 攻撃モーション単位で変わるサマリ情報 弾
+			for _, fb in pairs(p.fireball) do
+				--[[
+				if fb.pure_dmg > 0 then
+					print(string.format("%s %s %s %s", fb.attack, fb.attack_id, fb.pure_dmg, fb.hit_summary.pure_dmg))
+				end
+				]]
+				if fb.alive then
+					fb.dmg_summary = make_dmg_summary(fb, fb.hit_summary) or fb.dmg_summary
+					p.dmg_summary = fb.dmg_summary
+
+					fb.atkact_summary = make_atkact_summary(fb, fb.hit_summary) or fb.atkact_summary
+					-- 表示情報を弾の情報で上書き
+					p.atkact_summary = fb.atkact_summary
+					-- 情報を残すために弾中の動作のIDも残す
+					p.summary_p_atk = p.attack > 0 and p.attack or summary_p_atk
+				end
+			end
+
+			-- サマリ情報を結合する
+			for _, row in ipairs(p.dmg_summary) do
+				table.insert(all_summary, row)
+			end
+			for _, row in ipairs(p.pow_summary) do
+				table.insert(all_summary, row)
+			end
+			for _, row in ipairs(p.atkact_summary) do
+				table.insert(all_summary, row)
+			end
+			for _, row in ipairs(p.atk_summary) do
+				table.insert(all_summary, row)
+			end
+			for _, row in ipairs(p.throw_summary) do
+				table.insert(all_summary, row)
+			end
+			for _, row in ipairs(p.parry_summary) do
+				table.insert(all_summary, row)
+			end
+
+			p.all_summary = sort_summary(all_summary)
+		end
+
 		for i, p in ipairs(players) do
 			local op         = players[3-i]
 
@@ -10137,97 +10228,6 @@ function rbff2.startplugin()
 			elseif p.last_blockstun > 0 then
 				p.last_blockstun = p.last_blockstun - 1
 			end
-		end
-
-		for _, p in ipairs(players) do
-			-- くらい判定等の常時更新するサマリ情報
-			local all_summary = make_hurt_summary(p, p.hit_summary)
-
-			-- 攻撃判定のサマリ情報
-			if check_edge(p.hit_summary.edge.throw) then
-				p.throw_summary = make_throw_summary(p, p.hit_summary)
-			else
-				p.throw_summary = p.old_throw_summary or {}
-			end
-			p.old_throw_summary = p.throw_summary
-
-			if check_edge(p.hit_summary.edge.parry) then
-				p.parry_summary = make_parry_summary(p, p.hit_summary)
-			else
-				p.parry_summary = p.old_parry_summary or {}
-			end
-			p.old_parry_summary = p.parry_summary
-
-			--[[
-			if p.pure_dmg > 0 then
-				print(string.format("%s %s %s %s %s %x %x %x", p.attack, p.attack_id, p.attack_flag, p.pure_dmg, p.hit_summary.pure_dmg, p.state_flags2, p.state_flags3, p.state_flags4))
-			end
-			]]
-			p.dmg_summary = p.dmg_summary or {}
-			if p.hit_summary.pure_dmg ~= nil and (p.attack_id > 0 or (p.hit_summary.pure_dmg or 0) > 0) then
-				p.dmg_summary = make_dmg_summary(p, p.hit_summary) or p.dmg_summary
-			end
-
-			-- TODO 必殺技の動作終了タイミングでPOW情報が0になるものがある
-			p.pow_summary = p.pow_summary or {}
-			if p.attack > 0 then
-				p.pow_summary = make_pow_summary(p, p.hit_summary) or p.pow_summary
-			end
-
-			-- 攻撃モーション単位で変わるサマリ情報
-			local summary_p_atk = p.attack > 0 and string.format("%x %s %s %s", p.attack, p.slide_atk, p.bs_atk, p.hitbox_txt) or ""
-			p.atk_summary = p.atk_summary or {}
-			p.atkact_summary = p.atkact_summary or {}
-			-- 攻撃モーション単位で変わるサマリ情報 本体
-			if (p.attack_flag and p.attack > 0 and p.summary_p_atk ~= summary_p_atk) or
-				(p.attack_id > 0 and p.summary_p_atkid ~= p.attack_id) then
-				p.atk_summary = make_atk_summary(p, p.hit_summary)
-				if p.fake_hit == false then
-					p.atkact_summary = make_atkact_summary(p, p.hit_summary) or p.atkact_summary
-				end
-				p.summary_p_atk = summary_p_atk
-				p.summary_p_atkid = p.attack_id
-			end
-			-- 攻撃モーション単位で変わるサマリ情報 弾
-			for _, fb in pairs(p.fireball) do
-				--[[
-				if fb.pure_dmg > 0 then
-					print(string.format("%s %s %s %s", fb.attack, fb.attack_id, fb.pure_dmg, fb.hit_summary.pure_dmg))
-				end
-				]]
-				if fb.alive then
-					fb.dmg_summary = make_dmg_summary(fb, fb.hit_summary) or fb.dmg_summary
-					p.dmg_summary = fb.dmg_summary
-
-					fb.atkact_summary = make_atkact_summary(fb, fb.hit_summary) or fb.atkact_summary
-					-- 表示情報を弾の情報で上書き
-					p.atkact_summary = fb.atkact_summary
-					-- 情報を残すために弾中の動作のIDも残す
-					p.summary_p_atk = p.attack > 0 and p.attack or summary_p_atk
-				end
-			end
-
-			-- サマリ情報を結合する
-			for _, row in ipairs(p.dmg_summary) do
-				table.insert(all_summary, row)
-			end
-			for _, row in ipairs(p.pow_summary) do
-				table.insert(all_summary, row)
-			end
-			for _, row in ipairs(p.atkact_summary) do
-				table.insert(all_summary, row)
-			end
-			for _, row in ipairs(p.atk_summary) do
-				table.insert(all_summary, row)
-			end
-			for _, row in ipairs(p.throw_summary) do
-				table.insert(all_summary, row)
-			end
-			for _, row in ipairs(p.parry_summary) do
-				table.insert(all_summary, row)
-			end
-
-			p.all_summary = sort_summary(all_summary)
 		end
 
 		for i, p in ipairs(players) do

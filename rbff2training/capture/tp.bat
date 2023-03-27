@@ -16,7 +16,7 @@ FOR /R %%a IN (*.png) DO (
 		echo to   !fto!
 		echo dir  !fdir!
 		if NOT exist "!fdir!" ( mkdir !fdir! )
-		magick convert "!fpath!" -strip -crop 320x216+0+4 -trim -transparent "#B0B6BE" "!fto!"
+		magick convert "!fpath!" -strip -crop 320x230 -trim -transparent "#B0B6BE" "!fto!"
 	)
 )
 endlocal enabledelayedexpansion
