@@ -4492,9 +4492,9 @@ local throw_inv_type = {
 	time24 = { value = 24, disp_label = "タイマー24", name = "通常投げ"},
 	time20 = { value = 20, disp_label = "タイマー20", name = "M.リアルカウンター投げ"},
 	time10 = { value = 10, disp_label = "タイマー10", name = "真空投げ 羅生門 鬼門陣 M.タイフーン M.スパイダー 爆弾パチキ ドリル ブレスパ ブレスパBR リフトアップブロー デンジャラススルー ギガティックサイクロン マジンガ STOL"},
-	sway   = { value = 256, disp_label = "スウェー",  name = "スウェー"},
-	flag1  = { value = 256, disp_label = "フラグ1", name = "投げ無敵フラグ1"},
-	flag2  = { value = 256, disp_label = "フラグ2", name = "投げ無敵フラグ2"},
+	sway   = { value = 256, disp_label = "スウェー", name = "スウェー"},
+	flag1  = { value = 256, disp_label = "フラグ1", name = "無敵フラグ"},
+	flag2  = { value = 256, disp_label = "フラグ2", name = "通常投げ無敵フラグ"},
 	state  = { value = 256, disp_label = "やられ状態", name = "相互のやられ状態が非通常値"},
 	no_gnd = { value = 256, disp_label = "高度", name = "接地状態ではない（地面へのめり込みも投げ不可）"},
 }
