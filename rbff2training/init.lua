@@ -4461,6 +4461,51 @@ local fix_bp_addr = function(addr)
 	return addr + fix2
 end
 
+-- やられ判定の高さ
+local head_inv_type = {
+	none  = { value = -1024, disp_label = "", name = ""}, -- なし
+	top32 = { value = 32, disp_label = "上半身無敵1", name = "避け"}, -- 32 避け
+	top40 = { value = 40, disp_label = "上半身無敵2", name = "ウェービングブロー,龍転身,ダブルローリング"}, -- 40 ウェービングブロー,龍転身,ダブルローリング
+	top48 = { value = 48, disp_label = "上半身無敵3", name = "ローレンス避け"}, -- 48 ローレンス避け
+	top60 = { value = 60, disp_label = "頭部無敵1", name = "屈 アンディ等"}, -- 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
+	top64 = { value = 64, disp_label = "頭部無敵2", name = "屈 テリー等"}, -- 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
+	top68 = { value = 68, disp_label = "頭部無敵3", name = "屈 ローレンス"}, -- 68 屈 ローレンス
+	top76 = { value = 76, disp_label = "頭部無敵4", name = "屈 フランコ"}, -- 76 屈 フランコ
+	top80 = { value = 80, disp_label = "頭部無敵5", name = "屈 クラウザー"}, -- 80 屈 クラウザー
+}
+-- 足元無敵
+local low_inv_type = {
+	none  = { value = 1024, disp_label = "", name = ""}, -- なし
+	low40 = { value = 40, disp_label = "足元無敵1", name = "対アンディ屈C"}, -- 対アンディ屈C
+	low32 = { value = 32, disp_label = "足元無敵2", name = "対ギース屈C"}, -- 対ギース屈C
+	low24 = { value = 24, disp_label = "足元無敵3", name = "対だいたいの屈B（キムとボブ以外）"}, -- 対だいたいの屈B（キムとボブ以外）
+}
+for _, types in ipairs({head_inv_type, low_inv_type}) do
+	local values = {}
+	for _, type in ipairs(types) do
+		table.insert(values, type)
+	end
+	types.values = values
+end
+head_inv_type.get = function(real_top)
+	local ret = head_inv_type.none
+	for _, type in ipairs(head_inv_type.values) do
+		if real_top <= type.value then
+			ret = type
+		end
+	end
+	return ret
+end
+low_inv_type.get = function(real_bottom)
+	local ret = low_inv_type.none
+	for _, type in ipairs(low_inv_type.values) do
+		if real_bottom >= type.value then
+			ret = type
+		end
+	end
+	return ret
+end
+
 -- 削りダメージ補正
 local chip_dmg_types = {
 	zero = { -- ゼロ
@@ -5007,53 +5052,8 @@ local update_box_summary = function(p, box)
 				info.range_phx_tw =  summary.phx_tw and in_range(real_top, real_bottom, 120, 56)
 			elseif edge == summary.edge.hurt then
 				local real_top, real_bottom = edge.top + p.pos_y, edge.bottom + p.pos_y
-
-				summary.head_inv1 = false
-				summary.head_inv2 = false
-				summary.head_inv3 = false
-				summary.head_inv4 = false
-				summary.head_inv5 = false
-				summary.head_inv6 = false
-				summary.head_inv7 = false
-				summary.head_inv8 = false
-				summary.low_inv1 = false
-				summary.low_inv2 = false
-				summary.low_inv3 = false
-
-				if real_top <= 32 then
-					summary.head_inv1 = true -- 32 上半身無敵 避け
-				end
-				if real_top <= 40 then
-					summary.head_inv2 = true -- 40 上半身無敵 ウェービングブロー,龍転身,ダブルローリング
-				end
-				if real_top <= 48 then
-					summary.head_inv3 = true -- 48 上半身無敵 ローレンス避け
-				end
-				if real_top <= 60 then
-					summary.head_inv4 = true -- 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
-				end
-				if real_top <= 64 then
-					summary.head_inv5 = true -- 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
-				end
-				if real_top <= 68 then
-					summary.head_inv6 = true -- 68 屈 ローレンス
-				end
-				if real_top <= 76 then
-					summary.head_inv7 = true -- 76 屈 フランコ
-				end
-				if real_top <= 80 then
-					summary.head_inv8 = true -- 80 屈 クラウザー
-				end
-
-				if real_bottom >= 40 then
-					summary.low_inv1 = true -- 足元無敵
-				end
-				if real_bottom >= 32 then
-					summary.low_inv2 = true -- 足元無敵
-				end
-				if real_bottom >= 24 then
-					summary.low_inv3 = true -- 足元無敵
-				end
+				summary.head_inv = head_inv_type.get(real_top)
+				summary.low_inv  = low_inv_type.get(real_bottom)
 			end
 		end
 
@@ -8181,40 +8181,13 @@ function rbff2.startplugin()
 		local has_hurt = check_edge(summary.edge.hurt)
 		if has_hurt == true and summary.hurt == true or p.hit.vulnerable == true then
 			local temp_hurt = {}
-			if summary.head_inv1 then
-				-- 上半身無敵 避け
-				table.insert(temp_hurt, "上半身無敵1")
-			elseif summary.head_inv2 then
-				-- 上半身無敵 ウェービングブロー,龍転身,ダブルローリング
-				table.insert(temp_hurt, "上半身無敵2")
-			elseif summary.head_inv3 then
-				-- 上半身無敵 ローレンス避け
-				table.insert(temp_hurt, "上半身無敵3")
-			elseif summary.head_inv4 then
-			 	-- 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
-				 table.insert(temp_hurt, "頭部無敵1")
-			elseif summary.head_inv5 then
-				-- 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
-				table.insert(temp_hurt, "頭部無敵2")
-			elseif summary.head_inv6 then
-				-- 68 屈 ローレンス
-				table.insert(temp_hurt, "頭部無敵3")
-			elseif summary.head_inv7 then
-				-- 76 屈 フランコ
-				--table.insert(temp_hurt, "頭部無敵4")
-			elseif summary.head_inv8 then
-				-- 80 屈 クラウザー
-				--table.insert(temp_hurt, "頭部無敵5")
+			-- 上半身無敵
+			if summary.head_inv ~= head_inv_type.none then
+				table.insert(temp_hurt, summary.head_inv.disp_label)
 			end
-			if summary.low_inv1 then
-				-- 足元無敵 対アンディ屈C
-				table.insert(temp_hurt, "足元無敵1")
-			elseif summary.low_inv2 then
-				-- 足元無敵 対ギース屈C
-				table.insert(temp_hurt, "足元無敵2")
-			elseif summary.low_inv3 then
-				-- 足元無敵 対だいたいの屈B（キムとボブ以外）
-				table.insert(temp_hurt, "足元無敵3")
+			-- 足元無敵
+			if summary.low_inv ~= low_inv_type.none then
+				table.insert(temp_hurt, summary.low_inv.disp_label)
 			end
 			if summary.main_inv then
 				-- メインライン攻撃無敵  main line attack invincible
@@ -8385,9 +8358,7 @@ function rbff2.startplugin()
 				parry = {},
 				throw = {},
 			},
-			head_inv1 = false, -- 上半身無敵 避け
-			head_inv2 = false, -- 上半身無敵 ウェービングブロー,龍転身,ダブルローリング
-			head_inv3 = false, -- 上半身無敵 ローレンス避け
+			head_inv  = head_inv_type.none,  -- 上半身無敵
 			low_inv1 = false, -- 足元無敵 対アンディ屈C
 			low_inv2 = false, -- 足元無敵 対ギース屈C
 			low_inv3 = false, -- 足元無敵 対だいたいの屈B（キムとボブとホンフゥ以外）
