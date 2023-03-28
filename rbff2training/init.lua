@@ -4460,31 +4460,25 @@ local fix_bp_addr = function(addr)
 	local fix2 = bp_offset[addr] and (bp_offset[addr][emu.romname()] or fix1) or fix1
 	return addr + fix2
 end
--- ライン関係の無敵
-local line_inv_type = {
-	none     = { disp_label = "", name = ""},
-	main     = { disp_label = "メイン攻撃無敵", name = "メインライン攻撃無敵"},
-	overhead = { disp_label = "対メイン上段無敵", name = "対メインライン上段攻撃無敵"},
-	low      = { disp_label = "対メイン下段無敵", name = "対メインライン下段攻撃無敵"},
-}
--- やられ判定の高さ
-local head_inv_type = {
-	none  = { value = -1024, disp_label = "", name = ""},
-	top32 = { value = 32, disp_label = "上半身無敵1", name = "32 避け"},
-	top40 = { value = 40, disp_label = "上半身無敵2", name = "40 ウェービングブロー,龍転身,ダブルローリング"},
-	top48 = { value = 48, disp_label = "上半身無敵3", name = "48 ローレンス避け"},
-	top60 = { value = 60, disp_label = "頭部無敵1", name = "60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン"},
-	top64 = { value = 64, disp_label = "頭部無敵2", name = "64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド"},
-	top68 = { value = 68, disp_label = "頭部無敵3", name = "68 屈 ローレンス"},
-	top76 = { value = 76, disp_label = "頭部無敵4", name = "76 屈 フランコ"},
-	top80 = { value = 80, disp_label = "頭部無敵5", name = "80 屈 クラウザー"},
-}
--- 足元無敵
-local low_inv_type = {
-	none  = { value = 1024, disp_label = "", name = ""},
-	low40 = { value = 40, disp_label = "足元無敵1", name = "対アンディ屈C"},
-	low32 = { value = 32, disp_label = "足元無敵2", name = "対ギース屈C"},
-	low24 = { value = 24, disp_label = "足元無敵3", name = "対だいたいの屈B（キムとボブ以外）"},
+local hurt_inv_type = {
+	none     = { type = 0, disp_label = "", name = ""},
+	-- ライン関係の無敵
+	main     = { type = 1, disp_label = "メイン攻撃無敵", name = "メインライン攻撃無敵"},
+	overhead = { type = 1, disp_label = "対メイン上段無敵", name = "対メインライン上段攻撃無敵"},
+	low      = { type = 1, disp_label = "対メイン下段無敵", name = "対メインライン下段攻撃無敵"},
+	-- やられ判定の高さ
+	top32 = { type = 2, value = 32, disp_label = "上半身無敵1", name = "32 避け"},
+	top40 = { type = 2, value = 40, disp_label = "上半身無敵2", name = "40 ウェービングブロー,龍転身,ダブルローリング"},
+	top48 = { type = 2, value = 48, disp_label = "上半身無敵3", name = "48 ローレンス避け"},
+	top60 = { type = 2, value = 60, disp_label = "頭部無敵1", name = "60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン"},
+	top64 = { type = 2, value = 64, disp_label = "頭部無敵2", name = "64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド"},
+	top68 = { type = 2, value = 68, disp_label = "頭部無敵3", name = "68 屈 ローレンス"},
+	top76 = { type = 2, value = 76, disp_label = "頭部無敵4", name = "76 屈 フランコ"},
+	top80 = { type = 2, value = 80, disp_label = "頭部無敵5", name = "80 屈 クラウザー"},
+	-- 足元無敵
+	low40 = { type = 3, value = 40, disp_label = "足元無敵1", name = "対アンディ屈C"},
+	low32 = { type = 3, value = 32, disp_label = "足元無敵2", name = "対ギース屈C"},
+	low24 = { type = 3, value = 24, disp_label = "足元無敵3", name = "対だいたいの屈B（キムとボブ以外）"},
 }
 -- 投げ無敵
 local throw_inv_type = {
@@ -4498,30 +4492,38 @@ local throw_inv_type = {
 	state  = { value = 256, disp_label = "やられ状態", name = "相互のやられ状態が非通常値"},
 	no_gnd = { value = 256, disp_label = "高度", name = "接地状態ではない（地面へのめり込みも投げ不可）"},
 }
-for _, types in ipairs({line_inv_type, head_inv_type, low_inv_type, throw_inv_type}) do
+for _, types in ipairs({hurt_inv_type, throw_inv_type}) do
 	local values = {}
 	for _, type in ipairs(types) do
 		table.insert(values, type)
 	end
 	types.values = values
 end
-head_inv_type.get = function(real_top)
-	local ret = head_inv_type.none
-	for _, type in ipairs(head_inv_type.values) do
-		if real_top <= type.value then
-			ret = type
+hurt_inv_type.get = function(p, real_top, real_bottom, box)
+	local ret, top, low = {}, nil, nil
+	for _, type in ipairs(hurt_inv_type.values) do
+		if type.type == 2 and real_top <= type.value then
+			top = type
+		end
+		if type.type == 3 and real_bottom >= type.value then
+			low = type
 		end
 	end
-	return ret
-end
-low_inv_type.get = function(real_bottom)
-	local ret = low_inv_type.none
-	for _, type in ipairs(low_inv_type.values) do
-		if real_bottom >= type.value then
-			ret = type
-		end
+	if top then
+		table.insert(ret, top)
 	end
-	return ret
+	if low then
+		table.insert(ret, low)
+	end
+	if box.type == box_type_base.v6 then  -- 食らい(対ライン上攻撃)
+		table.insert(ret, hurt_inv_type.overhead)
+	elseif box.type == box_type_base.x1 then  -- 食らい(対ライン下攻撃)
+		table.insert(ret, hurt_inv_type.low)
+	elseif box.type == box_type_base.sv1 or -- 食らい1(スウェー中)
+		box.type == box_type_base.sv2 then -- 食らい2(スウェー中)
+		table.insert(ret, hurt_inv_type.main)
+	end
+	return #ret == 0 and { hurt_inv_type.none } or ret
 end
 throw_inv_type.get = function(p)
 	local ret = throw_inv_type.none
@@ -4959,15 +4961,12 @@ local update_box_summary = function(p, box)
 			edge = summary.edge.hurt
 		elseif box.type == box_type_base.v6 then  -- 食らい(対ライン上攻撃)
 			summary.hurt = true
-			summary.line_inv = line_inv_type.overhead
 			edge = summary.edge.hurt
 		elseif box.type == box_type_base.x1 then  -- 食らい(対ライン下攻撃)
 			summary.hurt = true
-			summary.line_inv = line_inv_type.low
 			edge = summary.edge.hurt
 		elseif box.type == box_type_base.sv1 or -- 食らい1(スウェー中)
 			box.type == box_type_base.sv2 then -- 食らい2(スウェー中)
-			summary.line_inv = line_inv_type.main
 			edge = summary.edge.hurt
 		elseif box.type == box_type_base.g1 or -- 立ガード
 			box.type == box_type_base.g2 or -- 下段ガード
@@ -5094,8 +5093,7 @@ local update_box_summary = function(p, box)
 				info.range_phx_tw =  summary.phx_tw and in_range(real_top, real_bottom, 120, 56)
 			elseif edge == summary.edge.hurt then
 				local real_top, real_bottom = edge.top + p.pos_y, edge.bottom + p.pos_y
-				summary.head_inv = head_inv_type.get(real_top)
-				summary.low_inv  = low_inv_type.get(real_bottom)
+				summary.hurt_inv = hurt_inv_type.get(p, real_top, real_bottom, box)
 			end
 		end
 
@@ -8223,17 +8221,11 @@ function rbff2.startplugin()
 		local has_hurt = check_edge(summary.edge.hurt)
 		if has_hurt == true and summary.hurt == true or p.hit.vulnerable == true then
 			local temp_hurt = {}
-			-- 上半身無敵
-			if summary.head_inv ~= head_inv_type.none then
-				table.insert(temp_hurt, summary.head_inv.disp_label)
-			end
-			-- 足元無敵
-			if summary.low_inv ~= low_inv_type.none then
-				table.insert(temp_hurt, summary.low_inv.disp_label)
-			end
-			-- ライン攻撃無敵
-			if summary.line_inv ~= line_inv_type.none then
-				table.insert(temp_hurt, summary.line_inv.disp_label)
+			-- やられ判定無敵
+			for _, inv in ipairs(summary.hurt_inv) do
+				if inv ~= hurt_inv_type.none then
+					table.insert(temp_hurt, inv.disp_label)
+				end
 			end
 			if temp_hurt then
 				table.insert(hurt_labels, table.concat(temp_hurt, ","))
@@ -8364,10 +8356,8 @@ function rbff2.startplugin()
 				parry = {},
 				throw = {},
 			},
-			line_inv  = line_inv_type.none, -- ライン無敵
-			head_inv  = head_inv_type.none, -- 上半身無敵
-			low_inv   = low_inv_type.none,  -- 足元無敵
-			throw_inv = throw_inv_type.get(p), -- 投げ無敵タイマー
+			hurt_inv  = { hurt_inv_type.none }, -- やられ判定無敵
+			throw_inv = throw_inv_type.get(p), -- 投げ無敵
 		}
 		return ret
 	end
