@@ -4460,7 +4460,13 @@ local fix_bp_addr = function(addr)
 	local fix2 = bp_offset[addr] and (bp_offset[addr][emu.romname()] or fix1) or fix1
 	return addr + fix2
 end
-
+-- ライン関係の無敵
+local line_inv_type = {
+	none     = { disp_label = "", name = ""}, -- なし
+	main     = { disp_label = "メイン攻撃無敵", name = "メインライン攻撃無敵"}, -- メインライン攻撃無敵
+	overhead = { disp_label = "対メイン上段無敵", name = "対メインライン上段攻撃無敵"}, -- ライン移動中段攻撃無敵
+	low      = { disp_label = "対メイン下段無敵", name = "対メインライン下段攻撃無敵"}, -- ライン移動下段攻撃無敵
+}
 -- やられ判定の高さ
 local head_inv_type = {
 	none  = { value = -1024, disp_label = "", name = ""}, -- なし
@@ -4480,12 +4486,23 @@ local low_inv_type = {
 	low32 = { value = 32, disp_label = "足元無敵2", name = "対ギース屈C"}, -- 対ギース屈C
 	low24 = { value = 24, disp_label = "足元無敵3", name = "対だいたいの屈B（キムとボブ以外）"}, -- 対だいたいの屈B（キムとボブ以外）
 }
-for _, types in ipairs({head_inv_type, low_inv_type}) do
+for _, types in ipairs({line_inv_type, head_inv_type, low_inv_type}) do
 	local values = {}
 	for _, type in ipairs(types) do
 		table.insert(values, type)
 	end
 	types.values = values
+end
+line_inv_type.get = function(main, oh, lo)
+	local ret = line_inv_type.none
+	if main then
+		ret = line_inv_type.main
+	elseif oh then
+		ret = line_inv_type.overhead
+	elseif lo then
+		ret = line_inv_type.low
+	end
+	return ret
 end
 head_inv_type.get = function(real_top)
 	local ret = head_inv_type.none
@@ -4917,15 +4934,15 @@ local update_box_summary = function(p, box)
 			edge = summary.edge.hurt
 		elseif box.type == box_type_base.v6 then  -- 食らい(対ライン上攻撃)
 			summary.hurt = true
-			summary.line_shift_lo_inv = true
+			summary.line_inv = line_inv_type.overhead
 			edge = summary.edge.hurt
 		elseif box.type == box_type_base.x1 then  -- 食らい(対ライン下攻撃)
 			summary.hurt = true
-			summary.line_shift_oh_inv = true
+			summary.line_inv = line_inv_type.low
 			edge = summary.edge.hurt
 		elseif box.type == box_type_base.sv1 or -- 食らい1(スウェー中)
 			box.type == box_type_base.sv2 then -- 食らい2(スウェー中)
-			summary.main_inv = true
+			summary.line_inv = line_inv_type.main
 			edge = summary.edge.hurt
 		elseif box.type == box_type_base.g1 or -- 立ガード
 			box.type == box_type_base.g2 or -- 下段ガード
@@ -8189,17 +8206,9 @@ function rbff2.startplugin()
 			if summary.low_inv ~= low_inv_type.none then
 				table.insert(temp_hurt, summary.low_inv.disp_label)
 			end
-			if summary.main_inv then
-				-- メインライン攻撃無敵  main line attack invincible
-				table.insert(temp_hurt, "メインライン攻撃無敵")
-			end
-			if summary.line_shift_oh_inv then
-				-- ライン移動中段攻撃無敵 line shift overhead attack invincible
-				table.insert(temp_hurt, "ライン移動中段攻撃無敵")
-			end
-			if summary.line_shift_lo_inv then
-				-- ライン移動下段攻撃無敵 line shift low attack invincible
-				table.insert(temp_hurt, "ライン移動下段攻撃無敵")
+			-- ライン攻撃無敵
+			if summary.line_inv ~= line_inv_type.none then
+				table.insert(temp_hurt, summary.line_inv.disp_label)
 			end
 			if temp_hurt then
 				table.insert(hurt_labels, table.concat(temp_hurt, ","))
@@ -8344,9 +8353,6 @@ function rbff2.startplugin()
 			hurt = false, -- くらい判定あり（＝打撃無敵ではない)
 			hurt_otg = false, -- ダウン追撃用くらい判定あり
 			hurt_juggle = false, -- 空中追撃用くらい判定あり
-			main_inv = false, -- メインライン攻撃無敵  main line attack invincible
-			line_shift_oh_inv = false, -- ライン移動中段攻撃無敵 line shift overhead attack invincible
-			line_shift_lo_inv = false, -- ライン移動下段攻撃無敵 line shift low attack invincible
 			throw = false, -- 投げ判定あり
 			block = false, -- ガード判定あり
 			parry = false, -- 当て身キャッチ判定あり
@@ -8358,10 +8364,9 @@ function rbff2.startplugin()
 				parry = {},
 				throw = {},
 			},
-			head_inv  = head_inv_type.none,  -- 上半身無敵
-			low_inv1 = false, -- 足元無敵 対アンディ屈C
-			low_inv2 = false, -- 足元無敵 対ギース屈C
-			low_inv3 = false, -- 足元無敵 対だいたいの屈B（キムとボブとホンフゥ以外）
+			line_inv  = line_inv_type.none, -- ライン無敵
+			head_inv  = head_inv_type.none, -- 上半身無敵
+			low_inv   = low_inv_type.none,  -- 足元無敵
 		}
 	end
 
