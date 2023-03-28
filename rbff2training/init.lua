@@ -4462,47 +4462,48 @@ local fix_bp_addr = function(addr)
 end
 -- ライン関係の無敵
 local line_inv_type = {
-	none     = { disp_label = "", name = ""}, -- なし
-	main     = { disp_label = "メイン攻撃無敵", name = "メインライン攻撃無敵"}, -- メインライン攻撃無敵
-	overhead = { disp_label = "対メイン上段無敵", name = "対メインライン上段攻撃無敵"}, -- ライン移動中段攻撃無敵
-	low      = { disp_label = "対メイン下段無敵", name = "対メインライン下段攻撃無敵"}, -- ライン移動下段攻撃無敵
+	none     = { disp_label = "", name = ""},
+	main     = { disp_label = "メイン攻撃無敵", name = "メインライン攻撃無敵"},
+	overhead = { disp_label = "対メイン上段無敵", name = "対メインライン上段攻撃無敵"},
+	low      = { disp_label = "対メイン下段無敵", name = "対メインライン下段攻撃無敵"},
 }
 -- やられ判定の高さ
 local head_inv_type = {
-	none  = { value = -1024, disp_label = "", name = ""}, -- なし
-	top32 = { value = 32, disp_label = "上半身無敵1", name = "避け"}, -- 32 避け
-	top40 = { value = 40, disp_label = "上半身無敵2", name = "ウェービングブロー,龍転身,ダブルローリング"}, -- 40 ウェービングブロー,龍転身,ダブルローリング
-	top48 = { value = 48, disp_label = "上半身無敵3", name = "ローレンス避け"}, -- 48 ローレンス避け
-	top60 = { value = 60, disp_label = "頭部無敵1", name = "屈 アンディ等"}, -- 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
-	top64 = { value = 64, disp_label = "頭部無敵2", name = "屈 テリー等"}, -- 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
-	top68 = { value = 68, disp_label = "頭部無敵3", name = "屈 ローレンス"}, -- 68 屈 ローレンス
-	top76 = { value = 76, disp_label = "頭部無敵4", name = "屈 フランコ"}, -- 76 屈 フランコ
-	top80 = { value = 80, disp_label = "頭部無敵5", name = "屈 クラウザー"}, -- 80 屈 クラウザー
+	none  = { value = -1024, disp_label = "", name = ""},
+	top32 = { value = 32, disp_label = "上半身無敵1", name = "32 避け"},
+	top40 = { value = 40, disp_label = "上半身無敵2", name = "40 ウェービングブロー,龍転身,ダブルローリング"},
+	top48 = { value = 48, disp_label = "上半身無敵3", name = "48 ローレンス避け"},
+	top60 = { value = 60, disp_label = "頭部無敵1", name = "60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン"},
+	top64 = { value = 64, disp_label = "頭部無敵2", name = "64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド"},
+	top68 = { value = 68, disp_label = "頭部無敵3", name = "68 屈 ローレンス"},
+	top76 = { value = 76, disp_label = "頭部無敵4", name = "76 屈 フランコ"},
+	top80 = { value = 80, disp_label = "頭部無敵5", name = "80 屈 クラウザー"},
 }
 -- 足元無敵
 local low_inv_type = {
-	none  = { value = 1024, disp_label = "", name = ""}, -- なし
-	low40 = { value = 40, disp_label = "足元無敵1", name = "対アンディ屈C"}, -- 対アンディ屈C
-	low32 = { value = 32, disp_label = "足元無敵2", name = "対ギース屈C"}, -- 対ギース屈C
-	low24 = { value = 24, disp_label = "足元無敵3", name = "対だいたいの屈B（キムとボブ以外）"}, -- 対だいたいの屈B（キムとボブ以外）
+	none  = { value = 1024, disp_label = "", name = ""},
+	low40 = { value = 40, disp_label = "足元無敵1", name = "対アンディ屈C"},
+	low32 = { value = 32, disp_label = "足元無敵2", name = "対ギース屈C"},
+	low24 = { value = 24, disp_label = "足元無敵3", name = "対だいたいの屈B（キムとボブ以外）"},
 }
-for _, types in ipairs({line_inv_type, head_inv_type, low_inv_type}) do
+-- 投げ無敵
+local throw_inv_type = {
+	none   = { value = -1, disp_label = "", name = ""},
+	time24 = { value = 24, disp_label = "タイマー24", name = "通常投げ"},
+	time20 = { value = 20, disp_label = "タイマー20", name = "M.リアルカウンター投げ"},
+	time10 = { value = 10, disp_label = "タイマー10", name = "真空投げ 羅生門 鬼門陣 M.タイフーン M.スパイダー 爆弾パチキ ドリル ブレスパ ブレスパBR リフトアップブロー デンジャラススルー ギガティックサイクロン マジンガ STOL"},
+	sway   = { value = 256, disp_label = "スウェー",  name = "スウェー"},
+	flag1  = { value = 256, disp_label = "フラグ1", name = "投げ無敵フラグ1"},
+	flag2  = { value = 256, disp_label = "フラグ2", name = "投げ無敵フラグ2"},
+	state  = { value = 256, disp_label = "やられ状態", name = "相互のやられ状態が非通常値"},
+	no_gnd = { value = 256, disp_label = "高度", name = "接地状態ではない（地面へのめり込みも投げ不可）"},
+}
+for _, types in ipairs({line_inv_type, head_inv_type, low_inv_type, throw_inv_type}) do
 	local values = {}
 	for _, type in ipairs(types) do
 		table.insert(values, type)
 	end
 	types.values = values
-end
-line_inv_type.get = function(main, oh, lo)
-	local ret = line_inv_type.none
-	if main then
-		ret = line_inv_type.main
-	elseif oh then
-		ret = line_inv_type.overhead
-	elseif lo then
-		ret = line_inv_type.low
-	end
-	return ret
 end
 head_inv_type.get = function(real_top)
 	local ret = head_inv_type.none
@@ -4522,7 +4523,31 @@ low_inv_type.get = function(real_bottom)
 	end
 	return ret
 end
-
+throw_inv_type.get = function(p)
+	local ret = throw_inv_type.none
+	for _, type in ipairs(throw_inv_type.values) do
+		if p.tw_frame >= type.value then
+			ret = type
+		end
+	end
+	ret = {ret}
+	if p.state ~= 0 or p.op.state ~= 0 then
+		table.insert(ret, throw_inv_type.state)
+	end
+	if p.pos_y ~= 0 then
+		table.insert(ret, throw_inv_type.no_gnd)
+	end
+	if p.sway_status ~= 0x00 then
+		table.insert(ret, throw_inv_type.sway)
+	end
+	if p.tw_muteki ~= 0 then
+		table.insert(ret, throw_inv_type.flag1)
+	end
+	if p.tw_muteki2 ~= 0 then
+		table.insert(ret, throw_inv_type.flag2)
+	end
+	return ret
+end
 -- 削りダメージ補正
 local chip_dmg_types = {
 	zero = { -- ゼロ
@@ -6980,7 +7005,7 @@ function rbff2.startplugin()
 	-- 状態クリア
 	local cls_ps = function()
 		for i, p in ipairs(players) do
-			local op = players[3 - i]
+			local op = p.op
 			p.input_states = {}
 			p.init_stun = init_stuns[p.char]
 
@@ -7147,7 +7172,7 @@ function rbff2.startplugin()
 
 			-- メインラインでニュートラル状態にする
 			for i, p in ipairs(players) do
-				local op = players[3 - i]
+				local op = p.op
 
 				-- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
 				if global.replay_reset == 2 or (global.replay_reset == 3 and i == 3) or (global.replay_reset == 4 and i == 4) then
@@ -8231,36 +8256,11 @@ function rbff2.startplugin()
 		local hurt_label = table.concat(hurt_labels, ",")
 
 		local throw_invincibles = {}
-		-- なんらかのやられ状態か
-		if p.state ~= 0 or p.op.state ~= 0 then
-			table.insert(throw_invincibles, "やられ状態")
-		end
-		if p.pos_y ~= 0 then
-			-- 高度による地上投げ無敵（めり込みも投げ不可）
-			table.insert(throw_invincibles, "高度")
-		end
-		-- 投げ無敵タイマー
-		if p.tw_frame <= 10 then
-			-- 真空投げ 羅生門 鬼門陣 M.タイフーン M.スパイダー 爆弾パチキ ドリル ブレスパ ブレスパBR リフトアップブロー デンジャラススルー ギガティックサイクロン マジンガ STOL
-			table.insert(throw_invincibles, "タイマー10")
-		elseif p.tw_frame <= 20 then
-			-- M.リアルカウンター投げ
-			table.insert(throw_invincibles, "タイマー20")
-		elseif p.tw_frame <= 24 then
-			-- 通常投げ
-			table.insert(throw_invincibles, "タイマー24")
-		end
-		if p.sway_status ~= 0x00 then
-			-- スウェーによる投げ無敵
-			table.insert(throw_invincibles, "スウェー")
-		end
-		-- 投げ無敵フラグ
-		if p.tw_muteki ~= 0 then
-			table.insert(throw_invincibles, "フラグ1")
-		end
-		-- 投げ無敵フラグ
-		if p.tw_muteki2 ~= 0 then
-			table.insert(throw_invincibles, "フラグ2")
+		-- 投げ無敵
+		for _, inv in ipairs(summary.throw_inv) do
+			if inv ~= throw_inv_type.none then
+				table.insert(throw_invincibles, inv.disp_label)
+			end
 		end
 		local throw_label = table.concat(throw_invincibles, ",")
 		local reach_label = ""
@@ -8345,8 +8345,8 @@ function rbff2.startplugin()
 		return add_frame_to_summary(hurt_sumamry)
 	end
 
-	local new_box_summary = function()
-		return {
+	local new_box_summary = function(p)
+		local ret = {
 			hit = false, -- 攻撃判定あり
 			otg = false,-- ダウン追撃判定あり
 			juggle = false, -- 空中追撃判定あり
@@ -8367,7 +8367,9 @@ function rbff2.startplugin()
 			line_inv  = line_inv_type.none, -- ライン無敵
 			head_inv  = head_inv_type.none, -- 上半身無敵
 			low_inv   = low_inv_type.none,  -- 足元無敵
+			throw_inv = throw_inv_type.get(p), -- 投げ無敵タイマー
 		}
+		return ret
 	end
 
 	local force_y_pos = { "OFF", 0 }
@@ -8573,7 +8575,7 @@ function rbff2.startplugin()
 		-- 1Pと2Pの状態読取
 		for i, p in ipairs(players) do
 			local op         = players[3-i]
-
+			p.op             = op
 			p.base           = pgm:read_u32(p.addr.base)
 			p.char           = pgm:read_u8(p.addr.char)
 			p.char_4times    = 0xFFFF & (p.char + p.char)
@@ -8829,7 +8831,7 @@ function rbff2.startplugin()
 
 		-- 1Pと2Pの状態読取 ゲージ
 		for i, p in ipairs(players) do
-			local op         = players[3-i]
+			local op         = p.op
 
 			local hit_attack = p.attack
 
@@ -8949,7 +8951,7 @@ function rbff2.startplugin()
 
 		-- 1Pと2Pの状態読取 入力
 		for i, p in ipairs(players) do
-			local op         = players[3-i]
+			local op         = p.op
 
 			p.input_offset   = pgm:read_u32(p.addr.input_offset)
 			p.old_input_states = p.input_states or {}
@@ -9255,7 +9257,7 @@ function rbff2.startplugin()
 					fb.pure_st_tm = 0
 				end
 
-				fb.hit_summary = new_box_summary()
+				fb.hit_summary = new_box_summary(fb)
 				if fb.alive then
 					debug_box(fb, pgm)
 				end
@@ -9304,7 +9306,7 @@ function rbff2.startplugin()
 			p.hit.vulnerable22 = pgm:read_u8(p.addr.vulnerable22) == 0 --0の時vulnerable=true
 
 			-- リーチ
-			p.hit_summary  = new_box_summary()
+			p.hit_summary  = new_box_summary(p)
 			debug_box(p, pgm)
 
 			-- 投げ判定取得
@@ -9605,7 +9607,7 @@ function rbff2.startplugin()
 		end
 
 		for i, p in ipairs(players) do
-			local op         = players[3-i]
+			local op         = p.op
 
 			--フレーム数
 			p.frame_gap      = p.frame_gap or 0
@@ -9836,7 +9838,7 @@ function rbff2.startplugin()
 		apply_1p2p_active()
 
 		for i, p in ipairs(players) do
-			local op = players[3-i]
+			local op = p.op
 
 			-- 飛び道具
 			local chg_fireball_state, chg_prefireball_state = false, false
@@ -10208,7 +10210,7 @@ function rbff2.startplugin()
 
 		for i, p in ipairs(players) do
 			local p1 = i == 1
-			local op = players[3-i]
+			local op = p.op
 
 			-- 入力表示用の情報構築
 			local key_now = p.key_now
@@ -10333,7 +10335,7 @@ function rbff2.startplugin()
 
 		-- プレイヤー操作
 		for i, p in ipairs(players) do
-			local op   = players[3-i]
+			local op   = p.op
 			if p.control == 1 or p.control == 2 then
 				--前進とガード方向
 				local sp = p_space == 0 and prev_p_space or p_space
@@ -11091,7 +11093,7 @@ function rbff2.startplugin()
 			-- ダメージとコンボ表示
 			for i, p in ipairs(players) do
 				local p1 = i == 1
-				local op = players[3-i]
+				local op = p.op
 
 				-- コンボ表示などの四角枠
 				if p.disp_dmg then
