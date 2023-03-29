@@ -4461,28 +4461,38 @@ local fix_bp_addr = function(addr)
 	return addr + fix2
 end
 local hurt_inv_type = {
-	none     = { type = 0, disp_label = "", name = ""},
+	-- 全身無敵
+	full    = { type = 0, disp_label = "全身無敵", name = "全身無敵"},
 	-- ライン関係の無敵
-	main     = { type = 1, disp_label = "メイン攻撃無敵", name = "メインライン攻撃無敵"},
-	overhead = { type = 1, disp_label = "対メイン上段無敵", name = "対メインライン上段攻撃無敵"},
-	low      = { type = 1, disp_label = "対メイン下段無敵", name = "対メインライン下段攻撃無敵"},
+	main    = { type = 1, disp_label = "メイン攻撃無敵", name = "メインライン攻撃無敵"},
+	sway_oh = { type = 1, disp_label = "対メイン上段無敵", name = "対メインライン上段攻撃無敵"},
+	sway_lo = { type = 1, disp_label = "対メイン下段無敵", name = "対メインライン下段攻撃無敵"},
 	-- やられ判定の高さ
 	top32 = { type = 2, value = 32, disp_label = "上半身無敵1", name = "32 避け"},
 	top40 = { type = 2, value = 40, disp_label = "上半身無敵2", name = "40 ウェービングブロー,龍転身,ダブルローリング"},
 	top48 = { type = 2, value = 48, disp_label = "上半身無敵3", name = "48 ローレンス避け"},
+	--[[
 	top60 = { type = 2, value = 60, disp_label = "頭部無敵1", name = "60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン"},
 	top64 = { type = 2, value = 64, disp_label = "頭部無敵2", name = "64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド"},
 	top68 = { type = 2, value = 68, disp_label = "頭部無敵3", name = "68 屈 ローレンス"},
 	top76 = { type = 2, value = 76, disp_label = "頭部無敵4", name = "76 屈 フランコ"},
 	top80 = { type = 2, value = 80, disp_label = "頭部無敵5", name = "80 屈 クラウザー"},
+	]]
 	-- 足元無敵
 	low40 = { type = 3, value = 40, disp_label = "足元無敵1", name = "対アンディ屈C"},
 	low32 = { type = 3, value = 32, disp_label = "足元無敵2", name = "対ギース屈C"},
 	low24 = { type = 3, value = 24, disp_label = "足元無敵3", name = "対だいたいの屈B（キムとボブ以外）"},
+	-- 特殊やられ
+	otg = { type = 4, disp_label = "ダウン追撃", name = "ダウン追撃のみ可能"},
+	juggle = { type = 4, disp_label = "空中追撃", name = "空中追撃のみ可能"},
+}
+hurt_inv_type.values = {
+	hurt_inv_type.full, hurt_inv_type.main, hurt_inv_type.sway_oh, hurt_inv_type.sway_lo, hurt_inv_type.top32, hurt_inv_type.top40,
+	hurt_inv_type.top48, -- hurt_inv_type.top60, hurt_inv_type.top64, hurt_inv_type.top68, hurt_inv_type.top76, hurt_inv_type.top80,
+	hurt_inv_type.low40, hurt_inv_type.low32, hurt_inv_type.low24, hurt_inv_type.otg, hurt_inv_type.juggle
 }
 -- 投げ無敵
 local throw_inv_type = {
-	none   = { value = -1, disp_label = "", name = ""},
 	time24 = { value = 24, disp_label = "タイマー24", name = "通常投げ"},
 	time20 = { value = 20, disp_label = "タイマー20", name = "M.リアルカウンター投げ"},
 	time10 = { value = 10, disp_label = "タイマー10", name = "真空投げ 羅生門 鬼門陣 M.タイフーン M.スパイダー 爆弾パチキ ドリル ブレスパ ブレスパBR リフトアップブロー デンジャラススルー ギガティックサイクロン マジンガ STOL"},
@@ -4492,13 +4502,10 @@ local throw_inv_type = {
 	state  = { value = 256, disp_label = "やられ状態", name = "相互のやられ状態が非通常値"},
 	no_gnd = { value = 256, disp_label = "高度", name = "接地状態ではない（地面へのめり込みも投げ不可）"},
 }
-for _, types in ipairs({hurt_inv_type, throw_inv_type}) do
-	local values = {}
-	for _, type in ipairs(types) do
-		table.insert(values, type)
-	end
-	types.values = values
-end
+throw_inv_type.values = {
+	throw_inv_type.time24, throw_inv_type.time20, throw_inv_type.time10, throw_inv_type.sway, throw_inv_type.flag1, throw_inv_type.flag2,
+	throw_inv_type.state, throw_inv_type.no_gnd
+}
 hurt_inv_type.get = function(p, real_top, real_bottom, box)
 	local ret, top, low = {}, nil, nil
 	for _, type in ipairs(hurt_inv_type.values) do
@@ -4515,24 +4522,31 @@ hurt_inv_type.get = function(p, real_top, real_bottom, box)
 	if low then
 		table.insert(ret, low)
 	end
-	if box.type == box_type_base.v6 then  -- 食らい(対ライン上攻撃)
-		table.insert(ret, hurt_inv_type.overhead)
+	if box.type == box_type_base.v3 then -- 食らい(ダウン追撃のみ可)
+		table.insert(ret, hurt_inv_type.otg)
+	elseif box.type == box_type_base.v4 then  -- 食らい(空中追撃のみ可)
+		table.insert(ret, hurt_inv_type.juggle)
+	elseif box.type == box_type_base.v6 then  -- 食らい(対ライン上攻撃)
+		table.insert(ret, hurt_inv_type.sway_oh)
 	elseif box.type == box_type_base.x1 then  -- 食らい(対ライン下攻撃)
-		table.insert(ret, hurt_inv_type.low)
+		table.insert(ret, hurt_inv_type.sway_lo)
 	elseif box.type == box_type_base.sv1 or -- 食らい1(スウェー中)
 		box.type == box_type_base.sv2 then -- 食らい2(スウェー中)
 		table.insert(ret, hurt_inv_type.main)
 	end
-	return #ret == 0 and { hurt_inv_type.none } or ret
+	return #ret == 0 and {} or ret
 end
 throw_inv_type.get = function(p)
-	local ret = throw_inv_type.none
+	if p.is_fireball then
+		return {}
+	end
+	local ret = nil
 	for _, type in ipairs(throw_inv_type.values) do
 		if p.tw_frame >= type.value then
 			ret = type
 		end
 	end
-	ret = {ret}
+	ret = ret == nil and {} or {ret}
 	if p.state ~= 0 or p.op.state ~= 0 then
 		table.insert(ret, throw_inv_type.state)
 	end
@@ -4954,10 +4968,10 @@ local update_box_summary = function(p, box)
 			summary.hurt = true
 			edge = summary.edge.hurt
 		elseif box.type == box_type_base.v3 then -- 食らい(ダウン追撃のみ可)
-			summary.hurt_otg = true
-			--edge = summary.edge.hurt 部分無敵チェックに不要なのでコメントアウト
+			summary.hurt = true
+			edge = summary.edge.hurt
 		elseif box.type == box_type_base.v4 then  -- 食らい(空中追撃のみ可)
-			summary.hurt_juggle = true
+			summary.hurt = true
 			edge = summary.edge.hurt
 		elseif box.type == box_type_base.v6 then  -- 食らい(対ライン上攻撃)
 			summary.hurt = true
@@ -8219,40 +8233,20 @@ function rbff2.startplugin()
 	local make_hurt_summary = function(p, summary)
 		local hurt_labels = {}
 		local has_hurt = check_edge(summary.edge.hurt)
-		if has_hurt == true and summary.hurt == true or p.hit.vulnerable == true then
-			local temp_hurt = {}
-			-- やられ判定無敵
-			for _, inv in ipairs(summary.hurt_inv) do
-				if inv ~= hurt_inv_type.none then
-					table.insert(temp_hurt, inv.disp_label)
-				end
-			end
-			if temp_hurt then
-				table.insert(hurt_labels, table.concat(temp_hurt, ","))
-			end
-		else
-			if summary.hurt_otg or summary.hurt_juggle then
-			else
-				-- くらい判定
-				table.insert(hurt_labels, "全身無敵")
-			end
+		if not (has_hurt == true and summary.hurt == true or p.hit.vulnerable == true) then
+			summary.hurt_inv = { hurt_inv_type.full }
 		end
-		if summary.hurt_otg then
-			-- ダウン追撃用くらい判定あり
-			table.insert(hurt_labels, "ダウン追撃")
-		end
-		if summary.hurt_juggle then
-			-- 空中追撃用くらい判定あり
-			table.insert(hurt_labels, "空中追撃")
+		-- やられ判定無敵
+		local hurt_labels = {}
+		for _, inv in ipairs(summary.hurt_inv) do
+			table.insert(hurt_labels, inv.disp_label)
 		end
 		local hurt_label = table.concat(hurt_labels, ",")
 
 		local throw_invincibles = {}
 		-- 投げ無敵
 		for _, inv in ipairs(summary.throw_inv) do
-			if inv ~= throw_inv_type.none then
-				table.insert(throw_invincibles, inv.disp_label)
-			end
+			table.insert(throw_invincibles, inv.disp_label)
 		end
 		local throw_label = table.concat(throw_invincibles, ",")
 		local reach_label = ""
@@ -8343,8 +8337,6 @@ function rbff2.startplugin()
 			otg = false,-- ダウン追撃判定あり
 			juggle = false, -- 空中追撃判定あり
 			hurt = false, -- くらい判定あり（＝打撃無敵ではない)
-			hurt_otg = false, -- ダウン追撃用くらい判定あり
-			hurt_juggle = false, -- 空中追撃用くらい判定あり
 			throw = false, -- 投げ判定あり
 			block = false, -- ガード判定あり
 			parry = false, -- 当て身キャッチ判定あり
@@ -8356,7 +8348,7 @@ function rbff2.startplugin()
 				parry = {},
 				throw = {},
 			},
-			hurt_inv  = { hurt_inv_type.none }, -- やられ判定無敵
+			hurt_inv  = {}, -- やられ判定無敵
 			throw_inv = throw_inv_type.get(p), -- 投げ無敵
 		}
 		return ret
@@ -9507,7 +9499,7 @@ function rbff2.startplugin()
 
 		for _, p in ipairs(players) do
 			-- くらい判定等の常時更新するサマリ情報
-			local all_summary = make_hurt_summary(p, p.hit_summary)
+			p.hurt_summary = make_hurt_summary(p, p.hit_summary)
 
 			-- 攻撃判定のサマリ情報
 			if check_edge(p.hit_summary.edge.throw) then
@@ -9574,25 +9566,19 @@ function rbff2.startplugin()
 			end
 
 			-- サマリ情報を結合する
-			for _, row in ipairs(p.dmg_summary) do
-				table.insert(all_summary, row)
+			local all_summary = {}
+			for _, summary in ipairs({
+				p.hurt_summary,
+				p.dmg_summary,
+				p.pow_summary,
+				p.atkact_summary,
+				p.atk_summary,
+				p.throw_summary,
+				p.parry_summary}) do
+				for _, row in ipairs(summary) do
+					table.insert(all_summary, row)
+				end
 			end
-			for _, row in ipairs(p.pow_summary) do
-				table.insert(all_summary, row)
-			end
-			for _, row in ipairs(p.atkact_summary) do
-				table.insert(all_summary, row)
-			end
-			for _, row in ipairs(p.atk_summary) do
-				table.insert(all_summary, row)
-			end
-			for _, row in ipairs(p.throw_summary) do
-				table.insert(all_summary, row)
-			end
-			for _, row in ipairs(p.parry_summary) do
-				table.insert(all_summary, row)
-			end
-
 			p.all_summary = sort_summary(all_summary)
 		end
 
@@ -9631,7 +9617,7 @@ function rbff2.startplugin()
 		end
 
 		for _, p in ipairs(players) do
-			-- 無敵表示
+			--[[ 無敵表示
 			p.muteki.type = 0 -- 無敵
 			p.vul_hi, p.vul_lo = 240, 0
 			for _, box in pairs(p.hitboxes) do
@@ -9657,6 +9643,7 @@ function rbff2.startplugin()
 			else
 				p.muteki.type = 3
 			end
+			]]
 
 			--停止演出のチェック
 			p.old_skip_frame = p.skip_frame
@@ -9972,16 +9959,24 @@ function rbff2.startplugin()
 			local last_frame = frame
 
 			-- 無敵表示
-			if p.muteki.type == 4 then -- スウェー上
-				col, line = 0xAAFFA500, 0xDDAFEEEE
-			elseif p.muteki.type == 0 then -- 全身無敵
-				col, line = 0xAAB0E0E6, 0xDDAFEEEE
-			elseif p.muteki.type == 1 then -- 上半身無敵（地上）
-				col, line = 0xAA32CD32, 0xDDAFEEEE
-			elseif p.muteki.type == 2 then -- 足元無敵（地上）
-				col, line = 0xAA9400D3, 0xDDAFEEEE
-			else
-				col, line = 0x00000000, 0x00000000
+			col, line = 0x00000000, 0x00000000
+			for _, hurt_inv in ipairs(p.hit_summary.hurt_inv) do
+				if hurt_inv.type == 0 then -- 全身無敵
+					col, line = 0xAAB0E0E6, 0xDDAFEEEE
+					break
+				elseif hurt_inv.type == 1 then -- スウェー上
+					col, line = 0xAAFFA500, 0xDDAFEEEE
+					break
+				elseif hurt_inv.type == 2 then -- 上半身無敵（地上）
+					col, line = 0xAA32CD32, 0xDDAFEEEE
+					break
+				elseif hurt_inv.type == 3 then -- 足元無敵（地上）
+					col, line = 0xAA9400D3, 0xDDAFEEEE
+					break
+				elseif hurt_inv.type == 0 then -- ダウンor空中追撃のみ可能
+					col, line = 0xAAB0E0E6, 0xDDAFEEEE
+					break
+				end
 			end
 			--print(string.format("top %s, hi %s, lo %s", screen_top, vul_hi, vul_lo))
 
