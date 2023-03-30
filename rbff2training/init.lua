@@ -7950,14 +7950,14 @@ function rbff2.startplugin()
 		end
 		-- キャンセル可否
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
-		local cancel_advs_label, cancel_advs = "必×", {}
-		p.cancelable = pgm:read_u8(p.addr.cancelable)
+		local cancel_advs_label, cancel_advs = "連×/必×", {}
 		-- 家庭用2AD90からの処理
 		if p.attack < 0x70 then
-			local d0 = pgm:read_u8(pgm:read_u32(p.char_4times + 0x850D8) + p.attack)
-			p.cancelable = d0
+			p.cancelable = pgm:read_u8(pgm:read_u32(p.char_4times + 0x850D8) + p.attack)
+		else
+			p.cancelable = pgm:read_u8(p.addr.cancelable)
 		end
-		if p.cancelable and p.cancelable ~= 0 then
+		if p.state_flags3 == 0 and p.cancelable and p.cancelable ~= 0 then
 			if faint_cancels[p.char] and p.attack_id then
 				for _, fc in ipairs(faint_cancels[p.char]) do
 					local p1  = 1 + p.hitstop + fc.f
@@ -7966,10 +7966,9 @@ function rbff2.startplugin()
 					table.insert(cancel_advs, string.format(fc.name .. ":当%sF/防%sF", p2h - p1, p2g - p1))
 				end
 			end
+			cancel_advs_label = string.format("%s", p.cancelable == 0xD0 and "連〇/必〇" or "連×/必〇")
 			if #cancel_advs > 0 then
-				cancel_advs_label = "必〇/" .. table.concat(cancel_advs, ",")
-			else
-				cancel_advs_label = "必〇"
+				cancel_advs_label = cancel_advs_label .. "/" .. table.concat(cancel_advs, ",")
 			end
 		end
 		local slide_label = p.slide_atk and "滑(CA×)/" or ""
@@ -12975,6 +12974,12 @@ function rbff2.startplugin()
 			maincpu.rw@02FA82=0000
 			]]
 
+			--[[ 連キャン、必キャン可否テーブルに連キャンデータを設定する
+			for i = 0x085138, 0x08591F do
+				pgm:write_direct_u8(i, 0xD0)
+			end
+			]]
+
 			--[[ 常にCPUレベルMAX
 			MVS                          家庭用
 			maincpu.rd@0500E8=303C0007   maincpu.rd@050108=303C0007
@@ -13013,20 +13018,6 @@ function rbff2.startplugin()
 
 			-- 逆襲拳、サドマゾの初段で相手の状態変更しない（相手が投げられなくなる事象が解消する）
 			-- pgm:write_direct_u8(0x57F43, 0x00)
-
-			--[[
-			-- 遠近切替距離のログ
-			for i, name in ipairs(char_names) do
-				local close_far      = get_close_far_pos(i)
-				local close_far_lma  = get_close_far_pos_line_move_attack(i)
-				for btn, range in pairs( close_far) do
-					print(char_names[i], i, "通", string.upper(btn), range.x1, range.x2)
-				end
-				for btn, range in pairs( close_far_lma) do
-					print(char_names[i], i, "ラ", string.upper(btn), range.x1, range.x2)
-				end
-			end
-			]]
 
 			--[[ WIP
 			-- https://www.neo-geo.com/forums/index.php?threads/universe-bios-released-good-news-for-mvs-owners.41967/page-7
@@ -13098,7 +13089,6 @@ function rbff2.startplugin()
 			end
 		end
 		if player_select_active then
-			--apply_1p2p_active()
 			if pgm:read_u8(mem_0x10CDD0) > 12 then
 				local addr1 = 0xFFFFFF & pgm:read_u32(players[1].addr.select_hook)
 				local addr2 = 0xFFFFFF & pgm:read_u32(players[2].addr.select_hook)
