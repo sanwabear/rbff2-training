@@ -10718,14 +10718,6 @@ function rbff2.startplugin()
 						draw_vline(box.right, box.top-8, box.bottom+8, box.type.outline)
 					end
 				else
-					--[[
-					if box_type_base.at == box.type then
-						print("box at ", box.left, box.top, box.right, box.bottom)
-					elseif box_type_base.pt == box.type then
-						print("box pt ", box.left, box.top, box.right, box.bottom)
-					end
-					]]
-
 					if box.visible == true and box.type.enabled == true then
 						-- 背景なしの場合は判定の塗りつぶしをやめる
 						if global.no_background then
@@ -10990,23 +10982,8 @@ function rbff2.startplugin()
 						if p.state_bits[j] == 1 then
 							flgtxt = flgtxt .. sts_flg_names[j] .. " "
 						end
-						--[[
-						-- ビット値の表示版
-						local num = string.format("%s", j % 10)
-						local txt = flgtbl[j] == 1 and "1" or "-"
-						if p1 then
-							local x = 147 - (j * 3)
-							draw_text_with_shadow(x    , 1    , num)
-							draw_text_with_shadow(x    , 8    , txt)
-						else
-							local x = 269 - (j * 3)
-							draw_text_with_shadow(x    , 1    , num)
-							draw_text_with_shadow(x    , 8    , txt)
-						end
-						]]
 					end
 
-					--
 					scr:draw_box(p1 and (138 - 32)           or 180,  9, p1 and 140 or (182 + 32)          , 14, 0, 0xDDC0C0C0) -- 枠
 					scr:draw_box(p1 and (139 - 32)           or 181, 10, p1 and 139 or (181 + 32)          , 13, 0, 0xDD000000) -- 黒背景
 
