@@ -4865,6 +4865,8 @@ local get_reach = function(p, box, pos_x, pos_y)
 		asis_top    = math.floor(asis_top_reach) - 24,
 		asis_bottom = math.floor(asis_bottom_reach) - 24,
 	}
+	reach_data.real_top = reach_data.top + p.pos_y       -- 実際の上のリーチ
+	reach_data.real_bottom = reach_data.bottom + p.pos_y -- 実際の上のリーチ
 	return reach_data
 end
 
@@ -5003,13 +5005,17 @@ local update_box_summary = function(p, box)
 			edge.back     = math.min(box.reach.back  , edge.back   or 999)
 			edge.top      = math.max(box.reach.top   , edge.top    or 0)
 			edge.bottom   = math.min(box.reach.bottom, edge.bottom or 999)
+			-- 実際の上下のリーチを再計算
+			edge.real_top = edge.top + p.pos_y
+			edge.real_bottom = edge.bottom + p.pos_y
 			-- boxごとに評価
 			if edge == summary.edge.hit then
-				local real_top, real_bottom = box.reach.top + p.pos_y, box.reach.bottom + p.pos_y
+				local real_top, real_bottom = box.reach.real_top, box.reach.real_bottom
 
 				box.info = box.info or {
 					pos_low1 = false, -- 判定位置下段
 					pos_low2 = false, -- 判定位置下段 タン用]
+					unblock = false, -- タン以外ガード不能
 					unblock_pot = false, -- タン以外ガード不能可能性あり
 					sway_pos_low1 = false, -- 対スウェー判定位置下段
 					sway_pos_low2 = false, -- 対スウェー判定位置下段 タン用
@@ -5037,8 +5043,12 @@ local update_box_summary = function(p, box)
 				}
 				local info = box.info
 
-				if real_top <= 48 then
+				if real_top <= 52 then -- 48
 					info.pos_low1 = true -- 判定位置下段
+					-- 属性が屈ガード不可ならガード不能
+					if summary.up_guard then
+						info.unblock = true
+					end
 				end
 				if real_top <= 36 then
 					info.pos_low2 = true -- 判定位置下段 タン用
@@ -5106,8 +5116,7 @@ local update_box_summary = function(p, box)
 				info.phx_tw = summary.phx_tw
 				info.range_phx_tw =  summary.phx_tw and in_range(real_top, real_bottom, 120, 56)
 			elseif edge == summary.edge.hurt then
-				local real_top, real_bottom = edge.top + p.pos_y, edge.bottom + p.pos_y
-				summary.hurt_inv = hurt_inv_type.get(p, real_top, real_bottom, box)
+				summary.hurt_inv = hurt_inv_type.get(p, edge.real_top, edge.real_bottom, box)
 			end
 		end
 
@@ -5166,9 +5175,6 @@ local update_box_summary = function(p, box)
 			)
 		elseif box.type.type_check == type_ck_gd then
 			box.log_txt = string.format("guard %6x %x", p.addr.base, box.id)
-		end
-		if box.log_txt then
-			box.log_txt = box.log_txt
 		end
 	end
 	return box
@@ -8041,7 +8047,7 @@ function rbff2.startplugin()
 		fbno = fbno or 0
 		local prefix = fbno == 0 and "" or ("弾" .. fbno)
 		local atkact_summary = {}
-		if p.attack_id > 0 or p.is_fireball == true then
+		if p.fake_hit == false and (p.attack_id > 0 or p.is_fireball == true) then
 			for _, box in ipairs(p.hitboxes) do
 				if box.atk and box.info then
 					local info = box.info
@@ -8087,7 +8093,11 @@ function rbff2.startplugin()
 							-- ALL
 						elseif info.pos_low1 then
 							-- タン以外
-							table.insert(blocks, "立(タンのみ)")
+							if info.unblock then
+								table.insert(blocks, "ガード不能(タン以外)")
+							else
+								table.insert(blocks, "立(タンのみ)")
+							end
 						else
 							table.insert(blocks, "立")
 						end
@@ -8098,7 +8108,7 @@ function rbff2.startplugin()
 					if summary.air_guard then
 						table.insert(blocks, "空")
 					end
-					if info.unblock_pot and summary.normal_hit then
+					if not info.unblock and info.unblock_pot and summary.normal_hit then
 						if not summary.low_guard then
 							table.insert(blocks, "ガー不可能性あり")
 						end
@@ -9535,14 +9545,11 @@ function rbff2.startplugin()
 			-- 攻撃モーション単位で変わるサマリ情報
 			local summary_p_atk = p.attack > 0 and string.format("%x %s %s %s", p.attack, p.slide_atk, p.bs_atk, p.hitbox_txt) or ""
 			p.atk_summary = p.atk_summary or {}
-			p.atkact_summary = p.atkact_summary or {}
 			-- 攻撃モーション単位で変わるサマリ情報 本体
+			p.atkact_summary = make_atkact_summary(p, p.hit_summary) or p.atkact_summary
 			if (p.attack_flag and p.attack > 0 and p.summary_p_atk ~= summary_p_atk) or
 				(p.attack_id > 0 and p.summary_p_atkid ~= p.attack_id) then
 				p.atk_summary = make_atk_summary(p, p.hit_summary)
-				if p.fake_hit == false then
-					p.atkact_summary = make_atkact_summary(p, p.hit_summary) or p.atkact_summary
-				end
 				p.summary_p_atk = summary_p_atk
 				p.summary_p_atkid = p.attack_id
 			end
@@ -9863,9 +9870,9 @@ function rbff2.startplugin()
 				end
 			elseif p.throwing then
 				col, line = 0xAAD2691E, 0xDDD2691E
-			elseif p.can_juggle then
+			elseif p.can_juggle and op.act_normal then
 				col, line = 0xAAFFA500, 0xDDFFA500
-			elseif p.can_otg then
+			elseif p.can_otg and op.act_normal then
 				col, line = 0xAAFFA500, 0xDDFFA500
 			elseif p.act_normal then
 				col, line = 0x44FFFFFF, 0xDDFFFFFF
