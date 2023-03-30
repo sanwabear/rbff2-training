@@ -8595,7 +8595,6 @@ function rbff2.startplugin()
 				p.cancelable = pgm:read_u8(p.addr.cancelable)
 			end
 			p.repeatable = (p.cancelable & 0xD0 == 0xD0) and (pgm:read_u8(p.addr.repeatable) & 0x4 == 0x4)
-print(string.format("%s %x %x", p.repeatable, p.cancelable & 0xD0, pgm:read_u8(p.addr.repeatable) & 0x4))
 			p.pure_dmg       = pgm:read_u8(p.addr.pure_dmg)             -- ダメージ(フック処理)
 			p.tmp_pow        = pgm:read_u8(p.addr.tmp_pow)              -- POWゲージ増加量
 			p.tmp_pow_rsv    = pgm:read_u8(p.addr.tmp_pow_rsv)          -- POWゲージ増加量(予約値)
