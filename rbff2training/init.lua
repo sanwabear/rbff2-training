@@ -4886,6 +4886,7 @@ local update_summary = function(p)
 	summary.max_hit_nm  = summary.max_hit_nm  or p.hit.max_hit_nm -- p.act_frame中の行動最大ヒット 分子
 	summary.max_hit_dn  = summary.max_hit_dn  or p.hit.max_hit_dn -- p.act_frame中の行動最大ヒット 分母
 	summary.cancelable  = summary.cancelable  or p.cancelable -- キャンセル可否
+	summary.repeatable  = summary.repeatable  or p.repeatable -- 連キャン可否
 	summary.slide_atk   = summary.slide_atk   or p.slide_atk -- ダッシュ滑り攻撃
 	summary.bs_atk      = summary.bs_atk      or p.bs_atk -- ブレイクショット
 
@@ -5726,6 +5727,7 @@ function rbff2.startplugin()
 				no_hit       = p1 and 0x10DDF2 or 0x10DDF1, -- ヒットしないフック
 				-- range        = 0x1004E2 or 0x1005E2 -- 距離 0近距離 1中距離 2遠距離
 				cancelable   = p1 and 0x1004AF or 0x1005AF, -- キャンセル可否 00不可 C0可 D0可 正確ではない
+				repeatable   = p1 and 0x10046A or 0x10056A, -- 連キャン可否用
 				box_base1    = p1 and 0x100476 or 0x100576, -- 判定の開始アドレス1、判定データはバンク切替されている場合あり
 				box_base2    = p1 and 0x10047A or 0x10057A, -- 判定の開始アドレス2、判定データはバンク切替されている場合あり
 				kaiser_wave  = p1 and 0x1004FB or 0x1005FB, -- カイザーウェイブのレベル
@@ -5809,6 +5811,7 @@ function rbff2.startplugin()
 				pos_z          = 0, -- Z座標
 				attack         = 0, -- 攻撃中のみ変化
 				cancelable     = 0, -- キャンセル可否
+				repeatable     = 0, -- 連キャン可否用
 				hitstop_id     = 0, -- ガード硬直のID
 				attack_id      = 0, -- 当たり判定ごとに設定されているID
 				attacking      = false, -- 攻撃判定発生中の場合true
@@ -7951,12 +7954,6 @@ function rbff2.startplugin()
 		-- キャンセル可否
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		local cancel_advs_label, cancel_advs = "連×/必×", {}
-		-- 家庭用2AD90からの処理
-		if p.attack < 0x70 then
-			p.cancelable = pgm:read_u8(pgm:read_u32(p.char_4times + 0x850D8) + p.attack)
-		else
-			p.cancelable = pgm:read_u8(p.addr.cancelable)
-		end
 		if p.state_flags3 == 0 and p.cancelable and p.cancelable ~= 0 then
 			if faint_cancels[p.char] and p.attack_id then
 				for _, fc in ipairs(faint_cancels[p.char]) do
@@ -7966,7 +7963,7 @@ function rbff2.startplugin()
 					table.insert(cancel_advs, string.format(fc.name .. ":当%sF/防%sF", p2h - p1, p2g - p1))
 				end
 			end
-			cancel_advs_label = string.format("%s", p.cancelable == 0xD0 and "連〇/必〇" or "連×/必〇")
+			cancel_advs_label = string.format("%s", p.repeatable and "連〇/必〇" or "連×/必〇")
 			if #cancel_advs > 0 then
 				cancel_advs_label = cancel_advs_label .. "/" .. table.concat(cancel_advs, ",")
 			end
@@ -8591,7 +8588,14 @@ function rbff2.startplugin()
 			p.attack         = pgm:read_u8(p.addr.attack)
 			p.dmg_id         = pgm:read_u8(p.addr.dmg_id)               -- 最後にヒット/ガードした技ID
 			p.attack_flag    = p.attack_flag or (p.state_flags3 > 0) or (p.state_flags4 > 0)
-
+			-- キャンセル可否家庭用2AD90からの処理の断片
+			if p.attack < 0x70 then
+				p.cancelable = pgm:read_u8(pgm:read_u32(p.char_4times + 0x850D8) + p.attack)
+			else
+				p.cancelable = pgm:read_u8(p.addr.cancelable)
+			end
+			p.repeatable = (p.cancelable & 0xD0 == 0xD0) and (pgm:read_u8(p.addr.repeatable) & 0x4 == 0x4)
+print(string.format("%s %x %x", p.repeatable, p.cancelable & 0xD0, pgm:read_u8(p.addr.repeatable) & 0x4))
 			p.pure_dmg       = pgm:read_u8(p.addr.pure_dmg)             -- ダメージ(フック処理)
 			p.tmp_pow        = pgm:read_u8(p.addr.tmp_pow)              -- POWゲージ増加量
 			p.tmp_pow_rsv    = pgm:read_u8(p.addr.tmp_pow_rsv)          -- POWゲージ増加量(予約値)
@@ -9700,6 +9704,8 @@ function rbff2.startplugin()
 					col, line = 0x00000000, 0xDDFF00FF
 				end
 			elseif p.throwing then
+				col, line = 0xAAD2691E, 0xDDD2691E
+			elseif p.repeatable then
 				col, line = 0xAAD2691E, 0xDDD2691E
 			elseif p.can_juggle and op.act_normal then
 				col, line = 0xAAFFA500, 0xDDFFA500
