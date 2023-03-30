@@ -3944,7 +3944,6 @@ local get_next_bs = function(p, excludes)
 	end
 
 	local ret = get_next_counter(p.dummy_bs_list, p, excludes)
-	--print(string.format("get_next_bs %x", p.addr.base), ret == nil and "" or ret.name, #p.dummy_bs_list)
 	return ret
 end
 
@@ -4009,7 +4008,6 @@ local get_joy_base = function(prev, exclude_player)
 		local state = 0
 		if not joy_port[joy.port] then
 			joy_port[joy.port] = manager.machine.ioport.ports[joy.port]:read()
-			--print(string.format("%s", joy.port))
 		end
 		local field = manager.machine.ioport.ports[joy.port].fields[joy.field]
 		state = ((joy_port[joy.port] & field.mask) ~ field.defvalue)
@@ -4035,9 +4033,6 @@ local get_joy_base = function(prev, exclude_player)
 		if exclude_player ~= joy.player then
 			joy_val[joy.field] = joy.frame
 			prev_joy_val[joy.field] = joy.prev
-			--if "P2 A" == joy.field then
-			--	print(string.format("%s %s %s %s", global.frame_number, joy.field, joy.prev, joy.frame))
-			--end
 		end
 	end
 	return prev and prev_joy_val or joy_val
@@ -4775,7 +4770,6 @@ local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, is_f
 
 	if box.top == box.bottom and box.left == box.right then
 		box.visible = false
-		--print("FLAT " .. (key or "")) --debug
 		return nil
 	elseif box.type.type_check(p.hit, box) then
 		-- ビリーの旋風棍がヒット、ガードされると判定表示が消えてしまうので飛び道具は状態判断の対象から外す
@@ -4785,12 +4779,10 @@ local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, is_f
 		else
 			-- フレーム表示や自動ガードで使うため無効状態の判定を返す
 			box.visible = false
-			--print("IGNORE " .. (key or "")) --debug
 			return nil
 		end
 	else
 		box.visible = true
-		--print("LIVE " .. (key or "")) --debug
 	end
 
 	if box.atk then
@@ -9526,17 +9518,11 @@ function rbff2.startplugin()
 			end
 			p.old_parry_summary = p.parry_summary
 
-			--[[
-			if p.pure_dmg > 0 then
-				print(string.format("%s %s %s %s %s %x %x %x", p.attack, p.attack_id, p.attack_flag, p.pure_dmg, p.hit_summary.pure_dmg, p.state_flags2, p.state_flags3, p.state_flags4))
-			end
-			]]
 			p.dmg_summary = p.dmg_summary or {}
 			if p.hit_summary.pure_dmg ~= nil and (p.attack_id > 0 or (p.hit_summary.pure_dmg or 0) > 0) then
 				p.dmg_summary = make_dmg_summary(p, p.hit_summary) or p.dmg_summary
 			end
 
-			-- TODO 必殺技の動作終了タイミングでPOW情報が0になるものがある
 			p.pow_summary = p.pow_summary or {}
 			if p.attack > 0 then
 				p.pow_summary = make_pow_summary(p, p.hit_summary) or p.pow_summary
@@ -9555,11 +9541,6 @@ function rbff2.startplugin()
 			end
 			-- 攻撃モーション単位で変わるサマリ情報 弾
 			for _, fb in pairs(p.fireball) do
-				--[[
-				if fb.pure_dmg > 0 then
-					print(string.format("%s %s %s %s", fb.attack, fb.attack_id, fb.pure_dmg, fb.hit_summary.pure_dmg))
-				end
-				]]
 				if fb.alive then
 					fb.dmg_summary = make_dmg_summary(fb, fb.hit_summary) or fb.dmg_summary
 					p.dmg_summary = fb.dmg_summary
@@ -9624,34 +9605,6 @@ function rbff2.startplugin()
 		end
 
 		for _, p in ipairs(players) do
-			--[[ 無敵表示
-			p.muteki.type = 0 -- 無敵
-			p.vul_hi, p.vul_lo = 240, 0
-			for _, box in pairs(p.hitboxes) do
-				if box.type.type == "vuln" then
-					p.muteki.type = 3
-					if box.top < box.bottom then
-						p.vul_hi = math.min(p.vul_hi, box.top-screen_top)
-						p.vul_lo = math.max(p.vul_lo, box.bottom-screen_top)
-					else
-						p.vul_hi = math.min(p.vul_hi, box.bottom-screen_top)
-						p.vul_lo = math.max(p.vul_lo, box.top-screen_top)
-					end
-				end
-			end
-			if p.in_sway_line then
-				p.muteki.type = 4 -- スウェー上
-			elseif p.muteki.type == 0 then
-				p.muteki.type = 0 -- 全身無敵
-			elseif 152 <= p.vul_hi and p.in_air ~= true then -- 152 ローレンス避け 156 兄龍転身 168 その他避け
-				p.muteki.type = 1 -- 上半身無敵（地上）
-			elseif p.vul_lo <= 172 and p.in_air ~= true then -- 160 164 168 172 ダブルローリング サイドワインダー
-				p.muteki.type = 2 -- 足元無敵（地上）
-			else
-				p.muteki.type = 3
-			end
-			]]
-
 			--停止演出のチェック
 			p.old_skip_frame = p.skip_frame
 			if global.no_background then
@@ -9661,32 +9614,6 @@ function rbff2.startplugin()
 				p.skip_frame = p.hit_skip ~= 0 or p.stop ~= 0 or
 					(mem_0x100F56 == 0xFFFFFFFF or mem_0x100F56 == 0x0000FFFF)
 			end
-
-			--[[調査用ログ
-			local printdata = function()
-				print(string.format("%2x %2s %2s %2s %2s %2s %2s %2x %2s %2s %2x",
-				p.state,                  --1
-				p.stop,                   --2 0x10058D
-				pgm:read_u8(0x100569),
-				p.stop                & pgm:read_u8(0x10054c), --  2 24
-				pgm:read_u8(0x100569) & pgm:read_u8(0x100550), --  4 25
-				pgm:read_u8(0x100516),  -- 17 25
-				p.pos_z,
-				p.knock_back3,
-				p.on_sway_line,
-				p.on_main_line,
-				p.act
-				))
-			end
-			if p.state == 1 or p.state == 2 or p.state == 3 then
-				if p.old_state ~= p.state then
-					print("--")
-				end
-				printdata()
-			elseif p.old_state == 1 or p.old_state == 2 or p.old_state == 3 then
-				printdata()
-			end
-			]]
 
 			if p.hit_skip ~= 0 or mem_0x100F56 ~= 0 then
 				--停止フレームはフレーム計算しない
@@ -9839,7 +9766,6 @@ function rbff2.startplugin()
 				for _, fb in pairs(p.fireball) do
 					if fb.proc_active == true and fb.alive ~= true then
 						fb.atk_count = fb.atk_count - 1
-						--print(string.format("  %x %x %s", fb.addr.base, fb.asm, fb.atk_count))
 						if fb.atk_count == -1 then
 							chg_prefireball_state = true
 							break
@@ -9893,10 +9819,6 @@ function rbff2.startplugin()
 
 			-- 行動が変わったかのフラグ
 			local frame = p.act_frames[#p.act_frames]
-			--[[
-			local chg_act_name = (p.old_act_data.name ~= p.act_data.name)
-			local disp_name = convert(p.act_data.disp_name or p.act_data.name)
-			]]
 			local concrete_name, chg_act_name, disp_name
 			if frame ~= nil then
 				if p.act_data.names then
@@ -10282,9 +10204,6 @@ function rbff2.startplugin()
 				p.last_combo_stun_offset = p.stun
 				p.last_combo_st_timer_offset = p.stun_timer
 			end
-			--if p.hitstop > 0 then
-			--	print(string.format("%x:%s hit:%s gd:%s %s %s", p.addr.base, p.hitstop, p.hitstop, math.max(2, p.hitstop-1), p.dmg_scaling, p.tmp_dmg))
-			--end
 			if p.tmp_pow_rsv > 0 then
 				p.tmp_pow = p.tmp_pow + p.tmp_pow_rsv
 			end
@@ -10436,14 +10355,11 @@ function rbff2.startplugin()
 				elseif p.dummy_gd == dummy_gd_type.guard1 then
 					if p.guard1 == 0 and p.next_block_ec == 75 then
 						p.next_block = true
-						--print("guard0")
 					elseif p.guard1 == 1 then
 						p.next_block = true
 						p.next_block_ec = 75 -- カウンター初期化
-						--print("guard1")
 					elseif p.guard1 == 2 and global.frame_number <= (p.on_guard1 + global.next_block_grace) then
 						p.next_block = true
-						--print("in grace")
 					else
 						-- カウンター消費しきったらガードするように切り替える
 						p.next_block_ec = p.next_block_ec and (p.next_block_ec - 1) or 0
@@ -10451,14 +10367,11 @@ function rbff2.startplugin()
 							p.next_block = true
 							p.next_block_ec = 75 -- カウンター初期化
 							p.guard1 = 0
-							--print("reset")
 						elseif global.frame_number == p.on_guard then
 							p.next_block_ec = 75 -- カウンター初期化
 							p.next_block = false
-							--print("countdown " .. p.next_block_ec)
 						else
 							p.next_block = false
-							--print("countdown " .. p.next_block_ec)
 						end
 					end
 					if global.frame_number == p.on_hit then
@@ -10466,9 +10379,7 @@ function rbff2.startplugin()
 						p.next_block = true
 						p.next_block_ec = 75 -- カウンター初期化
 						p.guard1 = 0
-						--print("HIT reset")
 					end
-					--print((p.next_block and "G" or "-") .. " " .. p.next_block_ec .. " " .. p.state .. " " .. op.old_state)
 				end
 
 				--挑発中は前進
@@ -10483,7 +10394,6 @@ function rbff2.startplugin()
 					if global.log.rvslog and logtxt then
 						print(logtxt)
 					end
-					-- set_step(p, true)
 					if p.dummy_rvs.throw then
 						if p.act == 0x9 and p.act_frame > 1 then -- 着地硬直は投げでないのでスルー
 							return
@@ -10508,10 +10418,8 @@ function rbff2.startplugin()
 					if p.dummy_rvs.cmd then
 						if rvs_types.knock_back_recovery ~= rvs_type then
 							if (((p.state_flags | p.old_state_flags) & 0x2 == 0x2) or pre_down_acts[p.act]) and p.dummy_rvs.cmd == cmd_base._2d then
-								-- print("NO", p.state_flags, p.dummy_rvs.name, string.format("%x", p.act))
-									-- no act
+								-- no act
 							else
-								-- print("do", p.state_flags, p.dummy_rvs.name, string.format("%x", p.act))
 								p.dummy_rvs.cmd(p, next_joy)
 							end
 						end
@@ -11352,7 +11260,6 @@ function rbff2.startplugin()
 						draw_text_with_shadow (170, y, string.format("%s%s%s", i_side, side, flip_x))
 					end
 				end
-				--print(string.format("%3s %3s %3s %3s xx %3s %3s", players[1].min_pos, players[2].min_pos, players[1].max_pos, players[2].max_pos, players[1].pos, players[2].pos))
 			end
 
 			-- GG風コマンド入力表示
@@ -11526,59 +11433,6 @@ function rbff2.startplugin()
 				log = log .. string.format("%2x %1s %1s ", box.id or 0xFF, tw, range)
 			end
 		end
-		--print(log)
-		--[[
-		for i, p in ipairs(players) do
-			if i == 1 then
-				--print(p.old_pos - p.pos)
-				if p.act_data then
-					print(p.char, p.posd, p.act_data.name, p.old_posd)
-				end
-			end
-		end
-
-		-- ダッシュ中の投げ不能フレーム数確認ログ
-		for i, p in ipairs(players) do
-			local op = players[3-i]
-			if p.act_data then
-				if     p.old_act_data.name ~= "ダッシュ" and p.act_data.name == "ダッシュ" then
-					p.throw_log = {}
-				elseif p.old_act_data.name == "ダッシュ" and p.act_data.name ~= "ダッシュ" then
-					local twlog = string.format("%x %2s %2s", p.addr.base, p.char, op.char)
-					local cnt = 0
-					for _, f in ipairs(p.throw_log) do
-						if f > 0 then
-							twlog = twlog .. string.format(" o:%s-%s", cnt+1, cnt+math.abs(f))
-						else
-							twlog = twlog .. string.format(" x:%s-%s", cnt+1, cnt+math.abs(f))
-						end
-						cnt = cnt+math.abs(f)
-					end
-					print(twlog)
-				end
-				if p.act_data.name == "ダッシュ" then
-					local len = #p.throw_log
-					if op.throw.in_range == true then
-						if len == 0 then
-							p.throw_log[len+1] = 1
-						elseif p.throw_log[len] > 0 then
-							p.throw_log[len] = p.throw_log[len] + 1
-						else
-							p.throw_log[len+1] = 1
-						end
-					else
-						if len == 0 then
-							p.throw_log[len+1] = -1
-						elseif p.throw_log[len] > 0 then
-							p.throw_log[len+1] = -1
-						else
-							p.throw_log[len] = p.throw_log[len] - 1
-						end
-					end
-				end
-			end
-		end
-		]]
 	end
 
 	emu.register_start(function() math.randomseed(os.time()) end)
@@ -13111,33 +12965,14 @@ function rbff2.startplugin()
 			and mem_0x10FDAF == 2
 			and mem_0x10FDB6 ~= 0
 			and mem_0x10E043 == 0 then
-			--[[
-			if not player_select_active then
-				print("player_select_active = true")
-			end
-			]]
 			pgm:write_u32(mem_0x100F56, 0x00000000)
 			player_select_active = true
 		else
-			--[[
-			if player_select_active then
-				print("player_select_active = false")
-			end
-			]]
 			player_select_active = false -- 状態リセット
 			pgm:write_u8(mem_0x10CDD0, 0x00)
 			pgm:write_u32(players[1].addr.select_hook)
 			pgm:write_u32(players[2].addr.select_hook)
 		end
-
-		--状態チェック用
-		--[[
-		local vv = string.format("%x %x %x %x", mem_0x100701, mem_0x107C22, mem_0x10FDAF, mem_0x10FDB6)
-		if not bufuf[vv] and not active_mem_0x100701[mem_0x100701] then
-			bufuf[vv] = vv
-			print("tra", vv)
-		end
-		]]
 
 		-- ROM部分のメモリエリアへパッチあて
 		if mem_biostest then
