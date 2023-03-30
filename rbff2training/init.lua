@@ -7724,7 +7724,6 @@ function rbff2.startplugin()
 		else
 			p_d0 = p_d0 + a - screen_left
 		end
-		--print(string.format("%x %s %s %s %s %s %s %s", p.addr.base, ret, gap, p_d0, op_d0, d4, p_pos, op_pos))
 		-- 投げ間合いセット
 		p.throw = {
 			x1 = p_d0 - d4,
@@ -7751,64 +7750,10 @@ function rbff2.startplugin()
 		if cond1 ~= 0 then
 			ret = 1
 		elseif cond2 ~= 0 then
-			--local b1 = 0x80 == (0x80 & pgm:read_u8(pgm:read_u32(0x83C58 + char_4times) + cond2))
 			local b2 = 0x80 == (0x80 & pgm:read_u8(pgm:read_u32(0x8C9E2 + char_4times) + cond2))
 			ret = b2 and 2 or 1
 		end
-		-- if ret ~= 0 then
-		-- 	print(string.format("%s %x %s",  global.frame_number, p.addr.base, ret))
-		-- end
 		return ret
-	end
-	-- 押し合い判定のアドレス 家庭用05C5CEからの処理
-	-- 011E22: 1C18                     move.b  (A0)+, D6
-	--[[
-		当たり判定の開始座標
-		011E24: 1946 0076                move.b  D6, ($76,A4)
-		011E28: 0205 0003                andi.b  A0, ($7a,A4)
-	]]
-	local calc_box_a0 = function(p)
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
-		local d0, d1, d2, d3, a0 = p.char, p.state_flags, p.state_flags3, p.pos_y, 0
-		local goto_05C710 = function()
-			d0 = 0xFFFF & ((0xFFFF & d0) << 3)
-			a0 = a0 + d0
-			print(string.format("a0=%x d0=%x d1=%x d2=%x d3=%x", a0, d0, d1, d2, d3)) -- bp 5C712
-			return a0
-		end
-		local goto_05C70C = function()
-			a0 = 0x5C9BC
-			return goto_05C710()
-		end
-		local goto_05C6FE = function()
-			a0 = 0x5CA7C
-			d2 = d1 & 0x14000046
-			if d2 ~= 0 then
-				return goto_05C710()
-			end
-			return goto_05C70C()
-		end
-		if d0 == 0x5 and (d2 & 0xF) == 0xF then
-			return goto_05C70C()
-		end
-		if d1 & 0x1 ~= 0x1 then
-			return goto_05C6FE()
-		end
-		a0 = 0x5cb3c
-		if d3 == 0x0 then
-			return goto_05C6FE()
-		else
-			d3 = d2 & pgm:read_u32(0x05C726 + p.char_4times) -- 空中技チェック
-			if d3 ~= 0 then
-				return goto_05C710()
-			end
-		end
-		d2 = d2 & 0xffff0000   -- 必殺技チェック
-		if d2 == 0 then
-			return goto_05C710()
-		end
-		a0 = 0x5CBFC
-		return goto_05C710()
 	end
 
 	local summary_rows, summary_sort_key = {
@@ -9046,11 +8991,6 @@ function rbff2.startplugin()
 				table.insert(p.input_states, tmp)
 			end
 
-			--[[
-			calc_box_a0(p)
-			print(string.format("76=%x 7A=%x", p.box_base1, p.box_base2))
-			]]
-
 			--フレーム数
 			p.frame_gap      = p.frame_gap or 0
 			p.last_frame_gap = p.last_frame_gap or 0
@@ -9063,7 +9003,6 @@ function rbff2.startplugin()
 			if mem_0x10B862 ~= 0 and p.act_contact ~= 0 then
 				if p.state == 2 then
 					p.on_guard = global.frame_number
-					--print(string.format("on guard %x" , p.act))
 				elseif p.state == 1 or p.state == 3 then
 					p.on_hit = global.frame_number
 				end
@@ -9077,8 +9016,6 @@ function rbff2.startplugin()
 				p.on_wakeup = global.frame_number
 			end
 			-- ダウンフレーム
-			--if (down_acts[p.old_act] ~= true and down_acts[p.act] == true) or
-			--	(p.old_in_air ~= true and p.in_air == true and down_acts[p.act] == true) then
 			if (p.old_state_flags & 0x2 == 0x0) and (p.state_flags & 0x2 == 0x2) then
 				p.on_down = global.frame_number
 			end
@@ -9245,22 +9182,6 @@ function rbff2.startplugin()
 				if fb.alive then
 					debug_box(fb, pgm)
 				end
-				--[[
-				if fb.asm ~= 0x4E75 then
-					print(string.format("%x %1s  %2x(%s) %2x(%s) %2x(%s)",
-						fb.addr.base,
-						(fb.obsl_hit or fb.full_hit  or fb.harmless2) and " " or "H",
-						pgm:read_u8(fb.addr.obsl_hit),
-						fb.obsl_hit and "o" or "-",
-						pgm:read_u8(fb.addr.full_hit),
-						fb.full_hit  and "o" or "-",
-						pgm:read_u8(fb.addr.harmless2),
-						fb.harmless2 and "o" or "-"))
-				end
-				]]
-				--if fb.hitstop > 0 then
-				--	print(string.format("%x:2 hit:%s gd:%s", fb.addr.base, fb.hitstop, math.max(2, fb.hitstop-1)))
-				--end
 			end
 
 			-- 値更新のフック確認
@@ -9340,12 +9261,6 @@ function rbff2.startplugin()
 			p.air_throw.bottom   =  p.air_throw.range_y
 			p.air_throw.type     = box_type_base.at
 			p.air_throw.on       = p.addr.base == p.air_throw.base and p.air_throw.on or 0xFF
-			--[[
-			if p.air_throw.on == 0xFF then
-				print(string.format("x=%s y=%s px=%s py=%s top=%s btm=%s h=%s s=%s", p.air_throw.range_x, p.air_throw.range_y,
-					p.air_throw.pos_x, p.air_throw.pos_y, p.air_throw.top, p.air_throw.bottom, height, screen_top))
-			end
-			]]
 
 			-- 必殺投げ判定取得
 			p.sp_throw.left      = nil
@@ -9369,11 +9284,6 @@ function rbff2.startplugin()
 				p.sp_throw.top    = nil
 				p.sp_throw.bottom = nil
 			end
-			--[[
-			if p.sp_throw.on ~= 0xFF then
-				print(i, p.sp_throw.on, p.sp_throw.top, p.sp_throw.bottom, p.sp_throw.front, p.sp_throw.side, p.hit.flip_x)
-			end
-			]]
 
 			-- 当たり判定の構築用バッファのリフレッシュ
 			p.hitboxes             = {}
@@ -9429,8 +9339,6 @@ function rbff2.startplugin()
 				left        = pgm:read_i8(addr+0x4),
 				right       = pgm:read_i8(addr+0x5),
 				base        = pgm:read_u32(addr+0x6),
-				--attack_only = (pgm:read_u8(addr+0xA) == 1),
-				--attack_only_val = pgm:read_u8(addr+0xA),
 				pos_x       = pgm:read_i16(addr+0xC) - screen_left,
 				pos_y       = height - pgm:read_i16(addr+0xE) + screen_top,
 			}
@@ -9443,8 +9351,6 @@ function rbff2.startplugin()
 					p.uniq_hitboxes[box.key] = true
 					table.insert(p.buffer, box)
 				end
-			else
-				--print("DROP " .. box.key) --debug
 			end
 		end
 
