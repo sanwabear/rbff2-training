@@ -5853,6 +5853,7 @@ function rbff2.startplugin()
 				pos_z          = 0, -- Z座標
 				attack         = 0, -- 攻撃中のみ変化
 				cancelable     = 0, -- キャンセル可否
+				old_repeatable = 0,
 				repeatable     = 0, -- 連キャン可否用
 				hitstop_id     = 0, -- ガード硬直のID
 				attack_id      = 0, -- 当たり判定ごとに設定されているID
@@ -8619,6 +8620,7 @@ function rbff2.startplugin()
 			else
 				p.cancelable = pgm:read_u8(p.addr.cancelable)
 			end
+			p.old_repeatable = p.repeatable
 			p.repeatable     = (p.cancelable & 0xD0 == 0xD0) and (pgm:read_u8(p.addr.repeatable) & 0x4 == 0x4)
 			p.pure_dmg       = pgm:read_u8(p.addr.pure_dmg)             -- ダメージ(フック処理)
 			p.tmp_pow        = pgm:read_u8(p.addr.tmp_pow)              -- POWゲージ増加量
@@ -9742,7 +9744,10 @@ function rbff2.startplugin()
 				end
 			elseif p.throwing then
 				col, line = 0xAAD2691E, 0xDDD2691E
-			elseif p.repeatable then
+			elseif p.act_1st ~= true and 
+				((p.old_repeatable == true and p.repeatable == true) or
+				(p.old_repeatable == true and p.repeatable ~= true and p.act_frame > 0)) then
+				-- 1F前の状態とあわせて判定する
 				col, line = 0xAAD2691E, 0xDDD2691E
 			elseif p.can_juggle and op.act_normal then
 				col, line = 0xAAFFA500, 0xDDFFA500
