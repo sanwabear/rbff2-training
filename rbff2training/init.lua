@@ -4181,6 +4181,47 @@ local ggkey_set = {
 	new_ggkey_set(false)
 }
 
+local slide_btn = { [0] = "-", [1] = "A", [2] = "B", [3] = "C", [4] = "D", [5] = "AB", [6] = "BC", [7] = "CD", }
+local slide_rev = { [0] = "N", [1] = "↑", [2] = "↓", [3] = "→", [4] = "↗", [5] = "↘", [6] = "←", [7] = "↖", [8] = "↙", }
+-- ダッシュ中の行動アドレス 家庭用0x02B024からの処理
+local get_dash_act_addr = function(p, pgm)
+	--[[
+	02B024: 43F9 0004 B746           lea     $4b746.l, A1                          ; A1 = 4b746
+	02B02A: 297C 0000 0004 00CC      move.l  #$4, ($cc,A4)                         ; 動作フラグセット 0000 0004 滑り攻撃
+	02B032: 6100 B63A                bsr     $2666e                                ; 方向キーセット D0=方向 100*83=入力 100*82=入力1F前
+	02B036: 7200                     moveq   #$0, D1                               ; D1 = 0
+	02B038: 122C 0084                move.b  ($84,A4), D1                          ; D1 = 100*84 クリアリング後のボタン入力
+	02B03C: E748                     lsl.w   #3, D0                                ; 3ビットシフト D0 *= 8
+	02B03E: D041                     add.w   D1, D0                                ; D0 = D0 + D1
+	02B040: 322C 0010                move.w  ($10,A4), D1                          ; D1 = キャラID
+	02B044: D241                     add.w   D1, D1                                ; D1 = D1 + D1
+	02B046: D241                     add.w   D1, D1                                ; D1 = D1 + D1
+	02B048: D3C1                     adda.l  D1, A1                                ; A1 = A1 + D1
+	02B04A: 2051                     movea.l (A1), A0                              ; A0 = A1のデータ
+	02B04C: D1C0                     adda.l  D0, A0                                ; A0 = A0 + D0
+	02B04E: 7200                     moveq   #$0, D1                               ; D1 = 0
+	02B050: 1210                     move.b  (A0), D1                              ; D1 = A0のデータ1バイト
+	02B052: D241                     add.w   D1, D1                                ; D1 = D1 + D1
+	02B054: D241                     add.w   D1, D1                                ; D1 = D1 + D1
+	02B056: 43FA B3EC                lea     (-$4c14,PC) ; ($26444), A1            ; A1 = 26444 ダッシュ攻撃の最終的なテーブル
+	02B05A: D3C1                     adda.l  D1, A1                                ; A1 = A1 + D1
+	02B05C: 2051                     movea.l (A1), A0                              ; A0 = A1のデータ
+	02B05E: 4ED0                     jmp     (A0)                                  ; A0へジャンプ
+	]]
+	local a0, a1, d0, d1 = nil, 0x04B746, p.input1, p.cln_btn
+	d1 = 0xFFFF & (d1 * 8)
+	d0 = d0 + d1
+	d1 = p.char_4times
+	a1 = a1 + d1
+	a0 = pgm:read_u32(a1) + d0
+	d1 = pgm:read_u8(a0)
+	d1 = 0xFFFF & (d1 * 4)
+	a1 = 0x26444
+	a1 = a1 + d1
+	a0 = pgm:read_u32(a1)
+	return a0
+end
+
 -- 当たり判定
 local type_ck_push = function(obj, box)
 	obj.height = obj.height or box.bottom - box.top --used for height of ground throwbox
@@ -5709,6 +5750,7 @@ function rbff2.startplugin()
 				input_side   = p1 and 0x100486 or 0x100586, -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
 				input1       = p1 and 0x100482 or 0x100582, -- キー入力 直近Fの入力
 				input2       = p1 and 0x100483 or 0x100583, -- キー入力 1F前の入力
+				cln_btn      = p1 and 0x100484 or 0x100584, -- クリアリングされたボタン入力
 				state        = p1 and 0x10048E or 0x10058E, -- 状態
 				state_flags  = p1 and 0x1004C0 or 0x1005C0, -- フラグ群
 				state_flags4 = p1 and 0x1004C4 or 0x1005C4, -- フラグ群
@@ -7776,6 +7818,8 @@ function rbff2.startplugin()
 		"POW(基/当/防)",
 		"詠酒間合い",
 		"キャンセル",
+		"キャンセル補足",
+		"滑り攻撃補足",
 		"効果(地/空)",
 		"1 ガード方向",
 		"1 キャッチ",
@@ -7953,7 +7997,7 @@ function rbff2.startplugin()
 		end
 		-- キャンセル可否
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
-		local cancel_advs_label, cancel_advs = "連×/必×", {}
+		local cancel_label, cancel_advs_label, cancel_advs = "連×/必×", "", {}
 		if p.state_flags3 == 0 and p.cancelable and p.cancelable ~= 0 then
 			if faint_cancels[p.char] and p.attack_id then
 				for _, fc in ipairs(faint_cancels[p.char]) do
@@ -7963,16 +8007,18 @@ function rbff2.startplugin()
 					table.insert(cancel_advs, string.format(fc.name .. ":当%sF/防%sF", p2h - p1, p2g - p1))
 				end
 			end
-			cancel_advs_label = string.format("%s", p.repeatable and "連〇/必〇" or "連×/必〇")
+			cancel_label = string.format("%s", p.repeatable and "連〇/必〇" or "連×/必〇")
 			if #cancel_advs > 0 then
-				cancel_advs_label = cancel_advs_label .. "/" .. table.concat(cancel_advs, ",")
+				cancel_advs_label = table.concat(cancel_advs, ",")
 			end
 		end
 		local slide_label = p.slide_atk and "滑(CA×)/" or ""
 		local atk_summary = {
 			{"詠酒間合い:"         , esaka_label },
 			{"ブレイクショット:"   , bs_label    },
-			{"キャンセル:"         , slide_label .. cancel_advs_label },
+			{"キャンセル:"         , slide_label .. cancel_label },
+			{"キャンセル補足:"     , cancel_advs_label },
+			{"滑り攻撃補足:"       , p.dash_act_info }
 		}
 		return add_frame_to_summary(atk_summary)
 	end
@@ -8520,27 +8566,6 @@ function rbff2.startplugin()
 			p.box_base2      = pgm:read_u32(p.addr.box_base2)
 			p.old_kaiser_wave = p.kaiser_wave                          -- 前フレームのカイザーウェイブのレベル
 			p.kaiser_wave    = pgm:read_u8(p.addr.kaiser_wave)         -- カイザーウェイブのレベル
-			--[[
-			local logbox = function(box_base)
-				local addr = box_base
-				while true do
-					local id     = pgm:read_u8(addr)
-					if id == 0 then
-						break
-					end
-					local name = box_types[id]
-					name = name and name.name or "-"
-					local top    = pgm:read_i8(addr+0x2)
-					local bottom = pgm:read_i8(addr+0x3)
-					local left   = pgm:read_i8(addr+0x4)
-					local right  = pgm:read_i8(addr+0x5)
-					addr = addr + 0x6
-					print(string.format("%s/%s/%x/上%s/下%s/左%s/右%s", i, name, id, top, bottom, left, right))
-				end
-			end
-			logbox(p.box_base1)
-			logbox(p.box_base2)
-			]]
 			p.slide_atk      = testbit(p.state_flags2, 0x4) -- ダッシュ滑り攻撃
 			-- ブレイクショット
 			if testbit(p.state_flags2, 0x200000) == true and
@@ -8594,7 +8619,7 @@ function rbff2.startplugin()
 			else
 				p.cancelable = pgm:read_u8(p.addr.cancelable)
 			end
-			p.repeatable = (p.cancelable & 0xD0 == 0xD0) and (pgm:read_u8(p.addr.repeatable) & 0x4 == 0x4)
+			p.repeatable     = (p.cancelable & 0xD0 == 0xD0) and (pgm:read_u8(p.addr.repeatable) & 0x4 == 0x4)
 			p.pure_dmg       = pgm:read_u8(p.addr.pure_dmg)             -- ダメージ(フック処理)
 			p.tmp_pow        = pgm:read_u8(p.addr.tmp_pow)              -- POWゲージ増加量
 			p.tmp_pow_rsv    = pgm:read_u8(p.addr.tmp_pow_rsv)          -- POWゲージ増加量(予約値)
@@ -8743,6 +8768,19 @@ function rbff2.startplugin()
 			p.disp_side      = get_flip_x(players[1])
 			p.input1         = pgm:read_u8(p.addr.input1)
 			p.input2         = pgm:read_u8(p.addr.input2)
+			p.cln_btn        = pgm:read_u8(p.addr.cln_btn)
+			-- 滑り属性の攻撃か慣性残しの立ち攻撃か
+			if p.slide_atk == true or (p.old_act == 0x19 and p.inertia > 0 and testbit(p.state_flags, 0x32)) then
+				p.dash_act_addr = get_dash_act_addr(p, pgm)
+				p.dash_act_info = string.format("%s %s+%s %x",
+					p.slide_atk == true and "滑り属性" or "慣性残し",
+					slide_rev[p.input1] or p.input1,
+					slide_btn[p.cln_btn] or p.cln_btn,
+					p.dash_act_addr or 0)
+			else
+				p.dash_act_addr = p.dash_act_addr or 0
+				p.dash_act_info = p.dash_act_info or ""
+			end
 
 			p.life           = pgm:read_u8(p.addr.life)
 			p.pow            = pgm:read_u8(p.addr.pow)
@@ -9764,7 +9802,12 @@ function rbff2.startplugin()
 				chg_act_name = true
 				p.act_1st = true
 			end
-			if #p.act_frames == 0 or chg_act_name or frame.col ~= col or p.chg_air_state ~= 0 or chg_fireball_state == true or chg_prefireball_state == true or p.act_1st or frame.reach_memo ~= reach_memo  or (max_hit_dn > 1 and frame.act_count ~= act_count) then
+			-- ダッシュの減速モーション
+			if p.old_act ~= 0x19 and p.act == 0x19 then
+				chg_act_name = true
+			end
+			if #p.act_frames == 0 or chg_act_name or frame.col ~= col or p.chg_air_state ~= 0 or chg_fireball_state == true or chg_prefireball_state == true or
+				p.act_1st or frame.reach_memo ~= reach_memo  or (max_hit_dn > 1 and frame.act_count ~= act_count) then
 				--行動IDの更新があった場合にフレーム情報追加
 				frame = {
 					act = p.act,
