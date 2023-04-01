@@ -5543,7 +5543,6 @@ function rbff2.startplugin()
 			act_frames_total = 0,
 
 			muteki           = {
-				type         = 0,
 				act_frames   = {},
 				act_frames2  = {},
 			},
@@ -7443,7 +7442,7 @@ function rbff2.startplugin()
 	-- グラフの描画最大範囲（画面の横幅）までにとどめる
 	local fix_max_framecount = function()
 		local min_count = 332
-		for i, p in ipairs(players) do
+		for _, p in ipairs(players) do
 			local frame1 = p.act_frames[#p.act_frames]
 			if frame1.count <= 332 then
 				return
@@ -8223,11 +8222,10 @@ function rbff2.startplugin()
 	local make_hurt_summary = function(p, summary)
 		local hurt_labels = {}
 		local has_hurt = check_edge(summary.edge.hurt)
-		if not (has_hurt == true and summary.hurt == true or p.hit.vulnerable == true) then
+		if not (has_hurt == true and (summary.hurt == true or p.hit.vulnerable == true)) then
 			summary.hurt_inv = { hurt_inv_type.full }
 		end
 		-- やられ判定無敵
-		local hurt_labels = {}
 		for _, inv in ipairs(summary.hurt_inv) do
 			table.insert(hurt_labels, inv.disp_label)
 		end
@@ -8757,6 +8755,7 @@ function rbff2.startplugin()
 			p.pos_z          = pgm:read_i16(p.addr.pos_z)
 			p.on_sway_line   = (40 == p.pos_z and 40 > p.old_pos_z) and global.frame_number or p.on_sway_line
 			p.on_main_line   = (24 == p.pos_z and 24 < p.old_pos_z) and global.frame_number or p.on_main_line
+			p.old_sway_status= p.sway_status
 			p.sway_status    = pgm:read_u8(p.addr.sway_status) -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
 			if p.sway_status == 0x00 then
 				p.in_sway_line = false
@@ -9807,13 +9806,26 @@ function rbff2.startplugin()
 				chg_act_name = true
 				p.act_1st = true
 			end
-			-- ダッシュの加速、減速、最終モーション
-			if p.old_act ~= 0x18 and p.act == 0x18 then
-				chg_act_name = true
-			elseif p.old_act ~= 0x19 and p.act == 0x19 then
-				chg_act_name = true
-			elseif p.act == 0x19 and p.base == fix_bp_addr(0x26152) then
-				chg_act_name = true
+			if chg_act_name ~= true then
+				if p.old_act ~= 0x18 and p.act == 0x18 then -- ダッシュの加速、減速、最終モーション
+					chg_act_name = true
+				elseif p.old_act ~= 0x19 and p.act == 0x19 then
+					chg_act_name = true
+				elseif p.act == 0x19 and p.base == fix_bp_addr(0x26152) then
+					chg_act_name = true
+				elseif p.old_act ~= 0x31 and p.act == 0x31 then -- スウェーのダッシュの区切り
+					chg_act_name = true
+				elseif p.old_act ~= 0x32 and p.act == 0x32 then
+					chg_act_name = true
+				elseif p.old_act ~= 0x34 and p.act == 0x34 then
+					chg_act_name = true
+				elseif p.old_act ~= 0x35 and p.act == 0x35 then
+					chg_act_name = true
+				elseif p.old_sway_status ~= 0x80 and p.sway_status == 0x80 then -- スウェーの切り替え
+					chg_act_name = true
+				elseif p.old_sway_status ~= 0x00 and p.sway_status == 0x00 then
+					chg_act_name = true
+				end
 			end
 			if #p.act_frames == 0 or chg_act_name or frame.col ~= col or p.chg_air_state ~= 0 or chg_fireball_state == true or chg_prefireball_state == true or
 				p.act_1st or frame.reach_memo ~= reach_memo  or (max_hit_dn > 1 and frame.act_count ~= act_count) then
@@ -9852,21 +9864,31 @@ function rbff2.startplugin()
 			-- 無敵表示
 			col, line = 0x00000000, 0x00000000
 			for _, hurt_inv in ipairs(p.hit_summary.hurt_inv) do
-				if hurt_inv.type == 0 then -- 全身無敵
-					col, line = 0xAAB0E0E6, 0xDDAFEEEE
-					break
-				elseif hurt_inv.type == 1 then -- スウェー上
-					col, line = 0xAAFFA500, 0xDDAFEEEE
-					break
-				elseif hurt_inv.type == 2 then -- 上半身無敵（地上）
-					col, line = 0xAA32CD32, 0xDDAFEEEE
-					break
-				elseif hurt_inv.type == 3 then -- 足元無敵（地上）
-					col, line = 0xAA9400D3, 0xDDAFEEEE
-					break
-				elseif hurt_inv.type == 0 then -- ダウンor空中追撃のみ可能
-					col, line = 0xAAB0E0E6, 0xDDAFEEEE
-					break
+				if 0x400 > p.state_flags2 then
+					if hurt_inv.type == 0 then -- 全身無敵
+						col, line = 0xAAB0E0E6, 0xDDAFEEEE
+						break
+					elseif hurt_inv.type == 1 then -- スウェー上
+						col, line = 0xAAFFA500, 0xDDAFEEEE
+						break
+					elseif hurt_inv.type == 2 then -- 上半身無敵（地上）
+						col, line = 0xAA32CD32, 0xDDAFEEEE
+						break
+					elseif hurt_inv.type == 3 then -- 足元無敵（地上）
+						col, line = 0xAA9400D3, 0xDDAFEEEE
+						break
+					elseif hurt_inv.type == 0 then -- ダウンor空中追撃のみ可能
+						col, line = 0xAAB0E0E6, 0xDDAFEEEE
+						break
+					end
+				else
+					if hurt_inv.type == 0 then -- 全身無敵
+						col, line = 0xAAB0E0E6, 0xDDAFEEEE
+						break
+					elseif hurt_inv.type == 1 then -- スウェー上
+						col, line = 0xAAFFA500, 0xDDAFEEEE
+						break
+					end
 				end
 			end
 			--print(string.format("top %s, hi %s, lo %s", screen_top, vul_hi, vul_lo))
