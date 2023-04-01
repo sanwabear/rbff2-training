@@ -9807,8 +9807,12 @@ function rbff2.startplugin()
 				chg_act_name = true
 				p.act_1st = true
 			end
-			-- ダッシュの減速モーション
-			if p.old_act ~= 0x19 and p.act == 0x19 then
+			-- ダッシュの加速、減速、最終モーション
+			if p.old_act ~= 0x18 and p.act == 0x18 then
+				chg_act_name = true
+			elseif p.old_act ~= 0x19 and p.act == 0x19 then
+				chg_act_name = true
+			elseif p.act == 0x19 and p.base == fix_bp_addr(0x26152) then
 				chg_act_name = true
 			end
 			if #p.act_frames == 0 or chg_act_name or frame.col ~= col or p.chg_air_state ~= 0 or chg_fireball_state == true or chg_prefireball_state == true or
