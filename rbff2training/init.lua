@@ -4306,8 +4306,15 @@ end
 local btn_col = { [convert("_A")] = 0xFFCC0000, [convert("_B")] = 0xFFCC8800, [convert("_C")] = 0xFF3333CC, [convert("_D")] = 0xFF336600, }
 local text_col, shadow_col = 0xFFFFFFFF, 0xFF000000
 
+local is_dir = function(name)
+	if type(name)~="string" then return false end
+	local cd = lfs.currentdir()
+	local is = lfs.chdir(name) and true or false
+	lfs.chdir(cd)
+	return is
+end
 local mkdir = function(path)
-	if isDir(path) then
+	if is_dir(path) then
 		return true, nil
 	end
 	local r, err = lfs.mkdir(path)
@@ -4315,13 +4322,6 @@ local mkdir = function(path)
 		print(err)
 	end
 	return r, err
-end
-local isDir = function(name)
-	if type(name)~="string" then return false end
-	local cd = lfs.currentdir()
-	local is = lfs.chdir(name) and true or false
-	lfs.chdir(cd)
-	return is
 end
 local is_file = function(name)
 	if type(name)~="string" then return false end
