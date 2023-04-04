@@ -10882,8 +10882,9 @@ function rbff2.startplugin()
 			end
 
 			-- スクショ保存
-			for i, p in ipairs(players) do
+			for _, p in ipairs(players) do
 				local chg_y = p.chg_air_state ~= 0
+				local chg_act = p.old_act_normal ~= p.act_normal
 				local chg_hit = p.chg_hitbox_frm == global.frame_number
 				local chg_hurt = p.chg_hurtbox_frm == global.frame_number
 				local chg_sway = p.on_sway_line == global.frame_number or p.on_main_line  == global.frame_number
@@ -10896,47 +10897,44 @@ function rbff2.startplugin()
 						chg_hurt = true
 					end
 				end
-				-- 判定が変わったら
-				if p.act_normal ~= true and (p.atk_count == 1 or p.old_act_normal ~= p.act_normal or chg_y or chg_hit or chg_hurt or chg_sway) then
-					-- ポーズさせる
-					if global.pause_hitbox == 4 then
-						global.pause = true
-					end
-					-- スクショ保存
-					if i == 1 and global.save_snapshot > 1 then
-						-- 画像保存先のディレクトリ作成
-						local frame_group = p.act_frames2[#p.act_frames2]
-						local name, sub_name, dir_name = frame_group[#frame_group].name, "_", base_path() .. "/capture"
-						mkdir(dir_name)
-						dir_name = dir_name .. "/" .. char_names2[p.char]
-						mkdir(dir_name)
-						if p.slide_atk then
-							sub_name = "_SLIDE_"
-						elseif p.bs_atk then
-							sub_name = "_BS_"
-						end
-						name = string.format("%s%s%04x_%s_%03d", char_names2[p.char], sub_name, p.act_data.id_1st or 0, name, p.atk_count)
-						dir_name = dir_name .. string.format("/%04x", p.act_data.id_1st or 0)
-						mkdir(dir_name)
+				local chg_hitbox = p.act_normal ~= true and (p.atk_count == 1 or chg_act or chg_y or chg_hit or chg_hurt or chg_sway)
 
-						-- ファイル名を設定してMAMEのスクショ機能で画像保存
-						local filename = dir_name .. "/" .. name .. ".png"
-						local exists = is_file(filename)
-						local dowrite = false
-						if exists and global.save_snapshot == 3 then
+				-- 判定が変わったらポーズさせる
+				if chg_hitbox and global.pause_hitbox == 4 then
+					global.pause = true
+				end
+
+				-- 画像保存 1:OFF 2:1P動作 3:2P動作
+				if  (chg_hitbox or p.state ~= 0) and global.save_snapshot > 1 then
+					-- 画像保存先のディレクトリ作成
+					local frame_group = p.act_frames2[#p.act_frames2]
+					local name, sub_name, dir_name = frame_group[#frame_group].name, "_", base_path() .. "/capture"
+					mkdir(dir_name)
+					dir_name = dir_name .. "/" .. char_names2[p.char]
+					mkdir(dir_name)
+					if p.slide_atk then
+						sub_name = "_SLIDE_"
+					elseif p.bs_atk then
+						sub_name = "_BS_"
+					end
+					name = string.format("%s%s%04x_%s_%03d", char_names2[p.char], sub_name, p.act_data.id_1st or 0, name, p.atk_count)
+					dir_name = dir_name .. string.format("/%04x", p.act_data.id_1st or 0)
+					mkdir(dir_name)
+
+					-- ファイル名を設定してMAMEのスクショ機能で画像保存
+					local filename, dowrite = dir_name .. "/" .. name .. ".png", false
+					if is_file(filename) then
+						if global.save_snapshot == 3 then
 							dowrite = true
-							if exists then
-								os.remove(filename)
-							end
-						elseif (global.save_snapshot == 2 or global.save_snapshot == 3) and exists == false then
-							dowrite = true
+							os.remove(filename)
 						end
-						if dowrite then
-							local scr = manager.machine.screens:at(1)
-							scr:snapshot(filename)
-							print("save " .. filename)
-						end
-						break
+					else
+						dowrite = true
+					end
+					if dowrite then
+						local scr = manager.machine.screens:at(1)
+						scr:snapshot(filename)
+						print("save " .. filename)
 					end
 				end
 			end
