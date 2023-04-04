@@ -4306,6 +4306,23 @@ end
 local btn_col = { [convert("_A")] = 0xFFCC0000, [convert("_B")] = 0xFFCC8800, [convert("_C")] = 0xFF3333CC, [convert("_D")] = 0xFF336600, }
 local text_col, shadow_col = 0xFFFFFFFF, 0xFF000000
 
+local mkdir = function(path)
+	if isDir(path) then
+		return true, nil
+	end
+	local r, err = lfs.mkdir(path)
+	if not r then
+		print(err)
+	end
+	return r, err
+end
+local isDir = function(name)
+	if type(name)~="string" then return false end
+	local cd = lfs.currentdir()
+	local is = lfs.chdir(name) and true or false
+	lfs.chdir(cd)
+	return is
+end
 local is_file = function(name)
 	if type(name)~="string" then return false end
 	local f = io.open(name,"r")
@@ -10886,42 +10903,23 @@ function rbff2.startplugin()
 						global.pause = true
 					end
 					-- スクショ保存
-					local frame_group = p.act_frames2[#p.act_frames2]
-					local frame = frame_group[#frame_group]
-					local isDir = function(name)
-						if type(name)~="string" then return false end
-						local cd = lfs.currentdir()
-						local is = lfs.chdir(name) and true or false
-						lfs.chdir(cd)
-						return is
-					end
-					local mkdir = function(path)
-						if isDir(path) then
-							return true, nil
-						end
-						local r, err = lfs.mkdir(path)
-						if not r then
-							print(err)
-						end
-						return r, err
-					end
-					local name, dir_name = nil, base_path() .. "/capture"
-					mkdir(dir_name)
-					dir_name = dir_name .. "/" .. char_names2[p.char]
-					mkdir(dir_name)
-					if p.slide_atk then
-						name = string.format("%s_SLIDE_%04x_%s_%03d", char_names2[p.char], p.act_data.id_1st or 0, frame.name, p.atk_count)
-						dir_name = dir_name .. string.format("/SLIDE_%04x", p.act_data.id_1st or 0)
-					elseif p.bs_atk then
-						name = string.format("%s_BS_%04x_%s_%03d", char_names2[p.char], p.act_data.id_1st or 0, frame.name, p.atk_count)
-						dir_name = dir_name .. string.format("/BS_%04x", p.act_data.id_1st or 0)
-					else
-						name = string.format("%s_%04x_%s_%03d", char_names2[p.char], p.act_data.id_1st or 0, frame.name, p.atk_count)
-						dir_name = dir_name .. string.format("/%04x", p.act_data.id_1st or 0)
-					end
-					mkdir(dir_name)
 					if i == 1 and global.save_snapshot > 1 then
-						-- print(i, name, p.attacking and "A" or "-", (p.tw_muteki > 0) and "M" or "-", (p.tw_muteki2 > 0) and "m" or "-")
+						-- 画像保存先のディレクトリ作成
+						local frame_group = p.act_frames2[#p.act_frames2]
+						local name, sub_name, dir_name = frame_group[#frame_group].name, "_", base_path() .. "/capture"
+						mkdir(dir_name)
+						dir_name = dir_name .. "/" .. char_names2[p.char]
+						mkdir(dir_name)
+						if p.slide_atk then
+							sub_name = "_SLIDE_"
+						elseif p.bs_atk then
+							sub_name = "_BS_"
+						end
+						name = string.format("%s%s%04x_%s_%03d", char_names2[p.char], sub_name, p.act_data.id_1st or 0, name, p.atk_count)
+						dir_name = dir_name .. string.format("/%04x", p.act_data.id_1st or 0)
+						mkdir(dir_name)
+
+						-- ファイル名を設定してMAMEのスクショ機能で画像保存
 						local filename = dir_name .. "/" .. name .. ".png"
 						local exists = is_file(filename)
 						local dowrite = false
@@ -10962,9 +10960,6 @@ function rbff2.startplugin()
 						draw_base(i, k, p.bases[k].count, p.bases[k].addr, p.bases[k].name, p.bases[k].xmov)
 					end
 				end
-				--if p.disp_base then
-				--	draw_base(i, #p.bases + 1, 0, "", "")
-				--end
 			end
 			-- ダメージとコンボ表示
 			for i, p in ipairs(players) do
@@ -10974,10 +10969,8 @@ function rbff2.startplugin()
 				-- コンボ表示などの四角枠
 				if p.disp_dmg then
 					if p1 then
-						--scr:draw_box(184+40, 40, 274+40,  77, 0x80404040, 0x80404040)
 						scr:draw_box(184+40, 40, 274+40,  84, 0x80404040, 0x80404040)
 					else
-						--scr:draw_box( 45-40, 40, 134-40,  77, 0x80404040, 0x80404040)
 						scr:draw_box( 45-40, 40, 134-40,  84, 0x80404040, 0x80404040)
 					end
 
