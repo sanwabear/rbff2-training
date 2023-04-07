@@ -5640,14 +5640,14 @@ function rbff2.startplugin()
 			sway_status      = 0,           --
 			side             = 0,           -- 向き
 			state            = 0,           -- いまのやられ状態
-			state_flags      = 0,           -- 処理で使われているフラグ群
-			old_state_flags  = 0,           -- 処理で使われているフラグ群
-			state_flags2     = 0,           -- 処理で使われているフラグ群
-			old_state_flags2 = 0,           -- 処理で使われているフラグ群
+			flag_c0          = 0,           -- 処理で使われているフラグ群
+			old_flag_c0      = 0,           -- 処理で使われているフラグ群
+			flag_cc          = 0,           -- 処理で使われているフラグ群
+			old_flag_cc      = 0,           -- 処理で使われているフラグ群
 			attack_flag      = false,
-			state_flags3     = 0,           -- 処理で使われているフラグ群
-			blkstn_flags     = 0,           -- 処理で使われているフラグ（硬直の判断用）
-			old_blkstn_flags = 0,           -- 処理で使われているフラグ（硬直の判断用）
+			flag_c8          = 0,           -- 処理で使われているフラグ群
+			flag_d0          = 0,           -- 処理で使われているフラグ（硬直の判断用）
+			old_flag_d0      = 0,           -- 処理で使われているフラグ（硬直の判断用）
 			tmp_combo        = 0,           -- 一次的なコンボ数
 			tmp_combo_dmg    = 0,
 			tmp_combo_pow    = 0,
@@ -5906,11 +5906,11 @@ function rbff2.startplugin()
 				input2       = p1 and 0x100483 or 0x100583, -- キー入力 1F前の入力
 				cln_btn      = p1 and 0x100484 or 0x100584, -- クリアリングされたボタン入力
 				state        = p1 and 0x10048E or 0x10058E, -- 状態
-				state_flags  = p1 and 0x1004C0 or 0x1005C0, -- フラグ群
-				state_flags4 = p1 and 0x1004C4 or 0x1005C4, -- フラグ群
-				state_flags3 = p1 and 0x1004C8 or 0x1005C8, -- 必殺技等のフラグ群2
-				state_flags2 = p1 and 0x1004CC or 0x1005CC, -- フラグ群2
-				blkstn_flags = p1 and 0x1004D0 or 0x1005D0, -- フラグ群3
+				flag_c0      = p1 and 0x1004C0 or 0x1005C0, -- フラグ群
+				flag_c4      = p1 and 0x1004C4 or 0x1005C4, -- フラグ群
+				flag_c8      = p1 and 0x1004C8 or 0x1005C8, -- フラグ群
+				flag_cc      = p1 and 0x1004CC or 0x1005CC, -- フラグ群
+				flag_d0      = p1 and 0x1004D0 or 0x1005D0, -- フラグ群
 				stop         = p1 and 0x10048D or 0x10058D, -- ヒットストップ
 				knock_back1  = p1 and 0x100469 or 0x100569, -- のけぞり確認用1(色々)
 				knock_back2  = p1 and 0x100416 or 0x100516, -- のけぞり確認用2(裏雲隠し)
@@ -8158,7 +8158,7 @@ function rbff2.startplugin()
 		-- キャンセル可否
 		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		local cancel_label, cancel_advs_label, cancel_advs = "連×/必×", "", {}
-		if p.state_flags3 == 0 and p.cancelable and p.cancelable ~= 0 then
+		if p.flag_c8 == 0 and p.cancelable and p.cancelable ~= 0 then
 			if faint_cancels[p.char] and p.attack_id then
 				for _, fc in ipairs(faint_cancels[p.char]) do
 					local p1  = 1 + p.hitstop + fc.f
@@ -8478,20 +8478,20 @@ function rbff2.startplugin()
 		end
 
 		-- フラグによる状態の表示
-		if p.blkstn_flags > 0 then
-			table.insert(hurt_sumamry, { "動作C0:", a(p.state_flags , sts_flg_names[0xC0]) })
+		if p.flag_c0 > 0 then
+			table.insert(hurt_sumamry, { "動作C0:", a(p.flag_c0 , sts_flg_names[0xC0]) })
 		end
-		if p.state_flags2 > 0 then
-			table.insert(hurt_sumamry, { "動作C4:", a(p.state_flags2, sts_flg_names[0xC4]) })
+		if p.flag_c4 > 0 then
+			table.insert(hurt_sumamry, { "動作C4:", a(p.flag_c4, sts_flg_names[0xC4]) })
 		end
-		if p.state_flags3 > 0 then
-			table.insert(hurt_sumamry, { "動作C8:", a(p.state_flags3, sts_flg_names[0xC8]) })
+		if p.flag_c8 > 0 then
+			table.insert(hurt_sumamry, { "動作C8:", a(p.flag_c8, sts_flg_names[0xC8]) })
 		end
-		if p.state_flags4 > 0 then
-			table.insert(hurt_sumamry, { "動作CC:", a(p.state_flags4, sts_flg_names[0xCC]) })
+		if p.flag_cc > 0 then
+			table.insert(hurt_sumamry, { "動作CC:", a(p.flag_cc, sts_flg_names[0xCC]) })
 		end
-		if p.blkstn_flags > 0 then
-			table.insert(hurt_sumamry, { "動作D0:", a(p.blkstn_flags, sts_flg_names[0xD0]) })
+		if p.flag_d0 > 0 then
+			table.insert(hurt_sumamry, { "動作D0:", a(p.flag_d0, sts_flg_names[0xD0]) })
 		end
 
 		return add_frame_to_summary(hurt_sumamry)
@@ -8733,20 +8733,20 @@ function rbff2.startplugin()
 			p.life           = pgm:read_u8(p.addr.life)                 -- 今の体力
 			p.old_state      = p.state                                  -- 前フレームの状態保存
 			p.state          = pgm:read_u8(p.addr.state)                -- 今の状態
-			p.old_state_flags = p.state_flags
-			p.state_flags    = pgm:read_u32(p.addr.state_flags)        -- フラグ群
-			p.old_state_flags2 = p.state_flags2
-			p.state_flags2   = pgm:read_u32(p.addr.state_flags2)       -- フラグ群2
-			p.state_flags3   = pgm:read_u32(p.addr.state_flags3)       -- 必殺技などの技のフラグ群
-			p.state_flags4   = pgm:read_u32(p.addr.state_flags4)       -- フラグ群
+			p.old_flag_c0    = p.flag_c0
+			p.flag_c0        = pgm:read_u32(p.addr.flag_c0)        -- フラグ群
+			p.old_flag_cc    = p.flag_cc
+			p.flag_cc        = pgm:read_u32(p.addr.flag_cc)       -- フラグ群2
+			p.flag_c8        = pgm:read_u32(p.addr.flag_c8)       -- 必殺技などの技のフラグ群
+			p.flag_c4        = pgm:read_u32(p.addr.flag_c4)       -- フラグ群
 			p.box_base1      = pgm:read_u32(p.addr.box_base1)
 			p.box_base2      = pgm:read_u32(p.addr.box_base2)
 			p.old_kaiser_wave = p.kaiser_wave                          -- 前フレームのカイザーウェイブのレベル
 			p.kaiser_wave    = pgm:read_u8(p.addr.kaiser_wave)         -- カイザーウェイブのレベル
-			p.slide_atk      = testbit(p.state_flags2, 0x4) -- ダッシュ滑り攻撃
+			p.slide_atk      = testbit(p.flag_cc, 0x4) -- ダッシュ滑り攻撃
 			-- ブレイクショット
-			if testbit(p.state_flags2, 0x200000) == true and
-				(testbit(p.old_state_flags2, 0x100000) == true or p.bs_atk == true) then
+			if testbit(p.flag_cc, 0x200000) == true and
+				(testbit(p.old_flag_cc, 0x100000) == true or p.bs_atk == true) then
 				p.bs_atk     = true
 			else
 				p.bs_atk     = false
@@ -8773,12 +8773,12 @@ function rbff2.startplugin()
 				40000000 空中投げ
 				80000000 投げ技
 			]]
-			p.attack_flag    = testbit(p.state_flags2, 0x4000 | 0x200000 | 0x1000000 | 0x80000 | 0x200000 | 0x1000000 | 0x2000000 | 0x40000000 | 0x80000000)
-			p.state_bits     = tobits(p.state_flags)
-			p.old_blkstn_flags= p.blkstn_flags
+			p.attack_flag    = testbit(p.flag_cc, 0x4000 | 0x200000 | 0x1000000 | 0x80000 | 0x200000 | 0x1000000 | 0x2000000 | 0x40000000 | 0x80000000)
+			p.state_bits     = tobits(p.flag_c0)
+			p.old_flag_d0    = p.flag_d0
 			p.old_blkstn_bits= p.blkstn_bits
-			p.blkstn_flags   = pgm:read_u8(p.addr.blkstn_flags)        -- 硬直系のフラグ群3
-			p.blkstn_bits    = tobits(p.blkstn_flags)
+			p.flag_d0        = pgm:read_u8(p.addr.flag_d0)        -- 硬直系のフラグ群3
+			p.blkstn_bits    = tobits(p.flag_d0)
 			p.last_normal_state = p.normal_state
 			p.normal_state   = p.state == 0 -- 素立ち
 			p.combo          = tohexnum(pgm:read_u8(p.addr.combo2))     -- 最近のコンボ数
@@ -8788,7 +8788,7 @@ function rbff2.startplugin()
 			p.old_attack     = p.attack
 			p.attack         = pgm:read_u8(p.addr.attack)
 			p.dmg_id         = pgm:read_u8(p.addr.dmg_id)               -- 最後にヒット/ガードした技ID
-			p.attack_flag    = p.attack_flag or (p.state_flags3 > 0) or (p.state_flags4 > 0)
+			p.attack_flag    = p.attack_flag or (p.flag_c8 > 0) or (p.flag_c4 > 0)
 			-- キャンセル可否家庭用2AD90からの処理の断片
 			if p.attack < 0x70 then
 				p.cancelable = pgm:read_u8(pgm:read_u32(p.char_4times + 0x850D8) + p.attack)
@@ -8948,7 +8948,7 @@ function rbff2.startplugin()
 			p.input2         = pgm:read_u8(p.addr.input2)
 			p.cln_btn        = pgm:read_u8(p.addr.cln_btn)
 			-- 滑り属性の攻撃か慣性残しの立ち攻撃か
-			if p.slide_atk == true or (p.old_act == 0x19 and p.inertia > 0 and testbit(p.state_flags, 0x32)) then
+			if p.slide_atk == true or (p.old_act == 0x19 and p.inertia > 0 and testbit(p.flag_c0, 0x32)) then
 				p.dash_act_addr = get_dash_act_addr(p, pgm)
 				p.dash_act_info = string.format("%s %s+%s %x",
 					p.slide_atk == true and "滑り属性" or "慣性残し",
@@ -8982,9 +8982,9 @@ function rbff2.startplugin()
 
 			local hit_attack = p.attack
 
-			if hit_attack ~= 0 and op.hitstop_id ~= 0 and op.state_flags > 0 and op.state_flags2 > 0 then
+			if hit_attack ~= 0 and op.hitstop_id ~= 0 and op.flag_c0 > 0 and op.flag_cc > 0 then
 				hit_attack = op.hitstop_id
-				-- print(string.format("%x %x %x %x", op.state_flags, op.state_flags2, op.state_flags3, op.state_flags4))
+				-- print(string.format("%x %x %x %x", op.flag_c0, op.flag_cc, op.flag_c8, op.flag_c4))
 			end
 
 			if hit_attack ~= 0 then
@@ -9234,7 +9234,7 @@ function rbff2.startplugin()
 				p.on_wakeup = global.frame_number
 			end
 			-- ダウンフレーム
-			if (p.old_state_flags & 0x2 == 0x0) and (p.state_flags & 0x2 == 0x2) then
+			if (p.old_flag_c0 & 0x2 == 0x0) and (p.flag_c0 & 0x2 == 0x2) then
 				p.on_down = global.frame_number
 			end
 			-- フレーム表示用処理
@@ -10041,7 +10041,7 @@ function rbff2.startplugin()
 			-- 無敵表示
 			col, line = 0x00000000, 0x00000000
 			for _, hurt_inv in ipairs(p.hit_summary.hurt_inv) do
-				if 0x400 > p.state_flags2 then
+				if 0x400 > p.flag_cc then
 					if hurt_inv.type == 0 then -- 全身無敵
 						col, line = 0xAAB0E0E6, 0xDDAFEEEE
 						break
@@ -10571,14 +10571,14 @@ function rbff2.startplugin()
 							end
 						end
 					elseif p.dummy_rvs.jump then
-						if p.state == 0 and p.old_state == 0 and  (p.state_flags | p.old_state_flags) & 0x10000 == 0x10000 then
+						if p.state == 0 and p.old_state == 0 and  (p.flag_c0 | p.old_flag_c0) & 0x10000 == 0x10000 then
 							-- 連続通常ジャンプを繰り返さない
 							return
 						end
 					end
 					if p.dummy_rvs.cmd then
 						if rvs_types.knock_back_recovery ~= rvs_type then
-							if (((p.state_flags | p.old_state_flags) & 0x2 == 0x2) or pre_down_acts[p.act]) and p.dummy_rvs.cmd == cmd_base._2d then
+							if (((p.flag_c0 | p.old_flag_c0) & 0x2 == 0x2) or pre_down_acts[p.act]) and p.dummy_rvs.cmd == cmd_base._2d then
 								-- no act
 							else
 								p.dummy_rvs.cmd(p, next_joy)
@@ -11181,7 +11181,7 @@ function rbff2.startplugin()
 					draw_rtext(    p1 and 40 or 314, 19, string.format("%02x", p.act_frame))
 
 					draw_rtext(    p1 and  8 or 274, 25, string.format("%02x", p.additional))
-					draw_rtext(    p1 and 40 or 314, 25, string.format("%08x", p.state_flags2))
+					draw_rtext(    p1 and 40 or 314, 25, string.format("%08x", p.flag_cc))
 
 					--[[
 						p.tw_frame のしきい値。しきい値より大きければ投げ処理継続可能。
