@@ -33,7 +33,7 @@ exports.description = "RBFF2 Training"
 exports.license = "MIT License"
 exports.author = { name = "Sanwabear" }
 
-local man, machine, cpu, pgm, scr, ioports, debugger, wpset, bpset
+local man, machine, cpu, pgm, scr, ioports, debugger
 local setup_emu = function()
 	man = manager
 	machine = man.machine
@@ -42,12 +42,6 @@ local setup_emu = function()
 	scr = machine.screens:at(1)
 	ioports = man.machine.ioport.ports
 	debugger = machine.debugger
-	wpset = function(repo, rw, addr, len, cond, exec)
-		table.insert(repo, cpu.debug:wpset(pgm, rw, addr, len, cond or 1, exec or ""))
-	end
-	bpset = function(repo, addr, cond, exec)
-		table.insert(repo, cpu.debug:bpset(addr, cond or 1, exec or ""))
-	end
 end
 
 local rbff2 = exports
@@ -181,7 +175,14 @@ local global = {
 	new_hook_holder  = function()
 		return { bps = {}, wps = {}, on = true, }
 	end,
-	set_bps          = function(disable, holder)
+
+	wp = function(wps, rw, addr, len, cond, exec)
+		table.insert(wps, cpu.debug:wpset(pgm, rw, addr, len, cond or 1, exec or ""))
+	end,
+	bp = function(bps, addr, cond, exec)
+		table.insert(bps, cpu.debug:bpset(addr, cond or 1, exec or ""))
+	end,
+	set_bps = function(disable, holder)
 		if disable == true and holder.on == true then
 			for _, bp in ipairs(holder.bps) do
 				cpu.debug:bpdisable(bp)
@@ -194,7 +195,7 @@ local global = {
 			holder.on = true
 		end
 	end,
-	set_wps          = function(disable, holder)
+	set_wps = function(disable, holder)
 		if disable == true and holder.on == true then
 			for _, wp in ipairs(holder.wps) do
 				cpu.debug:wpdisable(wp)
@@ -6199,7 +6200,7 @@ function rbff2.startplugin()
 			global.set_bps(enabled ~= true, p.step_bp)
 		else
 			p.step_bp = global.new_hook_holder()
-			bpset(p.step_bp.bps, 0x026216, "(A4)==$" .. string.format("%x", p.addr.base), "PC=$02622A;g")
+			global.bp(p.step_bp.bps, 0x026216, "(A4)==$" .. string.format("%x", p.addr.base), "PC=$02622A;g")
 		end
 	end
 
@@ -6281,7 +6282,7 @@ function rbff2.startplugin()
 			global.set_bps(enabled ~= true, hook_holder)
 		else
 			hook_holder = global.new_hook_holder()
-			bpset(hook_holder.bps, addr, cond, exec)
+			global.bp(hook_holder.bps, addr, cond, exec)
 			global.set_bps(enabled ~= true, hook_holder)
 		end
 		return hook_holder
@@ -6383,39 +6384,38 @@ function rbff2.startplugin()
 		else
 			global.wps = global.new_hook_holder()
 			local wps = global.wps.wps
-			--debug:wpset(space, type, addr, len, [opt] cond, [opt] act)
-			wpset(wps, "w", 0x1006BF, 1, "wpdata!=0", "maincpu.pb@10CA00=1;g")
-			wpset(wps, "w", 0x1007BF, 1, "wpdata!=0", "maincpu.pb@10CA01=1;g")
-			wpset(wps, "w", 0x100620, 1, "wpdata!=0", "maincpu.pb@10CA02=1;g")
-			wpset(wps, "w", 0x10062C, 1, "wpdata!=0", "maincpu.pb@10CA03=1;g")
-			wpset(wps, "w", 0x100820, 1, "wpdata!=0", "maincpu.pb@10CA04=1;g")
-			wpset(wps, "w", 0x10082C, 1, "wpdata!=0", "maincpu.pb@10CA05=1;g")
-			wpset(wps, "w", 0x100A20, 1, "wpdata!=0", "maincpu.pb@10CA06=1;g")
-			wpset(wps, "w", 0x100A2C, 1, "wpdata!=0", "maincpu.pb@10CA07=1;g")
-			wpset(wps, "w", 0x100720, 1, "wpdata!=0", "maincpu.pb@10CA08=1;g")
-			wpset(wps, "w", 0x10072C, 1, "wpdata!=0", "maincpu.pb@10CA09=1;g")
-			wpset(wps, "w", 0x100920, 1, "wpdata!=0", "maincpu.pb@10CA0A=1;g")
-			wpset(wps, "w", 0x10092C, 1, "wpdata!=0", "maincpu.pb@10CA0B=1;g")
-			wpset(wps, "w", 0x100B20, 1, "wpdata!=0", "maincpu.pb@10CA0C=1;g")
-			wpset(wps, "w", 0x100B2C, 1, "wpdata!=0", "maincpu.pb@10CA0D=1;g")
-			wpset(wps, "w", 0x10048E, 1, "wpdata!=0", "maincpu.pb@10CA0E=maincpu.pb@10048E;g")
-			wpset(wps, "w", 0x10058E, 1, "wpdata!=0", "maincpu.pb@10CA0F=maincpu.pb@10058E;g")
-			wpset(wps, "w", 0x10048F, 1, "1", "maincpu.pb@10CA10=wpdata;g")
-			wpset(wps, "w", 0x10058F, 1, "1", "maincpu.pb@10CA11=wpdata;g")
-			wpset(wps, "w", 0x100460, 1, "wpdata!=0", "maincpu.pw@10CA12=wpdata;g")
-			wpset(wps, "w", 0x100560, 1, "wpdata!=0", "maincpu.pw@10CA14=wpdata;g")
+			global.wp(wps, "w", 0x1006BF, 1, "wpdata!=0", "maincpu.pb@10CA00=1;g")
+			global.wp(wps, "w", 0x1007BF, 1, "wpdata!=0", "maincpu.pb@10CA01=1;g")
+			global.wp(wps, "w", 0x100620, 1, "wpdata!=0", "maincpu.pb@10CA02=1;g")
+			global.wp(wps, "w", 0x10062C, 1, "wpdata!=0", "maincpu.pb@10CA03=1;g")
+			global.wp(wps, "w", 0x100820, 1, "wpdata!=0", "maincpu.pb@10CA04=1;g")
+			global.wp(wps, "w", 0x10082C, 1, "wpdata!=0", "maincpu.pb@10CA05=1;g")
+			global.wp(wps, "w", 0x100A20, 1, "wpdata!=0", "maincpu.pb@10CA06=1;g")
+			global.wp(wps, "w", 0x100A2C, 1, "wpdata!=0", "maincpu.pb@10CA07=1;g")
+			global.wp(wps, "w", 0x100720, 1, "wpdata!=0", "maincpu.pb@10CA08=1;g")
+			global.wp(wps, "w", 0x10072C, 1, "wpdata!=0", "maincpu.pb@10CA09=1;g")
+			global.wp(wps, "w", 0x100920, 1, "wpdata!=0", "maincpu.pb@10CA0A=1;g")
+			global.wp(wps, "w", 0x10092C, 1, "wpdata!=0", "maincpu.pb@10CA0B=1;g")
+			global.wp(wps, "w", 0x100B20, 1, "wpdata!=0", "maincpu.pb@10CA0C=1;g")
+			global.wp(wps, "w", 0x100B2C, 1, "wpdata!=0", "maincpu.pb@10CA0D=1;g")
+			global.wp(wps, "w", 0x10048E, 1, "wpdata!=0", "maincpu.pb@10CA0E=maincpu.pb@10048E;g")
+			global.wp(wps, "w", 0x10058E, 1, "wpdata!=0", "maincpu.pb@10CA0F=maincpu.pb@10058E;g")
+			global.wp(wps, "w", 0x10048F, 1, "1", "maincpu.pb@10CA10=wpdata;g")
+			global.wp(wps, "w", 0x10058F, 1, "1", "maincpu.pb@10CA11=wpdata;g")
+			global.wp(wps, "w", 0x100460, 1, "wpdata!=0", "maincpu.pw@10CA12=wpdata;g")
+			global.wp(wps, "w", 0x100560, 1, "wpdata!=0", "maincpu.pw@10CA14=wpdata;g")
 
 			-- X軸のMAXとMIN
-			wpset(wps, "w", 0x100420, 2, "wpdata>maincpu.pw@10DDE6", "maincpu.pw@10DDE6=wpdata;g")
-			wpset(wps, "w", 0x100420, 2, "wpdata<maincpu.pw@10DDEA", "maincpu.pw@10DDEA=wpdata;g")
-			wpset(wps, "w", 0x100520, 2, "wpdata>maincpu.pw@10DDE8", "maincpu.pw@10DDE8=wpdata;g")
-			wpset(wps, "w", 0x100520, 2, "wpdata<maincpu.pw@10DDEC", "maincpu.pw@10DDEC=wpdata;g")
+			global.wp(wps, "w", 0x100420, 2, "wpdata>maincpu.pw@10DDE6", "maincpu.pw@10DDE6=wpdata;g")
+			global.wp(wps, "w", 0x100420, 2, "wpdata<maincpu.pw@10DDEA", "maincpu.pw@10DDEA=wpdata;g")
+			global.wp(wps, "w", 0x100520, 2, "wpdata>maincpu.pw@10DDE8", "maincpu.pw@10DDE8=wpdata;g")
+			global.wp(wps, "w", 0x100520, 2, "wpdata<maincpu.pw@10DDEC", "maincpu.pw@10DDEC=wpdata;g")
 
 			-- コマンド入力状態の記憶場所 A1
 			-- bp 39488,{(A4)==100400},{printf "PC=%X A4=%X A1=%X",PC,(A4),(A1);g}
 
 			-- タメ状態の調査用
-			-- wpset(wps, "w", 0x10B548, 160, "wpdata!=FF&&wpdata>0&&maincpu.pb@(wpaddr)==0", "printf \"pos=%X addr=%X wpdata=%X\", (wpaddr - $10B548),wpaddr,wpdata;g")
+			-- global.wp(wps, "w", 0x10B548, 160, "wpdata!=FF&&wpdata>0&&maincpu.pb@(wpaddr)==0", "printf \"pos=%X addr=%X wpdata=%X\", (wpaddr - $10B548),wpaddr,wpdata;g")
 
 			-- 必殺技追加入力の調査用
 			-- wp 1004A5,1,r,wpdata!=FF,{printf "PC=%X data=%X",PC,wpdata;g} -- 追加入力チェックまたは技処理内での消去
@@ -6425,12 +6425,12 @@ function rbff2.startplugin()
 			for i, p in ipairs(players) do
 				-- コマンド成立の確認用
 				--[[
-				wpset(wps, "w", p.addr.base + 0xA4, 2, "wpdata>0",
+				global.wp(wps, "w", p.addr.base + 0xA4, 2, "wpdata>0",
 					"printf \"wpdata=%X CH=%X CH4=%D PC=%X PREF_ADDR=%X A4=%X A6=%X D1=%X\",wpdata,maincpu.pw@((A4)+10),maincpu.pw@((A4)+10),PC,PREF_ADDR,(A4),(A6),(D1);g")
 				]]
 				-- 投げ持続フレームの解除の確認用
 				--[[
-				wpset(wps, "w", p.addr.base + 0xA4, 2, "wpdata==0&&maincpu.pb@" ..  string.format("%x", p.addr.base) .. ">0",
+				global.wp(wps, "w", p.addr.base + 0xA4, 2, "wpdata==0&&maincpu.pb@" ..  string.format("%x", p.addr.base) .. ">0",
 					"printf \"wpdata=%X CH=%X CH4=%D PC=%X PREF_ADDR=%X A4=%X A6=%X D1=%X\",wpdata,maincpu.pw@((A4)+10),maincpu.pw@((A4)+10),PC,PREF_ADDR,(A4),(A6),(D1);g")
 				]]
 			end
@@ -6446,8 +6446,8 @@ function rbff2.startplugin()
 
 			if global.infinity_life2 then
 				--bp 05B480,{(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100500)},{PC=5B48E;g}
-				bpset(bps, fix_bp_addr(0x05B460), "1", string.format("PC=%x;g", fix_bp_addr(0x05B46E)))
-				bpset(bps, fix_bp_addr(0x05B466), "1", string.format("PC=%x;g", fix_bp_addr(0x05B46E)))
+				global.bp(bps, fix_bp_addr(0x05B460), "1", string.format("PC=%x;g", fix_bp_addr(0x05B46E)))
+				global.bp(bps, fix_bp_addr(0x05B466), "1", string.format("PC=%x;g", fix_bp_addr(0x05B46E)))
 			end
 
 			-- wp CB23E,16,r,{A4==100400},{printf "A4=%X PC=%X A6=%X D1=%X data=%X",A4,PC,A6,D1,wpdata;g}
@@ -6457,49 +6457,49 @@ function rbff2.startplugin()
 			local bp_cnd2 = "(maincpu.pw@107C22>0)&&((($1E<=maincpu.pb@10DDDA)&&(maincpu.pb@10DDDD==$1)&&($100400==((A4)&$FFFFFF)))||(($1E<=maincpu.pb@10DDDE)&&(maincpu.pb@10DDE1==$1)&&($100500==((A4)&$FFFFFF))))"
 			-- ダッシュとか用
 			-- BPモードON 未入力で技発動するように
-			bpset(bps, fix_bp_addr(0x039512), "((A6)==CB242)&&"..bp_cnd2, "D1=0;g")
+			global.bp(bps, fix_bp_addr(0x039512), "((A6)==CB242)&&"..bp_cnd2, "D1=0;g")
 			-- 技入力データの読み込み
-			bpset(bps, fix_bp_addr(0x03957E), "((A6)==CB244)&&"..bp_cnd2,
+			global.bp(bps, fix_bp_addr(0x03957E), "((A6)==CB244)&&"..bp_cnd2,
 				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$40);D1=(maincpu.pb@(temp1));A6=((A6)+1);maincpu.pb@((A4)+$D6)=D1;maincpu.pb@((A4)+$D7)=maincpu.pb@(temp1+1);PC=((PC)+$20);g")
 			-- 必殺技用
 			-- BPモードON 未入力で技発動するように
-			bpset(bps, fix_bp_addr(0x039512), "((A6)==CB242)&&"..bp_cond, "D1=0;g")
+			global.bp(bps, fix_bp_addr(0x039512), "((A6)==CB242)&&"..bp_cond, "D1=0;g")
 			-- 技入力データの読み込み
 			-- bp 03957E,{((A6)==CB244)&&((A4)==100400)&&(maincpu.pb@10048E==2)},{D1=1;g}
 			-- bp 03957E,{((A6)==CB244)&&((A4)==100500)&&(maincpu.pb@10058E==2)},{D1=1;g}
 			-- 0395B2: 1941 00A3                move.b  D1, ($a3,A4) -- 確定した技データ
 			-- 0395B6: 195E 00A4                move.b  (A6)+, ($a4,A4) -- 技データ読込 だいたい06
 			-- 0395BA: 195E 00A5                move.b  (A6)+, ($a5,A4) -- 技データ読込 だいたい00、飛燕斬01、02、03
-			bpset(bps, fix_bp_addr(0x03957E), "((A6)==CB244)&&"..bp_cond,
+			global.bp(bps, fix_bp_addr(0x03957E), "((A6)==CB244)&&"..bp_cond,
 				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$40);D1=(maincpu.pb@(temp1));A6=((A6)+2);maincpu.pb@((A4)+$A3)=D1;maincpu.pb@((A4)+$A4)=maincpu.pb@(temp1+1);maincpu.pb@((A4)+$A5)=maincpu.pb@(temp1+2);PC=((PC)+$20);g")
 
 			-- ステージ設定用。メニューでFを設定した場合にのみ動作させる
 			-- ラウンド数を1に初期化→スキップ
-			bpset(bps, 0x0F368, "maincpu.pw@((A5)-$448)==$F", "PC=F36E;g")
+			global.bp(bps, 0x0F368, "maincpu.pw@((A5)-$448)==$F", "PC=F36E;g")
 			-- ラウンド2以上の場合の初期化処理→無条件で実施
-			bpset(bps, 0x22AD8, "maincpu.pw@((A5)-$448)==$F", "PC=22AF4;g")
+			global.bp(bps, 0x22AD8, "maincpu.pw@((A5)-$448)==$F", "PC=22AF4;g")
 			-- キャラ読込 ラウンド1の時だけ読み込む→無条件で実施
-			bpset(bps, 0x22D32, "maincpu.pw@((A5)-$448)==$F", "PC=22D3E;g")
+			global.bp(bps, 0x22D32, "maincpu.pw@((A5)-$448)==$F", "PC=22D3E;g")
 			-- ラウンド2以上の時の処理→データロード直後の状態なので不要。スキップしないとBGMが変わらない
-			bpset(bps, 0x0F6AC, "maincpu.pw@((A5)-$448)==$F", "PC=F6B6;g")
+			global.bp(bps, 0x0F6AC, "maincpu.pw@((A5)-$448)==$F", "PC=F6B6;g")
 			-- ラウンド1じゃないときの処理 →スキップ
-			bpset(bps, 0x1E39A, "maincpu.pw@((A5)-$448)==$F", "PC=1E3A4;g")
+			global.bp(bps, 0x1E39A, "maincpu.pw@((A5)-$448)==$F", "PC=1E3A4;g")
 			-- ラウンド1の時だけ読み込む →無条件で実施。データを1ラウンド目の値に戻す
-			bpset(bps, 0x17694, "maincpu.pw@((A5)-$448)==$F", "maincpu.pw@((A5)-$448)=1;PC=176A0;g")
+			global.bp(bps, 0x17694, "maincpu.pw@((A5)-$448)==$F", "maincpu.pw@((A5)-$448)=1;PC=176A0;g")
 
 			-- 当たり判定用
 			-- 喰らい判定フラグ用
-			bpset(bps, fix_bp_addr(0x5C2DA),
+			global.bp(bps, fix_bp_addr(0x5C2DA),
 				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100500)",
 				"temp1=$10CB30+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=$01;g")
 
 			-- 喰らい判定用
-			bpset(bps, fix_bp_addr(0x5C2E6),
+			global.bp(bps, fix_bp_addr(0x5C2E6),
 				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100500)",
 				"temp1=$10CB32+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=$01;maincpu.pb@(temp1+$2)=(maincpu.pb@(((A4)+$B1)&$FFFFFF));g")
 
 			--判定追加1 攻撃判定
-			bpset(bps, fix_bp_addr(0x012C42),
+			global.bp(bps, fix_bp_addr(0x012C42),
 				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100F00)",
 				--"printf \"PC=%X A4=%X A2=%X D0=%X CT=%X\",PC,A4,A2,D0,($1DC000+((maincpu.pb@10CB40)*$10));"..
 				"temp0=($1DC000+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pd@(temp0+$B)=maincpu.pd@((A2)+$5);maincpu.pw@(temp0+$C)=maincpu.pw@(((A4)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A4)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g")
@@ -6510,45 +6510,45 @@ function rbff2.startplugin()
 			bp 0x012C88,1,{printf "0x012C88 %X %X A3=%X A4=%X A1=%X A2=%X 476=%X 47A=%X 576=%X 57A=%X",maincpu.pw@100460,maincpu.pw@10046E,A3,A4,A1,A2,maincpu.pd@100476,maincpu.pd@10047A,maincpu.pd@100576,maincpu.pd@10057A;g}
 			]]
 			--判定追加2 攻撃判定
-			bpset(bps, fix_bp_addr(0x012C88),
+			global.bp(bps, fix_bp_addr(0x012C88),
 				"(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100F00)",
 				--"printf \"PC=%X A3=%X A1=%X D0=%X CT=%X\",PC,A3,A1,D0,($1DC000+((maincpu.pb@10CB40)*$10));"..
 				"temp0=($1DC000+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$01;maincpu.pd@(temp0+$B)=maincpu.pd@((A1)+$5);maincpu.pw@(temp0+$C)=maincpu.pw@(((A3)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A3)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g")
 
 			--判定追加3 1P押し合い判定
-			bpset(bps, fix_bp_addr(0x012D4C),
+			global.bp(bps, fix_bp_addr(0x012D4C),
 				"(maincpu.pw@107C22>0)&&($100400==((A4)&$FFFFFF))",
 				--"printf \"PC=%X A4=%X A2=%X D0=%X CT=%X\",PC,A4,A2,D0,($1DC000+((maincpu.pb@10CB40)*$10));"..
 				"temp0=($1DC000+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pw@(temp0+$C)=maincpu.pw@(((A4)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A4)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g")
 
 			--判定追加4 2P押し合い判定
-			bpset(bps, fix_bp_addr(0x012D92),
+			global.bp(bps, fix_bp_addr(0x012D92),
 				"(maincpu.pw@107C22>0)&&($100500<=((A3)&$FFFFFF))",
 				--"printf \"PC=%X A3=%X A1=%X D0=%X CT=%X\",PC,A3,A1,D0,($1DC000+((maincpu.pb@10CB40)*$10));"..
 				"temp0=($1DC000+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pw@(temp0+$C)=maincpu.pw@(((A3)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A3)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g")
 
 			-- 地上通常投げ
-			bpset(bps, fix_bp_addr(0x05D782),
+			global.bp(bps, fix_bp_addr(0x05D782),
 				"(maincpu.pw@107C22>0)&&((((D7)&$FFFF)!=0x65))&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100500)",
 				"temp1=$10CD90+((((A4)&$FFFFFF)-$100400)/$8);maincpu.pb@(temp1)=$1;maincpu.pd@(temp1+$1)=((A4)&$FFFFFF);maincpu.pd@(temp1+$5)=maincpu.pd@(((A4)&$FFFFFF)+$96);maincpu.pw@(temp1+$A)=maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10);maincpu.pw@(temp1+$C)=maincpu.pw@(((A4)&$FFFFFF)+$10);maincpu.pb@(temp1+$10)=maincpu.pb@(((A4)&$FFFFFF)+$96+$58);maincpu.pb@(temp1+$11)=maincpu.pb@(((A4)&$FFFFFF)+$58);maincpu.pb@(temp1+$12)=maincpu.pb@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$58);maincpu.pb@(temp1+$13)=maincpu.pb@(maincpu.pd@((PC)+$2));maincpu.pb@(temp1+$14)=maincpu.pb@((maincpu.pd@((PC)+$02))+((maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10))<<3)+$3);maincpu.pb@(temp1+$15)=maincpu.pb@((maincpu.pd@((PC)+$02))+((maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10))<<3)+$4);maincpu.pb@(temp1+$16)=maincpu.pb@((maincpu.pd@((PC)+$2))+((maincpu.pw@(((A4)&$FFFFFF)+$10))<<3)+$3);maincpu.pb@(temp1+$17)=maincpu.pb@((PC)+$D2+(maincpu.pw@((A4)&$FFFFFF)+$10)*4+((((D7)&$FFFF)-$60)&$7));maincpu.pw@(temp1+$18)=maincpu.pw@(($FFFFFF&(A4))+$20);maincpu.pw@(temp1+$1A)=maincpu.pw@(($FFFFFF&(A4))+$28);g")
 
 			-- 空中投げ
-			bpset(bps, fix_bp_addr(0x060428),
+			global.bp(bps, fix_bp_addr(0x060428),
 				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100500)",
 				"temp1=$10CD00+((((A4)&$FFFFFF)-$100400)/$8);maincpu.pb@(temp1)=$1;maincpu.pw@(temp1+$1)=maincpu.pw@(A0);maincpu.pw@(temp1+$3)=maincpu.pw@((A0)+$2);maincpu.pd@(temp1+$5)=$FFFFFF&(A4);maincpu.pd@(temp1+$9)=maincpu.pd@(($FFFFFF&(A4))+$96);maincpu.pw@(temp1+$D)=maincpu.pw@(maincpu.pd@(($FFFFFF&(A4))+$96)+$10);maincpu.pd@(temp1+$11)=maincpu.rb@(($FFFFFF&(A4))+$58);maincpu.pw@(temp1+$13)=maincpu.pw@(($FFFFFF&(A4))+$20);maincpu.pw@(temp1+$15)=maincpu.pw@(($FFFFFF&(A4))+$28);g")
 
 			-- 必殺投げ
-			bpset(bps, fix_bp_addr(0x039F2A),
+			global.bp(bps, fix_bp_addr(0x039F2A),
 				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100500)",
 				"temp1=$10CD40+((((A4)&$FFFFFF)-$100400)/$8);maincpu.pb@(temp1)=$1;maincpu.pw@(temp1+$1)=maincpu.pw@(A0);maincpu.pw@(temp1+$3)=maincpu.pw@((A0)+$2);maincpu.pd@(temp1+$5)=$FFFFFF&(A4);maincpu.pd@(temp1+$9)=maincpu.pd@(($FFFFFF&(A4))+$96);maincpu.pw@(temp1+$D)=maincpu.pw@(maincpu.pd@(($FFFFFF&(A4))+$96)+$10);maincpu.pd@(temp1+$11)=maincpu.rb@(($FFFFFF&(A4))+$58);maincpu.pw@(temp1+$12)=maincpu.pw@(A0+$4);maincpu.pw@(temp1+$15)=maincpu.pw@(($FFFFFF&(A4))+$20);maincpu.pw@(temp1+$17)=maincpu.pw@(($FFFFFF&(A4))+$28);g")
 			-- プレイヤー選択時のカーソル操作表示用データのオフセット
 			-- PC=11EE2のときのA4レジスタのアドレスがプレイヤー選択のアイコンの参照場所
 			-- データの領域を未使用の別メモリ領域に退避して1P操作で2Pカーソル移動ができるようにする
 			-- maincpu.pw@((A4)+$60)=$00F8を付けたすとカーソルをCPUにできる
-			bpset(bps, 0x11EE2,
+			global.bp(bps, 0x11EE2,
 				"(maincpu.pw@((A4)+2)==2D98||maincpu.pw@((A4)+2)==33B8)&&maincpu.pw@100701==10B&&maincpu.pb@10FDAF==2&&maincpu.pw@10FDB6!=0&&maincpu.pb@100026==2",
 				"maincpu.pb@10CDD0=($FF&((maincpu.pb@10CDD0)+1));maincpu.pd@10CDD1=((A4)+$13);g")
-				bpset(bps, 0x11EE2,
+				global.bp(bps, 0x11EE2,
 				"(maincpu.pw@((A4)+2)==2D98||maincpu.pw@((A4)+2)==33B8)&&maincpu.pw@100701==10B&&maincpu.pb@10FDAF==2&&maincpu.pw@10FDB6!=0&&maincpu.pb@100026==1",
 				"maincpu.pb@10CDD0=($FF&((maincpu.pb@10CDD0)+1));maincpu.pd@10CDD5=((A4)+$13);g")
 
@@ -6557,10 +6557,10 @@ function rbff2.startplugin()
 			-- PC= 12376 読取反映先=D0 スタートボタンの読取してるけど関係なし
 			-- PC=C096A8 読取反映先=D1 スタートボタンの読取してるけど関係なし
 			-- PC=C1B954 読取反映先=D2 スタートボタンの読取してるとこ
-			bpset(bps, 0xC1B95A,
+			global.bp(bps, 0xC1B95A,
 				"(maincpu.pb@100024==1&&maincpu.pw@100701==10B&&maincpu.pb@10FDAF==2&&maincpu.pw@10FDB6!=0)&&((((maincpu.pb@300000)&$10)==0)||(((maincpu.pb@300000)&$80)==0))",
 				"D2=($FF^$04);g")
-			bpset(bps, 0xC1B95A,
+			global.bp(bps, 0xC1B95A,
 				"(maincpu.pb@100024==2&&maincpu.pw@100701==10B&&maincpu.pb@10FDAF==2&&maincpu.pw@10FDB6!=0)&&((((maincpu.pb@340000)&$10)==0)||(((maincpu.pb@340000)&$80)==0))",
 				"D2=($FF^$01);g")
 
@@ -6569,16 +6569,16 @@ function rbff2.startplugin()
 			--			func = function() memory.pgm:write_u8(gr("a4") + 0x82, 0) end},
 			--solid shadows 01
 			--no    shadows FF
-			bpset(bps, 0x017300, "maincpu.pw@107C22>0&&maincpu.pb@10DDF0==FF", "maincpu.pb@((A4)+$82)=$FF;g")
+			global.bp(bps, 0x017300, "maincpu.pw@107C22>0&&maincpu.pb@10DDF0==FF", "maincpu.pb@((A4)+$82)=$FF;g")
 
 			-- 潜在ぜったい投げるマン
-			--table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x039F8C), "1",
+			--table.insert(bps, cpu.debug:global.bp(fix_bp_addr(0x039F8C), "1",
 			--	"maincpu.pb@((A3)+$90)=$19;g"))
 			-- 投げ可能判定用フレーム
-			bpset(bps, fix_bp_addr(0x039F90), "maincpu.pw@107C22>0",
+			global.bp(bps, fix_bp_addr(0x039F90), "maincpu.pw@107C22>0",
 				"temp1=$10DDE2+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=D7;g")
 			-- 投げ確定時の判定用フレーム
-			bpset(bps, fix_bp_addr(0x039F96), "maincpu.pw@107C22>0",
+			global.bp(bps, fix_bp_addr(0x039F96), "maincpu.pw@107C22>0",
 				"temp1=$10DDE4+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@((A3)+$90);g")
 
 			-- 判定の接触判定が無視される
@@ -6586,27 +6586,27 @@ function rbff2.startplugin()
 
 			-- 攻撃のヒットをむりやりガードに変更する
 			-- $10DE5E $10DE5Fにフラグたっているかをチェックする
-			bpset(bps, fix_bp_addr(0x0580D4),
+			global.bp(bps, fix_bp_addr(0x0580D4),
 				"maincpu.pw@107C22>0&&((maincpu.pb@10DDF1>0&&(A4)==100500&&maincpu.pb@10DE5F==1&&(maincpu.pb@10058E==0||maincpu.pb@10058E==2))||(maincpu.pb@10DDF1>0&&(A4)==100400&&maincpu.pb@10DE5E==1&&(maincpu.pb@10048E==0||maincpu.pb@10048E==2)))",
 				"PC=" .. string.format("%x", fix_bp_addr(0x0580EA)) .. ";g")
 			--[[
-			bpset(bps, fix_bp_addr(0x012FD0),
+			global.bp(bps, fix_bp_addr(0x012FD0),
 				"maincpu.pw@107C22>0&&((maincpu.pb@10DDF1>0&&(A4)==100500)||(maincpu.pb@10DDF1>0&&(A4)==100400))",
 				"temp1=$10DDF1+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=0;PC=" .. string.format("%x", fix_bp_addr(0x012FDA)) .. ";g")
 			]]
 
 			-- N段目で強制空ぶりさせるフック
-			bpset(bps, fix_bp_addr(0x0130F8),
+			global.bp(bps, fix_bp_addr(0x0130F8),
 				"maincpu.pw@107C22>0&&((D7)<$FFFF)&&((maincpu.pb@10DDF1!=$FF&&(A4)==100500&&maincpu.pb@10DDF1<=maincpu.pb@10B4E0)||(maincpu.pb@10DDF2!=$FF&&(A4)==100400&&maincpu.pb@10DDF2<=maincpu.pb@10B4E1))",
 				"maincpu.pb@(temp1)=0;PC=" .. string.format("%x", fix_bp_addr(0x012FDA)) .. ";g")
 			--[[ 空振りフック時の状態確認用
-			bpset(bps, fix_bp_addr(0x0130F8),
+			global.bp(bps, fix_bp_addr(0x0130F8),
 				"maincpu.pw@107C22>0&&((D7)<$FFFF)&&((A4)==100500||(A4)==100400)",
 				"printf \"A4=%X 1=%X 2=%X E0=%X E1=%X\",(A4),maincpu.pb@10DDF1,maincpu.pb@10DDF2,maincpu.pb@10B4E0,maincpu.pb@10B4E1;g")
 			]]
 
 			-- ヒット後ではなく技の出だしから嘘判定であることの判定用フック
-			bpset(bps, fix_bp_addr(0x011DFE),
+			global.bp(bps, fix_bp_addr(0x011DFE),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DDF3+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(D5);g")
 
@@ -6621,66 +6621,66 @@ function rbff2.startplugin()
 			05B13A MVS
 			]]
 			-- 補正前ダメージ取得用フック
-			bpset(bps, fix_bp_addr(0x05B11A),
+			global.bp(bps, fix_bp_addr(0x05B11A),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DDFB+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@((A4)+$8F);g")
-				bpset(bps, fix_bp_addr(0x05B13A),
+				global.bp(bps, fix_bp_addr(0x05B13A),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DDFB+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@((A4)+$8F);g")
 
 			-- 気絶値と気絶値タイマー取得用フック
-			bpset(bps, fix_bp_addr(0x05C1E0),
+			global.bp(bps, fix_bp_addr(0x05C1E0),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DDFD+((((A4)&$FFFFFF)-$100400)/$80);maincpu.pb@(temp1)=(D0);maincpu.pb@(temp1+$1)=(D1);g")
 
 			--ダメージ補正 7/8
-			bpset(bps, fix_bp_addr(0x5B1E0),
+			global.bp(bps, fix_bp_addr(0x5B1E0),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DE50+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@(temp1)+1;g")
 			--ダメージ補正 6/8
-			bpset(bps, fix_bp_addr(0x5B1F6),
+			global.bp(bps, fix_bp_addr(0x5B1F6),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DE52+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@(temp1)+1;g")
 			--ダメージ補正 5/8
-			bpset(bps, fix_bp_addr(0x5B20C),
+			global.bp(bps, fix_bp_addr(0x5B20C),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DE54+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@(temp1)+1;g")
 			--ダメージ補正 4/8
-			bpset(bps, fix_bp_addr(0x5B224),
+			global.bp(bps, fix_bp_addr(0x5B224),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DE56+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@(temp1)+1;g")
 
 			-- POWゲージ増加量取得用フック 通常技
 			-- 中間のチェックをスキップして算出処理へ飛ぶ
-			bpset(bps, fix_bp_addr(0x03BEDA),
+			global.bp(bps, fix_bp_addr(0x03BEDA),
 				"maincpu.pw@107C22>0",
 				string.format("PC=%x;g", fix_bp_addr(0x03BEEC)))
 			-- 中間チェックに抵触するパターンは値採取後にRTSへ移動する
-			bpset(bps, fix_bp_addr(0x05B3AC),
+			global.bp(bps, fix_bp_addr(0x05B3AC),
 				"maincpu.pw@107C22>0&&(maincpu.pb@((A3)+$BF)!=$0||maincpu.pb@((A3)+$BC)==$3C)",
 				"temp1=$10DE58+((((A3)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));" .. string.format("PC=%x", fix_bp_addr(0x05B34E)) .. ";g")
 			-- 中間チェックに抵触しないパターン
-			bpset(bps, fix_bp_addr(0x05B3AC),
+			global.bp(bps, fix_bp_addr(0x05B3AC),
 				"maincpu.pw@107C22>0&&maincpu.pb@((A3)+$BF)==$0&&maincpu.pb@((A3)+$BC)!=$3C",
 				"temp1=$10DE58+((((A3)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g")
 
 			-- POWゲージ増加量取得用フック 必殺技
 			-- 中間のチェックをスキップして算出処理へ飛ぶ
-			bpset(bps, fix_bp_addr(0x05B34C),
+			global.bp(bps, fix_bp_addr(0x05B34C),
 				"maincpu.pw@107C22>0",
 				string.format("PC=%x;g", fix_bp_addr(0x05B35E)))
 			-- 中間チェックに抵触するパターンは値採取後にRTSへ移動する
-			bpset(bps, fix_bp_addr(0x03C144),
+			global.bp(bps, fix_bp_addr(0x03C144),
 				"maincpu.pw@107C22>0&&maincpu.pb@((A4)+$BF)!=$0",
 				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));" .. string.format("PC=%x", fix_bp_addr(0x03C13A)) .. ";g")
 			-- 中間チェックに抵触しないパターン
-			bpset(bps, fix_bp_addr(0x03C144),
+			global.bp(bps, fix_bp_addr(0x03C144),
 				"maincpu.pw@107C22>0&&maincpu.pb@((A4)+$BF)==$0",
 				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g")
 
 			-- POWゲージ増加量取得用フック 倍返しとか
 			-- 中間のチェック以前に値がD0に入っているのでそれを採取する
-			bpset(bps, fix_bp_addr(0x03BF04),
+			global.bp(bps, fix_bp_addr(0x03BF04),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g")
 
@@ -6724,7 +6724,7 @@ function rbff2.startplugin()
 				0x00039F36, -- 投げ成立
 				0x00039DFA, -- 無敵Fチェック
 			}) do
-				bpset(bps, addr, "1", "printf \"A4=%X CH=%D PC=%X PREF_ADDR=%X A0=%X D7=%X\",(A4),maincpu.pw@((A4)+10),PC,PREF_ADDR,(A0),(D7);g"))
+				global.bp(bps, addr, "1", "printf \"A4=%X CH=%D PC=%X PREF_ADDR=%X A0=%X D7=%X\",(A4),maincpu.pw@((A4)+10),PC,PREF_ADDR,(A0),(D7);g"))
 			end
 			--]]
 
@@ -6757,24 +6757,24 @@ function rbff2.startplugin()
 			cond2 = cond1.."&&(maincpu.pb@((A3)+$B6)==0)"
 			-- 投げの時だけやられ判定表示（ジョー用）
 			local cond3 = "(maincpu.pw@107C22>0)&&((maincpu.pb@($AA+(A3))|D0)!=0)"
-			bpset(bps_rg, fix_bp_addr(0x5C2E2), cond3, "PC=((PC)+$C);g")
+			global.bp(bps_rg, fix_bp_addr(0x5C2E2), cond3, "PC=((PC)+$C);g")
 			-- 投げのときだけやられ判定表示（主にボブ用）
 			local cond4 = "(maincpu.pw@107C22>0)&&(maincpu.pb@($7A+(A3))==0)"
-			bpset(bps_rg, 0x12BB0, cond4, "PC=((PC)+$E);g")
+			global.bp(bps_rg, 0x12BB0, cond4, "PC=((PC)+$E);g")
 
 			--check vuln at all times *** setregister for m68000.pc is broken *** --bp 05C2E8, 1, {PC=((PC)+$6);g}
-			bpset(bps_rg, fix_bp_addr(0x5C2E8), cond2, "PC=((PC)+$6);g")
+			global.bp(bps_rg, fix_bp_addr(0x5C2E8), cond2, "PC=((PC)+$6);g")
 			--この条件で動作させると攻撃判定がでてしまってヒットしてしまうのでダメ
 			--[[
 			local cond2 = "(maincpu.pw@107C22>0)&&(maincpu.pb@((A0)+$B6)==0)&&((maincpu.pw@((A0)+$60)==$50)||(maincpu.pw@((A0)+$60)==$51)||(maincpu.pw@((A0)+$60)==$54))"
-			bpset(bps_rg, fix_bp_addr(0x5C2E8), cond2, "maincpu.pb@((A3)+$B6)=1;g")
+			global.bp(bps_rg, fix_bp_addr(0x5C2E8), cond2, "maincpu.pb@((A3)+$B6)=1;g")
 			]]
 			--check vuln at all times *** hackish workaround *** --bp 05C2E8, 1, {A3=((A3)-$B5);g}
-			bpset(bps_rg, fix_bp_addr(0x5C2E8), cond1, "A3=((A3)-$B5);g")
+			global.bp(bps_rg, fix_bp_addr(0x5C2E8), cond1, "A3=((A3)-$B5);g")
 			--*** fix for hackish workaround *** --bp 05C2EE, 1, {A3=((A3)+$B5);g}
-			bpset(bps_rg, fix_bp_addr(0x5C2EE), cond1, "A3=((A3)+$B5);g")
+			global.bp(bps_rg, fix_bp_addr(0x5C2EE), cond1, "A3=((A3)+$B5);g")
 			-- 無理やり条件スキップしたので当たり処理に入らないようにする
-			bpset(bps_rg, fix_bp_addr(0x5C2F6), "(maincpu.pb@((A3)+$B6)==0)||((maincpu.pb@($AA+(A3))|D0)!=0)", "PC=((PC)+$8);g")
+			global.bp(bps_rg, fix_bp_addr(0x5C2F6), "(maincpu.pb@((A3)+$B6)==0)||((maincpu.pb@($AA+(A3))|D0)!=0)", "PC=((PC)+$8);g")
 		end
 	end
 
@@ -8575,7 +8575,7 @@ function rbff2.startplugin()
 					-- bp 40AE,{(A4)==100500||(A4)==100700||(A4)==100900||(A4)==100B00},{PC=4112;g} -- 1Pだけ消す
 					cond3 = cond3.."&&((A4)==$100500||(A4)==$100700||(A4)==$100900||(A4)==$100B00)"
 				end
-				bpset(bps, 0x0040AE, cond3, pc)
+				global.bp(bps, 0x0040AE, cond3, pc)
 			end
 		end
 
@@ -8585,38 +8585,38 @@ function rbff2.startplugin()
 			global.disp_effect_bps = global.new_hook_holder()
 			local bps = global.disp_effect_bps.bps
 			--pc = "printf \"A3=%X A4=%X PREF=%X\",A3,A4,PREF_ADDR;PC=$4112;g"
-			table.insert(bps, cpu.debug:bpset(0x03BCC2, cond, "PC=$3BCC8;g"))
+			global.bp(bps, 0x03BCC2, cond, "PC=$3BCC8;g")
 			-- ファイヤーキックの砂煙だけ抑止する
 			local cond2 = cond.."&&maincpu.pw@((A3)+$10)==$1&&maincpu.pw@((A3)+$60)==$B8"
-			bpset(bps, 0x03BB1E, cond2, "PC=$3BC00;g")
-			bpset(bps, 0x0357B0, cond, "PC=$35756;g")
-			bpset(bps, 0x015A82, cond, pc) -- rts 015A88
-			bpset(bps, 0x015AAC, cond, pc) -- rts 015AB2
-			bpset(bps, 0x015AD8, cond, pc) -- rts 015ADE
-			bpset(bps, 0x0173B2, cond, pc) -- rts 0173B8 影
-			bpset(bps, 0x017750, cond, pc) -- rts 017756
-			bpset(bps, 0x02559E, cond, pc) -- rts 0255FA
-			bpset(bps, 0x0256FA, cond, pc) -- rts 025700
-			bpset(bps, 0x036172, cond, pc) -- rts 036178
-			bpset(bps, 0x03577C, cond2, pc) -- rts 035782 技エフェクト
-			bpset(bps, 0x03BB60, cond2, pc) -- rts 03BB66 技エフェクト
-			bpset(bps, 0x060BDA, cond, pc) -- rts 060BE0 ヒットマーク
-			bpset(bps, 0x060F2C, cond, pc) -- rts 060F32 ヒットマーク
-			bpset(bps, 0x061150, cond, "PC=$061156;g") -- rts 061156 ヒットマーク、パワーウェイブの一部
-			bpset(bps, 0x0610E0, cond, pc) -- rts 0610E6
+			global.bp(bps, 0x03BB1E, cond2, "PC=$3BC00;g")
+			global.bp(bps, 0x0357B0, cond, "PC=$35756;g")
+			global.bp(bps, 0x015A82, cond, pc) -- rts 015A88
+			global.bp(bps, 0x015AAC, cond, pc) -- rts 015AB2
+			global.bp(bps, 0x015AD8, cond, pc) -- rts 015ADE
+			global.bp(bps, 0x0173B2, cond, pc) -- rts 0173B8 影
+			global.bp(bps, 0x017750, cond, pc) -- rts 017756
+			global.bp(bps, 0x02559E, cond, pc) -- rts 0255FA
+			global.bp(bps, 0x0256FA, cond, pc) -- rts 025700
+			global.bp(bps, 0x036172, cond, pc) -- rts 036178
+			global.bp(bps, 0x03577C, cond2, pc) -- rts 035782 技エフェクト
+			global.bp(bps, 0x03BB60, cond2, pc) -- rts 03BB66 技エフェクト
+			global.bp(bps, 0x060BDA, cond, pc) -- rts 060BE0 ヒットマーク
+			global.bp(bps, 0x060F2C, cond, pc) -- rts 060F32 ヒットマーク
+			global.bp(bps, 0x061150, cond, "PC=$061156;g") -- rts 061156 ヒットマーク、パワーウェイブの一部
+			global.bp(bps, 0x0610E0, cond, pc) -- rts 0610E6
 
 			-- コンボ表示抑制＝ヒット数を2以上にしない
 			-- bp 0252E8,1,{D7=0;PC=0252EA;g}
-			bpset(bps, 0x0252E8, "1", "D7=0;PC=0252EA;g")
+			global.bp(bps, 0x0252E8, "1", "D7=0;PC=0252EA;g")
 			-- bp 039782,1,{PC=039788;g} -- BS表示でない
-			bpset(bps, 0x039782, "1", "PC=039788;g")
+			global.bp(bps, 0x039782, "1", "PC=039788;g")
 			-- bp 03C604,1,{PC=03C60A;g} -- 潜在表示でない
-			bpset(bps, 0x03C604, "1", "PC=03C60A;g")
+			global.bp(bps, 0x03C604, "1", "PC=03C60A;g")
 			-- bp 039850,1,{PC=039856;g} -- リバサ表示でない
-			bpset(bps, 0x039850, "1", "PC=039856;g")
+			global.bp(bps, 0x039850, "1", "PC=039856;g")
 			-- いろんな割り込み文字が出ない、開幕にONにしておくと進まない
 			-- bp 2378,1,{PC=2376;g}
-			-- bpset(bps, 0x002378, "1", "PC=002376;g")
+			-- global.bp(bps, 0x002378, "1", "PC=002376;g")
 		end
 
 		if global.fix_pos_bps then
@@ -8631,11 +8631,11 @@ function rbff2.startplugin()
 			-- bp 013BBA,1,{D0=(maincpu.pw@100428);g}
 			-- bp 013AF0,1,{PC=13B28;g} -- 潜在演出無視
 			-- bp 013AF0,1,{PC=13B76;g} -- 潜在演出強制（上に制限が付く）
-			bpset(bps, 0x013B6E, cond.."&&(maincpu.pb@10DE5C)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5C)+#40);g")
-			bpset(bps, 0x013B6E, cond.."&&(maincpu.pb@10DE5D)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5D)+#40);g")
-			bpset(bps, 0x013BBA, cond.."&&(maincpu.pb@10DE5C)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5C)+#40);g")
-			bpset(bps, 0x013BBA, cond.."&&(maincpu.pb@10DE5D)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5D)+#40);g")
-			bpset(bps, 0x013AF0, cond, "PC=$13B28;g")
+			global.bp(bps, 0x013B6E, cond.."&&(maincpu.pb@10DE5C)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5C)+#40);g")
+			global.bp(bps, 0x013B6E, cond.."&&(maincpu.pb@10DE5D)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5D)+#40);g")
+			global.bp(bps, 0x013BBA, cond.."&&(maincpu.pb@10DE5C)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5C)+#40);g")
+			global.bp(bps, 0x013BBA, cond.."&&(maincpu.pb@10DE5D)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5D)+#40);g")
+			global.bp(bps, 0x013AF0, cond, "PC=$13B28;g")
 		end
 
 		-- メイン処理
@@ -11116,11 +11116,7 @@ function rbff2.startplugin()
 
 				-- 状態 小表示
 				if p.disp_sts == 2 or p.disp_sts == 3 then
-					if p1 then
-						scr:draw_box(  2, 0,  40,  36, 0x80404040, 0x80404040)
-					else
-						scr:draw_box(277, 0, 316,  36, 0x80404040, 0x80404040)
-					end
+					scr:draw_box(p1 and 2 or 277, 0, p1 and 40 or 316,  36, 0x80404040, 0x80404040)
 
 					scr:draw_text( p1 and  4 or 278,  1, string.format("%s", p.state))
 					draw_rtext(    p1 and 16 or 290,  1, string.format("%02s", p.tw_threshold))
