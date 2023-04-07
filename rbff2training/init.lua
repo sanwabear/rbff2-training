@@ -8866,7 +8866,7 @@ function rbff2.startplugin()
 			p.old_pos_frc_y  = p.pos_frc_y
 			p.old_in_air     = p.in_air
 			p.pos_y          = pgm:read_i16(p.addr.pos_y)
-			p.pos_frc_y      = pgm:read_u16(p.addr.pos_frc_y)
+			p.pos_frc_y      = int16tofloat(pgm:read_u16(p.addr.pos_frc_y))
 			p.in_air         = 0 < p.pos_y or 0 < p.pos_frc_y
 
 			-- ジャンプの遷移ポイントかどうか
@@ -11127,13 +11127,10 @@ function rbff2.startplugin()
 					draw_rtext(    p1 and 28 or 302,  1, string.format("%03s", p.tw_accepted))
 					draw_rtext(    p1 and 40 or 314,  1, string.format("%03s", p.tw_frame))
 
-					scr:draw_text( p1 and  4 or 278,  7, p.hit.vulnerable and "V" or "-")
-					draw_rtext(    p1 and 16 or 290,  7, string.format("%0s", p.tw_muteki2))
-					draw_rtext(    p1 and 24 or 298,  7, string.format("%0s", p.tw_muteki))
-					draw_rtext(    p1 and 32 or 306,  7, string.format("%02x", p.sway_status))
-					scr:draw_text( p1 and 36 or 310,  7, p.in_air and "A" or "G")
+					local diff_pos_y = p.pos_y + p.pos_frc_y - p.old_pos_y - p.old_pos_frc_y
+					draw_rtext(    p1 and 16 or 290,  7, string.format("%0.03f", diff_pos_y))
+					draw_rtext(    p1 and 40 or 314,  7, string.format("%0.03f", p.pos_y + p.pos_frc_y))
 
-					scr:draw_text( p1 and  4 or 278, 13, p.hit.harmless and "-" or "H")
 					draw_rtext(    p1 and 16 or 290, 13, string.format("%02x", p.attack))
 					draw_rtext(    p1 and 28 or 302, 13, string.format("%02x", p.attack_id))
 					draw_rtext(    p1 and 40 or 314, 13, string.format("%02x", p.hitstop_id))
@@ -11142,6 +11139,7 @@ function rbff2.startplugin()
 					draw_rtext(    p1 and 28 or 302, 19, string.format("%02x", p.act_count))
 					draw_rtext(    p1 and 40 or 314, 19, string.format("%02x", p.act_frame))
 
+					draw_rtext(    p1 and 28 or 302, 25, string.format("%02x", p.sway_status))
 					draw_rtext(    p1 and 40 or 314, 25, string.format("%02x", p.additional))
 
 					--[[
