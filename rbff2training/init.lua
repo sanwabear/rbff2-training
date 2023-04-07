@@ -8425,6 +8425,7 @@ function rbff2.startplugin()
 			end
 			return flgtxt
 		end
+
 		local hurt_sumamry = {
 			{ "投げ無敵:"       , throw_label },
 			{ "方向(動作/入力):", sides_label },
@@ -8433,6 +8434,11 @@ function rbff2.startplugin()
 		}
 		for _, box in ipairs(summary.hurt_boxes) do
 			table.insert(hurt_sumamry, { box.type_label, box.reach_label })
+		end
+
+		-- 移動距離 進力とみなす値 慣性とみなす値
+		if p.diff_pos_total > 0 or p.thrust > 0 or p.inertia > 0 then
+			table.insert(hurt_sumamry, { "動作:", string.format("M %0.03f T %0.03f I %0.03f", p.diff_pos_total, p.thrust, p.inertia) })
 		end
 
 		-- フラグによる状態の表示
@@ -11136,7 +11142,7 @@ function rbff2.startplugin()
 					draw_rtext(    p1 and 28 or 302, 19, string.format("%02x", p.act_count))
 					draw_rtext(    p1 and 40 or 314, 19, string.format("%02x", p.act_frame))
 
-					draw_rtext(    p1 and  8 or 274, 25, string.format("%02x", p.additional))
+					draw_rtext(    p1 and 40 or 314, 25, string.format("%02x", p.additional))
 
 					--[[
 						p.tw_frame のしきい値。しきい値より大きければ投げ処理継続可能。
@@ -11157,18 +11163,6 @@ function rbff2.startplugin()
 						scr:draw_text( p1 and 15 or 289, 31, p.hit.vulnerable and "" or "打")
 						scr:draw_text( p1 and 24 or 298, 31, p.n_throwable and "" or "通")
 						scr:draw_text( p1 and 30 or 304, 31, p.throwable and "" or throw_txt)
-					end
-					scr:draw_box(p1 and (138 - 32)           or 180,  9, p1 and 140 or (182 + 32)          , 14, 0, 0xDDC0C0C0) -- 枠
-					scr:draw_box(p1 and (139 - 32)           or 181, 10, p1 and 139 or (181 + 32)          , 13, 0, 0xDD000000) -- 黒背景
-
-					scr:draw_box(p1 and (124 + p.thrust) or 197, 9, p1 and 124 or (197 - p.thrust), 14, 0, 0x80FF0022)
-					scr:draw_box(p1 and (124 + p.inertia) or 197, 9, p1 and 124 or (197 - p.inertia), 14, 0, 0x80FF8C00)
-					scr:draw_box(p1 and (124 + p.diff_pos_total) or 197, 10, p1 and 124 or (197 - p.diff_pos_total), 13, 0, 0xDDFFFF00)
-					draw_fmt_rtext(p1 and 105 or 262, 8, "M %0.03f", p.diff_pos_total) -- 移動距離
-					if p.thrust > 0 then
-						draw_fmt_rtext(p1 and  83 or 240, 8, "T %0.03f", p.thrust) -- 進力とみなす値
-					else
-						draw_fmt_rtext(p1 and  83 or 240, 8, "I %0.03f", p.inertia) -- 慣性とみなす値
 					end
 				end
 
