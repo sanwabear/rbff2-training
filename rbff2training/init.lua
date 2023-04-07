@@ -33,6 +33,17 @@ exports.description = "RBFF2 Training"
 exports.license = "MIT License"
 exports.author = { name = "Sanwabear" }
 
+local man, machine, cpu, pgm, scr, ioports, debugger
+local setup_emu = function()
+	man = manager
+	machine = man.machine
+	cpu = machine.devices[":maincpu"]
+	pgm = cpu.spaces["program"]
+	scr = machine.screens:at(1)
+	ioports = man.machine.ioport.ports
+	debugger = machine.debugger
+end
+
 local rbff2 = exports
 
 local main_or_menu_state, prev_main_or_menu_state
@@ -63,8 +74,6 @@ local offset_pos_y          = 0x28
 local screen_left           = 0
 local screen_top            = 0
 local bios_test             = function()
-	local cpu = manager.machine.devices[":maincpu"]
-	local pgm = cpu.spaces["program"]
 	for _, addr in ipairs({0x100400, 0x100500}) do
 		local ram_value = pgm:read_u8(addr)
 		for _, test_value in ipairs({0x5555, 0xAAAA, (0xFFFF & addr)}) do
@@ -167,7 +176,6 @@ local global = {
 		return { bps = {}, wps = {}, on = true, }
 	end,
 	set_bps          = function(disable, holder)
-		local cpu = manager.machine.devices[":maincpu"]
 		if disable == true and holder.on == true then
 			for _, bp in ipairs(holder.bps) do
 				cpu.debug:bpdisable(bp)
@@ -181,9 +189,7 @@ local global = {
 		end
 	end,
 	set_wps          = function(disable, holder)
-		local cpu = manager.machine.devices[":maincpu"]
 		if disable == true and holder.on == true then
-			local cpu = manager.machine.devices[":maincpu"]
 			for _, wp in ipairs(holder.wps) do
 				cpu.debug:wpdisable(wp)
 			end
@@ -501,10 +507,10 @@ local sts_flg_names = {
 		"",
 		"",
 		"",
+		"特殊技",
 		"",
 		"",
-		"",
-		"",
+		"特殊技",
 		"特殊技",
 		"特殊技",
 		"特殊技",
@@ -515,7 +521,7 @@ local sts_flg_names = {
 		"超必殺技",
 		"",
 		"",
-		"",
+		"必殺技",
 		"必殺技",
 		"必殺技",
 		"必殺技",
@@ -2810,9 +2816,9 @@ local jump_acts = {
 	[0x0B] = true, [0x0C] = true,
 	[0x0D] = true, [0x0E] = true,
 	[0x0F] = true, [0x10] = true,
-	[0x0B] = true, [0x11] = true, [0x12] = true,
-	[0x0D] = true, [0x13] = true, [0x14] = true,
-	[0x0F] = true, [0x15] = true, [0x16] = true,
+	[0x11] = true, [0x12] = true,
+	[0x13] = true, [0x14] = true,
+	[0x15] = true, [0x16] = true,
 }
 local wakeup_acts = { [0x193] = true, [0x13B] = true, }
 local down_acts = { [0x190] = true,  [0x191] = true, [0x192] = true, [0x18E] = true, }
@@ -3388,10 +3394,7 @@ local create_input_states = function()
 		},
 	}
 	for ti = 2, 160, 2 do
-	--for ti = 0x44, 240, 2 do -- 調査用 2～
-	--for ti = 0x94, 240, 2 do -- 調査用 2～
-	--for ti = 144, 240, 2 do -- 調査用 2～
-				table.insert(input_states[#input_states], {
+		table.insert(input_states[#input_states], {
 			name = string.format("%x", ti),
 			addr = ti,
 			cmd = "?",
@@ -4132,12 +4135,11 @@ local use_joy = {
 }
 
 local get_joy_base = function(prev, exclude_player)
-	-- for pname, port in pairs(manager.machine.ioport.ports) do
+	-- for pname, port in pairs(ioports) do
 	-- 	for fname, field in pairs(port.fields) do
 	-- 		print(string.format("%s %s", pname, fname))
 	-- 	end
 	-- end
-	local scr = manager.machine.screens:at(1)
 	local ec = scr:frame_number()
 	local joy_port = {}
 	local joy_val = {}
@@ -4145,9 +4147,9 @@ local get_joy_base = function(prev, exclude_player)
 	for _, joy in ipairs(use_joy) do
 		local state = 0
 		if not joy_port[joy.port] then
-			joy_port[joy.port] = manager.machine.ioport.ports[joy.port]:read()
+			joy_port[joy.port] = ioports[joy.port]:read()
 		end
-		local field = manager.machine.ioport.ports[joy.port].fields[joy.field]
+		local field = ioports[joy.port].fields[joy.field]
 		state = ((joy_port[joy.port] & field.mask) ~ field.defvalue)
 		if joy.get < ec then
 			joy.prev = joy.frame
@@ -4182,7 +4184,6 @@ local accept_input = function(btn, joy_val, state_past)
 	if 12 < state_past then
 		local p1 = btn == "Start" and "1 Player Start" or ("P1 " .. btn)
 		local p2 = btn == "Start" and "2 Players Start" or ("P2 " .. btn)
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		if btn == "Up" or btn == "Down" or btn == "Right" or btn == "Left" then
 			if (0 < joy_val[p1]) or (0 < joy_val[p2]) then
 				pgm:write_u32(0x0010D612, 0x00600004)
@@ -4206,7 +4207,6 @@ local is_start_a = function(joy_val, state_past)
 	if 12 < state_past then
 		for i = 1, 2 do
 			local st = i == 1 and "1 Player Start" or "2 Players Start"
-			local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 			if (35 < joy_val[st]) then
 				pgm:write_u32(0x0010D612, 0x00610004)
 				pgm:write_u8(0x0010D713, 0x01)
@@ -4250,7 +4250,7 @@ local joy_frontback = {
 -- MAMEへの入力の無効化
 local cls_joy = function()
 	for _, joy in ipairs(use_joy) do
-		manager.machine.ioport.ports[joy.port].fields[joy.field]:set_value(0)
+		ioports[joy.port].fields[joy.field]:set_value(0)
 	end
 end
 
@@ -4261,7 +4261,7 @@ local nega_or_mi1 = function(v) return 0 >= v and v - 1 or -1 end
 
 -- ポーズ
 local set_freeze = function(frz_expected)
-	local dswport = manager.machine.ioport.ports[":DSW"]
+	local dswport = ioports[":DSW"]
 	local fzfld = dswport.fields["Freeze"]
 	local freez = ((dswport:read() & fzfld.mask) ~ fzfld.defvalue) <= 0
 
@@ -4274,7 +4274,6 @@ local set_freeze = function(frz_expected)
 			end
 		end
 	else
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		pgm:write_u8(0x1041D2, frz_expected and 0x00 or 0xFF)
 	end
 end
@@ -4472,7 +4471,7 @@ local is_file = function(name)
 end
 
 local base_path = function()
-	local base = emu.subst_env(manager.options.entries.homepath:value():match('([^;]+)')) .. '/plugins/' .. exports.name
+	local base = emu.subst_env(man.options.entries.homepath:value():match('([^;]+)')) .. '/plugins/' .. exports.name
 	local dir = lfs.currentdir()
 	return dir .. "/" .. base
 end
@@ -4549,20 +4548,18 @@ local draw_rtext = function(x, y, str, fgcol, bgcol)
 	if type(str) ~= "string" then
 		str = string.format("%s", str)
 	end
-	local scr = manager.machine.screens:at(1)
-	local xx = - manager.ui:get_string_width(str, scr.xscale * scr.height)
+	local xx = - man.ui:get_string_width(str, scr.xscale * scr.height)
 	scr:draw_text(x + xx, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
 	return xx
 end
 
 local draw_text_with_shadow = function(x, y, str, fgcol, bgcol)
-	local scr = manager.machine.screens:at(1)
 	if type(str) ~= "string" then
 		str = string.format("%s", str)
 	end
 	scr:draw_text(x + 0.5, y + 0.5, str, shadow_col, bgcol or 0x00000000)
 	scr:draw_text(x, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
-	return manager.ui:get_string_width(str, scr.xscale * scr.height)
+	return man.ui:get_string_width(str, scr.xscale * scr.height)
 end
 
 local draw_rtext_with_shadow = function(x, y, str, fgcol, bgcol)
@@ -4575,7 +4572,6 @@ local draw_fmt_rtext = function(x, y, fmt, dec)
 end
 -- コマンド文字列表示
 local draw_cmd_text_with_shadow = function(x, y, str, fgcol, bgcol)
-	local scr = manager.machine.screens:at(1)
 	-- 変換しつつUnicodeの文字配列に落とし込む
 	local cstr, xx = convert(str), x
 	for c in string.gmatch(cstr, "([%z\1-\127\194-\244][\128-\191]*)") do
@@ -4593,8 +4589,6 @@ local draw_cmd_text_with_shadow = function(x, y, str, fgcol, bgcol)
 end
 -- コマンド入力表示
 local draw_cmd = function(p, line, frame, str)
-	local scr = manager.machine.screens:at(1)
-
 	local p1 = p == 1
 	local xx = p1 and 12 or 294   -- 1Pと2Pで左右に表示し分ける
 	local yy = (line + 10 - 1) * 8 -- +8はオフセット位置
@@ -4619,8 +4613,6 @@ local draw_cmd = function(p, line, frame, str)
 end
 -- 処理アドレス表示
 local draw_base = function(p, line, frame, addr, act_name, xmov)
-	local scr = manager.machine.screens:at(1)
-
 	local p1 = p == 1
 	local xx = p1 and 60 or 195    -- 1Pと2Pで左右に表示し分ける
 	local yy = (line + 10 - 1) * 8 -- +8はオフセット位置
@@ -4822,7 +4814,6 @@ local hit_sub_procs = {
 local hit_box_proc = function(id, addr)
 	-- 家庭用版 012DBC~012F04のデータ取得処理をベースに判定＆属性チェック
 	-- 家庭用版 012F30~012F96のデータ取得処理をベースに判定＆属性チェック
-	local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 	local d2 = id - 0x20
 	if d2 >= 0 then
 		d2 = pgm:read_u8(addr + d2)
@@ -5370,7 +5361,6 @@ local update_box_summary = function(p, box)
 end
 
 local new_throwbox = function(p, box)
-	local scr = manager.machine.screens:at(1)
 	local height = scr.height * scr.yscale
 	--print("a", box.opp_id, box.top, box.bottom, p.hit.flip_x)
 	p.throwing = true
@@ -5391,7 +5381,6 @@ end
 -- 1:右向き -1:左向き
 local get_flip_x = function(p)
 	local obj_base = p.addr.base
-	local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 	local flip_x = pgm:read_i16(obj_base + 0x6A) < 0 and 1 or 0
 	flip_x = flip_x ~ (pgm:read_u8(obj_base + 0x71) & 1)
 	flip_x = flip_x > 0 and 1 or -1
@@ -5400,8 +5389,6 @@ end
 
 -- 当たり判定用のキャラ情報更新と判定表示用の情報作成
 local update_object = function(p)
-	local pgm = manager.machine.devices[":maincpu"].spaces["program"]
-	local scr = manager.machine.screens:at(1)
 	local height = scr.height * scr.yscale
 
 	local obj_base = p.addr.base
@@ -6092,7 +6079,7 @@ function rbff2.startplugin()
 			return addr - 1
 		end
 	end
-	local apply_patch = function(pgm, s_patch, offset, force)
+	local apply_patch = function(s_patch, offset, force)
 		if force ~= true then
 			for saddr, v1, v2 in string.gmatch(s_patch, ffptn) do
 				local before = pgm:read_u8(fixaddr(saddr, offset))
@@ -6111,19 +6098,21 @@ function rbff2.startplugin()
 		end
 		return true
 	end
-	local apply_patch_file = function(pgm, patch, force)
+	local apply_patch_file = function(patch, force)
 		local ret = false
 		if pgm then
 			local path = rom_patch_path(patch)
 			print(path .. " patch " .. (force and "force" or ""))
 			local f = io.open(path, "r")
-			for line in f:lines() do
-				ret = apply_patch(pgm, line, 0x000000, force)
-				if not ret then
-					print("patch failure in [" .. line .. "]")
+			if f then
+				for line in f:lines() do
+					ret = apply_patch(line, 0x000000, force)
+					if not ret then
+						print("patch failure in [" .. line .. "]")
+					end
 				end
+				f:close()
 			end
-			f:close()
 		end
 		print(ret and "patch finish" or "patch NOT finish")
 		return ret
@@ -6131,13 +6120,11 @@ function rbff2.startplugin()
 
 	-- 場面変更
 	local apply_1p2p_active = function()
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		pgm:write_direct_u8(0x100024, 0x03) -- 1P or 2P
 		pgm:write_direct_u8(0x100027, 0x03) -- 1P or 2P
 	end
 
 	local apply_vs_mode = function(continue)
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		apply_1p2p_active()
 		if not continue then
 			pgm:write_direct_u8(0x107BB5, 0x01) -- vs 1st CPU mode
@@ -6145,13 +6132,11 @@ function rbff2.startplugin()
 	end
 
 	local goto_player_select = function()
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		dofile(ram_patch_path("player-select.lua"))
 		apply_vs_mode(false)
 	end
 
 	local restart_fight = function(param)
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		param = param or {}
 		local stg1  = param.next_stage.stg1 or stgs[1].stg1
 		local stg2  = param.next_stage.stg2 or stgs[1].stg2
@@ -6190,12 +6175,12 @@ function rbff2.startplugin()
 	-- ブレイクポイント発動時のデバッグ画面表示と停止をさせない
 	local debug_stop = 0
 	local auto_recovery_debug = function()
-		if manager.machine.debugger then
-			if manager.machine.debugger.execution_state ~= "run" then
+		if debugger then
+			if debugger.execution_state ~= "run" then
 				debug_stop = debug_stop + 1
 			end
 			if 3 > debug_stop then
-				manager.machine.debugger.execution_state = "run"
+				debugger.execution_state = "run"
 				debug_stop = 0
 			end
 		end
@@ -6208,7 +6193,6 @@ function rbff2.startplugin()
 			global.set_bps(enabled ~= true, p.step_bp)
 		else
 			p.step_bp = global.new_hook_holder()
-			local cpu = manager.machine.devices[":maincpu"]
 			table.insert(p.step_bp.bps, cpu.debug:bpset(0x026216, "(A4)==$" .. string.format("%x", p.addr.base), "PC=$02622A;g"))
 		end
 	end
@@ -6223,8 +6207,6 @@ function rbff2.startplugin()
 		end
 		local org_char = char
 		char =  char - 1
-		local cpu = manager.machine.devices[":maincpu"]
-		local pgm = cpu.spaces["program"]
 		local abc_offset = close_far_offset + (char * 4)
 		-- 家庭用02DD02からの処理
 		local d_offset = close_far_offset_d + (char * 2)
@@ -6260,8 +6242,6 @@ function rbff2.startplugin()
 		end
 
 		-- 家庭用2EC72,2EDEE,2E1FEからの処理
-		local cpu = manager.machine.devices[":maincpu"]
-		local pgm = cpu.spaces["program"]
 		local offset = 0x2EE06
 		local d1 = 0x2A000 -- 整数部上部4バイト、少数部下部4バイト
 		local decd1 = int16tofloat(d1)
@@ -6295,7 +6275,6 @@ function rbff2.startplugin()
 			global.set_bps(enabled ~= true, hook_holder)
 		else
 			hook_holder = global.new_hook_holder()
-			local cpu = manager.machine.devices[":maincpu"]
 			table.insert(hook_holder.bps, cpu.debug:bpset(addr, cond, exec))
 			global.set_bps(enabled ~= true, hook_holder)
 		end
@@ -6398,8 +6377,6 @@ function rbff2.startplugin()
 		else
 			global.wps = global.new_hook_holder()
 			local wps = global.wps.wps
-			local cpu = manager.machine.devices[":maincpu"]
-			local pgm = cpu.spaces["program"]
 			--debug:wpset(space, type, addr, len, [opt] cond, [opt] act)
 			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x1006BF, 1, "wpdata!=0", "maincpu.pb@10CA00=1;g"))
 			table.insert(wps, cpu.debug:wpset(pgm, "w", 0x1007BF, 1, "wpdata!=0", "maincpu.pb@10CA01=1;g"))
@@ -6461,7 +6438,6 @@ function rbff2.startplugin()
 			global.bps = global.new_hook_holder()
 			local bps = global.bps
 
-			local cpu = manager.machine.devices[":maincpu"]
 			if global.infinity_life2 then
 				--bp 05B480,{(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100500)},{PC=5B48E;g}
 				table.insert(bps, cpu.debug:bpset(fix_bp_addr(0x05B460),
@@ -6765,7 +6741,6 @@ function rbff2.startplugin()
 			global.bps_rg = global.new_hook_holder()
 			local bps_rg = global.bps_rg.bps
 
-			local cpu = manager.machine.devices[":maincpu"]
 			local cond1, cond2
 			if emu.romname() ~= "rbff2" then
 				-- この処理をそのまま有効にすると通常時でも食らい判定が見えるようになるが、MVS版ビリーの本来は攻撃判定無しの垂直ジャンプ攻撃がヒットしてしまう
@@ -6823,8 +6798,6 @@ function rbff2.startplugin()
 
 	-- 誤動作防止のためフックで使用する領域を初期化する
 	local cls_hook = function()
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
-
 		-- 各種当たり判定のフック
 		-- 0x10CB40 当たり判定の発生個数
 		-- 0x1DC000 から 0x10 間隔で当たり判定をbpsetのフックで記録する
@@ -7254,8 +7227,6 @@ function rbff2.startplugin()
 	-- リプレイ開始位置記憶
 	rec_fixpos = function()
 		local pos = { players[1].input_side, players[2].input_side }
-		--local pos = { players[1].disp_side, players[2].disp_side }
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		local fixpos  = { pgm:read_i16(players[1].addr.pos)       , pgm:read_i16(players[2].addr.pos)        }
 		local fixsway = { pgm:read_u8(players[1].addr.sway_status), pgm:read_u8(players[2].addr.sway_status) }
 		local fixscr  = {
@@ -7263,7 +7234,7 @@ function rbff2.startplugin()
 			y = pgm:read_u16(stage_base_addr + offset_pos_y),
 			z = pgm:read_u16(stage_base_addr + offset_pos_z),
 		}
-		recording.fixpos = { pos = pos, fixpos = fixpos, fixscr = fixscr, fixsway = fixsway, fixstate = fixstate, }
+		recording.fixpos = { pos = pos, fixpos = fixpos, fixscr = fixscr, fixsway = fixsway, }
 	end
 	-- 初回入力まち
 	-- 未入力状態を待ちける→入力開始まで待ち受ける
@@ -7333,7 +7304,6 @@ function rbff2.startplugin()
 	rec_await_play = function(to_joy)
 		local force_start_play = global.rec_force_start_play
 		global.rec_force_start_play = false -- 初期化
-		local scr = manager.machine.screens:at(1)
 		local ec = scr:frame_number()
 		local state_past = ec - global.input_accepted
 
@@ -7377,8 +7347,6 @@ function rbff2.startplugin()
 			recording.play_count = 1
 			global.rec_main = rec_play
 			global.input_accepted = ec
-
-			local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 
 			-- メインラインでニュートラル状態にする
 			for i, p in ipairs(players) do
@@ -7486,8 +7454,6 @@ function rbff2.startplugin()
 	end
 	-- リプレイ中
 	rec_play = function(to_joy)
-		local scr = manager.machine.screens:at(1)
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		local ec = scr:frame_number()
 		local state_past = ec - global.input_accepted
 
@@ -7510,7 +7476,7 @@ function rbff2.startplugin()
 				stop = true
 			end
 		end
-		if not stop then
+		if not stop and store then
 			-- 入力再生
 			local pos = { players[1].input_side, players[2].input_side }
 			--local pos = { players[1].disp_side, players[2].disp_side }
@@ -7556,7 +7522,6 @@ function rbff2.startplugin()
 
 	-- リプレイまでの待ち時間
 	rec_play_interval = function(to_joy)
-		local scr = manager.machine.screens:at(1)
 		local ec = scr:frame_number()
 		local state_past = ec - global.input_accepted
 
@@ -7672,7 +7637,7 @@ function rbff2.startplugin()
 				-- 同じグループ
 				if prev_frame == frame then
 					-- 変更なし
-				else
+				elseif prev_frame then
 					table.insert(frame_group, frame)
 					-- 直前までのフレーム合計加算して保存
 					frame.last_total = prev_frame.last_total + prev_frame.count
@@ -7755,7 +7720,6 @@ function rbff2.startplugin()
 		if #frames2 == 0 then
 			return
 		end
-		local scr = manager.machine.screens:at(1)
 		span = span or height
 		local txty = math.max(-2, height-8)
 
@@ -7794,7 +7758,6 @@ function rbff2.startplugin()
 		if #frames2 == 0 then
 			return
 		end
-		local scr = manager.machine.screens:at(1)
 
 		-- 横に描画
 		local xmin = x --30
@@ -7831,7 +7794,6 @@ function rbff2.startplugin()
 	end
 
 	do_recover = function(p, op, force)
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		-- 体力と気絶値とMAX気絶値回復
 		local life = { 0xC0, 0x60, 0x00 }
 		local max_life = life[p.red] or (p.red - #life) -- 赤体力にするかどうか
@@ -7872,7 +7834,6 @@ function rbff2.startplugin()
 	-- 1Pと2Pの通常投げ間合い取得
 	-- 0x05D78Cからの実装
 	local get_n_throw = function(p, op)
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		local d0, d1, d4, d5, a0_1, a0_2 = 0, 0, 0, 0, 0x5C9BC, 0x5D874
 		local char1, char2 = pgm:read_u16(p.addr.base + 0x10), pgm:read_u16(op.addr.base + 0x10)
 		local op_pos = op.max_pos or op.min_pos or op.pos -- 投げられ側のX座標は補正前の値
@@ -7939,7 +7900,6 @@ function rbff2.startplugin()
 		if p.addr.base ~= 0x100400 and p.addr.base ~= 0x100500 then
 			return 1
 		end
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		local char_id  = pgm:read_u16(p.addr.base + 0x10)
 		local char_4times = 0xFFFF & (char_id + char_id)
 		char_4times = 0xFFFF & (char_4times + char_4times)
@@ -8156,7 +8116,6 @@ function rbff2.startplugin()
 			bs_label = "〇"
 		end
 		-- キャンセル可否
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		local cancel_label, cancel_advs_label, cancel_advs = "連×/必×", "", {}
 		if p.flag_c8 == 0 and p.cancelable and p.cancelable ~= 0 then
 			if faint_cancels[p.char] and p.attack_id then
@@ -8555,9 +8514,6 @@ function rbff2.startplugin()
 	-- トレモのメイン処理
 	tra_main = {}
 	tra_main.proc = function()
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
-		local cpu = manager.machine.devices[":maincpu"]
-
 		-- 画面表示
 		if global.no_background or global.disp_gauge == false then
 			if pgm:read_u8(0x107BB9) == 0x01 or pgm:read_u8(0x107BB9) == 0x0F then
@@ -8692,7 +8648,6 @@ function rbff2.startplugin()
 
 		local next_joy = new_next_joy()
 
-		local scr = manager.machine.screens:at(1)
 		local ec = scr:frame_number()
 		local state_past = ec - global.input_accepted
 		local height = scr.height * scr.yscale
@@ -9692,7 +9647,7 @@ function rbff2.startplugin()
 			p.all_summary = sort_summary(all_summary)
 		end
 
-		for i, p in ipairs(players) do
+		for _, p in ipairs(players) do
 			local op         = p.op
 
 			--フレーム数
@@ -9870,7 +9825,7 @@ function rbff2.startplugin()
 		end
 		apply_1p2p_active()
 
-		for i, p in ipairs(players) do
+		for _, p in ipairs(players) do
 			local op = p.op
 
 			-- 飛び道具
@@ -10002,8 +9957,18 @@ function rbff2.startplugin()
 					chg_act_name = true
 				end
 			end
-			if #p.act_frames == 0 or chg_act_name or frame.col ~= col or p.chg_air_state ~= 0 or chg_fireball_state == true or chg_prefireball_state == true or
-				p.act_1st or frame.reach_memo ~= reach_memo  or (max_hit_dn > 1 and frame.act_count ~= act_count) then
+			local chg_col = frame and (frame.col ~= col) or false
+			local chg_memo = frame and (frame.reach_memo ~= reach_memo) or false
+			local chg_act_count = frame and (frame.act_count ~= act_count) or false
+			if #p.act_frames == 0 or
+				chg_act_name or
+				chg_col or
+				p.chg_air_state ~= 0 or
+				chg_fireball_state == true or
+				chg_prefireball_state == true or
+				p.act_1st or
+				chg_memo or
+				(max_hit_dn > 1 and chg_act_count) then
 				--行動IDの更新があった場合にフレーム情報追加
 				frame = {
 					act = p.act,
@@ -10027,10 +9992,12 @@ function rbff2.startplugin()
 				end
 			else
 				--同一行動IDが継続している場合はフレーム値加算
-				frame.count = frame.count + 1
+				if frame then
+					frame.count = frame.count + 1
+				end
 			end
 			-- 技名でグループ化したフレームデータの配列をマージ生成する
-			p.act_frames2, _ = frame_groups(frame, p.act_frames2 or {})
+			p.act_frames2 = frame_groups(frame, p.act_frames2 or {})
 			-- 表示可能範囲（最大で横画面幅）以上は加算しない
 			p.act_frames_total = (332 < p.act_frames_total) and 332 or (p.act_frames_total + 1)
 			-- 後の処理用に最終フレームを保持
@@ -10093,7 +10060,7 @@ function rbff2.startplugin()
 			local upd_group = false
 			p.muteki.act_frames2, upd_group = frame_groups(frame, p.muteki.act_frames2 or {})
 			-- メインフレーム表示からの描画開始位置を記憶させる
-			if upd_group then
+			if upd_group and last_frame then
 				last_frame.muteki = last_frame.muteki or {}
 				table.insert(last_frame.muteki, p.muteki.act_frames2[#p.muteki.act_frames2])
 			end
@@ -10181,7 +10148,7 @@ function rbff2.startplugin()
 			-- 技名でグループ化したフレームデータの配列をマージ生成する
 			p.frm_gap.act_frames2, upd_group = frame_groups(frame, p.frm_gap.act_frames2 or {})
 			-- メインフレーム表示からの描画開始位置を記憶させる
-			if upd_group then
+			if upd_group and last_frame then
 				last_frame.frm_gap = last_frame.frm_gap or {}
 				table.insert(last_frame.frm_gap, p.frm_gap.act_frames2[#p.frm_gap.act_frames2])
 			end
@@ -10260,7 +10227,7 @@ function rbff2.startplugin()
 
 			-- メインフレーム表示からの描画開始位置を記憶させる
 			for fb_base, fb_upd_group in pairs(fb_upd_groups) do
-				if fb_upd_group then
+				if fb_upd_group and last_frame then
 					last_frame.fireball = last_frame.fireball or {}
 					last_frame.fireball[fb_base] = last_frame.fireball[fb_upd_group] or {}
 					local last_fb_frame = last_frame.fireball[fb_base]
@@ -10778,7 +10745,7 @@ function rbff2.startplugin()
 			local prev_rec_main, called = nil, {}
 			repeat
 				prev_rec_main = global.rec_main
-				called[prev_rec_main] = true
+				called[prev_rec_main or "NOT DEFINED"] = true
 				global.rec_main(next_joy)
 			until global.rec_main == prev_rec_main or called[global.rec_main] == true
 		end
@@ -10786,16 +10753,16 @@ function rbff2.startplugin()
 		-- ジョイスティック入力の反映
 		for _, joy in ipairs(use_joy) do
 			if next_joy[joy.field] ~= nil then
-				manager.machine.ioport.ports[joy.port].fields[joy.field]:set_value(next_joy[joy.field] and 1 or 0)
+				ioports[joy.port].fields[joy.field]:set_value(next_joy[joy.field] and 1 or 0)
 			end
 		end
 
-		for i, p in ipairs(players) do
+		for _, p in ipairs(players) do
 			pgm:write_u8(p.addr.no_hit, p.no_hit_limit == 0 and 0xFF or (p.no_hit_limit - 1))
 		end
 
 		-- Y座標強制
-		for i, p in ipairs(players) do
+		for _, p in ipairs(players) do
 			if p.force_y_pos > 1 then
 				pgm:write_i16(p.addr.pos_y, force_y_pos[p.force_y_pos])
 			end
@@ -10809,7 +10776,7 @@ function rbff2.startplugin()
 		end
 
 		global.pause = false
-		for i, p in ipairs(players) do
+		for _, p in ipairs(players) do
 			-- 判定が出たらポーズさせる
 			for _, box in ipairs(p.hitboxes) do
 				if (box.type.type == "throw" and global.pause_hitbox == 2) or
@@ -10846,7 +10813,6 @@ function rbff2.startplugin()
 		if summary == nil or #summary == 0 then
 			return summary
 		end
-		local scr = manager.machine.screens:at(1)
 		local x, y = i == 1 and 162 or 2, 2
 		scr:draw_box(x-2, y-2, x+158, y+2+7*#summary, 0x80404040, 0x80404040)
 		for _, row in ipairs(summary) do
@@ -10865,7 +10831,6 @@ function rbff2.startplugin()
 	end
 
 	local draw_hitbox = function(left, top, right, bottom, outline, fill, over_left, over_top, over_right, over_bottom)
-		local scr = manager.machine.screens:at(1)
 		if outline and 0 < outline then
 			if over_left ~= true then
 				scr:draw_box(left, top, left+1, bottom, 0, outline)
@@ -10885,11 +10850,9 @@ function rbff2.startplugin()
 		end
 	end
 	local draw_vline = function(x1, y1, y2, color)
-		local scr = manager.machine.screens:at(1)
 		scr:draw_box(x1, y1, x1+1, y2+1, 0, color)
 	end
 	local draw_hline = function(x1, x2, y1, color)
-		local scr = manager.machine.screens:at(1)
 		scr:draw_box(x1, y1, x2+1, y1+1, 0, color)
 	end
 	local draw_axis = function(i, p, x, col)
@@ -10936,9 +10899,6 @@ function rbff2.startplugin()
 	end
 
 	tra_main.draw = function()
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
-		local scr = manager.machine.screens:at(1)
-
 		-- メイン処理
 		if match_active then
 			-- 判定表示（キャラ、飛び道具）
@@ -11090,7 +11050,6 @@ function rbff2.startplugin()
 						dowrite = true
 					end
 					if dowrite then
-						local scr = manager.machine.screens:at(1)
 						scr:snapshot(filename)
 						print("save " .. filename)
 					end
@@ -11179,7 +11138,6 @@ function rbff2.startplugin()
 					draw_rtext(    p1 and 40 or 314, 19, string.format("%02x", p.act_frame))
 
 					draw_rtext(    p1 and  8 or 274, 25, string.format("%02x", p.additional))
-					draw_rtext(    p1 and 40 or 314, 25, string.format("%08x", p.flag_cc))
 
 					--[[
 						p.tw_frame のしきい値。しきい値より大きければ投げ処理継続可能。
@@ -11305,7 +11263,6 @@ function rbff2.startplugin()
 						for base, _ in pairs(p.fireball_bases) do
 							local fb = p.fireball[base]
 							if fb.act_frames2 ~= nil and p.disp_fbfrm == true then
-								-- print(string.format("%x", base) .. " " .. j .. " " .. #fb.act_frames2 ) -- debug
 								draw_frame_groups(fb.act_frames2, p.act_frames_total, 30, p1 and 64 or 70, 8)
 							end
 							j = j + 1
@@ -11533,7 +11490,10 @@ function rbff2.startplugin()
 		end
 	end
 
-	emu.register_start(function() math.randomseed(os.time()) end)
+	emu.register_start(function()
+		setup_emu()
+		math.randomseed(os.time())
+	end)
 
 	emu.register_stop(function() end)
 
@@ -11545,7 +11505,6 @@ function rbff2.startplugin()
 	local menu_max_row = 13
 	local menu_nop = function() end
 	local setup_char_manu = function()
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		-- キャラにあわせたメニュー設定
 		for i, p in ipairs(players) do
 			local tmp_chr = pgm:read_u8(p.addr.char)
@@ -11687,7 +11646,6 @@ function rbff2.startplugin()
 	local disp_menu_to_main = function(cancel)
 		local col = disp_menu.pos.col
 		local p   = players
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		--                              1                               1
 		p[1].disp_hitbox         = col[ 2]      -- 1P 判定表示          2
 		p[2].disp_hitbox         = col[ 3]      -- 2P 判定表示          3
@@ -11722,7 +11680,6 @@ function rbff2.startplugin()
 	local ex_menu_to_main = function(cancel)
 		local col = ex_menu.pos.col
 		local p   = players
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		--                              1                                 1
 		dip_config.easy_super    = col[ 2] == 2 -- 簡易超必               2
 		dip_config.semiauto_p    = col[ 3] == 2 -- 半自動潜在能力         3
@@ -11776,7 +11733,7 @@ function rbff2.startplugin()
 		global.auto_input.fast_kadenzer= col[15] == 2 -- 必勝！逆襲拳           15
 		global.auto_input.kara_ca      = col[16] == 2 -- 空振りCA               16
 
-		for i, p in ipairs(players) do
+		for _, p in ipairs(players) do
 			set_auto_deadly(p, global.auto_input.rave)
 			set_auto_unlimit(p, global.auto_input.desire)
 			set_auto_drill(p, global.auto_input.drill)
@@ -11817,13 +11774,11 @@ function rbff2.startplugin()
 
 	local menu_rec_to_tra = function() menu_cur = tra_menu end
 	local exit_menu_to_rec = function(slot_no)
-		local scr = manager.machine.screens:at(1)
 		local ec = scr:frame_number()
 		global.dummy_mode = 5
 		global.rec_main = rec_await_no_input
 		global.input_accepted = ec
 		-- 選択したプレイヤー側の反対側の操作をいじる
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		recording.temp_player = (pgm:read_u8(players[1].addr.reg_pcnt) ~= 0xFF) and 2 or 1
 		recording.last_slot   = slot_no
 		recording.active_slot = recording.slot[slot_no]
@@ -11846,13 +11801,11 @@ function rbff2.startplugin()
 		global.repeat_interval    = recording.repeat_interval
 	end
 	local exit_menu_to_rec_pos = function()
-		local scr = manager.machine.screens:at(1)
 		local ec = scr:frame_number()
 		global.dummy_mode = 5 -- レコードモードにする
 		global.rec_main = rec_fixpos
 		global.input_accepted = ec
 		-- 選択したプレイヤー側の反対側の操作をいじる
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		recording.temp_player = (pgm:read_u8(players[1].addr.reg_pcnt) ~= 0xFF) and 2 or 1
 		exit_menu_to_play_common()
 		menu_cur = main_menu
@@ -11866,7 +11819,6 @@ function rbff2.startplugin()
 			return
 		end
 
-		local scr = manager.machine.screens:at(1)
 		local ec = scr:frame_number()
 		global.dummy_mode = 6 -- リプレイモードにする
 		global.rec_main = rec_await_play
@@ -11876,7 +11828,6 @@ function rbff2.startplugin()
 		menu_exit()
  	end
 	local exit_menu_to_play_cancel = function()
-		local scr = manager.machine.screens:at(1)
 		local ec = scr:frame_number()
 		global.dummy_mode = 6 -- リプレイモードにする
 		global.rec_main = rec_await_play
@@ -12148,7 +12099,6 @@ function rbff2.startplugin()
 	}
 	menu_cur = main_menu -- デフォルト設定
 	update_menu_pos = function()
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
 		-- メニューの更新
 		main_menu.pos.col[ 9] = math.min(math.max(pgm:read_u8(0x107BA5)  , 1), #char_names)
 		main_menu.pos.col[10] = math.min(math.max(pgm:read_u8(0x107BA7)  , 1), #char_names)
@@ -12847,7 +12797,6 @@ function rbff2.startplugin()
 		set_freeze(false)
 	end
 	menu.draw = function()
-		local scr = manager.machine.screens:at(1)
 		local ec = scr:frame_number()
 		local state_past = ec - global.input_accepted
 		local width = scr.width * scr.xscale
@@ -12970,7 +12919,7 @@ function rbff2.startplugin()
 			if i == menu_cur.pos.row then
 				c1, c2, c3, c4, c5 = 0xFFDD2200, 0xFF662200, 0xFFFFFF00, 0xCC000000, 0xAAFFFFFF
 				-- アクティブメニュー項目のビカビカ処理
-				local deep, _ = math.modf((scr:frame_number() / 5) % 20) + 1
+				local deep = math.modf((scr:frame_number() / 5) % 20) + 1
 				c1 = c1 - (0x00110000 * math.abs(deep - 10))
 			else
 				c1, c2, c3, c4, c5 = 0xFFC0C0C0, 0xFFB0B0B0, 0xFF000000, 0x00000000, 0xFF000000
@@ -13020,11 +12969,9 @@ function rbff2.startplugin()
 
 	main_or_menu_state = tra_main -- menu or tra_main
 	local main_or_menu = function()
-		if not manager.machine.devices[":maincpu"] then
+		if not cpu then
 			return
 		end
-		local pgm = manager.machine.devices[":maincpu"].spaces["program"]
-		local scr = manager.machine.screens:at(1)
 		local width = scr.width * scr.xscale
 
 		-- フレーム更新しているかチェック更新
@@ -13076,8 +13023,7 @@ function rbff2.startplugin()
 		if mem_biostest then
 			pached = false               -- 状態リセット
 		elseif not pached then
-			--pached = apply_patch_file(pgm, "ps2-p1.pat", true)
-			pached = apply_patch_file(pgm, "char1-p1.pat", true)
+			pached = apply_patch_file("char1-p1.pat", true)
 
 			-- キャラ選択の時間減らす処理をNOPにする
 			pgm:write_direct_u16(0x63336, 0x4E71)
@@ -13336,22 +13282,26 @@ function rbff2.startplugin()
 	end)
 
 	emu.register_frame_done(function()
-		if manager.machine.paused == false then
-			main_or_menu_state.draw()
-			--collectgarbage("collect")
+		if machine then
+			if machine.paused == false then
+				main_or_menu_state.draw()
+				--collectgarbage("collect")
 
-			if global.pause then
-				emu.pause()
+				if global.pause then
+					emu.pause()
+				end
 			end
 		end
 	end)
 
 	emu.register_periodic(function()
-		if manager.machine.paused == false then
+		if machine then
+			if machine.paused == false then
 			main_or_menu()
-		end
-		if global.mame_debug_wnd == false then
-			auto_recovery_debug()
+			end
+			if global.mame_debug_wnd == false then
+				auto_recovery_debug()
+			end
 		end
 	end)
 end
