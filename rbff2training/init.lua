@@ -462,31 +462,31 @@ local sts_flg_names = {
 		"CA",
 		"A攻撃かB攻撃",
 		"滑り攻撃",
+		"必殺投げやられ",
 		"",
-		"",
-		"",
-		"",
-		"後退",
-		"後ろ斜め下",
-		"",
+		"空中ガード",
+		"屈ガード",
+		"立ガード",
+		"投げ派生やられ",
+		"つかみ投げやられ",
 		"投げられ",
 		"",
+		"ライン送りやられ",
+		"ダウン",
+		"空中やられ",
+		"地上やられ",
 		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
+		"気絶",
+		"気絶起き上がり",
+		"挑発",
+		"ブレイクショット",
 		"必殺技中",
 		"",
+		"起き上がり",
+		"フェイント",
+		"つかみ技",
 		"",
-		"",
-		"",
-		"",
-		"",
+		"投げ追撃",
 		"",
 		"",
 		"空中投げ",
@@ -516,7 +516,7 @@ local sts_flg_names = {
 		"",
 		"",
 		"",
-		"ダウン追撃",
+		"必殺技",
 		"必殺技",
 		"必殺技",
 		"必殺技",
@@ -564,10 +564,10 @@ local sts_flg_names = {
 		"",
 		"",
 		"",
+		"ギガティック投げられ",
 		"",
-		"",
-		"",
-		"攻撃やられ",
+		"追撃投げ中",
+		"ガード中、やられ中",
 		"攻撃ヒット",
 		"",
 		"",
@@ -8458,37 +8458,16 @@ function rbff2.startplugin()
 		-- 見た目と入力方向が違う状態
 		sides_label = sides_label .. ((p.internal_side == p.input_side) and "" or "＊")
 
-		--local move_label = string.format("本体%sF %s %s %x", p.atk_count, p.attack, p.attack_id, p.state_flags4)
-		local move_label = string.format("%08x %08x %08x", p.state_flags4, p.state_flags3, p.state_flags2)
-		for _, fb in pairs(p.fireball) do
-			if fb.alive == true then
-				move_label = move_label .. string.format("/弾%sF", fb.atk_count)
-			end
-		end
-
-		--[[
-		state_flags  = p1 and 0x1004C0 or 0x1005C0, -- フラグ群
-		state_flags4 = p1 and 0x1004C4 or 0x1005C4, -- フラグ群
-		state_flags3 = p1 and 0x1004C8 or 0x1005C8, -- 必殺技等のフラグ群2
-		state_flags2 = p1 and 0x1004CC or 0x1005CC, -- フラグ群2
-		blkstn_flags = p1 and 0x1004D0 or 0x1005D0, -- フラグ群3
-		]]
 		local a = function(flags, names)
 			local flgtxt, bits = "", tobits(flags)
 			for j = 32, 1, -1  do
 				if bits[j] == 1 then
-					flgtxt = string.format("%s%02s %s ",flgtxt, j, names[j])
+					flgtxt = string.format("%s%02d %s ",flgtxt, j, names[j])
 				end
 			end
 			return flgtxt
 		end
 		local hurt_sumamry = {
-			{ "動作:"           , move_label },
-			{ "動作C0:"         , a(p.state_flags , sts_flg_names[0xC0]) },
-			{ "動作C4:"         , a(p.state_flags2, sts_flg_names[0xC4]) },
-			{ "動作C8:"         , a(p.state_flags3, sts_flg_names[0xC8]) },
-			{ "動作CC:"         , a(p.state_flags4, sts_flg_names[0xCC]) },
-			{ "動作D0:"         , a(p.blkstn_flags, sts_flg_names[0xD0]) },
 			{ "投げ無敵:"       , throw_label },
 			{ "方向(動作/入力):", sides_label },
 			{ "押し合い範囲:"   , push_label  },
@@ -8497,6 +8476,24 @@ function rbff2.startplugin()
 		for _, box in ipairs(summary.hurt_boxes) do
 			table.insert(hurt_sumamry, { box.type_label, box.reach_label })
 		end
+
+		-- フラグによる状態の表示
+		if p.blkstn_flags > 0 then
+			table.insert(hurt_sumamry, { "動作C0:", a(p.state_flags , sts_flg_names[0xC0]) })
+		end
+		if p.state_flags2 > 0 then
+			table.insert(hurt_sumamry, { "動作C4:", a(p.state_flags2, sts_flg_names[0xC4]) })
+		end
+		if p.state_flags3 > 0 then
+			table.insert(hurt_sumamry, { "動作C8:", a(p.state_flags3, sts_flg_names[0xC8]) })
+		end
+		if p.state_flags4 > 0 then
+			table.insert(hurt_sumamry, { "動作CC:", a(p.state_flags4, sts_flg_names[0xCC]) })
+		end
+		if p.blkstn_flags > 0 then
+			table.insert(hurt_sumamry, { "動作D0:", a(p.blkstn_flags, sts_flg_names[0xD0]) })
+		end
+
 		return add_frame_to_summary(hurt_sumamry)
 	end
 
@@ -8761,21 +8758,20 @@ function rbff2.startplugin()
 					  20 空中ガード
 				      40 斜め後ろ
 				      80 後ろ
-				   80000 挑発
-				  100000 ブレイクショット
-				  200000 必殺技
-				 1000000 フェイント技
-				 2000000 つかみ技
-				40000000 空中投げ
-				80000000 投げ技
-
 				     100 投げ派生
 				     200 つかまれ
 				     400 なげられ
 				    2000 ダウンまで
 				    6000 吹き飛びダウン
 				    8000 やられ
+				   80000 挑発
+				  100000 ブレイクショット
+				  200000 必殺技
 				  800000 ダウン
+				 1000000 フェイント技
+				 2000000 つかみ技
+				40000000 空中投げ
+				80000000 投げ技
 			]]
 			p.attack_flag    = testbit(p.state_flags2, 0x4000 | 0x200000 | 0x1000000 | 0x80000 | 0x200000 | 0x1000000 | 0x2000000 | 0x40000000 | 0x80000000)
 			p.state_bits     = tobits(p.state_flags)
