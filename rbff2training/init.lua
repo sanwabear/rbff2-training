@@ -459,38 +459,38 @@ local sts_flg_names = {
 		"立",
 	},
 	[0xC4] = {
-		"CA",
-		"A攻撃かB攻撃",
-		"滑り攻撃",
-		"必殺投げやられ",
-		"",
-		"空中ガード",
-		"屈ガード",
-		"立ガード",
-		"投げ派生やられ",
-		"つかみ投げやられ",
-		"投げられ",
-		"",
-		"ライン送りやられ",
-		"ダウン",
-		"空中やられ",
-		"地上やられ",
-		"",
-		"気絶",
-		"気絶起き上がり",
-		"挑発",
-		"ブレイクショット",
-		"必殺技中",
-		"",
-		"起き上がり",
-		"フェイント",
-		"つかみ技",
-		"",
-		"投げ追撃",
+		"避け攻撃",
+		"対スウェーライン下段攻撃",
+		"対スウェーライン上段攻撃",
+		"対メインライン威力大攻撃",
+		"対メインラインB攻撃",
+		"対メインラインA攻撃",
+		"後方小ジャンプC攻撃",
+		"後方小ジャンプB攻撃",
+		"後方小ジャンプA攻撃",
+		"前方小ジャンプC攻撃",
+		"前方小ジャンプB攻撃",
+		"前方小ジャンプA攻撃",
+		"垂直小ジャンプC攻撃",
+		"垂直小ジャンプB攻撃",
+		"垂直小ジャンプA攻撃",
+		"後方ジャンプC攻撃",
+		"後方ジャンプB攻撃",
+		"後方ジャンプA攻撃",
+		"前方ジャンプC攻撃",
+		"前方ジャンプB攻撃",
+		"前方ジャンプA攻撃",
+		"垂直ジャンプC攻撃",
+		"垂直ジャンプB攻撃",
+		"垂直ジャンプA攻撃",
 		"",
 		"",
-		"空中投げ",
-		"投げ",
+		"屈C攻撃",
+		"屈B攻撃",
+		"屈A攻撃",
+		"立C攻撃",
+		"立B攻撃",
+		"立A攻撃",
 	},
 	[0xC8] = {
 		"",
@@ -527,38 +527,38 @@ local sts_flg_names = {
 		"必殺技",
 	},
 	[0xCC] = {
-		"避け攻撃",
-		"対スウェーライン下段攻撃",
-		"対スウェーライン上段攻撃",
-		"対メインライン威力大攻撃",
-		"対メインラインB攻撃",
-		"対メインラインA攻撃",
-		"後方小ジャンプC攻撃",
-		"後方小ジャンプB攻撃",
-		"後方小ジャンプA攻撃",
-		"前方小ジャンプC攻撃",
-		"前方小ジャンプB攻撃",
-		"前方小ジャンプA攻撃",
-		"垂直小ジャンプC攻撃",
-		"垂直小ジャンプB攻撃",
-		"垂直小ジャンプA攻撃",
-		"後方ジャンプC攻撃",
-		"後方ジャンプB攻撃",
-		"後方ジャンプA攻撃",
-		"前方ジャンプC攻撃",
-		"前方ジャンプB攻撃",
-		"前方ジャンプA攻撃",
-		"垂直ジャンプC攻撃",
-		"垂直ジャンプB攻撃",
-		"垂直ジャンプA攻撃",
+		"CA",
+		"A攻撃かB攻撃",
+		"滑り攻撃",
+		"必殺投げやられ",
+		"",
+		"空中ガード",
+		"屈ガード",
+		"立ガード",
+		"投げ派生やられ",
+		"つかみ投げやられ",
+		"投げられ",
+		"",
+		"ライン送りやられ",
+		"ダウン",
+		"空中やられ",
+		"地上やられ",
+		"",
+		"気絶",
+		"気絶起き上がり",
+		"挑発",
+		"ブレイクショット",
+		"必殺技中",
+		"",
+		"起き上がり",
+		"フェイント",
+		"つかみ技",
+		"",
+		"投げ追撃",
 		"",
 		"",
-		"屈C攻撃",
-		"屈B攻撃",
-		"屈A攻撃",
-		"立C攻撃",
-		"立B攻撃",
-		"立A攻撃",
+		"空中投げ",
+		"投げ",
 	},
 	[0xD0] = {
 		"",
@@ -5909,7 +5909,7 @@ function rbff2.startplugin()
 				flag_c0      = p1 and 0x1004C0 or 0x1005C0, -- フラグ群
 				flag_c4      = p1 and 0x1004C4 or 0x1005C4, -- フラグ群
 				flag_c8      = p1 and 0x1004C8 or 0x1005C8, -- フラグ群
-				flag_cc      = p1 and 0x1004CC or 0x1005CC, -- フラグ群
+				flag_cc      = p1 and 0x1004CC or 0x1005CC, -- フラグ群 00 00 00 00
 				flag_d0      = p1 and 0x1004D0 or 0x1005D0, -- フラグ群
 				stop         = p1 and 0x10048D or 0x10058D, -- ヒットストップ
 				knock_back1  = p1 and 0x100469 or 0x100569, -- のけぞり確認用1(色々)
@@ -8459,9 +8459,9 @@ function rbff2.startplugin()
 		sides_label = sides_label .. ((p.internal_side == p.input_side) and "" or "＊")
 
 		local a = function(flags, names)
-			local flgtxt, bits = "", tobits(flags)
+			local flgtxt = ""
 			for j = 32, 1, -1  do
-				if bits[j] == 1 then
+				if flags & 2 ^ (j - 1) ~= 0 then
 					flgtxt = string.format("%s%02d %s ",flgtxt, j, names[j])
 				end
 			end
@@ -8734,11 +8734,13 @@ function rbff2.startplugin()
 			p.old_state      = p.state                                  -- 前フレームの状態保存
 			p.state          = pgm:read_u8(p.addr.state)                -- 今の状態
 			p.old_flag_c0    = p.flag_c0
-			p.flag_c0        = pgm:read_u32(p.addr.flag_c0)        -- フラグ群
 			p.old_flag_cc    = p.flag_cc
-			p.flag_cc        = pgm:read_u32(p.addr.flag_cc)       -- フラグ群2
-			p.flag_c8        = pgm:read_u32(p.addr.flag_c8)       -- 必殺技などの技のフラグ群
-			p.flag_c4        = pgm:read_u32(p.addr.flag_c4)       -- フラグ群
+			p.old_flag_d0    = p.flag_d0
+			p.flag_c0        = pgm:read_u32(p.addr.flag_c0)
+			p.flag_c4        = pgm:read_u32(p.addr.flag_c4)
+			p.flag_c8        = pgm:read_u32(p.addr.flag_c8)
+			p.flag_cc        = pgm:read_u32(p.addr.flag_cc)
+			p.flag_d0        = pgm:read_u8(p.addr.flag_d0)
 			p.box_base1      = pgm:read_u32(p.addr.box_base1)
 			p.box_base2      = pgm:read_u32(p.addr.box_base2)
 			p.old_kaiser_wave = p.kaiser_wave                          -- 前フレームのカイザーウェイブのレベル
@@ -8773,11 +8775,9 @@ function rbff2.startplugin()
 				40000000 空中投げ
 				80000000 投げ技
 			]]
-			p.attack_flag    = testbit(p.flag_cc, 0x4000 | 0x200000 | 0x1000000 | 0x80000 | 0x200000 | 0x1000000 | 0x2000000 | 0x40000000 | 0x80000000)
+			p.attack_flag    = testbit(p.flag_cc, 0x4000 | 0x200000 | 0x1000000 | 0x80000 | 0x200000 | 0x1000000 | 0x2000000 | 0x40000000 | 0x80000000) or (p.flag_c8 > 0) or (p.flag_c4 > 0)
 			p.state_bits     = tobits(p.flag_c0)
-			p.old_flag_d0    = p.flag_d0
 			p.old_blkstn_bits= p.blkstn_bits
-			p.flag_d0        = pgm:read_u8(p.addr.flag_d0)        -- 硬直系のフラグ群3
 			p.blkstn_bits    = tobits(p.flag_d0)
 			p.last_normal_state = p.normal_state
 			p.normal_state   = p.state == 0 -- 素立ち
@@ -8788,7 +8788,6 @@ function rbff2.startplugin()
 			p.old_attack     = p.attack
 			p.attack         = pgm:read_u8(p.addr.attack)
 			p.dmg_id         = pgm:read_u8(p.addr.dmg_id)               -- 最後にヒット/ガードした技ID
-			p.attack_flag    = p.attack_flag or (p.flag_c8 > 0) or (p.flag_c4 > 0)
 			-- キャンセル可否家庭用2AD90からの処理の断片
 			if p.attack < 0x70 then
 				p.cancelable = pgm:read_u8(pgm:read_u32(p.char_4times + 0x850D8) + p.attack)
@@ -8984,7 +8983,6 @@ function rbff2.startplugin()
 
 			if hit_attack ~= 0 and op.hitstop_id ~= 0 and op.flag_c0 > 0 and op.flag_cc > 0 then
 				hit_attack = op.hitstop_id
-				-- print(string.format("%x %x %x %x", op.flag_c0, op.flag_cc, op.flag_c8, op.flag_c4))
 			end
 
 			if hit_attack ~= 0 then
