@@ -5079,8 +5079,8 @@ local update_summary = function(p)
 	summary.gd_strength = summary.gd_strength or p.gd_strength -- 相手のガード持続の種類
 	summary.max_hit_nm  = summary.max_hit_nm  or p.hit.max_hit_nm -- p.act_frame中の行動最大ヒット 分子
 	summary.max_hit_dn  = summary.max_hit_dn  or p.hit.max_hit_dn -- p.act_frame中の行動最大ヒット 分母
-	summary.cancelable  = summary.cancelable  or p.cancelable -- キャンセル可否
-	summary.repeatable  = summary.repeatable  or p.repeatable -- 連キャン可否
+	summary.cancelable  = summary.cancelable  or p.cancelable or 0 -- キャンセル可否
+	summary.repeatable  = summary.repeatable  or p.repeatable or false -- 連キャン可否
 	summary.slide_atk   = summary.slide_atk   or p.slide_atk -- ダッシュ滑り攻撃
 	summary.bs_atk      = summary.bs_atk      or p.bs_atk -- ブレイクショット
 
@@ -5722,10 +5722,9 @@ function rbff2.startplugin()
 			chg_hitbox_frm   = 0,
 			chg_hurtbox_frm  = 0,
 			type_boxes       = {}, -- key + count
-			fireball_bases   = p1 and { [0x100600] = true, [0x100800] = true, [0x100A00] = true, } or
-			                          { [0x100700] = true, [0x100900] = true, [0x100B00] = true, },
-			fake_hits        = p1 and { [0x100600] = 0x10DDF5, [0x100800] = 0x10DDF7, [0x100A00] = 0x10DDF9, } or
-									  { [0x100700] = 0x10DDF6, [0x100900] = 0x10DDF8, [0x100B00] = 0x10DDFA, },
+			fireball_bases   = { [base + 0x200] = true, [base + 0x400] = true, [base + 0x600] = true, },
+			fake_hits        = { [base + 0x200] = 0x10DDF5, [base + 0x400] = 0x10DDF7, [base + 0x600] = 0x10DDF9, } or
+							   { [base + 0x200] = 0x10DDF6, [base + 0x400] = 0x10DDF8, [base + 0x600] = 0x10DDFA, },
 			fireball         = {},
 
 			bs_hooked        = 0,           -- BSモードのフック処理フレーム数。
@@ -5948,67 +5947,6 @@ function rbff2.startplugin()
 	for _, p in ipairs(players) do
 		for base, _ in pairs(p.fireball_bases) do
 			p.fireball[base] = {
-				parent         = p,
-				is_fireball    = true,
-				act            = 0,
-				acta           = 0,
-				atk_count      = 0,
-
-				act_count      = 0, -- 現在の行動のカウンタ
-				act_frame      = 0, -- 現在の行動の残フレーム、ゼロになると次の行動へ
-				act_contact    = 0, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
-
-				asm            = 0,
-				proc_active    = false,
-				old_proc_act   = false,
-				pos            = 0, -- X座標
-				pos_y          = 0, -- Y座標
-				pos_z          = 0, -- Z座標
-				attack         = 0, -- 攻撃中のみ変化
-				cancelable     = 0, -- キャンセル可否
-				old_repeatable = 0,
-				repeatable     = 0, -- 連キャン可否用
-				hitstop_id     = 0, -- ガード硬直のID
-				attack_id      = 0, -- 当たり判定ごとに設定されているID
-				attacking      = false, -- 攻撃判定発生中の場合true
-				dmmy_attacking = false, -- ヒットしない攻撃判定発生中の場合true（嘘判定のぞく）
-				juggling       = false, -- 空中追撃判定発生中の場合true
-				can_techrise   = false, -- 受け身行動可否
-				hitstop        = 0, -- ガード硬直
-				fake_hit       = false,
-				obsl_hit       = false, -- 嘘判定チェック用
-				full_hit       = false, -- 判定チェック用1
-				harmless2      = false, -- 判定チェック用2 飛び道具専用
-				prj_rank       = 0,     -- 飛び道具の強さ
-				bai_chk1       = 0,     -- 倍返しチェック1
-				bai_chk2       = 0,     -- 倍返しチェック2
-				max_hit_dn     = 0,     -- 同一技行動での最大ヒット数 分母
-				max_hit_nm     = 0,     -- 同一技行動での最大ヒット数 分子
-				hitboxes       = {},
-				buffer         = {},
-				uniq_hitboxes  = {}, -- key + boolean
-				hitbox_txt     = "",
-				hurtbox_txt    = "",
-				chg_hitbox_frm = 0,
-				chg_hurtbox_frm= 0,
-				hit_summary    = {}, -- 大状態表示のデータ構造の一部
-				hit            = {
-					pos_x      = 0,
-					pos_z      = 0,
-					pos_y      = 0,
-					on         = 0,
-					flip_x     = 0,
-					scale      = 0,
-					char_id    = 0,
-					vulnerable = 0,
-					harmless   = false,
-					fake_hit   = false,
-					obsl_hit   = false,
-					full_hit   = false,
-					harmless2  = false,
-					max_hit_dn = 0,
-					max_hit_nm = 0,
-				},
 				addr           = {
 					base       = base, -- キャラ状態とかのベースのアドレス
 					char       = base + 0x10, -- 技のキャラID
@@ -9226,14 +9164,16 @@ function rbff2.startplugin()
 
 			-- 飛び道具の状態読取
 			for _, fb in pairs(p.fireball) do
+				fb.parent         = p
+				fb.is_fireball    = true
 				fb.act            = pgm:read_u16(fb.addr.act)
 				fb.acta           = pgm:read_u16(fb.addr.acta)
 				fb.actb           = pgm:read_u16(fb.addr.actb)
-				fb.act_count      = pgm:read_u8(fb.addr.act_count)
+				fb.act_count      = pgm:read_u8(fb.addr.act_count) -- 現在の行動のカウンタ
 				-- 家庭用004A6Aからの処理
 				fb.act_boxtype    = 0xFFFF & (pgm:read_u8(fb.addr.act_boxtype) & 0xC0 * 4)
-				fb.act_frame      = pgm:read_u8(fb.addr.act_frame)
-				fb.act_contact    = pgm:read_u8(fb.addr.act_contact)
+				fb.act_frame      = pgm:read_u8(fb.addr.act_frame) -- 現在の行動の残フレーム、ゼロになると次の行動へ
+				fb.act_contact    = pgm:read_u8(fb.addr.act_contact) -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
 				fb.pos            = pgm:read_i16(fb.addr.pos)
 				fb.pos_y          = pgm:read_i16(fb.addr.pos_y)
 				fb.pos_z          = pgm:read_i16(fb.addr.pos_z)
@@ -9241,7 +9181,7 @@ function rbff2.startplugin()
 				fb.asm            = pgm:read_u16(pgm:read_u32(fb.addr.base))
 				fb.old_proc_act   = fb.proc_active
 				fb.proc_active    = (fb.asm ~= 0x4E75 and fb.asm ~= 0x197C)
-				fb.attack         = pgm:read_u16(pgm:read_u32(fb.addr.attack))
+				fb.attack         = pgm:read_u16(pgm:read_u32(fb.addr.attack)) -- 攻撃中のみ変化
 				fb.hitstop_id     = pgm:read_u16(fb.addr.hitstop_id)
 				fb.attack_id      = 0
 				fb.old_attacking  = p.attacking
@@ -9265,39 +9205,42 @@ function rbff2.startplugin()
 					fb.pure_st_tm = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x88772))
 				end
 				-- 受け身行動可否 家庭用 05A9B8 からの処理
-				fb.can_techrise   = pgm:read_u8(fb.addr.hitstop_id)
-				fb.can_techrise   = 2 > pgm:read_u8(0x8E2C0 + fb.can_techrise)
+				fb.can_techrise   = 2 > pgm:read_u8(0x8E2C0 + pgm:read_u8(fb.addr.hitstop_id))
 				fb.fake_hit       = (pgm:read_u8(fb.addr.fake_hit) & 0xB) == 0
-				fb.obsl_hit       = (pgm:read_u8(fb.addr.obsl_hit) & 0xB) == 0
-				fb.full_hit       = pgm:read_u8(fb.addr.full_hit ) > 0
-				fb.harmless2      = pgm:read_u8(fb.addr.harmless2) > 0
-				fb.prj_rank       = pgm:read_u8(fb.addr.prj_rank)
+				fb.obsl_hit       = (pgm:read_u8(fb.addr.obsl_hit) & 0xB) == 0 -- 嘘判定チェック用
+				fb.full_hit       = pgm:read_u8(fb.addr.full_hit ) > 0 -- 判定チェック用1
+				fb.harmless2      = pgm:read_u8(fb.addr.harmless2) > 0 -- 判定チェック用2 飛び道具専用
+				fb.prj_rank       = pgm:read_u8(fb.addr.prj_rank) -- 飛び道具の強さ
 				fb.side           = pgm:read_u8(fb.addr.side)
 				fb.box_base1      = pgm:read_u32(fb.addr.box_base1)
 				fb.box_base2      = pgm:read_u32(fb.addr.box_base2)
-
-				--[[
-				倍返しチェック
-				05C8CE: 0C2B 0002 008A           cmpi.b  #$2, ($8a,A3)        -- 10078A と 0x2 を比較     飛翔拳は03
-				05C8D4: 6D1A                     blt     $5c8f0               -- 小さかったら 5c8f0 へ
-				05C8D6: 41F9 0008 E940           lea     $8e940.l, A0         -- A0 = 8e940
-				05C8DC: 0C6C 000B 0010           cmpi.w  #$b, ($10,A4)        -- 100410 と 0xB を比較 山崎かどうかチェック
-				05C8E2: 6618                     bne     $5c8fc               -- 違ったら 5c8fc へ
-				05C8E4: 302B 00BE                move.w  ($be,A3), D0         -- D0 = 1007BE              飛翔拳は09
-				05C8E8: D040                     add.w   D0, D0               -- D0 = D0 + D0
-				05C8EA: 4A30 0000                tst.b   (A0,D0.w)            -- 8e940 + D0 の値チェック  データテーブルチェック 8e940 飛翔拳は01
-				05C8EE: 6754                     beq     $5c944               -- 0だったら 5c944 へ
-				]]
+				--倍返しチェック 家庭用05C8CEからの処理
 				fb.bai_chk1       = pgm:read_u8(fb.addr.bai_chk1)
-				fb.bai_chk2       = pgm:read_u16(fb.addr.hitstop_id)
-				fb.bai_chk2       = pgm:read_u8(0x8E940 + (0xFFFF & (fb.bai_chk2 + fb.hitstop_id)))
+				fb.bai_chk2       = pgm:read_u8(0x8E940 + (0xFFFF & (pgm:read_u16(fb.addr.hitstop_id) + fb.hitstop_id)))
 				fb.bai_catch      = 0x2 >= fb.bai_chk1 and fb.bai_chk2 == 0x01
-
-				fb.max_hit_dn     = pgm:read_u8(fix_bp_addr(0x885F2) + fb.hitstop_id)
-				fb.max_hit_nm     = pgm:read_u8(fb.addr.max_hit_nm)
+				fb.max_hit_dn     = pgm:read_u8(fix_bp_addr(0x885F2) + fb.hitstop_id) -- 同一技行動での最大ヒット数 分母
+				fb.max_hit_nm     = pgm:read_u8(fb.addr.max_hit_nm) -- 同一技行動での最大ヒット数 分子
 				fb.hitboxes       = {}
 				fb.buffer         = {}
 				fb.uniq_hitboxes  = {} -- key + boolean
+				fb.hit_summary    = fb.hit_summary or {} -- 大状態表示のデータ構造の一部
+				fb.hit            = fb.hit or {
+					pos_x         = 0,
+					pos_z         = 0,
+					pos_y         = 0,
+					on            = 0,
+					flip_x        = 0,
+					scale         = 0,
+					char_id       = 0,
+					vulnerable    = 0,
+					harmless      = false,
+					fake_hit      = false,
+					obsl_hit      = false,
+					full_hit      = false,
+					harmless2     = false,
+					max_hit_dn    = 0,
+					max_hit_nm    = 0,
+				}
 				fb.type_boxes     = {}
 				fb.act_data_fired = p.act_data -- 発射したタイミングの行動ID
 
