@@ -5508,6 +5508,7 @@ function rbff2.startplugin()
 	local players = {}
 	for p = 1, 2 do
 		local p1 = (p == 1)
+		local base = p1 and 0x100400 or 0x100500
 		players[p] = {
 			base             = 0x0,
 			bases            = {},
@@ -5763,22 +5764,6 @@ function rbff2.startplugin()
 			},
 
 			n_throw          = {
-				on           = 0,
-				right        = 0,
-				base         = 0,
-				opp_base     = 0,
-				opp_id       = 0,
-				char_id      = 0,
-				side         = 0,
-				range1       = 0,
-				range2       = 0,
-				range3       = 0,
-				range41      = 0,
-				range42      = 0,
-				range5       = 0,
-				id           = 0,
-				pos_x        = 0,
-				pos_y        = 0,
 				addr         = {
 					on       = p1 and 0x10CD90 or 0x10CDB0,
 					base     = p1 and 0x10CD91 or 0x10CDB1,
@@ -5799,16 +5784,6 @@ function rbff2.startplugin()
 			},
 
 			air_throw        = {
-				on           = 0,
-				range_x      = 0,
-				range_y      = 0,
-				base         = 0,
-				opp_base     = 0,
-				opp_id       = 0,
-				side         = 0,
-				id           = 0,
-				pos_x        = 0,
-				pos_y        = 0,
 				addr         = {
 					on       = p1 and 0x10CD00 or 0x10CD20,
 					range_x  = p1 and 0x10CD01 or 0x10CD21,
@@ -5824,17 +5799,6 @@ function rbff2.startplugin()
 			},
 
 			sp_throw         = {
-				on           = 0,
-				front        = 0,
-				top          = 0,
-				base         = 0,
-				opp_base     = 0,
-				opp_id       = 0,
-				side         = 0,
-				bottom       = 0,
-				id           = 0,
-				pos_x        = 0,
-				pos_y        = 0,
 				addr         = {
 					on       = p1 and 0x10CD40 or 0x10CD60,
 					front    = p1 and 0x10CD41 or 0x10CD61,
@@ -5851,76 +5815,76 @@ function rbff2.startplugin()
 			},
 
 			addr           = {
-				base         = p1 and 0x100400 or 0x100500, -- キャラ状態とかのベースのアドレス
-				act          = p1 and 0x100460 or 0x100560, -- 行動ID デバッグディップステータス表示のPと同じ
-				acta         = p1 and 0x100462 or 0x100562, -- 行動ID デバッグディップステータス表示のAと同じ
-				act_count    = p1 and 0x100466 or 0x100566, -- 現在の行動のカウンタ
-				act_boxtype  = p1 and 0x100467 or 0x100567, -- 現在の行動の判定種類
-				act_frame    = p1 and 0x10046F or 0x10056F, -- 現在の行動の残フレーム、ゼロになると次の行動へ
-				act_contact  = p1 and 0x100401 or 0x100501, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
-				attack       = p1 and 0x1004B6 or 0x1005B6, -- 攻撃中のみ変化、判定チェック用2 0のときは何もしていない、 詠酒の間合いチェック用
-				hitstop_id   = p1 and 0x1004EB or 0x1005EB, -- 被害中のみ変化
-				can_techrise = p1 and 0x100492 or 0x100592, -- 受け身行動可否チェック用
-				ophit_base   = p1 and 0x10049E or 0x10059E, -- ヒットさせた相手側のベースアドレス
+				base         = base, -- キャラ状態とかのベースのアドレス
+				act          = base + 0x60, -- 行動ID デバッグディップステータス表示のPと同じ
+				acta         = base + 0x62, -- 行動ID デバッグディップステータス表示のAと同じ
+				act_count    = base + 0x66, -- 現在の行動のカウンタ
+				act_boxtype  = base + 0x67, -- 現在の行動の判定種類
+				act_frame    = base + 0x6F, -- 現在の行動の残フレーム、ゼロになると次の行動へ
+				act_contact  = base + 0x01, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
+				attack       = base + 0xB6, -- 攻撃中のみ変化、判定チェック用2 0のときは何もしていない、 詠酒の間合いチェック用
+				hitstop_id   = base + 0xEB, -- 被害中のみ変化
+				can_techrise = base + 0x92, -- 受け身行動可否チェック用
+				ophit_base   = base + 0x9E, -- ヒットさせた相手側のベースアドレス
 				char         = p1 and 0x107BA5 or 0x107BA7, -- キャラID
 				color        = p1 and 0x107BAC or 0x107BAD, -- カラー A=0x00 D=0x01
 				combo        = p1 and 0x10B4E4 or 0x10B4E5, -- コンボ
 				combo2       = p1 and 0x10B4E5 or 0x10B4E4, -- 最近のコンボ数のアドレス
-				dmg_id       = p1 and 0x1004E9 or 0x1005E9, -- ダメージ算出の技ID(最後にヒット/ガードした技のID)
+				dmg_id       = base + 0xE9, -- ダメージ算出の技ID(最後にヒット/ガードした技のID)
 				tmp_combo2   = p1 and 0x10B4E1 or 0x10B4E0, -- 一次的なコンボ数のアドレス
 				max_combo2   = p1 and 0x10B4F0 or 0x10B4EF, -- 最大コンボ数のアドレス
 				dmg_scl7     = p1 and 0x10DE50 or 0x10DE51, -- 補正 7/8 の回数
 				dmg_scl6     = p1 and 0x10DE52 or 0x10DE53, -- 補正 6/8 の回数
 				dmg_scl5     = p1 and 0x10DE54 or 0x10DE55, -- 補正 5/8 の回数
 				dmg_scl4     = p1 and 0x10DE56 or 0x10DE57, -- 補正 4/8 の回数
-				last_dmg     = p1 and 0x10048F or 0x10058F, -- 最終ダメージ
+				last_dmg     = base + 0x8F, -- 最終ダメージ
 				tmp_dmg      = p1 and 0x10CA10 or 0x10CA11, -- 最終ダメージの更新フック
 				pure_dmg     = p1 and 0x10DDFB or 0x10DDFC, -- 最終ダメージ(補正前)
 				tmp_pow      = p1 and 0x10DE59 or 0x10DE58, -- POWゲージ増加量
 				tmp_pow_rsv  = p1 and 0x10DE5B or 0x10DE5A, -- POWゲージ増加量(予約値)
 				tmp_stun     = p1 and 0x10DDFD or 0x10DDFF, -- 最終気絶値
 				tmp_st_timer = p1 and 0x10DDFE or 0x10DE00, -- 最終気絶タイマー
-				life         = p1 and 0x10048B or 0x10058B, -- 体力
+				life         = base + 0x8B, -- 体力
 				max_combo    = p1 and 0x10B4EF or 0x10B4F0, -- 最大コンボ
 				max_stun     = p1 and 0x10B84E or 0x10B856, -- 最大気絶値
-				corner       = p1 and 0x1004B7 or 0x1005B7, -- 画面端状態 0:端以外 1:画面端 3:端押し付け
-				pos          = p1 and 0x100420 or 0x100520, -- X座標
-				pos_frc      = p1 and 0x100422 or 0x100522, -- X座標 少数部
+				corner       = base + 0xB7, -- 画面端状態 0:端以外 1:画面端 3:端押し付け
+				pos          = base + 0x20, -- X座標
+				pos_frc      = base + 0x22, -- X座標 少数部
 				max_pos      = p1 and 0x10DDE6 or 0x10DDE8, -- X座標最大
 				min_pos      = p1 and 0x10DDEA or 0x10DDEC, -- X座標最小
-				pos_y        = p1 and 0x100428 or 0x100528, -- Y座標
-				pos_frc_y    = p1 and 0x10042A or 0x10052A, -- Y座標 少数部
-				pos_z        = p1 and 0x100424 or 0x100524, -- Z座標
-				sway_status  = p1 and 0x100489 or 0x100589, -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
- 				side         = p1 and 0x100458 or 0x100558, -- 向き
-				--forward    = p1 and 0x100440 or 0x100540, -- 前移動速度 8バイト
+				pos_y        = base + 0x28, -- Y座標
+				pos_frc_y    = base + 0x2A, -- Y座標 少数部
+				pos_z        = base + 0x24, -- Z座標
+				sway_status  = base + 0x89, -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
+ 				side         = base + 0x58, -- 向き
+				--forward    = base + 0x40, -- 前移動速度 8バイト
 				--backward   = 0x0022FAE -- 後退のベースアドレス
-				input_side   = p1 and 0x100486 or 0x100586, -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
-				input1       = p1 and 0x100482 or 0x100582, -- キー入力 直近Fの入力
-				input2       = p1 and 0x100483 or 0x100583, -- キー入力 1F前の入力
-				cln_btn      = p1 and 0x100484 or 0x100584, -- クリアリングされたボタン入力
-				state        = p1 and 0x10048E or 0x10058E, -- 状態
-				flag_c0      = p1 and 0x1004C0 or 0x1005C0, -- フラグ群
-				flag_c4      = p1 and 0x1004C4 or 0x1005C4, -- フラグ群
-				flag_c8      = p1 and 0x1004C8 or 0x1005C8, -- フラグ群
-				flag_cc      = p1 and 0x1004CC or 0x1005CC, -- フラグ群 00 00 00 00
-				flag_d0      = p1 and 0x1004D0 or 0x1005D0, -- フラグ群
-				stop         = p1 and 0x10048D or 0x10058D, -- ヒットストップ
-				knock_back1  = p1 and 0x100469 or 0x100569, -- のけぞり確認用1(色々)
-				knock_back2  = p1 and 0x100416 or 0x100516, -- のけぞり確認用2(裏雲隠し)
-				knock_back3  = p1 and 0x10047E or 0x10057E, -- のけぞり確認用3(フェニックススルー)
-				sp_throw_id  = p1 and 0x1004A3 or 0x1005A3, -- 投げ必殺のID
-				sp_throw_act = p1 and 0x1004A4 or 0x1005A4, -- 投げ必殺の持続残F
-				additional   = p1 and 0x1004A5 or 0x1005A5, -- 追加入力成立時のデータ
-				prj_rank     = p1 and 0x1004B5 or 0x1005B5, -- 飛び道具の強さ
+				input_side   = base + 0x86, -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
+				input1       = base + 0x82, -- キー入力 直近Fの入力
+				input2       = base + 0x83, -- キー入力 1F前の入力
+				cln_btn      = base + 0x84, -- クリアリングされたボタン入力
+				state        = base + 0x8E, -- 状態
+				flag_c0      = base + 0xC0, -- フラグ群
+				flag_c4      = base + 0xC4, -- フラグ群
+				flag_c8      = base + 0xC8, -- フラグ群
+				flag_cc      = base + 0xCC, -- フラグ群 00 00 00 00
+				flag_d0      = base + 0xD0, -- フラグ群
+				stop         = base + 0x8D, -- ヒットストップ
+				knock_back1  = base + 0x69, -- のけぞり確認用1(色々)
+				knock_back2  = base + 0x16, -- のけぞり確認用2(裏雲隠し)
+				knock_back3  = base + 0x7E, -- のけぞり確認用3(フェニックススルー)
+				sp_throw_id  = base + 0xA3, -- 投げ必殺のID
+				sp_throw_act = base + 0xA4, -- 投げ必殺の持続残F
+				additional   = base + 0xA5, -- 追加入力成立時のデータ
+				prj_rank     = base + 0xB5, -- 飛び道具の強さ
 				input_offset = p1 and 0x0394C4 or 0x0394C8, -- コマンド入力状態のオフセットアドレス
 				no_hit       = p1 and 0x10DDF2 or 0x10DDF1, -- ヒットしないフック
 				-- range        = 0x1004E2 or 0x1005E2 -- 距離 0近距離 1中距離 2遠距離
-				cancelable   = p1 and 0x1004AF or 0x1005AF, -- キャンセル可否 00不可 C0可 D0可 正確ではない
-				repeatable   = p1 and 0x10046A or 0x10056A, -- 連キャン可否用
-				box_base1    = p1 and 0x100476 or 0x100576, -- 判定の開始アドレス1、判定データはバンク切替されている場合あり
-				box_base2    = p1 and 0x10047A or 0x10057A, -- 判定の開始アドレス2、判定データはバンク切替されている場合あり
-				kaiser_wave  = p1 and 0x1004FB or 0x1005FB, -- カイザーウェイブのレベル
+				cancelable   = base + 0xAF, -- キャンセル可否 00不可 C0可 D0可 正確ではない
+				repeatable   = base + 0x6A, -- 連キャン可否用
+				box_base1    = base + 0x76, -- 判定の開始アドレス1、判定データはバンク切替されている場合あり
+				box_base2    = base + 0x7A, -- 判定の開始アドレス2、判定データはバンク切替されている場合あり
+				kaiser_wave  = base + 0xFB, -- カイザーウェイブのレベル
 
 				-- キャラ毎の必殺技の番号 0x1004B8
 				-- 技の内部の進行度 0x1004F7
@@ -5928,21 +5892,22 @@ function rbff2.startplugin()
 				stun         = p1 and 0x10B850 or 0x10B858, -- 現在気絶値
  				stun_timer   = p1 and 0x10B854 or 0x10B85C, -- 気絶値ゼロ化までの残フレーム数
  				tmp_combo    = p1 and 0x10B4E0 or 0x10B4E1, -- コンボテンポラリ
-				-- bs_id        = p1 and 0x1004B9 or 0x1005B9, -- BSの技ID
-				pow          = p1 and 0x1004BC or 0x1005BC, -- パワーアドレス
+				-- bs_id        = base + 0xB9, -- BSの技ID
+				pow          = base + 0xBC, -- パワーアドレス
 				reg_pcnt     = p1 and 0x300000 or 0x340000, -- キー入力 REG_P1CNT or REG_P2CNT アドレス
 				reg_st_b     = 0x380000,                    -- キー入力 REG_STATUS_B アドレス
-				control1     = p1 and 0x100412 or 0x100512, -- Human 1 or 2, CPU 3
-				control2     = p1 and 0x100413 or 0x100513, -- Human 1 or 2, CPU 3
+				control1     = base + 0x12, -- Human 1 or 2, CPU 3
+				control2     = base + 0x13, -- Human 1 or 2, CPU 3
+
 				select_hook  = p1 and 0x10CDD1 or 0x10CDD5, -- プレイヤーセレクト画面のフック処理用アドレス
 				bs_hook1     = p1 and 0x10DDDA or 0x10DDDE, -- BSモードのフック処理用アドレス。技のID。
 				bs_hook2     = p1 and 0x10DDDB or 0x10DDDF, -- BSモードのフック処理用アドレス。技のバリエーション。
 				bs_hook3     = p1 and 0x10DDDD or 0x10DDE1, -- BSモードのフック処理用アドレス。技発動。
 
 				tw_threshold = p1 and 0x10DDE2 or 0x10DDE3, -- 投げ可能かどうかのフレーム判定のしきい値
-				tw_frame     = p1 and 0x100490 or 0x100590, -- 投げ可能かどうかのフレーム経過
+				tw_frame     = base + 0x90, -- 投げ可能かどうかのフレーム経過
 				tw_accepted  = p1 and 0x10DDE4 or 0x10DDE5, -- 投げ確定時のフレーム経過
-				tw_muteki    = p1 and 0x1004F6 or 0x1005F6, -- 投げ無敵の残フレーム数
+				tw_muteki    = base + 0xF6, -- 投げ無敵の残フレーム数
 
 				-- フックできないかわり用
 				state2       = p1 and 0x10CA0E or 0x10CA0F, -- 状態
@@ -5955,9 +5920,9 @@ function rbff2.startplugin()
 
 				-- ヒットするかどうか
 				fake_hit     = p1 and 0x10DDF3 or 0x10DDF4, -- 出だしから嘘判定のフック
-				obsl_hit     = p1 and 0x10046A or 0x10056A, -- 嘘判定チェック用 3ビット目が立っていると嘘判定
-				full_hit     = p1 and 0x1004AA or 0x1005AA, -- 判定チェック用1 0じゃないとき全段攻撃ヒット/ガード
-				max_hit_nm   = p1 and 0x1004AB or 0x1005AB, -- 同一技行動での最大ヒット数 分子
+				obsl_hit     = base + 0x6A, -- 嘘判定チェック用 3ビット目が立っていると嘘判定
+				full_hit     = base + 0xAA, -- 判定チェック用1 0じゃないとき全段攻撃ヒット/ガード
+				max_hit_nm   = base + 0xAB, -- 同一技行動での最大ヒット数 分子
 
 				-- スクショ用
 				fix_scr_top  = p1 and 0x10DE5C or 0x10DE5D, -- screen_topの強制フック用
@@ -5980,7 +5945,7 @@ function rbff2.startplugin()
 	players[1].op = players[2]
 	players[2].op = players[1]
 	-- 飛び道具領域の作成
-	for i, p in ipairs(players) do
+	for _, p in ipairs(players) do
 		for base, _ in pairs(p.fireball_bases) do
 			p.fireball[base] = {
 				parent         = p,
