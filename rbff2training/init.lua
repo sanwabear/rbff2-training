@@ -2817,18 +2817,16 @@ for char, fireballs_base in pairs(char_fireball_base) do
 		end
 	end
 end
-
-local jump_acts = {
-	[0x9] = true,
-	[0x0B] = true, [0x0C] = true,
-	[0x0D] = true, [0x0E] = true,
-	[0x0F] = true, [0x10] = true,
-	[0x11] = true, [0x12] = true,
-	[0x13] = true, [0x14] = true,
-	[0x15] = true, [0x16] = true,
-}
-local wakeup_acts = { [0x193] = true, [0x13B] = true, }
-local down_acts = { [0x190] = true,  [0x191] = true, [0x192] = true, [0x18E] = true, }
+local new_set = function(...)
+	local ret = {}
+	for _, v in ipairs({ ... }) do
+		ret[v] = true
+	end
+	return ret
+end
+local jump_acts = new_set(0x9, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16)
+local wakeup_acts = new_set(0x193, 0x13B)
+local down_acts = new_set(0x190, 0x191, 0x192, 0x18E)
 local get_act_name = function(act_data)
 	if act_data then
 		return act_data.disp_name or (act_data.names and act_data.names[1] or act_data.name) or act_data.name or ""
@@ -3589,30 +3587,7 @@ local rvs_types = {
 	dangerous_through   = 6, -- デンジャラススルー用
 	atemi               = 7, -- 当身うち空振りと裏雲隠し用
 }
-local pre_down_acts = {
-	[0x142] = true,
-	[0x145] = true,
-	[0x156] = true,
-	[0x15A] = true,
-	[0x15B] = true,
-	[0x15E] = true,
-	[0x15F] = true,
-	[0x160] = true,
-	[0x162] = true,
-	[0x166] = true,
-	[0x16A] = true,
-	[0x16C] = true,
-	[0x16D] = true,
-	[0x174] = true,
-	[0x175] = true,
-	[0x186] = true,
-	[0x188] = true,
-	[0x189] = true,
-	[0x1E0] = true,
-	[0x1E1] = true,
-	[0x2AE] = true,
-	[0x2BA] = true,
-}
+local pre_down_acts = new_set(0x142, 0x145, 0x156, 0x15A, 0x15B, 0x15E, 0x15F, 0x160, 0x162, 0x166, 0x16A, 0x16C, 0x16D, 0x174, 0x175, 0x186, 0x188, 0x189, 0x1E0, 0x1E1, 0x2AE, 0x2BA)
 -- コマンドテーブル上の技ID
 local common_rvs = {
 	{ cmd = cmd_base._3      , bs = false, common = true, name = "[共通] 斜め下前入れ", },
@@ -5722,7 +5697,7 @@ function rbff2.startplugin()
 			chg_hitbox_frm   = 0,
 			chg_hurtbox_frm  = 0,
 			type_boxes       = {}, -- key + count
-			fireball_bases   = { [base + 0x200] = true, [base + 0x400] = true, [base + 0x600] = true, },
+			fireball_bases   = new_set(base + 0x200, base + 0x400, base + 0x600),
 			fake_hits        = { [base + 0x200] = 0x10DDF5, [base + 0x400] = 0x10DDF7, [base + 0x600] = 0x10DDF9, } or
 							   { [base + 0x200] = 0x10DDF6, [base + 0x400] = 0x10DDF8, [base + 0x600] = 0x10DDFA, },
 			fireball         = {},
@@ -8889,10 +8864,7 @@ function rbff2.startplugin()
 				end
 
 				-- トドメ=ヒットで+7、雷撃棍=発生で+5、倍返し=返しで+7、吸収で+20、蛇使い は個別に設定が必要
-				local yama_pows = {
-					[0x06] = true, [0x70] = true, [0x71] = true, [0x75] = true,
-					[0x76] = true, [0x77] = true, [0x7C] = true, [0x7D] = true,
-				}
+				local yama_pows = new_set(0x06, 0x70, 0x71, 0x75, 0x76, 0x77, 0x7C, 0x7D)
 				if p.char == 0x6 and p.attack == 0x28 then
 					p.pow_up_hit     = 0
 					p.pow_up_gd      = 0
