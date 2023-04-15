@@ -7712,15 +7712,17 @@ function rbff2.startplugin()
 	-- 0x05D78Cからの実装
 	local get_n_throw = function(p, op)
 		-- 相手が向き合いか背向けかで押し合い幅を解決して反映
-		local op_push = ((p.side == op.side) and op.push_back or op.push_front)
-		local op_edge = 0xFFFF & (op.proc_pos - op_push)
+		local op_edge = 0xFFFF & (op.proc_pos - ((p.side == op.side) and op.push_back or op.push_front))
 		-- 自身の押し合い判定を反映
 		local p_edge = 0xFFFF & (p.pos - p.push_front)
 
-		local d0 = 0xFFFF & math.abs(op_edge - p_edge)
-		local ret = p.tw_half_range >= d0
-
-		local tw_center = p_edge + op_push - screen_left
+		local a = 0xFFFF & math.abs(op.proc_pos - op_edge)
+		local tw_center = p_edge - screen_left
+		if 0 > p.side  then
+			tw_center = tw_center - a
+		else
+			tw_center = tw_center + a
+		end
 
 		-- 投げ間合いセット
 		p.throw = {
@@ -7728,8 +7730,10 @@ function rbff2.startplugin()
 			x2 = tw_center + p.tw_half_range,
 			half_range = p.tw_half_range,
 			full_range = p.tw_half_range + p.tw_half_range,
-			in_range = ret,
+			in_range = false,
 		}
+		local op_pos = op.proc_pos - screen_left
+		p.throw.in_range = p.throw.x1 <= op_pos and op_pos <= p.throw.x2
 	end
 	-- 0:攻撃無し 1:ガード継続小 2:ガード継続大
 	local get_gd_strength = function(p)
@@ -8358,9 +8362,11 @@ function rbff2.startplugin()
 	-- 家庭用0x05D78Cからの処理
 	local get_push_range = function(p, fix)
 		local d5 = pgm:read_u8(fix + fix_bp_addr(0x05C99C) + p.char_8times)
-		d5 = 0xFF00 + d5
-		if 0 > p.side then                              -- 位置がマイナスなら
-			d5 = 0x10000 - d5                           -- NEG
+		if fix == 0x3 then
+			d5 = 0xFF00 + d5
+			if 0 > p.side then                              -- 位置がマイナスなら
+				d5 = 0x10000 - d5                           -- NEG
+			end
 		end
 		d5 = 0xFFFF & (d5 + d5)                         -- 2倍値に
 		d5 = 0xFFFF & (d5 + d5)                         -- さらに2倍値に
