@@ -33,7 +33,7 @@ exports.description = "RBFF2 Training"
 exports.license = "MIT License"
 exports.author = { name = "Sanwabear" }
 
-local man, machine, cpu, pgm, scr, ioports, debugger
+local man, machine, cpu, pgm, scr, ioports, debugger, base_path
 local setup_emu = function()
 	man = manager
 	machine = man.machine
@@ -42,6 +42,12 @@ local setup_emu = function()
 	scr = machine.screens:at(1)
 	ioports = man.machine.ioport.ports
 	debugger = machine.debugger
+	base_path = function()
+		local base = emu.subst_env(man.options.entries.homepath:value():match('([^;]+)')) .. '/plugins/' .. exports.name
+		local dir = lfs.currentdir()
+		return dir .. "/" .. base
+	end
+	dofile(base_path() .. "/data.lua")
 end
 
 local rbff2 = exports
@@ -526,8 +532,8 @@ local sts_flg_names = {
 		"潜在能力",
 		"超必殺技",
 		"超必殺技",
-		"",
-		"",
+		"必殺技",
+		"必殺技",
 		"必殺技",
 		"必殺技",
 		"必殺技",
@@ -4452,12 +4458,6 @@ local is_file = function(name)
 	return false
 end
 
-local base_path = function()
-	local base = emu.subst_env(man.options.entries.homepath:value():match('([^;]+)')) .. '/plugins/' .. exports.name
-	local dir = lfs.currentdir()
-	return dir .. "/" .. base
-end
-
 local rom_patch_path = function(filename)
 	local base = base_path() .. '/rom-patch/'
 	local patch = base .. emu.romname() .. '/' .. filename
@@ -7711,63 +7711,23 @@ function rbff2.startplugin()
 	-- 1Pと2Pの通常投げ間合い取得
 	-- 0x05D78Cからの実装
 	local get_n_throw = function(p, op)
-		local d0, d1, d4, d5, a0_1, a0_2 = 0, 0, 0, 0, 0x5C9BC, 0x5D874
-		local char1, char2 = pgm:read_u16(p.addr.base + 0x10), pgm:read_u16(op.addr.base + 0x10)
-		local op_pos = op.max_pos or op.min_pos or op.pos -- 投げられ側のX座標は補正前の値
-		local p_pos = p.pos                             -- 投げ側のX座標は補正後の値
+		-- 相手が向き合いか背向けかで押し合い幅を解決して反映
+		local op_push = ((p.side == op.side) and op.push_back or op.push_front)
+		local op_edge = 0xFFFF & (op.proc_pos - op_push)
+		-- 自身の押し合い判定を反映
+		local p_edge = 0xFFFF & (p.pos - p.push_front)
 
-		d0 = char2                                      -- D0 = 100510アドレスの値(相手のキャラID)
-		d0 = 0xFFFF & (d0 << 3)                         -- D0 を3ビット左シフト
-		if p.side == op.side then                       -- 自分の向きと相手の向きが違ったら
-			d0 = pgm:read_u8(0x4 + a0_1 + d0)           -- D0 = A0+4+D0アドレスのデータ(0x5CAC3~)
-		else                                            -- 自分の向きと相手の向きが同じなら
-			d0 = pgm:read_u8(0x3 + a0_1 + d0)           -- D0 = A0+3+D0アドレスのデータ(0x5CABB~)
-		end
-		d0 = 0xFF00 + d0
-		if 0 > op.side then                             -- 位置がマイナスなら
-			d0 = 0x10000 - d0                           -- NEG
-		end
-		d0 = 0xFFFF & (d0 + d0)                         -- 2倍値に
-		d0 = 0xFFFF & (d0 + d0)                         -- さらに2倍値に
-		d1 = op_pos                                     -- D1 = 相手のX座標
-		d1 = 0xFFFF & (d1 - d0)                         -- 相手との距離計算
-		local op_d0 = d0                                -- 投げ間合いの補正値
-		local op_d1 = d1
+		local d0 = 0xFFFF & math.abs(op_edge - p_edge)
+		local ret = p.tw_half_range >= d0
 
-		d5 = char1                                      -- D5 = 100410アドレスの値(キャラID)
-		d5 = 0xFFFF & (d5 << 3)                         -- D5 = D5を3ビット左シフト
-		d5 = pgm:read_u8(0x3 + a0_1 + d5)               -- D5 = 3+A0+D5アドレスのデータ
-		d5 = 0xFF00 + d5
-		if 0 > p.side then                              -- 位置がマイナスなら
-			d5 = 0x10000 - d5                           -- NEG
-		end
-		d5 = 0xFFFF & (d5 + d5)                         -- 2倍値に
-		d5 = 0xFFFF & (d5 + d5)                         -- さらに2倍値に
-		d0 = p_pos                                      -- 自分のX座標
-		d0 = 0xFFFF & (d0 - d5)                         -- 投げ間合いの限界距離
-		local p_d0 = d0
+		local tw_center = p_edge + op_push - screen_left
 
-		d0 = d1 > d0 and (d1 - d0) or (d0 - d1)         -- D1(相手との距離) と D0 を比較して差分算出
-		d0 = 0xFFFF & d0
-		local gap = d0
-
-		local d1 = char1
-		d1 = 0xFFFF & (d1 + d1)                         -- 2倍値に
-		d1 = 0xFFFF & (d1 + d1)                         -- さらに2倍値に
-		d4 = pgm:read_u8(a0_2 + d1)                     -- 投げ間合いから相手座標の距離の±許容幅
-		local ret = d4 >= d0
-		local a = math.abs(op_pos - op_d1)
-		if 0 > p.side  then
-			p_d0 = p_d0 - a - screen_left
-		else
-			p_d0 = p_d0 + a - screen_left
-		end
 		-- 投げ間合いセット
 		p.throw = {
-			x1 = p_d0 - d4,
-			x2 = p_d0 + d4,
-			half_range = d4,
-			full_range = d4 + d4,
+			x1 = tw_center - p.tw_half_range,
+			x2 = tw_center + p.tw_half_range,
+			half_range = p.tw_half_range,
+			full_range = p.tw_half_range + p.tw_half_range,
 			in_range = ret,
 		}
 	end
@@ -8394,6 +8354,19 @@ function rbff2.startplugin()
 		end
 	end
 
+	-- 投げ間合いで使う立ち状態の押し合い判定
+	-- 家庭用0x05D78Cからの処理
+	local get_push_range = function(p, fix)
+		local d5 = pgm:read_u8(fix + fix_bp_addr(0x05C99C) + p.char_8times)
+		d5 = 0xFF00 + d5
+		if 0 > p.side then                              -- 位置がマイナスなら
+			d5 = 0x10000 - d5                           -- NEG
+		end
+		d5 = 0xFFFF & (d5 + d5)                         -- 2倍値に
+		d5 = 0xFFFF & (d5 + d5)                         -- さらに2倍値に
+		return d5
+	end
+
 	-- トレモのメイン処理
 	tra_main = {}
 	tra_main.proc = function()
@@ -8566,6 +8539,7 @@ function rbff2.startplugin()
 			p.char           = pgm:read_u8(p.addr.char)
 			p.char_4times    = 0xFFFF & (p.char + p.char)
 			p.char_4times    = 0xFFFF & (p.char_4times + p.char_4times)
+			p.char_8times    = 0xFFFF & (p.char << 3)
 			p.close_far      = get_close_far_pos(p.char)
 			p.close_far_lma  = get_close_far_pos_line_move_attack(p.char)
 			p.life           = pgm:read_u8(p.addr.life)                 -- 今の体力
@@ -8658,13 +8632,7 @@ function rbff2.startplugin()
 			p.old_tw_muteki2 = p.tw_muteki2 or 0
 			p.tw_muteki2     = 0
 			if 0x70 <= p.attack then
-				local d1 = pgm:read_u16(p.addr.base + 0x10)
-				d1 = 0xFF & (d1 + d1)
-				d1 = 0xFF & (d1 + d1)
-				local a0 = pgm:read_u32(d1 + 0x89692)
-				local d2 = p.attack - 0x70
-				p.tw_muteki2 = pgm:read_u8(a0 + d2)
-				--print(string.format("%x", a0 + d2))
+				p.tw_muteki2 = pgm:read_u8(pgm:read_u32(p.char_4times + 0x89692) + p.attack - 0x70)
 			end
 			p.throwable      = p.state == 0 and op.state == 0 and p.tw_frame > 24 and p.sway_status == 0x00 and p.tw_muteki == 0 -- 投げ可能ベース
 			p.n_throwable    = p.throwable and p.tw_muteki2 == 0 -- 通常投げ可能
@@ -8740,6 +8708,7 @@ function rbff2.startplugin()
 				p.min_pos = nil
 			end
 			pgm:write_i16(p.addr.min_pos, 1000)
+			p.proc_pos       = p.max_pos or p.min_pos or p.pos  -- 内部の補正前のX座標
 			p.old_pos_y      = p.pos_y
 			p.old_pos_frc_y  = p.pos_frc_y
 			p.old_in_air     = p.in_air
@@ -8781,6 +8750,9 @@ function rbff2.startplugin()
 			p.corner         = pgm:read_u8(p.addr.corner)     -- 画面端状態 0:端以外 1:画面端 3:端押し付け
 			p.input_side     = pgm:read_u8(p.addr.input_side) -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
 			p.disp_side      = get_flip_x(players[1])
+			p.push_front     = get_push_range(p, 0x3) -- 正面
+			p.push_back      = get_push_range(p, 0x4) -- 背後
+			p.tw_half_range  = pgm:read_u8(fix_bp_addr(0x5D854) + p.char_4times) -- 投げ間合い半数
 			p.input1         = pgm:read_u8(p.addr.input1)
 			p.input2         = pgm:read_u8(p.addr.input2)
 			p.cln_btn        = pgm:read_u8(p.addr.cln_btn)
