@@ -7735,6 +7735,28 @@ function rbff2.startplugin()
 		local op_pos = op.proc_pos - screen_left
 		p.throw.in_range = p.throw.x1 <= op_pos and op_pos <= p.throw.x2
 	end
+	-- 空中投げ間合い取得
+	-- 0x05FDCA,0x060426からの実装
+	-- TODO アドレスの補正
+	local can_air_throwable_bases = new_set(0x02C9D4, 0x02BF20, 0x02C132, 0x02C338, 0x02C552)
+	local get_air_throw = function(p, op)
+		-- 投げ間合いセット
+		p.air_throw = p.air_throw or {}
+		-- 参考表示の枠なので簡易的なチェックにする
+		p.air_throw.can_throw = p.in_air == true and op.in_air == true and
+			can_air_throwable_bases[p.base] == true and pgm:read_u8(0x05FDE0 + p.char) ~= 0
+		p.air_throw.x1 = p.side < 0 and -pgm:read_u16(0x060566) or 0
+		p.air_throw.x2 = p.side < 0 and 0 or pgm:read_u16(0x060566)
+		p.air_throw.y1 = pgm:read_u16(0x060568)
+		p.air_throw.y2 = -p.air_throw.y1 - 1
+		local op_pos = op.proc_pos - p.proc_pos
+		local op_pos_y = op.old_pos_y  - p.old_pos_y
+		p.air_throw.in_range = p.air_throw.x1 <= op_pos and op_pos <= p.air_throw.x2 and
+			p.air_throw.y1 >= op_pos_y and op_pos_y >= p.air_throw.y2
+	end
+	-- 必殺投げ間合い取得
+	local get_sp_throw = function(p, op)
+	end
 	-- 0:攻撃無し 1:ガード継続小 2:ガード継続大
 	local get_gd_strength = function(p)
 		-- 飛び道具は無視
@@ -9279,24 +9301,25 @@ function rbff2.startplugin()
 			p.n_throw.on       = p.addr.base == p.n_throw.base and p.n_throw.on or 0xFF
 
 			-- 空中投げ判定取得
-			p.air_throw.left     = nil
-			p.air_throw.right    = nil
+			get_air_throw(p, op)
 			p.air_throw.on       = pgm:read_u8(p.air_throw.addr.on)
 			p.air_throw.range_x  = pgm:read_i16(p.air_throw.addr.range_x)
 			p.air_throw.range_y  = pgm:read_i16(p.air_throw.addr.range_y)
+			p.air_throw.left     = 0
+			p.air_throw.right    = p.air_throw.range_x * p.side
 			p.air_throw.base     = pgm:read_u32(p.air_throw.addr.base)
 			p.air_throw.opp_base = pgm:read_u32(p.air_throw.addr.opp_base)
 			p.air_throw.opp_id   = pgm:read_u16(p.air_throw.addr.opp_id)
 			p.air_throw.pos_x    = p.pos - screen_left
-			p.air_throw.pos_y    = height - p.pos_y - screen_top
+			p.air_throw.pos_y    = screen_top + height - p.old_pos_y - p.old_pos_z
 			p.air_throw.side     = p.side
-			p.air_throw.right    = p.air_throw.range_x * p.side
-			p.air_throw.top      = -p.air_throw.range_y
-			p.air_throw.bottom   =  p.air_throw.range_y
+			p.air_throw.top      = p.air_throw.range_y + 1
+			p.air_throw.bottom   = -p.air_throw.range_y
 			p.air_throw.type     = box_type_base.at
 			p.air_throw.on       = p.addr.base == p.air_throw.base and p.air_throw.on or 0xFF
 
 			-- 必殺投げ判定取得
+			get_sp_throw(p, op)
 			p.sp_throw.left      = nil
 			p.sp_throw.right     = nil
 			p.sp_throw.top       = nil
@@ -10840,6 +10863,22 @@ function rbff2.startplugin()
 					if p.disp_range == 2 or p.disp_range == 4 then
 						for btn, range in pairs(p.close_far_lma) do
 							draw_close_far(i, p, string.upper(btn), range.x1, range.x2)
+						end
+					end
+				elseif p.air_throw.can_throw == true or p.air_throw.on == 0x1 then
+					-- 通常投げ間合い
+					if p.disp_range == 2 or p.disp_range == 3 then
+						local color = p.air_throw.in_range and 0xFFFFFF00 or 0xFFBBBBBB
+						draw_hitbox(
+							p.air_throw.x1 + p.hit.pos_x,
+							p.air_throw.y1 + p.hit.old_pos_y,
+							p.air_throw.x2 + p.hit.pos_x,
+							p.air_throw.y2 + p.hit.old_pos_y,
+							color,
+							0,
+							false, false, false, false)
+						if p.air_throw.in_range then
+							draw_text_with_shadow(p.air_throw.x1+2.5, 0, string.format("投%d", i), color)
 						end
 					end
 				end
