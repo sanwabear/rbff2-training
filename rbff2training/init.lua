@@ -7748,7 +7748,7 @@ function rbff2.startplugin()
 		p.air_throw.x1 = p.side < 0 and -pgm:read_u16(0x060566) or 0
 		p.air_throw.x2 = p.side < 0 and 0 or pgm:read_u16(0x060566)
 		p.air_throw.y1 = pgm:read_u16(0x060568)
-		p.air_throw.y2 = -p.air_throw.y1 - 1
+		p.air_throw.y2 = -p.air_throw.y1
 		local op_pos = op.proc_pos - p.proc_pos
 		local op_pos_y = op.old_pos_y  - p.old_pos_y
 		p.air_throw.in_range = p.air_throw.x1 <= op_pos and op_pos <= p.air_throw.x2 and
@@ -9313,7 +9313,7 @@ function rbff2.startplugin()
 			p.air_throw.pos_x    = p.pos - screen_left
 			p.air_throw.pos_y    = screen_top + height - p.old_pos_y - p.old_pos_z
 			p.air_throw.side     = p.side
-			p.air_throw.top      = p.air_throw.range_y + 1
+			p.air_throw.top      = p.air_throw.range_y
 			p.air_throw.bottom   = -p.air_throw.range_y
 			p.air_throw.type     = box_type_base.at
 			p.air_throw.on       = p.addr.base == p.air_throw.base and p.air_throw.on or 0xFF
@@ -9333,7 +9333,7 @@ function rbff2.startplugin()
 			p.sp_throw.side      = p.side
 			p.sp_throw.bottom    = pgm:read_i16(p.sp_throw.addr.bottom)
 			p.sp_throw.pos_x     = p.pos - screen_left
-			p.sp_throw.pos_y     = height - p.pos_y - screen_top
+			p.sp_throw.pos_y     = screen_top + height - p.old_pos_y - p.old_pos_z
 			p.sp_throw.right     = p.sp_throw.front * p.side
 			p.sp_throw.type      = box_type_base.pt
 			p.sp_throw.on        = p.addr.base == p.sp_throw.base and p.sp_throw.on or 0xFF
