@@ -7710,7 +7710,7 @@ function rbff2.startplugin()
 
 	-- 1Pと2Pの通常投げ間合い取得
 	-- 0x05D78Cからの実装
-	local get_n_throw = function(p, op)
+	local get_n_throw = function(p, op, height)
 		-- 相手が向き合いか背向けかで押し合い幅を解決して反映
 		local op_edge = 0xFFFF & (op.proc_pos - ((p.side == op.side) and op.push_back or op.push_front))
 		-- 自身の押し合い判定を反映
@@ -7734,12 +7734,41 @@ function rbff2.startplugin()
 		}
 		local op_pos = op.proc_pos - screen_left
 		p.throw.in_range = p.throw.x1 <= op_pos and op_pos <= p.throw.x2
+
+		-- フックした情報の取得
+		p.n_throw.left     = nil
+		p.n_throw.right    = nil
+		p.n_throw.top      = nil
+		p.n_throw.bottom   = nil
+		p.n_throw.on       = pgm:read_u8(p.n_throw.addr.on)
+		p.n_throw.base     = pgm:read_u32(p.n_throw.addr.base)
+		p.n_throw.opp_base = pgm:read_u32(p.n_throw.addr.opp_base)
+		p.n_throw.opp_id   = pgm:read_u16(p.n_throw.addr.opp_id)
+		p.n_throw.char_id  = pgm:read_u16(p.n_throw.addr.char_id)
+		p.n_throw.side     = p.side
+		p.n_throw.range1   = pgm:read_u8(p.n_throw.addr.range1)
+		p.n_throw.range2   = pgm:read_u8(p.n_throw.addr.range2)
+		p.n_throw.range3   = pgm:read_i8(p.n_throw.addr.range3)
+		p.n_throw.range41  = pgm:read_i8(p.n_throw.addr.range41)
+		p.n_throw.range42  = pgm:read_i8(p.n_throw.addr.range42)
+		p.n_throw.range5   = pgm:read_i8(p.n_throw.addr.range5)
+		p.n_throw.id       = pgm:read_i8(p.n_throw.addr.id)
+		p.n_throw.pos_x    = p.pos - screen_left
+		p.n_throw.pos_y    = height - p.pos_y - screen_top
+		local range = (p.n_throw.range1 == p.n_throw.range2 and math.abs(p.n_throw.range42*4)) or math.abs(p.n_throw.range41*4)
+		range = range + p.n_throw.range5 * -4
+		range = range + p.throw.half_range
+		p.n_throw.range    = range
+		p.n_throw.right    = p.n_throw.range * p.side
+		p.n_throw.left     = (p.n_throw.range - p.throw.full_range) * p.side
+		p.n_throw.type     = box_type_base.t
+		p.n_throw.on       = p.addr.base == p.n_throw.base and p.n_throw.on or 0xFF
 	end
 	-- 空中投げ間合い取得
 	-- 0x05FDCA,0x060426からの実装
 	-- TODO アドレスの補正
 	local can_air_throwable_bases = new_set(0x02C9D4, 0x02BF20, 0x02C132, 0x02C338, 0x02C552)
-	local get_air_throw = function(p, op)
+	local get_air_throw = function(p, op, height)
 		-- 投げ間合いセット
 		p.air_throw = p.air_throw or {}
 		-- 参考表示の枠なので簡易的なチェックにする
@@ -7752,10 +7781,49 @@ function rbff2.startplugin()
 		local op_pos = op.proc_pos - p.proc_pos
 		local op_pos_y = op.old_pos_y  - p.old_pos_y
 		p.air_throw.in_range = p.air_throw.x1 <= op_pos and op_pos <= p.air_throw.x2 and
-			p.air_throw.y1 >= op_pos_y and op_pos_y >= p.air_throw.y2
+
+		-- フックした情報の取得
+		p.air_throw.y1 >= op_pos_y and op_pos_y >= p.air_throw.y2
+		p.air_throw.on       = pgm:read_u8(p.air_throw.addr.on)
+		p.air_throw.range_x  = pgm:read_i16(p.air_throw.addr.range_x)
+		p.air_throw.range_y  = pgm:read_i16(p.air_throw.addr.range_y)
+		p.air_throw.left     = 0
+		p.air_throw.right    = p.air_throw.range_x * p.side
+		p.air_throw.base     = pgm:read_u32(p.air_throw.addr.base)
+		p.air_throw.opp_base = pgm:read_u32(p.air_throw.addr.opp_base)
+		p.air_throw.opp_id   = pgm:read_u16(p.air_throw.addr.opp_id)
+		p.air_throw.pos_x    = p.pos - screen_left
+		p.air_throw.pos_y    = screen_top + height - p.old_pos_y - p.old_pos_z
+		p.air_throw.side     = p.side
+		p.air_throw.top      = p.air_throw.range_y
+		p.air_throw.bottom   = -p.air_throw.range_y
+		p.air_throw.type     = box_type_base.at
+		p.air_throw.on       = p.addr.base == p.air_throw.base and p.air_throw.on or 0xFF
 	end
 	-- 必殺投げ間合い取得
-	local get_sp_throw = function(p, op)
+	local get_sp_throw = function(p, op, height)
+		-- フックした情報の取得
+		p.sp_throw.left      = nil
+		p.sp_throw.right     = nil
+		p.sp_throw.top       = nil
+		p.sp_throw.bottom    = nil
+		p.sp_throw.on        = pgm:read_u8(p.sp_throw.addr.on)
+		p.sp_throw.front     = pgm:read_i16(p.sp_throw.addr.front)
+		p.sp_throw.top       = -pgm:read_i16(p.sp_throw.addr.top)
+		p.sp_throw.base      = pgm:read_u32(p.sp_throw.addr.base)
+		p.sp_throw.opp_base  = pgm:read_u32(p.sp_throw.addr.opp_base)
+		p.sp_throw.opp_id    = pgm:read_u16(p.sp_throw.addr.opp_id)
+		p.sp_throw.side      = p.side
+		p.sp_throw.bottom    = pgm:read_i16(p.sp_throw.addr.bottom)
+		p.sp_throw.pos_x     = p.pos - screen_left
+		p.sp_throw.pos_y     = screen_top + height - p.old_pos_y - p.old_pos_z
+		p.sp_throw.right     = p.sp_throw.front * p.side
+		p.sp_throw.type      = box_type_base.pt
+		p.sp_throw.on        = p.addr.base == p.sp_throw.base and p.sp_throw.on or 0xFF
+		if p.sp_throw.top == 0 then
+			p.sp_throw.top    = nil
+			p.sp_throw.bottom = nil
+		end
 	end
 	-- 0:攻撃無し 1:ガード継続小 2:ガード継続大
 	local get_gd_strength = function(p)
@@ -9271,76 +9339,13 @@ function rbff2.startplugin()
 			debug_box(p, pgm)
 
 			-- 投げ判定取得
-			get_n_throw(p, op)
-			p.n_throw.left     = nil
-			p.n_throw.right    = nil
-			p.n_throw.top      = nil
-			p.n_throw.bottom   = nil
-			p.n_throw.on       = pgm:read_u8(p.n_throw.addr.on)
-			p.n_throw.base     = pgm:read_u32(p.n_throw.addr.base)
-			p.n_throw.opp_base = pgm:read_u32(p.n_throw.addr.opp_base)
-			p.n_throw.opp_id   = pgm:read_u16(p.n_throw.addr.opp_id)
-			p.n_throw.char_id  = pgm:read_u16(p.n_throw.addr.char_id)
-			p.n_throw.side     = p.side
-			p.n_throw.range1   = pgm:read_u8(p.n_throw.addr.range1)
-			p.n_throw.range2   = pgm:read_u8(p.n_throw.addr.range2)
-			p.n_throw.range3   = pgm:read_i8(p.n_throw.addr.range3)
-			p.n_throw.range41  = pgm:read_i8(p.n_throw.addr.range41)
-			p.n_throw.range42  = pgm:read_i8(p.n_throw.addr.range42)
-			p.n_throw.range5   = pgm:read_i8(p.n_throw.addr.range5)
-			p.n_throw.id       = pgm:read_i8(p.n_throw.addr.id)
-			p.n_throw.pos_x    = p.pos - screen_left
-			p.n_throw.pos_y    = height - p.pos_y - screen_top
-			local range = (p.n_throw.range1 == p.n_throw.range2 and math.abs(p.n_throw.range42*4)) or math.abs(p.n_throw.range41*4)
-			range = range + p.n_throw.range5 * -4
-			range = range + p.throw.half_range
-			p.n_throw.range    = range
-			p.n_throw.right    = p.n_throw.range * p.side
-			p.n_throw.left     = (p.n_throw.range - p.throw.full_range) * p.side
-			p.n_throw.type     = box_type_base.t
-			p.n_throw.on       = p.addr.base == p.n_throw.base and p.n_throw.on or 0xFF
+			get_n_throw(p, op, height)
 
 			-- 空中投げ判定取得
-			get_air_throw(p, op)
-			p.air_throw.on       = pgm:read_u8(p.air_throw.addr.on)
-			p.air_throw.range_x  = pgm:read_i16(p.air_throw.addr.range_x)
-			p.air_throw.range_y  = pgm:read_i16(p.air_throw.addr.range_y)
-			p.air_throw.left     = 0
-			p.air_throw.right    = p.air_throw.range_x * p.side
-			p.air_throw.base     = pgm:read_u32(p.air_throw.addr.base)
-			p.air_throw.opp_base = pgm:read_u32(p.air_throw.addr.opp_base)
-			p.air_throw.opp_id   = pgm:read_u16(p.air_throw.addr.opp_id)
-			p.air_throw.pos_x    = p.pos - screen_left
-			p.air_throw.pos_y    = screen_top + height - p.old_pos_y - p.old_pos_z
-			p.air_throw.side     = p.side
-			p.air_throw.top      = p.air_throw.range_y
-			p.air_throw.bottom   = -p.air_throw.range_y
-			p.air_throw.type     = box_type_base.at
-			p.air_throw.on       = p.addr.base == p.air_throw.base and p.air_throw.on or 0xFF
+			get_air_throw(p, op, height)
 
 			-- 必殺投げ判定取得
-			get_sp_throw(p, op)
-			p.sp_throw.left      = nil
-			p.sp_throw.right     = nil
-			p.sp_throw.top       = nil
-			p.sp_throw.bottom    = nil
-			p.sp_throw.on        = pgm:read_u8(p.sp_throw.addr.on)
-			p.sp_throw.front     = pgm:read_i16(p.sp_throw.addr.front)
-			p.sp_throw.top       = -pgm:read_i16(p.sp_throw.addr.top)
-			p.sp_throw.base      = pgm:read_u32(p.sp_throw.addr.base)
-			p.sp_throw.opp_base  = pgm:read_u32(p.sp_throw.addr.opp_base)
-			p.sp_throw.opp_id    = pgm:read_u16(p.sp_throw.addr.opp_id)
-			p.sp_throw.side      = p.side
-			p.sp_throw.bottom    = pgm:read_i16(p.sp_throw.addr.bottom)
-			p.sp_throw.pos_x     = p.pos - screen_left
-			p.sp_throw.pos_y     = screen_top + height - p.old_pos_y - p.old_pos_z
-			p.sp_throw.right     = p.sp_throw.front * p.side
-			p.sp_throw.type      = box_type_base.pt
-			p.sp_throw.on        = p.addr.base == p.sp_throw.base and p.sp_throw.on or 0xFF
-			if p.sp_throw.top == 0 then
-				p.sp_throw.top    = nil
-				p.sp_throw.bottom = nil
-			end
+			get_sp_throw(p, op, height)
 
 			-- 当たり判定の構築用バッファのリフレッシュ
 			p.hitboxes             = {}
