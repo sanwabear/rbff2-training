@@ -4380,7 +4380,8 @@ local box_type_base = {
 	t   = { id = 0x00, name = "投げ",                      enabled = true, type_check = type_ck_thw,  type = "throw",  sort =  6, color = 0xFFFF00, fill = 0x40, outline = 0xFF },
 	at  = { id = 0x00, name = "必殺技投げ",                enabled = true, type_check = type_ck_thw,  type = "throw",  sort =  6, color = 0xFFFF00, fill = 0x40, outline = 0xFF },
 	pt  = { id = 0x00, name = "空中投げ",                  enabled = true, type_check = type_ck_thw,  type = "throw",  sort =  6, color = 0xFFFF00, fill = 0x40, outline = 0xFF },
-	p   = { id = 0x01, name = "押し合い",                  enabled = true, type_check = type_ck_push, type = "push",   sort =  1, color = 0xDDDDDD, fill = 0x00, outline = 0xFF },	v1  = { id = 0x02, name = "食らい1",                   enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x0000FF, fill = 0x40, outline = 0xFF },
+	p   = { id = 0x01, name = "押し合い",                  enabled = true, type_check = type_ck_push, type = "push",   sort =  1, color = 0xDDDDDD, fill = 0x00, outline = 0xFF },
+	v1  = { id = 0x02, name = "食らい1",                   enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x0000FF, fill = 0x40, outline = 0xFF },
 	v2  = { id = 0x03, name = "食らい2",                   enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x0000FF, fill = 0x40, outline = 0xFF },
 	v3  = { id = 0x04, name = "食らい(ダウン追撃のみ可)",  enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x00FFFF, fill = 0x80, outline = 0xFF },
 	v4  = { id = 0x05, name = "食らい(空中追撃のみ可)",    enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x00FFFF, fill = 0x80, outline = 0xFF },
@@ -4824,6 +4825,8 @@ local hit_box_procs = {
 	phx_tw     = function(id) return hit_box_proc(id, 0x9588C) end, -- 012F6C: 012F82: フェニックススルーの処理
 	baigaeshi  = function(id) return hit_box_proc(id, 0x957AC) end, -- 012F62: 012F82: 倍返しの処理
 	unknown1   = function(id) return hit_box_proc(id, 0x94FCC) end, -- 012E38: 012E44: 不明処理、未使用？
+	katsu      = function(id) return hit_box_proc(id, 0x9596C) end, -- : 012FB2: 喝消し
+	nullify    = function(id) return (0x20 <= id) and hit_proc_types.same_line or hit_proc_types.none end, -- : 012F9A: 弾消し
 }
 local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, is_fireball)
 	local box = {id = id, p = p,}
@@ -5095,7 +5098,10 @@ local update_box_summary = function(p, box)
 			summary.phx_tw      = summary.phx_tw      or hit_box_procs.phx_tw(box.id)
 			summary.baigaeshi   = summary.baigaeshi   or hit_box_procs.baigaeshi(box.id)
 			summary.unknown1    = summary.unknown1    or hit_box_procs.unknown1(box.id)
+			summary.katsu       = summary.katsu       or p.is_fireball and 3 <= p.prj_rank and hit_box_procs.katsu(box.id) or nil
+			summary.nullify     = summary.nullify     or p.is_fireball and hit_box_procs.nullify(box.id) or nil
 			summary.bai_catch   = summary.bai_catch   or p.bai_catch == true and "v" or nil
+			summary.box_addr    = summary.box_addr    or pgm:read_u32(pgm:read_u8(0x094C2C + box.id) * 4 + 0x012CB4)
 		end
 		if box.type == box_type_base.a or -- 攻撃
 			box.type == box_type_base.pa then -- 飛び道具
@@ -5276,7 +5282,14 @@ local update_box_summary = function(p, box)
 				info.range_baigaeshi = summary.baigaeshi and in_range(real_top, real_bottom, 84, 0)
 				-- フェニックススルー
 				info.phx_tw = summary.phx_tw
-				info.range_phx_tw =  summary.phx_tw and in_range(real_top, real_bottom, 120, 56)
+				info.range_phx_tw = summary.phx_tw and in_range(real_top, real_bottom, 120, 56)
+				-- 喝消し
+				info.katsu = summary.katsu
+				info.range_katsu = summary.katsu and in_range(real_top, real_bottom, 84, 0)
+				-- 弾消し
+				info.nullify = summary.nullify
+				-- ヒット処理のアドレス
+				info.box_addr = summary.box_addr
 			elseif edge == summary.edge.hurt then
 				summary.hurt_inv = hurt_inv_type.get(p, edge.real_top, edge.real_bottom, box)
 			end
@@ -5698,7 +5711,8 @@ function rbff2.startplugin()
 			chg_hurtbox_frm  = 0,
 			type_boxes       = {}, -- key + count
 			fireball_bases   = new_set(base + 0x200, base + 0x400, base + 0x600),
-			fake_hits        = { [base + 0x200] = 0x10DDF5, [base + 0x400] = 0x10DDF7, [base + 0x600] = 0x10DDF9, } or
+			fake_hits        = p1 and
+							   { [base + 0x200] = 0x10DDF5, [base + 0x400] = 0x10DDF7, [base + 0x600] = 0x10DDF9, } or
 							   { [base + 0x200] = 0x10DDF6, [base + 0x400] = 0x10DDF8, [base + 0x600] = 0x10DDFA, },
 			fireball         = {},
 
@@ -7873,13 +7887,13 @@ function rbff2.startplugin()
 		"滑り攻撃補足",
 		"効果(地/空)",
 		"1 ガード方向",
-		"1 キャッチ",
+		"1 接触判定",
 		"1 攻撃高さ",
 		"2 ガード方向",
-		"2 キャッチ",
+		"2 接触判定",
 		"2 攻撃高さ",
 		"3 ガード方向",
-		"3 キャッチ",
+		"3 接触判定",
 		"3 攻撃高さ",
 		"1 攻撃範囲",
 		"2 攻撃範囲",
@@ -8167,6 +8181,8 @@ function rbff2.startplugin()
 					table.insert(parry, info.range_sadomazo and "サ" or info.sadomazo and "(サ)" or nil)   -- サドマゾ可能
 					table.insert(parry, info.range_phx_tw and "フ" or info.phx_tw and "(フ)" or nil)     -- フェニックススルー可能
 					table.insert(parry, info.range_baigaeshi and "倍" or info.baigaeshi and "(倍)" or nil)  -- 倍返し可能
+					table.insert(parry, info.range_katsu and "喝消し" or info.katsu and "(喝消し)" or nil)  -- 喝を相殺可能
+					table.insert(parry, info.nullify and "弾消し" or nil)  -- 弾を相殺可能
 					table.insert(summary.boxes, {
 						punish_away_label = punish_away_label,
 						asis_punish_away_label = asis_punish_away_label,
@@ -8224,7 +8240,7 @@ function rbff2.startplugin()
 
 			for box_no, box in ipairs(summary.boxes) do
 				table.insert(atkact_summary, {box_no .. " ガード方向:", string.format("メイン:%s/スウェー:%s", box.block_label, box.sway_block_label)})
-				table.insert(atkact_summary, {box_no .. " キャッチ:"  , box.parry_label})
+				table.insert(atkact_summary, {box_no .. " 接触判定:"  , box.parry_label})
 				local label = box.punish_away_label
 				if box.punish_away_label ~= box.asis_punish_away_label then
 					label = label .. "(" .. box.asis_punish_away_label .. ")"
@@ -8781,7 +8797,6 @@ function rbff2.startplugin()
 			p.full_hit       = pgm:read_u8(p.addr.full_hit) > 0
 			p.harmless2      = pgm:read_u8(p.addr.attack) == 0
 			p.prj_rank       = pgm:read_u8(p.addr.prj_rank)
-
 			p.old_posd       = p.posd
 			p.posd           = pgm:read_i32(p.addr.pos)
 			p.poslr          = p.posd == op.posd and "=" or p.posd < op.posd  and "L" or "R"
