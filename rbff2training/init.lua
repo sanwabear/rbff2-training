@@ -33,6 +33,10 @@ exports.description = "RBFF2 Training"
 exports.license = "MIT License"
 exports.author = { name = "Sanwabear" }
 
+local printf = function(format, ...)
+	print(string.format(format, ...))
+end
+
 local man, machine, cpu, pgm, scr, ioports, debugger, base_path
 local setup_emu = function()
 	man = manager
@@ -4055,7 +4059,7 @@ local get_next_rvs = function(p, excludes)
 	end
 
 	local ret = get_next_counter(p.dummy_rvs_list, p, excludes)
-	--print(string.format("get_next_rvs %x", p.addr.base), ret == nil and "" or ret.name, #p.dummy_rvs_list)
+	--printf("get_next_rvs %x %s %s", p.addr.base, ret == nil and "" or ret.name, #p.dummy_rvs_list)
 	return ret
 end
 
@@ -4125,7 +4129,7 @@ local use_joy = {
 local get_joy_base = function(prev, exclude_player)
 	-- for pname, port in pairs(ioports) do
 	-- 	for fname, field in pairs(port.fields) do
-	-- 		print(string.format("%s %s", pname, fname))
+	-- 		printf("%s %s", pname, fname)
 	-- 	end
 	-- end
 	local ec = scr:frame_number()
@@ -4356,7 +4360,7 @@ local type_ck_gd   = function(obj, box) end
 local type_ck_atk  = function(obj, box) if obj.harmless then return true end end
 local type_ck_thw  = function(obj, box) if obj.harmless then return true end end
 local type_ck_und  = function(obj, box)
-	--print(string.format("%x, unk box id: %x", obj.base, box.id)) --debug
+	--printf("%x, unk box id: %x", obj.base, box.id) --debug
 end
 local box_type_base = {
 	a   = { id = 0x00, name = "攻撃",                      enabled = true, type_check = type_ck_atk,  type = "attack", sort =  4, color = 0xFF00FF, fill = 0x40, outline = 0xFF },
@@ -4803,7 +4807,7 @@ local hit_box_proc = function(id, addr)
 		d2 = 0xFFFF & (d2 + d2)
 		d2 = 0xFFFF & (d2 + d2)
 		local a0 = pgm:read_u32(0x13120 + d2)
-		--print(string.format(" ext attack %x %x %s", id, addr, hit_sub_procs[a0] or "none"))
+		--printf(" ext attack %x %x %s", id, addr, hit_sub_procs[a0] or "none")
 		return hit_sub_procs[a0]
 	end
 	return hit_proc_types.none
@@ -6162,7 +6166,7 @@ function rbff2.startplugin()
 				end
 			end
 			if logging then
-				print(string.format("%s %s %x %s %x %s",char_names[char], act_name, d0, d0, d1, decd1))
+				printf("%s %s %x %s %x %s",char_names[char], act_name, d0, d0, d1, decd1)
 			end
 		end
 		cache_close_far_pos_lmo[char] = ret
@@ -8450,7 +8454,9 @@ function rbff2.startplugin()
 		if pgm:read_u16(0x107EC6) ~= p.act_boxtype then
 		end
 		local d0 = p.side ~ pgm:read_u8(p.addr.base + 0x6A)
-		print(string.format("frame=%s %x %s x=%s y=%s,%s %x %x", global.frame_number, p.addr.base, (0 < d0) and ">" or "<", p.pos, p.pos_y, p.pos_z, p.act_boxtype, pgm:read_u16(0x107EC6)))
+		print("frame=%s %x %s x=%s y=%s,%s %x %x",
+			global.frame_number, p.addr.base, (0 < d0) and ">" or "<",
+			p.pos, p.pos_y, p.pos_z, p.act_boxtype, pgm:read_u16(0x107EC6))
 		for d2 = 1, pgm:read_u8(p.addr.box_base2) do
 			local a2 = p.box_base2 + 5 * (d2 - 1)
 			-- 004A9Eからの処理
@@ -8458,9 +8464,9 @@ function rbff2.startplugin()
 			local d5 = pgm:read_u8(a2) & 0x1F
 			local y1, y2 = pgm:read_u8(a2 + 0x1), pgm:read_u8(a2 + 0x2)
 			local x1, x2 = pgm:read_u8(a2 + 0x3), pgm:read_u8(a2 + 0x4)
-			print(string.format(
+			printf
 				"  %s addr=%x data=%02x%02x%02x%02x%02x type=%03x y1=%s y2=%s x1=%s x2=%s",
-				d2, a2, d5, y1, y2, x1, x2, d5, y1, y2, x1, x2))
+				d2, a2, d5, y1, y2, x1, x2, d5, y1, y2, x1, x2)
 		end
 	end
 
@@ -9396,12 +9402,12 @@ function rbff2.startplugin()
 						-- 双角だけ中段と下段の飛び道具がある
 						act_type = char_fireballs[p.char][fb.act].type
 						fb.char_fireball = char_fireballs[p.char][fb.act]
-						--print(fb.char_fireball.name, string.format("%x", fb.act))
+						--printf("%s %x", fb.char_fireball.name, fb.act)
 					end
 					op.need_block     = op.need_block or (act_type == act_types.low_attack) or (act_type == act_types.attack) or (act_type == act_types.overhead)
 					op.need_low_block = op.need_low_block or (act_type == act_types.low_attack)
 					op.need_ovh_block = op.need_ovh_block or (act_type == act_types.overhead)
-					--print(string.format("%x %s", fb.act, act_type)) -- debug
+					--printf("%x %s", fb.act, act_type) -- debug
 				end
 			end
 		end
@@ -9685,12 +9691,12 @@ function rbff2.startplugin()
 					pgm:write_u16(p.addr.bs_hook2, bs_hook.ver or 0x0600)
 					pgm:write_u8(p.addr.bs_hook3, 0x01)
 					p.bs_hooked = global.frame_number
-					--print(string.format("bshook %s %x %x %x", global.frame_number, p.act, bs_hook.id or 0x20, bs_hook.ver or 0x0600))
+					--printf("bshook %s %x %x %x", global.frame_number, p.act, bs_hook.id or 0x20, bs_hook.ver or 0x0600)
 				else
 					pgm:write_u8(p.addr.bs_hook1, 0x00)
 					pgm:write_u16(p.addr.bs_hook2, 0x0600)
 					pgm:write_u8(p.addr.bs_hook3, 0xFF)
-					-- print(string.format("bshook %s %x %x %x", global.frame_number, 0x20, 0x0600))
+					-- printf("bshook %s %x %x %x", global.frame_number, 0x20, 0x0600))
 				end
 			end
 		end
@@ -9939,7 +9945,7 @@ function rbff2.startplugin()
 					end
 				end
 			end
-			--print(string.format("top %s, hi %s, lo %s", screen_top, vul_hi, vul_lo))
+			--printf("top %s, hi %s, lo %s", screen_top, vul_hi, vul_lo)
 
 			frame = p.muteki.act_frames[#p.muteki.act_frames]
 			if frame == nil or chg_act_name or frame.col ~= col or p.state ~= p.old_state or p.act_1st then
