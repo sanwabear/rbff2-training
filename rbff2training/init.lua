@@ -1750,7 +1750,7 @@ local char_acts_base = {
 		{ name = "小 帝王天耳拳", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
 		{ name = "大 帝王天耳拳", type = act_types.attack, ids = { 0xAE, 0xAF, 0xB0, 0xB1, }, },
 		{ name = "帝王漏尽拳", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBB, 0xBA, 0xBC, }, firing = true, },
-		{ name = "龍転身（前方）", type = act_types.any, ids = { 0xC2, 0xC3, 0xC4, }, firing = true, },
+		{ name = "龍転身（前方）", type = act_types.any, ids = { 0xC2, 0xC3, 0xC4, }, },
 		{ name = "龍転身（後方）", type = act_types.any, ids = { 0xCC, 0xCD, 0xCE, }, },
 		{ name = "帝王宿命拳", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, firing = true, },
 		{ name = "帝王宿命拳2", type = act_types.attack, ids = { 0x101, 0x102, 0x103, }, firing = true, },
@@ -1850,6 +1850,7 @@ local char_acts_base = {
 		{ name = "スーパーポンピングマシーン", type = act_types.low_attack, ids = { 0x77, 0x78, 0x79, }, },
 		{ name = "スーパーポンピングマシーンHit", type = act_types.low_attack, ids = { 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F, 0x82, 0x80, 0x81, }, },
 		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x24E, }, },
+		{ disp_name = "CA 立B", name = "CA 立B2(2段目)", type = act_types.attack, ids = { 0x240, }, },
 		{ disp_name = "CA 下B", name = "CA 下B(2段目)", type = act_types.low_attack, ids = { 0x24F, }, },
 		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x243, }, },
 		{ disp_name = "CA 下C", name = "CA 下C(3段目)", type = act_types.low_attack, ids = { 0x24D, }, },
@@ -2540,6 +2541,7 @@ local char_acts_base = {
 		{ disp_name = "CA _3C", name = "CA 3C(3段目)Bルート", type = act_types.provoke, ids = { 0x250, 0x251, 0x252, }, },
 		{ disp_name = "CA 下C", name = "CA 下C(3段目)Bルート", type = act_types.low_attack, ids = { 0x287, }, },
 		{ disp_name = "CA _6_6+A", name = "CA 66A", type = act_types.attack, ids = { 0x24F, }, },
+		{ disp_name = "CA _N_C", name = "CA NC", type = act_types.attack, ids = { 0x284, 0x285, 0x286, }, },
 	},
 	-- アルフレッド
 	{
@@ -2787,38 +2789,25 @@ local char_fireball_base = {
 		{ name = "ダイバージェンス", type = act_types.attack, ids = { 0x264, }, },
 	},
 }
-local char_acts, char_1st_acts, char_1st_f = {}, {}, {}
+local char_acts, char_1st_acts = {}, {}
 for char, acts_base in pairs(char_acts_base) do
 	-- キャラごとのテーブル作成
-	char_acts[char], char_1st_acts[char], char_1st_f[char] = {}, {}, {}
+	char_acts[char], char_1st_acts[char] = {}, {}
 	for _, acts in pairs(acts_base) do
-		local id_1st = nil
 		for i, id in ipairs(acts.ids) do
-			-- 補完
-			acts.f = acts.f or 0
-
 			if i == 1 then
-				char_1st_f[char][id] = acts.f
-				id_1st = id
-				if acts.type == act_types.guard or acts.type == act_types.hit then
-					-- char_1st_actsには登録しない
-				elseif acts.name == "振り向き中" or acts.name == "しゃがみ振り向き中" then
-					-- char_1st_actsには登録しない
-				elseif acts.names then
-					-- char_1st_actsには登録しない
-				else
+				acts.id_1st = id
+				if acts.type ~= act_types.guard and acts.type ~= act_types.hit and
+					acts.name ~= "振り向き中" and acts.name ~= "しゃがみ振り向き中" and
+					acts.names == nil then
 					char_1st_acts[char][id] = true
 				end
-			else
-				char_1st_f[char][id] = -1
-				char_1st_acts[char][id] = false
 			end
 			char_acts[char][id] = acts
 		end
-		acts.id_1st = id_1st
 	end
 end
-local char_fireballs = { }
+local char_fireballs = {}
 for char, fireballs_base in pairs(char_fireball_base) do
 	char_fireballs [char] = {}
 	for _, fireball in pairs(fireballs_base) do
@@ -3386,7 +3375,7 @@ local create_input_states = function()
 			{ name = "真心牙_6_8_4_2"                  , addr = 0x4A, cmd = _6842c, },
 			{ name = "ダッシュ"                        , addr = 0x4E, cmd = _66, type = input_state_types.step, },
 			{ name = "バックステップ"                  , addr = 0x52, cmd = _44, type = input_state_types.step, },
-			{ name = "CA _6_6_A"                       , addr = 0x62, cmd = _66a, },
+			{ name = "CA _4_4_A"                       , addr = 0x62, cmd = _66a, },
 			{ name = "フェイント天崩山"                , addr = 0x66, cmd = _4ac, type = input_state_types.faint, },
 			{ name = "フェイント大鉄神"                , addr = 0x6A, cmd = _2bc, type = input_state_types.faint, },
 		},
@@ -6166,7 +6155,7 @@ function rbff2.startplugin()
 				end
 			end
 			if logging then
-				printf("%s %s %x %s %x %s",char_names[char], act_name, d0, d0, d1, decd1)
+				printf("%s %s %x %s %x %s", char_names[char], act_name, d0, d0, d1, decd1)
 			end
 		end
 		cache_close_far_pos_lmo[char] = ret
@@ -8464,8 +8453,7 @@ function rbff2.startplugin()
 			local d5 = pgm:read_u8(a2) & 0x1F
 			local y1, y2 = pgm:read_u8(a2 + 0x1), pgm:read_u8(a2 + 0x2)
 			local x1, x2 = pgm:read_u8(a2 + 0x3), pgm:read_u8(a2 + 0x4)
-			printf
-				"  %s addr=%x data=%02x%02x%02x%02x%02x type=%03x y1=%s y2=%s x1=%s x2=%s",
+			printf("  %s addr=%x data=%02x%02x%02x%02x%02x type=%03x y1=%s y2=%s x1=%s x2=%s",
 				d2, a2, d5, y1, y2, x1, x2, d5, y1, y2, x1, x2)
 		end
 	end
@@ -9170,11 +9158,6 @@ function rbff2.startplugin()
 			p.frm_gap.act_frames2  = p.frm_gap.act_frames2 or {}
 
 			p.old_act_data   = p.act_data or { name = "", type = act_types.any, }
-			if char_1st_f[p.char] and char_1st_f[p.char][p.act] then
-				p.act_1st_f = char_1st_f[p.char][p.act]
-			else
-				p.act_1st_f = -1
-			end
 
 			if char_acts[p.char] and char_acts[p.char][p.act] then
 				p.act_data   = char_acts[p.char][p.act]
@@ -9844,7 +9827,7 @@ function rbff2.startplugin()
 				chg_act_name = true
 			end
 			-- カイザーウェイブのレベルアップ
-			if p.old_kaiser_wave ~= p.kaiser_wave then
+			if p.char == 0x14 and p.old_kaiser_wave ~= p.kaiser_wave then
 				chg_act_name = true
 				p.act_1st = true
 			end
