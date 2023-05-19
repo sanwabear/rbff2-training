@@ -3375,7 +3375,7 @@ local create_input_states = function()
 			{ name = "真心牙_6_8_4_2"                  , addr = 0x4A, cmd = _6842c, },
 			{ name = "ダッシュ"                        , addr = 0x4E, cmd = _66, type = input_state_types.step, },
 			{ name = "バックステップ"                  , addr = 0x52, cmd = _44, type = input_state_types.step, },
-			{ name = "CA _4_4_A"                       , addr = 0x62, cmd = _66a, },
+			{ name = "CA _6_6_A"                       , addr = 0x62, cmd = _66a, },
 			{ name = "フェイント天崩山"                , addr = 0x66, cmd = _4ac, type = input_state_types.faint, },
 			{ name = "フェイント大鉄神"                , addr = 0x6A, cmd = _2bc, type = input_state_types.faint, },
 		},
@@ -5039,6 +5039,7 @@ end
 local update_summary = function(p)
 	local summary = p.hit_summary
 	-- 判定ができてからのログ情報の作成
+	summary.attack      = summary.attack      or p.attack -- 補正前攻撃力導出元ID
 	summary.pure_dmg    = summary.pure_dmg    or p.pure_dmg -- 補正前攻撃力
 	summary.pure_st     = summary.pure_st     or p.pure_st -- 気絶値
 	summary.pure_st_tm  = summary.pure_st_tm  or p.pure_st_tm -- 気絶タイマー
@@ -5866,6 +5867,7 @@ function rbff2.startplugin()
 				box_base1    = base + 0x76, -- 判定の開始アドレス1、判定データはバンク切替されている場合あり
 				box_base2    = base + 0x7A, -- 判定の開始アドレス2、判定データはバンク切替されている場合あり
 				kaiser_wave  = base + 0xFB, -- カイザーウェイブのレベル
+				hurt_state   = base + 0xE4, -- やられ状態
 
 				-- キャラ毎の必殺技の番号 0x1004B8
 				-- 技の内部の進行度 0x1004F7
@@ -8073,7 +8075,7 @@ function rbff2.startplugin()
 		local atk_summary = {
 			{"詠酒間合い:"         , esaka_label },
 			{"ブレイクショット:"   , bs_label    },
-			{"キャンセル:"         , slide_label .. cancel_label },
+			{"キャンセル:"         , slide_label .. cancel_label .. string.format("%02x", p.cancelable) },
 			{"キャンセル補足:"     , cancel_advs_label },
 			{"滑り攻撃補足:"       , p.dash_act_info }
 		}
@@ -8264,11 +8266,12 @@ function rbff2.startplugin()
 		local prefix = fbno == 0 and "" or ("弾" .. fbno)
 		local atkact_summary = {}
 		-- local chip_type = string.format(" %s %s", summary.chip_dmg_nm, summary.attack_id)
-		table.insert(atkact_summary, {prefix .. "攻撃/気絶:", string.format("%s(%s)/%s(%sF)",
+		table.insert(atkact_summary, {prefix .. "攻撃/気絶:", string.format("%s(%s)/%s(%sF) %02x",
 			summary.pure_dmg,
 			summary.chip_dmg and (summary.chip_dmg > 0 and summary.chip_dmg or 0) or 0,
 			summary.pure_st,
-			summary.pure_st_tm)})
+			summary.pure_st_tm,
+			summary.attack)})
 		return add_frame_to_summary(atkact_summary)
 	end
 	local make_pow_summary = function(p, summary)
@@ -8663,6 +8666,7 @@ function rbff2.startplugin()
 			p.box_base2      = pgm:read_u32(p.addr.box_base2)
 			p.old_kaiser_wave = p.kaiser_wave                          -- 前フレームのカイザーウェイブのレベル
 			p.kaiser_wave    = pgm:read_u8(p.addr.kaiser_wave)         -- カイザーウェイブのレベル
+			p.hurt_state     = pgm:read_u8(p.addr.hurt_state)
 			p.slide_atk      = testbit(p.flag_cc, 0x4) -- ダッシュ滑り攻撃
 			-- ブレイクショット
 			if testbit(p.flag_cc, 0x200000) == true and
@@ -11041,6 +11045,7 @@ function rbff2.startplugin()
 					draw_rtext(    p1 and 28 or 302, 19, string.format("%02x", p.act_count))
 					draw_rtext(    p1 and 40 or 314, 19, string.format("%02x", p.act_frame))
 
+					draw_rtext(    p1 and 16 or 290, 25, string.format("%02x", p.hurt_state))
 					draw_rtext(    p1 and 28 or 302, 25, string.format("%02x", p.sway_status))
 					draw_rtext(    p1 and 40 or 314, 25, string.format("%02x", p.additional))
 
