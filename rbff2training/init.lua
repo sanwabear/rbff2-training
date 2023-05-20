@@ -5525,6 +5525,8 @@ function rbff2.startplugin()
 			disp_stun        = true,        -- 気絶表示
 			disp_sts         = 3,           -- 状態表示 "OFF", "ON", "ON:小表示", "ON:大表示"
 
+			dis_plain_shift  = false,       -- ライン送らない現象
+
 			no_hit           = 0,           -- Nヒット目に空ぶるカウントのカウンタ
 			no_hit_limit     = 0,           -- Nヒット目に空ぶるカウントの上限
 
@@ -8892,6 +8894,11 @@ function rbff2.startplugin()
 			else
 				p.ophit = op.fireball[p.ophit_base]
 			end
+
+			-- ライン送らない状態のデータ書き込み
+			if p.dis_plain_shift then
+				pgm:write_u8(p.addr.hurt_state, p.hurt_state | 0x40)
+			end
 		end
 
 		-- 1Pと2Pの状態読取 ゲージ
@@ -11581,16 +11588,18 @@ function rbff2.startplugin()
 		--                              1                                 1
 		dip_config.easy_super    = col[ 2] == 2 -- 簡易超必               2
 		dip_config.semiauto_p    = col[ 3] == 2 -- 半自動潜在能力         3
-		global.pause_hit         = col[ 4]      -- ヒット時にポーズ       4
-		global.pause_hitbox      = col[ 5]      -- 判定発生時にポーズ     5
-		global.save_snapshot     = col[ 6]      -- 技画像保存             6
-		global.mame_debug_wnd    = col[ 7] == 2 -- MAMEデバッグウィンドウ 7
-		global.damaged_move      = col[ 8]      -- ヒット効果確認用       8
-		global.log.poslog        = col[ 9] == 2 -- 位置ログ               9
-		global.log.atklog        = col[10] == 2 -- 攻撃情報ログ          10
-		global.log.baselog       = col[11] == 2 -- 処理アドレスログ      11
-		global.log.keylog        = col[12] == 2 -- 入力ログ              12
-		global.log.rvslog        = col[13] == 2 -- リバサログ            13
+		p[1].dis_plain_shift     = col[ 4] == 2 or col[ 4] == 3 -- ライン送らない現象     4 
+		p[2].dis_plain_shift     = col[ 4] == 2 or col[ 4] == 4 -- ライン送らない現象     4
+		global.pause_hit         = col[ 5]      -- ヒット時にポーズ       5
+		global.pause_hitbox      = col[ 6]      -- 判定発生時にポーズ     6
+		global.save_snapshot     = col[ 7]      -- 技画像保存             7
+		global.mame_debug_wnd    = col[ 8] == 2 -- MAMEデバッグウィンドウ 8
+		global.damaged_move      = col[ 9]      -- ヒット効果確認用       9
+		global.log.poslog        = col[10] == 2 -- 位置ログ              10
+		global.log.atklog        = col[11] == 2 -- 攻撃情報ログ          11
+		global.log.baselog       = col[12] == 2 -- 処理アドレスログ      12
+		global.log.keylog        = col[13] == 2 -- 入力ログ              13
+		global.log.rvslog        = col[14] == 2 -- リバサログ            14
 
 		local dmove = damaged_moves[global.damaged_move]
 		if dmove and dmove > 0 then
@@ -11800,20 +11809,29 @@ function rbff2.startplugin()
 	end
 	local init_ex_menu_config = function()
 		local col = ex_menu.pos.col
+		local p = players
 		local g = global
-		--   1                                                          1
-		col[ 2] = dip_config.easy_super and 2 or 1 -- 簡易超必          2
-		col[ 3] = dip_config.semiauto_p and 2 or 1 -- 半自動潜在能力    3
-		col[ 4] = g.pause_hit              -- ヒット時にポーズ          4
-		col[ 5] = g.pause_hitbox           -- 判定発生時にポーズ        5
-		col[ 6] = g.save_snapshot          -- 技画像保存                6
-		col[ 7] = g.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ 7
-		col[ 8] = g.damaged_move           -- ヒット効果確認用          8
-		col[ 9] = g.log.poslog  and 2 or 1 -- 位置ログ                  9
-		col[10] = g.log.atklog  and 2 or 1 -- 攻撃情報ログ             10
-		col[11] = g.log.baselog and 2 or 1 -- 処理アドレスログ         11
-		col[12] = g.log.keylog  and 2 or 1 -- 入力ログ                 12
-		col[13] = g.log.rvslog  and 2 or 1 -- リバサログ               13
+		--   1                                                                1
+		col[ 2] = dip_config.easy_super and 2 or 1  -- 簡易超必               2
+		col[ 3] = dip_config.semiauto_p and 2 or 1  -- 半自動潜在能力         3
+		col[ 4] = 1                                 -- ライン送らない現象     4
+		if p[1].dis_plain_shift and p[2].dis_plain_shift then
+			col[ 4] = 2
+		elseif p[1].dis_plain_shift then
+			col[ 4] = 3
+		elseif p[2].dis_plain_shift then
+			col[ 4] = 4
+		end
+		col[ 5] = g.pause_hit              -- ヒット時にポーズ                5
+		col[ 6] = g.pause_hitbox           -- 判定発生時にポーズ              6
+		col[ 7] = g.save_snapshot          -- 技画像保存                      7
+		col[ 8] = g.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ       8
+		col[ 9] = g.damaged_move           -- ヒット効果確認用                9
+		col[10] = g.log.poslog  and 2 or 1 -- 位置ログ                       10
+		col[11] = g.log.atklog  and 2 or 1 -- 攻撃情報ログ                   11
+		col[12] = g.log.baselog and 2 or 1 -- 処理アドレスログ               12
+		col[13] = g.log.keylog  and 2 or 1 -- 入力ログ                       13
+		col[14] = g.log.rvslog  and 2 or 1 -- リバサログ                     14
 	end
 	local init_auto_menu_config = function()
 		local col = auto_menu.pos.col
@@ -12384,6 +12402,7 @@ function rbff2.startplugin()
 			{ "                          特殊設定" },
 			{ "簡易超必"              , { "OFF", "ON" }, },
 			{ "半自動潜在能力"        , { "OFF", "ON" }, },
+			{ "ライン送らない現象"    , { "OFF", "ON", "ON:1Pのみ", "ON:2Pのみ" }, },
 			{ "ヒット時にポーズ"      , { "OFF", "ON", "ON:やられのみ", "ON:投げやられのみ", "ON:打撃やられのみ", "ON:ガードのみ", }, },
 			{ "判定発生時にポーズ"    , { "OFF", "投げ", "攻撃", "変化時", }, },
 			{ "技画像保存"            , { "OFF", "ON:新規", "ON:上書き", }, },
@@ -12402,21 +12421,24 @@ function rbff2.startplugin()
 				0, -- －特殊設定－            1
 				1, -- 簡易超必                2
 				1, -- 半自動潜在能力          3
-				1, -- ヒット時にポーズ        4
-				1, -- 判定発生時にポーズ      5
-				1, -- 技画像保存              6
-				1, -- MAMEデバッグウィンドウ  7
-				1, -- ヒット効果確認用        8
-				1, -- 位置ログ                9
-				1, -- 攻撃情報ログ           10
-				1, -- 処理アドレスログ       11
-				1, -- 入力ログ               12
-				1, -- リバサログ             13
+				1, -- ライン送らない現象      4
+				1, -- ヒット時にポーズ        5
+				1, -- 判定発生時にポーズ      6
+				1, -- 技画像保存              7
+				1, -- MAMEデバッグウィンドウ  8
+				1, -- ヒット効果確認用        9
+				1, -- 位置ログ               10
+				1, -- 攻撃情報ログ           11
+				1, -- 処理アドレスログ       12
+				1, -- 入力ログ               13
+				1, -- リバサログ             14
 			},
 		},
 		on_a = {
 			ex_menu_to_main, -- －特殊設定－
 			ex_menu_to_main, -- 簡易超必
+			ex_menu_to_main, -- 半自動潜在能力
+			ex_menu_to_main, -- ライン送らない現象
 			ex_menu_to_main, -- ヒット時にポーズ
 			ex_menu_to_main, -- 判定発生時にポーズ
 			ex_menu_to_main, -- 技画像保存
@@ -12429,8 +12451,10 @@ function rbff2.startplugin()
 			ex_menu_to_main, -- リバサログ
 		},
 		on_b = {
-			ex_menu_to_main_cancel, -- －一般設定－
+			ex_menu_to_main_cancel, -- －特殊設定－
 			ex_menu_to_main_cancel, -- 簡易超必
+			ex_menu_to_main_cancel, -- 半自動潜在能力
+			ex_menu_to_main_cancel, -- ライン送らない現象
 			ex_menu_to_main_cancel, -- ヒット時にポーズ
 			ex_menu_to_main_cancel, -- 判定発生時にポーズ
 			ex_menu_to_main_cancel, -- 技画像保存
