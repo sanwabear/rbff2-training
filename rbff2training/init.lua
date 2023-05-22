@@ -1998,7 +1998,7 @@ local char_acts_base = {
 		{ name = "一本釣り投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 		{ name = "地獄落とし", type = act_types.any, ids = { 0x81, 0x82, 0x83, 0x84, }, },
 		{ name = "三節棍中段打ち", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, firing = true, },
-		{ name = "火炎三節棍中段打ち", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, }, firing = true, },
+		{ name = "火炎三節棍中段突き", type = act_types.attack, ids = { 0x90, 0x91, 0x92, 0x93, }, firing = true, },
 		{ name = "燕落とし", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
 		{ name = "火龍追撃棍", type = act_types.attack, ids = { 0xB8, 0xB9, }, },
 		{ name = "旋風棍", type = act_types.attack, ids = { 0xA4, }, },
@@ -2744,7 +2744,7 @@ local char_fireball_base = {
 	-- ビリー・カーン
 	{
 		{ name = "三節棍中段打ち", type = act_types.attack, ids = { 0x266, }, },
-		{ name = "火炎三節棍中段打ち", type = act_types.attack, ids = { 0x267, }, },
+		{ name = "火炎三節棍中段突き", type = act_types.attack, ids = { 0x267, }, },
 		{ name = "旋風棍", type = act_types.attack, ids = { 0x269, }, },
 		{ name = "超火炎旋風棍", type = act_types.attack, ids = { 0x261, 0x263, 0x262, }, },
 		{ name = "サラマンダーストリーム", type = act_types.attack, ids = { 0x27A, 0x278, }, },
@@ -3260,7 +3260,7 @@ local create_input_states = function()
 		},
 		{ --ビリー・カーン
 			{ name = "三節棍中段打ち"                  , addr = 0x02, cmd = _4chg6a, type = input_state_types.charge, },
-			{ name = "火炎三節棍中段打ち"              , addr = 0x06, cmd = _46c, },
+			{ name = "火炎三節棍中段突き"              , addr = 0x06, cmd = _46c, },
 			{ name = "雀落とし"                        , addr = 0x0A, cmd = _214a, },
 			{ name = "火龍追撃棍"                      , addr = 0x16, cmd = _214b, },
 			{ name = "旋風棍"                          , addr = 0x0E, cmd = _aaaa, },
@@ -3880,7 +3880,7 @@ local char_rvs_list = {
 	{
 		{ cmd = cmd_base._3c     , bs = false, name = "地獄落とし", },
 		{ id = 0x01, ver = 0x0600, bs = false, name = "三節棍中段打ち", },
-		-- { id = 0x00, ver = 0x06FF, bs = false, name = "火炎三節棍中段打ち", },
+		-- { id = 0x00, ver = 0x06FF, bs = false, name = "火炎三節棍中段突き", },
 		{ id = 0x03, ver = 0x0600, bs = true , name = "雀落とし", },
 		{ id = 0x04, ver = 0x0C00, bs = false, name = "旋風棍", },
 		{ id = 0x05, ver = 0x0600, bs = true , name = "強襲飛翔棍", },
