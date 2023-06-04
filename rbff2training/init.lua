@@ -9193,7 +9193,19 @@ function rbff2.startplugin()
 				p.act_1st    = false
 			end
 			p.old_act_normal = p.act_normal
-			p.act_normal     = p.act_data.type == act_types.free
+			-- ガード移行可否
+			p.act_normal = nil
+			if p.state == 2 or
+				(p.flag_cc & 0xFFFFFF3F) ~= 0 or
+				(p.flag_c0 & 0x03FFD723) ~= 0 or
+				(pgm:read_u8(p.addr.base + 0xB6) | p.flag_c4 | p.flag_c8) ~= 0 then
+				p.act_normal = false
+			elseif p.old_act == 0 or p.old_act ~= p.act then
+				p.act_normal = true
+			else
+				p.act_normal = true -- 移動中など
+				p.act_normal = p.act_data.type == act_types.free or p.act_data.type == act_types.guard
+			end
 
 			-- アドレス保存
 			if not p.bases[#p.bases] or p.bases[#p.bases].addr ~= p.base then
@@ -11191,7 +11203,6 @@ function rbff2.startplugin()
 						end
 					end
 					draw_rtext_with_shadow(p1 and 155 or 170, 40, p.last_frame_gap, col(p.last_frame_gap))
-					draw_rtext_with_shadow(p1 and 155 or 170, 47, p.hist_frame_gap[#p.hist_frame_gap], col(p.hist_frame_gap[#p.hist_frame_gap]))
 				end
 			end
 
