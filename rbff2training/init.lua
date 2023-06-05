@@ -6222,6 +6222,19 @@ function rbff2.startplugin()
 		return tmp_table
 	end
 
+	local new_filled_table = function(...)
+		local tmp_table = {}
+		local a = {...}
+		for j = 1, #a, 2 do
+			local len = a[j]
+			local fill = a[j + 1]
+			for i = 1, len do
+				table.insert(tmp_table, fill)
+			end
+		end
+		return tmp_table
+	end
+
 	--  自動デッドリー
 	local set_auto_deadly = function(p, count)
 		p.auto_deadly = p.auto_deadly or new_empty_table(11)
@@ -11419,6 +11432,7 @@ function rbff2.startplugin()
 
 	-- メニュー表示
 	local menu_max_row = 13
+	local menu_label_off_on = { "OFF", "ON" }
 	local menu_nop = function() end
 	local setup_char_manu = function()
 		-- キャラにあわせたメニュー設定
@@ -11583,10 +11597,10 @@ function rbff2.startplugin()
 		p[2].disp_sts            = col[19]      -- 2P 状態表示         19
 		p[1].disp_base           = col[20] == 2 -- 1P 処理アドレス表示 20
 		p[2].disp_base           = col[21] == 2 -- 2P 処理アドレス表示 21
-		p[1].disp_char           = col[22] == 2 -- 1P キャラ表示       22
-		p[2].disp_char           = col[23] == 2 -- 2P キャラ表示       23
-		global.disp_effect       = col[24] == 2 -- エフェクト表示      24
-		global.disp_pos          = col[25] == 2 -- 1P 2P 距離表示      25
+		global.disp_pos          = col[22] == 2 -- 1P 2P 距離表示      22
+		p[1].disp_char           = col[23] == 2 -- 1P キャラ表示       23
+		p[2].disp_char           = col[24] == 2 -- 2P キャラ表示       24
+		global.disp_effect       = col[25] == 2 -- エフェクト表示      25
 
 		menu_cur = main_menu
 	end
@@ -11632,7 +11646,6 @@ function rbff2.startplugin()
 		ex_menu_to_main(true)
 	end
 	local auto_menu_to_main = function(cancel)
-		local p   = players
 		local col = auto_menu.pos.col
 		-- 自動入力設定                                                          1
 		global.auto_input.otg_thw      = col[ 2] == 2 -- ダウン投げ              2
@@ -11813,10 +11826,10 @@ function rbff2.startplugin()
 		col[19] = p[2].disp_sts                -- 2P 状態表示          19
 		col[20] = p[1].disp_base and 2 or 1    -- 1P 処理アドレス表示  20
 		col[21] = p[2].disp_base and 2 or 1    -- 2P 処理アドレス表示  21
-		col[22] = p[1].disp_char and 2 or 1    -- 1P キャラ表示        22
-		col[23] = p[2].disp_char and 2 or 1    -- 2P キャラ表示        23
-		col[24] = g.disp_effect  and 2 or 1    -- エフェクト表示       24
-		col[25] = g.disp_pos     and 2 or 1    -- 1P 2P 距離表示       25
+		col[22] = g.disp_pos     and 2 or 1    -- 1P 2P 距離表示       22
+		col[23] = p[1].disp_char and 2 or 1    -- 1P キャラ表示        23
+		col[24] = p[2].disp_char and 2 or 1    -- 2P キャラ表示        24
+		col[25] = g.disp_effect  and 2 or 1    -- エフェクト表示       25
 	end
 	local init_ex_menu_config = function()
 		local col = ex_menu.pos.col
@@ -11958,7 +11971,7 @@ function rbff2.startplugin()
 			{ "2P カラー"             , { "A", "D" } },
 			{ "ステージセレクト"      , names },
 			{ "BGMセレクト"           , bgm_names },
-			{ "体力,POWゲージ表示"    , { "OFF", "ON" }, },
+			{ "体力,POWゲージ表示"    , menu_label_off_on, },
 			{ "背景なし時位置補正"    , fix_scr_tops, },
 			{ "リスタート" },
 		},
@@ -12004,25 +12017,7 @@ function rbff2.startplugin()
 			menu_restart_fight, -- 背景なし時位置補正
 			menu_restart_fight, -- リスタート
 		},
-		on_b = {
-			menu_exit, -- ダミー設定
-			menu_exit, -- ゲージ設定
-			menu_exit, -- 表示設定
-			menu_exit, -- 特殊設定
-			menu_exit, -- 判定個別設定
-			menu_exit, -- 自動入力設定
-			menu_exit, -- プレイヤーセレクト画面
-			menu_exit, -- クイックセレクト
-			menu_exit, -- 1P セレクト
-			menu_exit, -- 2P セレクト
-			menu_exit, -- 1P カラー
-			menu_exit, -- 2P カラー
-			menu_exit, -- ステージセレクト
-			menu_exit, -- BGMセレクト
-			menu_exit, -- 体力,POWゲージ表示
-			menu_exit, -- 背景なし時位置補正
-			menu_exit, -- リスタート
-		},
+		on_b = new_filled_table(18, menu_exit),
 	}
 	menu_cur = main_menu -- デフォルト設定
 	update_menu_pos = function()
@@ -12178,8 +12173,8 @@ function rbff2.startplugin()
 			{ "ガードリバーサル設定"  , bs_guards },
 			{ "1P 強制空振り"         , no_hit_row, },
 			{ "2P 強制空振り"         , no_hit_row, },
-			{ "1P 挑発で前進"         , { "OFF", "ON" }, },
-			{ "2P 挑発で前進"         , { "OFF", "ON" }, },
+			{ "1P 挑発で前進"         , menu_label_off_on, },
+			{ "2P 挑発で前進"         , menu_label_off_on, },
 			{ "1P Y座標強制"          , force_y_pos, },
 			{ "2P Y座標強制"          , force_y_pos, },
 			{ "画面下に移動"          , { "OFF", "2Pを下に移動", "1Pを下に移動", }, },
@@ -12208,46 +12203,8 @@ function rbff2.startplugin()
 				1, -- X座標同期              18
 			},
 		},
-		on_a = {
-			menu_to_main, -- ダミーモード
-			menu_to_main, -- －ダミー設定－
-			menu_to_main, -- 1P アクション
-			menu_to_main, -- 2P アクション
-			menu_to_main, -- 1P ガード
-			menu_to_main, -- 2P ガード
-			menu_to_main, -- 1ガード持続フレーム数
-			menu_to_main, -- ブレイクショット設定
-			menu_to_main, -- 1P やられ時行動
-			menu_to_main, -- 2P やられ時行動
-			menu_to_main, -- ガードリバーサル設定
-			menu_to_main, -- 1P 強制空振り
-			menu_to_main, -- 2P 強制空振り
-			menu_to_main, -- 1P 挑発で前進
-			menu_to_main, -- 2P 挑発で前進
-			menu_to_main, -- 1P Y座標強制
-			menu_to_main, -- 2P Y座標強制
-			menu_to_main, -- X座標同期
-		},
-		on_b = {
-			menu_to_main_cancel, -- ダミーモード
-			menu_to_main_cancel, -- －ダミー設定－
-			menu_to_main_cancel, -- 1P アクション
-			menu_to_main_cancel, -- 2P アクション
-			menu_to_main_cancel, -- 1P ガード
-			menu_to_main_cancel, -- 2P ガード
-			menu_to_main_cancel, -- 1ガード持続フレーム数
-			menu_to_main_cancel, -- ブレイクショット設定
-			menu_to_main_cancel, -- 1P やられ時行動
-			menu_to_main_cancel, -- 2P やられ時行動
-			menu_to_main_cancel, -- ガードリバーサル設定
-			menu_to_main_cancel, -- 1P 強制空振り
-			menu_to_main_cancel, -- 2P 強制空振り
-			menu_to_main_cancel, -- 1P 挑発で前進
-			menu_to_main_cancel, -- 2P 挑発で前進
-			menu_to_main_cancel, -- 1P Y座標強制
-			menu_to_main_cancel, -- 2P Y座標強制
-			menu_to_main_cancel, -- X座標同期
-		},
+		on_a = new_filled_table(18, menu_to_main),
+		on_b = new_filled_table(18, menu_to_main_cancel),
 	}
 
 	bar_menu = {
@@ -12273,24 +12230,8 @@ function rbff2.startplugin()
 				2, -- POWゲージモード         7
 			},
 		},
-		on_a = {
-			bar_menu_to_main, -- －ゲージ設定－          1
-			bar_menu_to_main, -- 1P 体力ゲージ量         2
-			bar_menu_to_main, -- 2P 体力ゲージ量         3
-			bar_menu_to_main, -- 1P POWゲージ量          4
-			bar_menu_to_main, -- 2P POWゲージ量          5
-			bar_menu_to_main, -- 体力ゲージモード        6
-			bar_menu_to_main, -- POWゲージモード         7
-		},
-		on_b = {
-			bar_menu_to_main_cancel, -- －ゲージ設定－          1
-			bar_menu_to_main_cancel, -- 1P 体力ゲージ量         2
-			bar_menu_to_main_cancel, -- 2P 体力ゲージ量         3
-			bar_menu_to_main_cancel, -- 1P POWゲージ量          4
-			bar_menu_to_main_cancel, -- 2P POWゲージ量          5
-			bar_menu_to_main_cancel, -- 体力ゲージモード        6
-			bar_menu_to_main_cancel, -- POWゲージモード         7
-		},
+		on_a = new_filled_table(7, bar_menu_to_main),
+		on_b = new_filled_table(7 ,bar_menu_to_main_cancel),
 	}
 
 	disp_menu = {
@@ -12300,26 +12241,26 @@ function rbff2.startplugin()
 			{ "2P 判定表示"           , { "OFF", "ON", "ON:P番号なし", }, },
 			{ "1P 間合い表示"         , { "OFF", "ON", "ON:投げ", "ON:遠近攻撃", "ON:詠酒", }, },
 			{ "2P 間合い表示"         , { "OFF", "ON", "ON:投げ", "ON:遠近攻撃", "ON:詠酒", }, },
-			{ "1P 気絶ゲージ表示"     , { "OFF", "ON" }, },
-			{ "2P 気絶ゲージ表示"     , { "OFF", "ON" }, },
-			{ "1P ダメージ表示"       , { "OFF", "ON" }, },
-			{ "2P ダメージ表示"       , { "OFF", "ON" }, },
+			{ "1P 気絶ゲージ表示"     , menu_label_off_on, },
+			{ "2P 気絶ゲージ表示"     , menu_label_off_on, },
+			{ "1P ダメージ表示"       , menu_label_off_on, },
+			{ "2P ダメージ表示"       , menu_label_off_on, },
 			{ "1P 入力表示"           , { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
 			{ "2P 入力表示"           , { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
 			{ "コマンド入力状態表示"  , { "OFF", "1P", "2P", }, },
 			{ "フレーム差表示"        , { "OFF", "数値とグラフ", "数値" }, },
 			{ "1P フレーム数表示"     , { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
 			{ "2P フレーム数表示"     , { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
-			{ "1P 弾フレーム数表示"   , { "OFF", "ON" }, },
-			{ "2P 弾フレーム数表示"   , { "OFF", "ON" }, },
+			{ "1P 弾フレーム数表示"   , menu_label_off_on, },
+			{ "2P 弾フレーム数表示"   , menu_label_off_on, },
 			{ "1P 状態表示"           , { "OFF", "ON", "ON:小表示", "ON:大表示" }, },
 			{ "2P 状態表示"           , { "OFF", "ON", "ON:小表示", "ON:大表示" }, },
-			{ "1P 処理アドレス表示"   , { "OFF", "ON" }, },
-			{ "2P 処理アドレス表示"   , { "OFF", "ON" }, },
-			{ "1P キャラ表示"         , { "OFF", "ON" }, },
-			{ "2P キャラ表示"         , { "OFF", "ON" }, },
+			{ "1P 処理アドレス表示"   , menu_label_off_on, },
+			{ "2P 処理アドレス表示"   , menu_label_off_on, },
+			{ "1P 2P 距離表示"        , menu_label_off_on, },
+			{ "1P キャラ表示"         , menu_label_off_on, },
+			{ "2P キャラ表示"         , menu_label_off_on, },
 			{ "エフェクト表示"        , { "OFF", "ON", }, },
-			{ "1P 2P 距離表示"        , { "OFF", "ON" }, },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
@@ -12327,103 +12268,51 @@ function rbff2.startplugin()
 			col = {
 				0, -- －表示設定－            1
 				2, -- 1P 判定表示             2
-				2, -- 2P 判定表示             2
-				2, -- 1P 間合い表示           3
-				2, -- 2P 間合い表示           3
-				2, -- 1P 気絶ゲージ表示       4
-				2, -- 2P 気絶ゲージ表示       5
-				1, -- 1P ダメージ表示         6
-				1, -- 2P ダメージ表示         7
-				1, -- 1P 入力表示             8
-				1, -- 2P 入力表示             9
-				1, -- コマンド入力状態表示   10
-				3, -- フレーム差表示         11
-				4, -- 1P フレーム数表示      12
-				4, -- 2P フレーム数表示      13
-				2, -- 1P 弾フレーム数表示    14
-				2, -- 1P 弾フレーム数表示    15
-				1, -- 1P 状態表示            16
-				1, -- 2P 状態表示            17
-				1, -- 1P 処理アドレス表示    18
-				1, -- 2P 処理アドレス表示    19
-				2, -- 1P キャラ表示          20
-				2, -- 2P キャラ表示          21
-				2, -- エフェクト表示         22
-				1, -- 1P 2P 距離表示         23
+				2, -- 2P 判定表示             3
+				2, -- 1P 間合い表示           4
+				2, -- 2P 間合い表示           5
+				2, -- 1P 気絶ゲージ表示       6
+				2, -- 2P 気絶ゲージ表示       7
+				1, -- 1P ダメージ表示         8
+				1, -- 2P ダメージ表示         9
+				1, -- 1P 入力表示            10
+				1, -- 2P 入力表示            11
+				1, -- コマンド入力状態表示   12
+				3, -- フレーム差表示         13
+				4, -- 1P フレーム数表示      14
+				4, -- 2P フレーム数表示      15
+				2, -- 1P 弾フレーム数表示    16
+				2, -- 1P 弾フレーム数表示    17
+				1, -- 1P 状態表示            18
+				1, -- 2P 状態表示            19
+				1, -- 1P 処理アドレス表示    20
+				1, -- 2P 処理アドレス表示    21
+				1, -- 1P 2P 距離表示         22
+				2, -- 1P キャラ表示          23
+				2, -- 2P キャラ表示          24
+				2, -- エフェクト表示         25
 			},
 		},
-		on_a = {
-			disp_menu_to_main, -- －表示設定－
-			disp_menu_to_main, -- 1P 判定表示
-			disp_menu_to_main, -- 2P 判定表示
-			disp_menu_to_main, -- 1P 間合い表示
-			disp_menu_to_main, -- 2P 間合い表示
-			disp_menu_to_main, -- 1P 気絶ゲージ表示
-			disp_menu_to_main, -- 2P 気絶ゲージ表示
-			disp_menu_to_main, -- 1P ダメージ表示
-			disp_menu_to_main, -- 2P ダメージ表示
-			disp_menu_to_main, -- 1P 入力表示
-			disp_menu_to_main, -- 2P 入力表示
-			disp_menu_to_main, -- コマンド入力状態表示
-			disp_menu_to_main, -- フレーム差表示
-			disp_menu_to_main, -- 1P フレーム数表示
-			disp_menu_to_main, -- 2P フレーム数表示
-			disp_menu_to_main, -- 1P 弾フレーム数表示
-			disp_menu_to_main, -- 2P 弾フレーム数表示
-			disp_menu_to_main, -- 1P 状態表示
-			disp_menu_to_main, -- 2P 状態表示
-			disp_menu_to_main, -- 1P 処理アドレス表示
-			disp_menu_to_main, -- 2P 処理アドレス表示
-			disp_menu_to_main, -- 1P キャラ表示
-			disp_menu_to_main, -- 2P キャラ表示
-			disp_menu_to_main, -- エフェクト表示
-			disp_menu_to_main, -- 1P 2P 距離表示
-		},
-		on_b = {
-			disp_menu_to_main_cancel, -- －表示設定－
-			disp_menu_to_main_cancel, -- 1P 判定表示
-			disp_menu_to_main_cancel, -- 2P 判定表示
-			disp_menu_to_main_cancel, -- 1P 間合い表示
-			disp_menu_to_main_cancel, -- 2P 間合い表示
-			disp_menu_to_main_cancel, -- 1P 気絶ゲージ表示
-			disp_menu_to_main_cancel, -- 2P 気絶ゲージ表示
-			disp_menu_to_main_cancel, -- フレーム差表示
-			disp_menu_to_main_cancel, -- 1P ダメージ表示
-			disp_menu_to_main_cancel, -- 2P ダメージ表示
-			disp_menu_to_main_cancel, -- 1P 入力表示
-			disp_menu_to_main_cancel, -- 2P 入力表示
-			disp_menu_to_main_cancel, -- コマンド入力状態表示
-			disp_menu_to_main_cancel, -- 1P フレーム数表示
-			disp_menu_to_main_cancel, -- 2P フレーム数表示
-			disp_menu_to_main_cancel, -- 1P 弾フレーム数表示
-			disp_menu_to_main_cancel, -- 2P 弾フレーム数表示
-			disp_menu_to_main_cancel, -- 1P 状態表示
-			disp_menu_to_main_cancel, -- 2P 状態表示
-			disp_menu_to_main_cancel, -- 1P 処理アドレス表示
-			disp_menu_to_main_cancel, -- 2P 処理アドレス表示
-			disp_menu_to_main_cancel, -- 1P キャラ表示
-			disp_menu_to_main_cancel, -- 2P キャラ表示
-			disp_menu_to_main_cancel, -- エフェクト表示
-			disp_menu_to_main_cancel, -- 1P 2P 距離表示
-		},
+		on_a = new_filled_table(25, disp_menu_to_main),
+		on_b = new_filled_table(25, disp_menu_to_main_cancel),
 	}
 
 	ex_menu = {
 		list = {
 			{ "                          特殊設定" },
-			{ "簡易超必"              , { "OFF", "ON" }, },
-			{ "半自動潜在能力"        , { "OFF", "ON" }, },
+			{ "簡易超必"              , menu_label_off_on, },
+			{ "半自動潜在能力"        , menu_label_off_on, },
 			{ "ライン送らない現象"    , { "OFF", "ON", "ON:1Pのみ", "ON:2Pのみ" }, },
 			{ "ヒット時にポーズ"      , { "OFF", "ON", "ON:やられのみ", "ON:投げやられのみ", "ON:打撃やられのみ", "ON:ガードのみ", }, },
 			{ "判定発生時にポーズ"    , { "OFF", "投げ", "攻撃", "変化時", }, },
 			{ "技画像保存"            , { "OFF", "ON:新規", "ON:上書き", }, },
-			{ "MAMEデバッグウィンドウ", { "OFF", "ON" }, },
+			{ "MAMEデバッグウィンドウ", menu_label_off_on, },
 			{ "ヒット効果確認用"      , damaged_move_keys },
-			{ "位置ログ"              , { "OFF", "ON" }, },
-			{ "攻撃情報ログ"          , { "OFF", "ON" }, },
-			{ "処理アドレスログ"      , { "OFF", "ON" }, },
-			{ "入力ログ"              , { "OFF", "ON" }, },
-			{ "リバサログ"            , { "OFF", "ON" }, },
+			{ "位置ログ"              , menu_label_off_on, },
+			{ "攻撃情報ログ"          , menu_label_off_on, },
+			{ "処理アドレスログ"      , menu_label_off_on, },
+			{ "入力ログ"              , menu_label_off_on, },
+			{ "リバサログ"            , menu_label_off_on, },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
@@ -12445,58 +12334,28 @@ function rbff2.startplugin()
 				1, -- リバサログ             14
 			},
 		},
-		on_a = {
-			ex_menu_to_main, -- －特殊設定－
-			ex_menu_to_main, -- 簡易超必
-			ex_menu_to_main, -- 半自動潜在能力
-			ex_menu_to_main, -- ライン送らない現象
-			ex_menu_to_main, -- ヒット時にポーズ
-			ex_menu_to_main, -- 判定発生時にポーズ
-			ex_menu_to_main, -- 技画像保存
-			ex_menu_to_main, -- MAMEデバッグウィンドウ
-			ex_menu_to_main, -- ヒット効果確認用
-			ex_menu_to_main, -- 位置ログ
-			ex_menu_to_main, -- 攻撃情報ログ
-			ex_menu_to_main, -- 処理アドレスログ
-			ex_menu_to_main, -- 入力ログ
-			ex_menu_to_main, -- リバサログ
-		},
-		on_b = {
-			ex_menu_to_main_cancel, -- －特殊設定－
-			ex_menu_to_main_cancel, -- 簡易超必
-			ex_menu_to_main_cancel, -- 半自動潜在能力
-			ex_menu_to_main_cancel, -- ライン送らない現象
-			ex_menu_to_main_cancel, -- ヒット時にポーズ
-			ex_menu_to_main_cancel, -- 判定発生時にポーズ
-			ex_menu_to_main_cancel, -- 技画像保存
-			ex_menu_to_main_cancel, -- MAMEデバッグウィンドウ
-			ex_menu_to_main_cancel, -- ヒット効果確認用
-			ex_menu_to_main_cancel, -- 位置ログ
-			ex_menu_to_main_cancel, -- 攻撃情報ログ
-			ex_menu_to_main_cancel, -- 処理アドレスログ
-			ex_menu_to_main_cancel, -- 入力ログ
-			ex_menu_to_main_cancel, -- リバサログ
-		},
+		on_a = new_filled_table(14, ex_menu_to_main),
+		on_b = new_filled_table(14, ex_menu_to_main_cancel),
 	}
 
 	auto_menu = {
 		list = {
 			{ "                        自動入力設定" },
-			{ "ダウン投げ"            , { "OFF", "ON" }, },
-			{ "ダウン攻撃"            , { "OFF", "ON" }, },
-			{ "通常投げの派生技"      , { "OFF", "ON" }, },
+			{ "ダウン投げ"            , menu_label_off_on, },
+			{ "ダウン攻撃"            , menu_label_off_on, },
+			{ "通常投げの派生技"      , menu_label_off_on, },
 			{ "デッドリーレイブ"      , { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, },
 			{ "アンリミテッドデザイア", { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "ギガティックサイクロン" }, },
 			{ "ドリル"                , { 1, 2, 3, 4, 5 }, },
 			{ "超白龍"                , { "OFF", "C攻撃-判定発生前", "C攻撃-判定発生後" }, },
 			{ "M.リアルカウンター"    , { "OFF", "ジャーマン", "フェイスロック", "投げっぱなしジャーマン", "ランダム", }, },
-			{ "M.トリプルエクスタシー", { "OFF", "ON" }, },
-			{ "炎の種馬"              , { "OFF", "ON" }, },
-			{ "喝CA"                  , { "OFF", "ON" }, },
+			{ "M.トリプルエクスタシー", menu_label_off_on, },
+			{ "炎の種馬"              , menu_label_off_on, },
+			{ "喝CA"                  , menu_label_off_on, },
 			{ "                          入力設定" },
-			{ "詠酒距離チェック"      , { "OFF", "ON" }, },
-			{ "必勝！逆襲拳"          , { "OFF", "ON" }, },
-			{ "空振りCA"              , { "OFF", "ON" }, },
+			{ "詠酒距離チェック"      , menu_label_off_on, },
+			{ "必勝！逆襲拳"          , menu_label_off_on, },
+			{ "空振りCA"              , menu_label_off_on, },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
@@ -12520,42 +12379,8 @@ function rbff2.startplugin()
 				1, -- 空振りCA               16
 			},
 		},
-		on_a = {
-			auto_menu_to_main, -- 自動入力設定            1
-			auto_menu_to_main, -- ダウン投げ              2
-			auto_menu_to_main, -- ダウン攻撃              3
-			auto_menu_to_main, -- 通常投げの派生技        4
-			auto_menu_to_main, -- デッドリーレイブ        5
-			auto_menu_to_main, -- アンリミテッドデザイア  6
-			auto_menu_to_main, -- ドリル                  7
-			auto_menu_to_main, -- 超白龍                  8
-			auto_menu_to_main, -- M.リアルカウンター      9
-			auto_menu_to_main, -- M.トリプルエクスタシー 10
-			auto_menu_to_main, -- 炎の種馬               11
-			auto_menu_to_main, -- 喝CA                   12
-			auto_menu_to_main, -- 入力設定               13
-			auto_menu_to_main, -- 詠酒距離チェック       14
-			auto_menu_to_main, -- 必勝！逆襲拳           15
-			auto_menu_to_main, -- 空振りCA               16
-		},
-		on_b = {
-			auto_menu_to_main_cancel, -- 自動入力設定            1
-			auto_menu_to_main_cancel, -- ダウン投げ              2
-			auto_menu_to_main_cancel, -- ダウン攻撃              3
-			auto_menu_to_main_cancel, -- 通常投げの派生技        4
-			auto_menu_to_main_cancel, -- デッドリーレイブ        5
-			auto_menu_to_main_cancel, -- アンリミテッドデザイア  6
-			auto_menu_to_main_cancel, -- ドリル                  7
-			auto_menu_to_main_cancel, -- 超白龍                  8
-			auto_menu_to_main_cancel, -- リアルカウンター        9
-			auto_menu_to_main_cancel, -- M.トリプルエクスタシー 10
-			auto_menu_to_main_cancel, -- 炎の種馬               11
-			auto_menu_to_main_cancel, -- 喝CA                   12
-			auto_menu_to_main_cancel, -- 入力設定               13
-			auto_menu_to_main_cancel, -- 詠酒距離チェック       14
-			auto_menu_to_main_cancel, -- 必勝！逆襲拳           15
-			auto_menu_to_main_cancel, -- 空振りCA               16
-		},
+		on_a = new_filled_table(16, auto_menu_to_main),
+		on_b = new_filled_table(16, auto_menu_to_main_cancel),
 	}
 
 	col_menu = {
@@ -12617,17 +12442,7 @@ function rbff2.startplugin()
 			function() exit_menu_to_rec(7) end, -- スロット7
 			function() exit_menu_to_rec(8) end, -- スロット8
 		},
-		on_b = {
-			menu_rec_to_tra, -- 説明
-			menu_to_tra, -- スロット1
-			menu_to_tra, -- スロット2
-			menu_to_tra, -- スロット3
-			menu_to_tra, -- スロット4
-			menu_to_tra, -- スロット5
-			menu_to_tra, -- スロット6
-			menu_to_tra, -- スロット7
-			menu_to_tra, -- スロット8
-		},
+		on_b = new_filled_table(1, menu_rec_to_tra, 8, menu_to_tra),
 	}
 	local play_interval = {}
 	for i = 1, 301 do
@@ -12676,45 +12491,9 @@ function rbff2.startplugin()
 				2, -- ダメージでリプレイ中止 17
 			},
 		},
-		on_a = {
-			exit_menu_to_play, -- 説明
-			exit_menu_to_play, -- スロット1
-			exit_menu_to_play, -- スロット2
-			exit_menu_to_play, -- スロット3
-			exit_menu_to_play, -- スロット4
-			exit_menu_to_play, -- スロット5
-			exit_menu_to_play, -- スロット6
-			exit_menu_to_play, -- スロット7
-			exit_menu_to_play, -- スロット8
-			exit_menu_to_play, -- リプレイ設定
-			exit_menu_to_play, -- 繰り返し
-			exit_menu_to_play, -- 繰り返し間隔
-			exit_menu_to_play, -- 繰り返し開始条件
-			exit_menu_to_play, -- 開始間合い固定
-			exit_menu_to_play, -- 状態リセット
-			exit_menu_to_play, -- ガイド表示
-			exit_menu_to_play, -- ダメージでリプレイ中止
-		},
-		on_b = {
-			-- TODO キャンセル時にも間合い固定の設定とかが変わるように
-			exit_menu_to_play_cancel, -- 説明
-			exit_menu_to_play_cancel, -- スロット1
-			exit_menu_to_play_cancel, -- スロット2
-			exit_menu_to_play_cancel, -- スロット3
-			exit_menu_to_play_cancel, -- スロット4
-			exit_menu_to_play_cancel, -- スロット5
-			exit_menu_to_play_cancel, -- スロット6
-			exit_menu_to_play_cancel, -- スロット7
-			exit_menu_to_play_cancel, -- スロット8
-			exit_menu_to_play_cancel, -- リプレイ設定
-			exit_menu_to_play_cancel, -- 繰り返し
-			exit_menu_to_play_cancel, -- 繰り返し間隔
-			exit_menu_to_play_cancel, -- 繰り返し開始条件
-			exit_menu_to_play_cancel, -- 開始間合い固定
-			exit_menu_to_play_cancel, -- 状態リセット
-			exit_menu_to_play_cancel, -- ガイド表示
-			exit_menu_to_play_cancel, -- ダメージでリプレイ中止
-		},
+		on_a = new_filled_table(17, exit_menu_to_play),
+		-- TODO キャンセル時にも間合い固定の設定とかが変わるように
+		on_b = new_filled_table(17, exit_menu_to_play_cancel),
 	}
 	init_auto_menu_config()
 	init_disp_menu_config()
