@@ -335,41 +335,37 @@ local dip_config ={
 	cpu_cant_move = false,
 }
 
--- 最大気絶値の初期値
--- 配列のインデックス=キャラID
-local init_stuns =  {
-	32 --[[ TERRY ]] ,31 --[[ ANDY ]] ,32 --[[ JOE ]], 29 --[[ MAI ]], 33 --[[ GEESE ]], 32 --[[ SOKAKU ]],
-	31 --[[ BOB ]] ,31 --[[ HON-FU ]] ,29 --[[ MARY ]] ,35 --[[ BASH ]] ,38 --[[ YAMAZAKI ]] ,29 --[[ CHONSHU ]],
-	29 --[[ CHONREI ]] ,32 --[[ DUCK ]] ,32 --[[ KIM ]] ,32 --[[ BILLY ]] ,31 --[[ CHENG ]] ,31 --[[ TUNG ]],
-	35 --[[ LAURENCE ]] ,35 --[[ KRAUSER ]] ,32 --[[ RICK ]] ,29 --[[ XIANGFEI ]] ,32 --[[ ALFRED ]]
-}
--- 起き上がりフレーム数
-local wakeup_frms = {
-	20 --[[ TERRY ]] ,20 --[[ ANDY ]] ,20 --[[ JOE ]], 17 --[[ MAI ]], 20 --[[ GEESE ]], 20 --[[ SOKAKU ]],
-	20 --[[ BOB ]] ,20 --[[ HON-FU ]] ,20 --[[ MARY ]] ,20 --[[ BASH ]] ,20 --[[ YAMAZAKI ]] ,20 --[[ CHONSHU ]],
-	20 --[[ CHONREI ]] ,20 --[[ DUCK ]] ,20 --[[ KIM ]] ,20 --[[ BILLY ]] ,20 --[[ CHENG ]] ,20 --[[ TUNG ]],
-	20 --[[ LAURENCE ]] ,20 --[[ KRAUSER ]] ,20 --[[ RICK ]] ,14 --[[ XIANGFEI ]] ,20 --[[ ALFRED ]]
-}
-
 -- 行動の種類
 local act_types = { free = -1, attack = 0, low_attack = 1, provoke =  2, any = 3, overhead = 4, guard = 5, hit = 6, }
---- グランドスウェーリバサ行動
-local sway_act_counts = {
-	3 --[[ TERRY ]] ,2 --[[ ANDY ]] ,4 --[[ JOE ]], 3 --[[ MAI ]], 3 --[[ GEESE ]], 2 --[[ SOKAKU ]],
-	2 --[[ BOB ]] ,3 --[[ HON-FU ]] ,3 --[[ MARY ]] ,3 --[[ BASH ]] ,2 --[[ YAMAZAKI ]] ,0xC --[[ CHONSHU ]],
-	0xC --[[ CHONREI ]] ,2 --[[ DUCK ]] ,4 --[[ KIM ]] ,4 --[[ BILLY ]] ,2 --[[ CHENG ]] ,4 --[[ TUNG ]],
-	4 --[[ LAURENCE ]] ,3 --[[ KRAUSER ]] ,7 --[[ RICK ]] ,3 --[[ XIANGFEI ]] ,0 --[[ ALFRED ]]
+
+-- キャラの基本データ
+-- 配列のインデックス=キャラID
+local chars = {
+	{ name = "テリー・ボガード",           name2 = "TERRY",    init_stuns = 32, wakeup_frms = 20, sway_act_counts = 3,  },
+	{ name = "アンディ・ボガード",         name2 = "ANDY",     init_stuns = 31, wakeup_frms = 20, sway_act_counts = 2,  },
+	{ name = "東丈",                       name2 = "JOE",      init_stuns = 32, wakeup_frms = 20, sway_act_counts = 4,  },
+	{ name = "不知火舞",                   name2 = "MAI",      init_stuns = 29, wakeup_frms = 17, sway_act_counts = 3,  },
+	{ name = "ギース・ハワード",           name2 = "GEESE",    init_stuns = 33, wakeup_frms = 20, sway_act_counts = 3,  },
+	{ name = "望月双角",                   name2 = "SOKAKU",   init_stuns = 32, wakeup_frms = 20, sway_act_counts = 2,  },
+	{ name = "ボブ・ウィルソン",           name2 = "BOB",      init_stuns = 31, wakeup_frms = 20, sway_act_counts = 2,  },
+	{ name = "ホンフゥ",                   name2 = "HON-FU",   init_stuns = 31, wakeup_frms = 20, sway_act_counts = 3,  },
+	{ name = "ブルー・マリー",             name2 = "MARY",     init_stuns = 29, wakeup_frms = 20, sway_act_counts = 3,  },
+	{ name = "フランコ・バッシュ",         name2 = "BASH",     init_stuns = 35, wakeup_frms = 20, sway_act_counts = 3,  },
+	{ name = "山崎竜二",                   name2 = "YAMAZAKI", init_stuns = 38, wakeup_frms = 20, sway_act_counts = 2,  },
+	{ name = "秦崇秀",                     name2 = "CHONSHU",  init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC,},
+	{ name = "秦崇雷",                     name2 = "CHONREI",  init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC,},
+	{ name = "ダック・キング",             name2 = "DUCK",     init_stuns = 32, wakeup_frms = 20, sway_act_counts = 2,  },
+	{ name = "キム・カッファン",           name2 = "KIM",      init_stuns = 32, wakeup_frms = 20, sway_act_counts = 4,  },
+	{ name = "ビリー・カーン",             name2 = "BILLY",    init_stuns = 32, wakeup_frms = 20, sway_act_counts = 4,  },
+	{ name = "チン・シンザン",             name2 = "CHENG",    init_stuns = 31, wakeup_frms = 20, sway_act_counts = 2,  },
+	{ name = "タン・フー・ルー",           name2 = "TUNG",     init_stuns = 31, wakeup_frms = 20, sway_act_counts = 4,  },
+	{ name = "ローレンス・ブラッド",       name2 = "LAURENCE", init_stuns = 35, wakeup_frms = 20, sway_act_counts = 4,  },
+	{ name = "ヴォルフガング・クラウザー", name2 = "KRAUSER",  init_stuns = 35, wakeup_frms = 20, sway_act_counts = 3,  },
+	{ name = "リック・ストラウド",         name2 = "RICK",     init_stuns = 32, wakeup_frms = 20, sway_act_counts = 7,  },
+	{ name = "李香緋",                     name2 = "XIANGFEI", init_stuns = 29, wakeup_frms = 14, sway_act_counts = 3,  },
+	{ name = "アルフレッド",               name2 = "ALFRED",   init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0,  },
 }
-local char_names = {
-	"テリー・ボガード", "アンディ・ボガード", "東丈", "不知火舞", "ギース・ハワード", "望月双角",
-	"ボブ・ウィルソン", "ホンフゥ", "ブルー・マリー", "フランコ・バッシュ", "山崎竜二", "秦崇秀", "秦崇雷",
-	"ダック・キング", "キム・カッファン", "ビリー・カーン", "チン・シンザン", "タン・フー・ルー",
-	"ローレンス・ブラッド", "ヴォルフガング・クラウザー", "リック・ストラウド", "李香緋", "アルフレッド",
-}
-local char_names2 = {
-	"TERRY" ,"ANDY" ,"JOE", "MAI", "GEESE", "SOKAKU", "BOB" ,"HON-FU" ,"MARY" ,"BASH" ,"YAMAZAKI" ,"CHONSHU",
-	"CHONREI" ,"DUCK" ,"KIM" ,"BILLY" ,"CHENG" ,"TUNG", "LAURENCE" ,"KRAUSER" ,"RICK" ,"XIANGFEI" ,"ALFRED",
-}
+
 local bgms = {
 	{ id = 0x01, name = "クリといつまでも"              , }, --テリー・ボガード
 	{ id = 0x02, name = "雷波濤外伝"                    , }, --アンディ・ボガード
@@ -6159,7 +6155,7 @@ function rbff2.startplugin()
 				end
 			end
 			if logging then
-				printf("%s %s %x %s %x %s", char_names[char], act_name, d0, d0, d1, decd1)
+				printf("%s %s %x %s %x %s", chars[char].name, act_name, d0, d0, d1, decd1)
 			end
 		end
 		cache_close_far_pos_lmo[char] = ret
@@ -7091,7 +7087,7 @@ function rbff2.startplugin()
 		for i, p in ipairs(players) do
 			local op = p.op
 			p.input_states = {}
-			p.init_stun = init_stuns[p.char]
+			p.init_stun = p.char_data.init_stuns
 
 			do_recover(p, op, true)
 
@@ -8661,6 +8657,7 @@ function rbff2.startplugin()
 			p.op             = op
 			p.base           = pgm:read_u32(p.addr.base)
 			p.char           = pgm:read_u8(p.addr.char)
+			p.char_data      = chars[p.char]
 			p.char_4times    = 0xFFFF & (p.char + p.char)
 			p.char_4times    = 0xFFFF & (p.char_4times + p.char_4times)
 			p.char_8times    = 0xFFFF & (p.char << 3)
@@ -8895,7 +8892,7 @@ function rbff2.startplugin()
 
 			p.life           = pgm:read_u8(p.addr.life)
 			p.pow            = pgm:read_u8(p.addr.pow)
-			p.init_stun      = init_stuns[p.char]
+			p.init_stun      = p.char_data.init_stuns
 			p.max_stun       = pgm:read_u8(p.addr.max_stun)
 			p.stun           = pgm:read_u8(p.addr.stun)
 			p.stun_timer     = pgm:read_u16(p.addr.stun_timer)
@@ -10295,7 +10292,7 @@ function rbff2.startplugin()
 				p.last_combo_st_timer = math.max(0, p.stun_timer - p.last_combo_st_timer_offset)
 				p.max_disp_stun = math.max(p.max_disp_stun, p.last_combo_stun)
 				p.max_st_timer = math.max(p.max_st_timer, p.last_combo_st_timer)
-				p.init_stun = init_stuns[p.char]
+				p.init_stun = p.char_data.init_stuns
 			end
 
 			do_recover(p, op)
@@ -10506,9 +10503,9 @@ function rbff2.startplugin()
 					-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
 					if (p.dummy_wakeup == wakeup_type.tech or p.dummy_wakeup == wakeup_type.sway or p.dummy_wakeup == wakeup_type.rvs) and p.dummy_rvs then
 						-- ダウン起き上がりリバーサル入力
-						if wakeup_acts[p.act] and (wakeup_frms[p.char] - 3) <= (global.frame_number - p.on_wakeup) then
+						if wakeup_acts[p.act] and (p.char_data.wakeup_frms - 3) <= (global.frame_number - p.on_wakeup) then
 							input_rvs(rvs_types.on_wakeup, p, string.format("ダウン起き上がりリバーサル入力1 %s %s", 
-								wakeup_frms[p.char], (global.frame_number - p.on_wakeup)))
+								p.char_data.wakeup_frms, (global.frame_number - p.on_wakeup)))
 						end
 						-- 着地リバーサル入力（やられの着地）
 						if 1 < p.pos_y_down and p.old_pos_y > p.pos_y and p.in_air ~= true then
@@ -10552,10 +10549,10 @@ function rbff2.startplugin()
 						end
 						-- グランドスウェー
 						local sway_act_frame = 0
-						if sway_act_counts[p.char] ~= 0 then
+						if p.char_data.sway_act_counts ~= 0 then
 							sway_act_frame = 1
 						end
-						if p.act == 0x13E and p.act_count == sway_act_counts[p.char] and p.act_frame == sway_act_frame then
+						if p.act == 0x13E and p.act_count == p.char_data.sway_act_counts and p.act_frame == sway_act_frame then
 							input_rvs(rvs_types.in_knock_back, p, string.format("グランドスウェーのあとのリバサ %x %x %x %s", p.act, p.act_count, p.act_frame, p.tw_frame))
 						end
 					end
@@ -10975,14 +10972,14 @@ function rbff2.startplugin()
 					local frame_group = p.act_frames2[#p.act_frames2]
 					local name, sub_name, dir_name = frame_group[#frame_group].name, "_", base_path() .. "/capture"
 					mkdir(dir_name)
-					dir_name = dir_name .. "/" .. char_names2[p.char]
+					dir_name = dir_name .. "/" .. p.char_data.names2
 					mkdir(dir_name)
 					if p.slide_atk then
 						sub_name = "_SLIDE_"
 					elseif p.bs_atk then
 						sub_name = "_BS_"
 					end
-					name = string.format("%s%s%04x_%s_%03d", char_names2[p.char], sub_name, p.act_data.id_1st or 0, name, p.atk_count)
+					name = string.format("%s%s%04x_%s_%03d", p.char_data.names2, sub_name, p.act_data.id_1st or 0, name, p.atk_count)
 					dir_name = dir_name .. string.format("/%04x", p.act_data.id_1st or 0)
 					mkdir(dir_name)
 
@@ -11955,6 +11952,12 @@ function rbff2.startplugin()
 	local is_label_line = function(str)
 		return str:find('^' .. "  +") ~= nil
 	end
+	local label_char_names = {
+		"テリー・ボガード", "アンディ・ボガード", "東丈", "不知火舞", "ギース・ハワード", "望月双角",
+		"ボブ・ウィルソン", "ホンフゥ", "ブルー・マリー", "フランコ・バッシュ", "山崎竜二", "秦崇秀", "秦崇雷",
+		"ダック・キング", "キム・カッファン", "ビリー・カーン", "チン・シンザン", "タン・フー・ルー",
+		"ローレンス・ブラッド", "ヴォルフガング・クラウザー", "リック・ストラウド", "李香緋", "アルフレッド",
+	}
 	main_menu = {
 		list = {
 			{ "ダミー設定" },
@@ -11965,8 +11968,8 @@ function rbff2.startplugin()
 			{ "判定個別設定" },
 			{ "プレイヤーセレクト画面" },
 			{ "                          クイックセレクト" },
-			{ "1P セレクト"           , char_names },
-			{ "2P セレクト"           , char_names },
+			{ "1P セレクト"           , label_char_names },
+			{ "2P セレクト"           , label_char_names },
 			{ "1P カラー"             , { "A", "D" } },
 			{ "2P カラー"             , { "A", "D" } },
 			{ "ステージセレクト"      , names },
@@ -12022,8 +12025,8 @@ function rbff2.startplugin()
 	menu_cur = main_menu -- デフォルト設定
 	update_menu_pos = function()
 		-- メニューの更新
-		main_menu.pos.col[ 9] = math.min(math.max(pgm:read_u8(0x107BA5)  , 1), #char_names)
-		main_menu.pos.col[10] = math.min(math.max(pgm:read_u8(0x107BA7)  , 1), #char_names)
+		main_menu.pos.col[ 9] = math.min(math.max(pgm:read_u8(0x107BA5)  , 1), #label_char_names)
+		main_menu.pos.col[10] = math.min(math.max(pgm:read_u8(0x107BA7)  , 1), #label_char_names)
 		main_menu.pos.col[11] = math.min(math.max(pgm:read_u8(0x107BAC)+1, 1), 2)
 		main_menu.pos.col[12] = math.min(math.max(pgm:read_u8(0x107BAD)+1, 1), 2)
 
