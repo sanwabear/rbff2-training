@@ -871,25 +871,38 @@ local char_acts_base = {
 		{ name = "ジョースペシャル", type = act_types.any, ids = { 0x6D, 0x6E, 0x6F, 0x70, 0x71, }, },
 		{ name = "夏のおもひで", type = act_types.any, ids = { 0x24E, 0x24F, }, },
 		{ name = "膝地獄", type = act_types.any, ids = { 0x81, 0x82, 0x83, 0x84, }, },
-		{ name = "スライディング", type = act_types.low_attack, ids = { 0x68, 0xF4, 0xF5, }, },
+		{ name = "スライディング", type = act_types.low_attack, ids = { 0x68, 0xF4, }, },
+		{ names = { "スライディング", }, type = act_types.low_attack, ids = { 0xF5, }, },
 		{ name = "ハイキック", type = act_types.attack, ids = { 0x69, }, },
 		{ name = "炎の指先", type = act_types.any, ids = { 0x6A, }, },
-		{ disp_name = "スラッシュキック", name = "小スラッシュキック", type = act_types.attack, ids = { 0x86, 0x87, 0x88, 0x89, }, },
-		{ disp_name = "スラッシュキック", name = "大スラッシュキック", type = act_types.attack, ids = { 0x90, 0x91, }, },
-		{ name = "大スラッシュキック2段目", type = act_types.attack, ids = { 0x92, }, },
-		{ names = { "大スラッシュキック", "大スラッシュキックHit", }, type = act_types.attack, ids = { 0x90, 0x91, 0x93, 0x94, }, },
-		{ name = "黄金のカカト", type = act_types.attack, ids = { 0x9A, 0x9B, 0x9C, }, },
-		{ name = "タイガーキック", type = act_types.attack, ids = { 0xA4, 0xA5, 0xA6, 0xA7, }, },
+		{ name = "小スラッシュキック", type = act_types.attack, ids = { 0x86, 0x87, 0x88, }, },
+		{ names = { "小スラッシュキック" }, type = act_types.any, ids = { 0x89, }, },
+		{ name = "大スラッシュキック", type = act_types.attack, ids = { 0x90, 0x91, }, },
+		{ names = { "大スラッシュキック", "大スラッシュキック2段目", }, type = act_types.attack, ids = { 0x92, }, },
+		{ names = { "大スラッシュキック", "大スラッシュキックHit", }, type = act_types.attack, ids = { 0x90, 0x91, }, },
+		{ names = { "大スラッシュキック", "大スラッシュキックHit", }, type = act_types.any, ids = { 0x93, 0x94, }, },
+		{ name = "黄金のカカト", type = act_types.attack, ids = { 0x9A, 0x9B, }, },
+		{ names = { "黄金のカカト", }, type = act_types.any, ids = { 0x9C, }, },
+		{ name = "タイガーキック", type = act_types.attack, ids = { 0xA4, 0xA5, }, },
+		{ names = { "タイガーキック", }, type = act_types.any, ids = { 0xA6, 0xA7, }, },
 		{ name = "爆裂拳", type = act_types.attack, ids = { 0xAE, 0xB0, 0xB1, }, },
 		{ disp_name = "爆裂拳", name = "爆裂拳2", type = act_types.attack, ids = { 0xAF, }, },
-		{ disp_name = "爆裂拳", name = "爆裂拳3", type = act_types.attack, ids = { 0xB2, }, },
-		{ name = "爆裂フック", type = act_types.attack, ids = { 0xB3, 0xB4, 0xB5, }, },
-		{ name = "爆裂アッパー", type = act_types.attack, ids = { 0xF8, 0xF9, 0xFA, 0xFB, }, },
-		{ name = "ハリケーンアッパー", type = act_types.attack, ids = { 0xB8, 0xB9, 0xBA, }, firing = true, },
-		{ name = "爆裂ハリケーン", type = act_types.attack, ids = { 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, }, },
-		{ name = "スクリューアッパー", type = act_types.attack, ids = { 0xFE, 0xFF, 0x100, }, firing = true, },
-		{ disp_name = "サンダーファイヤー", name = "サンダーファイヤー(C)", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, 0x110, 0x111, }, },
-		{ disp_name = "サンダーファイヤー", name = "サンダーファイヤー(D)", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, }, },
+		{ disp_name = "爆裂拳", name = "爆裂拳3", type = act_types.any, ids = { 0xB2, }, },
+		{ name = "爆裂フック", type = act_types.attack, ids = { 0xB3, 0xB4, }, },
+		{ names = { "爆裂フック", }, type = act_types.any, ids = { 0xB5, }, },
+		{ name = "爆裂アッパー", type = act_types.attack, ids = { 0xF8, 0xF9, 0xFA, }, },
+		{ names = { "爆裂アッパー", }, type = act_types.any, ids = { 0xFB, }, },
+		{ name = "ハリケーンアッパー", type = act_types.any, ids = { 0xB8, }, },
+		{ names = { "ハリケーンアッパー", }, type = act_types.attack, ids = { 0xB9, 0xBA, }, firing = true, },
+		{ name = "爆裂ハリケーン", type = act_types.any, ids = { 0xC3, }, },
+		{ names = { "爆裂ハリケーン", }, type = act_types.attack, ids = { 0xC4, 0xC5, }, firing = true, },
+		{ names = { "爆裂ハリケーン", }, type = act_types.any, ids = { 0xC6, }, },
+		{ name = "スクリューアッパー", type = act_types.attack, ids = { 0xFE, 0xFF, }, firing = true, },
+		{ names = { "スクリューアッパー", }, type = act_types.any, ids = { 0x100, }, },
+		{ disp_name = "サンダーファイヤー", name = "サンダーファイヤー(C)", type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, 0x110, }, },
+		{ names = { "サンダーファイヤー", "サンダーファイヤー(C)", }, type = act_types.any, ids = { 0x111, }, },
+		{ disp_name = "サンダーファイヤー", name = "サンダーファイヤー(D)", type = act_types.attack, ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA, }, },
+		{ names = { "サンダーファイヤー", "サンダーファイヤー(D)", }, type = act_types.any, ids = { 0xEB, }, },
 		{ disp_name = "CA 立A", name = "CA 立A(2段目)", type = act_types.attack, ids = { 0x24B, }, },
 		{ disp_name = "CA 立B", name = "CA 立B(2段目)", type = act_types.attack, ids = { 0x42, }, },
 		{ disp_name = "CA 立B", name = "CA 遠立B(2段目)", type = act_types.attack, ids = { 0x244, }, },
@@ -899,7 +912,8 @@ local char_acts_base = {
 		{ disp_name = "CA 立B", name = "CA 立B(3段目)", type = act_types.attack, ids = { 0x45, }, },
 		{ disp_name = "CA _3C", name = "CA 3C(3段目)", type = act_types.attack, ids = { 0x246, }, },
 		{ disp_name = "CA 立C", name = "CA 立C(2段目)", type = act_types.attack, ids = { 0x240, }, },
-		{ disp_name = "CA _8C", name = "CA 8C(3段目)", type = act_types.overhead, ids = { 0x251, 0x252, 0x253, }, },
+		{ disp_name = "CA _8C", name = "CA 8C(3段目)", type = act_types.overhead, ids = { 0x251, 0x252, }, },
+		{ names = { "CA _8C", "CA 8C(3段目)", }, type = act_types.any, ids = { 0x253, }, },
 		{ disp_name = "CA 立C", name = "CA 立C(3段目)", type = act_types.attack, ids = { 0x46, }, },
 		{ disp_name = "CA _2_3_6+C", name = "CA 236C(3段目)", type = act_types.attack, ids = { 0x24A, }, },
 	},
@@ -7101,9 +7115,10 @@ function rbff2.startplugin()
 
 	-- 状態クリア
 	local cls_ps = function()
-		for i, p in ipairs(players) do
+		for _, p in ipairs(players) do
 			local op = p.op
 			p.input_states = {}
+			p.char_data = chars[p.char]
 			p.init_stun = p.char_data.init_stuns
 
 			do_recover(p, op, true)
@@ -11450,7 +11465,7 @@ function rbff2.startplugin()
 	local menu_nop = function() end
 	local setup_char_manu = function()
 		-- キャラにあわせたメニュー設定
-		for i, p in ipairs(players) do
+		for _, p in ipairs(players) do
 			local tmp_chr = pgm:read_u8(p.addr.char)
 
 			-- ブレイクショット
@@ -11469,6 +11484,7 @@ function rbff2.startplugin()
 				p.dummy_rvs = get_next_rvs(p)
 			end
 
+			p.char_data      = chars[p.char]
 			p.gd_rvs_enabled = false
 			p.rvs_count      = -1
 		end
