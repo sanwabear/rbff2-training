@@ -10557,6 +10557,9 @@ function rbff2.startplugin()
 				else
 					if p.backstep_killer then
 						-- コマンド入力状態を無効にしてバクステ暴発を防ぐ
+						-- TODO 簡易超必がONのときはコマンド入力状態が変わるのでバクステが暴発するキャラがいる
+						-- 対象はコマンドが多い＝テーブル状態の変化の影響を受けるキャラ
+						-- ギース、山崎、ダック、クラウザー、シャンフェイ
 						pgm:write_u8(p.input_offset + p.char_data.bs_addr, 0x00)
 						p.backstep_killer = false
 					end
