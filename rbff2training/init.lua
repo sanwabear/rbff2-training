@@ -5879,6 +5879,7 @@ function rbff2.startplugin()
 			hit1             = 0,          -- ヒット時（硬直前後）フレームの判断用
 			on_hit           = 0,          -- ヒット時（硬直前）フレーム
 			on_hit1          = 0,          -- ヒット時（硬直後）フレーム
+			on_punish        = 0,
 			on_wakeup        = 0,
 			on_down          = 0,
 			hit_skip         = 0,
@@ -9274,9 +9275,8 @@ function rbff2.startplugin()
 			p.old_input_states = p.input_states or {}
 			p.input_states   = {}
 			local debug = false
-			local target_input_states = dip_config.easy_super and input_states.easy or input_states.normal
-			local all_input_states = target_input_states[#target_input_states] -- 調査用
-			local states = debug and all_input_states or target_input_states[p.char]
+			local states = dip_config.easy_super and input_states.easy or input_states.normal
+			states = debug and states[#states] or states[p.char]
 			for ti, tbl in ipairs(states) do
 				local old = p.old_input_states[ti]
 				local on = pgm:read_u8(tbl.addr + p.input_offset - 1)
@@ -9388,12 +9388,25 @@ function rbff2.startplugin()
 			p.on_hit         = p.on_hit or 0
 			p.on_guard       = p.on_guard or 0
 			p.hit_skip       = p.hit_skip or 0
+			p.on_punish      = p.on_punish or 0
 
 			if mem_0x10B862 ~= 0 and p.act_contact ~= 0 then
 				if p.state == 2 then
+					-- ガードへの遷移フレームを記録
 					p.on_guard = global.frame_number
+					p.on_punish = -1
 				elseif p.state == 1 or p.state == 3 then
+					-- ヒットへの遷移フレームを記録
 					p.on_hit = global.frame_number
+					if p.act_normal ~= true and p.old_state == 0 then
+						p.on_punish = global.frame_number
+					else
+						p.on_punish = -1
+					end
+				else
+					if p.act_normal ~= true and (p.on_punish + 60) >= global.frame_number then
+						p.on_punish = -1
+					end
 				end
 				if pgm:read_u8(p.addr.base + 0xAB) > 0 or p.ophit then
 					p.hit_skip = 2
@@ -10469,11 +10482,13 @@ function rbff2.startplugin()
 				lever = lever .. "_D"
 				btn_d = true
 			end
+			-- GG風キーディスの更新
 			table.insert(p.ggkey_hist, { l = lever_no, a = btn_a, b = btn_b, c = btn_c, d = btn_d, })
 			while 60 < #p.ggkey_hist do
 				--バッファ長調整
 				table.remove(p.ggkey_hist, 1)
 			end
+			-- キーログの更新
 			if p.key_hist[#p.key_hist] ~= lever then
 				for k = 2, #p.key_hist do
 					p.key_hist[k - 1] = p.key_hist[k]
@@ -11457,7 +11472,21 @@ function rbff2.startplugin()
 							return 0xFFFF0000
 						end
 					end
+					local col2 = function(frame_number)
+						if (frame_number + 10) <= global.frame_number then
+							return 0xFFFFFFFF
+						else
+							return 0xFF00FFFF
+						end
+					end
 					draw_rtext_with_shadow(p1 and 155 or 170, 40, p.last_frame_gap, col(p.last_frame_gap))
+					if p.on_punish > 0 and p.on_punish <= global.frame_number then
+						if p1 then
+							draw_rtext_with_shadow(155, 46, "PUNISH", col2(p.on_punish))
+						else
+							draw_text_with_shadow(170, 46, "PUNISH", col2(p.on_punish))
+						end
+					end
 				end
 			end
 
