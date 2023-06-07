@@ -3079,6 +3079,7 @@ local create_input_states = function()
 	local _4chg6c = "_4|^4|_6|_C"
 	local _616ab = "_6|_1|_6|_A+_B"
 	local _623a = "_6|_2|_3|_A"
+	local _623ab = "_6|_2|_3|_A+_B"
 	local _623b = "_6|_2|_3|_B"
 	local _623bc = "_6|_2|_3|_B+_C"
 	local _623c = "_6|_2|_3|_C"
@@ -3414,19 +3415,9 @@ local create_input_states = function()
 			{ name = "ダックダンスC連打"               , addr = 0x72, easy_addr = 0x52, cmd = _cccc, },
 			{ name = "ダッシュ"                        , addr = 0x76, easy_addr = 0x5A, cmd = _66, type = input_state_types.step, },
 			{ name = "バックステップ"                  , addr = 0x7A, easy_addr = 0x5E, cmd = _44, type = input_state_types.step, },
-			--[[
-			{ name = "?"                               , addr = nil , easy_Addr = 0x62,	cmd = "?", type = input_state_types.unknown, },
-			{ name = "?"                               , addr = nil , easy_Addr = 0x66,	cmd = "?", type = input_state_types.unknown, },
-			{ name = "?"                               , addr = nil , easy_Addr = 0x6A,	cmd = "?", type = input_state_types.unknown, },
-			]]
 			{ name = "ショッキングボール"              , addr = 0x8A, easy_addr = 0x6E, cmd = _2c, type = input_state_types.faint, },
 			{ name = "CA ブレイクストーム"             , addr = 0x8E, easy_addr = 0x72, cmd = _2369b, },
 			{ name = "フェイントダックダンス"          , addr = 0x92, easy_addr = 0x76, cmd = _2bc, type = input_state_types.faint, },
-			--[[
-			{ name = "?"                               , addr = nil , easy_Addr = 0x7A,	cmd = "?", type = input_state_types.unknown, },
-			{ name = "?"                               , addr = nil , easy_Addr = 0x7E,	cmd = "?", type = input_state_types.unknown, },
-			{ name = "?"                               , addr = nil , easy_Addr = 0x82,	cmd = "?", type = input_state_types.unknown, },
-			]]
 		},
 		{ --キム・カッファン
 			{ name = "飛燕斬"                          , addr = 0x02, cmd = _2chg8b, type = input_state_types.charge, },
@@ -3552,7 +3543,8 @@ local create_input_states = function()
 			{ name = "閃里肘皇・心砕把"                , addr = 0x1A, cmd = _214b, },
 			{ name = "天崩山"                          , addr = 0x1E, cmd = _623b, },
 			{ name = "大鉄神"                          , addr = 0x22, cmd = _64123bc, sdm = "a", },
-			{ name = "超白龍"                          , addr = 0x26, cmd = _616ab, sdm = "x", },
+			{ name = "超白龍"                          , addr = 0x26, cmd = _616ab, },
+			--{ name = "超白龍?"                         , addr = 0x2A, cmd = _623ab, },
 			{ name = "真心牙_8_6_2_4"                  , addr = 0x2E, cmd = _8624c, sdm = "x", },
 			{ name = "真心牙_6_2_4_8"                  , addr = 0x32, cmd = _6248c, sdm = "x", },
 			{ name = "真心牙_2_4_8_6"                  , addr = 0x36, cmd = _2486c, sdm = "x", },
@@ -13125,6 +13117,9 @@ function rbff2.startplugin()
 
 			-- 対戦の双角ステージをビリーステージに変更する MVSと家庭用共通
 			pgm:write_direct_u16(0xF290, 0x0004)
+
+			-- 簡易超必ONのときにダックのブレイクスパイラルブラザー（BRも）が出るようにする
+			pgm:write_direct_u16(0x0CACC8, 0xC37C)
 
 			-- クレジット消費をNOPにする
 			pgm:write_direct_u32(0x00D238, 0x4E714E71)
