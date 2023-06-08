@@ -12789,6 +12789,46 @@ function rbff2.startplugin()
 		-- メニュー表示中はDIPかポーズでフリーズさせる
 		set_freeze(false)
 	end
+	local menu_cur_updown = function(add_val)
+		local temp_row = menu_cur.pos.row
+		while true do
+			temp_row = (temp_row + add_val) % #menu_cur.list
+			if temp_row < 1 then
+				temp_row = #menu_cur.list
+			elseif temp_row > #menu_cur.list then
+				temp_row = 1
+			end
+			menu_cur.pos.row = temp_row
+			-- ラベルだけ行の場合はスキップ
+			if not is_label_line(menu_cur.list[temp_row][1]) then
+				break
+			end
+		end
+		if not (menu_cur.pos.offset < menu_cur.pos.row and menu_cur.pos.row < menu_cur.pos.offset + menu_max_row) then
+			menu_cur.pos.offset = math.max(1, menu_cur.pos.row - menu_max_row)
+		end
+		global.input_accepted = scr:frame_number()
+	end
+	local menu_cur_lr = function(add_val, loop)
+		-- カーソル右移動
+		local cols = menu_cur.list[menu_cur.pos.row][2]
+		if cols then
+			local col_pos = menu_cur.pos.col
+			local temp_col = col_pos[menu_cur.pos.row]
+			if loop then
+				temp_col = temp_col and ((temp_col + add_val) % #col_pos) or 1
+			else
+				temp_col = temp_col and temp_col + add_val or 1
+			end
+			if temp_col < 1 then
+				temp_col = loop and #cols or 1
+			elseif temp_col > #cols then
+				temp_col = loop and 1 or #cols
+			end
+			col_pos[menu_cur.pos.row] = temp_col
+		end
+		global.input_accepted = scr:frame_number()
+	end
 	menu.draw = function()
 		local ec = scr:frame_number()
 		local state_past = ec - global.input_accepted
@@ -12821,88 +12861,22 @@ function rbff2.startplugin()
 			global.input_accepted = ec
 		elseif accept_input("Up", joy_val, state_past) then
 			-- カーソル上移動
-			local temp_row = menu_cur.pos.row
-			while true do
-				temp_row = (temp_row - 1) % #menu_cur.list
-				if temp_row < 1 then
-					temp_row = #menu_cur.list
-				elseif temp_row > #menu_cur.list then
-					temp_row = 1
-				end
-				menu_cur.pos.row = temp_row
-				-- ラベルだけ行の場合はスキップ
-				if not is_label_line(menu_cur.list[temp_row][1]) then
-					break
-				end
-			end
-			if not (menu_cur.pos.offset < menu_cur.pos.row and menu_cur.pos.row < menu_cur.pos.offset + menu_max_row) then
-				menu_cur.pos.offset = math.max(1, menu_cur.pos.row - menu_max_row)
-			end
-			global.input_accepted = ec
+			menu_cur_updown(-1)
 		elseif accept_input("Down", joy_val, state_past) then
 			-- カーソル下移動
-			local temp_row = menu_cur.pos.row
-			while true do
-				temp_row = (temp_row + 1) % #menu_cur.list
-				if temp_row < 1 then
-					temp_row = #menu_cur.list
-				elseif temp_row > #menu_cur.list then
-					temp_row = 1
-				end
-				menu_cur.pos.row = temp_row
-				-- ラベルだけ行の場合はスキップ
-				if not is_label_line(menu_cur.list[temp_row][1]) then
-					break
-				end
-			end
-			if not (menu_cur.pos.offset < menu_cur.pos.row and menu_cur.pos.row < menu_cur.pos.offset + menu_max_row) then
-				menu_cur.pos.offset = math.max(1, menu_cur.pos.row - menu_max_row)
-			end
-			global.input_accepted = ec
+			menu_cur_updown(1)
 		elseif accept_input("Left", joy_val, state_past) then
 			-- カーソル左移動
-			local cols = menu_cur.list[menu_cur.pos.row][2]
-			if cols then
-				local col_pos = menu_cur.pos.col
-				col_pos[menu_cur.pos.row] = col_pos[menu_cur.pos.row] and (col_pos[menu_cur.pos.row]-1) or 1
-				if col_pos[menu_cur.pos.row] <= 0 then
-					col_pos[menu_cur.pos.row] = 1
-				end
-			end
-			global.input_accepted = ec
+			menu_cur_lr(-1, true)
 		elseif accept_input("Right", joy_val, state_past) then
 			-- カーソル右移動
-			local cols = menu_cur.list[menu_cur.pos.row][2]
-			if cols then
-				local col_pos = menu_cur.pos.col
-				col_pos[menu_cur.pos.row] = col_pos[menu_cur.pos.row] and (col_pos[menu_cur.pos.row]+1) or 2
-				if col_pos[menu_cur.pos.row] > #cols then
-					col_pos[menu_cur.pos.row] = #cols
-				end
-			end
-			global.input_accepted = ec
+			menu_cur_lr(1, true)
 		elseif accept_input("C", joy_val, state_past) then
 			-- カーソル左10移動
-			local cols = menu_cur.list[menu_cur.pos.row][2]
-			if cols then
-				local col_pos = menu_cur.pos.col
-				col_pos[menu_cur.pos.row] = col_pos[menu_cur.pos.row] and (col_pos[menu_cur.pos.row]-10) or 1
-				if col_pos[menu_cur.pos.row] <= 0 then
-					col_pos[menu_cur.pos.row] = 1
-				end
-			end
-			global.input_accepted = ec
+			menu_cur_lr(-10, false)
 		elseif accept_input("D", joy_val, state_past) then
 			-- カーソル右10移動
-			local cols = menu_cur.list[menu_cur.pos.row][2]
-			if cols then
-				local col_pos = menu_cur.pos.col
-				col_pos[menu_cur.pos.row] = col_pos[menu_cur.pos.row] and (col_pos[menu_cur.pos.row]+10) or 11
-				if col_pos[menu_cur.pos.row] > #cols then
-					col_pos[menu_cur.pos.row] = #cols
-				end
-			end
-			global.input_accepted = ec
+			menu_cur_lr(10, false)
 		end
 
 		-- メニュー表示本体
