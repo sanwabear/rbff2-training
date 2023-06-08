@@ -3823,22 +3823,21 @@ local rvs_types = {
 local pre_down_acts = new_set(0x142, 0x145, 0x156, 0x15A, 0x15B, 0x15E, 0x15F, 0x160, 0x162, 0x166, 0x16A, 0x16C, 0x16D, 0x174, 0x175, 0x186, 0x188, 0x189, 0x1E0, 0x1E1, 0x2AE, 0x2BA)
 -- コマンドテーブル上の技ID
 local common_rvs = {
-	{ cmd = cmd_base._3      , bs = false, common = true, name = "[共通] 斜め下前入れ", },
-	{ cmd = cmd_base._a      , bs = false, common = true, name = "[共通] 立A", },
-	{ cmd = cmd_base._b      , bs = false, common = true, name = "[共通] 立B", },
-	{ cmd = cmd_base._c      , bs = false, common = true, name = "[共通] 立C", },
-	{ cmd = cmd_base._d      , bs = false, common = true, name = "[共通] 立D", },
-	{ cmd = cmd_base._ab     , bs = false, common = true, name = "[共通] 避け攻撃", },
-	{ cmd = cmd_base._6c     , bs = false, common = true, name = "[共通] 投げ", throw = true, },
 	{ cmd = cmd_base._2a     , bs = false, common = true, name = "[共通] 下A", },
+	{ cmd = cmd_base._a      , bs = false, common = true, name = "[共通] 立A", },
 	{ cmd = cmd_base._2b     , bs = false, common = true, name = "[共通] 下B", },
+	{ cmd = cmd_base._b      , bs = false, common = true, name = "[共通] 立B", },
+	{ cmd = cmd_base._6c     , bs = false, common = true, name = "[共通] 投げ", throw = true, },
+	{ cmd = cmd_base._ab     , bs = false, common = true, name = "[共通] 避け攻撃", },
+	{ id = 0x1F, ver = 0x0600, bs = false, common = true, name = "[共通] バックステップ", },
 	{ cmd = cmd_base._2c     , bs = false, common = true, name = "[共通] 下C", },
 	{ cmd = cmd_base._2d     , bs = false, common = true, name = "[共通] 下D", },
+	{ cmd = cmd_base._c      , bs = false, common = true, name = "[共通] 立C", },
+	{ cmd = cmd_base._d      , bs = false, common = true, name = "[共通] 立D", },
 	{ cmd = cmd_base._8      , bs = false, common = true, name = "[共通] 垂直ジャンプ", jump = true, },
 	{ cmd = cmd_base._9      , bs = false, common = true, name = "[共通] 前ジャンプ", jump = true, },
 	{ cmd = cmd_base._7      , bs = false, common = true, name = "[共通] 後ジャンプ", jump = true, },
 	{ id = 0x1E, ver = 0x0600, bs = false, common = true, name = "[共通] ダッシュ", },
-	{ id = 0x1F, ver = 0x0600, bs = false, common = true, name = "[共通] バックステップ", },
 }
 local char_rvs_list = {
 	-- テリー・ボガード
@@ -12824,31 +12823,35 @@ function rbff2.startplugin()
 			-- カーソル上移動
 			local temp_row = menu_cur.pos.row
 			while true do
-				temp_row = temp_row-1
-				if temp_row <= 0 then
-					break
+				temp_row = (temp_row - 1) % #menu_cur.list
+				if temp_row < 1 then
+					temp_row = #menu_cur.list
+				elseif temp_row > #menu_cur.list then
+					temp_row = 1
 				end
+				menu_cur.pos.row = temp_row
 				-- ラベルだけ行の場合はスキップ
 				if not is_label_line(menu_cur.list[temp_row][1]) then
-					menu_cur.pos.row = temp_row
 					break
 				end
 			end
 			if not (menu_cur.pos.offset < menu_cur.pos.row and menu_cur.pos.row < menu_cur.pos.offset + menu_max_row) then
-				menu_cur.pos.offset = math.min(menu_cur.pos.offset, menu_cur.pos.row)
+				menu_cur.pos.offset = math.max(1, menu_cur.pos.row - menu_max_row)
 			end
 			global.input_accepted = ec
 		elseif accept_input("Down", joy_val, state_past) then
 			-- カーソル下移動
 			local temp_row = menu_cur.pos.row
 			while true do
-				temp_row = temp_row+1
-				if temp_row > #menu_cur.list then
-					break
+				temp_row = (temp_row + 1) % #menu_cur.list
+				if temp_row < 1 then
+					temp_row = #menu_cur.list
+				elseif temp_row > #menu_cur.list then
+					temp_row = 1
 				end
+				menu_cur.pos.row = temp_row
 				-- ラベルだけ行の場合はスキップ
 				if not is_label_line(menu_cur.list[temp_row][1]) then
-					menu_cur.pos.row = temp_row
 					break
 				end
 			end
