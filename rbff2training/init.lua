@@ -60,24 +60,26 @@ local main_or_menu_state, prev_main_or_menu_state
 local menu_cur, main_menu, tra_menu, rec_menu, play_menu, menu, tra_main, menu_exit, bs_menus, rvs_menus, bar_menu, disp_menu, ex_menu, col_menu, auto_menu
 local update_menu_pos, reset_menu_pos
 
-local mem_last_time         = 0      -- 最終読込フレーム(キャッシュ用)
-local mem_0x100701          = 0      -- 場面判定用
-local mem_0x107C22          = 0      -- 場面判定用
-local mem_0x10B862          = 0      -- ガードヒット=FF
-local mem_0x100F56          = 0      -- 潜在発動時の停止時間
-local mem_0x10FD82          = 0      -- console 0x00, mvs 0x01
-local mem_0x10FDAF          = 0      -- 場面判定用
-local mem_0x10FDB6          = 0      -- P1 P2 開始判定用
-local mem_0x10E043          = 0      -- 手動でポーズしたときに00以外になる
-local mem_biostest          = false  -- 初期化中のときtrue
-local match_active          = false  -- 対戦画面のときtrue
-local player_select_active  = false  -- プレイヤー選択画面のときtrue
-local mem_0x10CDD0          = 0x10CDD0 -- プレイヤー選択のハック用
-local p_space               = 0      -- 1Pと2Pの間隔
-local prev_p_space          = 0      -- 1Pと2Pの間隔(前フレーム)
-local stage_base_addr       = 0x100E00
-local close_far_offset      = 0x02AE08 -- 近距離技と遠距離技判断用のデータの開始位置
-local close_far_offset_d    = 0x02DDAA -- 対ラインの近距離技と遠距離技判断用のデータの開始位置
+local mem = {
+	last_time               = 0,        -- 最終読込フレーム(キャッシュ用)
+	_0x100701               = 0,        -- 場面判定用
+	_0x107C22               = 0,        -- 場面判定用
+	_0x10B862               = 0,        -- ガードヒット=FF
+	_0x100F56               = 0,        -- 潜在発動時の停止時間
+	_0x10FD82               = 0,        -- console 0x00, mvs 0x01
+	_0x10FDAF               = 0,        -- 場面判定用
+	_0x10FDB6               = 0,        -- P1 P2 開始判定用
+	_0x10E043               = 0,        -- 手動でポーズしたときに00以外になる
+	_0x10CDD0               = 0x10CDD0, -- プレイヤー選択のハック用
+	biostest                = false,    -- 初期化中のときtrue
+	stage_base_addr         = 0x100E00,
+	close_far_offset        = 0x02AE08, -- 近距離技と遠距離技判断用のデータの開始位置
+	close_far_offset_d      = 0x02DDAA, -- 対ラインの近距離技と遠距離技判断用のデータの開始位置
+}
+local match_active          = false     -- 対戦画面のときtrue
+local player_select_active  = false     -- プレイヤー選択画面のときtrue
+local p_space               = 0         -- 1Pと2Pの間隔
+local prev_p_space          = 0         -- 1Pと2Pの間隔(前フレーム)
 local offset_pos_x          = 0x20
 local offset_pos_z          = 0x24
 local offset_pos_y          = 0x28
@@ -4479,7 +4481,7 @@ local set_freeze = function(frz_expected)
 	local fzfld = dswport.fields["Freeze"]
 	local freez = ((dswport:read() & fzfld.mask) ~ fzfld.defvalue) <= 0
 
-	if mem_0x10FD82 ~= 0x00 then
+	if mem._0x10FD82 ~= 0x00 then
 		if freez ~= frz_expected then
 			fzfld:set_value(global.frz[global.frzc])
 			global.frzc = global.frzc +1
@@ -6337,9 +6339,9 @@ function rbff2.startplugin()
 		end
 		local org_char = char
 		char =  char - 1
-		local abc_offset = close_far_offset + (char * 4)
+		local abc_offset = mem.close_far_offset + (char * 4)
 		-- 家庭用02DD02からの処理
-		local d_offset = close_far_offset_d + (char * 2)
+		local d_offset = mem.close_far_offset_d + (char * 2)
 		local ret = {
 			a = { x1 = 0, x2 = pgm:read_u8(abc_offset)     },
 			b = { x1 = 0, x2 = pgm:read_u8(abc_offset + 1) },
@@ -7366,9 +7368,9 @@ function rbff2.startplugin()
 		local fixpos  = { pgm:read_i16(players[1].addr.pos)       , pgm:read_i16(players[2].addr.pos)        }
 		local fixsway = { pgm:read_u8(players[1].addr.sway_status), pgm:read_u8(players[2].addr.sway_status) }
 		local fixscr  = {
-			x = pgm:read_u16(stage_base_addr + offset_pos_x),
-			y = pgm:read_u16(stage_base_addr + offset_pos_y),
-			z = pgm:read_u16(stage_base_addr + offset_pos_z),
+			x = pgm:read_u16(mem.stage_base_addr + offset_pos_x),
+			y = pgm:read_u16(mem.stage_base_addr + offset_pos_y),
+			z = pgm:read_u16(mem.stage_base_addr + offset_pos_z),
 		}
 		recording.fixpos = { pos = pos, fixpos = fixpos, fixscr = fixscr, fixsway = fixsway, }
 	end
@@ -7544,12 +7546,12 @@ function rbff2.startplugin()
 					end
 				end
 				if fixpos.fixscr and global.replay_fix_pos and global.replay_fix_pos ~= 1 then
-					pgm:write_u16(stage_base_addr + offset_pos_x, fixpos.fixscr.x)
-					pgm:write_u16(stage_base_addr + offset_pos_x + 0x30, fixpos.fixscr.x)
-					pgm:write_u16(stage_base_addr + offset_pos_x + 0x2C, fixpos.fixscr.x)
-					pgm:write_u16(stage_base_addr + offset_pos_x + 0x34, fixpos.fixscr.x)
-					pgm:write_u16(stage_base_addr + offset_pos_y, fixpos.fixscr.y)
-					pgm:write_u16(stage_base_addr + offset_pos_z, fixpos.fixscr.z)
+					pgm:write_u16(mem.stage_base_addr + offset_pos_x, fixpos.fixscr.x)
+					pgm:write_u16(mem.stage_base_addr + offset_pos_x + 0x30, fixpos.fixscr.x)
+					pgm:write_u16(mem.stage_base_addr + offset_pos_x + 0x2C, fixpos.fixscr.x)
+					pgm:write_u16(mem.stage_base_addr + offset_pos_x + 0x34, fixpos.fixscr.x)
+					pgm:write_u16(mem.stage_base_addr + offset_pos_y, fixpos.fixscr.y)
+					pgm:write_u16(mem.stage_base_addr + offset_pos_z, fixpos.fixscr.z)
 				end
 			end
 			players[1].input_side     = pgm:read_u8(players[1].addr.input_side)
@@ -8853,7 +8855,7 @@ function rbff2.startplugin()
 			return
 		end
 		-- ポーズ中は状態を更新しない
-		if mem_0x10E043 ~= 0 then
+		if mem._0x10E043 ~= 0 then
 			return
 		end
 
@@ -8884,8 +8886,8 @@ function rbff2.startplugin()
 			return
 		end
 
-		screen_left = pgm:read_i16(stage_base_addr + offset_pos_x) + (320 - width) / 2 --FBA removes the side margins for some games
-		screen_top  = pgm:read_i16(stage_base_addr + offset_pos_y)
+		screen_left = pgm:read_i16(mem.stage_base_addr + offset_pos_x) + (320 - width) / 2 --FBA removes the side margins for some games
+		screen_top  = pgm:read_i16(mem.stage_base_addr + offset_pos_y)
 
 		-- プレイヤーと飛び道具のベースアドレスをキー、オブジェクトを値にするバッファ
 		local temp_hits = {}
@@ -9389,7 +9391,7 @@ function rbff2.startplugin()
 			p.hit_skip       = p.hit_skip or 0
 			p.on_punish      = p.on_punish or 0
 
-			if mem_0x10B862 ~= 0 and p.act_contact ~= 0 then
+			if mem._0x10B862 ~= 0 and p.act_contact ~= 0 then
 				if p.state == 2 then
 					-- ガードへの遷移フレームを記録
 					p.on_guard = global.frame_number
@@ -9412,7 +9414,7 @@ function rbff2.startplugin()
 					p.hit_skip = 2
 				end
 			end
-			if p.state == 0 and p.act_normal ~= true and mem_0x10B862 ~= 0 and op.act_contact ~= 0 then
+			if p.state == 0 and p.act_normal ~= true and mem._0x10B862 ~= 0 and op.act_contact ~= 0 then
 				p.on_punish = -1
 			end
 
@@ -9837,7 +9839,7 @@ function rbff2.startplugin()
 			--フレーム数
 			p.frame_gap      = p.frame_gap or 0
 			p.last_frame_gap = p.last_frame_gap or 0
-			if mem_0x10B862 ~= 0 and p.act_contact ~= 0 then
+			if mem._0x10B862 ~= 0 and p.act_contact ~= 0 then
 				local hitstun, blockstun = 0, 0
 				if p.ophit and p.ophit.hitboxes then
 					for _, box in pairs(p.ophit.hitboxes) do
@@ -9873,10 +9875,10 @@ function rbff2.startplugin()
 			else
 				-- 停止演出のチェックで背景なしチートの影響箇所をチェックするので背景なしONときは停止演出のチェックを飛ばす
 				p.skip_frame = p.hit_skip ~= 0 or p.stop ~= 0 or
-					(mem_0x100F56 == 0xFFFFFFFF or mem_0x100F56 == 0x0000FFFF)
+					(mem._0x100F56 == 0xFFFFFFFF or mem._0x100F56 == 0x0000FFFF)
 			end
 
-			if p.hit_skip ~= 0 or mem_0x100F56 ~= 0 then
+			if p.hit_skip ~= 0 or mem._0x100F56 ~= 0 then
 				--停止フレームはフレーム計算しない
 				if p.hit_skip ~= 0 then
 					--ヒットストップの減算
@@ -12947,51 +12949,51 @@ function rbff2.startplugin()
 
 		-- フレーム更新しているかチェック更新
 		local ec = scr:frame_number()
-		if mem_last_time == ec then
+		if mem.last_time == ec then
 			return
 		end
-		mem_last_time = ec
+		mem.last_time = ec
 
 		-- メモリ値の読込と更新
-		mem_0x100701  = pgm:read_u16(0x100701) -- 22e 22f 対戦中
-		mem_0x107C22  = pgm:read_u16(0x107C22) -- 対戦中4400
-		mem_0x10B862  = pgm:read_u8(0x10B862) -- 対戦中00
-		mem_0x100F56  = pgm:read_u32(0x100F56) --100F56 100F58
-		mem_0x10FD82  = pgm:read_u8(0x10FD82)
-		mem_0x10FDAF  = pgm:read_u8(0x10FDAF)
-		mem_0x10FDB6  = pgm:read_u16(0x10FDB6)
-		mem_biostest  = bios_test()
-		mem_0x10E043  = pgm:read_u8(0x10E043)
+		mem._0x100701  = pgm:read_u16(0x100701) -- 22e 22f 対戦中
+		mem._0x107C22  = pgm:read_u16(0x107C22) -- 対戦中4400
+		mem._0x10B862  = pgm:read_u8(0x10B862) -- 対戦中00
+		mem._0x100F56  = pgm:read_u32(0x100F56) --100F56 100F58
+		mem._0x10FD82  = pgm:read_u8(0x10FD82)
+		mem._0x10FDAF  = pgm:read_u8(0x10FDAF)
+		mem._0x10FDB6  = pgm:read_u16(0x10FDB6)
+		mem.biostest  = bios_test()
+		mem._0x10E043  = pgm:read_u8(0x10E043)
 		prev_p_space  = (p_space ~= 0) and p_space or prev_p_space
 
 		-- 対戦中かどうかの判定
-		if not mem_biostest
-			and active_mem_0x100701[mem_0x100701] ~= nil
-			and mem_0x107C22 == 0x4400
-			and mem_0x10FDAF == 2
-			and (mem_0x10FDB6 == 0x0100 or mem_0x10FDB6 == 0x0101) then
+		if not mem.biostest
+			and active_mem_0x100701[mem._0x100701] ~= nil
+			and mem._0x107C22 == 0x4400
+			and mem._0x10FDAF == 2
+			and (mem._0x10FDB6 == 0x0100 or mem._0x10FDB6 == 0x0101) then
 			match_active = true
 		else
 			match_active = false
 		end
 		-- プレイヤーセレクト中かどうかの判定
-		if not mem_biostest
-			and mem_0x100701 == 0x10B
-			and (mem_0x107C22 == 0x0000 or mem_0x107C22 == 0x5500)
-			and mem_0x10FDAF == 2
-			and mem_0x10FDB6 ~= 0
-			and mem_0x10E043 == 0 then
-			pgm:write_u32(mem_0x100F56, 0x00000000)
+		if not mem.biostest
+			and mem._0x100701 == 0x10B
+			and (mem._0x107C22 == 0x0000 or mem._0x107C22 == 0x5500)
+			and mem._0x10FDAF == 2
+			and mem._0x10FDB6 ~= 0
+			and mem._0x10E043 == 0 then
+			pgm:write_u32(mem._0x100F56, 0x00000000)
 			player_select_active = true
 		else
 			player_select_active = false -- 状態リセット
-			pgm:write_u8(mem_0x10CDD0, 0x00)
+			pgm:write_u8(mem._0x10CDD0, 0x00)
 			pgm:write_u32(players[1].addr.select_hook)
 			pgm:write_u32(players[2].addr.select_hook)
 		end
 
 		-- ROM部分のメモリエリアへパッチあて
-		if mem_biostest then
+		if mem.biostest then
 			pached = false               -- 状態リセット
 		elseif not pached then
 			pached = apply_patch_file("char1-p1.pat", true)
@@ -13165,7 +13167,7 @@ function rbff2.startplugin()
 		end
 
 		-- 強制的に家庭用モードに変更
-		if not mem_biostest then
+		if not mem.biostest then
 			pgm:write_direct_u16(0x10FE32, 0x0000)
 		end
 
@@ -13225,7 +13227,7 @@ function rbff2.startplugin()
 			end
 		end
 		if player_select_active then
-			if pgm:read_u8(mem_0x10CDD0) > 12 then
+			if pgm:read_u8(mem._0x10CDD0) > 12 then
 				local addr1 = 0xFFFFFF & pgm:read_u32(players[1].addr.select_hook)
 				local addr2 = 0xFFFFFF & pgm:read_u32(players[2].addr.select_hook)
 				if addr1 > 0 then
