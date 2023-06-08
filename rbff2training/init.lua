@@ -9399,8 +9399,9 @@ function rbff2.startplugin()
 					-- ヒットへの遷移フレームを記録
 					p.on_hit = global.frame_number
 					if p.act_normal ~= true and p.old_state == 0 then
+						-- 確定反撃フレームを記録
 						p.on_punish = global.frame_number
-					else
+					elseif p.old_state == 0 or p.old_state == 2 then
 						p.on_punish = -1
 					end
 				else
@@ -9411,6 +9412,9 @@ function rbff2.startplugin()
 				if pgm:read_u8(p.addr.base + 0xAB) > 0 or p.ophit then
 					p.hit_skip = 2
 				end
+			end
+			if p.state == 0 and p.act_normal ~= true and mem_0x10B862 ~= 0 and op.act_contact ~= 0 then
+				p.on_punish = -1
 			end
 
 			-- 起き上がりフレーム
