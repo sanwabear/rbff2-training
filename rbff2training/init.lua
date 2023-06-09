@@ -104,97 +104,97 @@ for i = -20, 70 do
 end
 
 local global = {
-	frame_number    = 0,
+	frame_number        = 0,
 
 	-- 当たり判定用
-	axis_color      = 0xFF797979,
-	axis_air_color  = 0xFFCC00CC,
+	axis_color          = 0xFF797979,
+	axis_air_color      = 0xFFCC00CC,
 	axis_internal_color = 0xFF00FFFF,
-	axis_size       = 12,
-	axis_size2      = 5,
-	no_alpha        = true, --fill = 0x00, outline = 0xFF for all box types
-	throwbox_height = 200, --default for ground throws
-	no_background   = false,
-	no_background_addr = 0x10DDF0,
-	fix_pos         = false,
-	fix_pos_bps     = nil,
-	no_bars         = false,
-	sync_pos_x      = 1, -- 1: OFF, 2:1Pと同期, 3:2Pと同期
+	axis_size           = 12,
+	axis_size2          = 5,
+	no_alpha            = true, --fill = 0x00, outline = 0xFF for all box types
+	throwbox_height     = 200, --default for ground throws
+	no_background       = false,
+	no_background_addr  = 0x10DDF0,
+	fix_pos             = false,
+	fix_pos_bps         = nil,
+	no_bars             = false,
+	sync_pos_x          = 1, -- 1: OFF, 2:1Pと同期, 3:2Pと同期
 
-	disp_pos        = true, -- 1P 2P 距離表示
-	disp_effect     = true, -- ヒットマークなど画面表示するときtrue
-	disp_effect_bps = nil,
-	disp_frmgap     = 3, -- フレーム差表示
-	disp_input_sts  = 1, -- コマンド入力状態表示 1:OFF 2:1P 3:2P
-	pause_hit       = 1, -- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
-	pause_hitbox    = 1, -- 判定発生時にポーズ
-	pause           = false,
-	replay_stop_on_dmg = false, -- ダメージでリプレイ中段
+	disp_pos            = true, -- 1P 2P 距離表示
+	disp_effect         = true, -- ヒットマークなど画面表示するときtrue
+	disp_effect_bps     = nil,
+	disp_frmgap         = 3, -- フレーム差表示
+	disp_input_sts      = 1, -- コマンド入力状態表示 1:OFF 2:1P 3:2P
+	pause_hit           = 1, -- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
+	pause_hitbox        = 1, -- 判定発生時にポーズ
+	pause               = false,
+	replay_stop_on_dmg  = false, -- ダメージでリプレイ中段
 
 	-- リバーサルとブレイクショットの設定
-	dummy_bs_cnt    = 1,     -- ブレイクショットのカウンタ
-	dummy_rvs_cnt   = 1,     -- リバーサルのカウンタ
+	dummy_bs_cnt        = 1, -- ブレイクショットのカウンタ
+	dummy_rvs_cnt       = 1, -- リバーサルのカウンタ
 
-	auto_input      = {
-		otg_thw      = false, -- ダウン投げ              2
-		otg_atk      = false, -- ダウン攻撃              3
-		thw_otg      = false, -- 通常投げの派生技        4
-		rave         = 1,     -- デッドリーレイブ        5
-		desire       = 1,     -- アンリミテッドデザイア  6
-		drill        = 5,     -- ドリル                  7
-		pairon       = 1,     -- 超白龍                  8
-		real_counter = 1,     -- M.リアルカウンター      9
-		auto_3ecst   = false, -- M.トリプルエクスタシー 10
-		auto_taneuma = false, -- 炎の種馬               11
-		auto_katsu   = false, -- 喝CA                   12
+	auto_input          = {
+		otg_thw       = false, -- ダウン投げ              2
+		otg_atk       = false, -- ダウン攻撃              3
+		thw_otg       = false, -- 通常投げの派生技        4
+		rave          = 1, -- デッドリーレイブ        5
+		desire        = 1, -- アンリミテッドデザイア  6
+		drill         = 5, -- ドリル                  7
+		pairon        = 1, -- 超白龍                  8
+		real_counter  = 1, -- M.リアルカウンター      9
+		auto_3ecst    = false, -- M.トリプルエクスタシー 10
+		auto_taneuma  = false, -- 炎の種馬               11
+		auto_katsu    = false, -- 喝CA                   12
 		-- 入力設定                                     13
-		esaka_check  = false, -- 詠酒距離チェック       14
-		fast_kadenzer= false, -- 必勝！逆襲拳           15
-		kara_ca      = false, -- 空振りCA               16
+		esaka_check   = false, -- 詠酒距離チェック       14
+		fast_kadenzer = false, -- 必勝！逆襲拳           15
+		kara_ca       = false, -- 空振りCA               16
 	},
 
-	frzc            = 1,
-	frz             = {0x1, 0x0},  -- DIPによる停止操作用の値とカウンタ
+	frzc                = 1,
+	frz                 = { 0x1, 0x0 }, -- DIPによる停止操作用の値とカウンタ
 
-	dummy_mode      = 1,
-	old_dummy_mode  = 1,
-	rec_main        = nil,
+	dummy_mode          = 1,
+	old_dummy_mode      = 1,
+	rec_main            = nil,
 
-	input_accepted  = 0,
+	input_accepted      = 0,
 
-	next_block_grace = 0,     -- 1ガードでの持続フレーム数
-	infinity_life2   = true,
-	pow_mode         = 2,     -- POWモード　1:自動回復 2:固定 3:通常動作
-	disp_gauge       = true,
-	repeat_interval  = 0,
-	await_neutral    = false,
-	replay_fix_pos   = 1,     -- 開始間合い固定 1:OFF 2:位置記憶 3:1Pと2P 4:1P 5:2P
-	replay_reset     = 2,     -- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
-	mame_debug_wnd   = false, -- MAMEデバッグウィンドウ表示のときtrue
-	damaged_move     = 1,
-	disp_replay      = true,  -- レコードリプレイガイド表示
-	save_snapshot    = 1,     -- 技画像保存 1:OFF 2:新規 3:上書き
+	next_block_grace    = 0, -- 1ガードでの持続フレーム数
+	infinity_life2      = true,
+	pow_mode            = 2, -- POWモード　1:自動回復 2:固定 3:通常動作
+	disp_gauge          = true,
+	repeat_interval     = 0,
+	await_neutral       = false,
+	replay_fix_pos      = 1, -- 開始間合い固定 1:OFF 2:位置記憶 3:1Pと2P 4:1P 5:2P
+	replay_reset        = 2, -- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
+	mame_debug_wnd      = false, -- MAMEデバッグウィンドウ表示のときtrue
+	damaged_move        = 1,
+	disp_replay         = true, -- レコードリプレイガイド表示
+	save_snapshot       = 1, -- 技画像保存 1:OFF 2:新規 3:上書き
 
 	-- log
-	log              = {
-		poslog       = false, -- 位置ログ
-		atklog       = false, -- 攻撃情報ログ
-		baselog      = false, -- フレーム事の処理アドレスログ
-		keylog       = false, -- 入力ログ
-		rvslog       = false, -- リバサログ
+	log                 = {
+		poslog  = false, -- 位置ログ
+		atklog  = false, -- 攻撃情報ログ
+		baselog = false, -- フレーム事の処理アドレスログ
+		keylog  = false, -- 入力ログ
+		rvslog  = false, -- リバサログ
 	},
 
-	new_hook_holder  = function()
+	new_hook_holder     = function ()
 		return { bps = {}, wps = {}, on = true, }
 	end,
 
-	wp = function(wps, rw, addr, len, cond, exec)
+	wp                  = function (wps, rw, addr, len, cond, exec)
 		table.insert(wps, cpu.debug:wpset(pgm, rw, addr, len, cond or 1, exec or ""))
 	end,
-	bp = function(bps, addr, cond, exec)
+	bp                  = function (bps, addr, cond, exec)
 		table.insert(bps, cpu.debug:bpset(addr, cond or 1, exec or ""))
 	end,
-	set_bps = function(disable, holder)
+	set_bps             = function (disable, holder)
 		if disable == true and holder.on == true then
 			for _, bp in ipairs(holder.bps) do
 				cpu.debug:bpdisable(bp)
@@ -207,7 +207,7 @@ local global = {
 			holder.on = true
 		end
 	end,
-	set_wps = function(disable, holder)
+	set_wps             = function (disable, holder)
 		if disable == true and holder.on == true then
 			for _, wp in ipairs(holder.wps) do
 				cpu.debug:wpdisable(wp)
@@ -232,90 +232,108 @@ local damaged_moves = {
 	0x3294C, 0x332E0, 0x349F2, 0x34CF4, 0x34ACC, 0x31AC6, 0x34E40, 0x31CA8, 0x30612, 0x33AC2,
 	0x301FC, 0x301F4, 0x3031A, 0x30312,
 }
+local hit_effect_types = {
+	down = "ダ",               -- ダウン
+	extra = "特",              -- 特殊なやられ
+	extra_launch = "特浮",     -- 特殊な空中追撃可能ダウン
+	force_stun = "気",         -- 強制気絶
+	fukitobi = "吹",           -- 吹き飛び
+	hikikomi = "後",           -- 後ろ向きのけぞり
+	hikikomi_launch = "後浮",  -- 後ろ向き浮き
+	launch = "浮",             -- 空中とダウン追撃可能ダウン
+	launch2 = "浮の～浮",      -- 浮のけぞり～ダウン
+	launch_nokezori = "浮の",  -- 浮のけぞり
+	nokezori = "の",           -- のけぞり
+	nokezori2 = "の(対スウェー時:ダ)", -- のけぞり 対スウェー時はダウン追撃可能ダウン
+	otg_down = "やられ付ダ",   -- ダウン追撃可能ダウン
+	plane_shift = "送",        -- スウェーライン送り
+	plane_shift_down = "送ダ", -- スウェーライン送りダウン
+	standup = "立",            -- 強制立のけぞり
+}
 local hit_effects = {
-	{ "の", "吹" },                               -- { "のけぞり", "吹き飛び" },
-	{ "の", "吹" },                               -- { "のけぞり", "吹き飛び" },
-	{ "の", "吹" },                               -- { "のけぞり", "吹き飛び" },
-	{ "の", "吹" },                               -- { "のけぞり", "吹き飛び" },
-	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "立", "吹" },                               -- { "強制立ちのけぞり", "吹き飛び" },
-	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "の", "吹" },                               -- { "のけぞり", "吹き飛び" },
-	{ "の(対スウェー時:ダ)", "吹" },              -- { "のけぞり", "吹き飛び" },
-	{ "送", "送ダ" },                             -- { "スウェーライン送り", "スウェーライン送りダウン(ダ)" },
-	{ "送ダ", "送ダ", "やられ付ダ" },         -- { "スウェーライン送りダウン(ダ)", "スウェーライン送りダウン(ダ)" },
-	{ "吹", "吹" },                               -- { "吹き飛び", "吹き飛び" },
-	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "の", "ダ", "やられ付ダ" },             -- { "のけぞり", "ダウン(ダ)" },
-	{ "の", "ダ", "やられ付ダ" },             -- { "のけぞり", "ダウン(ダ)" },
-	{ "の", "ダ", "やられ付ダ" },             -- { "のけぞり", "ダウン(ダ)" },
-	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "吹", "吹" },                               -- { "吹き飛び", "吹き飛び" },
-	{ "ダ", "ダ" },                               -- { "ダウン", "ダウン" },
-	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "ダ", "ダ" },                               -- { "ダウン", "ダウン" },
-	{ "ダ", "ダ" },                               -- { "ダウン", "ダウン" },
-	{ "ダ", "ダ" },                               -- { "ダウン", "ダウン" },
-	{ "後", "吹" },                               -- { "後ろ向きのけぞり", "吹き飛び" },
-	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "の", "ダ" },                               -- { "のけぞり", "ダウン" },
-	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "の", "ダ" },                               -- { "のけぞり", "ダウン" },
-	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "立", "立" },                               -- { "強制立ちのけぞり", "強制立ちのけぞり" },
-	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "特", "特" },                               -- { "特殊", "特殊" },
-	{ "特浮", "浮", "やられ付ダ" },           -- { "特殊(空)", "ダウン(空,ダ)" },
-	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "の", "吹" },                               -- { "のけぞり", "吹き飛び" },
-	{ "気", "気", "やられ付ダ" },             -- { "強制気絶", "強制気絶(ダ)" },
-	{ "の", "吹" },                               -- { "のけぞり", "吹き飛び" },
-	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "特", "特" },                               -- { "特殊", "特殊(ダ)" },
-	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "の", "ダ", "やられ付ダ" },             -- { "のけぞり", "ダウン(ダ)" },
-	{ "の", "ダ", "やられ付ダ" },             -- { "のけぞり", "ダウン(ダ)" },
-	{ "の", "ダ", "やられ付ダ" },             -- { "のけぞり", "ダウン(ダ)" },
-	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "の", "吹" },                               -- { "のけぞり", "吹き飛び" },
-	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "浮の", "浮", "やられ付ダ" },           -- { "のけぞり(空)", "ダウン(空,ダ)" },
-	{ "浮の", "浮", "やられ付ダ" },           -- { "のけぞり(空)", "ダウン(空,ダ)" },
-	{ "後浮", "浮", "やられ付ダ" },           -- { "後ろ向きのけぞり(空)", "ダウン(空,ダ)" },
-	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "特", "特" },                               -- { "特殊", "特殊" },
-	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "浮の～浮", "浮の～浮", "やられ付ダ" }, -- { "浮のけぞり～ダウン(空,ダ)", "浮のけぞり～ダウン(空,ダ)" },
-	{ "ダ", "ダ" },                               -- { "ダウン", "ダウン" },
-	{ "浮", "浮" },                               -- { "ダウン(空)", "ダウン(空)" },
-	{ "特", "特" },                               -- { "特殊", "特殊" },
-	{ "浮", "浮" },                               -- { "ダウン(空)", "ダウン(空)" },
-	{ "特", "特" },                               -- { "特殊", "特殊" },
-	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "ダ", "ダ" },                               -- { "ダウン", "ダウン" },
-	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
-	{ "ダ", "ダ", "やられ付ダ" },             -- { "ダウン(ダ)", "ダウン(ダ)" },
-	{ "浮", "浮", "やられ付ダ" },             -- { "ダウン(空,ダ)", "ダウン(空,ダ)" },
+	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
+	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
+	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
+	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
+	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.standup,          hit_effect_types.fukitobi },
+	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
+	{ hit_effect_types.nokezori2,        hit_effect_types.fukitobi },
+	{ hit_effect_types.plane_shift,      hit_effect_types.plane_shift_down },
+	{ hit_effect_types.plane_shift_down, hit_effect_types.plane_shift_down, hit_effect_types.otg_down },
+	{ hit_effect_types.fukitobi,         hit_effect_types.fukitobi },
+	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.fukitobi,         hit_effect_types.fukitobi },
+	{ hit_effect_types.down,             hit_effect_types.down },
+	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.down,             hit_effect_types.down },
+	{ hit_effect_types.down,             hit_effect_types.down },
+	{ hit_effect_types.down,             hit_effect_types.down },
+	{ hit_effect_types.hikikomi,         hit_effect_types.fukitobi },
+	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.nokezori,         hit_effect_types.down },
+	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+	{ hit_effect_types.nokezori,         hit_effect_types.down },
+	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+	{ hit_effect_types.standup,          hit_effect_types.standup },
+	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+	{ hit_effect_types.extra,            hit_effect_types.extra },
+	{ hit_effect_types.extra_launch,     hit_effect_types.launch,           hit_effect_types.otg_down },
+	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
+	{ hit_effect_types.force_stun,       hit_effect_types.force_stun,       hit_effect_types.otg_down },
+	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
+	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.extra,            hit_effect_types.extra },
+	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+	{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
+	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+	{ hit_effect_types.launch_nokezori,  hit_effect_types.launch,           hit_effect_types.otg_down },
+	{ hit_effect_types.launch_nokezori,  hit_effect_types.launch,           hit_effect_types.otg_down },
+	{ hit_effect_types.hikikomi_launch,  hit_effect_types.launch,           hit_effect_types.otg_down },
+	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.extra,            hit_effect_types.extra },
+	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.launch2,          hit_effect_types.launch2,          hit_effect_types.otg_down },
+	{ hit_effect_types.down,             hit_effect_types.down },
+	{ hit_effect_types.launch,           hit_effect_types.launch },
+	{ hit_effect_types.extra,            hit_effect_types.extra },
+	{ hit_effect_types.launch,           hit_effect_types.launch },
+	{ hit_effect_types.extra,            hit_effect_types.extra },
+	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+	{ hit_effect_types.down,             hit_effect_types.down },
+	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
 }
 local damaged_move_keys = {}
 for i = 1, #damaged_moves do
@@ -369,33 +387,33 @@ local chars = {
 }
 
 local bgms = {
-	{ id = 0x01, name = "クリといつまでも"              , }, --テリー・ボガード
-	{ id = 0x02, name = "雷波濤外伝"                    , }, --アンディ・ボガード
-	{ id = 0x03, name = "タイ南部に伝わったSPの詩"      , }, --東丈
-	{ id = 0x04, name = "まいまいきゅーん"              , }, --不知火舞
-	{ id = 0x05, name = "ギースにしょうゆとオケヒット"  , }, --ギース・ハワード
-	{ id = 0x06, name = "TAKU-HATSU-Rock"               , }, --望月双角,
-	{ id = 0x07, name = "蜜の味"                        , }, --ボブ・ウィルソン
-	{ id = 0x08, name = "ドンチカ!!チ!!チ!!"            , }, --ホンフゥ
-	{ id = 0x09, name = "Blue Mary's BLUES"             , }, --ブルー・マリー
-	{ id = 0x0A, name = "GOLI-Rock"                     , }, --フランコ・バッシュ
-	{ id = 0x0B, name = "C62 -シロクニ- Ver.2"          , }, --山崎竜二
-	{ id = 0x0C, name = "パンドラの箱より 第3番「決断」", }, --秦崇秀
-	{ id = 0x0D, name = "パンドラの箱より 第3番「決断」 ", }, --秦崇雷 崇秀と崇雷が同じBGMなので名前にスペースいれて排他かける
-	{ id = 0x0E, name = "Duck! Duck! Duck!"             , }, --ダック・キング
-	{ id = 0x0F, name = "ソウルっす♪"                  , }, --キム・カッファン
-	{ id = 0x10, name = "ロンドンマーチ"                , }, --ビリー・カーン
-	{ id = 0x11, name = "ハプシュ！フゥゥゥ"            , }, --チン・シンザン
-	{ id = 0x12, name = "中国四千年の歴史とはいかにII"  , }, --タン・フー・ルー,
-	{ id = 0x13, name = "牛とお戯れ"                    , }, --ローレンス・ブラッド
-	{ id = 0x14, name = "REQUIEM K.626 [Lacrimosa]"     , }, --ヴォルフガング・クラウザー
-	{ id = 0x15, name = "Exceed The Limit"              , }, --リック・ストラウド
-	{ id = 0x16, name = "雄々盛嬢後援 ～競場詩～"       , }, --李香緋
-	{ id = 0x17, name = "Get The Sky -With Your Dream-" , }, --アルフレッド
-	{ id = 0x00, name = "なし"                          , }, -- なし
-	{ id = 0x1C, name = "4 HITs Ⅱ"                     , }, -- キャラクターセレクト
-	{ id = 0x1E, name = "Gain a victory"                , }, -- 勝利デモ
-	{ id = 0x26, name = "NEOGEO SOUND LOGO"             , }, -- ネオジオデモ
+	{ id = 0x01, name = "クリといつまでも", },
+	{ id = 0x02, name = "雷波濤外伝", },
+	{ id = 0x03, name = "タイ南部に伝わったSPの詩", },
+	{ id = 0x04, name = "まいまいきゅーん", },
+	{ id = 0x05, name = "ギースにしょうゆとオケヒット", },
+	{ id = 0x06, name = "TAKU-HATSU-Rock", },
+	{ id = 0x07, name = "蜜の味", },
+	{ id = 0x08, name = "ドンチカ!!チ!!チ!!", },
+	{ id = 0x09, name = "Blue Mary's BLUES", },
+	{ id = 0x0A, name = "GOLI-Rock", },
+	{ id = 0x0B, name = "C62 -シロクニ- Ver.2", },
+	{ id = 0x0C, name = "パンドラの箱より 第3番「決断」", },
+	{ id = 0x0D, name = "パンドラの箱より 第3番「決断」 ", },
+	{ id = 0x0E, name = "Duck! Duck! Duck!", },
+	{ id = 0x0F, name = "ソウルっす♪", },
+	{ id = 0x10, name = "ロンドンマーチ", },
+	{ id = 0x11, name = "ハプシュ！フゥゥゥ", },
+	{ id = 0x12, name = "中国四千年の歴史とはいかにII", },
+	{ id = 0x13, name = "牛とお戯れ", },
+	{ id = 0x14, name = "REQUIEM K.626 [Lacrimosa]", },
+	{ id = 0x15, name = "Exceed The Limit", },
+	{ id = 0x16, name = "雄々盛嬢後援 ～競場詩～", },
+	{ id = 0x17, name = "Get The Sky -With Your Dream-", },
+	{ id = 0x00, name = "なし", },
+	{ id = 0x1C, name = "4 HITs Ⅱ", },
+	{ id = 0x1E, name = "Gain a victory", },
+	{ id = 0x26, name = "NEOGEO SOUND LOGO", },
 }
 local bgm_names = {}
 for _, bgm in ipairs(bgms) do
@@ -413,32 +431,32 @@ for _, bgm in ipairs(bgms) do
 	end
 end
 local stgs = {
-	{ stg1 = 0x01, stg2 = 0x00, stg3 = 0x01, name = "日本 [1]"          , no_background = false, }, -- 不知火舞
-	{ stg1 = 0x01, stg2 = 0x01, stg3 = 0x01, name = "日本 [2]"          , no_background = false, }, -- 望月双角,
-	{ stg1 = 0x01, stg2 = 0x01, stg3 = 0x0F, name = "日本 [2] 雨"       , no_background = false, }, -- 望月双角,
-	{ stg1 = 0x01, stg2 = 0x02, stg3 = 0x01, name = "日本 [3]"          , no_background = false, }, -- アンディ・ボガード
-	{ stg1 = 0x02, stg2 = 0x00, stg3 = 0x01, name = "香港1 [1]"         , no_background = false, }, -- チン・シンザン
-	{ stg1 = 0x02, stg2 = 0x01, stg3 = 0x01, name = "香港1 [2]"         , no_background = false, }, -- 山崎竜二
-	{ stg1 = 0x03, stg2 = 0x00, stg3 = 0x01, name = "韓国 [1]"          , no_background = false, }, -- キム・カッファン
-	{ stg1 = 0x03, stg2 = 0x01, stg3 = 0x01, name = "韓国 [2]"          , no_background = false, }, -- タン・フー・ルー,
-	{ stg1 = 0x04, stg2 = 0x00, stg3 = 0x01, name = "サウスタウン [1]"  , no_background = false, }, -- ギース・ハワード
-	{ stg1 = 0x04, stg2 = 0x01, stg3 = 0x01, name = "サウスタウン [2]"  , no_background = false, }, -- ビリー・カーン
-	{ stg1 = 0x05, stg2 = 0x00, stg3 = 0x01, name = "ドイツ [1]"        , no_background = false, }, -- ヴォルフガング・クラウザー
-	{ stg1 = 0x05, stg2 = 0x01, stg3 = 0x01, name = "ドイツ [2]"        , no_background = false, }, -- ローレンス・ブラッド
-	{ stg1 = 0x06, stg2 = 0x00, stg3 = 0x01, name = "アメリカ1 [1]"     , no_background = false, }, -- ダック・キング
-	{ stg1 = 0x06, stg2 = 0x01, stg3 = 0x01, name = "アメリカ1 [2]"     , no_background = false, }, -- ブルー・マリー
-	{ stg1 = 0x07, stg2 = 0x00, stg3 = 0x01, name = "アメリカ2 [1]"     , no_background = false, }, -- テリー・ボガード
-	{ stg1 = 0x07, stg2 = 0x01, stg3 = 0x01, name = "アメリカ2 [2]"     , no_background = false, }, -- リック・ストラウド
-	{ stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, name = "アメリカ2 [3]"     , no_background = false, }, -- アルフレッド
-	{ stg1 = 0x08, stg2 = 0x00, stg3 = 0x01, name = "タイ [1]"          , no_background = false, }, -- ボブ・ウィルソン
-	{ stg1 = 0x08, stg2 = 0x01, stg3 = 0x01, name = "タイ [2]"          , no_background = false, }, -- フランコ・バッシュ
-	{ stg1 = 0x08, stg2 = 0x02, stg3 = 0x01, name = "タイ [3]"          , no_background = false, }, -- 東丈
-	{ stg1 = 0x09, stg2 = 0x00, stg3 = 0x01, name = "香港2 [1]"         , no_background = false, }, -- 秦崇秀
-	{ stg1 = 0x09, stg2 = 0x01, stg3 = 0x01, name = "香港2 [2]"         , no_background = false, }, -- 秦崇雷,
-	{ stg1 = 0x0A, stg2 = 0x00, stg3 = 0x01, name = "NEW CHALLENGERS[1]", no_background = false, }, -- 李香緋
-	{ stg1 = 0x0A, stg2 = 0x01, stg3 = 0x01, name = "NEW CHALLENGERS[2]", no_background = false, }, -- ホンフゥ
-	{ stg1 = 0x04, stg2 = 0x01, stg3 = 0x01, name = "背景なし"          , no_background = true , }, -- 背景なし
-	{ stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, name = "背景なし(1LINE)"   , no_background = true , }, -- 背景なし(1LINE)
+	{ stg1 = 0x01, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "日本 [1] 舞", },
+	{ stg1 = 0x01, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "日本 [2] 双角1", },
+	{ stg1 = 0x01, stg2 = 0x01, stg3 = 0x0F, no_background = false, name = "日本 [2] 双角2", },
+	{ stg1 = 0x01, stg2 = 0x02, stg3 = 0x01, no_background = false, name = "日本 [3] アンディ", },
+	{ stg1 = 0x02, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "香港1 [1] チン", },
+	{ stg1 = 0x02, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "香港1 [2] 山崎", },
+	{ stg1 = 0x03, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "韓国 [1] キム", },
+	{ stg1 = 0x03, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "韓国 [2] タン", },
+	{ stg1 = 0x04, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "サウスタウン [1] ギース", },
+	{ stg1 = 0x04, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "サウスタウン [2] ビリー", },
+	{ stg1 = 0x05, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "ドイツ [1] クラウザー", },
+	{ stg1 = 0x05, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "ドイツ [2] ローレンス", },
+	{ stg1 = 0x06, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "アメリカ1 [1] ダック", },
+	{ stg1 = 0x06, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "アメリカ1 [2] マリー", },
+	{ stg1 = 0x07, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "アメリカ2 [1] テリー", },
+	{ stg1 = 0x07, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "アメリカ2 [2] リック", },
+	{ stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, no_background = false, name = "アメリカ2 [3] アルフレッド", },
+	{ stg1 = 0x08, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "タイ [1] ボブ", },
+	{ stg1 = 0x08, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "タイ [2] フランコ", },
+	{ stg1 = 0x08, stg2 = 0x02, stg3 = 0x01, no_background = false, name = "タイ [3] 東", },
+	{ stg1 = 0x09, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "香港2 [1] 崇秀", },
+	{ stg1 = 0x09, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "香港2 [2] 崇雷", },
+	{ stg1 = 0x0A, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "NEW CHALLENGERS[1] 香緋", },
+	{ stg1 = 0x0A, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "NEW CHALLENGERS[2] ホンフゥ", },
+	{ stg1 = 0x04, stg2 = 0x01, stg3 = 0x01, no_background = true,  name = "背景なし(2ライン)", },
+	{ stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, no_background = true,  name = "背景なし(1ライン)", },
 }
 local names = {}
 for _, stg in ipairs(stgs) do
@@ -619,58 +637,13 @@ local sts_flg_names = {
 local char_acts_base = {
 	-- テリー・ボガード
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", }, type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
 		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ disp_name = "フェイント", name = "フェイント パワーゲイザー", type = act_types.any, ids = { 0x113, }, },
 		{ disp_name = "フェイント", name = "フェイント バーンナックル", type = act_types.any, ids = { 0x112, }, },
 		{ name = "バスタースルー", type = act_types.any, ids = { 0x6D, 0x6E, }, },
@@ -717,58 +690,13 @@ local char_acts_base = {
 	},
 	-- アンディ・ボガード
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
 		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ disp_name = "フェイント", name = "フェイント 残影拳", type = act_types.any, ids = { 0x112, }, },
 		{ disp_name = "フェイント", name = "フェイント 飛翔拳", type = act_types.any, ids = { 0x113, }, },
 		{ disp_name = "フェイント", name = "フェイント 超裂破弾", type = act_types.any, ids = { 0x114, }, },
@@ -816,58 +744,13 @@ local char_acts_base = {
 	},
 	-- 東丈
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
 		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, 0xF7, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ disp_name = "フェイント", name = "フェイント スラッシュキック", type = act_types.any, ids = { 0x113, }, },
 		{ disp_name = "フェイント", name = "フェイント ハリケーンアッパー", type = act_types.any, ids = { 0x112, }, },
 		{ name = "ジョースペシャル", type = act_types.any, ids = { 0x6D, 0x6E, 0x6F, 0x70, 0x71, }, },
@@ -921,59 +804,14 @@ local char_acts_base = {
 	},
 	-- 不知火舞
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
 		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
 		{ disp_name = "立C", name = "立C2", type = act_types.attack, ids = { 0xF4, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ disp_name = "フェイント", name = "フェイント 花蝶扇", type = act_types.attack, ids = { 0x112, }, },
 		{ disp_name = "フェイント", name = "フェイント 花嵐", type = act_types.attack, ids = { 0x113, }, },
 		{ name = "風車崩し・改", type = act_types.attack, ids = { 0x6D, 0x6E, }, },
@@ -1011,58 +849,13 @@ local char_acts_base = {
 	},
 	-- ギース・ハワード
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
 		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
 		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ disp_name = "フェイント", name = "フェイント 烈風拳", type = act_types.any, ids = { 0x112, }, },
 		{ disp_name = "フェイント", name = "フェイント レイジングストーム", type = act_types.any, ids = { 0x113, }, },
 		{ name = "虎殺投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
@@ -1113,58 +906,12 @@ local char_acts_base = {
 	},
 	-- 望月双角,
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
-		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
 		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, 0x71 }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ disp_name = "フェイント", name = "フェイント まきびし", type = act_types.any, ids = { 0x112, }, },
 		{ disp_name = "フェイント", name = "フェイント いかづち", type = act_types.any, ids = { 0x113, }, },
 		{ name = "無道縛り投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
@@ -1200,58 +947,12 @@ local char_acts_base = {
 	},
 	-- ボブ・ウィルソン
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
-		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
 		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ disp_name = "フェイント", name = "フェイント ダンシングバイソン", type = act_types.any, ids = { 0x112, }, },
 		{ name = "ファルコン", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 		{ name = "ホーネットアタック", type = act_types.any, ids = { 0x7C, 0x7D, 0x7E, }, },
@@ -1289,58 +990,12 @@ local char_acts_base = {
 	},
 	-- ホンフゥ
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
-		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
 		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ disp_name = "フェイント", name = "フェイント 制空烈火棍", type = act_types.any, ids = { 0x112, }, },
 		{ name = "バックフリップ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 		{ name = "経絡乱打", type = act_types.any, ids = { 0x81, 0x82, 0x83, 0x84, }, },
@@ -1395,58 +1050,12 @@ local char_acts_base = {
 	},
 	-- ブルー・マリー
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
-		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
 		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ disp_name = "フェイント", name = "フェイント M.スナッチャー", type = act_types.any, ids = { 0x112, }, },
 		{ name = "ヘッドスロー", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 		{ name = "アキレスホールド", type = act_types.any, ids = { 0x7C, 0x7E, 0x7F, }, },
@@ -1502,58 +1111,12 @@ local char_acts_base = {
 	},
 	-- フランコ・バッシュ
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
-		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
 		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ disp_name = "フェイント", name = "フェイント ガッツダンク", type = act_types.any, ids = { 0x113, }, },
 		{ disp_name = "フェイント", name = "フェイント ハルマゲドンバスター", type = act_types.any, ids = { 0x112, }, },
 		{ name = "ゴリラッシュ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
@@ -1586,58 +1149,12 @@ local char_acts_base = {
 	},
 	-- 山崎竜二
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
-		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.low_attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.low_attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
 		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ disp_name = "フェイント", name = "フェイント 裁きの匕首", type = act_types.any, ids = { 0x112, }, },
 		{ name = "ブン投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 		{ name = "目ツブシ", type = act_types.attack, ids = { 0x68, 0x6C, }, firing = true, },
@@ -1682,58 +1199,12 @@ local char_acts_base = {
 	},
 	-- 秦崇秀
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
-		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
 		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ disp_name = "フェイント", name = "フェイント 海龍照臨", type = act_types.any, ids = { 0x112, }, },
 		{ name = "発勁龍", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 		{ name = "光輪殺", type = act_types.overhead, ids = { 0x68, }, },
@@ -1778,58 +1249,12 @@ local char_acts_base = {
 	},
 	-- 秦崇雷,
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
-		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
 		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ disp_name = "フェイント", name = "フェイント 帝王宿命拳", type = act_types.any, ids = { 0x112, }, },
 		{ name = "発勁龍", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 		{ name = "龍脚殺", type = act_types.overhead, ids = { 0x68, }, },
@@ -1865,58 +1290,12 @@ local char_acts_base = {
 	},
 	-- ダック・キング
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
-		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
-		{ name = "立B", type = act_types.overhead, ids = { 0x45, 0x73, 0x74, }, },
+		{ name = "立B", type = act_types.attack, ids = { 0x45, 0x73, 0x74, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ disp_name = "フェイント", name = "フェイント ダックダンス", type = act_types.any, ids = { 0x112, }, },
 		{ name = "ローリングネックスルー", type = act_types.attack, ids = { 0x6D, 0x6E, 0x6F, 0x70, 0x71, }, },
 		{ name = "ニードルロー", type = act_types.low_attack, ids = { 0x68, }, },
@@ -1980,58 +1359,12 @@ local char_acts_base = {
 	},
 	-- キム・カッファン
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
-		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
 		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.low_attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ disp_name = "フェイント", name = "フェイント 鳳凰脚", type = act_types.any, ids = { 0x112, }, },
 		{ name = "体落とし", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 		{ name = "ネリチャギ", type = act_types.overhead, ids = { 0x68, 0x69, }, },
@@ -2067,58 +1400,12 @@ local char_acts_base = {
 	},
 	-- ビリー・カーン
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
-		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.low_attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
 		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ disp_name = "フェイント", name = "フェイント 強襲飛翔棍", type = act_types.any, ids = { 0x112, }, },
 		{ name = "一本釣り投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 		{ name = "地獄落とし", type = act_types.any, ids = { 0x81, 0x82, 0x83, 0x84, }, },
@@ -2148,58 +1435,12 @@ local char_acts_base = {
 	},
 	-- チン・シンザン
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
-		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
 		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ disp_name = "フェイント", name = "フェイント 破岩撃", type = act_types.any, ids = { 0x112, }, },
 		{ disp_name = "フェイント", name = "フェイント クッサメ砲", type = act_types.any, ids = { 0x113, }, },
 		{ name = "合気投げ", type = act_types.any, ids = { 0x6D, 0x6E, }, },
@@ -2243,58 +1484,12 @@ local char_acts_base = {
 	},
 	-- タン・フー・ルー,
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
-		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
 		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ disp_name = "フェイント", name = "フェイント 旋風剛拳", type = act_types.any, ids = { 0x112, }, },
 		{ name = "裂千掌", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 		{ name = "右降龍", type = act_types.attack, ids = { 0x68, }, },
@@ -2321,58 +1516,12 @@ local char_acts_base = {
 	},
 	-- ローレンス・ブラッド
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
-		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
 		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ name = "マタドールバスター", type = act_types.any, ids = { 0x6D, 0x6E, 0x6F, }, },
 		{ name = "トルネードキック", type = act_types.attack, ids = { 0x68, }, },
 		{ name = "オーレィ", type = act_types.any, ids = { 0x69, }, },
@@ -2402,58 +1551,12 @@ local char_acts_base = {
 	},
 	-- ヴォルフガング・クラウザー
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
-		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
 		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ disp_name = "フェイント", name = "フェイント ブリッツボール", type = act_types.any, ids = { 0x112, }, },
 		{ disp_name = "フェイント", name = "フェイント カイザーウェイブ", type = act_types.any, ids = { 0x113, }, },
 		{ name = "ニースマッシャー", type = act_types.any, ids = { 0x6D, 0x6E, }, },
@@ -2496,58 +1599,12 @@ local char_acts_base = {
 	},
 	-- リック・ストラウド
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
-		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
 		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ disp_name = "フェイント", name = "フェイント シューティングスター", type = act_types.any, ids = { 0x112, }, },
 		{ name = "ガング・ホー", type = act_types.any, ids = { 0x6D, 0x6E, }, },
 		{ name = "チョッピングライト", type = act_types.overhead, ids = { 0x68, 0x69, }, },
@@ -2599,58 +1656,12 @@ local char_acts_base = {
 	},
 	-- 李香緋
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
-		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
 		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ disp_name = "フェイント", name = "フェイント 天崩山", type = act_types.any, ids = { 0x113, }, },
 		{ disp_name = "フェイント", name = "フェイント 大鉄神", type = act_types.any, ids = { 0x112, }, },
 		{ name = "力千後宴", type = act_types.any, ids = { 0x6D, 0x6E, }, },
@@ -2707,58 +1718,12 @@ local char_acts_base = {
 	},
 	-- アルフレッド
 	{
-		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
-		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
-		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
-		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
-		{ name = "スウェー戻り", type = act_types.any, ids = { 0x36, 0x37, 0x38, }, },
-		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
-		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
-		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
-		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
-		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
-		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
-		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
 		{ disp_name = "スウェーC", name = "近スウェーC", type = act_types.attack, ids = { 0x62, 0x63, 0x64, }, },
-		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
-		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
 		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "スウェーC", "近スウェーC", }, type = act_types.any, ids = { 0x25D, }, },
-		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
-		{ names = { "着地", "やられ", } , type = act_types.any, ids = { 0x9, }, },
-		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
-		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
-		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
-		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
-		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
 		{ name = "近立C", type = act_types.attack, ids = { 0x43, }, },
-		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
 		{ name = "立B", type = act_types.attack, ids = { 0x45, }, },
 		{ name = "立C", type = act_types.attack, ids = { 0x46, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
 		{ name = "下A", type = act_types.attack, ids = { 0x47, }, },
-		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
-		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
-		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
-		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
-		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
-		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
-		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
-		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
-		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
-		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
-		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
-		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
-		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
-		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
-		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
-		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
-		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
-		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
-		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
-		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
-		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
-		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 		{ disp_name = "フェイント", name = "フェイント クリティカルウィング", type = act_types.any, ids = { 0x112, }, },
 		{ disp_name = "フェイント", name = "フェイント オーグメンターウィング", type = act_types.any, ids = { 0x113, }, },
 		{ name = "バスタソニックウィング", type = act_types.any, ids = { 0x6D, 0x6E, }, },
@@ -2822,6 +1787,58 @@ local char_acts_base = {
 		{ name = "気絶", type = act_types.any, ids = { 0x194, 0x195, }, },
 		{ name = "ガード", type = act_types.guard, ids = { 0x117, 0x118, 0x119, 0x11A, 0x11B, 0x11C, 0x11D, 0x11E, 0x11F, 0x120, 0x121, 0x122, 0x123, 0x124, 0x125, 0x126, 0x127, 0x128, 0x129, 0x12A, 0x12B, 0x12C, 0x12C, 0x12D, 0x12E, 0x131, 0x132, 0x133, 0x134, 0x135, 0x136, 0x137, 0x139, }, },
 		{ name = "やられ", type = act_types.hit, ids = { 0x13F, 0x140, 0x141, 0x142, 0x143, 0x144, 0x145, 0x146, 0x147, 0x148, 0x149, 0x14A, 0x14B, 0x14C, 0x14C, 0x14D, 0x14E, 0x14F, 0x151, 0x1E9, 0x239 }, },
+		{ name = "ダッシュ", type = act_types.any, ids = { 0x17, 0x18, 0x19, }, },
+		{ name = "バックステップ", type = act_types.any, ids = { 0x1A, 0x1B, 0x1C, }, },
+		{ name = "立スウェー移動", type = act_types.any, ids = { 0x26, 0x27, 0x28, }, },
+		{ name = "下スウェー移動", type = act_types.any, ids = { 0x29, 0x2A, 0x2B, }, },
+		-- { name = "スウェー戻り",
+		{ name = "クイックロール", type = act_types.any, ids = { 0x39, 0x3A, 0x3B, }, },
+		{ disp_name = "ダッシュ", name = "スウェーライン上 ダッシュ", type = act_types.any, ids = { 0x30, 0x31, 0x32, }, },
+		{ disp_name = "バックステップ", name = "スウェーライン上 バックステップ", type = act_types.any, ids = { 0x33, 0x34, 0x35, }, },
+		{ names = { "スウェー戻り", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x37, 0x38, }, },
+		{ names = { "スウェー振り向き移動", "ダッシュ", "スウェーライン上 ダッシュ", "バックステップ", "スウェーライン上 バックステップ", }, type = act_types.any, ids = { 0x2BC, 0x2BD, }, },
+		{ disp_name = "スウェーA", name = "近スウェーA", type = act_types.overhead, ids = { 0x5C, 0x5D, 0x5E, }, },
+		{ disp_name = "スウェーB", name = "近スウェーB", type = act_types.low_attack, ids = { 0x5F, 0x60, 0x61, }, },
+		-- { disp_name = "スウェーC",
+		{ disp_name = "スウェーA", name = "スウェーA", type = act_types.overhead, ids = { 0x254, 0x255, 0x256, }, },
+		{ disp_name = "スウェーB", name = "スウェーB", type = act_types.low_attack, ids = { 0x257, 0x258, 0x259, }, },
+		{ disp_name = "スウェーC", name = "スウェーC", type = act_types.attack, ids = { 0x25A, 0x25B, 0x25C, }, },
+		-- { names = { "スウェーC",
+		{ name = "ジャンプ移行", type = act_types.any, ids = { 0x8, }, },
+		{ names = { "着地", "やられ", }, type = act_types.any, ids = { 0x9, }, },
+		{ name = "グランドスウェー", type = act_types.any, ids = { 0x13C, 0x13D, 0x13E, }, },
+		{ name = "テクニカルライズ", type = act_types.any, ids = { 0x2CA, 0x2C8, 0x2C9, }, },
+		{ name = "避け攻撃", type = act_types.attack, ids = { 0x67, }, },
+		{ name = "近立A", type = act_types.attack, ids = { 0x41, }, },
+		{ name = "近立B", type = act_types.attack, ids = { 0x42, }, },
+		-- { name = "近立C",
+		{ name = "立A", type = act_types.attack, ids = { 0x44, }, },
+		-- { name = "立B",
+		-- { name = "立C",
+		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(上)", type = act_types.attack, ids = { 0x65, }, },
+		-- { name = "下A",
+		{ name = "下B", type = act_types.low_attack, ids = { 0x48, }, },
+		{ name = "下C", type = act_types.low_attack, ids = { 0x49, }, },
+		{ disp_name = "対スウェーライン攻撃", name = "対スウェーライン攻撃(下)", type = act_types.low_attack, ids = { 0x66, }, },
+		{ disp_name = "着地", name = "ジャンプ着地1(小攻撃後)", type = act_types.any, ids = { 0x56, }, },
+		{ disp_name = "着地", name = "ジャンプ着地2(小攻撃後)", type = act_types.any, ids = { 0x59, }, },
+		{ disp_name = "着地", name = "ジャンプ着地3(大攻撃後)", type = act_types.any, ids = { 0x57, }, },
+		{ disp_name = "着地", name = "ジャンプ着地4(大攻撃後)", type = act_types.any, ids = { 0x5A, }, },
+		{ disp_name = "ジャンプA", name = "垂直ジャンプA", type = act_types.overhead, ids = { 0x4A, }, },
+		{ disp_name = "ジャンプB", name = "垂直ジャンプB", type = act_types.overhead, ids = { 0x4B, }, },
+		{ disp_name = "ジャンプC", name = "垂直ジャンプC", type = act_types.overhead, ids = { 0x4C, }, },
+		{ name = "ジャンプ振り向き", type = act_types.any, ids = { 0x1F, }, },
+		{ name = "ジャンプA", type = act_types.overhead, ids = { 0x4D, }, },
+		{ name = "ジャンプB", type = act_types.overhead, ids = { 0x4E, }, },
+		{ name = "ジャンプC", type = act_types.overhead, ids = { 0x4F, }, },
+		{ disp_name = "小ジャンプA", name = "垂直小ジャンプA", type = act_types.overhead, ids = { 0x50, }, },
+		{ disp_name = "小ジャンプB", name = "垂直小ジャンプB", type = act_types.overhead, ids = { 0x51, }, },
+		{ disp_name = "小ジャンプC", name = "垂直小ジャンプC", type = act_types.overhead, ids = { 0x52, }, },
+		{ name = "小ジャンプA", type = act_types.overhead, ids = { 0x53, }, },
+		{ name = "小ジャンプB", type = act_types.overhead, ids = { 0x54, }, },
+		{ name = "小ジャンプC", type = act_types.overhead, ids = { 0x55, }, },
+		{ name = "挑発", type = act_types.provoke, ids = { 0x196, }, },
+		{ disp_name = "おきあがり", name = "ダウンおきあがり", type = act_types.any, ids = { 0x193, 0x13B, 0x2C7, }, },
 	},
 }
 local char_fireball_base = {
@@ -3823,7 +2840,6 @@ local rvs_types = {
 	atemi               = 7, -- 当身うち空振りと裏雲隠し用
 }
 local pre_down_acts = new_set(0x142, 0x145, 0x156, 0x15A, 0x15B, 0x15E, 0x15F, 0x160, 0x162, 0x166, 0x16A, 0x16C, 0x16D, 0x174, 0x175, 0x186, 0x188, 0x189, 0x1E0, 0x1E1, 0x2AE, 0x2BA)
--- コマンドテーブル上の技ID
 local common_rvs = {
 	{ cmd = cmd_base._2a     , bs = false, common = true, name = "[共通] 下A", },
 	{ cmd = cmd_base._a      , bs = false, common = true, name = "[共通] 立A", },
@@ -3841,6 +2857,8 @@ local common_rvs = {
 	{ cmd = cmd_base._7      , bs = false, common = true, name = "[共通] 後ジャンプ", jump = true, },
 	{ id = 0x1E, ver = 0x0600, bs = false, common = true, name = "[共通] ダッシュ", },
 }
+-- idはコマンドテーブル上の技ID
+-- verは追加入力フラグとして認識される技ID
 local char_rvs_list = {
 	-- テリー・ボガード
 	{
@@ -4305,51 +3323,50 @@ local get_next_bs = function(p, excludes)
 end
 
 -- エミュレータ本体の入力取得
-local joyk = {
+local joyk                      = {
 	p1 = {
-		dn = "P1 Down"       , -- joyk.p1.dn
-		lt = "P1 Left"       , -- joyk.p1.lt
-		rt = "P1 Right"      , -- joyk.p1.rt
-		up = "P1 Up"         , -- joyk.p1.up
-		a  = "P1 A"   , -- joyk.p1.a
-		b  = "P1 B"   , -- joyk.p1.b
-		c  = "P1 C"   , -- joyk.p1.c
-		d  = "P1 D"   , -- joyk.p1.d
+		dn = "P1 Down",  -- joyk.p1.dn
+		lt = "P1 Left",  -- joyk.p1.lt
+		rt = "P1 Right", -- joyk.p1.rt
+		up = "P1 Up",    -- joyk.p1.up
+		a  = "P1 A",     -- joyk.p1.a
+		b  = "P1 B",     -- joyk.p1.b
+		c  = "P1 C",     -- joyk.p1.c
+		d  = "P1 D",     -- joyk.p1.d
 		st = "1 Player Start", -- joyk.p1.st
 	},
 	p2 = {
-		dn = "P2 Down"        , -- joyk.p2.dn
-		lt = "P2 Left"        , -- joyk.p2.lt
-		rt = "P2 Right"       , -- joyk.p2.rt
-		up = "P2 Up"          , -- joyk.p2.up
-		a  = "P2 A"    , -- joyk.p2.a
-		b  = "P2 B"    , -- joyk.p2.b
-		c  = "P2 C"    , -- joyk.p2.c
-		d  = "P2 D"    , -- joyk.p2.d
+		dn = "P2 Down",   -- joyk.p2.dn
+		lt = "P2 Left",   -- joyk.p2.lt
+		rt = "P2 Right",  -- joyk.p2.rt
+		up = "P2 Up",     -- joyk.p2.up
+		a  = "P2 A",      -- joyk.p2.a
+		b  = "P2 B",      -- joyk.p2.b
+		c  = "P2 C",      -- joyk.p2.c
+		d  = "P2 D",      -- joyk.p2.d
 		st = "2 Players Start", -- joyk.p2.st
 	},
 }
-local use_joy = {
-	{ port = ":edge:joy:JOY1" , field = joyk.p1.a , frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1" , field = joyk.p1.b , frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1" , field = joyk.p1.c , frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1" , field = joyk.p1.d , frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1" , field = joyk.p1.dn, frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1" , field = joyk.p1.lt, frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1" , field = joyk.p1.rt, frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1" , field = joyk.p1.up, frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY2" , field = joyk.p2.a , frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2" , field = joyk.p2.b , frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2" , field = joyk.p2.c , frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2" , field = joyk.p2.d , frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2" , field = joyk.p2.dn, frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2" , field = joyk.p2.lt, frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2" , field = joyk.p2.rt, frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2" , field = joyk.p2.up, frame = 0, prev = 0, player = 2, get = 0, },
+local use_joy                   = {
+	{ port = ":edge:joy:JOY1",  field = joyk.p1.a,  frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1",  field = joyk.p1.b,  frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1",  field = joyk.p1.c,  frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1",  field = joyk.p1.d,  frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1",  field = joyk.p1.dn, frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1",  field = joyk.p1.lt, frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1",  field = joyk.p1.rt, frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1",  field = joyk.p1.up, frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY2",  field = joyk.p2.a,  frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2",  field = joyk.p2.b,  frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2",  field = joyk.p2.c,  frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2",  field = joyk.p2.d,  frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2",  field = joyk.p2.dn, frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2",  field = joyk.p2.lt, frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2",  field = joyk.p2.rt, frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2",  field = joyk.p2.up, frame = 0, prev = 0, player = 2, get = 0, },
 	{ port = ":edge:joy:START", field = joyk.p2.st, frame = 0, prev = 0, player = 2, get = 0, },
 	{ port = ":edge:joy:START", field = joyk.p1.st, frame = 0, prev = 0, player = 1, get = 0, },
 }
-
 local get_joy_base = function(prev, exclude_player)
 	-- for pname, port in pairs(ioports) do
 	-- 	for fname, field in pairs(port.fields) do
@@ -4586,62 +3603,66 @@ local type_ck_thw  = function(obj, box) if obj.harmless then return true end end
 local type_ck_und  = function(obj, box)
 	--printf("%x, unk box id: %x", obj.base, box.id) --debug
 end
-local box_type_base = {
-	a   = { id = 0x00, name = "攻撃",                      enabled = true, type_check = type_ck_atk,  type = "attack", sort =  4, color = 0xFF00FF, fill = 0x40, outline = 0xFF },
-	fa  = { id = 0x00, name = "攻撃(嘘)",                  enabled = false,type_check = type_ck_und,  type = "attack", sort =  4, color = 0x00FF00, fill = 0x00, outline = 0xFF },
-	da  = { id = 0x00, name = "攻撃(無効)",                enabled = true, type_check = type_ck_und,  type = "attack", sort =  4, color = 0xFF00FF, fill = 0x00, outline = 0xFF },
-
-	aa  = { id = 0x00, name = "攻撃(空中追撃可)",          enabled = true, type_check = type_ck_atk,  type = "attack", sort =  4, color = 0xFF0033, fill = 0x40, outline = 0xFF },
-	faa = { id = 0x00, name = "攻撃(嘘、空中追撃可)",      enabled = false,type_check = type_ck_und,  type = "attack", sort =  4, color = 0x00FF33, fill = 0x00, outline = 0xFF },
-	daa = { id = 0x00, name = "攻撃(無効、空中追撃可)",    enabled = true, type_check = type_ck_und,  type = "attack", sort =  4, color = 0xFF0033, fill = 0x00, outline = 0xFF },
-
-	t3  = { id = 0x00, name = "未使用",                    enabled = true, type_check = type_ck_thw,  type = "throw",  sort = -1, color = 0x8B4513, fill = 0x40, outline = 0xFF },
-
-	pa  = { id = 0x00, name = "飛び道具",                  enabled = true, type_check = type_ck_atk,  type = "attack", sort =  5, color = 0xFF00FF, fill = 0x40, outline = 0xFF },
-	pfa = { id = 0x00, name = "飛び道具(嘘)",              enabled = true, type_check = type_ck_atk,  type = "attack", sort =  5, color = 0x00FF00, fill = 0x00, outline = 0xFF },
-	pda = { id = 0x00, name = "飛び道具(無効)",            enabled = true, type_check = type_ck_atk,  type = "attack", sort =  5, color = 0xFF00FF, fill = 0x00, outline = 0xFF },
-
-	paa = { id = 0x00, name = "飛び道具(空中追撃可)",      enabled = true, type_check = type_ck_atk,  type = "attack", sort =  5, color = 0xFF0033, fill = 0x40, outline = 0xFF },
-	pfaa= { id = 0x00, name = "飛び道具(嘘、空中追撃可)",  enabled = true, type_check = type_ck_atk,  type = "attack", sort =  5, color = 0x00FF33, fill = 0x00, outline = 0xFF },
-	pdaa= { id = 0x00, name = "飛び道具(無効、空中追撃可)",enabled = true, type_check = type_ck_atk,  type = "attack", sort =  5, color = 0xFF0033, fill = 0x00, outline = 0xFF },
-
-	t   = { id = 0x00, name = "投げ",                      enabled = true, type_check = type_ck_thw,  type = "throw",  sort =  6, color = 0xFFFF00, fill = 0x40, outline = 0xFF },
-	at  = { id = 0x00, name = "必殺技投げ",                enabled = true, type_check = type_ck_thw,  type = "throw",  sort =  6, color = 0xFFFF00, fill = 0x40, outline = 0xFF },
-	pt  = { id = 0x00, name = "空中投げ",                  enabled = true, type_check = type_ck_thw,  type = "throw",  sort =  6, color = 0xFFFF00, fill = 0x40, outline = 0xFF },
-	p   = { id = 0x01, name = "押し合い",                  enabled = true, type_check = type_ck_push, type = "push",   sort =  1, color = 0xDDDDDD, fill = 0x00, outline = 0xFF },
-	v1  = { id = 0x02, name = "食らい1",                   enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x0000FF, fill = 0x40, outline = 0xFF },
-	v2  = { id = 0x03, name = "食らい2",                   enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x0000FF, fill = 0x40, outline = 0xFF },
-	v3  = { id = 0x04, name = "食らい(ダウン追撃のみ可)",  enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x00FFFF, fill = 0x80, outline = 0xFF },
-	v4  = { id = 0x05, name = "食らい(空中追撃のみ可)",    enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x00FFFF, fill = 0x80, outline = 0xFF },
-	v5  = { id = 0x06, name = "食らい5(未使用?)",          enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x606060, fill = 0x40, outline = 0xFF },
-	v6  = { id = 0x07, name = "食らい(対ライン上攻撃)",    enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x00FFFF, fill = 0x80, outline = 0xFF },
-	x1  = { id = 0x08, name = "食らい(対ライン下攻撃)",    enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x00FFFF, fill = 0x80, outline = 0xFF },
-	x2  = { id = 0x09, name = "用途不明2",                 enabled = true, type_check = type_ck_und,  type = "unkown", sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF },
-	x3  = { id = 0x0A, name = "用途不明3",                 enabled = true, type_check = type_ck_und,  type = "unkown", sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF }, -- 1311C
-	x4  = { id = 0x0B, name = "用途不明4",                 enabled = true, type_check = type_ck_und,  type = "unkown", sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF },
-	x5  = { id = 0x0C, name = "用途不明5",                 enabled = true, type_check = type_ck_und,  type = "unkown", sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF },
-	x6  = { id = 0x0D, name = "用途不明6",                 enabled = true, type_check = type_ck_und,  type = "unkown", sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF },
-	x7  = { id = 0x0E, name = "用途不明7",                 enabled = true, type_check = type_ck_und,  type = "unkown", sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF },
-	x8  = { id = 0x0F, name = "用途不明8",                 enabled = true, type_check = type_ck_und,  type = "unkown", sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF },
-	x9  = { id = 0x10, name = "用途不明9",                 enabled = true, type_check = type_ck_und,  type = "unkown", sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF },
-	g1  = { id = 0x11, name = "立ガード",                  enabled = true, type_check = type_ck_gd,   type = "guard",  sort =  3, color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 stand-guard
-	g2  = { id = 0x12, name = "下段ガード",                enabled = true, type_check = type_ck_gd,   type = "guard",  sort =  3, color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 counch-guard
-	g3  = { id = 0x13, name = "空中ガード",                enabled = true, type_check = type_ck_gd,   type = "guard",  sort =  3, color = 0xC0C0C0, fill = 0x40, outline = 0xFF },--rbff2 air-guard
-	g4  = { id = 0x14, name = "上段当身投げ",              enabled = true, type_check = type_ck_gd,   type = "atemi",  sort =  3, color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 j.atemi-nage        012DBC
-	g5  = { id = 0x15, name = "裏雲隠し",                  enabled = true, type_check = type_ck_gd,   type = "atemi",  sort =  3, color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 c.atemi-nage        012DBC
-	g6  = { id = 0x16, name = "下段当身打ち",              enabled = true, type_check = type_ck_gd,   type = "atemi",  sort =  3, color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 g.ateminage         012DBC
-	g7  = { id = 0x17, name = "必勝逆襲拳",                enabled = true, type_check = type_ck_gd,   type = "atemi",  sort =  3, color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 h.gyakushu-kyaku    012DBC
-	g8  = { id = 0x18, name = "サドマゾ",                  enabled = true, type_check = type_ck_gd,   type = "atemi",  sort =  3, color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 sadomazo            012DBC
-	g9  = { id = 0x19, name = "倍返し",                    enabled = true, type_check = type_ck_gd,   type = "atemi",  sort =  3, color = 0xFF007F, fill = 0x40, outline = 0xFF },--rbff2 bai-gaeshi          012DBC
-	g12 = { id = 0x1A, name = "ガード?1",                  enabled = true, type_check = type_ck_und,  type = "guard",  sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF },--?
-	g11 = { id = 0x1B, name = "ガード?2",                  enabled = true, type_check = type_ck_und,  type = "guard",  sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF },--?
-	g10 = { id = 0x1C, name = "フェニックススルー",        enabled = true, type_check = type_ck_gd,   type = "atemi",  sort =  3, color = 0xFF7F00, fill = 0x40, outline = 0xFF },--rbff2 p.throw?            012DBC
-	g13 = { id = 0x1D, name = "ガード?4",                  enabled = true, type_check = type_ck_und,  type = "guard",  sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF },--?
-	g14 = { id = 0x1E, name = "ガード?5",                  enabled = true, type_check = type_ck_gd,   type = "guard",  sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF },--?
-	g15 = { id = 0x1F, name = "ガード?6",                  enabled = true, type_check = type_ck_und,  type = "guard",  sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF },--?
-	g16 = { id = 0x20, name = "ガード?7",                  enabled = true, type_check = type_ck_und,  type = "guard",  sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF },--?
-	sv1 = { id = 0x02, name = "食らい1(スウェー中)",       enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true },
-	sv2 = { id = 0x03, name = "食らい2(スウェー中)",       enabled = true, type_check = type_ck_vuln, type = "vuln",   sort =  2, color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true, },
+local box_types                 = {
+	atemi = "atemi",
+	attack = "attack",
+	block = "guard",
+	push = "push",
+	throw = "throw",
+	unknown = "unkown",
+	vuln = "vuln",
+}
+local box_type_base             = {
+	a    = { id = 0x00, enabled = true, type_check = type_ck_atk, type = box_types.attack, sort = 4, color = 0xFF00FF, fill = 0x40, outline = 0xFF, sway = false, name = "攻撃", },
+	fa   = { id = 0x00, enabled = false, type_check = type_ck_und, type = box_types.attack, sort = 4, color = 0x00FF00, fill = 0x00, outline = 0xFF, sway = false, name = "攻撃(嘘)", },
+	da   = { id = 0x00, enabled = true, type_check = type_ck_und, type = box_types.attack, sort = 4, color = 0xFF00FF, fill = 0x00, outline = 0xFF, sway = false, name = "攻撃(無効)", },
+	aa   = { id = 0x00, enabled = true, type_check = type_ck_atk, type = box_types.attack, sort = 4, color = 0xFF0033, fill = 0x40, outline = 0xFF, sway = false, name = "攻撃(空中追撃可)", },
+	faa  = { id = 0x00, enabled = false, type_check = type_ck_und, type = box_types.attack, sort = 4, color = 0x00FF33, fill = 0x00, outline = 0xFF, sway = false, name = "攻撃(嘘、空中追撃可)", },
+	daa  = { id = 0x00, enabled = true, type_check = type_ck_und, type = box_types.attack, sort = 4, color = 0xFF0033, fill = 0x00, outline = 0xFF, sway = false, name = "攻撃(無効、空中追撃可)", },
+	t3   = { id = 0x00, enabled = true, type_check = type_ck_thw, type = box_types.throw, sort = -1, color = 0x8B4513, fill = 0x40, outline = 0xFF, sway = false, name = "未使用", },
+	pa   = { id = 0x00, enabled = true, type_check = type_ck_atk, type = box_types.attack, sort = 5, color = 0xFF00FF, fill = 0x40, outline = 0xFF, sway = false, name = "飛び道具", },
+	pfa  = { id = 0x00, enabled = true, type_check = type_ck_atk, type = box_types.attack, sort = 5, color = 0x00FF00, fill = 0x00, outline = 0xFF, sway = false, name = "飛び道具(嘘)", },
+	pda  = { id = 0x00, enabled = true, type_check = type_ck_atk, type = box_types.attack, sort = 5, color = 0xFF00FF, fill = 0x00, outline = 0xFF, sway = false, name = "飛び道具(無効)", },
+	paa  = { id = 0x00, enabled = true, type_check = type_ck_atk, type = box_types.attack, sort = 5, color = 0xFF0033, fill = 0x40, outline = 0xFF, sway = false, name = "飛び道具(空中追撃可)", },
+	pfaa = { id = 0x00, enabled = true, type_check = type_ck_atk, type = box_types.attack, sort = 5, color = 0x00FF33, fill = 0x00, outline = 0xFF, sway = false, name = "飛び道具(嘘、空中追撃可)", },
+	pdaa = { id = 0x00, enabled = true, type_check = type_ck_atk, type = box_types.attack, sort = 5, color = 0xFF0033, fill = 0x00, outline = 0xFF, sway = false, name = "飛び道具(無効、空中追撃可)", },
+	t    = { id = 0x00, enabled = true, type_check = type_ck_thw, type = box_types.throw, sort = 6, color = 0xFFFF00, fill = 0x40, outline = 0xFF, sway = false, name = "投げ", },
+	at   = { id = 0x00, enabled = true, type_check = type_ck_thw, type = box_types.throw, sort = 6, color = 0xFFFF00, fill = 0x40, outline = 0xFF, sway = false, name = "必殺技投げ", },
+	pt   = { id = 0x00, enabled = true, type_check = type_ck_thw, type = box_types.throw, sort = 6, color = 0xFFFF00, fill = 0x40, outline = 0xFF, sway = false, name = "空中投げ", },
+	p    = { id = 0x01, enabled = true, type_check = type_ck_push, type = box_types.push, sort = 1, color = 0xDDDDDD, fill = 0x00, outline = 0xFF, sway = false, name = "押し合い", },
+	v1   = { id = 0x02, enabled = true, type_check = type_ck_vuln, type = box_types.vuln, sort = 2, color = 0x0000FF, fill = 0x40, outline = 0xFF, sway = false, name = "食らい1", },
+	v2   = { id = 0x03, enabled = true, type_check = type_ck_vuln, type = box_types.vuln, sort = 2, color = 0x0000FF, fill = 0x40, outline = 0xFF, sway = false, name = "食らい2", },
+	v3   = { id = 0x04, enabled = true, type_check = type_ck_vuln, type = box_types.vuln, sort = 2, color = 0x00FFFF, fill = 0x80, outline = 0xFF, sway = false, name = "食らい(ダウン追撃のみ可)", },
+	v4   = { id = 0x05, enabled = true, type_check = type_ck_vuln, type = box_types.vuln, sort = 2, color = 0x00FFFF, fill = 0x80, outline = 0xFF, sway = false, name = "食らい(空中追撃のみ可)", },
+	v5   = { id = 0x06, enabled = true, type_check = type_ck_vuln, type = box_types.vuln, sort = 2, color = 0x606060, fill = 0x40, outline = 0xFF, sway = false, name = "食らい5(未使用?)", },
+	v6   = { id = 0x07, enabled = true, type_check = type_ck_vuln, type = box_types.vuln, sort = 2, color = 0x00FFFF, fill = 0x80, outline = 0xFF, sway = false, name = "食らい(対ライン上攻撃)", },
+	x1   = { id = 0x08, enabled = true, type_check = type_ck_vuln, type = box_types.vuln, sort = 2, color = 0x00FFFF, fill = 0x80, outline = 0xFF, sway = false, name = "食らい(対ライン下攻撃)", },
+	x2   = { id = 0x09, enabled = true, type_check = type_ck_und, type = box_types.unknown, sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF, sway = false, name = "用途不明2", },
+	x3   = { id = 0x0A, enabled = true, type_check = type_ck_und, type = box_types.unknown, sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF, sway = false, name = "用途不明3", },
+	x4   = { id = 0x0B, enabled = true, type_check = type_ck_und, type = box_types.unknown, sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF, sway = false, name = "用途不明4", },
+	x5   = { id = 0x0C, enabled = true, type_check = type_ck_und, type = box_types.unknown, sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF, sway = false, name = "用途不明5", },
+	x6   = { id = 0x0D, enabled = true, type_check = type_ck_und, type = box_types.unknown, sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF, sway = false, name = "用途不明6", },
+	x7   = { id = 0x0E, enabled = true, type_check = type_ck_und, type = box_types.unknown, sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF, sway = false, name = "用途不明7", },
+	x8   = { id = 0x0F, enabled = true, type_check = type_ck_und, type = box_types.unknown, sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF, sway = false, name = "用途不明8", },
+	x9   = { id = 0x10, enabled = true, type_check = type_ck_und, type = box_types.unknown, sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF, sway = false, name = "用途不明9", },
+	g1   = { id = 0x11, enabled = true, type_check = type_ck_gd, type = box_types.block, sort = 3, color = 0xC0C0C0, fill = 0x40, outline = 0xFF, sway = false, name = "立ガード", },
+	g2   = { id = 0x12, enabled = true, type_check = type_ck_gd, type = box_types.block, sort = 3, color = 0xC0C0C0, fill = 0x40, outline = 0xFF, sway = false, name = "下段ガード", },
+	g3   = { id = 0x13, enabled = true, type_check = type_ck_gd, type = box_types.block, sort = 3, color = 0xC0C0C0, fill = 0x40, outline = 0xFF, sway = false, name = "空中ガード", },
+	g4   = { id = 0x14, enabled = true, type_check = type_ck_gd, type = box_types.atemi, sort = 3, color = 0xFF7F00, fill = 0x40, outline = 0xFF, sway = false, name = "上段当身投げ", },
+	g5   = { id = 0x15, enabled = true, type_check = type_ck_gd, type = box_types.atemi, sort = 3, color = 0xFF7F00, fill = 0x40, outline = 0xFF, sway = false, name = "裏雲隠し", },
+	g6   = { id = 0x16, enabled = true, type_check = type_ck_gd, type = box_types.atemi, sort = 3, color = 0xFF7F00, fill = 0x40, outline = 0xFF, sway = false, name = "下段当身打ち", },
+	g7   = { id = 0x17, enabled = true, type_check = type_ck_gd, type = box_types.atemi, sort = 3, color = 0xFF7F00, fill = 0x40, outline = 0xFF, sway = false, name = "必勝逆襲拳", },
+	g8   = { id = 0x18, enabled = true, type_check = type_ck_gd, type = box_types.atemi, sort = 3, color = 0xFF7F00, fill = 0x40, outline = 0xFF, sway = false, name = "サドマゾ", },
+	g9   = { id = 0x19, enabled = true, type_check = type_ck_gd, type = box_types.atemi, sort = 3, color = 0xFF007F, fill = 0x40, outline = 0xFF, sway = false, name = "倍返し", },
+	g12  = { id = 0x1A, enabled = true, type_check = type_ck_und, type = box_types.block, sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF, sway = false, name = "ガード?1", },
+	g11  = { id = 0x1B, enabled = true, type_check = type_ck_und, type = box_types.block, sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF, sway = false, name = "ガード?2", },
+	g10  = { id = 0x1C, enabled = true, type_check = type_ck_gd, type = box_types.atemi, sort = 3, color = 0xFF7F00, fill = 0x40, outline = 0xFF, sway = false, name = "フェニックススルー", },
+	g13  = { id = 0x1D, enabled = true, type_check = type_ck_und, type = box_types.block, sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF, sway = false, name = "ガード?4", },
+	g14  = { id = 0x1E, enabled = true, type_check = type_ck_gd, type = box_types.block, sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF, sway = false, name = "ガード?5", },
+	g15  = { id = 0x1F, enabled = true, type_check = type_ck_und, type = box_types.block, sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF, sway = false, name = "ガード?6", },
+	g16  = { id = 0x20, enabled = true, type_check = type_ck_und, type = box_types.block, sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF, sway = false, name = "ガード?7", },
+	sv1  = { id = 0x02, enabled = true, type_check = type_ck_vuln, type = box_types.vuln, sort = 2, color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true, name = "食らい1(スウェー中)", },
+	sv2  = { id = 0x03, enabled = true, type_check = type_ck_vuln, type = box_types.vuln, sort = 2, color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true, name = "食らい2(スウェー中)", },
 }
 local box_types, sway_box_types = {}, {}
 for _, boxtype in pairs(box_type_base) do
@@ -4841,30 +3862,30 @@ end
 
 -- 当たり判定のオフセット
 local bp_offset = {
-	[0x012C42] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x00 },
-	[0x012C88] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x00 },
-	[0x012D4C] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x00 }, --p1 push
-	[0x012D92] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x00 }, --p2 push
-	[0x039F2A] = { ["rbff2k"] =   0x0C, ["rbff2h"] = 0x20 }, --special throws
-	[0x017300] = { ["rbff2k"] =   0x28, ["rbff2h"] = 0x00 }, --solid shadows
+	[0x012C42] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 },
+	[0x012C88] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 },
+	[0x012D4C] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 }, --p1 push
+	[0x012D92] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 }, --p2 push
+	[0x039F2A] = { ["rbff2k"] = 0x0C, ["rbff2h"] = 0x20 }, --special throws
+	[0x017300] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 }, --solid shadows
 }
 local bp_clone = { ["rbff2k"] = -0x104, ["rbff2h"] = 0x20 }
-local fix_bp_addr = function(addr)
+local fix_bp_addr = function (addr)
 	local fix1 = bp_clone[emu.romname()] or 0
 	local fix2 = bp_offset[addr] and (bp_offset[addr][emu.romname()] or fix1) or fix1
 	return addr + fix2
 end
 local hurt_inv_type = {
 	-- 全身無敵
-	full    = { type = 0, disp_label = "全身無敵", name = "全身無敵"},
+	full    = { type = 0, disp_label = "全身無敵", name = "全身無敵" },
 	-- ライン関係の無敵
-	main    = { type = 1, disp_label = "メイン攻撃無敵", name = "メインライン攻撃無敵"},
-	sway_oh = { type = 1, disp_label = "対メイン上段無敵", name = "対メインライン上段攻撃無敵"},
-	sway_lo = { type = 1, disp_label = "対メイン下段無敵", name = "対メインライン下段攻撃無敵"},
+	main    = { type = 1, disp_label = "メイン攻撃無敵", name = "メインライン攻撃無敵" },
+	sway_oh = { type = 1, disp_label = "対メイン上段無敵", name = "対メインライン上段攻撃無敵" },
+	sway_lo = { type = 1, disp_label = "対メイン下段無敵", name = "対メインライン下段攻撃無敵" },
 	-- やられ判定の高さ
-	top32 = { type = 2, value = 32, disp_label = "上半身無敵1", name = "32 避け"},
-	top40 = { type = 2, value = 40, disp_label = "上半身無敵2", name = "40 ウェービングブロー,龍転身,ダブルローリング"},
-	top48 = { type = 2, value = 48, disp_label = "上半身無敵3", name = "48 ローレンス避け"},
+	top32   = { type = 2, value = 32, disp_label = "上半身無敵1", name = "32 避け" },
+	top40   = { type = 2, value = 40, disp_label = "上半身無敵2", name = "40 ウェービングブロー,龍転身,ダブルローリング" },
+	top48   = { type = 2, value = 48, disp_label = "上半身無敵3", name = "48 ローレンス避け" },
 	--[[
 	top60 = { type = 2, value = 60, disp_label = "頭部無敵1", name = "60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン"},
 	top64 = { type = 2, value = 64, disp_label = "頭部無敵2", name = "64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド"},
@@ -4873,12 +3894,12 @@ local hurt_inv_type = {
 	top80 = { type = 2, value = 80, disp_label = "頭部無敵5", name = "80 屈 クラウザー"},
 	]]
 	-- 足元無敵
-	low40 = { type = 3, value = 40, disp_label = "足元無敵1", name = "対アンディ屈C"},
-	low32 = { type = 3, value = 32, disp_label = "足元無敵2", name = "対ギース屈C"},
-	low24 = { type = 3, value = 24, disp_label = "足元無敵3", name = "対だいたいの屈B（キムとボブ以外）"},
+	low40 = { type = 3, value = 40, disp_label = "足元無敵1", name = "対アンディ屈C" },
+	low32 = { type = 3, value = 32, disp_label = "足元無敵2", name = "対ギース屈C" },
+	low24 = { type = 3, value = 24, disp_label = "足元無敵3", name = "対だいたいの屈B（キムとボブ以外）" },
 	-- 特殊やられ
-	otg = { type = 4, disp_label = "ダウン追撃", name = "ダウン追撃のみ可能"},
-	juggle = { type = 4, disp_label = "空中追撃", name = "空中追撃のみ可能"},
+	otg = { type = 4, disp_label = "ダウン追撃", name = "ダウン追撃のみ可能" },
+	juggle = { type = 4, disp_label = "空中追撃", name = "空中追撃のみ可能" },
 }
 hurt_inv_type.values = {
 	hurt_inv_type.full, hurt_inv_type.main, hurt_inv_type.sway_oh, hurt_inv_type.sway_lo, hurt_inv_type.top32, hurt_inv_type.top40,
@@ -4887,20 +3908,20 @@ hurt_inv_type.values = {
 }
 -- 投げ無敵
 local throw_inv_type = {
-	time24 = { value = 24, disp_label = "タイマー24", name = "通常投げ"},
-	time20 = { value = 20, disp_label = "タイマー20", name = "M.リアルカウンター投げ"},
-	time10 = { value = 10, disp_label = "タイマー10", name = "真空投げ 羅生門 鬼門陣 M.タイフーン M.スパイダー 爆弾パチキ ドリル ブレスパ ブレスパBR リフトアップブロー デンジャラススルー ギガティックサイクロン マジンガ STOL"},
-	sway   = { value = 256, disp_label = "スウェー", name = "スウェー"},
-	flag1  = { value = 256, disp_label = "フラグ1", name = "無敵フラグ"},
-	flag2  = { value = 256, disp_label = "フラグ2", name = "通常投げ無敵フラグ"},
-	state  = { value = 256, disp_label = "やられ状態", name = "相互のやられ状態が非通常値"},
-	no_gnd = { value = 256, disp_label = "高度", name = "接地状態ではない（地面へのめり込みも投げ不可）"},
+	time24 = { value = 24, disp_label = "タイマー24", name = "通常投げ" },
+	time20 = { value = 20, disp_label = "タイマー20", name = "M.リアルカウンター投げ" },
+	time10 = { value = 10, disp_label = "タイマー10", name = "真空投げ 羅生門 鬼門陣 M.タイフーン M.スパイダー 爆弾パチキ ドリル ブレスパ ブレスパBR リフトアップブロー デンジャラススルー ギガティックサイクロン マジンガ STOL" },
+	sway   = { value = 256, disp_label = "スウェー", name = "スウェー" },
+	flag1  = { value = 256, disp_label = "フラグ1", name = "無敵フラグ" },
+	flag2  = { value = 256, disp_label = "フラグ2", name = "通常投げ無敵フラグ" },
+	state  = { value = 256, disp_label = "やられ状態", name = "相互のやられ状態が非通常値" },
+	no_gnd = { value = 256, disp_label = "高度", name = "接地状態ではない（地面へのめり込みも投げ不可）" },
 }
 throw_inv_type.values = {
 	throw_inv_type.time24, throw_inv_type.time20, throw_inv_type.time10, throw_inv_type.sway, throw_inv_type.flag1, throw_inv_type.flag2,
 	throw_inv_type.state, throw_inv_type.no_gnd
 }
-hurt_inv_type.get = function(p, real_top, real_bottom, box)
+hurt_inv_type.get = function (p, real_top, real_bottom, box)
 	local ret, top, low = {}, nil, nil
 	for _, type in ipairs(hurt_inv_type.values) do
 		if type.type == 2 and real_top <= type.value then
@@ -4916,21 +3937,21 @@ hurt_inv_type.get = function(p, real_top, real_bottom, box)
 	if low then
 		table.insert(ret, low)
 	end
-	if box.type == box_type_base.v3 then -- 食らい(ダウン追撃のみ可)
+	if box.type == box_type_base.v3 then  -- 食らい(ダウン追撃のみ可)
 		table.insert(ret, hurt_inv_type.otg)
-	elseif box.type == box_type_base.v4 then  -- 食らい(空中追撃のみ可)
+	elseif box.type == box_type_base.v4 then -- 食らい(空中追撃のみ可)
 		table.insert(ret, hurt_inv_type.juggle)
-	elseif box.type == box_type_base.v6 then  -- 食らい(対ライン上攻撃)
+	elseif box.type == box_type_base.v6 then -- 食らい(対ライン上攻撃)
 		table.insert(ret, hurt_inv_type.sway_oh)
-	elseif box.type == box_type_base.x1 then  -- 食らい(対ライン下攻撃)
+	elseif box.type == box_type_base.x1 then -- 食らい(対ライン下攻撃)
 		table.insert(ret, hurt_inv_type.sway_lo)
 	elseif box.type == box_type_base.sv1 or -- 食らい1(スウェー中)
-		box.type == box_type_base.sv2 then -- 食らい2(スウェー中)
+																																																																	box.type == box_type_base.sv2 then -- 食らい2(スウェー中)
 		table.insert(ret, hurt_inv_type.main)
 	end
 	return #ret == 0 and {} or ret
 end
-throw_inv_type.get = function(p)
+throw_inv_type.get = function (p)
 	if p.is_fireball then
 		return {}
 	end
@@ -5037,26 +4058,28 @@ local hit_box_proc = function(id, addr)
 	return hit_proc_types.none
 end
 local hit_box_procs = {
-	normal_hit = function(id) return hit_box_proc(id, 0x94D2C) end, -- 012DBC: 012DC8: 通常状態へのヒット判定処理
-	down_hit   = function(id) return hit_box_proc(id, 0x94E0C) end, -- 012DE4: 012DF0: ダウン状態へのヒット判定処理
-	air_hit    = function(id) return hit_box_proc(id, 0x94EEC) end, -- 012E0E: 012E1A: 空中追撃可能状態へのヒット判定処理
-	up_guard   = function(id) return hit_box_proc(id, 0x950AC) end, -- 012EAC: 012EB8: 上段ガード判定処理
-	low_guard  = function(id) return hit_box_proc(id, 0x9518C) end, -- 012ED8: 012EE4: 下段ガード判定処理
-	air_guard  = function(id) return hit_box_proc(id, 0x9526C) end, -- 012F04: 012F16: 空中ガード判定処理
-	sway_up_gd = function(id) return hit_box_proc(id, 0x95A4C) end, -- 012E60: 012E6C: 対ライン上段の謎処理
-	sway_low_gd= function(id) return hit_box_proc(id, 0x95B2C) end, -- 012F3A: 012E90: 対ライン下段の謎処理
-	j_atm_nage = function(id) return hit_box_proc(id, 0x9534C) end, -- 012F30: 012F82: 上段当身投げの処理
-	urakumo    = function(id) return hit_box_proc(id, 0x9542C) end, -- 012F30: 012F82: 裏雲隠しの処理
-	g_atm_uchi = function(id) return hit_box_proc(id, 0x9550C) end, -- 012F44: 012F82: 下段当身打ちの処理
-	gyakushu   = function(id) return hit_box_proc(id, 0x955EC) end, -- 012F4E: 012F82: 必勝逆襲拳の処理
-	sadomazo   = function(id) return hit_box_proc(id, 0x956CC) end, -- 012F58: 012F82: サドマゾの処理
-	phx_tw     = function(id) return hit_box_proc(id, 0x9588C) end, -- 012F6C: 012F82: フェニックススルーの処理
-	baigaeshi  = function(id) return hit_box_proc(id, 0x957AC) end, -- 012F62: 012F82: 倍返しの処理
-	unknown1   = function(id) return hit_box_proc(id, 0x94FCC) end, -- 012E38: 012E44: 不明処理、未使用？
-	katsu      = function(id) return hit_box_proc(id, 0x9596C) end, -- : 012FB2: 喝消し
-	nullify    = function(id) return (0x20 <= id) and hit_proc_types.same_line or hit_proc_types.none end, -- : 012F9A: 弾消し
+	normal_hit  = function (id) return hit_box_proc(id, 0x94D2C) end, -- 012DBC: 012DC8: 通常状態へのヒット判定処理
+	down_hit    = function (id) return hit_box_proc(id, 0x94E0C) end, -- 012DE4: 012DF0: ダウン状態へのヒット判定処理
+	air_hit     = function (id) return hit_box_proc(id, 0x94EEC) end, -- 012E0E: 012E1A: 空中追撃可能状態へのヒット判定処理
+	up_guard    = function (id) return hit_box_proc(id, 0x950AC) end, -- 012EAC: 012EB8: 上段ガード判定処理
+	low_guard   = function (id) return hit_box_proc(id, 0x9518C) end, -- 012ED8: 012EE4: 下段ガード判定処理
+	air_guard   = function (id) return hit_box_proc(id, 0x9526C) end, -- 012F04: 012F16: 空中ガード判定処理
+	sway_up_gd  = function (id) return hit_box_proc(id, 0x95A4C) end, -- 012E60: 012E6C: 対ライン上段の謎処理
+	sway_low_gd = function (id) return hit_box_proc(id, 0x95B2C) end, -- 012F3A: 012E90: 対ライン下段の謎処理
+	j_atm_nage  = function (id) return hit_box_proc(id, 0x9534C) end, -- 012F30: 012F82: 上段当身投げの処理
+	urakumo     = function (id) return hit_box_proc(id, 0x9542C) end, -- 012F30: 012F82: 裏雲隠しの処理
+	g_atm_uchi  = function (id) return hit_box_proc(id, 0x9550C) end, -- 012F44: 012F82: 下段当身打ちの処理
+	gyakushu    = function (id) return hit_box_proc(id, 0x955EC) end, -- 012F4E: 012F82: 必勝逆襲拳の処理
+	sadomazo    = function (id) return hit_box_proc(id, 0x956CC) end, -- 012F58: 012F82: サドマゾの処理
+	phx_tw      = function (id) return hit_box_proc(id, 0x9588C) end, -- 012F6C: 012F82: フェニックススルーの処理
+	baigaeshi   = function (id) return hit_box_proc(id, 0x957AC) end, -- 012F62: 012F82: 倍返しの処理
+	unknown1    = function (id) return hit_box_proc(id, 0x94FCC) end, -- 012E38: 012E44: 不明処理、未使用？
+	katsu       = function (id) return hit_box_proc(id, 0x9596C) end, -- : 012FB2: 喝消し
+	nullify     = function (id)                                       -- : 012F9A: 弾消し
+		return (0x20 <= id) and hit_proc_types.same_line or hit_proc_types.none
+	end,
 }
-local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, is_fireball)
+local new_hitbox1 = function (p, id, pos_x, pos_y, top, bottom, left, right, is_fireball)
 	local box = {id = id, p = p,}
 	box.type = nil
 	if (box.id >= #box_types) then
@@ -6864,7 +5887,7 @@ function rbff2.startplugin()
 			}) do
 				global.bp(bps, addr, "1", "printf \"A4=%X CH=%D PC=%X PREF_ADDR=%X A0=%X D7=%X\",(A4),maincpu.pw@((A4)+10),PC,PREF_ADDR,(A0),(D7);g"))
 			end
-			--]]
+			]]
 
 			-- bp 058946,1,{PC=5895A;g} -- BS出ない
 			-- bp 039782,1,{PC=039788;g} -- BS表示でない
