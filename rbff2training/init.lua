@@ -528,32 +528,32 @@ local sts_flg_names = {
 		"対メインライン威力大攻撃",
 		"対メインラインB攻撃",
 		"対メインラインA攻撃",
-		"後方小ジャンプC攻撃",
-		"後方小ジャンプB攻撃",
-		"後方小ジャンプA攻撃",
-		"前方小ジャンプC攻撃",
-		"前方小ジャンプB攻撃",
-		"前方小ジャンプA攻撃",
-		"垂直小ジャンプC攻撃",
-		"垂直小ジャンプB攻撃",
-		"垂直小ジャンプA攻撃",
-		"後方ジャンプC攻撃",
-		"後方ジャンプB攻撃",
-		"後方ジャンプA攻撃",
-		"前方ジャンプC攻撃",
-		"前方ジャンプB攻撃",
-		"前方ジャンプA攻撃",
-		"垂直ジャンプC攻撃",
-		"垂直ジャンプB攻撃",
-		"垂直ジャンプA攻撃",
-		"",
-		"",
-		"屈C攻撃",
-		"屈B攻撃",
-		"屈A攻撃",
-		"立C攻撃",
-		"立B攻撃",
-		"立A攻撃",
+		"後方小ジャンプC",
+		"後方小ジャンプB",
+		"後方小ジャンプA",
+		"前方小ジャンプC",
+		"前方小ジャンプB",
+		"前方小ジャンプA",
+		"垂直小ジャンプC",
+		"垂直小ジャンプB",
+		"垂直小ジャンプA",
+		"後方ジャンプC",
+		"後方ジャンプB",
+		"後方ジャンプA",
+		"前方ジャンプC",
+		"前方ジャンプB",
+		"前方ジャンプA",
+		"垂直ジャンプC",
+		"垂直ジャンプB",
+		"垂直ジャンプA",
+		"C4 24",
+		"C4 25",
+		"屈C",
+		"屈B",
+		"屈A",
+		"立C",
+		"立B",
+		"立A",
 	},
 	[0xC8] = {
 		"",
@@ -658,6 +658,18 @@ local sts_flg_names = {
 		"",
 	},
 }
+local get_flag_name = function(flags, names)
+	local flgtxt = ""
+	if flags == 0 then
+		return nil
+	end
+	for j = 32, 1, -1 do
+		if flags & 2 ^ (j - 1) ~= 0 then
+			flgtxt = string.format("%s%02d %s ", flgtxt, j, names[j])
+		end
+	end
+	return flgtxt
+end
 -- !!注意!!後隙が配列の後ろに来るように定義すること
 local char_acts_base = {
 	-- テリー・ボガード
@@ -1899,81 +1911,80 @@ local char_acts_base = {
 local char_fireball_base = {
 	-- テリー・ボガード
 	{
-		{ name = "パワーウェイブ", type = act_types.attack, ids = { 0x265, 0x266, 0x26A, }, },
-		{ name = "ラウンドウェイブ", type = act_types.low_attack, ids = { 0x260, }, },
-		{ name = "パワーゲイザー", type = act_types.attack, ids = { 0x261, }, },
-		{ name = "トリプルゲイザー", type = act_types.attack, ids = { 0x267, }, },
+		{ names = { "パワーウェイブ" }, type = act_types.attack, ids = { 0x265, 0x266, 0x26A, }, },
+		{ names = { "ラウンドウェイブ" }, type = act_types.low_attack, ids = { 0x260, }, },
+		{ names = { "パワーゲイザー" }, type = act_types.attack, ids = { 0x261, }, },
+		{ names = { "トリプルゲイザー" }, type = act_types.attack, ids = { 0x267, }, },
 	},
 	-- アンディ・ボガード
 	{
-		{ name = "飛翔拳", type = act_types.attack, ids = { 0x262, 0x263, }, },
-		{ name = "激飛翔拳", type = act_types.attack, ids = { 0x266, 0x267, }, },
+		{ names = { "飛翔拳" }, type = act_types.attack, ids = { 0x262, 0x263, }, },
+		{ names = { "激飛翔拳" }, type = act_types.attack, ids = { 0x266, 0x267, }, },
 	},
 	-- 東丈
 	{
-		{ name = "ハリケーンアッパー", type = act_types.attack, ids = { 0x266, 0x267, 0x269, }, },
-		-- { name = "爆裂ハリケーン", type = act_types.attack, ids = {  0x266, 0x267, 0x269, }, },
-		{ name = "スクリューアッパー", type = act_types.attack, ids = { 0x269, 0x26A, 0x26B, }, },
+		{ names = { "ハリケーンアッパー" }, type = act_types.attack, ids = { 0x266, 0x267, 0x269, }, },
+		{ names = { "スクリューアッパー" }, type = act_types.attack, ids = { 0x269, 0x26A, 0x26B, }, },
 	},
 	-- 不知火舞
 	{
-		{ name = "花蝶扇", type = act_types.attack, ids = { 0x261, 0x262, 0x263, }, },
-		{ name = "龍炎舞", type = act_types.attack, ids = { 0x264, }, },
+		{ names = { "花蝶扇" }, type = act_types.attack, ids = { 0x261, 0x262, 0x263, }, },
+		{ names = { "龍炎舞" }, type = act_types.attack, ids = { 0x264, }, },
 	},
 	-- ギース・ハワード
 	{
-		{ name = "烈風拳", type = act_types.attack, ids = { 0x261, 0x260, 0x276, }, },
-		{ name = "ダブル烈風拳", type = act_types.attack, ids = { 0x262, 0x263, 0x264, 0x265, }, },
-		{ name = "レイジングストーム", type = act_types.attack, ids = { 0x269, 0x26B, 0x26A, }, },
+		{ names = { "烈風拳" }, type = act_types.attack, ids = { 0x261, 0x260, 0x276, }, },
+		{ names = { "ダブル烈風拳" }, type = act_types.attack, ids = { 0x262, 0x263, 0x264, 0x265, }, },
+		{ names = { "レイジングストーム" }, type = act_types.attack, ids = { 0x269, 0x26B, 0x26A, }, },
 	},
 	-- 望月双角,
 	{
-		{ name = "雷撃棍", type = act_types.attack, ids = { 0x260, }, },
-		{ name = "野猿狩り/掴み", type = act_types.attack, ids = { 0x277, 0x27C, }, },
-		{ name = "まきびし", type = act_types.low_attack, ids = { 0x274, 0x275, }, },
-		{ name = "憑依弾", type = act_types.attack, ids = { 0x263, 0x266, }, },
-		{ name = "邪棍舞", type = act_types.attack, ids = { 0xF4, 0xF5, }, },
-		{ name = "天破", type = act_types.attack, ids = { 0xF6, }, },
-		{ name = "払破", type = act_types.low_attack, ids = { 0xF7, }, },
-		{ name = "倒破", type = act_types.overhead, ids = { 0xF8, }, },
-		{ name = "降破", type = act_types.overhead, ids = { 0xF9, }, },
-		{ name = "突破", type = act_types.attack, ids = { 0xFA, }, },
-		{ name = "喝", type = act_types.attack, ids = { 0x282, 0x283, }, },
-		{ name = "いかづち", type = act_types.attack, ids = { 0x286, 0x287, }, },
+		{ names = { "雷撃棍" }, type = act_types.attack, ids = { 0x260, }, },
+		{ names = { "野猿狩り/掴み" }, type = act_types.attack, ids = { 0x277, 0x27C, }, },
+		{ names = { "まきびし" }, type = act_types.low_attack, ids = { 0x274, 0x275, }, },
+		{ names = { "憑依弾" }, type = act_types.attack, ids = { 0x263, 0x266, }, },
+		{ names = { "邪棍舞" }, type = act_types.attack, ids = { 0xF4, 0xF5, }, },
+		{ names = { "天破" }, type = act_types.attack, ids = { 0xF6, }, },
+		{ names = { "払破" }, type = act_types.low_attack, ids = { 0xF7, }, },
+		{ names = { "倒破" }, type = act_types.overhead, ids = { 0xF8, }, },
+		{ names = { "降破" }, type = act_types.overhead, ids = { 0xF9, }, },
+		{ names = { "突破" }, type = act_types.attack, ids = { 0xFA, }, },
+		{ names = { "喝" }, type = act_types.attack, ids = { 0x282, 0x283, }, },
+		{ names = { "いかづち" }, type = act_types.attack, ids = { 0x286, 0x287, }, },
 	},
 	-- ボブ・ウィルソン
 	{
 	},
 	-- ホンフゥ
 	{
-		{ name = "よかトンハンマー", type = act_types.attack, ids = { 0x26B, }, },
+		{ names = { "よかトンハンマー" }, type = act_types.attack, ids = { 0x26B, }, },
 	},
 	-- ブルー・マリー
 	{
 	},
 	-- フランコ・バッシュ
 	{
-		{ name = "ザッパー", type = act_types.attack, ids = { 0x269, }, },
-		{ name = "ファイナルオメガショット", type = act_types.attack, ids = { 0x26C, }, },
+		{ names = { "ザッパー" }, type = act_types.attack, ids = { 0x269, }, },
+		{ names = { "ファイナルオメガショット" }, type = act_types.attack, ids = { 0x26C, }, },
 	},
 	-- 山崎竜二
 	{
-		{ name = "目ツブシ", type = act_types.attack, ids = { 0x261, }, },
-		{ name = "倍返し", type = act_types.attack, ids = { 0x262, 0x263, 0x270, 0x26D, }, },
+		{ names = { "目ツブシ" }, type = act_types.attack, ids = { 0x261, }, },
+		{ names = { "倍返し" }, type = act_types.attack, ids = { 0x262, 0x263, 0x270, 0x26D, }, },
 	},
 	-- 秦崇秀
 	{
-		{ name = "帝王天眼拳", type = act_types.attack, ids = { 0x262, 0x263, 0x265, }, },
-		{ name = "海龍照臨", type = act_types.attack, ids = { 0x273, 0x274, }, },
-		{ name = "帝王漏尽拳", type = act_types.attack, ids = { 0x26C, }, },
-		{ name = "帝王空殺漏尽拳", type = act_types.low_attack, ids = { 0x26F, }, },
+		{ names = { "帝王天眼拳" }, type = act_types.attack, ids = { 0x262, 0x263, 0x265, }, },
+		{ names = { "海龍照臨" }, type = act_types.attack, ids = { 0x273, 0x274, }, },
+		{ names = { "帝王漏尽拳" }, type = act_types.attack, ids = { 0x26C, }, },
+		{ names = { "帝王空殺漏尽拳" }, type = act_types.low_attack, ids = { 0x26F, }, },
 	},
 	-- 秦崇雷,
 	{
-		{ name = "帝王漏尽拳", type = act_types.attack, ids = { 0x266, }, },
-		{ name = "帝王天眼拳", type = act_types.attack, ids = { 0x26E, }, },
-		{ name = "帝王宿命拳", type = act_types.attack, ids = { 0x268, 0x273, }, },
-		{ name = "帝王龍声拳", type = act_types.attack, ids = { 0x26B, }, },
+		{ names = { "帝王漏尽拳" }, type = act_types.attack, ids = { 0x266, }, },
+		{ names = { "帝王天眼拳" }, type = act_types.attack, ids = { 0x26E, }, },
+		{ names = { "帝王宿命拳" }, type = act_types.attack, ids = { 0x268, 0x273, }, },
+		{ names = { "帝王龍声拳" }, type = act_types.attack, ids = { 0x26B, }, },
 	},
 	-- ダック・キング
 	{
@@ -1983,50 +1994,50 @@ local char_fireball_base = {
 	},
 	-- ビリー・カーン
 	{
-		{ name = "三節棍中段打ち", type = act_types.attack, ids = { 0x266, }, },
-		{ name = "火炎三節棍中段突き", type = act_types.attack, ids = { 0x267, }, },
-		{ name = "旋風棍", type = act_types.attack, ids = { 0x269, }, },
-		{ name = "超火炎旋風棍", type = act_types.attack, ids = { 0x261, 0x263, 0x262, }, },
-		{ name = "サラマンダーストリーム", type = act_types.attack, ids = { 0x27A, 0x278, }, },
+		{ names = { "三節棍中段打ち" }, type = act_types.attack, ids = { 0x266, }, },
+		{ names = { "火炎三節棍中段突き" }, type = act_types.attack, ids = { 0x267, }, },
+		{ names = { "旋風棍" }, type = act_types.attack, ids = { 0x269, }, },
+		{ names = { "超火炎旋風棍" }, type = act_types.attack, ids = { 0x261, 0x263, 0x262, }, },
+		{ names = { "サラマンダーストリーム" }, type = act_types.attack, ids = { 0x27A, 0x278, }, },
 	},
 	-- チン・シンザン
 	{
-		{ name = "気雷砲", type = act_types.low_attack, ids = { 0x267, 0x268, 0x26E, }, },
-		{ name = "爆雷砲", type = act_types.attack, ids = { 0x287, 0x272, 0x273, }, },
-		{ name = "ホエホエ弾", type = act_types.low_attack, ids = { 0x280, 0x281, 0x27E, 0x27F, }, },
-		{ name = "クッサメ砲", type = act_types.low_attack, ids = { 0x282, }, },
+		{ names = { "気雷砲" }, type = act_types.low_attack, ids = { 0x267, 0x268, 0x26E, }, },
+		{ names = { "爆雷砲" }, type = act_types.attack, ids = { 0x287, 0x272, 0x273, }, },
+		{ names = { "ホエホエ弾" }, type = act_types.low_attack, ids = { 0x280, 0x281, 0x27E, 0x27F, }, },
+		{ names = { "クッサメ砲" }, type = act_types.low_attack, ids = { 0x282, }, },
 	},
 	-- タン・フー・ルー,
 	{
-		{ name = "衝波", type = act_types.attack, ids = { 0x265, }, },
+		{ names = { "衝波" }, type = act_types.attack, ids = { 0x265, }, },
 	},
 	-- ローレンス・ブラッド
 	{
-		{ name = "ブラッディサーベル", type = act_types.attack, ids = { 0x282, }, },
-		{ name = "ブラッディミキサー", type = act_types.attack, ids = { 0x284, }, },
+		{ names = { "ブラッディサーベル" }, type = act_types.attack, ids = { 0x282, }, },
+		{ names = { "ブラッディミキサー" }, type = act_types.attack, ids = { 0x284, }, },
 	},
 	-- ヴォルフガング・クラウザー
 	{
-		{ name = "小 ブリッツボール", type = act_types.attack, ids = { 0x263, 0x262, }, },
-		{ name = "大 ブリッツボール", type = act_types.low_attack, ids = { 0x266, }, },
-		{ name = "カイザーウェイブ1", type = act_types.attack, ids = { 0x26E, 0x26F, }, },
-		{ name = "カイザーウェイブ2", type = act_types.attack, ids = { 0x282, 0x270, }, },
-		{ name = "カイザーウェイブ3", type = act_types.attack, ids = { 0x283, 0x271, }, },
+		{ names = { "小 ブリッツボール" }, type = act_types.attack, ids = { 0x263, 0x262, }, },
+		{ names = { "大 ブリッツボール" }, type = act_types.low_attack, ids = { 0x263, 0x266 }, },
+		{ names = { "カイザーウェイブ1" }, type = act_types.attack, ids = { 0x26E, 0x26F, }, },
+		{ names = { "カイザーウェイブ2" }, type = act_types.attack, ids = { 0x282, 0x270, }, },
+		{ names = { "カイザーウェイブ3" }, type = act_types.attack, ids = { 0x283, 0x271, }, },
 	},
 	-- リック・ストラウド
 	{
-		{ name = "ガイアブレス", type = act_types.attack, ids = { 0x261, }, },
-		{ name = "ハウリング・ブル", type = act_types.low_attack, ids = { 0x26A, 0x26B, 0x267, }, },
+		{ names = { "ガイアブレス" }, type = act_types.attack, ids = { 0x261, }, },
+		{ names = { "ハウリング・ブル" }, type = act_types.low_attack, ids = { 0x26A, 0x26B, 0x267, }, },
 	},
 	-- 李香緋
 	{
-		{ name = "小 那夢波", type = act_types.attack, ids = { 0x263, }, },
-		{ name = "大 那夢波", type = act_types.attack, ids = { 0x268, }, },
-		{ name = "真心牙", type = act_types.attack, ids = { 0x270, }, },
+		{ names = { "小 那夢波" }, type = act_types.attack, ids = { 0x263, }, },
+		{ names = { "大 那夢波" }, type = act_types.attack, ids = { 0x268, }, },
+		{ names = { "真心牙" }, type = act_types.attack, ids = { 0x270, }, },
 	},
 	-- アルフレッド
 	{
-		{ name = "ダイバージェンス", type = act_types.attack, ids = { 0x264, }, },
+		{ names = { "ダイバージェンス" }, type = act_types.attack, ids = { 0x264, }, },
 	},
 }
 local char_acts, char_1st_acts = {}, {}
@@ -2034,6 +2045,7 @@ for char, acts_base in pairs(char_acts_base) do
 	-- キャラごとのテーブル作成
 	char_acts[char], char_1st_acts[char] = {}, {}
 	for _, acts in pairs(acts_base) do
+		acts.name = acts.name or acts.names[1]
 		for i, id in ipairs(acts.ids) do
 			if i == 1 then
 				acts.id_1st = id
@@ -2051,6 +2063,7 @@ local char_fireballs = {}
 for char, fireballs_base in pairs(char_fireball_base) do
 	char_fireballs [char] = {}
 	for _, fireball in pairs(fireballs_base) do
+		fireball.name = fireball.name or fireball.names[1]
 		for _, id in pairs(fireball.ids) do
 			char_fireballs[char][id] = fireball
 		end
@@ -2065,15 +2078,7 @@ local new_set = function(...)
 end
 local jump_acts = new_set(0x9, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16)
 local wakeup_acts = new_set(0x193, 0x13B)
-local down_acts = new_set(0x190, 0x191, 0x192, 0x18E)
-local get_act_name = function(act_data)
-	if act_data then
-		return act_data.disp_name or (act_data.names and act_data.names[1] or act_data.name) or act_data.name or ""
-	else
-		return ""
-	end
-	---return a.disp_name or ((a.names and #a.names > 0) and a.names[1] or a.name)
-end
+local get_act_name = function(act_data) return act_data and act_data.name or  "" end
 local input_state_types = {
 	step = 1,
 	faint = 2,
@@ -7739,16 +7744,6 @@ rbff2.startplugin = function()
 		-- 見た目と入力方向が違う状態
 		sides_label = sides_label .. ((p.internal_side == p.input_side) and "" or "＊")
 
-		local a = function(flags, names)
-			local flgtxt = ""
-			for j = 32, 1, -1 do
-				if flags & 2 ^ (j - 1) ~= 0 then
-					flgtxt = string.format("%s%02d %s ", flgtxt, j, names[j])
-				end
-			end
-			return flgtxt
-		end
-
 		local hurt_sumamry = {
 			{ "投げ無敵:",           throw_label },
 			{ "方向(動作/入力):",  sides_label },
@@ -7766,19 +7761,19 @@ rbff2.startplugin = function()
 
 		-- フラグによる状態の表示
 		if p.flag_c0 > 0 then
-			table.insert(hurt_sumamry, { "動作C0:", a(p.flag_c0, sts_flg_names[0xC0]) })
+			table.insert(hurt_sumamry, { "動作C0:", get_flag_name(p.flag_c0, sts_flg_names[0xC0]) })
 		end
 		if p.flag_c4 > 0 then
-			table.insert(hurt_sumamry, { "動作C4:", a(p.flag_c4, sts_flg_names[0xC4]) })
+			table.insert(hurt_sumamry, { "動作C4:", get_flag_name(p.flag_c4, sts_flg_names[0xC4]) })
 		end
 		if p.flag_c8 > 0 then
-			table.insert(hurt_sumamry, { "動作C8:", a(p.flag_c8, sts_flg_names[0xC8]) })
+			table.insert(hurt_sumamry, { "動作C8:", get_flag_name(p.flag_c8, sts_flg_names[0xC8]) })
 		end
 		if p.flag_cc > 0 then
-			table.insert(hurt_sumamry, { "動作CC:", a(p.flag_cc, sts_flg_names[0xCC]) })
+			table.insert(hurt_sumamry, { "動作CC:", get_flag_name(p.flag_cc, sts_flg_names[0xCC]) })
 		end
 		if p.flag_d0 > 0 then
-			table.insert(hurt_sumamry, { "動作D0:", a(p.flag_d0, sts_flg_names[0xD0]) })
+			table.insert(hurt_sumamry, { "動作D0:", get_flag_name(p.flag_d0, sts_flg_names[0xD0]) })
 		end
 
 		return add_frame_to_summary(hurt_sumamry)
@@ -8565,7 +8560,6 @@ rbff2.startplugin = function()
 			p.frm_gap.act_frames2 = p.frm_gap.act_frames2 or {}
 
 			p.old_act_data        = p.act_data or { name = "", type = act_types.any, }
-
 			if char_acts[p.char] and char_acts[p.char][p.act] then
 				p.act_data = char_acts[p.char][p.act]
 				p.act_1st  = char_1st_acts[p.char][p.act] or false
@@ -8601,6 +8595,10 @@ rbff2.startplugin = function()
 			else
 				p.act_normal = true -- 移動中など
 				p.act_normal = p.act_data.type == act_types.free or p.act_data.type == act_types.block
+			end
+			if p.flag_c4 == 0 and p.flag_c8 == 0 then
+				p.act_data.name = string.format("%s %s", get_flag_name(p.flag_c0, sts_flg_names[0xC0]) or "", get_flag_name(p.flag_cc, sts_flg_names[0xCC]) or "")
+				p.act_data.names = { p.act_data.name }
 			end
 
 			-- アドレス保存
@@ -8788,13 +8786,6 @@ rbff2.startplugin = function()
 				op.need_block     = (p.act_data.type == act_types.low_attack) or (p.act_data.type == act_types.attack) or (p.act_data.type == act_types.overhead)
 				op.need_low_block = p.act_data.type == act_types.low_attack
 				op.need_ovh_block = p.act_data.type == act_types.overhead
-				--[[ 全段ヒットはガードしない場合
-				if p.hit.full_hit or p.hit.harmless2 then
-					op.need_block     = false
-					op.need_low_block = false
-					op.need_ovh_block = false
-				end
-				]]
 			end
 			for _, fb in pairs(p.fireball) do
 				-- 飛び道具の状態チェック
@@ -8804,12 +8795,11 @@ rbff2.startplugin = function()
 						-- 双角だけ中段と下段の飛び道具がある
 						act_type = char_fireballs[p.char][fb.act].type
 						fb.char_fireball = char_fireballs[p.char][fb.act]
-						--printf("%s %x", fb.char_fireball.name, fb.act)
 					end
 					op.need_block     = op.need_block or (act_type == act_types.low_attack) or (act_type == act_types.attack) or (act_type == act_types.overhead)
 					op.need_low_block = op.need_low_block or (act_type == act_types.low_attack)
 					op.need_ovh_block = op.need_ovh_block or (act_type == act_types.overhead)
-					--printf("%x %s", fb.act, act_type) -- debug
+					printf("%x %x %x %s", fb.act, fb.acta, fb.actb, act_type) -- debug
 				end
 			end
 		end
@@ -11932,9 +11922,10 @@ rbff2.startplugin = function()
 			elseif temp_row > #menu_cur.list then
 				temp_row = 1
 			end
-			menu_cur.pos.row = temp_row
+			-- printf("row %s/%s", temp_row, #menu_cur.list)
 			-- ラベルだけ行の場合はスキップ
 			if not is_label_line(menu_cur.list[temp_row][1]) then
+				menu_cur.pos.row = temp_row
 				break
 			end
 		end
@@ -11950,7 +11941,7 @@ rbff2.startplugin = function()
 			local col_pos = menu_cur.pos.col
 			local temp_col = col_pos[menu_cur.pos.row]
 			if loop then
-				temp_col = temp_col and ((temp_col + add_val) % #col_pos) or 1
+				temp_col = temp_col and ((temp_col + add_val) % #cols) or 1
 			else
 				temp_col = temp_col and temp_col + add_val or 1
 			end
@@ -11960,6 +11951,7 @@ rbff2.startplugin = function()
 				temp_col = loop and 1 or #cols
 			end
 			col_pos[menu_cur.pos.row] = temp_col
+			-- printf("row %s/%s", temp_col, #cols)
 		end
 		global.input_accepted = scr:frame_number()
 	end
