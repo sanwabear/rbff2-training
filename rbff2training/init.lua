@@ -660,7 +660,7 @@ local sts_flg_names = {
 }
 local get_flag_name = function(flags, names)
 	local flgtxt = ""
-	if flags == 0 then
+	if flags <= 0 then
 		return nil
 	end
 	for j = 32, 1, -1 do
@@ -8596,8 +8596,9 @@ rbff2.startplugin = function()
 				p.act_normal = true -- 移動中など
 				p.act_normal = p.act_data.type == act_types.free or p.act_data.type == act_types.block
 			end
-			if p.flag_c4 == 0 and p.flag_c8 == 0 then
-				p.act_data.name = string.format("%s %s", get_flag_name(p.flag_c0, sts_flg_names[0xC0]) or "", get_flag_name(p.flag_cc, sts_flg_names[0xCC]) or "")
+			if p.flag_c8 <= 0 then
+				p.act_data.name = get_flag_name(p.flag_c4, sts_flg_names[0xC4]) or
+					string.format("%s %s", get_flag_name(p.flag_c0, sts_flg_names[0xC0]) or "", get_flag_name(p.flag_cc, sts_flg_names[0xCC]) or "")
 				p.act_data.names = { p.act_data.name }
 			end
 
@@ -8799,7 +8800,7 @@ rbff2.startplugin = function()
 					op.need_block     = op.need_block or (act_type == act_types.low_attack) or (act_type == act_types.attack) or (act_type == act_types.overhead)
 					op.need_low_block = op.need_low_block or (act_type == act_types.low_attack)
 					op.need_ovh_block = op.need_ovh_block or (act_type == act_types.overhead)
-					printf("%x %x %x %s", fb.act, fb.acta, fb.actb, act_type) -- debug
+					-- printf("%x %x %x %s", fb.act, fb.acta, fb.actb, act_type) -- debug
 				end
 			end
 		end
