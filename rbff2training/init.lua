@@ -508,10 +508,10 @@ local sts_flg_names = {
 		"ジャンプ移行",
 		"後方小ジャンプ",
 		"前方小ジャンプ",
-		"垂方小ジャンプ",
+		"垂直小ジャンプ",
 		"後方ジャンプ",
 		"前方ジャンプ",
-		"垂方ジャンプ",
+		"垂直ジャンプ",
 		"ダッシュ",
 		"飛び退き",
 		"屈前進",
@@ -591,8 +591,8 @@ local sts_flg_names = {
 	},
 	[0xCC] = {
 		"CA",
-		"A攻撃かB攻撃",
-		"滑り攻撃",
+		"AかB攻撃",
+		"滑り",
 		"必殺投げやられ",
 		"",
 		"空中ガード",
@@ -2046,6 +2046,16 @@ for char, acts_base in pairs(char_acts_base) do
 	char_acts[char], char_1st_acts[char] = {}, {}
 	for _, acts in pairs(acts_base) do
 		acts.name = acts.name or acts.names[1]
+		acts.normal_name = acts.name
+		acts.slide_name = "滑り " .. acts.name
+		acts.bs_name = "BS " .. acts.name
+		local temp_names = acts.names
+		acts.names = {}
+		for _, name in ipairs(temp_names) do
+			table.insert(acts.names, name)
+			table.insert(acts.names, "滑り " .. name)
+			table.insert(acts.names, "BS " .. name)
+		end
 		for i, id in ipairs(acts.ids) do
 			if i == 1 then
 				acts.id_1st = id
@@ -2078,7 +2088,6 @@ local new_set = function(...)
 end
 local jump_acts = new_set(0x9, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16)
 local wakeup_acts = new_set(0x193, 0x13B)
-local get_act_name = function(act_data) return act_data and act_data.name or  "" end
 local input_state_types = {
 	step = 1,
 	faint = 2,
@@ -8563,9 +8572,25 @@ rbff2.startplugin = function()
 			if char_acts[p.char] and char_acts[p.char][p.act] then
 				p.act_data = char_acts[p.char][p.act]
 				p.act_1st  = char_1st_acts[p.char][p.act] or false
+				-- 技動作は滑りかBSかを付与する
+				if p.slide_atk then
+					p.act_data.name = p.act_data.slide_name
+				elseif p.bs_atk then
+					p.act_data.name = p.act_data.bs_name
+				else
+					p.act_data.name = p.act_data.normal_name
+				end
 			elseif char_acts[#char_acts] and char_acts[#char_acts][p.act] then
 				p.act_data = char_acts[#char_acts][p.act]
 				p.act_1st  = char_1st_acts[#char_acts][p.act] or false
+				-- 技動作は滑りかBSかを付与する
+				if p.slide_atk then
+					p.act_data.name = p.act_data.slide_name
+				elseif p.bs_atk then
+					p.act_data.name = p.act_data.bs_name
+				else
+					p.act_data.name = p.act_data.normal_name
+				end
 			else
 				p.act_data = {
 					name = (p.state == 1 or p.state == 3) and "やられ" or tohex(p.act),
@@ -8596,11 +8621,6 @@ rbff2.startplugin = function()
 				p.act_normal = true -- 移動中など
 				p.act_normal = p.act_data.type == act_types.free or p.act_data.type == act_types.block
 			end
-			if p.flag_c8 <= 0 then
-				p.act_data.name = get_flag_name(p.flag_c4, sts_flg_names[0xC4]) or
-					string.format("%s %s", get_flag_name(p.flag_c0, sts_flg_names[0xC0]) or "", get_flag_name(p.flag_cc, sts_flg_names[0xCC]) or "")
-				p.act_data.names = { p.act_data.name }
-			end
 
 			-- アドレス保存
 			if not p.bases[#p.bases] or p.bases[#p.bases].addr ~= p.base then
@@ -8608,7 +8628,7 @@ rbff2.startplugin = function()
 					addr     = p.base,
 					count    = 1,
 					act_data = p.act_data,
-					name     = get_act_name(p.act_data),
+					name     = p.act_data.name,
 					pos1     = p.pos_total,
 					pos2     = p.pos_total,
 					xmov     = 0,
@@ -9032,7 +9052,7 @@ rbff2.startplugin = function()
 
 		if global.log.baselog or global.log.keylog or global.log.poslog then
 			local p1, p2 = players[1], players[2]
-			local log1, log2 = string.format("P1 %s ", get_act_name(p1.act_data)), string.format("P2 %s ", get_act_name(p2.act_data))
+			local log1, log2 = string.format("P1 %s ", p1.act_data.name, string.format("P2 %s ", p2.act_data.name))
 
 			-- ベースアドレスログ
 			if global.log.baselog then
@@ -9138,7 +9158,7 @@ rbff2.startplugin = function()
 			local fb_upd_groups = {}
 			for _, fb in pairs(p.fireball) do
 				if fb.has_atk_box == true then
-					if fb.atk_count == 1 and get_act_name(fb.act_data_fired) == get_act_name(p.act_data) then
+					if fb.atk_count == 1 and fb.act_data_fired.name == p.act_data.name then
 						chg_fireball_state = true
 					end
 					break
@@ -9461,11 +9481,11 @@ rbff2.startplugin = function()
 			-- 飛び道具2
 			for fb_base, fb in pairs(p.fireball) do
 				local frame = fb.act_frames[#fb.act_frames]
-				local reset, new_name = false, get_act_name(fb.act_data_fired)
+				local reset, new_name = false, fb.act_data_fired.name
 				if p.act_data.firing then
 					if p.act_1st then
 						reset = true
-					elseif not frame or frame.name ~= get_act_name(fb.act_data_fired) then
+					elseif not frame or frame.name ~= fb.act_data_fired.name then
 						reset = true
 					end
 				elseif fb.act == 0 and (not frame or frame.name ~= "") then
