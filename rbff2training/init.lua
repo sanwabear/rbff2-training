@@ -37,7 +37,15 @@ local printf = function(format, ...)
 	print(string.format(format, ...))
 end
 
-local man, machine, cpu, pgm, scr, ioports, debugger, base_path
+-- MAMEのLuaオブジェクトの変数と初期化処理
+local man
+local machine
+local cpu
+local pgm
+local scr
+local ioports
+local debugger
+local base_path
 local setup_emu = function()
 	man = manager
 	machine = man.machine
@@ -56,9 +64,26 @@ end
 
 local rbff2 = exports
 
-local main_or_menu_state, prev_main_or_menu_state
-local menu_cur, main_menu, tra_menu, rec_menu, play_menu, menu, tra_main, menu_exit, bs_menus, rvs_menus, bar_menu, disp_menu, ex_menu, col_menu, auto_menu
-local update_menu_pos, reset_menu_pos
+-- メニュー用変数
+local main_or_menu_state
+local prev_main_or_menu_state
+local menu_cur
+local main_menu
+local tra_menu
+local rec_menu
+local play_menu
+local menu
+local tra_main
+local menu_exit
+local bs_menus
+local rvs_menus 
+local bar_menu
+local disp_menu
+local ex_menu
+local col_menu
+local auto_menu
+local update_menu_pos
+local reset_menu_pos
 
 local mem = {
 	last_time               = 0,        -- 最終読込フレーム(キャッシュ用)
@@ -183,18 +208,17 @@ local global = {
 		keylog  = false, -- 入力ログ
 		rvslog  = false, -- リバサログ
 	},
-
-	new_hook_holder     = function ()
+	new_hook_holder     = function()
 		return { bps = {}, wps = {}, on = true, }
 	end,
 
-	wp                  = function (wps, rw, addr, len, cond, exec)
+	wp                  = function(wps, rw, addr, len, cond, exec)
 		table.insert(wps, cpu.debug:wpset(pgm, rw, addr, len, cond or 1, exec or ""))
 	end,
-	bp                  = function (bps, addr, cond, exec)
+	bp                  = function(bps, addr, cond, exec)
 		table.insert(bps, cpu.debug:bpset(addr, cond or 1, exec or ""))
 	end,
-	set_bps             = function (disable, holder)
+	set_bps             = function(disable, holder)
 		if disable == true and holder.on == true then
 			for _, bp in ipairs(holder.bps) do
 				cpu.debug:bpdisable(bp)
@@ -207,7 +231,7 @@ local global = {
 			holder.on = true
 		end
 	end,
-	set_wps             = function (disable, holder)
+	set_wps             = function(disable, holder)
 		if disable == true and holder.on == true then
 			for _, wp in ipairs(holder.wps) do
 				cpu.debug:wpdisable(wp)
@@ -233,22 +257,22 @@ local damaged_moves = {
 	0x301FC, 0x301F4, 0x3031A, 0x30312,
 }
 local hit_effect_types = {
-	down = "ダ",               -- ダウン
-	extra = "特",              -- 特殊なやられ
-	extra_launch = "特浮",     -- 特殊な空中追撃可能ダウン
-	force_stun = "気",         -- 強制気絶
-	fukitobi = "吹",           -- 吹き飛び
-	hikikomi = "後",           -- 後ろ向きのけぞり
-	hikikomi_launch = "後浮",  -- 後ろ向き浮き
-	launch = "浮",             -- 空中とダウン追撃可能ダウン
-	launch2 = "浮の～浮",      -- 浮のけぞり～ダウン
-	launch_nokezori = "浮の",  -- 浮のけぞり
-	nokezori = "の",           -- のけぞり
+	down = "ダ",           -- ダウン
+	extra = "特",          -- 特殊なやられ
+	extra_launch = "特浮", -- 特殊な空中追撃可能ダウン
+	force_stun = "気",     -- 強制気絶
+	fukitobi = "吹",       -- 吹き飛び
+	hikikomi = "後",       -- 後ろ向きのけぞり
+	hikikomi_launch = "後浮", -- 後ろ向き浮き
+	launch = "浮",         -- 空中とダウン追撃可能ダウン
+	launch2 = "浮の～浮", -- 浮のけぞり～ダウン
+	launch_nokezori = "浮の", -- 浮のけぞり
+	nokezori = "の",       -- のけぞり
 	nokezori2 = "の(対スウェー時:ダ)", -- のけぞり 対スウェー時はダウン追撃可能ダウン
-	otg_down = "やられ付ダ",   -- ダウン追撃可能ダウン
-	plane_shift = "送",        -- スウェーライン送り
+	otg_down = "やられ付ダ", -- ダウン追撃可能ダウン
+	plane_shift = "送",    -- スウェーライン送り
 	plane_shift_down = "送ダ", -- スウェーライン送りダウン
-	standup = "立",            -- 強制立のけぞり
+	standup = "立",        -- 強制立のけぞり
 }
 local hit_effects = {
 	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
@@ -2622,7 +2646,7 @@ local create_input_states = function()
 		return copy
 	end
 	local input_easy_states = deepcopy(input_states)
-	local sdm_cmd = {  ["a"] = _22a, ["b"] = _22b, ["c"] = _22c, ["d"] = _22d }
+	local sdm_cmd = { ["a"] = _22a, ["b"] = _22b, ["c"] = _22c, ["d"] = _22d }
 	-- 簡易コマンドテーブル
 	for _, char_tbl in ipairs(input_easy_states) do
 		local removes = {}
@@ -2637,7 +2661,7 @@ local create_input_states = function()
 			end
 			tbl.addr = tbl.easy_addr or tbl.addr
 		end
-		for i = #removes , 1, -1 do
+		for i = #removes, 1, -1 do
 			table.remove(char_tbl, removes[i])
 		end
 	end
@@ -2650,11 +2674,11 @@ local create_input_states = function()
 				table.insert(removes, i)
 			end
 		end
-		for i = #removes , 1, -1 do
+		for i = #removes, 1, -1 do
 			table.remove(char_tbl, removes[i])
 		end
 	end
-	local convert = function (input_tables)
+	local convert = function(input_tables)
 		for _, char_tbl in ipairs(input_tables) do
 			for _, tbl in ipairs(char_tbl) do
 				-- 左右反転コマンド表示用
@@ -3269,7 +3293,7 @@ for _, list in pairs(char_rvs_list) do
 	table.insert(char_bs_list, bs_list)
 end
 
-local get_next_counter = function(targets, p, excludes)
+local get_next_counter          = function(targets, p, excludes)
 	local ex, list, len = excludes or {}, {}, 0
 	for _, rvs in ipairs(targets) do
 		if not ex[rvs] then
@@ -3286,7 +3310,7 @@ local get_next_counter = function(targets, p, excludes)
 	end
 end
 
-local get_next_rvs = function(p, excludes)
+local get_next_rvs              = function(p, excludes)
 	local i = p.addr.base == 0x100400 and 1 or 2
 	local rvs_menu = rvs_menus[i][p.char]
 	if not rvs_menu then
@@ -3294,7 +3318,7 @@ local get_next_rvs = function(p, excludes)
 	end
 	p.dummy_rvs_list = {}
 	for j, rvs in pairs(char_rvs_list[p.char]) do
-		if rvs_menu.pos.col[j+1] == 2 then
+		if rvs_menu.pos.col[j + 1] == 2 then
 			table.insert(p.dummy_rvs_list, rvs)
 		end
 	end
@@ -3304,7 +3328,7 @@ local get_next_rvs = function(p, excludes)
 	return ret
 end
 
-local get_next_bs = function(p, excludes)
+local get_next_bs               = function(p, excludes)
 	local i = p.addr.base == 0x100400 and 1 or 2
 	local bs_menu = bs_menus[i][p.char]
 	if not bs_menu then
@@ -3312,7 +3336,7 @@ local get_next_bs = function(p, excludes)
 	end
 	p.dummy_bs_list = {}
 	for j, bs in pairs(char_bs_list[p.char]) do
-		if bs_menu.pos.col[j+1] == 2 then
+		if bs_menu.pos.col[j + 1] == 2 then
 			table.insert(p.dummy_bs_list, bs)
 		end
 	end
@@ -3320,7 +3344,6 @@ local get_next_bs = function(p, excludes)
 	local ret = get_next_counter(p.dummy_bs_list, p, excludes)
 	return ret
 end
-
 -- エミュレータ本体の入力取得
 local joyk                      = {
 	p1 = {
@@ -3366,7 +3389,7 @@ local use_joy                   = {
 	{ port = ":edge:joy:START", field = joyk.p2.st, frame = 0, prev = 0, player = 2, get = 0, },
 	{ port = ":edge:joy:START", field = joyk.p1.st, frame = 0, prev = 0, player = 1, get = 0, },
 }
-local get_joy_base = function(prev, exclude_player)
+local get_joy_base              = function(prev, exclude_player)
 	-- for pname, port in pairs(ioports) do
 	-- 	for fname, field in pairs(port.fields) do
 	-- 		printf("%s %s", pname, fname)
@@ -3409,10 +3432,10 @@ local get_joy_base = function(prev, exclude_player)
 	end
 	return prev and prev_joy_val or joy_val
 end
-local get_joy = function(exclude_player)
+local get_joy                   = function(exclude_player)
 	return get_joy_base(false, exclude_player)
 end
-local accept_input = function(btn, joy_val, state_past)
+local accept_input              = function(btn, joy_val, state_past)
 	if 12 < state_past then
 		local p1 = btn == "Start" and "1 Player Start" or ("P1 " .. btn)
 		local p2 = btn == "Start" and "2 Players Start" or ("P2 " .. btn)
@@ -3424,7 +3447,7 @@ local accept_input = function(btn, joy_val, state_past)
 			end
 		else
 			if (0 < joy_val[p1] and state_past >= joy_val[p1]) or
-			   (0 < joy_val[p2] and state_past >= joy_val[p2]) then
+				(0 < joy_val[p2] and state_past >= joy_val[p2]) then
 				if global.disp_replay then
 					pgm:write_u32(0x0010D612, 0x00610004)
 					pgm:write_u8(0x0010D713, 0x01)
@@ -3435,7 +3458,7 @@ local accept_input = function(btn, joy_val, state_past)
 	end
 	return false
 end
-local is_start_a = function(joy_val, state_past)
+local is_start_a                = function(joy_val, state_past)
 	if 12 < state_past then
 		for i = 1, 2 do
 			local st = i == 1 and "1 Player Start" or "2 Players Start"
@@ -3448,51 +3471,85 @@ local is_start_a = function(joy_val, state_past)
 	end
 	return false
 end
-local new_next_joy = function()
+local new_next_joy              = function()
 	return {
-		[joyk.p1.dn] = false, [joyk.p1.a] = false, [joyk.p2.dn] = false, [joyk.p2.a] = false,
-		[joyk.p1.lt] = false, [joyk.p1.b] = false, [joyk.p2.lt] = false, [joyk.p2.b] = false,
-		[joyk.p1.rt] = false, [joyk.p1.c] = false, [joyk.p2.rt] = false, [joyk.p2.c] = false,
-		[joyk.p1.up] = false, [joyk.p1.d] = false, [joyk.p2.up] = false, [joyk.p2.d] = false,
+		[joyk.p1.dn] = false,
+		[joyk.p1.a] = false,
+		[joyk.p2.dn] = false,
+		[joyk.p2.a] = false,
+		[joyk.p1.lt] = false,
+		[joyk.p1.b] = false,
+		[joyk.p2.lt] = false,
+		[joyk.p2.b] = false,
+		[joyk.p1.rt] = false,
+		[joyk.p1.c] = false,
+		[joyk.p2.rt] = false,
+		[joyk.p2.c] = false,
+		[joyk.p1.up] = false,
+		[joyk.p1.d] = false,
+		[joyk.p2.up] = false,
+		[joyk.p2.d] = false,
 	}
 end
 -- 入力の1P、2P反転用のテーブル
-local rev_joy = {
-	[joyk.p1.a ] = joyk.p2.a , [joyk.p2.a ] = joyk.p1.a ,
-	[joyk.p1.b ] = joyk.p2.b , [joyk.p2.b ] = joyk.p1.b ,
-	[joyk.p1.c ] = joyk.p2.c , [joyk.p2.c ] = joyk.p1.c ,
-	[joyk.p1.d ] = joyk.p2.d , [joyk.p2.d ] = joyk.p1.d ,
-	[joyk.p1.dn] = joyk.p2.dn, [joyk.p2.dn] = joyk.p1.dn,
-	[joyk.p1.lt] = joyk.p2.lt, [joyk.p2.lt] = joyk.p1.lt,
-	[joyk.p1.rt] = joyk.p2.rt, [joyk.p2.rt] = joyk.p1.rt,
-	[joyk.p1.up] = joyk.p2.up, [joyk.p2.up] = joyk.p1.up,
+local rev_joy                   = {
+	[joyk.p1.a] = joyk.p2.a,
+	[joyk.p2.a] = joyk.p1.a,
+	[joyk.p1.b] = joyk.p2.b,
+	[joyk.p2.b] = joyk.p1.b,
+	[joyk.p1.c] = joyk.p2.c,
+	[joyk.p2.c] = joyk.p1.c,
+	[joyk.p1.d] = joyk.p2.d,
+	[joyk.p2.d] = joyk.p1.d,
+	[joyk.p1.dn] = joyk.p2.dn,
+	[joyk.p2.dn] = joyk.p1.dn,
+	[joyk.p1.lt] = joyk.p2.lt,
+	[joyk.p2.lt] = joyk.p1.lt,
+	[joyk.p1.rt] = joyk.p2.rt,
+	[joyk.p2.rt] = joyk.p1.rt,
+	[joyk.p1.up] = joyk.p2.up,
+	[joyk.p2.up] = joyk.p1.up,
 }
 -- 入力から1P、2Pを判定するテーブル
-local joy_pside = {
-	[joyk.p1.dn] = 1, [joyk.p1.a] = 1, [joyk.p2.dn] = 2, [joyk.p2.a] = 2,
-	[joyk.p1.lt] = 1, [joyk.p1.b] = 1, [joyk.p2.lt] = 2, [joyk.p2.b] = 2,
-	[joyk.p1.rt] = 1, [joyk.p1.c] = 1, [joyk.p2.rt] = 2, [joyk.p2.c] = 2,
-	[joyk.p1.up] = 1, [joyk.p1.d] = 1, [joyk.p2.up] = 2, [joyk.p2.d] = 2,
+local joy_pside                 = {
+	[joyk.p1.dn] = 1,
+	[joyk.p1.a] = 1,
+	[joyk.p2.dn] = 2,
+	[joyk.p2.a] = 2,
+	[joyk.p1.lt] = 1,
+	[joyk.p1.b] = 1,
+	[joyk.p2.lt] = 2,
+	[joyk.p2.b] = 2,
+	[joyk.p1.rt] = 1,
+	[joyk.p1.c] = 1,
+	[joyk.p2.rt] = 2,
+	[joyk.p2.c] = 2,
+	[joyk.p1.up] = 1,
+	[joyk.p1.d] = 1,
+	[joyk.p2.up] = 2,
+	[joyk.p2.d] = 2,
 }
 -- 入力の左右反転用のテーブル
-local joy_frontback = {
-	[joyk.p1.lt] = joyk.p1.rt, [joyk.p2.lt] = joyk.p2.rt,
-	[joyk.p1.rt] = joyk.p1.lt, [joyk.p2.rt] = joyk.p2.lt,
+local joy_frontback             = {
+	[joyk.p1.lt] = joyk.p1.rt,
+	[joyk.p2.lt] = joyk.p2.rt,
+	[joyk.p1.rt] = joyk.p1.lt,
+	[joyk.p2.rt] = joyk.p2.lt,
 }
 -- MAMEへの入力の無効化
-local cls_joy = function()
+local cls_joy                   = function()
 	for _, joy in ipairs(use_joy) do
 		ioports[joy.port].fields[joy.field]:set_value(0)
 	end
 end
 
 -- キー入力
-local kprops = { "d", "c", "b", "a", "rt", "lt", "dn", "up", "sl", "st", }
-local posi_or_pl1 = function(v) return 0 <= v and v + 1 or 1 end
-local nega_or_mi1 = function(v) return 0 >= v and v - 1 or -1 end
+local kprops                    = { "d", "c", "b", "a", "rt", "lt", "dn", "up", "sl", "st", }
+local posi_or_pl1               = function(v) return 0 <= v and v + 1 or 1 end
+local nega_or_mi1               = function(v) return 0 >= v and v - 1 or -1 end
 
 -- ポーズ
-local set_freeze = function(frz_expected)
+local set_freeze                = function(frz_expected)
 	local dswport = ioports[":DSW"]
 	local fzfld = dswport.fields["Freeze"]
 	local freez = ((dswport:read() & fzfld.mask) ~ fzfld.defvalue) <= 0
@@ -3500,7 +3557,7 @@ local set_freeze = function(frz_expected)
 	if mem._0x10FD82 ~= 0x00 then
 		if freez ~= frz_expected then
 			fzfld:set_value(global.frz[global.frzc])
-			global.frzc = global.frzc +1
+			global.frzc = global.frzc + 1
 			if global.frzc > #global.frz then
 				global.frzc = 1
 			end
@@ -3509,51 +3566,50 @@ local set_freeze = function(frz_expected)
 		pgm:write_u8(0x1041D2, frz_expected and 0x00 or 0xFF)
 	end
 end
-
-local new_ggkey_set = function(p1)
+local new_ggkey_set             = function(p1)
 	local xoffset, yoffset = p1 and 50 or 245, 200
-	local pt0, pt2, ptS, ptP, ptP1, ptP2 , ptP3, ptP4 = 0, 1, math.sin(1), 9, 8.4, 8.7, 9.3, 9.6
+	local pt0, pt2, ptS, ptP, ptP1, ptP2, ptP3, ptP4 = 0, 1, math.sin(1), 9, 8.4, 8.7, 9.3, 9.6
 	local oct_vt = {
-		{ x =  pt0, y  = pt2, no = 1, op = 5, dg1 = 4, dg2 = 6, },  -- 1:レバー2
-		{ x =  ptS, y =  ptS, no = 2, op = 6, dg1 = 5, dg2 = 7, },  -- 2:レバー3
-		{ x =  pt2, y =  pt0, no = 3, op = 7, dg1 = 6, dg2 = 8, },  -- 3:レバー6
-		{ x =  ptS, y = -ptS, no = 4, op = 8, dg1 = 1, dg2 = 7, },  -- 4:レバー9
-		{ x =  pt0, y = -pt2, no = 5, op = 1, dg1 = 2, dg2 = 8, },  -- 5:レバー8
-		{ x = -ptS, y = -ptS, no = 6, op = 2, dg1 = 1, dg2 = 3, },  -- 6:レバー7
-		{ x = -pt2, y =  pt0, no = 7, op = 3, dg1 = 2, dg2 = 4, },  -- 7:レバー4
-		{ x = -ptS, y =  ptS, no = 8, op = 4, dg1 = 3, dg2 = 5, },  -- 8:レバー1
-		{ x =  pt0, y =  pt0, no = 9, op = 9, dg1 = 9, dg2 = 9, },  -- 9:レバー5
+		{ x = pt0,  y = pt2,  no = 1, op = 5, dg1 = 4, dg2 = 6, }, -- 1:レバー2
+		{ x = ptS,  y = ptS,  no = 2, op = 6, dg1 = 5, dg2 = 7, }, -- 2:レバー3
+		{ x = pt2,  y = pt0,  no = 3, op = 7, dg1 = 6, dg2 = 8, }, -- 3:レバー6
+		{ x = ptS,  y = -ptS, no = 4, op = 8, dg1 = 1, dg2 = 7, }, -- 4:レバー9
+		{ x = pt0,  y = -pt2, no = 5, op = 1, dg1 = 2, dg2 = 8, }, -- 5:レバー8
+		{ x = -ptS, y = -ptS, no = 6, op = 2, dg1 = 1, dg2 = 3, }, -- 6:レバー7
+		{ x = -pt2, y = pt0,  no = 7, op = 3, dg1 = 2, dg2 = 4, }, -- 7:レバー4
+		{ x = -ptS, y = ptS,  no = 8, op = 4, dg1 = 3, dg2 = 5, }, -- 8:レバー1
+		{ x = pt0,  y = pt0,  no = 9, op = 9, dg1 = 9, dg2 = 9, }, -- 9:レバー5
 	}
 	for _, xy in ipairs(oct_vt) do
 		xy.x1, xy.y1 = xy.x * ptP1 + xoffset, xy.y * ptP1 + yoffset
 		xy.x2, xy.y2 = xy.x * ptP2 + xoffset, xy.y * ptP2 + yoffset
 		xy.x3, xy.y3 = xy.x * ptP3 + xoffset, xy.y * ptP3 + yoffset
 		xy.x4, xy.y4 = xy.x * ptP3 + xoffset, xy.y * ptP4 + yoffset
-		xy.x , xy.y  = xy.x * ptP  + xoffset, xy.y * ptP  + yoffset -- 座標の中心
-		xy.xt, xy.yt = xy.x - 2.5           , xy.y -3               -- レバーの丸表示用
+		xy.x, xy.y   = xy.x * ptP + xoffset, xy.y * ptP + yoffset -- 座標の中心
+		xy.xt, xy.yt = xy.x - 2.5, xy.y - 3                 -- レバーの丸表示用
 	end
 	local key_xy = {
-		oct_vt[8],  -- 8:レバー1
-		oct_vt[1],  -- 1:レバー2
-		oct_vt[2],  -- 2:レバー3
-		oct_vt[7],  -- 7:レバー4
-		oct_vt[9],  -- 9:レバー5
-		oct_vt[3],  -- 3:レバー6
-		oct_vt[6],  -- 6:レバー7
-		oct_vt[5],  -- 5:レバー8
-		oct_vt[4],  -- 4:レバー9
+		oct_vt[8], -- 8:レバー1
+		oct_vt[1], -- 1:レバー2
+		oct_vt[2], -- 2:レバー3
+		oct_vt[7], -- 7:レバー4
+		oct_vt[9], -- 9:レバー5
+		oct_vt[3], -- 3:レバー6
+		oct_vt[6], -- 6:レバー7
+		oct_vt[5], -- 5:レバー8
+		oct_vt[4], -- 4:レバー9
 	}
 	return { xoffset = xoffset, yoffset = yoffset, oct_vt = oct_vt, key_xy = key_xy, }
 end
-local ggkey_set = {
+local ggkey_set                 = {
 	new_ggkey_set(true),
 	new_ggkey_set(false)
 }
 
-local slide_btn = { [0] = "-", [1] = "A", [2] = "B", [3] = "C", [4] = "D", [5] = "AB", [6] = "BC", [7] = "CD", }
-local slide_rev = { [0] = "N", [1] = "↑", [2] = "↓", [3] = "→", [4] = "↗", [5] = "↘", [6] = "←", [7] = "↖", [8] = "↙", }
+local slide_btn                 = { [0] = "-", [1] = "A", [2] = "B", [3] = "C", [4] = "D", [5] = "AB", [6] = "BC", [7] = "CD", }
+local slide_rev                 = { [0] = "N", [1] = "↑", [2] = "↓", [3] = "→", [4] = "↗", [5] = "↘", [6] = "←", [7] = "↖", [8] = "↙", }
 -- ダッシュ中の行動アドレス 家庭用0x02B024からの処理
-local get_dash_act_addr = function(p, pgm)
+local get_dash_act_addr         = function(p, pgm)
 	--[[
 	02B024: 43F9 0004 B746           lea     $4b746.l, A1                          ; A1 = 4b746
 	02B02A: 297C 0000 0004 00CC      move.l  #$4, ($cc,A4)                         ; 動作フラグセット 0000 0004 滑り攻撃
@@ -3592,14 +3648,14 @@ local get_dash_act_addr = function(p, pgm)
 end
 
 -- 当たり判定
-local type_ck_push = function(obj, box)
+local type_ck_push              = function(obj, box)
 	obj.height = obj.height or box.bottom - box.top --used for height of ground throwbox
 end
-local type_ck_vuln = function(obj, box) if not obj.vulnerable then return true end end
-local type_ck_gd   = function(obj, box) end
-local type_ck_atk  = function(obj, box) if obj.harmless then return true end end
-local type_ck_thw  = function(obj, box) if obj.harmless then return true end end
-local type_ck_und  = function(obj, box)
+local type_ck_vuln              = function(obj, box) if not obj.vulnerable then return true end end
+local type_ck_gd                = function(obj, box) end
+local type_ck_atk               = function(obj, box) if obj.harmless then return true end end
+local type_ck_thw               = function(obj, box) if obj.harmless then return true end end
+local type_ck_und               = function(obj, box)
 	--printf("%x, unk box id: %x", obj.base, box.id) --debug
 end
 local box_types                 = {
@@ -3672,7 +3728,7 @@ for _, boxtype in pairs(box_type_base) do
 			box_types[boxtype.id - 1] = boxtype
 		end
 	end
-	boxtype.fill    = (0xFFFFFFFF & (boxtype.fill    << 24)) | boxtype.color
+	boxtype.fill    = (0xFFFFFFFF & (boxtype.fill << 24)) | boxtype.color
 	boxtype.outline = (0xFFFFFFFF & (boxtype.outline << 24)) | boxtype.color
 end
 
@@ -3681,7 +3737,7 @@ local btn_col = { [convert("_A")] = 0xFFCC0000, [convert("_B")] = 0xFFCC8800, [c
 local text_col, shadow_col = 0xFFFFFFFF, 0xFF000000
 
 local is_dir = function(name)
-	if type(name)~="string" then return false end
+	if type(name) ~= "string" then return false end
 	local cd = lfs.currentdir()
 	local is = lfs.chdir(name) and true or false
 	lfs.chdir(cd)
@@ -3698,8 +3754,8 @@ local mkdir = function(path)
 	return r, err
 end
 local is_file = function(name)
-	if type(name)~="string" then return false end
-	local f = io.open(name,"r")
+	if type(name) ~= "string" then return false end
+	local f = io.open(name, "r")
 	if f then
 		f:close()
 		return true
@@ -3732,7 +3788,7 @@ local tohex = function(num)
 	local s = ''
 	while num > 0 do
 		local mod = math.fmod(num, 16)
-		s = string.sub(hexstr, mod+1, mod+1) .. s
+		s = string.sub(hexstr, mod + 1, mod + 1) .. s
 		num = math.floor(num / 16)
 	end
 	if s == '' then s = '0' end
@@ -3746,13 +3802,13 @@ end
 -- tableで返す
 local tobits = function(num)
 	-- returns a table of bits, least significant first.
-    local t, rest = {}, 0 -- will contain the bits
-    while num > 0 do
+	local t, rest = {}, 0 -- will contain the bits
+	while num > 0 do
 		rest = math.fmod(num, 2)
 		table.insert(t, rest)
-        num = (num - rest) / 2
-    end
-    return t
+		num = (num - rest) / 2
+	end
+	return t
 end
 
 local testbit = function(target, hex)
@@ -3779,7 +3835,7 @@ local draw_rtext = function(x, y, str, fgcol, bgcol)
 	if type(str) ~= "string" then
 		str = string.format("%s", str)
 	end
-	local xx = - man.ui:get_string_width(str, scr.xscale * scr.height)
+	local xx = -man.ui:get_string_width(str, scr.xscale * scr.height)
 	scr:draw_text(x + xx, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
 	return xx
 end
@@ -3821,22 +3877,22 @@ end
 -- コマンド入力表示
 local draw_cmd = function(p, line, frame, str)
 	local p1 = p == 1
-	local xx = p1 and 12 or 294   -- 1Pと2Pで左右に表示し分ける
+	local xx = p1 and 12 or 294 -- 1Pと2Pで左右に表示し分ける
 	local yy = (line + 10 - 1) * 8 -- +8はオフセット位置
 
 	if 0 < frame then
 		local cframe = 999 < frame and "LOT" or frame
-		draw_rtext_with_shadow(p1 and 10   or 292  ,       yy, cframe, text_col)
+		draw_rtext_with_shadow(p1 and 10 or 292, yy, cframe, text_col)
 	end
 	local col = 0xFAFFFFFF
 	if p1 then
 		for i = 1, 50 do
-			scr:draw_line(i, yy, i+1, yy, col)
+			scr:draw_line(i, yy, i + 1, yy, col)
 			col = col - 0x05000000
 		end
 	else
 		for i = 320, 270, -1 do
-			scr:draw_line(i, yy, i-1, yy, col)
+			scr:draw_line(i, yy, i - 1, yy, col)
 			col = col - 0x05000000
 		end
 	end
@@ -3845,7 +3901,7 @@ end
 -- 処理アドレス表示
 local draw_base = function(p, line, frame, addr, act_name, xmov)
 	local p1 = p == 1
-	local xx = p1 and 60 or 195    -- 1Pと2Pで左右に表示し分ける
+	local xx = p1 and 60 or 195 -- 1Pと2Pで左右に表示し分ける
 	local yy = (line + 10 - 1) * 8 -- +8はオフセット位置
 
 	local cframe
@@ -3869,7 +3925,7 @@ local bp_offset = {
 	[0x017300] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 }, --solid shadows
 }
 local bp_clone = { ["rbff2k"] = -0x104, ["rbff2h"] = 0x20 }
-local fix_bp_addr = function (addr)
+local fix_bp_addr = function(addr)
 	local fix1 = bp_clone[emu.romname()] or 0
 	local fix2 = bp_offset[addr] and (bp_offset[addr][emu.romname()] or fix1) or fix1
 	return addr + fix2
@@ -3920,7 +3976,7 @@ throw_inv_type.values = {
 	throw_inv_type.time24, throw_inv_type.time20, throw_inv_type.time10, throw_inv_type.sway, throw_inv_type.flag1, throw_inv_type.flag2,
 	throw_inv_type.state, throw_inv_type.no_gnd
 }
-hurt_inv_type.get = function (p, real_top, real_bottom, box)
+hurt_inv_type.get = function(p, real_top, real_bottom, box)
 	local ret, top, low = {}, nil, nil
 	for _, type in ipairs(hurt_inv_type.values) do
 		if type.type == 2 and real_top <= type.value then
@@ -3936,21 +3992,21 @@ hurt_inv_type.get = function (p, real_top, real_bottom, box)
 	if low then
 		table.insert(ret, low)
 	end
-	if box.type == box_type_base.v3 then  -- 食らい(ダウン追撃のみ可)
+	if box.type == box_type_base.v3 then                                                            -- 食らい(ダウン追撃のみ可)
 		table.insert(ret, hurt_inv_type.otg)
-	elseif box.type == box_type_base.v4 then -- 食らい(空中追撃のみ可)
+	elseif box.type == box_type_base.v4 then                                                        -- 食らい(空中追撃のみ可)
 		table.insert(ret, hurt_inv_type.juggle)
-	elseif box.type == box_type_base.v6 then -- 食らい(対ライン上攻撃)
+	elseif box.type == box_type_base.v6 then                                                        -- 食らい(対ライン上攻撃)
 		table.insert(ret, hurt_inv_type.sway_oh)
-	elseif box.type == box_type_base.x1 then -- 食らい(対ライン下攻撃)
+	elseif box.type == box_type_base.x1 then                                                        -- 食らい(対ライン下攻撃)
 		table.insert(ret, hurt_inv_type.sway_lo)
-	elseif box.type == box_type_base.sv1 or -- 食らい1(スウェー中)
-																																																																	box.type == box_type_base.sv2 then -- 食らい2(スウェー中)
+	elseif box.type == box_type_base.sv1 or                                                         -- 食らい1(スウェー中)
+		box.type == box_type_base.sv2 then                                                          -- 食らい2(スウェー中)
 		table.insert(ret, hurt_inv_type.main)
 	end
 	return #ret == 0 and {} or ret
 end
-throw_inv_type.get = function (p)
+throw_inv_type.get = function(p)
 	if p.is_fireball then
 		return {}
 	end
@@ -3960,7 +4016,7 @@ throw_inv_type.get = function (p)
 			ret = type
 		end
 	end
-	ret = ret == nil and {} or {ret}
+	ret = ret == nil and {} or { ret }
 	if p.state ~= 0 or p.op.state ~= 0 then
 		table.insert(ret, throw_inv_type.state)
 	end
@@ -3980,19 +4036,22 @@ throw_inv_type.get = function (p)
 end
 -- 削りダメージ補正
 local chip_dmg_types = {
-	zero = { -- ゼロ
+	zero = {
+	      -- ゼロ
 		name = "0",
 		calc = function(pure_dmg)
 			return 0
 		end,
 	},
-	rshift4 = { -- 1/16
+	rshift4 = {
+	         -- 1/16
 		name = "1/16",
 		calc = function(pure_dmg)
 			return math.max(1, 0xFFFF & (pure_dmg >> 4))
 		end,
 	},
-	rshift5 = { -- 1/32
+	rshift5 = {
+	         -- 1/32
 		name = "1/32",
 		calc = function(pure_dmg)
 			return math.max(1, 0xFFFF & (pure_dmg >> 5))
@@ -4001,23 +4060,23 @@ local chip_dmg_types = {
 }
 -- 削りダメージ計算種別 補正処理の分岐先の種類分用意する
 local chip_dmg_type_tbl = {
-	chip_dmg_types.zero,    --  0 ダメージ無し
-	chip_dmg_types.zero,    --  1 ダメージ無し
+	chip_dmg_types.zero, --  0 ダメージ無し
+	chip_dmg_types.zero, --  1 ダメージ無し
 	chip_dmg_types.rshift4, --  2 1/16
 	chip_dmg_types.rshift4, --  3 1/16
-	chip_dmg_types.zero,    --  4 ダメージ無し
-	chip_dmg_types.zero,    --  5 ダメージ無し
+	chip_dmg_types.zero, --  4 ダメージ無し
+	chip_dmg_types.zero, --  5 ダメージ無し
 	chip_dmg_types.rshift4, --  6 1/16
 	chip_dmg_types.rshift5, --  7 1/32
 	chip_dmg_types.rshift5, --  8 1/32
-	chip_dmg_types.zero,    --  9 ダメージ無し
-	chip_dmg_types.zero,    -- 10 ダメージ無し
+	chip_dmg_types.zero, --  9 ダメージ無し
+	chip_dmg_types.zero, -- 10 ダメージ無し
 	chip_dmg_types.rshift4, -- 11 1/16
 	chip_dmg_types.rshift4, -- 12 1/16
 	chip_dmg_types.rshift4, -- 13 1/16
 	chip_dmg_types.rshift4, -- 14 1/16
 	chip_dmg_types.rshift4, -- 15 1/16
-	chip_dmg_types.zero,    -- 16 ダメージ無し
+	chip_dmg_types.zero, -- 16 ダメージ無し
 }
 -- 削りダメージ計算種別取得 05B2A4 からの処理
 local get_chip_dmg_type = function(id, pgm)
@@ -4028,18 +4087,18 @@ local get_chip_dmg_type = function(id, pgm)
 end
 -- ヒット処理の飛び先 家庭用版 0x13120 からのデータテーブル 5種類
 local hit_proc_types = {
-	none      = nil,                       -- 常に判定しない
-	same_line = "メイン",                  -- 同一ライン同士なら判定する
-	diff_line = "メイン,スウェー",         -- 異なるライン同士でも判定する
-	unknown   = "",                        -- 不明
-	air_onry  = "空中のみ",                -- 相手が空中にいれば判定する
+	none      = nil,     -- 常に判定しない
+	same_line = "メイン", -- 同一ライン同士なら判定する
+	diff_line = "メイン,スウェー", -- 異なるライン同士でも判定する
+	unknown   = "",      -- 不明
+	air_onry  = "空中のみ", -- 相手が空中にいれば判定する
 }
 local hit_sub_procs = {
-	[0x01311C] = hit_proc_types.none,      -- 常に判定しない
+	[0x01311C] = hit_proc_types.none,   -- 常に判定しない
 	[0x012FF0] = hit_proc_types.same_line, -- → 013038 同一ライン同士なら判定する
 	[0x012FFE] = hit_proc_types.diff_line, -- → 013054 異なるライン同士でも判定する
-	[0x01300A] = hit_proc_types.unknown,   -- → 013018 不明
-	[0x012FE2] = hit_proc_types.air_onry,  -- → 012ff0 → 013038 相手が空中にいれば判定する
+	[0x01300A] = hit_proc_types.unknown, -- → 013018 不明
+	[0x012FE2] = hit_proc_types.air_onry, -- → 012ff0 → 013038 相手が空中にいれば判定する
 }
 -- 判定枠のチェック処理種類
 local hit_box_proc = function(id, addr)
@@ -4057,29 +4116,29 @@ local hit_box_proc = function(id, addr)
 	return hit_proc_types.none
 end
 local hit_box_procs = {
-	normal_hit  = function (id) return hit_box_proc(id, 0x94D2C) end, -- 012DBC: 012DC8: 通常状態へのヒット判定処理
-	down_hit    = function (id) return hit_box_proc(id, 0x94E0C) end, -- 012DE4: 012DF0: ダウン状態へのヒット判定処理
-	air_hit     = function (id) return hit_box_proc(id, 0x94EEC) end, -- 012E0E: 012E1A: 空中追撃可能状態へのヒット判定処理
-	up_guard    = function (id) return hit_box_proc(id, 0x950AC) end, -- 012EAC: 012EB8: 上段ガード判定処理
-	low_guard   = function (id) return hit_box_proc(id, 0x9518C) end, -- 012ED8: 012EE4: 下段ガード判定処理
-	air_guard   = function (id) return hit_box_proc(id, 0x9526C) end, -- 012F04: 012F16: 空中ガード判定処理
-	sway_up_gd  = function (id) return hit_box_proc(id, 0x95A4C) end, -- 012E60: 012E6C: 対ライン上段の謎処理
-	sway_low_gd = function (id) return hit_box_proc(id, 0x95B2C) end, -- 012F3A: 012E90: 対ライン下段の謎処理
-	j_atm_nage  = function (id) return hit_box_proc(id, 0x9534C) end, -- 012F30: 012F82: 上段当身投げの処理
-	urakumo     = function (id) return hit_box_proc(id, 0x9542C) end, -- 012F30: 012F82: 裏雲隠しの処理
-	g_atm_uchi  = function (id) return hit_box_proc(id, 0x9550C) end, -- 012F44: 012F82: 下段当身打ちの処理
-	gyakushu    = function (id) return hit_box_proc(id, 0x955EC) end, -- 012F4E: 012F82: 必勝逆襲拳の処理
-	sadomazo    = function (id) return hit_box_proc(id, 0x956CC) end, -- 012F58: 012F82: サドマゾの処理
-	phx_tw      = function (id) return hit_box_proc(id, 0x9588C) end, -- 012F6C: 012F82: フェニックススルーの処理
-	baigaeshi   = function (id) return hit_box_proc(id, 0x957AC) end, -- 012F62: 012F82: 倍返しの処理
-	unknown1    = function (id) return hit_box_proc(id, 0x94FCC) end, -- 012E38: 012E44: 不明処理、未使用？
-	katsu       = function (id) return hit_box_proc(id, 0x9596C) end, -- : 012FB2: 喝消し
-	nullify     = function (id)                                       -- : 012F9A: 弾消し
+	normal_hit  = function(id) return hit_box_proc(id, 0x94D2C) end, -- 012DBC: 012DC8: 通常状態へのヒット判定処理
+	down_hit    = function(id) return hit_box_proc(id, 0x94E0C) end, -- 012DE4: 012DF0: ダウン状態へのヒット判定処理
+	air_hit     = function(id) return hit_box_proc(id, 0x94EEC) end, -- 012E0E: 012E1A: 空中追撃可能状態へのヒット判定処理
+	up_guard    = function(id) return hit_box_proc(id, 0x950AC) end, -- 012EAC: 012EB8: 上段ガード判定処理
+	low_guard   = function(id) return hit_box_proc(id, 0x9518C) end, -- 012ED8: 012EE4: 下段ガード判定処理
+	air_guard   = function(id) return hit_box_proc(id, 0x9526C) end, -- 012F04: 012F16: 空中ガード判定処理
+	sway_up_gd  = function(id) return hit_box_proc(id, 0x95A4C) end, -- 012E60: 012E6C: 対ライン上段の謎処理
+	sway_low_gd = function(id) return hit_box_proc(id, 0x95B2C) end, -- 012F3A: 012E90: 対ライン下段の謎処理
+	j_atm_nage  = function(id) return hit_box_proc(id, 0x9534C) end, -- 012F30: 012F82: 上段当身投げの処理
+	urakumo     = function(id) return hit_box_proc(id, 0x9542C) end, -- 012F30: 012F82: 裏雲隠しの処理
+	g_atm_uchi  = function(id) return hit_box_proc(id, 0x9550C) end, -- 012F44: 012F82: 下段当身打ちの処理
+	gyakushu    = function(id) return hit_box_proc(id, 0x955EC) end, -- 012F4E: 012F82: 必勝逆襲拳の処理
+	sadomazo    = function(id) return hit_box_proc(id, 0x956CC) end, -- 012F58: 012F82: サドマゾの処理
+	phx_tw      = function(id) return hit_box_proc(id, 0x9588C) end, -- 012F6C: 012F82: フェニックススルーの処理
+	baigaeshi   = function(id) return hit_box_proc(id, 0x957AC) end, -- 012F62: 012F82: 倍返しの処理
+	unknown1    = function(id) return hit_box_proc(id, 0x94FCC) end, -- 012E38: 012E44: 不明処理、未使用？
+	katsu       = function(id) return hit_box_proc(id, 0x9596C) end, -- : 012FB2: 喝消し
+	nullify     = function(id)                                     -- : 012F9A: 弾消し
 		return (0x20 <= id) and hit_proc_types.same_line or hit_proc_types.none
 	end,
 }
-local new_hitbox1 = function (p, id, pos_x, pos_y, top, bottom, left, right, is_fireball)
-	local box = {id = id, p = p,}
+local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, is_fireball)
+	local box = { id = id, p = p, }
 	box.type = nil
 	if (box.id >= #box_types) then
 		box.atk = true
@@ -4096,7 +4155,7 @@ local new_hitbox1 = function (p, id, pos_x, pos_y, top, bottom, left, right, is_
 				elseif p.hit.harmless then
 					box.type = box_type_base.pdaa -- 飛び道具(空中追撃可、無効)
 				else
-					box.type = box_type_base.paa  -- 飛び道具(空中追撃可)
+					box.type = box_type_base.paa -- 飛び道具(空中追撃可)
 				end
 			else
 				if p.hit.fake_hit then
@@ -4104,7 +4163,7 @@ local new_hitbox1 = function (p, id, pos_x, pos_y, top, bottom, left, right, is_
 				elseif p.hit.harmless then
 					box.type = box_type_base.pda -- 飛び道具(無効)
 				else
-					box.type = box_type_base.pa  -- 飛び道具
+					box.type = box_type_base.pa -- 飛び道具
 				end
 			end
 		else
@@ -4114,15 +4173,15 @@ local new_hitbox1 = function (p, id, pos_x, pos_y, top, bottom, left, right, is_
 				elseif p.hit.harmless then
 					box.type = box_type_base.daa -- 攻撃(無効、空中追撃可)
 				else
-					box.type = box_type_base.aa  -- 攻撃(空中追撃可)
+					box.type = box_type_base.aa -- 攻撃(空中追撃可)
 				end
 			else
 				if p.hit.fake_hit then
-					box.type = box_type_base.fa  -- 攻撃(嘘)
+					box.type = box_type_base.fa -- 攻撃(嘘)
 				elseif p.hit.harmless then
-					box.type = box_type_base.da  -- 攻撃(無効)
+					box.type = box_type_base.da -- 攻撃(無効)
 				else
-					box.type = box_type_base.a   -- 攻撃(空中追撃可)
+					box.type = box_type_base.a -- 攻撃(空中追撃可)
 				end
 			end
 		end
@@ -4145,29 +4204,29 @@ local new_hitbox1 = function (p, id, pos_x, pos_y, top, bottom, left, right, is_
 		end
 	end
 
-	local orig_posy = pos_y
-	pos_y  = pos_y - p.hit.pos_z
+	local orig_posy                = pos_y
+	pos_y                          = pos_y - p.hit.pos_z
 
-	top    = pos_y - (0xFFFF & ((top    * p.hit.scale) >> 6))
-	bottom = pos_y - (0xFFFF & ((bottom * p.hit.scale) >> 6))
+	top                            = pos_y - (0xFFFF & ((top * p.hit.scale) >> 6))
+	bottom                         = pos_y - (0xFFFF & ((bottom * p.hit.scale) >> 6))
 
-	top = top & 0xFFFF
-	bottom = bottom & 0xFFFF
-	left   = 0xFFFF & (pos_x - (0xFFFF & ((left   * p.hit.scale) >> 6)) * p.hit.flip_x)
-	right  = 0xFFFF & (pos_x - (0xFFFF & ((right  * p.hit.scale) >> 6)) * p.hit.flip_x)
+	top                            = top & 0xFFFF
+	bottom                         = bottom & 0xFFFF
+	left                           = 0xFFFF & (pos_x - (0xFFFF & ((left * p.hit.scale) >> 6)) * p.hit.flip_x)
+	right                          = 0xFFFF & (pos_x - (0xFFFF & ((right * p.hit.scale) >> 6)) * p.hit.flip_x)
 
-	box.top , box.bottom = bottom, top
-	box.left, box.right  = left, right
-	box.asis_top , box.asis_bottom = bottom, top
+	box.top, box.bottom            = bottom, top
+	box.left, box.right            = left, right
+	box.asis_top, box.asis_bottom  = bottom, top
 	box.asis_left, box.asis_right  = left, right
 
-	if ((box.top <= 0 and box.bottom <=0) or (box.top >= 224 and box.bottom >=224) or (box.left <= 0 and box.right <= 0) or (box.left >= 320 and box.right >= 320)) then
+	if ((box.top <= 0 and box.bottom <= 0) or (box.top >= 224 and box.bottom >= 224) or (box.left <= 0 and box.right <= 0) or (box.left >= 320 and box.right >= 320)) then
 		--print("OVERFLOW " .. (key or "")) --debug
 		return nil
 	end
 
 	-- はみ出し補正
-	if  p.hit.flip_x == 1 then
+	if p.hit.flip_x == 1 then
 		if box.right > 320 and box.right > box.left then
 			box.right = 0
 			box.over_right = true
@@ -4234,7 +4293,6 @@ local new_hitbox1 = function (p, id, pos_x, pos_y, top, bottom, left, right, is_
 
 	return box
 end
-
 local get_reach = function(p, box, pos_x, pos_y)
 	local top_reach    = pos_y - math.min(box.top, box.bottom)
 	local bottom_reach = pos_y - math.max(box.top, box.bottom)
@@ -4292,35 +4350,34 @@ local in_range = function(top, bottom, atop, abottom)
 	end
 	return false
 end
-
 local update_summary = function(p)
-	local summary = p.hit_summary
+	local summary        = p.hit_summary
 	-- 判定ができてからのログ情報の作成
-	summary.attack      = summary.attack      or p.attack -- 補正前攻撃力導出元ID
-	summary.pure_dmg    = summary.pure_dmg    or p.pure_dmg -- 補正前攻撃力
-	summary.pure_st     = summary.pure_st     or p.pure_st -- 気絶値
-	summary.pure_st_tm  = summary.pure_st_tm  or p.pure_st_tm -- 気絶タイマー
-	summary.chip_dmg    = summary.chip_dmg    or (p.chip_dmg_type and p.chip_dmg_type.calc(summary.pure_dmg) or 0) -- 削りダメージ
-	summary.chip_dmg_nm = summary.chip_dmg_nm or (p.chip_dmg_type and p.chip_dmg_type.name or "0") -- 削りダメージ名
-	summary.attack_id   = summary.attack_id   or p.attack_id
-	summary.effect      = summary.effect      or p.effect -- ヒット効果
-	summary.can_techrise= summary.can_techrise or p.can_techrise -- 受け身行動可否
-	summary.gd_strength = summary.gd_strength or p.gd_strength -- 相手のガード持続の種類
-	summary.max_hit_nm  = summary.max_hit_nm  or p.hit.max_hit_nm -- p.act_frame中の行動最大ヒット 分子
-	summary.max_hit_dn  = summary.max_hit_dn  or p.hit.max_hit_dn -- p.act_frame中の行動最大ヒット 分母
-	summary.cancelable  = summary.cancelable  or p.cancelable or 0 -- キャンセル可否
-	summary.repeatable  = summary.repeatable  or p.repeatable or false -- 連キャン可否
-	summary.slide_atk   = summary.slide_atk   or p.slide_atk -- ダッシュ滑り攻撃
-	summary.bs_atk      = summary.bs_atk      or p.bs_atk -- ブレイクショット
+	summary.attack       = summary.attack or p.attack                                                           -- 補正前攻撃力導出元ID
+	summary.pure_dmg     = summary.pure_dmg or p.pure_dmg                                                       -- 補正前攻撃力
+	summary.pure_st      = summary.pure_st or p.pure_st                                                         -- 気絶値
+	summary.pure_st_tm   = summary.pure_st_tm or p.pure_st_tm                                                   -- 気絶タイマー
+	summary.chip_dmg     = summary.chip_dmg or (p.chip_dmg_type and p.chip_dmg_type.calc(summary.pure_dmg) or 0) -- 削りダメージ
+	summary.chip_dmg_nm  = summary.chip_dmg_nm or (p.chip_dmg_type and p.chip_dmg_type.name or "0")             -- 削りダメージ名
+	summary.attack_id    = summary.attack_id or p.attack_id
+	summary.effect       = summary.effect or p.effect                                                           -- ヒット効果
+	summary.can_techrise = summary.can_techrise or p.can_techrise                                               -- 受け身行動可否
+	summary.gd_strength  = summary.gd_strength or p.gd_strength                                                 -- 相手のガード持続の種類
+	summary.max_hit_nm   = summary.max_hit_nm or p.hit.max_hit_nm                                               -- p.act_frame中の行動最大ヒット 分子
+	summary.max_hit_dn   = summary.max_hit_dn or p.hit.max_hit_dn                                               -- p.act_frame中の行動最大ヒット 分母
+	summary.cancelable   = summary.cancelable or p.cancelable or 0                                              -- キャンセル可否
+	summary.repeatable   = summary.repeatable or p.repeatable or false                                          -- 連キャン可否
+	summary.slide_atk    = summary.slide_atk or p.slide_atk                                                     -- ダッシュ滑り攻撃
+	summary.bs_atk       = summary.bs_atk or p.bs_atk                                                           -- ブレイクショット
 
-	summary.hitstun     = summary.hitstun     or p.hitstun    -- ヒット硬直
-	summary.blockstun   = summary.blockstun   or p.blockstun  -- ガード硬直
-	summary.hitstop     = summary.hitstop     or p.hitstop      -- ヒットストップ
-	summary.hitstop_gd  = summary.hitstop_gd  or p.hitstop_gd   -- ガード時ヒットストップ
+	summary.hitstun      = summary.hitstun or p.hitstun                                                         -- ヒット硬直
+	summary.blockstun    = summary.blockstun or p.blockstun                                                     -- ガード硬直
+	summary.hitstop      = summary.hitstop or p.hitstop                                                         -- ヒットストップ
+	summary.hitstop_gd   = summary.hitstop_gd or p.hitstop_gd                                                   -- ガード時ヒットストップ
 	if p.is_fireball == true then
-		summary.prj_rank = summary.prj_rank   or p.prj_rank -- 飛び道具の強さ
+		summary.prj_rank = summary.prj_rank or p.prj_rank                                                       -- 飛び道具の強さ
 	else
-		summary.prj_rank = nil -- 飛び道具の強さ
+		summary.prj_rank = nil                                                                                  -- 飛び道具の強さ
 	end
 end
 local update_box_summary = function(p, box)
@@ -4333,26 +4390,26 @@ local update_box_summary = function(p, box)
 			box.reach = get_reach(p, box, box.pos_x, box.pos_y)
 		end
 		if box.atk then
-			summary.normal_hit  = summary.normal_hit  or hit_box_procs.normal_hit(box.id)
-			summary.down_hit    = summary.down_hit    or hit_box_procs.down_hit(box.id)
-			summary.air_hit     = summary.air_hit     or hit_box_procs.air_hit(box.id)
-			summary.up_guard    = summary.up_guard    or hit_box_procs.up_guard(box.id)
-			summary.low_guard   = summary.low_guard   or hit_box_procs.low_guard(box.id)
-			summary.air_guard   = summary.air_guard   or hit_box_procs.air_guard(box.id)
-			summary.sway_up_gd  = summary.sway_up_gd  or hit_box_procs.sway_up_gd(box.id)
+			summary.normal_hit  = summary.normal_hit or hit_box_procs.normal_hit(box.id)
+			summary.down_hit    = summary.down_hit or hit_box_procs.down_hit(box.id)
+			summary.air_hit     = summary.air_hit or hit_box_procs.air_hit(box.id)
+			summary.up_guard    = summary.up_guard or hit_box_procs.up_guard(box.id)
+			summary.low_guard   = summary.low_guard or hit_box_procs.low_guard(box.id)
+			summary.air_guard   = summary.air_guard or hit_box_procs.air_guard(box.id)
+			summary.sway_up_gd  = summary.sway_up_gd or hit_box_procs.sway_up_gd(box.id)
 			summary.sway_low_gd = summary.sway_low_gd or hit_box_procs.sway_low_gd(box.id)
-			summary.j_atm_nage  = summary.j_atm_nage  or hit_box_procs.j_atm_nage(box.id)
-			summary.urakumo     = summary.urakumo     or hit_box_procs.urakumo(box.id)
-			summary.g_atm_uchi  = summary.g_atm_uchi  or hit_box_procs.g_atm_uchi(box.id)
-			summary.gyakushu    = summary.gyakushu    or hit_box_procs.gyakushu(box.id)
-			summary.sadomazo    = summary.sadomazo    or hit_box_procs.sadomazo(box.id)
-			summary.phx_tw      = summary.phx_tw      or hit_box_procs.phx_tw(box.id)
-			summary.baigaeshi   = summary.baigaeshi   or hit_box_procs.baigaeshi(box.id)
-			summary.unknown1    = summary.unknown1    or hit_box_procs.unknown1(box.id)
-			summary.katsu       = summary.katsu       or p.is_fireball and 3 <= p.prj_rank and hit_box_procs.katsu(box.id) or nil
-			summary.nullify     = summary.nullify     or p.is_fireball and hit_box_procs.nullify(box.id) or nil
-			summary.bai_catch   = summary.bai_catch   or p.bai_catch == true and "v" or nil
-			summary.box_addr    = summary.box_addr    or pgm:read_u32(pgm:read_u8(0x094C2C + box.id) * 4 + 0x012CB4)
+			summary.j_atm_nage  = summary.j_atm_nage or hit_box_procs.j_atm_nage(box.id)
+			summary.urakumo     = summary.urakumo or hit_box_procs.urakumo(box.id)
+			summary.g_atm_uchi  = summary.g_atm_uchi or hit_box_procs.g_atm_uchi(box.id)
+			summary.gyakushu    = summary.gyakushu or hit_box_procs.gyakushu(box.id)
+			summary.sadomazo    = summary.sadomazo or hit_box_procs.sadomazo(box.id)
+			summary.phx_tw      = summary.phx_tw or hit_box_procs.phx_tw(box.id)
+			summary.baigaeshi   = summary.baigaeshi or hit_box_procs.baigaeshi(box.id)
+			summary.unknown1    = summary.unknown1 or hit_box_procs.unknown1(box.id)
+			summary.katsu       = summary.katsu or p.is_fireball and 3 <= p.prj_rank and hit_box_procs.katsu(box.id) or nil
+			summary.nullify     = summary.nullify or p.is_fireball and hit_box_procs.nullify(box.id) or nil
+			summary.bai_catch   = summary.bai_catch or p.bai_catch == true and "v" or nil
+			summary.box_addr    = summary.box_addr or pgm:read_u32(pgm:read_u8(0x094C2C + box.id) * 4 + 0x012CB4)
 		end
 		if box.type == box_type_base.a or -- 攻撃
 			box.type == box_type_base.pa then -- 飛び道具
@@ -4380,24 +4437,24 @@ local update_box_summary = function(p, box)
 			summary.tw_threshold = p.tw_threshold
 			edge = summary.edge.throw
 		elseif box.type == box_type_base.pt then -- 必殺技投げ
-			summary.sp_throw = true
+			summary.sp_throw     = true
 			summary.sp_throw_id  = p.sp_throw_id
 			summary.tw_threshold = p.tw_threshold
-			edge = summary.edge.throw
+			edge                 = summary.edge.throw
 		elseif box.type == box_type_base.v1 or -- 食らい1
-			box.type == box_type_base.v2 then  -- 食らい2
+			box.type == box_type_base.v2 then -- 食らい2
 			summary.hurt = true
 			edge = summary.edge.hurt
 		elseif box.type == box_type_base.v3 then -- 食らい(ダウン追撃のみ可)
 			summary.hurt = true
 			edge = summary.edge.hurt
-		elseif box.type == box_type_base.v4 then  -- 食らい(空中追撃のみ可)
+		elseif box.type == box_type_base.v4 then -- 食らい(空中追撃のみ可)
 			summary.hurt = true
 			edge = summary.edge.hurt
-		elseif box.type == box_type_base.v6 then  -- 食らい(対ライン上攻撃)
+		elseif box.type == box_type_base.v6 then -- 食らい(対ライン上攻撃)
 			summary.hurt = true
 			edge = summary.edge.hurt
-		elseif box.type == box_type_base.x1 then  -- 食らい(対ライン下攻撃)
+		elseif box.type == box_type_base.x1 then -- 食らい(対ライン下攻撃)
 			summary.hurt = true
 			edge = summary.edge.hurt
 		elseif box.type == box_type_base.sv1 or -- 食らい1(スウェー中)
@@ -4420,12 +4477,12 @@ local update_box_summary = function(p, box)
 		end
 		-- 各判定の最大数値の保存
 		if edge then
-			edge.front    = math.max(box.reach.front , edge.front  or 0)
-			edge.back     = math.min(box.reach.back  , edge.back   or 999)
-			edge.top      = math.max(box.reach.top   , edge.top    or 0)
-			edge.bottom   = math.min(box.reach.bottom, edge.bottom or 999)
+			edge.front       = math.max(box.reach.front, edge.front or 0)
+			edge.back        = math.min(box.reach.back, edge.back or 999)
+			edge.top         = math.max(box.reach.top, edge.top or 0)
+			edge.bottom      = math.min(box.reach.bottom, edge.bottom or 999)
 			-- 実際の上下のリーチを再計算
-			edge.real_top = edge.top + p.pos_y
+			edge.real_top    = edge.top + p.pos_y
 			edge.real_bottom = edge.bottom + p.pos_y
 			-- boxごとに評価
 			if edge == summary.edge.hit then
@@ -4439,11 +4496,11 @@ local update_box_summary = function(p, box)
 					sway_pos_low1 = false, -- 対スウェー判定位置下段
 					sway_pos_low2 = false, -- 対スウェー判定位置下段 タン用
 					punish_away = 0, -- 1:避けつぶし
-									-- 2:ウェービングブロー,龍転身,ダブルローリングつぶし
-									-- 3:避けつぶし ローレンス用
-									-- 4:60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
-									-- 5:64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
-									-- 6:68 屈 ローレンス
+					-- 2:ウェービングブロー,龍転身,ダブルローリングつぶし
+					-- 3:避けつぶし ローレンス用
+					-- 4:60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
+					-- 5:64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
+					-- 6:68 屈 ローレンス
 					asis_punish_away = 0,
 					j_atm_nage = true,
 					range_j_atm_nage = true,
@@ -4554,50 +4611,50 @@ local update_box_summary = function(p, box)
 			memo = memo .. " ugd=" .. (summary.up_guard or "-")
 			memo = memo .. " lgd=" .. (summary.low_guard or "-")
 			memo = memo .. " agd=" .. (summary.air_guard or "-")
-			memo = memo .. " sugd=".. (summary.sway_up_gd or "-")
-			memo = memo .. " slgd=".. (summary.sway_low_gd or "-")
-			memo = memo .. " jatm=".. (summary.j_atm_nage or"-")
-			memo = memo .. " urkm=".. (summary.urakumo or"-")
-			memo = memo .. " gatm=".. (summary.g_atm_uchi or"-")
-			memo = memo .. " gsyu=".. (summary.gyakushu or"-")
-			memo = memo .. " sdmz=".. (summary.sadomazo or"-")
-			memo = memo .. " phx=" .. (summary.phx_tw or"-")
-			memo = memo .. " bai=" .. (summary.baigaeshi or"-")
-			memo = memo .. " ?1="  .. (summary.unknown1 or "-")
-			memo = memo .. " catch="..(summary.bai_catch or "-")
+			memo = memo .. " sugd=" .. (summary.sway_up_gd or "-")
+			memo = memo .. " slgd=" .. (summary.sway_low_gd or "-")
+			memo = memo .. " jatm=" .. (summary.j_atm_nage or "-")
+			memo = memo .. " urkm=" .. (summary.urakumo or "-")
+			memo = memo .. " gatm=" .. (summary.g_atm_uchi or "-")
+			memo = memo .. " gsyu=" .. (summary.gyakushu or "-")
+			memo = memo .. " sdmz=" .. (summary.sadomazo or "-")
+			memo = memo .. " phx=" .. (summary.phx_tw or "-")
+			memo = memo .. " bai=" .. (summary.baigaeshi or "-")
+			memo = memo .. " ?1=" .. (summary.unknown1 or "-")
+			memo = memo .. " catch=" .. (summary.bai_catch or "-")
 
 			-- ログ用
 			box.log_txt = string.format(
-				"hit %6x %3x %3x %2s %3s %2x %2x %2x %s %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s %2x %3s "..memo,
-				p.addr.base,                        -- 1P:100400 2P:100500 1P弾:100600 2P弾:100700 1P弾:100800 2P弾:100900 1P弾:100A00 2P弾:100B00
-				p.act,                              --
-				p.acta,                             --
-				p.act_count,                        --
-				p.act_frame,                        --
-				p.act_contact,                      --
-				p.attack,                           --
-				p.hitstop_id,                       -- ガード硬直のID
-				p.gd_strength,                      -- 相手のガード持続の種類
-				box.id,                             -- 判定のID
-				p.hit.harmless  and "hm"   or "",   -- 無害化
-				p.hit.fake_hit  and "fake" or "",   -- 嘘判定
-				p.hit.obsl_hit  and "obsl" or "",   -- 嘘判定
-				p.hit.full_hit  and "full" or "",   -- 最大ヒット
-				p.hit.harmless2 and "h2"   or "",   -- 無害化
-				p.hit.max_hit_nm,                   -- p.act_frame中の行動最大ヒット 分子
-				p.hit.max_hit_dn,                   -- p.act_frame中の行動最大ヒット 分母
-				p.pure_dmg,                         -- 補正前攻撃力 %3s
-				p.chip_dmg_type.calc(p.pure_dmg),   -- 補正前削りダメージ %s
-				p.chip_dmg_type.name,               -- 削り補正値 %4s
-				p.hitstop,                          -- ヒットストップ %2s
-				p.hitstop_gd,                       -- ガード時ヒットストップ %2s
-				p.hitstun,                          -- ヒット後硬直F %2s
-				p.blockstun,                        -- ガード後硬直F %2s
-				p.effect,                           -- ヒット効果 %2s
-				p.pure_st,                          -- 気絶値 %2s
-				p.pure_st_tm,                       -- 気絶タイマー %2s
-				p.prj_rank,                         -- 飛び道具の強さ
-				p.esaka_range                       -- 詠酒範囲
+				"hit %6x %3x %3x %2s %3s %2x %2x %2x %s %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s %2x %3s " .. memo,
+				p.addr.base,          -- 1P:100400 2P:100500 1P弾:100600 2P弾:100700 1P弾:100800 2P弾:100900 1P弾:100A00 2P弾:100B00
+				p.act,                --
+				p.acta,               --
+				p.act_count,          --
+				p.act_frame,          --
+				p.act_contact,        --
+				p.attack,             --
+				p.hitstop_id,         -- ガード硬直のID
+				p.gd_strength,        -- 相手のガード持続の種類
+				box.id,               -- 判定のID
+				p.hit.harmless and "hm" or "", -- 無害化
+				p.hit.fake_hit and "fake" or "", -- 嘘判定
+				p.hit.obsl_hit and "obsl" or "", -- 嘘判定
+				p.hit.full_hit and "full" or "", -- 最大ヒット
+				p.hit.harmless2 and "h2" or "", -- 無害化
+				p.hit.max_hit_nm,     -- p.act_frame中の行動最大ヒット 分子
+				p.hit.max_hit_dn,     -- p.act_frame中の行動最大ヒット 分母
+				p.pure_dmg,           -- 補正前攻撃力 %3s
+				p.chip_dmg_type.calc(p.pure_dmg), -- 補正前削りダメージ %s
+				p.chip_dmg_type.name, -- 削り補正値 %4s
+				p.hitstop,            -- ヒットストップ %2s
+				p.hitstop_gd,         -- ガード時ヒットストップ %2s
+				p.hitstun,            -- ヒット後硬直F %2s
+				p.blockstun,          -- ガード後硬直F %2s
+				p.effect,             -- ヒット効果 %2s
+				p.pure_st,            -- 気絶値 %2s
+				p.pure_st_tm,         -- 気絶タイマー %2s
+				p.prj_rank,           -- 飛び道具の強さ
+				p.esaka_range         -- 詠酒範囲
 			)
 		elseif box.type.type_check == type_ck_gd then
 			box.log_txt = string.format("guard %6x %x", p.addr.base, box.id)
@@ -4607,19 +4664,19 @@ local update_box_summary = function(p, box)
 end
 
 local new_throwbox = function(p, box)
-	local height = scr.height * scr.yscale
+	local height                   = scr.height * scr.yscale
 	--print("a", box.opp_id, box.top, box.bottom, p.hit.flip_x)
-	p.throwing = true
-	box.flat_throw = box.top == nil
-	box.top    = box.top or box.pos_y - global.throwbox_height
-	box.left   = box.pos_x + (box.left or 0)
-	box.right  = box.pos_x + (box.right or 0)
-	box.top    = box.top and box.pos_y - box.top --air throw
-	box.bottom = box.bottom and (box.pos_y - box.bottom) or height + screen_top - p.hit.pos_z
-	box.type   = box.type or box_type_base.t
-	box.visible = true
+	p.throwing                     = true
+	box.flat_throw                 = box.top == nil
+	box.top                        = box.top or box.pos_y - global.throwbox_height
+	box.left                       = box.pos_x + (box.left or 0)
+	box.right                      = box.pos_x + (box.right or 0)
+	box.top                        = box.top and box.pos_y - box.top --air throw
+	box.bottom                     = box.bottom and (box.pos_y - box.bottom) or height + screen_top - p.hit.pos_z
+	box.type                       = box.type or box_type_base.t
+	box.visible                    = true
 	--print("b", box.opp_id, box.top, box.bottom, p.hit.flip_x)
-	box.asis_top , box.asis_bottom = box.bottom, box.top
+	box.asis_top, box.asis_bottom  = box.bottom, box.top
 	box.asis_left, box.asis_right  = box.left, box.right
 	return box
 end
@@ -4635,11 +4692,11 @@ end
 
 -- 当たり判定用のキャラ情報更新と判定表示用の情報作成
 local update_object = function(p)
-	local height = scr.height * scr.yscale
+	local height   = scr.height * scr.yscale
 
 	local obj_base = p.addr.base
 
-	p.hit.pos_x   = p.pos - screen_left
+	p.hit.pos_x    = p.pos - screen_left
 	if p.min_pos then
 		p.hit.min_pos_x = p.min_pos - screen_left
 	else
@@ -4650,23 +4707,23 @@ local update_object = function(p)
 	else
 		p.hit.max_pos_x = nil
 	end
-	p.hit.pos_z   = p.pos_z
-	p.hit.old_pos_y = p.hit.pos_y
-	p.hit.pos_y   = height - p.pos_y - p.hit.pos_z
-	p.hit.pos_y   = screen_top + p.hit.pos_y
-	p.hit.on      = pgm:read_u32(obj_base)
-	p.hit.flip_x  = get_flip_x(p)
-	p.hit.scale   = pgm:read_u8(obj_base + 0x73) + 1
-	p.hit.char_id = pgm:read_u16(obj_base + 0x10)
-	p.hit.base    = obj_base
+	p.hit.pos_z      = p.pos_z
+	p.hit.old_pos_y  = p.hit.pos_y
+	p.hit.pos_y      = height - p.pos_y - p.hit.pos_z
+	p.hit.pos_y      = screen_top + p.hit.pos_y
+	p.hit.on         = pgm:read_u32(obj_base)
+	p.hit.flip_x     = get_flip_x(p)
+	p.hit.scale      = pgm:read_u8(obj_base + 0x73) + 1
+	p.hit.char_id    = pgm:read_u16(obj_base + 0x10)
+	p.hit.base       = obj_base
 
-	p.attacking   = false
+	p.attacking      = false
 	p.dmmy_attacking = false
-	p.juggling    = false
-	p.can_juggle  = false
-	p.can_otg     = false
-	p.attack_id   = 0
-	p.throwing    = false
+	p.juggling       = false
+	p.can_juggle     = false
+	p.can_otg        = false
+	p.attack_id      = 0
+	p.throwing       = false
 
 	-- ヒットするかどうか
 	if p.is_fireball then
@@ -4717,10 +4774,10 @@ local update_object = function(p)
 		--print("n throw " .. string.format("%x", p.addr.base) .. " " .. p.n_throw.type.name .. " " .. " " .. p.n_throw.left .. " " .. p.n_throw.right .. " " .. p.n_throw.top .. " " .. p.n_throw.bottom)
 	end
 	if p.air_throw and p.air_throw.on == 0x1 then
-		table.insert(p.hitboxes,  update_box_summary(p, new_throwbox(p, p.air_throw)))
+		table.insert(p.hitboxes, update_box_summary(p, new_throwbox(p, p.air_throw)))
 	end
 	if p.sp_throw and p.sp_throw.on == 0x1 then
-		table.insert(p.hitboxes,  update_box_summary(p, new_throwbox(p, p.sp_throw)))
+		table.insert(p.hitboxes, update_box_summary(p, new_throwbox(p, p.sp_throw)))
 	end
 end
 
@@ -4741,245 +4798,244 @@ local wakeup_type = {
 	sway = 4, -- グランドスウェー
 	atk  = 5, -- 起き上がり攻撃
 }
-
-function rbff2.startplugin()
+rbff2.startplugin = function()
 	-- プレイヤーの状態など
 	local players = {}
 	for p = 1, 2 do
 		local p1 = (p == 1)
 		local base = p1 and 0x100400 or 0x100500
 		players[p] = {
-			base             = 0x0,
-			bases            = {},
+			base                       = 0x0,
+			bases                      = {},
 
-			dummy_act        = 1,           -- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
-			dummy_gd         = dummy_gd_type.none, -- なし, オート, ブレイクショット, 1ヒットガード, 1ガード, 常時, ランダム, 強制
-			dummy_wakeup     = wakeup_type.none,  -- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
+			dummy_act                  = 1,         -- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
+			dummy_gd                   = dummy_gd_type.none, -- なし, オート, ブレイクショット, 1ヒットガード, 1ガード, 常時, ランダム, 強制
+			dummy_wakeup               = wakeup_type.none, -- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
 
-			dummy_bs         = nil,         -- ランダムで選択されたブレイクショット
-			dummy_bs_list    = {},          -- ブレイクショットのコマンドテーブル上の技ID
-			dummy_bs_chr     = 0,           -- ブレイクショットの設定をした時のキャラID
-			bs_count         = -1,          -- ブレイクショットの実施カウント
+			dummy_bs                   = nil,       -- ランダムで選択されたブレイクショット
+			dummy_bs_list              = {},        -- ブレイクショットのコマンドテーブル上の技ID
+			dummy_bs_chr               = 0,         -- ブレイクショットの設定をした時のキャラID
+			bs_count                   = -1,        -- ブレイクショットの実施カウント
 
-			dummy_rvs        = nil,         -- ランダムで選択されたリバーサル
-			dummy_rvs_list   = {},          -- リバーサルのコマンドテーブル上の技ID
-			dummy_rvs_chr    = 0,           -- リバーサルの設定をした時のキャラID
-			rvs_count        = -1,          -- リバーサルの実施カウント
-			gd_rvs_enabled   = false,       -- ガードリバーサルの実行可否
+			dummy_rvs                  = nil,       -- ランダムで選択されたリバーサル
+			dummy_rvs_list             = {},        -- リバーサルのコマンドテーブル上の技ID
+			dummy_rvs_chr              = 0,         -- リバーサルの設定をした時のキャラID
+			rvs_count                  = -1,        -- リバーサルの実施カウント
+			gd_rvs_enabled             = false,     -- ガードリバーサルの実行可否
 
-			life_rec         = true,        -- 自動で体力回復させるときtrue
-			red              = 2,           -- 体力設定     	--"最大", "赤", "ゼロ" ...
-			max              = 1,           -- パワー設定       --"最大", "半分", "ゼロ" ...
-			disp_hitbox      = 2,           -- 判定表示
-			disp_range       = 2,           -- 間合い表示
-			disp_base        = false,       -- 処理のアドレスを表示するときtrue
-			disp_char        = true,        -- キャラを画面表示するときtrue
-			disp_char_bps    = nil,
-			disp_dmg         = true,        -- ダメージ表示するときtrue
-			disp_cmd         = 2,           -- 入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
-			disp_frm         = 4,           -- フレーム数表示する
-			disp_fbfrm       = true,        -- 弾のフレーム数表示するときtrue
-			disp_stun        = true,        -- 気絶表示
-			disp_sts         = 3,           -- 状態表示 "OFF", "ON", "ON:小表示", "ON:大表示"
+			life_rec                   = true,      -- 自動で体力回復させるときtrue
+			red                        = 2,         -- 体力設定     	--"最大", "赤", "ゼロ" ...
+			max                        = 1,         -- パワー設定       --"最大", "半分", "ゼロ" ...
+			disp_hitbox                = 2,         -- 判定表示
+			disp_range                 = 2,         -- 間合い表示
+			disp_base                  = false,     -- 処理のアドレスを表示するときtrue
+			disp_char                  = true,      -- キャラを画面表示するときtrue
+			disp_char_bps              = nil,
+			disp_dmg                   = true,      -- ダメージ表示するときtrue
+			disp_cmd                   = 2,         -- 入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
+			disp_frm                   = 4,         -- フレーム数表示する
+			disp_fbfrm                 = true,      -- 弾のフレーム数表示するときtrue
+			disp_stun                  = true,      -- 気絶表示
+			disp_sts                   = 3,         -- 状態表示 "OFF", "ON", "ON:小表示", "ON:大表示"
 
-			dis_plain_shift  = false,       -- ライン送らない現象
+			dis_plain_shift            = false,     -- ライン送らない現象
 
-			no_hit           = 0,           -- Nヒット目に空ぶるカウントのカウンタ
-			no_hit_limit     = 0,           -- Nヒット目に空ぶるカウントの上限
+			no_hit                     = 0,         -- Nヒット目に空ぶるカウントのカウンタ
+			no_hit_limit               = 0,         -- Nヒット目に空ぶるカウントの上限
 
-			combo            = 0,           -- 最近のコンボ数
-			last_combo       = 0,
-			last_dmg         = 0,           -- ダメージ
-			last_pow         = 0,           -- コンボ表示用POWゲージ増加量
-			tmp_pow          = 0,           -- コンボ表示用POWゲージ増加量
-			tmp_pow_rsv      = 0,           -- コンボ表示用POWゲージ増加量(予約値)
-			tmp_pow_atc      = 0,           -- コンボ表示用POWゲージ増加量(予約時の行動)
-			tmp_stun         = 0,
-			tmp_st_timer     = 0,
-			dmg_scaling      = 1,
-			dmg_scl7         = 0,
-			dmg_scl6         = 0,
-			dmg_scl5         = 0,
-			dmg_scl4         = 0,
-			last_pure_dmg    = 0,
-			last_stun        = 0,
-			last_st_timer    = 0,
-			last_normal_state = true,
-			last_effects     = {},
-			life             = 0,           -- いまの体力
-			max_combo        = 0,           -- 最大コンボ数
-			max_dmg          = 0,
-			max_combo_pow    = 0,
-			max_disp_stun    = 0,
-			max_st_timer     = 0,
-			mv_state         = 0,           -- 動作
-			old_combo        = 0,           -- 前フレームのコンボ数
-			last_combo_dmg   = 0,
-			last_combo_pow   = 0,
-			last_dmg_scaling = 1,
-			last_combo_stun  = 0,
-			last_combo_st_timer = 0,
-			old_state        = 0,           -- 前フレームのやられ状態
-			char             = 0,
-			close_far        = {
+			combo                      = 0,         -- 最近のコンボ数
+			last_combo                 = 0,
+			last_dmg                   = 0,         -- ダメージ
+			last_pow                   = 0,         -- コンボ表示用POWゲージ増加量
+			tmp_pow                    = 0,         -- コンボ表示用POWゲージ増加量
+			tmp_pow_rsv                = 0,         -- コンボ表示用POWゲージ増加量(予約値)
+			tmp_pow_atc                = 0,         -- コンボ表示用POWゲージ増加量(予約時の行動)
+			tmp_stun                   = 0,
+			tmp_st_timer               = 0,
+			dmg_scaling                = 1,
+			dmg_scl7                   = 0,
+			dmg_scl6                   = 0,
+			dmg_scl5                   = 0,
+			dmg_scl4                   = 0,
+			last_pure_dmg              = 0,
+			last_stun                  = 0,
+			last_st_timer              = 0,
+			last_normal_state          = true,
+			last_effects               = {},
+			life                       = 0, -- いまの体力
+			max_combo                  = 0, -- 最大コンボ数
+			max_dmg                    = 0,
+			max_combo_pow              = 0,
+			max_disp_stun              = 0,
+			max_st_timer               = 0,
+			mv_state                   = 0, -- 動作
+			old_combo                  = 0, -- 前フレームのコンボ数
+			last_combo_dmg             = 0,
+			last_combo_pow             = 0,
+			last_dmg_scaling           = 1,
+			last_combo_stun            = 0,
+			last_combo_st_timer        = 0,
+			old_state                  = 0, -- 前フレームのやられ状態
+			char                       = 0,
+			close_far                  = {
 				a = { x1 = 0, x2 = 0 },
 				b = { x1 = 0, x2 = 0 },
 				c = { x1 = 0, x2 = 0 },
 				d = { x1 = 0, x2 = 0 },
 			},
-			close_far_lma    = {
+			close_far_lma              = {
 				["1"] = { x1 = 0, x2 = 0 },
 				["2"] = { x1 = 0, x2 = 0 },
 				["M"] = { x1 = 0, x2 = 0 },
 				["C"] = { x1 = 0, x2 = 0 },
 			},
-			act              = 0,
-			acta             = 0,
-			atk_count        = 0,
-			attack           = 0,           -- 攻撃中のみ変化
-			old_attack       = 0,
-			hitstop_id       = 0,           -- ヒット/ガードしている相手側のattackと同値
-			attack_id        = 0,           -- 当たり判定ごとに設定されているID
-			attacking        = false,       -- 攻撃判定発生中の場合true
-			dmmy_attacking   = false,       -- ヒットしない攻撃判定発生中の場合true（嘘判定のぞく）
-			juggling         = false,       -- 空中追撃判定発生中の場合true
-			throwing         = false,       -- 投げ判定発生中の場合true
-			can_techrise     = false,       -- 受け身行動可否
-			pow_up           = 0,           -- 状態表示用パワー増加量空振り
-			pow_up_hit       = 0,           -- 状態表示用パワー増加量ヒット
-			pow_up_gd        = 0,           -- 状態表示用パワー増加量ガード
-			pow_revenge      = 0,           -- 状態表示用パワー増加量倍返し反射
-			pow_absorb       = 0,           -- 状態表示用パワー増加量倍返し吸収
-			hitstop          = 0,           -- 攻撃側のガード硬直
-			old_pos          = 0,           -- X座標
-			old_pos_frc      = 0,           -- X座標少数部
-			pos              = 0,           -- X座標
-			pos_frc          = 0,           -- X座標少数部
-			old_posd         = 0,           -- X座標
-			posd             = 0,           -- X座標
-			poslr            = "L",         -- 右側か左側か
-			max_pos          = 0,           -- X座標最大
-			min_pos          = 0,           -- X座標最小
-			pos_y            = 0,           -- Y座標
-			pos_frc_y        = 0,           -- Y座標少数部
-			old_pos_y        = 0,           -- Y座標
-			old_pos_frc_y    = 0,           -- Y座標少数部
-			old_in_air       = false,
-			in_air           = false,
-			chg_air_state    = 0,           -- ジャンプの遷移ポイントかどうか
-			force_y_pos      = 1,           -- Y座標強制
-			pos_z            = 0,           -- Z座標
-			old_pos_z        = 0,           -- Z座標
-			on_main_line     = 0,           -- Z座標メインに移動した瞬間フレーム
-			on_sway_line     = 0,           -- Z座標スウェイに移動した瞬間フレーム
-			in_sway_line     = false,       -- Z座標
-			sway_status      = 0,           --
-			side             = 0,           -- 向き
-			state            = 0,           -- いまのやられ状態
-			flag_c0          = 0,           -- 処理で使われているフラグ群
-			old_flag_c0      = 0,           -- 処理で使われているフラグ群
-			flag_cc          = 0,           -- 処理で使われているフラグ群
-			old_flag_cc      = 0,           -- 処理で使われているフラグ群
-			attack_flag      = false,
-			flag_c8          = 0,           -- 処理で使われているフラグ群
-			flag_d0          = 0,           -- 処理で使われているフラグ（硬直の判断用）
-			old_flag_d0      = 0,           -- 処理で使われているフラグ（硬直の判断用）
-			tmp_combo        = 0,           -- 一次的なコンボ数
-			tmp_combo_dmg    = 0,
-			tmp_combo_pow    = 0,
-			last_combo_stun_offset = 0,
+			act                        = 0,
+			acta                       = 0,
+			atk_count                  = 0,
+			attack                     = 0, -- 攻撃中のみ変化
+			old_attack                 = 0,
+			hitstop_id                 = 0, -- ヒット/ガードしている相手側のattackと同値
+			attack_id                  = 0, -- 当たり判定ごとに設定されているID
+			attacking                  = false, -- 攻撃判定発生中の場合true
+			dmmy_attacking             = false, -- ヒットしない攻撃判定発生中の場合true（嘘判定のぞく）
+			juggling                   = false, -- 空中追撃判定発生中の場合true
+			throwing                   = false, -- 投げ判定発生中の場合true
+			can_techrise               = false, -- 受け身行動可否
+			pow_up                     = 0, -- 状態表示用パワー増加量空振り
+			pow_up_hit                 = 0, -- 状態表示用パワー増加量ヒット
+			pow_up_gd                  = 0, -- 状態表示用パワー増加量ガード
+			pow_revenge                = 0, -- 状態表示用パワー増加量倍返し反射
+			pow_absorb                 = 0, -- 状態表示用パワー増加量倍返し吸収
+			hitstop                    = 0, -- 攻撃側のガード硬直
+			old_pos                    = 0, -- X座標
+			old_pos_frc                = 0, -- X座標少数部
+			pos                        = 0, -- X座標
+			pos_frc                    = 0, -- X座標少数部
+			old_posd                   = 0, -- X座標
+			posd                       = 0, -- X座標
+			poslr                      = "L", -- 右側か左側か
+			max_pos                    = 0, -- X座標最大
+			min_pos                    = 0, -- X座標最小
+			pos_y                      = 0, -- Y座標
+			pos_frc_y                  = 0, -- Y座標少数部
+			old_pos_y                  = 0, -- Y座標
+			old_pos_frc_y              = 0, -- Y座標少数部
+			old_in_air                 = false,
+			in_air                     = false,
+			chg_air_state              = 0, -- ジャンプの遷移ポイントかどうか
+			force_y_pos                = 1, -- Y座標強制
+			pos_z                      = 0, -- Z座標
+			old_pos_z                  = 0, -- Z座標
+			on_main_line               = 0, -- Z座標メインに移動した瞬間フレーム
+			on_sway_line               = 0, -- Z座標スウェイに移動した瞬間フレーム
+			in_sway_line               = false, -- Z座標
+			sway_status                = 0, --
+			side                       = 0, -- 向き
+			state                      = 0, -- いまのやられ状態
+			flag_c0                    = 0, -- 処理で使われているフラグ群
+			old_flag_c0                = 0, -- 処理で使われているフラグ群
+			flag_cc                    = 0, -- 処理で使われているフラグ群
+			old_flag_cc                = 0, -- 処理で使われているフラグ群
+			attack_flag                = false,
+			flag_c8                    = 0, -- 処理で使われているフラグ群
+			flag_d0                    = 0, -- 処理で使われているフラグ（硬直の判断用）
+			old_flag_d0                = 0, -- 処理で使われているフラグ（硬直の判断用）
+			tmp_combo                  = 0, -- 一次的なコンボ数
+			tmp_combo_dmg              = 0,
+			tmp_combo_pow              = 0,
+			last_combo_stun_offset     = 0,
 			last_combo_st_timer_offset = 0,
-			tmp_dmg          = 0,           -- ダメージが入ったフレーム
-			color            = 0,           -- カラー A=0x00 D=0x01
+			tmp_dmg                    = 0, -- ダメージが入ったフレーム
+			color                      = 0, -- カラー A=0x00 D=0x01
 
-			frame_gap        = 0,
-			last_frame_gap   = 0,
-			hist_frame_gap   = { 0 },
-			act_contact      = 0,
-			guard1           = 0,          -- ガード時（硬直前後）フレームの判断用
-			on_guard         = 0,          -- ガード時（硬直前）フレーム
-			on_guard1        = 0,          -- ガード時（硬直後）フレーム
-			hit1             = 0,          -- ヒット時（硬直前後）フレームの判断用
-			on_hit           = 0,          -- ヒット時（硬直前）フレーム
-			on_hit1          = 0,          -- ヒット時（硬直後）フレーム
-			on_punish        = 0,
-			on_wakeup        = 0,
-			on_down          = 0,
-			hit_skip         = 0,
-			old_skip_frame   = false,
-			skip_frame       = false,
-			last_blockstun   = 0,
-			last_hitstop     = 0,
+			frame_gap                  = 0,
+			last_frame_gap             = 0,
+			hist_frame_gap             = { 0 },
+			act_contact                = 0,
+			guard1                     = 0, -- ガード時（硬直前後）フレームの判断用
+			on_guard                   = 0, -- ガード時（硬直前）フレーム
+			on_guard1                  = 0, -- ガード時（硬直後）フレーム
+			hit1                       = 0, -- ヒット時（硬直前後）フレームの判断用
+			on_hit                     = 0, -- ヒット時（硬直前）フレーム
+			on_hit1                    = 0, -- ヒット時（硬直後）フレーム
+			on_punish                  = 0,
+			on_wakeup                  = 0,
+			on_down                    = 0,
+			hit_skip                   = 0,
+			old_skip_frame             = false,
+			skip_frame                 = false,
+			last_blockstun             = 0,
+			last_hitstop               = 0,
 
-			knock_back1      = 0, -- のけぞり確認用1(色々)
-			knock_back2      = 0, -- のけぞり確認用2(裏雲隠し)
-			knock_back3      = 0, -- のけぞり確認用3(フェニックススルー)
-			old_knock_back1  = 0, -- のけぞり確認用1(色々)
-			old_knock_back2  = 0, -- のけぞり確認用2(裏雲隠し)
-			old_knock_back3  = 0, -- のけぞり確認用3(フェニックススルー)
-			fake_hit         = false,
-			obsl_hit         = false, -- 嘘判定チェック用
-			full_hit         = false, -- 判定チェック用1
-			harmless2        = false, -- 判定チェック用2 飛び道具専用
-			prj_rank         = 0,           -- 飛び道具の強さ
-			esaka_range      = 0,           -- 詠酒の間合いチェック用
+			knock_back1                = 0, -- のけぞり確認用1(色々)
+			knock_back2                = 0, -- のけぞり確認用2(裏雲隠し)
+			knock_back3                = 0, -- のけぞり確認用3(フェニックススルー)
+			old_knock_back1            = 0, -- のけぞり確認用1(色々)
+			old_knock_back2            = 0, -- のけぞり確認用2(裏雲隠し)
+			old_knock_back3            = 0, -- のけぞり確認用3(フェニックススルー)
+			fake_hit                   = false,
+			obsl_hit                   = false, -- 嘘判定チェック用
+			full_hit                   = false, -- 判定チェック用1
+			harmless2                  = false, -- 判定チェック用2 飛び道具専用
+			prj_rank                   = 0, -- 飛び道具の強さ
+			esaka_range                = 0, -- 詠酒の間合いチェック用
 
-			key_now          = {},          -- 個別キー入力フレーム
-			key_pre          = {},          -- 前フレームまでの個別キー入力フレーム
-			key_hist         = {},
-			ggkey_hist       = {},
-			key_frames       = {},
-			act_frame        = 0,
-			act_frames       = {},
-			act_frames2      = {},
-			act_frames_total = 0,
+			key_now                    = {}, -- 個別キー入力フレーム
+			key_pre                    = {}, -- 前フレームまでの個別キー入力フレーム
+			key_hist                   = {},
+			ggkey_hist                 = {},
+			key_frames                 = {},
+			act_frame                  = 0,
+			act_frames                 = {},
+			act_frames2                = {},
+			act_frames_total           = 0,
 
-			muteki           = {
-				act_frames   = {},
-				act_frames2  = {},
+			muteki                     = {
+				act_frames  = {},
+				act_frames2 = {},
 			},
 
-			frm_gap           = {
-				act_frames   = {},
-				act_frames2  = {},
+			frm_gap                    = {
+				act_frames  = {},
+				act_frames2 = {},
 			},
 
-			reg_pcnt         = 0,           -- キー入力 REG_P1CNT or REG_P2CNT
-			reg_st_b         = 0,           -- キー入力 REG_STATUS_B
+			reg_pcnt                   = 0, -- キー入力 REG_P1CNT or REG_P2CNT
+			reg_st_b                   = 0, -- キー入力 REG_STATUS_B
 
-			update_sts       = 0,
-			update_dmg       = 0,
-			update_act       = 0,
-			random_boolean   = math.random(255) % 2 == 0,
+			update_sts                 = 0,
+			update_dmg                 = 0,
+			update_act                 = 0,
+			random_boolean             = math.random(255) % 2 == 0,
 
-			backstep_killer  = false,
-			need_block       = false,
-			need_low_block   = false,
+			backstep_killer            = false,
+			need_block                 = false,
+			need_low_block             = false,
 
-			hitboxes         = {},
-			buffer           = {},
-			uniq_hitboxes    = {}, -- key + boolean
-			hitbox_txt       = "",
-			hurtbox_txt      = "",
-			chg_hitbox_frm   = 0,
-			chg_hurtbox_frm  = 0,
-			type_boxes       = {}, -- key + count
-			fireball_bases   = new_set(base + 0x200, base + 0x400, base + 0x600),
-			fake_hits        = p1 and
-							   { [base + 0x200] = 0x10DDF5, [base + 0x400] = 0x10DDF7, [base + 0x600] = 0x10DDF9, } or
-							   { [base + 0x200] = 0x10DDF6, [base + 0x400] = 0x10DDF8, [base + 0x600] = 0x10DDFA, },
-			fireball         = {},
+			hitboxes                   = {},
+			buffer                     = {},
+			uniq_hitboxes              = {}, -- key + boolean
+			hitbox_txt                 = "",
+			hurtbox_txt                = "",
+			chg_hitbox_frm             = 0,
+			chg_hurtbox_frm            = 0,
+			type_boxes                 = {}, -- key + count
+			fireball_bases             = new_set(base + 0x200, base + 0x400, base + 0x600),
+			fake_hits                  = p1 and
+				{ [base + 0x200] = 0x10DDF5, [base + 0x400] = 0x10DDF7, [base + 0x600] = 0x10DDF9, } or
+				{ [base + 0x200] = 0x10DDF6, [base + 0x400] = 0x10DDF8, [base + 0x600] = 0x10DDFA, },
+			fireball                   = {},
 
-			bs_hooked        = 0,           -- BSモードのフック処理フレーム数。
+			bs_hooked                  = 0, -- BSモードのフック処理フレーム数。
 
-			all_summary      = {}, -- 大状態表示のデータ構造
-			atk_summary      = {}, -- 大状態表示のデータ構造の一部
-			hit_summary      = {}, -- 大状態表示のデータ構造の一部
-			old_hit_summary  = {}, -- 大状態表示のデータ構造の一部
+			all_summary                = {}, -- 大状態表示のデータ構造
+			atk_summary                = {}, -- 大状態表示のデータ構造の一部
+			hit_summary                = {}, -- 大状態表示のデータ構造の一部
+			old_hit_summary            = {}, -- 大状態表示のデータ構造の一部
 
-			fix_scr_top      = 0xFF, -- screen_topの強制フック用
+			fix_scr_top                = 0xFF, -- screen_topの強制フック用
 
-			hit              = {
+			hit                        = {
 				pos_x        = 0,
 				pos_z        = 0,
 				pos_y        = 0,
@@ -4994,19 +5050,19 @@ function rbff2.startplugin()
 				harmless2    = false,
 				vulnerable1  = 0,
 				vulnerable21 = 0,
-				vulnerable22 = 0,           -- 0の時vulnerable=true
+				vulnerable22 = 0, -- 0の時vulnerable=true
 			},
 
-			throw            = {
-				x1           = 0,
-				x2           = 0,
-				half_range   = 0,
-				full_range   = 0,
-				in_range     = false,
+			throw                      = {
+				x1         = 0,
+				x2         = 0,
+				half_range = 0,
+				full_range = 0,
+				in_range   = false,
 			},
 
-			n_throw          = {
-				addr         = {
+			n_throw                    = {
+				addr = {
 					on       = p1 and 0x10CD90 or 0x10CDB0,
 					base     = p1 and 0x10CD91 or 0x10CDB1,
 					opp_base = p1 and 0x10CD95 or 0x10CDB5,
@@ -5025,8 +5081,8 @@ function rbff2.startplugin()
 				},
 			},
 
-			air_throw        = {
-				addr         = {
+			air_throw                  = {
+				addr = {
 					on       = p1 and 0x10CD00 or 0x10CD20,
 					range_x  = p1 and 0x10CD01 or 0x10CD21,
 					range_y  = p1 and 0x10CD03 or 0x10CD23,
@@ -5040,8 +5096,8 @@ function rbff2.startplugin()
 				},
 			},
 
-			sp_throw         = {
-				addr         = {
+			sp_throw                   = {
+				addr = {
 					on       = p1 and 0x10CD40 or 0x10CD60,
 					front    = p1 and 0x10CD41 or 0x10CD61,
 					top      = p1 and 0x10CD43 or 0x10CD63,
@@ -5056,91 +5112,91 @@ function rbff2.startplugin()
 				},
 			},
 
-			addr           = {
-				base         = base, -- キャラ状態とかのベースのアドレス
-				act          = base + 0x60, -- 行動ID デバッグディップステータス表示のPと同じ
-				acta         = base + 0x62, -- 行動ID デバッグディップステータス表示のAと同じ
-				act_count    = base + 0x66, -- 現在の行動のカウンタ
-				act_boxtype  = base + 0x67, -- 現在の行動の判定種類
-				act_frame    = base + 0x6F, -- 現在の行動の残フレーム、ゼロになると次の行動へ
-				act_contact  = base + 0x01, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
-				attack       = base + 0xB6, -- 攻撃中のみ変化、判定チェック用2 0のときは何もしていない、 詠酒の間合いチェック用
-				hitstop_id   = base + 0xEB, -- 被害中のみ変化
-				can_techrise = base + 0x92, -- 受け身行動可否チェック用
-				ophit_base   = base + 0x9E, -- ヒットさせた相手側のベースアドレス
+			addr                       = {
+				base         = base,            -- キャラ状態とかのベースのアドレス
+				act          = base + 0x60,     -- 行動ID デバッグディップステータス表示のPと同じ
+				acta         = base + 0x62,     -- 行動ID デバッグディップステータス表示のAと同じ
+				act_count    = base + 0x66,     -- 現在の行動のカウンタ
+				act_boxtype  = base + 0x67,     -- 現在の行動の判定種類
+				act_frame    = base + 0x6F,     -- 現在の行動の残フレーム、ゼロになると次の行動へ
+				act_contact  = base + 0x01,     -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
+				attack       = base + 0xB6,     -- 攻撃中のみ変化、判定チェック用2 0のときは何もしていない、 詠酒の間合いチェック用
+				hitstop_id   = base + 0xEB,     -- 被害中のみ変化
+				can_techrise = base + 0x92,     -- 受け身行動可否チェック用
+				ophit_base   = base + 0x9E,     -- ヒットさせた相手側のベースアドレス
 				char         = p1 and 0x107BA5 or 0x107BA7, -- キャラID
 				color        = p1 and 0x107BAC or 0x107BAD, -- カラー A=0x00 D=0x01
 				combo        = p1 and 0x10B4E4 or 0x10B4E5, -- コンボ
 				combo2       = p1 and 0x10B4E5 or 0x10B4E4, -- 最近のコンボ数のアドレス
-				dmg_id       = base + 0xE9, -- ダメージ算出の技ID(最後にヒット/ガードした技のID)
+				dmg_id       = base + 0xE9,     -- ダメージ算出の技ID(最後にヒット/ガードした技のID)
 				tmp_combo2   = p1 and 0x10B4E1 or 0x10B4E0, -- 一次的なコンボ数のアドレス
 				max_combo2   = p1 and 0x10B4F0 or 0x10B4EF, -- 最大コンボ数のアドレス
 				dmg_scl7     = p1 and 0x10DE50 or 0x10DE51, -- 補正 7/8 の回数
 				dmg_scl6     = p1 and 0x10DE52 or 0x10DE53, -- 補正 6/8 の回数
 				dmg_scl5     = p1 and 0x10DE54 or 0x10DE55, -- 補正 5/8 の回数
 				dmg_scl4     = p1 and 0x10DE56 or 0x10DE57, -- 補正 4/8 の回数
-				last_dmg     = base + 0x8F, -- 最終ダメージ
+				last_dmg     = base + 0x8F,     -- 最終ダメージ
 				tmp_dmg      = p1 and 0x10CA10 or 0x10CA11, -- 最終ダメージの更新フック
 				pure_dmg     = p1 and 0x10DDFB or 0x10DDFC, -- 最終ダメージ(補正前)
 				tmp_pow      = p1 and 0x10DE59 or 0x10DE58, -- POWゲージ増加量
 				tmp_pow_rsv  = p1 and 0x10DE5B or 0x10DE5A, -- POWゲージ増加量(予約値)
 				tmp_stun     = p1 and 0x10DDFD or 0x10DDFF, -- 最終気絶値
 				tmp_st_timer = p1 and 0x10DDFE or 0x10DE00, -- 最終気絶タイマー
-				life         = base + 0x8B, -- 体力
+				life         = base + 0x8B,     -- 体力
 				max_combo    = p1 and 0x10B4EF or 0x10B4F0, -- 最大コンボ
 				max_stun     = p1 and 0x10B84E or 0x10B856, -- 最大気絶値
-				corner       = base + 0xB7, -- 画面端状態 0:端以外 1:画面端 3:端押し付け
-				pos          = base + 0x20, -- X座標
-				pos_frc      = base + 0x22, -- X座標 少数部
+				corner       = base + 0xB7,     -- 画面端状態 0:端以外 1:画面端 3:端押し付け
+				pos          = base + 0x20,     -- X座標
+				pos_frc      = base + 0x22,     -- X座標 少数部
 				max_pos      = p1 and 0x10DDE6 or 0x10DDE8, -- X座標最大
 				min_pos      = p1 and 0x10DDEA or 0x10DDEC, -- X座標最小
-				pos_y        = base + 0x28, -- Y座標
-				pos_frc_y    = base + 0x2A, -- Y座標 少数部
-				pos_z        = base + 0x24, -- Z座標
-				sway_status  = base + 0x89, -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
- 				side         = base + 0x58, -- 向き
+				pos_y        = base + 0x28,     -- Y座標
+				pos_frc_y    = base + 0x2A,     -- Y座標 少数部
+				pos_z        = base + 0x24,     -- Z座標
+				sway_status  = base + 0x89,     -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
+				side         = base + 0x58,     -- 向き
 				--forward    = base + 0x40, -- 前移動速度 8バイト
 				--backward   = 0x0022FAE -- 後退のベースアドレス
-				input_side   = base + 0x86, -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
-				input1       = base + 0x82, -- キー入力 直近Fの入力
-				input2       = base + 0x83, -- キー入力 1F前の入力
-				cln_btn      = base + 0x84, -- クリアリングされたボタン入力
-				state        = base + 0x8E, -- 状態
-				flag_c0      = base + 0xC0, -- フラグ群
-				flag_c4      = base + 0xC4, -- フラグ群
-				flag_c8      = base + 0xC8, -- フラグ群
-				flag_cc      = base + 0xCC, -- フラグ群 00 00 00 00
-				flag_d0      = base + 0xD0, -- フラグ群
-				stop         = base + 0x8D, -- ヒットストップ
-				knock_back1  = base + 0x69, -- のけぞり確認用1(色々)
-				knock_back2  = base + 0x16, -- のけぞり確認用2(裏雲隠し)
-				knock_back3  = base + 0x7E, -- のけぞり確認用3(フェニックススルー)
-				sp_throw_id  = base + 0xA3, -- 投げ必殺のID
-				sp_throw_act = base + 0xA4, -- 投げ必殺の持続残F
-				additional   = base + 0xA5, -- 追加入力成立時のデータ
-				prj_rank     = base + 0xB5, -- 飛び道具の強さ
+				input_side   = base + 0x86,     -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
+				input1       = base + 0x82,     -- キー入力 直近Fの入力
+				input2       = base + 0x83,     -- キー入力 1F前の入力
+				cln_btn      = base + 0x84,     -- クリアリングされたボタン入力
+				state        = base + 0x8E,     -- 状態
+				flag_c0      = base + 0xC0,     -- フラグ群
+				flag_c4      = base + 0xC4,     -- フラグ群
+				flag_c8      = base + 0xC8,     -- フラグ群
+				flag_cc      = base + 0xCC,     -- フラグ群 00 00 00 00
+				flag_d0      = base + 0xD0,     -- フラグ群
+				stop         = base + 0x8D,     -- ヒットストップ
+				knock_back1  = base + 0x69,     -- のけぞり確認用1(色々)
+				knock_back2  = base + 0x16,     -- のけぞり確認用2(裏雲隠し)
+				knock_back3  = base + 0x7E,     -- のけぞり確認用3(フェニックススルー)
+				sp_throw_id  = base + 0xA3,     -- 投げ必殺のID
+				sp_throw_act = base + 0xA4,     -- 投げ必殺の持続残F
+				additional   = base + 0xA5,     -- 追加入力成立時のデータ
+				prj_rank     = base + 0xB5,     -- 飛び道具の強さ
 				input_offset = p1 and 0x0394C4 or 0x0394C8, -- コマンド入力状態のオフセットアドレス
 				no_hit       = p1 and 0x10DDF2 or 0x10DDF1, -- ヒットしないフック
 				-- range        = 0x1004E2 or 0x1005E2 -- 距離 0近距離 1中距離 2遠距離
-				cancelable   = base + 0xAF, -- キャンセル可否 00不可 C0可 D0可 正確ではない
-				repeatable   = base + 0x6A, -- 連キャン可否用
-				box_base1    = base + 0x76, -- 判定の開始アドレス1、判定データはバンク切替されている場合あり
-				box_base2    = base + 0x7A, -- 判定の開始アドレス2、判定データはバンク切替されている場合あり
-				kaiser_wave  = base + 0xFB, -- カイザーウェイブのレベル
-				hurt_state   = base + 0xE4, -- やられ状態
+				cancelable   = base + 0xAF,     -- キャンセル可否 00不可 C0可 D0可 正確ではない
+				repeatable   = base + 0x6A,     -- 連キャン可否用
+				box_base1    = base + 0x76,     -- 判定の開始アドレス1、判定データはバンク切替されている場合あり
+				box_base2    = base + 0x7A,     -- 判定の開始アドレス2、判定データはバンク切替されている場合あり
+				kaiser_wave  = base + 0xFB,     -- カイザーウェイブのレベル
+				hurt_state   = base + 0xE4,     -- やられ状態
 
 				-- キャラ毎の必殺技の番号 0x1004B8
 				-- 技の内部の進行度 0x1004F7
 
 				stun         = p1 and 0x10B850 or 0x10B858, -- 現在気絶値
- 				stun_timer   = p1 and 0x10B854 or 0x10B85C, -- 気絶値ゼロ化までの残フレーム数
- 				tmp_combo    = p1 and 0x10B4E0 or 0x10B4E1, -- コンボテンポラリ
+				stun_timer   = p1 and 0x10B854 or 0x10B85C, -- 気絶値ゼロ化までの残フレーム数
+				tmp_combo    = p1 and 0x10B4E0 or 0x10B4E1, -- コンボテンポラリ
 				-- bs_id        = base + 0xB9, -- BSの技ID
-				pow          = base + 0xBC, -- パワーアドレス
+				pow          = base + 0xBC,     -- パワーアドレス
 				reg_pcnt     = p1 and 0x300000 or 0x340000, -- キー入力 REG_P1CNT or REG_P2CNT アドレス
-				reg_st_b     = 0x380000,                    -- キー入力 REG_STATUS_B アドレス
-				control1     = base + 0x12, -- Human 1 or 2, CPU 3
-				control2     = base + 0x13, -- Human 1 or 2, CPU 3
+				reg_st_b     = 0x380000,        -- キー入力 REG_STATUS_B アドレス
+				control1     = base + 0x12,     -- Human 1 or 2, CPU 3
+				control2     = base + 0x13,     -- Human 1 or 2, CPU 3
 
 				select_hook  = p1 and 0x10CDD1 or 0x10CDD5, -- プレイヤーセレクト画面のフック処理用アドレス
 				bs_hook1     = p1 and 0x10DDDA or 0x10DDDE, -- BSモードのフック処理用アドレス。技のID。
@@ -5148,9 +5204,9 @@ function rbff2.startplugin()
 				bs_hook3     = p1 and 0x10DDDD or 0x10DDE1, -- BSモードのフック処理用アドレス。技発動。
 
 				tw_threshold = p1 and 0x10DDE2 or 0x10DDE3, -- 投げ可能かどうかのフレーム判定のしきい値
-				tw_frame     = base + 0x90, -- 投げ可能かどうかのフレーム経過
+				tw_frame     = base + 0x90,     -- 投げ可能かどうかのフレーム経過
 				tw_accepted  = p1 and 0x10DDE4 or 0x10DDE5, -- 投げ確定時のフレーム経過
-				tw_muteki    = base + 0xF6, -- 投げ無敵の残フレーム数
+				tw_muteki    = base + 0xF6,     -- 投げ無敵の残フレーム数
 
 				-- フックできないかわり用
 				state2       = p1 and 0x10CA0E or 0x10CA0F, -- 状態
@@ -5163,9 +5219,9 @@ function rbff2.startplugin()
 
 				-- ヒットするかどうか
 				fake_hit     = p1 and 0x10DDF3 or 0x10DDF4, -- 出だしから嘘判定のフック
-				obsl_hit     = base + 0x6A, -- 嘘判定チェック用 3ビット目が立っていると嘘判定
-				full_hit     = base + 0xAA, -- 判定チェック用1 0じゃないとき全段攻撃ヒット/ガード
-				max_hit_nm   = base + 0xAB, -- 同一技行動での最大ヒット数 分子
+				obsl_hit     = base + 0x6A,     -- 嘘判定チェック用 3ビット目が立っていると嘘判定
+				full_hit     = base + 0xAA,     -- 判定チェック用1 0じゃないとき全段攻撃ヒット/ガード
+				max_hit_nm   = base + 0xAB,     -- 同一技行動での最大ヒット数 分子
 
 				-- スクショ用
 				fix_scr_top  = p1 and 0x10DE5C or 0x10DE5D, -- screen_topの強制フック用
@@ -5181,7 +5237,7 @@ function rbff2.startplugin()
 		for i = 1, 16 do
 			players[p].key_hist[i] = ""
 			players[p].key_frames[i] = 0
-			players[p].act_frames[i] = {0,0}
+			players[p].act_frames[i] = { 0, 0 }
 			players[p].bases[i] = { count = 0, addr = 0x0, act_data = nil, name = "", pos1 = 0, pos2 = 0, xmov = 0, }
 		end
 	end
@@ -5191,32 +5247,32 @@ function rbff2.startplugin()
 	for _, p in ipairs(players) do
 		for base, _ in pairs(p.fireball_bases) do
 			p.fireball[base] = {
-				addr           = {
-					base       = base, -- キャラ状態とかのベースのアドレス
-					char       = base + 0x10, -- 技のキャラID
-					act        = base + 0x60, -- 技のID デバッグのP
-					acta       = base + 0x62, -- 技のID デバッグのA
-					actb       = base + 0x64, -- 技のID?
-					act_count  = base + 0x66, -- 現在の行動のカウンタ
-					act_boxtype= base + 0x67, -- 現在の行動の判定種類
-					act_frame  = base + 0x6F, -- 現在の行動の残フレーム、ゼロになると次の行動へ
-					act_contact= base + 0x01, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
-					dmg_id     = base + 0xE9, -- 最後にヒット/ガードしたダメージ算出の技ID
-					pos        = base + 0x20, -- X座標
-					pos_y      = base + 0x28, -- Y座標
-	 				pos_z      = base + 0x24, -- Z座標
-					attack     = base + 0xBF, -- デバッグのNO
-					hitstop_id = base + 0xBE, -- ヒット硬直用ID、受け身行動可否チェック用、倍返しチェック2
-					fake_hit   = p.fake_hits[base], -- ヒットするかどうか
-					obsl_hit   = base + 0x6A, -- 嘘判定チェック用 3ビット目が立っていると嘘判定
-					full_hit   = base + 0xAA, -- 判定チェック用1 0じゃないとき全段攻撃ヒット/ガード
-					harmless2  = base + 0xE7, -- 判定チェック用2 0じゃないときヒット/ガード
-					max_hit_nm = base + 0xAB, -- 同一技行動での最大ヒット数 分子
-					prj_rank   = base + 0xB5, -- 飛び道具の強さ
-					side       = base + 0x58, -- 向き
-					box_base1  = base + 0x76,
-					box_base2  = base + 0x7A,
-					bai_chk1   = base + 0x8A, -- 倍返しチェック1
+				addr = {
+					base        = base, -- キャラ状態とかのベースのアドレス
+					char        = base + 0x10, -- 技のキャラID
+					act         = base + 0x60, -- 技のID デバッグのP
+					acta        = base + 0x62, -- 技のID デバッグのA
+					actb        = base + 0x64, -- 技のID?
+					act_count   = base + 0x66, -- 現在の行動のカウンタ
+					act_boxtype = base + 0x67, -- 現在の行動の判定種類
+					act_frame   = base + 0x6F, -- 現在の行動の残フレーム、ゼロになると次の行動へ
+					act_contact = base + 0x01, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
+					dmg_id      = base + 0xE9, -- 最後にヒット/ガードしたダメージ算出の技ID
+					pos         = base + 0x20, -- X座標
+					pos_y       = base + 0x28, -- Y座標
+					pos_z       = base + 0x24, -- Z座標
+					attack      = base + 0xBF, -- デバッグのNO
+					hitstop_id  = base + 0xBE, -- ヒット硬直用ID、受け身行動可否チェック用、倍返しチェック2
+					fake_hit    = p.fake_hits[base], -- ヒットするかどうか
+					obsl_hit    = base + 0x6A, -- 嘘判定チェック用 3ビット目が立っていると嘘判定
+					full_hit    = base + 0xAA, -- 判定チェック用1 0じゃないとき全段攻撃ヒット/ガード
+					harmless2   = base + 0xE7, -- 判定チェック用2 0じゃないときヒット/ガード
+					max_hit_nm  = base + 0xAB, -- 同一技行動での最大ヒット数 分子
+					prj_rank    = base + 0xB5, -- 飛び道具の強さ
+					side        = base + 0x58, -- 向き
+					box_base1   = base + 0x76,
+					box_base2   = base + 0x7A,
+					bai_chk1    = base + 0x8A, -- 倍返しチェック1
 				},
 			}
 		end
@@ -5239,7 +5295,7 @@ function rbff2.startplugin()
 				local before = pgm:read_u8(fixaddr(saddr, offset))
 				if before ~= tonumber(v1, 16) then
 					if before == tonumber(v2, 16) then
-					-- already patched
+						-- already patched
 					else
 						print("patch failure in 0x" .. saddr)
 						return false
@@ -5291,16 +5347,16 @@ function rbff2.startplugin()
 	end
 
 	local restart_fight = function(param)
-		param = param or {}
-		local stg1  = param.next_stage.stg1 or stgs[1].stg1
-		local stg2  = param.next_stage.stg2 or stgs[1].stg2
-		local stg3  = param.next_stage.stg3 or stgs[1].stg3
+		param                = param or {}
+		local stg1           = param.next_stage.stg1 or stgs[1].stg1
+		local stg2           = param.next_stage.stg2 or stgs[1].stg2
+		local stg3           = param.next_stage.stg3 or stgs[1].stg3
 		global.no_background = (param.next_stage or stgs[1]).no_background
-		local p1    = param.next_p1    or 1
-		local p2    = param.next_p2    or 21
-		local p1col = param.next_p1col or 0x00
-		local p2col = param.next_p2col or 0x01
-		local bgm   = param.next_bgm   or 21
+		local p1             = param.next_p1 or 1
+		local p2             = param.next_p2 or 21
+		local p1col          = param.next_p1col or 0x00
+		local p2col          = param.next_p2col or 0x01
+		local bgm            = param.next_bgm or 21
 
 		dofile(ram_patch_path("vs-restart.lua"))
 		apply_vs_mode(true)
@@ -5310,9 +5366,9 @@ function rbff2.startplugin()
 		pgm:write_u8(0x107BB1, stg1)
 		pgm:write_u8(0x107BB7, stg2)
 		pgm:write_u8(0x107BB9, stg3) -- フックさせて無理やり実現するために0xD0を足す（0xD1～0xD5にする）
-		pgm:write_u8(p[1].addr.char , p1)
+		pgm:write_u8(p[1].addr.char, p1)
 		pgm:write_u8(p[1].addr.color, p1col)
-		pgm:write_u8(p[2].addr.char , p2)
+		pgm:write_u8(p[2].addr.char, p2)
 		if p1 == p2 then
 			pgm:write_u8(p[2].addr.color, p1col == 0x00 and 0x01 or 0x00)
 		else
@@ -5359,18 +5415,18 @@ function rbff2.startplugin()
 		if cache_close_far_pos[char] then
 			return cache_close_far_pos[char]
 		end
-		local org_char = char
-		char =  char - 1
-		local abc_offset = mem.close_far_offset + (char * 4)
+		local org_char                = char
+		char                          = char - 1
+		local abc_offset              = mem.close_far_offset + (char * 4)
 		-- 家庭用02DD02からの処理
-		local d_offset = mem.close_far_offset_d + (char * 2)
-		local ret = {
-			a = { x1 = 0, x2 = pgm:read_u8(abc_offset)     },
+		local d_offset                = mem.close_far_offset_d + (char * 2)
+		local ret                     = {
+			a = { x1 = 0, x2 = pgm:read_u8(abc_offset) },
 			b = { x1 = 0, x2 = pgm:read_u8(abc_offset + 1) },
 			c = { x1 = 0, x2 = pgm:read_u8(abc_offset + 2) },
-			d = { x1 = 0, x2 = pgm:read_u16(d_offset)      },
+			d = { x1 = 0, x2 = pgm:read_u16(d_offset) },
 		}
-		cache_close_far_pos[org_char]  = ret
+		cache_close_far_pos[org_char] = ret
 		return ret
 	end
 
@@ -5380,11 +5436,11 @@ function rbff2.startplugin()
 		local x1, x2 = 0, 0
 		for d = 1, intd1 do
 			x2 = d * d0
-			ret[name .. d-1] = { x1 = x1, x2 = x2-1}
+			ret[name .. d - 1] = { x1 = x1, x2 = x2 - 1 }
 			x1 = x2
 		end
 		if incl_last then
-			ret[name .. intd1]  = { x1 = x1, x2 = math.floor(d0 * decd1) } -- 1Fあたりの最大移動量になる距離
+			ret[name .. intd1] = { x1 = x1, x2 = math.floor(d0 * decd1) } -- 1Fあたりの最大移動量になる距離
 		end
 		return ret
 	end
@@ -5401,12 +5457,12 @@ function rbff2.startplugin()
 		local decd1 = int16tofloat(d1)
 		local ret = {}
 		-- 0:近A 1:遠A 2:近B 3:遠B 4:近C 5:遠C
-		for i, act_name in ipairs({"近A", "遠A", "近B", "遠B", "近C", "遠C"}) do
-			local d0 = pgm:read_u8(pgm:read_u32(offset + (i-1) * 4) + char * 6)
+		for i, act_name in ipairs({ "近A", "遠A", "近B", "遠B", "近C", "遠C" }) do
+			local d0 = pgm:read_u8(pgm:read_u32(offset + (i - 1) * 4) + char * 6)
 			-- データが近距離、遠距離の2種類しかないのと実質的に意味があるのが近距離のものなので最初のデータだけ返す
 			if i == 1 then
 				get_lmo_range_internal(ret, "", d0, d1, true)
-				ret["近"]  = { x1 = 0, x2 = 72 } -- 近距離攻撃になる距離
+				ret["近"] = { x1 = 0, x2 = 72 } -- 近距離攻撃になる距離
 
 				if char == 6 then
 					-- 渦炎陣
@@ -5482,7 +5538,7 @@ function rbff2.startplugin()
 
 	local new_filled_table = function(...)
 		local tmp_table = {}
-		local a = {...}
+		local a = { ... }
 		for j = 1, #a, 2 do
 			local len = a[j]
 			local fill = a[j + 1]
@@ -5617,20 +5673,20 @@ function rbff2.startplugin()
 			local bp_cnd2 = "(maincpu.pw@107C22>0)&&((($1E<=maincpu.pb@10DDDA)&&(maincpu.pb@10DDDD==$1)&&($100400==((A4)&$FFFFFF)))||(($1E<=maincpu.pb@10DDDE)&&(maincpu.pb@10DDE1==$1)&&($100500==((A4)&$FFFFFF))))"
 			-- ダッシュとか用
 			-- BPモードON 未入力で技発動するように
-			global.bp(bps, fix_bp_addr(0x039512), "((A6)==CB242)&&"..bp_cnd2, "D1=0;g")
+			global.bp(bps, fix_bp_addr(0x039512), "((A6)==CB242)&&" .. bp_cnd2, "D1=0;g")
 			-- 技入力データの読み込み
-			global.bp(bps, fix_bp_addr(0x03957E), "((A6)==CB244)&&"..bp_cnd2,
+			global.bp(bps, fix_bp_addr(0x03957E), "((A6)==CB244)&&" .. bp_cnd2,
 				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$40);D1=(maincpu.pb@(temp1));A6=((A6)+1);maincpu.pb@((A4)+$D6)=D1;maincpu.pb@((A4)+$D7)=maincpu.pb@(temp1+1);PC=((PC)+$20);g")
 			-- 必殺技用
 			-- BPモードON 未入力で技発動するように
-			global.bp(bps, fix_bp_addr(0x039512), "((A6)==CB242)&&"..bp_cond, "D1=0;g")
+			global.bp(bps, fix_bp_addr(0x039512), "((A6)==CB242)&&" .. bp_cond, "D1=0;g")
 			-- 技入力データの読み込み
 			-- bp 03957E,{((A6)==CB244)&&((A4)==100400)&&(maincpu.pb@10048E==2)},{D1=1;g}
 			-- bp 03957E,{((A6)==CB244)&&((A4)==100500)&&(maincpu.pb@10058E==2)},{D1=1;g}
 			-- 0395B2: 1941 00A3                move.b  D1, ($a3,A4) -- 確定した技データ
 			-- 0395B6: 195E 00A4                move.b  (A6)+, ($a4,A4) -- 技データ読込 だいたい06
 			-- 0395BA: 195E 00A5                move.b  (A6)+, ($a5,A4) -- 技データ読込 だいたい00、飛燕斬01、02、03
-			global.bp(bps, fix_bp_addr(0x03957E), "((A6)==CB244)&&"..bp_cond,
+			global.bp(bps, fix_bp_addr(0x03957E), "((A6)==CB244)&&" .. bp_cond,
 				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$40);D1=(maincpu.pb@(temp1));A6=((A6)+2);maincpu.pb@((A4)+$A3)=D1;maincpu.pb@((A4)+$A4)=maincpu.pb@(temp1+1);maincpu.pb@((A4)+$A5)=maincpu.pb@(temp1+2);PC=((PC)+$20);g")
 
 			-- ステージ設定用。メニューでFを設定した場合にのみ動作させる
@@ -5708,7 +5764,7 @@ function rbff2.startplugin()
 			global.bp(bps, 0x11EE2,
 				"(maincpu.pw@((A4)+2)==2D98||maincpu.pw@((A4)+2)==33B8)&&maincpu.pw@100701==10B&&maincpu.pb@10FDAF==2&&maincpu.pw@10FDB6!=0&&maincpu.pb@100026==2",
 				"maincpu.pb@10CDD0=($FF&((maincpu.pb@10CDD0)+1));maincpu.pd@10CDD1=((A4)+$13);g")
-				global.bp(bps, 0x11EE2,
+			global.bp(bps, 0x11EE2,
 				"(maincpu.pw@((A4)+2)==2D98||maincpu.pw@((A4)+2)==33B8)&&maincpu.pw@100701==10B&&maincpu.pb@10FDAF==2&&maincpu.pw@10FDB6!=0&&maincpu.pb@100026==1",
 				"maincpu.pb@10CDD0=($FF&((maincpu.pb@10CDD0)+1));maincpu.pd@10CDD5=((A4)+$13);g")
 
@@ -5784,7 +5840,7 @@ function rbff2.startplugin()
 			global.bp(bps, fix_bp_addr(0x05B11A),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DDFB+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@((A4)+$8F);g")
-				global.bp(bps, fix_bp_addr(0x05B13A),
+			global.bp(bps, fix_bp_addr(0x05B13A),
 				"maincpu.pw@107C22>0",
 				"temp1=$10DDFB+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@((A4)+$8F);g")
 
@@ -5855,9 +5911,9 @@ function rbff2.startplugin()
 			-- 空振りCAできる
 			-- bp 02FA5E,1,{PC=02FA6A;g}
 			-- ↓のテーブルを全部00にするのでも可
-			-- 02FA72: 0000 0000   
+			-- 02FA72: 0000 0000
 			-- 02FA76: 0000 0000
-			-- 02FA7A: FFFF FFFF        
+			-- 02FA7A: FFFF FFFF
 			-- 02FA7E: 00FF FF00
 			-- 02FA82: FFFF
 
@@ -5914,7 +5970,7 @@ function rbff2.startplugin()
 			else
 				cond1 = "(maincpu.pw@107C22>0)"
 			end
-			cond2 = cond1.."&&(maincpu.pb@((A3)+$B6)==0)"
+			cond2 = cond1 .. "&&(maincpu.pb@((A3)+$B6)==0)"
 			-- 投げの時だけやられ判定表示（ジョー用）
 			local cond3 = "(maincpu.pw@107C22>0)&&((maincpu.pb@($AA+(A3))|D0)!=0)"
 			global.bp(bps_rg, fix_bp_addr(0x5C2E2), cond3, "PC=((PC)+$C);g")
@@ -5966,214 +6022,214 @@ function rbff2.startplugin()
 		pgm:write_u8(0x10CB40, 0x00)
 
 		for i, p in ipairs(players) do
-			pgm:write_u8(p.addr.state2, 0x00)               -- ステータス更新フック
-			pgm:write_u16(p.addr.act2, 0x00)                 -- 技ID更新フック
+			pgm:write_u8(p.addr.state2, 0x00) -- ステータス更新フック
+			pgm:write_u16(p.addr.act2, 0x00) -- 技ID更新フック
 
-			pgm:write_u8(p.addr.vulnerable1 , 0xFF)         -- 食らい判定のフック
-			pgm:write_u8(p.addr.vulnerable21, 0xFF)         -- 食らい判定のフック
-			pgm:write_u8(p.addr.vulnerable22, 0xFF)         -- 食らい判定のフック
+			pgm:write_u8(p.addr.vulnerable1, 0xFF) -- 食らい判定のフック
+			pgm:write_u8(p.addr.vulnerable21, 0xFF) -- 食らい判定のフック
+			pgm:write_u8(p.addr.vulnerable22, 0xFF) -- 食らい判定のフック
 
-			pgm:write_u8(p.n_throw.addr.on, 0xFF)           -- 投げのフック
-			pgm:write_u8(p.air_throw.addr.on, 0xFF)         -- 空中投げのフック
-			pgm:write_u8(p.sp_throw.addr.on, 0xFF)          -- 必殺投げのフック
+			pgm:write_u8(p.n_throw.addr.on, 0xFF) -- 投げのフック
+			pgm:write_u8(p.air_throw.addr.on, 0xFF) -- 空中投げのフック
+			pgm:write_u8(p.sp_throw.addr.on, 0xFF) -- 必殺投げのフック
 		end
 	end
 
 	-- レコード＆リプレイ
 	local recording = {
-		state        = 0, -- 0=レコーディング待ち, 1=レコーディング, 2=リプレイ待ち 3=リプレイ開始
-		cleanup      = false,
-		player       = nil,
-		temp_player  = nil,
-		play_count   = 1,
+		state           = 0, -- 0=レコーディング待ち, 1=レコーディング, 2=リプレイ待ち 3=リプレイ開始
+		cleanup         = false,
+		player          = nil,
+		temp_player     = nil,
+		play_count      = 1,
 
-		last_slot    = nil,
-		active_slot  = nil,
-		slot         = {}, -- スロット
-		live_slots   = {}, -- ONにされたスロット
+		last_slot       = nil,
+		active_slot     = nil,
+		slot            = {}, -- スロット
+		live_slots      = {}, -- ONにされたスロット
 
-		fixpos       = nil,
-		do_repeat    = false,
+		fixpos          = nil,
+		do_repeat       = false,
 		repeat_interval = 0,
 	}
 	for i = 1, 8 do
 		recording.slot[i] = {
 			side  = 1, -- レコーディング対象のプレイヤー番号 1=1P, 2=2P
 			store = {}, -- 入力保存先
-			name = "スロット" .. i,
+			name  = "スロット" .. i,
 		}
 	end
 
 	-- 調査用自動再生スロットの準備
 	local research_cmd = function()
-		local make_cmd = function(joykp, ...)
+		local make_cmd    = function(joykp, ...)
 			local joy = new_next_joy()
 			if ... then
-				for _, k in ipairs({...}) do
+				for _, k in ipairs({ ... }) do
 					joy[joykp[k]] = true
 				end
 			end
 			return joy
 		end
-		local _1     = function(joykp) return make_cmd(joykp, "lt", "dn") end
-		local _1a    = function(joykp) return make_cmd(joykp, "lt", "dn", "a") end
-		local _1b    = function(joykp) return make_cmd(joykp, "lt", "dn", "b") end
-		local _1ab   = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "b") end
-		local _1c    = function(joykp) return make_cmd(joykp, "lt", "dn", "c") end
-		local _1ac   = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "c") end
-		local _1bc   = function(joykp) return make_cmd(joykp, "lt", "dn", "b", "c") end
-		local _1abc  = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "b", "c") end
-		local _1d    = function(joykp) return make_cmd(joykp, "lt", "dn", "d") end
-		local _1ad   = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "d") end
-		local _1bd   = function(joykp) return make_cmd(joykp, "lt", "dn", "b", "d") end
-		local _1abd  = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "b", "d") end
-		local _1cd   = function(joykp) return make_cmd(joykp, "lt", "dn", "c", "d") end
-		local _1acd  = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "c", "d") end
-		local _1bcd  = function(joykp) return make_cmd(joykp, "lt", "dn", "b", "c", "d") end
-		local _1abcd = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "b", "c", "d") end
-		local _2     = function(joykp) return make_cmd(joykp, "dn") end
-		local _2a    = function(joykp) return make_cmd(joykp, "dn", "a") end
-		local _2b    = function(joykp) return make_cmd(joykp, "dn", "b") end
-		local _2ab   = function(joykp) return make_cmd(joykp, "dn", "a", "b") end
-		local _2c    = function(joykp) return make_cmd(joykp, "dn", "c") end
-		local _2ac   = function(joykp) return make_cmd(joykp, "dn", "a", "c") end
-		local _2bc   = function(joykp) return make_cmd(joykp, "dn", "b", "c") end
-		local _2abc  = function(joykp) return make_cmd(joykp, "dn", "a", "b", "c") end
-		local _2d    = function(joykp) return make_cmd(joykp, "dn", "d") end
-		local _2ad   = function(joykp) return make_cmd(joykp, "dn", "a", "d") end
-		local _2bd   = function(joykp) return make_cmd(joykp, "dn", "b", "d") end
-		local _2abd  = function(joykp) return make_cmd(joykp, "dn", "a", "b", "d") end
-		local _2cd   = function(joykp) return make_cmd(joykp, "dn", "c", "d") end
-		local _2acd  = function(joykp) return make_cmd(joykp, "dn", "a", "c", "d") end
-		local _2bcd  = function(joykp) return make_cmd(joykp, "dn", "b", "c", "d") end
-		local _2abcd = function(joykp) return make_cmd(joykp, "dn", "a", "b", "c", "d") end
-		local _3     = function(joykp) return make_cmd(joykp, "rt", "dn") end
-		local _3a    = function(joykp) return make_cmd(joykp, "rt", "dn", "a") end
-		local _3b    = function(joykp) return make_cmd(joykp, "rt", "dn", "b") end
-		local _3ab   = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "b") end
-		local _3c    = function(joykp) return make_cmd(joykp, "rt", "dn", "c") end
-		local _3ac   = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "c") end
-		local _3bc   = function(joykp) return make_cmd(joykp, "rt", "dn", "b", "c") end
-		local _3abc  = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "b", "c") end
-		local _3d    = function(joykp) return make_cmd(joykp, "rt", "dn", "d") end
-		local _3ad   = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "d") end
-		local _3bd   = function(joykp) return make_cmd(joykp, "rt", "dn", "b", "d") end
-		local _3abd  = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "b", "d") end
-		local _3cd   = function(joykp) return make_cmd(joykp, "rt", "dn", "c", "d") end
-		local _3acd  = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "c", "d") end
-		local _3bcd  = function(joykp) return make_cmd(joykp, "rt", "dn", "b", "c", "d") end
-		local _3abcd = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "b", "c", "d") end
-		local _4     = function(joykp) return make_cmd(joykp, "lt") end
-		local _4a    = function(joykp) return make_cmd(joykp, "lt", "a") end
-		local _4b    = function(joykp) return make_cmd(joykp, "lt", "b") end
-		local _4ab   = function(joykp) return make_cmd(joykp, "lt", "a", "b") end
-		local _4c    = function(joykp) return make_cmd(joykp, "lt", "c") end
-		local _4ac   = function(joykp) return make_cmd(joykp, "lt", "a", "c") end
-		local _4bc   = function(joykp) return make_cmd(joykp, "lt", "b", "c") end
-		local _4abc  = function(joykp) return make_cmd(joykp, "lt", "a", "b", "c") end
-		local _4d    = function(joykp) return make_cmd(joykp, "lt", "d") end
-		local _4ad   = function(joykp) return make_cmd(joykp, "lt", "a", "d") end
-		local _4bd   = function(joykp) return make_cmd(joykp, "lt", "b", "d") end
-		local _4abd  = function(joykp) return make_cmd(joykp, "lt", "a", "b", "d") end
-		local _4cd   = function(joykp) return make_cmd(joykp, "lt", "c", "d") end
-		local _4acd  = function(joykp) return make_cmd(joykp, "lt", "a", "c", "d") end
-		local _4bcd  = function(joykp) return make_cmd(joykp, "lt", "b", "c", "d") end
-		local _4abcd = function(joykp) return make_cmd(joykp, "lt", "a", "b", "c", "d") end
-		local _5     = function(joykp) return make_cmd(joykp) end
-		local _5a    = function(joykp) return make_cmd(joykp, "a") end
-		local _5b    = function(joykp) return make_cmd(joykp, "b") end
-		local _5ab   = function(joykp) return make_cmd(joykp, "a", "b") end
-		local _5c    = function(joykp) return make_cmd(joykp, "c") end
-		local _5ac   = function(joykp) return make_cmd(joykp, "a", "c") end
-		local _5bc   = function(joykp) return make_cmd(joykp, "b", "c") end
-		local _5abc  = function(joykp) return make_cmd(joykp, "a", "b", "c") end
-		local _5d    = function(joykp) return make_cmd(joykp, "d") end
-		local _5ad   = function(joykp) return make_cmd(joykp, "a", "d") end
-		local _5bd   = function(joykp) return make_cmd(joykp, "b", "d") end
-		local _5abd  = function(joykp) return make_cmd(joykp, "a", "b", "d") end
-		local _5cd   = function(joykp) return make_cmd(joykp, "c", "d") end
-		local _5acd  = function(joykp) return make_cmd(joykp, "a", "c", "d") end
-		local _5bcd  = function(joykp) return make_cmd(joykp, "b", "c", "d") end
-		local _5abcd = function(joykp) return make_cmd(joykp, "a", "b", "c", "d") end
-		local _a     = _5a
-		local _b     = _5b
-		local _ab    = _5ab
-		local _c     = _5c
-		local _ac    = _5ac
-		local _bc    = _5bc
-		local _abc   = _5abc
-		local _d     = _5d
-		local _ad    = _5ad
-		local _bd    = _5bd
-		local _abd   = _5abd
-		local _cd    = _5cd
-		local _acd   = _5acd
-		local _bcd   = _5bcd
-		local _abcd  = _5abcd
-		local _6     = function(joykp) return make_cmd(joykp, "rt") end
-		local _6a    = function(joykp) return make_cmd(joykp, "rt", "a") end
-		local _6b    = function(joykp) return make_cmd(joykp, "rt", "b") end
-		local _6ab   = function(joykp) return make_cmd(joykp, "rt", "a", "b") end
-		local _6c    = function(joykp) return make_cmd(joykp, "rt", "c") end
-		local _6ac   = function(joykp) return make_cmd(joykp, "rt", "a", "c") end
-		local _6bc   = function(joykp) return make_cmd(joykp, "rt", "b", "c") end
-		local _6abc  = function(joykp) return make_cmd(joykp, "rt", "a", "b", "c") end
-		local _6d    = function(joykp) return make_cmd(joykp, "rt", "d") end
-		local _6ad   = function(joykp) return make_cmd(joykp, "rt", "a", "d") end
-		local _6bd   = function(joykp) return make_cmd(joykp, "rt", "b", "d") end
-		local _6abd  = function(joykp) return make_cmd(joykp, "rt", "a", "b", "d") end
-		local _6cd   = function(joykp) return make_cmd(joykp, "rt", "c", "d") end
-		local _6acd  = function(joykp) return make_cmd(joykp, "rt", "a", "c", "d") end
-		local _6bcd  = function(joykp) return make_cmd(joykp, "rt", "b", "c", "d") end
-		local _6abcd = function(joykp) return make_cmd(joykp, "rt", "a", "b", "c", "d") end
-		local _7     = function(joykp) return make_cmd(joykp, "lt", "up") end
-		local _7a    = function(joykp) return make_cmd(joykp, "lt", "up", "a") end
-		local _7b    = function(joykp) return make_cmd(joykp, "lt", "up", "b") end
-		local _7ab   = function(joykp) return make_cmd(joykp, "lt", "up", "a", "b") end
-		local _7c    = function(joykp) return make_cmd(joykp, "lt", "up", "c") end
-		local _7ac   = function(joykp) return make_cmd(joykp, "lt", "up", "a", "c") end
-		local _7bc   = function(joykp) return make_cmd(joykp, "lt", "up", "b", "c") end
-		local _7abc  = function(joykp) return make_cmd(joykp, "lt", "up", "a", "b", "c") end
-		local _7d    = function(joykp) return make_cmd(joykp, "lt", "up", "d") end
-		local _7ad   = function(joykp) return make_cmd(joykp, "lt", "up", "a", "d") end
-		local _7bd   = function(joykp) return make_cmd(joykp, "lt", "up", "b", "d") end
-		local _7abd  = function(joykp) return make_cmd(joykp, "lt", "up", "a", "b", "d") end
-		local _7cd   = function(joykp) return make_cmd(joykp, "lt", "up", "c", "d") end
-		local _7acd  = function(joykp) return make_cmd(joykp, "lt", "up", "a", "c", "d") end
-		local _7bcd  = function(joykp) return make_cmd(joykp, "lt", "up", "b", "c", "d") end
-		local _7abcd = function(joykp) return make_cmd(joykp, "lt", "up", "a", "b", "c", "d") end
-		local _8     = function(joykp) return make_cmd(joykp, "up") end
-		local _8a    = function(joykp) return make_cmd(joykp, "up", "a") end
-		local _8b    = function(joykp) return make_cmd(joykp, "up", "b") end
-		local _8ab   = function(joykp) return make_cmd(joykp, "up", "a", "b") end
-		local _8c    = function(joykp) return make_cmd(joykp, "up", "c") end
-		local _8ac   = function(joykp) return make_cmd(joykp, "up", "a", "c") end
-		local _8bc   = function(joykp) return make_cmd(joykp, "up", "b", "c") end
-		local _8abc  = function(joykp) return make_cmd(joykp, "up", "a", "b", "c") end
-		local _8d    = function(joykp) return make_cmd(joykp, "up", "d") end
-		local _8ad   = function(joykp) return make_cmd(joykp, "up", "a", "d") end
-		local _8bd   = function(joykp) return make_cmd(joykp, "up", "b", "d") end
-		local _8abd  = function(joykp) return make_cmd(joykp, "up", "a", "b", "d") end
-		local _8cd   = function(joykp) return make_cmd(joykp, "up", "c", "d") end
-		local _8acd  = function(joykp) return make_cmd(joykp, "up", "a", "c", "d") end
-		local _8bcd  = function(joykp) return make_cmd(joykp, "up", "b", "c", "d") end
-		local _8abcd = function(joykp) return make_cmd(joykp, "up", "a", "b", "c", "d") end
-		local _9     = function(joykp) return make_cmd(joykp, "rt", "up") end
-		local _9a    = function(joykp) return make_cmd(joykp, "rt", "up", "a") end
-		local _9b    = function(joykp) return make_cmd(joykp, "rt", "up", "b") end
-		local _9ab   = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b") end
-		local _9c    = function(joykp) return make_cmd(joykp, "rt", "up", "c") end
-		local _9ac   = function(joykp) return make_cmd(joykp, "rt", "up", "a", "c") end
-		local _9bc   = function(joykp) return make_cmd(joykp, "rt", "up", "b", "c") end
-		local _9abc  = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b", "c") end
-		local _9d    = function(joykp) return make_cmd(joykp, "rt", "up", "d") end
-		local _9ad   = function(joykp) return make_cmd(joykp, "rt", "up", "a", "d") end
-		local _9bd   = function(joykp) return make_cmd(joykp, "rt", "up", "b", "d") end
-		local _9abd  = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b", "d") end
-		local _9cd   = function(joykp) return make_cmd(joykp, "rt", "up", "c", "d") end
-		local _9acd  = function(joykp) return make_cmd(joykp, "rt", "up", "a", "c", "d") end
-		local _9bcd  = function(joykp) return make_cmd(joykp, "rt", "up", "b", "c", "d") end
-		local _9abcd = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b", "c", "d") end
+		local _1          = function(joykp) return make_cmd(joykp, "lt", "dn") end
+		local _1a         = function(joykp) return make_cmd(joykp, "lt", "dn", "a") end
+		local _1b         = function(joykp) return make_cmd(joykp, "lt", "dn", "b") end
+		local _1ab        = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "b") end
+		local _1c         = function(joykp) return make_cmd(joykp, "lt", "dn", "c") end
+		local _1ac        = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "c") end
+		local _1bc        = function(joykp) return make_cmd(joykp, "lt", "dn", "b", "c") end
+		local _1abc       = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "b", "c") end
+		local _1d         = function(joykp) return make_cmd(joykp, "lt", "dn", "d") end
+		local _1ad        = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "d") end
+		local _1bd        = function(joykp) return make_cmd(joykp, "lt", "dn", "b", "d") end
+		local _1abd       = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "b", "d") end
+		local _1cd        = function(joykp) return make_cmd(joykp, "lt", "dn", "c", "d") end
+		local _1acd       = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "c", "d") end
+		local _1bcd       = function(joykp) return make_cmd(joykp, "lt", "dn", "b", "c", "d") end
+		local _1abcd      = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "b", "c", "d") end
+		local _2          = function(joykp) return make_cmd(joykp, "dn") end
+		local _2a         = function(joykp) return make_cmd(joykp, "dn", "a") end
+		local _2b         = function(joykp) return make_cmd(joykp, "dn", "b") end
+		local _2ab        = function(joykp) return make_cmd(joykp, "dn", "a", "b") end
+		local _2c         = function(joykp) return make_cmd(joykp, "dn", "c") end
+		local _2ac        = function(joykp) return make_cmd(joykp, "dn", "a", "c") end
+		local _2bc        = function(joykp) return make_cmd(joykp, "dn", "b", "c") end
+		local _2abc       = function(joykp) return make_cmd(joykp, "dn", "a", "b", "c") end
+		local _2d         = function(joykp) return make_cmd(joykp, "dn", "d") end
+		local _2ad        = function(joykp) return make_cmd(joykp, "dn", "a", "d") end
+		local _2bd        = function(joykp) return make_cmd(joykp, "dn", "b", "d") end
+		local _2abd       = function(joykp) return make_cmd(joykp, "dn", "a", "b", "d") end
+		local _2cd        = function(joykp) return make_cmd(joykp, "dn", "c", "d") end
+		local _2acd       = function(joykp) return make_cmd(joykp, "dn", "a", "c", "d") end
+		local _2bcd       = function(joykp) return make_cmd(joykp, "dn", "b", "c", "d") end
+		local _2abcd      = function(joykp) return make_cmd(joykp, "dn", "a", "b", "c", "d") end
+		local _3          = function(joykp) return make_cmd(joykp, "rt", "dn") end
+		local _3a         = function(joykp) return make_cmd(joykp, "rt", "dn", "a") end
+		local _3b         = function(joykp) return make_cmd(joykp, "rt", "dn", "b") end
+		local _3ab        = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "b") end
+		local _3c         = function(joykp) return make_cmd(joykp, "rt", "dn", "c") end
+		local _3ac        = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "c") end
+		local _3bc        = function(joykp) return make_cmd(joykp, "rt", "dn", "b", "c") end
+		local _3abc       = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "b", "c") end
+		local _3d         = function(joykp) return make_cmd(joykp, "rt", "dn", "d") end
+		local _3ad        = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "d") end
+		local _3bd        = function(joykp) return make_cmd(joykp, "rt", "dn", "b", "d") end
+		local _3abd       = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "b", "d") end
+		local _3cd        = function(joykp) return make_cmd(joykp, "rt", "dn", "c", "d") end
+		local _3acd       = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "c", "d") end
+		local _3bcd       = function(joykp) return make_cmd(joykp, "rt", "dn", "b", "c", "d") end
+		local _3abcd      = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "b", "c", "d") end
+		local _4          = function(joykp) return make_cmd(joykp, "lt") end
+		local _4a         = function(joykp) return make_cmd(joykp, "lt", "a") end
+		local _4b         = function(joykp) return make_cmd(joykp, "lt", "b") end
+		local _4ab        = function(joykp) return make_cmd(joykp, "lt", "a", "b") end
+		local _4c         = function(joykp) return make_cmd(joykp, "lt", "c") end
+		local _4ac        = function(joykp) return make_cmd(joykp, "lt", "a", "c") end
+		local _4bc        = function(joykp) return make_cmd(joykp, "lt", "b", "c") end
+		local _4abc       = function(joykp) return make_cmd(joykp, "lt", "a", "b", "c") end
+		local _4d         = function(joykp) return make_cmd(joykp, "lt", "d") end
+		local _4ad        = function(joykp) return make_cmd(joykp, "lt", "a", "d") end
+		local _4bd        = function(joykp) return make_cmd(joykp, "lt", "b", "d") end
+		local _4abd       = function(joykp) return make_cmd(joykp, "lt", "a", "b", "d") end
+		local _4cd        = function(joykp) return make_cmd(joykp, "lt", "c", "d") end
+		local _4acd       = function(joykp) return make_cmd(joykp, "lt", "a", "c", "d") end
+		local _4bcd       = function(joykp) return make_cmd(joykp, "lt", "b", "c", "d") end
+		local _4abcd      = function(joykp) return make_cmd(joykp, "lt", "a", "b", "c", "d") end
+		local _5          = function(joykp) return make_cmd(joykp) end
+		local _5a         = function(joykp) return make_cmd(joykp, "a") end
+		local _5b         = function(joykp) return make_cmd(joykp, "b") end
+		local _5ab        = function(joykp) return make_cmd(joykp, "a", "b") end
+		local _5c         = function(joykp) return make_cmd(joykp, "c") end
+		local _5ac        = function(joykp) return make_cmd(joykp, "a", "c") end
+		local _5bc        = function(joykp) return make_cmd(joykp, "b", "c") end
+		local _5abc       = function(joykp) return make_cmd(joykp, "a", "b", "c") end
+		local _5d         = function(joykp) return make_cmd(joykp, "d") end
+		local _5ad        = function(joykp) return make_cmd(joykp, "a", "d") end
+		local _5bd        = function(joykp) return make_cmd(joykp, "b", "d") end
+		local _5abd       = function(joykp) return make_cmd(joykp, "a", "b", "d") end
+		local _5cd        = function(joykp) return make_cmd(joykp, "c", "d") end
+		local _5acd       = function(joykp) return make_cmd(joykp, "a", "c", "d") end
+		local _5bcd       = function(joykp) return make_cmd(joykp, "b", "c", "d") end
+		local _5abcd      = function(joykp) return make_cmd(joykp, "a", "b", "c", "d") end
+		local _a          = _5a
+		local _b          = _5b
+		local _ab         = _5ab
+		local _c          = _5c
+		local _ac         = _5ac
+		local _bc         = _5bc
+		local _abc        = _5abc
+		local _d          = _5d
+		local _ad         = _5ad
+		local _bd         = _5bd
+		local _abd        = _5abd
+		local _cd         = _5cd
+		local _acd        = _5acd
+		local _bcd        = _5bcd
+		local _abcd       = _5abcd
+		local _6          = function(joykp) return make_cmd(joykp, "rt") end
+		local _6a         = function(joykp) return make_cmd(joykp, "rt", "a") end
+		local _6b         = function(joykp) return make_cmd(joykp, "rt", "b") end
+		local _6ab        = function(joykp) return make_cmd(joykp, "rt", "a", "b") end
+		local _6c         = function(joykp) return make_cmd(joykp, "rt", "c") end
+		local _6ac        = function(joykp) return make_cmd(joykp, "rt", "a", "c") end
+		local _6bc        = function(joykp) return make_cmd(joykp, "rt", "b", "c") end
+		local _6abc       = function(joykp) return make_cmd(joykp, "rt", "a", "b", "c") end
+		local _6d         = function(joykp) return make_cmd(joykp, "rt", "d") end
+		local _6ad        = function(joykp) return make_cmd(joykp, "rt", "a", "d") end
+		local _6bd        = function(joykp) return make_cmd(joykp, "rt", "b", "d") end
+		local _6abd       = function(joykp) return make_cmd(joykp, "rt", "a", "b", "d") end
+		local _6cd        = function(joykp) return make_cmd(joykp, "rt", "c", "d") end
+		local _6acd       = function(joykp) return make_cmd(joykp, "rt", "a", "c", "d") end
+		local _6bcd       = function(joykp) return make_cmd(joykp, "rt", "b", "c", "d") end
+		local _6abcd      = function(joykp) return make_cmd(joykp, "rt", "a", "b", "c", "d") end
+		local _7          = function(joykp) return make_cmd(joykp, "lt", "up") end
+		local _7a         = function(joykp) return make_cmd(joykp, "lt", "up", "a") end
+		local _7b         = function(joykp) return make_cmd(joykp, "lt", "up", "b") end
+		local _7ab        = function(joykp) return make_cmd(joykp, "lt", "up", "a", "b") end
+		local _7c         = function(joykp) return make_cmd(joykp, "lt", "up", "c") end
+		local _7ac        = function(joykp) return make_cmd(joykp, "lt", "up", "a", "c") end
+		local _7bc        = function(joykp) return make_cmd(joykp, "lt", "up", "b", "c") end
+		local _7abc       = function(joykp) return make_cmd(joykp, "lt", "up", "a", "b", "c") end
+		local _7d         = function(joykp) return make_cmd(joykp, "lt", "up", "d") end
+		local _7ad        = function(joykp) return make_cmd(joykp, "lt", "up", "a", "d") end
+		local _7bd        = function(joykp) return make_cmd(joykp, "lt", "up", "b", "d") end
+		local _7abd       = function(joykp) return make_cmd(joykp, "lt", "up", "a", "b", "d") end
+		local _7cd        = function(joykp) return make_cmd(joykp, "lt", "up", "c", "d") end
+		local _7acd       = function(joykp) return make_cmd(joykp, "lt", "up", "a", "c", "d") end
+		local _7bcd       = function(joykp) return make_cmd(joykp, "lt", "up", "b", "c", "d") end
+		local _7abcd      = function(joykp) return make_cmd(joykp, "lt", "up", "a", "b", "c", "d") end
+		local _8          = function(joykp) return make_cmd(joykp, "up") end
+		local _8a         = function(joykp) return make_cmd(joykp, "up", "a") end
+		local _8b         = function(joykp) return make_cmd(joykp, "up", "b") end
+		local _8ab        = function(joykp) return make_cmd(joykp, "up", "a", "b") end
+		local _8c         = function(joykp) return make_cmd(joykp, "up", "c") end
+		local _8ac        = function(joykp) return make_cmd(joykp, "up", "a", "c") end
+		local _8bc        = function(joykp) return make_cmd(joykp, "up", "b", "c") end
+		local _8abc       = function(joykp) return make_cmd(joykp, "up", "a", "b", "c") end
+		local _8d         = function(joykp) return make_cmd(joykp, "up", "d") end
+		local _8ad        = function(joykp) return make_cmd(joykp, "up", "a", "d") end
+		local _8bd        = function(joykp) return make_cmd(joykp, "up", "b", "d") end
+		local _8abd       = function(joykp) return make_cmd(joykp, "up", "a", "b", "d") end
+		local _8cd        = function(joykp) return make_cmd(joykp, "up", "c", "d") end
+		local _8acd       = function(joykp) return make_cmd(joykp, "up", "a", "c", "d") end
+		local _8bcd       = function(joykp) return make_cmd(joykp, "up", "b", "c", "d") end
+		local _8abcd      = function(joykp) return make_cmd(joykp, "up", "a", "b", "c", "d") end
+		local _9          = function(joykp) return make_cmd(joykp, "rt", "up") end
+		local _9a         = function(joykp) return make_cmd(joykp, "rt", "up", "a") end
+		local _9b         = function(joykp) return make_cmd(joykp, "rt", "up", "b") end
+		local _9ab        = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b") end
+		local _9c         = function(joykp) return make_cmd(joykp, "rt", "up", "c") end
+		local _9ac        = function(joykp) return make_cmd(joykp, "rt", "up", "a", "c") end
+		local _9bc        = function(joykp) return make_cmd(joykp, "rt", "up", "b", "c") end
+		local _9abc       = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b", "c") end
+		local _9d         = function(joykp) return make_cmd(joykp, "rt", "up", "d") end
+		local _9ad        = function(joykp) return make_cmd(joykp, "rt", "up", "a", "d") end
+		local _9bd        = function(joykp) return make_cmd(joykp, "rt", "up", "b", "d") end
+		local _9abd       = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b", "d") end
+		local _9cd        = function(joykp) return make_cmd(joykp, "rt", "up", "c", "d") end
+		local _9acd       = function(joykp) return make_cmd(joykp, "rt", "up", "a", "c", "d") end
+		local _9bcd       = function(joykp) return make_cmd(joykp, "rt", "up", "b", "c", "d") end
+		local _9abcd      = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b", "c", "d") end
 		local extract_cmd = function(joyk, cmd_ary)
 			if not cmd_ary then
 				return {}
@@ -6192,12 +6248,12 @@ function rbff2.startplugin()
 			end
 			return ret
 		end
-		local merge_cmd = function(cmd_ary1, cmd_ary2)
+		local merge_cmd   = function(cmd_ary1, cmd_ary2)
 			local keys1, keys2 = extract_cmd(joyk.p1, cmd_ary1), extract_cmd(joyk.p2, cmd_ary2)
 			local ret, max = {}, math.max(#keys1, #keys2)
 			for i = 1, max do
 				local joy = new_next_joy()
-				for _, key in ipairs({keys1[i] or {}, keys2[i] or {}}) do
+				for _, key in ipairs({ keys1[i] or {}, keys2[i] or {} }) do
 					for k, v in pairs(key) do
 						if v then
 							joy[k] = v
@@ -6208,8 +6264,14 @@ function rbff2.startplugin()
 			end
 			return ret
 		end
-		local rec1, rec2, rec3, rec4, rec5, rec6, rec7, rec8 = {}, {}, {}, {}, {}, {}, {}, {}
-
+		local rec1        = {}
+		local rec2        = {}
+		local rec3        = {}
+		local rec4        = {}
+		local rec5        = {}
+		local rec6        = {}
+		local rec7        = {}
+		local rec8        = {}
 		--[[
 		rec1 = merge_cmd( -- ボブ対クラウザー100% ラグがでると落ちる
 			{
@@ -6340,9 +6402,22 @@ function rbff2.startplugin()
 	recording.active_slot = recording.slot[1]
 	recording.active_slot.side = 1
 
-	local rec_await_no_input, rec_await_1st_input, rec_await_play, rec_input, rec_play, rec_repeat_play, rec_play_interval, rec_fixpos
+	-- メニュー用変数
+	local rec_await_no_input
+	local rec_await_1st_input
+	local rec_await_play
+	local rec_input
+	local rec_play
+	local rec_repeat_play
+	local rec_play_interval
+	local rec_fixpos
 	local do_recover
-	local menu_to_tra, menu_to_bar, menu_to_disp, menu_to_ex, menu_to_col, menu_to_auto
+	local menu_to_tra
+	local menu_to_bar
+	local menu_to_disp
+	local menu_to_ex
+	local menu_to_col
+	local menu_to_auto
 
 	-- 状態クリア
 	local cls_ps = function()
@@ -6354,27 +6429,27 @@ function rbff2.startplugin()
 
 			do_recover(p, op, true)
 
-			p.last_pure_dmg = 0
-			p.last_dmg = 0
-			p.last_dmg_scaling = 0
-			p.last_combo_dmg = 0
-			p.last_dmg = 0
-			p.last_combo = 0
-			p.last_combo_stun = 0
-			p.last_stun = 0
+			p.last_pure_dmg       = 0
+			p.last_dmg            = 0
+			p.last_dmg_scaling    = 0
+			p.last_combo_dmg      = 0
+			p.last_dmg            = 0
+			p.last_combo          = 0
+			p.last_combo_stun     = 0
+			p.last_stun           = 0
 			p.last_combo_st_timer = 0
-			p.last_st_timer = 0
-			p.last_combo_pow = 0
-			p.last_pow = 0
-			p.tmp_combo      = 0
-			p.tmp_dmg        = 0
-			p.tmp_pow        = 0
-			p.tmp_pow_rsv    = 0
-			p.tmp_pow_atc    = 0
-			p.tmp_stun       = 0
-			p.tmp_st_timer   = 0
-			p.tmp_pow = 0
-			p.tmp_combo_pow = 0
+			p.last_st_timer       = 0
+			p.last_combo_pow      = 0
+			p.last_pow            = 0
+			p.tmp_combo           = 0
+			p.tmp_dmg             = 0
+			p.tmp_pow             = 0
+			p.tmp_pow_rsv         = 0
+			p.tmp_pow_atc         = 0
+			p.tmp_stun            = 0
+			p.tmp_st_timer        = 0
+			p.tmp_pow             = 0
+			p.tmp_combo_pow       = 0
 		end
 	end
 
@@ -6386,10 +6461,10 @@ function rbff2.startplugin()
 	end
 	-- リプレイ開始位置記憶
 	rec_fixpos = function()
-		local pos = { players[1].input_side, players[2].input_side }
-		local fixpos  = { pgm:read_i16(players[1].addr.pos)       , pgm:read_i16(players[2].addr.pos)        }
-		local fixsway = { pgm:read_u8(players[1].addr.sway_status), pgm:read_u8(players[2].addr.sway_status) }
-		local fixscr  = {
+		local pos        = { players[1].input_side, players[2].input_side }
+		local fixpos     = { pgm:read_i16(players[1].addr.pos), pgm:read_i16(players[2].addr.pos) }
+		local fixsway    = { pgm:read_u8(players[1].addr.sway_status), pgm:read_u8(players[2].addr.sway_status) }
+		local fixscr     = {
 			x = pgm:read_u16(mem.stage_base_addr + offset_pos_x),
 			y = pgm:read_u16(mem.stage_base_addr + offset_pos_y),
 			z = pgm:read_u16(mem.stage_base_addr + offset_pos_z),
@@ -6426,8 +6501,8 @@ function rbff2.startplugin()
 					recording.player = recording.temp_player
 					recording.active_slot.cleanup = false
 					recording.active_slot.side = joy_pside[rev_joy[k]] -- レコーディング対象のプレイヤー番号 1=1P, 2=2P
-					recording.active_slot.store = {} -- 入力保存先
-					table.insert(recording.active_slot.store, { joy = next_val      , pos = pos })
+					recording.active_slot.store = {}    -- 入力保存先
+					table.insert(recording.active_slot.store, { joy = next_val, pos = pos })
 					table.insert(recording.active_slot.store, { joy = new_next_joy(), pos = pos })
 
 					-- 状態変更
@@ -6457,7 +6532,7 @@ function rbff2.startplugin()
 			end
 		end
 		table.remove(recording.active_slot.store)
-		table.insert(recording.active_slot.store, { joy = next_val      , pos = pos })
+		table.insert(recording.active_slot.store, { joy = next_val, pos = pos })
 		table.insert(recording.active_slot.store, { joy = new_next_joy(), pos = pos })
 	end
 	-- リプレイまち
@@ -6514,18 +6589,18 @@ function rbff2.startplugin()
 
 				-- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
 				if global.replay_reset == 2 or (global.replay_reset == 3 and i == 3) or (global.replay_reset == 4 and i == 4) then
-					pgm:write_u8( p.addr.sway_status, 0x00) --fixpos.fixsway[i])
+					pgm:write_u8(p.addr.sway_status, 0x00) --fixpos.fixsway[i])
 					--pgm:write_u32(p.addr.base, 0x000261A0) -- 素立ち処理
 					pgm:write_u32(p.addr.base, 0x00058D5A) -- やられからの復帰処理
 
-					pgm:write_u8( p.addr.base + 0xC0, 0x80)
-					pgm:write_u8( p.addr.base + 0xC2, 0x00)
-					pgm:write_u8( p.addr.base + 0xFC, 0x00)
-					pgm:write_u8( p.addr.base + 0xFD, 0x00)
+					pgm:write_u8(p.addr.base + 0xC0, 0x80)
+					pgm:write_u8(p.addr.base + 0xC2, 0x00)
+					pgm:write_u8(p.addr.base + 0xFC, 0x00)
+					pgm:write_u8(p.addr.base + 0xFD, 0x00)
 
-					pgm:write_u8( p.addr.base + 0x61, 0x01)
-					pgm:write_u8( p.addr.base + 0x63, 0x02)
-					pgm:write_u8( p.addr.base + 0x65, 0x02)
+					pgm:write_u8(p.addr.base + 0x61, 0x01)
+					pgm:write_u8(p.addr.base + 0x63, 0x02)
+					pgm:write_u8(p.addr.base + 0x65, 0x02)
 
 					pgm:write_i16(p.addr.pos_y, 0x00)
 					pgm:write_i16(p.addr.pos_z, 0x18)
@@ -6543,12 +6618,12 @@ function rbff2.startplugin()
 
 					pgm:write_u16(p.addr.base + 0x60, 0x01)
 					pgm:write_u16(p.addr.base + 0x64, 0xFFFF)
-					pgm:write_u8( p.addr.base + 0x66, 0x00)
+					pgm:write_u8(p.addr.base + 0x66, 0x00)
 					pgm:write_u16(p.addr.base + 0x6E, 0x00)
-					pgm:write_u8( p.addr.base + 0x6A, 0x00)
-					pgm:write_u8( p.addr.base + 0x7E, 0x00)
-					pgm:write_u8( p.addr.base + 0xB0, 0x00)
-					pgm:write_u8( p.addr.base + 0xB1, 0x00)
+					pgm:write_u8(p.addr.base + 0x6A, 0x00)
+					pgm:write_u8(p.addr.base + 0x7E, 0x00)
+					pgm:write_u8(p.addr.base + 0xB0, 0x00)
+					pgm:write_u8(p.addr.base + 0xB1, 0x00)
 
 					do_recover(p, op, true)
 
@@ -6576,13 +6651,13 @@ function rbff2.startplugin()
 					pgm:write_u16(mem.stage_base_addr + offset_pos_z, fixpos.fixscr.z)
 				end
 			end
-			players[1].input_side     = pgm:read_u8(players[1].addr.input_side)
-			players[2].input_side     = pgm:read_u8(players[2].addr.input_side)
-			players[1].disp_side      = get_flip_x(players[1])
-			players[2].disp_side      = get_flip_x(players[2])
+			players[1].input_side = pgm:read_u8(players[1].addr.input_side)
+			players[2].input_side = pgm:read_u8(players[2].addr.input_side)
+			players[1].disp_side  = get_flip_x(players[1])
+			players[2].disp_side  = get_flip_x(players[2])
 
 			-- 入力リセット
-			local next_joy = new_next_joy()
+			local next_joy        = new_next_joy()
 			for _, joy in ipairs(use_joy) do
 				to_joy[joy.field] = next_joy[joy.field] or false
 			end
@@ -6590,9 +6665,9 @@ function rbff2.startplugin()
 		end
 	end
 	-- 繰り返しリプレイ待ち
-	rec_repeat_play= function(to_joy)
+	rec_repeat_play = function(to_joy)
 		-- 繰り返し前の行動が完了するまで待つ
-		local p = players[3-recording.player]
+		local p = players[3 - recording.player]
 		local op = players[recording.player]
 
 		local p_ok = true
@@ -6703,8 +6778,8 @@ function rbff2.startplugin()
 			if recording.do_repeat then
 				-- 状態変更
 				-- 繰り返し前の行動を覚えておいて、行動が完了するまで待機できるようにする
-				recording.last_act = players[3-recording.player].act
-				recording.last_pos_y = players[3-recording.player].pos_y
+				recording.last_act = players[3 - recording.player].act
+				recording.last_pos_y = players[3 - recording.player].pos_y
 				global.rec_main = rec_repeat_play
 				print(global.frame_number .. " rec_play_interval -> rec_repeat_play")
 				return
@@ -6823,7 +6898,7 @@ function rbff2.startplugin()
 			if show_name and main_frame then
 				if (frame_group[1].col + frame_group[1].line) > 0 then
 					local disp_name = frame_group[1].disp_name or frame_group[1].name
-					draw_text_with_shadow(x+12  , txty+y     , disp_name, 0xFFC0C0C0)
+					draw_text_with_shadow(x + 12, txty + y, disp_name, 0xFFC0C0C0)
 				end
 			end
 			-- グループのフレーム数を末尾から描画
@@ -6846,25 +6921,25 @@ function rbff2.startplugin()
 				if (frame.col + frame.line) > 0 then
 					local evx = math.min(x1, x2)
 					if on_fb then
-						scr:draw_text(evx-1.5, txty+y-1, "●")
+						scr:draw_text(evx - 1.5, txty + y - 1, "●")
 					elseif on_prefb then
 						-- 飛び道具の処理発生ポイント(発生保障や完全消失の候補)
-						scr:draw_text(evx-2.0, txty+y-1, "◆")
+						scr:draw_text(evx - 2.0, txty + y - 1, "◆")
 					end
 					if on_ar then
-						scr:draw_text(evx-3, txty+y, "▲")
+						scr:draw_text(evx - 3, txty + y, "▲")
 					elseif on_gd then
-						scr:draw_text(evx-3, txty+y, "▼")
+						scr:draw_text(evx - 3, txty + y, "▼")
 					end
-					scr:draw_box(x1, y, x2, y+height, frame.line, frame.col)
+					scr:draw_box(x1, y, x2, y + height, frame.line, frame.col)
 					if show_count then
-						local count_txt = 300 < frame.count and "LOT" or (""..frame.count)
+						local count_txt = 300 < frame.count and "LOT" or ("" .. frame.count)
 						if frame.count > 5 then
-							draw_text_with_shadow(x2+1  , txty+y    , count_txt)
+							draw_text_with_shadow(x2 + 1, txty + y, count_txt)
 						elseif 3 > frame.count then
-							draw_text_with_shadow(x2-1  , txty+y    , count_txt)
+							draw_text_with_shadow(x2 - 1, txty + y, count_txt)
 						else
-							draw_text_with_shadow(x2    , txty+y    , count_txt)
+							draw_text_with_shadow(x2, txty + y, count_txt)
 						end
 					end
 				end
@@ -6881,7 +6956,7 @@ function rbff2.startplugin()
 			return
 		end
 		span = span or height
-		local txty = math.max(-2, height-8)
+		local txty = math.max(-2, height - 8)
 
 		-- 縦に描画
 		local x1 = xmax
@@ -6896,18 +6971,18 @@ function rbff2.startplugin()
 				if frame.fireball and disp_fbfrm == true then
 					for _, fb in pairs(frame.fireball) do
 						for _, sub_group in ipairs(fb) do
-							dodraw(x1, y + 0 + span, sub_group, false, height, x, xmax, show_name, show_count, x+sub_group.parent_count-overflow, scr, txty-1)
+							dodraw(x1, y + 0 + span, sub_group, false, height, x, xmax, show_name, show_count, x + sub_group.parent_count - overflow, scr, txty - 1)
 						end
 					end
 				end
 				if frame.frm_gap then
 					for _, sub_group in ipairs(frame.frm_gap) do
-						dodraw(x1, y + 6 + span, sub_group, false, height-3, x, xmax, show_name, show_count, x, scr, txty-1)
+						dodraw(x1, y + 6 + span, sub_group, false, height - 3, x, xmax, show_name, show_count, x, scr, txty - 1)
 					end
 				end
 				if frame.muteki then
 					for _, sub_group in ipairs(frame.muteki) do
-						dodraw(x1, y + 11 + span, sub_group, false, height-3, x, xmax, show_name, show_count, x, scr, txty-1)
+						dodraw(x1, y + 11 + span, sub_group, false, height - 3, x, xmax, show_name, show_count, x, scr, txty - 1)
 					end
 				end
 			end
@@ -6932,17 +7007,17 @@ function rbff2.startplugin()
 				local x2 = math.max(xmin, x1 - frame.count)
 				loopend = x2 <= xmin
 				if (frame.col + frame.line) > 0 then -- 速度かせぎのためカラー無しはスキップする
-					scr:draw_box (x1, y, x2, y+height, frame.line, frame.col)
+					scr:draw_box(x1, y, x2, y + height, frame.line, frame.col)
 					if show_count == true and first == true then
 						first = false
-						local txty = math.max(-2, height-8)
-						local count_txt = 300 < frame.count and "LOT" or (""..frame.count)
+						local txty = math.max(-2, height - 8)
+						local count_txt = 300 < frame.count and "LOT" or ("" .. frame.count)
 						if frame.count > 5 then
-							draw_text_with_shadow(x2+1  , txty+y    , count_txt)
+							draw_text_with_shadow(x2 + 1, txty + y, count_txt)
 						elseif 3 > frame.count then
-							draw_text_with_shadow(x2-1  , txty+y    , count_txt)
+							draw_text_with_shadow(x2 - 1, txty + y, count_txt)
 						else
-							draw_text_with_shadow(x2    , txty+y    , count_txt)
+							draw_text_with_shadow(x2, txty + y, count_txt)
 						end
 					end
 				end
@@ -6959,15 +7034,15 @@ function rbff2.startplugin()
 		local max_life = life[p.red] or (p.red - #life) -- 赤体力にするかどうか
 		if dip_config.infinity_life then
 			pgm:write_u8(p.addr.life, max_life)
-			pgm:write_u8(p.addr.max_stun,  p.init_stun) -- 最大気絶値
+			pgm:write_u8(p.addr.max_stun, p.init_stun) -- 最大気絶値
 			pgm:write_u8(p.addr.init_stun, p.init_stun) -- 最大気絶値
 		elseif p.life_rec then
 			-- 回復判定して回復
 			if force or ((math.max(p.update_dmg, op.update_dmg) + 180) <= global.frame_number and p.state == 0) then
 				-- やられ状態から戻ったときに回復させる
 				pgm:write_u8(p.addr.life, max_life) -- 体力
-				pgm:write_u8(p.addr.stun, 0) -- 気絶値
-				pgm:write_u8(p.addr.max_stun,  p.init_stun) -- 最大気絶値
+				pgm:write_u8(p.addr.stun, 0)    -- 気絶値
+				pgm:write_u8(p.addr.max_stun, p.init_stun) -- 最大気絶値
 				pgm:write_u8(p.addr.init_stun, p.init_stun) -- 最大気絶値
 				pgm:write_u16(p.addr.stun_timer, 0) -- 気絶値タイマー
 			elseif max_life < p.life then
@@ -6978,8 +7053,8 @@ function rbff2.startplugin()
 
 		-- パワーゲージ回復
 		-- 0x3C, 0x1E, 0x00
-		local pow = { 0x3C, 0x1E, 0x00 }
-		local max_pow  = pow[p.max] or (p.max - #pow) -- パワーMAXにするかどうか
+		local pow     = { 0x3C, 0x1E, 0x00 }
+		local max_pow = pow[p.max] or (p.max - #pow) -- パワーMAXにするかどうか
 		-- POWモード　1:自動回復 2:固定 3:通常動作
 		if global.pow_mode == 2 then
 			pgm:write_u8(p.addr.pow, max_pow)
@@ -7001,22 +7076,22 @@ function rbff2.startplugin()
 
 		local a = 0xFFFF & math.abs(op.proc_pos - op_edge)
 		local tw_center = p_edge - screen_left
-		if 0 > p.side  then
+		if 0 > p.side then
 			tw_center = tw_center - a
 		else
 			tw_center = tw_center + a
 		end
 
 		-- 投げ間合いセット
-		p.throw = {
+		p.throw            = {
 			x1 = tw_center - p.tw_half_range,
 			x2 = tw_center + p.tw_half_range,
 			half_range = p.tw_half_range,
 			full_range = p.tw_half_range + p.tw_half_range,
 			in_range = false,
 		}
-		local op_pos = op.proc_pos - screen_left
-		p.throw.in_range = p.throw.x1 <= op_pos and op_pos <= p.throw.x2
+		local op_pos       = op.proc_pos - screen_left
+		p.throw.in_range   = p.throw.x1 <= op_pos and op_pos <= p.throw.x2
 
 		-- フックした情報の取得
 		p.n_throw.left     = nil
@@ -7038,9 +7113,9 @@ function rbff2.startplugin()
 		p.n_throw.id       = pgm:read_i8(p.n_throw.addr.id)
 		p.n_throw.pos_x    = p.pos - screen_left
 		p.n_throw.pos_y    = height - p.pos_y - screen_top
-		local range = (p.n_throw.range1 == p.n_throw.range2 and math.abs(p.n_throw.range42*4)) or math.abs(p.n_throw.range41*4)
-		range = range + p.n_throw.range5 * -4
-		range = range + p.throw.half_range
+		local range        = (p.n_throw.range1 == p.n_throw.range2 and math.abs(p.n_throw.range42 * 4)) or math.abs(p.n_throw.range41 * 4)
+		range              = range + p.n_throw.range5 * -4
+		range              = range + p.throw.half_range
 		p.n_throw.range    = range
 		p.n_throw.right    = p.n_throw.range * p.side
 		p.n_throw.left     = (p.n_throw.range - p.throw.full_range) * p.side
@@ -7053,56 +7128,56 @@ function rbff2.startplugin()
 	local can_air_throwable_bases = new_set(0x02C9D4, 0x02BF20, 0x02C132, 0x02C338, 0x02C552)
 	local get_air_throw = function(p, op, height)
 		-- 投げ間合いセット
-		p.air_throw = p.air_throw or {}
+		p.air_throw           = p.air_throw or {}
 		-- 参考表示の枠なので簡易的なチェックにする
 		p.air_throw.can_throw = p.in_air == true and op.in_air == true and
 			can_air_throwable_bases[p.base] == true and pgm:read_u8(0x05FDE0 + p.char) ~= 0
-		p.air_throw.x1 = p.side < 0 and -pgm:read_u16(0x060566) or 0
-		p.air_throw.x2 = p.side < 0 and 0 or pgm:read_u16(0x060566)
-		p.air_throw.y1 = pgm:read_u16(0x060568)
-		p.air_throw.y2 = -p.air_throw.y1
-		local op_pos = op.proc_pos - p.proc_pos
-		local op_pos_y = op.old_pos_y  - p.old_pos_y
-		p.air_throw.in_range = p.air_throw.x1 <= op_pos and op_pos <= p.air_throw.x2 and
+		p.air_throw.x1        = p.side < 0 and -pgm:read_u16(0x060566) or 0
+		p.air_throw.x2        = p.side < 0 and 0 or pgm:read_u16(0x060566)
+		p.air_throw.y1        = pgm:read_u16(0x060568)
+		p.air_throw.y2        = -p.air_throw.y1
+		local op_pos          = op.proc_pos - p.proc_pos
+		local op_pos_y        = op.old_pos_y - p.old_pos_y
+		p.air_throw.in_range  = p.air_throw.x1 <= op_pos and op_pos <= p.air_throw.x2 and
 
-		-- フックした情報の取得
-		p.air_throw.y1 >= op_pos_y and op_pos_y >= p.air_throw.y2
-		p.air_throw.on       = pgm:read_u8(p.air_throw.addr.on)
-		p.air_throw.range_x  = pgm:read_i16(p.air_throw.addr.range_x)
-		p.air_throw.range_y  = pgm:read_i16(p.air_throw.addr.range_y)
-		p.air_throw.left     = 0
-		p.air_throw.right    = p.air_throw.range_x * p.side
-		p.air_throw.base     = pgm:read_u32(p.air_throw.addr.base)
-		p.air_throw.opp_base = pgm:read_u32(p.air_throw.addr.opp_base)
-		p.air_throw.opp_id   = pgm:read_u16(p.air_throw.addr.opp_id)
-		p.air_throw.pos_x    = p.pos - screen_left
-		p.air_throw.pos_y    = screen_top + height - p.old_pos_y - p.old_pos_z
-		p.air_throw.side     = p.side
-		p.air_throw.top      = p.air_throw.range_y
-		p.air_throw.bottom   = -p.air_throw.range_y
-		p.air_throw.type     = box_type_base.at
-		p.air_throw.on       = p.addr.base == p.air_throw.base and p.air_throw.on or 0xFF
+			-- フックした情報の取得
+			p.air_throw.y1 >= op_pos_y and op_pos_y >= p.air_throw.y2
+		p.air_throw.on        = pgm:read_u8(p.air_throw.addr.on)
+		p.air_throw.range_x   = pgm:read_i16(p.air_throw.addr.range_x)
+		p.air_throw.range_y   = pgm:read_i16(p.air_throw.addr.range_y)
+		p.air_throw.left      = 0
+		p.air_throw.right     = p.air_throw.range_x * p.side
+		p.air_throw.base      = pgm:read_u32(p.air_throw.addr.base)
+		p.air_throw.opp_base  = pgm:read_u32(p.air_throw.addr.opp_base)
+		p.air_throw.opp_id    = pgm:read_u16(p.air_throw.addr.opp_id)
+		p.air_throw.pos_x     = p.pos - screen_left
+		p.air_throw.pos_y     = screen_top + height - p.old_pos_y - p.old_pos_z
+		p.air_throw.side      = p.side
+		p.air_throw.top       = p.air_throw.range_y
+		p.air_throw.bottom    = -p.air_throw.range_y
+		p.air_throw.type      = box_type_base.at
+		p.air_throw.on        = p.addr.base == p.air_throw.base and p.air_throw.on or 0xFF
 	end
 	-- 必殺投げ間合い取得
 	local get_sp_throw = function(p, op, height)
 		-- フックした情報の取得
-		p.sp_throw.left      = nil
-		p.sp_throw.right     = nil
-		p.sp_throw.top       = nil
-		p.sp_throw.bottom    = nil
-		p.sp_throw.on        = pgm:read_u8(p.sp_throw.addr.on)
-		p.sp_throw.front     = pgm:read_i16(p.sp_throw.addr.front)
-		p.sp_throw.top       = -pgm:read_i16(p.sp_throw.addr.top)
-		p.sp_throw.base      = pgm:read_u32(p.sp_throw.addr.base)
-		p.sp_throw.opp_base  = pgm:read_u32(p.sp_throw.addr.opp_base)
-		p.sp_throw.opp_id    = pgm:read_u16(p.sp_throw.addr.opp_id)
-		p.sp_throw.side      = p.side
-		p.sp_throw.bottom    = pgm:read_i16(p.sp_throw.addr.bottom)
-		p.sp_throw.pos_x     = p.pos - screen_left
-		p.sp_throw.pos_y     = screen_top + height - p.old_pos_y - p.old_pos_z
-		p.sp_throw.right     = p.sp_throw.front * p.side
-		p.sp_throw.type      = box_type_base.pt
-		p.sp_throw.on        = p.addr.base == p.sp_throw.base and p.sp_throw.on or 0xFF
+		p.sp_throw.left     = nil
+		p.sp_throw.right    = nil
+		p.sp_throw.top      = nil
+		p.sp_throw.bottom   = nil
+		p.sp_throw.on       = pgm:read_u8(p.sp_throw.addr.on)
+		p.sp_throw.front    = pgm:read_i16(p.sp_throw.addr.front)
+		p.sp_throw.top      = -pgm:read_i16(p.sp_throw.addr.top)
+		p.sp_throw.base     = pgm:read_u32(p.sp_throw.addr.base)
+		p.sp_throw.opp_base = pgm:read_u32(p.sp_throw.addr.opp_base)
+		p.sp_throw.opp_id   = pgm:read_u16(p.sp_throw.addr.opp_id)
+		p.sp_throw.side     = p.side
+		p.sp_throw.bottom   = pgm:read_i16(p.sp_throw.addr.bottom)
+		p.sp_throw.pos_x    = p.pos - screen_left
+		p.sp_throw.pos_y    = screen_top + height - p.old_pos_y - p.old_pos_z
+		p.sp_throw.right    = p.sp_throw.front * p.side
+		p.sp_throw.type     = box_type_base.pt
+		p.sp_throw.on       = p.addr.base == p.sp_throw.base and p.sp_throw.on or 0xFF
 		if p.sp_throw.top == 0 then
 			p.sp_throw.top    = nil
 			p.sp_throw.bottom = nil
@@ -7114,13 +7189,13 @@ function rbff2.startplugin()
 		if p.addr.base ~= 0x100400 and p.addr.base ~= 0x100500 then
 			return 1
 		end
-		local char_id  = pgm:read_u16(p.addr.base + 0x10)
+		local char_id     = pgm:read_u16(p.addr.base + 0x10)
 		local char_4times = 0xFFFF & (char_id + char_id)
-		char_4times = 0xFFFF & (char_4times + char_4times)
+		char_4times       = 0xFFFF & (char_4times + char_4times)
 		-- 家庭用0271FCからの処理
-		local cond1 = pgm:read_u8(p.addr.base + 0xA2) -- ガード判断用 0のときは何もしていない
-		local cond2 = pgm:read_u8(p.addr.base + 0xB6) -- ガード判断用 0のときは何もしていない
-		local ret = 0
+		local cond1       = pgm:read_u8(p.addr.base + 0xA2) -- ガード判断用 0のときは何もしていない
+		local cond2       = pgm:read_u8(p.addr.base + 0xB6) -- ガード判断用 0のときは何もしていない
+		local ret         = 0
 		if cond1 ~= 0 then
 			ret = 1
 		elseif cond2 ~= 0 then
@@ -7129,7 +7204,6 @@ function rbff2.startplugin()
 		end
 		return ret
 	end
-
 	local summary_rows, summary_sort_key = {
 		"動作",
 		"動作C0",
@@ -7172,7 +7246,7 @@ function rbff2.startplugin()
 		"3 やられ範囲",
 	}, {}
 	for i, k in ipairs(summary_rows) do
-		summary_sort_key[k..":"] = i
+		summary_sort_key[k .. ":"] = i
 	end
 	local sort_summary = function(summary)
 		table.sort(summary, function(row1, row2)
@@ -7183,29 +7257,29 @@ function rbff2.startplugin()
 		return summary
 	end
 	local faint_cancels = {
-		{ { name = "フ", f = 18 }, }, -- テリー
-		{ { name = "フ", f = 18 }, }, -- アンディ
-		{ { name = "フ", f = 18 }, }, -- 東
-		{ { name = "フ", f = 18 }, }, -- 舞
-		{ { name = "フ", f = 19 }, }, -- ギース
-		{ { name = "フ", f = 18 }, }, -- 双角
-		{ { name = "フ", f = 19 }, }, -- ボブ
-		{ { name = "フ", f = 16 }, }, -- ホンフゥ
-		{ { name = "フ", f = 41 }, }, -- マリー
-		{ { name = "フ", f = 15 }, }, -- フランコ
-		{ { name = "フ", f = 18 }, { name = "中蛇", f =  9, } }, -- 山崎
+		{ { name = "フ", f = 18 }, },                  -- テリー
+		{ { name = "フ", f = 18 }, },                  -- アンディ
+		{ { name = "フ", f = 18 }, },                  -- 東
+		{ { name = "フ", f = 18 }, },                  -- 舞
+		{ { name = "フ", f = 19 }, },                  -- ギース
+		{ { name = "フ", f = 18 }, },                  -- 双角
+		{ { name = "フ", f = 19 }, },                  -- ボブ
+		{ { name = "フ", f = 16 }, },                  -- ホンフゥ
+		{ { name = "フ", f = 41 }, },                  -- マリー
+		{ { name = "フ", f = 15 }, },                  -- フランコ
+		{ { name = "フ", f = 18 }, { name = "中蛇", f = 9, } }, -- 山崎
 		{ { name = "フ", f = 57 }, { name = "真眼", f = 47, } }, -- 崇秀
 		{ { name = "フ", f = 27 }, { name = "龍転", f = 25, } }, -- 崇雷
-		{ { name = "フ", f = 47 }, },                 -- ダック
+		{ { name = "フ", f = 47 }, },                  -- ダック
 		{ { name = "フ", f = 19 }, { name = "覇気", f = 28, } }, -- キム
-		{ { name = "フ", f = 42 }, }, -- ビリー
-		{ { name = "フ", f = 23 }, { name = "軟体", f = 20, } },-- チン
-		{ { name = "フ", f = 19 }, }, -- タン
-		{ }, -- ローレンス
-		{ { name = "フ", f = 17 }, }, -- クラウザー
-		{ { name = "フ", f = 18 }, }, -- リック
-		{ { name = "フ", f = 22 }, }, -- シャンフェイ
-		{ { name = "フ", f = 13 }, }, -- アルフレッド
+		{ { name = "フ", f = 42 }, },                  -- ビリー
+		{ { name = "フ", f = 23 }, { name = "軟体", f = 20, } }, -- チン
+		{ { name = "フ", f = 19 }, },                  -- タン
+		{},                                             -- ローレンス
+		{ { name = "フ", f = 17 }, },                  -- クラウザー
+		{ { name = "フ", f = 18 }, },                  -- リック
+		{ { name = "フ", f = 22 }, },                  -- シャンフェイ
+		{ { name = "フ", f = 13 }, },                  -- アルフレッド
 	}
 	local check_edge = function(edge)
 		if edge.front and edge.top and edge.bottom and edge.back then
@@ -7264,20 +7338,20 @@ function rbff2.startplugin()
 					06 雷鳴ごうは
 					08 ダイナマイトスイング
 			]]
-			local air,inf,otg = false, false, false
-			if p.char == 0x05 then --ギース・ハワード
+			local air, inf, otg = false, false, false
+			if p.char == 0x05 then       --ギース・ハワード
 				otg = summary.sp_throw_id == 0x06
-			elseif p.char == 0x06 then --望月双角,
-			elseif p.char == 0x09 then --ブルー・マリー
-				air = p.act == 0x91 or -- M.スナッチャー
+			elseif p.char == 0x06 then   --望月双角,
+			elseif p.char == 0x09 then   --ブルー・マリー
+				air = p.act == 0x91 or   -- M.スナッチャー
 					p.act == 0xB9 or p.act == 0xBA -- ダブルスナッチャー
 				inf = p.act == 0xC4 or p.act == 0x9D -- ダブルクラッチ
 				otg = summary.sp_throw_id == 0x08
-			elseif p.char == 0x0B then --山崎竜二
-			elseif p.char == 0x0E then --ダック・キング
+			elseif p.char == 0x0B then   --山崎竜二
+			elseif p.char == 0x0E then   --ダック・キング
 				air = summary.sp_throw_id == 0x11
-			elseif p.char == 0x14 then --ヴォルフガング・クラウザー
-			elseif p.char == 0x16 then --李香緋
+			elseif p.char == 0x14 then   --ヴォルフガング・クラウザー
+			elseif p.char == 0x16 then   --李香緋
 			end
 			if air == true then
 				range_label = string.format("空/%sF/前%s/上%s(%s)/下%s(%s)/後%s",
@@ -7288,25 +7362,25 @@ function rbff2.startplugin()
 					summary.edge.throw.bottom + p.pos_y,
 					summary.edge.throw.bottom,
 					summary.edge.throw.back)
-				elseif inf == true then
-					range_label = string.format("地/%sF/前%s/上∞/下∞/後%s",
-						summary.tw_threshold,
-						summary.edge.throw.front,
-						summary.edge.throw.back)
-				elseif otg == true then
-					range_label = string.format("追撃/前%s/後%s",
-						summary.tw_threshold,
-						summary.edge.throw.front,
-						summary.edge.throw.back)
-				else
-					range_label = string.format("地/%sF/前%s/後%s",
-						summary.tw_threshold,
-						summary.edge.throw.front,
-						summary.edge.throw.back)
-				end
+			elseif inf == true then
+				range_label = string.format("地/%sF/前%s/上∞/下∞/後%s",
+					summary.tw_threshold,
+					summary.edge.throw.front,
+					summary.edge.throw.back)
+			elseif otg == true then
+				range_label = string.format("追撃/前%s/後%s",
+					summary.tw_threshold,
+					summary.edge.throw.front,
+					summary.edge.throw.back)
+			else
+				range_label = string.format("地/%sF/前%s/後%s",
+					summary.tw_threshold,
+					summary.edge.throw.front,
+					summary.edge.throw.back)
+			end
 		end
 		local throw_summary = {
-			{"投げ間合い:", range_label},
+			{ "投げ間合い:", range_label },
 		}
 		return add_frame_to_summary(throw_summary)
 	end
@@ -7317,7 +7391,7 @@ function rbff2.startplugin()
 			summary.edge.parry.bottom + p.pos_y,
 			summary.edge.parry.back)
 		local parry_summary = {
-			{"キャッチ範囲:", range_label},
+			{ "キャッチ範囲:", range_label },
 		}
 		return add_frame_to_summary(parry_summary)
 	end
@@ -7347,11 +7421,11 @@ function rbff2.startplugin()
 		end
 		local slide_label = p.slide_atk and "滑(CA×)/" or ""
 		local atk_summary = {
-			{"詠酒間合い:"         , esaka_label },
-			{"ブレイクショット:"   , bs_label    },
-			{"キャンセル:"         , slide_label .. cancel_label .. string.format("%02x", p.cancelable) },
-			{"キャンセル補足:"     , cancel_advs_label },
-			{"滑り攻撃補足:"       , p.dash_act_info }
+			{ "詠酒間合い:",          esaka_label },
+			{ "ブレイクショット:", bs_label },
+			{ "キャンセル:",          slide_label .. cancel_label .. string.format("%02x", p.cancelable) },
+			{ "キャンセル補足:",    cancel_advs_label },
+			{ "滑り攻撃補足:",       p.dash_act_info }
 		}
 		return add_frame_to_summary(atk_summary)
 	end
@@ -7444,20 +7518,20 @@ function rbff2.startplugin()
 					end
 					local parry = {}
 					table.insert(parry, info.range_j_atm_nage and "上" or info.j_atm_nage and "(上)" or nil) -- 上段当て身投げ可能
-					table.insert(parry, info.range_urakumo and "裏" or info.urakumo and "(裏)" or nil)    -- 裏雲隠し可能
+					table.insert(parry, info.range_urakumo and "裏" or info.urakumo and "(裏)" or nil) -- 裏雲隠し可能
 					table.insert(parry, info.range_g_atm_uchi and "下" or info.g_atm_uchi and "(下)" or nil) -- 下段当て身打ち可能
-					table.insert(parry, info.range_gyakushu and "逆" or info.gyakushu and "(逆)" or nil)  -- 逆襲拳可能
-					table.insert(parry, info.range_sadomazo and "サ" or info.sadomazo and "(サ)" or nil)   -- サドマゾ可能
-					table.insert(parry, info.range_phx_tw and "フ" or info.phx_tw and "(フ)" or nil)     -- フェニックススルー可能
-					table.insert(parry, info.range_baigaeshi and "倍" or info.baigaeshi and "(倍)" or nil)  -- 倍返し可能
-					table.insert(parry, info.range_katsu and "喝消し" or info.katsu and "(喝消し)" or nil)  -- 喝を相殺可能
-					table.insert(parry, info.nullify and "弾消し" or nil)  -- 弾を相殺可能
+					table.insert(parry, info.range_gyakushu and "逆" or info.gyakushu and "(逆)" or nil) -- 逆襲拳可能
+					table.insert(parry, info.range_sadomazo and "サ" or info.sadomazo and "(サ)" or nil) -- サドマゾ可能
+					table.insert(parry, info.range_phx_tw and "フ" or info.phx_tw and "(フ)" or nil) -- フェニックススルー可能
+					table.insert(parry, info.range_baigaeshi and "倍" or info.baigaeshi and "(倍)" or nil) -- 倍返し可能
+					table.insert(parry, info.range_katsu and "喝消し" or info.katsu and "(喝消し)" or nil) -- 喝を相殺可能
+					table.insert(parry, info.nullify and "弾消し" or nil)                -- 弾を相殺可能
 					table.insert(summary.boxes, {
 						punish_away_label = punish_away_label,
 						asis_punish_away_label = asis_punish_away_label,
 						block_label = #blocks == 0 and "ガード不能" or table.concat(blocks, ","),
 						sway_block_label = #sway_blocks == 0 and "-" or table.concat(sway_blocks, ","),
-						parry_label = #parry == 0 and "不可" or  string.gsub(table.concat(parry, ","), "%),%(", ","),
+						parry_label = #parry == 0 and "不可" or string.gsub(table.concat(parry, ","), "%),%(", ","),
 						reach_label = string.format("前%s/上%s(%s)/下%s(%s)/後%s",
 							box.reach.front,
 							box.reach.top + p.pos_y,
@@ -7508,19 +7582,19 @@ function rbff2.startplugin()
 			end
 
 			for box_no, box in ipairs(summary.boxes) do
-				table.insert(atkact_summary, {box_no .. " ガード方向:", string.format("メイン:%s/スウェー:%s", box.block_label, box.sway_block_label)})
-				table.insert(atkact_summary, {box_no .. " 接触判定:"  , box.parry_label})
+				table.insert(atkact_summary, { box_no .. " ガード方向:", string.format("メイン:%s/スウェー:%s", box.block_label, box.sway_block_label) })
+				table.insert(atkact_summary, { box_no .. " 接触判定:", box.parry_label })
 				local label = box.punish_away_label
 				if box.punish_away_label ~= box.asis_punish_away_label then
 					label = label .. "(" .. box.asis_punish_away_label .. ")"
 				end
-				table.insert(atkact_summary, {box_no .. " 攻撃高さ:"  , label})
-				table.insert(atkact_summary, {box_no .. " 攻撃範囲:"  , box.reach_label})
+				table.insert(atkact_summary, { box_no .. " 攻撃高さ:", label })
+				table.insert(atkact_summary, { box_no .. " 攻撃範囲:", box.reach_label })
 			end
-			table.insert(atkact_summary, {"攻撃対象:"    , summary.normal_hit or summary.down_hit or summary.air_hit or "-"})
-			table.insert(atkact_summary, {"攻撃範囲 最大:", reach_label})
-			table.insert(atkact_summary, {prefix .. "効果(地/空):"   , effect_label .. " " .. followup_label})
-			table.insert(atkact_summary, {prefix .. "硬直 当/防(BS):", 
+			table.insert(atkact_summary, { "攻撃対象:", summary.normal_hit or summary.down_hit or summary.air_hit or "-" })
+			table.insert(atkact_summary, { "攻撃範囲 最大:", reach_label })
+			table.insert(atkact_summary, { prefix .. "効果(地/空):", effect_label .. " " .. followup_label })
+			table.insert(atkact_summary, { prefix .. "硬直 当/防(BS):",
 				p.hitstun and
 				string.format(prefix .. "%sF(%sF)/%sF(%sF)",
 					p.hitstun and p.hitstun or "-",
@@ -7529,7 +7603,7 @@ function rbff2.startplugin()
 					summary.hitstop_gd) or
 				"-"
 			})
-			table.insert(atkact_summary, {prefix .. "ヒット数:"  , string.format("%s/%s %s", summary.max_hit_nm, summary.max_hit_dn, prj_rank_label)})
+			table.insert(atkact_summary, { prefix .. "ヒット数:", string.format("%s/%s %s", summary.max_hit_nm, summary.max_hit_dn, prj_rank_label) })
 
 			return add_frame_to_summary(atkact_summary)
 		end
@@ -7540,19 +7614,19 @@ function rbff2.startplugin()
 		local prefix = fbno == 0 and "" or ("弾" .. fbno)
 		local atkact_summary = {}
 		-- local chip_type = string.format(" %s %s", summary.chip_dmg_nm, summary.attack_id)
-		table.insert(atkact_summary, {prefix .. "攻撃/気絶:", string.format("%s(%s)/%s(%sF) %02x",
+		table.insert(atkact_summary, { prefix .. "攻撃/気絶:", string.format("%s(%s)/%s(%sF) %02x",
 			summary.pure_dmg,
 			summary.chip_dmg and (summary.chip_dmg > 0 and summary.chip_dmg or 0) or 0,
 			summary.pure_st,
 			summary.pure_st_tm,
-			summary.attack)})
+			summary.attack) })
 		return add_frame_to_summary(atkact_summary)
 	end
 	local make_pow_summary = function(p, summary)
 		local atkact_summary = {}
 		-- パワーゲージ
 		local pow_label = string.format("%s/%s/%s  返/吸:%s/%s", p.pow_up or 0, p.pow_up_hit or 0, p.pow_up_gd or 0, p.pow_revenge or 0, p.pow_absorb or 0)
-		table.insert(atkact_summary, {"POW(基/当/防):"      , pow_label   })
+		table.insert(atkact_summary, { "POW(基/当/防):", pow_label })
 		return add_frame_to_summary(atkact_summary)
 	end
 	local make_hurt_summary = function(p, summary)
@@ -7636,19 +7710,19 @@ function rbff2.startplugin()
 
 		local a = function(flags, names)
 			local flgtxt = ""
-			for j = 32, 1, -1  do
+			for j = 32, 1, -1 do
 				if flags & 2 ^ (j - 1) ~= 0 then
-					flgtxt = string.format("%s%02d %s ",flgtxt, j, names[j])
+					flgtxt = string.format("%s%02d %s ", flgtxt, j, names[j])
 				end
 			end
 			return flgtxt
 		end
 
 		local hurt_sumamry = {
-			{ "投げ無敵:"       , throw_label },
-			{ "方向(動作/入力):", sides_label },
-			{ "押し合い範囲:"   , push_label  },
-			{ "やられ範囲 最大:", reach_label ..  hurt_label },
+			{ "投げ無敵:",           throw_label },
+			{ "方向(動作/入力):",  sides_label },
+			{ "押し合い範囲:",     push_label },
+			{ "やられ範囲 最大:", reach_label .. hurt_label },
 		}
 		for _, box in ipairs(summary.hurt_boxes) do
 			table.insert(hurt_sumamry, { box.type_label, box.reach_label })
@@ -7661,7 +7735,7 @@ function rbff2.startplugin()
 
 		-- フラグによる状態の表示
 		if p.flag_c0 > 0 then
-			table.insert(hurt_sumamry, { "動作C0:", a(p.flag_c0 , sts_flg_names[0xC0]) })
+			table.insert(hurt_sumamry, { "動作C0:", a(p.flag_c0, sts_flg_names[0xC0]) })
 		end
 		if p.flag_c4 > 0 then
 			table.insert(hurt_sumamry, { "動作C4:", a(p.flag_c4, sts_flg_names[0xC4]) })
@@ -7681,22 +7755,23 @@ function rbff2.startplugin()
 
 	local new_box_summary = function(p)
 		local ret = {
-			hit = false, -- 攻撃判定あり
-			otg = false,-- ダウン追撃判定あり
-			juggle = false, -- 空中追撃判定あり
-			hurt = false, -- くらい判定あり（＝打撃無敵ではない)
-			throw = false, -- 投げ判定あり
-			block = false, -- ガード判定あり
-			parry = false, -- 当て身キャッチ判定あり
-			boxes = {}, -- 攻撃判定ごとの情報
-			edge = {  -- 判定の最大範囲
+			hit       = false, -- 攻撃判定あり
+			otg       = false, -- ダウン追撃判定あり
+			juggle    = false, -- 空中追撃判定あり
+			hurt      = false, -- くらい判定あり（＝打撃無敵ではない)
+			throw     = false, -- 投げ判定あり
+			block     = false, -- ガード判定あり
+			parry     = false, -- 当て身キャッチ判定あり
+			boxes     = {}, -- 攻撃判定ごとの情報
+			edge      = {
+				-- 判定の最大範囲
 				hit   = {},
 				hurt  = {},
 				block = {},
 				parry = {},
 				throw = {},
 			},
-			hurt_inv  = {}, -- やられ判定無敵
+			hurt_inv  = {},           -- やられ判定無敵
 			throw_inv = throw_inv_type.get(p), -- 投げ無敵
 		}
 		return ret
@@ -7741,12 +7816,12 @@ function rbff2.startplugin()
 		local d5 = pgm:read_u8(fix + fix_bp_addr(0x05C99C) + p.char_8times)
 		if fix == 0x3 then
 			d5 = 0xFF00 + d5
-			if 0 > p.side then                              -- 位置がマイナスなら
-				d5 = 0x10000 - d5                           -- NEG
+			if 0 > p.side then -- 位置がマイナスなら
+				d5 = 0x10000 - d5 -- NEG
 			end
 		end
-		d5 = 0xFFFF & (d5 + d5)                         -- 2倍値に
-		d5 = 0xFFFF & (d5 + d5)                         -- さらに2倍値に
+		d5 = 0xFFFF & (d5 + d5) -- 2倍値に
+		d5 = 0xFFFF & (d5 + d5) -- さらに2倍値に
 		return d5
 	end
 
@@ -7801,13 +7876,13 @@ function rbff2.startplugin()
 			elseif p.disp_char == false then
 				p.disp_char_bps = global.new_hook_holder()
 				local bps = p.disp_char_bps.bps
-				local cond3 = cond.."&&(A3)==$100400"
+				local cond3 = cond .. "&&(A3)==$100400"
 				if i == 1 then
 					-- bp 40AE,{(A4)==100400||(A4)==100600||(A4)==100800||(A4)==100A00},{PC=4112;g} -- 2Pだけ消す
-					cond3 = cond3.."&&((A4)==$100400||(A4)==$100600||(A4)==$100800||(A4)==$100A00)"
+					cond3 = cond3 .. "&&((A4)==$100400||(A4)==$100600||(A4)==$100800||(A4)==$100A00)"
 				else
 					-- bp 40AE,{(A4)==100500||(A4)==100700||(A4)==100900||(A4)==100B00},{PC=4112;g} -- 1Pだけ消す
-					cond3 = cond3.."&&((A4)==$100500||(A4)==$100700||(A4)==$100900||(A4)==$100B00)"
+					cond3 = cond3 .. "&&((A4)==$100500||(A4)==$100700||(A4)==$100900||(A4)==$100B00)"
 				end
 				global.bp(bps, 0x0040AE, cond3, pc)
 			end
@@ -7821,23 +7896,23 @@ function rbff2.startplugin()
 			--pc = "printf \"A3=%X A4=%X PREF=%X\",A3,A4,PREF_ADDR;PC=$4112;g"
 			global.bp(bps, 0x03BCC2, cond, "PC=$3BCC8;g")
 			-- ファイヤーキックの砂煙だけ抑止する
-			local cond2 = cond.."&&maincpu.pw@((A3)+$10)==$1&&maincpu.pw@((A3)+$60)==$B8"
+			local cond2 = cond .. "&&maincpu.pw@((A3)+$10)==$1&&maincpu.pw@((A3)+$60)==$B8"
 			global.bp(bps, 0x03BB1E, cond2, "PC=$3BC00;g")
 			global.bp(bps, 0x0357B0, cond, "PC=$35756;g")
-			global.bp(bps, 0x015A82, cond, pc) -- rts 015A88
-			global.bp(bps, 0x015AAC, cond, pc) -- rts 015AB2
-			global.bp(bps, 0x015AD8, cond, pc) -- rts 015ADE
-			global.bp(bps, 0x0173B2, cond, pc) -- rts 0173B8 影
-			global.bp(bps, 0x017750, cond, pc) -- rts 017756
-			global.bp(bps, 0x02559E, cond, pc) -- rts 0255FA
-			global.bp(bps, 0x0256FA, cond, pc) -- rts 025700
-			global.bp(bps, 0x036172, cond, pc) -- rts 036178
-			global.bp(bps, 0x03577C, cond2, pc) -- rts 035782 技エフェクト
-			global.bp(bps, 0x03BB60, cond2, pc) -- rts 03BB66 技エフェクト
-			global.bp(bps, 0x060BDA, cond, pc) -- rts 060BE0 ヒットマーク
-			global.bp(bps, 0x060F2C, cond, pc) -- rts 060F32 ヒットマーク
+			global.bp(bps, 0x015A82, cond, pc)    -- rts 015A88
+			global.bp(bps, 0x015AAC, cond, pc)    -- rts 015AB2
+			global.bp(bps, 0x015AD8, cond, pc)    -- rts 015ADE
+			global.bp(bps, 0x0173B2, cond, pc)    -- rts 0173B8 影
+			global.bp(bps, 0x017750, cond, pc)    -- rts 017756
+			global.bp(bps, 0x02559E, cond, pc)    -- rts 0255FA
+			global.bp(bps, 0x0256FA, cond, pc)    -- rts 025700
+			global.bp(bps, 0x036172, cond, pc)    -- rts 036178
+			global.bp(bps, 0x03577C, cond2, pc)   -- rts 035782 技エフェクト
+			global.bp(bps, 0x03BB60, cond2, pc)   -- rts 03BB66 技エフェクト
+			global.bp(bps, 0x060BDA, cond, pc)    -- rts 060BE0 ヒットマーク
+			global.bp(bps, 0x060F2C, cond, pc)    -- rts 060F32 ヒットマーク
 			global.bp(bps, 0x061150, cond, "PC=$061156;g") -- rts 061156 ヒットマーク、パワーウェイブの一部
-			global.bp(bps, 0x0610E0, cond, pc) -- rts 0610E6
+			global.bp(bps, 0x0610E0, cond, pc)    -- rts 0610E6
 
 			-- コンボ表示抑制＝ヒット数を2以上にしない
 			-- bp 0252E8,1,{D7=0;PC=0252EA;g}
@@ -7865,10 +7940,10 @@ function rbff2.startplugin()
 			-- bp 013BBA,1,{D0=(maincpu.pw@100428);g}
 			-- bp 013AF0,1,{PC=13B28;g} -- 潜在演出無視
 			-- bp 013AF0,1,{PC=13B76;g} -- 潜在演出強制（上に制限が付く）
-			global.bp(bps, 0x013B6E, cond.."&&(maincpu.pb@10DE5C)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5C)+#40);g")
-			global.bp(bps, 0x013B6E, cond.."&&(maincpu.pb@10DE5D)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5D)+#40);g")
-			global.bp(bps, 0x013BBA, cond.."&&(maincpu.pb@10DE5C)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5C)+#40);g")
-			global.bp(bps, 0x013BBA, cond.."&&(maincpu.pb@10DE5D)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5D)+#40);g")
+			global.bp(bps, 0x013B6E, cond .. "&&(maincpu.pb@10DE5C)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5C)+#40);g")
+			global.bp(bps, 0x013B6E, cond .. "&&(maincpu.pb@10DE5D)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5D)+#40);g")
+			global.bp(bps, 0x013BBA, cond .. "&&(maincpu.pb@10DE5C)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5C)+#40);g")
+			global.bp(bps, 0x013BBA, cond .. "&&(maincpu.pb@10DE5D)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5D)+#40);g")
 			global.bp(bps, 0x013AF0, cond, "PC=$13B28;g")
 		end
 
@@ -7900,7 +7975,7 @@ function rbff2.startplugin()
 
 		-- スタートボタン（リプレイモード中のみスタートボタンおしっぱでメニュー表示へ切り替え
 		if (global.dummy_mode == 6 and is_start_a(joy_val, state_past)) or
-		   (global.dummy_mode ~= 6 and accept_input("Start", joy_val, state_past)) then
+			(global.dummy_mode ~= 6 and accept_input("Start", joy_val, state_past)) then
 			-- メニュー表示状態へ切り替え
 			global.input_accepted = ec
 			main_or_menu_state = menu
@@ -7908,47 +7983,47 @@ function rbff2.startplugin()
 			return
 		end
 
-		screen_left = pgm:read_i16(mem.stage_base_addr + offset_pos_x) + (320 - width) / 2 --FBA removes the side margins for some games
-		screen_top  = pgm:read_i16(mem.stage_base_addr + offset_pos_y)
+		screen_left     = pgm:read_i16(mem.stage_base_addr + offset_pos_x) + (320 - width) / 2 --FBA removes the side margins for some games
+		screen_top      = pgm:read_i16(mem.stage_base_addr + offset_pos_y)
 
 		-- プレイヤーと飛び道具のベースアドレスをキー、オブジェクトを値にするバッファ
 		local temp_hits = {}
 
 		-- 1Pと2Pの状態読取
 		for i, p in ipairs(players) do
-			local op         = players[3-i]
-			p.op             = op
-			p.base           = pgm:read_u32(p.addr.base)
-			p.char           = pgm:read_u8(p.addr.char)
-			p.char_data      = chars[p.char]
-			p.char_4times    = 0xFFFF & (p.char + p.char)
-			p.char_4times    = 0xFFFF & (p.char_4times + p.char_4times)
-			p.char_8times    = 0xFFFF & (p.char << 3)
-			p.close_far      = get_close_far_pos(p.char)
-			p.close_far_lma  = get_close_far_pos_line_move_attack(p.char)
-			p.life           = pgm:read_u8(p.addr.life)                 -- 今の体力
-			p.old_state      = p.state                                  -- 前フレームの状態保存
-			p.state          = pgm:read_u8(p.addr.state)                -- 今の状態
-			p.old_flag_c0    = p.flag_c0
-			p.old_flag_cc    = p.flag_cc
-			p.old_flag_d0    = p.flag_d0
-			p.flag_c0        = pgm:read_u32(p.addr.flag_c0)
-			p.flag_c4        = pgm:read_u32(p.addr.flag_c4)
-			p.flag_c8        = pgm:read_u32(p.addr.flag_c8)
-			p.flag_cc        = pgm:read_u32(p.addr.flag_cc)
-			p.flag_d0        = pgm:read_u8(p.addr.flag_d0)
-			p.box_base1      = pgm:read_u32(p.addr.box_base1)
-			p.box_base2      = pgm:read_u32(p.addr.box_base2)
-			p.old_kaiser_wave = p.kaiser_wave                          -- 前フレームのカイザーウェイブのレベル
-			p.kaiser_wave    = pgm:read_u8(p.addr.kaiser_wave)         -- カイザーウェイブのレベル
-			p.hurt_state     = pgm:read_u8(p.addr.hurt_state)
-			p.slide_atk      = testbit(p.flag_cc, 0x4) -- ダッシュ滑り攻撃
+			local op          = players[3 - i]
+			p.op              = op
+			p.base            = pgm:read_u32(p.addr.base)
+			p.char            = pgm:read_u8(p.addr.char)
+			p.char_data       = chars[p.char]
+			p.char_4times     = 0xFFFF & (p.char + p.char)
+			p.char_4times     = 0xFFFF & (p.char_4times + p.char_4times)
+			p.char_8times     = 0xFFFF & (p.char << 3)
+			p.close_far       = get_close_far_pos(p.char)
+			p.close_far_lma   = get_close_far_pos_line_move_attack(p.char)
+			p.life            = pgm:read_u8(p.addr.life) -- 今の体力
+			p.old_state       = p.state          -- 前フレームの状態保存
+			p.state           = pgm:read_u8(p.addr.state) -- 今の状態
+			p.old_flag_c0     = p.flag_c0
+			p.old_flag_cc     = p.flag_cc
+			p.old_flag_d0     = p.flag_d0
+			p.flag_c0         = pgm:read_u32(p.addr.flag_c0)
+			p.flag_c4         = pgm:read_u32(p.addr.flag_c4)
+			p.flag_c8         = pgm:read_u32(p.addr.flag_c8)
+			p.flag_cc         = pgm:read_u32(p.addr.flag_cc)
+			p.flag_d0         = pgm:read_u8(p.addr.flag_d0)
+			p.box_base1       = pgm:read_u32(p.addr.box_base1)
+			p.box_base2       = pgm:read_u32(p.addr.box_base2)
+			p.old_kaiser_wave = p.kaiser_wave          -- 前フレームのカイザーウェイブのレベル
+			p.kaiser_wave     = pgm:read_u8(p.addr.kaiser_wave) -- カイザーウェイブのレベル
+			p.hurt_state      = pgm:read_u8(p.addr.hurt_state)
+			p.slide_atk       = testbit(p.flag_cc, 0x4) -- ダッシュ滑り攻撃
 			-- ブレイクショット
 			if testbit(p.flag_cc, 0x200000) == true and
 				(testbit(p.old_flag_cc, 0x100000) == true or p.bs_atk == true) then
-				p.bs_atk     = true
+				p.bs_atk = true
 			else
-				p.bs_atk     = false
+				p.bs_atk = false
 			end
 			--[[
 				       1 CA技
@@ -7972,19 +8047,19 @@ function rbff2.startplugin()
 				40000000 空中投げ
 				80000000 投げ技
 			]]
-			p.attack_flag    = testbit(p.flag_cc, 0x4000 | 0x200000 | 0x1000000 | 0x80000 | 0x200000 | 0x1000000 | 0x2000000 | 0x40000000 | 0x80000000) or (p.flag_c8 > 0) or (p.flag_c4 > 0)
-			p.state_bits     = tobits(p.flag_c0)
-			p.old_blkstn_bits= p.blkstn_bits
-			p.blkstn_bits    = tobits(p.flag_d0)
+			p.attack_flag       = testbit(p.flag_cc, 0x4000 | 0x200000 | 0x1000000 | 0x80000 | 0x200000 | 0x1000000 | 0x2000000 | 0x40000000 | 0x80000000) or (p.flag_c8 > 0) or (p.flag_c4 > 0)
+			p.state_bits        = tobits(p.flag_c0)
+			p.old_blkstn_bits   = p.blkstn_bits
+			p.blkstn_bits       = tobits(p.flag_d0)
 			p.last_normal_state = p.normal_state
-			p.normal_state   = p.state == 0 -- 素立ち
-			p.combo          = tohexnum(pgm:read_u8(p.addr.combo2))     -- 最近のコンボ数
-			p.tmp_combo      = tohexnum(pgm:read_u8(p.addr.tmp_combo2)) -- 一次的なコンボ数
-			p.max_combo      = tohexnum(pgm:read_u8(p.addr.max_combo2)) -- 最大コンボ数
-			p.tmp_dmg        = pgm:read_u8(p.addr.tmp_dmg)              -- ダメージ
-			p.old_attack     = p.attack
-			p.attack         = pgm:read_u8(p.addr.attack)
-			p.dmg_id         = pgm:read_u8(p.addr.dmg_id)               -- 最後にヒット/ガードした技ID
+			p.normal_state      = p.state == 0                    -- 素立ち
+			p.combo             = tohexnum(pgm:read_u8(p.addr.combo2)) -- 最近のコンボ数
+			p.tmp_combo         = tohexnum(pgm:read_u8(p.addr.tmp_combo2)) -- 一次的なコンボ数
+			p.max_combo         = tohexnum(pgm:read_u8(p.addr.max_combo2)) -- 最大コンボ数
+			p.tmp_dmg           = pgm:read_u8(p.addr.tmp_dmg)     -- ダメージ
+			p.old_attack        = p.attack
+			p.attack            = pgm:read_u8(p.addr.attack)
+			p.dmg_id            = pgm:read_u8(p.addr.dmg_id) -- 最後にヒット/ガードした技ID
 			-- キャンセル可否家庭用2AD90からの処理の断片
 			if p.attack < 0x70 then
 				p.cancelable = pgm:read_u8(pgm:read_u32(p.char_4times + 0x850D8) + p.attack)
@@ -7993,15 +8068,15 @@ function rbff2.startplugin()
 			end
 			p.old_repeatable = p.repeatable
 			p.repeatable     = (p.cancelable & 0xD0 == 0xD0) and (pgm:read_u8(p.addr.repeatable) & 0x4 == 0x4)
-			p.pure_dmg       = pgm:read_u8(p.addr.pure_dmg)             -- ダメージ(フック処理)
-			p.tmp_pow        = pgm:read_u8(p.addr.tmp_pow)              -- POWゲージ増加量
-			p.tmp_pow_rsv    = pgm:read_u8(p.addr.tmp_pow_rsv)          -- POWゲージ増加量(予約値)
+			p.pure_dmg       = pgm:read_u8(p.addr.pure_dmg) -- ダメージ(フック処理)
+			p.tmp_pow        = pgm:read_u8(p.addr.tmp_pow) -- POWゲージ増加量
+			p.tmp_pow_rsv    = pgm:read_u8(p.addr.tmp_pow_rsv) -- POWゲージ増加量(予約値)
 			if p.tmp_pow_rsv > 0 then
-				p.tmp_pow_atc = p.attack                                -- POWゲージ増加量(予約時の行動)
+				p.tmp_pow_atc = p.attack              -- POWゲージ増加量(予約時の行動)
 			end
 
-			p.tmp_stun       = pgm:read_u8(p.addr.tmp_stun)             -- 気絶値
-			p.tmp_st_timer   = pgm:read_u8(p.addr.tmp_st_timer)         -- 気絶タイマー
+			p.tmp_stun     = pgm:read_u8(p.addr.tmp_stun) -- 気絶値
+			p.tmp_st_timer = pgm:read_u8(p.addr.tmp_st_timer) -- 気絶タイマー
 			pgm:write_u8(p.addr.tmp_dmg, 0)
 			pgm:write_u8(p.addr.pure_dmg, 0)
 			pgm:write_u8(p.addr.tmp_pow, 0)
@@ -8019,86 +8094,86 @@ function rbff2.startplugin()
 			if 0x70 <= p.attack then
 				p.tw_muteki2 = pgm:read_u8(pgm:read_u32(p.char_4times + 0x89692) + p.attack - 0x70)
 			end
-			p.throwable      = p.state == 0 and op.state == 0 and p.tw_frame > 24 and p.sway_status == 0x00 and p.tw_muteki == 0 -- 投げ可能ベース
-			p.n_throwable    = p.throwable and p.tw_muteki2 == 0 -- 通常投げ可能
-			p.sp_throw_id    = pgm:read_u8(p.addr.sp_throw_id)   -- 投げ必殺のID
-			p.sp_throw_act   = pgm:read_u8(p.addr.sp_throw_act)  -- 投げ必殺の持続残F
-			p.additional     = pgm:read_u8(p.addr.additional)
+			p.throwable       = p.state == 0 and op.state == 0 and p.tw_frame > 24 and p.sway_status == 0x00 and p.tw_muteki == 0 -- 投げ可能ベース
+			p.n_throwable     = p.throwable and p.tw_muteki2 == 0                                                        -- 通常投げ可能
+			p.sp_throw_id     = pgm:read_u8(p.addr.sp_throw_id)                                                          -- 投げ必殺のID
+			p.sp_throw_act    = pgm:read_u8(p.addr.sp_throw_act)                                                         -- 投げ必殺の持続残F
+			p.additional      = pgm:read_u8(p.addr.additional)
 
-			p.old_act        = p.act or 0x00
-			p.act            = pgm:read_u16(p.addr.act)
-			p.acta           = pgm:read_u16(p.addr.acta)
-			p.old_act_count  = p.act_count
-			p.act_count      = pgm:read_u8(p.addr.act_count)
+			p.old_act         = p.act or 0x00
+			p.act             = pgm:read_u16(p.addr.act)
+			p.acta            = pgm:read_u16(p.addr.acta)
+			p.old_act_count   = p.act_count
+			p.act_count       = pgm:read_u8(p.addr.act_count)
 			-- 家庭用004A6Aからの処理
-			p.act_boxtype    = 0xFFFF & (pgm:read_u8(p.addr.act_boxtype) & 0xC0 * 4)
-			p.old_act_frame  = p.act_frame
-			p.act_frame      = pgm:read_u8(p.addr.act_frame)
-			p.provoke        = 0x0196 == p.act --挑発中
-			p.stop           = pgm:read_u8(p.addr.stop)
-			p.gd_strength    = get_gd_strength(p)
-			p.old_knock_back1= p.knock_back1
-			p.old_knock_back2= p.knock_back2
-			p.old_knock_back3= p.knock_back3
-			p.knock_back1    = pgm:read_u8(p.addr.knock_back1)
-			p.knock_back2    = pgm:read_u8(p.addr.knock_back2)
-			p.knock_back3    = pgm:read_u8(p.addr.knock_back3)
-			p.hitstop_id     = pgm:read_u8(p.addr.hitstop_id)
-			p.attack_id      = 0
-			p.old_attacking  = p.attacking
-			p.attacking      = false
-			p.dmmy_attacking = false
-			p.juggling       = false
-			p.can_juggle     = false
-			p.can_otg        = false
-			p.old_throwing   = p.throwing
-			p.throwing       = false
-			p.can_techrise   = 2 > pgm:read_u8(0x88A12 + p.attack)
-			p.pow_up_hit     = 0
-			p.pow_up_gd      = 0
-			p.pow_up         = 0
-			p.pow_revenge    = 0
-			p.pow_absorb     = 0
-			p.esaka_range    = 0
-			p.hitstop        = 0
-			p.hitstop_gd     = 0
-			p.pure_dmg       = 0
-			p.pure_st        = 0
-			p.pure_st_tm     = 0
-			p.fake_hit       = (pgm:read_u8(p.addr.fake_hit) & 0xB) == 0
-			p.obsl_hit       = (pgm:read_u8(p.addr.obsl_hit) & 0xB) == 0
-			p.full_hit       = pgm:read_u8(p.addr.full_hit) > 0
-			p.harmless2      = pgm:read_u8(p.addr.attack) == 0
-			p.prj_rank       = pgm:read_u8(p.addr.prj_rank)
-			p.old_posd       = p.posd
-			p.posd           = pgm:read_i32(p.addr.pos)
-			p.poslr          = p.posd == op.posd and "=" or p.posd < op.posd  and "L" or "R"
-			p.old_pos        = p.pos
-			p.old_pos_frc    = p.pos_frc
-			p.pos            = pgm:read_i16(p.addr.pos)
-			p.pos_frc        = pgm:read_u16(p.addr.pos_frc)
-			p.thrust        = pgm:read_i16(p.addr.base + 0x34) + int16tofloat(pgm:read_u16(p.addr.base + 0x36))
-			p.inertia       = pgm:read_i16(p.addr.base + 0xDA) + int16tofloat(pgm:read_u16(p.addr.base + 0xDC))
-			p.pos_total     = p.pos + int16tofloat(p.pos_frc)
-			p.old_pos_total = p.old_pos + int16tofloat(p.old_pos_frc)
-			p.diff_pos_total = p.pos_total - p.old_pos_total
-			p.max_pos        = pgm:read_i16(p.addr.max_pos)
+			p.act_boxtype     = 0xFFFF & (pgm:read_u8(p.addr.act_boxtype) & 0xC0 * 4)
+			p.old_act_frame   = p.act_frame
+			p.act_frame       = pgm:read_u8(p.addr.act_frame)
+			p.provoke         = 0x0196 == p.act --挑発中
+			p.stop            = pgm:read_u8(p.addr.stop)
+			p.gd_strength     = get_gd_strength(p)
+			p.old_knock_back1 = p.knock_back1
+			p.old_knock_back2 = p.knock_back2
+			p.old_knock_back3 = p.knock_back3
+			p.knock_back1     = pgm:read_u8(p.addr.knock_back1)
+			p.knock_back2     = pgm:read_u8(p.addr.knock_back2)
+			p.knock_back3     = pgm:read_u8(p.addr.knock_back3)
+			p.hitstop_id      = pgm:read_u8(p.addr.hitstop_id)
+			p.attack_id       = 0
+			p.old_attacking   = p.attacking
+			p.attacking       = false
+			p.dmmy_attacking  = false
+			p.juggling        = false
+			p.can_juggle      = false
+			p.can_otg         = false
+			p.old_throwing    = p.throwing
+			p.throwing        = false
+			p.can_techrise    = 2 > pgm:read_u8(0x88A12 + p.attack)
+			p.pow_up_hit      = 0
+			p.pow_up_gd       = 0
+			p.pow_up          = 0
+			p.pow_revenge     = 0
+			p.pow_absorb      = 0
+			p.esaka_range     = 0
+			p.hitstop         = 0
+			p.hitstop_gd      = 0
+			p.pure_dmg        = 0
+			p.pure_st         = 0
+			p.pure_st_tm      = 0
+			p.fake_hit        = (pgm:read_u8(p.addr.fake_hit) & 0xB) == 0
+			p.obsl_hit        = (pgm:read_u8(p.addr.obsl_hit) & 0xB) == 0
+			p.full_hit        = pgm:read_u8(p.addr.full_hit) > 0
+			p.harmless2       = pgm:read_u8(p.addr.attack) == 0
+			p.prj_rank        = pgm:read_u8(p.addr.prj_rank)
+			p.old_posd        = p.posd
+			p.posd            = pgm:read_i32(p.addr.pos)
+			p.poslr           = p.posd == op.posd and "=" or p.posd < op.posd and "L" or "R"
+			p.old_pos         = p.pos
+			p.old_pos_frc     = p.pos_frc
+			p.pos             = pgm:read_i16(p.addr.pos)
+			p.pos_frc         = pgm:read_u16(p.addr.pos_frc)
+			p.thrust          = pgm:read_i16(p.addr.base + 0x34) + int16tofloat(pgm:read_u16(p.addr.base + 0x36))
+			p.inertia         = pgm:read_i16(p.addr.base + 0xDA) + int16tofloat(pgm:read_u16(p.addr.base + 0xDC))
+			p.pos_total       = p.pos + int16tofloat(p.pos_frc)
+			p.old_pos_total   = p.old_pos + int16tofloat(p.old_pos_frc)
+			p.diff_pos_total  = p.pos_total - p.old_pos_total
+			p.max_pos         = pgm:read_i16(p.addr.max_pos)
 			if p.max_pos == 0 or p.max_pos == p.pos then
 				p.max_pos = nil
 			end
 			pgm:write_i16(p.addr.max_pos, 0)
-			p.min_pos        = pgm:read_i16(p.addr.min_pos)
+			p.min_pos = pgm:read_i16(p.addr.min_pos)
 			if p.min_pos == 1000 or p.min_pos == p.pos then
 				p.min_pos = nil
 			end
 			pgm:write_i16(p.addr.min_pos, 1000)
-			p.proc_pos       = p.max_pos or p.min_pos or p.pos  -- 内部の補正前のX座標
-			p.old_pos_y      = p.pos_y
-			p.old_pos_frc_y  = p.pos_frc_y
-			p.old_in_air     = p.in_air
-			p.pos_y          = pgm:read_i16(p.addr.pos_y)
-			p.pos_frc_y      = int16tofloat(pgm:read_u16(p.addr.pos_frc_y))
-			p.in_air         = 0 < p.pos_y or 0 < p.pos_frc_y
+			p.proc_pos      = p.max_pos or p.min_pos or p.pos -- 内部の補正前のX座標
+			p.old_pos_y     = p.pos_y
+			p.old_pos_frc_y = p.pos_frc_y
+			p.old_in_air    = p.in_air
+			p.pos_y         = pgm:read_i16(p.addr.pos_y)
+			p.pos_frc_y     = int16tofloat(pgm:read_u16(p.addr.pos_frc_y))
+			p.in_air        = 0 < p.pos_y or 0 < p.pos_frc_y
 
 			-- ジャンプの遷移ポイントかどうか
 			if p.old_in_air ~= true and p.in_air == true then
@@ -8118,28 +8193,28 @@ function rbff2.startplugin()
 			else
 				p.pos_y_down = 0
 			end
-			p.old_pos_z      = p.pos_z
-			p.pos_z          = pgm:read_i16(p.addr.pos_z)
-			p.on_sway_line   = (40 == p.pos_z and 40 > p.old_pos_z) and global.frame_number or p.on_sway_line
-			p.on_main_line   = (24 == p.pos_z and 24 < p.old_pos_z) and global.frame_number or p.on_main_line
-			p.old_sway_status= p.sway_status
-			p.sway_status    = pgm:read_u8(p.addr.sway_status) -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
+			p.old_pos_z       = p.pos_z
+			p.pos_z           = pgm:read_i16(p.addr.pos_z)
+			p.on_sway_line    = (40 == p.pos_z and 40 > p.old_pos_z) and global.frame_number or p.on_sway_line
+			p.on_main_line    = (24 == p.pos_z and 24 < p.old_pos_z) and global.frame_number or p.on_main_line
+			p.old_sway_status = p.sway_status
+			p.sway_status     = pgm:read_u8(p.addr.sway_status) -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
 			if p.sway_status == 0x00 then
 				p.in_sway_line = false
 			else
 				p.in_sway_line = true
 			end
-			p.internal_side  = pgm:read_u8(p.addr.side)
-			p.side           = pgm:read_i8(p.addr.side) < 0 and -1 or 1
-			p.corner         = pgm:read_u8(p.addr.corner)     -- 画面端状態 0:端以外 1:画面端 3:端押し付け
-			p.input_side     = pgm:read_u8(p.addr.input_side) -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
-			p.disp_side      = get_flip_x(players[1])
-			p.push_front     = get_push_range(p, 0x3) -- 正面
-			p.push_back      = get_push_range(p, 0x4) -- 背後
-			p.tw_half_range  = pgm:read_u8(fix_bp_addr(0x5D854) + p.char_4times) -- 投げ間合い半数
-			p.input1         = pgm:read_u8(p.addr.input1)
-			p.input2         = pgm:read_u8(p.addr.input2)
-			p.cln_btn        = pgm:read_u8(p.addr.cln_btn)
+			p.internal_side = pgm:read_u8(p.addr.side)
+			p.side          = pgm:read_i8(p.addr.side) < 0 and -1 or 1
+			p.corner        = pgm:read_u8(p.addr.corner)               -- 画面端状態 0:端以外 1:画面端 3:端押し付け
+			p.input_side    = pgm:read_u8(p.addr.input_side)           -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
+			p.disp_side     = get_flip_x(players[1])
+			p.push_front    = get_push_range(p, 0x3)                   -- 正面
+			p.push_back     = get_push_range(p, 0x4)                   -- 背後
+			p.tw_half_range = pgm:read_u8(fix_bp_addr(0x5D854) + p.char_4times) -- 投げ間合い半数
+			p.input1        = pgm:read_u8(p.addr.input1)
+			p.input2        = pgm:read_u8(p.addr.input2)
+			p.cln_btn       = pgm:read_u8(p.addr.cln_btn)
 			-- 滑り属性の攻撃か慣性残しの立ち攻撃か
 			if p.slide_atk == true or (p.old_act == 0x19 and p.inertia > 0 and testbit(p.flag_c0, 0x32)) then
 				p.dash_act_addr = get_dash_act_addr(p, pgm)
@@ -8153,15 +8228,15 @@ function rbff2.startplugin()
 				p.dash_act_info = p.dash_act_info or ""
 			end
 
-			p.life           = pgm:read_u8(p.addr.life)
-			p.pow            = pgm:read_u8(p.addr.pow)
-			p.init_stun      = p.char_data.init_stuns
-			p.max_stun       = pgm:read_u8(p.addr.max_stun)
-			p.stun           = pgm:read_u8(p.addr.stun)
-			p.stun_timer     = pgm:read_u16(p.addr.stun_timer)
-			p.act_contact    = pgm:read_u8(p.addr.act_contact)
-			p.ophit_base     = pgm:read_u32(p.addr.ophit_base)
-			p.ophit          = nil
+			p.life        = pgm:read_u8(p.addr.life)
+			p.pow         = pgm:read_u8(p.addr.pow)
+			p.init_stun   = p.char_data.init_stuns
+			p.max_stun    = pgm:read_u8(p.addr.max_stun)
+			p.stun        = pgm:read_u8(p.addr.stun)
+			p.stun_timer  = pgm:read_u16(p.addr.stun_timer)
+			p.act_contact = pgm:read_u8(p.addr.act_contact)
+			p.ophit_base  = pgm:read_u32(p.addr.ophit_base)
+			p.ophit       = nil
 			if p.ophit_base == 0x100400 or p.ophit_base == 0x100500 then
 				p.ophit = op
 			else
@@ -8186,7 +8261,7 @@ function rbff2.startplugin()
 
 			if hit_attack ~= 0 then
 				p.hitstop    = 0x7F & pgm:read_u8(pgm:read_u32(fix_bp_addr(0x83C38) + p.char_4times) + hit_attack)
-				p.hitstop    = p.hitstop == 0 and 2 or p.hitstop + 1  -- システムで消費される分を加算
+				p.hitstop    = p.hitstop == 0 and 2 or p.hitstop + 1 -- システムで消費される分を加算
 				p.hitstop_gd = math.max(2, p.hitstop - 1) -- ガード時の補正
 
 				-- 補正前ダメージ量取得 家庭用 05B118 からの処理
@@ -8206,12 +8281,12 @@ function rbff2.startplugin()
 					-- 家庭用 05B37E からの処理
 					if 0x27 <= hit_attack then -- CA技、特殊技かどうかのチェック
 						p.pow_up_hit = pgm:read_u8((0xFF & (hit_attack - 0x27)) + pgm:read_u32(0x8C18C + p.char_4times))
-					else -- 通常技 ビリーとチョンシュか、それ以外でアドレスが違う
+					else        -- 通常技 ビリーとチョンシュか、それ以外でアドレスが違う
 						local a0 = (0xC ~= p.char and 0x10 ~= p.char) and 0x8C24C or 0x8C274
 						p.pow_up_hit = pgm:read_u8(a0 + hit_attack)
 					end
 					-- ガード時増加量 d0の右1ビットシフト=1/2
-					p.pow_up_gd  = 0xFF & (p.pow_up_hit >> 1)
+					p.pow_up_gd = 0xFF & (p.pow_up_hit >> 1)
 				end
 
 				-- 必殺技のパワー増加 家庭用 03C140 からの処理
@@ -8227,50 +8302,50 @@ function rbff2.startplugin()
 				-- トドメ=ヒットで+7、雷撃棍=発生で+5、倍返し=返しで+7、吸収で+20、蛇使い は個別に設定が必要
 				local yama_pows = new_set(0x06, 0x70, 0x71, 0x75, 0x76, 0x77, 0x7C, 0x7D)
 				if p.char == 0x6 and p.attack == 0x28 then
-					p.pow_up_hit     = 0
-					p.pow_up_gd      = 0
-					p.pow_up         = 5
+					p.pow_up_hit = 0
+					p.pow_up_gd  = 0
+					p.pow_up     = 5
 				elseif p.char == 0xB and yama_pows[p.attack] then
-					p.pow_up_hit     = 0
-					p.pow_up_gd      = 0
-					p.pow_up         = 5
+					p.pow_up_hit = 0
+					p.pow_up_gd  = 0
+					p.pow_up     = 5
 				elseif p.char == 0xB and p.attack == 0x8E then
-					p.pow_up_hit     = 0
-					p.pow_up_gd      = 0
-					p.pow_up         = 0
-					p.pow_revenge    = 7
-					p.pow_absorb     = 20
+					p.pow_up_hit  = 0
+					p.pow_up_gd   = 0
+					p.pow_up      = 0
+					p.pow_revenge = 7
+					p.pow_absorb  = 20
 				elseif p.char == 0xB and p.attack == 0xA0 then
-					p.pow_up_hit     = 7
-					p.pow_up_gd      = 0
-					p.pow_up         = 0
+					p.pow_up_hit = 7
+					p.pow_up_gd  = 0
+					p.pow_up     = 0
 				elseif p.char == 0xB and p.attack == 0x82 then
-					p.pow_revenge    = 6 -- サドマゾ
+					p.pow_revenge = 6 -- サドマゾ
 				elseif p.char == 0x14 and p.attack == 0x82 then
-					p.pow_revenge    = 6 -- フェニックススルー
+					p.pow_revenge = 6 -- フェニックススルー
 				elseif p.char == 0x8 and p.attack == 0x94 then
-					p.pow_revenge    = 6 -- 逆襲
+					p.pow_revenge = 6 -- 逆襲
 				elseif p.char == 0x5 and p.attack == 0x82 then
-					p.pow_revenge    = 6 -- 当身投げ
+					p.pow_revenge = 6 -- 当身投げ
 				elseif p.char == 0x5 and p.attack == 0x7c then
-					p.pow_revenge    = 6 -- 当身投げ
+					p.pow_revenge = 6 -- 当身投げ
 				elseif p.char == 0x5 and p.attack == 0x88 then
-					p.pow_revenge    = 6 -- 当身投げ
+					p.pow_revenge = 6 -- 当身投げ
 				end
 			end
 
-			p.max_hit_dn     = p.attack > 0 and pgm:read_u8(pgm:read_u32(fix_bp_addr(0x827B8) + p.char_4times) + p.attack) or 0
-			p.max_hit_nm     = pgm:read_u8(p.addr.max_hit_nm)
-			p.last_dmg       = p.last_dmg or 0
-			p.last_pow       = p.last_pow or 0
-			p.last_pure_dmg  = p.last_pure_dmg or 0
-			p.last_stun      = p.last_stun or 0
-			p.last_st_timer  = p.last_st_timer or 0
-			p.last_effects   = p.last_effects or {}
-			p.dmg_scl7       = pgm:read_u8(p.addr.dmg_scl7)
-			p.dmg_scl6       = pgm:read_u8(p.addr.dmg_scl6)
-			p.dmg_scl5       = pgm:read_u8(p.addr.dmg_scl5)
-			p.dmg_scl4       = pgm:read_u8(p.addr.dmg_scl4)
+			p.max_hit_dn    = p.attack > 0 and pgm:read_u8(pgm:read_u32(fix_bp_addr(0x827B8) + p.char_4times) + p.attack) or 0
+			p.max_hit_nm    = pgm:read_u8(p.addr.max_hit_nm)
+			p.last_dmg      = p.last_dmg or 0
+			p.last_pow      = p.last_pow or 0
+			p.last_pure_dmg = p.last_pure_dmg or 0
+			p.last_stun     = p.last_stun or 0
+			p.last_st_timer = p.last_st_timer or 0
+			p.last_effects  = p.last_effects or {}
+			p.dmg_scl7      = pgm:read_u8(p.addr.dmg_scl7)
+			p.dmg_scl6      = pgm:read_u8(p.addr.dmg_scl6)
+			p.dmg_scl5      = pgm:read_u8(p.addr.dmg_scl5)
+			p.dmg_scl4      = pgm:read_u8(p.addr.dmg_scl4)
 			pgm:write_u8(p.addr.dmg_scl7, 0)
 			pgm:write_u8(p.addr.dmg_scl6, 0)
 			pgm:write_u8(p.addr.dmg_scl5, 0)
@@ -8292,20 +8367,20 @@ function rbff2.startplugin()
 
 		-- 1Pと2Pの状態読取 入力
 		for i, p in ipairs(players) do
-			local op         = p.op
+			local op           = p.op
 
-			p.input_offset   = pgm:read_u32(p.addr.input_offset)
+			p.input_offset     = pgm:read_u32(p.addr.input_offset)
 			p.old_input_states = p.input_states or {}
-			p.input_states   = {}
-			local debug = false
-			local states = dip_config.easy_super and input_states.easy or input_states.normal
-			states = debug and states[#states] or states[p.char]
+			p.input_states     = {}
+			local debug        = false
+			local states       = dip_config.easy_super and input_states.easy or input_states.normal
+			states             = debug and states[#states] or states[p.char]
 			for ti, tbl in ipairs(states) do
 				local old = p.old_input_states[ti]
 				local on = pgm:read_u8(tbl.addr + p.input_offset - 1)
 				local on_debug = on
 				local chg_remain = pgm:read_u8(tbl.addr + p.input_offset)
-				local max =  (old and old.on_debug == on_debug) and old.max or chg_remain
+				local max = (old and old.on_debug == on_debug) and old.max or chg_remain
 				local input_estab = old and old.input_estab or false
 				local charging = false
 				-- コマンド種類ごとの表示用の補正
@@ -8349,7 +8424,7 @@ function rbff2.startplugin()
 					if on <= 2 then
 						on = 0
 					else
-						on = on -1
+						on = on - 1
 					end
 					if old then
 						reset = old.on == #tbl.cmds and old.chg_remain > 0
@@ -8362,7 +8437,7 @@ function rbff2.startplugin()
 					if on <= 1 then
 						on = 0
 					else
-						on = on -1
+						on = on - 1
 					end
 					if old then
 						reset = old.on > 0 and old.chg_remain > 0
@@ -8398,7 +8473,7 @@ function rbff2.startplugin()
 					debug = debug,
 					input_estab = input_estab,
 					charging = charging,
-					max =  max,
+					max = max,
 				}
 				table.insert(p.input_states, tmp)
 			end
@@ -8407,7 +8482,7 @@ function rbff2.startplugin()
 			p.frame_gap      = p.frame_gap or 0
 			p.last_frame_gap = p.last_frame_gap or 0
 			p.last_blockstun = p.last_blockstun or 0
-			p.last_hitstop   = p.last_hitstop   or 0
+			p.last_hitstop   = p.last_hitstop or 0
 			p.on_hit         = p.on_hit or 0
 			p.on_guard       = p.on_guard or 0
 			p.hit_skip       = p.hit_skip or 0
@@ -8449,38 +8524,38 @@ function rbff2.startplugin()
 				p.on_down = global.frame_number
 			end
 			-- フレーム表示用処理
-			p.act_frames     = p.act_frames  or {}
-			p.act_frames2    = p.act_frames2 or {}
-			p.act_frames_total = p.act_frames_total or 0
+			p.act_frames          = p.act_frames or {}
+			p.act_frames2         = p.act_frames2 or {}
+			p.act_frames_total    = p.act_frames_total or 0
 
-			p.muteki.act_frames    = p.muteki.act_frames   or {}
-			p.muteki.act_frames2   = p.muteki.act_frames2  or {}
-			p.frm_gap.act_frames   = p.frm_gap.act_frames  or {}
-			p.frm_gap.act_frames2  = p.frm_gap.act_frames2 or {}
+			p.muteki.act_frames   = p.muteki.act_frames or {}
+			p.muteki.act_frames2  = p.muteki.act_frames2 or {}
+			p.frm_gap.act_frames  = p.frm_gap.act_frames or {}
+			p.frm_gap.act_frames2 = p.frm_gap.act_frames2 or {}
 
-			p.old_act_data   = p.act_data or { name = "", type = act_types.any, }
+			p.old_act_data        = p.act_data or { name = "", type = act_types.any, }
 
 			if char_acts[p.char] and char_acts[p.char][p.act] then
-				p.act_data   = char_acts[p.char][p.act]
-				p.act_1st    = char_1st_acts[p.char][p.act] or false
+				p.act_data = char_acts[p.char][p.act]
+				p.act_1st  = char_1st_acts[p.char][p.act] or false
 			elseif char_acts[#char_acts] and char_acts[#char_acts][p.act] then
-				p.act_data   = char_acts[#char_acts][p.act]
-				p.act_1st    = char_1st_acts[#char_acts][p.act] or false
+				p.act_data = char_acts[#char_acts][p.act]
+				p.act_1st  = char_1st_acts[#char_acts][p.act] or false
 			else
-				p.act_data   = {
-					name     = (p.state == 1 or p.state == 3) and "やられ" or tohex(p.act),
-					type     = act_types.any,
+				p.act_data = {
+					name = (p.state == 1 or p.state == 3) and "やられ" or tohex(p.act),
+					type = act_types.any,
 				}
-				p.act_1st    = false
+				p.act_1st  = false
 			end
 			if p.act_data.name == "やられ" then
-				p.act_1st    = false
+				p.act_1st = false
 			elseif p.act_data.name ~= "ダウン" and (p.state == 1 or p.state == 3) then
-				p.act_data   = {
-					name     = "やられ",
-					type     = act_types.any,
+				p.act_data = {
+					name = "やられ",
+					type = act_types.any,
 				}
-				p.act_1st    = false
+				p.act_1st  = false
 			end
 			p.old_act_normal = p.act_normal
 			-- ガード移行可否
@@ -8565,9 +8640,9 @@ function rbff2.startplugin()
 				fb.can_techrise   = 2 > pgm:read_u8(0x8E2C0 + pgm:read_u8(fb.addr.hitstop_id))
 				fb.fake_hit       = (pgm:read_u8(fb.addr.fake_hit) & 0xB) == 0
 				fb.obsl_hit       = (pgm:read_u8(fb.addr.obsl_hit) & 0xB) == 0 -- 嘘判定チェック用
-				fb.full_hit       = pgm:read_u8(fb.addr.full_hit ) > 0 -- 判定チェック用1
+				fb.full_hit       = pgm:read_u8(fb.addr.full_hit) > 0 -- 判定チェック用1
 				fb.harmless2      = pgm:read_u8(fb.addr.harmless2) > 0 -- 判定チェック用2 飛び道具専用
-				fb.prj_rank       = pgm:read_u8(fb.addr.prj_rank) -- 飛び道具の強さ
+				fb.prj_rank       = pgm:read_u8(fb.addr.prj_rank)  -- 飛び道具の強さ
 				fb.side           = pgm:read_u8(fb.addr.side)
 				fb.box_base1      = pgm:read_u32(fb.addr.box_base1)
 				fb.box_base2      = pgm:read_u32(fb.addr.box_base2)
@@ -8576,40 +8651,40 @@ function rbff2.startplugin()
 				fb.bai_chk2       = pgm:read_u8(0x8E940 + (0xFFFF & (pgm:read_u16(fb.addr.hitstop_id) + fb.hitstop_id)))
 				fb.bai_catch      = 0x2 >= fb.bai_chk1 and fb.bai_chk2 == 0x01
 				fb.max_hit_dn     = pgm:read_u8(fix_bp_addr(0x885F2) + fb.hitstop_id) -- 同一技行動での最大ヒット数 分母
-				fb.max_hit_nm     = pgm:read_u8(fb.addr.max_hit_nm) -- 同一技行動での最大ヒット数 分子
+				fb.max_hit_nm     = pgm:read_u8(fb.addr.max_hit_nm)       -- 同一技行動での最大ヒット数 分子
 				fb.hitboxes       = {}
 				fb.buffer         = {}
-				fb.uniq_hitboxes  = {} -- key + boolean
+				fb.uniq_hitboxes  = {}       -- key + boolean
 				fb.hit_summary    = fb.hit_summary or {} -- 大状態表示のデータ構造の一部
 				fb.hit            = fb.hit or {
-					pos_x         = 0,
-					pos_z         = 0,
-					pos_y         = 0,
-					on            = 0,
-					flip_x        = 0,
-					scale         = 0,
-					char_id       = 0,
-					vulnerable    = 0,
-					harmless      = false,
-					fake_hit      = false,
-					obsl_hit      = false,
-					full_hit      = false,
-					harmless2     = false,
-					max_hit_dn    = 0,
-					max_hit_nm    = 0,
+					pos_x      = 0,
+					pos_z      = 0,
+					pos_y      = 0,
+					on         = 0,
+					flip_x     = 0,
+					scale      = 0,
+					char_id    = 0,
+					vulnerable = 0,
+					harmless   = false,
+					fake_hit   = false,
+					obsl_hit   = false,
+					full_hit   = false,
+					harmless2  = false,
+					max_hit_dn = 0,
+					max_hit_nm = 0,
 				}
 				fb.type_boxes     = {}
 				fb.act_data_fired = p.act_data -- 発射したタイミングの行動ID
 
-				fb.act_frames     = fb.act_frames  or {}
+				fb.act_frames     = fb.act_frames or {}
 				fb.act_frames2    = fb.act_frames2 or {}
 
 				-- 当たり判定の構築
 				fb.has_atk_box    = false
 				if fb.proc_active == true then --0x4E75 is rts instruction
-					fb.alive      = true
+					fb.alive                = true
 					temp_hits[fb.addr.base] = fb
-					fb.atk_count = fb.atk_count or 0
+					fb.atk_count            = fb.atk_count or 0
 				else
 					fb.alive      = false
 					fb.atk_count  = 0
@@ -8644,7 +8719,7 @@ function rbff2.startplugin()
 			end
 
 			-- 硬直フレーム設定
-			p.last_blockstun = p.last_blockstun or 0
+			p.last_blockstun   = p.last_blockstun or 0
 
 			-- 当たり判定のフック確認
 			p.hit.vulnerable1  = pgm:read_u8(p.addr.vulnerable1)
@@ -8652,7 +8727,7 @@ function rbff2.startplugin()
 			p.hit.vulnerable22 = pgm:read_u8(p.addr.vulnerable22) == 0 --0の時vulnerable=true
 
 			-- リーチ
-			p.hit_summary  = new_box_summary(p)
+			p.hit_summary      = new_box_summary(p)
 			debug_box(p, pgm)
 
 			-- 投げ判定取得
@@ -8711,15 +8786,15 @@ function rbff2.startplugin()
 		-- キャラと飛び道具の当たり判定取得
 		for addr = 0x1DC000, 0x1DC000 + pgm:read_u8(0x10CB40) * 0x10, 0x10 do
 			local box = {
-				on          = pgm:read_u8(addr),
-				id          = pgm:read_u8(addr+0x1),
-				top         = pgm:read_i8(addr+0x2),
-				bottom      = pgm:read_i8(addr+0x3),
-				left        = pgm:read_i8(addr+0x4),
-				right       = pgm:read_i8(addr+0x5),
-				base        = pgm:read_u32(addr+0x6),
-				pos_x       = pgm:read_i16(addr+0xC) - screen_left,
-				pos_y       = height - pgm:read_i16(addr+0xE) + screen_top,
+				on     = pgm:read_u8(addr),
+				id     = pgm:read_u8(addr + 0x1),
+				top    = pgm:read_i8(addr + 0x2),
+				bottom = pgm:read_i8(addr + 0x3),
+				left   = pgm:read_i8(addr + 0x4),
+				right  = pgm:read_i8(addr + 0x5),
+				base   = pgm:read_u32(addr + 0x6),
+				pos_x  = pgm:read_i16(addr + 0xC) - screen_left,
+				pos_y  = height - pgm:read_i16(addr + 0xE) + screen_top,
 			}
 			if box.on ~= 0xFF and temp_hits[box.base] then
 				box.is_fireball = temp_hits[box.base].is_fireball == true
@@ -8747,13 +8822,13 @@ function rbff2.startplugin()
 			-- D0 = 0xAだったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
 			-- D0 x 4 + 579da
 			-- d0 = fix_bp_addr(0x0579DA + d0 * 4) --0x0579DA から4バイトのデータの並びがヒット効果の処理アドレスになる
-			p.effect = pgm:read_u8(p.attack_id - 0x20 + fix_bp_addr(0x95BEC))
+			p.effect        = pgm:read_u8(p.attack_id - 0x20 + fix_bp_addr(0x95BEC))
 			-- 削りダメージ計算種別取得 05B2A4 からの処理
 			p.chip_dmg_type = get_chip_dmg_type(p.attack_id, pgm)
 			-- 硬直時間取得 05AF7C(家庭用版)からの処理
-			local d2 = 0xF & pgm:read_u8(p.attack_id + fix_bp_addr(0x95CCC))
-			p.hitstun   = pgm:read_u8(0x16 + 0x2 + fix_bp_addr(0x5AF7C) + d2) + 1 + 3 -- ヒット硬直
-			p.blockstun = pgm:read_u8(0x1A + 0x2 + fix_bp_addr(0x5AF88) + d2) + 1 + 2 -- ガード硬直
+			local d2        = 0xF & pgm:read_u8(p.attack_id + fix_bp_addr(0x95CCC))
+			p.hitstun       = pgm:read_u8(0x16 + 0x2 + fix_bp_addr(0x5AF7C) + d2) + 1 + 3 -- ヒット硬直
+			p.blockstun     = pgm:read_u8(0x1A + 0x2 + fix_bp_addr(0x5AF88) + d2) + 1 + 2 -- ガード硬直
 
 			-- 飛び道具の有効無効確定
 			if p.is_fireball == true then
@@ -8764,7 +8839,7 @@ function rbff2.startplugin()
 			local hurtbox_keys = {}
 			for k, boxtype in pairs(p.uniq_hitboxes) do
 				if boxtype == true then
-				elseif boxtype.type == "attack" or  boxtype.type == "throw" or boxtype.type == "atemi" then
+				elseif boxtype.type == "attack" or boxtype.type == "throw" or boxtype.type == "atemi" then
 					table.insert(hitbox_keys, k)
 				else
 					table.insert(hurtbox_keys, k)
@@ -8847,7 +8922,7 @@ function rbff2.startplugin()
 				p.atkact_summary,
 				p.atk_summary,
 				p.throw_summary,
-				p.parry_summary}) do
+				p.parry_summary }) do
 				for _, row in ipairs(summary) do
 					table.insert(all_summary, row)
 				end
@@ -8998,7 +9073,7 @@ function rbff2.startplugin()
 		end
 
 		-- キャラ間の距離
-		p_space = players[1].pos - players[2].pos
+		p_space         = players[1].pos - players[2].pos
 
 		-- プレイヤー操作事前設定（それぞれCPUか人力か入れ替えか）
 		-- キー入力の取得（1P、2Pの操作を入れ替えていたりする場合もあるのでモード判定と一緒に処理する）
@@ -9012,7 +9087,7 @@ function rbff2.startplugin()
 			elseif global.dummy_mode == 3 then
 				p.control = i == 1 and 3 or i
 			elseif global.dummy_mode == 4 or global.dummy_mode == 5 then
-				p.control = 3-i
+				p.control = 3 - i
 			else
 				p.control = i
 			end
@@ -9081,9 +9156,9 @@ function rbff2.startplugin()
 				end
 			elseif p.throwing then
 				col, line = 0xAAD2691E, 0xDDD2691E
-			elseif p.act_1st ~= true and 
+			elseif p.act_1st ~= true and
 				((p.old_repeatable == true and p.repeatable == true) or
-				(p.old_repeatable == true and p.repeatable ~= true and p.act_frame > 0)) then
+					(p.old_repeatable == true and p.repeatable ~= true and p.act_frame > 0)) then
 				-- 1F前の状態とあわせて判定する
 				col, line = 0xAAD2691E, 0xDDD2691E
 			elseif p.can_juggle and op.act_normal then
@@ -9104,11 +9179,11 @@ function rbff2.startplugin()
 				reach_memo = p.hurtbox_txt
 			end
 
-			local act_count  = p.act_count  or 0
+			local act_count  = p.act_count or 0
 			local max_hit_dn = p.attacking and p.hit.max_hit_dn or 0
 
 			-- 行動が変わったかのフラグ
-			local frame = p.act_frames[#p.act_frames]
+			local frame      = p.act_frames[#p.act_frames]
 			local concrete_name, chg_act_name, disp_name
 			if frame ~= nil then
 				if p.act_data.names then
@@ -9193,7 +9268,7 @@ function rbff2.startplugin()
 					act_count = act_count,
 					max_hit_dn = max_hit_dn,
 				}
-				table.insert(p.act_frames , frame)
+				table.insert(p.act_frames, frame)
 				if 180 < #p.act_frames then
 					--バッファ長調整
 					table.remove(p.act_frames, 1)
@@ -9255,7 +9330,7 @@ function rbff2.startplugin()
 					line = line,
 					act_1st = p.act_1st,
 				}
-				table.insert(p.muteki.act_frames , frame)
+				table.insert(p.muteki.act_frames, frame)
 				if 180 < #p.muteki.act_frames then
 					--バッファ長調整
 					table.remove(p.muteki.act_frames, 1)
@@ -9344,7 +9419,7 @@ function rbff2.startplugin()
 					line = line,
 					act_1st = p.act_1st,
 				}
-				table.insert(p.frm_gap.act_frames , frame)
+				table.insert(p.frm_gap.act_frames, frame)
 				if 180 < #p.frm_gap.act_frames then
 					--バッファ長調整
 					table.remove(p.frm_gap.act_frames, 1)
@@ -9410,15 +9485,15 @@ function rbff2.startplugin()
 				local act_count  = fb.actb
 				local max_hit_dn = fb.hit.max_hit_dn
 
-				if #fb.act_frames == 0 or (frame == nil) or frame.col ~= col or reset or frame.reach_memo ~= reach_memo  or (max_hit_dn > 1 and frame.act_count ~= act_count)  then
+				if #fb.act_frames == 0 or (frame == nil) or frame.col ~= col or reset or frame.reach_memo ~= reach_memo or (max_hit_dn > 1 and frame.act_count ~= act_count) then
 					-- 軽量化のため攻撃の有無だけで記録を残す
 					frame = {
-						act = act,
-						count = 1,
-						col = col,
-						name = new_name,
-						line = line,
-						act_1st = reset,
+						act        = act,
+						count      = 1,
+						col        = col,
+						name       = new_name,
+						line       = line,
+						act_1st    = reset,
 						reach_memo = reach_memo,
 						act_count  = act_count,
 						max_hit_dn = max_hit_dn,
@@ -9457,40 +9532,40 @@ function rbff2.startplugin()
 		end
 
 		for i, p in ipairs(players) do
-			local p1 = i == 1
-			local op = p.op
+			local p1      = i == 1
+			local op      = p.op
 
 			-- 入力表示用の情報構築
 			local key_now = p.key_now
-			key_now.d  = (p.reg_pcnt & 0x80) == 0x00 and posi_or_pl1(key_now.d ) or nega_or_mi1(key_now.d ) -- Button D
-			key_now.c  = (p.reg_pcnt & 0x40) == 0x00 and posi_or_pl1(key_now.c ) or nega_or_mi1(key_now.c ) -- Button C
-			key_now.b  = (p.reg_pcnt & 0x20) == 0x00 and posi_or_pl1(key_now.b ) or nega_or_mi1(key_now.b ) -- Button B
-			key_now.a  = (p.reg_pcnt & 0x10) == 0x00 and posi_or_pl1(key_now.a ) or nega_or_mi1(key_now.a ) -- Button A
-			key_now.rt = (p.reg_pcnt & 0x08) == 0x00 and posi_or_pl1(key_now.rt) or nega_or_mi1(key_now.rt) -- Right
-			key_now.lt = (p.reg_pcnt & 0x04) == 0x00 and posi_or_pl1(key_now.lt) or nega_or_mi1(key_now.lt) -- Left
-			key_now.dn = (p.reg_pcnt & 0x02) == 0x00 and posi_or_pl1(key_now.dn) or nega_or_mi1(key_now.dn) -- Down
-			key_now.up = (p.reg_pcnt & 0x01) == 0x00 and posi_or_pl1(key_now.up) or nega_or_mi1(key_now.up) -- Up
-			key_now.sl = (p.reg_st_b & (p1 and 0x02 or 0x08)) == 0x00 and posi_or_pl1(key_now.sl) or nega_or_mi1(key_now.sl) -- Select
-			key_now.st = (p.reg_st_b & (p1 and 0x01 or 0x04)) == 0x00 and posi_or_pl1(key_now.st) or nega_or_mi1(key_now.st) -- Start
+			key_now.d     = (p.reg_pcnt & 0x80) == 0x00 and posi_or_pl1(key_now.d) or nega_or_mi1(key_now.d)           -- Button D
+			key_now.c     = (p.reg_pcnt & 0x40) == 0x00 and posi_or_pl1(key_now.c) or nega_or_mi1(key_now.c)           -- Button C
+			key_now.b     = (p.reg_pcnt & 0x20) == 0x00 and posi_or_pl1(key_now.b) or nega_or_mi1(key_now.b)           -- Button B
+			key_now.a     = (p.reg_pcnt & 0x10) == 0x00 and posi_or_pl1(key_now.a) or nega_or_mi1(key_now.a)           -- Button A
+			key_now.rt    = (p.reg_pcnt & 0x08) == 0x00 and posi_or_pl1(key_now.rt) or nega_or_mi1(key_now.rt)         -- Right
+			key_now.lt    = (p.reg_pcnt & 0x04) == 0x00 and posi_or_pl1(key_now.lt) or nega_or_mi1(key_now.lt)         -- Left
+			key_now.dn    = (p.reg_pcnt & 0x02) == 0x00 and posi_or_pl1(key_now.dn) or nega_or_mi1(key_now.dn)         -- Down
+			key_now.up    = (p.reg_pcnt & 0x01) == 0x00 and posi_or_pl1(key_now.up) or nega_or_mi1(key_now.up)         -- Up
+			key_now.sl    = (p.reg_st_b & (p1 and 0x02 or 0x08)) == 0x00 and posi_or_pl1(key_now.sl) or nega_or_mi1(key_now.sl) -- Select
+			key_now.st    = (p.reg_st_b & (p1 and 0x01 or 0x04)) == 0x00 and posi_or_pl1(key_now.st) or nega_or_mi1(key_now.st) -- Start
 			local lever, lever_no
 			if (p.reg_pcnt & 0x05) == 0x00 then
 				lever, lever_no = "_7", 7
 			elseif (p.reg_pcnt & 0x09) == 0x00 then
-				lever, lever_no  = "_9", 9
+				lever, lever_no = "_9", 9
 			elseif (p.reg_pcnt & 0x06) == 0x00 then
-				lever, lever_no  = "_1", 1
+				lever, lever_no = "_1", 1
 			elseif (p.reg_pcnt & 0x0A) == 0x00 then
-				lever, lever_no  = "_3", 3
+				lever, lever_no = "_3", 3
 			elseif (p.reg_pcnt & 0x01) == 0x00 then
-				lever, lever_no  = "_8", 8
+				lever, lever_no = "_8", 8
 			elseif (p.reg_pcnt & 0x02) == 0x00 then
-				lever, lever_no  = "_2", 2
+				lever, lever_no = "_2", 2
 			elseif (p.reg_pcnt & 0x04) == 0x00 then
-				lever, lever_no  = "_4", 4
+				lever, lever_no = "_4", 4
 			elseif (p.reg_pcnt & 0x08) == 0x00 then
-				lever, lever_no  = "_6", 6
+				lever, lever_no = "_6", 6
 			else
-				lever, lever_no  = "_N", 5
+				lever, lever_no = "_N", 5
 			end
 			local btn_a, btn_b, btn_c, btn_d = false, false, false, false
 			if (p.reg_pcnt & 0x10) == 0x00 then
@@ -9546,7 +9621,7 @@ function rbff2.startplugin()
 			if p.tmp_pow > 0 then
 				p.last_pow = p.tmp_pow
 				-- TODO: 大バーン→クラックシュートみたいな繋ぎのときにちゃんと加算されない
-				if p.last_normal_state == true and p.normal_state == true  then
+				if p.last_normal_state == true and p.normal_state == true then
 					p.tmp_combo_pow = p.tmp_pow
 				elseif p.last_normal_state == true and p.normal_state == false then
 					p.tmp_combo_pow = p.tmp_pow
@@ -9582,12 +9657,12 @@ function rbff2.startplugin()
 
 		-- プレイヤー操作
 		for i, p in ipairs(players) do
-			local op   = p.op
+			local op = p.op
 			if p.control == 1 or p.control == 2 then
 				--前進とガード方向
 				local sp = p_space == 0 and prev_p_space or p_space
 				sp = i == 1 and sp or (sp * -1)
-				local lt, rt = "P".. p.control .." Left", "P" .. p.control .. " Right"
+				local lt, rt = "P" .. p.control .. " Left", "P" .. p.control .. " Right"
 				p.block_side = 0 < sp and rt or lt
 				p.front_side = 0 < sp and lt or rt
 
@@ -9605,7 +9680,7 @@ function rbff2.startplugin()
 				-- { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" },
 				-- レコード中、リプレイ中は行動しない
 				if accept_control then
-					if     p.dummy_act == 1 then
+					if p.dummy_act == 1 then
 					elseif p.dummy_act == 2 and p.sway_status == 0x00 then
 						next_joy["P" .. p.control .. " Down"] = true
 					elseif p.dummy_act == 3 and p.sway_status == 0x00 then
@@ -9640,11 +9715,11 @@ function rbff2.startplugin()
 						-- 常時（ガード方向はダミーモードに従う）
 						next_joy[p.block_side] = true
 						p.backstep_killer = true
-					elseif p.dummy_gd == dummy_gd_type.auto or -- オート
-						p.dummy_gd == dummy_gd_type.bs or -- ブレイクショット
+					elseif p.dummy_gd == dummy_gd_type.auto or     -- オート
+						p.dummy_gd == dummy_gd_type.bs or          -- ブレイクショット
 						(p.dummy_gd == dummy_gd_type.random and p.random_boolean) or -- ランダム
 						(p.dummy_gd == dummy_gd_type.hit1 and p.next_block) or -- 1ヒットガード
-						(p.dummy_gd == dummy_gd_type.guard1) -- 1ガード
+						(p.dummy_gd == dummy_gd_type.guard1)       -- 1ガード
 					then
 						-- 中段から優先
 						if p.need_ovh_block then
@@ -9681,7 +9756,7 @@ function rbff2.startplugin()
 				if p.dummy_gd == dummy_gd_type.hit1 then
 					-- 1ヒットガードのときは次ガードすべきかどうかの状態を切り替える
 					if global.frame_number == p.on_hit then
-						p.next_block = true	-- ヒット時はガードに切り替え
+						p.next_block = true -- ヒット時はガードに切り替え
 						p.next_block_ec = 75 -- カウンター初期化
 					elseif global.frame_number == p.on_guard then
 						p.next_block = false
@@ -9746,12 +9821,12 @@ function rbff2.startplugin()
 							return
 						end
 						if p.dummy_rvs.cmd then -- 通常投げ
-							if not  p.n_throwable or not p.throw.in_range then
+							if not p.n_throwable or not p.throw.in_range then
 								--return
 							end
 						end
 					elseif p.dummy_rvs.jump then
-						if p.state == 0 and p.old_state == 0 and  (p.flag_c0 | p.old_flag_c0) & 0x10000 == 0x10000 then
+						if p.state == 0 and p.old_state == 0 and (p.flag_c0 | p.old_flag_c0) & 0x10000 == 0x10000 then
 							-- 連続通常ジャンプを繰り返さない
 							return
 						end
@@ -9791,7 +9866,7 @@ function rbff2.startplugin()
 					if (p.dummy_wakeup == wakeup_type.tech or p.dummy_wakeup == wakeup_type.sway or p.dummy_wakeup == wakeup_type.rvs) and p.dummy_rvs then
 						-- ダウン起き上がりリバーサル入力
 						if wakeup_acts[p.act] and (p.char_data.wakeup_frms - 3) <= (global.frame_number - p.on_wakeup) then
-							input_rvs(rvs_types.on_wakeup, p, string.format("ダウン起き上がりリバーサル入力1 %s %s", 
+							input_rvs(rvs_types.on_wakeup, p, string.format("ダウン起き上がりリバーサル入力1 %s %s",
 								p.char_data.wakeup_frms, (global.frame_number - p.on_wakeup)))
 						end
 						-- 着地リバーサル入力（やられの着地）
@@ -9890,31 +9965,31 @@ function rbff2.startplugin()
 				if global.auto_input.thw_otg then
 					if p.char == 7 then
 						-- ボブ
-						if  p.act == 0x6D  and p.act_count == 5  and p.act_frame == 0 then
+						if p.act == 0x6D and p.act_count == 5 and p.act_frame == 0 then
 							p.write_bs_hook({ id = 0x00, ver = 0x1EFF, bs = false, name = "ホーネットアタック", })
 						end
 					elseif p.char == 3 then
 						-- ジョー
-						if  p.act == 0x70  and p.act_count == 0  and p.act_frame == 11 then
+						if p.act == 0x70 and p.act_count == 0 and p.act_frame == 11 then
 							cmd_base._2c(p, next_joy)
 						end
 					elseif p.char == 5 then
 						-- ギース
-						if  p.act == 0x6D  and p.act_count == 0  and p.act_frame == 0 then
+						if p.act == 0x6D and p.act_count == 0 and p.act_frame == 0 then
 							p.write_bs_hook({ id = 0x50, ver = 0x0600, bs = false, name = "絶命人中打ち", })
 						end
 					elseif p.char == 6 then
 						-- 双角
-						if  p.act == 0x6D  and p.act_count == 0  and p.act_frame == 0 then
+						if p.act == 0x6D and p.act_count == 0 and p.act_frame == 0 then
 							p.write_bs_hook({ id = 0x50, ver = 0x0600, bs = false, name = "地獄門", })
 						end
 					elseif p.char == 9 then
 						-- マリー
-						if  p.act == 0x6D  and p.act_count == 0  and p.act_frame == 0 then
+						if p.act == 0x6D and p.act_count == 0 and p.act_frame == 0 then
 							p.write_bs_hook({ id = 0x50, ver = 0x0600, bs = false, name = "アキレスホールド", })
 						end
 					elseif p.char == 22 then
-						if p.act == 0xA1 and p.act_count == 6  and p.act_frame >= 0 then
+						if p.act == 0xA1 and p.act_count == 6 and p.act_frame >= 0 then
 							p.write_bs_hook({ id = 0x03, ver = 0x06FF, bs = false, name = "閃里肘皇", })
 						end
 					end
@@ -9987,7 +10062,7 @@ function rbff2.startplugin()
 			local from = global.sync_pos_x - 1
 			local to   = 3 - from
 			pgm:write_i16(players[to].addr.pos, players[from].pos)
-			pgm:write_i16(players[to].addr.pos_y, players[from].pos_y-124)
+			pgm:write_i16(players[to].addr.pos_y, players[from].pos_y - 124)
 		end
 
 		global.pause = false
@@ -10029,16 +10104,16 @@ function rbff2.startplugin()
 			return summary
 		end
 		local x, y = i == 1 and 162 or 2, 2
-		scr:draw_box(x-2, y-2, x+158, y+2+7*#summary, 0x80404040, 0x80404040)
+		scr:draw_box(x - 2, y - 2, x + 158, y + 2 + 7 * #summary, 0x80404040, 0x80404040)
 		for _, row in ipairs(summary) do
 			local k, v, frame = row[1], row[2], row[3] or 0
 			local col = global.frame_number == frame and 0xFF00FFFF or 0xFFFFFFFF
 			scr:draw_text(x, y, k, col)
 			if v then
 				if type(v) == "number" then
-					scr:draw_text(x+47, y, v .."", col)
+					scr:draw_text(x + 47, y, v .. "", col)
 				else
-					scr:draw_text(x+47, y, v, col)
+					scr:draw_text(x + 47, y, v, col)
 				end
 			end
 			y = y + 7
@@ -10048,16 +10123,16 @@ function rbff2.startplugin()
 	local draw_hitbox = function(left, top, right, bottom, outline, fill, over_left, over_top, over_right, over_bottom)
 		if outline and 0 < outline then
 			if over_left ~= true then
-				scr:draw_box(left, top, left+1, bottom, 0, outline)
+				scr:draw_box(left, top, left + 1, bottom, 0, outline)
 			end
 			if over_top ~= true then
-				scr:draw_box(left, top, right,  top+1, 0, outline)
+				scr:draw_box(left, top, right, top + 1, 0, outline)
 			end
 			if over_right ~= true then
-				scr:draw_box(right+1, top, right, bottom, 0, outline)
+				scr:draw_box(right + 1, top, right, bottom, 0, outline)
 			end
 			if over_bottom ~= true then
-				scr:draw_box(left, bottom+1, right, bottom, 0, outline)
+				scr:draw_box(left, bottom + 1, right, bottom, 0, outline)
 			end
 		end
 		if fill and 0 < fill then
@@ -10065,10 +10140,10 @@ function rbff2.startplugin()
 		end
 	end
 	local draw_vline = function(x1, y1, y2, color)
-		scr:draw_box(x1, y1, x1+1, y2+1, 0, color)
+		scr:draw_box(x1, y1, x1 + 1, y2 + 1, 0, color)
 	end
 	local draw_hline = function(x1, x2, y1, color)
-		scr:draw_box(x1, y1, x2+1, y1+1, 0, color)
+		scr:draw_box(x1, y1, x2 + 1, y1 + 1, 0, color)
 	end
 	local draw_axis = function(i, p, x, col)
 		if x then
@@ -10082,9 +10157,9 @@ function rbff2.startplugin()
 	end
 	local draw_esaka = function(i, x, col)
 		if x and 0 <= x then
-			local y1, y2 = 0, 200+global.axis_size
+			local y1, y2 = 0, 200 + global.axis_size
 			draw_vline(x, y1, y2, col)
-			draw_text_with_shadow(x-2.5, y2    , string.format("え%d", i), col)
+			draw_text_with_shadow(x - 2.5, y2, string.format("え%d", i), col)
 		end
 	end
 	local draw_close_far = function(i, p, btn, x1, x2)
@@ -10096,10 +10171,10 @@ function rbff2.startplugin()
 			x2 = p.hit.pos_x + x2 * p.side
 			-- 間合い
 			local color = in_range and 0xFFFFFF00 or 0xFFBBBBBB
-			draw_hline(x2-2, x2+2, p.hit.pos_y  , color)
-			draw_vline(x2  , p.hit.pos_y-2, p.hit.pos_y+2, color)
+			draw_hline(x2 - 2, x2 + 2, p.hit.pos_y, color)
+			draw_vline(x2, p.hit.pos_y - 2, p.hit.pos_y + 2, color)
 			if in_range then
-				draw_text_with_shadow(x2-2.5, p.hit.pos_y+4  , string.format("%s%d", btn, i), color)
+				draw_text_with_shadow(x2 - 2.5, p.hit.pos_y + 4, string.format("%s%d", btn, i), color)
 			end
 		end
 	end
@@ -10139,11 +10214,11 @@ function rbff2.startplugin()
 				if box.flat_throw then
 					if box.visible == true and box.type.enabled == true then
 						if global.no_background ~= true then
-							draw_hitbox(box.left , box.top-8 , box.right, box.bottom+8, box.type.fill, box.type.fill)
+							draw_hitbox(box.left, box.top - 8, box.right, box.bottom + 8, box.type.fill, box.type.fill)
 						end
-						draw_hline(box.left , box.right, box.bottom  , box.type.outline)
-						draw_vline(box.left , box.top-8, box.bottom+8, box.type.outline)
-						draw_vline(box.right, box.top-8, box.bottom+8, box.type.outline)
+						draw_hline(box.left, box.right, box.bottom, box.type.outline)
+						draw_vline(box.left, box.top - 8, box.bottom + 8, box.type.outline)
+						draw_vline(box.right, box.top - 8, box.bottom + 8, box.type.outline)
 					end
 				else
 					if box.visible == true and box.type.enabled == true then
@@ -10160,8 +10235,8 @@ function rbff2.startplugin()
 							local y1, y2 = math.min(box.top, box.bottom), math.max(box.top, box.bottom)
 							local x = math.floor((x2 - x1) / 2) + x1 - 2
 							local y = math.floor((y2 - y1) / 2) + y1 - 4
-							scr:draw_text(x+0.5, y+0.5, box.type_count.."", shadow_col)
-							scr:draw_text(x, y, box.type_count.."", box.type.outline)
+							scr:draw_text(x + 0.5, y + 0.5, box.type_count .. "", shadow_col)
+							scr:draw_text(x, y, box.type_count .. "", box.type.outline)
 						end
 					end
 				end
@@ -10173,11 +10248,11 @@ function rbff2.startplugin()
 					-- 通常投げ間合い
 					if p.disp_range == 2 or p.disp_range == 3 then
 						local color = p.throw.in_range and 0xFFFFFF00 or 0xFFBBBBBB
-						draw_hline(p.throw.x1, p.throw.x2   , p.hit.pos_y  , color)
-						draw_vline(p.throw.x1, p.hit.pos_y-4, p.hit.pos_y+4, color)
-						draw_vline(p.throw.x2, p.hit.pos_y-4, p.hit.pos_y+4, color)
+						draw_hline(p.throw.x1, p.throw.x2, p.hit.pos_y, color)
+						draw_vline(p.throw.x1, p.hit.pos_y - 4, p.hit.pos_y + 4, color)
+						draw_vline(p.throw.x2, p.hit.pos_y - 4, p.hit.pos_y + 4, color)
 						if p.throw.in_range then
-							draw_text_with_shadow(p.throw.x1+2.5, p.hit.pos_y+4  , string.format("投%d", i), color)
+							draw_text_with_shadow(p.throw.x1 + 2.5, p.hit.pos_y + 4, string.format("投%d", i), color)
 						end
 					end
 
@@ -10207,7 +10282,7 @@ function rbff2.startplugin()
 							0,
 							false, false, false, false)
 						if p.air_throw.in_range then
-							draw_text_with_shadow(p.air_throw.x1+2.5, 0, string.format("投%d", i), color)
+							draw_text_with_shadow(p.air_throw.x1 + 2.5, 0, string.format("投%d", i), color)
 						end
 					end
 				end
@@ -10236,7 +10311,7 @@ function rbff2.startplugin()
 				local chg_act = p.old_act_normal ~= p.act_normal
 				local chg_hit = p.chg_hitbox_frm == global.frame_number
 				local chg_hurt = p.chg_hurtbox_frm == global.frame_number
-				local chg_sway = p.on_sway_line == global.frame_number or p.on_main_line  == global.frame_number
+				local chg_sway = p.on_sway_line == global.frame_number or p.on_main_line == global.frame_number
 				local chg_actc = p.atk_count ~= 1 and (p.old_act_count ~= p.act_count)
 				for _, fb in pairs(p.fireball) do
 					if fb.chg_hitbox_frm == global.frame_number then
@@ -10254,7 +10329,7 @@ function rbff2.startplugin()
 				end
 
 				-- 画像保存 1:OFF 2:1P動作 3:2P動作
-				if  (chg_hitbox or p.state ~= 0) and global.save_snapshot > 1 then
+				if (chg_hitbox or p.state ~= 0) and global.save_snapshot > 1 then
 					-- 画像保存先のディレクトリ作成
 					local frame_group = p.act_frames2[#p.act_frames2]
 					local name, sub_name, dir_name = frame_group[#frame_group].name, "_", base_path() .. "/capture"
@@ -10314,56 +10389,56 @@ function rbff2.startplugin()
 				-- コンボ表示などの四角枠
 				if p.disp_dmg then
 					if p1 then
-						scr:draw_box(184+40, 40, 274+40,  84, 0x80404040, 0x80404040)
+						scr:draw_box(184 + 40, 40, 274 + 40, 84, 0x80404040, 0x80404040)
 					else
-						scr:draw_box( 45-40, 40, 134-40,  84, 0x80404040, 0x80404040)
+						scr:draw_box(45 - 40, 40, 134 - 40, 84, 0x80404040, 0x80404040)
 					end
 
 					-- コンボ表示
-					scr:draw_text(p1 and 228 or  9, 41, "補正:")
-					scr:draw_text(p1 and 228 or  9, 48, "ダメージ:")
-					scr:draw_text(p1 and 228 or  9, 55, "コンボ:")
-					scr:draw_text(p1 and 228 or  9, 62, "気絶値:")
-					scr:draw_text(p1 and 228 or  9, 69, "気絶値持続:")
-					scr:draw_text(p1 and 228 or  9, 76, "POW:")
-					draw_rtext(   p1 and 296 or 77, 41, string.format("%s>%s(%s%%)", p.last_pure_dmg, op.last_dmg, (op.last_dmg_scaling-1) * 100))
-					draw_rtext(   p1 and 296 or 77, 48, string.format("%s(+%s)", op.last_combo_dmg, op.last_dmg))
-					draw_rtext(   p1 and 296 or 77, 55, op.last_combo)
-					draw_rtext(   p1 and 296 or 77, 62, string.format("%s(+%s)", op.last_combo_stun, op.last_stun))
-					draw_rtext(   p1 and 296 or 77, 69, string.format("%s(+%s)", op.last_combo_st_timer, op.last_st_timer))
-					draw_rtext(   p1 and 296 or 77, 76, string.format("%s(+%s)", op.last_combo_pow, op.last_pow))
+					scr:draw_text(p1 and 228 or 9, 41, "補正:")
+					scr:draw_text(p1 and 228 or 9, 48, "ダメージ:")
+					scr:draw_text(p1 and 228 or 9, 55, "コンボ:")
+					scr:draw_text(p1 and 228 or 9, 62, "気絶値:")
+					scr:draw_text(p1 and 228 or 9, 69, "気絶値持続:")
+					scr:draw_text(p1 and 228 or 9, 76, "POW:")
+					draw_rtext(p1 and 296 or 77, 41, string.format("%s>%s(%s%%)", p.last_pure_dmg, op.last_dmg, (op.last_dmg_scaling - 1) * 100))
+					draw_rtext(p1 and 296 or 77, 48, string.format("%s(+%s)", op.last_combo_dmg, op.last_dmg))
+					draw_rtext(p1 and 296 or 77, 55, op.last_combo)
+					draw_rtext(p1 and 296 or 77, 62, string.format("%s(+%s)", op.last_combo_stun, op.last_stun))
+					draw_rtext(p1 and 296 or 77, 69, string.format("%s(+%s)", op.last_combo_st_timer, op.last_st_timer))
+					draw_rtext(p1 and 296 or 77, 76, string.format("%s(+%s)", op.last_combo_pow, op.last_pow))
 					scr:draw_text(p1 and 301 or 82, 41, "最大")
-					draw_rtext(   p1 and 311 or 92, 48, op.max_dmg)
-					draw_rtext(   p1 and 311 or 92, 55, op.max_combo)
-					draw_rtext(   p1 and 311 or 92, 62, op.max_disp_stun)
-					draw_rtext(   p1 and 311 or 92, 69, op.max_st_timer)
-					draw_rtext(   p1 and 311 or 92, 76, op.max_combo_pow)
+					draw_rtext(p1 and 311 or 92, 48, op.max_dmg)
+					draw_rtext(p1 and 311 or 92, 55, op.max_combo)
+					draw_rtext(p1 and 311 or 92, 62, op.max_disp_stun)
+					draw_rtext(p1 and 311 or 92, 69, op.max_st_timer)
+					draw_rtext(p1 and 311 or 92, 76, op.max_combo_pow)
 				end
 
 				-- 状態 小表示
 				if p.disp_sts == 2 or p.disp_sts == 3 then
-					scr:draw_box(p1 and 2 or 277, 0, p1 and 40 or 316,  36, 0x80404040, 0x80404040)
+					scr:draw_box(p1 and 2 or 277, 0, p1 and 40 or 316, 36, 0x80404040, 0x80404040)
 
-					scr:draw_text( p1 and  4 or 278,  1, string.format("%s", p.state))
-					draw_rtext(    p1 and 16 or 290,  1, string.format("%02s", p.tw_threshold))
-					draw_rtext(    p1 and 28 or 302,  1, string.format("%03s", p.tw_accepted))
-					draw_rtext(    p1 and 40 or 314,  1, string.format("%03s", p.tw_frame))
+					scr:draw_text(p1 and 4 or 278, 1, string.format("%s", p.state))
+					draw_rtext(p1 and 16 or 290, 1, string.format("%02s", p.tw_threshold))
+					draw_rtext(p1 and 28 or 302, 1, string.format("%03s", p.tw_accepted))
+					draw_rtext(p1 and 40 or 314, 1, string.format("%03s", p.tw_frame))
 
 					local diff_pos_y = p.pos_y + p.pos_frc_y - p.old_pos_y - p.old_pos_frc_y
-					draw_rtext(    p1 and 16 or 290,  7, string.format("%0.03f", diff_pos_y))
-					draw_rtext(    p1 and 40 or 314,  7, string.format("%0.03f", p.pos_y + p.pos_frc_y))
+					draw_rtext(p1 and 16 or 290, 7, string.format("%0.03f", diff_pos_y))
+					draw_rtext(p1 and 40 or 314, 7, string.format("%0.03f", p.pos_y + p.pos_frc_y))
 
-					draw_rtext(    p1 and 16 or 290, 13, string.format("%02x", p.attack))
-					draw_rtext(    p1 and 28 or 302, 13, string.format("%02x", p.attack_id))
-					draw_rtext(    p1 and 40 or 314, 13, string.format("%02x", p.hitstop_id))
+					draw_rtext(p1 and 16 or 290, 13, string.format("%02x", p.attack))
+					draw_rtext(p1 and 28 or 302, 13, string.format("%02x", p.attack_id))
+					draw_rtext(p1 and 40 or 314, 13, string.format("%02x", p.hitstop_id))
 
-					draw_rtext(    p1 and 16 or 290, 19, string.format("%04x", p.act))
-					draw_rtext(    p1 and 28 or 302, 19, string.format("%02x", p.act_count))
-					draw_rtext(    p1 and 40 or 314, 19, string.format("%02x", p.act_frame))
+					draw_rtext(p1 and 16 or 290, 19, string.format("%04x", p.act))
+					draw_rtext(p1 and 28 or 302, 19, string.format("%02x", p.act_count))
+					draw_rtext(p1 and 40 or 314, 19, string.format("%02x", p.act_frame))
 
-					draw_rtext(    p1 and 16 or 290, 25, string.format("%02x", p.hurt_state))
-					draw_rtext(    p1 and 28 or 302, 25, string.format("%02x", p.sway_status))
-					draw_rtext(    p1 and 40 or 314, 25, string.format("%02x", p.additional))
+					draw_rtext(p1 and 16 or 290, 25, string.format("%02x", p.hurt_state))
+					draw_rtext(p1 and 28 or 302, 25, string.format("%02x", p.sway_status))
+					draw_rtext(p1 and 40 or 314, 25, string.format("%02x", p.additional))
 
 					--[[
 						p.tw_frame のしきい値。しきい値より大きければ投げ処理継続可能。
@@ -10380,10 +10455,10 @@ function rbff2.startplugin()
 						if p.tw_frame <= 20 then
 							throw_txt = throw_txt .. "<"
 						end
-						scr:draw_text( p1 and  1 or 275, 31, "無敵")
-						scr:draw_text( p1 and 15 or 289, 31, p.hit.vulnerable and "" or "打")
-						scr:draw_text( p1 and 24 or 298, 31, p.n_throwable and "" or "通")
-						scr:draw_text( p1 and 30 or 304, 31, p.throwable and "" or throw_txt)
+						scr:draw_text(p1 and 1 or 275, 31, "無敵")
+						scr:draw_text(p1 and 15 or 289, 31, p.hit.vulnerable and "" or "打")
+						scr:draw_text(p1 and 24 or 298, 31, p.n_throwable and "" or "通")
+						scr:draw_text(p1 and 30 or 304, 31, p.throwable and "" or throw_txt)
 					end
 				end
 
@@ -10392,7 +10467,7 @@ function rbff2.startplugin()
 					for ti, input_state in ipairs(p.input_states) do
 						local x = 147
 						local y = 50 + ti * 5
-						draw_text_with_shadow (x + 15, y - 2, input_state.tbl.name,
+						draw_text_with_shadow(x + 15, y - 2, input_state.tbl.name,
 							input_state.input_estab == true and 0xC0FF8800 or 0xC0FFFFFF)
 						if input_state.on > 0 and input_state.chg_remain > 0 then
 							scr:draw_box(x - 8 + input_state.max * 2, y, x - 8, y + 4,
@@ -10414,8 +10489,8 @@ function rbff2.startplugin()
 							end
 						end
 						draw_rtext_with_shadow(x + 1, y, input_state.chg_remain)
-						draw_text_with_shadow (x + 4, y, "/")
-						draw_text_with_shadow (x + 7, y, input_state.max)
+						draw_text_with_shadow(x + 4, y, "/")
+						draw_text_with_shadow(x + 7, y, input_state.max)
 						if input_state.debug then
 							draw_rtext_with_shadow(x + 25, y, input_state.on)
 							draw_rtext_with_shadow(x + 40, y, input_state.on_debug)
@@ -10426,20 +10501,20 @@ function rbff2.startplugin()
 				-- BS状態表示
 				if p.dummy_gd == dummy_gd_type.bs and global.no_background ~= true then
 					if p1 then
-						scr:draw_box(106, 40, 150,  50, 0x80404040, 0x80404040)
+						scr:draw_box(106, 40, 150, 50, 0x80404040, 0x80404040)
 					else
-						scr:draw_box(169, 40, 213,  50, 0x80404040, 0x80404040)
+						scr:draw_box(169, 40, 213, 50, 0x80404040, 0x80404040)
 					end
 					scr:draw_text(p1 and 115 or 180, 41, "回ガードでB.S.")
-					draw_rtext(   p1 and 115 or 180, 41, global.dummy_bs_cnt - math.max(p.bs_count, 0))
+					draw_rtext(p1 and 115 or 180, 41, global.dummy_bs_cnt - math.max(p.bs_count, 0))
 				end
 
 				-- ガードリバーサル状態表示
 				if p.dummy_wakeup == wakeup_type.rvs and global.no_background ~= true then
 					if p1 then
-						scr:draw_box(106, 50, 150,  60, 0x80404040, 0x80404040)
+						scr:draw_box(106, 50, 150, 60, 0x80404040, 0x80404040)
 					else
-						scr:draw_box(169, 50, 213,  60, 0x80404040, 0x80404040)
+						scr:draw_box(169, 50, 213, 60, 0x80404040, 0x80404040)
 					end
 					scr:draw_text(p1 and 115 or 180, 51, "回ガードでG.R.")
 					local count = 0
@@ -10448,20 +10523,20 @@ function rbff2.startplugin()
 					else
 						count = global.dummy_rvs_cnt - math.max(p.rvs_count, 0)
 					end
-					draw_rtext(   p1 and 115 or 180, 51, count)
+					draw_rtext(p1 and 115 or 180, 51, count)
 				end
 
 				-- 気絶表示
 				if p.disp_stun then
-					scr:draw_box(p1 and (138 - p.max_stun)   or 180, 29, p1 and 140 or (182 + p.max_stun)  , 34, 0, 0xDDC0C0C0) -- 枠
-					scr:draw_box(p1 and (139 - p.max_stun)   or 181, 30, p1 and 139 or (181 + p.max_stun)  , 33, 0, 0xDD000000) -- 黒背景
-					scr:draw_box(p1 and (139 - p.stun)       or 181, 30, p1 and 139 or (181 + p.stun)      , 33, 0, 0xDDFF0000) -- 気絶値
-					draw_rtext_with_shadow(p1 and 135   or 190  , 28  ,  p.stun)
+					scr:draw_box(p1 and (138 - p.max_stun) or 180, 29, p1 and 140 or (182 + p.max_stun), 34, 0, 0xDDC0C0C0) -- 枠
+					scr:draw_box(p1 and (139 - p.max_stun) or 181, 30, p1 and 139 or (181 + p.max_stun), 33, 0, 0xDD000000) -- 黒背景
+					scr:draw_box(p1 and (139 - p.stun) or 181, 30, p1 and 139 or (181 + p.stun), 33, 0, 0xDDFF0000) -- 気絶値
+					draw_rtext_with_shadow(p1 and 135 or 190, 28, p.stun)
 
-					scr:draw_box(p1 and (138 - 90)           or 180, 35, p1 and 140 or (182 + 90)          , 40, 0, 0xDDC0C0C0) -- 枠
-					scr:draw_box(p1 and (139 - 90)           or 181, 36, p1 and 139 or (181 + 90)          , 39, 0, 0xDD000000) -- 黒背景
+					scr:draw_box(p1 and (138 - 90) or 180, 35, p1 and 140 or (182 + 90), 40, 0, 0xDDC0C0C0)      -- 枠
+					scr:draw_box(p1 and (139 - 90) or 181, 36, p1 and 139 or (181 + 90), 39, 0, 0xDD000000)      -- 黒背景
 					scr:draw_box(p1 and (139 - p.stun_timer) or 181, 36, p1 and 139 or (181 + p.stun_timer), 39, 0, 0xDDFFFF00) -- 気絶値
-					draw_rtext_with_shadow(p1 and 135   or 190  , 34  ,  p.stun_timer)
+					draw_rtext_with_shadow(p1 and 135 or 190, 34, p.stun_timer)
 				end
 			end
 
@@ -10481,11 +10556,11 @@ function rbff2.startplugin()
 							end
 							j = j + 1
 						end
-						draw_frame_groups(p.muteki.act_frames2 , p.act_frames_total, 30, p1 and 68 or 76, 3)
+						draw_frame_groups(p.muteki.act_frames2, p.act_frames_total, 30, p1 and 68 or 76, 3)
 						draw_frame_groups(p.frm_gap.act_frames2, p.act_frames_total, 30, p1 and 65 or 73, 3, true)
 					end
 					if p.disp_frm > 1 then
-						draw_frames(p.act_frames2, p1 and 160 or 285, true , true, p1 and 40 or 165, 63, 8, 16, p.disp_fbfrm)
+						draw_frames(p.act_frames2, p1 and 160 or 285, true, true, p1 and 40 or 165, 63, 8, 16, p.disp_fbfrm)
 					end
 				end
 				--フレーム差表示
@@ -10527,19 +10602,19 @@ function rbff2.startplugin()
 			local abs_space = math.abs(p_space)
 			if global.disp_pos then
 				local y = 216 -- math.floor(get_digit(abs_space)/2)
-				draw_rtext_with_shadow(167  , y    , abs_space)
+				draw_rtext_with_shadow(167, y, abs_space)
 
 				-- キャラの向き
 				for i, p in ipairs(players) do
-					local p1 = i == 1
-					local side   = p.side       == 1    and "(>)" or "(<)" -- 内部の向き 1:右向き -1:左向き
+					local p1     = i == 1
+					local side   = p.side == 1 and "(>)" or "(<)" -- 内部の向き 1:右向き -1:左向き
 					local i_side = p.input_side == 0x00 and "[>]" or "[<]" -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側 -- p.poslr
 					if p1 then
-						local flip_x = p.disp_side  == 1 and  ">"  or  "<"  -- 判定の向き 1:右向き -1:左向き
+						local flip_x = p.disp_side == 1 and ">" or "<" -- 判定の向き 1:右向き -1:左向き
 						draw_rtext_with_shadow(150, y, string.format("%s%s%s", flip_x, side, i_side))
 					else
-						local flip_x = p.disp_side  == 1 and  "<"  or  ">"  -- 判定の向き 1:左向き -1:右向き
-						draw_text_with_shadow (170, y, string.format("%s%s%s", i_side, side, flip_x))
+						local flip_x = p.disp_side == 1 and "<" or ">" -- 判定の向き 1:左向き -1:右向き
+						draw_text_with_shadow(170, y, string.format("%s%s%s", i_side, side, flip_x))
 					end
 				end
 			end
@@ -10553,11 +10628,11 @@ function rbff2.startplugin()
 					local oct_vt = ggkey_set[i].oct_vt
 					local key_xy = ggkey_set[i].key_xy
 					local tracks, max_track = {}, 6 -- 軌跡をつくる 軌跡は6個まで
-					scr:draw_box(xoffset - 13, yoffset-13, xoffset+35, yoffset+13, 0x80404040, 0x80404040)
+					scr:draw_box(xoffset - 13, yoffset - 13, xoffset + 35, yoffset + 13, 0x80404040, 0x80404040)
 					for ni = 1, 8 do -- 八角形描画
 						local prev = ni > 1 and ni - 1 or 8
 						local xy1, xy2 = oct_vt[ni], oct_vt[prev]
-						scr:draw_line(xy1.x , xy1.y , xy2.x , xy2.y , 0xDDCCCCCC)
+						scr:draw_line(xy1.x, xy1.y, xy2.x, xy2.y, 0xDDCCCCCC)
 						scr:draw_line(xy1.x1, xy1.y1, xy2.x1, xy2.y1, 0xDDCCCCCC)
 						scr:draw_line(xy1.x2, xy1.y2, xy2.x2, xy2.y2, 0xDDCCCCCC)
 						scr:draw_line(xy1.x3, xy1.y3, xy2.x3, xy2.y3, 0xDDCCCCCC)
@@ -10573,20 +10648,20 @@ function rbff2.startplugin()
 							end
 						end
 					end
-					local fixj = max_track - #tracks -- 軌跡の上限補正用
+					local fixj = max_track - #tracks   -- 軌跡の上限補正用
 					for j, track in ipairs(tracks) do
-						local col = 0xFF0000FF + 0x002A0000 * (fixj+j) -- 青→ピンクのグラデーション
+						local col = 0xFF0000FF + 0x002A0000 * (fixj + j) -- 青→ピンクのグラデーション
 						local xy1, xy2 = track.xy1, track.xy2
 						if xy1.x == xy2.x then
-							scr:draw_box (xy1.x-0.6, xy1.y , xy2.x+0.6, xy2.y, col, col)
+							scr:draw_box(xy1.x - 0.6, xy1.y, xy2.x + 0.6, xy2.y, col, col)
 						elseif xy1.y == xy2.y then
-							scr:draw_box (xy1.x, xy1.y-0.6, xy2.x, xy2.y+0.6, col, col)
+							scr:draw_box(xy1.x, xy1.y - 0.6, xy2.x, xy2.y + 0.6, col, col)
 						elseif xy1.op == xy2.no or xy1.dg1 == xy2.no or xy1.dg2 == xy2.no or xy1.no == 9 or xy2.no == 9 then
 							for k = -0.6, 0.6, 0.3 do
-								scr:draw_line(xy1.x+k, xy1.y+k, xy2.x+k, xy2.y+k, col)
+								scr:draw_line(xy1.x + k, xy1.y + k, xy2.x + k, xy2.y + k, col)
 							end
 						else
-							scr:draw_line(xy1.x , xy1.y , xy2.x , xy2.y , col)
+							scr:draw_line(xy1.x, xy1.y, xy2.x, xy2.y, col)
 							scr:draw_line(xy1.x1, xy1.y1, xy2.x1, xy2.y1, col)
 							scr:draw_line(xy1.x2, xy1.y2, xy2.x2, xy2.y2, col)
 							scr:draw_line(xy1.x3, xy1.y3, xy2.x3, xy2.y3, col)
@@ -10637,7 +10712,7 @@ function rbff2.startplugin()
 
 			-- レコーディング状態表示
 			if global.disp_replay and (global.dummy_mode == 5 or global.dummy_mode == 6) then
-				scr:draw_box (260-25, 208-8, 320-5, 224, 0xBB404040, 0xBB404040)
+				scr:draw_box(260 - 25, 208 - 8, 320 - 5, 224, 0xBB404040, 0xBB404040)
 				if global.rec_main == rec_await_1st_input then
 					-- 初回入力まち
 					scr:draw_text(265, 204, "● REC " .. #recording.active_slot.name, 0xFFFF1133)
@@ -10648,27 +10723,27 @@ function rbff2.startplugin()
 				elseif global.rec_main == rec_input then
 					-- 入力中
 					scr:draw_text(265, 204, "● REC " .. #recording.active_slot.name, 0xFFFF1133)
-					scr:draw_text(265, 212, frame_to_time(3601-#recording.active_slot.store), 0xFFFF1133)
+					scr:draw_text(265, 212, frame_to_time(3601 - #recording.active_slot.store), 0xFFFF1133)
 				elseif global.rec_main == rec_repeat_play then
 					-- 自動リプレイまち
-					scr:draw_text(265-15, 204, "■ リプレイ中", 0xFFFFFFFF)
-					scr:draw_text(265-15, 212, "スタートおしっぱでメニュー", 0xFFFFFFFF)
+					scr:draw_text(265 - 15, 204, "■ リプレイ中", 0xFFFFFFFF)
+					scr:draw_text(265 - 15, 212, "スタートおしっぱでメニュー", 0xFFFFFFFF)
 				elseif global.rec_main == rec_play then
 					-- リプレイ中
-					scr:draw_text(265-15, 204, "■ リプレイ中", 0xFFFFFFFF)
-					scr:draw_text(265-15, 212, "スタートおしっぱでメニュー", 0xFFFFFFFF)
+					scr:draw_text(265 - 15, 204, "■ リプレイ中", 0xFFFFFFFF)
+					scr:draw_text(265 - 15, 212, "スタートおしっぱでメニュー", 0xFFFFFFFF)
 				elseif global.rec_main == rec_play_interval then
 					-- リプレイまち
-					scr:draw_text(265-15, 204, "■ リプレイ中", 0xFFFFFFFF)
-					scr:draw_text(265-15, 212, "スタートおしっぱでメニュー", 0xFFFFFFFF)
+					scr:draw_text(265 - 15, 204, "■ リプレイ中", 0xFFFFFFFF)
+					scr:draw_text(265 - 15, 212, "スタートおしっぱでメニュー", 0xFFFFFFFF)
 				elseif global.rec_main == rec_await_play then
 					-- リプレイまち
-					scr:draw_text(265-15, 204, "■ スタートでリプレイ", 0xFFFFFFFF)
-					scr:draw_text(265-15, 212, "スタートおしっぱでメニュー", 0xFFFFFFFF)
+					scr:draw_text(265 - 15, 204, "■ スタートでリプレイ", 0xFFFFFFFF)
+					scr:draw_text(265 - 15, 212, "スタートおしっぱでメニュー", 0xFFFFFFFF)
 				elseif global.rec_main == rec_fixpos then
 					-- 開始位置記憶中
 					scr:draw_text(265, 204, "● 位置REC " .. #recording.active_slot.name, 0xFFFF1133)
-					scr:draw_text(265-15, 212, "スタートでメニュー", 0xFFFF1133)
+					scr:draw_text(265 - 15, 212, "スタートでメニュー", 0xFFFF1133)
 				elseif global.rec_main == rec_await_1st_input then
 				end
 			end
@@ -10686,7 +10761,7 @@ function rbff2.startplugin()
 				p.act,
 				p.acta,
 				p.attack
-				--,	p.act_count, p.act_frame
+			--,	p.act_count, p.act_frame
 			)
 			for _, box in ipairs(p.hitboxes) do
 				local atk, air = " ", " "
@@ -10704,11 +10779,11 @@ function rbff2.startplugin()
 
 				local tw, range = " ", " "
 				if box.type == box_type_base.t then
-					tw, range = "NT", string.format("%sx%s", math.abs(box.left-box.right), math.abs(box.top-box.bottom))
+					tw, range = "NT", string.format("%sx%s", math.abs(box.left - box.right), math.abs(box.top - box.bottom))
 				elseif box.type == box_type_base.at then
-					tw, range = "AT", string.format("%sx%s", math.abs(box.left-box.right), math.abs(box.top-box.bottom))
+					tw, range = "AT", string.format("%sx%s", math.abs(box.left - box.right), math.abs(box.top - box.bottom))
 				elseif box.type == box_type_base.pt then
-					tw, range = "PT", string.format("%sx%s", math.abs(box.left-box.right), math.abs(box.top-box.bottom))
+					tw, range = "PT", string.format("%sx%s", math.abs(box.left - box.right), math.abs(box.top - box.bottom))
 				else
 					tw, range = "", ""
 				end
@@ -10727,7 +10802,6 @@ function rbff2.startplugin()
 	emu.register_menu(function(index, event) return false end, {}, "RB2 Training")
 
 	emu.register_frame(function() end)
-
 	-- メニュー表示
 	local menu_max_row = 13
 	local menu_label_off_on = { "OFF", "ON" }
@@ -10759,29 +10833,28 @@ function rbff2.startplugin()
 		end
 	end
 	local menu_to_main = function(cancel, do_init)
-		local col = tra_menu.pos.col
-		local row = tra_menu.pos.row
-		local p   = players
+		local col               = tra_menu.pos.col
+		local row               = tra_menu.pos.row
+		local p                 = players
 
-		global.dummy_mode        = col[ 1]      -- ダミーモード           1
-		--                              2          レコード・リプレイ設定 2
-		p[1].dummy_act           = col[ 3]      -- 1P アクション          3
-		p[2].dummy_act           = col[ 4]      -- 2P アクション          4
-		p[1].dummy_gd            = col[ 5]      -- 1P ガード              5
-		p[2].dummy_gd            = col[ 6]      -- 2P ガード              6
-		global.next_block_grace  = col[ 7] - 1  -- 1ガード持続フレーム数  7
-		global.dummy_bs_cnt      = col[ 8]      -- ブレイクショット設定   8
-		p[1].dummy_wakeup        = col[ 9]      -- 1P やられ時行動        9
-		p[2].dummy_wakeup        = col[10]      -- 2P やられ時行動       10
-		global.dummy_rvs_cnt     = col[11]      -- ガードリバーサル設定  11
-		p[2].no_hit_limit        = col[12] - 1  -- 1P 強制空振り         12
-		p[1].no_hit_limit        = col[13] - 1  -- 2P 強制空振り         13
-		p[1].fwd_prov            = col[14] == 2 -- 1P 挑発で前進         14
-		p[2].fwd_prov            = col[15] == 2 -- 2P 挑発で前進         15
-		p[1].force_y_pos         = col[16]      -- 1P Y座標強制          16
-		p[2].force_y_pos         = col[17]      -- 2P Y座標強制          17
-		global.sync_pos_x        = col[18]      -- X座標同期             18
-
+		global.dummy_mode       = col[1]  -- ダミーモード
+		-- レコード・リプレイ設定
+		p[1].dummy_act          = col[3]  -- 1P アクション
+		p[2].dummy_act          = col[4]  -- 2P アクション
+		p[1].dummy_gd           = col[5]  -- 1P ガード
+		p[2].dummy_gd           = col[6]  -- 2P ガード
+		global.next_block_grace = col[7] - 1 -- 1ガード持続フレーム数
+		global.dummy_bs_cnt     = col[8]  -- ブレイクショット設定
+		p[1].dummy_wakeup       = col[9]  -- 1P やられ時行動
+		p[2].dummy_wakeup       = col[10] -- 2P やられ時行動
+		global.dummy_rvs_cnt    = col[11] -- ガードリバーサル設定
+		p[2].no_hit_limit       = col[12] - 1 -- 1P 強制空振り
+		p[1].no_hit_limit       = col[13] - 1 -- 2P 強制空振り
+		p[1].fwd_prov           = col[14] == 2 -- 1P 挑発で前進
+		p[2].fwd_prov           = col[15] == 2 -- 2P 挑発で前進
+		p[1].force_y_pos        = col[16] -- 1P Y座標強制
+		p[2].force_y_pos        = col[17] -- 2P Y座標強制
+		global.sync_pos_x       = col[18] -- X座標同期
 		for _, p in ipairs(players) do
 			if p.dummy_gd == dummy_gd_type.hit1 then
 				p.next_block = false
@@ -10813,19 +10886,18 @@ function rbff2.startplugin()
 			-- リプレイ
 			-- 設定でリプレイに入らずに抜けたとき用にモードを1に戻しておく
 			global.dummy_mode = 1
-			play_menu.pos.col[11] = recording.do_repeat and 2 or 1   -- 繰り返し          11
-			play_menu.pos.col[12] = recording.repeat_interval + 1    -- 繰り返し間隔      12
-			play_menu.pos.col[13] = global.await_neutral and 2 or 1  -- 繰り返し開始条件  13
-			play_menu.pos.col[14] = global.replay_fix_pos            -- 開始間合い固定    14
-			play_menu.pos.col[15] = global.replay_reset              -- 状態リセット      15
-			play_menu.pos.col[16] = global.disp_replay and 2 or 1    -- ガイド表示        16
-			play_menu.pos.col[17] = global.replay_stop_on_dmg  and 2 or 1 -- ダメージでリプレイ中止 17
+			play_menu.pos.col[11] = recording.do_repeat and 2 or 1 -- 繰り返し
+			play_menu.pos.col[12] = recording.repeat_interval + 1 -- 繰り返し間隔
+			play_menu.pos.col[13] = global.await_neutral and 2 or 1 -- 繰り返し開始条件
+			play_menu.pos.col[14] = global.replay_fix_pos        -- 開始間合い固定
+			play_menu.pos.col[15] = global.replay_reset          -- 状態リセット
+			play_menu.pos.col[16] = global.disp_replay and 2 or 1 -- ガイド表示
+			play_menu.pos.col[17] = global.replay_stop_on_dmg and 2 or 1 -- ダメージでリプレイ中止
 			if not cancel and row == 1 then
 				menu_cur = play_menu
 				return
 			end
 		end
-
 		-- プレイヤー選択しなおしなどで初期化したいときはサブメニュー遷移しない
 		if do_init ~= true then
 			-- 設定後にメニュー遷移
@@ -10856,76 +10928,75 @@ function rbff2.startplugin()
 	for i = 1, 0x3C do
 		table.insert(pow_range, i)
 	end
-	local bar_menu_to_main = function(cancel)
-		local col = bar_menu.pos.col
-		local p   = players
-		--                              1                                      1
-		p[1].red                 = col[ 2]      -- 1P 体力ゲージ量             2
-		p[2].red                 = col[ 3]      -- 2P 体力ゲージ量             3
-		p[1].max                 = col[ 4]      -- 1P POWゲージ量              4
-		p[2].max                 = col[ 5]      -- 2P POWゲージ量              5
-		dip_config.infinity_life = col[ 6] == 2 -- 体力ゲージモード            6
-		global.pow_mode          = col[ 7]      -- POWゲージモード             7
+	local bar_menu_to_main         = function(cancel)
+		local col                = bar_menu.pos.col
+		local p                  = players
+		--  タイトルラベル
+		p[1].red                 = col[2] -- 1P 体力ゲージ量
+		p[2].red                 = col[3] -- 2P 体力ゲージ量
+		p[1].max                 = col[4] -- 1P POWゲージ量
+		p[2].max                 = col[5] -- 2P POWゲージ量
+		dip_config.infinity_life = col[6] == 2 -- 体力ゲージモード
+		global.pow_mode          = col[7] -- POWゲージモード
 
-		menu_cur = main_menu
+		menu_cur                 = main_menu
 	end
-	local bar_menu_to_main_cancel = function()
+	local bar_menu_to_main_cancel  = function()
 		bar_menu_to_main(true)
 	end
-	local disp_menu_to_main = function(cancel)
-		local col = disp_menu.pos.col
-		local p   = players
-		--                              1                               1
-		p[1].disp_hitbox         = col[ 2]      -- 1P 判定表示          2
-		p[2].disp_hitbox         = col[ 3]      -- 2P 判定表示          3
-		p[1].disp_range          = col[ 4]      -- 1P 間合い表示        4
-		p[2].disp_range          = col[ 5]      -- 2P 間合い表示        5
-		p[1].disp_stun           = col[ 6] == 2 -- 1P 気絶ゲージ表示    6
-		p[2].disp_stun           = col[ 7] == 2 -- 2P 気絶ゲージ表示    7
-		p[1].disp_dmg            = col[ 8] == 2 -- 1P ダメージ表示      8
-		p[2].disp_dmg            = col[ 9] == 2 -- 2P ダメージ表示      9
-		p[1].disp_cmd            = col[10]      -- 1P 入力表示         10
-		p[2].disp_cmd            = col[11]      -- 2P 入力表示         11
-		global.disp_input_sts    = col[12]      -- コマンド入力状態表示12
-		global.disp_frmgap       = col[13]      -- フレーム差表示      13
-		p[1].disp_frm            = col[14]      -- 1P フレーム数表示   14
-		p[2].disp_frm            = col[15]      -- 2P フレーム数表示   15
-		p[1].disp_fbfrm          = col[16] == 2 -- 1P 弾フレーム数表示 16
-		p[2].disp_fbfrm          = col[17] == 2 -- 2P 弾フレーム数表示 17
-		p[1].disp_sts            = col[18]      -- 1P 状態表示         18
-		p[2].disp_sts            = col[19]      -- 2P 状態表示         19
-		p[1].disp_base           = col[20] == 2 -- 1P 処理アドレス表示 20
-		p[2].disp_base           = col[21] == 2 -- 2P 処理アドレス表示 21
-		global.disp_pos          = col[22] == 2 -- 1P 2P 距離表示      22
-		p[1].disp_char           = col[23] == 2 -- 1P キャラ表示       23
-		p[2].disp_char           = col[24] == 2 -- 2P キャラ表示       24
-		global.disp_effect       = col[25] == 2 -- エフェクト表示      25
-
-		menu_cur = main_menu
+	local disp_menu_to_main        = function(cancel)
+		local col             = disp_menu.pos.col
+		local p               = players
+		--  タイトルラベル
+		p[1].disp_hitbox      = col[2]    -- 1P 判定表示
+		p[2].disp_hitbox      = col[3]    -- 2P 判定表示
+		p[1].disp_range       = col[4]    -- 1P 間合い表示
+		p[2].disp_range       = col[5]    -- 2P 間合い表示
+		p[1].disp_stun        = col[6] == 2 -- 1P 気絶ゲージ表示
+		p[2].disp_stun        = col[7] == 2 -- 2P 気絶ゲージ表示
+		p[1].disp_dmg         = col[8] == 2 -- 1P ダメージ表示
+		p[2].disp_dmg         = col[9] == 2 -- 2P ダメージ表示
+		p[1].disp_cmd         = col[10]   -- 1P 入力表示
+		p[2].disp_cmd         = col[11]   -- 2P 入力表示
+		global.disp_input_sts = col[12]   -- コマンド入力状態表示
+		global.disp_frmgap    = col[13]   -- フレーム差表示
+		p[1].disp_frm         = col[14]   -- 1P フレーム数表示
+		p[2].disp_frm         = col[15]   -- 2P フレーム数表示
+		p[1].disp_fbfrm       = col[16] == 2 -- 1P 弾フレーム数表示
+		p[2].disp_fbfrm       = col[17] == 2 -- 2P 弾フレーム数表示
+		p[1].disp_sts         = col[18]   -- 1P 状態表示
+		p[2].disp_sts         = col[19]   -- 2P 状態表示
+		p[1].disp_base        = col[20] == 2 -- 1P 処理アドレス表示
+		p[2].disp_base        = col[21] == 2 -- 2P 処理アドレス表示
+		global.disp_pos       = col[22] == 2 -- 1P 2P 距離表示
+		p[1].disp_char        = col[23] == 2 -- 1P キャラ表示
+		p[2].disp_char        = col[24] == 2 -- 2P キャラ表示
+		global.disp_effect    = col[25] == 2 -- エフェクト表示
+		menu_cur              = main_menu
 	end
 	local disp_menu_to_main_cancel = function()
 		disp_menu_to_main(true)
 	end
-	local ex_menu_to_main = function(cancel)
-		local col = ex_menu.pos.col
-		local p   = players
-		--                              1                                 1
-		dip_config.easy_super    = col[ 2] == 2 -- 簡易超必               2
-		dip_config.semiauto_p    = col[ 3] == 2 -- 半自動潜在能力         3
-		p[1].dis_plain_shift     = col[ 4] == 2 or col[ 4] == 3 -- ライン送らない現象     4 
-		p[2].dis_plain_shift     = col[ 4] == 2 or col[ 4] == 4 -- ライン送らない現象     4
-		global.pause_hit         = col[ 5]      -- ヒット時にポーズ       5
-		global.pause_hitbox      = col[ 6]      -- 判定発生時にポーズ     6
-		global.save_snapshot     = col[ 7]      -- 技画像保存             7
-		global.mame_debug_wnd    = col[ 8] == 2 -- MAMEデバッグウィンドウ 8
-		global.damaged_move      = col[ 9]      -- ヒット効果確認用       9
-		global.log.poslog        = col[10] == 2 -- 位置ログ              10
-		global.log.atklog        = col[11] == 2 -- 攻撃情報ログ          11
-		global.log.baselog       = col[12] == 2 -- 処理アドレスログ      12
-		global.log.keylog        = col[13] == 2 -- 入力ログ              13
-		global.log.rvslog        = col[14] == 2 -- リバサログ            14
+	local ex_menu_to_main          = function(cancel)
+		local col             = ex_menu.pos.col
+		local p               = players
+		-- タイトルラベル
+		dip_config.easy_super = col[2] == 2               -- 簡易超必
+		dip_config.semiauto_p = col[3] == 2               -- 半自動潜在能力
+		p[1].dis_plain_shift  = col[4] == 2 or col[4] == 3 -- ライン送らない現象
+		p[2].dis_plain_shift  = col[4] == 2 or col[4] == 4 -- ライン送らない現象
+		global.pause_hit      = col[5]                    -- ヒット時にポーズ
+		global.pause_hitbox   = col[6]                    -- 判定発生時にポーズ
+		global.save_snapshot  = col[7]                    -- 技画像保存
+		global.mame_debug_wnd = col[8] == 2               -- MAMEデバッグウィンドウ
+		global.damaged_move   = col[9]                    -- ヒット効果確認用
+		global.log.poslog     = col[10] == 2              -- 位置ログ
+		global.log.atklog     = col[11] == 2              -- 攻撃情報ログ
+		global.log.baselog    = col[12] == 2              -- 処理アドレスログ
+		global.log.keylog     = col[13] == 2              -- 入力ログ
+		global.log.rvslog     = col[14] == 2              -- リバサログ
 
-		local dmove = damaged_moves[global.damaged_move]
+		local dmove           = damaged_moves[global.damaged_move]
 		if dmove and dmove > 0 then
 			for i = 0x0579BA, 0x057B02, 4 do
 				pgm:write_direct_u32(fix_bp_addr(i), dmove == 0 and 0 or fix_bp_addr(dmove))
@@ -10941,27 +11012,27 @@ function rbff2.startplugin()
 
 		menu_cur = main_menu
 	end
-	local ex_menu_to_main_cancel = function()
+	local ex_menu_to_main_cancel   = function()
 		ex_menu_to_main(true)
 	end
-	local auto_menu_to_main = function(cancel)
-		local col = auto_menu.pos.col
-		-- 自動入力設定                                                          1
-		global.auto_input.otg_thw      = col[ 2] == 2 -- ダウン投げ              2
-		global.auto_input.otg_atk      = col[ 3] == 2 -- ダウン攻撃              3
-		global.auto_input.thw_otg      = col[ 4] == 2 -- 通常投げの派生技        4
-		global.auto_input.rave         = col[ 5]      -- デッドリーレイブ        5
-		global.auto_input.desire       = col[ 6]      -- アンリミテッドデザイア  6
-		global.auto_input.drill        = col[ 7]      -- ドリル                  7
-		global.auto_input.pairon       = col[ 8]      -- 超白龍                  8
-		global.auto_input.real_counter = col[ 9]      -- M.リアルカウンター      9
-		global.auto_input.auto_3ecst   = col[10] == 2 -- M.トリプルエクスタシー  9
-		global.auto_input.auto_taneuma = col[11] == 2 -- 炎の種馬               10
-		global.auto_input.auto_katsu   = col[12] == 2 -- 喝CA                   11
-		-- 入力設定                                                             13
-		global.auto_input.esaka_check  = col[14] == 2 -- 詠酒距離チェック       14
-		global.auto_input.fast_kadenzer= col[15] == 2 -- 必勝！逆襲拳           15
-		global.auto_input.kara_ca      = col[16] == 2 -- 空振りCA               16
+	local auto_menu_to_main        = function(cancel)
+		local col                       = auto_menu.pos.col
+		-- 自動入力設定
+		global.auto_input.otg_thw       = col[2] == 2 -- ダウン投げ
+		global.auto_input.otg_atk       = col[3] == 2 -- ダウン攻撃
+		global.auto_input.thw_otg       = col[4] == 2 -- 通常投げの派生技
+		global.auto_input.rave          = col[5] -- デッドリーレイブ
+		global.auto_input.desire        = col[6] -- アンリミテッドデザイア
+		global.auto_input.drill         = col[7] -- ドリル
+		global.auto_input.pairon        = col[8] -- 超白龍
+		global.auto_input.real_counter  = col[9] -- M.リアルカウンター
+		global.auto_input.auto_3ecst    = col[10] == 2 -- M.トリプルエクスタシー
+		global.auto_input.auto_taneuma  = col[11] == 2 -- 炎の種馬
+		global.auto_input.auto_katsu    = col[12] == 2 -- 喝CA
+		-- 入力設定
+		global.auto_input.esaka_check   = col[14] == 2 -- 詠酒距離チェック
+		global.auto_input.fast_kadenzer = col[15] == 2 -- 必勝！逆襲拳
+		global.auto_input.kara_ca       = col[16] == 2 -- 空振りCA
 
 		for _, p in ipairs(players) do
 			set_auto_deadly(p, global.auto_input.rave)
@@ -10979,7 +11050,7 @@ function rbff2.startplugin()
 	local auto_menu_to_main_cancel = function()
 		auto_menu_to_main(true)
 	end
-	local box_type_col_list = {
+	local box_type_col_list        = {
 		box_type_base.a, box_type_base.fa, box_type_base.da, box_type_base.aa, box_type_base.faa, box_type_base.daa,
 		box_type_base.pa, box_type_base.pfa, box_type_base.pda, box_type_base.paa, box_type_base.pfaa, box_type_base.pdaa,
 		box_type_base.t3, box_type_base.t, box_type_base.at, box_type_base.pt,
@@ -10989,48 +11060,47 @@ function rbff2.startplugin()
 		box_type_base.g1, box_type_base.g2, box_type_base.g3, box_type_base.g4, box_type_base.g5, box_type_base.g6,
 		box_type_base.g7, box_type_base.g8, box_type_base.g9, box_type_base.g10, box_type_base.g11, box_type_base.g12,
 		box_type_base.g13, box_type_base.g14, box_type_base.g15, box_type_base.g16, }
-	local col_menu_to_main = function(cancel)
+	local col_menu_to_main         = function(cancel)
 		local col = col_menu.pos.col
 
 		for i = 2, #col do
-			box_type_col_list[i-1].enabled = col[i] == 2
+			box_type_col_list[i - 1].enabled = col[i] == 2
 		end
 
 		menu_cur = main_menu
 	end
-	local col_menu_to_main_cancel = function()
+	local col_menu_to_main_cancel  = function()
 		col_menu_to_main(true)
 	end
-
-	local menu_rec_to_tra = function() menu_cur = tra_menu end
-	local exit_menu_to_rec = function(slot_no)
-		local ec = scr:frame_number()
-		global.dummy_mode = 5
-		global.rec_main = rec_await_no_input
+	local menu_rec_to_tra          = function() menu_cur = tra_menu end
+	local exit_menu_to_rec         = function(slot_no)
+		local ec              = scr:frame_number()
+		global.dummy_mode     = 5
+		global.rec_main       = rec_await_no_input
 		global.input_accepted = ec
 		-- 選択したプレイヤー側の反対側の操作をいじる
 		recording.temp_player = (pgm:read_u8(players[1].addr.reg_pcnt) ~= 0xFF) and 2 or 1
 		recording.last_slot   = slot_no
 		recording.active_slot = recording.slot[slot_no]
-		menu_cur = main_menu
+		menu_cur              = main_menu
 		menu_exit()
 	end
 	local exit_menu_to_play_common = function()
 		local col = play_menu.pos.col
 		recording.live_slots = recording.live_slots or {}
 		for i = 1, #recording.slot do
-			recording.live_slots[i] = (col[i+1] == 2)
+			recording.live_slots[i] = (col[i + 1] == 2)
 		end
-		recording.do_repeat       = col[11] == 2 -- 繰り返し          11
-		recording.repeat_interval = col[12] - 1  -- 繰り返し間隔      12
-		global.await_neutral      = col[13] == 2 -- 繰り返し開始条件  13
-		global.replay_fix_pos     = col[14]      -- 開始間合い固定    14
-		global.replay_reset       = col[15]      -- 状態リセット      15
-		global.disp_replay        = col[16] == 2 -- ガイド表示        16
-		global.replay_stop_on_dmg = col[17] == 2 -- ダメージでリプレイ中止 17
+		recording.do_repeat       = col[11] == 2 -- 繰り返し
+		recording.repeat_interval = col[12] - 1 -- 繰り返し間隔
+		global.await_neutral      = col[13] == 2 -- 繰り返し開始条件
+		global.replay_fix_pos     = col[14] -- 開始間合い固定
+		global.replay_reset       = col[15] -- 状態リセット
+		global.disp_replay        = col[16] == 2 -- ガイド表示
+		global.replay_stop_on_dmg = col[17] == 2 -- ダメージでリプレイ中止
 		global.repeat_interval    = recording.repeat_interval
 	end
-	local exit_menu_to_rec_pos = function()
+	local exit_menu_to_rec_pos     = function()
 		local ec = scr:frame_number()
 		global.dummy_mode = 5 -- レコードモードにする
 		global.rec_main = rec_fixpos
@@ -11041,7 +11111,7 @@ function rbff2.startplugin()
 		menu_cur = main_menu
 		menu_exit()
 	end
-	local exit_menu_to_play = function()
+	local exit_menu_to_play        = function()
 		local col = play_menu.pos.col
 
 		if play_menu.pos.row == 14 and col[14] == 2 then -- 開始間合い固定 / 記憶
@@ -11056,7 +11126,7 @@ function rbff2.startplugin()
 		exit_menu_to_play_common()
 		menu_cur = main_menu
 		menu_exit()
- 	end
+	end
 	local exit_menu_to_play_cancel = function()
 		local ec = scr:frame_number()
 		global.dummy_mode = 6 -- リプレイモードにする
@@ -11065,132 +11135,132 @@ function rbff2.startplugin()
 		exit_menu_to_play_common()
 		menu_to_tra()
 	end
-	local init_menu_config = function()
+	local init_menu_config         = function()
 		local col = tra_menu.pos.col
 		local p = players
 		local g = global
-		col[ 1] = g.dummy_mode             -- ダミーモード           1
-		--   2                                レコード・リプレイ設定 2
-		col[ 3] = p[1].dummy_act           -- 1P アクション          3
-		col[ 4] = p[2].dummy_act           -- 2P アクション          4
-		col[ 5] = p[1].dummy_gd            -- 1P ガード              5
-		col[ 6] = p[2].dummy_gd            -- 2P ガード              6
-		col[ 7] = g.next_block_grace + 1   -- 1ガード持続フレーム数  7
-		col[ 8] = g.dummy_bs_cnt           -- ブレイクショット設定   8
-		col[ 9] = p[1].dummy_wakeup        -- 1P やられ時行動        9
-		col[10] = p[2].dummy_wakeup        -- 2P やられ時行動       10
-		col[11] = g.dummy_rvs_cnt          -- ガードリバーサル設定  11
-		col[12] = p[2].no_hit_limit + 1    -- 1P 強制空振り         12
-		col[13] = p[1].no_hit_limit + 1    -- 2P 強制空振り         13
-		col[14] = p[1].fwd_prov and 2 or 1 -- 1P 挑発で前進         14
-		col[15] = p[2].fwd_prov and 2 or 1 -- 2P 挑発で前進         15
-		col[16] = p[1].force_y_pos         -- 1P Y座標強制          16
-		col[17] = p[2].force_y_pos         -- 2P Y座標強制          17
-		g.sync_pos_x = col[18]             -- X座標同期             18
+		col[1] = g.dummy_mode        -- ダミーモード
+		-- -- レコード・リプレイ設定
+		col[3] = p[1].dummy_act      -- 1P アクション
+		col[4] = p[2].dummy_act      -- 2P アクション
+		col[5] = p[1].dummy_gd       -- 1P ガード
+		col[6] = p[2].dummy_gd       -- 2P ガード
+		col[7] = g.next_block_grace + 1 -- 1ガード持続フレーム数
+		col[8] = g.dummy_bs_cnt      -- ブレイクショット設定
+		col[9] = p[1].dummy_wakeup   -- 1P やられ時行動
+		col[10] = p[2].dummy_wakeup  -- 2P やられ時行動
+		col[11] = g.dummy_rvs_cnt    -- ガードリバーサル設定
+		col[12] = p[2].no_hit_limit + 1 -- 1P 強制空振り
+		col[13] = p[1].no_hit_limit + 1 -- 2P 強制空振り
+		col[14] = p[1].fwd_prov and 2 or 1 -- 1P 挑発で前進
+		col[15] = p[2].fwd_prov and 2 or 1 -- 2P 挑発で前進
+		col[16] = p[1].force_y_pos   -- 1P Y座標強制
+		col[17] = p[2].force_y_pos   -- 2P Y座標強制
+		g.sync_pos_x = col[18]       -- X座標同期
 	end
-	local init_bar_menu_config = function()
+	local init_bar_menu_config     = function()
 		local col = bar_menu.pos.col
 		local p = players
 		local g = global
 		--   1                                                        1
-		col[ 2] = p[1].red                  -- 1P 体力ゲージ量        2
-		col[ 3] = p[2].red                  -- 2P 体力ゲージ量        3
-		col[ 4] = p[1].max                  -- 1P POWゲージ量         4
-		col[ 5] = p[2].max                  -- 2P POWゲージ量         5
-		col[ 6] = dip_config.infinity_life and 2 or 1 -- 体力ゲージモード 6
-		col[ 7] = g.pow_mode                -- POWゲージモード        7
+		col[2] = p[1].red                      -- 1P 体力ゲージ量
+		col[3] = p[2].red                      -- 2P 体力ゲージ量
+		col[4] = p[1].max                      -- 1P POWゲージ量
+		col[5] = p[2].max                      -- 2P POWゲージ量
+		col[6] = dip_config.infinity_life and 2 or 1 -- 体力ゲージモード
+		col[7] = g.pow_mode                    -- POWゲージモード
 	end
-	local init_disp_menu_config = function()
+	local init_disp_menu_config    = function()
 		local col = disp_menu.pos.col
 		local p = players
 		local g = global
-		--   1                                                          1
-		col[ 2] = p[1].disp_hitbox             -- 判定表示              2
-		col[ 3] = p[2].disp_hitbox             -- 判定表示              3
-		col[ 4] = p[1].disp_range              -- 間合い表示            4
-		col[ 5] = p[2].disp_range              -- 間合い表示            5
-		col[ 6] = p[1].disp_stun and 2 or 1    -- 1P 気絶ゲージ表示     6
-		col[ 7] = p[2].disp_stun and 2 or 1    -- 2P 気絶ゲージ表示     7
-		col[ 8] = p[1].disp_dmg  and 2 or 1    -- 1P ダメージ表示       8
-		col[ 9] = p[2].disp_dmg  and 2 or 1    -- 2P ダメージ表示       9
-		col[10] = p[1].disp_cmd                -- 1P 入力表示          10
-		col[11] = p[2].disp_cmd                -- 2P 入力表示          11
-		col[12] = g.disp_input_sts             -- コマンド入力状態表示 12
-		col[13] = g.disp_frmgap                -- フレーム差表示       13
-		col[14] = p[1].disp_frm                -- 1P フレーム数表示    14
-		col[15] = p[2].disp_frm                -- 2P フレーム数表示    15
-		col[16] = p[1].disp_fbfrm and 2 or 1   -- 1P 弾フレーム数表示  16
-		col[17] = p[2].disp_fbfrm and 2 or 1   -- 2P 弾フレーム数表示  17
-		col[18] = p[1].disp_sts                -- 1P 状態表示          18
-		col[19] = p[2].disp_sts                -- 2P 状態表示          19
-		col[20] = p[1].disp_base and 2 or 1    -- 1P 処理アドレス表示  20
-		col[21] = p[2].disp_base and 2 or 1    -- 2P 処理アドレス表示  21
-		col[22] = g.disp_pos     and 2 or 1    -- 1P 2P 距離表示       22
-		col[23] = p[1].disp_char and 2 or 1    -- 1P キャラ表示        23
-		col[24] = p[2].disp_char and 2 or 1    -- 2P キャラ表示        24
-		col[25] = g.disp_effect  and 2 or 1    -- エフェクト表示       25
+		-- タイトルラベル
+		col[2] = p[1].disp_hitbox      -- 判定表示
+		col[3] = p[2].disp_hitbox      -- 判定表示
+		col[4] = p[1].disp_range       -- 間合い表示
+		col[5] = p[2].disp_range       -- 間合い表示
+		col[6] = p[1].disp_stun and 2 or 1 -- 1P 気絶ゲージ表示
+		col[7] = p[2].disp_stun and 2 or 1 -- 2P 気絶ゲージ表示
+		col[8] = p[1].disp_dmg and 2 or 1 -- 1P ダメージ表示
+		col[9] = p[2].disp_dmg and 2 or 1 -- 2P ダメージ表示
+		col[10] = p[1].disp_cmd        -- 1P 入力表示
+		col[11] = p[2].disp_cmd        -- 2P 入力表示
+		col[12] = g.disp_input_sts     -- コマンド入力状態表示
+		col[13] = g.disp_frmgap        -- フレーム差表示
+		col[14] = p[1].disp_frm        -- 1P フレーム数表示
+		col[15] = p[2].disp_frm        -- 2P フレーム数表示
+		col[16] = p[1].disp_fbfrm and 2 or 1 -- 1P 弾フレーム数表示
+		col[17] = p[2].disp_fbfrm and 2 or 1 -- 2P 弾フレーム数表示
+		col[18] = p[1].disp_sts        -- 1P 状態表示
+		col[19] = p[2].disp_sts        -- 2P 状態表示
+		col[20] = p[1].disp_base and 2 or 1 -- 1P 処理アドレス表示
+		col[21] = p[2].disp_base and 2 or 1 -- 2P 処理アドレス表示
+		col[22] = g.disp_pos and 2 or 1 -- 1P 2P 距離表示
+		col[23] = p[1].disp_char and 2 or 1 -- 1P キャラ表示
+		col[24] = p[2].disp_char and 2 or 1 -- 2P キャラ表示
+		col[25] = g.disp_effect and 2 or 1 -- エフェクト表示
 	end
-	local init_ex_menu_config = function()
+	local init_ex_menu_config      = function()
 		local col = ex_menu.pos.col
 		local p = players
 		local g = global
-		--   1                                                                1
-		col[ 2] = dip_config.easy_super and 2 or 1  -- 簡易超必               2
-		col[ 3] = dip_config.semiauto_p and 2 or 1  -- 半自動潜在能力         3
-		col[ 4] = 1                                 -- ライン送らない現象     4
+		-- タイトルラベル
+		col[2] = dip_config.easy_super and 2 or 1 -- 簡易超必
+		col[3] = dip_config.semiauto_p and 2 or 1 -- 半自動潜在能力
+		col[4] = 1                          -- ライン送らない現象
 		if p[1].dis_plain_shift and p[2].dis_plain_shift then
-			col[ 4] = 2
+			col[4] = 2
 		elseif p[1].dis_plain_shift then
-			col[ 4] = 3
+			col[4] = 3
 		elseif p[2].dis_plain_shift then
-			col[ 4] = 4
+			col[4] = 4
 		end
-		col[ 5] = g.pause_hit              -- ヒット時にポーズ                5
-		col[ 6] = g.pause_hitbox           -- 判定発生時にポーズ              6
-		col[ 7] = g.save_snapshot          -- 技画像保存                      7
-		col[ 8] = g.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ       8
-		col[ 9] = g.damaged_move           -- ヒット効果確認用                9
-		col[10] = g.log.poslog  and 2 or 1 -- 位置ログ                       10
-		col[11] = g.log.atklog  and 2 or 1 -- 攻撃情報ログ                   11
-		col[12] = g.log.baselog and 2 or 1 -- 処理アドレスログ               12
-		col[13] = g.log.keylog  and 2 or 1 -- 入力ログ                       13
-		col[14] = g.log.rvslog  and 2 or 1 -- リバサログ                     14
+		col[5] = g.pause_hit           -- ヒット時にポーズ
+		col[6] = g.pause_hitbox        -- 判定発生時にポーズ
+		col[7] = g.save_snapshot       -- 技画像保存
+		col[8] = g.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ
+		col[9] = g.damaged_move        -- ヒット効果確認用
+		col[10] = g.log.poslog and 2 or 1 -- 位置ログ
+		col[11] = g.log.atklog and 2 or 1 -- 攻撃情報ログ
+		col[12] = g.log.baselog and 2 or 1 -- 処理アドレスログ
+		col[13] = g.log.keylog and 2 or 1 -- 入力ログ
+		col[14] = g.log.rvslog and 2 or 1 -- リバサログ
 	end
-	local init_auto_menu_config = function()
+	local init_auto_menu_config    = function()
 		local col = auto_menu.pos.col
 		local g = global
-		                                          -- 自動入力設定            1
-		col[ 2] = g.auto_input.otg_thw and 2 or 1 -- ダウン投げ              2
-		col[ 3] = g.auto_input.otg_atk and 2 or 1 -- ダウン攻撃              3
-		col[ 4] = g.auto_input.thw_otg and 2 or 1 -- 通常投げの派生技        4
-		col[ 5] = g.auto_input.rave               -- デッドリーレイブ        5
-		col[ 6] = g.auto_input.desire             -- アンリミテッドデザイア  6
-		col[ 7] = g.auto_input.drill              -- ドリル                  7
-		col[ 8] = g.auto_input.pairon             -- 超白龍                  8
-		col[ 9] = g.auto_input.real_counter       -- M.リアルカウンター      9
-		col[10] = g.auto_input.auto_3ecst and 2 or 1 -- M.トリプルエクスタシー 10
-		col[11] = global.auto_input.auto_taneuma and 2 or 1 -- 炎の種馬     11
-		col[12] = global.auto_input.auto_katsu   and 2 or 1 -- 喝CA         12
-		-- 入力設定                                                         13
-		col[14] = global.auto_input.esaka_check  and 2 or 1 -- 詠酒距離チェック 14
-		col[15] = global.auto_input.fast_kadenzer and 2 or 1 -- 必勝！逆襲拳 15
-		col[16] = global.auto_input.kara_ca      and 2 or 1 -- 空振りCA     16
+		-- -- 自動入力設定
+		col[2] = g.auto_input.otg_thw and 2 or 1       -- ダウン投げ
+		col[3] = g.auto_input.otg_atk and 2 or 1       -- ダウン攻撃
+		col[4] = g.auto_input.thw_otg and 2 or 1       -- 通常投げの派生技
+		col[5] = g.auto_input.rave                     -- デッドリーレイブ
+		col[6] = g.auto_input.desire                   -- アンリミテッドデザイア
+		col[7] = g.auto_input.drill                    -- ドリル
+		col[8] = g.auto_input.pairon                   -- 超白龍
+		col[9] = g.auto_input.real_counter             -- M.リアルカウンター
+		col[10] = g.auto_input.auto_3ecst and 2 or 1   -- M.トリプルエクスタシー
+		col[11] = global.auto_input.auto_taneuma and 2 or 1 -- 炎の種馬
+		col[12] = global.auto_input.auto_katsu and 2 or 1 -- 喝CA
+		-- -- 入力設定
+		col[14] = global.auto_input.esaka_check and 2 or 1 -- 詠酒距離チェック
+		col[15] = global.auto_input.fast_kadenzer and 2 or 1 -- 必勝！逆襲拳
+		col[16] = global.auto_input.kara_ca and 2 or 1 -- 空振りCA
 	end
-	local init_restart_fight = function()
+	local init_restart_fight       = function()
 	end
-	menu_to_tra  = function() menu_cur = tra_menu end
-	menu_to_bar  = function() menu_cur = bar_menu end
-	menu_to_disp = function() menu_cur = disp_menu end
-	menu_to_ex   = function() menu_cur = ex_menu end
-	menu_to_auto = function() menu_cur = auto_menu end
-	menu_to_col  = function() menu_cur = col_menu end
-	menu_exit = function()
+	menu_to_tra                    = function() menu_cur = tra_menu end
+	menu_to_bar                    = function() menu_cur = bar_menu end
+	menu_to_disp                   = function() menu_cur = disp_menu end
+	menu_to_ex                     = function() menu_cur = ex_menu end
+	menu_to_auto                   = function() menu_cur = auto_menu end
+	menu_to_col                    = function() menu_cur = col_menu end
+	menu_exit                      = function()
 		-- Bボタンでトレーニングモードへ切り替え
 		main_or_menu_state = tra_main
 		cls_joy()
 		cls_ps()
 	end
-	local menu_player_select = function()
+	local menu_player_select       = function()
 		--main_menu.pos.row = 1
 		cls_hook()
 		goto_player_select()
@@ -11211,17 +11281,17 @@ function rbff2.startplugin()
 			exit_menu_to_play()
 		end
 	end
-	local menu_restart_fight = function()
+	local menu_restart_fight       = function()
 		--main_menu.pos.row = 1
 		cls_hook()
 		global.disp_gauge = main_menu.pos.col[15] == 2 -- 体力,POWゲージ表示
 		restart_fight({
-			next_p1       =      main_menu.pos.col[ 9]  , -- 1P セレクト
-			next_p2       =      main_menu.pos.col[10]  , -- 2P セレクト
-			next_p1col    =      main_menu.pos.col[11]-1, -- 1P カラー
-			next_p2col    =      main_menu.pos.col[12]-1, -- 2P カラー
-			next_stage    = stgs[main_menu.pos.col[13]], -- ステージセレクト
-			next_bgm      = bgms[main_menu.pos.col[14]].id, -- BGMセレクト
+			next_p1    = main_menu.pos.col[9],   -- 1P セレクト
+			next_p2    = main_menu.pos.col[10],  -- 2P セレクト
+			next_p1col = main_menu.pos.col[11] - 1, -- 1P カラー
+			next_p2col = main_menu.pos.col[12] - 1, -- 2P カラー
+			next_stage = stgs[main_menu.pos.col[13]], -- ステージセレクト
+			next_bgm   = bgms[main_menu.pos.col[14]].id, -- BGMセレクト
 		})
 		local fix_scr_top = main_menu.pos.col[16]
 		if fix_scr_top == 1 then
@@ -11251,16 +11321,16 @@ function rbff2.startplugin()
 		end
 	end
 	-- 半角スペースで始まっているメニューはラベル行とみなす
-	local is_label_line = function(str)
+	local is_label_line            = function(str)
 		return str:find('^' .. "  +") ~= nil
 	end
-	local label_char_names = {
+	local label_char_names         = {
 		"テリー・ボガード", "アンディ・ボガード", "東丈", "不知火舞", "ギース・ハワード", "望月双角",
 		"ボブ・ウィルソン", "ホンフゥ", "ブルー・マリー", "フランコ・バッシュ", "山崎竜二", "秦崇秀", "秦崇雷",
 		"ダック・キング", "キム・カッファン", "ビリー・カーン", "チン・シンザン", "タン・フー・ルー",
 		"ローレンス・ブラッド", "ヴォルフガング・クラウザー", "リック・ストラウド", "李香緋", "アルフレッド",
 	}
-	main_menu = {
+	main_menu                      = {
 		list = {
 			{ "ダミー設定" },
 			{ "ゲージ設定" },
@@ -11270,17 +11340,18 @@ function rbff2.startplugin()
 			{ "判定個別設定" },
 			{ "プレイヤーセレクト画面" },
 			{ "                          クイックセレクト" },
-			{ "1P セレクト"           , label_char_names },
-			{ "2P セレクト"           , label_char_names },
-			{ "1P カラー"             , { "A", "D" } },
-			{ "2P カラー"             , { "A", "D" } },
-			{ "ステージセレクト"      , names },
-			{ "BGMセレクト"           , bgm_names },
-			{ "体力,POWゲージ表示"    , menu_label_off_on, },
-			{ "背景なし時位置補正"    , fix_scr_tops, },
+			{ "1P セレクト",            label_char_names },
+			{ "2P セレクト",            label_char_names },
+			{ "1P カラー",              { "A", "D" } },
+			{ "2P カラー",              { "A", "D" } },
+			{ "ステージセレクト",       names },
+			{ "BGMセレクト",            bgm_names },
+			{ "体力,POWゲージ表示",     menu_label_off_on, },
+			{ "背景なし時位置補正",     fix_scr_tops, },
 			{ "リスタート" },
 		},
-		pos = { -- メニュー内の選択位置
+		pos = {
+			-- メニュー内の選択位置
 			offset = 1,
 			row = 1,
 			col = {
@@ -11311,7 +11382,7 @@ function rbff2.startplugin()
 			menu_to_auto, -- 自動入力設定
 			menu_to_col, -- 判定個別設定
 			menu_player_select, -- プレイヤーセレクト画面
-			menu_nop, -- クイックセレクト
+			menu_nop,  -- クイックセレクト
 			menu_restart_fight, -- 1P セレクト
 			menu_restart_fight, -- 2P セレクト
 			menu_restart_fight, -- 1P カラー
@@ -11324,13 +11395,13 @@ function rbff2.startplugin()
 		},
 		on_b = new_filled_table(18, menu_exit),
 	}
-	menu_cur = main_menu -- デフォルト設定
-	update_menu_pos = function()
+	menu_cur                       = main_menu -- デフォルト設定
+	update_menu_pos                = function()
 		-- メニューの更新
-		main_menu.pos.col[ 9] = math.min(math.max(pgm:read_u8(0x107BA5)  , 1), #label_char_names)
-		main_menu.pos.col[10] = math.min(math.max(pgm:read_u8(0x107BA7)  , 1), #label_char_names)
-		main_menu.pos.col[11] = math.min(math.max(pgm:read_u8(0x107BAC)+1, 1), 2)
-		main_menu.pos.col[12] = math.min(math.max(pgm:read_u8(0x107BAD)+1, 1), 2)
+		main_menu.pos.col[9] = math.min(math.max(pgm:read_u8(0x107BA5), 1), #label_char_names)
+		main_menu.pos.col[10] = math.min(math.max(pgm:read_u8(0x107BA7), 1), #label_char_names)
+		main_menu.pos.col[11] = math.min(math.max(pgm:read_u8(0x107BAC) + 1, 1), 2)
+		main_menu.pos.col[12] = math.min(math.max(pgm:read_u8(0x107BAD) + 1, 1), 2)
 
 		reset_menu_pos = false
 
@@ -11370,11 +11441,11 @@ function rbff2.startplugin()
 		setup_char_manu()
 	end
 	-- ブレイクショットメニュー
-	bs_menus, rvs_menus = {}, {}
-	local bs_guards, rvs_guards = {}, {}
+	bs_menus, rvs_menus            = {}, {}
+	local bs_blocks, rvs_blocks    = {}, {}
 	for i = 1, 60 do
-		table.insert(bs_guards , string.format("%s回ガード後に発動", i))
-		table.insert(rvs_guards, string.format("%s回ガード後に発動", i))
+		table.insert(bs_blocks, string.format("%s回ガード後に発動", i))
+		table.insert(rvs_blocks, string.format("%s回ガード後に発動", i))
 	end
 	local menu_bs_to_tra_menu = function()
 		menu_to_tra()
@@ -11414,14 +11485,15 @@ function rbff2.startplugin()
 			table.insert(on_ab, menu_bs_to_tra_menu)
 			table.insert(col, 0)
 			for _, bs in pairs(bs_list) do
-				table.insert(list, { bs.name, { "OFF", "ON", }, common = bs.common == true, row = #list, })
+				table.insert(list, { bs.name, menu_label_off_on, common = bs.common == true, row = #list, })
 				table.insert(on_ab, menu_bs_to_tra_menu)
 				table.insert(col, 1)
 			end
 
 			local a_bs_menu = {
 				list = list,
-				pos = { -- メニュー内の選択位置
+				pos = {
+					-- メニュー内の選択位置
 					offset = 1,
 					row = 2,
 					col = col,
@@ -11437,14 +11509,15 @@ function rbff2.startplugin()
 			table.insert(on_ab, menu_rvs_to_tra_menu)
 			table.insert(col, 0)
 			for _, bs in pairs(rvs_list) do
-				table.insert(list, { bs.name, { "OFF", "ON", }, common = bs.common == true, row = #list, })
+				table.insert(list, { bs.name, menu_label_off_on, common = bs.common == true, row = #list, })
 				table.insert(on_ab, menu_rvs_to_tra_menu)
 				table.insert(col, 1)
 			end
 
 			local a_rvs_menu = {
 				list = list,
-				pos = { -- メニュー内の選択位置
+				pos = {
+					-- メニュー内の選択位置
 					offset = 1,
 					row = 2,
 					col = col,
@@ -11465,24 +11538,24 @@ function rbff2.startplugin()
 	end
 	tra_menu = {
 		list = {
-			{ "ダミーモード"          , { "プレイヤー vs プレイヤー", "プレイヤー vs CPU", "CPU vs プレイヤー", "1P&2P入れ替え", "レコード", "リプレイ" }, },
+			{ "ダミーモード",           { "プレイヤー vs プレイヤー", "プレイヤー vs CPU", "CPU vs プレイヤー", "1P&2P入れ替え", "レコード", "リプレイ" }, },
 			{ "                         ダミー設定" },
-			{ "1P アクション"         , { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
-			{ "2P アクション"         , { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
-			{ "1P ガード"             , { "なし", "オート", "ブレイクショット（Aで選択画面へ）", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
-			{ "2P ガード"             , { "なし", "オート", "ブレイクショット（Aで選択画面へ）", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
-			{ "1ガード持続フレーム数" , gd_frms, },
-			{ "ブレイクショット設定"  , bs_guards },
-			{ "1P やられ時行動"       , { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ（Aで選択画面へ）", "グランドスウェー（Aで選択画面へ）", "起き上がり攻撃", }, },
-			{ "2P やられ時行動"       , { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ（Aで選択画面へ）", "グランドスウェー（Aで選択画面へ）", "起き上がり攻撃", }, },
-			{ "ガードリバーサル設定"  , bs_guards },
-			{ "1P 強制空振り"         , no_hit_row, },
-			{ "2P 強制空振り"         , no_hit_row, },
-			{ "1P 挑発で前進"         , menu_label_off_on, },
-			{ "2P 挑発で前進"         , menu_label_off_on, },
-			{ "1P Y座標強制"          , force_y_pos, },
-			{ "2P Y座標強制"          , force_y_pos, },
-			{ "画面下に移動"          , { "OFF", "2Pを下に移動", "1Pを下に移動", }, },
+			{ "1P アクション",          { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
+			{ "2P アクション",          { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
+			{ "1P ガード",              { "なし", "オート", "ブレイクショット（Aで選択画面へ）", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
+			{ "2P ガード",              { "なし", "オート", "ブレイクショット（Aで選択画面へ）", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
+			{ "1ガード持続フレーム数",  gd_frms, },
+			{ "ブレイクショット設定",   bs_blocks },
+			{ "1P やられ時行動",        { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ（Aで選択画面へ）", "グランドスウェー（Aで選択画面へ）", "起き上がり攻撃", }, },
+			{ "2P やられ時行動",        { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ（Aで選択画面へ）", "グランドスウェー（Aで選択画面へ）", "起き上がり攻撃", }, },
+			{ "ガードリバーサル設定",   bs_blocks },
+			{ "1P 強制空振り",          no_hit_row, },
+			{ "2P 強制空振り",          no_hit_row, },
+			{ "1P 挑発で前進",          menu_label_off_on, },
+			{ "2P 挑発で前進",          menu_label_off_on, },
+			{ "1P Y座標強制",           force_y_pos, },
+			{ "2P Y座標強制",           force_y_pos, },
+			{ "画面下に移動",           { "OFF", "2Pを下に移動", "1Pを下に移動", }, },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
@@ -11515,14 +11588,15 @@ function rbff2.startplugin()
 	bar_menu = {
 		list = {
 			{ "                         ゲージ設定" },
-			{ "1P 体力ゲージ量"       , life_range, }, 	-- "最大", "赤", "ゼロ" ...
-			{ "2P 体力ゲージ量"       , life_range, }, 	-- "最大", "赤", "ゼロ" ...
-			{ "1P POWゲージ量"        , pow_range, },   -- "最大", "半分", "ゼロ" ...
-			{ "2P POWゲージ量"        , pow_range, },   -- "最大", "半分", "ゼロ" ...
-			{ "体力ゲージモード"      , { "自動回復", "固定" }, },
-			{ "POWゲージモード"       , { "自動回復", "固定", "通常動作" }, },
+			{ "1P 体力ゲージ量",         life_range, }, -- "最大", "赤", "ゼロ" ...
+			{ "2P 体力ゲージ量",         life_range, }, -- "最大", "赤", "ゼロ" ...
+			{ "1P POWゲージ量",          pow_range, }, -- "最大", "半分", "ゼロ" ...
+			{ "2P POWゲージ量",          pow_range, }, -- "最大", "半分", "ゼロ" ...
+			{ "体力ゲージモード",        { "自動回復", "固定" }, },
+			{ "POWゲージモード",         { "自動回復", "固定", "通常動作" }, },
 		},
-		pos = { -- メニュー内の選択位置
+		pos = {
+		  -- メニュー内の選択位置
 			offset = 1,
 			row = 2,
 			col = {
@@ -11536,38 +11610,39 @@ function rbff2.startplugin()
 			},
 		},
 		on_a = new_filled_table(7, bar_menu_to_main),
-		on_b = new_filled_table(7 ,bar_menu_to_main_cancel),
+		on_b = new_filled_table(7, bar_menu_to_main_cancel),
 	}
 
 	disp_menu = {
 		list = {
 			{ "                          表示設定" },
-			{ "1P 判定表示"           , { "OFF", "ON", "ON:P番号なし", }, },
-			{ "2P 判定表示"           , { "OFF", "ON", "ON:P番号なし", }, },
-			{ "1P 間合い表示"         , { "OFF", "ON", "ON:投げ", "ON:遠近攻撃", "ON:詠酒", }, },
-			{ "2P 間合い表示"         , { "OFF", "ON", "ON:投げ", "ON:遠近攻撃", "ON:詠酒", }, },
-			{ "1P 気絶ゲージ表示"     , menu_label_off_on, },
-			{ "2P 気絶ゲージ表示"     , menu_label_off_on, },
-			{ "1P ダメージ表示"       , menu_label_off_on, },
-			{ "2P ダメージ表示"       , menu_label_off_on, },
-			{ "1P 入力表示"           , { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
-			{ "2P 入力表示"           , { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
-			{ "コマンド入力状態表示"  , { "OFF", "1P", "2P", }, },
-			{ "フレーム差表示"        , { "OFF", "数値とグラフ", "数値" }, },
-			{ "1P フレーム数表示"     , { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
-			{ "2P フレーム数表示"     , { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
-			{ "1P 弾フレーム数表示"   , menu_label_off_on, },
-			{ "2P 弾フレーム数表示"   , menu_label_off_on, },
-			{ "1P 状態表示"           , { "OFF", "ON", "ON:小表示", "ON:大表示" }, },
-			{ "2P 状態表示"           , { "OFF", "ON", "ON:小表示", "ON:大表示" }, },
-			{ "1P 処理アドレス表示"   , menu_label_off_on, },
-			{ "2P 処理アドレス表示"   , menu_label_off_on, },
-			{ "1P 2P 距離表示"        , menu_label_off_on, },
-			{ "1P キャラ表示"         , menu_label_off_on, },
-			{ "2P キャラ表示"         , menu_label_off_on, },
-			{ "エフェクト表示"        , { "OFF", "ON", }, },
+			{ "1P 判定表示",             { "OFF", "ON", "ON:P番号なし", }, },
+			{ "2P 判定表示",             { "OFF", "ON", "ON:P番号なし", }, },
+			{ "1P 間合い表示",           { "OFF", "ON", "ON:投げ", "ON:遠近攻撃", "ON:詠酒", }, },
+			{ "2P 間合い表示",           { "OFF", "ON", "ON:投げ", "ON:遠近攻撃", "ON:詠酒", }, },
+			{ "1P 気絶ゲージ表示",       menu_label_off_on, },
+			{ "2P 気絶ゲージ表示",       menu_label_off_on, },
+			{ "1P ダメージ表示",         menu_label_off_on, },
+			{ "2P ダメージ表示",         menu_label_off_on, },
+			{ "1P 入力表示",             { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
+			{ "2P 入力表示",             { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
+			{ "コマンド入力状態表示",    { "OFF", "1P", "2P", }, },
+			{ "フレーム差表示",          { "OFF", "数値とグラフ", "数値" }, },
+			{ "1P フレーム数表示",       { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
+			{ "2P フレーム数表示",       { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
+			{ "1P 弾フレーム数表示",     menu_label_off_on, },
+			{ "2P 弾フレーム数表示",     menu_label_off_on, },
+			{ "1P 状態表示",             { "OFF", "ON", "ON:小表示", "ON:大表示" }, },
+			{ "2P 状態表示",             { "OFF", "ON", "ON:小表示", "ON:大表示" }, },
+			{ "1P 処理アドレス表示",     menu_label_off_on, },
+			{ "2P 処理アドレス表示",     menu_label_off_on, },
+			{ "1P 2P 距離表示",          menu_label_off_on, },
+			{ "1P キャラ表示",           menu_label_off_on, },
+			{ "2P キャラ表示",           menu_label_off_on, },
+			{ "エフェクト表示",          menu_label_off_on, },
 		},
-		pos = { -- メニュー内の選択位置
+		pos = {
+		  -- メニュー内の選択位置
 			offset = 1,
 			row = 2,
 			col = {
@@ -11601,25 +11676,25 @@ function rbff2.startplugin()
 		on_a = new_filled_table(25, disp_menu_to_main),
 		on_b = new_filled_table(25, disp_menu_to_main_cancel),
 	}
-
 	ex_menu = {
 		list = {
 			{ "                          特殊設定" },
-			{ "簡易超必"              , menu_label_off_on, },
-			{ "半自動潜在能力"        , menu_label_off_on, },
-			{ "ライン送らない現象"    , { "OFF", "ON", "ON:1Pのみ", "ON:2Pのみ" }, },
-			{ "ヒット時にポーズ"      , { "OFF", "ON", "ON:やられのみ", "ON:投げやられのみ", "ON:打撃やられのみ", "ON:ガードのみ", }, },
-			{ "判定発生時にポーズ"    , { "OFF", "投げ", "攻撃", "変化時", }, },
-			{ "技画像保存"            , { "OFF", "ON:新規", "ON:上書き", }, },
+			{ "簡易超必",               menu_label_off_on, },
+			{ "半自動潜在能力",         menu_label_off_on, },
+			{ "ライン送らない現象",     { "OFF", "ON", "ON:1Pのみ", "ON:2Pのみ" }, },
+			{ "ヒット時にポーズ",       { "OFF", "ON", "ON:やられのみ", "ON:投げやられのみ", "ON:打撃やられのみ", "ON:ガードのみ", }, },
+			{ "判定発生時にポーズ",     { "OFF", "投げ", "攻撃", "変化時", }, },
+			{ "技画像保存",             { "OFF", "ON:新規", "ON:上書き", }, },
 			{ "MAMEデバッグウィンドウ", menu_label_off_on, },
-			{ "ヒット効果確認用"      , damaged_move_keys },
-			{ "位置ログ"              , menu_label_off_on, },
-			{ "攻撃情報ログ"          , menu_label_off_on, },
-			{ "処理アドレスログ"      , menu_label_off_on, },
-			{ "入力ログ"              , menu_label_off_on, },
-			{ "リバサログ"            , menu_label_off_on, },
+			{ "ヒット効果確認用",       damaged_move_keys },
+			{ "位置ログ",               menu_label_off_on, },
+			{ "攻撃情報ログ",           menu_label_off_on, },
+			{ "処理アドレスログ",       menu_label_off_on, },
+			{ "入力ログ",               menu_label_off_on, },
+			{ "リバサログ",             menu_label_off_on, },
 		},
-		pos = { -- メニュー内の選択位置
+		pos = {
+		  -- メニュー内の選択位置
 			offset = 1,
 			row = 2,
 			col = {
@@ -11662,7 +11737,8 @@ function rbff2.startplugin()
 			{ "必勝！逆襲拳"          , menu_label_off_on, },
 			{ "空振りCA"              , menu_label_off_on, },
 		},
-		pos = { -- メニュー内の選択位置
+		pos = {
+		  -- メニュー内の選択位置
 			offset = 1,
 			row = 2,
 			col = {
@@ -11690,7 +11766,8 @@ function rbff2.startplugin()
 
 	col_menu = {
 		list = {},
-		pos = { -- メニュー内の選択位置
+		pos = {
+		  -- メニュー内の選択位置
 			offset = 1,
 			row = 2,
 			col = {},
@@ -11703,7 +11780,7 @@ function rbff2.startplugin()
 	table.insert(col_menu.on_a, col_menu_to_main)
 	table.insert(col_menu.on_b, col_menu_to_main_cancel)
 	for _, box in pairs(box_type_col_list) do
-		table.insert(col_menu.list, { box.name, { "OFF", "ON", }, { fill = box.fill, outline = box.outline } })
+		table.insert(col_menu.list, { box.name, menu_label_off_on, { fill = box.fill, outline = box.outline } })
 		table.insert(col_menu.pos.col, box.enabled and 2 or 1)
 		table.insert(col_menu.on_a, col_menu_to_main)
 		table.insert(col_menu.on_b, col_menu_to_main_cancel)
@@ -11712,16 +11789,17 @@ function rbff2.startplugin()
 	rec_menu = {
 		list = {
 			{ "            選択したスロットに記憶されます。" },
-			{ "スロット1"             , { "Aでレコード開始", }, },
-			{ "スロット2"             , { "Aでレコード開始", }, },
-			{ "スロット3"             , { "Aでレコード開始", }, },
-			{ "スロット4"             , { "Aでレコード開始", }, },
-			{ "スロット5"             , { "Aでレコード開始", }, },
-			{ "スロット6"             , { "Aでレコード開始", }, },
-			{ "スロット7"             , { "Aでレコード開始", }, },
-			{ "スロット8"             , { "Aでレコード開始", }, },
+			{ "スロット1",              { "Aでレコード開始", }, },
+			{ "スロット2",              { "Aでレコード開始", }, },
+			{ "スロット3",              { "Aでレコード開始", }, },
+			{ "スロット4",              { "Aでレコード開始", }, },
+			{ "スロット5",              { "Aでレコード開始", }, },
+			{ "スロット6",              { "Aでレコード開始", }, },
+			{ "スロット7",              { "Aでレコード開始", }, },
+			{ "スロット8",              { "Aでレコード開始", }, },
 		},
-		pos = { -- メニュー内の選択位置
+		pos = {
+		  -- メニュー内の選択位置
 			offset = 1,
 			row = 2,
 			col = {
@@ -11737,7 +11815,7 @@ function rbff2.startplugin()
 			},
 		},
 		on_a = {
-			menu_rec_to_tra, -- 説明
+			menu_rec_to_tra,           -- 説明
 			function() exit_menu_to_rec(1) end, -- スロット1
 			function() exit_menu_to_rec(2) end, -- スロット2
 			function() exit_menu_to_rec(3) end, -- スロット3
@@ -11751,49 +11829,50 @@ function rbff2.startplugin()
 	}
 	local play_interval = {}
 	for i = 1, 301 do
-		table.insert(play_interval, i-1)
+		table.insert(play_interval, i - 1)
 	end
 	play_menu = {
 		list = {
 			{ "     ONにしたスロットからランダムでリプレイされます。" },
-			{ "スロット1"             , { "OFF", "ON", }, },
-			{ "スロット2"             , { "OFF", "ON", }, },
-			{ "スロット3"             , { "OFF", "ON", }, },
-			{ "スロット4"             , { "OFF", "ON", }, },
-			{ "スロット5"             , { "OFF", "ON", }, },
-			{ "スロット6"             , { "OFF", "ON", }, },
-			{ "スロット7"             , { "OFF", "ON", }, },
-			{ "スロット8"             , { "OFF", "ON", }, },
+			{ "スロット1",              menu_label_off_on, },
+			{ "スロット2",              menu_label_off_on, },
+			{ "スロット3",              menu_label_off_on, },
+			{ "スロット4",              menu_label_off_on, },
+			{ "スロット5",              menu_label_off_on, },
+			{ "スロット6",              menu_label_off_on, },
+			{ "スロット7",              menu_label_off_on, },
+			{ "スロット8",              menu_label_off_on, },
 			{ "                        リプレイ設定" },
-			{ "繰り返し"              , { "OFF", "ON", }, },
-			{ "繰り返し間隔"          , play_interval, },
-			{ "繰り返し開始条件"      , { "なし", "両キャラがニュートラル", }, },
-			{ "開始間合い固定"        , { "OFF", "Aでレコード開始", "1Pと2P", "1P", "2P", }, },
-			{ "状態リセット"          , { "OFF", "1Pと2P", "1P", "2P", }, },
-			{ "ガイド表示"            , { "OFF", "ON", }, },
-			{ "ダメージでリプレイ中止", { "OFF", "ON", }, },
+			{ "繰り返し",               menu_label_off_on, },
+			{ "繰り返し間隔",           play_interval, },
+			{ "繰り返し開始条件",       { "なし", "両キャラがニュートラル", }, },
+			{ "開始間合い固定",         { "OFF", "Aでレコード開始", "1Pと2P", "1P", "2P", }, },
+			{ "状態リセット",           { "OFF", "1Pと2P", "1P", "2P", }, },
+			{ "ガイド表示",             menu_label_off_on, },
+			{ "ダメージでリプレイ中止", menu_label_off_on, },
 		},
-		pos = { -- メニュー内の選択位置
+		pos = {
+		  -- メニュー内の選択位置
 			offset = 1,
 			row = 2,
 			col = {
-				0, -- 説明               1
-				2, -- スロット1          2
-				2, -- スロット2          3
-				2, -- スロット3          4
-				2, -- スロット4          5
-				2, -- スロット5          6
-				2, -- スロット6          7
-				2, -- スロット7          8
-				2, -- スロット8          9
-				0, -- リプレイ設定      10
-				1, -- 繰り返し          11
-				1, -- 繰り返し間隔      12
-				1, -- 繰り返し開始条件  13
+				0,         -- 説明               1
+				2,         -- スロット1          2
+				2,         -- スロット2          3
+				2,         -- スロット3          4
+				2,         -- スロット4          5
+				2,         -- スロット5          6
+				2,         -- スロット6          7
+				2,         -- スロット7          8
+				2,         -- スロット8          9
+				0,         -- リプレイ設定      10
+				1,         -- 繰り返し          11
+				1,         -- 繰り返し間隔      12
+				1,         -- 繰り返し開始条件  13
 				global.replay_fix_pos, -- 開始間合い固定    14
-				global.replay_reset,   -- 状態リセット      15
-				2, -- ガイド表示        16
-				2, -- ダメージでリプレイ中止 17
+				global.replay_reset, -- 状態リセット      15
+				2,         -- ガイド表示        16
+				2,         -- ダメージでリプレイ中止 17
 			},
 		},
 		on_a = new_filled_table(17, exit_menu_to_play),
@@ -11904,11 +11983,11 @@ function rbff2.startplugin()
 		end
 
 		-- メニュー表示本体
-		scr:draw_box (0, 0, width, height, 0xC0000000, 0xC0000000)
-		local row_num, menu_max = 1, math.min(menu_cur.pos.offset+menu_max_row, #menu_cur.list)
+		scr:draw_box(0, 0, width, height, 0xC0000000, 0xC0000000)
+		local row_num, menu_max = 1, math.min(menu_cur.pos.offset + menu_max_row, #menu_cur.list)
 		for i = menu_cur.pos.offset, menu_max do
 			local row = menu_cur.list[i]
-			local y = 48+10*row_num
+			local y = 48 + 10 * row_num
 			local c1, c2, c3, c4, c5
 			-- 選択行とそうでない行の色分け判断
 			if i == menu_cur.pos.row then
@@ -11921,34 +12000,34 @@ function rbff2.startplugin()
 			end
 			if is_label_line(row[1]) then
 				-- ラベルだけ行
-				scr:draw_text(96  , y+1  , row[1], 0xFFFFFFFF)
+				scr:draw_text(96, y + 1, row[1], 0xFFFFFFFF)
 			else
 				-- 通常行 ラベル部分
-				scr:draw_box (90  , y+0.5, 230   , y+8.5, c2, c1)
+				scr:draw_box(90, y + 0.5, 230, y + 8.5, c2, c1)
 				if i == menu_cur.pos.row then
-					scr:draw_line(90  , y+0.5, 230 , y+0.5, 0xFFDD2200)
-					scr:draw_line(90  , y+0.5, 90  , y+8.5, 0xFFDD2200)
+					scr:draw_line(90, y + 0.5, 230, y + 0.5, 0xFFDD2200)
+					scr:draw_line(90, y + 0.5, 90, y + 8.5, 0xFFDD2200)
 				else
-					scr:draw_box (90  , y+7.0, 230 , y+8.5, 0xFFB8B8B8, 0xFFB8B8B8)
-					scr:draw_box (90  , y+8.0, 230 , y+8.5, 0xFFA8A8A8, 0xFFA8A8A8)
+					scr:draw_box(90, y + 7.0, 230, y + 8.5, 0xFFB8B8B8, 0xFFB8B8B8)
+					scr:draw_box(90, y + 8.0, 230, y + 8.5, 0xFFA8A8A8, 0xFFA8A8A8)
 				end
-				scr:draw_text(96.5, y+1.5, row[1], c4)
-				scr:draw_text(96  , y+1  , row[1], c3)
+				scr:draw_text(96.5, y + 1.5, row[1], c4)
+				scr:draw_text(96, y + 1, row[1], c3)
 				if row[2] then
 					-- 通常行 オプション部分
 					local col_pos_num = menu_cur.pos.col[i] or 1
 					if col_pos_num > 0 then
-						scr:draw_text(165.5, y+1.5, string.format("%s", row[2][col_pos_num]), c4)
-						scr:draw_text(165  , y+1  , string.format("%s", row[2][col_pos_num]), c3)
+						scr:draw_text(165.5, y + 1.5, string.format("%s", row[2][col_pos_num]), c4)
+						scr:draw_text(165, y + 1, string.format("%s", row[2][col_pos_num]), c3)
 						-- オプション部分の左右移動可否の表示
 						if i == menu_cur.pos.row then
-							scr:draw_text(160, y+1, "◀", col_pos_num == 1       and c5 or c3)
-							scr:draw_text(223, y+1, "▶", col_pos_num == #row[2] and c5 or c3)
+							scr:draw_text(160, y + 1, "◀", col_pos_num == 1 and c5 or c3)
+							scr:draw_text(223, y + 1, "▶", col_pos_num == #row[2] and c5 or c3)
 						end
 					end
 				end
 				if row[3] and row[3].outline then
-					scr:draw_box(200, y+2, 218, y+7, row[3].outline, row[3].outline)
+					scr:draw_box(200, y + 2, 218, y + 7, row[3].outline, row[3].outline)
 				end
 			end
 
@@ -11977,15 +12056,15 @@ function rbff2.startplugin()
 		mem.last_time = ec
 
 		-- メモリ値の読込と更新
-		mem._0x100701  = pgm:read_u16(0x100701) -- 22e 22f 対戦中
-		mem._0x107C22  = pgm:read_u16(0x107C22) -- 対戦中4400
-		mem._0x10B862  = pgm:read_u8(0x10B862) -- 対戦中00
-		mem._0x100F56  = pgm:read_u32(0x100F56) --100F56 100F58
-		mem._0x10FD82  = pgm:read_u8(0x10FD82)
-		mem._0x10FDAF  = pgm:read_u8(0x10FDAF)
-		mem._0x10FDB6  = pgm:read_u16(0x10FDB6)
+		mem._0x100701 = pgm:read_u16(0x100701) -- 22e 22f 対戦中
+		mem._0x107C22 = pgm:read_u16(0x107C22) -- 対戦中4400
+		mem._0x10B862 = pgm:read_u8(0x10B862) -- 対戦中00
+		mem._0x100F56 = pgm:read_u32(0x100F56) --100F56 100F58
+		mem._0x10FD82 = pgm:read_u8(0x10FD82)
+		mem._0x10FDAF = pgm:read_u8(0x10FDAF)
+		mem._0x10FDB6 = pgm:read_u16(0x10FDB6)
 		mem.biostest  = bios_test()
-		mem._0x10E043  = pgm:read_u8(0x10E043)
+		mem._0x10E043 = pgm:read_u8(0x10E043)
 		prev_p_space  = (p_space ~= 0) and p_space or prev_p_space
 
 		-- 対戦中かどうかの判定
@@ -12016,7 +12095,7 @@ function rbff2.startplugin()
 
 		-- ROM部分のメモリエリアへパッチあて
 		if mem.biostest then
-			pached = false               -- 状態リセット
+			pached = false -- 状態リセット
 		elseif not pached then
 			pached = apply_patch_file("char1-p1.pat", true)
 
@@ -12197,19 +12276,19 @@ function rbff2.startplugin()
 		local dip1, dip2, dip3, dip4 = 0x00, 0x00, 0x00, 0x00
 		if match_active and dip_config.show_hitbox then
 			--dip1 = dip1 | 0x40    --cheat "DIP= 1-7 色々な判定表示"
-			dip1 = dip1 | 0x80    --cheat "DIP= 1-8 当たり判定表示"
+			dip1 = dip1 | 0x80 --cheat "DIP= 1-8 当たり判定表示"
 		end
 		if match_active and dip_config.infinity_life then
-			dip1 = dip1 | 0x02    --cheat "DIP= 1-2 Infinite Energy"
+			dip1 = dip1 | 0x02 --cheat "DIP= 1-2 Infinite Energy"
 		end
 		if match_active and dip_config.easy_super then
-			dip2 = dip2 | 0x01    --Cheat "DIP 2-1 Eeasy Super"
+			dip2 = dip2 | 0x01 --Cheat "DIP 2-1 Eeasy Super"
 		end
 		if match_active and dip_config.semiauto_p then
-			dip4 = dip4 | 0x08    -- DIP4-4
+			dip4 = dip4 | 0x08 -- DIP4-4
 		end
 		if dip_config.infinity_time then
-			dip2 = dip2 | 0x10    --cheat "DIP= 2-5 Disable Time Over"
+			dip2 = dip2 | 0x10  --cheat "DIP= 2-5 Disable Time Over"
 			-- 家庭用オプションの時間無限大設定
 			pgm:write_u8(0x10E024, 0x03) -- 1:45 2:60 3:90 4:infinity
 			pgm:write_u8(0x107C28, 0xAA) --cheat "Infinite Time"
@@ -12217,16 +12296,16 @@ function rbff2.startplugin()
 			pgm:write_u8(0x107C28, dip_config.fix_time)
 		end
 		if dip_config.stage_select then
-			dip1 = dip1 | 0x04    --cheat "DIP= 1-3 Stage Select Mode"
+			dip1 = dip1 | 0x04 --cheat "DIP= 1-3 Stage Select Mode"
 		end
 		if player_select_active and dip_config.alfred then
-			dip2 = dip2 | 0x80    --cheat "DIP= 2-8 Alfred Code (B+C >A)"
+			dip2 = dip2 | 0x80 --cheat "DIP= 2-8 Alfred Code (B+C >A)"
 		end
 		if match_active and dip_config.watch_states then
-			dip2 = dip2 | 0x20    --cheat "DIP= 2-6 Watch States"
+			dip2 = dip2 | 0x20 --cheat "DIP= 2-6 Watch States"
 		end
 		if match_active and dip_config.cpu_cant_move then
-			dip3 = dip3 | 0x01    --cheat "DIP= 3-1 CPU Can't Move"
+			dip3 = dip3 | 0x01 --cheat "DIP= 3-1 CPU Can't Move"
 		end
 		--dip3 = dip3 | 0x10    --cheat "DIP= 3-5 移動速度変更"
 
@@ -12273,7 +12352,7 @@ function rbff2.startplugin()
 
 	emu.register_pause(function()
 		main_or_menu_state.draw()
-	end) 
+	end)
 
 	emu.register_resume(function()
 		global.pause = false
@@ -12295,7 +12374,7 @@ function rbff2.startplugin()
 	emu.register_periodic(function()
 		if machine then
 			if machine.paused == false then
-			main_or_menu()
+				main_or_menu()
 			end
 			if global.mame_debug_wnd == false then
 				auto_recovery_debug()

@@ -11,7 +11,7 @@ tab_width = 4
 # none/single/double
 quote_style = none
 
-continuation_indent = 256
+continuation_indent = 4
 
 # this mean utf8 length , if this is 'unset' then the line width is no longer checked
 # this option decides when to chopdown the code
@@ -41,7 +41,7 @@ space_before_function_open_parenthesis = false
 
 space_before_function_call_open_parenthesis = false
 
-space_before_closure_open_parenthesis = true
+space_before_closure_open_parenthesis = false
 
 # optional always/only_string/only_table/none
 # or true/false
