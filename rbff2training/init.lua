@@ -1037,7 +1037,7 @@ local char_acts_base = {
 		{ names = { "フェイント 制空烈火棍" },        type = act_types.any,        ids = { 0x112 } },
 		{ names = { "バックフリップ" },                  type = act_types.any,        ids = { 0x6D, 0x6E } },
 		{ names = { "経絡乱打" },                           type = act_types.any,        ids = { 0x81, 0x82, 0x83, 0x84 } },
-		{ names = { "ハエタタキ" },                        type = act_types.any,        ids = { 0x69 } },
+		{ names = { "ハエタタキ" },                        type = act_types.attack,        ids = { 0x69 } },
 		{ names = { "踏み込み側蹴り" },                  type = act_types.attack,     ids = { 0x68 } },
 		{ names = { "トドメヌンチャク" },               type = act_types.attack,     ids = { 0x6A } },
 		{ names = { "九龍の読み" },                        type = act_types.attack,     ids = { 0x86 } },
