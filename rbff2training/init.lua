@@ -19,24 +19,21 @@
 --LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 --OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 --SOFTWARE.
-
-local exports = {}
-local lfs = require("lfs")
-local convert_lib = require("data/button_char")
-local convert = function(str)
+local exports              = {}
+local lfs                  = require("lfs")
+local convert_lib          = require("data/button_char")
+local convert              = function(str)
 	return str and convert_lib(str) or str
 end
+exports.name               = "rbff2training"
+exports.version            = "0.0.1"
+exports.description        = "RBFF2 Training"
+exports.license            = "MIT License"
+exports.author             = { name = "Sanwabear" }
 
-exports.name = "rbff2training"
-exports.version = "0.0.1"
-exports.description = "RBFF2 Training"
-exports.license = "MIT License"
-exports.author = { name = "Sanwabear" }
-
-local printf = function(format, ...)
+local printf               = function(format, ...)
 	print(string.format(format, ...))
 end
-
 -- MAMEのLuaオブジェクトの変数と初期化処理
 local man
 local machine
@@ -46,7 +43,7 @@ local scr
 local ioports
 local debugger
 local base_path
-local setup_emu = function()
+local setup_emu            = function()
 	man = manager
 	machine = man.machine
 	cpu = machine.devices[":maincpu"]
@@ -62,78 +59,196 @@ local setup_emu = function()
 	dofile(base_path() .. "/data.lua")
 end
 
-local rbff2 = exports
+local rbff2                = exports
+
+-- キャラの基本データ
+-- 配列のインデックス=キャラID
+local chars = {
+	{ name = "テリー・ボガード",           init_stuns = 32, wakeup_frms = 20, sway_act_counts = 3,   bs_addr = 0x2E, },
+	{ name = "アンディ・ボガード",         init_stuns = 31, wakeup_frms = 20, sway_act_counts = 2,   bs_addr = 0x2A, },
+	{ name = "東丈",                       init_stuns = 32, wakeup_frms = 20, sway_act_counts = 4,   bs_addr = 0x3A, },
+	{ name = "不知火舞",                   init_stuns = 29, wakeup_frms = 17, sway_act_counts = 3,   bs_addr = 0x22, },
+	{ name = "ギース・ハワード",           init_stuns = 33, wakeup_frms = 20, sway_act_counts = 3,   bs_addr = 0x66, easy_bs_addr = 0x4A, },
+	{ name = "望月双角",                   init_stuns = 32, wakeup_frms = 20, sway_act_counts = 2,   bs_addr = 0x46, },
+	{ name = "ボブ・ウィルソン",           init_stuns = 31, wakeup_frms = 20, sway_act_counts = 2,   bs_addr = 0x2A, },
+	{ name = "ホンフゥ",                   init_stuns = 31, wakeup_frms = 20, sway_act_counts = 3,   bs_addr = 0x32, },
+	{ name = "ブルー・マリー",             init_stuns = 29, wakeup_frms = 20, sway_act_counts = 3,   bs_addr = 0x3E, },
+	{ name = "フランコ・バッシュ",         init_stuns = 35, wakeup_frms = 20, sway_act_counts = 3,   bs_addr = 0x2A, },
+	{ name = "山崎竜二",                   init_stuns = 38, wakeup_frms = 20, sway_act_counts = 2,   bs_addr = 0x56, easy_bs_addr = 0x3A, },
+	{ name = "秦崇秀",                     init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC, bs_addr = 0x3A, },
+	{ name = "秦崇雷",                     init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC, bs_addr = 0x36, },
+	{ name = "ダック・キング",             init_stuns = 32, wakeup_frms = 20, sway_act_counts = 2,   bs_addr = 0x7A, easy_bs_addr = 0x5E, },
+	{ name = "キム・カッファン",           init_stuns = 32, wakeup_frms = 20, sway_act_counts = 4,   bs_addr = 0x36, },
+	{ name = "ビリー・カーン",             init_stuns = 32, wakeup_frms = 20, sway_act_counts = 4,   bs_addr = 0x2A, },
+	{ name = "チン・シンザン",             init_stuns = 31, wakeup_frms = 20, sway_act_counts = 2,   bs_addr = 0x2E, },
+	{ name = "タン・フー・ルー",           init_stuns = 31, wakeup_frms = 20, sway_act_counts = 4,   bs_addr = 0x22, },
+	{ name = "ローレンス・ブラッド",       init_stuns = 35, wakeup_frms = 20, sway_act_counts = 4,   bs_addr = 0x22, },
+	{ name = "ヴォルフガング・クラウザー", init_stuns = 35, wakeup_frms = 20, sway_act_counts = 3,   bs_addr = 0x52, easy_bs_addr = 0x36, },
+	{ name = "リック・ストラウド",         init_stuns = 32, wakeup_frms = 20, sway_act_counts = 7,   bs_addr = 0x26, },
+	{ name = "李香緋",                     init_stuns = 29, wakeup_frms = 14, sway_act_counts = 3,   bs_addr = 0x52, easy_bs_addr = 0x32, },
+	{ name = "アルフレッド",               init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0,   bs_addr = 0x2A, },
+}
 
 -- メニュー用変数
-local menu = {
+local menu          = {
 	proc = nil,
 	draw = nil,
 
-	state= nil,
-	prev_state= nil,
-	current= nil,
-	main= nil,
-	training= nil,
-	recording= nil,
-	replay= nil,
+	state = nil,
+	prev_state = nil,
+	current = nil,
+	main = nil,
+	training = nil,
+	recording = nil,
+	replay = nil,
 	tra_main = {
 		proc = nil,
 		draw = nil,
 	},
-	exit= nil,
-	bs_menus= nil,
+	exit = nil,
+	bs_menus = nil,
 	rvs_menus = nil,
-	bar= nil,
-	disp= nil,
-	extra= nil,
-	color= nil,
-	auto= nil,
-	update_pos= nil,
-	reset_pos= nil,
+	bar = nil,
+	disp = nil,
+	extra = nil,
+	color = nil,
+	auto = nil,
+	update_pos = nil,
+	reset_pos = nil,
+
+	stgs = {
+		{ stg1 = 0x01, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "日本 [1] 舞", },
+		{ stg1 = 0x01, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "日本 [2] 双角1", },
+		{ stg1 = 0x01, stg2 = 0x01, stg3 = 0x0F, no_background = false, name = "日本 [2] 双角2", },
+		{ stg1 = 0x01, stg2 = 0x02, stg3 = 0x01, no_background = false, name = "日本 [3] アンディ", },
+		{ stg1 = 0x02, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "香港1 [1] チン", },
+		{ stg1 = 0x02, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "香港1 [2] 山崎", },
+		{ stg1 = 0x03, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "韓国 [1] キム", },
+		{ stg1 = 0x03, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "韓国 [2] タン", },
+		{ stg1 = 0x04, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "サウスタウン [1] ギース", },
+		{ stg1 = 0x04, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "サウスタウン [2] ビリー", },
+		{ stg1 = 0x05, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "ドイツ [1] クラウザー", },
+		{ stg1 = 0x05, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "ドイツ [2] ローレンス", },
+		{ stg1 = 0x06, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "アメリカ1 [1] ダック", },
+		{ stg1 = 0x06, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "アメリカ1 [2] マリー", },
+		{ stg1 = 0x07, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "アメリカ2 [1] テリー", },
+		{ stg1 = 0x07, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "アメリカ2 [2] リック", },
+		{ stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, no_background = false, name = "アメリカ2 [3] アルフレッド", },
+		{ stg1 = 0x08, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "タイ [1] ボブ", },
+		{ stg1 = 0x08, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "タイ [2] フランコ", },
+		{ stg1 = 0x08, stg2 = 0x02, stg3 = 0x01, no_background = false, name = "タイ [3] 東", },
+		{ stg1 = 0x09, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "香港2 [1] 崇秀", },
+		{ stg1 = 0x09, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "香港2 [2] 崇雷", },
+		{ stg1 = 0x0A, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "NEW CHALLENGERS[1] 香緋", },
+		{ stg1 = 0x0A, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "NEW CHALLENGERS[2] ホンフゥ", },
+		{ stg1 = 0x04, stg2 = 0x01, stg3 = 0x01, no_background = true,  name = "背景なし(2ライン)", },
+		{ stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, no_background = true,  name = "背景なし(1ライン)", },
+	},
+	bgms = {
+		{ id = 0x01, name = "クリといつまでも", },
+		{ id = 0x02, name = "雷波濤外伝", },
+		{ id = 0x03, name = "タイ南部に伝わったSPの詩", },
+		{ id = 0x04, name = "まいまいきゅーん", },
+		{ id = 0x05, name = "ギースにしょうゆとオケヒット", },
+		{ id = 0x06, name = "TAKU-HATSU-Rock", },
+		{ id = 0x07, name = "蜜の味", },
+		{ id = 0x08, name = "ドンチカ!!チ!!チ!!", },
+		{ id = 0x09, name = "Blue Mary's BLUES", },
+		{ id = 0x0A, name = "GOLI-Rock", },
+		{ id = 0x0B, name = "C62 -シロクニ- Ver.2", },
+		{ id = 0x0C, name = "パンドラの箱より 第3番「決断」", },
+		{ id = 0x0D, name = "パンドラの箱より 第3番「決断」 ", },
+		{ id = 0x0E, name = "Duck! Duck! Duck!", },
+		{ id = 0x0F, name = "ソウルっす♪", },
+		{ id = 0x10, name = "ロンドンマーチ", },
+		{ id = 0x11, name = "ハプシュ！フゥゥゥ", },
+		{ id = 0x12, name = "中国四千年の歴史とはいかにII", },
+		{ id = 0x13, name = "牛とお戯れ", },
+		{ id = 0x14, name = "REQUIEM K.626 [Lacrimosa]", },
+		{ id = 0x15, name = "Exceed The Limit", },
+		{ id = 0x16, name = "雄々盛嬢後援 ～競場詩～", },
+		{ id = 0x17, name = "Get The Sky -With Your Dream-", },
+		{ id = 0x00, name = "なし", },
+		{ id = 0x1C, name = "4 HITs Ⅱ", },
+		{ id = 0x1E, name = "Gain a victory", },
+		{ id = 0x26, name = "NEOGEO SOUND LOGO", },
+	},
+
+	labels = {
+		fix_scr_tops = { "OFF" },
+		chars        = {},
+		stgs         = {},
+		bgms         = {},
+		off_on       = { "OFF", "ON" }
+	},
+}
+for _, char in ipairs(chars) do
+	table.insert(menu.labels.chars, char.name)
+end
+for i = -20, 70 do
+	table.insert(menu.labels.fix_scr_tops, "1P " .. i)
+end
+for i = -20, 70 do
+	table.insert(menu.labels.fix_scr_tops, "2P " .. i)
+end
+for _, stg in ipairs(menu.stgs) do
+	table.insert(menu.labels.stgs, stg.name)
+end
+for _, bgm in ipairs(menu.bgms) do
+	local exists = false
+	for _, name in pairs(menu.labels.bgms) do
+		if name == bgm.name then
+			exists = true
+			bgm.name_idx = #menu.labels.bgms
+			break
+		end
+	end
+	if not exists then
+		table.insert(menu.labels.bgms, bgm.name)
+		bgm.name_idx = #menu.labels.bgms
+	end
+end
+
+local mem                  = {
+	last_time          = 0,        -- 最終読込フレーム(キャッシュ用)
+	_0x100701          = 0,        -- 場面判定用
+	_0x107C22          = 0,        -- 場面判定用
+	_0x10B862          = 0,        -- ガードヒット=FF
+	_0x100F56          = 0,        -- 潜在発動時の停止時間
+	_0x10FD82          = 0,        -- console 0x00, mvs 0x01
+	_0x10FDAF          = 0,        -- 場面判定用
+	_0x10FDB6          = 0,        -- P1 P2 開始判定用
+	_0x10E043          = 0,        -- 手動でポーズしたときに00以外になる
+	_0x10CDD0          = 0x10CDD0, -- プレイヤー選択のハック用
+	biostest           = false,    -- 初期化中のときtrue
+	stage_base_addr    = 0x100E00,
+	close_far_offset   = 0x02AE08, -- 近距離技と遠距離技判断用のデータの開始位置
+	close_far_offset_d = 0x02DDAA, -- 対ラインの近距離技と遠距離技判断用のデータの開始位置
+}
+local match_active         = false -- 対戦画面のときtrue
+local player_select_active = false -- プレイヤー選択画面のときtrue
+local p_space              = 0     -- 1Pと2Pの間隔
+local prev_p_space         = 0     -- 1Pと2Pの間隔(前フレーム)
+
+local screen               = {
+	offset_x = 0x20,
+	offset_z = 0x24,
+	offset_y = 0x28,
+	left     = 0,
+	top      = 0,
 }
 
-local mem = {
-	last_time               = 0,        -- 最終読込フレーム(キャッシュ用)
-	_0x100701               = 0,        -- 場面判定用
-	_0x107C22               = 0,        -- 場面判定用
-	_0x10B862               = 0,        -- ガードヒット=FF
-	_0x100F56               = 0,        -- 潜在発動時の停止時間
-	_0x10FD82               = 0,        -- console 0x00, mvs 0x01
-	_0x10FDAF               = 0,        -- 場面判定用
-	_0x10FDB6               = 0,        -- P1 P2 開始判定用
-	_0x10E043               = 0,        -- 手動でポーズしたときに00以外になる
-	_0x10CDD0               = 0x10CDD0, -- プレイヤー選択のハック用
-	biostest                = false,    -- 初期化中のときtrue
-	stage_base_addr         = 0x100E00,
-	close_far_offset        = 0x02AE08, -- 近距離技と遠距離技判断用のデータの開始位置
-	close_far_offset_d      = 0x02DDAA, -- 対ラインの近距離技と遠距離技判断用のデータの開始位置
-}
-local match_active          = false     -- 対戦画面のときtrue
-local player_select_active  = false     -- プレイヤー選択画面のときtrue
-local p_space               = 0         -- 1Pと2Pの間隔
-local prev_p_space          = 0         -- 1Pと2Pの間隔(前フレーム)
-local offset_pos_x          = 0x20
-local offset_pos_z          = 0x24
-local offset_pos_y          = 0x28
-local screen_left           = 0
-local screen_top            = 0
-local bios_test             = function()
-	for _, addr in ipairs({0x100400, 0x100500}) do
+local bios_test            = function()
+	for _, addr in ipairs({ 0x100400, 0x100500 }) do
 		local ram_value = pgm:read_u8(addr)
-		for _, test_value in ipairs({0x5555, 0xAAAA, (0xFFFF & addr)}) do
+		for _, test_value in ipairs({ 0x5555, 0xAAAA, (0xFFFF & addr) }) do
 			if ram_value == test_value then
 				return true
 			end
 		end
 	end
 end
-local fix_scr_tops          = { "OFF" }
-for i = -20, 70 do
-	table.insert(fix_scr_tops, "1P " .. i)
-end
-for i = -20, 70 do
-	table.insert(fix_scr_tops, "2P " .. i)
-end
+
 
 local global = {
 	frame_number        = 0,
@@ -151,15 +266,15 @@ local global = {
 	fix_pos             = false,
 	fix_pos_bps         = nil,
 	no_bars             = false,
-	sync_pos_x          = 1, -- 1: OFF, 2:1Pと同期, 3:2Pと同期
+	sync_pos_x          = 1,  -- 1: OFF, 2:1Pと同期, 3:2Pと同期
 
 	disp_pos            = true, -- 1P 2P 距離表示
 	disp_effect         = true, -- ヒットマークなど画面表示するときtrue
 	disp_effect_bps     = nil,
-	disp_frmgap         = 3, -- フレーム差表示
-	disp_input_sts      = 1, -- コマンド入力状態表示 1:OFF 2:1P 3:2P
-	pause_hit           = 1, -- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
-	pause_hitbox        = 1, -- 判定発生時にポーズ
+	disp_frmgap         = 3,  -- フレーム差表示
+	disp_input_sts      = 1,  -- コマンド入力状態表示 1:OFF 2:1P 3:2P
+	pause_hit           = 1,  -- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
+	pause_hitbox        = 1,  -- 判定発生時にポーズ
 	pause               = false,
 	replay_stop_on_dmg  = false, -- ダメージでリプレイ中段
 
@@ -200,13 +315,12 @@ local global = {
 	disp_gauge          = true,
 	repeat_interval     = 0,
 	await_neutral       = false,
-	replay_fix_pos      = 1, -- 開始間合い固定 1:OFF 2:位置記憶 3:1Pと2P 4:1P 5:2P
-	replay_reset        = 2, -- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
+	replay_fix_pos      = 1,  -- 開始間合い固定 1:OFF 2:位置記憶 3:1Pと2P 4:1P 5:2P
+	replay_reset        = 2,  -- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
 	mame_debug_wnd      = false, -- MAMEデバッグウィンドウ表示のときtrue
 	damaged_move        = 1,
 	disp_replay         = true, -- レコードリプレイガイド表示
-	save_snapshot       = 1, -- 技画像保存 1:OFF 2:新規 3:上書き
-
+	save_snapshot       = 1,  -- 技画像保存 1:OFF 2:新規 3:上書き
 	-- log
 	log                 = {
 		poslog  = false, -- 位置ログ
@@ -389,110 +503,6 @@ local dip_config ={
 -- 行動の種類
 local act_types = { free = -1, attack = 0, low_attack = 1, provoke =  2, any = 3, overhead = 4, block = 5, hit = 6, }
 
--- キャラの基本データ
--- 配列のインデックス=キャラID
-local chars = {
-	{ name = "テリー・ボガード",           init_stuns = 32, wakeup_frms = 20, sway_act_counts = 3,   bs_addr = 0x2E, },
-	{ name = "アンディ・ボガード",         init_stuns = 31, wakeup_frms = 20, sway_act_counts = 2,   bs_addr = 0x2A, },
-	{ name = "東丈",                       init_stuns = 32, wakeup_frms = 20, sway_act_counts = 4,   bs_addr = 0x3A, },
-	{ name = "不知火舞",                   init_stuns = 29, wakeup_frms = 17, sway_act_counts = 3,   bs_addr = 0x22, },
-	{ name = "ギース・ハワード",           init_stuns = 33, wakeup_frms = 20, sway_act_counts = 3,   bs_addr = 0x66, easy_bs_addr = 0x4A, },
-	{ name = "望月双角",                   init_stuns = 32, wakeup_frms = 20, sway_act_counts = 2,   bs_addr = 0x46, },
-	{ name = "ボブ・ウィルソン",           init_stuns = 31, wakeup_frms = 20, sway_act_counts = 2,   bs_addr = 0x2A, },
-	{ name = "ホンフゥ",                   init_stuns = 31, wakeup_frms = 20, sway_act_counts = 3,   bs_addr = 0x32, },
-	{ name = "ブルー・マリー",             init_stuns = 29, wakeup_frms = 20, sway_act_counts = 3,   bs_addr = 0x3E, },
-	{ name = "フランコ・バッシュ",         init_stuns = 35, wakeup_frms = 20, sway_act_counts = 3,   bs_addr = 0x2A, },
-	{ name = "山崎竜二",                   init_stuns = 38, wakeup_frms = 20, sway_act_counts = 2,   bs_addr = 0x56, easy_bs_addr = 0x3A, },
-	{ name = "秦崇秀",                     init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC, bs_addr = 0x3A, },
-	{ name = "秦崇雷",                     init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC, bs_addr = 0x36, },
-	{ name = "ダック・キング",             init_stuns = 32, wakeup_frms = 20, sway_act_counts = 2,   bs_addr = 0x7A, easy_bs_addr = 0x5E, },
-	{ name = "キム・カッファン",           init_stuns = 32, wakeup_frms = 20, sway_act_counts = 4,   bs_addr = 0x36, },
-	{ name = "ビリー・カーン",             init_stuns = 32, wakeup_frms = 20, sway_act_counts = 4,   bs_addr = 0x2A, },
-	{ name = "チン・シンザン",             init_stuns = 31, wakeup_frms = 20, sway_act_counts = 2,   bs_addr = 0x2E, },
-	{ name = "タン・フー・ルー",           init_stuns = 31, wakeup_frms = 20, sway_act_counts = 4,   bs_addr = 0x22, },
-	{ name = "ローレンス・ブラッド",       init_stuns = 35, wakeup_frms = 20, sway_act_counts = 4,   bs_addr = 0x22, },
-	{ name = "ヴォルフガング・クラウザー", init_stuns = 35, wakeup_frms = 20, sway_act_counts = 3,   bs_addr = 0x52, easy_bs_addr = 0x36, },
-	{ name = "リック・ストラウド",         init_stuns = 32, wakeup_frms = 20, sway_act_counts = 7,   bs_addr = 0x26, },
-	{ name = "李香緋",                     init_stuns = 29, wakeup_frms = 14, sway_act_counts = 3,   bs_addr = 0x52, easy_bs_addr = 0x32, },
-	{ name = "アルフレッド",               init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0,   bs_addr = 0x2A, },
-}
-
-local bgms = {
-	{ id = 0x01, name = "クリといつまでも", },
-	{ id = 0x02, name = "雷波濤外伝", },
-	{ id = 0x03, name = "タイ南部に伝わったSPの詩", },
-	{ id = 0x04, name = "まいまいきゅーん", },
-	{ id = 0x05, name = "ギースにしょうゆとオケヒット", },
-	{ id = 0x06, name = "TAKU-HATSU-Rock", },
-	{ id = 0x07, name = "蜜の味", },
-	{ id = 0x08, name = "ドンチカ!!チ!!チ!!", },
-	{ id = 0x09, name = "Blue Mary's BLUES", },
-	{ id = 0x0A, name = "GOLI-Rock", },
-	{ id = 0x0B, name = "C62 -シロクニ- Ver.2", },
-	{ id = 0x0C, name = "パンドラの箱より 第3番「決断」", },
-	{ id = 0x0D, name = "パンドラの箱より 第3番「決断」 ", },
-	{ id = 0x0E, name = "Duck! Duck! Duck!", },
-	{ id = 0x0F, name = "ソウルっす♪", },
-	{ id = 0x10, name = "ロンドンマーチ", },
-	{ id = 0x11, name = "ハプシュ！フゥゥゥ", },
-	{ id = 0x12, name = "中国四千年の歴史とはいかにII", },
-	{ id = 0x13, name = "牛とお戯れ", },
-	{ id = 0x14, name = "REQUIEM K.626 [Lacrimosa]", },
-	{ id = 0x15, name = "Exceed The Limit", },
-	{ id = 0x16, name = "雄々盛嬢後援 ～競場詩～", },
-	{ id = 0x17, name = "Get The Sky -With Your Dream-", },
-	{ id = 0x00, name = "なし", },
-	{ id = 0x1C, name = "4 HITs Ⅱ", },
-	{ id = 0x1E, name = "Gain a victory", },
-	{ id = 0x26, name = "NEOGEO SOUND LOGO", },
-}
-local bgm_names = {}
-for _, bgm in ipairs(bgms) do
-	local exists = false
-	for _, name in pairs(bgm_names) do
-		if name == bgm.name then
-			exists = true
-			bgm.name_idx = #bgm_names
-			break
-		end
-	end
-	if not exists then
-		table.insert(bgm_names, bgm.name)
-		bgm.name_idx = #bgm_names
-	end
-end
-local stgs = {
-	{ stg1 = 0x01, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "日本 [1] 舞", },
-	{ stg1 = 0x01, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "日本 [2] 双角1", },
-	{ stg1 = 0x01, stg2 = 0x01, stg3 = 0x0F, no_background = false, name = "日本 [2] 双角2", },
-	{ stg1 = 0x01, stg2 = 0x02, stg3 = 0x01, no_background = false, name = "日本 [3] アンディ", },
-	{ stg1 = 0x02, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "香港1 [1] チン", },
-	{ stg1 = 0x02, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "香港1 [2] 山崎", },
-	{ stg1 = 0x03, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "韓国 [1] キム", },
-	{ stg1 = 0x03, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "韓国 [2] タン", },
-	{ stg1 = 0x04, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "サウスタウン [1] ギース", },
-	{ stg1 = 0x04, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "サウスタウン [2] ビリー", },
-	{ stg1 = 0x05, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "ドイツ [1] クラウザー", },
-	{ stg1 = 0x05, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "ドイツ [2] ローレンス", },
-	{ stg1 = 0x06, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "アメリカ1 [1] ダック", },
-	{ stg1 = 0x06, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "アメリカ1 [2] マリー", },
-	{ stg1 = 0x07, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "アメリカ2 [1] テリー", },
-	{ stg1 = 0x07, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "アメリカ2 [2] リック", },
-	{ stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, no_background = false, name = "アメリカ2 [3] アルフレッド", },
-	{ stg1 = 0x08, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "タイ [1] ボブ", },
-	{ stg1 = 0x08, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "タイ [2] フランコ", },
-	{ stg1 = 0x08, stg2 = 0x02, stg3 = 0x01, no_background = false, name = "タイ [3] 東", },
-	{ stg1 = 0x09, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "香港2 [1] 崇秀", },
-	{ stg1 = 0x09, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "香港2 [2] 崇雷", },
-	{ stg1 = 0x0A, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "NEW CHALLENGERS[1] 香緋", },
-	{ stg1 = 0x0A, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "NEW CHALLENGERS[2] ホンフゥ", },
-	{ stg1 = 0x04, stg2 = 0x01, stg3 = 0x01, no_background = true,  name = "背景なし(2ライン)", },
-	{ stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, no_background = true,  name = "背景なし(1ライン)", },
-}
-local names = {}
-for _, stg in ipairs(stgs) do
-	table.insert(names, stg.name)
-end
 local sts_flg_names = {
 	[0xC0] = {
 		"ジャンプ振向",
@@ -4340,7 +4350,7 @@ local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, is_f
 	end
 
 	box.fb_pos_x, box.fb_pos_y = pos_x, orig_posy
-	box.pos_x = p.is_fireball and math.floor(p.parent.pos - screen_left) or pos_x
+	box.pos_x = p.is_fireball and math.floor(p.parent.pos - screen.left) or pos_x
 	box.pos_y = p.is_fireball and math.floor(p.parent.pos_y) or orig_posy
 
 	return box
@@ -4724,7 +4734,7 @@ local new_throwbox = function(p, box)
 	box.left                       = box.pos_x + (box.left or 0)
 	box.right                      = box.pos_x + (box.right or 0)
 	box.top                        = box.top and box.pos_y - box.top --air throw
-	box.bottom                     = box.bottom and (box.pos_y - box.bottom) or height + screen_top - p.hit.pos_z
+	box.bottom                     = box.bottom and (box.pos_y - box.bottom) or height + screen.top - p.hit.pos_z
 	box.type                       = box.type or box_type_base.t
 	box.visible                    = true
 	--print("b", box.opp_id, box.top, box.bottom, p.hit.flip_x)
@@ -4748,21 +4758,21 @@ local update_object = function(p)
 
 	local obj_base = p.addr.base
 
-	p.hit.pos_x    = p.pos - screen_left
+	p.hit.pos_x    = p.pos - screen.left
 	if p.min_pos then
-		p.hit.min_pos_x = p.min_pos - screen_left
+		p.hit.min_pos_x = p.min_pos - screen.left
 	else
 		p.hit.min_pos_x = nil
 	end
 	if p.max_pos then
-		p.hit.max_pos_x = p.max_pos - screen_left
+		p.hit.max_pos_x = p.max_pos - screen.left
 	else
 		p.hit.max_pos_x = nil
 	end
 	p.hit.pos_z      = p.pos_z
 	p.hit.old_pos_y  = p.hit.pos_y
 	p.hit.pos_y      = height - p.pos_y - p.hit.pos_z
-	p.hit.pos_y      = screen_top + p.hit.pos_y
+	p.hit.pos_y      = screen.top + p.hit.pos_y
 	p.hit.on         = pgm:read_u32(obj_base)
 	p.hit.flip_x     = get_flip_x(p)
 	p.hit.scale      = pgm:read_u8(obj_base + 0x73) + 1
@@ -5400,10 +5410,10 @@ rbff2.startplugin = function()
 
 	local restart_fight = function(param)
 		param                = param or {}
-		local stg1           = param.next_stage.stg1 or stgs[1].stg1
-		local stg2           = param.next_stage.stg2 or stgs[1].stg2
-		local stg3           = param.next_stage.stg3 or stgs[1].stg3
-		global.no_background = (param.next_stage or stgs[1]).no_background
+		local stg1           = param.next_stage.stg1 or menu.stgs[1].stg1
+		local stg2           = param.next_stage.stg2 or menu.stgs[1].stg2
+		local stg3           = param.next_stage.stg3 or menu.stgs[1].stg3
+		global.no_background = (param.next_stage or menu.stgs[1]).no_background
 		local p1             = param.next_p1 or 1
 		local p2             = param.next_p2 or 21
 		local p1col          = param.next_p1col or 0x00
@@ -6517,9 +6527,9 @@ rbff2.startplugin = function()
 		local fixpos     = { pgm:read_i16(players[1].addr.pos), pgm:read_i16(players[2].addr.pos) }
 		local fixsway    = { pgm:read_u8(players[1].addr.sway_status), pgm:read_u8(players[2].addr.sway_status) }
 		local fixscr     = {
-			x = pgm:read_u16(mem.stage_base_addr + offset_pos_x),
-			y = pgm:read_u16(mem.stage_base_addr + offset_pos_y),
-			z = pgm:read_u16(mem.stage_base_addr + offset_pos_z),
+			x = pgm:read_u16(mem.stage_base_addr + screen.offset_x),
+			y = pgm:read_u16(mem.stage_base_addr + screen.offset_y),
+			z = pgm:read_u16(mem.stage_base_addr + screen.offset_z),
 		}
 		recording.fixpos = { pos = pos, fixpos = fixpos, fixscr = fixscr, fixsway = fixsway, }
 	end
@@ -6695,12 +6705,12 @@ rbff2.startplugin = function()
 					end
 				end
 				if fixpos.fixscr and global.replay_fix_pos and global.replay_fix_pos ~= 1 then
-					pgm:write_u16(mem.stage_base_addr + offset_pos_x, fixpos.fixscr.x)
-					pgm:write_u16(mem.stage_base_addr + offset_pos_x + 0x30, fixpos.fixscr.x)
-					pgm:write_u16(mem.stage_base_addr + offset_pos_x + 0x2C, fixpos.fixscr.x)
-					pgm:write_u16(mem.stage_base_addr + offset_pos_x + 0x34, fixpos.fixscr.x)
-					pgm:write_u16(mem.stage_base_addr + offset_pos_y, fixpos.fixscr.y)
-					pgm:write_u16(mem.stage_base_addr + offset_pos_z, fixpos.fixscr.z)
+					pgm:write_u16(mem.stage_base_addr + screen.offset_x, fixpos.fixscr.x)
+					pgm:write_u16(mem.stage_base_addr + screen.offset_x + 0x30, fixpos.fixscr.x)
+					pgm:write_u16(mem.stage_base_addr + screen.offset_x + 0x2C, fixpos.fixscr.x)
+					pgm:write_u16(mem.stage_base_addr + screen.offset_x + 0x34, fixpos.fixscr.x)
+					pgm:write_u16(mem.stage_base_addr + screen.offset_y, fixpos.fixscr.y)
+					pgm:write_u16(mem.stage_base_addr + screen.offset_z, fixpos.fixscr.z)
 				end
 			end
 			players[1].input_side = pgm:read_u8(players[1].addr.input_side)
@@ -7127,7 +7137,7 @@ rbff2.startplugin = function()
 		local p_edge = 0xFFFF & (p.pos - p.push_front)
 
 		local a = 0xFFFF & math.abs(op.proc_pos - op_edge)
-		local tw_center = p_edge - screen_left
+		local tw_center = p_edge - screen.left
 		if 0 > p.side then
 			tw_center = tw_center - a
 		else
@@ -7142,7 +7152,7 @@ rbff2.startplugin = function()
 			full_range = p.tw_half_range + p.tw_half_range,
 			in_range = false,
 		}
-		local op_pos       = op.proc_pos - screen_left
+		local op_pos       = op.proc_pos - screen.left
 		p.throw.in_range   = p.throw.x1 <= op_pos and op_pos <= p.throw.x2
 
 		-- フックした情報の取得
@@ -7163,8 +7173,8 @@ rbff2.startplugin = function()
 		p.n_throw.range42  = pgm:read_i8(p.n_throw.addr.range42)
 		p.n_throw.range5   = pgm:read_i8(p.n_throw.addr.range5)
 		p.n_throw.id       = pgm:read_i8(p.n_throw.addr.id)
-		p.n_throw.pos_x    = p.pos - screen_left
-		p.n_throw.pos_y    = height - p.pos_y - screen_top
+		p.n_throw.pos_x    = p.pos - screen.left
+		p.n_throw.pos_y    = height - p.pos_y - screen.top
 		local range        = (p.n_throw.range1 == p.n_throw.range2 and math.abs(p.n_throw.range42 * 4)) or math.abs(p.n_throw.range41 * 4)
 		range              = range + p.n_throw.range5 * -4
 		range              = range + p.throw.half_range
@@ -7202,8 +7212,8 @@ rbff2.startplugin = function()
 		p.air_throw.base      = pgm:read_u32(p.air_throw.addr.base)
 		p.air_throw.opp_base  = pgm:read_u32(p.air_throw.addr.opp_base)
 		p.air_throw.opp_id    = pgm:read_u16(p.air_throw.addr.opp_id)
-		p.air_throw.pos_x     = p.pos - screen_left
-		p.air_throw.pos_y     = screen_top + height - p.old_pos_y - p.old_pos_z
+		p.air_throw.pos_x     = p.pos - screen.left
+		p.air_throw.pos_y     = screen.top + height - p.old_pos_y - p.old_pos_z
 		p.air_throw.side      = p.side
 		p.air_throw.top       = p.air_throw.range_y
 		p.air_throw.bottom    = -p.air_throw.range_y
@@ -7225,8 +7235,8 @@ rbff2.startplugin = function()
 		p.sp_throw.opp_id   = pgm:read_u16(p.sp_throw.addr.opp_id)
 		p.sp_throw.side     = p.side
 		p.sp_throw.bottom   = pgm:read_i16(p.sp_throw.addr.bottom)
-		p.sp_throw.pos_x    = p.pos - screen_left
-		p.sp_throw.pos_y    = screen_top + height - p.old_pos_y - p.old_pos_z
+		p.sp_throw.pos_x    = p.pos - screen.left
+		p.sp_throw.pos_y    = screen.top + height - p.old_pos_y - p.old_pos_z
 		p.sp_throw.right    = p.sp_throw.front * p.side
 		p.sp_throw.type     = box_type_base.pt
 		p.sp_throw.on       = p.addr.base == p.sp_throw.base and p.sp_throw.on or 0xFF
@@ -8024,8 +8034,8 @@ rbff2.startplugin = function()
 			return
 		end
 
-		screen_left     = pgm:read_i16(mem.stage_base_addr + offset_pos_x) + (320 - width) / 2 --FBA removes the side margins for some games
-		screen_top      = pgm:read_i16(mem.stage_base_addr + offset_pos_y)
+		screen.left     = pgm:read_i16(mem.stage_base_addr + screen.offset_x) + (320 - width) / 2 --FBA removes the side margins for some games
+		screen.top      = pgm:read_i16(mem.stage_base_addr + screen.offset_y)
 
 		-- プレイヤーと飛び道具のベースアドレスをキー、オブジェクトを値にするバッファ
 		local temp_hits = {}
@@ -8841,8 +8851,8 @@ rbff2.startplugin = function()
 				left   = pgm:read_i8(addr + 0x4),
 				right  = pgm:read_i8(addr + 0x5),
 				base   = pgm:read_u32(addr + 0x6),
-				pos_x  = pgm:read_i16(addr + 0xC) - screen_left,
-				pos_y  = height - pgm:read_i16(addr + 0xE) + screen_top,
+				pos_x  = pgm:read_i16(addr + 0xC) - screen.left,
+				pos_y  = height - pgm:read_i16(addr + 0xE) + screen.top,
 			}
 			if box.on ~= 0xFF and temp_hits[box.base] then
 				box.is_fireball = temp_hits[box.base].is_fireball == true
@@ -10852,7 +10862,6 @@ rbff2.startplugin = function()
 	emu.register_frame(function() end)
 	-- メニュー表示
 	local menu_max_row = 13
-	local menu_label_off_on = { "OFF", "ON" }
 	local menu_nop = function() end
 	local setup_char_manu = function()
 		-- キャラにあわせたメニュー設定
@@ -11338,8 +11347,8 @@ rbff2.startplugin = function()
 			next_p2    = menu.main.pos.col[10],  -- 2P セレクト
 			next_p1col = menu.main.pos.col[11] - 1, -- 1P カラー
 			next_p2col = menu.main.pos.col[12] - 1, -- 2P カラー
-			next_stage = stgs[menu.main.pos.col[13]], -- ステージセレクト
-			next_bgm   = bgms[menu.main.pos.col[14]].id, -- BGMセレクト
+			next_stage = menu.stgs[menu.main.pos.col[13]], -- ステージセレクト
+			next_bgm   = menu.bgms[menu.main.pos.col[14]].id, -- BGMセレクト
 		})
 		local fix_scr_top = menu.main.pos.col[16]
 		if fix_scr_top == 1 then
@@ -11372,12 +11381,6 @@ rbff2.startplugin = function()
 	local is_label_line            = function(str)
 		return str:find('^' .. "  +") ~= nil
 	end
-	local label_char_names         = {
-		"テリー・ボガード", "アンディ・ボガード", "東丈", "不知火舞", "ギース・ハワード", "望月双角",
-		"ボブ・ウィルソン", "ホンフゥ", "ブルー・マリー", "フランコ・バッシュ", "山崎竜二", "秦崇秀", "秦崇雷",
-		"ダック・キング", "キム・カッファン", "ビリー・カーン", "チン・シンザン", "タン・フー・ルー",
-		"ローレンス・ブラッド", "ヴォルフガング・クラウザー", "リック・ストラウド", "李香緋", "アルフレッド",
-	}
 	menu.main                      = {
 		list = {
 			{ "ダミー設定" },
@@ -11388,14 +11391,14 @@ rbff2.startplugin = function()
 			{ "判定個別設定" },
 			{ "プレイヤーセレクト画面" },
 			{ "                          クイックセレクト" },
-			{ "1P セレクト",            label_char_names },
-			{ "2P セレクト",            label_char_names },
+			{ "1P セレクト",            menu.labels.chars },
+			{ "2P セレクト",            menu.labels.chars },
 			{ "1P カラー",              { "A", "D" } },
 			{ "2P カラー",              { "A", "D" } },
-			{ "ステージセレクト",       names },
-			{ "BGMセレクト",            bgm_names },
-			{ "体力,POWゲージ表示",     menu_label_off_on, },
-			{ "背景なし時位置補正",     fix_scr_tops, },
+			{ "ステージセレクト",       menu.labels.stgs },
+			{ "BGMセレクト",            menu.labels.bgms },
+			{ "体力,POWゲージ表示",     menu.labels.off_on, },
+			{ "背景なし時位置補正",     menu.labels.fix_scr_tops, },
 			{ "リスタート" },
 		},
 		pos = {
@@ -11446,8 +11449,8 @@ rbff2.startplugin = function()
 	menu.current                       = menu.main -- デフォルト設定
 	menu.update_pos                = function()
 		-- メニューの更新
-		menu.main.pos.col[9] = math.min(math.max(pgm:read_u8(0x107BA5), 1), #label_char_names)
-		menu.main.pos.col[10] = math.min(math.max(pgm:read_u8(0x107BA7), 1), #label_char_names)
+		menu.main.pos.col[9] = math.min(math.max(pgm:read_u8(0x107BA5), 1), #menu.labels.chars)
+		menu.main.pos.col[10] = math.min(math.max(pgm:read_u8(0x107BA7), 1), #menu.labels.chars)
 		menu.main.pos.col[11] = math.min(math.max(pgm:read_u8(0x107BAC) + 1, 1), 2)
 		menu.main.pos.col[12] = math.min(math.max(pgm:read_u8(0x107BAD) + 1, 1), 2)
 
@@ -11457,7 +11460,7 @@ rbff2.startplugin = function()
 		local stg2 = pgm:read_u8(0x107BB7)
 		local stg3 = pgm:read_u8(0x107BB9) == 1 and 0x01 or 0x0F
 		menu.main.pos.col[13] = 1
-		for i, data in ipairs(stgs) do
+		for i, data in ipairs(menu.stgs) do
 			if data.stg1 == stg1 and data.stg2 == stg2 and data.stg3 == stg3 and global.no_background == data.no_background then
 				menu.main.pos.col[13] = i
 				break
@@ -11465,7 +11468,7 @@ rbff2.startplugin = function()
 		end
 
 		local bgmid, found = pgm:read_u8(0x10A8D5), false
-		for _, bgm in ipairs(bgms) do
+		for _, bgm in ipairs(menu.bgms) do
 			if bgmid == bgm.id then
 				menu.main.pos.col[14] = bgm.name_idx
 				found = true
@@ -11533,7 +11536,7 @@ rbff2.startplugin = function()
 			table.insert(on_ab, menu_bs_to_tra_menu)
 			table.insert(col, 0)
 			for _, bs in pairs(bs_list) do
-				table.insert(list, { bs.name, menu_label_off_on, common = bs.common == true, row = #list, })
+				table.insert(list, { bs.name, menu.labels.off_on, common = bs.common == true, row = #list, })
 				table.insert(on_ab, menu_bs_to_tra_menu)
 				table.insert(col, 1)
 			end
@@ -11557,7 +11560,7 @@ rbff2.startplugin = function()
 			table.insert(on_ab, menu_rvs_to_tra_menu)
 			table.insert(col, 0)
 			for _, bs in pairs(rvs_list) do
-				table.insert(list, { bs.name, menu_label_off_on, common = bs.common == true, row = #list, })
+				table.insert(list, { bs.name, menu.labels.off_on, common = bs.common == true, row = #list, })
 				table.insert(on_ab, menu_rvs_to_tra_menu)
 				table.insert(col, 1)
 			end
@@ -11599,8 +11602,8 @@ rbff2.startplugin = function()
 			{ "ガードリバーサル設定",   bs_blocks },
 			{ "1P 強制空振り",          no_hit_row, },
 			{ "2P 強制空振り",          no_hit_row, },
-			{ "1P 挑発で前進",          menu_label_off_on, },
-			{ "2P 挑発で前進",          menu_label_off_on, },
+			{ "1P 挑発で前進",          menu.labels.off_on, },
+			{ "2P 挑発で前進",          menu.labels.off_on, },
 			{ "1P Y座標強制",           force_y_pos, },
 			{ "2P Y座標強制",           force_y_pos, },
 			{ "画面下に移動",           { "OFF", "2Pを下に移動", "1Pを下に移動", }, },
@@ -11668,26 +11671,26 @@ rbff2.startplugin = function()
 			{ "2P 判定表示",             { "OFF", "ON", "ON:P番号なし", }, },
 			{ "1P 間合い表示",           { "OFF", "ON", "ON:投げ", "ON:遠近攻撃", "ON:詠酒", }, },
 			{ "2P 間合い表示",           { "OFF", "ON", "ON:投げ", "ON:遠近攻撃", "ON:詠酒", }, },
-			{ "1P 気絶ゲージ表示",       menu_label_off_on, },
-			{ "2P 気絶ゲージ表示",       menu_label_off_on, },
-			{ "1P ダメージ表示",         menu_label_off_on, },
-			{ "2P ダメージ表示",         menu_label_off_on, },
+			{ "1P 気絶ゲージ表示",       menu.labels.off_on, },
+			{ "2P 気絶ゲージ表示",       menu.labels.off_on, },
+			{ "1P ダメージ表示",         menu.labels.off_on, },
+			{ "2P ダメージ表示",         menu.labels.off_on, },
 			{ "1P 入力表示",             { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
 			{ "2P 入力表示",             { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
 			{ "コマンド入力状態表示",    { "OFF", "1P", "2P", }, },
 			{ "フレーム差表示",          { "OFF", "数値とグラフ", "数値" }, },
 			{ "1P フレーム数表示",       { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
 			{ "2P フレーム数表示",       { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
-			{ "1P 弾フレーム数表示",     menu_label_off_on, },
-			{ "2P 弾フレーム数表示",     menu_label_off_on, },
+			{ "1P 弾フレーム数表示",     menu.labels.off_on, },
+			{ "2P 弾フレーム数表示",     menu.labels.off_on, },
 			{ "1P 状態表示",             { "OFF", "ON", "ON:小表示", "ON:大表示" }, },
 			{ "2P 状態表示",             { "OFF", "ON", "ON:小表示", "ON:大表示" }, },
-			{ "1P 処理アドレス表示",     menu_label_off_on, },
-			{ "2P 処理アドレス表示",     menu_label_off_on, },
-			{ "1P 2P 距離表示",          menu_label_off_on, },
-			{ "1P キャラ表示",           menu_label_off_on, },
-			{ "2P キャラ表示",           menu_label_off_on, },
-			{ "エフェクト表示",          menu_label_off_on, },
+			{ "1P 処理アドレス表示",     menu.labels.off_on, },
+			{ "2P 処理アドレス表示",     menu.labels.off_on, },
+			{ "1P 2P 距離表示",          menu.labels.off_on, },
+			{ "1P キャラ表示",           menu.labels.off_on, },
+			{ "2P キャラ表示",           menu.labels.off_on, },
+			{ "エフェクト表示",          menu.labels.off_on, },
 		},
 		pos = {
 		  -- メニュー内の選択位置
@@ -11727,19 +11730,19 @@ rbff2.startplugin = function()
 	menu.extra = {
 		list = {
 			{ "                          特殊設定" },
-			{ "簡易超必",               menu_label_off_on, },
-			{ "半自動潜在能力",         menu_label_off_on, },
+			{ "簡易超必",               menu.labels.off_on, },
+			{ "半自動潜在能力",         menu.labels.off_on, },
 			{ "ライン送らない現象",     { "OFF", "ON", "ON:1Pのみ", "ON:2Pのみ" }, },
 			{ "ヒット時にポーズ",       { "OFF", "ON", "ON:やられのみ", "ON:投げやられのみ", "ON:打撃やられのみ", "ON:ガードのみ", }, },
 			{ "判定発生時にポーズ",     { "OFF", "投げ", "攻撃", "変化時", }, },
 			{ "技画像保存",             { "OFF", "ON:新規", "ON:上書き", }, },
-			{ "MAMEデバッグウィンドウ", menu_label_off_on, },
+			{ "MAMEデバッグウィンドウ", menu.labels.off_on, },
 			{ "ヒット効果確認用",       damaged_move_keys },
-			{ "位置ログ",               menu_label_off_on, },
-			{ "攻撃情報ログ",           menu_label_off_on, },
-			{ "処理アドレスログ",       menu_label_off_on, },
-			{ "入力ログ",               menu_label_off_on, },
-			{ "リバサログ",             menu_label_off_on, },
+			{ "位置ログ",               menu.labels.off_on, },
+			{ "攻撃情報ログ",           menu.labels.off_on, },
+			{ "処理アドレスログ",       menu.labels.off_on, },
+			{ "入力ログ",               menu.labels.off_on, },
+			{ "リバサログ",             menu.labels.off_on, },
 		},
 		pos = {
 		  -- メニュー内の選択位置
@@ -11769,21 +11772,21 @@ rbff2.startplugin = function()
 	menu.auto = {
 		list = {
 			{ "                        自動入力設定" },
-			{ "ダウン投げ"            , menu_label_off_on, },
-			{ "ダウン攻撃"            , menu_label_off_on, },
-			{ "通常投げの派生技"      , menu_label_off_on, },
+			{ "ダウン投げ"            , menu.labels.off_on, },
+			{ "ダウン攻撃"            , menu.labels.off_on, },
+			{ "通常投げの派生技"      , menu.labels.off_on, },
 			{ "デッドリーレイブ"      , { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, },
 			{ "アンリミテッドデザイア", { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "ギガティックサイクロン" }, },
 			{ "ドリル"                , { 1, 2, 3, 4, 5 }, },
 			{ "超白龍"                , { "OFF", "C攻撃-判定発生前", "C攻撃-判定発生後" }, },
 			{ "M.リアルカウンター"    , { "OFF", "ジャーマン", "フェイスロック", "投げっぱなしジャーマン", "ランダム", }, },
-			{ "M.トリプルエクスタシー", menu_label_off_on, },
-			{ "炎の種馬"              , menu_label_off_on, },
-			{ "喝CA"                  , menu_label_off_on, },
+			{ "M.トリプルエクスタシー", menu.labels.off_on, },
+			{ "炎の種馬"              , menu.labels.off_on, },
+			{ "喝CA"                  , menu.labels.off_on, },
 			{ "                          入力設定" },
-			{ "詠酒距離チェック"      , menu_label_off_on, },
-			{ "必勝！逆襲拳"          , menu_label_off_on, },
-			{ "空振りCA"              , menu_label_off_on, },
+			{ "詠酒距離チェック"      , menu.labels.off_on, },
+			{ "必勝！逆襲拳"          , menu.labels.off_on, },
+			{ "空振りCA"              , menu.labels.off_on, },
 		},
 		pos = {
 		  -- メニュー内の選択位置
@@ -11828,7 +11831,7 @@ rbff2.startplugin = function()
 	table.insert(menu.color.on_a, col_menu_to_main)
 	table.insert(menu.color.on_b, col_menu_to_main_cancel)
 	for _, box in pairs(box_type_col_list) do
-		table.insert(menu.color.list, { box.name, menu_label_off_on, { fill = box.fill, outline = box.outline } })
+		table.insert(menu.color.list, { box.name, menu.labels.off_on, { fill = box.fill, outline = box.outline } })
 		table.insert(menu.color.pos.col, box.enabled and 2 or 1)
 		table.insert(menu.color.on_a, col_menu_to_main)
 		table.insert(menu.color.on_b, col_menu_to_main_cancel)
@@ -11882,22 +11885,22 @@ rbff2.startplugin = function()
 	menu.replay = {
 		list = {
 			{ "     ONにしたスロットからランダムでリプレイされます。" },
-			{ "スロット1",              menu_label_off_on, },
-			{ "スロット2",              menu_label_off_on, },
-			{ "スロット3",              menu_label_off_on, },
-			{ "スロット4",              menu_label_off_on, },
-			{ "スロット5",              menu_label_off_on, },
-			{ "スロット6",              menu_label_off_on, },
-			{ "スロット7",              menu_label_off_on, },
-			{ "スロット8",              menu_label_off_on, },
+			{ "スロット1",              menu.labels.off_on, },
+			{ "スロット2",              menu.labels.off_on, },
+			{ "スロット3",              menu.labels.off_on, },
+			{ "スロット4",              menu.labels.off_on, },
+			{ "スロット5",              menu.labels.off_on, },
+			{ "スロット6",              menu.labels.off_on, },
+			{ "スロット7",              menu.labels.off_on, },
+			{ "スロット8",              menu.labels.off_on, },
 			{ "                        リプレイ設定" },
-			{ "繰り返し",               menu_label_off_on, },
+			{ "繰り返し",               menu.labels.off_on, },
 			{ "繰り返し間隔",           play_interval, },
 			{ "繰り返し開始条件",       { "なし", "両キャラがニュートラル", }, },
 			{ "開始間合い固定",         { "OFF", "Aでレコード開始", "1Pと2P", "1P", "2P", }, },
 			{ "状態リセット",           { "OFF", "1Pと2P", "1P", "2P", }, },
-			{ "ガイド表示",             menu_label_off_on, },
-			{ "ダメージでリプレイ中止", menu_label_off_on, },
+			{ "ガイド表示",             menu.labels.off_on, },
+			{ "ダメージでリプレイ中止", menu.labels.off_on, },
 		},
 		pos = {
 		  -- メニュー内の選択位置
