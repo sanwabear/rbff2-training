@@ -258,6 +258,8 @@ end
 local global = {
 	frame_number        = 0,
 	lag_frame           = false,
+	all_act_normal      = false,
+	old_all_act_normal  = false,
 
 	-- 当たり判定用
 	axis_color          = 0xFF797979,
@@ -279,6 +281,7 @@ local global = {
 	disp_effect_bps     = nil,
 	disp_frmgap         = 3,  -- フレーム差表示
 	disp_input_sts      = 1,  -- コマンド入力状態表示 1:OFF 2:1P 3:2P
+	disp_normal_frms    = 1,  -- 通常動作フレーム表示 1:OFF 2:ON
 	pause_hit           = 1,  -- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
 	pause_hitbox        = 1,  -- 判定発生時にポーズ
 	pause               = false,
@@ -711,7 +714,7 @@ local char_acts_base = {
 		{ startup = true,  names = { "バックスピンキック" },             type = act_types.attack,     ids = { 0x68, }, },
 		{ startup = true,  names = { "チャージキック" },                   type = act_types.overhead,   ids = { 0x6A, }, },
 		{ startup = true,  names = { "小バーンナックル" },                type = act_types.attack,     ids = { 0x86, 0x87, }, },
-		{ startup = true,  names = { "小バーンナックル" },                type = act_types.any,        ids = { 0x88, }, },
+		{ startup = false,  names = { "小バーンナックル" },                type = act_types.any,        ids = { 0x88, }, },
 		{ startup = true,  names = { "大バーンナックル" },                type = act_types.attack,     ids = { 0x90, 0x91, }, },
 		{ startup = false, names = { "大バーンナックル" },                type = act_types.any,        ids = { 0x92, }, },
 		{ startup = true,  names = { "パワーウェイブ" },                   type = act_types.attack,     ids = { 0x9A, 0x9B, 0x9C, },                         firing = true, },
@@ -744,7 +747,7 @@ local char_acts_base = {
 		{ startup = true,  names = { "CA 対スウェーライン上段攻撃" }, type = act_types.attack,     ids = { 0x24A, }, },
 		{ startup = true,  names = { "CA 対スウェーライン下段攻撃" }, type = act_types.low_attack, ids = { 0x24B, }, },
 		{ startup = true,  names = { "パワーダンク" },                      type = act_types.attack,     ids = { 0xE0, 0xE1, }, },
-		{ startup = true,  names = { "パワーダンク" },                      type = act_types.attack,     ids = { 0xE2, }, },
+		{ startup = false,  names = { "パワーダンク" },                      type = act_types.attack,     ids = { 0xE2, }, },
 		{ startup = true,  names = { "CA 立C" },                                 type = act_types.attack,     ids = { 0x248, }, },
 		{ startup = true,  names = { "CA 立C" },                                 type = act_types.attack,     ids = { 0x249, }, },
 	},
@@ -817,7 +820,7 @@ local char_acts_base = {
 		{ startup = true,  names = { "夏のおもひで" },                                                   type = act_types.any,        ids = { 0x24E, 0x24F } },
 		{ startup = true,  names = { "膝地獄" },                                                            type = act_types.any,        ids = { 0x81, 0x82, 0x83, 0x84 } },
 		{ startup = true,  names = { "スライディング" },                                                type = act_types.low_attack, ids = { 0x68, 0xF4 } },
-		{ startup = true,  names = { "スライディング" },                                                type = act_types.low_attack, ids = { 0xF5 } },
+		{ startup = false,  names = { "スライディング" },                                                type = act_types.any, ids = { 0xF5 } },
 		{ startup = true,  names = { "ハイキック" },                                                      type = act_types.attack,     ids = { 0x69 } },
 		{ startup = true,  names = { "炎の指先" },                                                         type = act_types.any,        ids = { 0x6A } },
 		{ startup = true,  names = { "小スラッシュキック" },                                          type = act_types.attack,     ids = { 0x86, 0x87, 0x88 } },
@@ -8425,7 +8428,9 @@ rbff2.startplugin = function()
 		end
 
 		-- 1Pと2Pの状態読取 入力
-		for i, p in ipairs(players) do
+		global.old_all_act_normal = global.all_act_normal
+		global.all_act_normal = true
+		for _, p in ipairs(players) do
 			local op           = p.op
 
 			p.input_offset     = pgm:read_u32(p.addr.input_offset)
@@ -8634,6 +8639,7 @@ rbff2.startplugin = function()
 				p.act_normal = true -- 移動中など
 				p.act_normal = p.act_data.type == act_types.free or p.act_data.type == act_types.block
 			end
+			global.all_act_normal = global.all_act_normal and p.act_normal
 
 			-- アドレス保存
 			if not p.bases[#p.bases] or p.bases[#p.bases].addr ~= p.base then
@@ -8756,6 +8762,7 @@ rbff2.startplugin = function()
 					fb.pure_st    = 0
 					fb.pure_st_tm = 0
 				end
+				global.all_act_normal = global.all_act_normal and (fb.alive == false)
 
 				fb.hit_summary = new_box_summary(fb)
 				if fb.alive then
@@ -9168,420 +9175,439 @@ rbff2.startplugin = function()
 		end
 		apply_1p2p_active()
 
-		-- フレームデータの構築処理
-		for _, p in ipairs(players) do
-			local op = p.op
-
-			-- 飛び道具
-			local chg_fireball_state, chg_prefireball_state = false, false
-			local fb_upd_groups = {}
-			for _, fb in pairs(p.fireball) do
-				if fb.has_atk_box == true then
-					if fb.atk_count == 1 and fb.act_data_fired.name == p.act_data.name then
-						chg_fireball_state = true
+		-- 全キャラ特別な動作でない場合はフレーム記録しない
+		if global.disp_normal_frms == 1 or (global.disp_normal_frms == 2 and global.all_act_normal == false) then
+			if global.disp_normal_frms == 2 and global.old_all_act_normal == true then
+				for _, p in ipairs(players) do
+					p.act_frames = {}
+					p.act_frames2 = {}
+					p.frm_gap.act_frames = {}
+					p.frm_gap.act_frames2 = {}
+					p.hist_frame_gap = {}
+					p.muteki.act_frames = {}
+					p.muteki.act_frames2 = {}
+					for _, fb in pairs(p.fireball) do
+						fb.act_frames = {}
+						fb.act_frames2 = {}
 					end
-					break
 				end
 			end
-			if chg_fireball_state ~= true then
+
+			-- フレームデータの構築処理
+			for _, p in ipairs(players) do
+				local op = p.op
+
+				-- 飛び道具
+				local chg_fireball_state, chg_prefireball_state = false, false
+				local fb_upd_groups = {}
 				for _, fb in pairs(p.fireball) do
-					if fb.proc_active == true and fb.alive ~= true then
-						fb.atk_count = fb.atk_count - 1
-						if fb.atk_count == -1 then
+					if fb.has_atk_box == true then
+						if fb.atk_count == 1 and fb.act_data_fired.name == p.act_data.name then
+							chg_fireball_state = true
+						end
+						break
+					end
+				end
+				if chg_fireball_state ~= true then
+					for _, fb in pairs(p.fireball) do
+						if fb.proc_active == true and fb.alive ~= true then
+							fb.atk_count = fb.atk_count - 1
+							if fb.atk_count == -1 then
+								chg_prefireball_state = true
+								break
+							end
+						end
+						if fb.old_proc_act == true and fb.proc_active ~= true then
 							chg_prefireball_state = true
 							break
 						end
 					end
-					if fb.old_proc_act == true and fb.proc_active ~= true then
-						chg_prefireball_state = true
-						break
-					end
 				end
-			end
 
-			--ガード移行できない行動は色替えする
-			local col, line = 0xAAF0E68C, 0xDDF0E68C
-			if p.skip_frame then
-				col, line = 0xAA888888, 0xDD888888
-			elseif p.attacking then
-				if p.juggling then
-					col, line = 0xAAFF4500, 0xDDFF4500
-				else
-					col, line = 0xAAFF00FF, 0xDDFF00FF
-				end
-			elseif p.dmmy_attacking then
-				if p.juggling then
-					col, line = 0x00000000, 0xDDFF4500
-				else
-					col, line = 0x00000000, 0xDDFF00FF
-				end
-			elseif p.throwing then
-				col, line = 0xAAD2691E, 0xDDD2691E
-			elseif p.act_1st ~= true and
-				((p.old_repeatable == true and p.repeatable == true) or
-					(p.old_repeatable == true and p.repeatable ~= true and p.act_frame > 0)) then
-				-- 1F前の状態とあわせて判定する
-				col, line = 0xAAD2691E, 0xDDD2691E
-			elseif p.can_juggle and op.act_normal then
-				col, line = 0xAAFFA500, 0xDDFFA500
-			elseif p.can_otg and op.act_normal then
-				col, line = 0xAAFFA500, 0xDDFFA500
-			elseif p.act_normal then
-				col, line = 0x44FFFFFF, 0xDDFFFFFF
-			end
-
-			-- 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
-			local reach_memo = ""
-			if p.disp_frm == 3 then
-				reach_memo = p.hitbox_txt .. "&" .. p.hurtbox_txt
-			elseif p.disp_frm == 4 then
-				reach_memo = p.hitbox_txt
-			elseif p.disp_frm == 5 then
-				reach_memo = p.hurtbox_txt
-			end
-
-			local act_count  = p.act_count or 0
-			local max_hit_dn = p.attacking and p.hit.max_hit_dn or 0
-
-			-- 行動が変わったかのフラグ
-			local frame      = p.act_frames[#p.act_frames]
-			local concrete_name, chg_act_name, disp_name
-			if frame ~= nil then
-				if p.act_data.names then
-					chg_act_name = true
-					for _, name in pairs(p.act_data.names) do
-						if frame.name == name then
-							chg_act_name = false
-							concrete_name = frame.name
-							disp_name = frame.disp_name
-							--p.act_1st = false
-						end
-					end
-					if chg_act_name then
-						concrete_name = p.act_data.name or p.act_data.names[1]
-						disp_name = convert(p.act_data.disp_name or concrete_name)
-					end
-				elseif frame.name ~= p.act_data.name then
-					concrete_name = p.act_data.name
-					disp_name = convert(p.act_data.disp_name or concrete_name)
-					chg_act_name = true
-				else
-					concrete_name = frame.name
-					disp_name = frame.disp_name
-					chg_act_name = false
-				end
-			else
-				concrete_name = p.act_data.name
-				disp_name = convert(p.act_data.disp_name or concrete_name)
-				chg_act_name = true
-			end
-			-- カイザーウェイブのレベルアップ
-			if p.char == 0x14 and p.old_kaiser_wave ~= p.kaiser_wave then
-				chg_act_name = true
-				p.act_1st = true
-			end
-			if chg_act_name ~= true then
-				if p.old_act ~= 0x18 and p.act == 0x18 then -- ダッシュの加速、減速、最終モーション
-					chg_act_name = true
-				elseif p.old_act ~= 0x19 and p.act == 0x19 then
-					chg_act_name = true
-				elseif p.act == 0x19 and p.base == fix_bp_addr(0x26152) then
-					chg_act_name = true
-				elseif p.old_act ~= 0x31 and p.act == 0x31 then -- スウェーのダッシュの区切り
-					chg_act_name = true
-				elseif p.old_act ~= 0x32 and p.act == 0x32 then
-					chg_act_name = true
-				elseif p.old_act ~= 0x34 and p.act == 0x34 then
-					chg_act_name = true
-				elseif p.old_act ~= 0x35 and p.act == 0x35 then
-					chg_act_name = true
-				elseif p.old_sway_status ~= 0x80 and p.sway_status == 0x80 then -- スウェーの切り替え
-					chg_act_name = true
-				elseif p.old_sway_status ~= 0x00 and p.sway_status == 0x00 then
-					chg_act_name = true
-				end
-			end
-			local chg_col = frame and (frame.col ~= col) or false
-			local chg_memo = frame and (frame.reach_memo ~= reach_memo) or false
-			local chg_act_count = frame and (frame.act_count ~= act_count) or false
-			if #p.act_frames == 0 or
-				chg_act_name or
-				chg_col or
-				p.chg_air_state ~= 0 or
-				chg_fireball_state == true or
-				chg_prefireball_state == true or
-				p.act_1st or
-				chg_memo or
-				(max_hit_dn > 1 and chg_act_count) then
-				--行動IDの更新があった場合にフレーム情報追加
-				frame = {
-					act = p.act,
-					count = 1,
-					col = col,
-					name = concrete_name,
-					disp_name = disp_name,
-					line = line,
-					chg_fireball_state = chg_fireball_state,
-					chg_prefireball_state = chg_prefireball_state,
-					chg_air_state = p.chg_air_state,
-					act_1st = p.act_1st,
-					reach_memo = reach_memo,
-					act_count = act_count,
-					max_hit_dn = max_hit_dn,
-				}
-				table.insert(p.act_frames, frame)
-				if 180 < #p.act_frames then
-					--バッファ長調整
-					table.remove(p.act_frames, 1)
-				end
-			else
-				--同一行動IDが継続している場合はフレーム値加算
-				if frame then
-					frame.count = frame.count + 1
-				end
-			end
-			-- 技名でグループ化したフレームデータの配列をマージ生成する
-			p.act_frames2 = frame_groups(frame, p.act_frames2 or {})
-			-- 表示可能範囲（最大で横画面幅）以上は加算しない
-			p.act_frames_total = (332 < p.act_frames_total) and 332 or (p.act_frames_total + 1)
-			-- 後の処理用に最終フレームを保持
-			local last_frame = frame
-
-			-- 無敵表示
-			col, line = 0x00000000, 0x00000000
-			for _, hurt_inv in ipairs(p.hit_summary.hurt_inv) do
-				if 0x400 > p.flag_cc then
-					if hurt_inv.type == 0 then -- 全身無敵
-						col, line = 0xAAB0E0E6, 0xDDAFEEEE
-						break
-					elseif hurt_inv.type == 1 then -- スウェー上
-						col, line = 0xAAFFA500, 0xDDAFEEEE
-						break
-					elseif hurt_inv.type == 2 then -- 上半身無敵（地上）
-						col, line = 0xAA32CD32, 0xDDAFEEEE
-						break
-					elseif hurt_inv.type == 3 then -- 足元無敵（地上）
-						col, line = 0xAA9400D3, 0xDDAFEEEE
-						break
-					elseif hurt_inv.type == 0 then -- ダウンor空中追撃のみ可能
-						col, line = 0xAAB0E0E6, 0xDDAFEEEE
-						break
-					end
-				else
-					if hurt_inv.type == 0 then -- 全身無敵
-						col, line = 0xAAB0E0E6, 0xDDAFEEEE
-						break
-					elseif hurt_inv.type == 1 then -- スウェー上
-						col, line = 0xAAFFA500, 0xDDAFEEEE
-						break
-					end
-				end
-			end
-			--printf("top %s, hi %s, lo %s", screen_top, vul_hi, vul_lo)
-
-			frame = p.muteki.act_frames[#p.muteki.act_frames]
-			if frame == nil or chg_act_name or frame.col ~= col or p.state ~= p.old_state or p.act_1st then
-				--行動IDの更新があった場合にフレーム情報追加
-				frame = {
-					act = p.act,
-					count = 1,
-					col = col,
-					name = concrete_name,
-					disp_name = disp_name,
-					line = line,
-					act_1st = p.act_1st,
-				}
-				table.insert(p.muteki.act_frames, frame)
-				if 180 < #p.muteki.act_frames then
-					--バッファ長調整
-					table.remove(p.muteki.act_frames, 1)
-				end
-			else
-				--同一行動IDが継続している場合はフレーム値加算
-				frame.count = frame.count + 1
-			end
-			-- 技名でグループ化したフレームデータの配列をマージ生成する
-			local upd_group = false
-			p.muteki.act_frames2, upd_group = frame_groups(frame, p.muteki.act_frames2 or {})
-			-- メインフレーム表示からの描画開始位置を記憶させる
-			if upd_group and last_frame then
-				last_frame.muteki = last_frame.muteki or {}
-				table.insert(last_frame.muteki, p.muteki.act_frames2[#p.muteki.act_frames2])
-			end
-
-			-- フレーム差
-			-- フレーム差のバッファ
-			local old_last_frame_gap = p.last_frame_gap
-			local save_frame_gap = function()
-				local upd = false
-				if old_last_frame_gap > 0 and old_last_frame_gap > p.last_frame_gap then
-					upd = true
-				elseif old_last_frame_gap < 0 and old_last_frame_gap < p.last_frame_gap then
-					upd = true
-				elseif old_last_frame_gap ~= 0 and p.last_frame_gap == 0 then
-					upd = true
-				end
-				if upd then
-					table.insert(p.hist_frame_gap, old_last_frame_gap)
-					if 10 < #p.hist_frame_gap then
-						--バッファ長調整
-						table.remove(p.hist_frame_gap, 1)
-					end
-				end
-			end
-			-- フレーム差の更新
-			if p.act_normal and op.act_normal then
-				if not p.old_act_normal and not op.old_act_normal then
-					p.last_frame_gap = 0
-				end
-				p.frame_gap = 0
-				col, line = 0x00000000, 0x00000000
-			elseif not p.act_normal and not op.act_normal then
-				if p.state == 0 and op.state ~= 0 then
-					p.frame_gap = p.frame_gap + 1
-					p.last_frame_gap = p.frame_gap
-					col, line = 0xAA0000FF, 0xDD0000FF
-				elseif p.state ~= 0 and op.state == 0 then
-					p.frame_gap = p.frame_gap - 1
-					p.last_frame_gap = p.frame_gap
-					col, line = 0xAAFF6347, 0xDDFF6347
-				else
-					p.frame_gap = 0
-					col, line = 0x00000000, 0x00000000
-				end
-			elseif p.act_normal and not op.act_normal then
-				-- 直前が行動中ならリセットする
-				if not p.old_act_normal then
-					p.frame_gap = 0
-				end
-				p.frame_gap = p.frame_gap + 1
-				p.last_frame_gap = p.frame_gap
-				col, line = 0xAA0000FF, 0xDD0000FF
-			elseif not p.act_normal and op.act_normal then
-				-- 直前が行動中ならリセットする
-				if not op.old_act_normal then
-					p.frame_gap = 0
-				end
-				p.frame_gap = p.frame_gap - 1
-				p.last_frame_gap = p.frame_gap
-				col, line = 0xAAFF6347, 0xDDFF6347
-			end
-			save_frame_gap()
-
-			frame = p.frm_gap.act_frames[#p.frm_gap.act_frames]
-			if frame == nil or chg_act_name or (frame.col ~= col and (p.frame_gap == 0 or p.frame_gap == -1 or p.frame_gap == 1)) or p.act_1st then
-				--行動IDの更新があった場合にフレーム情報追加
-				frame = {
-					act = p.act,
-					count = 1,
-					col = col,
-					name = concrete_name,
-					disp_name = disp_name,
-					line = line,
-					act_1st = p.act_1st,
-				}
-				table.insert(p.frm_gap.act_frames, frame)
-				if 180 < #p.frm_gap.act_frames then
-					--バッファ長調整
-					table.remove(p.frm_gap.act_frames, 1)
-				end
-			else
-				--同一行動IDが継続している場合はフレーム値加算
-				frame.count = frame.count + 1
-			end
-			-- 技名でグループ化したフレームデータの配列をマージ生成する
-			p.frm_gap.act_frames2, upd_group = frame_groups(frame, p.frm_gap.act_frames2 or {})
-			-- メインフレーム表示からの描画開始位置を記憶させる
-			if upd_group and last_frame then
-				last_frame.frm_gap = last_frame.frm_gap or {}
-				table.insert(last_frame.frm_gap, p.frm_gap.act_frames2[#p.frm_gap.act_frames2])
-			end
-
-			-- 飛び道具2
-			for fb_base, fb in pairs(p.fireball) do
-				local frame = fb.act_frames[#fb.act_frames]
-				local reset, new_name = false, fb.act_data_fired.name
-				if p.act_data.firing then
-					if p.act_1st then
-						reset = true
-					elseif not frame or frame.name ~= fb.act_data_fired.name then
-						reset = true
-					end
-				elseif fb.act == 0 and (not frame or frame.name ~= "") then
-					reset = true
-					new_name = ""
-				end
-				local col, line, act
+				--ガード移行できない行動は色替えする
+				local col, line = 0xAAF0E68C, 0xDDF0E68C
 				if p.skip_frame then
-					col, line, act = 0x00000000, 0x00000000, 0
-				elseif fb.has_atk_box == true then
-					if fb.fake_hit == true then
-						col, line, act = 0xAA00FF33, 0xDD00FF33, 2
-					elseif fb.obsl_hit == true or fb.full_hit == true or fb.harmless2 == true then
-						if fb.juggling then
-							col, line, act = 0x00000000, 0xDDFF4500, 1
-						else
-							col, line, act = 0x00000000, 0xDDFF1493, 0
-						end
+					col, line = 0xAA888888, 0xDD888888
+				elseif p.attacking then
+					if p.juggling then
+						col, line = 0xAAFF4500, 0xDDFF4500
 					else
-						if fb.juggling then
-							col, line, act = 0xAAFF4500, 0xDDFF4500, 1
-						else
-							col, line, act = 0xAAFF00FF, 0xDDFF00FF, 1
-						end
+						col, line = 0xAAFF00FF, 0xDDFF00FF
 					end
-				else
-					col, line, act = 0x00000000, 0x00000000, 0
+				elseif p.dmmy_attacking then
+					if p.juggling then
+						col, line = 0x00000000, 0xDDFF4500
+					else
+						col, line = 0x00000000, 0xDDFF00FF
+					end
+				elseif p.throwing then
+					col, line = 0xAAD2691E, 0xDDD2691E
+				elseif p.act_1st ~= true and
+					((p.old_repeatable == true and p.repeatable == true) or
+						(p.old_repeatable == true and p.repeatable ~= true and p.act_frame > 0)) then
+					-- 1F前の状態とあわせて判定する
+					col, line = 0xAAD2691E, 0xDDD2691E
+				elseif p.can_juggle and op.act_normal then
+					col, line = 0xAAFFA500, 0xDDFFA500
+				elseif p.can_otg and op.act_normal then
+					col, line = 0xAAFFA500, 0xDDFFA500
+				elseif p.act_normal then
+					col, line = 0x44FFFFFF, 0xDDFFFFFF
 				end
 
 				-- 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
 				local reach_memo = ""
-				if fb.disp_frm == 3 then
-					reach_memo = fb.hitbox_txt .. "&" .. fb.hurtbox_txt
+				if p.disp_frm == 3 then
+					reach_memo = p.hitbox_txt .. "&" .. p.hurtbox_txt
 				elseif p.disp_frm == 4 then
-					reach_memo = fb.hitbox_txt
+					reach_memo = p.hitbox_txt
 				elseif p.disp_frm == 5 then
-					reach_memo = fb.hurtbox_txt
+					reach_memo = p.hurtbox_txt
 				end
-				local act_count  = fb.actb
-				local max_hit_dn = fb.hit.max_hit_dn
 
-				if #fb.act_frames == 0 or (frame == nil) or frame.col ~= col or reset or frame.reach_memo ~= reach_memo or (max_hit_dn > 1 and frame.act_count ~= act_count) then
-					-- 軽量化のため攻撃の有無だけで記録を残す
+				local act_count  = p.act_count or 0
+				local max_hit_dn = p.attacking and p.hit.max_hit_dn or 0
+
+				-- 行動が変わったかのフラグ
+				local frame      = p.act_frames[#p.act_frames]
+				local concrete_name, chg_act_name, disp_name
+				if frame ~= nil then
+					if p.act_data.names then
+						chg_act_name = true
+						for _, name in pairs(p.act_data.names) do
+							if frame.name == name then
+								chg_act_name = false
+								concrete_name = frame.name
+								disp_name = frame.disp_name
+								--p.act_1st = false
+							end
+						end
+						if chg_act_name then
+							concrete_name = p.act_data.name or p.act_data.names[1]
+							disp_name = convert(p.act_data.disp_name or concrete_name)
+						end
+					elseif frame.name ~= p.act_data.name then
+						concrete_name = p.act_data.name
+						disp_name = convert(p.act_data.disp_name or concrete_name)
+						chg_act_name = true
+					else
+						concrete_name = frame.name
+						disp_name = frame.disp_name
+						chg_act_name = false
+					end
+				else
+					concrete_name = p.act_data.name
+					disp_name = convert(p.act_data.disp_name or concrete_name)
+					chg_act_name = true
+				end
+				-- カイザーウェイブのレベルアップ
+				if p.char == 0x14 and p.old_kaiser_wave ~= p.kaiser_wave then
+					chg_act_name = true
+					p.act_1st = true
+				end
+				if chg_act_name ~= true then
+					if p.old_act ~= 0x18 and p.act == 0x18 then -- ダッシュの加速、減速、最終モーション
+						chg_act_name = true
+					elseif p.old_act ~= 0x19 and p.act == 0x19 then
+						chg_act_name = true
+					elseif p.act == 0x19 and p.base == fix_bp_addr(0x26152) then
+						chg_act_name = true
+					elseif p.old_act ~= 0x31 and p.act == 0x31 then -- スウェーのダッシュの区切り
+						chg_act_name = true
+					elseif p.old_act ~= 0x32 and p.act == 0x32 then
+						chg_act_name = true
+					elseif p.old_act ~= 0x34 and p.act == 0x34 then
+						chg_act_name = true
+					elseif p.old_act ~= 0x35 and p.act == 0x35 then
+						chg_act_name = true
+					elseif p.old_sway_status ~= 0x80 and p.sway_status == 0x80 then -- スウェーの切り替え
+						chg_act_name = true
+					elseif p.old_sway_status ~= 0x00 and p.sway_status == 0x00 then
+						chg_act_name = true
+					end
+				end
+				local chg_col = frame and (frame.col ~= col) or false
+				local chg_memo = frame and (frame.reach_memo ~= reach_memo) or false
+				local chg_act_count = frame and (frame.act_count ~= act_count) or false
+				if #p.act_frames == 0 or
+					chg_act_name or
+					chg_col or
+					p.chg_air_state ~= 0 or
+					chg_fireball_state == true or
+					chg_prefireball_state == true or
+					p.act_1st or
+					chg_memo or
+					(max_hit_dn > 1 and chg_act_count) then
+					--行動IDの更新があった場合にフレーム情報追加
 					frame = {
-						act        = act,
-						count      = 1,
-						col        = col,
-						name       = new_name,
-						line       = line,
-						act_1st    = reset,
+						act = p.act,
+						count = 1,
+						col = col,
+						name = concrete_name,
+						disp_name = disp_name,
+						line = line,
+						chg_fireball_state = chg_fireball_state,
+						chg_prefireball_state = chg_prefireball_state,
+						chg_air_state = p.chg_air_state,
+						act_1st = p.act_1st,
 						reach_memo = reach_memo,
-						act_count  = act_count,
+						act_count = act_count,
 						max_hit_dn = max_hit_dn,
 					}
-					-- 関数の使いまわすためact_framesは配列にするが明細を表示ないので1個しかもたなくていい
-					fb.act_frames[1] = frame
+					table.insert(p.act_frames, frame)
+					if 180 < #p.act_frames then
+						--バッファ長調整
+						table.remove(p.act_frames, 1)
+					end
 				else
-					-- 同一行動IDが継続している場合はフレーム値加算
+					--同一行動IDが継続している場合はフレーム値加算
+					if frame then
+						frame.count = frame.count + 1
+					end
+				end
+				-- 技名でグループ化したフレームデータの配列をマージ生成する
+				p.act_frames2 = frame_groups(frame, p.act_frames2 or {})
+				-- 表示可能範囲（最大で横画面幅）以上は加算しない
+				p.act_frames_total = (332 < p.act_frames_total) and 332 or (p.act_frames_total + 1)
+				-- 後の処理用に最終フレームを保持
+				local last_frame = frame
+
+				-- 無敵表示
+				col, line = 0x00000000, 0x00000000
+				for _, hurt_inv in ipairs(p.hit_summary.hurt_inv) do
+					if 0x400 > p.flag_cc then
+						if hurt_inv.type == 0 then -- 全身無敵
+							col, line = 0xAAB0E0E6, 0xDDAFEEEE
+							break
+						elseif hurt_inv.type == 1 then -- スウェー上
+							col, line = 0xAAFFA500, 0xDDAFEEEE
+							break
+						elseif hurt_inv.type == 2 then -- 上半身無敵（地上）
+							col, line = 0xAA32CD32, 0xDDAFEEEE
+							break
+						elseif hurt_inv.type == 3 then -- 足元無敵（地上）
+							col, line = 0xAA9400D3, 0xDDAFEEEE
+							break
+						elseif hurt_inv.type == 0 then -- ダウンor空中追撃のみ可能
+							col, line = 0xAAB0E0E6, 0xDDAFEEEE
+							break
+						end
+					else
+						if hurt_inv.type == 0 then -- 全身無敵
+							col, line = 0xAAB0E0E6, 0xDDAFEEEE
+							break
+						elseif hurt_inv.type == 1 then -- スウェー上
+							col, line = 0xAAFFA500, 0xDDAFEEEE
+							break
+						end
+					end
+				end
+				--printf("top %s, hi %s, lo %s", screen_top, vul_hi, vul_lo)
+
+				frame = p.muteki.act_frames[#p.muteki.act_frames]
+				if frame == nil or chg_act_name or frame.col ~= col or p.state ~= p.old_state or p.act_1st then
+					--行動IDの更新があった場合にフレーム情報追加
+					frame = {
+						act = p.act,
+						count = 1,
+						col = col,
+						name = concrete_name,
+						disp_name = disp_name,
+						line = line,
+						act_1st = p.act_1st,
+					}
+					table.insert(p.muteki.act_frames, frame)
+					if 180 < #p.muteki.act_frames then
+						--バッファ長調整
+						table.remove(p.muteki.act_frames, 1)
+					end
+				else
+					--同一行動IDが継続している場合はフレーム値加算
 					frame.count = frame.count + 1
 				end
 				-- 技名でグループ化したフレームデータの配列をマージ生成する
-				fb.act_frames2, fb_upd_groups[fb_base] = frame_groups(frame, fb.act_frames2 or {})
-			end
+				local upd_group = false
+				p.muteki.act_frames2, upd_group = frame_groups(frame, p.muteki.act_frames2 or {})
+				-- メインフレーム表示からの描画開始位置を記憶させる
+				if upd_group and last_frame then
+					last_frame.muteki = last_frame.muteki or {}
+					table.insert(last_frame.muteki, p.muteki.act_frames2[#p.muteki.act_frames2])
+				end
 
-			-- メインフレーム表示からの描画開始位置を記憶させる
-			for fb_base, fb_upd_group in pairs(fb_upd_groups) do
-				if fb_upd_group and last_frame then
-					last_frame.fireball = last_frame.fireball or {}
-					last_frame.fireball[fb_base] = last_frame.fireball[fb_upd_group] or {}
-					local last_fb_frame = last_frame.fireball[fb_base]
-					table.insert(last_fb_frame, p.fireball[fb_base].act_frames2[# p.fireball[fb_base].act_frames2])
-					last_fb_frame[#last_fb_frame].parent_count = last_frame.last_total
+				-- フレーム差
+				-- フレーム差のバッファ
+				local old_last_frame_gap = p.last_frame_gap
+				local save_frame_gap = function()
+					local upd = false
+					if old_last_frame_gap > 0 and old_last_frame_gap > p.last_frame_gap then
+						upd = true
+					elseif old_last_frame_gap < 0 and old_last_frame_gap < p.last_frame_gap then
+						upd = true
+					elseif old_last_frame_gap ~= 0 and p.last_frame_gap == 0 then
+						upd = true
+					end
+					if upd then
+						table.insert(p.hist_frame_gap, old_last_frame_gap)
+						if 10 < #p.hist_frame_gap then
+							--バッファ長調整
+							table.remove(p.hist_frame_gap, 1)
+						end
+					end
+				end
+				-- フレーム差の更新
+				if p.act_normal and op.act_normal then
+					if not p.old_act_normal and not op.old_act_normal then
+						p.last_frame_gap = 0
+					end
+					p.frame_gap = 0
+					col, line = 0x00000000, 0x00000000
+				elseif not p.act_normal and not op.act_normal then
+					if p.state == 0 and op.state ~= 0 then
+						p.frame_gap = p.frame_gap + 1
+						p.last_frame_gap = p.frame_gap
+						col, line = 0xAA0000FF, 0xDD0000FF
+					elseif p.state ~= 0 and op.state == 0 then
+						p.frame_gap = p.frame_gap - 1
+						p.last_frame_gap = p.frame_gap
+						col, line = 0xAAFF6347, 0xDDFF6347
+					else
+						p.frame_gap = 0
+						col, line = 0x00000000, 0x00000000
+					end
+				elseif p.act_normal and not op.act_normal then
+					-- 直前が行動中ならリセットする
+					if not p.old_act_normal then
+						p.frame_gap = 0
+					end
+					p.frame_gap = p.frame_gap + 1
+					p.last_frame_gap = p.frame_gap
+					col, line = 0xAA0000FF, 0xDD0000FF
+				elseif not p.act_normal and op.act_normal then
+					-- 直前が行動中ならリセットする
+					if not op.old_act_normal then
+						p.frame_gap = 0
+					end
+					p.frame_gap = p.frame_gap - 1
+					p.last_frame_gap = p.frame_gap
+					col, line = 0xAAFF6347, 0xDDFF6347
+				end
+				save_frame_gap()
+
+				frame = p.frm_gap.act_frames[#p.frm_gap.act_frames]
+				if frame == nil or chg_act_name or (frame.col ~= col and (p.frame_gap == 0 or p.frame_gap == -1 or p.frame_gap == 1)) or p.act_1st then
+					--行動IDの更新があった場合にフレーム情報追加
+					frame = {
+						act = p.act,
+						count = 1,
+						col = col,
+						name = concrete_name,
+						disp_name = disp_name,
+						line = line,
+						act_1st = p.act_1st,
+					}
+					table.insert(p.frm_gap.act_frames, frame)
+					if 180 < #p.frm_gap.act_frames then
+						--バッファ長調整
+						table.remove(p.frm_gap.act_frames, 1)
+					end
+				else
+					--同一行動IDが継続している場合はフレーム値加算
+					frame.count = frame.count + 1
+				end
+				-- 技名でグループ化したフレームデータの配列をマージ生成する
+				p.frm_gap.act_frames2, upd_group = frame_groups(frame, p.frm_gap.act_frames2 or {})
+				-- メインフレーム表示からの描画開始位置を記憶させる
+				if upd_group and last_frame then
+					last_frame.frm_gap = last_frame.frm_gap or {}
+					table.insert(last_frame.frm_gap, p.frm_gap.act_frames2[#p.frm_gap.act_frames2])
+				end
+
+				-- 飛び道具2
+				for fb_base, fb in pairs(p.fireball) do
+					local frame = fb.act_frames[#fb.act_frames]
+					local reset, new_name = false, fb.act_data_fired.name
+					if p.act_data.firing then
+						if p.act_1st then
+							reset = true
+						elseif not frame or frame.name ~= fb.act_data_fired.name then
+							reset = true
+						end
+					elseif fb.act == 0 and (not frame or frame.name ~= "") then
+						reset = true
+						new_name = ""
+					end
+					local col, line, act
+					if p.skip_frame then
+						col, line, act = 0x00000000, 0x00000000, 0
+					elseif fb.has_atk_box == true then
+						if fb.fake_hit == true then
+							col, line, act = 0xAA00FF33, 0xDD00FF33, 2
+						elseif fb.obsl_hit == true or fb.full_hit == true or fb.harmless2 == true then
+							if fb.juggling then
+								col, line, act = 0x00000000, 0xDDFF4500, 1
+							else
+								col, line, act = 0x00000000, 0xDDFF1493, 0
+							end
+						else
+							if fb.juggling then
+								col, line, act = 0xAAFF4500, 0xDDFF4500, 1
+							else
+								col, line, act = 0xAAFF00FF, 0xDDFF00FF, 1
+							end
+						end
+					else
+						col, line, act = 0x00000000, 0x00000000, 0
+					end
+
+					-- 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
+					local reach_memo = ""
+					if fb.disp_frm == 3 then
+						reach_memo = fb.hitbox_txt .. "&" .. fb.hurtbox_txt
+					elseif p.disp_frm == 4 then
+						reach_memo = fb.hitbox_txt
+					elseif p.disp_frm == 5 then
+						reach_memo = fb.hurtbox_txt
+					end
+					local act_count  = fb.actb
+					local max_hit_dn = fb.hit.max_hit_dn
+
+					if #fb.act_frames == 0 or (frame == nil) or frame.col ~= col or reset or frame.reach_memo ~= reach_memo or (max_hit_dn > 1 and frame.act_count ~= act_count) then
+						-- 軽量化のため攻撃の有無だけで記録を残す
+						frame = {
+							act        = act,
+							count      = 1,
+							col        = col,
+							name       = new_name,
+							line       = line,
+							act_1st    = reset,
+							reach_memo = reach_memo,
+							act_count  = act_count,
+							max_hit_dn = max_hit_dn,
+						}
+						-- 関数の使いまわすためact_framesは配列にするが明細を表示ないので1個しかもたなくていい
+						fb.act_frames[1] = frame
+					else
+						-- 同一行動IDが継続している場合はフレーム値加算
+						frame.count = frame.count + 1
+					end
+					-- 技名でグループ化したフレームデータの配列をマージ生成する
+					fb.act_frames2, fb_upd_groups[fb_base] = frame_groups(frame, fb.act_frames2 or {})
+				end
+
+				-- メインフレーム表示からの描画開始位置を記憶させる
+				for fb_base, fb_upd_group in pairs(fb_upd_groups) do
+					if fb_upd_group and last_frame then
+						last_frame.fireball = last_frame.fireball or {}
+						last_frame.fireball[fb_base] = last_frame.fireball[fb_upd_group] or {}
+						local last_fb_frame = last_frame.fireball[fb_base]
+						table.insert(last_fb_frame, p.fireball[fb_base].act_frames2[# p.fireball[fb_base].act_frames2])
+						last_fb_frame[#last_fb_frame].parent_count = last_frame.last_total
+					end
 				end
 			end
+			--1Pと2Pともにフレーム数が多すぎる場合は加算をやめる
+			fix_max_framecount()
 		end
-		--1Pと2Pともにフレーム数が多すぎる場合は加算をやめる
-		fix_max_framecount()
 
 		-- フレーム経過による硬直差の減少
 		for _, p in ipairs(players) do
@@ -11015,31 +11041,32 @@ rbff2.startplugin = function()
 		local col             = menu.disp.pos.col
 		local p               = players
 		--  タイトルラベル
-		p[1].disp_hitbox      = col[2]    -- 1P 判定表示
-		p[2].disp_hitbox      = col[3]    -- 2P 判定表示
-		p[1].disp_range       = col[4]    -- 1P 間合い表示
-		p[2].disp_range       = col[5]    -- 2P 間合い表示
-		p[1].disp_stun        = col[6] == 2 -- 1P 気絶ゲージ表示
-		p[2].disp_stun        = col[7] == 2 -- 2P 気絶ゲージ表示
-		p[1].disp_dmg         = col[8] == 2 -- 1P ダメージ表示
-		p[2].disp_dmg         = col[9] == 2 -- 2P ダメージ表示
-		p[1].disp_cmd         = col[10]   -- 1P 入力表示
-		p[2].disp_cmd         = col[11]   -- 2P 入力表示
-		global.disp_input_sts = col[12]   -- コマンド入力状態表示
-		global.disp_frmgap    = col[13]   -- フレーム差表示
-		p[1].disp_frm         = col[14]   -- 1P フレーム数表示
-		p[2].disp_frm         = col[15]   -- 2P フレーム数表示
-		p[1].disp_fbfrm       = col[16] == 2 -- 1P 弾フレーム数表示
-		p[2].disp_fbfrm       = col[17] == 2 -- 2P 弾フレーム数表示
-		p[1].disp_sts         = col[18]   -- 1P 状態表示
-		p[2].disp_sts         = col[19]   -- 2P 状態表示
-		p[1].disp_base        = col[20] == 2 -- 1P 処理アドレス表示
-		p[2].disp_base        = col[21] == 2 -- 2P 処理アドレス表示
-		global.disp_pos       = col[22] == 2 -- 1P 2P 距離表示
-		p[1].disp_char        = col[23] == 2 -- 1P キャラ表示
-		p[2].disp_char        = col[24] == 2 -- 2P キャラ表示
-		global.disp_effect    = col[25] == 2 -- エフェクト表示
-		menu.current              = menu.main
+		p[1].disp_hitbox        = col[2]   -- 1P 判定表示
+		p[2].disp_hitbox        = col[3]   -- 2P 判定表示
+		p[1].disp_range         = col[4]   -- 1P 間合い表示
+		p[2].disp_range         = col[5]   -- 2P 間合い表示
+		p[1].disp_stun          = col[6] == 2 -- 1P 気絶ゲージ表示
+		p[2].disp_stun          = col[7] == 2 -- 2P 気絶ゲージ表示
+		p[1].disp_dmg           = col[8] == 2 -- 1P ダメージ表示
+		p[2].disp_dmg           = col[9] == 2 -- 2P ダメージ表示
+		p[1].disp_cmd           = col[10]  -- 1P 入力表示
+		p[2].disp_cmd           = col[11]  -- 2P 入力表示
+		global.disp_input_sts   = col[12]  -- コマンド入力状態表示
+		global.disp_normal_frms = col[13]  -- 通常動作フレーム表示
+		global.disp_frmgap      = col[14]  -- フレーム差表示
+		p[1].disp_frm           = col[15]  -- 1P フレーム数表示
+		p[2].disp_frm           = col[16]  -- 2P フレーム数表示
+		p[1].disp_fbfrm         = col[17] == 2 -- 1P 弾フレーム数表示
+		p[2].disp_fbfrm         = col[18] == 2 -- 2P 弾フレーム数表示
+		p[1].disp_sts           = col[19]  -- 1P 状態表示
+		p[2].disp_sts           = col[20]  -- 2P 状態表示
+		p[1].disp_base          = col[21] == 2 -- 1P 処理アドレス表示
+		p[2].disp_base          = col[22] == 2 -- 2P 処理アドレス表示
+		global.disp_pos         = col[23] == 2 -- 1P 2P 距離表示
+		p[1].disp_char          = col[24] == 2 -- 1P キャラ表示
+		p[2].disp_char          = col[25] == 2 -- 2P キャラ表示
+		global.disp_effect      = col[26] == 2 -- エフェクト表示
+		menu.current            = menu.main
 	end
 	local disp_menu_to_main_cancel = function()
 		disp_menu_to_main(true)
@@ -11253,19 +11280,20 @@ rbff2.startplugin = function()
 		col[10] = p[1].disp_cmd        -- 1P 入力表示
 		col[11] = p[2].disp_cmd        -- 2P 入力表示
 		col[12] = g.disp_input_sts     -- コマンド入力状態表示
-		col[13] = g.disp_frmgap        -- フレーム差表示
-		col[14] = p[1].disp_frm        -- 1P フレーム数表示
-		col[15] = p[2].disp_frm        -- 2P フレーム数表示
-		col[16] = p[1].disp_fbfrm and 2 or 1 -- 1P 弾フレーム数表示
-		col[17] = p[2].disp_fbfrm and 2 or 1 -- 2P 弾フレーム数表示
-		col[18] = p[1].disp_sts        -- 1P 状態表示
-		col[19] = p[2].disp_sts        -- 2P 状態表示
-		col[20] = p[1].disp_base and 2 or 1 -- 1P 処理アドレス表示
-		col[21] = p[2].disp_base and 2 or 1 -- 2P 処理アドレス表示
-		col[22] = g.disp_pos and 2 or 1 -- 1P 2P 距離表示
-		col[23] = p[1].disp_char and 2 or 1 -- 1P キャラ表示
-		col[24] = p[2].disp_char and 2 or 1 -- 2P キャラ表示
-		col[25] = g.disp_effect and 2 or 1 -- エフェクト表示
+		col[13] = g.disp_normal_frms   -- 通常動作フレーム表示
+		col[14] = g.disp_frmgap        -- フレーム差表示
+		col[15] = p[1].disp_frm        -- 1P フレーム数表示
+		col[16] = p[2].disp_frm        -- 2P フレーム数表示
+		col[17] = p[1].disp_fbfrm and 2 or 1 -- 1P 弾フレーム数表示
+		col[18] = p[2].disp_fbfrm and 2 or 1 -- 2P 弾フレーム数表示
+		col[19] = p[1].disp_sts        -- 1P 状態表示
+		col[20] = p[2].disp_sts        -- 2P 状態表示
+		col[21] = p[1].disp_base and 2 or 1 -- 1P 処理アドレス表示
+		col[22] = p[2].disp_base and 2 or 1 -- 2P 処理アドレス表示
+		col[23] = g.disp_pos and 2 or 1 -- 1P 2P 距離表示
+		col[24] = p[1].disp_char and 2 or 1 -- 1P キャラ表示
+		col[25] = p[2].disp_char and 2 or 1 -- 2P キャラ表示
+		col[26] = g.disp_effect and 2 or 1 -- エフェクト表示
 	end
 	local init_ex_menu_config      = function()
 		local col = menu.extra.pos.col
@@ -11688,6 +11716,7 @@ rbff2.startplugin = function()
 			{ "1P 入力表示",             { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
 			{ "2P 入力表示",             { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
 			{ "コマンド入力状態表示",    { "OFF", "1P", "2P", }, },
+			{ "通常動作フレーム表示",    menu.labels.off_on, },
 			{ "フレーム差表示",          { "OFF", "数値とグラフ", "数値" }, },
 			{ "1P フレーム数表示",       { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
 			{ "2P フレーム数表示",       { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
@@ -11719,19 +11748,20 @@ rbff2.startplugin = function()
 				1, -- 1P 入力表示            10
 				1, -- 2P 入力表示            11
 				1, -- コマンド入力状態表示   12
-				3, -- フレーム差表示         13
-				4, -- 1P フレーム数表示      14
-				4, -- 2P フレーム数表示      15
-				2, -- 1P 弾フレーム数表示    16
+				1, -- 通常動作フレーム表示   13
+				3, -- フレーム差表示         14
+				4, -- 1P フレーム数表示      15
+				4, -- 2P フレーム数表示      16
 				2, -- 1P 弾フレーム数表示    17
-				1, -- 1P 状態表示            18
-				1, -- 2P 状態表示            19
-				1, -- 1P 処理アドレス表示    20
-				1, -- 2P 処理アドレス表示    21
-				1, -- 1P 2P 距離表示         22
-				2, -- 1P キャラ表示          23
-				2, -- 2P キャラ表示          24
-				2, -- エフェクト表示         25
+				2, -- 1P 弾フレーム数表示    18
+				1, -- 1P 状態表示            19
+				1, -- 2P 状態表示            20
+				1, -- 1P 処理アドレス表示    21
+				1, -- 2P 処理アドレス表示    22
+				1, -- 1P 2P 距離表示         23
+				2, -- 1P キャラ表示          24
+				2, -- 2P キャラ表示          25
+				2, -- エフェクト表示         26
 			},
 		},
 		on_a = new_filled_table(25, disp_menu_to_main),
@@ -12108,7 +12138,6 @@ rbff2.startplugin = function()
 		if not cpu then
 			return
 		end
-		local width = scr.width * scr.xscale
 
 		-- フレーム更新しているかチェック更新
 		local ec = scr:frame_number()
@@ -12130,6 +12159,9 @@ rbff2.startplugin = function()
 		mem.old_0x107C2A = mem._0x107C2A
 		mem._0x107C2A = pgm:read_u16(0x107C2A)
 		global.lag_frame = mem.old_0x107C2A == mem._0x107C2A
+		if mem._0x107C2A >= 0x176E then
+			pgm:write_u16(0x107C2A, 0) -- リセット
+		end
 		prev_p_space  = (p_space ~= 0) and p_space or prev_p_space
 
 		-- 対戦中かどうかの判定
