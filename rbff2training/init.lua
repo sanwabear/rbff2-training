@@ -281,7 +281,7 @@ local global = {
 	disp_effect_bps     = nil,
 	disp_frmgap         = 3,  -- フレーム差表示
 	disp_input_sts      = 1,  -- コマンド入力状態表示 1:OFF 2:1P 3:2P
-	disp_normal_frms    = 1,  -- 通常動作フレーム表示 1:OFF 2:ON
+	disp_normal_frms    = 1,  -- 通常動作フレーム非表示 1:OFF 2:ON
 	pause_hit           = 1,  -- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
 	pause_hitbox        = 1,  -- 判定発生時にポーズ
 	pause               = false,
@@ -7064,7 +7064,15 @@ rbff2.startplugin = function()
 
 		-- 横に描画
 		local xmin = x --30
-		local xmax = math.min(325 - xmin, act_frames_total + xmin)
+		local xa, xb, xmax = 325 - xmin, act_frames_total + xmin, 0
+		-- 左寄せで開始
+		if xa < xb then
+			xmax = xa
+		else
+			xmax = (act_frames_total + xmin) % (325 - xmin)
+		end
+		-- 右寄せで開始
+		-- xmax = math.min(325 - xmin, act_frames_total + xmin)
 		local x1 = xmax
 		local loopend = false
 		for j = #frames2, 1, -1 do
@@ -9179,6 +9187,7 @@ rbff2.startplugin = function()
 		if global.disp_normal_frms == 1 or (global.disp_normal_frms == 2 and global.all_act_normal == false) then
 			if global.disp_normal_frms == 2 and global.old_all_act_normal == true then
 				for _, p in ipairs(players) do
+					p.act_frames_total = 0
 					p.act_frames = {}
 					p.act_frames2 = {}
 					p.frm_gap.act_frames = {}
@@ -11052,7 +11061,7 @@ rbff2.startplugin = function()
 		p[1].disp_cmd           = col[10]  -- 1P 入力表示
 		p[2].disp_cmd           = col[11]  -- 2P 入力表示
 		global.disp_input_sts   = col[12]  -- コマンド入力状態表示
-		global.disp_normal_frms = col[13]  -- 通常動作フレーム表示
+		global.disp_normal_frms = col[13]  -- 通常動作フレーム非表示
 		global.disp_frmgap      = col[14]  -- フレーム差表示
 		p[1].disp_frm           = col[15]  -- 1P フレーム数表示
 		p[2].disp_frm           = col[16]  -- 2P フレーム数表示
@@ -11280,7 +11289,7 @@ rbff2.startplugin = function()
 		col[10] = p[1].disp_cmd        -- 1P 入力表示
 		col[11] = p[2].disp_cmd        -- 2P 入力表示
 		col[12] = g.disp_input_sts     -- コマンド入力状態表示
-		col[13] = g.disp_normal_frms   -- 通常動作フレーム表示
+		col[13] = g.disp_normal_frms   -- 通常動作フレーム非表示
 		col[14] = g.disp_frmgap        -- フレーム差表示
 		col[15] = p[1].disp_frm        -- 1P フレーム数表示
 		col[16] = p[2].disp_frm        -- 2P フレーム数表示
@@ -11716,7 +11725,7 @@ rbff2.startplugin = function()
 			{ "1P 入力表示",             { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
 			{ "2P 入力表示",             { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
 			{ "コマンド入力状態表示",    { "OFF", "1P", "2P", }, },
-			{ "通常動作フレーム表示",    menu.labels.off_on, },
+			{ "通常動作フレーム非表示",  menu.labels.off_on, },
 			{ "フレーム差表示",          { "OFF", "数値とグラフ", "数値" }, },
 			{ "1P フレーム数表示",       { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
 			{ "2P フレーム数表示",       { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
@@ -11748,7 +11757,7 @@ rbff2.startplugin = function()
 				1, -- 1P 入力表示            10
 				1, -- 2P 入力表示            11
 				1, -- コマンド入力状態表示   12
-				1, -- 通常動作フレーム表示   13
+				1, -- 通常動作フレーム非表示 13
 				3, -- フレーム差表示         14
 				4, -- 1P フレーム数表示      15
 				4, -- 2P フレーム数表示      16
