@@ -2178,6 +2178,8 @@ local create_input_states = function()
 	local _33b = "_3|_N|_3|_B"
 	local _33c = "_3|_N|_3|_C"
 	local _3b = "_3|_B"
+	local _3c = "_3|_C"
+	local _412c = "_4|_1|_2|_C"
 	local _41236a = "_4|_1|_2|_3|_6|_A"
 	local _41236b = "_4|_1|_2|_3|_6|_B"
 	local _41236bc = "_4|_1|_2|_3|_6|_B+_C"
@@ -2194,6 +2196,7 @@ local create_input_states = function()
 	local _4862bc = "_4|_8|_6|_2|_B+_C"
 	local _4862c = "_4|_8|_6|_2|_C"
 	local _4ac = "_4|_A+_C"
+	local _4b = "_4|_B"
 	local _4chg6a = "_4|^4|_6|_A"
 	local _4chg6b = "_4|^4|_6|_B"
 	local _4chg6bc = "_4|^4|_6|_B+_C"
@@ -2222,6 +2225,8 @@ local create_input_states = function()
 	local _66 = "_6|_N|_6"
 	local _666a = "_6|_N|_6|_N|_6|_A"
 	local _66a = "_6|_N|_6|_A"
+	local _66c = "_6|_N|_6|_C"
+	local _666c = "_6|_N|_6|_N|_6|_C"
 	local _6842a = "_6|_8|_4|_2|_A"
 	local _6842bc = "_6|_8|_4|_2|_B+_C"
 	local _6842c = "_6|_8|_4|_2|_C"
@@ -2247,9 +2252,16 @@ local create_input_states = function()
 	local _cc = "_C|_C|||"
 	local _ccc = "_C|_C|_C"
 	local _cccc = "_C|_C|_C|_C"
+	local _46a = "_4|_6|_A"
+	local _412d = "_4|_1|_2|_D"
+	local _44b = "_4|_N|_4|_B"
+	local _44d = "_4|_N|_4|_D"
+	local _abc = "_A+_B+_C"
+	local _6b = "_6|_B"
+	local _6c = "_6|_C"
 
 	local input_states = {
-		{ --テリー・ボガード
+		{ --テリー・ボガード 11
 			{ addr = 0x02, cmd = _214a, name = "小バーンナックル", },
 			{ addr = 0x06, cmd = _214c, name = "大バーンナックル", },
 			{ addr = 0x0A, cmd = _236a, name = "パワーウェイブ", },
@@ -2262,6 +2274,9 @@ local create_input_states = function()
 			{ addr = 0x26, cmd = _21416c, sdm = "c", name = "トリプルゲイザー", },
 			{ addr = 0x2A, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x2E, cmd = _44, type = input_state_types.step, name = "飛び退き", },
+			{ addr = 0x32, cmd = _46a, name = "_4_6+_A", },
+			{ addr = 0x36, cmd = _412d, name = "_4_1_2+_D", },
+			{ addr = 0x3A, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
 			{ addr = 0x3E, cmd = _6ac, type = input_state_types.faint, name = "フェイントバーンナックル", },
 			{ addr = 0x42, cmd = _2bc, type = input_state_types.faint, name = "フェイントパワーゲイザー", },
 		},
@@ -2277,11 +2292,15 @@ local create_input_states = function()
 			{ addr = 0x22, cmd = _21416c, sdm = "c", name = "男打弾", },
 			{ addr = 0x26, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x2A, cmd = _44, type = input_state_types.step, name = "飛び退き", },
+			{ addr = 0x2E, cmd = _46a, name = "_4_6+_A", },
+			{ addr = 0x32, cmd = _412d, name = "_4_1_2+_D", },
+			{ addr = 0x36, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
 			{ addr = 0x3A, cmd = _6ac, type = input_state_types.faint, name = "フェイント斬影拳", },
 			{ addr = 0x3E, cmd = _2ac, type = input_state_types.faint, name = "フェイント飛翔拳", },
 			{ addr = 0x42, cmd = _2bc, type = input_state_types.faint, name = "フェイント超裂破弾", },
 		},
 		{ --東丈
+			{ addr = 0x02, cmd = _412d, name = "_4_1_2+_D", },
 			{ addr = 0x06, cmd = _16b, name = "小スラッシュキック", },
 			{ addr = 0x0A, cmd = _16c, name = "大スラッシュキック", },
 			{ addr = 0x0E, cmd = _214b, name = "黄金のカカト", },
@@ -2296,8 +2315,10 @@ local create_input_states = function()
 			{ addr = 0x32, cmd = _64123d, sdm = "d", name = "サンダーファイヤーD", },
 			{ addr = 0x36, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x3A, cmd = _44, type = input_state_types.step, name = "飛び退き", },
+			{ addr = 0x3E, cmd = _46a, name = "_4_6+_A", },
 			{ addr = 0x42, cmd = _2c, type = input_state_types.faint, name = "炎の指先", },
 			{ addr = 0x46, cmd = _236c, type = input_state_types.faint, name = "CA _2_3_6+_C", },
+			{ addr = 0x4A, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
 			{ addr = 0x4E, cmd = _2ac, type = input_state_types.faint, name = "フェイントハリケーンアッパー", },
 			{ addr = 0x52, cmd = _6ac, type = input_state_types.faint, name = "フェイントスラッシュキック", },
 		},
@@ -2311,7 +2332,10 @@ local create_input_states = function()
 			{ addr = 0x1A, cmd = _64123c, sdm = "c", name = "花嵐", },
 			{ addr = 0x1E, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x22, cmd = _44, type = input_state_types.step, name = "飛び退き", },
+			{ addr = 0x26, cmd = _46a, name = "_4_6+_A", },
 			{ addr = 0x2A, cmd = _ccc, name = "跳ね蹴り", },
+			{ addr = 0x2E, cmd = _412d, name = "_4_1_2+_D", },
+			{ addr = 0x32, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
 			{ addr = 0x36, cmd = _2ac, type = input_state_types.faint, name = "フェイント花蝶扇", },
 			{ addr = 0x3A, cmd = _2bc, type = input_state_types.faint, name = "フェイント花嵐", },
 		},
@@ -2343,7 +2367,11 @@ local create_input_states = function()
 			{ addr = 0x5E, cmd = _6842c, sdm = "x", name = "羅生門_6_8_4_2", },
 			{ addr = 0x62, easy_addr = 0x46, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x66, easy_addr = 0x4A, cmd = _44, type = input_state_types.step, name = "飛び退き", },
+			{ addr = 0x6A, cmd = _46a, name = "_4_6+_A", },
+			{ addr = 0x6E, cmd = _412d, name = "_4_1_2+_D", },
+			{ addr = 0x72, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
 			{ addr = 0x76, easy_addr = 0x4E, cmd = _632c, name = "絶命人中打ち", },
+			{ addr = 0x7A, cmd = _412c, sdm = "x", name = "絶命人中打ち", },
 			{ addr = 0x7E, easy_addr = 0x52, cmd = _2ac, type = input_state_types.faint, name = "フェイント烈風拳", },
 			{ addr = 0x82, easy_addr = 0x56, cmd = _2bc, type = input_state_types.faint, name = "フェイントレイジングストーム", },
 		},
@@ -2366,8 +2394,12 @@ local create_input_states = function()
 			{ addr = 0x3E, cmd = _6842c, name = "鬼門陣_6_8_4_2 or 喝CAの投げ", },
 			{ addr = 0x42, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x46, cmd = _44, type = input_state_types.step, name = "バックダッシュ", },
+			{ addr = 0x4A, cmd = _46a, name = "_4_6+_A", },
 			{ addr = 0x4E, cmd = _2c, type = input_state_types.faint, name = "雷撃棍", },
+			{ addr = 0x52, cmd = _412d, name = "_4_1_2+_D", },
+			{ addr = 0x56, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
 			{ addr = 0x5A, cmd = _632c, name = "地獄門", },
+			{ addr = 0x5E, cmd = _412c, name = "地獄門", },
 			{ addr = 0x62, cmd = _623a, name = "CA _6_2_3+_A", },
 			{ addr = 0x66, cmd = _22c, type = input_state_types.todome, name = "CA _2_2+_C", },
 			{ addr = 0x6A, cmd = _2ac, type = input_state_types.faint, name = "フェイントまきびし", },
@@ -2385,8 +2417,11 @@ local create_input_states = function()
 			{ addr = 0x22, cmd = _33c, type = input_state_types.followup, name = "ホーネットアタック", },
 			{ addr = 0x26, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x2A, cmd = _44, type = input_state_types.step, name = "飛び退き", },
+			{ addr = 0x2E, cmd = _46a, name = "_4_6+_A", },
 			{ addr = 0x32, cmd = _ccc, name = "フライングフィッシュ", },
 			{ addr = 0x36, cmd = _8c, type = input_state_types.faint, name = "リンクスファング", },
+			{ addr = 0x3A, cmd = _412d, name = "_4_1_2+_D", },
+			{ addr = 0x3E, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
 			{ addr = 0x42, cmd = _2bc, type = input_state_types.faint, name = "フェイントダンシングバイソン", },
 		},
 		{ --ホンフゥ
@@ -2403,7 +2438,10 @@ local create_input_states = function()
 			{ addr = 0x2A, cmd = _21416c, sdm = "c", name = "よかトンハンマー", },
 			{ addr = 0x2E, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x32, cmd = _44, type = input_state_types.step, name = "飛び退き", },
+			{ addr = 0x36, cmd = _46a, name = "_4_6+_A", },
 			{ addr = 0x3A, cmd = _2c, type = input_state_types.followup, name = "トドメヌンチャク", },
+			{ addr = 0x3E, cmd = _412d, name = "_4_1_2+_D", },
+			{ addr = 0x42, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
 			{ addr = 0x46, cmd = _4ac, type = input_state_types.faint, name = "フェイント制空烈火棍", },
 		},
 		{ --ブルー・マリー
@@ -2420,12 +2458,17 @@ local create_input_states = function()
 			{ addr = 0x2A, cmd = _64123c, sdm = "c", name = "M.エスカレーション", },
 			{ addr = 0x2E, cmd = _33c, type = input_state_types.followup, name = "CA ジャーマンスープレックス", },
 			{ addr = 0x32, cmd = _632c, name = "アキレスホールド", },
+			{ addr = 0x36, cmd = _412c, name = "アキレスホールド", },
 			{ addr = 0x3A, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x3E, cmd = _44, type = input_state_types.step, name = "飛び退き", },
+			{ addr = 0x42, cmd = _46a, name = "_4_6+_A", },
 			{ addr = 0x46, cmd = _2b, type = input_state_types.followup, name = "レッグプレス", },
+			{ addr = 0x4A, cmd = _412d, name = "_4_1_2+_D", },
+			{ addr = 0x4E, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
 			{ addr = 0x52, cmd = _4ac, type = input_state_types.faint, name = "フェイントM.スナッチャー", },
 		},
 		{ --フランコ・バッシュ
+			{ addr = 0x02, cmd = _412d, name = "_4_1_2+_D", },
 			{ addr = 0x06, cmd = _214a, name = "ダブルコング", },
 			{ addr = 0x0A, cmd = _236a, name = "ザッパー", },
 			{ addr = 0x0E, cmd = _236d, name = "ウエービングブロー", },
@@ -2436,11 +2479,14 @@ local create_input_states = function()
 			{ addr = 0x22, cmd = _64123c, name = "ハルマゲドンバスター", },
 			{ addr = 0x26, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x2A, cmd = _44, type = input_state_types.step, name = "飛び退き", },
+			{ addr = 0x2E, cmd = _46a, name = "_4_6+_A", },
 			{ addr = 0x32, cmd = _ccc, name = "スマッシュ", },
+			{ addr = 0x36, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
 			{ addr = 0x3A, cmd = _2bc, type = input_state_types.faint, name = "フェイントハルマゲドンバスター", },
 			{ addr = 0x3E, cmd = _6ac, type = input_state_types.faint, name = "フェイントガッツダンク", },
 		},
 		{ --山崎竜二
+			{ addr = 0x02, cmd = _abc, name = "ドリル Lv.5", },
 			{ addr = 0x06, cmd = _22c, type = input_state_types.todome, name = "トドメ", },
 			{ addr = 0x0A, cmd = _214a, name = "蛇使い・上段 ", },
 			{ addr = 0x0E, cmd = _214b, name = "蛇使い・中段", },
@@ -2450,6 +2496,7 @@ local create_input_states = function()
 			{ addr = 0x1E, cmd = _236c, name = "倍返し", },
 			{ addr = 0x22, cmd = _623a, name = "裁きの匕首", },
 			{ addr = 0x26, cmd = _6428c, name = "爆弾パチキ", },
+			{ addr = 0x2A, cmd = _22c, type = input_state_types.todome, name = "トドメ", },
 			{ addr = 0x2E, cmd = _64123bc, sdm = "a", name = "ギロチン", },
 			{ addr = 0x32, cmd = _8624c, sdm = "x", name = "ドリル_8_6_2_4", },
 			{ addr = 0x36, cmd = _6248c, sdm = "x", name = "ドリル_6_2_4_8", },
@@ -2462,7 +2509,10 @@ local create_input_states = function()
 			{ addr = nil, easy_addr = 0x32, cmd = _22c, sdm = "c", name = "ドリル", },
 			{ addr = 0x52, easy_addr = 0x36, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x56, easy_addr = 0x3A, cmd = _44, type = input_state_types.step, name = "飛び退き", },
+			{ addr = 0x5A, cmd = _46a, name = "_4_6+_A", },
 			{ addr = 0x5E, easy_addr = 0x3E, cmd = _ccc, name = "砂かけ", },
+			{ addr = 0x62, cmd = _412d, name = "_4_1_2+_D", },
+			{ addr = 0x66, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
 			{ addr = 0x6A, easy_addr = 0x42, cmd = _6ac, type = input_state_types.faint, name = "フェイント裁きの匕首", },
 		},
 		{ --秦崇秀
@@ -2481,7 +2531,10 @@ local create_input_states = function()
 			{ addr = 0x32, cmd = _64123c, sdm = "c", name = "海龍照臨", },
 			{ addr = 0x36, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x3A, cmd = _44, type = input_state_types.step, name = "飛び退き", },
+			{ addr = 0x3E, cmd = _46a, name = "_4_6+_A", },
 			{ addr = 0x42, cmd = _64c, name = "CA _6_4+_C", },
+			{ addr = 0x46, cmd = _412d, name = "_4_1_2+_D", },
+			{ addr = 0x4A, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
 			{ addr = 0x4E, cmd = _2bc, type = input_state_types.faint, name = "フェイント海龍照臨", },
 		},
 		{ --秦崇雷
@@ -2495,15 +2548,19 @@ local create_input_states = function()
 			{ addr = 0x1E, cmd = _236b, name = "龍転身（前方）", },
 			{ addr = 0x22, cmd = _214b, name = "龍転身（後方）", },
 			{ addr = 0x26, cmd = _64123bc, sdm = "a", name = "帝王宿命拳", },
-			--{ addr = 0x2A, cmd = _ccc, name = "帝王宿命拳 連射" , },
+			{ addr = 0x2A, cmd = _ccc, name = "帝王宿命拳 連射?" , },
 			{ addr = 0x2E, cmd = _64123c, sdm = "c", name = "帝王龍声拳", },
 			{ addr = 0x32, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x36, cmd = _44, type = input_state_types.step, name = "飛び退き", },
+			{ addr = 0x3A, cmd = _46a, name = "_4_6+_A", },
+			{ addr = 0x3E, cmd = _412d, name = "_4_1_2+_D", },
+			{ addr = 0x42, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
 			{ addr = 0x46, cmd = _2bc, type = input_state_types.faint, name = "フェイント帝王宿命拳", },
 		},
 		{ --ダック・キング
 			-- ROMパッチをあてて通常コマンドでﾌﾞﾚｲｸｽﾊﾟｲﾗﾙﾌﾞﾗｻﾞｰを出せるようにしているため
 			-- こちらのほうもコマンド変更
+			{ addr = 0x02, cmd = _3c, type = input_state_types.step, name = "_3+_C", },
 			{ addr = 0x06, cmd = _236a, name = "小ヘッドスピンアタック", },
 			{ addr = 0x0A, cmd = _236c, name = "大ヘッドスピンアタック", },
 			{ addr = 0x0E, cmd = _cc, name = "オーバーヘッドキック", },
@@ -2529,6 +2586,7 @@ local create_input_states = function()
 			{ addr = 0x5E, cmd = _6842bc, sdm = "x", name = "ブレイクスパイラル_6_8_4_2", },
 			{ addr = 0x62, cmd = _41236bc, sdm = "x", name = "ﾌﾞﾚｲｸｽﾊﾟｲﾗﾙﾌﾞﾗｻﾞｰ or ｸﾚｲｼﾞｰBR", },
 			{ addr = 0x66, cmd = _63214c, sdm = "x", name = "スーパーポンピングマシーン", },
+			{ addr = 0x6A, cmd = _623c, sdm = "x", name = "_6_2_3+_C", },
 			{ addr = 0x6E, cmd = _64123c, sdm = "x", name = "ダックダンス", },
 			{ addr = nil, easy_addr = 0x42, cmd = _22c, sdm = "a", name = "ブレイクスパイラル", },
 			{ addr = nil, easy_addr = 0x46, cmd = _41236bc, name = "ﾌﾞﾚｲｸｽﾊﾟｲﾗﾙﾌﾞﾗｻﾞｰ or ｸﾚｲｼﾞｰBR", },
@@ -2537,6 +2595,9 @@ local create_input_states = function()
 			{ addr = 0x72, easy_addr = 0x52, cmd = _cccc, name = "ダックダンスC連打", },
 			{ addr = 0x76, easy_addr = 0x5A, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x7A, easy_addr = 0x5E, cmd = _44, type = input_state_types.step, name = "飛び退き", },
+			{ addr = 0x7E, cmd = _46a, name = "_4_6+_A", },
+			{ addr = 0x82, cmd = _412d, name = "_4_1_2+_D", },
+			{ addr = 0x86, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
 			{ addr = 0x8A, easy_addr = 0x6E, cmd = _2c, type = input_state_types.faint, name = "ショッキングボール", },
 			{ addr = 0x8E, easy_addr = 0x72, cmd = _2369b, name = "CA ブレイクストーム", },
 			{ addr = 0x92, easy_addr = 0x76, cmd = _2bc, type = input_state_types.faint, name = "フェイントダックダンス", },
@@ -2556,20 +2617,26 @@ local create_input_states = function()
 			{ addr = 0x2E, cmd = _21416c, sdm = "c", name = "鳳凰脚", },
 			{ addr = 0x32, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x36, cmd = _44, type = input_state_types.step, name = "飛び退き", },
+			{ addr = 0x3A, cmd = _46a, name = "_4_6+_A", },
+			{ addr = 0x3E, cmd = _412d, name = "_4_1_2+_D", },
+			{ addr = 0x42, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
 			{ addr = 0x46, cmd = _2bc, type = input_state_types.faint, name = "フェイント鳳凰脚", },
 		},
 		{ --ビリー・カーン
 			{ addr = 0x02, cmd = _4chg6a, type = input_state_types.charge, name = "三節棍中段打ち", },
 			{ addr = 0x06, cmd = _46c, name = "火炎三節棍中段突き", },
 			{ addr = 0x0A, cmd = _214a, name = "雀落とし", },
-			{ addr = 0x16, cmd = _214b, name = "火龍追撃棍", },
 			{ addr = 0x0E, cmd = _aaaa, name = "旋風棍", },
 			{ addr = 0x12, cmd = _1236b, name = "強襲飛翔棍", },
+			{ addr = 0x16, cmd = _214b, name = "火龍追撃棍", },
 			{ addr = 0x1A, cmd = _64123bc, sdm = "a", name = "超火炎旋風棍", },
 			{ addr = 0x1E, cmd = _632c, sdm = "b", name = "紅蓮殺棍", },
 			{ addr = 0x22, cmd = _64123c, sdm = "c", name = "サラマンダーストーム", },
 			{ addr = 0x26, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x2A, cmd = _44, type = input_state_types.step, name = "飛び退き", },
+			{ addr = 0x2E, cmd = _46a, name = "_4_6+_A", },
+			{ addr = 0x32, cmd = _412d, name = "_4_1_2+_D", },
+			{ addr = 0x36, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
 			{ addr = 0x3A, cmd = _236c, name = "CA 集点連破棍", },
 			{ addr = 0x3E, cmd = _4ac, type = input_state_types.faint, name = "フェイント強襲飛翔棍", },
 		},
@@ -2586,6 +2653,10 @@ local create_input_states = function()
 			{ addr = 0x26, cmd = _64123c, sdm = "c", name = "ホエホエ弾", },
 			{ addr = 0x2A, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x2E, cmd = _44, type = input_state_types.step, name = "飛び退き", },
+			{ addr = 0x32, cmd = _46a, name = "_4_6+_A", },
+			{ addr = 0x36, cmd = _412d, name = "_4_1_2+_D", },
+			{ addr = 0x3A, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
+			{ addr = 0x3E, cmd = _44b, type = input_state_types.shinsoku, name = "_4_4+_B", },
 			{ addr = 0x42, cmd = _6ac, type = input_state_types.faint, name = "フェイント破岩撃", },
 			{ addr = 0x46, cmd = _2ac, type = input_state_types.faint, name = "フェイントクッサメ砲", },
 		},
@@ -2599,6 +2670,11 @@ local create_input_states = function()
 			{ addr = 0x1A, cmd = _64123c, sdm = "c", name = "大撃砲", },
 			{ addr = 0x1E, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x22, cmd = _44, type = input_state_types.step, name = "飛び退き", },
+			{ addr = 0x26, cmd = _46a, name = "_4_6+_A", },
+			{ addr = 0x2A, cmd = _412d, name = "_4_1_2+_D", },
+			{ addr = 0x2E, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
+			{ addr = 0x32, cmd = _6b, type = input_state_types.faint, name = "_6+_B", },
+			{ addr = 0x36, cmd = _6c, type = input_state_types.faint, name = "_6+_C", },
 			{ addr = 0x3A, cmd = _2bc, type = input_state_types.faint, name = "フェイント旋風剛拳", },
 		},
 		{ --ローレンス・ブラッド
@@ -2611,14 +2687,19 @@ local create_input_states = function()
 			{ addr = 0x1A, cmd = _64123c, sdm = "c", name = "ブラッディシャドー", },
 			{ addr = 0x1E, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x22, cmd = _44, type = input_state_types.step, name = "飛び退き", },
+			{ addr = 0x26, cmd = _46a, name = "_4_6+_A", },
+			{ addr = 0x2A, cmd = _412d, name = "_4_1_2+_D", },
+			{ addr = 0x2E, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
 			{ addr = 0x32, cmd = _632c, name = "CA _6_3_2_C", },
 		},
 		{ --ヴォルフガング・クラウザー
+			{ addr = 0x02, easy_addr = 0x02, cmd = _421ac, name = "アンリミテッドデザイア2 Finish", },
 			{ addr = 0x06, cmd = _214a, name = "小ブリッツボール", },
 			{ addr = 0x0A, cmd = _214c, name = "大ブリッツボール", },
 			{ addr = 0x0E, cmd = _236b, name = "レッグトマホーク", },
 			{ addr = 0x12, cmd = _41236c, name = "フェニックススルー", },
 			{ addr = 0x16, cmd = _41236a, name = "デンジャラススルー", },
+			{ addr = 0x1A, cmd = _666c, name = "グリフォンアッパー", },
 			{ addr = 0x1E, cmd = _623c, name = "カイザークロー", },
 			{ addr = 0x22, cmd = _63214b, name = "リフトアップブロー", },
 			{ addr = 0x26, cmd = _4chg6bc, type = input_state_types.charge, sdm = "a", name = "カイザーウェイブ", },
@@ -2632,9 +2713,11 @@ local create_input_states = function()
 			{ addr = 0x46, cmd = _6842c, sdm = "x", name = "ギガティックサイクロン_6_8_4_2", },
 			{ addr = nil, easy_addr = 0x2A, cmd = _22c, sdm = "c", name = "ギガティックサイクロン", },
 			{ addr = 0x4A, easy_addr = 0x2E, cmd = _632146a, sdm = "d", name = "アンリミテッドデザイア", },
-			{ addr = 0x02, easy_addr = 0x02, cmd = _421ac, name = "アンリミテッドデザイア2 Finish", },
 			{ addr = 0x4E, easy_addr = 0x32, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x52, easy_addr = 0x36, cmd = _44, type = input_state_types.step, name = "飛び退き", },
+			{ addr = 0x56, cmd = _46a, name = "_4_6+_A", },
+			{ addr = 0x5A, cmd = _412d, name = "_4_1_2+_D", },
+			{ addr = 0x5E, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
 			{ addr = 0x62, easy_addr = 0x46, cmd = _2c, type = input_state_types.faint, name = "ダイビングエルボー", },
 			{ addr = 0x66, easy_addr = 0x4A, cmd = _236c, name = "CA _2_3_6_C", },
 			{ addr = 0x6A, easy_addr = 0x4E, cmd = _2ac, type = input_state_types.faint, name = "フェイントブリッツボール", },
@@ -2651,6 +2734,9 @@ local create_input_states = function()
 			{ addr = 0x1E, cmd = _64123c, sdm = "c", name = "ハウリング・ブル", },
 			{ addr = 0x22, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x26, cmd = _44, type = input_state_types.step, name = "飛び退き", },
+			{ addr = 0x2A, cmd = _46a, name = "_4_6+_A", },
+			{ addr = 0x2E, cmd = _412d, name = "_4_1_2+_D", },
+			{ addr = 0x32, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
 			{ addr = 0x36, cmd = _33b, name = "CA _3_3_B", },
 			{ addr = 0x3A, cmd = _22c, name = "CA _2_2_C", },
 			{ addr = 0x3E, cmd = _6ac, type = input_state_types.faint, name = "フェイントシューティングスター", },
@@ -2678,6 +2764,9 @@ local create_input_states = function()
 			{ addr = nil, easy_addr = 0x2A, cmd = _22c, sdm = "c", name = "真心牙", },
 			{ addr = 0x4E, easy_addr = 0x2E, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x52, easy_addr = 0x32, cmd = _44, type = input_state_types.step, name = "飛び退き", },
+			{ addr = 0x56, cmd = _46a, name = "_4_6+_A", },
+			{ addr = 0x5A, cmd = _412d, name = "_4_1_2+_D", },
+			{ addr = 0x5E, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
 			{ addr = 0x62, easy_addr = 0x36, cmd = _66a, name = "CA _6_6_A", },
 			{ addr = 0x66, easy_addr = 0x3A, cmd = _4ac, type = input_state_types.faint, name = "フェイント天崩山", },
 			{ addr = 0x6A, easy_addr = 0x3E, cmd = _2bc, type = input_state_types.faint, name = "フェイント大鉄神", },
@@ -2694,6 +2783,9 @@ local create_input_states = function()
 			{ addr = 0x22, cmd = _64123c, sdm = "c", name = "ウェーブライダー", },
 			{ addr = 0x26, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
 			{ addr = 0x2A, cmd = _44, type = input_state_types.step, name = "飛び退き", },
+			{ addr = 0x2E, cmd = _46a, name = "_4_6+_A", },
+			{ addr = 0x32, cmd = _412d, name = "_4_1_2+_D", },
+			{ addr = 0x36, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
 			{ addr = 0x3A, cmd = _2ac, type = input_state_types.faint, name = "フェイントクリティカルウィング", },
 			{ addr = 0x3E, cmd = _4ac, type = input_state_types.faint, name = "フェイントオーグメンターウィング", },
 		},
