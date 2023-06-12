@@ -10650,17 +10650,17 @@ rbff2.startplugin = function()
 				--行動IDとフレーム数表示
 				if global.disp_frmgap > 1 or p.disp_frm > 1 then
 					if global.disp_frmgap == 2 then
-						draw_frame_groups(p.act_frames2, p.act_frames_total, 30, p1 and 64 or 72, 8)
+						draw_frame_groups(p.act_frames2, p.act_frames_total, 30, p1 and 64 or 72, 8, true)
 						local j = 0
 						for base, _ in pairs(p.fireball_bases) do
 							local fb = p.fireball[base]
 							if fb.act_frames2 ~= nil and p.disp_fbfrm == true then
-								draw_frame_groups(fb.act_frames2, p.act_frames_total, 30, p1 and 64 or 70, 8)
+								draw_frame_groups(fb.act_frames2, p.act_frames_total, 30, p1 and 64 or 70, 8, true)
 							end
 							j = j + 1
 						end
-						draw_frame_groups(p.muteki.act_frames2, p.act_frames_total, 30, p1 and 68 or 76, 3)
-						draw_frame_groups(p.frm_gap.act_frames2, p.act_frames_total, 30, p1 and 65 or 73, 3, true)
+						draw_frame_groups(p.muteki.act_frames2, p.act_frames_total, 30, p1 and 68 or 76, 3, true)
+						-- draw_frame_groups(p.frm_gap.act_frames2, p.act_frames_total, 30, p1 and 65 or 73, 3, true)
 					end
 					if p.disp_frm > 1 then
 						draw_frames(p.act_frames2, p1 and 160 or 285, true, true, p1 and 40 or 165, 63, 8, 16, p.disp_fbfrm)
