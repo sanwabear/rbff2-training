@@ -2816,12 +2816,10 @@ local create_input_states = function()
 		end
 		return copy
 	end
-	local input_easy_states = deepcopy(input_states)
 	local sdm_cmd = { ["a"] = _22a, ["b"] = _22b, ["c"] = _22c, ["d"] = _22d }
 	local sdm_estab =  { ["a"] = 0x100600, ["b"] = 0x110600, ["c"] = 0x120600, ["d"] = 0x130600 }
 	local id_estab = function(tbl)
 		tbl.estab = sdm_estab[tbl.sdm] or tbl.estab
-		tbl.addr = tbl.easy_addr or tbl.addr
 		tbl.id = (0xFF0000 & tbl.estab) / 0x10000
 		tbl.estab = tbl.estab & 0xFFFF
 	end
@@ -2830,7 +2828,8 @@ local create_input_states = function()
 			table.remove(target, indexies[i])
 		end
 	end
-	-- 簡易コマンドテーブル
+	-- DEBUG DIP 2-1 ON時の簡易コマンドテーブルの準備としてSDMのフラグからコマンド情報を変更
+	local input_easy_states = deepcopy(input_states)
 	for _, char_tbl in ipairs(input_easy_states) do
 		local removes = {}
 		for i, tbl in ipairs(char_tbl) do
@@ -2842,11 +2841,12 @@ local create_input_states = function()
 				tbl.cmd = sdm_cmd[tbl.sdm]
 				tbl.type = input_state_types.followup
 			end
+			tbl.addr = tbl.easy_addr or tbl.addr
 			id_estab(tbl)
 		end
 		do_remove(char_tbl, removes)
 	end
-	-- 通常コマンドテーブル
+	-- 通常コマンドテーブルの準備としてアドレスが未定義にしているものを削除
 	for _, char_tbl in ipairs(input_states) do
 		local removes = {}
 		for i, tbl in ipairs(char_tbl) do
@@ -8553,24 +8553,12 @@ rbff2.startplugin = function()
 				local old = p.old_input_states[ti]
 				local addr = tbl.addr + p.input_offset
 				local on = pgm:read_u8(addr - 1)
-				local on_debug = on
+				local on_prev = on
 				local chg_remain = pgm:read_u8(addr)
-				local max = (old and old.on_debug == on_debug) and old.max or chg_remain
+				local max = (old and old.on_prev == on_prev) and old.max or chg_remain
 				local input_estab = old and old.input_estab or false
 				local charging = false
-				-- 成立したコマンドの技ID、派生フラグとしてのID
-				local id_estab, cmd_estab, exp_extab
-				if tbl.id < 0x1E  then
-					id_estab = pgm:read_u8(0xB8 + p.addr.base)
-					cmd_estab = pgm:read_u8(0xA5 + p.addr.base)
-					exp_extab = tbl.estab & 0x00FF
-					input_estab = cmd_estab == exp_extab and id_estab == tbl.id or input_estab
-				else
-					id_estab = pgm:read_u8(0xD6 + p.addr.base)
-					cmd_estab = pgm:read_u16(0xD7 + p.addr.base) & 0xFF00
-					exp_extab = tbl.estab & 0xFF00
-					input_estab = id_estab == tbl.id or input_estab
-				end
+
 				-- コマンド種類ごとの表示用の補正
 				local reset = false
 				local force_reset = false
@@ -8602,9 +8590,7 @@ rbff2.startplugin = function()
 					end
 				elseif tbl.type == input_state_types.followup then
 					on = math.max(on - 1, 0)
-					if on == 1 then
-						on = 0
-					end
+					on = (on == 1) and 0 or on
 					if old then
 						reset = old.on == #tbl.cmds and old.chg_remain > 0
 						if on == 0 and chg_remain > 0 then
@@ -8612,11 +8598,7 @@ rbff2.startplugin = function()
 						end
 					end
 				elseif tbl.type == input_state_types.shinsoku then
-					if on <= 2 then
-						on = 0
-					else
-						on = on - 1
-					end
+					on = (on <= 2) and 0 or (on - 1)
 					if old then
 						reset = old.on == #tbl.cmds and old.chg_remain > 0
 						if on == 0 and chg_remain > 0 then
@@ -8625,11 +8607,7 @@ rbff2.startplugin = function()
 					end
 				elseif tbl.type == input_state_types.todome then
 					on = math.max(on - 1, 0)
-					if on <= 1 then
-						on = 0
-					else
-						on = on - 1
-					end
+					on = (on <= 1) and 0 or (on - 1)
 					if old then
 						reset = old.on > 0 and old.chg_remain > 0
 						if on == 0 and chg_remain > 0 then
@@ -8648,8 +8626,19 @@ rbff2.startplugin = function()
 				if old then
 					if p.char ~= old.char or on == 1 then
 						input_estab = false
-					elseif chg_remain == 0 and on == 0 and reset then
-						input_estab = true
+					else
+						if tbl.id < 0x1E  then
+							local id_estab = pgm:read_u8(0xB8 + p.addr.base)
+							local cmd_estab = pgm:read_u8(0xA5 + p.addr.base)
+							local exp_extab = tbl.estab & 0x00FF
+							reset = cmd_estab == exp_extab and id_estab == tbl.id or input_estab
+						else
+							--local id_estab = pgm:read_u8(0xD6 + p.addr.base)
+							--reset = id_estab == tbl.id or input_estab
+						end
+						if chg_remain == 0 and on == 0 and reset then
+							input_estab = true
+						end
 					end
 					if force_reset then
 						input_estab = false
@@ -8659,7 +8648,7 @@ rbff2.startplugin = function()
 					char = p.char,
 					chg_remain = chg_remain, -- 次の入力の受付猶予F
 					on = on,
-					on_debug = on_debug, -- 加工前の入力のすすみの数値
+					on_prev = on_prev, -- 加工前の入力のすすみの数値
 					tbl = tbl,
 					debug = debug,
 					input_estab = input_estab,
@@ -10726,7 +10715,7 @@ rbff2.startplugin = function()
 						draw_text_with_shadow(x + 7, y, input_state.max)
 						if input_state.debug then
 							draw_rtext_with_shadow(x + 25, y, input_state.on)
-							draw_rtext_with_shadow(x + 40, y, input_state.on_debug)
+							draw_rtext_with_shadow(x + 40, y, input_state.on_prev)
 						end
 					end
 				end
