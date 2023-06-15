@@ -8627,7 +8627,7 @@ rbff2.startplugin = function()
 					if p.char ~= old.char or on == 1 then
 						input_estab = false
 					else
-						if tbl.id < 0x1E  then
+						if 0 < tbl.id  and tbl.id < 0x1E  then
 							local id_estab = pgm:read_u8(0xB8 + p.addr.base)
 							local cmd_estab = pgm:read_u8(0xA5 + p.addr.base)
 							local exp_extab = tbl.estab & 0x00FF
