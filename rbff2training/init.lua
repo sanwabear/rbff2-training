@@ -7993,6 +7993,431 @@ rbff2.startplugin = function()
 		return d5
 	end
 
+	local proc_act_frame = function(p)
+		-- 飛び道具
+		local chg_fireball_state, chg_prefireball_state = false, false
+		for _, fb in pairs(p.fireball) do
+			if fb.has_atk_box == true then
+				if fb.atk_count == 1 and fb.act_data_fired.name == p.act_data.name then
+					chg_fireball_state = true
+				end
+				break
+			end
+		end
+		if chg_fireball_state ~= true then
+			for _, fb in pairs(p.fireball) do
+				if fb.proc_active == true and fb.alive ~= true then
+					fb.atk_count = fb.atk_count - 1
+					if fb.atk_count == -1 then
+						chg_prefireball_state = true
+						break
+					end
+				end
+				if fb.old_proc_act == true and fb.proc_active ~= true then
+					chg_prefireball_state = true
+					break
+				end
+			end
+		end
+
+		--ガード移行できない行動は色替えする
+		local col, line = 0xAAF0E68C, 0xDDF0E68C
+		if p.skip_frame then
+			col, line = 0xAA888888, 0xDD888888
+		elseif p.attacking then
+			if p.juggling then
+				col, line = 0xAAFF4500, 0xDDFF4500
+			else
+				col, line = 0xAAFF00FF, 0xDDFF00FF
+			end
+		elseif p.dmmy_attacking then
+			if p.juggling then
+				col, line = 0x00000000, 0xDDFF4500
+			else
+				col, line = 0x00000000, 0xDDFF00FF
+			end
+		elseif p.throwing then
+			col, line = 0xAAD2691E, 0xDDD2691E
+		elseif p.act_1st ~= true and
+			((p.old_repeatable == true and p.repeatable == true) or
+				(p.old_repeatable == true and p.repeatable ~= true and p.act_frame > 0)) then
+			-- 1F前の状態とあわせて判定する
+			col, line = 0xAAD2691E, 0xDDD2691E
+		elseif p.can_juggle and op.act_normal then
+			col, line = 0xAAFFA500, 0xDDFFA500
+		elseif p.can_otg and op.act_normal then
+			col, line = 0xAAFFA500, 0xDDFFA500
+		elseif p.act_normal then
+			col, line = 0x44FFFFFF, 0xDDFFFFFF
+		end
+
+		-- 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
+		local reach_memo = ""
+		if p.disp_frm == 3 then
+			reach_memo = p.hitbox_txt .. "&" .. p.hurtbox_txt
+		elseif p.disp_frm == 4 then
+			reach_memo = p.hitbox_txt
+		elseif p.disp_frm == 5 then
+			reach_memo = p.hurtbox_txt
+		end
+
+		local act_count  = p.act_count or 0
+		local max_hit_dn = p.attacking and p.hit.max_hit_dn or 0
+
+		-- 行動が変わったかのフラグ
+		local frame      = p.act_frames[#p.act_frames]
+		local concrete_name, chg_act_name, disp_name
+		if frame ~= nil then
+			if p.act_data.names then
+				chg_act_name = true
+				for _, name in pairs(p.act_data.names) do
+					if frame.name == name then
+						chg_act_name = false
+						concrete_name = frame.name
+						disp_name = frame.disp_name
+						--p.act_1st = false
+					end
+				end
+				if chg_act_name then
+					concrete_name = p.act_data.name or p.act_data.names[1]
+					disp_name = convert(p.act_data.disp_name or concrete_name)
+				end
+			elseif frame.name ~= p.act_data.name then
+				concrete_name = p.act_data.name
+				disp_name = convert(p.act_data.disp_name or concrete_name)
+				chg_act_name = true
+			else
+				concrete_name = frame.name
+				disp_name = frame.disp_name
+				chg_act_name = false
+			end
+		else
+			concrete_name = p.act_data.name
+			disp_name = convert(p.act_data.disp_name or concrete_name)
+			chg_act_name = true
+		end
+		-- カイザーウェイブのレベルアップ
+		if p.char == 0x14 and p.old_kaiser_wave ~= p.kaiser_wave then
+			chg_act_name = true
+			p.act_1st = true
+		end
+		if chg_act_name ~= true then
+			if p.old_act ~= 0x18 and p.act == 0x18 then -- ダッシュの加速、減速、最終モーション
+				chg_act_name = true
+			elseif p.old_act ~= 0x19 and p.act == 0x19 then
+				chg_act_name = true
+			elseif p.act == 0x19 and p.base == fix_bp_addr(0x26152) then
+				chg_act_name = true
+			elseif p.old_act ~= 0x31 and p.act == 0x31 then -- スウェーのダッシュの区切り
+				chg_act_name = true
+			elseif p.old_act ~= 0x32 and p.act == 0x32 then
+				chg_act_name = true
+			elseif p.old_act ~= 0x34 and p.act == 0x34 then
+				chg_act_name = true
+			elseif p.old_act ~= 0x35 and p.act == 0x35 then
+				chg_act_name = true
+			elseif p.old_sway_status ~= 0x80 and p.sway_status == 0x80 then -- スウェーの切り替え
+				chg_act_name = true
+			elseif p.old_sway_status ~= 0x00 and p.sway_status == 0x00 then
+				chg_act_name = true
+			end
+		end
+		local chg_col = frame and (frame.col ~= col) or false
+		local chg_memo = frame and (frame.reach_memo ~= reach_memo) or false
+		local chg_act_count = frame and (frame.act_count ~= act_count) or false
+		if #p.act_frames == 0 or
+			chg_act_name or
+			chg_col or
+			p.chg_air_state ~= 0 or
+			chg_fireball_state == true or
+			chg_prefireball_state == true or
+			p.act_1st or
+			chg_memo or
+			(max_hit_dn > 1 and chg_act_count) then
+			--行動IDの更新があった場合にフレーム情報追加
+			frame = {
+				act = p.act,
+				count = 1,
+				col = col,
+				name = concrete_name,
+				disp_name = disp_name,
+				line = line,
+				chg_fireball_state = chg_fireball_state,
+				chg_prefireball_state = chg_prefireball_state,
+				chg_air_state = p.chg_air_state,
+				act_1st = p.act_1st,
+				reach_memo = reach_memo,
+				act_count = act_count,
+				max_hit_dn = max_hit_dn,
+			}
+			table.insert(p.act_frames, frame)
+			if 180 < #p.act_frames then
+				--バッファ長調整
+				table.remove(p.act_frames, 1)
+			end
+		else
+			--同一行動IDが継続している場合はフレーム値加算
+			if frame then
+				frame.count = frame.count + 1
+			end
+		end
+		-- 技名でグループ化したフレームデータの配列をマージ生成する
+		p.act_frames2 = frame_groups(frame, p.act_frames2 or {})
+		-- 表示可能範囲（最大で横画面幅）以上は加算しない
+		p.act_frames_total = (332 < p.act_frames_total) and 332 or (p.act_frames_total + 1)
+		-- 後の処理用に最終フレームを保持
+		local last_frame = frame
+		return last_frame, chg_act_name
+	end
+
+	local proc_muteki_frame = function(p, chg_act_name)
+		local last_frame = p.act_frames[#p.act_frames]
+
+		-- 無敵表示
+		local col, line = 0x00000000, 0x00000000
+		for _, hurt_inv in ipairs(p.hit_summary.hurt_inv) do
+			if 0x400 > p.flag_cc then
+				if hurt_inv.type == 0 then -- 全身無敵
+					col, line = 0xAAB0E0E6, 0xDDAFEEEE
+					break
+				elseif hurt_inv.type == 1 then -- スウェー上
+					col, line = 0xAAFFA500, 0xDDAFEEEE
+					break
+				elseif hurt_inv.type == 2 then -- 上半身無敵（地上）
+					col, line = 0xAA32CD32, 0xDDAFEEEE
+					break
+				elseif hurt_inv.type == 3 then -- 足元無敵（地上）
+					col, line = 0xAA9400D3, 0xDDAFEEEE
+					break
+				elseif hurt_inv.type == 0 then -- ダウンor空中追撃のみ可能
+					col, line = 0xAAB0E0E6, 0xDDAFEEEE
+					break
+				end
+			else
+				if hurt_inv.type == 0 then -- 全身無敵
+					col, line = 0xAAB0E0E6, 0xDDAFEEEE
+					break
+				elseif hurt_inv.type == 1 then -- スウェー上
+					col, line = 0xAAFFA500, 0xDDAFEEEE
+					break
+				end
+			end
+		end
+		--printf("top %s, hi %s, lo %s", screen_top, vul_hi, vul_lo)
+
+		local frame = p.muteki.act_frames[#p.muteki.act_frames]
+		if frame == nil or chg_act_name or frame.col ~= col or p.state ~= p.old_state or p.act_1st then
+			--行動IDの更新があった場合にフレーム情報追加
+			frame = {
+				act = p.act,
+				count = 1,
+				col = col,
+				name = last_frame.name,
+				disp_name = last_frame.disp_name,
+				line = line,
+				act_1st = p.act_1st,
+			}
+			table.insert(p.muteki.act_frames, frame)
+			if 180 < #p.muteki.act_frames then
+				--バッファ長調整
+				table.remove(p.muteki.act_frames, 1)
+			end
+		else
+			--同一行動IDが継続している場合はフレーム値加算
+			frame.count = frame.count + 1
+		end
+		-- 技名でグループ化したフレームデータの配列をマージ生成する
+		local upd_group = false
+		p.muteki.act_frames2, upd_group = frame_groups(frame, p.muteki.act_frames2 or {})
+		-- メインフレーム表示からの描画開始位置を記憶させる
+		if upd_group and last_frame then
+			last_frame.muteki = last_frame.muteki or {}
+			table.insert(last_frame.muteki, p.muteki.act_frames2[#p.muteki.act_frames2])
+		end
+
+		return frame
+	end
+
+	local proc_frame_gap = function(p, chg_act_name)
+		local op = p.op
+		local last_frame = p.act_frames[#p.act_frames]
+
+		-- フレーム差
+		-- フレーム差のバッファ
+		local old_last_frame_gap = p.last_frame_gap
+		local save_frame_gap = function()
+			local upd = false
+			if old_last_frame_gap > 0 and old_last_frame_gap > p.last_frame_gap then
+				upd = true
+			elseif old_last_frame_gap < 0 and old_last_frame_gap < p.last_frame_gap then
+				upd = true
+			elseif old_last_frame_gap ~= 0 and p.last_frame_gap == 0 then
+				upd = true
+			end
+			if upd then
+				table.insert(p.hist_frame_gap, old_last_frame_gap)
+				if 10 < #p.hist_frame_gap then
+					--バッファ長調整
+					table.remove(p.hist_frame_gap, 1)
+				end
+			end
+		end
+		-- フレーム差の更新
+		local col, line = 0x00000000, 0x00000000
+		if p.act_normal and op.act_normal then
+			if not p.old_act_normal and not op.old_act_normal then
+				p.last_frame_gap = 0
+			end
+			p.frame_gap = 0
+		elseif not p.act_normal and not op.act_normal then
+			if p.state == 0 and op.state ~= 0 then
+				p.frame_gap = p.frame_gap + 1
+				p.last_frame_gap = p.frame_gap
+				col, line = 0xAA0000FF, 0xDD0000FF
+			elseif p.state ~= 0 and op.state == 0 then
+				p.frame_gap = p.frame_gap - 1
+				p.last_frame_gap = p.frame_gap
+				col, line = 0xAAFF6347, 0xDDFF6347
+			else
+				p.frame_gap = 0
+			end
+		elseif p.act_normal and not op.act_normal then
+			-- 直前が行動中ならリセットする
+			if not p.old_act_normal then
+				p.frame_gap = 0
+			end
+			p.frame_gap = p.frame_gap + 1
+			p.last_frame_gap = p.frame_gap
+			col, line = 0xAA0000FF, 0xDD0000FF
+		elseif not p.act_normal and op.act_normal then
+			-- 直前が行動中ならリセットする
+			if not op.old_act_normal then
+				p.frame_gap = 0
+			end
+			p.frame_gap = p.frame_gap - 1
+			p.last_frame_gap = p.frame_gap
+			col, line = 0xAAFF6347, 0xDDFF6347
+		end
+		save_frame_gap()
+
+		local frame = p.frm_gap.act_frames[#p.frm_gap.act_frames]
+		if frame == nil or chg_act_name or (frame.col ~= col and (p.frame_gap == 0 or p.frame_gap == -1 or p.frame_gap == 1)) or p.act_1st then
+			--行動IDの更新があった場合にフレーム情報追加
+			frame = {
+				act = p.act,
+				count = 1,
+				col = col,
+				name = last_frame.name,
+				disp_name = last_frame.disp_name,
+				line = line,
+				act_1st = p.act_1st,
+			}
+			table.insert(p.frm_gap.act_frames, frame)
+			if 180 < #p.frm_gap.act_frames then
+				--バッファ長調整
+				table.remove(p.frm_gap.act_frames, 1)
+			end
+		else
+			--同一行動IDが継続している場合はフレーム値加算
+			frame.count = frame.count + 1
+		end
+		-- 技名でグループ化したフレームデータの配列をマージ生成する
+		p.frm_gap.act_frames2, upd_group = frame_groups(frame, p.frm_gap.act_frames2 or {})
+		-- メインフレーム表示からの描画開始位置を記憶させる
+		if upd_group and last_frame then
+			last_frame.frm_gap = last_frame.frm_gap or {}
+			table.insert(last_frame.frm_gap, p.frm_gap.act_frames2[#p.frm_gap.act_frames2])
+		end
+	end
+
+	local proc_fb_frame = function(p)
+		local last_frame = p.act_frames[#p.act_frames]
+		local fb_upd_groups = {}
+
+		-- 飛び道具2
+		for fb_base, fb in pairs(p.fireball) do
+			local frame = fb.act_frames[#fb.act_frames]
+			local reset, new_name = false, fb.act_data_fired.name
+			if p.act_data.firing then
+				if p.act_1st then
+					reset = true
+				elseif not frame or frame.name ~= fb.act_data_fired.name then
+					reset = true
+				end
+			elseif fb.act == 0 and (not frame or frame.name ~= "") then
+				reset = true
+				new_name = ""
+			end
+			local col, line, act
+			if p.skip_frame then
+				col, line, act = 0x00000000, 0x00000000, 0
+			elseif fb.has_atk_box == true then
+				if fb.fake_hit == true then
+					col, line, act = 0xAA00FF33, 0xDD00FF33, 2
+				elseif fb.obsl_hit == true or fb.full_hit == true or fb.harmless2 == true then
+					if fb.juggling then
+						col, line, act = 0x00000000, 0xDDFF4500, 1
+					else
+						col, line, act = 0x00000000, 0xDDFF1493, 0
+					end
+				else
+					if fb.juggling then
+						col, line, act = 0xAAFF4500, 0xDDFF4500, 1
+					else
+						col, line, act = 0xAAFF00FF, 0xDDFF00FF, 1
+					end
+				end
+			else
+				col, line, act = 0x00000000, 0x00000000, 0
+			end
+
+			-- 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
+			local reach_memo = ""
+			if fb.disp_frm == 3 then
+				reach_memo = fb.hitbox_txt .. "&" .. fb.hurtbox_txt
+			elseif p.disp_frm == 4 then
+				reach_memo = fb.hitbox_txt
+			elseif p.disp_frm == 5 then
+				reach_memo = fb.hurtbox_txt
+			end
+			local act_count  = fb.actb
+			local max_hit_dn = fb.hit.max_hit_dn
+
+			if #fb.act_frames == 0 or (frame == nil) or frame.col ~= col or reset or frame.reach_memo ~= reach_memo or (max_hit_dn > 1 and frame.act_count ~= act_count) then
+				-- 軽量化のため攻撃の有無だけで記録を残す
+				frame = {
+					act        = act,
+					count      = 1,
+					col        = col,
+					name       = new_name,
+					line       = line,
+					act_1st    = reset,
+					reach_memo = reach_memo,
+					act_count  = act_count,
+					max_hit_dn = max_hit_dn,
+				}
+				-- 関数の使いまわすためact_framesは配列にするが明細を表示ないので1個しかもたなくていい
+				fb.act_frames[1] = frame
+			else
+				-- 同一行動IDが継続している場合はフレーム値加算
+				frame.count = frame.count + 1
+			end
+			-- 技名でグループ化したフレームデータの配列をマージ生成する
+			fb.act_frames2, fb_upd_groups[fb_base] = frame_groups(frame, fb.act_frames2 or {})
+		end
+
+		-- メインフレーム表示からの描画開始位置を記憶させる
+		for fb_base, fb_upd_group in pairs(fb_upd_groups) do
+			if fb_upd_group and last_frame then
+				last_frame.fireball = last_frame.fireball or {}
+				last_frame.fireball[fb_base] = last_frame.fireball[fb_upd_group] or {}
+				local last_fb_frame = last_frame.fireball[fb_base]
+				table.insert(last_fb_frame, p.fireball[fb_base].act_frames2[# p.fireball[fb_base].act_frames2])
+				last_fb_frame[#last_fb_frame].parent_count = last_frame.last_total
+			end
+		end
+	end
+
 	-- トレモのメイン処理
 	menu.tra_main.proc = function()
 		-- 画面表示
@@ -9293,6 +9718,7 @@ rbff2.startplugin = function()
 
 		-- 全キャラ特別な動作でない場合はフレーム記録しない
 		if global.disp_normal_frms == 1 or (global.disp_normal_frms == 2 and global.all_act_normal == false) then
+			-- キャラ、弾ともに通常動作状態ならリセットする
 			if global.disp_normal_frms == 2 and global.old_all_act_normal == true then
 				for _, p in ipairs(players) do
 					p.act_frames_total = 0
@@ -9312,416 +9738,12 @@ rbff2.startplugin = function()
 
 			-- フレームデータの構築処理
 			for _, p in ipairs(players) do
-				local op = p.op
-
-				-- 飛び道具
-				local chg_fireball_state, chg_prefireball_state = false, false
-				local fb_upd_groups = {}
-				for _, fb in pairs(p.fireball) do
-					if fb.has_atk_box == true then
-						if fb.atk_count == 1 and fb.act_data_fired.name == p.act_data.name then
-							chg_fireball_state = true
-						end
-						break
-					end
-				end
-				if chg_fireball_state ~= true then
-					for _, fb in pairs(p.fireball) do
-						if fb.proc_active == true and fb.alive ~= true then
-							fb.atk_count = fb.atk_count - 1
-							if fb.atk_count == -1 then
-								chg_prefireball_state = true
-								break
-							end
-						end
-						if fb.old_proc_act == true and fb.proc_active ~= true then
-							chg_prefireball_state = true
-							break
-						end
-					end
-				end
-
-				--ガード移行できない行動は色替えする
-				local col, line = 0xAAF0E68C, 0xDDF0E68C
-				if p.skip_frame then
-					col, line = 0xAA888888, 0xDD888888
-				elseif p.attacking then
-					if p.juggling then
-						col, line = 0xAAFF4500, 0xDDFF4500
-					else
-						col, line = 0xAAFF00FF, 0xDDFF00FF
-					end
-				elseif p.dmmy_attacking then
-					if p.juggling then
-						col, line = 0x00000000, 0xDDFF4500
-					else
-						col, line = 0x00000000, 0xDDFF00FF
-					end
-				elseif p.throwing then
-					col, line = 0xAAD2691E, 0xDDD2691E
-				elseif p.act_1st ~= true and
-					((p.old_repeatable == true and p.repeatable == true) or
-						(p.old_repeatable == true and p.repeatable ~= true and p.act_frame > 0)) then
-					-- 1F前の状態とあわせて判定する
-					col, line = 0xAAD2691E, 0xDDD2691E
-				elseif p.can_juggle and op.act_normal then
-					col, line = 0xAAFFA500, 0xDDFFA500
-				elseif p.can_otg and op.act_normal then
-					col, line = 0xAAFFA500, 0xDDFFA500
-				elseif p.act_normal then
-					col, line = 0x44FFFFFF, 0xDDFFFFFF
-				end
-
-				-- 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
-				local reach_memo = ""
-				if p.disp_frm == 3 then
-					reach_memo = p.hitbox_txt .. "&" .. p.hurtbox_txt
-				elseif p.disp_frm == 4 then
-					reach_memo = p.hitbox_txt
-				elseif p.disp_frm == 5 then
-					reach_memo = p.hurtbox_txt
-				end
-
-				local act_count  = p.act_count or 0
-				local max_hit_dn = p.attacking and p.hit.max_hit_dn or 0
-
-				-- 行動が変わったかのフラグ
-				local frame      = p.act_frames[#p.act_frames]
-				local concrete_name, chg_act_name, disp_name
-				if frame ~= nil then
-					if p.act_data.names then
-						chg_act_name = true
-						for _, name in pairs(p.act_data.names) do
-							if frame.name == name then
-								chg_act_name = false
-								concrete_name = frame.name
-								disp_name = frame.disp_name
-								--p.act_1st = false
-							end
-						end
-						if chg_act_name then
-							concrete_name = p.act_data.name or p.act_data.names[1]
-							disp_name = convert(p.act_data.disp_name or concrete_name)
-						end
-					elseif frame.name ~= p.act_data.name then
-						concrete_name = p.act_data.name
-						disp_name = convert(p.act_data.disp_name or concrete_name)
-						chg_act_name = true
-					else
-						concrete_name = frame.name
-						disp_name = frame.disp_name
-						chg_act_name = false
-					end
-				else
-					concrete_name = p.act_data.name
-					disp_name = convert(p.act_data.disp_name or concrete_name)
-					chg_act_name = true
-				end
-				-- カイザーウェイブのレベルアップ
-				if p.char == 0x14 and p.old_kaiser_wave ~= p.kaiser_wave then
-					chg_act_name = true
-					p.act_1st = true
-				end
-				if chg_act_name ~= true then
-					if p.old_act ~= 0x18 and p.act == 0x18 then -- ダッシュの加速、減速、最終モーション
-						chg_act_name = true
-					elseif p.old_act ~= 0x19 and p.act == 0x19 then
-						chg_act_name = true
-					elseif p.act == 0x19 and p.base == fix_bp_addr(0x26152) then
-						chg_act_name = true
-					elseif p.old_act ~= 0x31 and p.act == 0x31 then -- スウェーのダッシュの区切り
-						chg_act_name = true
-					elseif p.old_act ~= 0x32 and p.act == 0x32 then
-						chg_act_name = true
-					elseif p.old_act ~= 0x34 and p.act == 0x34 then
-						chg_act_name = true
-					elseif p.old_act ~= 0x35 and p.act == 0x35 then
-						chg_act_name = true
-					elseif p.old_sway_status ~= 0x80 and p.sway_status == 0x80 then -- スウェーの切り替え
-						chg_act_name = true
-					elseif p.old_sway_status ~= 0x00 and p.sway_status == 0x00 then
-						chg_act_name = true
-					end
-				end
-				local chg_col = frame and (frame.col ~= col) or false
-				local chg_memo = frame and (frame.reach_memo ~= reach_memo) or false
-				local chg_act_count = frame and (frame.act_count ~= act_count) or false
-				if #p.act_frames == 0 or
-					chg_act_name or
-					chg_col or
-					p.chg_air_state ~= 0 or
-					chg_fireball_state == true or
-					chg_prefireball_state == true or
-					p.act_1st or
-					chg_memo or
-					(max_hit_dn > 1 and chg_act_count) then
-					--行動IDの更新があった場合にフレーム情報追加
-					frame = {
-						act = p.act,
-						count = 1,
-						col = col,
-						name = concrete_name,
-						disp_name = disp_name,
-						line = line,
-						chg_fireball_state = chg_fireball_state,
-						chg_prefireball_state = chg_prefireball_state,
-						chg_air_state = p.chg_air_state,
-						act_1st = p.act_1st,
-						reach_memo = reach_memo,
-						act_count = act_count,
-						max_hit_dn = max_hit_dn,
-					}
-					table.insert(p.act_frames, frame)
-					if 180 < #p.act_frames then
-						--バッファ長調整
-						table.remove(p.act_frames, 1)
-					end
-				else
-					--同一行動IDが継続している場合はフレーム値加算
-					if frame then
-						frame.count = frame.count + 1
-					end
-				end
-				-- 技名でグループ化したフレームデータの配列をマージ生成する
-				p.act_frames2 = frame_groups(frame, p.act_frames2 or {})
-				-- 表示可能範囲（最大で横画面幅）以上は加算しない
-				p.act_frames_total = (332 < p.act_frames_total) and 332 or (p.act_frames_total + 1)
-				-- 後の処理用に最終フレームを保持
-				local last_frame = frame
-
-				-- 無敵表示
-				col, line = 0x00000000, 0x00000000
-				for _, hurt_inv in ipairs(p.hit_summary.hurt_inv) do
-					if 0x400 > p.flag_cc then
-						if hurt_inv.type == 0 then -- 全身無敵
-							col, line = 0xAAB0E0E6, 0xDDAFEEEE
-							break
-						elseif hurt_inv.type == 1 then -- スウェー上
-							col, line = 0xAAFFA500, 0xDDAFEEEE
-							break
-						elseif hurt_inv.type == 2 then -- 上半身無敵（地上）
-							col, line = 0xAA32CD32, 0xDDAFEEEE
-							break
-						elseif hurt_inv.type == 3 then -- 足元無敵（地上）
-							col, line = 0xAA9400D3, 0xDDAFEEEE
-							break
-						elseif hurt_inv.type == 0 then -- ダウンor空中追撃のみ可能
-							col, line = 0xAAB0E0E6, 0xDDAFEEEE
-							break
-						end
-					else
-						if hurt_inv.type == 0 then -- 全身無敵
-							col, line = 0xAAB0E0E6, 0xDDAFEEEE
-							break
-						elseif hurt_inv.type == 1 then -- スウェー上
-							col, line = 0xAAFFA500, 0xDDAFEEEE
-							break
-						end
-					end
-				end
-				--printf("top %s, hi %s, lo %s", screen_top, vul_hi, vul_lo)
-
-				frame = p.muteki.act_frames[#p.muteki.act_frames]
-				if frame == nil or chg_act_name or frame.col ~= col or p.state ~= p.old_state or p.act_1st then
-					--行動IDの更新があった場合にフレーム情報追加
-					frame = {
-						act = p.act,
-						count = 1,
-						col = col,
-						name = concrete_name,
-						disp_name = disp_name,
-						line = line,
-						act_1st = p.act_1st,
-					}
-					table.insert(p.muteki.act_frames, frame)
-					if 180 < #p.muteki.act_frames then
-						--バッファ長調整
-						table.remove(p.muteki.act_frames, 1)
-					end
-				else
-					--同一行動IDが継続している場合はフレーム値加算
-					frame.count = frame.count + 1
-				end
-				-- 技名でグループ化したフレームデータの配列をマージ生成する
-				local upd_group = false
-				p.muteki.act_frames2, upd_group = frame_groups(frame, p.muteki.act_frames2 or {})
-				-- メインフレーム表示からの描画開始位置を記憶させる
-				if upd_group and last_frame then
-					last_frame.muteki = last_frame.muteki or {}
-					table.insert(last_frame.muteki, p.muteki.act_frames2[#p.muteki.act_frames2])
-				end
-
-				-- フレーム差
-				-- フレーム差のバッファ
-				local old_last_frame_gap = p.last_frame_gap
-				local save_frame_gap = function()
-					local upd = false
-					if old_last_frame_gap > 0 and old_last_frame_gap > p.last_frame_gap then
-						upd = true
-					elseif old_last_frame_gap < 0 and old_last_frame_gap < p.last_frame_gap then
-						upd = true
-					elseif old_last_frame_gap ~= 0 and p.last_frame_gap == 0 then
-						upd = true
-					end
-					if upd then
-						table.insert(p.hist_frame_gap, old_last_frame_gap)
-						if 10 < #p.hist_frame_gap then
-							--バッファ長調整
-							table.remove(p.hist_frame_gap, 1)
-						end
-					end
-				end
-				-- フレーム差の更新
-				if p.act_normal and op.act_normal then
-					if not p.old_act_normal and not op.old_act_normal then
-						p.last_frame_gap = 0
-					end
-					p.frame_gap = 0
-					col, line = 0x00000000, 0x00000000
-				elseif not p.act_normal and not op.act_normal then
-					if p.state == 0 and op.state ~= 0 then
-						p.frame_gap = p.frame_gap + 1
-						p.last_frame_gap = p.frame_gap
-						col, line = 0xAA0000FF, 0xDD0000FF
-					elseif p.state ~= 0 and op.state == 0 then
-						p.frame_gap = p.frame_gap - 1
-						p.last_frame_gap = p.frame_gap
-						col, line = 0xAAFF6347, 0xDDFF6347
-					else
-						p.frame_gap = 0
-						col, line = 0x00000000, 0x00000000
-					end
-				elseif p.act_normal and not op.act_normal then
-					-- 直前が行動中ならリセットする
-					if not p.old_act_normal then
-						p.frame_gap = 0
-					end
-					p.frame_gap = p.frame_gap + 1
-					p.last_frame_gap = p.frame_gap
-					col, line = 0xAA0000FF, 0xDD0000FF
-				elseif not p.act_normal and op.act_normal then
-					-- 直前が行動中ならリセットする
-					if not op.old_act_normal then
-						p.frame_gap = 0
-					end
-					p.frame_gap = p.frame_gap - 1
-					p.last_frame_gap = p.frame_gap
-					col, line = 0xAAFF6347, 0xDDFF6347
-				end
-				save_frame_gap()
-
-				frame = p.frm_gap.act_frames[#p.frm_gap.act_frames]
-				if frame == nil or chg_act_name or (frame.col ~= col and (p.frame_gap == 0 or p.frame_gap == -1 or p.frame_gap == 1)) or p.act_1st then
-					--行動IDの更新があった場合にフレーム情報追加
-					frame = {
-						act = p.act,
-						count = 1,
-						col = col,
-						name = concrete_name,
-						disp_name = disp_name,
-						line = line,
-						act_1st = p.act_1st,
-					}
-					table.insert(p.frm_gap.act_frames, frame)
-					if 180 < #p.frm_gap.act_frames then
-						--バッファ長調整
-						table.remove(p.frm_gap.act_frames, 1)
-					end
-				else
-					--同一行動IDが継続している場合はフレーム値加算
-					frame.count = frame.count + 1
-				end
-				-- 技名でグループ化したフレームデータの配列をマージ生成する
-				p.frm_gap.act_frames2, upd_group = frame_groups(frame, p.frm_gap.act_frames2 or {})
-				-- メインフレーム表示からの描画開始位置を記憶させる
-				if upd_group and last_frame then
-					last_frame.frm_gap = last_frame.frm_gap or {}
-					table.insert(last_frame.frm_gap, p.frm_gap.act_frames2[#p.frm_gap.act_frames2])
-				end
-
-				-- 飛び道具2
-				for fb_base, fb in pairs(p.fireball) do
-					local frame = fb.act_frames[#fb.act_frames]
-					local reset, new_name = false, fb.act_data_fired.name
-					if p.act_data.firing then
-						if p.act_1st then
-							reset = true
-						elseif not frame or frame.name ~= fb.act_data_fired.name then
-							reset = true
-						end
-					elseif fb.act == 0 and (not frame or frame.name ~= "") then
-						reset = true
-						new_name = ""
-					end
-					local col, line, act
-					if p.skip_frame then
-						col, line, act = 0x00000000, 0x00000000, 0
-					elseif fb.has_atk_box == true then
-						if fb.fake_hit == true then
-							col, line, act = 0xAA00FF33, 0xDD00FF33, 2
-						elseif fb.obsl_hit == true or fb.full_hit == true or fb.harmless2 == true then
-							if fb.juggling then
-								col, line, act = 0x00000000, 0xDDFF4500, 1
-							else
-								col, line, act = 0x00000000, 0xDDFF1493, 0
-							end
-						else
-							if fb.juggling then
-								col, line, act = 0xAAFF4500, 0xDDFF4500, 1
-							else
-								col, line, act = 0xAAFF00FF, 0xDDFF00FF, 1
-							end
-						end
-					else
-						col, line, act = 0x00000000, 0x00000000, 0
-					end
-
-					-- 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
-					local reach_memo = ""
-					if fb.disp_frm == 3 then
-						reach_memo = fb.hitbox_txt .. "&" .. fb.hurtbox_txt
-					elseif p.disp_frm == 4 then
-						reach_memo = fb.hitbox_txt
-					elseif p.disp_frm == 5 then
-						reach_memo = fb.hurtbox_txt
-					end
-					local act_count  = fb.actb
-					local max_hit_dn = fb.hit.max_hit_dn
-
-					if #fb.act_frames == 0 or (frame == nil) or frame.col ~= col or reset or frame.reach_memo ~= reach_memo or (max_hit_dn > 1 and frame.act_count ~= act_count) then
-						-- 軽量化のため攻撃の有無だけで記録を残す
-						frame = {
-							act        = act,
-							count      = 1,
-							col        = col,
-							name       = new_name,
-							line       = line,
-							act_1st    = reset,
-							reach_memo = reach_memo,
-							act_count  = act_count,
-							max_hit_dn = max_hit_dn,
-						}
-						-- 関数の使いまわすためact_framesは配列にするが明細を表示ないので1個しかもたなくていい
-						fb.act_frames[1] = frame
-					else
-						-- 同一行動IDが継続している場合はフレーム値加算
-						frame.count = frame.count + 1
-					end
-					-- 技名でグループ化したフレームデータの配列をマージ生成する
-					fb.act_frames2, fb_upd_groups[fb_base] = frame_groups(frame, fb.act_frames2 or {})
-				end
-
-				-- メインフレーム表示からの描画開始位置を記憶させる
-				for fb_base, fb_upd_group in pairs(fb_upd_groups) do
-					if fb_upd_group and last_frame then
-						last_frame.fireball = last_frame.fireball or {}
-						last_frame.fireball[fb_base] = last_frame.fireball[fb_upd_group] or {}
-						local last_fb_frame = last_frame.fireball[fb_base]
-						table.insert(last_fb_frame, p.fireball[fb_base].act_frames2[# p.fireball[fb_base].act_frames2])
-						last_fb_frame[#last_fb_frame].parent_count = last_frame.last_total
-					end
-				end
+				local _, chg_act_name = proc_act_frame(p)
+				proc_muteki_frame(p, chg_act_name)
+				proc_frame_gap(p, chg_act_name)
+				proc_fb_frame(p)
 			end
+
 			--1Pと2Pともにフレーム数が多すぎる場合は加算をやめる
 			fix_max_framecount()
 		end
