@@ -8040,9 +8040,7 @@ rbff2.startplugin = function()
 			end
 		elseif p.throwing then
 			col, line = 0xAAD2691E, 0xDDD2691E
-		elseif p.act_1st ~= true and
-			((p.old_repeatable == true and p.repeatable == true) or
-				(p.old_repeatable == true and p.repeatable ~= true and p.act_frame > 0)) then
+		elseif p.act_1st ~= true and p.old_repeatable == true and (p.repeatable == true or p.act_frame > 0) then
 			-- 1F前の状態とあわせて判定する
 			col, line = 0xAAD2691E, 0xDDD2691E
 		elseif p.can_juggle or p.can_otg then
@@ -8100,11 +8098,6 @@ rbff2.startplugin = function()
 			disp_name = convert(p.act_data.disp_name or concrete_name)
 			chg_act_name = true
 		end
-		-- カイザーウェイブのレベルアップ
-		if p.char == 0x14 and p.old_kaiser_wave ~= p.kaiser_wave then
-			chg_act_name = true
-			p.act_1st = true
-		end
 		local is_change_any = function(expecteds, old, current)
 			for _, expected in ipairs(expecteds) do
 				if old ~= expected and current == expected then
@@ -8123,22 +8116,14 @@ rbff2.startplugin = function()
 			-- スウェーの切り替え
 			chg_act_name = is_change_any({ 0x00, 0x80, 0x32, 0x34, 0x35, 0x80 }, p.old_sway_status, p.sway_status)
 		end
-		if chg_act_name ~= true then
-			chg_act_name = frame and (frame.col ~= col) or false
-		end
-		if chg_act_name ~= true then
-			chg_act_name = frame and (frame.reach_memo ~= reach_memo) or false
-		end
-		if chg_act_name ~= true then
-			chg_act_name = (max_hit_dn > 1) and (frame and (frame.act_count ~= act_count) or false)
-		end
-		if #p.act_frames == 0 or
-			chg_act_name or
-			p.chg_air_state ~= 0 or
-			chg_fireball_state == true or
-			chg_prefireball_state == true or
-			p.act_1st or
-			(max_hit_dn > 1 and chg_act_count) then
+		local chg_any_state = #p.act_frames == 0 or	p.chg_air_state ~= 0 or p.act_1st
+		chg_any_state = chg_any_state or (frame.col ~= col) or false
+		chg_any_state = chg_any_state or frame and (frame.reach_memo ~= reach_memo) or false
+		chg_any_state = chg_any_state or (max_hit_dn > 1) and (frame and (frame.act_count ~= act_count) or false)
+		if chg_act_name or
+			chg_fireball_state or
+			chg_prefireball_state or
+			chg_any_state then
 			--行動IDの更新があった場合にフレーム情報追加
 			frame = {
 				act = p.act,
@@ -8232,7 +8217,7 @@ rbff2.startplugin = function()
 			frame.count = frame.count + 1
 		end
 		-- 技名でグループ化したフレームデータの配列をマージ生成する
-		local upd_group = false
+		local upd_group
 		p.muteki.act_frames2, upd_group = frame_groups(frame, p.muteki.act_frames2 or {})
 		-- メインフレーム表示からの描画開始位置を記憶させる
 		if upd_group and last_frame then
@@ -8269,24 +8254,12 @@ rbff2.startplugin = function()
 		end
 		-- フレーム差の更新
 		local col, line = 0x00000000, 0x00000000
-		if p.act_normal and op.act_normal then
-			if not p.old_act_normal and not op.old_act_normal then
+		if p.act_normal == op.act_normal then
+			if p.act_normal ~= op.act_normal then
 				p.last_frame_gap = 0
 			end
 			p.frame_gap = 0
-		elseif not p.act_normal and not op.act_normal then
-			if p.state == 0 and op.state ~= 0 then
-				p.frame_gap = p.frame_gap + 1
-				p.last_frame_gap = p.frame_gap
-				col, line = 0xAA0000FF, 0xDD0000FF
-			elseif p.state ~= 0 and op.state == 0 then
-				p.frame_gap = p.frame_gap - 1
-				p.last_frame_gap = p.frame_gap
-				col, line = 0xAAFF6347, 0xDDFF6347
-			else
-				p.frame_gap = 0
-			end
-		elseif p.act_normal and not op.act_normal then
+		elseif p.act_normal then
 			-- 直前が行動中ならリセットする
 			if not p.old_act_normal then
 				p.frame_gap = 0
@@ -8294,7 +8267,7 @@ rbff2.startplugin = function()
 			p.frame_gap = p.frame_gap + 1
 			p.last_frame_gap = p.frame_gap
 			col, line = 0xAA0000FF, 0xDD0000FF
-		elseif not p.act_normal and op.act_normal then
+		elseif not p.act_normal then
 			-- 直前が行動中ならリセットする
 			if not op.old_act_normal then
 				p.frame_gap = 0
@@ -8327,6 +8300,7 @@ rbff2.startplugin = function()
 			frame.count = frame.count + 1
 		end
 		-- 技名でグループ化したフレームデータの配列をマージ生成する
+		local upd_group
 		p.frm_gap.act_frames2, upd_group = frame_groups(frame, p.frm_gap.act_frames2 or {})
 		-- メインフレーム表示からの描画開始位置を記憶させる
 		if upd_group and last_frame then
@@ -9170,6 +9144,10 @@ rbff2.startplugin = function()
 					type = act_types.any,
 				}
 				p.act_1st  = false
+			end
+			-- カイザーウェイブのレベルアップ
+			if p.char == 0x14 and p.old_kaiser_wave ~= p.kaiser_wave then
+				p.act_1st = true
 			end
 			p.old_act_normal = p.act_normal
 			-- ガード移行可否
