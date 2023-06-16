@@ -7994,6 +7994,8 @@ rbff2.startplugin = function()
 	end
 
 	local proc_act_frame = function(p)
+		local op = p.op
+
 		-- 飛び道具
 		local chg_fireball_state, chg_prefireball_state = false, false
 		for _, fb in pairs(p.fireball) do
@@ -8043,10 +8045,12 @@ rbff2.startplugin = function()
 				(p.old_repeatable == true and p.repeatable ~= true and p.act_frame > 0)) then
 			-- 1F前の状態とあわせて判定する
 			col, line = 0xAAD2691E, 0xDDD2691E
-		elseif p.can_juggle and op.act_normal then
-			col, line = 0xAAFFA500, 0xDDFFA500
-		elseif p.can_otg and op.act_normal then
-			col, line = 0xAAFFA500, 0xDDFFA500
+		elseif p.can_juggle or p.can_otg then
+			if op.act_normal ~= true then
+				col, line = 0x99CCA500, 0x99CCA500
+			else
+				col, line = 0xAAFFA500, 0xDDFFA500
+			end
 		elseif p.act_normal then
 			col, line = 0x44FFFFFF, 0xDDFFFFFF
 		end
@@ -8101,38 +8105,39 @@ rbff2.startplugin = function()
 			chg_act_name = true
 			p.act_1st = true
 		end
-		if chg_act_name ~= true then
-			if p.old_act ~= 0x18 and p.act == 0x18 then -- ダッシュの加速、減速、最終モーション
-				chg_act_name = true
-			elseif p.old_act ~= 0x19 and p.act == 0x19 then
-				chg_act_name = true
-			elseif p.act == 0x19 and p.base == fix_bp_addr(0x26152) then
-				chg_act_name = true
-			elseif p.old_act ~= 0x31 and p.act == 0x31 then -- スウェーのダッシュの区切り
-				chg_act_name = true
-			elseif p.old_act ~= 0x32 and p.act == 0x32 then
-				chg_act_name = true
-			elseif p.old_act ~= 0x34 and p.act == 0x34 then
-				chg_act_name = true
-			elseif p.old_act ~= 0x35 and p.act == 0x35 then
-				chg_act_name = true
-			elseif p.old_sway_status ~= 0x80 and p.sway_status == 0x80 then -- スウェーの切り替え
-				chg_act_name = true
-			elseif p.old_sway_status ~= 0x00 and p.sway_status == 0x00 then
-				chg_act_name = true
+		local is_change_any = function(expecteds, old, current)
+			for _, expected in ipairs(expecteds) do
+				if old ~= expected and current == expected then
+					return true
+				end
 			end
+			return false
 		end
-		local chg_col = frame and (frame.col ~= col) or false
-		local chg_memo = frame and (frame.reach_memo ~= reach_memo) or false
-		local chg_act_count = frame and (frame.act_count ~= act_count) or false
+		if chg_act_name ~= true then
+			-- ダッシュの加速、減速、最終モーション
+			-- スウェーのダッシュの区切り
+			chg_act_name = is_change_any({ 0x18, 0x19, 0x32, 0x34, 0x35, 0x80 }, p.old_act, p.act)
+			chg_act_name = chg_act_name or (p.act == 0x19 and p.base == fix_bp_addr(0x26152))
+		end
+		if chg_act_name ~= true then
+			-- スウェーの切り替え
+			chg_act_name = is_change_any({ 0x00, 0x80, 0x32, 0x34, 0x35, 0x80 }, p.old_sway_status, p.sway_status)
+		end
+		if chg_act_name ~= true then
+			chg_act_name = frame and (frame.col ~= col) or false
+		end
+		if chg_act_name ~= true then
+			chg_act_name = frame and (frame.reach_memo ~= reach_memo) or false
+		end
+		if chg_act_name ~= true then
+			chg_act_name = (max_hit_dn > 1) and (frame and (frame.act_count ~= act_count) or false)
+		end
 		if #p.act_frames == 0 or
 			chg_act_name or
-			chg_col or
 			p.chg_air_state ~= 0 or
 			chg_fireball_state == true or
 			chg_prefireball_state == true or
 			p.act_1st or
-			chg_memo or
 			(max_hit_dn > 1 and chg_act_count) then
 			--行動IDの更新があった場合にフレーム情報追加
 			frame = {
