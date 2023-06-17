@@ -930,7 +930,7 @@ local char_acts_base = {
 		{ startup = true, names = { "飛燕失脚" },                                type = act_types.overhead,   ids = { 0x68, 0x6B, 0x6C } },
 		{ startup = true, names = { "雷光回し蹴り" },                          type = act_types.attack,     ids = { 0x6A } },
 		{ startup = true, names = { "烈風拳" },                                   type = act_types.attack,     ids = { 0x86, 0x87 },                firing = true },
-		{ startup = true, names = { "烈風拳" },                                   type = act_types.any,        ids = { 0x88 } },
+		{ startup = false, names = { "烈風拳" },                                   type = act_types.any,        ids = { 0x88 } },
 		{ startup = true, names = { "ダブル烈風拳" },                          type = act_types.attack,     ids = { 0x90, 0x91, 0x92 },          firing = true },
 		{ startup = true, names = { "屈段当て身打ち" },                       type = act_types.any,        ids = { 0xAE } },
 		{ startup = true, names = { "屈段当て身打ちキャッチ" },           type = act_types.attack,     ids = { 0xAF, 0xB0, 0xB1 } },
@@ -8010,37 +8010,49 @@ rbff2.startplugin = function()
 
 	local frame_event_types = {
 		reset = 0,
+		split = 1,
 		inactive = 2,
 		active = 3,
 	}
+	local frame_attack_types = {
+		attacking = 2 ^ 0, -- 0x1
+		fake = 2 ^ 1,      -- 0x10
+		juggling = 2 ^ 3,  -- 0x100
+		harmless = 2 ^ 4,  -- 0x1000
+		x05 = 2 ^  5, -- attack用 5 ~ 8
+		x06 = 2 ^  6, --
+		x07 = 2 ^  7, --
+		x08 = 2 ^  8, --
+		x09 = 2 ^  9, -- act_count用 9 ~ 16
+		x17 = 2 ^ 17, -- 技データ用 17 ~ 32
+	}
 	local frame_infos = {}
-	local on_frame_event = function(p, event_type, fireball)
-		local frame      = p.act_frames[#p.act_frames]
-		local break_info = function(info)
-			-- ブレイク
-			if info.last_event == frame_event_types.inactive and #info.active == 0 then
-				info.startup = info.count
-			elseif info.last_event == frame_event_types.active then
-				table.insert(info.active, info.count)
-				table.insert(info.act_types,  info.act_type)
-			elseif info.last_event == frame_event_types.inactive then
-				if event_type == frame_event_types.active then
-					table.insert(info.active, -info.count)
-				else
-					info.recovery = info.count
-				end
+	local break_info = function(info, event_type)
+		-- ブレイク
+		if info.last_event == frame_event_types.inactive and #info.active == 0 then
+			info.startup = info.count
+		elseif info.last_event == frame_event_types.active then
+			table.insert(info.active, info.count)
+			table.insert(info.act_types,  info.act_type)
+		elseif info.last_event == frame_event_types.inactive then
+			if event_type == frame_event_types.active or event_type == frame_event_types.split then
+				table.insert(info.active, -info.count)
+			else
+				info.recovery = info.count
 			end
 		end
+		info.count = 0
+	end
+	local on_frame_event = function(p, event_type, attack_type)
 		if event_type == frame_event_types.reset then
 			local info = frame_infos[p]
 			if info then
-				break_info(info)
+				break_info(info ,event_type)
 				local text = string.format("%s", info.startup)
 				if #info.active > 0 then
 					text = text .. "/"
 					local delim = ""
-					for i = 1, #info.active do
-						local count = info.active[i]
+					for _, count in ipairs(info.active) do
 						if 0 == count then
 							delim = ""
 						elseif 0 > count then
@@ -8053,11 +8065,10 @@ rbff2.startplugin = function()
 					end
 					text = string.format("%s/%s", text, info.recovery)
 				end
-				text = string.format("%3s: %s", info.total, text)
-				for i = 1, #info.act_types do
-					local act_type = info.act_types[i]
+				text = string.format("%3s|%s", info.total, text)
+				for i, act_type in ipairs(info.act_types) do
 					if i == 1 then
-						text = string.format("%s %s", text, act_type)
+						text = string.format("%s|%s", text, act_type)
 					else
 						text = string.format("%s,%s", text, act_type)
 					end
@@ -8066,26 +8077,33 @@ rbff2.startplugin = function()
 			end
 			frame_infos[p] = nil
 			return
+		elseif event_type == frame_event_types.split then
+			local info = frame_infos[p]
+			if info then
+				break_info(info, event_type)
+			end
+			return
 		end
 
 		local info = frame_infos[p] or {
 			last_event = event_type,
 			count = 0,
+			attack_type = attack_type,
+			act_type = p.hitstop_gd,
+
+			total = 0,
 			startup = 0,
 			active = {},
-			recovery = 0,
-			fireball = fireball,
-			total = 0,
-			act_type = p.act_data.type,
 			act_types = {},
+			recovery = 0,
 		}
 		frame_infos[p] = info
 		if info.last_event ~= event_type then
-			break_info(info)
+			break_info(info, event_type)
 			info.last_event = event_type
-			info.fireball = fireball
+			info.attack_type = attack_type
 			info.count = 1
-		elseif info.fireball ~= fireball then
+		elseif info.attack_type ~= attack_type then
 			if info.last_event == frame_event_types.active then
 				table.insert(info.active, info.count)
 				table.insert(info.act_types,  info.act_type)
@@ -8097,14 +8115,14 @@ rbff2.startplugin = function()
 					table.insert(info.active, -info.count)
 				end
 			end
-			info.fireball = fireball
+			info.attack_type = attack_type
 			info.last_event = event_type
 			info.count = 1
 		else
 			info.count = info.count + 1
 		end
 		info.total = info.total + 1
-		info.act_type = p.act_data.type
+		info.act_type = p.hitstop_gd
 	end
 
 	local proc_act_frame = function(p)
@@ -8112,19 +8130,30 @@ rbff2.startplugin = function()
 
 		-- 飛び道具
 		local chg_fireball_state, chg_prefireball_state = false, false
-		local fb_attacking, fake_fb_attacking = false, false
+		local attack_type = 0
 		for _, fb in pairs(p.fireball) do
 			if fb.has_atk_box == true then
 				if fb.atk_count == 1 and fb.act_data_fired.name == p.act_data.name then
 					chg_fireball_state = true
 				end
 				if fb.fake_hit == true then
-					fake_fb_attacking = true
+					attack_type = frame_attack_types.fake | frame_attack_types.attacking
 				elseif fb.obsl_hit == true or fb.full_hit == true or fb.harmless2 == true then
-					fb_attacking = true
+					attack_type = frame_attack_types.attacking | frame_attack_types.harmless
 				else
-					fb_attacking = true
+					attack_type = frame_attack_types.attacking
 				end
+				if fb.juggling then
+					attack_type = attack_type | frame_attack_types.juggling
+				end
+				local multi = 0
+				--[[
+				if fb.max_hit_dn > 1 or fb.max_hit_dn == 0 then
+					multi = fb.act * frame_attack_types.x17 | fb.act_count * frame_attack_types.x09
+				end
+				]]
+				attack_type = attack_type | multi
+				attack_type = attack_type | p.attack * frame_attack_types.x05
 				break
 			end
 		end
@@ -8146,21 +8175,32 @@ rbff2.startplugin = function()
 
 		--ガード移行できない行動は色替えする
 		local col, line = 0xAAF0E68C, 0xDDF0E68C
+		local multi = p.act * frame_attack_types.x17
+		if p.max_hit_dn > 1 or p.max_hit_dn == 0 then
+			multi = multi | p.act_count * frame_attack_types.x09
+		end
 		if p.skip_frame then
 			col, line = 0xAA888888, 0xDD888888
 		elseif p.attacking then
+			attack_type = frame_attack_types.attacking
 			if p.juggling then
+				attack_type = attack_type | frame_attack_types.juggling
 				col, line = 0xAAFF4500, 0xDDFF4500
 			else
 				col, line = 0xAAFF00FF, 0xDDFF00FF
 			end
+			attack_type = attack_type | multi
 		elseif p.dmmy_attacking then
+			attack_type = frame_attack_types.attacking | frame_attack_types.harmless
 			if p.juggling then
+				attack_type = attack_type | frame_attack_types.juggling
 				col, line = 0x00000000, 0xDDFF4500
 			else
 				col, line = 0x00000000, 0xDDFF00FF
 			end
+			attack_type = attack_type | multi
 		elseif p.throwing then
+			attack_type = frame_attack_types.attacking
 			col, line = 0xAAD2691E, 0xDDD2691E
 		elseif p.act_1st ~= true and p.old_repeatable == true and (p.repeatable == true or p.act_frame > 0) then
 			-- 1F前の状態とあわせて判定する
@@ -8287,10 +8327,10 @@ rbff2.startplugin = function()
 			if p.act_1st then
 				on_frame_event(p, frame_event_types.reset)
 			end
-			if p.attacking or p.dmmy_attacking or p.throwing or fb_attacking then
-				on_frame_event(p, frame_event_types.active, fb_attacking and 1 or nil)
+			if p.attacking or p.dmmy_attacking or p.throwing or attack_type > 0 then
+				on_frame_event(p, frame_event_types.active, attack_type)
 			else
-				on_frame_event(p, frame_event_types.inactive, fake_fb_attacking and 2 or nil)
+				on_frame_event(p, frame_event_types.inactive, attack_type)
 			end
 		end
 		-- 後の処理用に最終フレームを保持
@@ -9347,6 +9387,7 @@ rbff2.startplugin = function()
 				fb.old_attacking  = p.attacking
 				fb.attacking      = false
 				fb.dmmy_attacking = false
+				fb.juggling       = false
 				if fb.hitstop_id == 0 then
 					fb.hitstop    = 0
 					fb.hitstop_gd = 0
