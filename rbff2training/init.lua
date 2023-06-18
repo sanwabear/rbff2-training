@@ -8047,13 +8047,7 @@ rbff2.startplugin = function()
 		info.count = 0
 	end
 	on_frame_func.insert_tbl = function(pow, tbl, val)
-		if val then
-			if pow == 1 then
-				table.insert(tbl, string.format("%s", val))
-			else
-				table.insert(tbl, string.format("%sx%s", val, pow))
-			end
-		end
+		table.insert(tbl, pow == 1 and string.format("%s", val) or string.format("%sx%s", val, pow))
 	end
 	on_frame_func.build_txt1 = function(ctx, max, count, curr)
 		ctx = ctx or { prev = nil, pow = 0, tbl = {} }
