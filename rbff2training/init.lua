@@ -4546,31 +4546,31 @@ end
 local update_summary = function(p)
 	local summary        = p.hit_summary
 	-- 判定ができてからのログ情報の作成
-	summary.attack       = summary.attack or p.attack                                                           -- 補正前攻撃力導出元ID
-	summary.pure_dmg     = summary.pure_dmg or p.pure_dmg                                                       -- 補正前攻撃力
-	summary.pure_st      = summary.pure_st or p.pure_st                                                         -- 気絶値
-	summary.pure_st_tm   = summary.pure_st_tm or p.pure_st_tm                                                   -- 気絶タイマー
-	summary.chip_dmg     = summary.chip_dmg or (p.chip_dmg_type and p.chip_dmg_type.calc(summary.pure_dmg) or 0) -- 削りダメージ
-	summary.chip_dmg_nm  = summary.chip_dmg_nm or (p.chip_dmg_type and p.chip_dmg_type.name or "0")             -- 削りダメージ名
+	summary.attack       = summary.attack or p.attack                  -- 補正前攻撃力導出元ID
+	summary.pure_dmg     = summary.pure_dmg or p.pure_dmg              -- 補正前攻撃力
+	summary.pure_st      = summary.pure_st or p.pure_st                -- 気絶値
+	summary.pure_st_tm   = summary.pure_st_tm or p.pure_st_tm          -- 気絶タイマー
+	summary.chip_dmg     = summary.chip_dmg or p.chip_dmg_type.calc(summary.pure_dmg) -- 削りダメージ
+	summary.chip_dmg_nm  = summary.chip_dmg_nm or p.chip_dmg_type.name -- 削りダメージ名
 	summary.attack_id    = summary.attack_id or p.attack_id
-	summary.effect       = summary.effect or p.effect                                                           -- ヒット効果
-	summary.can_techrise = summary.can_techrise or p.can_techrise                                               -- 受け身行動可否
-	summary.gd_strength  = summary.gd_strength or p.gd_strength                                                 -- 相手のガード持続の種類
-	summary.max_hit_nm   = summary.max_hit_nm or p.hit.max_hit_nm                                               -- p.act_frame中の行動最大ヒット 分子
-	summary.max_hit_dn   = summary.max_hit_dn or p.hit.max_hit_dn                                               -- p.act_frame中の行動最大ヒット 分母
-	summary.cancelable   = summary.cancelable or p.cancelable or 0                                              -- キャンセル可否
-	summary.repeatable   = summary.repeatable or p.repeatable or false                                          -- 連キャン可否
-	summary.slide_atk    = summary.slide_atk or p.slide_atk                                                     -- ダッシュ滑り攻撃
-	summary.bs_atk       = summary.bs_atk or p.bs_atk                                                           -- ブレイクショット
+	summary.effect       = summary.effect or p.effect                  -- ヒット効果
+	summary.can_techrise = summary.can_techrise or p.can_techrise      -- 受け身行動可否
+	summary.gd_strength  = summary.gd_strength or p.gd_strength        -- 相手のガード持続の種類
+	summary.max_hit_nm   = summary.max_hit_nm or p.hit.max_hit_nm      -- p.act_frame中の行動最大ヒット 分子
+	summary.max_hit_dn   = summary.max_hit_dn or p.hit.max_hit_dn      -- p.act_frame中の行動最大ヒット 分母
+	summary.cancelable   = summary.cancelable or p.cancelable or 0     -- キャンセル可否
+	summary.repeatable   = summary.repeatable or p.repeatable or false -- 連キャン可否
+	summary.slide_atk    = summary.slide_atk or p.slide_atk            -- ダッシュ滑り攻撃
+	summary.bs_atk       = summary.bs_atk or p.bs_atk                  -- ブレイクショット
 
-	summary.hitstun      = summary.hitstun or p.hitstun                                                         -- ヒット硬直
-	summary.blockstun    = summary.blockstun or p.blockstun                                                     -- ガード硬直
-	summary.hitstop      = summary.hitstop or p.hitstop                                                         -- ヒットストップ
-	summary.hitstop_gd   = summary.hitstop_gd or p.hitstop_gd                                                   -- ガード時ヒットストップ
+	summary.hitstun      = summary.hitstun or p.hitstun                -- ヒット硬直
+	summary.blockstun    = summary.blockstun or p.blockstun            -- ガード硬直
+	summary.hitstop      = summary.hitstop or p.hitstop                -- ヒットストップ
+	summary.hitstop_gd   = summary.hitstop_gd or p.hitstop_gd          -- ガード時ヒットストップ
 	if p.is_fireball == true then
-		summary.prj_rank = summary.prj_rank or p.prj_rank                                                       -- 飛び道具の強さ
+		summary.prj_rank = summary.prj_rank or p.prj_rank              -- 飛び道具の強さ
 	else
-		summary.prj_rank = nil                                                                                  -- 飛び道具の強さ
+		summary.prj_rank = nil                                         -- 飛び道具の強さ
 	end
 end
 local update_box_summary = function(p, box)
@@ -4916,6 +4916,7 @@ local update_object = function(p)
 	p.can_juggle     = false
 	p.can_otg        = false
 	p.attack_id      = 0
+	p.effect         = 0
 	p.throwing       = false
 
 	-- ヒットするかどうか
@@ -5089,6 +5090,7 @@ rbff2.startplugin = function()
 			old_attack                 = 0,
 			hitstop_id                 = 0, -- ヒット/ガードしている相手側のattackと同値
 			attack_id                  = 0, -- 当たり判定ごとに設定されているID
+			effect                     = 0,
 			attacking                  = false, -- 攻撃判定発生中の場合true
 			dmmy_attacking             = false, -- ヒットしない攻撃判定発生中の場合true（嘘判定のぞく）
 			juggling                   = false, -- 空中追撃判定発生中の場合true
@@ -8026,14 +8028,15 @@ rbff2.startplugin = function()
 		x09 = 2 ^  9, -- act_count用 9 ~ 16
 		x17 = 2 ^ 17, -- 技データ用 17 ~ 32
 	}
+	local on_frame_func = {}
 	local frame_infos = {}
-	local break_info = function(info, event_type)
+	on_frame_func.break_info = function(info, event_type)
 		-- ブレイク
 		if info.last_event == frame_event_types.inactive and #info.active == 0 then
 			info.startup = info.count
 		elseif info.last_event == frame_event_types.active then
 			table.insert(info.active, info.count)
-			table.insert(info.act_types,  info.act_type)
+			table.insert(info.summaries, info.summary)
 		elseif info.last_event == frame_event_types.inactive then
 			if event_type == frame_event_types.active or event_type == frame_event_types.split then
 				table.insert(info.active, -info.count)
@@ -8043,11 +8046,45 @@ rbff2.startplugin = function()
 		end
 		info.count = 0
 	end
+	on_frame_func.insert_tbl = function(pow, tbl, val)
+		if val then
+			if pow == 1 then
+				table.insert(tbl, string.format("%s", val))
+			else
+				table.insert(tbl, string.format("%sx%s", val, pow))
+			end
+		end
+	end
+	on_frame_func.build_txt1 = function(ctx, max, count, curr)
+		ctx = ctx or { prev = nil, pow = 0, tbl = {} }
+		if ctx.prev ~= curr then
+			on_frame_func.insert_tbl(ctx.pow, ctx.tbl, ctx.prev)
+			ctx.prev = curr
+			ctx.pow = 1
+		elseif ctx.prev == curr then
+			ctx.pow = ctx.pow + 1
+		end
+		if count == max then
+			on_frame_func.insert_tbl(ctx.pow, ctx.tbl, ctx.prev)
+		end
+		return ctx
+	end
+	on_frame_func.build_txt2 = function(ctx, max, count, curr)
+		ctx = ctx or { tbl = {} }
+		table.insert(ctx.tbl, curr)
+		return ctx
+	end
+	on_frame_func.effect_txt = function(effect)
+		local e = effect + 1
+		local e1, e2 = hit_effects[e][1], hit_effects[e][2]
+		return e1 == e2 and e1 or string.format("%s/%s", e1, e2)
+	end
 	local on_frame_event = function(p, event_type, attack_type)
+		local func = on_frame_func
 		if event_type == frame_event_types.reset then
 			local info = frame_infos[p]
 			if info then
-				break_info(info ,event_type)
+				func.break_info(info ,event_type)
 				local text = string.format("%s", info.startup)
 				if #info.active > 0 then
 					text = text .. "/"
@@ -8066,12 +8103,30 @@ rbff2.startplugin = function()
 					text = string.format("%s/%s", text, info.recovery)
 				end
 				text = string.format("%3s|%s", info.total, text)
-				for i, act_type in ipairs(info.act_types) do
-					if i == 1 then
-						text = string.format("%s|%s", text, act_type)
-					else
-						text = string.format("%s,%s", text, act_type)
+				if #info.summaries > 0 then
+					local max, ctxs = #info.summaries, {}
+					local build_txt = #info.summaries > 2 and func.build_txt1 or func.build_txt2
+					for i, summary in ipairs(info.summaries) do
+						ctxs[1] = build_txt(ctxs[1], max, i, summary.hitstop_gd)
+						ctxs[2] = build_txt(ctxs[2], max, i, summary.pure_dmg)
+						ctxs[3] = build_txt(ctxs[3], max, i, summary.pure_st)
+						ctxs[4] = build_txt(ctxs[4], max, i, summary.pure_st_tm)
+						ctxs[5] = build_txt(ctxs[5], max, i, summary.gd_strength)
+						ctxs[6] = build_txt(ctxs[6], max, i, func.effect_txt(summary.effect))
+						ctxs[7] = build_txt(ctxs[7], max, i, summary.air_hit == hit_proc_types.same_line and "拾" or "-")
+						--ctxs[8] = build_txt(ctxs[8], max, i, summary.up_block summary.low_block summary.air_block)
 					end
+					-- 総F|発生/持続/後隙|BS猶予|ダメージ|気絶|気絶タイマー
+					text = table.concat({
+						text,
+						table.concat(ctxs[1].tbl, ","),
+						table.concat(ctxs[2].tbl, ","),
+						table.concat(ctxs[3].tbl, ","),
+						table.concat(ctxs[4].tbl, ","),
+						table.concat(ctxs[5].tbl, ","),
+						table.concat(ctxs[6].tbl, ","),
+						table.concat(ctxs[7].tbl, ","),
+					}, "|")
 				end
 				p.last_frame_info_txt = text
 			end
@@ -8080,7 +8135,7 @@ rbff2.startplugin = function()
 		elseif event_type == frame_event_types.split then
 			local info = frame_infos[p]
 			if info then
-				break_info(info, event_type)
+				func.break_info(info, event_type)
 			end
 			return
 		end
@@ -8089,24 +8144,23 @@ rbff2.startplugin = function()
 			last_event = event_type,
 			count = 0,
 			attack_type = attack_type,
-			act_type = p.hitstop_gd,
-
+			summary = p.hit_summary,
 			total = 0,
 			startup = 0,
 			active = {},
-			act_types = {},
+			summaries = {},
 			recovery = 0,
 		}
 		frame_infos[p] = info
 		if info.last_event ~= event_type then
-			break_info(info, event_type)
+			func.break_info(info, event_type)
 			info.last_event = event_type
 			info.attack_type = attack_type
 			info.count = 1
 		elseif info.attack_type ~= attack_type then
 			if info.last_event == frame_event_types.active then
 				table.insert(info.active, info.count)
-				table.insert(info.act_types,  info.act_type)
+				table.insert(info.summaries,  info.summary)
 			elseif info.last_event == frame_event_types.inactive then
 				if #info.active == 0 then
 					info.startup = info.count
@@ -8122,7 +8176,7 @@ rbff2.startplugin = function()
 			info.count = info.count + 1
 		end
 		info.total = info.total + 1
-		info.act_type = p.hitstop_gd
+		info.summary = p.hit_summary
 	end
 
 	local proc_act_frame = function(p)
@@ -8822,6 +8876,7 @@ rbff2.startplugin = function()
 			p.old_repeatable = p.repeatable
 			p.repeatable     = (p.cancelable & 0xD0 == 0xD0) and (pgm:read_u8(p.addr.repeatable) & 0x4 == 0x4)
 			p.pure_dmg       = pgm:read_u8(p.addr.pure_dmg) -- ダメージ(フック処理)
+			p.chip_dmg_type  = chip_dmg_types.zero
 			p.tmp_pow        = pgm:read_u8(p.addr.tmp_pow) -- POWゲージ増加量
 			p.tmp_pow_rsv    = pgm:read_u8(p.addr.tmp_pow_rsv) -- POWゲージ増加量(予約値)
 			if p.tmp_pow_rsv > 0 then
@@ -8893,6 +8948,7 @@ rbff2.startplugin = function()
 			p.pure_dmg        = 0
 			p.pure_st         = 0
 			p.pure_st_tm      = 0
+			p.chip_dmg_type   = chip_dmg_types.zero
 			p.fake_hit        = (pgm:read_u8(p.addr.fake_hit) & 0xB) == 0
 			p.obsl_hit        = (pgm:read_u8(p.addr.obsl_hit) & 0xB) == 0
 			p.full_hit        = pgm:read_u8(p.addr.full_hit) > 0
@@ -9392,6 +9448,7 @@ rbff2.startplugin = function()
 					fb.hitstop    = 0
 					fb.hitstop_gd = 0
 					fb.pure_dmg   = 0
+					fb.chip_dmg_type = chip_dmg_types.zero
 					fb.pure_st    = 0
 					fb.pure_st_tm = 0
 				else
