@@ -63,31 +63,31 @@ local rbff2                = exports
 
 -- キャラの基本データ
 -- 配列のインデックス=キャラID
-local chars = {
-	{ name = "テリー・ボガード",           init_stuns = 32, wakeup_frms = 20, sway_act_counts = 3,   bs_addr = 0x2E, easy_bs_addr = 0x2E, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "アンディ・ボガード",         init_stuns = 31, wakeup_frms = 20, sway_act_counts = 2,   bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "東丈",                       init_stuns = 32, wakeup_frms = 20, sway_act_counts = 4,   bs_addr = 0x3A, easy_bs_addr = 0x3A, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "不知火舞",                   init_stuns = 29, wakeup_frms = 17, sway_act_counts = 3,   bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "ギース・ハワード",           init_stuns = 33, wakeup_frms = 20, sway_act_counts = 3,   bs_addr = 0x66, easy_bs_addr = 0x4A, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "望月双角",                   init_stuns = 32, wakeup_frms = 20, sway_act_counts = 2,   bs_addr = 0x46, easy_bs_addr = 0x46, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "ボブ・ウィルソン",           init_stuns = 31, wakeup_frms = 20, sway_act_counts = 2,   bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "ホンフゥ",                   init_stuns = 31, wakeup_frms = 20, sway_act_counts = 3,   bs_addr = 0x32, easy_bs_addr = 0x32, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "ブルー・マリー",             init_stuns = 29, wakeup_frms = 20, sway_act_counts = 3,   bs_addr = 0x3E, easy_bs_addr = 0x3E, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "フランコ・バッシュ",         init_stuns = 35, wakeup_frms = 20, sway_act_counts = 3,   bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "山崎竜二",                   init_stuns = 38, wakeup_frms = 20, sway_act_counts = 2,   bs_addr = 0x56, easy_bs_addr = 0x3A, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "秦崇秀",                     init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC, bs_addr = 0x3A, easy_bs_addr = 0x3A, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "秦崇雷",                     init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC, bs_addr = 0x36, easy_bs_addr = 0x36, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "ダック・キング",             init_stuns = 32, wakeup_frms = 20, sway_act_counts = 2,   bs_addr = 0x7A, easy_bs_addr = 0x5E, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "キム・カッファン",           init_stuns = 32, wakeup_frms = 20, sway_act_counts = 4,   bs_addr = 0x36, easy_bs_addr = 0x36, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "ビリー・カーン",             init_stuns = 32, wakeup_frms = 20, sway_act_counts = 4,   bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "チン・シンザン",             init_stuns = 31, wakeup_frms = 20, sway_act_counts = 2,   bs_addr = 0x2E, easy_bs_addr = 0x2E, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "タン・フー・ルー",           init_stuns = 31, wakeup_frms = 20, sway_act_counts = 4,   bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "ローレンス・ブラッド",       init_stuns = 35, wakeup_frms = 20, sway_act_counts = 4,   bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "ヴォルフガング・クラウザー", init_stuns = 35, wakeup_frms = 20, sway_act_counts = 3,   bs_addr = 0x52, easy_bs_addr = 0x36, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "リック・ストラウド",         init_stuns = 32, wakeup_frms = 20, sway_act_counts = 7,   bs_addr = 0x26, easy_bs_addr = 0x26, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "李香緋",                     init_stuns = 29, wakeup_frms = 14, sway_act_counts = 3,   bs_addr = 0x52, easy_bs_addr = 0x32, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "アルフレッド",               init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0,   bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, },
-	{ name = "common", init_stuns = 0, wakeup_frms = 0, sway_act_counts = 0,   bs_addr = 0, easy_bs_addr = 0, acts = {}, act1sts = {}, fireballs = {}, common = true, },
+local chars         = {
+	{ min_y = 9,  min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x2E, easy_bs_addr = 0x2E, acts = {}, act1sts = {}, fireballs = {}, name = "テリー・ボガード", },
+	{ min_y = 10, min_sy = 4, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, name = "アンディ・ボガード", },
+	{ min_y = 8,  min_sy = 3, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x3A, easy_bs_addr = 0x3A, acts = {}, act1sts = {}, fireballs = {}, name = "東丈", },
+	{ min_y = 10, min_sy = 4, init_stuns = 29, wakeup_frms = 17, sway_act_counts = 0x3, bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, act1sts = {}, fireballs = {}, name = "不知火舞", },
+	{ min_y = 8,  min_sy = 1, init_stuns = 33, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x66, easy_bs_addr = 0x4A, acts = {}, act1sts = {}, fireballs = {}, name = "ギース・ハワード", },
+	{ min_y = 2,  min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x46, easy_bs_addr = 0x46, acts = {}, act1sts = {}, fireballs = {}, name = "望月双角", },
+	{ min_y = 9,  min_sy = 6, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, name = "ボブ・ウィルソン", },
+	{ min_y = 10, min_sy = 3, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x32, easy_bs_addr = 0x32, acts = {}, act1sts = {}, fireballs = {}, name = "ホンフゥ", },
+	{ min_y = 9,  min_sy = 7, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x3E, easy_bs_addr = 0x3E, acts = {}, act1sts = {}, fireballs = {}, name = "ブルー・マリー", },
+	{ min_y = 9,  min_sy = 4, init_stuns = 35, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, name = "フランコ・バッシュ", },
+	{ min_y = 9,  min_sy = 4, init_stuns = 38, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x56, easy_bs_addr = 0x3A, acts = {}, act1sts = {}, fireballs = {}, name = "山崎竜二", },
+	{ min_y = 11, min_sy = 1, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC, bs_addr = 0x3A, easy_bs_addr = 0x3A, acts = {}, act1sts = {}, fireballs = {}, name = "秦崇秀", },
+	{ min_y = 11, min_sy = 4, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC, bs_addr = 0x36, easy_bs_addr = 0x36, acts = {}, act1sts = {}, fireballs = {}, name = "秦崇雷", },
+	{ min_y = 9,  min_sy = 6, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x7A, easy_bs_addr = 0x5E, acts = {}, act1sts = {}, fireballs = {}, name = "ダック・キング", },
+	{ min_y = 9,  min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x36, easy_bs_addr = 0x36, acts = {}, act1sts = {}, fireballs = {}, name = "キム・カッファン", },
+	{ min_y = 4,  min_sy = 3, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, name = "ビリー・カーン", },
+	{ min_y = 9,  min_sy = 6, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2E, easy_bs_addr = 0x2E, acts = {}, act1sts = {}, fireballs = {}, name = "チン・シンザン", },
+	{ min_y = 11, min_sy = 8, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, act1sts = {}, fireballs = {}, name = "タン・フー・ルー", },
+	{ min_y = 7,  min_sy = 4, init_stuns = 35, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, act1sts = {}, fireballs = {}, name = "ローレンス・ブラッド", },
+	{ min_y = 7,  min_sy = 2, init_stuns = 35, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x52, easy_bs_addr = 0x36, acts = {}, act1sts = {}, fireballs = {}, name = "ヴォルフガング・クラウザー", },
+	{ min_y = 9,  min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x7, bs_addr = 0x26, easy_bs_addr = 0x26, acts = {}, act1sts = {}, fireballs = {}, name = "リック・ストラウド", },
+	{ min_y = 9,  min_sy = 5, init_stuns = 29, wakeup_frms = 14, sway_act_counts = 0x3, bs_addr = 0x52, easy_bs_addr = 0x32, acts = {}, act1sts = {}, fireballs = {}, name = "李香緋", },
+	{ min_y = 10, min_sy = 4, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x0, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, name = "アルフレッド", },
+	{ min_y = 0,  min_sy = 0, init_stuns = 0,  wakeup_frms = 0,  sway_act_counts = 0x0, bs_addr = 0x0,  easy_bs_addr = 0x0,  acts = {}, act1sts = {}, fireballs = {}, name = "common", },
 }
 
 -- メニュー用変数
@@ -184,7 +184,7 @@ local menu          = {
 	},
 }
 for _, char in ipairs(chars) do
-	if char.common ~= true then
+	if char.name ~= "common" then
 		table.insert(menu.labels.chars, char.name)
 	end
 end
@@ -554,7 +554,7 @@ local sts_flg_names = {
 		"対メインライン威力大攻撃",
 		"対メインラインB攻撃",
 		"対メインラインA攻撃",
-		"後方小ジャンプC",
+		"後方小ジャンプC", -- 27 7FC0000
 		"後方小ジャンプB",
 		"後方小ジャンプA",
 		"前方小ジャンプC",
@@ -562,8 +562,8 @@ local sts_flg_names = {
 		"前方小ジャンプA",
 		"垂直小ジャンプC",
 		"垂直小ジャンプB",
-		"垂直小ジャンプA",
-		"後方ジャンプC",
+		"垂直小ジャンプA", -- 19
+		"後方ジャンプC", -- 18 1FF00
 		"後方ジャンプB",
 		"後方ジャンプA",
 		"前方ジャンプC",
@@ -571,7 +571,7 @@ local sts_flg_names = {
 		"前方ジャンプA",
 		"垂直ジャンプC",
 		"垂直ジャンプB",
-		"垂直ジャンプA",
+		"垂直ジャンプA", --9
 		"C4 24",
 		"C4 25",
 		"屈C",
@@ -4503,7 +4503,6 @@ local get_reach = function(p, box, pos_x, pos_y)
 		front_reach = pos_x - math.min(box.left, box.right)
 		back_reach  = pos_x - math.max(box.left, box.right)
 	end
-
 	local x, y
 	if p.is_fireball then
 		x, y = p.pos, p.pos_y
@@ -4521,17 +4520,18 @@ local get_reach = function(p, box, pos_x, pos_y)
 		asis_back_reach  = x - math.max(box.asis_left, box.asis_right)
 	end
 	local reach_data = {
-		front    = math.floor(front_reach),             -- キャラ本体座標からの前のリーチ
-		back     = math.floor(back_reach),              -- キャラ本体座標からの後のリーチ
-		top      = math.floor(top_reach)    - 24,       -- キャラ本体座標からの上のリーチ
-		bottom   = math.floor(bottom_reach) - 24,       -- キャラ本体座標からの下のリーチ
+		front       = math.floor(front_reach), -- キャラ本体座標からの前のリーチ
+		back        = math.floor(back_reach), -- キャラ本体座標からの後のリーチ
+		top         = math.floor(top_reach) - 24, -- キャラ本体座標からの上のリーチ
+		bottom      = math.floor(bottom_reach) - 24, -- キャラ本体座標からの下のリーチ
 		asis_front  = math.floor(asis_front_reach),
 		asis_back   = math.floor(asis_back_reach),
 		asis_top    = math.floor(asis_top_reach) - 24,
 		asis_bottom = math.floor(asis_bottom_reach) - 24,
 	}
-	reach_data.real_top = reach_data.top + p.pos_y       -- 実際の上のリーチ
-	reach_data.real_bottom = reach_data.bottom + p.pos_y -- 実際の上のリーチ
+	local fix_pos_y = p.pos_miny > 0 and p.pos_miny or p.pos_y
+	reach_data.real_top = reach_data.top + fix_pos_y    -- 実際の上のリーチ
+	reach_data.real_bottom = reach_data.bottom + fix_pos_y -- 実際の上のリーチ
 	return reach_data
 end
 
@@ -4573,6 +4573,17 @@ local update_summary = function(p)
 		summary.prj_rank = nil                                         -- 飛び道具の強さ
 	end
 end
+
+local block_types = {
+	high = 2 ^ 0,
+	high_tung = 2 ^ 1,
+	low = 2 ^ 2,
+	air = 2 ^ 3,
+	sway_high = 2 ^ 4,
+	sway_high_tung = 2 ^ 5,
+	sway_low = 2 ^ 6,
+}
+
 local update_box_summary = function(p, box)
 	local summary = p.hit_summary
 	if box then
@@ -4682,12 +4693,6 @@ local update_box_summary = function(p, box)
 				local real_top, real_bottom = box.reach.real_top, box.reach.real_bottom
 
 				box.info = box.info or {
-					pos_low1 = false, -- 判定位置下段
-					pos_low2 = false, -- 判定位置下段 タン用]
-					unblock = false, -- タン以外ガード不能
-					unblock_pot = false, -- タン以外ガード不能可能性あり
-					sway_pos_low1 = false, -- 対スウェー判定位置下段
-					sway_pos_low2 = false, -- 対スウェー判定位置下段 タン用
 					punish_away = 0, -- 1:避けつぶし
 					-- 2:ウェービングブロー,龍転身,ダブルローリングつぶし
 					-- 3:避けつぶし ローレンス用
@@ -4712,28 +4717,40 @@ local update_box_summary = function(p, box)
 				}
 				local info = box.info
 
-				if real_top <= 52 then -- 48
-					info.pos_low1 = true -- 判定位置下段
-					-- 属性が屈ガード不可ならガード不能
-					if summary.up_block then
-						info.unblock = true
+				local blockbit = 0
+				if summary.air_block ~= hit_proc_types.none then
+					blockbit = blockbit | block_types.air
+				end
+				if summary.low_block ~= hit_proc_types.none then
+					blockbit = blockbit | block_types.low
+				end
+				if summary.up_block ~= hit_proc_types.none then
+					if real_top <= 36 then
+						-- 全キャラ上段ガード不能
+					elseif real_top <= 48 then
+						blockbit = blockbit | block_types.high_tung
+					else
+						blockbit = blockbit | block_types.high
 					end
 				end
-				if real_top <= 36 then
-					info.pos_low2 = true -- 判定位置下段 タン用
-				end
-				if box.reach.top <= 48 then
-					info.unblock_pot = true -- タン以外ガード不能可能性あり
-				end
-
 				if summary.normal_hit == hit_proc_types.diff_line then
-					if real_top <= 59 then
-						info.sway_pos_low1 = true -- 対スウェー判定位置下段
+					if summary.sway_up_blk == hit_proc_types.diff_line then
+						if real_top <= 48 then
+							-- 対スウェー全キャラ上段ガード不能
+						elseif real_top <= 59 then
+							blockbit = blockbit | block_types.sway_high_tung
+						else
+							blockbit = blockbit | block_types.sway_high
+						end
 					end
-					if real_top <= 48 then
-						info.sway_pos_low2 = true -- 対スウェー判定位置下段 タン用
+					if summary.sway_low_blk == hit_proc_types.diff_line then
+						blockbit = blockbit | block_types.sway_low
 					end
 				end
+				info.blockbit = blockbit
+				table.insert(summary.blockbits, blockbit)
+				summary.blockbit = summary.blockbit | blockbit
+
 				if real_bottom < 32 then
 					info.punish_away = 1 -- 避けつぶし
 				elseif real_bottom < 40 then
@@ -5113,6 +5130,7 @@ rbff2.startplugin = function()
 			min_pos                    = 0, -- X座標最小
 			pos_y                      = 0, -- Y座標
 			pos_frc_y                  = 0, -- Y座標少数部
+			pos_miny                   = 0, -- Y座標の最小値
 			old_pos_y                  = 0, -- Y座標
 			old_pos_frc_y              = 0, -- Y座標少数部
 			old_in_air                 = false,
@@ -7666,50 +7684,29 @@ rbff2.startplugin = function()
 						end
 					end
 
-					local blocks = {}
-					if summary.up_block then
-						-- 判定位置下段
-						if info.pos_low2 then
-							-- ALL
-						elseif info.pos_low1 then
-							-- タン以外
-							if info.unblock then
-								table.insert(blocks, "ガード不能(タン以外)")
-							else
-								table.insert(blocks, "立(タンのみ)")
-							end
-						else
-							table.insert(blocks, "立")
-						end
+					local blocks, sway_blocks = {}, {}
+					if testbit(info.blockbit, block_types.high) then
+						table.insert(blocks, "立")
 					end
-					if summary.low_block then
+					if testbit(info.blockbit, block_types.high_tung) then
+						table.insert(blocks, "立(タンのみ)")
+					end
+					if testbit(info.blockbit, block_types.low) then
 						table.insert(blocks, "屈")
 					end
-					if summary.air_block then
+					if testbit(info.blockbit, block_types.air) then
 						table.insert(blocks, "空")
 					end
-					if not info.unblock and info.unblock_pot and summary.normal_hit then
-						if not summary.low_block then
-							table.insert(blocks, "ガー不可能性あり")
-						end
+					if testbit(info.blockbit, block_types.sway_high) then
+						table.insert(sway_blocks, "立")
 					end
-					local sway_blocks = {}
-					if summary.normal_hit == hit_proc_types.diff_line then
-						if summary.sway_up_blk == hit_proc_types.diff_line then
-							-- 対スウェー判定位置下段
-							if info.sway_pos_low2 then
-								-- ALL
-							elseif info.sway_pos_low1 then
-								-- タン以外
-								table.insert(sway_blocks, "立(タンのみ)")
-							else
-								table.insert(sway_blocks, "立")
-							end
-						end
-						if summary.sway_low_blk == hit_proc_types.diff_line then
-							table.insert(sway_blocks, "屈")
-						end
+					if testbit(info.blockbit, block_types.sway_high_tung) then
+						table.insert(sway_blocks, "立(タンのみ)")
 					end
+					if testbit(info.blockbit, block_types.sway_low) then
+						table.insert(sway_blocks, "屈")
+					end
+
 					local parry = {}
 					table.insert(parry, info.range_j_atm_nage and "上" or info.j_atm_nage and "(上)" or nil) -- 上段当て身投げ可能
 					table.insert(parry, info.range_urakumo and "裏" or info.urakumo and "(裏)" or nil) -- 裏雲隠し可能
@@ -7849,7 +7846,7 @@ rbff2.startplugin = function()
 				summary.edge.hurt.bottom + p.pos_y,
 				summary.edge.hurt.back)
 		end
-		local normal, otg, juggle, up, low = 0, 0, 0, 0, 0
+		local normal, otg, juggle, high, low, highg, lowg, airg = 0, 0, 0, 0, 0, 0, 0, 0
 		local push_label = "なし"
 		summary.hurt_boxes = summary.hurt_boxes or {}
 		for _, box in ipairs(p.hitboxes) do
@@ -7873,11 +7870,20 @@ rbff2.startplugin = function()
 					juggle = juggle + 1
 					type_label = juggle .. " 空中追撃:"
 				elseif box.type == box_type_base.v6 then
-					up = up + 1
-					type_label = up .. " 対ライン上攻撃:"
+					high = high + 1
+					type_label = high .. " 対ライン上攻撃:"
 				elseif box.type == box_type_base.x1 then
 					low = low + 1
 					type_label = low .. " 対ライン下攻撃:"
+				elseif box.type == box_type_base.g1 then
+					highg = highg + 1
+					type_label = highg .. " 上段ガード:"
+				elseif box.type == box_type_base.g2 then
+					lowg = lowg + 1
+					type_label = lowg .. " 下段ガード:"
+				elseif box.type == box_type_base.g3 then
+					airg = airg + 1
+					type_label = airg .. " 空中ガード:"
 				end
 
 				if type_label then
@@ -7945,6 +7951,8 @@ rbff2.startplugin = function()
 			hurt      = false, -- くらい判定あり（＝打撃無敵ではない)
 			throw     = false, -- 投げ判定あり
 			block     = false, -- ガード判定あり
+			blockbits = {},
+			blockbit  = 0,
 			parry     = false, -- 当て身キャッチ判定あり
 			boxes     = {}, -- 攻撃判定ごとの情報
 			edge      = {
@@ -8052,7 +8060,9 @@ rbff2.startplugin = function()
 	on_frame_func.build_txt1 = function(ctx, max, count, curr)
 		ctx = ctx or { prev = nil, pow = 0, tbl = {} }
 		if ctx.prev ~= curr then
-			on_frame_func.insert_tbl(ctx.pow, ctx.tbl, ctx.prev)
+			if ctx.prev then
+				on_frame_func.insert_tbl(ctx.pow, ctx.tbl, ctx.prev)
+			end
 			ctx.prev = curr
 			ctx.pow = 1
 		elseif ctx.prev == curr then
@@ -8069,16 +8079,52 @@ rbff2.startplugin = function()
 		return ctx
 	end
 	on_frame_func.effect_txt = function(effect)
-		local e = effect + 1
-		local e1, e2 = hit_effects[e][1], hit_effects[e][2]
-		return e1 == e2 and e1 or string.format("%s/%s", e1, e2)
+		if effect then
+			local e = effect + 1
+			local e1, e2 = hit_effects[e][1], hit_effects[e][2]
+			return e1 == e2 and e1 or string.format("%s/%s", e1, e2)
+		end
+		return ""
 	end
-	local on_frame_event = function(p, event_type, attack_type)
+	on_frame_func.block_txt = function(blockbit)
+		local lo = testbit(blockbit, block_types.low)
+		local hi = testbit(blockbit, block_types.high)
+		local hitg = testbit(blockbit, block_types.high_tung)
+		local blocktxt = ""
+		if lo then
+			if hi == false and hitg == false then
+				blocktxt = "下"
+			else
+				if hitg then
+					blocktxt = "上*"
+				end
+				if hi then
+					blocktxt = blocktxt .. "上"
+				end
+			end
+		else
+			if hi == false and hitg == false then
+				blocktxt = "不"
+			else
+				if hitg then
+					blocktxt = "中*"
+				end
+				if hi then
+					blocktxt = blocktxt .. "中"
+				end
+			end
+		end
+		if testbit(blockbit, block_types.air) then
+			blocktxt = blocktxt .. "空"
+		end
+		return blocktxt
+	end
+	local on_frame_event = function(p, event_type, in_attack_type)
 		local func = on_frame_func
 		if event_type == frame_event_types.reset then
 			local info = frame_infos[p]
 			if info then
-				func.break_info(info ,event_type)
+				func.break_info(info, event_type)
 				local text = string.format("%s", info.startup)
 				if #info.active > 0 then
 					text = text .. "/"
@@ -8108,7 +8154,7 @@ rbff2.startplugin = function()
 						ctxs[5] = build_txt(ctxs[5], max, i, summary.gd_strength)
 						ctxs[6] = build_txt(ctxs[6], max, i, func.effect_txt(summary.effect))
 						ctxs[7] = build_txt(ctxs[7], max, i, summary.air_hit == hit_proc_types.same_line and "拾" or "-")
-						--ctxs[8] = build_txt(ctxs[8], max, i, summary.up_block summary.low_block summary.air_block)
+						ctxs[8] = build_txt(ctxs[8], max, i, func.block_txt(summary.blockbit))
 					end
 					-- 総F|発生/持続/後隙|BS猶予|ダメージ|気絶|気絶タイマー
 					text = table.concat({
@@ -8120,6 +8166,7 @@ rbff2.startplugin = function()
 						table.concat(ctxs[5].tbl, ","),
 						table.concat(ctxs[6].tbl, ","),
 						table.concat(ctxs[7].tbl, ","),
+						table.concat(ctxs[8].tbl, ","),
 					}, "|")
 				end
 				p.last_frame_info_txt = text
@@ -8134,6 +8181,8 @@ rbff2.startplugin = function()
 			return
 		end
 
+		local attack_type = in_attack_type and p.hit_summary.blockbit and
+			string.format("%x %x", in_attack_type, p.hit_summary.blockbit) or nil
 		local info = frame_infos[p] or {
 			last_event = event_type,
 			count = 0,
@@ -8154,7 +8203,7 @@ rbff2.startplugin = function()
 		elseif info.attack_type ~= attack_type then
 			if info.last_event == frame_event_types.active then
 				table.insert(info.active, info.count)
-				table.insert(info.summaries,  info.summary)
+				table.insert(info.summaries, info.summary)
 			elseif info.last_event == frame_event_types.inactive then
 				if #info.active == 0 then
 					info.startup = info.count
@@ -8848,10 +8897,16 @@ rbff2.startplugin = function()
 				40000000 空中投げ
 				80000000 投げ技
 			]]
-			p.attack_flag       = testbit(p.flag_cc, 0x4000 | 0x200000 | 0x1000000 | 0x80000 | 0x200000 | 0x1000000 | 0x2000000 | 0x40000000 | 0x80000000) or (p.flag_c8 > 0) or (p.flag_c4 > 0)
-			p.state_bits        = tobits(p.flag_c0)
-			p.old_blkstn_bits   = p.blkstn_bits
-			p.blkstn_bits       = tobits(p.flag_d0)
+			p.attack_flag     = testbit(p.flag_cc, 0x4000 | 0x200000 | 0x1000000 | 0x80000 | 0x200000 | 0x1000000 | 0x2000000 | 0x40000000 | 0x80000000) or (p.flag_c8 > 0) or (p.flag_c4 > 0)
+			p.state_bits      = tobits(p.flag_c0)
+			p.old_blkstn_bits = p.blkstn_bits
+			p.blkstn_bits     = tobits(p.flag_d0)
+			p.pos_miny        = 0
+			if testbit(p.flag_c4, 0x1FF00) then
+				p.pos_miny = p.char_data.min_y
+			elseif testbit(p.flag_c4, 0x7FC0000) then
+				p.pos_miny = p.char_data.min_sy
+			end
 			p.last_normal_state = p.normal_state
 			p.normal_state      = p.state == 0                    -- 素立ち
 			p.combo             = tohexnum(pgm:read_u8(p.addr.combo2)) -- 最近のコンボ数
@@ -9426,6 +9481,7 @@ rbff2.startplugin = function()
 				fb.act_contact    = pgm:read_u8(fb.addr.act_contact) -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
 				fb.pos            = pgm:read_i16(fb.addr.pos)
 				fb.pos_y          = pgm:read_i16(fb.addr.pos_y)
+				fb.pos_miny       = 0
 				fb.pos_z          = pgm:read_i16(fb.addr.pos_z)
 				fb.gd_strength    = get_gd_strength(fb)
 				fb.asm            = pgm:read_u16(pgm:read_u32(fb.addr.base))
@@ -11071,6 +11127,10 @@ rbff2.startplugin = function()
 						local flip_x = p.disp_side == 1 and "<" or ">" -- 判定の向き 1:左向き -1:右向き
 						draw_text_with_shadow(170, y, string.format("%s%s%s", i_side, side, flip_x))
 					end
+					if p.old_pos_y ~= p.pos_y or p.last_posy_txt == nil then
+						p.last_posy_txt = string.format("%3s>%3s", p.old_pos_y or 0, p.pos_y)
+					end
+					draw_rtext_with_shadow(p1 and 110 or 230, y, p.last_posy_txt)
 				end
 			end
 
