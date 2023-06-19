@@ -4582,6 +4582,7 @@ local block_types = {
 	sway_high = 2 ^ 4,
 	sway_high_tung = 2 ^ 5,
 	sway_low = 2 ^ 6,
+	sway_pass = 2 ^ 7,
 }
 
 local update_box_summary = function(p, box)
@@ -4733,7 +4734,7 @@ local update_box_summary = function(p, box)
 						blockbit = blockbit | block_types.high
 					end
 				end
-				if summary.normal_hit == hit_proc_types.diff_line then
+				if p.sway_status == 0 and summary.normal_hit == hit_proc_types.diff_line then
 					if summary.sway_up_blk == hit_proc_types.diff_line then
 						if real_top <= 48 then
 							-- 対スウェー全キャラ上段ガード不能
@@ -4746,6 +4747,8 @@ local update_box_summary = function(p, box)
 					if summary.sway_low_blk == hit_proc_types.diff_line then
 						blockbit = blockbit | block_types.sway_low
 					end
+				else
+					blockbit = blockbit | block_types.sway_pass
 				end
 				info.blockbit = blockbit
 				table.insert(summary.blockbits, blockbit)
@@ -8078,6 +8081,12 @@ rbff2.startplugin = function()
 		table.insert(ctx.tbl, curr)
 		return ctx
 	end
+	on_frame_func.dmg_txt = function(chip_dmg, pure_dmg)
+		if chip_dmg == 0 then
+			return string.format("%s", chip_dmg, pure_dmg)
+		end
+		return string.format("%s(%s)", chip_dmg, pure_dmg)
+	end
 	on_frame_func.effect_txt = function(effect)
 		if effect then
 			local e = effect + 1
@@ -8119,6 +8128,39 @@ rbff2.startplugin = function()
 		end
 		return blocktxt
 	end
+	on_frame_func.sway_block_txt = function(blockbit)
+		if testbit(blockbit, block_types.sway_pass) then
+			return "-"
+		end
+		local lo = testbit(blockbit, block_types.sway_low)
+		local hi = testbit(blockbit, block_types.sway_high)
+		local hitg = testbit(blockbit, block_types.sway_high_tung)
+		local blocktxt = ""
+		if lo then
+			if hi == false and hitg == false then
+				blocktxt = "下"
+			else
+				if hitg then
+					blocktxt = "上*"
+				end
+				if hi then
+					blocktxt = blocktxt .. "上"
+				end
+			end
+		else
+			if hi == false and hitg == false then
+				blocktxt = "不"
+			else
+				if hitg then
+					blocktxt = "中*"
+				end
+				if hi then
+					blocktxt = blocktxt .. "中"
+				end
+			end
+		end
+		return blocktxt
+	end
 	local on_frame_event = function(p, event_type, in_attack_type)
 		local func = on_frame_func
 		if event_type == frame_event_types.reset then
@@ -8144,30 +8186,29 @@ rbff2.startplugin = function()
 				end
 				text = string.format("%3s|%s", info.total, text)
 				if #info.summaries > 0 then
-					local max, ctxs = #info.summaries, {}
+					local max, contexts = #info.summaries, {}
 					local build_txt = #info.summaries > 2 and func.build_txt1 or func.build_txt2
-					for i, summary in ipairs(info.summaries) do
-						ctxs[1] = build_txt(ctxs[1], max, i, summary.hitstop_gd)
-						ctxs[2] = build_txt(ctxs[2], max, i, summary.pure_dmg)
-						ctxs[3] = build_txt(ctxs[3], max, i, summary.pure_st)
-						ctxs[4] = build_txt(ctxs[4], max, i, summary.pure_st_tm)
-						ctxs[5] = build_txt(ctxs[5], max, i, summary.gd_strength)
-						ctxs[6] = build_txt(ctxs[6], max, i, func.effect_txt(summary.effect))
-						ctxs[7] = build_txt(ctxs[7], max, i, summary.air_hit == hit_proc_types.same_line and "拾" or "-")
-						ctxs[8] = build_txt(ctxs[8], max, i, func.block_txt(summary.blockbit))
+					local texts = { text }
+					for i, s in ipairs(info.summaries) do
+						-- 総F|発生/持続/後隙|BS猶予|ダメージ|気絶|気絶タイマー
+						for j, sv in ipairs({
+							s.hitstop_gd,
+							func.dmg_txt(s.chip_dmg, s.pure_dmg),
+							s.pure_st,
+							s.pure_st_tm,
+							s.gd_strength,
+							func.effect_txt(s.effect),
+							s.air_hit == hit_proc_types.same_line and "拾" or "-",
+							func.block_txt(s.blockbit),
+							func.sway_block_txt(s.blockbit),
+						}) do
+							contexts[j] = build_txt(contexts[j], max, i, sv)
+							if max == i then
+								table.insert(texts, table.concat(contexts[j].tbl, ","))
+							end
+						end
 					end
-					-- 総F|発生/持続/後隙|BS猶予|ダメージ|気絶|気絶タイマー
-					text = table.concat({
-						text,
-						table.concat(ctxs[1].tbl, ","),
-						table.concat(ctxs[2].tbl, ","),
-						table.concat(ctxs[3].tbl, ","),
-						table.concat(ctxs[4].tbl, ","),
-						table.concat(ctxs[5].tbl, ","),
-						table.concat(ctxs[6].tbl, ","),
-						table.concat(ctxs[7].tbl, ","),
-						table.concat(ctxs[8].tbl, ","),
-					}, "|")
+					text = table.concat(texts, "|")
 				end
 				p.last_frame_info_txt = text
 			end
@@ -8180,13 +8221,13 @@ rbff2.startplugin = function()
 			end
 			return
 		end
-
+		-- ブレイク条件をくっつける
 		local attack_type = in_attack_type and p.hit_summary.blockbit and
 			string.format("%x %x", in_attack_type, p.hit_summary.blockbit) or nil
 		local info = frame_infos[p] or {
-			last_event = event_type,
-			count = 0,
-			attack_type = attack_type,
+			last_event = event_type, -- 攻撃かどうか
+			count = 0, -- バッファ
+			attack_type = attack_type, -- ブレイク条件
 			summary = p.hit_summary,
 			total = 0,
 			startup = 0,
