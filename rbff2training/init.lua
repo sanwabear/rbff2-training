@@ -8241,9 +8241,15 @@ rbff2.startplugin = function()
 							delim = ","
 						end
 					end
-					text = string.format("%s/%s", text, info.recovery)
+					local land_and_main = math.min(info.landing, math.min(info.recovery, info.main_line))
+					if land_and_main == info.recovery then
+						text = string.format("%s/%s", text, info.recovery)
+					else
+						text = string.format("%s/%s+%s", text, info.recovery - land_and_main, land_and_main)
+					end
 				end
 				text = string.format("%3s|%s", info.total, text)
+
 				if #info.summaries > 0 then
 					local max, contexts = #info.summaries, {}
 					local build_txt = #info.summaries > 1 and func.build_txt1 or func.build_txt2
@@ -8294,6 +8300,8 @@ rbff2.startplugin = function()
 		local info = frame_infos[p] or {
 			last_event = event_type, -- 攻撃かどうか
 			count = 0, -- バッファ
+			landing = 0, -- 着地硬直バッファ
+			main_line = 0, -- メインライン硬直バッファ
 			break_key = break_key, -- ブレイク条件
 			attackbit = attackbit,
 			summary = summary,
@@ -8330,6 +8338,16 @@ rbff2.startplugin = function()
 			info.count = info.count + 1
 		end
 		info.total = info.total + 1
+		if p.in_air then
+			info.landing = info.landing + 1
+		else
+			info.landing = 0
+		end
+		if p.in_sway_line then
+			info.main_line = 0
+		else
+			info.main_line = info.main_line + 1
+		end
 		info.summary = summary
 	end
 
