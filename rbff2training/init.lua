@@ -262,6 +262,14 @@ local new_set = function(...)
 	return ret
 end
 
+local table_to_set = function(tbl)
+	local ret = {}
+	for _, v in ipairs(tbl) do
+		ret[v] = true
+	end
+	return ret
+end
+
 local global = {
 	frame_number        = 0,
 	lag_frame           = false,
@@ -7984,18 +7992,19 @@ rbff2.startplugin = function()
 	end
 
 	local new_box_summary = function(p)
+		local throw_inv = throw_inv_type.get(p)
 		local ret = {
-			hit       = false, -- 攻撃判定あり
-			otg       = false, -- ダウン追撃判定あり
-			juggle    = false, -- 空中追撃判定あり
-			hurt      = false, -- くらい判定あり（＝打撃無敵ではない)
-			throw     = false, -- 投げ判定あり
-			block     = false, -- ガード判定あり
-			blockbits = {},
-			blockbit  = 0,
-			parry     = false, -- 当て身キャッチ判定あり
-			boxes     = {}, -- 攻撃判定ごとの情報
-			edge      = {
+			hit           = false, -- 攻撃判定あり
+			otg           = false, -- ダウン追撃判定あり
+			juggle        = false, -- 空中追撃判定あり
+			hurt          = false, -- くらい判定あり（＝打撃無敵ではない)
+			throw         = false, -- 投げ判定あり
+			block         = false, -- ガード判定あり
+			blockbits     = {},
+			blockbit      = 0,
+			parry         = false, -- 当て身キャッチ判定あり
+			boxes         = {}, -- 攻撃判定ごとの情報
+			edge          = {
 				-- 判定の最大範囲
 				hit   = {},
 				hurt  = {},
@@ -8003,8 +8012,9 @@ rbff2.startplugin = function()
 				parry = {},
 				throw = {},
 			},
-			hurt_inv  = {},           -- やられ判定無敵
-			throw_inv = throw_inv_type.get(p), -- 投げ無敵
+			hurt_inv      = {}, -- やられ判定無敵
+			throw_inv     = throw_inv, -- 投げ無敵
+			throw_inv_set = table_to_set(throw_inv),
 		}
 		return ret
 	end
@@ -8066,18 +8076,18 @@ rbff2.startplugin = function()
 	}
 	local frame_attack_types = {
 		attacking = 2 ^ 0, -- 0x1
-		fake = 2 ^ 1,      -- 0x10
-		juggling = 2 ^ 3,  -- 0x100
-		harmless = 2 ^ 4,  -- 0x1000
-		x05 = 2 ^  5, -- attack用 5 ~ 8
-		x06 = 2 ^  6, --
-		x07 = 2 ^  7, --
-		x08 = 2 ^  8, --
-		x09 = 2 ^  9, -- act_count用 9 ~ 16
+		fake = 2 ^ 1, -- 0x10
+		juggling = 2 ^ 3, -- 0x100
+		harmless = 2 ^ 4, -- 0x1000
+		x05 = 2 ^ 5, -- attack用 5 ~ 8
+		x06 = 2 ^ 6, --
+		x07 = 2 ^ 7, --
+		x08 = 2 ^ 8, --
+		x09 = 2 ^ 9, -- act_count用 9 ~ 16
 		x17 = 2 ^ 17, -- 技データ用 17 ~ 32
 	}
 	local on_frame_func = {
-		gd_str_txt = { "小", "大" }
+		gd_str_txt = { "小", "大" },
 	}
 	local frame_infos = {}
 	on_frame_func.break_info = function(info, event_type)
@@ -8220,7 +8230,20 @@ rbff2.startplugin = function()
 			local info = frame_infos[p]
 			if info then
 				func.break_info(info, event_type)
-				local text = string.format("%s", info.startup)
+				local text
+				local takeoff_and_main = math.min(info.startup, math.min(info.takeoff, info.stay_main))
+				local land_and_main = math.min(info.landing, info.return_main)
+				if takeoff_and_main == info.startup or takeoff_and_main == 0 then
+					text = string.format("%s", info.startup)
+				else
+					local startup = info.startup - takeoff_and_main
+					if #info.actives == 0 and info.recovery == 0 and land_and_main > 0 then
+						startup = startup - land_and_main
+						text = string.format("%s+%s+%s", takeoff_and_main, startup, land_and_main)
+					else
+						text = string.format("%s+%s", takeoff_and_main, startup)
+					end
+				end
 				if #info.actives > 0 then
 					text = text .. "/"
 					local delim = ""
@@ -8232,8 +8255,8 @@ rbff2.startplugin = function()
 							text = string.format("%s(%s)", text, -active.count)
 							delim = ""
 						elseif testbit(active.attackbit, frame_attack_types.fake) then
-							-- 嘘判定は<>で表現
-							text = string.format("%s<%s>", text, active.count)
+							-- 嘘判定は{}で表現
+							text = string.format("%s{%s}", text, active.count)
 							delim = ""
 						else
 							-- 通常の攻撃判定とフルヒットなどの判定無効状態は合わせて表示
@@ -8241,14 +8264,23 @@ rbff2.startplugin = function()
 							delim = ","
 						end
 					end
-					local land_and_main = math.min(info.landing, math.min(info.recovery, info.main_line))
-					if land_and_main == info.recovery then
+				end
+				if info.recovery > 0 then
+					land_and_main = math.min(info.recovery, land_and_main)
+					if land_and_main == info.recovery or land_and_main == 0 then
 						text = string.format("%s/%s", text, info.recovery)
 					else
 						text = string.format("%s/%s+%s", text, info.recovery - land_and_main, land_and_main)
 					end
 				end
 				text = string.format("%3s|%s", info.total, text)
+				local invs = {}
+				for k, v in pairs({ ["打"] = info.hurt_inv, ["通"] = info.throw_inv2, ["投"] = info.throw_inv1 }) do
+					if v > 0 then
+						table.insert(invs, string.format("%s%s", k, v))
+					end
+				end
+				text = string.format("%s|%s", text, #invs > 0 and table.concat(invs, "") or "-")
 
 				if #info.summaries > 0 then
 					local max, contexts = #info.summaries, {}
@@ -8271,6 +8303,7 @@ rbff2.startplugin = function()
 						end
 					end
 					text = table.concat(texts, "|")
+					-- 末尾の-を取り除く
 					while true do
 						local a1, _ = string.find(text, "%|%-x%d+$")
 						if a1 == nil then
@@ -8299,9 +8332,19 @@ rbff2.startplugin = function()
 		local summary = fb and fb.hit_summary or p.hit_summary
 		local info = frame_infos[p] or {
 			last_event = event_type, -- 攻撃かどうか
-			count = 0, -- バッファ
-			landing = 0, -- 着地硬直バッファ
-			main_line = 0, -- メインライン硬直バッファ
+			count = 0,      -- バッファ
+			hurt_inv = 0,   -- 打撃無敵
+			has_hurt = false,
+			throw_inv1 = 0, -- 投げ無敵
+			can_throw1 = false,
+			throw_inv2 = 0, -- 投げ無敵
+			can_throw2 = false,
+			takeoff = 0,    -- 地上バッファ
+			jumped = false,
+			stay_main = 0,  -- メインラインバッファ
+			planed = false,
+			landing = 0,    -- 着地硬直バッファ
+			return_main = 0, -- メインライン硬直バッファ
 			break_key = break_key, -- ブレイク条件
 			attackbit = attackbit,
 			summary = summary,
@@ -8339,18 +8382,51 @@ rbff2.startplugin = function()
 		end
 		info.total = info.total + 1
 		if p.in_air then
-			info.landing = info.landing + 1
-		else
+			info.jumped = true
 			info.landing = 0
+		else
+			if info.jumped == false then
+				info.takeoff = info.takeoff + 1
+			else
+				info.landing = info.landing + 1
+			end
 		end
 		if p.in_sway_line then
-			info.main_line = 0
+			info.planed = true
+			info.return_main = 0
 		else
-			info.main_line = info.main_line + 1
+			if info.planed == false then
+				info.stay_main = info.stay_main + 1
+			end
+			info.return_main = info.return_main + 1
 		end
 		info.summary = summary
+		if info.has_hurt == false then
+			local has_hurt = true
+			for _, inv in ipairs(summary.hurt_inv) do
+				if inv == hurt_inv_type.full then -- 全身無敵
+					info.hurt_inv = info.hurt_inv + 1
+					has_hurt = false
+					break
+				end
+			end
+			info.has_hurt = has_hurt
+		end
+		local throwable = p.sway_status == 0x00 and p.tw_muteki == 0 and p.pos_y == 0
+		local n_throwable = p.throwable and p.tw_muteki2 == 0
+		if info.can_throw1 == false then
+			info.can_throw1 = throwable
+			if info.can_throw1 == false then
+				info.throw_inv1 = info.throw_inv1 + 1
+			end
+		end
+		if info.can_throw2 == false then
+			info.can_throw2 = n_throwable
+			if info.can_throw2 == false then
+				info.throw_inv2 = info.throw_inv2 + 1
+			end
+		end
 	end
-
 	local proc_act_frame = function(p)
 		local op = p.op
 
