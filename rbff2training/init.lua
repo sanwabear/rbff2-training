@@ -254,6 +254,13 @@ local bios_test            = function()
 	end
 end
 
+local new_set = function(...)
+	local ret = {}
+	for _, v in ipairs({ ... }) do
+		ret[v] = true
+	end
+	return ret
+end
 
 local global = {
 	frame_number        = 0,
@@ -398,12 +405,18 @@ local hit_effect_types = {
 	launch2 = "浮の～浮", -- 浮のけぞり～ダウン
 	launch_nokezori = "浮の", -- 浮のけぞり
 	nokezori = "の",       -- のけぞり
-	nokezori2 = "の(対スウェー時:ダ)", -- のけぞり 対スウェー時はダウン追撃可能ダウン
-	otg_down = "やられ付ダ", -- ダウン追撃可能ダウン
+	nokezori2 = "*の", -- のけぞり 対スウェー時はダウン追撃可能ダウン
+	otg_down = "*ダ", -- ダウン追撃可能ダウン
 	plane_shift = "送",    -- スウェーライン送り
 	plane_shift_down = "送ダ", -- スウェーライン送りダウン
 	standup = "立",        -- 強制立のけぞり
 }
+local hit_effect_nokezoris = new_set(
+	hit_effect_types.nokezori,
+	hit_effect_types.nokezori2,
+	hit_effect_types.standup,
+	hit_effect_types.hikikomi,
+	hit_effect_types.plane_shift)
 local hit_effects = {
 	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
 	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
@@ -2124,13 +2137,6 @@ for char, fireballs_base in pairs(char_fireball_base) do
 			chars[char].fireballs[id] = fireball
 		end
 	end
-end
-local new_set = function(...)
-	local ret = {}
-	for _, v in ipairs({ ... }) do
-		ret[v] = true
-	end
-	return ret
 end
 local jump_acts = new_set(0x9, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16)
 local wakeup_acts = new_set(0x193, 0x13B)
@@ -3924,6 +3930,18 @@ for _, boxtype in pairs(box_type_base) do
 	boxtype.fill    = (0xFFFFFFFF & (boxtype.fill << 24)) | boxtype.color
 	boxtype.outline = (0xFFFFFFFF & (boxtype.outline << 24)) | boxtype.color
 end
+local attack_boxies = new_set(
+	box_type_base.a, -- 攻撃
+	box_type_base.pa, -- 飛び道具
+	box_type_base.da, -- 攻撃(無効)
+	box_type_base.pda, -- 飛び道具(無効)
+	box_type_base.aa, -- 攻撃(空中追撃可)
+	box_type_base.paa, -- 飛び道具(空中追撃可)
+	box_type_base.daa, -- 攻撃(無効、空中追撃可)
+	box_type_base.pdaa, -- 飛び道具(無効、空中追撃可)
+	box_type_base.t, -- 通常投げ
+	box_type_base.at, -- 空中投げ
+	box_type_base.pt) -- 必殺技投げ
 
 -- ボタンの色テーブル
 local btn_col = { [convert("_A")] = 0xFFCC0000, [convert("_B")] = 0xFFCC8800, [convert("_C")] = 0xFF3333CC, [convert("_D")] = 0xFF336600, }
@@ -4616,6 +4634,10 @@ local update_box_summary = function(p, box)
 			summary.bai_catch    = summary.bai_catch or p.bai_catch == true and "v" or nil
 			summary.box_addr     = summary.box_addr or pgm:read_u32(pgm:read_u8(0x094C2C + box.id) * 4 + 0x012CB4)
 		end
+
+		if attack_boxies[box.type] then
+			summary.attacking = true	
+		end
 		if box.type == box_type_base.a or -- 攻撃
 			box.type == box_type_base.pa then -- 飛び道具
 			summary.hit = true
@@ -4961,13 +4983,6 @@ local update_object = function(p)
 		p.hit.vulnerable = p.hit.vulnerable22
 	end
 
-	-- 共通情報
-	if p.is_fireball and p.proc_active then
-		update_summary(p)
-	elseif p.attack_flag then
-		update_summary(p)
-	end
-
 	-- 判定データ排他用のテーブル
 	for _, box in ipairs(p.buffer) do
 		local hitbox = new_hitbox1(p, box.id, box.pos_x, box.pos_y, box.top, box.bottom, box.left, box.right, box.is_fireball)
@@ -4980,6 +4995,28 @@ local update_object = function(p)
 				print(hitbox.log_txt)
 			end
 		end
+	end
+
+	-- ヒット効果、削り補正、硬直
+	-- 一動作で複数の攻撃判定を持っていてもIDの値は同じになる
+	-- 058232(家庭用版)からの処理
+	-- 1004E9のデータ＝5C83Eでセット 技ID
+	-- 1004E9のデータ-0x20 + 0x95C0C のデータがヒット効果の元ネタ D0
+	-- D0 = 0x9だったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
+	-- D0 = 0xAだったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
+	-- D0 x 4 + 579da
+	-- d0 = fix_bp_addr(0x0579DA + d0 * 4) --0x0579DA から4バイトのデータの並びがヒット効果の処理アドレスになる
+	p.effect        = pgm:read_u8(p.attack_id - 0x20 + fix_bp_addr(0x95BEC))
+	-- 削りダメージ計算種別取得 05B2A4 からの処理
+	p.chip_dmg_type = get_chip_dmg_type(p.attack_id, pgm)
+	-- 硬直時間取得 05AF7C(家庭用版)からの処理
+	local d2        = 0xF & pgm:read_u8(p.attack_id + fix_bp_addr(0x95CCC))
+	p.hitstun       = pgm:read_u8(0x16 + 0x2 + fix_bp_addr(0x5AF7C) + d2) + 1 + 3 -- ヒット硬直
+	p.blockstun     = pgm:read_u8(0x1A + 0x2 + fix_bp_addr(0x5AF88) + d2) + 1 + 2 -- ガード硬直
+
+	-- 共通情報
+	if (p.is_fireball and p.proc_active) or p.attack_flag then
+		update_summary(p)
 	end
 
 	-- 空投げ, 必殺投げ
@@ -8039,7 +8076,9 @@ rbff2.startplugin = function()
 		x09 = 2 ^  9, -- act_count用 9 ~ 16
 		x17 = 2 ^ 17, -- 技データ用 17 ~ 32
 	}
-	local on_frame_func = {}
+	local on_frame_func = {
+		gd_str_txt = { "小", "大" }
+	}
 	local frame_infos = {}
 	on_frame_func.break_info = function(info, event_type)
 		-- ブレイク
@@ -8087,15 +8126,26 @@ rbff2.startplugin = function()
 		end
 		return string.format("%s(%s)", pure_dmg, chip_dmg)
 	end
-	on_frame_func.effect_txt = function(effect)
-		if effect then
-			local e = effect + 1
-			local e1, e2 = hit_effects[e][1], hit_effects[e][2]
-			return e1 == e2 and e1 or string.format("%s/%s", e1, e2)
+	on_frame_func.stun_txt = function(pure_st, pure_st_tm)
+		if pure_st_tm == 0 then
+			if pure_st == 0 then
+				return "-"
+			end
+			return string.format("%s", pure_st)
 		end
-		return ""
+		return string.format("%s/%s", pure_st, pure_st_tm)
 	end
-	on_frame_func.block_txt = function(blockbit)
+	on_frame_func.effect_txt = function(effect, gd_strength, hitstun, blockstun)
+		local e = effect + 1
+		local e1, e2 = hit_effects[e][1], hit_effects[e][2]
+		if e1 == e2 then
+			return string.format("%s(-/%s)", e1, blockstun)
+		elseif hit_effect_nokezoris[e1] then
+			return string.format("%s(%s/%s)/%s", e1, hitstun, blockstun, e2)
+		end
+		return string.format("%s(-/%s)/%s", e1, blockstun, e2)
+	end
+	on_frame_func.block_txt = function(air_hit, blockbit)
 		local lo = testbit(blockbit, block_types.low)
 		local hi = testbit(blockbit, block_types.high)
 		local hitg = testbit(blockbit, block_types.high_tung)
@@ -8125,6 +8175,9 @@ rbff2.startplugin = function()
 		end
 		if testbit(blockbit, block_types.air) then
 			blocktxt = blocktxt .. "空"
+		end
+		if air_hit == hit_proc_types.same_line then
+			blocktxt = "拾" .. blocktxt
 		end
 		return blocktxt
 	end
@@ -8165,7 +8218,6 @@ rbff2.startplugin = function()
 		local func = on_frame_func
 		if event_type == frame_event_types.reset then
 			local info = frame_infos[p]
-			local fakes = {}
 			if info then
 				func.break_info(info, event_type)
 				local text = string.format("%s", info.startup)
@@ -8176,15 +8228,15 @@ rbff2.startplugin = function()
 						if nil == active then
 							delim = ""
 						elseif 0 > active.count then
+							-- マイナス値はinactive扱いでカッコで表現
 							text = string.format("%s(%s)", text, -active.count)
 							delim = ""
-						elseif testbit(active.attackbit, frame_attack_types.harmless) then
-							text = string.format("%s(%s)", text, active.count)
-							delim = ""
 						elseif testbit(active.attackbit, frame_attack_types.fake) then
-							text = string.format("%s(%s)", text, active.count)
-							delim = ","
+							-- 嘘判定は<>で表現
+							text = string.format("%s<%s>", text, active.count)
+							delim = ""
 						else
+							-- 通常の攻撃判定とフルヒットなどの判定無効状態は合わせて表示
 							text = string.format("%s%s%s", text, delim, active.count)
 							delim = ","
 						end
@@ -8194,19 +8246,15 @@ rbff2.startplugin = function()
 				text = string.format("%3s|%s", info.total, text)
 				if #info.summaries > 0 then
 					local max, contexts = #info.summaries, {}
-					local build_txt = #info.summaries > 2 and func.build_txt1 or func.build_txt2
+					local build_txt = #info.summaries > 1 and func.build_txt1 or func.build_txt2
 					local texts = { text }
 					for i, s in ipairs(info.summaries) do
-						-- 総F|発生/持続/後隙|BS猶予|ダメージ|気絶|気絶タイマー
-						for j, sv in ipairs(s.hit ~= true and new_filled_table(10, "-") or {
+						for j, sv in ipairs(s.attacking ~= true and new_filled_table(7, "-") or {
 							s.hitstop_gd,
 							func.dmg_txt(s.chip_dmg, s.pure_dmg),
-							s.pure_st,
-							s.pure_st_tm,
-							s.gd_strength,
-							func.effect_txt(s.effect),
-							s.air_hit == hit_proc_types.same_line and "拾" or "-",
-							func.block_txt(s.blockbit),
+							func.stun_txt(s.pure_st, s.pure_st_tm),
+							func.effect_txt(s.effect, s.gd_strength, s.hitstun, s.blockstun),
+							func.block_txt(s.air_hit, s.blockbit),
 							func.sway_block_txt(s.blockbit),
 							s.prj_rank and s.prj_rank or "-",
 						}) do
@@ -8217,6 +8265,16 @@ rbff2.startplugin = function()
 						end
 					end
 					text = table.concat(texts, "|")
+					while true do
+						local a1, _ = string.find(text, "%|%-x%d+$")
+						if a1 == nil then
+							a1, _ = string.find(text, "%|%-$")
+						end
+						if a1 == nil then
+							break
+						end
+						text = string.sub(text, 1, a1 - 1)
+					end
 				end
 				p.last_frame_info_txt = text
 			end
@@ -8338,7 +8396,8 @@ rbff2.startplugin = function()
 			end
 			attackbit = attackbit | multi
 		elseif p.dmmy_attacking then
-			attackbit = frame_attack_types.attacking | frame_attack_types.harmless
+			attackbit = attackbit | frame_attack_types.attacking
+			attackbit = attackbit | frame_attack_types.harmless
 			if p.juggling then
 				attackbit = attackbit | frame_attack_types.juggling
 				col, line = 0x00000000, 0xDDFF4500
@@ -8947,7 +9006,16 @@ rbff2.startplugin = function()
 				40000000 空中投げ
 				80000000 投げ技
 			]]
-			p.attack_flag     = testbit(p.flag_cc, 0x4000 | 0x200000 | 0x1000000 | 0x80000 | 0x200000 | 0x1000000 | 0x2000000 | 0x40000000 | 0x80000000) or (p.flag_c8 > 0) or (p.flag_c4 > 0)
+			p.attack_flag     = testbit(p.flag_cc,
+				2 ^ 31 | --		"CA",
+				2 ^ 30  | --"AかB攻撃",
+				2 ^ 11  | --"ブレイクショット",
+				2 ^ 10  | --"必殺技中",
+				2 ^ 6  | --"つかみ技",
+				2 ^ 4  | --"投げ追撃",
+				2 ^ 1  | --"空中投げ",
+				2 ^ 0 --"投げ",
+			) or (p.flag_c8 > 0) or (p.flag_c4 > 0)
 			p.state_bits      = tobits(p.flag_c0)
 			p.old_blkstn_bits = p.blkstn_bits
 			p.blkstn_bits     = tobits(p.flag_d0)
@@ -9731,23 +9799,6 @@ rbff2.startplugin = function()
 		for _, p in pairs(temp_hits) do
 			-- update_objectはキャラの位置情報と当たり判定の情報を読み込んだ後で実行すること
 			update_object(p)
-
-			-- ヒット効果、削り補正、硬直
-			-- 一動作で複数の攻撃判定を持っていてもIDの値は同じになる
-			-- 058232(家庭用版)からの処理
-			-- 1004E9のデータ＝5C83Eでセット 技ID
-			-- 1004E9のデータ-0x20 + 0x95C0C のデータがヒット効果の元ネタ D0
-			-- D0 = 0x9だったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
-			-- D0 = 0xAだったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
-			-- D0 x 4 + 579da
-			-- d0 = fix_bp_addr(0x0579DA + d0 * 4) --0x0579DA から4バイトのデータの並びがヒット効果の処理アドレスになる
-			p.effect        = pgm:read_u8(p.attack_id - 0x20 + fix_bp_addr(0x95BEC))
-			-- 削りダメージ計算種別取得 05B2A4 からの処理
-			p.chip_dmg_type = get_chip_dmg_type(p.attack_id, pgm)
-			-- 硬直時間取得 05AF7C(家庭用版)からの処理
-			local d2        = 0xF & pgm:read_u8(p.attack_id + fix_bp_addr(0x95CCC))
-			p.hitstun       = pgm:read_u8(0x16 + 0x2 + fix_bp_addr(0x5AF7C) + d2) + 1 + 3 -- ヒット硬直
-			p.blockstun     = pgm:read_u8(0x1A + 0x2 + fix_bp_addr(0x5AF88) + d2) + 1 + 2 -- ガード硬直
 
 			-- 飛び道具の有効無効確定
 			if p.is_fireball == true then
@@ -11142,7 +11193,7 @@ rbff2.startplugin = function()
 						end
 					end
 					draw_rtext_with_shadow(p1 and 155 or 170, 40, p.last_frame_gap, col(p.last_frame_gap))
-					draw_text_with_shadow(100, p1 and 52 or 58, p.last_frame_info_txt or "")
+					draw_text_with_shadow(30, p1 and 52 or 58, p.last_frame_info_txt or "")
 					if p.on_punish > 0 and p.on_punish <= global.frame_number then
 						if p1 then
 							draw_rtext_with_shadow(155, 46, "PUNISH", col2(p.on_punish))
