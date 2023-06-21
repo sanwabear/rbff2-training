@@ -4606,6 +4606,7 @@ local update_summary = function(p)
 	else
 		summary.prj_rank = nil                                         -- 飛び道具の強さ
 	end
+	summary.esaka_range  = summary.esaka_range or p.esaka_range        -- えさか範囲
 end
 
 local block_types = {
@@ -8162,7 +8163,7 @@ rbff2.startplugin = function()
 		end
 		return string.format("%s(-/%s)/%s", e1, blockstun, e2)
 	end
-	on_frame_func.block_txt = function(air_hit, blockbit)
+	on_frame_func.block_txt = function(air_hit, blockbit, esaka_range)
 		local lo = testbit(blockbit, block_types.low)
 		local hi = testbit(blockbit, block_types.high)
 		local hitg = testbit(blockbit, block_types.high_tung)
@@ -8189,6 +8190,9 @@ rbff2.startplugin = function()
 					blocktxt = blocktxt .. "中"
 				end
 			end
+		end
+		if esaka_range > 0 then
+			blocktxt = string.format("%s(%s)", blocktxt, esaka_range)
 		end
 		if testbit(blockbit, block_types.air) then
 			blocktxt = blocktxt .. "空"
@@ -8299,7 +8303,7 @@ rbff2.startplugin = function()
 							func.dmg_txt(s.chip_dmg, s.pure_dmg),
 							func.stun_txt(s.pure_st, s.pure_st_tm),
 							func.effect_txt(s.effect, s.gd_strength, s.hitstun, s.blockstun),
-							func.block_txt(s.air_hit, s.blockbit),
+							func.block_txt(s.air_hit, s.blockbit, s.esaka_range),
 							func.sway_block_txt(s.blockbit),
 							s.prj_rank and s.prj_rank or "-",
 						}) do
