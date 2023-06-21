@@ -10208,6 +10208,8 @@ rbff2.startplugin = function()
 						fb.act_frames = {}
 						fb.act_frames2 = {}
 					end
+					p.frame_gap      = 0
+					p.last_frame_gap = 0
 				end
 			end
 
