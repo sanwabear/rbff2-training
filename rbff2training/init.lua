@@ -301,7 +301,7 @@ local global = {
 	disp_effect_bps     = nil,
 	disp_frmgap         = 3,  -- フレーム差表示
 	disp_input_sts      = 1,  -- コマンド入力状態表示 1:OFF 2:1P 3:2P
-	disp_normal_frms    = 1,  -- 通常動作フレーム非表示 1:OFF 2:ON
+	disp_normal_frms    = 2,  -- 通常動作フレーム非表示 1:OFF 2:ON
 	pause_hit           = 1,  -- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
 	pause_hitbox        = 1,  -- 判定発生時にポーズ
 	pause               = false,
@@ -12379,7 +12379,7 @@ rbff2.startplugin = function()
 				1, -- 1P 入力表示            10
 				1, -- 2P 入力表示            11
 				1, -- コマンド入力状態表示   12
-				1, -- 通常動作フレーム非表示 13
+				2, -- 通常動作フレーム非表示 13
 				3, -- フレーム差表示         14
 				4, -- 1P フレーム数表示      15
 				4, -- 2P フレーム数表示      16
