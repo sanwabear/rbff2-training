@@ -532,7 +532,7 @@ local dip_config ={
 
 -- 行動の種類
 local act_types = { free = -1, attack = 0, low_attack = 1, provoke =  2, any = 3, overhead = 4, block = 5, hit = 6, }
-
+local frame_data_types = { startup = 1, wrap = 2, preserve = nil, }
 local sts_flg_names = {
 	[0xC0] = {
 		"ジャンプ振向",
