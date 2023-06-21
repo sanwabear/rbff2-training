@@ -8067,7 +8067,6 @@ rbff2.startplugin = function()
 		return d5
 	end
 
-
 	local frame_event_types = {
 		reset = 0,
 		split = 1,
@@ -8425,6 +8424,13 @@ rbff2.startplugin = function()
 			if info.can_throw2 == false then
 				info.throw_inv2 = info.throw_inv2 + 1
 			end
+		end
+	end
+	local proc_nonact_frame = function(p)
+		if p.skip_frame then
+			-- なにもしない
+		else
+			on_frame_event(p, nil, frame_event_types.reset)
 		end
 	end
 	local proc_act_frame = function(p)
@@ -10207,6 +10213,10 @@ rbff2.startplugin = function()
 
 			--1Pと2Pともにフレーム数が多すぎる場合は加算をやめる
 			fix_max_framecount()
+		else
+			for _, p in ipairs(players) do
+				proc_nonact_frame(p)
+			end
 		end
 
 		-- フレーム経過による硬直差の減少
@@ -10431,9 +10441,6 @@ rbff2.startplugin = function()
 				else
 					if p.backstep_killer then
 						-- コマンド入力状態を無効にしてバクステ暴発を防ぐ
-						-- TODO 簡易超必がONのときはコマンド入力状態が変わるのでバクステが暴発するキャラがいる
-						-- 対象はコマンドが多い＝テーブル状態の変化の影響を受けるキャラ
-						-- ギース、山崎、ダック、クラウザー、シャンフェイ
 						local bs_addr = dip_config.easy_super and p.char_data.easy_bs_addr or p.char_data.bs_addr
 						pgm:write_u8(p.input_offset + bs_addr, 0x00)
 						p.backstep_killer = false
