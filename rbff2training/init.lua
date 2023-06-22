@@ -4580,33 +4580,36 @@ end
 local update_summary = function(p)
 	local summary        = p.hit_summary
 	-- 判定ができてからのログ情報の作成
-	summary.attack       = summary.attack or p.attack                  -- 補正前攻撃力導出元ID
-	summary.pure_dmg     = summary.pure_dmg or p.pure_dmg              -- 補正前攻撃力
-	summary.pure_st      = summary.pure_st or p.pure_st                -- 気絶値
-	summary.pure_st_tm   = summary.pure_st_tm or p.pure_st_tm          -- 気絶タイマー
+	summary.attack       = summary.attack or p.attack                              -- 補正前攻撃力導出元ID
+	summary.pure_dmg     = summary.pure_dmg or p.pure_dmg                          -- 補正前攻撃力
+	summary.pure_st      = summary.pure_st or p.pure_st                            -- 気絶値
+	summary.pure_st_tm   = summary.pure_st_tm or p.pure_st_tm                      -- 気絶タイマー
 	summary.chip_dmg     = summary.chip_dmg or p.chip_dmg_type.calc(summary.pure_dmg) -- 削りダメージ
-	summary.chip_dmg_nm  = summary.chip_dmg_nm or p.chip_dmg_type.name -- 削りダメージ名
+	summary.chip_dmg_nm  = summary.chip_dmg_nm or p.chip_dmg_type.name             -- 削りダメージ名
+	summary.pow_up       = summary.pow_up or p.pow_up                              -- 状態表示用パワー増加量空振り
+	summary.pow_up_hit   = summary.pow_up_hit or p.pow_up_hit                      -- 状態表示用パワー増加量ヒット
+	summary.pow_up_gd    = summary.pow_up_gd or p.pow_up_gd                        -- 状態表示用パワー増加量ガード
 	summary.attack_id    = summary.attack_id or p.attack_id
-	summary.effect       = summary.effect or p.effect                  -- ヒット効果
-	summary.can_techrise = summary.can_techrise or p.can_techrise      -- 受け身行動可否
-	summary.gd_strength  = summary.gd_strength or p.gd_strength        -- 相手のガード持続の種類
-	summary.max_hit_nm   = summary.max_hit_nm or p.hit.max_hit_nm      -- p.act_frame中の行動最大ヒット 分子
-	summary.max_hit_dn   = summary.max_hit_dn or p.hit.max_hit_dn      -- p.act_frame中の行動最大ヒット 分母
-	summary.cancelable   = summary.cancelable or p.cancelable or 0     -- キャンセル可否
-	summary.repeatable   = summary.repeatable or p.repeatable or false -- 連キャン可否
-	summary.slide_atk    = summary.slide_atk or p.slide_atk            -- ダッシュ滑り攻撃
-	summary.bs_atk       = summary.bs_atk or p.bs_atk                  -- ブレイクショット
+	summary.effect       = summary.effect or p.effect                              -- ヒット効果
+	summary.can_techrise = summary.can_techrise or p.can_techrise                  -- 受け身行動可否
+	summary.gd_strength  = summary.gd_strength or p.gd_strength                    -- 相手のガード持続の種類
+	summary.max_hit_nm   = summary.max_hit_nm or p.hit.max_hit_nm                  -- p.act_frame中の行動最大ヒット 分子
+	summary.max_hit_dn   = summary.max_hit_dn or p.hit.max_hit_dn                  -- p.act_frame中の行動最大ヒット 分母
+	summary.cancelable   = summary.cancelable or p.cancelable or 0                 -- キャンセル可否
+	summary.repeatable   = summary.repeatable or p.repeatable or false             -- 連キャン可否
+	summary.slide_atk    = summary.slide_atk or p.slide_atk                        -- ダッシュ滑り攻撃
+	summary.bs_atk       = summary.bs_atk or p.bs_atk                              -- ブレイクショット
 
-	summary.hitstun      = summary.hitstun or p.hitstun                -- ヒット硬直
-	summary.blockstun    = summary.blockstun or p.blockstun            -- ガード硬直
-	summary.hitstop      = summary.hitstop or p.hitstop                -- ヒットストップ
-	summary.hitstop_gd   = summary.hitstop_gd or p.hitstop_gd          -- ガード時ヒットストップ
+	summary.hitstun      = summary.hitstun or p.hitstun                            -- ヒット硬直
+	summary.blockstun    = summary.blockstun or p.blockstun                        -- ガード硬直
+	summary.hitstop      = summary.hitstop or p.hitstop                            -- ヒットストップ
+	summary.hitstop_gd   = summary.hitstop_gd or p.hitstop_gd                      -- ガード時ヒットストップ
 	if p.is_fireball == true then
-		summary.prj_rank = summary.prj_rank or p.prj_rank              -- 飛び道具の強さ
+		summary.prj_rank = summary.prj_rank or p.prj_rank                          -- 飛び道具の強さ
 	else
-		summary.prj_rank = nil                                         -- 飛び道具の強さ
+		summary.prj_rank = nil                                                     -- 飛び道具の強さ
 	end
-	summary.esaka_range  = summary.esaka_range or p.esaka_range        -- えさか範囲
+	summary.esaka_range = summary.esaka_range or p.esaka_range                     -- えさか範囲
 end
 
 local block_types = {
@@ -8115,7 +8118,18 @@ rbff2.startplugin = function()
 		info.count = 0
 	end
 	on_frame_func.insert_tbl = function(pow, tbl, val)
-		table.insert(tbl, pow == 1 and string.format("%s", val) or string.format("%sx%s", val, pow))
+		local ct
+		if pow == 1 then
+			ct = string.format("%s", val)
+		else
+			local mt1 = string.match(val, "^%d+/[%d/]+$")
+			if mt1 then
+				ct = string.format("{%s}x%s", val, pow)
+			else
+				ct = string.format("%sx%s", val, pow)
+			end
+		end
+		table.insert(tbl,  ct)
 	end
 	on_frame_func.build_txt1 = function(ctx, max, count, curr)
 		ctx = ctx or { prev = nil, pow = 0, tbl = {} }
@@ -8144,6 +8158,9 @@ rbff2.startplugin = function()
 		end
 		return string.format("%s(%s)", pure_dmg, chip_dmg)
 	end
+	on_frame_func.pow_txt = function(pow_up, pow_up_hit, pow_up_gd)
+		return string.format("%s/%s/%s", pow_up or 0, pow_up_hit or 0, pow_up_gd or 0)
+	end
 	on_frame_func.stun_txt = function(pure_st, pure_st_tm)
 		if pure_st_tm == 0 then
 			if pure_st == 0 then
@@ -8154,8 +8171,13 @@ rbff2.startplugin = function()
 		return string.format("%s/%s", pure_st, pure_st_tm)
 	end
 	on_frame_func.effect_txt = function(effect, gd_strength, hitstun, blockstun)
-		local e = effect + 1
-		local e1, e2 = hit_effects[e][1], hit_effects[e][2]
+		local e1, e2
+		if effect then
+			local e = effect + 1
+			e1, e2 = hit_effects[e][1], hit_effects[e][2]
+		else
+			e1, e2 = "-", "-"
+		end
 		if e1 == e2 then
 			return string.format("%s(-/%s)", e1, blockstun)
 		elseif hit_effect_nokezoris[e1] then
@@ -8373,9 +8395,10 @@ rbff2.startplugin = function()
 					local build_txt = #info.summaries > 1 and func.build_txt1 or func.build_txt2
 					local texts = { text }
 					for i, s in ipairs(info.summaries) do
-						for j, sv in ipairs(s.attacking ~= true and new_filled_table(7, nil) or {
+						for j, sv in ipairs(s.attacking ~= true and new_filled_table(8, nil) or {
 							s.hitstop_gd,
 							func.dmg_txt(s.chip_dmg, s.pure_dmg),
+							func.pow_txt(s.pow_up, s.pow_up_hit, s.pow_up_gd),
 							func.stun_txt(s.pure_st, s.pure_st_tm),
 							func.effect_txt(s.effect, s.gd_strength, s.hitstun, s.blockstun),
 							func.block_txt(s.air_hit, s.blockbit, s.esaka_range or 0),
