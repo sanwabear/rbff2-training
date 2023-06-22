@@ -8279,34 +8279,36 @@ rbff2.startplugin = function()
 						end
 					end
 
-					-- 繰り返しパターンの抽出
+					-- 繰り返しパターンの最小文字列の抽出
 					local g1, g2 = string.match(act_txt, "(,?([%(]?%d+.*)%2)")
 					local reps, gp = {}, 0
 					while (g1 ~= nil) do
-						local rep1 = g2
+						local rep = g2
 						while (g2 ~= nil) do
-							rep1, g2 = g2, string.match(g2, "(.+)%1")
+							rep, g2 = g2, string.match(g2, "(.+)%1")
 						end
-						printf("reps  %s", rep1)
-						table.insert(reps, rep1)
+						-- printf("reps  %s", rep1)
+						table.insert(reps, rep)
 						_, gp = string.find(act_txt, g1, gp, true)
 						g1, g2 = string.match(act_txt, "(,?([%(]?%d+.*)%2)", gp)
 					end
 
 					-- 繰り返しパターンの圧縮
-					local new_txt, top_txt = act_txt, ""
-					for _, v in ipairs(reps) do
-						local a, b = string.find(new_txt, v, 0, true)
-						if a then
-							local f1, f2 = string.sub(new_txt, a, b), nil
-							local c, pow = 0, 1
-							if a > 1 then
-								top_txt = string.sub(new_txt, 1, a - 1)
-								new_txt = string.sub(new_txt, a)
-								a, b = string.find(new_txt, v, 0, true)
+					local top_txt, remain_txt = "", act_txt
+					for _, rep in ipairs(reps) do
+						local af1, af2 = string.find(remain_txt, rep, 0, true)
+						if af1 then
+							-- 発見文字から前後に分割
+							if af1 > 1 then
+								top_txt, remain_txt = top_txt .. string.sub(remain_txt, 1, af1 - 1), string.sub(remain_txt, af1)
+								af1, af2 = string.find(remain_txt, rep, 0, true)
 							end
-							for i = b, #new_txt, #f1 do
-								f2 = string.sub(new_txt, a + i, b + i)
+
+							-- 繰り返し回数を算出
+							local f1, f2 = string.sub(remain_txt, af1, af2), nil
+							local c, pow = 0, 1
+							for i = af2, #remain_txt, #f1 do
+								f2 = string.sub(remain_txt, af1 + i, af2 + i)
 								if f1 == f2 then
 									pow = pow + 1
 									f2 = ""
@@ -8317,11 +8319,12 @@ rbff2.startplugin = function()
 							end
 							if pow > 1 then
 								f1 = string.gsub(f1, "(.+),+", "%1")
-								new_txt = string.format("%s{%s}x%s,%s%s", top_txt, f1, pow, f2, string.sub(new_txt, c))
+								top_txt, remain_txt = string.format("%s{%s}x%s,%s", top_txt, f1, pow, f2), string.sub(remain_txt, c)
+								-- printf("%s %s", top_txt, remain_txt)
 							end
 						end
-						act_txt = new_txt
 					end
+					act_txt = top_txt .. remain_txt
 
 					text = text .. "/" .. act_txt
 				end
@@ -8520,10 +8523,13 @@ rbff2.startplugin = function()
 					attackbit = attackbit | frame_attack_types.juggling
 				end
 				if fb.max_hit_dn > 1 or fb.max_hit_dn == 0 then
-					attackbit = attackbit | fb.act * frame_attack_types.x17 
+					attackbit = attackbit | fb.act * frame_attack_types.x17
 					-- 飛び道具は判定の遷移ごとに細分化しない
 					-- attackbit = attackbit | fb.act_count * frame_attack_types.x09
 				end
+				local base = ((fb.addr.base - 0x100400) / 0x100)
+				attackbit = attackbit | base * frame_attack_types.x09
+				-- printf("%x %x", base, attackbit)
 				attackbit = attackbit | (p.attack * frame_attack_types.x05)
 				active_fb = fb
 				break
