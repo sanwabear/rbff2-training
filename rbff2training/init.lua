@@ -1589,9 +1589,9 @@ local char_acts_base = {
 		{ names = { "爆雷砲" },                                        type = act_types.startup | act_types.attack | act_types.firing,     ids = { 0xFE, 0xFF, 0x100 }, },
 		{ names = { "ホエホエ弾" },                                  type = act_types.startup | act_types.low_attack | act_types.firing, ids = { 0x108, 0x109, }, },
 		{ names = { "ホエホエ弾" },                                  type = act_types.preserve | act_types.any | act_types.firing,       ids = { 0x10A }, },
-		{ names = { "ホエホエ弾 持続" },                           type = act_types.startup | act_types.low_attack | act_types.firing, ids = { 0x10C, 0x10D }, },
+		{ names = { "ホエホエ弾 持続" },                           type = act_types.wrap | act_types.low_attack | act_types.firing, ids = { 0x10C, 0x10D }, },
 		{ names = { "ホエホエ弾 持続" },                           type = act_types.preserve | act_types.any | act_types.firing,       ids = { 0x114, 0x115 }, },
-		{ names = { "ホエホエ弾 落下攻撃" },                     type = act_types.startup | act_types.overhead | act_types.firing,   ids = { 0x10E }, },
+		{ names = { "ホエホエ弾 落下攻撃" },                     type = act_types.wrap | act_types.overhead | act_types.firing,   ids = { 0x10E }, },
 		{ names = { "ホエホエ弾 落下攻撃 接触" },              type = act_types.wrap | act_types.any | act_types.firing,           ids = { 0x10F }, },
 		{ names = { "ホエホエ弾 着地1" },                          type = act_types.wrap | act_types.any | act_types.firing,           ids = { 0x10B }, },
 		{ names = { "ホエホエ弾 着地2" },                          type = act_types.wrap | act_types.any | act_types.firing,           ids = { 0x110 }, },
@@ -1632,7 +1632,7 @@ local char_acts_base = {
 		{ names = { "撃放" },                                   type = act_types.startup | act_types.attack,                    ids = { 0xA4 } },
 		{ names = { "撃放 タメ" },                            type = act_types.wrap | act_types.attack,                       ids = { 0xA5 } },
 		{ names = { "撃放 タメ開放" },                      type = act_types.wrap | act_types.attack,                       ids = { 0xA7, 0xA8, 0xA9 } },
-		{ names = { "撃放隙" },                                type = act_types.startup | act_types.any,                       ids = { 0xA6 } },
+		{ names = { "撃放 隙" },                                type = act_types.wrap | act_types.any,                       ids = { 0xA6 } },
 		{ names = { "旋風剛拳" },                             type = act_types.startup | act_types.attack,                    ids = { 0xFE, 0xFF, 0x100 } },
 		{ names = { "旋風剛拳" },                             type = act_types.preserve | act_types.any,                      ids = { 0x101, 0x102 } },
 		{ names = { "大撃放" },                                type = act_types.startup | act_types.attack,                    ids = { 0x108, 0x109, 0x10A, 0x10B } },
@@ -8247,50 +8247,103 @@ rbff2.startplugin = function()
 				if takeoff_and_main == info.startup or takeoff_and_main == 0 then
 					text = string.format("%s", info.startup)
 				else
+					-- 発生フレームををメインかつ地上隙に分割する
 					local startup = info.startup - takeoff_and_main
 					if #info.actives == 0 and info.recovery == 0 and land_and_main > 0 then
+						-- 後隙フレームをメインかつ地上隙に分割する
 						startup = startup - land_and_main
 						text = string.format("%s+%s+%s", takeoff_and_main, startup, land_and_main)
 					else
 						text = string.format("%s+%s", takeoff_and_main, startup)
 					end
 				end
+				-- 持続フレームをくっつける
 				if #info.actives > 0 then
-					text = text .. "/"
+					local act_txt = ""
 					local delim = ""
 					for _, active in ipairs(info.actives) do
 						if nil == active then
 							delim = ""
 						elseif 0 > active.count then
 							-- マイナス値はinactive扱いでカッコで表現
-							text = string.format("%s(%s)", text, -active.count)
+							act_txt = string.format("%s(%s)", act_txt, -active.count)
 							delim = ""
 						elseif testbit(active.attackbit, frame_attack_types.fake) then
-							-- 嘘判定は{}で表現
-							text = string.format("%s{%s}", text, active.count)
+							-- 嘘判定は``で表現
+							act_txt = string.format("%s(%s)", act_txt, active.count)
 							delim = ""
 						else
 							-- 通常の攻撃判定とフルヒットなどの判定無効状態は合わせて表示
-							text = string.format("%s%s%s", text, delim, active.count)
+							act_txt = string.format("%s%s%s", act_txt, delim, active.count)
 							delim = ","
 						end
 					end
+
+					-- 繰り返しパターンの抽出
+					local reps = {}
+					for _, v in pairs({string.match(act_txt, ",?([%(]?%d+.*)%1")}) do
+						local rep1 = v
+						while (v ~= nil) do
+							rep1, v = v, string.match(v, "(.+)%1")
+						end
+						if #rep1 > 1 then
+							-- local rep1 = string.gsub(rep1, "(.+),", "%1[,%%(]?")
+							-- printf("reps %s %s", #reps, rep1)
+							table.insert(reps, rep1)
+						end
+					end
+					-- 繰り返しパターンの圧縮
+					local new_txt, top_txt = act_txt, ""
+					for k, v in ipairs(reps) do
+						local a, b = string.find(new_txt, v, 0, true)
+						if a then
+							local f1, f2 = string.sub(new_txt, a, b), nil
+							local c, pow = 0, 1
+							if a > 1 then
+								top_txt = string.sub(new_txt, 1, a - 1)
+								new_txt = string.sub(new_txt, a)
+								a, b = string.find(new_txt, v, 0, true)
+							end
+							for i = b, #new_txt, #f1 do
+								f2 = string.sub(new_txt, a + i, b + i)
+								if f1 == f2 then
+									pow = pow + 1
+									f2 = ""
+								else
+									c = i + #f2 + 1
+									break
+								end
+							end
+							if pow > 1 then
+								f1 = string.gsub(f1, "(.+),+", "%1")
+								new_txt = string.format("%s{%s}x%s,%s%s", top_txt, f1, pow, f2, string.sub(new_txt, c))
+							end
+						end
+						act_txt = new_txt
+					end
+
+					text = text .. "/" .. act_txt
 				end
 				if info.recovery > 0 then
 					land_and_main = math.min(info.recovery, land_and_main)
 					if land_and_main == info.recovery or land_and_main == 0 then
 						text = string.format("%s/%s", text, info.recovery)
 					else
+						-- 後隙フレームをメインライン&着地に分割する
 						text = string.format("%s/%s+%s", text, info.recovery - land_and_main, land_and_main)
 					end
 				end
 				text = string.format("%3s|%s", info.total, text)
+
+				-- 行動開始からの無敵フレーム
 				local invs = {}
 				for k, v in pairs({ ["打"] = info.hurt_inv, ["通"] = info.throw_inv2, ["投"] = info.throw_inv1 }) do
 					if v > 0 then
 						table.insert(invs, string.format("%s%s", k, v))
 					end
 				end
+
+				-- 全体フレーム
 				text = string.format("%s|%s", text, #invs > 0 and table.concat(invs, "") or "-")
 
 				if #info.summaries > 0 then
@@ -8298,12 +8351,12 @@ rbff2.startplugin = function()
 					local build_txt = #info.summaries > 1 and func.build_txt1 or func.build_txt2
 					local texts = { text }
 					for i, s in ipairs(info.summaries) do
-						for j, sv in ipairs(s.attacking ~= true and new_filled_table(7, "-") or {
+						for j, sv in ipairs(s.attacking ~= true and new_filled_table(7, nil) or {
 							s.hitstop_gd,
 							func.dmg_txt(s.chip_dmg, s.pure_dmg),
 							func.stun_txt(s.pure_st, s.pure_st_tm),
 							func.effect_txt(s.effect, s.gd_strength, s.hitstun, s.blockstun),
-							func.block_txt(s.air_hit, s.blockbit, s.esaka_range),
+							func.block_txt(s.air_hit, s.blockbit, s.esaka_range or 0),
 							func.sway_block_txt(s.blockbit),
 							s.prj_rank and s.prj_rank or "-",
 						}) do
@@ -8338,9 +8391,9 @@ rbff2.startplugin = function()
 			return
 		end
 		-- ブレイク条件をくっつける
-		local break_key = attackbit and p.hit_summary.blockbit and
-			string.format("%x %x", attackbit, p.hit_summary.blockbit) or nil
 		local summary = fb and fb.hit_summary or p.hit_summary
+		local break_key = attackbit and string.format("%x ", attackbit) or "- "
+		break_key = summary.blockbit and string.format("%s %x", break_key, summary.blockbit) or break_key
 		local info = frame_infos[p] or {
 			last_event = event_type, -- 攻撃かどうか
 			count = 0,      -- バッファ
@@ -8465,10 +8518,11 @@ rbff2.startplugin = function()
 				if fb.juggling then
 					attackbit = attackbit | frame_attack_types.juggling
 				end
-				--[[ 飛び道具は判定の遷移ごとに細分化しない
 				if fb.max_hit_dn > 1 or fb.max_hit_dn == 0 then
-					attackbit = attackbit | fb.act * frame_attack_types.x17 | fb.act_count * frame_attack_types.x09
-				end ]]
+					attackbit = attackbit | fb.act * frame_attack_types.x17 
+					-- 飛び道具は判定の遷移ごとに細分化しない
+					-- attackbit = attackbit | fb.act_count * frame_attack_types.x09
+				end
 				attackbit = attackbit | (p.attack * frame_attack_types.x05)
 				active_fb = fb
 				break
