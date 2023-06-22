@@ -8287,44 +8287,49 @@ rbff2.startplugin = function()
 						while (g2 ~= nil) do
 							rep, g2 = g2, string.match(g2, "(.+)%1")
 						end
-						-- printf("reps  %s", rep1)
+						rep = string.gsub(rep, "%(", "%%(")
+						rep = string.gsub(rep, "%)", "%%)")
+						rep = string.gsub(rep, ",$", ",?", #rep)
+						-- printf("rep %s", rep)
 						table.insert(reps, rep)
 						_, gp = string.find(act_txt, g1, gp, true)
 						g1, g2 = string.match(act_txt, "(,?([%(]?%d+.*)%2)", gp)
 					end
 
 					-- 繰り返しパターンの圧縮
-					local top_txt, remain_txt = "", act_txt
+					local top_txt, tail_txt = "", act_txt
 					for _, rep in ipairs(reps) do
-						local af1, af2 = string.find(remain_txt, rep, 0, true)
+						-- 最初の繰り返し文字列の場所特定
+						local af1, af2 = string.find(tail_txt, rep, 0)
 						if af1 then
-							-- 発見文字から前後に分割
+							-- 発見した位置から前後に分割
 							if af1 > 1 then
-								top_txt, remain_txt = top_txt .. string.sub(remain_txt, 1, af1 - 1), string.sub(remain_txt, af1)
-								af1, af2 = string.find(remain_txt, rep, 0, true)
+								top_txt = top_txt .. string.sub(tail_txt, 1, af1 - 1)
+								tail_txt = string.sub(tail_txt, af1)
+								af1, af2 = 1, af2 - af1 + 1
 							end
 
+							-- 最初の繰り返し文字列を末尾のカンマ区切りを除去して保存
+							local rep1 = string.gsub(string.sub(tail_txt, af1, af2), "(.+),+", "%1")
+							local pow, tmpaf1, tmpaf2 = 1, af1, af2 + 1
+
 							-- 繰り返し回数を算出
-							local f1, f2 = string.sub(remain_txt, af1, af2), nil
-							local c, pow = 0, 1
-							for i = af2, #remain_txt, #f1 do
-								f2 = string.sub(remain_txt, af1 + i, af2 + i)
-								if f1 == f2 then
-									pow = pow + 1
-									f2 = ""
-								else
-									c = i + #f2 + 1
-									break
+							while tmpaf2 ~= nil and tmpaf2 <= #tail_txt do
+								tmpaf1, tmpaf2 = string.find(tail_txt, "^" .. rep, tmpaf2)
+								if tmpaf2 then
+									tmpaf2 = tmpaf2 + 1
+									af2, pow = tmpaf2, pow + 1
 								end
 							end
 							if pow > 1 then
-								f1 = string.gsub(f1, "(.+),+", "%1")
-								top_txt, remain_txt = string.format("%s{%s}x%s,%s", top_txt, f1, pow, f2), string.sub(remain_txt, c)
+								top_txt = string.format("%s{%s}x%s", top_txt, rep1, pow)
+								tail_txt = string.gsub(string.sub(tail_txt, af2), "^%)", "")
+								tail_txt = string.gsub(tail_txt, "^(%d)", ",%1")
 								-- printf("%s %s", top_txt, remain_txt)
 							end
 						end
 					end
-					act_txt = top_txt .. remain_txt
+					act_txt = top_txt .. tail_txt
 
 					text = text .. "/" .. act_txt
 				end
