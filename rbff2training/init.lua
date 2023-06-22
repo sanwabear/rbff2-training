@@ -8283,15 +8283,18 @@ rbff2.startplugin = function()
 					local g1, g2 = string.match(act_txt, "(,?([%(]?%d+.*)%2)")
 					local reps, gp = {}, 0
 					while (g1 ~= nil) do
-						local rep = g2
-						while (g2 ~= nil) do
-							rep, g2 = g2, string.match(g2, "(.+)%1")
+						local nonnum = string.match(g2, "^(%d+)$")
+						if (nonnum == nil) then
+							local rep = g2
+							while (g2 ~= nil) do
+								rep, g2 = g2, string.match(g2, "(.+)%1")
+							end
+							rep = string.gsub(rep, "%(", "%%(")
+							rep = string.gsub(rep, "%)", "%%)")
+							rep = string.gsub(rep, ",$", ",?", #rep)
+							-- printf("rep %s", rep)
+							table.insert(reps, rep)
 						end
-						rep = string.gsub(rep, "%(", "%%(")
-						rep = string.gsub(rep, "%)", "%%)")
-						rep = string.gsub(rep, ",$", ",?", #rep)
-						-- printf("rep %s", rep)
-						table.insert(reps, rep)
 						_, gp = string.find(act_txt, g1, gp, true)
 						g1, g2 = string.match(act_txt, "(,?([%(]?%d+.*)%2)", gp)
 					end
@@ -8327,7 +8330,7 @@ rbff2.startplugin = function()
 									top_txt = string.format("%s{%s}x%s", top_txt, rep1, pow)
 								else
 									mt = string.match(top_txt, "[^%d]$")
-									if mt then
+									if #top_txt == 0 or mt then
 										top_txt = string.format("%s%sx%s", top_txt, rep1, pow)
 									else
 										top_txt = string.format("%s,%sx%s", top_txt, rep1, pow)
