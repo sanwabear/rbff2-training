@@ -8280,21 +8280,22 @@ rbff2.startplugin = function()
 					end
 
 					-- 繰り返しパターンの抽出
-					local reps = {}
-					for _, v in pairs({string.match(act_txt, ",?([%(]?%d+.*)%1")}) do
-						local rep1 = v
-						while (v ~= nil) do
-							rep1, v = v, string.match(v, "(.+)%1")
+					local g1, g2 = string.match(act_txt, "(,?([%(]?%d+.*)%2)")
+					local reps, gp = {}, 0
+					while (g1 ~= nil) do
+						local rep1 = g2
+						while (g2 ~= nil) do
+							rep1, g2 = g2, string.match(g2, "(.+)%1")
 						end
-						if #rep1 > 1 then
-							-- local rep1 = string.gsub(rep1, "(.+),", "%1[,%%(]?")
-							-- printf("reps %s %s", #reps, rep1)
-							table.insert(reps, rep1)
-						end
+						printf("reps  %s", rep1)
+						table.insert(reps, rep1)
+						_, gp = string.find(act_txt, g1, gp, true)
+						g1, g2 = string.match(act_txt, "(,?([%(]?%d+.*)%2)", gp)
 					end
+
 					-- 繰り返しパターンの圧縮
 					local new_txt, top_txt = act_txt, ""
-					for k, v in ipairs(reps) do
+					for _, v in ipairs(reps) do
 						local a, b = string.find(new_txt, v, 0, true)
 						if a then
 							local f1, f2 = string.sub(new_txt, a, b), nil
