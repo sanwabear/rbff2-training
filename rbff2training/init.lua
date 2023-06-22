@@ -1538,9 +1538,9 @@ local char_acts_base = {
 		{ names = { "燕落とし" },                             type = act_types.startup | act_types.attack,                    ids = { 0x9A, 0x9B } },
 		{ names = { "燕落とし" },                             type = act_types.preserve | act_types.any,                      ids = { 0x9C } },
 		{ names = { "火龍追撃棍" },                          type = act_types.startup | act_types.attack,                    ids = { 0xB8, 0xB9 } },
-		{ names = { "旋風棍" },                                type = act_types.startup | act_types.attack,                    ids = { 0xA4 } },
-		{ names = { "旋風棍" },                                type = act_types.preserve | act_types.attack,                   ids = { 0xA5 } },
-		{ names = { "旋風棍" },                                type = act_types.preserve | act_types.any,                      ids = { 0xA6 } },
+		{ names = { "旋風棍" },                                type = act_types.startup | act_types.attack | act_types.firing, ids = { 0xA4 } },
+		{ names = { "旋風棍 持続" },                         type = act_types.wrap | act_types.attack | act_types.firing,    ids = { 0xA5 } },
+		{ names = { "旋風棍 隙" },                            type = act_types.wrap | act_types.any | act_types.firing,       ids = { 0xA6 } },
 		{ names = { "強襲飛翔棍" },                          type = act_types.startup | act_types.attack,                    ids = { 0xAE, 0xAF, 0xB0 } },
 		{ names = { "強襲飛翔棍" },                          type = act_types.preserve | act_types.any,                      ids = { 0xB1 } },
 		{ names = { "超火炎旋風棍" },                       type = act_types.startup | act_types.attack | act_types.firing, ids = { 0xFE, 0xFF, 0x100 }, },
@@ -4586,9 +4586,6 @@ local update_summary = function(p)
 	summary.pure_st_tm   = summary.pure_st_tm or p.pure_st_tm                      -- 気絶タイマー
 	summary.chip_dmg     = summary.chip_dmg or p.chip_dmg_type.calc(summary.pure_dmg) -- 削りダメージ
 	summary.chip_dmg_nm  = summary.chip_dmg_nm or p.chip_dmg_type.name             -- 削りダメージ名
-	summary.pow_up       = summary.pow_up or p.pow_up                              -- 状態表示用パワー増加量空振り
-	summary.pow_up_hit   = summary.pow_up_hit or p.pow_up_hit                      -- 状態表示用パワー増加量ヒット
-	summary.pow_up_gd    = summary.pow_up_gd or p.pow_up_gd                        -- 状態表示用パワー増加量ガード
 	summary.attack_id    = summary.attack_id or p.attack_id
 	summary.effect       = summary.effect or p.effect                              -- ヒット効果
 	summary.can_techrise = summary.can_techrise or p.can_techrise                  -- 受け身行動可否
@@ -4605,13 +4602,18 @@ local update_summary = function(p)
 	summary.hitstop      = summary.hitstop or p.hitstop                            -- ヒットストップ
 	summary.hitstop_gd   = summary.hitstop_gd or p.hitstop_gd                      -- ガード時ヒットストップ
 	if p.is_fireball == true then
-		summary.prj_rank = summary.prj_rank or p.prj_rank                          -- 飛び道具の強さ
+		summary.prj_rank   = summary.prj_rank or p.prj_rank                        -- 飛び道具の強さ
+		summary.pow_up     = summary.pow_up or p.parent.pow_up                     -- 状態表示用パワー増加量空振り
+		summary.pow_up_hit = summary.pow_up_hit or p.parent.pow_up_hit             -- 状態表示用パワー増加量ヒット
+		summary.pow_up_gd  = summary.pow_up_gd or p.parent.pow_up_gd               -- 状態表示用パワー増加量ガード
 	else
-		summary.prj_rank = nil                                                     -- 飛び道具の強さ
+		summary.prj_rank   = nil                                                   -- 飛び道具の強さ
+		summary.pow_up     = summary.pow_up or p.pow_up                            -- 状態表示用パワー増加量空振り
+		summary.pow_up_hit = summary.pow_up_hit or p.pow_up_hit                    -- 状態表示用パワー増加量ヒット
+		summary.pow_up_gd  = summary.pow_up_gd or p.pow_up_gd                      -- 状態表示用パワー増加量ガード
 	end
 	summary.esaka_range = summary.esaka_range or p.esaka_range                     -- えさか範囲
 end
-
 local block_types = {
 	high = 2 ^ 0,
 	high_tung = 2 ^ 1,
@@ -9471,8 +9473,14 @@ rbff2.startplugin = function()
 					-- 家庭用 05B37E からの処理
 					if 0x27 <= hit_attack then -- CA技、特殊技かどうかのチェック
 						p.pow_up_hit = pgm:read_u8((0xFF & (hit_attack - 0x27)) + pgm:read_u32(0x8C18C + p.char_4times))
-					else        -- 通常技 ビリーとチョンシュか、それ以外でアドレスが違う
-						local a0 = (0xC ~= p.char and 0x10 ~= p.char) and 0x8C24C or 0x8C274
+					else
+						-- 通常技 ビリーとチョンシュか、それ以外でアドレスが違う
+						local a0 = 0x8C24C
+						if 0xC == p.char then
+							a0 = 0x8C274
+						elseif 0x10 == p.char then
+							a0 = 0x8C29C
+						end
 						p.pow_up_hit = pgm:read_u8(a0 + hit_attack)
 					end
 					-- ガード時増加量 d0の右1ビットシフト=1/2
