@@ -8322,7 +8322,17 @@ rbff2.startplugin = function()
 								end
 							end
 							if pow > 1 then
-								top_txt = string.format("%s{%s}x%s", top_txt, rep1, pow)
+								local mt = string.match(rep1, "[^%d]")
+								if mt then
+									top_txt = string.format("%s{%s}x%s", top_txt, rep1, pow)
+								else
+									mt = string.match(top_txt, "[^%d]$")
+									if mt then
+										top_txt = string.format("%s%sx%s", top_txt, rep1, pow)
+									else
+										top_txt = string.format("%s,%sx%s", top_txt, rep1, pow)
+									end
+								end
 								tail_txt = string.gsub(string.sub(tail_txt, af2), "^%)", "")
 								tail_txt = string.gsub(tail_txt, "^(%d)", ",%1")
 								-- printf("%s %s", top_txt, remain_txt)
