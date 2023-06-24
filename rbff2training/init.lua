@@ -64,30 +64,30 @@ local rbff2                = exports
 -- キャラの基本データ
 -- 配列のインデックス=キャラID
 local chars         = {
-	{ min_y = 9,  min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x2E, easy_bs_addr = 0x2E, acts = {}, act1sts = {}, fireballs = {}, name = "テリー・ボガード", },
-	{ min_y = 10, min_sy = 4, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, name = "アンディ・ボガード", },
-	{ min_y = 8,  min_sy = 3, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x3A, easy_bs_addr = 0x3A, acts = {}, act1sts = {}, fireballs = {}, name = "東丈", },
-	{ min_y = 10, min_sy = 4, init_stuns = 29, wakeup_frms = 17, sway_act_counts = 0x3, bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, act1sts = {}, fireballs = {}, name = "不知火舞", },
-	{ min_y = 8,  min_sy = 1, init_stuns = 33, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x66, easy_bs_addr = 0x4A, acts = {}, act1sts = {}, fireballs = {}, name = "ギース・ハワード", },
-	{ min_y = 2,  min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x46, easy_bs_addr = 0x46, acts = {}, act1sts = {}, fireballs = {}, name = "望月双角", },
-	{ min_y = 9,  min_sy = 6, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, name = "ボブ・ウィルソン", },
-	{ min_y = 10, min_sy = 3, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x32, easy_bs_addr = 0x32, acts = {}, act1sts = {}, fireballs = {}, name = "ホンフゥ", },
-	{ min_y = 9,  min_sy = 7, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x3E, easy_bs_addr = 0x3E, acts = {}, act1sts = {}, fireballs = {}, name = "ブルー・マリー", },
-	{ min_y = 9,  min_sy = 4, init_stuns = 35, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, name = "フランコ・バッシュ", },
-	{ min_y = 9,  min_sy = 4, init_stuns = 38, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x56, easy_bs_addr = 0x3A, acts = {}, act1sts = {}, fireballs = {}, name = "山崎竜二", },
-	{ min_y = 11, min_sy = 1, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC, bs_addr = 0x3A, easy_bs_addr = 0x3A, acts = {}, act1sts = {}, fireballs = {}, name = "秦崇秀", },
-	{ min_y = 11, min_sy = 4, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC, bs_addr = 0x36, easy_bs_addr = 0x36, acts = {}, act1sts = {}, fireballs = {}, name = "秦崇雷", },
-	{ min_y = 9,  min_sy = 6, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x7A, easy_bs_addr = 0x5E, acts = {}, act1sts = {}, fireballs = {}, name = "ダック・キング", },
-	{ min_y = 9,  min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x36, easy_bs_addr = 0x36, acts = {}, act1sts = {}, fireballs = {}, name = "キム・カッファン", },
-	{ min_y = 4,  min_sy = 3, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, name = "ビリー・カーン", },
-	{ min_y = 9,  min_sy = 6, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2E, easy_bs_addr = 0x2E, acts = {}, act1sts = {}, fireballs = {}, name = "チン・シンザン", },
-	{ min_y = 11, min_sy = 8, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, act1sts = {}, fireballs = {}, name = "タン・フー・ルー", },
-	{ min_y = 7,  min_sy = 4, init_stuns = 35, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, act1sts = {}, fireballs = {}, name = "ローレンス・ブラッド", },
-	{ min_y = 7,  min_sy = 2, init_stuns = 35, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x52, easy_bs_addr = 0x36, acts = {}, act1sts = {}, fireballs = {}, name = "ヴォルフガング・クラウザー", },
-	{ min_y = 9,  min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x7, bs_addr = 0x26, easy_bs_addr = 0x26, acts = {}, act1sts = {}, fireballs = {}, name = "リック・ストラウド", },
-	{ min_y = 9,  min_sy = 5, init_stuns = 29, wakeup_frms = 14, sway_act_counts = 0x3, bs_addr = 0x52, easy_bs_addr = 0x32, acts = {}, act1sts = {}, fireballs = {}, name = "李香緋", },
-	{ min_y = 10, min_sy = 4, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x0, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, name = "アルフレッド", },
-	{ min_y = 0,  min_sy = 0, init_stuns = 0,  wakeup_frms = 0,  sway_act_counts = 0x0, bs_addr = 0x0,  easy_bs_addr = 0x0,  acts = {}, act1sts = {}, fireballs = {}, name = "common", },
+	{ min_y = 9,  min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x2E, easy_bs_addr = 0x2E, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 18 }, },                               name = "テリー・ボガード", },
+	{ min_y = 10, min_sy = 4, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 18 }, },                               name = "アンディ・ボガード", },
+	{ min_y = 8,  min_sy = 3, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x3A, easy_bs_addr = 0x3A, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 18 }, },                               name = "東丈", },
+	{ min_y = 10, min_sy = 4, init_stuns = 29, wakeup_frms = 17, sway_act_counts = 0x3, bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 18 }, },                               name = "不知火舞", },
+	{ min_y = 8,  min_sy = 1, init_stuns = 33, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x66, easy_bs_addr = 0x4A, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 19 }, },                               name = "ギース・ハワード", },
+	{ min_y = 2,  min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x46, easy_bs_addr = 0x46, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 18 }, },                               name = "望月双角", },
+	{ min_y = 9,  min_sy = 6, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 19 }, },                               name = "ボブ・ウィルソン", },
+	{ min_y = 10, min_sy = 3, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x32, easy_bs_addr = 0x32, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 16 }, },                               name = "ホンフゥ", },
+	{ min_y = 9,  min_sy = 7, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x3E, easy_bs_addr = 0x3E, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 41 }, },                               name = "ブルー・マリー", },
+	{ min_y = 9,  min_sy = 4, init_stuns = 35, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 15 }, },                               name = "フランコ・バッシュ", },
+	{ min_y = 9,  min_sy = 4, init_stuns = 38, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x56, easy_bs_addr = 0x3A, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 18 }, { name = "中蛇", f = 9, } },     name = "山崎竜二", },
+	{ min_y = 11, min_sy = 1, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC, bs_addr = 0x3A, easy_bs_addr = 0x3A, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 57 }, { name = "真眼", f = 47, } },    name = "秦崇秀", },
+	{ min_y = 11, min_sy = 4, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC, bs_addr = 0x36, easy_bs_addr = 0x36, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 27 }, { name = "龍転", f = 25, } },    name = "秦崇雷", },
+	{ min_y = 9,  min_sy = 6, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x7A, easy_bs_addr = 0x5E, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 47 }, },                               name = "ダック・キング", },
+	{ min_y = 9,  min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x36, easy_bs_addr = 0x36, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 19 }, { name = "覇気", f = 28, } },    name = "キム・カッファン", },
+	{ min_y = 4,  min_sy = 3, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 42 }, },                               name = "ビリー・カーン", },
+	{ min_y = 9,  min_sy = 6, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2E, easy_bs_addr = 0x2E, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 23 }, { name = "軟体", f = 20, } },    name = "チン・シンザン", },
+	{ min_y = 11, min_sy = 8, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 19 }, },                               name = "タン・フー・ルー", },
+	{ min_y = 7,  min_sy = 4, init_stuns = 35, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = {},                                                         name = "ローレンス・ブラッド", },
+	{ min_y = 7,  min_sy = 2, init_stuns = 35, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x52, easy_bs_addr = 0x36, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 17 }, },                               name = "ヴォルフガング・クラウザー", },
+	{ min_y = 9,  min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x7, bs_addr = 0x26, easy_bs_addr = 0x26, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 18 }, },                               name = "リック・ストラウド", },
+	{ min_y = 9,  min_sy = 5, init_stuns = 29, wakeup_frms = 14, sway_act_counts = 0x3, bs_addr = 0x52, easy_bs_addr = 0x32, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 22 }, },                               name = "李香緋", },
+	{ min_y = 10, min_sy = 4, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x0, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 13 }, },                               name = "アルフレッド", },
+	{ min_y = 0,  min_sy = 0, init_stuns = 0,  wakeup_frms = 0,  sway_act_counts = 0x0, bs_addr = 0x0,  easy_bs_addr = 0x0,  acts = {}, act1sts = {}, fireballs = {}, faint_cancel = {}, name = "common", },
 }
 
 -- メニュー用変数
@@ -213,22 +213,29 @@ for _, bgm in ipairs(menu.bgms) do
 end
 
 local mem                  = {
-	last_time          = 0,        -- 最終読込フレーム(キャッシュ用)
-	_0x100701          = 0,        -- 場面判定用
-	_0x107C22          = 0,        -- 場面判定用
-	old_0x107C2A       = 0,        -- ラグチェック用
-	_0x107C2A          = 0,        -- ラグチェック用
-	_0x10B862          = 0,        -- ガードヒット=FF
-	_0x100F56          = 0,        -- 潜在発動時の停止時間
-	_0x10FD82          = 0,        -- console 0x00, mvs 0x01
-	_0x10FDAF          = 0,        -- 場面判定用
-	_0x10FDB6          = 0,        -- P1 P2 開始判定用
-	_0x10E043          = 0,        -- 手動でポーズしたときに00以外になる
+	last_time          = 0,     -- 最終読込フレーム(キャッシュ用)
+	_0x100701          = 0,     -- 場面判定用
+	_0x107C22          = 0,     -- 場面判定用
+	old_0x107C2A       = 0,     -- ラグチェック用
+	_0x107C2A          = 0,     -- ラグチェック用
+	_0x10B862          = 0,     -- ガードヒット=FF
+	_0x100F56          = 0,     -- 潜在発動時の停止時間
+	_0x10FD82          = 0,     -- console 0x00, mvs 0x01
+	_0x10FDAF          = 0,     -- 場面判定用
+	_0x10FDB6          = 0,     -- P1 P2 開始判定用
+	_0x10E043          = 0,     -- 手動でポーズしたときに00以外になる
 	_0x10CDD0          = 0x10CDD0, -- プレイヤー選択のハック用
-	biostest           = false,    -- 初期化中のときtrue
+	biostest           = false, -- 初期化中のときtrue
 	stage_base_addr    = 0x100E00,
 	close_far_offset   = 0x02AE08, -- 近距離技と遠距離技判断用のデータの開始位置
 	close_far_offset_d = 0x02DDAA, -- 対ラインの近距離技と遠距離技判断用のデータの開始位置
+
+	w8                 = function(addr, value) pgm:write_u8(addr, value) end,
+	w16                = function(addr, value) pgm:write_u16(addr, value) end,
+	w32                = function(addr, value) pgm:write_u32(addr, value) end,
+	w8i                = function(addr, value) pgm:write_i8(addr, value) end,
+	w16i               = function(addr, value) pgm:write_i16(addr, value) end,
+	w32i               = function(addr, value) pgm:write_i32(addr, value) end,
 }
 local match_active         = false -- 対戦画面のときtrue
 local player_select_active = false -- プレイヤー選択画面のときtrue
@@ -258,6 +265,22 @@ local new_set = function(...)
 	local ret = {}
 	for _, v in ipairs({ ... }) do
 		ret[v] = true
+	end
+	return ret
+end
+
+local new_set_false = function(...)
+	local ret = {}
+	for _, v in ipairs({ ... }) do
+		ret[v] = false
+	end
+	return ret
+end
+
+local new_tbl_0 = function(...)
+	local ret = {}
+	for _, v in ipairs({ ... }) do
+		ret[v] = 0
 	end
 	return ret
 end
@@ -1514,7 +1537,7 @@ local char_acts_base = {
 		{ names = { "CA 立A" },                                  type = act_types.startup | act_types.attack,     ids = { 0x241 } },
 		{ names = { "CA 立B" },                                  type = act_types.startup | act_types.attack,     ids = { 0x244 } },
 		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,     ids = { 0x246, 0x247 } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,     ids = { 0x248 } },
+		{ names = { "CA 立C" },                                  type = act_types.preserve | act_types.attack,     ids = { 0x248 } },
 		{ names = { "CA 立A" },                                  type = act_types.startup | act_types.attack,     ids = { 0x240 } },
 		{ names = { "CA 立B" },                                  type = act_types.startup | act_types.attack,     ids = { 0x243 } },
 		{ names = { "CA 立B" },                                  type = act_types.startup | act_types.attack,     ids = { 0x249 } },
@@ -3692,24 +3715,9 @@ local is_start_a                = function(joy_val, state_past)
 	return false
 end
 local new_next_joy              = function()
-	return {
-		[joyk.p1.dn] = false,
-		[joyk.p1.a] = false,
-		[joyk.p2.dn] = false,
-		[joyk.p2.a] = false,
-		[joyk.p1.lt] = false,
-		[joyk.p1.b] = false,
-		[joyk.p2.lt] = false,
-		[joyk.p2.b] = false,
-		[joyk.p1.rt] = false,
-		[joyk.p1.c] = false,
-		[joyk.p2.rt] = false,
-		[joyk.p2.c] = false,
-		[joyk.p1.up] = false,
-		[joyk.p1.d] = false,
-		[joyk.p2.up] = false,
-		[joyk.p2.d] = false,
-	}
+	return new_set_false(joyk.p1.dn, joyk.p1.a, joyk.p2.dn, joyk.p2.a, joyk.p1.lt,
+		joyk.p1.b, joyk.p2.lt, joyk.p2.b, joyk.p1.rt, joyk.p1.c, joyk.p2.rt,
+		joyk.p2.c, joyk.p1.up, joyk.p1.d, joyk.p2.up, joyk.p2.d)
 end
 -- 入力の1P、2P反転用のテーブル
 local rev_joy                   = {
@@ -4861,6 +4869,7 @@ local update_box_summary = function(p, box)
 		end
 
 		if box.atk then
+			--[[
 			local memo = ""
 			memo = memo .. " nml=" .. (summary.normal_hit or "-")
 			memo = memo .. " dwn=" .. (summary.down_hit or "-")
@@ -4913,8 +4922,11 @@ local update_box_summary = function(p, box)
 				p.prj_rank,           -- 飛び道具の強さ
 				p.esaka_range         -- 詠酒範囲
 			)
+			]]
 		elseif box.type.type_check == type_ck_gd then
+			--[[
 			box.log_txt = string.format("block %6x %x", p.addr.base, box.id)
+			]]
 		end
 	end
 	return box
@@ -5264,6 +5276,7 @@ rbff2.startplugin = function()
 			act_frames                 = {},
 			act_frames2                = {},
 			act_frames_total           = 0,
+			last_frame_info_txt        = {},
 
 			muteki                     = {
 				act_frames  = {},
@@ -6324,10 +6337,8 @@ rbff2.startplugin = function()
 			name  = "スロット" .. i,
 		}
 	end
-
-	-- 調査用自動再生スロットの準備
-	local research_cmd = function()
-		local make_cmd    = function(joykp, ...)
+	local cmd_funcs    = {
+		make    = function(joykp, ...)
 			local joy = new_next_joy()
 			if ... then
 				for _, k in ipairs({ ... }) do
@@ -6335,167 +6346,8 @@ rbff2.startplugin = function()
 				end
 			end
 			return joy
-		end
-		local _1          = function(joykp) return make_cmd(joykp, "lt", "dn") end
-		local _1a         = function(joykp) return make_cmd(joykp, "lt", "dn", "a") end
-		local _1b         = function(joykp) return make_cmd(joykp, "lt", "dn", "b") end
-		local _1ab        = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "b") end
-		local _1c         = function(joykp) return make_cmd(joykp, "lt", "dn", "c") end
-		local _1ac        = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "c") end
-		local _1bc        = function(joykp) return make_cmd(joykp, "lt", "dn", "b", "c") end
-		local _1abc       = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "b", "c") end
-		local _1d         = function(joykp) return make_cmd(joykp, "lt", "dn", "d") end
-		local _1ad        = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "d") end
-		local _1bd        = function(joykp) return make_cmd(joykp, "lt", "dn", "b", "d") end
-		local _1abd       = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "b", "d") end
-		local _1cd        = function(joykp) return make_cmd(joykp, "lt", "dn", "c", "d") end
-		local _1acd       = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "c", "d") end
-		local _1bcd       = function(joykp) return make_cmd(joykp, "lt", "dn", "b", "c", "d") end
-		local _1abcd      = function(joykp) return make_cmd(joykp, "lt", "dn", "a", "b", "c", "d") end
-		local _2          = function(joykp) return make_cmd(joykp, "dn") end
-		local _2a         = function(joykp) return make_cmd(joykp, "dn", "a") end
-		local _2b         = function(joykp) return make_cmd(joykp, "dn", "b") end
-		local _2ab        = function(joykp) return make_cmd(joykp, "dn", "a", "b") end
-		local _2c         = function(joykp) return make_cmd(joykp, "dn", "c") end
-		local _2ac        = function(joykp) return make_cmd(joykp, "dn", "a", "c") end
-		local _2bc        = function(joykp) return make_cmd(joykp, "dn", "b", "c") end
-		local _2abc       = function(joykp) return make_cmd(joykp, "dn", "a", "b", "c") end
-		local _2d         = function(joykp) return make_cmd(joykp, "dn", "d") end
-		local _2ad        = function(joykp) return make_cmd(joykp, "dn", "a", "d") end
-		local _2bd        = function(joykp) return make_cmd(joykp, "dn", "b", "d") end
-		local _2abd       = function(joykp) return make_cmd(joykp, "dn", "a", "b", "d") end
-		local _2cd        = function(joykp) return make_cmd(joykp, "dn", "c", "d") end
-		local _2acd       = function(joykp) return make_cmd(joykp, "dn", "a", "c", "d") end
-		local _2bcd       = function(joykp) return make_cmd(joykp, "dn", "b", "c", "d") end
-		local _2abcd      = function(joykp) return make_cmd(joykp, "dn", "a", "b", "c", "d") end
-		local _3          = function(joykp) return make_cmd(joykp, "rt", "dn") end
-		local _3a         = function(joykp) return make_cmd(joykp, "rt", "dn", "a") end
-		local _3b         = function(joykp) return make_cmd(joykp, "rt", "dn", "b") end
-		local _3ab        = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "b") end
-		local _3c         = function(joykp) return make_cmd(joykp, "rt", "dn", "c") end
-		local _3ac        = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "c") end
-		local _3bc        = function(joykp) return make_cmd(joykp, "rt", "dn", "b", "c") end
-		local _3abc       = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "b", "c") end
-		local _3d         = function(joykp) return make_cmd(joykp, "rt", "dn", "d") end
-		local _3ad        = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "d") end
-		local _3bd        = function(joykp) return make_cmd(joykp, "rt", "dn", "b", "d") end
-		local _3abd       = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "b", "d") end
-		local _3cd        = function(joykp) return make_cmd(joykp, "rt", "dn", "c", "d") end
-		local _3acd       = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "c", "d") end
-		local _3bcd       = function(joykp) return make_cmd(joykp, "rt", "dn", "b", "c", "d") end
-		local _3abcd      = function(joykp) return make_cmd(joykp, "rt", "dn", "a", "b", "c", "d") end
-		local _4          = function(joykp) return make_cmd(joykp, "lt") end
-		local _4a         = function(joykp) return make_cmd(joykp, "lt", "a") end
-		local _4b         = function(joykp) return make_cmd(joykp, "lt", "b") end
-		local _4ab        = function(joykp) return make_cmd(joykp, "lt", "a", "b") end
-		local _4c         = function(joykp) return make_cmd(joykp, "lt", "c") end
-		local _4ac        = function(joykp) return make_cmd(joykp, "lt", "a", "c") end
-		local _4bc        = function(joykp) return make_cmd(joykp, "lt", "b", "c") end
-		local _4abc       = function(joykp) return make_cmd(joykp, "lt", "a", "b", "c") end
-		local _4d         = function(joykp) return make_cmd(joykp, "lt", "d") end
-		local _4ad        = function(joykp) return make_cmd(joykp, "lt", "a", "d") end
-		local _4bd        = function(joykp) return make_cmd(joykp, "lt", "b", "d") end
-		local _4abd       = function(joykp) return make_cmd(joykp, "lt", "a", "b", "d") end
-		local _4cd        = function(joykp) return make_cmd(joykp, "lt", "c", "d") end
-		local _4acd       = function(joykp) return make_cmd(joykp, "lt", "a", "c", "d") end
-		local _4bcd       = function(joykp) return make_cmd(joykp, "lt", "b", "c", "d") end
-		local _4abcd      = function(joykp) return make_cmd(joykp, "lt", "a", "b", "c", "d") end
-		local _5          = function(joykp) return make_cmd(joykp) end
-		local _5a         = function(joykp) return make_cmd(joykp, "a") end
-		local _5b         = function(joykp) return make_cmd(joykp, "b") end
-		local _5ab        = function(joykp) return make_cmd(joykp, "a", "b") end
-		local _5c         = function(joykp) return make_cmd(joykp, "c") end
-		local _5ac        = function(joykp) return make_cmd(joykp, "a", "c") end
-		local _5bc        = function(joykp) return make_cmd(joykp, "b", "c") end
-		local _5abc       = function(joykp) return make_cmd(joykp, "a", "b", "c") end
-		local _5d         = function(joykp) return make_cmd(joykp, "d") end
-		local _5ad        = function(joykp) return make_cmd(joykp, "a", "d") end
-		local _5bd        = function(joykp) return make_cmd(joykp, "b", "d") end
-		local _5abd       = function(joykp) return make_cmd(joykp, "a", "b", "d") end
-		local _5cd        = function(joykp) return make_cmd(joykp, "c", "d") end
-		local _5acd       = function(joykp) return make_cmd(joykp, "a", "c", "d") end
-		local _5bcd       = function(joykp) return make_cmd(joykp, "b", "c", "d") end
-		local _5abcd      = function(joykp) return make_cmd(joykp, "a", "b", "c", "d") end
-		local _a          = _5a
-		local _b          = _5b
-		local _ab         = _5ab
-		local _c          = _5c
-		local _ac         = _5ac
-		local _bc         = _5bc
-		local _abc        = _5abc
-		local _d          = _5d
-		local _ad         = _5ad
-		local _bd         = _5bd
-		local _abd        = _5abd
-		local _cd         = _5cd
-		local _acd        = _5acd
-		local _bcd        = _5bcd
-		local _abcd       = _5abcd
-		local _6          = function(joykp) return make_cmd(joykp, "rt") end
-		local _6a         = function(joykp) return make_cmd(joykp, "rt", "a") end
-		local _6b         = function(joykp) return make_cmd(joykp, "rt", "b") end
-		local _6ab        = function(joykp) return make_cmd(joykp, "rt", "a", "b") end
-		local _6c         = function(joykp) return make_cmd(joykp, "rt", "c") end
-		local _6ac        = function(joykp) return make_cmd(joykp, "rt", "a", "c") end
-		local _6bc        = function(joykp) return make_cmd(joykp, "rt", "b", "c") end
-		local _6abc       = function(joykp) return make_cmd(joykp, "rt", "a", "b", "c") end
-		local _6d         = function(joykp) return make_cmd(joykp, "rt", "d") end
-		local _6ad        = function(joykp) return make_cmd(joykp, "rt", "a", "d") end
-		local _6bd        = function(joykp) return make_cmd(joykp, "rt", "b", "d") end
-		local _6abd       = function(joykp) return make_cmd(joykp, "rt", "a", "b", "d") end
-		local _6cd        = function(joykp) return make_cmd(joykp, "rt", "c", "d") end
-		local _6acd       = function(joykp) return make_cmd(joykp, "rt", "a", "c", "d") end
-		local _6bcd       = function(joykp) return make_cmd(joykp, "rt", "b", "c", "d") end
-		local _6abcd      = function(joykp) return make_cmd(joykp, "rt", "a", "b", "c", "d") end
-		local _7          = function(joykp) return make_cmd(joykp, "lt", "up") end
-		local _7a         = function(joykp) return make_cmd(joykp, "lt", "up", "a") end
-		local _7b         = function(joykp) return make_cmd(joykp, "lt", "up", "b") end
-		local _7ab        = function(joykp) return make_cmd(joykp, "lt", "up", "a", "b") end
-		local _7c         = function(joykp) return make_cmd(joykp, "lt", "up", "c") end
-		local _7ac        = function(joykp) return make_cmd(joykp, "lt", "up", "a", "c") end
-		local _7bc        = function(joykp) return make_cmd(joykp, "lt", "up", "b", "c") end
-		local _7abc       = function(joykp) return make_cmd(joykp, "lt", "up", "a", "b", "c") end
-		local _7d         = function(joykp) return make_cmd(joykp, "lt", "up", "d") end
-		local _7ad        = function(joykp) return make_cmd(joykp, "lt", "up", "a", "d") end
-		local _7bd        = function(joykp) return make_cmd(joykp, "lt", "up", "b", "d") end
-		local _7abd       = function(joykp) return make_cmd(joykp, "lt", "up", "a", "b", "d") end
-		local _7cd        = function(joykp) return make_cmd(joykp, "lt", "up", "c", "d") end
-		local _7acd       = function(joykp) return make_cmd(joykp, "lt", "up", "a", "c", "d") end
-		local _7bcd       = function(joykp) return make_cmd(joykp, "lt", "up", "b", "c", "d") end
-		local _7abcd      = function(joykp) return make_cmd(joykp, "lt", "up", "a", "b", "c", "d") end
-		local _8          = function(joykp) return make_cmd(joykp, "up") end
-		local _8a         = function(joykp) return make_cmd(joykp, "up", "a") end
-		local _8b         = function(joykp) return make_cmd(joykp, "up", "b") end
-		local _8ab        = function(joykp) return make_cmd(joykp, "up", "a", "b") end
-		local _8c         = function(joykp) return make_cmd(joykp, "up", "c") end
-		local _8ac        = function(joykp) return make_cmd(joykp, "up", "a", "c") end
-		local _8bc        = function(joykp) return make_cmd(joykp, "up", "b", "c") end
-		local _8abc       = function(joykp) return make_cmd(joykp, "up", "a", "b", "c") end
-		local _8d         = function(joykp) return make_cmd(joykp, "up", "d") end
-		local _8ad        = function(joykp) return make_cmd(joykp, "up", "a", "d") end
-		local _8bd        = function(joykp) return make_cmd(joykp, "up", "b", "d") end
-		local _8abd       = function(joykp) return make_cmd(joykp, "up", "a", "b", "d") end
-		local _8cd        = function(joykp) return make_cmd(joykp, "up", "c", "d") end
-		local _8acd       = function(joykp) return make_cmd(joykp, "up", "a", "c", "d") end
-		local _8bcd       = function(joykp) return make_cmd(joykp, "up", "b", "c", "d") end
-		local _8abcd      = function(joykp) return make_cmd(joykp, "up", "a", "b", "c", "d") end
-		local _9          = function(joykp) return make_cmd(joykp, "rt", "up") end
-		local _9a         = function(joykp) return make_cmd(joykp, "rt", "up", "a") end
-		local _9b         = function(joykp) return make_cmd(joykp, "rt", "up", "b") end
-		local _9ab        = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b") end
-		local _9c         = function(joykp) return make_cmd(joykp, "rt", "up", "c") end
-		local _9ac        = function(joykp) return make_cmd(joykp, "rt", "up", "a", "c") end
-		local _9bc        = function(joykp) return make_cmd(joykp, "rt", "up", "b", "c") end
-		local _9abc       = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b", "c") end
-		local _9d         = function(joykp) return make_cmd(joykp, "rt", "up", "d") end
-		local _9ad        = function(joykp) return make_cmd(joykp, "rt", "up", "a", "d") end
-		local _9bd        = function(joykp) return make_cmd(joykp, "rt", "up", "b", "d") end
-		local _9abd       = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b", "d") end
-		local _9cd        = function(joykp) return make_cmd(joykp, "rt", "up", "c", "d") end
-		local _9acd       = function(joykp) return make_cmd(joykp, "rt", "up", "a", "c", "d") end
-		local _9bcd       = function(joykp) return make_cmd(joykp, "rt", "up", "b", "c", "d") end
-		local _9abcd      = function(joykp) return make_cmd(joykp, "rt", "up", "a", "b", "c", "d") end
-		local extract_cmd = function(joyk, cmd_ary)
+		end,
+		extract = function(joyk, cmd_ary)
 			if not cmd_ary then
 				return {}
 			end
@@ -6512,33 +6364,189 @@ rbff2.startplugin = function()
 				end
 			end
 			return ret
-		end
-		local merge_cmd   = function(cmd_ary1, cmd_ary2)
-			local keys1, keys2 = extract_cmd(joyk.p1, cmd_ary1), extract_cmd(joyk.p2, cmd_ary2)
-			local ret, max = {}, math.max(#keys1, #keys2)
-			for i = 1, max do
-				local joy = new_next_joy()
-				for _, key in ipairs({ keys1[i] or {}, keys2[i] or {} }) do
-					for k, v in pairs(key) do
-						if v then
-							joy[k] = v
-						end
+		end,
+	}
+	cmd_funcs.merge    = function(cmd_ary1, cmd_ary2)
+		local keys1, keys2 = cmd_funcs.extract(joyk.p1, cmd_ary1), cmd_funcs.extract(joyk.p2, cmd_ary2)
+		local ret, max = {}, math.max(#keys1, #keys2)
+		for i = 1, max do
+			local joy = new_next_joy()
+			for _, key in ipairs({ keys1[i] or {}, keys2[i] or {} }) do
+				for k, v in pairs(key) do
+					if v then
+						joy[k] = v
 					end
 				end
-				table.insert(ret, joy)
 			end
-			return ret
+			table.insert(ret, joy)
 		end
-		local rec1        = {}
-		local rec2        = {}
-		local rec3        = {}
-		local rec4        = {}
-		local rec5        = {}
-		local rec6        = {}
-		local rec7        = {}
-		local rec8        = {}
+		return ret
+	end
+
+	-- 調査用自動再生スロットの準備
+	local research_cmd = function()
+		local _1     = function(joykp) return cmd_funcs.make(joykp, "lt", "dn") end
+		local _1a    = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "a") end
+		local _1b    = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "b") end
+		local _1ab   = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "a", "b") end
+		local _1c    = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "c") end
+		local _1ac   = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "a", "c") end
+		local _1bc   = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "b", "c") end
+		local _1abc  = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "a", "b", "c") end
+		local _1d    = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "d") end
+		local _1ad   = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "a", "d") end
+		local _1bd   = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "b", "d") end
+		local _1abd  = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "a", "b", "d") end
+		local _1cd   = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "c", "d") end
+		local _1acd  = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "a", "c", "d") end
+		local _1bcd  = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "b", "c", "d") end
+		local _1abcd = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "a", "b", "c", "d") end
+		local _2     = function(joykp) return cmd_funcs.make(joykp, "dn") end
+		local _2a    = function(joykp) return cmd_funcs.make(joykp, "dn", "a") end
+		local _2b    = function(joykp) return cmd_funcs.make(joykp, "dn", "b") end
+		local _2ab   = function(joykp) return cmd_funcs.make(joykp, "dn", "a", "b") end
+		local _2c    = function(joykp) return cmd_funcs.make(joykp, "dn", "c") end
+		local _2ac   = function(joykp) return cmd_funcs.make(joykp, "dn", "a", "c") end
+		local _2bc   = function(joykp) return cmd_funcs.make(joykp, "dn", "b", "c") end
+		local _2abc  = function(joykp) return cmd_funcs.make(joykp, "dn", "a", "b", "c") end
+		local _2d    = function(joykp) return cmd_funcs.make(joykp, "dn", "d") end
+		local _2ad   = function(joykp) return cmd_funcs.make(joykp, "dn", "a", "d") end
+		local _2bd   = function(joykp) return cmd_funcs.make(joykp, "dn", "b", "d") end
+		local _2abd  = function(joykp) return cmd_funcs.make(joykp, "dn", "a", "b", "d") end
+		local _2cd   = function(joykp) return cmd_funcs.make(joykp, "dn", "c", "d") end
+		local _2acd  = function(joykp) return cmd_funcs.make(joykp, "dn", "a", "c", "d") end
+		local _2bcd  = function(joykp) return cmd_funcs.make(joykp, "dn", "b", "c", "d") end
+		local _2abcd = function(joykp) return cmd_funcs.make(joykp, "dn", "a", "b", "c", "d") end
+		local _3     = function(joykp) return cmd_funcs.make(joykp, "rt", "dn") end
+		local _3a    = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "a") end
+		local _3b    = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "b") end
+		local _3ab   = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "a", "b") end
+		local _3c    = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "c") end
+		local _3ac   = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "a", "c") end
+		local _3bc   = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "b", "c") end
+		local _3abc  = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "a", "b", "c") end
+		local _3d    = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "d") end
+		local _3ad   = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "a", "d") end
+		local _3bd   = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "b", "d") end
+		local _3abd  = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "a", "b", "d") end
+		local _3cd   = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "c", "d") end
+		local _3acd  = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "a", "c", "d") end
+		local _3bcd  = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "b", "c", "d") end
+		local _3abcd = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "a", "b", "c", "d") end
+		local _4     = function(joykp) return cmd_funcs.make(joykp, "lt") end
+		local _4a    = function(joykp) return cmd_funcs.make(joykp, "lt", "a") end
+		local _4b    = function(joykp) return cmd_funcs.make(joykp, "lt", "b") end
+		local _4ab   = function(joykp) return cmd_funcs.make(joykp, "lt", "a", "b") end
+		local _4c    = function(joykp) return cmd_funcs.make(joykp, "lt", "c") end
+		local _4ac   = function(joykp) return cmd_funcs.make(joykp, "lt", "a", "c") end
+		local _4bc   = function(joykp) return cmd_funcs.make(joykp, "lt", "b", "c") end
+		local _4abc  = function(joykp) return cmd_funcs.make(joykp, "lt", "a", "b", "c") end
+		local _4d    = function(joykp) return cmd_funcs.make(joykp, "lt", "d") end
+		local _4ad   = function(joykp) return cmd_funcs.make(joykp, "lt", "a", "d") end
+		local _4bd   = function(joykp) return cmd_funcs.make(joykp, "lt", "b", "d") end
+		local _4abd  = function(joykp) return cmd_funcs.make(joykp, "lt", "a", "b", "d") end
+		local _4cd   = function(joykp) return cmd_funcs.make(joykp, "lt", "c", "d") end
+		local _4acd  = function(joykp) return cmd_funcs.make(joykp, "lt", "a", "c", "d") end
+		local _4bcd  = function(joykp) return cmd_funcs.make(joykp, "lt", "b", "c", "d") end
+		local _4abcd = function(joykp) return cmd_funcs.make(joykp, "lt", "a", "b", "c", "d") end
+		local _5     = function(joykp) return cmd_funcs.make(joykp) end
+		local _5a    = function(joykp) return cmd_funcs.make(joykp, "a") end
+		local _5b    = function(joykp) return cmd_funcs.make(joykp, "b") end
+		local _5ab   = function(joykp) return cmd_funcs.make(joykp, "a", "b") end
+		local _5c    = function(joykp) return cmd_funcs.make(joykp, "c") end
+		local _5ac   = function(joykp) return cmd_funcs.make(joykp, "a", "c") end
+		local _5bc   = function(joykp) return cmd_funcs.make(joykp, "b", "c") end
+		local _5abc  = function(joykp) return cmd_funcs.make(joykp, "a", "b", "c") end
+		local _5d    = function(joykp) return cmd_funcs.make(joykp, "d") end
+		local _5ad   = function(joykp) return cmd_funcs.make(joykp, "a", "d") end
+		local _5bd   = function(joykp) return cmd_funcs.make(joykp, "b", "d") end
+		local _5abd  = function(joykp) return cmd_funcs.make(joykp, "a", "b", "d") end
+		local _5cd   = function(joykp) return cmd_funcs.make(joykp, "c", "d") end
+		local _5acd  = function(joykp) return cmd_funcs.make(joykp, "a", "c", "d") end
+		local _5bcd  = function(joykp) return cmd_funcs.make(joykp, "b", "c", "d") end
+		local _5abcd = function(joykp) return cmd_funcs.make(joykp, "a", "b", "c", "d") end
+		local _a     = _5a
+		local _b     = _5b
+		local _ab    = _5ab
+		local _c     = _5c
+		local _ac    = _5ac
+		local _bc    = _5bc
+		local _abc   = _5abc
+		local _d     = _5d
+		local _ad    = _5ad
+		local _bd    = _5bd
+		local _abd   = _5abd
+		local _cd    = _5cd
+		local _acd   = _5acd
+		local _bcd   = _5bcd
+		local _abcd  = _5abcd
+		local _6     = function(joykp) return cmd_funcs.make(joykp, "rt") end
+		local _6a    = function(joykp) return cmd_funcs.make(joykp, "rt", "a") end
+		local _6b    = function(joykp) return cmd_funcs.make(joykp, "rt", "b") end
+		local _6ab   = function(joykp) return cmd_funcs.make(joykp, "rt", "a", "b") end
+		local _6c    = function(joykp) return cmd_funcs.make(joykp, "rt", "c") end
+		local _6ac   = function(joykp) return cmd_funcs.make(joykp, "rt", "a", "c") end
+		local _6bc   = function(joykp) return cmd_funcs.make(joykp, "rt", "b", "c") end
+		local _6abc  = function(joykp) return cmd_funcs.make(joykp, "rt", "a", "b", "c") end
+		local _6d    = function(joykp) return cmd_funcs.make(joykp, "rt", "d") end
+		local _6ad   = function(joykp) return cmd_funcs.make(joykp, "rt", "a", "d") end
+		local _6bd   = function(joykp) return cmd_funcs.make(joykp, "rt", "b", "d") end
+		local _6abd  = function(joykp) return cmd_funcs.make(joykp, "rt", "a", "b", "d") end
+		local _6cd   = function(joykp) return cmd_funcs.make(joykp, "rt", "c", "d") end
+		local _6acd  = function(joykp) return cmd_funcs.make(joykp, "rt", "a", "c", "d") end
+		local _6bcd  = function(joykp) return cmd_funcs.make(joykp, "rt", "b", "c", "d") end
+		local _6abcd = function(joykp) return cmd_funcs.make(joykp, "rt", "a", "b", "c", "d") end
+		local _7     = function(joykp) return cmd_funcs.make(joykp, "lt", "up") end
+		local _7a    = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "a") end
+		local _7b    = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "b") end
+		local _7ab   = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "a", "b") end
+		local _7c    = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "c") end
+		local _7ac   = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "a", "c") end
+		local _7bc   = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "b", "c") end
+		local _7abc  = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "a", "b", "c") end
+		local _7d    = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "d") end
+		local _7ad   = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "a", "d") end
+		local _7bd   = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "b", "d") end
+		local _7abd  = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "a", "b", "d") end
+		local _7cd   = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "c", "d") end
+		local _7acd  = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "a", "c", "d") end
+		local _7bcd  = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "b", "c", "d") end
+		local _7abcd = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "a", "b", "c", "d") end
+		local _8     = function(joykp) return cmd_funcs.make(joykp, "up") end
+		local _8a    = function(joykp) return cmd_funcs.make(joykp, "up", "a") end
+		local _8b    = function(joykp) return cmd_funcs.make(joykp, "up", "b") end
+		local _8ab   = function(joykp) return cmd_funcs.make(joykp, "up", "a", "b") end
+		local _8c    = function(joykp) return cmd_funcs.make(joykp, "up", "c") end
+		local _8ac   = function(joykp) return cmd_funcs.make(joykp, "up", "a", "c") end
+		local _8bc   = function(joykp) return cmd_funcs.make(joykp, "up", "b", "c") end
+		local _8abc  = function(joykp) return cmd_funcs.make(joykp, "up", "a", "b", "c") end
+		local _8d    = function(joykp) return cmd_funcs.make(joykp, "up", "d") end
+		local _8ad   = function(joykp) return cmd_funcs.make(joykp, "up", "a", "d") end
+		local _8bd   = function(joykp) return cmd_funcs.make(joykp, "up", "b", "d") end
+		local _8abd  = function(joykp) return cmd_funcs.make(joykp, "up", "a", "b", "d") end
+		local _8cd   = function(joykp) return cmd_funcs.make(joykp, "up", "c", "d") end
+		local _8acd  = function(joykp) return cmd_funcs.make(joykp, "up", "a", "c", "d") end
+		local _8bcd  = function(joykp) return cmd_funcs.make(joykp, "up", "b", "c", "d") end
+		local _8abcd = function(joykp) return cmd_funcs.make(joykp, "up", "a", "b", "c", "d") end
+		local _9     = function(joykp) return cmd_funcs.make(joykp, "rt", "up") end
+		local _9a    = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "a") end
+		local _9b    = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "b") end
+		local _9ab   = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "a", "b") end
+		local _9c    = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "c") end
+		local _9ac   = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "a", "c") end
+		local _9bc   = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "b", "c") end
+		local _9abc  = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "a", "b", "c") end
+		local _9d    = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "d") end
+		local _9ad   = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "a", "d") end
+		local _9bd   = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "b", "d") end
+		local _9abd  = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "a", "b", "d") end
+		local _9cd   = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "c", "d") end
+		local _9acd  = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "a", "c", "d") end
+		local _9bcd  = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "b", "c", "d") end
+		local _9abcd = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "a", "b", "c", "d") end
+		local ret    = new_filled_table(8, {})
 		--[[
-		rec1 = merge_cmd( -- ボブ対クラウザー100% ラグがでると落ちる
+		ret[1] = cmd_funcs.merge( -- ボブ対クラウザー100% ラグがでると落ちる
 			{
 				_4, 4, _5, 4, _4, 6, _7, 17, _5, 8, _5a, 7, _5c, 12, _4, 30, _5c, 3, _5, 5, _5c, 5, _5, 47, _5a, 5, _5b, 5, _5, 25, _1c, 5, _5, 20, _2bc, 4, _5, 2, _2, 5, _3, 5, _6, 5, _5b, 5, _4, 2,
 				_5, 64, _2, 5, _3, 5, _6, 5, _5b, 5,
@@ -6551,33 +6559,33 @@ rbff2.startplugin = function()
 		)
 		]]
 		--[[
-		rec1 = merge_cmd( -- 対ビリー 自動ガード+リバサ立A向けの炎の種馬相打ちコンボ
+		ret[1] = cmd_funcs.merge( -- 対ビリー 自動ガード+リバサ立A向けの炎の種馬相打ちコンボ
 			{ _4, 11, _2a, 7, _2, 1, _3, 2, _6, 7, _6a, 2, _5, 38, _1a, 15, _5, 7, _6ac, 3, _5, 13, _1a, 6, _5, 16, _5c, 7, _5, 12, _5c, 5, _5, 12, _4, 3, _2, 3, _1c, 3, _5, 76, _4, 15, _5, 16, _2, 3, _5c, 2, _5, 1, },
 			{ _5, }
 		)
-		rec1 = merge_cmd( -- 対アンディ 自動ガード+リバサ立A向けの炎の種馬相打ちコンボ
+		ret[1] = cmd_funcs.merge( -- 対アンディ 自動ガード+リバサ立A向けの炎の種馬相打ちコンボ
 			{ _4, 11, _2a, 4, _2, 1, _3, 2, _6, 7, _6a, 2, _5, 40, _2a, 6, _2c, 5, _5, 5, _6ac, 3, _5, 28, _1a, 6, _5, 16, _5c, 7, _5, 20, _5c, 5, _5, 23, _4, 6, _2, 4, _1c, 3, _5, 68, _5b, 3, _5, 4, _5b, 4, _5, 33, _2, 3, _5c, 2, _5, 1, },
 			{ _5, }
 		)
-		rec1 = merge_cmd( -- 対ギース 自動ガード+リバサ下A向けの炎の種馬相打ちコンボ
+		ret[1] = cmd_funcs.merge( -- 対ギース 自動ガード+リバサ下A向けの炎の種馬相打ちコンボ
 			{ _4, 11, _2a, 4, _2, 1, _3, 2, _6, 7, _6a, 2, _5, 38, _2b, 6, _2c, 5, _5, 9, _6ac, 3, _5, 28, _1a, 6, _5, 16, _5c, 7, _5, 15, _5c, 5, _5, 15, _4, 6, _2, 4, _1c, 3, _5, 76, _4, 15, _5, 16, _2, 3, _5c, 2, _5, 1, },
 			{ _5, }
 		)
 		]]
 		--[[
-		rec1 = merge_cmd(  -- ガード解除直前のNのあと2とNの繰り返しでガード硬直延長,をさらに投げる
+		ret[1] = cmd_funcs.merge(  -- ガード解除直前のNのあと2とNの繰り返しでガード硬直延長,をさらに投げる
 			{ _8, _5, 46, _6, 15, _5, 13, _4, _1, 5, _2, 2, _3, 4, _6, 6, _4c, 4, _c, 102, _5, 36, _c, 12, _5, _c, 11, _5, },
 			{ _5, }
 		)
 		]]
 
 		--[[
-		rec1 = merge_cmd(  -- ガード解除直前のNのあと2とNの繰り返しでガード硬直延長,をさらに投げる
+		ret[1] = cmd_funcs.merge(  -- ガード解除直前のNのあと2とNの繰り返しでガード硬直延長,をさらに投げる
 			{ _8, _5, 46, _1, 20, _2, 27, _5, 6, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1,
 			_5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1,},
 			{ _8, _5, 46, _2b, _5, 12, _2b, _5, 50, _4, _5, _4, _5, _7, 6, _7d, _5, 15, _c, _5, }
 		)
-		rec1 = merge_cmd(  -- ガード解除直前のNのあと2とNの繰り返しでガード硬直延長,をさらに投げる
+		ret[1] = cmd_funcs.merge(  -- ガード解除直前のNのあと2とNの繰り返しでガード硬直延長,をさらに投げる
 			{ _8, _5, 46, _1, 20, _2, 27, _5, 6, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1,
 			_5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1,},
 			{ _8, _5, 46, _2b, _5, 12, _2b, _5, 50, _4, _5, _4, _5, _7, 6, _7d, _5, 41, _c, _5, }
@@ -6585,77 +6593,77 @@ rbff2.startplugin = function()
 		]]
 		-- 真神足拳調査
 		--[[
-		rec8 = merge_cmd( --神足拳 ギリギリ遅らせ入力
+		ret[8] = cmd_funcs.merge( --神足拳 ギリギリ遅らせ入力
 			{ _8, _5, 46, _6, 17, _5, 17, _6, _5, 6, _a, _5, 2, _6, _5, },
 			{ }
 		)
 		]]
 
 		--[[
-		rec1 = merge_cmd(  -- ガード解除直前のNでガード硬直延長
+		ret[1] = cmd_funcs.merge(  -- ガード解除直前のNでガード硬直延長
 			{ _8, _5, 46, _1, 20, _2, 27, _5, },
 			{ _8, _5, 46, _2b, _5, 12, _2b, _5, }
 		)
-		rec1 = merge_cmd(  -- ガード解除直前のNのあと2とNの繰り返しでガード硬直延長,をさらに投げる
+		ret[1] = cmd_funcs.merge(  -- ガード解除直前のNのあと2とNの繰り返しでガード硬直延長,をさらに投げる
 			{ _8, _5, 46, _1, 20, _2, 27, _5, 6, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1,
 			_5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1,},
 			{ _8, _5, 46, _2b, _5, 12, _2b, _5, 42, _4, 20, _4c, _5, }
 		)
 
 		-- LINNさんネタの確認 ... リバサバクステキャンセルサイクロンで重ね飛燕失脚の迎撃
-		rec1 = merge_cmd( -- バクステ回避
+		ret[1] = cmd_funcs.merge( -- バクステ回避
 			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, },
 			{ _8, _5, 46, _2, 15, _2 , _5, 112, _8, _4, _2, _6, _5, _4, _5, _4, })
-		rec2 = merge_cmd( -- サイクロン成立
+		ret[2] = cmd_funcs.merge( -- サイクロン成立
 			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, },
 			{ _8, _5, 46, _2, 15, _2 , _5, 112, _8, _4, _2, _6, _5, _4, _5, _4, _5, 2, _5c, })
-		rec3 = merge_cmd( -- サイクロン成立
+		ret[3] = cmd_funcs.merge( -- サイクロン成立
 			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, },
 			{ _8, _5, 46, _2, 15, _2 , _5, 112, _8, _4, _2, _6, _5, _4, _5, _4, _5, 3, _5c, })
-		rec4 = merge_cmd( -- サイクロン成立
+		ret[4] = cmd_funcs.merge( -- サイクロン成立
 			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, },
 			{ _8, _5, 46, _2, 15, _2 , _5, 112, _8, _4, _2, _6, _5, _4, _5, _4, _5, 4, _c, })
-		rec5 = merge_cmd( -- サイクロン成立
+		ret[5] = cmd_funcs.merge( -- サイクロン成立
 			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, },
 			{ _8, _5, 46, _2, 15, _2 , _5, 112, _8, _4, _2, _6, _5, _4, _5, _4, _5, 5, _c, })
-		rec3 = merge_cmd( -- サイクロン不成立
+		ret[3] = cmd_funcs.merge( -- サイクロン不成立
 			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, },
 			{ _8, _5, 46, _2, 15, _2 , _5, 111, _8, _4, _2, _6, _5, _4, _5, _4, _5, 6, _c, })
-		rec4 = merge_cmd( -- サイクロン不成立
+		ret[4] = cmd_funcs.merge( -- サイクロン不成立
 			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, },
 			{ _8, _5, 46, _2, 15, _2 , _5, 110, _8, _4, _2, _6, _5, _4, _5, _4, _5, 7, _c, })
-		rec1 = merge_cmd( -- リバサバクステキャンセルアンリミ
+		ret[1] = cmd_funcs.merge( -- リバサバクステキャンセルアンリミ
 			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, },
 			{ _8, _5, 46, _2, 15, _2 , _5, 110, _6, _3, _2, _1, _4, _6, _5, _4, _5, _4, _5, 5, _a, })
-		rec1 = merge_cmd( -- リバササイクロンが飛燕失脚を投げられない状態でCがでて喰らう
+		ret[1] = cmd_funcs.merge( -- リバササイクロンが飛燕失脚を投げられない状態でCがでて喰らう
 			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, }, -- 通常投げ→飛燕失脚重ね
 			{ _8, _5, 46, _2, 15, _2 , _5, 112, _8, _4, _2, _6, _5, _4, _5, _4, _5, 1, _c, })
-		rec2 = merge_cmd( -- リバササイクロンが飛燕失脚を投げられない状態でバクステがでる
+		ret[2] = cmd_funcs.merge( -- リバササイクロンが飛燕失脚を投げられない状態でバクステがでる
 			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, }, -- 通常投げ→飛燕失脚重ね
 			{ _8, _5, 46, _2, 15, _2 , _5, 112, _8, _4, _2, _6, _5, _4, _5, _4, _5, 2, _c, })
-		rec3 = merge_cmd( -- リバサバクステキャンセルサイクロン
+		ret[3] = cmd_funcs.merge( -- リバサバクステキャンセルサイクロン
 			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, }, -- 通常投げ→飛燕失脚重ね
 			{ _8, _5, 46, _2, 15, _2 , _5, 112, _8, _4, _2, _6, _5, _4, _5, _4, _5, 3, _c, })
-		rec4 = merge_cmd( -- リバサバクステキャンセルサイクロン
+		ret[4] = cmd_funcs.merge( -- リバサバクステキャンセルサイクロン
 			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, }, -- 通常投げ→飛燕失脚重ね
 			{ _8, _5, 46, _2, 15, _2 , _5, 112, _8, _4, _2, _6, _5, _4, _5, _4, _5, 4, _c, })
-		rec5 = merge_cmd( -- リバサバクステキャンセルサイクロン
+		ret[5] = cmd_funcs.merge( -- リバサバクステキャンセルサイクロン
 			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, }, -- 通常投げ→飛燕失脚重ね
 			{ _8, _5, 46, _2, 15, _2 , _5, 112, _8, _4, _2, _6, _5, _4, _5, _4, _5, 5, _c, })
-		rec1 = merge_cmd( -- ガー不飛燕失脚 リバサバクステキャンセルサイクロン
+		ret[1] = cmd_funcs.merge( -- ガー不飛燕失脚 リバサバクステキャンセルサイクロン
 			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, }, -- 通常投げ→飛燕失脚重ね
 			{ _8, _5, 46, _2, 15, _2 , _5, 112, _8, _4, _2, _6, _5, _4, _5, _4, _5, 6, _5c, })
-		rec2 = merge_cmd( -- ガー不ジャンプB リバサバクステキャンセルレイブ
+		ret[2] = cmd_funcs.merge( -- ガー不ジャンプB リバサバクステキャンセルレイブ
 			{ _8, _5, 46, _2a, _5, 5, _2c, _5, 15, _6, _5, _4, _1, _2, _3, _bc, _5, 155, _9, _5, 29, _b, _1, 81, _5, },
 			{ _8, _5, 46, _2, 15, _2 , _5, 191, _4, _1, _2, _3, _6, _4, _5, _6, _5, _6, _5, 4, _a, })
-		rec2 = merge_cmd( -- ガー不ジャンプB リバサバクステキャンセルレイブ
+		ret[2] = cmd_funcs.merge( -- ガー不ジャンプB リバサバクステキャンセルレイブ
 			{ _8, _5, 46, _2a, _5, 5, _2c, _5, 15, _6, _5, _4, _1, _2, _3, _bc, _5, 155, _9, _5, 29, _b, _1, 81, _1, 289, _6, _5, _4, _1, _2, _3, _5, _4, _5, _4, _5, 3, _bc, _5, 178, _4, 23, _5, 26, _cd, _5, 51, _2, _1, _4, _5, _4, _5, _4, 3, _c, _5, 40, _cd, _5 },
 			{ _8, _5, 46, _2, 15, _2 , _5, 191, _4, _1, _2, _3, _6, _4, _5, _6, _5, _6, _5, 4, _a, _5, 340, _4a, _5, 270, _6, _2, _3, _6, _c, _5, 76, _cd, _5  })
-		rec3 = merge_cmd( -- ガー不ジャンプB リバサバクステキャンセル真空投げ
+		ret[3] = cmd_funcs.merge( -- ガー不ジャンプB リバサバクステキャンセル真空投げ
 			{ _8, _5, 46, _2a, _5, 5, _2c, _5, 15, _6, _5, _4, _1, _2, _3, _bc, _5, 155, _9, _5, 29, _b, _1, 81, _5, },
 			{ _8, _5, 46, _2, 15, _2 , _5, 191, _2, _4, _8, _6, _2, _4, _5, _6, _5, _6, _5, 4, _5a, })
 		]]
-		return { rec1, rec2, rec3, rec4, rec5, rec6, rec7, rec8 }
+		return ret
 	end
 	for i, preset_cmd in ipairs(research_cmd()) do
 		local store = recording.slot[i].store
@@ -6854,41 +6862,51 @@ rbff2.startplugin = function()
 
 				-- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
 				if global.replay_reset == 2 or (global.replay_reset == 3 and i == 3) or (global.replay_reset == 4 and i == 4) then
-					pgm:write_u8(p.addr.sway_status, 0x00) --fixpos.fixsway[i])
-					--pgm:write_u32(p.addr.base, 0x000261A0) -- 素立ち処理
-					pgm:write_u32(p.addr.base, 0x00058D5A) -- やられからの復帰処理
-
-					pgm:write_u8(p.addr.base + 0xC0, 0x80)
-					pgm:write_u8(p.addr.base + 0xC2, 0x00)
-					pgm:write_u8(p.addr.base + 0xFC, 0x00)
-					pgm:write_u8(p.addr.base + 0xFD, 0x00)
-
-					pgm:write_u8(p.addr.base + 0x61, 0x01)
-					pgm:write_u8(p.addr.base + 0x63, 0x02)
-					pgm:write_u8(p.addr.base + 0x65, 0x02)
-
-					pgm:write_i16(p.addr.pos_y, 0x00)
-					pgm:write_i16(p.addr.pos_z, 0x18)
-
-					pgm:write_u32(p.addr.base + 0x28, 0x00)
-					pgm:write_u32(p.addr.base + 0x48, 0x00)
-					pgm:write_u32(p.addr.base + 0xDA, 0x00)
-					pgm:write_u32(p.addr.base + 0xDE, 0x00)
-					pgm:write_u32(p.addr.base + 0x34, 0x00)
-					pgm:write_u32(p.addr.base + 0x38, 0x00)
-					pgm:write_u32(p.addr.base + 0x3C, 0x00)
-					pgm:write_u32(p.addr.base + 0x4C, 0x00)
-					pgm:write_u32(p.addr.base + 0x50, 0x00)
-					pgm:write_u32(p.addr.base + 0x44, 0x00)
-
-					pgm:write_u16(p.addr.base + 0x60, 0x01)
-					pgm:write_u16(p.addr.base + 0x64, 0xFFFF)
-					pgm:write_u8(p.addr.base + 0x66, 0x00)
-					pgm:write_u16(p.addr.base + 0x6E, 0x00)
-					pgm:write_u8(p.addr.base + 0x6A, 0x00)
-					pgm:write_u8(p.addr.base + 0x7E, 0x00)
-					pgm:write_u8(p.addr.base + 0xB0, 0x00)
-					pgm:write_u8(p.addr.base + 0xB1, 0x00)
+					local resets = {
+						[mem.w16i] = {
+							[p.addr.pos_y] = 0x00,
+							[p.addr.pos_z] = 0x18,
+						},
+						[mem.w16] = {
+							[0x60] = 0x01,
+							[0x64] = 0xFFFF,
+							[0x6E] = 0x00,
+						},
+						[mem.w32] = {
+							--[p.addr.base] = 0x000261A0, -- 素立ち処理
+							[p.addr.base] = 0x00058D5A, -- やられからの復帰処理
+							[0x28] = 0x00,
+							[0x34] = 0x00,
+							[0x38] = 0x00,
+							[0x3C] = 0x00,
+							[0x44] = 0x00,
+							[0x48] = 0x00,
+							[0x4C] = 0x00,
+							[0x50] = 0x00,
+							[0xDA] = 0x00,
+							[0xDE] = 0x00,
+						},
+						[mem.w8] = {
+							[0x61] = 0x01,
+							[0x63] = 0x02,
+							[0x65] = 0x02,
+							[0x66] = 0x00,
+							[0x6A] = 0x00,
+							[0x7E] = 0x00,
+							[0xB0] = 0x00,
+							[0xB1] = 0x00,
+							[0xC0] = 0x80,
+							[0xC2] = 0x00,
+							[0xFC] = 0x00,
+							[0xFD] = 0x00,
+							[p.addr.sway_status] = 0x00,
+						},
+					}
+					for fnc, tbl in pairs(resets) do
+						for addr, value in pairs(tbl) do
+							fnc(addr, value)
+						end
+					end
 
 					do_recover(p, op, true)
 
@@ -7530,31 +7548,6 @@ rbff2.startplugin = function()
 		end)
 		return summary
 	end
-	local faint_cancels = {
-		{ { name = "フ", f = 18 }, },                  -- テリー
-		{ { name = "フ", f = 18 }, },                  -- アンディ
-		{ { name = "フ", f = 18 }, },                  -- 東
-		{ { name = "フ", f = 18 }, },                  -- 舞
-		{ { name = "フ", f = 19 }, },                  -- ギース
-		{ { name = "フ", f = 18 }, },                  -- 双角
-		{ { name = "フ", f = 19 }, },                  -- ボブ
-		{ { name = "フ", f = 16 }, },                  -- ホンフゥ
-		{ { name = "フ", f = 41 }, },                  -- マリー
-		{ { name = "フ", f = 15 }, },                  -- フランコ
-		{ { name = "フ", f = 18 }, { name = "中蛇", f = 9, } }, -- 山崎
-		{ { name = "フ", f = 57 }, { name = "真眼", f = 47, } }, -- 崇秀
-		{ { name = "フ", f = 27 }, { name = "龍転", f = 25, } }, -- 崇雷
-		{ { name = "フ", f = 47 }, },                  -- ダック
-		{ { name = "フ", f = 19 }, { name = "覇気", f = 28, } }, -- キム
-		{ { name = "フ", f = 42 }, },                  -- ビリー
-		{ { name = "フ", f = 23 }, { name = "軟体", f = 20, } }, -- チン
-		{ { name = "フ", f = 19 }, },                  -- タン
-		{},                                             -- ローレンス
-		{ { name = "フ", f = 17 }, },                  -- クラウザー
-		{ { name = "フ", f = 18 }, },                  -- リック
-		{ { name = "フ", f = 22 }, },                  -- シャンフェイ
-		{ { name = "フ", f = 13 }, },                  -- アルフレッド
-	}
 	local check_edge = function(edge)
 		if edge.front and edge.top and edge.bottom and edge.back then
 			return true
@@ -7680,8 +7673,8 @@ rbff2.startplugin = function()
 		-- キャンセル可否
 		local cancel_label, cancel_advs_label, cancel_advs = "連×/必×", "", {}
 		if p.flag_c8 == 0 and p.cancelable and p.cancelable ~= 0 then
-			if faint_cancels[p.char] and p.attack_id then
-				for _, fc in ipairs(faint_cancels[p.char]) do
+			if p.char_data.faint_cancel and p.attack_id then
+				for _, fc in ipairs(p.char_data.faint_cancel) do
 					local p1  = 1 + p.hitstop + fc.f
 					local p2h = p.hitstop + p.hitstun
 					local p2g = p.hitstop_gd + p.blockstun
@@ -7908,12 +7901,12 @@ rbff2.startplugin = function()
 				summary.edge.hurt.bottom + p.pos_y,
 				summary.edge.hurt.back)
 		end
-		local normal, otg, juggle, high, low, highg, lowg, airg = 0, 0, 0, 0, 0, 0, 0, 0
+		local box_cnts = new_tbl_0(box_type_base.v1, box_type_base.v2, box_type_base.v3, box_type_base.v4,
+			box_type_base.v6, box_type_base.x1, box_type_base.g1, box_type_base.g2, box_type_base.g3)
 		local push_label = "なし"
 		summary.hurt_boxes = summary.hurt_boxes or {}
 		for _, box in ipairs(p.hitboxes) do
 			if not box.atk then
-				local type_label = nil
 				if box.type == box_type_base.p then
 					push_label = string.format("前%s/上%s(%s)/下%s(%s)/後%s",
 						box.reach.front,
@@ -7922,35 +7915,10 @@ rbff2.startplugin = function()
 						box.reach.bottom + p.pos_y,
 						box.reach.bottom,
 						box.reach.back)
-				elseif box.type == box_type_base.v1 or box.type == box_type_base.v2 then
-					normal = normal + 1
-					type_label = normal .. " やられ範囲:"
-				elseif box.type == box_type_base.v3 then
-					otg = otg + 1
-					type_label = otg .. " ダウン追撃:"
-				elseif box.type == box_type_base.v4 then
-					juggle = juggle + 1
-					type_label = juggle .. " 空中追撃:"
-				elseif box.type == box_type_base.v6 then
-					high = high + 1
-					type_label = high .. " 対ライン上攻撃:"
-				elseif box.type == box_type_base.x1 then
-					low = low + 1
-					type_label = low .. " 対ライン下攻撃:"
-				elseif box.type == box_type_base.g1 then
-					highg = highg + 1
-					type_label = highg .. " 上段ガード:"
-				elseif box.type == box_type_base.g2 then
-					lowg = lowg + 1
-					type_label = lowg .. " 下段ガード:"
-				elseif box.type == box_type_base.g3 then
-					airg = airg + 1
-					type_label = airg .. " 空中ガード:"
-				end
-
-				if type_label then
+				elseif box_cnts[box.type] then
+					box_cnts[box.type] = box_cnts[box.type] + 1
 					table.insert(summary.hurt_boxes, {
-						type_label  = type_label,
+						type_label  = string.format("%s %s", box_cnts[box.type], box.type.name),
 						reach_label = string.format("前%s/上%s(%s)/下%s(%s)/後%s ",
 							box.reach.front,
 							box.reach.top + p.pos_y,
@@ -8239,7 +8207,7 @@ rbff2.startplugin = function()
 				blocktxt = "下"
 			else
 				if hitg then
-					blocktxt = "上*"
+					blocktxt = "下*"
 				end
 				if hi then
 					blocktxt = blocktxt .. "上"
@@ -8250,7 +8218,7 @@ rbff2.startplugin = function()
 				blocktxt = "不"
 			else
 				if hitg then
-					blocktxt = "中*"
+					blocktxt = "不*"
 				end
 				if hi then
 					blocktxt = blocktxt .. "中"
@@ -8381,6 +8349,9 @@ rbff2.startplugin = function()
 				end
 				text = string.format("%3s|%s", info.total, text)
 
+				-- 1行目確定
+				p.last_frame_info_txt[1], text = text, nil
+
 				-- 行動開始からの無敵フレーム
 				local invs = {}
 				for k, v in pairs({ ["打"] = info.hurt_inv, ["通"] = info.throw_inv2, ["投"] = info.throw_inv1 }) do
@@ -8390,7 +8361,7 @@ rbff2.startplugin = function()
 				end
 
 				-- 全体フレーム
-				text = string.format("%s|%s", text, #invs > 0 and table.concat(invs, "") or "-")
+				text = string.format("%s", #invs > 0 and table.concat(invs, "") or "-")
 
 				if #info.summaries > 0 then
 					local max, contexts = #info.summaries, {}
@@ -8426,7 +8397,7 @@ rbff2.startplugin = function()
 						text = string.sub(text, 1, a1 - 1)
 					end
 				end
-				p.last_frame_info_txt = text
+				p.last_frame_info_txt[2] = text
 			end
 			frame_infos[p] = nil
 			return
@@ -8441,6 +8412,7 @@ rbff2.startplugin = function()
 		local summary = fb and fb.hit_summary or p.hit_summary
 		local break_key = attackbit and string.format("%x ", attackbit) or "- "
 		break_key = summary.blockbit and string.format("%s %x", break_key, summary.blockbit) or break_key
+		-- 初回は新しいデータ構造を作成
 		local info = frame_infos[p] or {
 			last_event = event_type, -- 攻撃かどうか
 			count = 0,      -- バッファ
@@ -8492,6 +8464,7 @@ rbff2.startplugin = function()
 			info.count = info.count + 1
 		end
 		info.total = info.total + 1
+		-- 空中状態の判定
 		if p.in_air then
 			info.jumped = true
 			info.landing = 0
@@ -8502,6 +8475,7 @@ rbff2.startplugin = function()
 				info.landing = info.landing + 1
 			end
 		end
+		-- スウェー状態の判定
 		if p.in_sway_line then
 			info.planed = true
 			info.return_main = 0
@@ -8512,10 +8486,11 @@ rbff2.startplugin = function()
 			info.return_main = info.return_main + 1
 		end
 		info.summary = summary
+		-- 動作開始からの打撃無敵を判定
 		if info.has_hurt == false then
 			local has_hurt = true
 			for _, inv in ipairs(summary.hurt_inv) do
-				if inv == hurt_inv_type.full then -- 全身無敵
+				if inv == hurt_inv_type.full then
 					info.hurt_inv = info.hurt_inv + 1
 					has_hurt = false
 					break
@@ -8523,6 +8498,7 @@ rbff2.startplugin = function()
 			end
 			info.has_hurt = has_hurt
 		end
+		-- 動作開始からの投げ無敵を判定
 		local throwable = p.sway_status == 0x00 and p.tw_muteki == 0 and p.pos_y == 0
 		local n_throwable = p.throwable and p.tw_muteki2 == 0
 		if info.can_throw1 == false then
@@ -9200,38 +9176,18 @@ rbff2.startplugin = function()
 			else
 				p.bs_atk = false
 			end
-			--[[
-				       1 CA技
-				       2 小技
-					   4 ダッシュ専用攻撃 滑り攻撃
-					  20 空中ガード
-				      40 斜め後ろ
-				      80 後ろ
-				     100 投げ派生
-				     200 つかまれ
-				     400 なげられ
-				    2000 ダウンまで
-				    6000 吹き飛びダウン
-				    8000 やられ
-				   80000 挑発
-				  100000 ブレイクショット
-				  200000 必殺技
-				  800000 ダウン
-				 1000000 フェイント技
-				 2000000 つかみ技
-				40000000 空中投げ
-				80000000 投げ技
-			]]
+
 			p.attack_flag     = testbit(p.flag_cc,
 				2 ^ 31 | --		"CA",
 				2 ^ 30  | --"AかB攻撃",
-				2 ^ 11  | --"ブレイクショット",
-				2 ^ 10  | --"必殺技中",
+				0x100000 | --"ブレイクショット",
+				0x200000 | --"必殺技中",
 				2 ^ 6  | --"つかみ技",
 				2 ^ 4  | --"投げ追撃",
-				2 ^ 1  | --"空中投げ",
-				2 ^ 0 --"投げ",
+				0x2  | --"空中投げ",
+				0x1 --"投げ",
 			) or (p.flag_c8 > 0) or (p.flag_c4 > 0)
+			p.spid            = testbit(p.flag_cc, 0x200000) and pgm:read_u8(p.addr.base + 0xB8) or 0
 			p.state_bits      = tobits(p.flag_c0)
 			p.old_blkstn_bits = p.blkstn_bits
 			p.blkstn_bits     = tobits(p.flag_d0)
@@ -9492,9 +9448,10 @@ rbff2.startplugin = function()
 				-- 03BF00: 082C 0004 00CD           btst    #$4, ($cd,A4) beqのときのみ
 				-- base+A3の値は技発動時の処理中にしか採取できないのでこの処理は機能しない
 				-- local d0, a0 = pgm:read_u8(p.addr.base + 0xA3), 0
-				local spid = ((pgm:read_u8(p.addr.base + 0xCD) & 0x20) == 0x20) and pgm:read_u8(p.addr.base + 0xB8) or 0 -- 0xB8=技コマンド成立時の技のID
-				if spid > 0 then
-					p.pow_up = pgm:read_u8(pgm:read_u32(0x8C1EC + p.char_4times) + spid - 1)
+				-- 0xB8=技コマンド成立時の技のID
+				-- TODO ビリーのA中段打ちが記録されない
+				if p.spid > 0 then
+					p.pow_up = pgm:read_u8(pgm:read_u32(0x8C1EC + p.char_4times) + p.spid - 1)
 				end
 
 				-- トドメ=ヒットで+7、雷撃棍=発生で+5、倍返し=返しで+7、吸収で+20、蛇使い は個別に設定が必要
@@ -11253,8 +11210,9 @@ rbff2.startplugin = function()
 					draw_rtext(p1 and 16 or 290, 7, string.format("%0.03f", diff_pos_y))
 					draw_rtext(p1 and 40 or 314, 7, string.format("%0.03f", p.pos_y + p.pos_frc_y))
 
-					draw_rtext(p1 and 16 or 290, 13, string.format("%02x", p.attack))
-					draw_rtext(p1 and 28 or 302, 13, string.format("%02x", p.attack_id))
+					draw_rtext(p1 and 10 or 284, 13, string.format("%02x", p.spid))
+					draw_rtext(p1 and 19 or 293, 13, string.format("%02x", p.attack))
+					draw_rtext(p1 and 30 or 304, 13, string.format("%02x", p.attack_id))
 					draw_rtext(p1 and 40 or 314, 13, string.format("%02x", p.hitstop_id))
 
 					draw_rtext(p1 and 16 or 290, 19, string.format("%04x", p.act))
@@ -11418,12 +11376,15 @@ rbff2.startplugin = function()
 						end
 					end
 					draw_rtext_with_shadow(p1 and 155 or 170, 40, p.last_frame_gap, col(p.last_frame_gap))
-					draw_text_with_shadow(30, p1 and 52 or 58, p.last_frame_info_txt or "")
+					-- フレームを含む動作サマリ情報
+					draw_text_with_shadow(30, p1 and 52 or 76, (p.last_frame_info_txt[1] or "") .. "|" .. p.last_frame_gap)
+					draw_text_with_shadow(30, p1 and 60 or 68, p.last_frame_info_txt[2] or "")
+					-- 確定反撃の表示
 					if p.on_punish > 0 and p.on_punish <= global.frame_number then
 						if p1 then
-							draw_rtext_with_shadow(155, 46, "PUNISH", col2(p.on_punish))
+							draw_rtext_with_shadow(155, 46, "確定反撃", col2(p.on_punish))
 						else
-							draw_text_with_shadow(170, 46, "PUNISH", col2(p.on_punish))
+							draw_text_with_shadow(170, 46, "確定反撃", col2(p.on_punish))
 						end
 					end
 				end
@@ -11590,6 +11551,7 @@ rbff2.startplugin = function()
 			end
 		end
 
+		--[[
 		-- ログ
 		local log = ""
 		for _, p in ipairs(players) do
@@ -11631,6 +11593,7 @@ rbff2.startplugin = function()
 				log = log .. string.format("%2x %1s %1s ", box.id or 0xFF, tw, range)
 			end
 		end
+		]]
 	end
 
 	emu.register_start(function()
