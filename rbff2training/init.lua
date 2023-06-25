@@ -8549,13 +8549,8 @@ rbff2.startplugin = function()
 			return
 		end
 		local summary = fb and fb.hit_summary or p.hit_summary
-<<<<<<< HEAD
 		-- ブレイク条件をくっつける
 		local break_key = func.get_break_key(summary, attackbit)
-=======
-		local break_key = attackbit and string.format("%x ", attackbit) or "- "
-		break_key = summary.blockbit and string.format("%s %x", break_key, summary.blockbit) or break_key
->>>>>>> c1a56a2a239b6c93810f1b396d66bafa74dc97e6
 		-- 初回は新しいデータ構造を作成
 		local info = frame_infos[p] or {
 			last_event = event_type, -- 攻撃かどうか
@@ -9321,7 +9316,6 @@ rbff2.startplugin = function()
 			else
 				p.bs_atk = false
 			end
-<<<<<<< HEAD
 			-- やられ状態
 			if p.flag_fin or testbit(p.flag_c0, 0x10000) then
 				-- 着地フレームか最終フレームの場合は前フレームのを踏襲する
@@ -9329,9 +9323,6 @@ rbff2.startplugin = function()
 			else
 				p.in_hitstun = p.hurt_state > 0 or testbit(p.flag_d0, 0x40) or testbit(p.flag_c0, 0x30) or testbit(p.flag_cc, flag_cc_types.hitstun)
 			end
-=======
-
->>>>>>> c1a56a2a239b6c93810f1b396d66bafa74dc97e6
 			p.attack_flag     = testbit(p.flag_cc,
 				2 ^ 31 | --		"CA",
 				2 ^ 30  | --"AかB攻撃",
