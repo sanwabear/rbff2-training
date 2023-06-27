@@ -757,18 +757,213 @@ local get_flag_name = function(flags, names)
 	end
 	return flgtxt
 end
-local flag_cc_types = {
-	c28 = 2 ^ (31-28), -- 必殺投げやられ
-	c23 = 2 ^ (31-23), -- 投げ派生やられ
-	c22 = 2 ^ (31-22), -- つかみ投げやられ
-	c21 = 2 ^ (31-21), -- 投げられ
-	c19 = 2 ^ (31-19), -- ライン送りやられ
-	c18 = 2 ^ (31-18), -- ダウン
-	c17 = 2 ^ (31-17), -- 空中やられ
-	c16 = 2 ^ (31-16), -- 地上やられ
-	c08 = 2 ^ (31-08), -- 起き上がり
+local flag_c0_types = {
+	_00 = 0x1,   -- ジャンプ振向
+	_01 = 0x2,   -- ダウン
+	_02 = 0x4,   -- 屈途中
+	_03 = 0x8,   -- 奥後退
+	_04 = 0x10,  -- 奥前進
+	_05 = 0x20,  -- 奥振向
+	_06 = 0x40,  -- 屈振向
+	_07 = 0x80,  -- 立振向
+	_08 = 0x100, -- スウェーライン上飛び退き～戻り
+	_09 = 0x200, -- スウェーライン上ダッシュ～戻り
+	_10 = 0x400, -- スウェーライン→メイン
+	_11 = 0x800, -- スウェーライン上立
+	_12 = 0x1000, -- メインライン→スウェーライン移動中
+	_13 = 0x2000, -- スウェーライン上維持
+	_14 = 0x4000, -- 未確認
+	_15 = 0x8000, -- 未確認
+	_16 = 0x10000, -- 着地
+	_17 = 0x20000, -- ジャンプ移行
+	_18 = 0x40000, -- 後方小ジャンプ
+	_19 = 0x80000, -- 前方小ジャンプ
+	_20 = 0x100000, -- 垂直小ジャンプ
+	_21 = 0x200000, -- 後方ジャンプ
+	_22 = 0x400000, -- 前方ジャンプ
+	_23 = 0x800000, -- 垂直ジャンプ
+	_24 = 0x1000000, -- ダッシュ
+	_25 = 0x2000000, -- 飛び退き
+	_26 = 0x4000000, -- 屈前進
+	_27 = 0x8000000, -- 立途中
+	_28 = 0x10000000, -- 屈
+	_29 = 0x20000000, -- 後退
+	_30 = 0x40000000, -- 前進
+	_31 = 0x80000000, -- 立
 }
-flag_cc_types.hitstun = flag_cc_types.c28 | flag_cc_types.c23 | flag_cc_types.c22 | flag_cc_types.c21 | flag_cc_types.c19 | flag_cc_types.c18 | flag_cc_types.c17 | flag_cc_types.c16  | flag_cc_types.c08
+local flag_c4_types = {
+	_00 = 0x1,   -- 避け攻撃
+	_01 = 0x2,   -- 対スウェーライン下段攻撃
+	_02 = 0x4,   -- 対スウェーライン上段攻撃
+	_03 = 0x8,   -- 対メインライン威力大攻撃
+	_04 = 0x10,  -- 対メインラインB攻撃
+	_05 = 0x20,  -- 対メインラインA攻撃
+	_06 = 0x40,  -- 後方小ジャンプC, -- 27 7FC0000
+	_07 = 0x80,  -- 後方小ジャンプB
+	_08 = 0x100, -- 後方小ジャンプA
+	_09 = 0x200, -- 前方小ジャンプC
+	_10 = 0x400, -- 前方小ジャンプB
+	_11 = 0x800, -- 前方小ジャンプA
+	_12 = 0x1000, -- 垂直小ジャンプC
+	_13 = 0x2000, -- 垂直小ジャンプB
+	_14 = 0x4000, -- 垂直小ジャンプA, -- 19
+	_15 = 0x8000, -- 後方ジャンプC, -- 18 1FF00
+	_16 = 0x10000, -- 後方ジャンプB
+	_17 = 0x20000, -- 後方ジャンプA
+	_18 = 0x40000, -- 前方ジャンプC
+	_19 = 0x80000, -- 前方ジャンプB
+	_20 = 0x100000, -- 前方ジャンプA
+	_21 = 0x200000, -- 垂直ジャンプC
+	_22 = 0x400000, -- 垂直ジャンプB
+	_23 = 0x800000, -- 垂直ジャンプA, --9
+	_24 = 0x1000000, -- C4 24
+	_25 = 0x2000000, -- C4 25
+	_26 = 0x4000000, -- 屈C
+	_27 = 0x8000000, -- 屈B
+	_28 = 0x10000000, -- 屈A
+	_29 = 0x20000000, -- 立C
+	_30 = 0x40000000, -- 立B
+	_31 = 0x80000000, -- 立A
+}
+flag_c4_types.hop = flag_c4_types._06 |
+	flag_c4_types._07 |
+	flag_c4_types._08 |
+	flag_c4_types._09 |
+	flag_c4_types._10 |
+	flag_c4_types._11 |
+	flag_c4_types._12 |
+	flag_c4_types._13 |
+	flag_c4_types._14
+flag_c4_types.jump = flag_c4_types._15 |
+	flag_c4_types._16 |
+	flag_c4_types._17 |
+	flag_c4_types._18 |
+	flag_c4_types._19 |
+	flag_c4_types._20 |
+	flag_c4_types._21 |
+	flag_c4_types._22 |
+	flag_c4_types._23
+local flag_c8_types = {
+	_00 = 0x1,   --
+	_01 = 0x2,   --
+	_02 = 0x4,   --
+	_03 = 0x8,   --
+	_04 = 0x10,  --
+	_05 = 0x20,  --
+	_06 = 0x40,  --
+	_07 = 0x80,  --
+	_08 = 0x100, -- 特殊技
+	_09 = 0x200, --
+	_10 = 0x400, --
+	_11 = 0x800, -- 特殊技
+	_12 = 0x1000, -- 特殊技
+	_13 = 0x2000, -- 特殊技
+	_14 = 0x4000, -- 特殊技
+	_15 = 0x8000, -- 特殊技
+	_16 = 0x10000, -- 潜在能力
+	_17 = 0x20000, -- 潜在能力
+	_18 = 0x40000, -- 超必殺技
+	_19 = 0x80000, -- 超必殺技
+	_20 = 0x100000, -- 必殺技
+	_21 = 0x200000, -- 必殺技
+	_22 = 0x400000, -- 必殺技
+	_23 = 0x800000, -- 必殺技
+	_24 = 0x1000000, -- 必殺技
+	_25 = 0x2000000, -- 必殺技
+	_26 = 0x4000000, -- 必殺技
+	_27 = 0x8000000, -- 必殺技
+	_28 = 0x10000000, -- 必殺技
+	_29 = 0x20000000, -- 必殺技
+	_30 = 0x40000000, -- 必殺技
+	_31 = 0x80000000, -- 必殺技
+}
+local flag_cc_types = {
+	_00 = 0x1,           -- CA
+	_01 = 0x2,           -- AかB攻撃
+	_02 = 0x4,           -- 滑り
+	_03 = 0x8,           -- 必殺投げやられ
+	_04 = 0x10,          --
+	_05 = 0x20,          -- 空中ガード
+	_06 = 0x40,          -- 屈ガード
+	_07 = 0x80,          -- 立ガード
+	_08 = 0x100,         -- 投げ派生やられ
+	_09 = 0x200,         -- つかみ投げやられ
+	_10 = 0x400,         -- 投げられ
+	_11 = 0x800,         --
+	_12 = 0x1000,        -- ライン送りやられ
+	_13 = 0x2000,        -- ダウン
+	_14 = 0x4000,        -- 空中やられ
+	_15 = 0x8000,        -- 地上やられ
+	_16 = 0x10000,       --
+	_17 = 0x20000,       -- 気絶
+	_18 = 0x40000,       -- 気絶起き上がり
+	_19 = 0x80000,       -- 挑発
+	_20 = 0x100000,      -- ブレイクショット
+	_21 = 0x200000,      -- 必殺技中
+	_22 = 0x400000,      --
+	_23 = 0x800000,      -- 起き上がり
+	_24 = 0x1000000,     -- フェイント
+	_25 = 0x2000000,     -- つかみ技
+	_26 = 0x4000000,     --
+	_27 = 0x8000000,     -- 投げ追撃
+	_28 = 0x10000000,    --
+	_29 = 0x20000000,    --
+	_30 = 0x40000000,    -- 空中投げ
+	_31 = 0x80000000,    -- 投げ
+}
+local flag_d0_types = {
+	_00 = 0x1,           --
+	_01 = 0x2,           --
+	_02 = 0x4,           --
+	_03 = 0x8,           -- ギガティック投げられ
+	_04 = 0x10,          --
+	_05 = 0x20,          -- 追撃投げ中
+	_06 = 0x40,          -- ガード中、やられ中
+	_07 = 0x80,          -- 攻撃ヒット
+	_08 = 0x100,         --
+	_09 = 0x200,         --
+	_10 = 0x400,         --
+	_11 = 0x800,         --
+	_12 = 0x1000,        --
+	_13 = 0x2000,        --
+	_14 = 0x4000,        --
+	_15 = 0x8000,        --
+	_16 = 0x10000,       --
+	_17 = 0x20000,       --
+	_18 = 0x40000,       --
+	_19 = 0x80000,       --
+	_20 = 0x100000,      --
+	_21 = 0x200000,      --
+	_22 = 0x400000,      --
+	_23 = 0x800000,      --
+	_24 = 0x1000000,     --
+	_25 = 0x2000000,     --
+	_26 = 0x4000000,     --
+	_27 = 0x8000000,     --
+	_28 = 0x10000000,    --
+	_29 = 0x20000000,    --
+	_30 = 0x40000000,    --
+	_31 = 0x80000000,    --
+}
+flag_cc_types.hitstun = flag_cc_types._03 |    -- 必殺投げやられ
+	flag_cc_types._08 |                        -- 投げ派生やられ
+	flag_cc_types._09 |                        -- つかみ投げやられ
+	flag_cc_types._10 |                        -- 投げられ
+	flag_cc_types._12 |                        -- ライン送りやられ
+	flag_cc_types._13 |                        -- ダウン
+	flag_cc_types._14 |                        -- 空中やられ
+	flag_cc_types._15 |                        -- 地上やられ
+	flag_cc_types._17 |                        -- 気絶
+	flag_cc_types._18 |                        -- 気絶起き上がり
+	flag_cc_types._23                          -- 起き上がり
+flag_cc_types.attacking = flag_cc_types._00 |  -- CA
+	flag_cc_types._01 |                        -- AかB攻撃
+	flag_cc_types._20 |                        -- ブレイクショット
+	flag_cc_types._21 |                        -- 必殺技中
+	flag_cc_types._25 |                        -- つかみ技
+	flag_cc_types._27 |                        -- 投げ追撃
+	flag_cc_types._30 |                        -- 空中投げ
+	flag_cc_types._31                          -- 投げ
 
 -- !!注意!!後隙が配列の後ろに来るように定義すること
 local char_acts_base = {
@@ -4529,10 +4724,10 @@ local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, is_f
 		p.juggling = true
 	end
 	if box.type == box_type_base.v3 then
-		p.can_juggle = true
+		p.can_otg = true
 	end
 	if box.type == box_type_base.v4 then
-		p.can_otg = true
+		p.can_juggle = true
 	end
 
 	box.fb_pos_x, box.fb_pos_y = pos_x, orig_posy
@@ -4755,20 +4950,22 @@ local update_box_summary = function(p, box)
 
 		local hurtbit = 0
 		if p.in_hitstun then
-			if p.op.act_normal ~= true then
+			if p.op.act_normal == true then
 				hurtbit = hurtbit | frame_hurt_types.op_normal
 			end
-			if p.has_hurt then
-				if p.pos_frc_y == 0 and p.pos_y == 0 and testbit(p.flag_cc, flag_cc_types.c21 | flag_cc_types.c19 | flag_cc_types.c16) then
-					hurtbit = hurtbit | frame_hurt_types.gnd_hitstun
-				elseif p.can_juggle then
-					hurtbit = hurtbit | frame_hurt_types.juggle
-				elseif p.can_otg then
-					hurtbit = hurtbit | frame_hurt_types.otg
-				end
-			else
+			if p.can_juggle then
+				hurtbit = hurtbit | frame_hurt_types.juggle
+			end
+			if p.can_otg then
+				hurtbit = hurtbit | frame_hurt_types.otg
+			end
+			if p.pos_frc_y == 0 and p.pos_y == 0 and
+				testbit(p.flag_cc, flag_cc_types._10 | flag_cc_types._12 | flag_cc_types._15 | flag_cc_types._31) then
+				hurtbit = hurtbit | frame_hurt_types.gnd_hitstun
+			end
+			if p.has_hurt ~= false then
 				hurtbit = hurtbit | frame_hurt_types.invincible
-				if testbit(p.flag_cc, flag_cc_types.c08) then
+				if testbit(p.flag_cc, flag_cc_types._08) then
 					hurtbit = hurtbit | frame_hurt_types.wakeup
 				end
 			end
@@ -5321,7 +5518,6 @@ rbff2.startplugin = function()
 			act_frames                 = {},
 			act_frames2                = {},
 			act_frames_total           = 0,
-			last_frame_info_txt        = {},
 
 			muteki                     = {
 				act_frames  = {},
@@ -5331,6 +5527,18 @@ rbff2.startplugin = function()
 			frm_gap                    = {
 				act_frames  = {},
 				act_frames2 = {},
+			},
+
+			frame_info                 = {
+				text = { "", "" },
+				attack = {
+					buff = nil,
+					txt = { "", "" }
+				},
+				hurt = {
+					buff = nil,
+					txt = { "", "" }
+				},
 			},
 
 			reg_pcnt                   = 0, -- キー入力 REG_P1CNT or REG_P2CNT
@@ -6345,7 +6553,7 @@ rbff2.startplugin = function()
 		end
 		pgm:write_u8(0x10CB40, 0x00)
 
-		for i, p in ipairs(players) do
+		for _, p in ipairs(players) do
 			pgm:write_u8(p.addr.state2, 0x00) -- ステータス更新フック
 			pgm:write_u16(p.addr.act2, 0x00) -- 技ID更新フック
 
@@ -8006,19 +8214,19 @@ rbff2.startplugin = function()
 		end
 		if p.flag_c4 > 0 then
 			table.insert(hurt_sumamry, { "動作C4:", get_flag_name(p.flag_c4, sts_flg_names[0xC4]) })
-			table.insert(hurt_sumamry, { "動作C0:", string.format("%016x", p.flag_c4) })
+			table.insert(hurt_sumamry, { "動作C4:", string.format("%016x", p.flag_c4) })
 		end
 		if p.flag_c8 > 0 then
 			table.insert(hurt_sumamry, { "動作C8:", get_flag_name(p.flag_c8, sts_flg_names[0xC8]) })
-			table.insert(hurt_sumamry, { "動作C0:", string.format("%016x", p.flag_c8) })
+			table.insert(hurt_sumamry, { "動作C8:", string.format("%016x", p.flag_c8) })
 		end
 		if p.flag_cc > 0 then
 			table.insert(hurt_sumamry, { "動作CC:", get_flag_name(p.flag_cc, sts_flg_names[0xCC]) })
-			table.insert(hurt_sumamry, { "動作C0:", string.format("%016x", p.flag_cc) })
+			table.insert(hurt_sumamry, { "動作CC:", string.format("%016x", p.flag_cc) })
 		end
 		if p.flag_d0 > 0 then
 			table.insert(hurt_sumamry, { "動作D0:", get_flag_name(p.flag_d0, sts_flg_names[0xD0]) })
-			table.insert(hurt_sumamry, { "動作C0:", string.format("%016x", p.flag_d0) })
+			table.insert(hurt_sumamry, { "動作D0:", string.format("%016x", p.flag_d0) })
 		end
 
 		return add_frame_to_summary(hurt_sumamry)
@@ -8130,21 +8338,20 @@ rbff2.startplugin = function()
 			return break_key
 		end,
 	}
-	local frame_both_infos = { [1] = {}, [2] = {} }
 	on_frame_func.break_info = function(info, event_type)
 		-- ブレイク
 		local last_inactive = testbit(info.last_event, frame_event_types.inactive)
 		local last_active = testbit(info.last_event, frame_event_types.active)
-		if last_inactive and #info.actives == 0 then
+		if info.startup and last_inactive and #info.actives == 0 then
 			info.startup = info.count
 		elseif last_active then
 			table.insert(info.actives, { count = info.count, attackbit = info.attackbit })
 			table.insert(info.summaries, info.summary)
 		elseif last_inactive then
-			if testbit(event_type, frame_event_types.active | frame_event_types.split) then
-				table.insert(info.actives, { count = -info.count, attackbit = info.attackbit })
-			else
+			if testbit(event_type, frame_event_types.active | frame_event_types.split) ~= true and info.recovery then
 				info.recovery = info.count
+			else
+				table.insert(info.actives, { count = -info.count, attackbit = info.attackbit })
 			end
 		end
 		info.count = 0
@@ -8216,6 +8423,74 @@ rbff2.startplugin = function()
 			return string.format("%s(%s/%s)/%s", e1, hitstun, blockstun, e2)
 		end
 		return string.format("%s(-/%s)/%s", e1, blockstun, e2)
+	end
+	on_frame_func.compress_txt = function(act_txt)
+		-- 繰り返しパターンの最小文字列の抽出
+		local g1, g2 = string.match(act_txt, "(,?([%(]?%d+.*)%2)")
+		local reps, gp = {}, 0
+		while (g1 ~= nil) do
+			local nonnum = string.match(g2, "^(%d+)$")
+			if (nonnum == nil) then
+				local rep = g2
+				while (g2 ~= nil) do
+					rep, g2 = g2, string.match(g2, "(.+)%1")
+				end
+				rep = string.gsub(rep, "%(", "%%(")
+				rep = string.gsub(rep, "%)", "%%)")
+				rep = string.gsub(rep, ",$", ",?", #rep)
+				-- printf("rep %s", rep)
+				table.insert(reps, rep)
+			end
+			_, gp = string.find(act_txt, g1, gp, true)
+			g1, g2 = string.match(act_txt, "(,?([%(]?%d+.*)%2)", gp)
+		end
+
+		-- 繰り返しパターンの圧縮
+		local top_txt, tail_txt = "", act_txt
+		for _, rep in ipairs(reps) do
+			-- 最初の繰り返し文字列の場所特定
+			local af1, af2 = string.find(tail_txt, rep, 0)
+			if af1 then
+				-- 発見した位置から前後に分割
+				if af1 > 1 then
+					top_txt = top_txt .. string.sub(tail_txt, 1, af1 - 1)
+					tail_txt = string.sub(tail_txt, af1)
+					af1, af2 = 1, af2 - af1 + 1
+				end
+
+				-- 最初の繰り返し文字列を末尾のカンマ区切りを除去して保存
+				local rep1 = string.gsub(string.sub(tail_txt, af1, af2), "(.+),+", "%1")
+				local pow, tmpaf1, tmpaf2 = 1, af1, af2 + 1
+
+				-- 繰り返し回数を算出
+				while tmpaf2 ~= nil and tmpaf2 <= #tail_txt do
+					tmpaf1, tmpaf2 = string.find(tail_txt, "^" .. rep, tmpaf2)
+					if tmpaf2 then
+						tmpaf2 = tmpaf2 + 1
+						af2, pow = tmpaf2, pow + 1
+					end
+				end
+				if pow > 1 then
+					local mt = string.match(rep1, "[^%d]")
+					if mt then
+						top_txt = string.format("%s{%s}x%s", top_txt, rep1, pow)
+					else
+						mt = string.match(top_txt, "[^%d]$")
+						if #top_txt == 0 or mt then
+							top_txt = string.format("%s%sx%s", top_txt, rep1, pow)
+						else
+							top_txt = string.format("%s,%sx%s", top_txt, rep1, pow)
+						end
+					end
+					tail_txt = string.gsub(string.sub(tail_txt, af2), "^%)", "")
+					tail_txt = string.gsub(tail_txt, "^(%d)", ",%1")
+					-- printf("%s %s", top_txt, remain_txt)
+				end
+			end
+		end
+		act_txt = top_txt .. tail_txt
+
+		return act_txt
 	end
 	on_frame_func.block_txt = function(air_hit, blockbit, esaka_range)
 		local lo = testbit(blockbit, block_types.low)
@@ -8290,18 +8565,59 @@ rbff2.startplugin = function()
 		return blocktxt
 	end
 	local on_frame_event_hitstun = function(p, fb, event_type, attackbit)
-		local func, frame_infos = on_frame_func, frame_both_infos[1]
+		local func = on_frame_func
+		local info = p.frame_info.hurt.buff
 		if event_type == frame_event_types.reset then
-			local info = frame_infos[p]
 			if info then
 				func.break_info(info, event_type)
-				p.last_frame_info_txt[1] = string.format("%s", info.total)
-				p.last_frame_info_txt[2] = nil
+
+				if #info.actives > 0 then
+					local act_txt = ""
+					local delim = ""
+					for i, active in ipairs(info.actives) do
+						local hurtbit = info.summaries[i].hurtbit
+						local has_hurt = true
+						for _, inv in ipairs(info.summaries[i].hurt_inv) do
+							if inv == hurt_inv_type.full then
+								has_hurt = false
+								break
+							end
+						end
+
+						local gnd = has_hurt and testbit(hurtbit, frame_hurt_types.gnd_hitstun)
+						local otg = testbit(hurtbit, frame_hurt_types.otg)
+						local juggle = testbit(hurtbit, frame_hurt_types.juggle)
+						if gnd or otg or juggle then
+							local a = ""
+							if gnd then
+								a = ""
+							elseif otg then
+								a = "O"
+							elseif juggle then
+								a = "J"
+							end
+							-- 追撃可能
+							if testbit(hurtbit, frame_hurt_types.op_normal) then
+								act_txt = string.format("%s%s%s%s", act_txt, delim, a, active.count)
+								delim = ","
+							else
+								act_txt = string.format("%s(%s%s)", act_txt, a, active.count)
+								delim = ""
+							end
+						elseif testbit(hurtbit, frame_hurt_types.invincible) or
+							testbit(hurtbit, frame_hurt_types.wakeup) then
+							-- 無敵
+							act_txt = string.format("%s(%s)", act_txt, active.count)
+							delim = ""
+						end
+					end
+					p.frame_info.hurt.txt = { string.format("%s|%s", info.total, func.compress_txt(act_txt)), "" }
+					p.frame_info.text = p.frame_info.hurt.txt
+				end
 			end
-			frame_infos[p] = nil
+			p.frame_info.hurt.buff = nil
 			return
 		elseif event_type == frame_event_types.split then
-			local info = frame_infos[p]
 			if info then
 				func.break_info(info, event_type)
 			end
@@ -8309,36 +8625,22 @@ rbff2.startplugin = function()
 		end
 		local summary = fb and fb.hit_summary or p.hit_summary
 		-- ブレイク条件をくっつける
-		local break_key = func.get_break_key(summary, attackbit)
-		if p.addr.base == 0x100500 then
-			printf("%s %s %s", event_type, break_key, p.in_hitstun)
-		end
+		--local break_key = func.get_break_key(summary, attackbit)
+		local break_key = string.format("%x", summary.hurtbit and
+			summary.hurtbit & (frame_hurt_types.gnd_hitstun | frame_hurt_types.otg |
+				frame_hurt_types.juggle | frame_hurt_types.op_normal) or "-")
 		-- 初回は新しいデータ構造を作成
-		local info = frame_infos[p] or {
+		info = info or {
 			last_event = event_type, -- 攻撃かどうか
 			count = 0,      -- バッファ
-			hurt_inv = 0,   -- 打撃無敵
-			has_hurt = false,
-			throw_inv1 = 0, -- 投げ無敵
-			can_throw1 = false,
-			throw_inv2 = 0, -- 投げ無敵
-			can_throw2 = false,
-			takeoff = 0,    -- 地上バッファ
-			jumped = false,
-			stay_main = 0,  -- メインラインバッファ
-			planed = false,
-			landing = 0,    -- 着地硬直バッファ
-			return_main = 0, -- メインライン硬直バッファ
 			break_key = break_key, -- ブレイク条件
 			attackbit = attackbit,
 			summary = summary,
 			total = 0,
-			startup = 0,
 			actives = {},
 			summaries = {},
-			recovery = 0,
 		}
-		frame_infos[p] = info
+		p.frame_info.hurt.buff = info
 		if info.last_event ~= event_type then
 			func.break_info(info, event_type)
 			info.last_event = event_type
@@ -8368,25 +8670,25 @@ rbff2.startplugin = function()
 		info.summary = summary
 	end
 	local on_frame_event_attack = function(p, fb, event_type, attackbit)
-		local func, frame_infos = on_frame_func, frame_both_infos[2]
+		local func = on_frame_func
+		local info = p.frame_info.attack.buff
 		if event_type == frame_event_types.reset then
-			local info = frame_infos[p]
 			if info then
 				func.break_info(info, event_type)
-				local text
+				local text1, text2
 				local takeoff_and_main = math.min(info.startup, math.min(info.takeoff, info.stay_main))
 				local land_and_main = math.min(info.landing, info.return_main)
 				if takeoff_and_main == info.startup or takeoff_and_main == 0 then
-					text = string.format("%s", info.startup)
+					text1 = string.format("%s", info.startup)
 				else
 					-- 発生フレームををメインかつ地上隙に分割する
 					local startup = info.startup - takeoff_and_main
 					if #info.actives == 0 and info.recovery == 0 and land_and_main > 0 then
 						-- 後隙フレームをメインかつ地上隙に分割する
 						startup = startup - land_and_main
-						text = string.format("%s+%s+%s", takeoff_and_main, startup, land_and_main)
+						text1 = string.format("%s+%s+%s", takeoff_and_main, startup, land_and_main)
 					else
-						text = string.format("%s+%s", takeoff_and_main, startup)
+						text1 = string.format("%s+%s", takeoff_and_main, startup)
 					end
 				end
 				-- 持続フレームをくっつける
@@ -8401,7 +8703,7 @@ rbff2.startplugin = function()
 							act_txt = string.format("%s(%s)", act_txt, -active.count)
 							delim = ""
 						elseif testbit(active.attackbit, frame_attack_types.fake) then
-							-- 嘘判定は``で表現
+							-- 嘘判定は()で表現
 							act_txt = string.format("%s(%s)", act_txt, active.count)
 							delim = ""
 						else
@@ -8410,87 +8712,18 @@ rbff2.startplugin = function()
 							delim = ","
 						end
 					end
-
-					-- 繰り返しパターンの最小文字列の抽出
-					local g1, g2 = string.match(act_txt, "(,?([%(]?%d+.*)%2)")
-					local reps, gp = {}, 0
-					while (g1 ~= nil) do
-						local nonnum = string.match(g2, "^(%d+)$")
-						if (nonnum == nil) then
-							local rep = g2
-							while (g2 ~= nil) do
-								rep, g2 = g2, string.match(g2, "(.+)%1")
-							end
-							rep = string.gsub(rep, "%(", "%%(")
-							rep = string.gsub(rep, "%)", "%%)")
-							rep = string.gsub(rep, ",$", ",?", #rep)
-							-- printf("rep %s", rep)
-							table.insert(reps, rep)
-						end
-						_, gp = string.find(act_txt, g1, gp, true)
-						g1, g2 = string.match(act_txt, "(,?([%(]?%d+.*)%2)", gp)
-					end
-
-					-- 繰り返しパターンの圧縮
-					local top_txt, tail_txt = "", act_txt
-					for _, rep in ipairs(reps) do
-						-- 最初の繰り返し文字列の場所特定
-						local af1, af2 = string.find(tail_txt, rep, 0)
-						if af1 then
-							-- 発見した位置から前後に分割
-							if af1 > 1 then
-								top_txt = top_txt .. string.sub(tail_txt, 1, af1 - 1)
-								tail_txt = string.sub(tail_txt, af1)
-								af1, af2 = 1, af2 - af1 + 1
-							end
-
-							-- 最初の繰り返し文字列を末尾のカンマ区切りを除去して保存
-							local rep1 = string.gsub(string.sub(tail_txt, af1, af2), "(.+),+", "%1")
-							local pow, tmpaf1, tmpaf2 = 1, af1, af2 + 1
-
-							-- 繰り返し回数を算出
-							while tmpaf2 ~= nil and tmpaf2 <= #tail_txt do
-								tmpaf1, tmpaf2 = string.find(tail_txt, "^" .. rep, tmpaf2)
-								if tmpaf2 then
-									tmpaf2 = tmpaf2 + 1
-									af2, pow = tmpaf2, pow + 1
-								end
-							end
-							if pow > 1 then
-								local mt = string.match(rep1, "[^%d]")
-								if mt then
-									top_txt = string.format("%s{%s}x%s", top_txt, rep1, pow)
-								else
-									mt = string.match(top_txt, "[^%d]$")
-									if #top_txt == 0 or mt then
-										top_txt = string.format("%s%sx%s", top_txt, rep1, pow)
-									else
-										top_txt = string.format("%s,%sx%s", top_txt, rep1, pow)
-									end
-								end
-								tail_txt = string.gsub(string.sub(tail_txt, af2), "^%)", "")
-								tail_txt = string.gsub(tail_txt, "^(%d)", ",%1")
-								-- printf("%s %s", top_txt, remain_txt)
-							end
-						end
-					end
-					act_txt = top_txt .. tail_txt
-
-					text = text .. "/" .. act_txt
+					text1 = text1 .. "/" .. func.compress_txt(act_txt)
 				end
 				if info.recovery > 0 then
 					land_and_main = math.min(info.recovery, land_and_main)
 					if land_and_main == info.recovery or land_and_main == 0 then
-						text = string.format("%s/%s", text, info.recovery)
+						text1 = string.format("%s/%s", text1, info.recovery)
 					else
 						-- 後隙フレームをメインライン&着地に分割する
-						text = string.format("%s/%s+%s", text, info.recovery - land_and_main, land_and_main)
+						text1 = string.format("%s/%s+%s", text1, info.recovery - land_and_main, land_and_main)
 					end
 				end
-				text = string.format("%3s|%s", info.total, text)
-
-				-- 1行目確定
-				p.last_frame_info_txt[1], text = text, nil
+				text1 = string.format("%3s|%s", info.total, text1)
 
 				-- 行動開始からの無敵フレーム
 				local invs = {}
@@ -8501,12 +8734,12 @@ rbff2.startplugin = function()
 				end
 
 				-- 全体フレーム
-				text = string.format("%s", #invs > 0 and table.concat(invs, "") or "-")
+				text2 = string.format("%s", #invs > 0 and table.concat(invs, "") or "-")
 
 				if #info.summaries > 0 then
 					local max, contexts = #info.summaries, {}
 					local build_txt = #info.summaries > 1 and func.build_txt1 or func.build_txt2
-					local texts = { text }
+					local texts = { text2 }
 					for i, s in ipairs(info.summaries) do
 						for j, sv in ipairs(s.attacking ~= true and new_filled_table(8, nil) or {
 							s.hitstop_gd,
@@ -8524,25 +8757,25 @@ rbff2.startplugin = function()
 							end
 						end
 					end
-					text = table.concat(texts, "|")
+					text2 = table.concat(texts, "|")
 					-- 末尾の-を取り除く
 					while true do
-						local a1, _ = string.find(text, "%|%-x%d+$")
+						local a1, _ = string.find(text2, "%|%-x%d+$")
 						if a1 == nil then
-							a1, _ = string.find(text, "%|%-$")
+							a1, _ = string.find(text2, "%|%-$")
 						end
 						if a1 == nil then
 							break
 						end
-						text = string.sub(text, 1, a1 - 1)
+						text2 = string.sub(text2, 1, a1 - 1)
 					end
 				end
-				p.last_frame_info_txt[2] = text
+				p.frame_info.attack.txt = { text1, text2 }
+				p.frame_info.text = p.frame_info.attack.txt
 			end
-			frame_infos[p] = nil
+			p.frame_info.attack.buff = nil
 			return
 		elseif event_type == frame_event_types.split then
-			local info = frame_infos[p]
 			if info then
 				func.break_info(info, event_type)
 			end
@@ -8552,7 +8785,7 @@ rbff2.startplugin = function()
 		-- ブレイク条件をくっつける
 		local break_key = func.get_break_key(summary, attackbit)
 		-- 初回は新しいデータ構造を作成
-		local info = frame_infos[p] or {
+		info = info or {
 			last_event = event_type, -- 攻撃かどうか
 			count = 0,      -- バッファ
 			hurt_inv = 0,   -- 打撃無敵
@@ -8576,7 +8809,7 @@ rbff2.startplugin = function()
 			summaries = {},
 			recovery = 0,
 		}
-		frame_infos[p] = info
+		p.frame_info.attack.buff = info
 		if info.last_event ~= event_type then
 			func.break_info(info, event_type)
 			info.last_event = event_type
@@ -8657,6 +8890,7 @@ rbff2.startplugin = function()
 		if p.skip_frame then
 			-- なにもしない
 		else
+			on_frame_event_hitstun(p, nil, frame_event_types.reset)
 			on_frame_event_attack(p, nil, frame_event_types.reset)
 		end
 	end
@@ -8857,8 +9091,12 @@ rbff2.startplugin = function()
 
 		if p.skip_frame then
 			-- なにもしない
-		elseif (p.flag_d0 & 0x2200000 > 0) or p.act_normal then
-			-- やられと通常状態
+		elseif p.in_hitstun then 
+			on_frame_event_hitstun(p, active_fb, frame_event_types.active, 0)
+			on_frame_event_attack(p, active_fb, frame_event_types.reset)
+		elseif p.act_normal then
+			-- 通常状態
+			on_frame_event_hitstun(p, active_fb, frame_event_types.reset)
 			on_frame_event_attack(p, active_fb, frame_event_types.reset)
 		else
 			if p.act_1st and testbit(p.act_data.type, act_types.startup) then
@@ -9308,39 +9546,32 @@ rbff2.startplugin = function()
 			p.old_kaiser_wave = p.kaiser_wave          -- 前フレームのカイザーウェイブのレベル
 			p.kaiser_wave     = pgm:read_u8(p.addr.kaiser_wave) -- カイザーウェイブのレベル
 			p.hurt_state      = pgm:read_u8(p.addr.hurt_state)
-			p.slide_atk       = testbit(p.flag_cc, 0x4) -- ダッシュ滑り攻撃
+			p.slide_atk       = testbit(p.flag_cc, flag_cc_types._02) -- ダッシュ滑り攻撃
 			-- ブレイクショット
-			if testbit(p.flag_cc, 0x200000) == true and
-				(testbit(p.old_flag_cc, 0x100000) == true or p.bs_atk == true) then
+			if testbit(p.flag_cc, flag_cc_types._21) == true and
+				(testbit(p.old_flag_cc, flag_cc_types._20) == true or p.bs_atk == true) then
 				p.bs_atk = true
 			else
 				p.bs_atk = false
 			end
 			-- やられ状態
-			if p.flag_fin or testbit(p.flag_c0, 0x10000) then
-				-- 着地フレームか最終フレームの場合は前フレームのを踏襲する
+			if p.flag_fin or testbit(p.flag_c0, flag_c0_types._16) then
+				-- 最終フレームか着地フレームの場合は前フレームのを踏襲する
 				p.in_hitstun = p.in_hitstun
 			else
-				p.in_hitstun = p.hurt_state > 0 or testbit(p.flag_d0, 0x40) or testbit(p.flag_c0, 0x30) or testbit(p.flag_cc, flag_cc_types.hitstun)
+				p.in_hitstun = p.hurt_state > 0 or testbit(p.flag_cc, flag_cc_types.hitstun) or
+					testbit(p.flag_d0, flag_d0_types._06) or -- ガード中、やられ中
+					testbit(p.flag_c0, flag_c0_types._01) -- ダウン
 			end
-			p.attack_flag     = testbit(p.flag_cc,
-				2 ^ 31 | --		"CA",
-				2 ^ 30  | --"AかB攻撃",
-				0x100000 | --"ブレイクショット",
-				0x200000 | --"必殺技中",
-				2 ^ 6  | --"つかみ技",
-				2 ^ 4  | --"投げ追撃",
-				0x2  | --"空中投げ",
-				0x1 --"投げ",
-			) or (p.flag_c8 > 0) or (p.flag_c4 > 0)
-			p.spid            = testbit(p.flag_cc, 0x200000) and pgm:read_u8(p.addr.base + 0xB8) or 0
+			p.attack_flag     = testbit(p.flag_cc, flag_cc_types.attacking) or (p.flag_c8 > 0) or (p.flag_c4 > 0)
+			p.spid            = testbit(p.flag_cc, flag_cc_types._21) and pgm:read_u8(p.addr.base + 0xB8) or 0
 			p.state_bits      = tobits(p.flag_c0)
 			p.old_blkstn_bits = p.blkstn_bits
 			p.blkstn_bits     = tobits(p.flag_d0)
 			p.pos_miny        = 0
-			if testbit(p.flag_c4, 0x1FF00) then
+			if testbit(p.flag_c4, flag_c4_types.hop) then
 				p.pos_miny = p.char_data.min_y
-			elseif testbit(p.flag_c4, 0x7FC0000) then
+			elseif testbit(p.flag_c4, flag_c4_types.jump) then
 				p.pos_miny = p.char_data.min_sy
 			end
 			p.last_normal_state = p.normal_state
@@ -10024,7 +10255,9 @@ rbff2.startplugin = function()
 			p.update_sts = (pgm:read_u8(p.addr.state2) ~= 0) and global.frame_number or p.update_sts
 			p.update_dmg = (p.tmp_dmg ~= 0) and global.frame_number or p.update_dmg
 			p.act2       = pgm:read_u16(p.addr.act2)
-			p.update_act = (p.act2 ~= 0) and global.frame_number or p.update_act
+			if testbit(p.flag_cc, flag_cc_types._25 | flag_cc_types._30 | flag_cc_types._31) ~= true then
+				p.update_act = (p.act2 ~= 0) and global.frame_number or p.update_act
+			end
 			p.act_1st    = p.update_act == global.frame_number and p.act_1st == true
 			if p.act_1st == true then
 				p.atk_count = 1
@@ -10263,14 +10496,15 @@ rbff2.startplugin = function()
 
 		-- フレーム表示などの前処理2
 		for _, p in ipairs(players) do
+			-- 起き上がり前にstopの値が入っているのでチェック
+			local stop = p.stop ~= 0 and testbit(p.flag_cc, flag_cc_types._08) ~= true
 			--停止演出のチェック
 			p.old_skip_frame = p.skip_frame
 			if global.no_background then
-				p.skip_frame = p.hit_skip ~= 0 or p.stop ~= 0
+				p.skip_frame = p.hit_skip ~= 0 or stop
 			else
 				-- 停止演出のチェックで背景なしチートの影響箇所をチェックするので背景なしONときは停止演出のチェックを飛ばす
-				p.skip_frame = p.hit_skip ~= 0 or p.stop ~= 0 or
-					(mem._0x100F56 == 0xFFFFFFFF or mem._0x100F56 == 0x0000FFFF)
+				p.skip_frame = p.hit_skip ~= 0 or stop or (mem._0x100F56 == 0xFFFFFFFF or mem._0x100F56 == 0x0000FFFF)
 			end
 
 			if p.hit_skip ~= 0 or mem._0x100F56 ~= 0 then
@@ -11523,8 +11757,9 @@ rbff2.startplugin = function()
 					end
 					draw_rtext_with_shadow(p1 and 155 or 170, 40, p.last_frame_gap, col(p.last_frame_gap))
 					-- フレームを含む動作サマリ情報
-					draw_text_with_shadow(30, p1 and 52 or 76, (p.last_frame_info_txt[1] or "") .. "|" .. p.last_frame_gap)
-					draw_text_with_shadow(30, p1 and 60 or 68, p.last_frame_info_txt[2] or "")
+					draw_text_with_shadow(30, p1 and 52 or 76, (p.frame_info.text[1] or "") .. "|" .. p.last_frame_gap)
+					draw_text_with_shadow(30, p1 and 60 or 68, p.frame_info.text[2] or "")
+
 					-- 確定反撃の表示
 					if p.on_punish > 0 and p.on_punish <= global.frame_number then
 						if p1 then
