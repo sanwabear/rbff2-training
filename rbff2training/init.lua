@@ -4846,7 +4846,7 @@ local frame_hurt_types = {
 	otg = 2 ^ 2,
 	juggle = 2 ^ 3,
 	wakeup = 2 ^ 4,
-	op_normal = 2 ^ 8
+	op_normal = 2 ^ 8,
 }
 local update_box_summary = function(p, box)
 	local summary = p.hit_summary
@@ -9089,9 +9089,13 @@ rbff2.startplugin = function()
 		-- 表示可能範囲（最大で横画面幅）以上は加算しない
 		p.act_frames_total = (332 < p.act_frames_total) and 332 or (p.act_frames_total + 1)
 
+		if p.old_anyhit_id ~= p.anyhit_id then
+			on_frame_event_hitstun(p, active_fb, frame_event_types.reset)
+		end
+
 		if p.skip_frame then
 			-- なにもしない
-		elseif p.in_hitstun then 
+		elseif p.in_hitstun then
 			on_frame_event_hitstun(p, active_fb, frame_event_types.active, 0)
 			on_frame_event_attack(p, active_fb, frame_event_types.reset)
 		elseif p.act_normal then
@@ -9653,6 +9657,8 @@ rbff2.startplugin = function()
 			p.old_throwing    = p.throwing
 			p.throwing        = false
 			p.can_techrise    = 2 > pgm:read_u8(0x88A12 + p.attack)
+			p.old_anyhit_id   = p.anyhit_id
+			p.anyhit_id       = pgm:read_u16(p.addr.can_techrise)
 			p.pow_up_hit      = 0
 			p.pow_up_gd       = 0
 			p.pow_up          = 0
