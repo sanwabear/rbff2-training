@@ -1055,10 +1055,10 @@ local char_acts_base = {
 		{ names = { "幻影不知火 地上攻撃" },             type = act_types.preserve | act_types.any,                      ids = { 0xC7 } },
 		{ names = { "超裂破弾" },                             type = act_types.startup | act_types.attack,                    ids = { 0xFE, 0xFF, 0x100, 0x101 } },
 		{ names = { "男打弾" },                                type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x108, 0x109, 0x10A }, },
-		{ names = { "男打弾 2段目" },                        type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x10B }, },
-		{ names = { "男打弾 3段目" },                        type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x10C }, },
-		{ names = { "男打弾 4段目" },                        type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x10D }, },
-		{ names = { "男打弾 5段目" },                        type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x10E, 0x10F }, },
+		{ names = { "男打弾 2段目" },                        type = act_types.wrap | act_types.attack | act_types.firing,    ids = { 0x10B }, },
+		{ names = { "男打弾 3段目" },                        type = act_types.wrap | act_types.attack | act_types.firing,    ids = { 0x10C }, },
+		{ names = { "男打弾 4段目" },                        type = act_types.wrap | act_types.attack | act_types.firing,    ids = { 0x10D }, },
+		{ names = { "男打弾 5段目" },                        type = act_types.wrap | act_types.attack | act_types.firing,    ids = { 0x10E, 0x10F }, },
 		{ names = { "CA 立B" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x240 } },
 		{ names = { "CA 屈B" },                                  type = act_types.startup | act_types.low_attack,                ids = { 0x241 } },
 		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x242 } },
@@ -1073,7 +1073,7 @@ local char_acts_base = {
 		{ names = { "上げ面追加 C" },                        type = act_types.startup | act_types.overhead,                  ids = { 0x24D } },
 		{ names = { "上げ面追加 C" },                        type = act_types.preserve | act_types.any,                      ids = { 0x24E } },
 		{ names = { "上げ面追加 立C" },                     type = act_types.startup | act_types.attack,                    ids = { 0x247 } },
-		{ names = { "上げ面追加 立C" },                     type = act_types.preserve | act_types.attack,                   ids = { 0x248 } },
+		{ names = { "上げ面追加 立C" },                     type = act_types.startup | act_types.attack,                    ids = { 0x248 } },
 	},
 	-- 東丈
 	{
@@ -1102,15 +1102,15 @@ local char_acts_base = {
 		{ names = { "黄金のカカト" },                                                   type = act_types.preserve | act_types.any,                      ids = { 0x9C } },
 		{ names = { "タイガーキック" },                                                type = act_types.startup | act_types.attack,                    ids = { 0xA4, 0xA5 } },
 		{ names = { "タイガーキック" },                                                type = act_types.preserve | act_types.any,                      ids = { 0xA6, 0xA7 } },
-		{ names = { "爆裂拳", "爆裂拳 持続" },                                        type = act_types.startup | act_types.attack,                    ids = { 0xAE, 0xB0, 0xB1 } },
-		{ names = { "爆裂拳 持続" },                                                     type = act_types.wrap | act_types.attack,                       ids = { 0xAF } },
+		{ names = { "爆裂拳" },                                                            type = act_types.startup | act_types.attack,                    ids = { 0xAE } },
+		{ names = { "爆裂拳 持続" },                                                     type = act_types.preserve  | act_types.attack,                       ids = { 0xAF, 0xB1, 0xB0 } },
 		{ names = { "爆裂拳 隙" },                                                        type = act_types.wrap | act_types.any,                          ids = { 0xB2 } },
 		{ names = { "爆裂フック" },                                                      type = act_types.startup | act_types.attack,                    ids = { 0xB3, 0xB4 } },
 		{ names = { "爆裂フック" },                                                      type = act_types.preserve | act_types.any,                      ids = { 0xB5 } },
 		{ names = { "爆裂アッパー" },                                                   type = act_types.startup | act_types.attack,                    ids = { 0xF8, 0xF9, 0xFA } },
 		{ names = { "爆裂アッパー" },                                                   type = act_types.preserve | act_types.any,                      ids = { 0xFB } },
-		{ names = { "ハリケーンアッパー" },                                          type = act_types.startup | act_types.attack | act_types.firing, ids = { 0xB9, 0xBA }, },
-		{ names = { "ハリケーンアッパー" },                                          type = act_types.preserve | act_types.any,                      ids = { 0xB8 } },
+		{ names = { "ハリケーンアッパー" },                                          type = act_types.startup | act_types.attack | act_types.firing,   ids = { 0xB8 } },
+		{ names = { "ハリケーンアッパー" },                                          type = act_types.preserve | act_types.any | act_types.firing, ids = { 0xB9, 0xBA }, },
 		{ names = { "爆裂ハリケーン" },                                                type = act_types.startup | act_types.attack | act_types.firing, ids = { 0xC2, 0xC3, 0xC4, 0xC5 }, },
 		{ names = { "爆裂ハリケーン" },                                                type = act_types.preserve | act_types.any,                      ids = { 0xC6 } },
 		{ names = { "スクリューアッパー" },                                          type = act_types.startup | act_types.attack | act_types.firing, ids = { 0xFE, 0xFF }, },
@@ -1129,7 +1129,7 @@ local char_acts_base = {
 		{ names = { "CA _3C" },                                                               type = act_types.startup | act_types.attack,                    ids = { 0x246 } },
 		{ names = { "CA 立C" },                                                              type = act_types.startup | act_types.attack,                    ids = { 0x240 } },
 		{ names = { "CA _8C" },                                                               type = act_types.startup | act_types.overhead,                  ids = { 0x251, 0x252 } },
-		{ names = { "CA _8C" },                                                               type = act_types.startup | act_types.any,                       ids = { 0x253 } },
+		{ names = { "CA _8C" },                                                               type = act_types.preserve | act_types.any,                       ids = { 0x253 } },
 		{ names = { "CA 立C" },                                                              type = act_types.startup | act_types.attack,                    ids = { 0x46 } },
 		{ names = { "CA _2_3_6+C" },                                                          type = act_types.startup | act_types.attack,                    ids = { 0x24A } },
 	},
@@ -1141,7 +1141,7 @@ local char_acts_base = {
 		{ names = { "近立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x43 } },
 		{ names = { "遠立B" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x45 } },
 		{ names = { "遠立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x46 } },
-		{ names = { "遠立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0xF4 } },
+		{ names = { "遠立C" },                                  type = act_types.wrap | act_types.attack,                    ids = { 0xF4 } },
 		{ names = { "屈A" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x47 } },
 		{ names = { "フェイント 花蝶扇" },                type = act_types.startup | act_types.attack,                    ids = { 0x112 } },
 		{ names = { "フェイント 花嵐" },                   type = act_types.startup | act_types.attack,                    ids = { 0x113 } },
@@ -1174,11 +1174,11 @@ local char_acts_base = {
 		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x246 } },
 		{ names = { "CA 対スウェーライン上段攻撃" },  type = act_types.startup | act_types.overhead,                  ids = { 0x249 } },
 		{ names = { "CA C" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x24A, 0x24B } },
-		{ names = { "CA C" },                                     type = act_types.startup | act_types.any,                       ids = { 0x24C } },
+		{ names = { "CA C" },                                     type = act_types.preserve | act_types.any,                       ids = { 0x24C } },
 		{ names = { "CA B" },                                     type = act_types.startup | act_types.overhead,                  ids = { 0x24D } },
-		{ names = { "CA B" },                                     type = act_types.startup | act_types.any,                       ids = { 0x24E } },
+		{ names = { "CA B" },                                     type = act_types.preserve | act_types.any,                       ids = { 0x24E } },
 		{ names = { "CA C" },                                     type = act_types.startup | act_types.overhead,                  ids = { 0x24F } },
-		{ names = { "CA C" },                                     type = act_types.startup | act_types.any,                       ids = { 0x250 } },
+		{ names = { "CA C" },                                     type = act_types.preserve | act_types.any,                       ids = { 0x250 } },
 		{ names = { "CA 屈C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x247 } },
 	},
 	-- ギース・ハワード
@@ -1230,8 +1230,8 @@ local char_acts_base = {
 		{ names = { "CA 立C" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x244 } },
 		{ names = { "CA 屈C" },                                     type = act_types.startup | act_types.low_attack,                ids = { 0x247 } },
 		{ names = { "CA 立C" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x249 } },
-		{ names = { "CA _8C" },                                      type = act_types.startup | act_types.attack,                    ids = { 0x24E, 0x24F } },
-		{ names = { "CA _8C" },                                      type = act_types.startup | act_types.any,                       ids = { 0x250 } },
+		{ names = { "CA _2C" },                                      type = act_types.startup | act_types.attack,                    ids = { 0x24E, 0x24F } },
+		{ names = { "CA _2C" },                                      type = act_types.preserve | act_types.any,                       ids = { 0x250 } },
 		{ names = { "CA 立C" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x24D } },
 		{ names = { "CA 立C" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x240 } },
 		{ names = { "CA 屈C" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x24B } },
@@ -1426,7 +1426,7 @@ local char_acts_base = {
 		{ names = { "M.タイフーン" },                                                                  type = act_types.preserve | act_types.any,        ids = { 0x100, 0x101, 0x102, 0x103, 0x104, 0x105, 0x106, 0x107, 0x116 } },
 		{ names = { "M.エスカレーション" },                                                         type = act_types.startup | act_types.attack,      ids = { 0x10B } },
 		{ names = { "M.トリプルエクスタシー" },                                                   type = act_types.startup | act_types.any,         ids = { 0xD6, 0xD8, 0xD7, 0xD9, 0xDA, 0xDB, 0xDC, 0xDD, 0xDE, 0xDF } },
-		{ names = { "立ち" },                                                                             type = act_types.preserve | act_types.free,        ids = { 0x109, 0x10A, 0x108 } },
+		{ names = { "立ち" },                                                                             type = act_types.preserve | act_types.free,       ids = { 0x109, 0x10A, 0x108 } },
 		{ names = { "CA 立B" },                                                                            type = act_types.startup | act_types.attack,      ids = { 0x24C } },
 		{ names = { "CA 屈B" },                                                                            type = act_types.startup | act_types.low_attack,  ids = { 0x251 } },
 		{ names = { "CA 立C" },                                                                            type = act_types.startup | act_types.attack,      ids = { 0x246 } },
@@ -1581,7 +1581,7 @@ local char_acts_base = {
 		{ names = { "帝王空殺漏尽拳", "帝王空殺漏尽拳 ヒット" }, type = act_types.preserve | act_types.any | act_types.firing,       ids = { 0xEE, 0xEF }, },
 		{ names = { "海龍照臨" },                                             type = act_types.startup | act_types.attack | act_types.firing,     ids = { 0x108, 0x109, 0x109, 0x10A }, },
 		{ names = { "海龍照臨" },                                             type = act_types.preserve | act_types.any | act_types.firing,       ids = { 0x10B }, },
-		{ names = { "立ち" },                                                   type = act_types.preserve | act_types.free,                          ids = { 0x6C } },
+		{ names = { "立ち" },                                                   type = act_types.preserve | act_types.free,                         ids = { 0x6C } },
 		{ names = { "CA 立A" },                                                  type = act_types.startup | act_types.attack,                        ids = { 0x247 } },
 		{ names = { "CA 立B" },                                                  type = act_types.startup | act_types.attack,                        ids = { 0x246 } },
 		{ names = { "CA 屈B" },                                                  type = act_types.startup | act_types.low_attack,                    ids = { 0x24B } },
@@ -1745,7 +1745,7 @@ local char_acts_base = {
 		{ names = { "CA 立A" },                                  type = act_types.startup | act_types.attack,     ids = { 0x241 } },
 		{ names = { "CA 立B" },                                  type = act_types.startup | act_types.attack,     ids = { 0x244 } },
 		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,     ids = { 0x246, 0x247 } },
-		{ names = { "CA 立C" },                                  type = act_types.preserve | act_types.attack,     ids = { 0x248 } },
+		{ names = { "CA 立C" },                                  type = act_types.preserve | act_types.attack,    ids = { 0x248 } },
 		{ names = { "CA 立A" },                                  type = act_types.startup | act_types.attack,     ids = { 0x240 } },
 		{ names = { "CA 立B" },                                  type = act_types.startup | act_types.attack,     ids = { 0x243 } },
 		{ names = { "CA 立B" },                                  type = act_types.startup | act_types.attack,     ids = { 0x249 } },
@@ -1820,9 +1820,9 @@ local char_acts_base = {
 		{ names = { "爆雷砲" },                                        type = act_types.startup | act_types.attack | act_types.firing,     ids = { 0xFE, 0xFF, 0x100 }, },
 		{ names = { "ホエホエ弾" },                                  type = act_types.startup | act_types.low_attack | act_types.firing, ids = { 0x108, 0x109, }, },
 		{ names = { "ホエホエ弾" },                                  type = act_types.preserve | act_types.any | act_types.firing,       ids = { 0x10A }, },
-		{ names = { "ホエホエ弾 持続" },                           type = act_types.wrap | act_types.low_attack | act_types.firing, ids = { 0x10C, 0x10D }, },
+		{ names = { "ホエホエ弾 持続" },                           type = act_types.wrap | act_types.low_attack | act_types.firing,    ids = { 0x10C, 0x10D }, },
 		{ names = { "ホエホエ弾 持続" },                           type = act_types.preserve | act_types.any | act_types.firing,       ids = { 0x114, 0x115 }, },
-		{ names = { "ホエホエ弾 落下攻撃" },                     type = act_types.wrap | act_types.overhead | act_types.firing,   ids = { 0x10E }, },
+		{ names = { "ホエホエ弾 落下攻撃" },                     type = act_types.wrap | act_types.overhead | act_types.firing,      ids = { 0x10E }, },
 		{ names = { "ホエホエ弾 落下攻撃 接触" },              type = act_types.wrap | act_types.any | act_types.firing,           ids = { 0x10F }, },
 		{ names = { "ホエホエ弾 着地1" },                          type = act_types.wrap | act_types.any | act_types.firing,           ids = { 0x10B }, },
 		{ names = { "ホエホエ弾 着地2" },                          type = act_types.wrap | act_types.any | act_types.firing,           ids = { 0x110 }, },
@@ -1863,7 +1863,7 @@ local char_acts_base = {
 		{ names = { "撃放" },                                   type = act_types.startup | act_types.attack,                    ids = { 0xA4 } },
 		{ names = { "撃放 タメ" },                            type = act_types.wrap | act_types.attack,                       ids = { 0xA5 } },
 		{ names = { "撃放 タメ開放" },                      type = act_types.wrap | act_types.attack,                       ids = { 0xA7, 0xA8, 0xA9 } },
-		{ names = { "撃放 隙" },                                type = act_types.wrap | act_types.any,                       ids = { 0xA6 } },
+		{ names = { "撃放 隙" },                               type = act_types.wrap | act_types.any,                          ids = { 0xA6 } },
 		{ names = { "旋風剛拳" },                             type = act_types.startup | act_types.attack,                    ids = { 0xFE, 0xFF, 0x100 } },
 		{ names = { "旋風剛拳" },                             type = act_types.preserve | act_types.any,                      ids = { 0x101, 0x102 } },
 		{ names = { "大撃放" },                                type = act_types.startup | act_types.attack,                    ids = { 0x108, 0x109, 0x10A, 0x10B } },
@@ -2119,20 +2119,20 @@ local char_acts_base = {
 	},
 	{
 		-- 共通行動
-		{ names = { "立ち" },                      type = act_types.startup | act_types.free, ids = { 0x0, 0x1, 0x23, 0x22, 0x3C } },
-		{ names = { "立ち振り向き" },          type = act_types.startup | act_types.free, ids = { 0x1D } },
-		{ names = { "しゃがみ振り向き" },    type = act_types.startup | act_types.free, ids = { 0x1E } },
+		{ names = { "立ち" },                      type = act_types.startup | act_types.free,  ids = { 0x0, 0x1, 0x23, 0x22, 0x3C } },
+		{ names = { "立ち振り向き" },          type = act_types.startup | act_types.free,  ids = { 0x1D } },
+		{ names = { "しゃがみ振り向き" },    type = act_types.startup | act_types.free,  ids = { 0x1E } },
 		{ names = { "振り向き中" },             type = act_types.preserve | act_types.free, ids = { 0x3D } },
 		{ names = { "しゃがみ振り向き中" }, type = act_types.preserve | act_types.free, ids = { 0x3E } },
-		{ names = { "しゃがみ" },                type = act_types.startup | act_types.free, ids = { 0x4, 0x24, 0x25 } },
-		{ names = { "しゃがみ途中" },          type = act_types.startup | act_types.free, ids = { 0x5 } },
-		{ names = { "立ち途中" },                type = act_types.startup | act_types.free, ids = { 0x6 } },
-		{ names = { "前歩き" },                   type = act_types.startup | act_types.free, ids = { 0x2 } },
-		{ names = { "後歩き" },                   type = act_types.startup | act_types.free, ids = { 0x3 } },
-		{ names = { "しゃがみ歩き" },          type = act_types.startup | act_types.free, ids = { 0x7 } },
-		{ names = { "立ち" },                      type = act_types.startup | act_types.free, ids = { 0x21, 0x40, 0x20, 0x3F } },
-		{ names = { "前歩き" },                   type = act_types.startup | act_types.free, ids = { 0x2D, 0x2C } },
-		{ names = { "後歩き" },                   type = act_types.startup | act_types.free, ids = { 0x2E, 0x2F } },
+		{ names = { "しゃがみ" },                type = act_types.startup | act_types.free,  ids = { 0x4, 0x24, 0x25 } },
+		{ names = { "しゃがみ途中" },          type = act_types.startup | act_types.free,  ids = { 0x5 } },
+		{ names = { "立ち途中" },                type = act_types.startup | act_types.free,  ids = { 0x6 } },
+		{ names = { "前歩き" },                   type = act_types.startup | act_types.free,  ids = { 0x2 } },
+		{ names = { "後歩き" },                   type = act_types.startup | act_types.free,  ids = { 0x3 } },
+		{ names = { "しゃがみ歩き" },          type = act_types.startup | act_types.free,  ids = { 0x7 } },
+		{ names = { "立ち" },                      type = act_types.startup | act_types.free,  ids = { 0x21, 0x40, 0x20, 0x3F } },
+		{ names = { "前歩き" },                   type = act_types.startup | act_types.free,  ids = { 0x2D, 0x2C } },
+		{ names = { "後歩き" },                   type = act_types.startup | act_types.free,  ids = { 0x2E, 0x2F } },
 		{
 			names = { "ジャンプ", "アンリミテッドデザイア", "ギガティックサイクロン" },
 			type = act_types.preserve | act_types.any,
@@ -2145,11 +2145,11 @@ local char_acts_base = {
 				0xF, 0x15, 0x16, -- 後小ジャンプ
 			}
 		},
-		{ names = { "空中ガード後" },                    type = act_types.wrap | act_types.free,  ids = { 0x12F } },
-		{ names = { "ダウン" },                             type = act_types.wrap | act_types.any,   ids = { 0x18E, 0x192, 0x190 } },
-		{ names = { "気絶" },                                type = act_types.wrap | act_types.any,   ids = { 0x194, 0x195 } },
+		{ names = { "空中ガード後" },                    type = act_types.wrap | act_types.free,     ids = { 0x12F } },
+		{ names = { "ダウン" },                             type = act_types.wrap | act_types.any,      ids = { 0x18E, 0x192, 0x190 } },
+		{ names = { "気絶" },                                type = act_types.wrap | act_types.any,      ids = { 0x194, 0x195 } },
 		{ names = { "ガード" },                             type = act_types.startup | act_types.block, ids = { 0x117, 0x118, 0x119, 0x11A, 0x11B, 0x11C, 0x11D, 0x11E, 0x11F, 0x120, 0x121, 0x122, 0x123, 0x124, 0x125, 0x126, 0x127, 0x128, 0x129, 0x12A, 0x12B, 0x12C, 0x12C, 0x12D, 0x12E, 0x131, 0x132, 0x133, 0x134, 0x135, 0x136, 0x137, 0x139 } },
-		{ names = { "やられ" },                             type = act_types.wrap | act_types.hit,   ids = { 0x13F, 0x140, 0x141, 0x142, 0x143, 0x144, 0x145, 0x146, 0x147, 0x148, 0x149, 0x14A, 0x14B, 0x14C, 0x14C, 0x14D, 0x14E, 0x14F, 0x151, 0x1E9, 0x239 } },
+		{ names = { "やられ" },                             type = act_types.wrap | act_types.hit,      ids = { 0x13F, 0x140, 0x141, 0x142, 0x143, 0x144, 0x145, 0x146, 0x147, 0x148, 0x149, 0x14A, 0x14B, 0x14C, 0x14C, 0x14D, 0x14E, 0x14F, 0x151, 0x1E9, 0x239 } },
 		{ names = { "ダッシュ" },                          type = act_types.startup | act_types.any,   ids = { 0x17, 0x18, 0x19 } },
 		{ names = { "飛び退き" },                          type = act_types.startup | act_types.any,   ids = { 0x1A, 0x1B, 0x1C } },
 		{ names = { "立スウェー移動" },                 type = act_types.startup | act_types.any,   ids = { 0x26, 0x27, 0x28 } },
@@ -2179,8 +2179,8 @@ local char_acts_base = {
 		-- { names = { "遠 対メインライン威力大攻撃",
 		{ names = { "ジャンプ移行" },                       type = act_types.startup | act_types.any,        ids = { 0x8 } },
 		{ names = { "着地", "やられ" },                      type = act_types.wrap | act_types.any,           ids = { 0x9 } },
-		{ names = { "グランドスウェー" },                 type = act_types.wrap | act_types.any,        ids = { 0x13C, 0x13D, 0x13E } },
-		{ names = { "テクニカルライズ" },                 type = act_types.wrap | act_types.any,        ids = { 0x2CA, 0x2C8, 0x2C9 } },
+		{ names = { "グランドスウェー" },                 type = act_types.wrap | act_types.any,           ids = { 0x13C, 0x13D, 0x13E } },
+		{ names = { "テクニカルライズ" },                 type = act_types.wrap | act_types.any,           ids = { 0x2CA, 0x2C8, 0x2C9 } },
 		{ names = { "避け攻撃" },                             type = act_types.startup | act_types.attack,     ids = { 0x67 } },
 		{ names = { "近立A" },                                  type = act_types.startup | act_types.attack,     ids = { 0x41 } },
 		{ names = { "近立B" },                                  type = act_types.startup | act_types.attack,     ids = { 0x42 } },
@@ -2193,10 +2193,10 @@ local char_acts_base = {
 		{ names = { "屈B" },                                     type = act_types.startup | act_types.low_attack, ids = { 0x48 } },
 		{ names = { "屈C" },                                     type = act_types.startup | act_types.low_attack, ids = { 0x49 } },
 		{ names = { "対スウェーライン下段攻撃" },     type = act_types.startup | act_types.low_attack, ids = { 0x66 } },
-		{ names = { "着地", "着地(小攻撃後1)" },          type = act_types.wrap | act_types.any,        ids = { 0x56 } },
-		{ names = { "着地", "着地(小攻撃後2)" },          type = act_types.wrap | act_types.any,        ids = { 0x59 } },
-		{ names = { "着地", "着地(大攻撃後3)" },          type = act_types.wrap | act_types.any,        ids = { 0x57 } },
-		{ names = { "着地", "着地(大攻撃後4)" },          type = act_types.wrap | act_types.any,        ids = { 0x5A } },
+		{ names = { "着地", "着地(小攻撃後1)" },          type = act_types.wrap | act_types.any,           ids = { 0x56 } },
+		{ names = { "着地", "着地(小攻撃後2)" },          type = act_types.wrap | act_types.any,           ids = { 0x59 } },
+		{ names = { "着地", "着地(大攻撃後3)" },          type = act_types.wrap | act_types.any,           ids = { 0x57 } },
+		{ names = { "着地", "着地(大攻撃後4)" },          type = act_types.wrap | act_types.any,           ids = { 0x5A } },
 		{ names = { "垂直ジャンプA" },                      type = act_types.startup | act_types.overhead,   ids = { 0x4A } },
 		{ names = { "垂直ジャンプB" },                      type = act_types.startup | act_types.overhead,   ids = { 0x4B } },
 		{ names = { "垂直ジャンプC" },                      type = act_types.startup | act_types.overhead,   ids = { 0x4C } },
@@ -2211,7 +2211,7 @@ local char_acts_base = {
 		{ names = { "斜め小ジャンプB" },                   type = act_types.startup | act_types.overhead,   ids = { 0x54 } },
 		{ names = { "斜め小ジャンプC" },                   type = act_types.startup | act_types.overhead,   ids = { 0x55 } },
 		{ names = { "挑発" },                                   type = act_types.startup | act_types.provoke,    ids = { 0x196 } },
-		{ names = { "おきあがり" },                          type = act_types.wrap | act_types.any,        ids = { 0x193, 0x13B, 0x2C7 } },
+		{ names = { "おきあがり" },                          type = act_types.wrap | act_types.any,           ids = { 0x193, 0x13B, 0x2C7 } },
 	},
 }
 local char_fireball_base = {
@@ -4169,12 +4169,12 @@ for _, boxtype in pairs(box_type_base) do
 end
 local attack_boxies = new_set(
 	box_type_base.a, -- 攻撃
-	box_type_base.pa, -- 飛び道具
 	box_type_base.da, -- 攻撃(無効)
-	box_type_base.pda, -- 飛び道具(無効)
 	box_type_base.aa, -- 攻撃(空中追撃可)
-	box_type_base.paa, -- 飛び道具(空中追撃可)
 	box_type_base.daa, -- 攻撃(無効、空中追撃可)
+	box_type_base.pa, -- 飛び道具
+	box_type_base.pda, -- 飛び道具(無効)
+	box_type_base.paa, -- 飛び道具(空中追撃可)
 	box_type_base.pdaa, -- 飛び道具(無効、空中追撃可)
 	box_type_base.t, -- 通常投げ
 	box_type_base.at, -- 空中投げ
@@ -4878,11 +4878,9 @@ local update_box_summary = function(p, box)
 			summary.nullify      = summary.nullify or p.is_fireball and hit_box_procs.nullify(box.id) or nil
 			summary.bai_catch    = summary.bai_catch or p.bai_catch == true and "v" or nil
 			summary.box_addr     = summary.box_addr or pgm:read_u32(pgm:read_u8(0x094C2C + box.id) * 4 + 0x012CB4)
+			summary.attacking    = summary.attacking or attack_boxies[box.type] == true
 		end
 
-		if attack_boxies[box.type] then
-			summary.attacking = true	
-		end
 		if box.type == box_type_base.a or -- 攻撃
 			box.type == box_type_base.pa then -- 飛び道具
 			summary.hit = true
@@ -8434,6 +8432,9 @@ rbff2.startplugin = function()
 				local rep = g2
 				while (g2 ~= nil) do
 					rep, g2 = g2, string.match(g2, "(.+)%1")
+					if g2 == nil or string.sub(rep, 1, #g2) ~= g2 then
+						break
+					end
 				end
 				rep = string.gsub(rep, "%(", "%%(")
 				rep = string.gsub(rep, "%)", "%%)")
@@ -8611,7 +8612,7 @@ rbff2.startplugin = function()
 							delim = ""
 						end
 					end
-					p.frame_info.hurt.txt = { string.format("%s|%s", info.total, func.compress_txt(act_txt)), "" }
+					p.frame_info.hurt.txt = { string.format("[%2x]%3s|%s", info.hitstop_id, info.total, act_txt), "" }
 					p.frame_info.text = p.frame_info.hurt.txt
 				end
 			end
@@ -8625,12 +8626,12 @@ rbff2.startplugin = function()
 		end
 		local summary = fb and fb.hit_summary or p.hit_summary
 		-- ブレイク条件をくっつける
-		--local break_key = func.get_break_key(summary, attackbit)
 		local break_key = string.format("%x", summary.hurtbit and
 			summary.hurtbit & (frame_hurt_types.gnd_hitstun | frame_hurt_types.otg |
 				frame_hurt_types.juggle | frame_hurt_types.op_normal) or "-")
 		-- 初回は新しいデータ構造を作成
 		info = info or {
+			hitstop_id = p.hitstop_id, -- TODO くらいの種類ID
 			last_event = event_type, -- 攻撃かどうか
 			count = 0,      -- バッファ
 			break_key = break_key, -- ブレイク条件
@@ -8723,13 +8724,13 @@ rbff2.startplugin = function()
 						text1 = string.format("%s/%s+%s", text1, info.recovery - land_and_main, land_and_main)
 					end
 				end
-				text1 = string.format("%3s|%s", info.total, text1)
+				text1 = string.format("[%2x]%3s|%s", info.attack, info.total, text1)
 
 				-- 行動開始からの無敵フレーム
-				local invs = {}
-				for k, v in pairs({ ["打"] = info.hurt_inv, ["通"] = info.throw_inv2, ["投"] = info.throw_inv1 }) do
+				local invs, labels = {}, { "打", "通", "投" }
+				for k, v in ipairs({ info.hurt_inv, info.throw_inv2, info.throw_inv1 }) do
 					if v > 0 then
-						table.insert(invs, string.format("%s%s", k, v))
+						table.insert(invs, string.format("%s%s", labels[k], v))
 					end
 				end
 
@@ -8737,8 +8738,16 @@ rbff2.startplugin = function()
 				text2 = string.format("%s", #invs > 0 and table.concat(invs, "") or "-")
 
 				if #info.summaries > 0 then
-					local max, contexts = #info.summaries, {}
-					local build_txt = #info.summaries > 1 and func.build_txt1 or func.build_txt2
+					local max = #info.summaries
+					for i = max, 1, -1 do
+						max = i
+						if info.summaries[i].attacking then
+							break
+						end
+					end
+
+					local contexts = {}
+					local build_txt = max > 1 and func.build_txt1 or func.build_txt2
 					local texts = { text2 }
 					for i, s in ipairs(info.summaries) do
 						for j, sv in ipairs(s.attacking ~= true and new_filled_table(8, nil) or {
@@ -8755,6 +8764,9 @@ rbff2.startplugin = function()
 							if max == i then
 								table.insert(texts, table.concat(contexts[j].tbl, ","))
 							end
+						end
+						if max == i then
+							break
 						end
 					end
 					text2 = table.concat(texts, "|")
@@ -8787,6 +8799,7 @@ rbff2.startplugin = function()
 		-- 初回は新しいデータ構造を作成
 		info = info or {
 			last_event = event_type, -- 攻撃かどうか
+			attack = p.attack,
 			count = 0,      -- バッファ
 			hurt_inv = 0,   -- 打撃無敵
 			has_hurt = false,
@@ -8922,7 +8935,7 @@ rbff2.startplugin = function()
 				local base = ((fb.addr.base - 0x100400) / 0x100)
 				attackbit = attackbit | base * frame_attack_types.x09
 				-- printf("%x %x", base, attackbit)
-				attackbit = attackbit | (p.attack * frame_attack_types.x05)
+				attackbit = attackbit | (fb.hitstop_id * frame_attack_types.x05)
 				active_fb = fb
 				break
 			end
@@ -8946,7 +8959,8 @@ rbff2.startplugin = function()
 		--ガード移行できない行動は色替えする
 		local col, line = 0xAAF0E68C, 0xDDF0E68C
 		local multi = p.act * frame_attack_types.x17
-		if p.max_hit_dn > 1 or p.max_hit_dn == 0 then
+		if p.max_hit_dn > 1 or p.max_hit_dn == 0 or
+			(p.char == 0x4 and p.attack == 0x16) then
 			multi = multi | p.act_count * frame_attack_types.x09
 		end
 		if p.skip_frame then
@@ -9094,7 +9108,7 @@ rbff2.startplugin = function()
 		end
 
 		if p.skip_frame then
-			-- なにもしない
+		-- なにもしない
 		elseif p.in_hitstun then
 			on_frame_event_hitstun(p, active_fb, frame_event_types.active, 0)
 			on_frame_event_attack(p, active_fb, frame_event_types.reset)
@@ -9562,10 +9576,13 @@ rbff2.startplugin = function()
 			if p.flag_fin or testbit(p.flag_c0, flag_c0_types._16) then
 				-- 最終フレームか着地フレームの場合は前フレームのを踏襲する
 				p.in_hitstun = p.in_hitstun
-			else
-				p.in_hitstun = p.hurt_state > 0 or testbit(p.flag_cc, flag_cc_types.hitstun) or
+			elseif p.flag_c8 == 0 then
+				p.in_hitstun = p.hurt_state > 0 or
+					testbit(p.flag_cc, flag_cc_types.hitstun) or
 					testbit(p.flag_d0, flag_d0_types._06) or -- ガード中、やられ中
 					testbit(p.flag_c0, flag_c0_types._01) -- ダウン
+			else
+				p.in_hitstun = false
 			end
 			p.attack_flag     = testbit(p.flag_cc, flag_cc_types.attacking) or (p.flag_c8 > 0) or (p.flag_c4 > 0)
 			p.spid            = testbit(p.flag_cc, flag_cc_types._21) and pgm:read_u8(p.addr.base + 0xB8) or 0
