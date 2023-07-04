@@ -964,6 +964,8 @@ flag_cc_types.attacking = flag_cc_types._00 |  -- CA
 	flag_cc_types._27 |                        -- 投げ追撃
 	flag_cc_types._30 |                        -- 空中投げ
 	flag_cc_types._31                          -- 投げ
+flag_cc_types.grabbing = flag_cc_types._25 |   -- つかみ技
+	flag_cc_types._27                          -- 投げ追撃
 
 -- !!注意!!後隙が配列の後ろに来るように定義すること
 local char_acts_base = {
@@ -4178,8 +4180,16 @@ local attack_boxies = new_set(
 	box_type_base.pdaa, -- 飛び道具(無効、空中追撃可)
 	box_type_base.t, -- 通常投げ
 	box_type_base.at, -- 空中投げ
-	box_type_base.pt) -- 必殺技投げ
-
+	box_type_base.pt, -- 必殺技投げ
+	box_type_base.g10) -- フェニックススルー
+local parry_boxies = new_set(
+	box_type_base.g4, -- 上段当身投げ
+	box_type_base.g5, -- 裏雲隠し
+	box_type_base.g6, -- 下段当身打ち
+	box_type_base.g7, -- 必勝逆襲拳
+	box_type_base.g8, -- サドマゾ
+	box_type_base.g9) -- 倍返し
+	
 -- ボタンの色テーブル
 local btn_col = { [convert("_A")] = 0xFFCC0000, [convert("_B")] = 0xFFCC8800, [convert("_C")] = 0xFF3333CC, [convert("_D")] = 0xFF336600, }
 local text_col, shadow_col = 0xFFFFFFFF, 0xFF000000
@@ -4563,13 +4573,13 @@ local hit_box_procs = {
 	down_hit    = function(id) return hit_box_proc(id, 0x94E0C) end, -- 012DE4: 012DF0: ダウン状態へのヒット判定処理
 	air_hit     = function(id) return hit_box_proc(id, 0x94EEC) end, -- 012E0E: 012E1A: 空中追撃可能状態へのヒット判定処理
 	up_block    = function(id) return hit_box_proc(id, 0x950AC) end, -- 012EAC: 012EB8: 上段ガード判定処理
-	low_block   = function(id) return hit_box_proc(id, 0x9518C) end, -- 012ED8: 012EE4: 屈段ガード判定処理
+	low_block   = function(id) return hit_box_proc(id, 0x9518C) end, -- 012ED8: 012EE4: 屈ガード判定処理
 	air_block   = function(id) return hit_box_proc(id, 0x9526C) end, -- 012F04: 012F16: 空中ガード判定処理
 	sway_up_blk  = function(id) return hit_box_proc(id, 0x95A4C) end, -- 012E60: 012E6C: 対ライン上段の謎処理
 	sway_low_blk = function(id) return hit_box_proc(id, 0x95B2C) end, -- 012F3A: 012E90: 対ライン下段の謎処理
 	j_atm_nage  = function(id) return hit_box_proc(id, 0x9534C) end, -- 012F30: 012F82: 上段当身投げの処理
 	urakumo     = function(id) return hit_box_proc(id, 0x9542C) end, -- 012F30: 012F82: 裏雲隠しの処理
-	g_atm_uchi  = function(id) return hit_box_proc(id, 0x9550C) end, -- 012F44: 012F82: 屈段当身打ちの処理
+	g_atm_uchi  = function(id) return hit_box_proc(id, 0x9550C) end, -- 012F44: 012F82: 下段当身打ちの処理
 	gyakushu    = function(id) return hit_box_proc(id, 0x955EC) end, -- 012F4E: 012F82: 必勝逆襲拳の処理
 	sadomazo    = function(id) return hit_box_proc(id, 0x956CC) end, -- 012F58: 012F82: サドマゾの処理
 	phx_tw      = function(id) return hit_box_proc(id, 0x9588C) end, -- 012F6C: 012F82: フェニックススルーの処理
@@ -4714,6 +4724,10 @@ local new_hitbox1 = function(p, id, pos_x, pos_y, top, bottom, left, right, is_f
 	end
 	if (box.type == box_type_base.a or box.type == box_type_base.aa) and
 		(is_fireball == true or (p.hit.harmless == false and p.hit.obsl_hit == false)) then
+		-- 攻撃中のフラグをたてる
+		p.attacking = true
+	end
+	if parry_boxies[box.type] == true then
 		-- 攻撃中のフラグをたてる
 		p.attacking = true
 	end
@@ -4878,8 +4892,14 @@ local update_box_summary = function(p, box)
 			summary.nullify      = summary.nullify or p.is_fireball and hit_box_procs.nullify(box.id) or nil
 			summary.bai_catch    = summary.bai_catch or p.bai_catch == true and "v" or nil
 			summary.box_addr     = summary.box_addr or pgm:read_u32(pgm:read_u8(0x094C2C + box.id) * 4 + 0x012CB4)
-			summary.attacking    = summary.attacking or attack_boxies[box.type] == true
 		end
+
+		-- 攻撃判定に関係なく判定する
+		summary.attacking    = summary.attacking or
+			attack_boxies[box.type] == true or
+			parry_boxies[box.type] == true or
+			(p.is_fireball ~= true and p.attack ~= 0) or
+			(p.is_fireball and p.hitstop_id ~= 0)
 
 		if box.type == box_type_base.a or -- 攻撃
 			box.type == box_type_base.pa then -- 飛び道具
@@ -4931,13 +4951,13 @@ local update_box_summary = function(p, box)
 			box.type == box_type_base.sv2 then -- 食らい2(スウェー中)
 			edge = summary.edge.hurt
 		elseif box.type == box_type_base.g1 or -- 立ガード
-			box.type == box_type_base.g2 or -- 屈段ガード
+			box.type == box_type_base.g2 or -- 屈ガード
 			box.type == box_type_base.g3 then -- 空中ガード
 			summary.block = true
 			edge = summary.edge.block
 		elseif box.type == box_type_base.g4 or -- 上段当身投げ
 			box.type == box_type_base.g5 or -- 裏雲隠し
-			box.type == box_type_base.g6 or -- 屈段当身打ち
+			box.type == box_type_base.g6 or -- 下段当身打ち
 			box.type == box_type_base.g7 or -- 必勝逆襲拳
 			box.type == box_type_base.g8 or -- サドマゾ
 			box.type == box_type_base.g9 or -- 倍返し
@@ -5081,7 +5101,7 @@ local update_box_summary = function(p, box)
 				-- 裏雲隠し
 				info.urakumo = summary.urakumo
 				info.range_urakumo = summary.urakumo and in_range(real_top, real_bottom, 104, 40)
-				-- 屈段当身打ち
+				-- 下段当身打ち
 				info.g_atm_uchi = summary.g_atm_uchi
 				info.range_g_atm_uchi = summary.g_atm_uchi and in_range(real_top, real_bottom, 44, 0)
 				-- 必勝逆襲拳
@@ -5268,6 +5288,16 @@ local update_object = function(p)
 			if global.log.atklog == true and hitbox.log_txt ~= nil then
 				print(hitbox.log_txt)
 			end
+		end
+	end
+	-- 判定から解決できない投げ用の設定
+	if p.is_fireball ~= true then
+		if testbit(p.op.flag_cc, flag_cc_types._03 | -- 必殺投げやられ
+			flag_cc_types._08  |        -- 投げ派生やられ
+			flag_cc_types._09  |         -- つかみ投げやられ
+			flag_cc_types._10            -- 投げられ
+			) and p.op.tmp_dmg > 0 then
+			p.attacking = true
 		end
 	end
 
@@ -9814,6 +9844,7 @@ rbff2.startplugin = function()
 
 				-- 補正前ダメージ量取得 家庭用 05B118 からの処理
 				p.pure_dmg   = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x813F0)) + hit_attack)
+				-- ("p.pure_dmg %s", p.pure_dmg)
 				-- 気絶値と気絶タイマー取得 05C1CA からの処理
 				p.pure_st    = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x85CCA)) + hit_attack)
 				p.pure_st_tm = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x85D2A)) + hit_attack)
@@ -10205,6 +10236,7 @@ rbff2.startplugin = function()
 					fb.hitstop_gd = math.max(2, fb.hitstop - 1) -- ガード時の補正
 					-- 補正前ダメージ量取得 家庭用 05B146 からの処理
 					fb.pure_dmg   = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x88472))
+					-- printf("fb.pure_dmg %s", fb.pure_dmg)
 					-- 気絶値と気絶タイマー取得 家庭用 05C1B0 からの処理
 					fb.pure_st    = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x886F2))
 					fb.pure_st_tm = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x88772))
