@@ -1413,7 +1413,7 @@ local char_acts_base = {
 		{ names = { "ダブルローリング" },                                                           type = act_types.preserve | act_types.low_attack,                      ids = { 0x6C } },
 		{ names = { "レッグプレス" },                                                                 type = act_types.startup | act_types.any,                              ids = { 0x6A } },
 		{ names = { "M.リアルカウンター" },                                                         type = act_types.startup | act_types.attack,                           ids = { 0xA4, 0xA5 } },
-		{ names = { "CAジャーマンスープレックス", "M.リアルカウンター" },               type = act_types.preserve | act_types.any,                             ids = { 0xA6 } },
+		{ names = { "CAジャーマンスープレックス", "M.リアルカウンター" },               type = act_types.startup_if_ca | act_types.any,                        ids = { 0xA6 } },
 		{ names = { "M.リアルカウンター投げ移行" },                                             type = act_types.startup | act_types.any,                              ids = { 0xAC } },
 		{ names = { "ジャーマンスープレックス", "CAジャーマンスープレックス" },     type = act_types.preserve | act_types.any,                             ids = { 0xA7, 0xA8, 0xA9, 0xAA, 0xAB } },
 		{ names = { "フェイスロック" },                                                              type = act_types.wrap | act_types.any,                                 ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4 } },
@@ -1426,16 +1426,17 @@ local char_acts_base = {
 		{ names = { "デンジャラススパイダー" },                                                  type = act_types.wrap | act_types.lunging_throw | act_types.attack,    ids = { 0xF0 } },
 		{ names = { "スピンフォール" },                                                              type = act_types.startup | act_types.attack,                           ids = { 0xAE, 0xAF } },
 		{ names = { "スピンフォール" },                                                              type = act_types.preserve | act_types.attack,                          ids = { 0xB0 } },
-		{ names = { "ダブルスパイダー", "M.スパイダー", "デンジャラススパイダー" }, type = act_types.preserve | act_types.any,                             ids = { 0x87, 0x88, 0x89, 0x8A, 0x8B } },
+		{ names = { "M.スパイダー", "デンジャラススパイダー" },                             type = act_types.preserve | act_types.any,                             ids = { 0x87 } },
+		{ names = { "ダブルスパイダー", "M.スパイダー", "デンジャラススパイダー" }, type = act_types.startup | act_types.any,                              ids = { 0x88, 0x89, 0x8A, 0x8B } },
 		{ names = { "M.スナッチャー" },                                                               type = act_types.lunging_throw | act_types.startup | act_types.attack, ids = { 0x90 } },
 		{ names = { "M.スナッチャー" },                                                               type = act_types.preserve | act_types.lunging_throw | act_types.any,   ids = { 0x91, 0x92 } },
 		{ names = { "バーチカルアロー" },                                                           type = act_types.startup | act_types.overhead,                         ids = { 0xB8, 0xB9 } },
 		{ names = { "バーチカルアロー" },                                                           type = act_types.preserve | act_types.any,                             ids = { 0xBA, 0xBB } },
-		{ names = { "ダブルスナッチャー", "M.スナッチャー" },                                type = act_types.preserve | act_types.any,                             ids = { 0x93, 0x94, 0x95, 0x96 } },
+		{ names = { "ダブルスナッチャー", "M.スナッチャー" },                                type = act_types.startup | act_types.any,                              ids = { 0x93, 0x94, 0x95, 0x96 } },
 		{ names = { "M.クラブクラッチ" },                                                            type = act_types.startup | act_types.low_attack,                       ids = { 0x9A, 0x9B } },
 		{ names = { "ストレートスライサー" },                                                     type = act_types.startup | act_types.low_attack,                       ids = { 0xC2, 0xC3 } },
 		{ names = { "ストレートスライサー", "M.クラブクラッチ" },                          type = act_types.preserve | act_types.any,                             ids = { 0xC4, 0xC5 } },
-		{ names = { "ダブルクラッチ", "M.クラブクラッチ" },                                   type = act_types.preserve | act_types.any,                             ids = { 0x9D, 0x9E, 0x9F, 0xA0, 0xA1 } },
+		{ names = { "ダブルクラッチ", "M.クラブクラッチ" },                                   type = act_types.startup | act_types.any,                              ids = { 0x9D, 0x9E, 0x9F, 0xA0, 0xA1 } },
 		{ names = { "M.ダイナマイトスウィング" },                                                type = act_types.startup | act_types.any,                              ids = { 0xCC, 0xCD, 0xCE, 0xCF, 0xD0, 0xD1 } },
 		{ names = { "M.タイフーン" },                                                                  type = act_types.startup | act_types.lunging_throw | act_types.attack, ids = { 0xFE, 0xFF, 0x100 } },
 		{ names = { "M.タイフーン" },                                                                  type = act_types.preserve | act_types.lunging_throw | act_types.any,   ids = { 0x100 } },
@@ -1447,13 +1448,13 @@ local char_acts_base = {
 		{ names = { "CA 屈B" },                                                                            type = act_types.startup | act_types.low_attack,                       ids = { 0x251 } },
 		{ names = { "CA 立C" },                                                                            type = act_types.startup | act_types.attack,                           ids = { 0x246 } },
 		{ names = { "CA _6C" },                                                                             type = act_types.startup | act_types.attack,                           ids = { 0x24E, 0x24F } },
-		{ names = { "CA _6C" },                                                                             type = act_types.startup | act_types.any,                              ids = { 0x250 } },
+		{ names = { "CA _6C" },                                                                             type = act_types.preserve | act_types.any,                             ids = { 0x250 } },
 		{ names = { "CA 屈C" },                                                                            type = act_types.startup | act_types.low_attack,                       ids = { 0x247 } },
 		{ names = { "CA _3C" },                                                                             type = act_types.startup | act_types.attack,                           ids = { 0x242 } },
 		{ names = { "CA 立C" },                                                                            type = act_types.startup | act_types.attack,                           ids = { 0x241 } },
 		{ names = { "CA 立C" },                                                                            type = act_types.startup | act_types.attack,                           ids = { 0x240 } },
 		{ names = { "CA 立C" },                                                                            type = act_types.startup | act_types.attack,                           ids = { 0x243, 0x244 } },
-		{ names = { "CA 立C" },                                                                            type = act_types.startup | act_types.any,                              ids = { 0x245 } },
+		{ names = { "CA 立C" },                                                                            type = act_types.preserve | act_types.any,                             ids = { 0x245 } },
 		{ names = { "CA 立C" },                                                                            type = act_types.startup | act_types.attack,                           ids = { 0x252, 0x253 } },
 		{ names = { "CA _3C" },                                                                             type = act_types.startup | act_types.attack,                           ids = { 0x24D } },
 		{ names = { "CA _6C" },                                                                             type = act_types.startup | act_types.attack,                           ids = { 0x249, 0x24A } },
@@ -1475,7 +1476,7 @@ local char_acts_base = {
 		{ names = { "バロムパンチ" },                             type = act_types.startup | act_types.low_attack,                  ids = { 0x69 } },
 		{ names = { "ダブルコング" },                             type = act_types.startup | act_types.overhead,                    ids = { 0x86, 0x87, 0x88 } },
 		{ names = { "ダブルコング" },                             type = act_types.preserve | act_types.any,                        ids = { 0x89 } },
-		{ names = { "ザッパー" },                                   type = act_types.startup | act_types.attack | act_types.firing,   ids = { 0x90, 0x91, 0x92 }, },
+		{ names = { "ザッパー" },                                   type = act_types.startup | act_types.attack | act_types.firing,   ids = { 0x90, 0x91 }, },
 		{ names = { "ザッパー" },                                   type = act_types.preserve | act_types.any | act_types.firing,     ids = { 0x92 }, },
 		{ names = { "ウェービングブロー" },                    type = act_types.startup | act_types.attack,                      ids = { 0x9A, 0x9B } },
 		{ names = { "ガッツダンク" },                             type = act_types.startup | act_types.attack,                      ids = { 0xA4, 0xA5, 0xA6, 0xA7 } },
@@ -5341,7 +5342,7 @@ local update_object = function(p)
 			end
 		end
 		if testbit(p.act_data.type, act_types.lunging_throw) then
-printf("%s %s", p.pure_dmg, p.old_pure_dmg)
+			-- printf("%s %s", p.pure_dmg, p.old_pure_dmg)
 			if p.pure_dmg == 0 then
 				p.hit_summary.pure_dmg = p.old_pure_dmg
 			end
@@ -8950,7 +8951,7 @@ rbff2.startplugin = function()
 			info.return_main = info.return_main + 1
 		end
 		info.summary = summary
-printf("%x %x %x summary.pure_dmg %s %s %s", p.addr.base, info.attack, attackbit, summary.attacking, summary.throw, summary.pure_dmg)
+		-- printf("%x %x %x summary.pure_dmg %s %s %s", p.addr.base, info.attack, attackbit, summary.attacking, summary.throw, summary.pure_dmg)
 		-- 動作開始からの打撃無敵を判定
 		if info.has_hurt == false then
 			local has_hurt = true
@@ -9209,7 +9210,8 @@ printf("%x %x %x summary.pure_dmg %s %s %s", p.addr.base, info.attack, attackbit
 			on_frame_event_hitstun(p, active_fb, frame_event_types.reset)
 			on_frame_event_attack(p, active_fb, frame_event_types.reset)
 		else
-			if p.act_1st and testbit(p.act_data.type, act_types.startup) then
+			if p.act_1st and (testbit(p.act_data.type, act_types.startup) or
+				testbit(p.act_data.type, act_types.startup_if_ca) and testbit(p.flag_cc, flag_cc_types._00)) then
 				on_frame_event_attack(p, active_fb, frame_event_types.reset)
 			end
 			if p.attacking or p.dmmy_attacking or p.throwing or attackbit > 0 then
@@ -10206,6 +10208,7 @@ printf("%x %x %x summary.pure_dmg %s %s %s", p.addr.base, info.attack, attackbit
 				else
 					p.act_data.name = p.act_data.normal_name
 				end
+				-- CAのときのみ開始動作として評価する
 				if testbit(p.act_data.type, act_types.startup_if_ca) then
 					if testbit(p.flag_cc, flag_cc_types._00) then
 						p.act_1st  = true
