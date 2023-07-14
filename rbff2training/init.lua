@@ -8705,7 +8705,6 @@ rbff2.startplugin = function()
 				end
 			end
 		end
-printf("lo=%s hi=%s hg=%s hl=%s %s", lo, hi, hitg, hilo, blocktxt)
 		if esaka_range > 0 then
 			blocktxt = string.format("%s(%s)", blocktxt, esaka_range)
 		end
