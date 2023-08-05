@@ -4533,29 +4533,29 @@ local fix_bp_addr = function(addr)
 end
 local hurt_inv_type = {
 	-- 全身無敵
-	full    = { type = 0, disp_label = "全身無敵", name = "全身無敵" },
+	full    = { type = 0, min_label = "全身", disp_label = "全身無敵", name = "全身無敵" },
 	-- ライン関係の無敵
-	main    = { type = 1, disp_label = "メイン攻撃無敵", name = "メインライン攻撃無敵" },
-	sway_oh = { type = 1, disp_label = "対メイン上段無敵", name = "対メインライン上段攻撃無敵" },
-	sway_lo = { type = 1, disp_label = "対メイン下段無敵", name = "対メインライン下段攻撃無敵" },
+	main    = { type = 1, min_label = "メイン", disp_label = "メイン攻撃無敵", name = "メインライン攻撃無敵" },
+	sway_oh = { type = 1, min_label = "対上", disp_label = "対メイン上段無敵", name = "対メインライン上段攻撃無敵" },
+	sway_lo = { type = 1, min_label = "対下", disp_label = "対メイン下段無敵", name = "対メインライン下段攻撃無敵" },
 	-- やられ判定の高さ
-	top32   = { type = 2, value = 32, disp_label = "上半身無敵1", name = "32 避け" },
-	top40   = { type = 2, value = 40, disp_label = "上半身無敵2", name = "40 ウェービングブロー,龍転身,ダブルローリング" },
-	top48   = { type = 2, value = 48, disp_label = "上半身無敵3", name = "48 ローレンス避け" },
+	top32   = { type = 2, value = 32, min_label = "膝上", disp_label = "上半身無敵1", name = "32 避け" },
+	top40   = { type = 2, value = 40, min_label = "膝上", disp_label = "上半身無敵2", name = "40 ウェービングブロー,龍転身,ダブルローリング" },
+	top48   = { type = 2, value = 48, min_label = "膝上", disp_label = "上半身無敵3", name = "48 ローレンス避け" },
 	--[[
-	top60 = { type = 2, value = 60, disp_label = "頭部無敵1", name = "60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン"},
-	top64 = { type = 2, value = 64, disp_label = "頭部無敵2", name = "64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド"},
-	top68 = { type = 2, value = 68, disp_label = "頭部無敵3", name = "68 屈 ローレンス"},
-	top76 = { type = 2, value = 76, disp_label = "頭部無敵4", name = "76 屈 フランコ"},
-	top80 = { type = 2, value = 80, disp_label = "頭部無敵5", name = "80 屈 クラウザー"},
+	top60 = { type = 2, value = 60, min_label = "上部", disp_label = "頭部無敵1", name = "60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン"},
+	top64 = { type = 2, value = 64, min_label = "上部", disp_label = "頭部無敵2", name = "64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド"},
+	top68 = { type = 2, value = 68, min_label = "上部", disp_label = "頭部無敵3", name = "68 屈 ローレンス"},
+	top76 = { type = 2, value = 76, min_label = "上部", disp_label = "頭部無敵4", name = "76 屈 フランコ"},
+	top80 = { type = 2, value = 80, min_label = "上部", disp_label = "頭部無敵5", name = "80 屈 クラウザー"},
 	]]
 	-- 足元無敵
-	low40 = { type = 3, value = 40, disp_label = "足元無敵1", name = "対アンディ屈C" },
-	low32 = { type = 3, value = 32, disp_label = "足元無敵2", name = "対ギース屈C" },
-	low24 = { type = 3, value = 24, disp_label = "足元無敵3", name = "対だいたいの屈B（キムとボブ以外）" },
+	low40 = { type = 3, value = 40, min_label = "足元", disp_label = "足元無敵1", name = "対アンディ屈C" },
+	low32 = { type = 3, value = 32, min_label = "足元", disp_label = "足元無敵2", name = "対ギース屈C" },
+	low24 = { type = 3, value = 24, min_label = "足元", disp_label = "足元無敵3", name = "対だいたいの屈B（キムとボブ以外）" },
 	-- 特殊やられ
-	otg = { type = 4, disp_label = "ダウン追撃", name = "ダウン追撃のみ可能" },
-	juggle = { type = 4, disp_label = "空中追撃", name = "空中追撃のみ可能" },
+	otg = { type = 4, min_label = "追撃可", disp_label = "ダウン追撃", name = "ダウン追撃のみ可能" },
+	juggle = { type = 4, min_label = "追撃可", disp_label = "空中追撃", name = "空中追撃のみ可能" },
 }
 hurt_inv_type.values = {
 	hurt_inv_type.full, hurt_inv_type.main, hurt_inv_type.sway_oh, hurt_inv_type.sway_lo, hurt_inv_type.top32, hurt_inv_type.top40,
@@ -8972,8 +8972,15 @@ rbff2.startplugin = function()
 				text1 = string.format("[%2x]%3s|%s", info.attack, info.total, text1)
 
 				-- 行動開始からの無敵フレーム
-				local invs, labels = {}, { "打", "通", "投" }
-				for k, v in ipairs({ info.hurt_inv, info.throw_inv2, info.throw_inv1 }) do
+				local invs, labels, uniq = {}, { "通", "投" }, {}
+				for _, t in ipairs(hurt_inv_type.values) do
+					local v = info.hurt_inv[t.min_label] or 0
+					if v > 0 and uniq[t.min_label] == nil then
+						table.insert(invs, string.format("%s%s", t.min_label, v))
+						uniq[t.min_label] = true
+					end
+				end
+				for k, v in ipairs({ info.throw_inv2, info.throw_inv1 }) do
 					if v > 0 then
 						table.insert(invs, string.format("%s%s", labels[k], v))
 					end
@@ -9043,7 +9050,7 @@ rbff2.startplugin = function()
 			last_event = event_type, -- 攻撃かどうか
 			attack = p.attack,
 			count = 0,      -- バッファ
-			hurt_inv = 0,   -- 打撃無敵
+			hurt_inv = {},   -- 打撃無敵 hurt_inv_types.min_labelをキー、フレーム数を値
 			has_hurt = false,
 			throw_inv1 = 0, -- 投げ無敵
 			can_throw1 = false,
@@ -9117,12 +9124,11 @@ rbff2.startplugin = function()
 		if info.has_hurt == false then
 			local has_hurt = true
 			for _, inv in ipairs(summary.hurt_inv) do
-				if inv == hurt_inv_type.full then
-					info.hurt_inv = info.hurt_inv + 1
-					-- printf("%x hurt_inv %s", p.attack, info.hurt_inv)
-					has_hurt = false
-					break
-				end
+				local v = info.hurt_inv[inv.min_label] or 0
+				info.hurt_inv[inv.min_label] = v + 1
+				-- printf("%x hurt_inv %s %s", p.attack, inv.min_label, info.hurt_inv[inv.min_label])
+				has_hurt = false
+				break
 			end
 			info.has_hurt = has_hurt
 		end
@@ -10823,18 +10829,23 @@ rbff2.startplugin = function()
 
 		-- フレーム表示などの前処理2
 		for _, p in ipairs(players) do
-			-- 起き上がり前にstopの値が入っているのでチェック
+			-- 起き上がりと投げやられ演出の停止はフレーム差の計算に邪魔なので停止扱いしない
 			local stop = p.stop ~= 0 and testbit(p.flag_cc,
-			flag_cc_types._03 |    -- 必殺投げやられ
-			flag_cc_types._08 |                        -- 投げ派生やられ
-			flag_cc_types._09 |                        -- つかみ投げやられ
-			flag_cc_types._10 |                       -- 投げられ
+				flag_cc_types._03 | -- 必殺投げやられ
+				flag_cc_types._08 | -- 投げ派生やられ
+				flag_cc_types._09 | -- つかみ投げやられ
+				flag_cc_types._10 | -- 投げられ
+				flag_cc_types._27 | -- 投げ追撃
+				flag_cc_types._30 | -- 空中投げ
+				flag_cc_types._31 | -- 投げ
+				flag_cc_types._23 -- 起き上がり
+			) ~= true
+			if testbit(p.flag_c0, flag_c0_types._01) and -- ダウン
+				testbit(p.flag_cc, flag_cc_types._13) -- ダウン
+			then
+				stop = false
+			end
 
-			flag_cc_types._27 |      -- 投げ追撃
-			flag_cc_types._30 |    -- 空中投げ
-			flag_cc_types._31    -- 投げ
-		
-		) ~= true
 			--停止演出のチェック
 			p.old_skip_frame = p.skip_frame
 			if global.no_background then
@@ -10859,7 +10870,8 @@ rbff2.startplugin = function()
 				p.hit1 = 1 -- 1ヒット確定
 			end
 			-- 停止時間なしのヒットガードのためelseifで繋げない
-			if (p.hit1 == 1 and p.skip_frame == false) or ((p.state == 1 or p.state == 3) and p.old_skip_frame == true and p.skip_frame == false) then
+			if (p.hit1 == 1 and p.skip_frame == false) or
+				((p.state == 1 or p.state == 3) and p.old_skip_frame == true and p.skip_frame == false) then
 				p.hit1 = 2 -- ヒット後のヒットストップ解除フレームの記録
 				p.on_hit1 = global.frame_number
 			end
@@ -10871,7 +10883,8 @@ rbff2.startplugin = function()
 				p.block1 = 1 -- 1ガード確定
 			end
 			-- 停止時間なしのヒットガードのためelseifで繋げない
-			if (p.block1 == 1 and p.skip_frame == false) or (p.state == 2 and p.old_skip_frame == true and p.skip_frame == false) then
+			if (p.block1 == 1 and p.skip_frame == false) or
+				(p.state == 2 and p.old_skip_frame == true and p.skip_frame == false) then
 				p.block1 = 2 -- ガード後のヒットストップ解除フレームの記録
 				p.on_block1 = global.frame_number
 			end
