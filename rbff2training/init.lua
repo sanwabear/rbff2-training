@@ -1,6 +1,6 @@
 --MIT License
 --
---Copyright (c) 2019 @ym2601 (https://github.com/sanwabear)
+--Copyright (c) 2019- @ym2601 (https://github.com/sanwabear)
 --
 --Permission is hereby granted, free of charge, to any person obtaining a copy
 --of this software and associated documentation files (the "Software"), to deal
@@ -20,7 +20,6 @@
 --OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 --SOFTWARE.
 local exports              = {}
-local lfs                  = require("lfs")
 local convert_lib          = require("data/button_char")
 local convert              = function(str)
 	return str and convert_lib(str) or str
@@ -31,9 +30,9 @@ exports.description        = "RBFF2 Training"
 exports.license            = "MIT License"
 exports.author             = { name = "Sanwabear" }
 
-local printf               = function(format, ...)
-	print(string.format(format, ...))
-end
+local util                 = require("rbff2training/util")
+local data                 = require("rbff2training/data")
+
 -- MAMEのLuaオブジェクトの変数と初期化処理
 local man
 local machine
@@ -47,13 +46,24 @@ local setup_emu            = function()
 	man = manager
 	machine = man.machine
 	cpu = machine.devices[":maincpu"]
+	-- for k, v in pairs(cpu.state) do util.printf("%s %s", k ,v ) end
 	pgm = cpu.spaces["program"]
 	scr = machine.screens:at(1)
 	ioports = man.machine.ioport.ports
+	--[[
+	for pname, port in pairs(ioports) do
+		for fname, field in pairs(port.fields) do util.printf("%s %s", pname, fname) end
+	end
+	for p, pk in ipairs(data.joy_k) do
+		for _, name in pairs(pk) do
+			util.printf("%s %s %s", ":edge:joy:JOY" .. p, name, ioports[":edge:joy:JOY" .. p].fields[name])
+		end
+	end
+	]]
 	debugger = machine.debugger
 	base_path = function()
 		local base = emu.subst_env(man.options.entries.homepath:value():match('([^;]+)')) .. '/plugins/' .. exports.name
-		local dir = lfs.currentdir()
+		local dir = util.cur_dir()
 		return dir .. "/" .. base
 	end
 	dofile(base_path() .. "/data.lua")
@@ -61,37 +71,133 @@ end
 
 local rbff2                = exports
 
--- キャラの基本データ
--- 配列のインデックス=キャラID
-local chars         = {
-	{ min_y = 9,  min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x2E, easy_bs_addr = 0x2E, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 18 }, },                               name = "テリー・ボガード", },
-	{ min_y = 10, min_sy = 4, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 18 }, },                               name = "アンディ・ボガード", },
-	{ min_y = 8,  min_sy = 3, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x3A, easy_bs_addr = 0x3A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 18 }, },                               name = "東丈", },
-	{ min_y = 10, min_sy = 3, init_stuns = 29, wakeup_frms = 17, sway_act_counts = 0x3, bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 18 }, },                               name = "不知火舞", },
-	{ min_y = 8,  min_sy = 1, init_stuns = 33, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x66, easy_bs_addr = 0x4A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 19 }, },                               name = "ギース・ハワード", },
-	{ min_y = 2,  min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x46, easy_bs_addr = 0x46, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 18 }, },                               name = "望月双角", },
-	{ min_y = 9,  min_sy = 6, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 19 }, },                               name = "ボブ・ウィルソン", },
-	{ min_y = 10, min_sy = 3, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x32, easy_bs_addr = 0x32, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 16 }, },                               name = "ホンフゥ", },
-	{ min_y = 9,  min_sy = 7, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x3E, easy_bs_addr = 0x3E, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 41 }, },                               name = "ブルー・マリー", },
-	{ min_y = 9,  min_sy = 4, init_stuns = 35, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 15 }, },                               name = "フランコ・バッシュ", },
-	{ min_y = 9,  min_sy = 4, init_stuns = 38, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x56, easy_bs_addr = 0x3A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 18 }, { name = "中蛇", f = 9, } },     name = "山崎竜二", },
-	{ min_y = 11, min_sy = 1, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC, bs_addr = 0x3A, easy_bs_addr = 0x3A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 57 }, { name = "真眼", f = 47, } },    name = "秦崇秀", },
-	{ min_y = 11, min_sy = 4, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC, bs_addr = 0x36, easy_bs_addr = 0x36, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 27 }, { name = "龍転", f = 25, } },    name = "秦崇雷", },
-	{ min_y = 9,  min_sy = 6, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x7A, easy_bs_addr = 0x5E, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 47 }, },                               name = "ダック・キング", },
-	{ min_y = 9,  min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x36, easy_bs_addr = 0x36, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 19 }, { name = "覇気", f = 28, } },    name = "キム・カッファン", },
-	{ min_y = 4,  min_sy = 3, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 42 }, },                               name = "ビリー・カーン", },
-	{ min_y = 9,  min_sy = 6, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2E, easy_bs_addr = 0x2E, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 23 }, { name = "軟体", f = 20, } },    name = "チン・シンザン", },
-	{ min_y = 11, min_sy = 0, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 19 }, },                               name = "タン・フー・ルー", },
-	{ min_y = 7,  min_sy = 4, init_stuns = 35, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = {},                                                         name = "ローレンス・ブラッド", },
-	{ min_y = 7,  min_sy = 2, init_stuns = 35, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x52, easy_bs_addr = 0x36, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 17 }, },                               name = "ヴォルフガング・クラウザー", },
-	{ min_y = 9,  min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x7, bs_addr = 0x26, easy_bs_addr = 0x26, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 18 }, },                               name = "リック・ストラウド", },
-	{ min_y = 9,  min_sy = 5, init_stuns = 29, wakeup_frms = 14, sway_act_counts = 0x3, bs_addr = 0x52, easy_bs_addr = 0x32, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 22 }, },                               name = "李香緋", },
-	{ min_y = 10, min_sy = 4, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x0, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 13 }, },                               name = "アルフレッド", },
-	{ min_y = 0,  min_sy = 0, init_stuns = 0,  wakeup_frms = 0,  sway_act_counts = 0x0, bs_addr = 0x0,  easy_bs_addr = 0x0,  acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = {}, name = "common", },
+-- キャラと動作データ
+local chars                = data.chars
+local jump_acts            = data.jump_acts
+local wakeup_acts          = data.wakeup_acts
+local act_types            = data.act_types
+local pre_down_acts        = data.pre_down_acts
+
+-- ヒット効果
+local hit_effect_types     = data.hit_effect_types
+local hit_effect_nokezoris = data.hit_effect_nokezoris
+local hit_effects          = data.hit_effects
+local hit_effect_moves     = { 0 }
+local hit_effect_move_keys = { "OFF" }
+
+-- ヒット時のシステム内での中間処理による停止アドレス
+local hit_system_stops     = {}
+
+-- 判定種類
+local box_kinds            = data.box_kinds
+local box_types            = data.box_types
+local main_box_types       = data.main_box_types
+local sway_box_types       = data.sway_box_types
+local attack_boxies        = data.attack_boxies
+local juggle_boxies        = data.juggle_boxies
+local fake_boxies          = data.fake_boxies
+local hitstun_boxies       = data.hitstun_boxies
+local block_boxies         = data.block_boxies
+local parry_boxies         = data.parry_boxies
+local hurt_boxies          = data.hurt_boxies
+local top_types            = data.top_types
+local top_sway_types       = data.top_sway_types
+local top_punish_types     = data.top_punish_types
+local block_types          = data.block_types
+local frame_hurt_types     = {
+	invincible = 2 ^ 0,
+	gnd_hitstun = 2 ^ 1,
+	otg = 2 ^ 2,
+	juggle = 2 ^ 3,
+	wakeup = 2 ^ 4,
+	op_normal = 2 ^ 8,
+}
+-- ヒット処理の飛び先 家庭用版 0x13120 からのデータテーブル 5種類
+local possible_types       = {
+	none      = 0,  -- 常に判定しない
+	same_line = 2 ^ 0, -- 同一ライン同士なら判定する
+	diff_line = 2 ^ 1, -- 異なるライン同士で判定する
+	air_onry  = 2 ^ 2, -- 相手が空中にいれば判定する
+	unknown   = 2 ^ 3, -- 不明
+}
+-- 同一ライン、異なるラインの両方で判定する
+possible_types.both_line   = possible_types.same_line | possible_types.diff_line
+local get_top_type         = function(top, types)
+	local type = 0
+	for _, t in ipairs(types) do
+		if top <= t.top then type = type | t.act_type end
+	end
+	return type
+end
+local hitbox_possibles     = {
+	normal          = 0x94D2C,  -- 012DBC: 012DC8: 通常状態へのヒット判定処理
+	down            = 0x94E0C,  -- 012DE4: 012DF0: ダウン状態へのヒット判定処理
+	juggle          = 0x94EEC,  -- 012E0E: 012E1A: 空中追撃可能状態へのヒット判定処理
+	standing_block  = 0x950AC,  -- 012EAC: 012EB8: 上段ガード判定処理
+	crouching_block = 0x9518C,  -- 012ED8: 012EE4: 屈ガード判定処理
+	air_block       = 0x9526C,  -- 012F04: 012F16: 空中ガード判定処理
+	sway_standing   = 0x95A4C,  -- 012E60: 012E6C: 対ライン上段の処理
+	sway_crouching  = 0x95B2C,  -- 012F3A: 012E90: 対ライン下段の処理
+	joudan_atemi    = 0x9534C,  -- 012F30: 012F82: 上段当身投げの処理
+	urakumo         = 0x9542C,  -- 012F30: 012F82: 裏雲隠しの処理
+	gedan_atemi     = 0x9550C,  -- 012F44: 012F82: 下段当身打ちの処理
+	gyakushu        = 0x955EC,  -- 012F4E: 012F82: 必勝逆襲拳の処理
+	sadomazo        = 0x956CC,  -- 012F58: 012F82: サドマゾの処理
+	phoenix_throw   = 0x9588C,  -- 012F6C: 012F82: フェニックススルーの処理
+	baigaeshi       = 0x957AC,  -- 012F62: 012F82: 倍返しの処理
+	unknown1        = 0x94FCC,  -- 012E38: 012E44: 不明処理、未使用？
+	katsu           = 0x9596C,  -- : 012FB2: 喝消し
+	nullify         = function(id) -- : 012F9A: 弾消し
+		return (0x20 <= id) and possible_types.same_line or possible_types.none
+	end,
+}
+local frame_attack_types   = {
+	fb = 2 ^ 0,          -- 0x 1 0000 0001 弾
+	attacking = 2 ^ 1,   -- 0x 2 0000 0010 攻撃動作中
+	juggle = 2 ^ 2,      -- 0x 4 0000 0100 空中追撃可能
+	fake = 2 ^ 3,        -- 0x 8 0000 1000 攻撃能力なし(判定初期から)
+	obsolute = 2 ^ 4,    -- 0x F 0001 0000 攻撃能力なし(動作途中から)
+	fullhit = 2 ^ 5,     -- 0x20 0010 0000 全段ヒット状態
+	harmless = 2 ^ 6,    -- 0x40 0100 0000 攻撃データIDなし
+
+	attack = 7,          -- attack 7ビット左シフト
+	act = 7 + 8,         -- act 15ビット左シフト
+
+	act_count = 7 + 8 + 16, -- act_count 31ビット左シフト 本体の動作区切り用
+	fb_effect = 7 + 8 + 16, -- effect 31ビット左シフト 弾の動作区切り用
 }
 
+-- 状態フラグ
+local esaka_type_names     = data.esaka_type_names
+local get_flag_name        = function(flags, names)
+	local flgtxt = ""
+	if flags <= 0 then
+		return nil
+	end
+	for j = 32, 1, -1 do
+		if flags & 2 ^ (j - 1) ~= 0 then
+			flgtxt = string.format("%s%02d %s ", flgtxt, 32 - j, names[j])
+		end
+	end
+	return flgtxt
+end
+local state_flag_names     = data.state_flag_names
+local state_flag_c0        = data.state_flag_c0
+local state_flag_c4        = data.state_flag_c4
+local state_flag_c8        = data.state_flag_c8
+local state_flag_cc        = data.state_flag_cc
+local state_flag_d0        = data.state_flag_d0
+
+-- コマンド入力状態
+local input_state_types    = data.input_state_types
+local input_states         = data.input_states
+local input_state_col      = data.input_state_col
+
+local chip_dmg_types       = data.chip_dmg_types
+local combo_scale_types    = data.combo_scale_types
+
 -- メニュー用変数
-local menu          = {
+local menu                 = {
 	proc = nil,
 	draw = nil,
 
@@ -117,63 +223,8 @@ local menu          = {
 	update_pos = nil,
 	reset_pos = nil,
 
-	stgs = {
-		{ stg1 = 0x01, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "日本 [1] 舞", },
-		{ stg1 = 0x01, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "日本 [2] 双角1", },
-		{ stg1 = 0x01, stg2 = 0x01, stg3 = 0x0F, no_background = false, name = "日本 [2] 双角2", },
-		{ stg1 = 0x01, stg2 = 0x02, stg3 = 0x01, no_background = false, name = "日本 [3] アンディ", },
-		{ stg1 = 0x02, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "香港1 [1] チン", },
-		{ stg1 = 0x02, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "香港1 [2] 山崎", },
-		{ stg1 = 0x03, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "韓国 [1] キム", },
-		{ stg1 = 0x03, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "韓国 [2] タン", },
-		{ stg1 = 0x04, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "サウスタウン [1] ギース", },
-		{ stg1 = 0x04, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "サウスタウン [2] ビリー", },
-		{ stg1 = 0x05, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "ドイツ [1] クラウザー", },
-		{ stg1 = 0x05, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "ドイツ [2] ローレンス", },
-		{ stg1 = 0x06, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "アメリカ1 [1] ダック", },
-		{ stg1 = 0x06, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "アメリカ1 [2] マリー", },
-		{ stg1 = 0x07, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "アメリカ2 [1] テリー", },
-		{ stg1 = 0x07, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "アメリカ2 [2] リック", },
-		{ stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, no_background = false, name = "アメリカ2 [3] アルフレッド", },
-		{ stg1 = 0x08, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "タイ [1] ボブ", },
-		{ stg1 = 0x08, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "タイ [2] フランコ", },
-		{ stg1 = 0x08, stg2 = 0x02, stg3 = 0x01, no_background = false, name = "タイ [3] 東", },
-		{ stg1 = 0x09, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "香港2 [1] 崇秀", },
-		{ stg1 = 0x09, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "香港2 [2] 崇雷", },
-		{ stg1 = 0x0A, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "NEW CHALLENGERS[1] 香緋", },
-		{ stg1 = 0x0A, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "NEW CHALLENGERS[2] ホンフゥ", },
-		{ stg1 = 0x04, stg2 = 0x01, stg3 = 0x01, no_background = true,  name = "背景なし(2ライン)", },
-		{ stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, no_background = true,  name = "背景なし(1ライン)", },
-	},
-	bgms = {
-		{ id = 0x00, name = "なし", },
-		{ id = 0x01, name = "クリといつまでも", },
-		{ id = 0x02, name = "雷波濤外伝", },
-		{ id = 0x03, name = "タイ南部に伝わったSPの詩", },
-		{ id = 0x04, name = "まいまいきゅーん", },
-		{ id = 0x05, name = "ギースにしょうゆとオケヒット", },
-		{ id = 0x06, name = "TAKU-HATSU-Rock", },
-		{ id = 0x07, name = "蜜の味", },
-		{ id = 0x08, name = "ドンチカ!!チ!!チ!!", },
-		{ id = 0x09, name = "Blue Mary's BLUES", },
-		{ id = 0x0A, name = "GOLI-Rock", },
-		{ id = 0x0B, name = "C62 -シロクニ- Ver.2", },
-		{ id = 0x0C, name = "パンドラの箱より 第3番「決断」", },
-		{ id = 0x0D, name = "パンドラの箱より 第3番「決断」 ", },
-		{ id = 0x0E, name = "Duck! Duck! Duck!", },
-		{ id = 0x0F, name = "ソウルっす♪", },
-		{ id = 0x10, name = "ロンドンマーチ", },
-		{ id = 0x11, name = "ハプシュ！フゥゥゥ", },
-		{ id = 0x12, name = "中国四千年の歴史とはいかにII", },
-		{ id = 0x13, name = "牛とお戯れ", },
-		{ id = 0x14, name = "REQUIEM K.626 [Lacrimosa]", },
-		{ id = 0x15, name = "Exceed The Limit", },
-		{ id = 0x16, name = "雄々盛嬢後援 ～競場詩～", },
-		{ id = 0x17, name = "Get The Sky -With Your Dream-", },
-		{ id = 0x1C, name = "4 HITs Ⅱ", },
-		{ id = 0x1E, name = "Gain a victory", },
-		{ id = 0x26, name = "NEOGEO SOUND LOGO", },
-	},
+	stgs = data.stage_list,
+	bgms = data.bgm_list,
 
 	labels = {
 		fix_scr_tops = { "OFF" },
@@ -183,26 +234,14 @@ local menu          = {
 		off_on       = { "OFF", "ON" }
 	},
 }
-for _, char in ipairs(chars) do
-	if char.name ~= "common" then
-		table.insert(menu.labels.chars, char.name)
-	end
-end
-for i = -20, 70 do
-	table.insert(menu.labels.fix_scr_tops, "1P " .. i)
-end
-for i = -20, 70 do
-	table.insert(menu.labels.fix_scr_tops, "2P " .. i)
-end
-for _, stg in ipairs(menu.stgs) do
-	table.insert(menu.labels.stgs, stg.name)
-end
+menu.labels.chars          = data.char_names
+for i = -20, 0xF0 do table.insert(menu.labels.fix_scr_tops, "" .. i) end
+for _, stg in ipairs(menu.stgs) do table.insert(menu.labels.stgs, stg.name) end
 for _, bgm in ipairs(menu.bgms) do
 	local exists = false
 	for _, name in pairs(menu.labels.bgms) do
 		if name == bgm.name then
-			exists = true
-			bgm.name_idx = #menu.labels.bgms
+			exists, bgm.name_idx = true, #menu.labels.bgms
 			break
 		end
 	end
@@ -212,37 +251,35 @@ for _, bgm in ipairs(menu.bgms) do
 	end
 end
 
-local mem                  = {
+local mem               = {
 	last_time          = 0,     -- 最終読込フレーム(キャッシュ用)
-	_0x100701          = 0,     -- 場面判定用
-	_0x107C22          = 0,     -- 場面判定用
-	old_0x107C2A       = 0,     -- ラグチェック用
-	_0x107C2A          = 0,     -- ラグチェック用
-	_0x10B862          = 0,     -- ガードヒット=FF
-	_0x100F56          = 0,     -- 潜在発動時の停止時間
-	_0x10FD82          = 0,     -- console 0x00, mvs 0x01
-	_0x10FDAF          = 0,     -- 場面判定用
-	_0x10FDB6          = 0,     -- P1 P2 開始判定用
 	_0x10E043          = 0,     -- 手動でポーズしたときに00以外になる
-	_0x10CDD0          = 0x10CDD0, -- プレイヤー選択のハック用
-	biostest           = false, -- 初期化中のときtrue
 	stage_base_addr    = 0x100E00,
 	close_far_offset   = 0x02AE08, -- 近距離技と遠距離技判断用のデータの開始位置
 	close_far_offset_d = 0x02DDAA, -- 対ラインの近距離技と遠距離技判断用のデータの開始位置
-
+	pached             = false, -- Fireflower形式のパッチファイルの読込とメモリへの書込
 	w8                 = function(addr, value) pgm:write_u8(addr, value) end,
+	wd8                = function(addr, value) pgm:write_direct_u8(addr, value) end,
 	w16                = function(addr, value) pgm:write_u16(addr, value) end,
+	wd16               = function(addr, value) pgm:write_direct_u16(addr, value) end,
 	w32                = function(addr, value) pgm:write_u32(addr, value) end,
+	wd32               = function(addr, value) pgm:write_direct_u32(addr, value) end,
 	w8i                = function(addr, value) pgm:write_i8(addr, value) end,
 	w16i               = function(addr, value) pgm:write_i16(addr, value) end,
 	w32i               = function(addr, value) pgm:write_i32(addr, value) end,
+	r8                 = function(addr, value) return pgm:read_u8(addr, value) end,
+	r16                = function(addr, value) return pgm:read_u16(addr, value) end,
+	r32                = function(addr, value) return pgm:read_u32(addr, value) end,
+	r8i                = function(addr, value) return pgm:read_i8(addr, value) end,
+	r16i               = function(addr, value) return pgm:read_i16(addr, value) end,
+	r32i               = function(addr, value) return pgm:read_i32(addr, value) end,
 }
-local match_active         = false -- 対戦画面のときtrue
-local player_select_active = false -- プレイヤー選択画面のときtrue
-local p_space              = 0     -- 1Pと2Pの間隔
-local prev_p_space         = 0     -- 1Pと2Pの間隔(前フレーム)
+local in_match          = false -- 対戦画面のときtrue
+local in_player_select  = false -- プレイヤー選択画面のときtrue
+local p_space           = 0     -- 1Pと2Pの間隔
+local prev_space        = 0     -- 1Pと2Pの間隔(前フレーム)
 
-local screen               = {
+local screen            = {
 	offset_x = 0x20,
 	offset_z = 0x24,
 	offset_y = 0x28,
@@ -250,59 +287,13 @@ local screen               = {
 	top      = 0,
 }
 
-local bios_test            = function()
-	for _, addr in ipairs({ 0x100400, 0x100500 }) do
-		local ram_value = pgm:read_u8(addr)
-		for _, test_value in ipairs({ 0x5555, 0xAAAA, (0xFFFF & addr) }) do
-			if ram_value == test_value then
-				return true
-			end
-		end
-	end
-end
-
-local new_set = function(...)
-	local ret = {}
-	for _, v in ipairs({ ... }) do
-		ret[v] = true
-	end
-	return ret
-end
-
-local new_set_false = function(...)
-	local ret = {}
-	for _, v in ipairs({ ... }) do
-		ret[v] = false
-	end
-	return ret
-end
-
-local new_tbl_0 = function(...)
-	local ret = {}
-	for _, v in ipairs({ ... }) do
-		ret[v] = 0
-	end
-	return ret
-end
-
-local table_to_set = function(tbl)
-	local ret = {}
-	for _, v in ipairs(tbl) do
-		ret[v] = true
-	end
-	return ret
-end
-
-local testbit = function(target, hex)
-	local ret = (target & hex) ~= 0
-	return ret
-end
-
-local global = {
+local global            = {
 	frame_number        = 0,
 	lag_frame           = false,
 	all_act_normal      = false,
 	old_all_act_normal  = false,
+	sp_skip_frame       = false,
+	fix_scr_top         = 1,
 
 	-- 当たり判定用
 	axis_color          = 0xFF797979,
@@ -312,16 +303,15 @@ local global = {
 	axis_size2          = 5,
 	no_alpha            = true, --fill = 0x00, outline = 0xFF for all box types
 	throwbox_height     = 200, --default for ground throws
-	no_background       = false,
-	no_background_addr  = 0x10DDF0,
+	disp_bg             = true,
 	fix_pos             = false,
-	fix_pos_bps         = nil,
 	no_bars             = false,
 	sync_pos_x          = 1,  -- 1: OFF, 2:1Pと同期, 3:2Pと同期
 
 	disp_pos            = true, -- 1P 2P 距離表示
-	disp_effect         = true, -- ヒットマークなど画面表示するときtrue
-	disp_effect_bps     = nil,
+	hide_p_chan         = false, -- Pちゃん表示するときfalse
+	hide_effect         = false, -- ヒットマークなど画面表示するときfalse
+	hide_shadow         = 2,  -- 1:OFF, 2:ON, 3:ON:双角ステージの反射→影
 	disp_frmgap         = 3,  -- フレーム差表示
 	disp_input_sts      = 1,  -- コマンド入力状態表示 1:OFF 2:1P 3:2P
 	disp_normal_frms    = 2,  -- 通常動作フレーム非表示 1:OFF 2:ON
@@ -329,6 +319,8 @@ local global = {
 	pause_hitbox        = 1,  -- 判定発生時にポーズ
 	pause               = false,
 	replay_stop_on_dmg  = false, -- ダメージでリプレイ中段
+
+	next_stg3           = 0,
 
 	-- リバーサルとブレイクショットの設定
 	dummy_bs_cnt        = 1, -- ブレイクショットのカウンタ
@@ -362,192 +354,207 @@ local global = {
 	input_accepted      = 0,
 
 	next_block_grace    = 0, -- 1ガードでの持続フレーム数
-	infinity_life2      = true,
 	pow_mode            = 2, -- POWモード　1:自動回復 2:固定 3:通常動作
-	disp_gauge          = true,
+	disp_meters         = true,
 	repeat_interval     = 0,
 	await_neutral       = false,
 	replay_fix_pos      = 1,  -- 開始間合い固定 1:OFF 2:位置記憶 3:1Pと2P 4:1P 5:2P
 	replay_reset        = 2,  -- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
 	mame_debug_wnd      = false, -- MAMEデバッグウィンドウ表示のときtrue
+	debug_stop          = 0,  -- カウンタ
 	damaged_move        = 1,
 	disp_replay         = true, -- レコードリプレイガイド表示
 	save_snapshot       = 1,  -- 技画像保存 1:OFF 2:新規 3:上書き
-	-- log
-	log                 = {
-		poslog  = false, -- 位置ログ
-		atklog  = false, -- 攻撃情報ログ
-		baselog = false, -- フレーム事の処理アドレスログ
-		keylog  = false, -- 入力ログ
-		rvslog  = false, -- リバサログ
-	},
-	new_hook_holder     = function()
-		return { bps = {}, wps = {}, on = true, }
-	end,
-
-	wp                  = function(wps, rw, addr, len, cond, exec)
-		table.insert(wps, cpu.debug:wpset(pgm, rw, addr, len, cond or 1, exec or ""))
-	end,
-	bp                  = function(bps, addr, cond, exec)
-		table.insert(bps, cpu.debug:bpset(addr, cond or 1, exec or ""))
-	end,
-	set_bps             = function(disable, holder)
-		if disable == true and holder.on == true then
-			for _, bp in ipairs(holder.bps) do
-				cpu.debug:bpdisable(bp)
-			end
-			holder.on = false
-		elseif disable ~= true and holder.on ~= true then
-			for _, bp in ipairs(holder.bps) do
-				cpu.debug:bpenable(bp)
-			end
-			holder.on = true
-		end
-	end,
-	set_wps             = function(disable, holder)
-		if disable == true and holder.on == true then
-			for _, wp in ipairs(holder.wps) do
-				--cpu.debug:wpdisable(wp)
-				wp:remove()
-			end
-			holder.on = false
-		elseif disable ~= true and holder.on ~= true then
-			for _, wp in ipairs(holder.wps) do
-				--cpu.debug:wpenable(wp)
-				wp:reinstall()
-			end
-			holder.on = true
-		end
-	end,
 }
-local damaged_moves = {
-	0x00000, 0x58C84, 0x58DCC, 0x58DBC, 0x58DDC, 0x58FDE, 0x58DEC, 0x590EA, 0x59D70, 0x59FFA,
-	0x5A178, 0x5A410, 0x591DA, 0x592F6, 0x593EE, 0x593DA, 0x59508, 0x59708, 0x596FC, 0x30618,
-	0x2FFE8, 0x30130, 0x3051C, 0x307B4, 0x30AC0, 0x5980E, 0x58E52, 0x306DE, 0x595CE, 0x58E08,
-	0x30F0E, 0x30D74, 0x30E08, 0x316F8, 0x31794, 0x31986, 0x31826, 0x315E6, 0x324C0, 0x32C42,
-	0x331CE, 0x336B8, 0x33CC2, 0x33ED6, 0x58C84, 0x325E8, 0x58C84, 0x341AC, 0x31394, 0x58FC6,
-	0x590D6, 0x592DA, 0x593C6, 0x593B2, 0x594E0, 0x596F0, 0x596E4, 0x3060C, 0x30128, 0x30516,
-	0x3075C, 0x30A68, 0x58C84, 0x3256A, 0x58D8A, 0x58DA0, 0x58DAE, 0x59090, 0x346E0, 0x3278E,
-	0x3294C, 0x332E0, 0x349F2, 0x34CF4, 0x34ACC, 0x31AC6, 0x34E40, 0x31CA8, 0x30612, 0x33AC2,
-	0x301FC, 0x301F4, 0x3031A, 0x30312,
-}
-local hit_effect_types = {
-	down = "ダ",           -- ダウン
-	extra = "特",          -- 特殊なやられ
-	extra_launch = "特浮", -- 特殊な空中追撃可能ダウン
-	force_stun = "気",     -- 強制気絶
-	fukitobi = "吹",       -- 吹き飛び
-	hikikomi = "後",       -- 後ろ向きのけぞり
-	hikikomi_launch = "後浮", -- 後ろ向き浮き
-	launch = "浮",         -- 空中とダウン追撃可能ダウン
-	launch2 = "浮", -- 浮のけぞり～ダウン
-	launch_nokezori = "浮", -- 浮のけぞり
-	nokezori = "の",       -- のけぞり
-	nokezori2 = "*の", -- のけぞり 対スウェー時はダウン追撃可能ダウン
-	otg_down = "*ダ", -- ダウン追撃可能ダウン
-	plane_shift = "送",    -- スウェーライン送り
-	plane_shift_down = "送ダ", -- スウェーライン送りダウン
-	standup = "立",        -- 強制立のけぞり
-}
-local hit_effect_nokezoris = new_set(
-	hit_effect_types.nokezori,
-	hit_effect_types.nokezori2,
-	hit_effect_types.standup,
-	hit_effect_types.hikikomi,
-	hit_effect_types.plane_shift)
-local hit_effects = {
-	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
-	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
-	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
-	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.standup,          hit_effect_types.fukitobi },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
-	{ hit_effect_types.nokezori2,        hit_effect_types.fukitobi },
-	{ hit_effect_types.plane_shift,      hit_effect_types.plane_shift_down },
-	{ hit_effect_types.plane_shift_down, hit_effect_types.plane_shift_down, hit_effect_types.otg_down },
-	{ hit_effect_types.fukitobi,         hit_effect_types.fukitobi },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.fukitobi,         hit_effect_types.fukitobi },
-	{ hit_effect_types.down,             hit_effect_types.down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down },
-	{ hit_effect_types.down,             hit_effect_types.down },
-	{ hit_effect_types.down,             hit_effect_types.down },
-	{ hit_effect_types.hikikomi,         hit_effect_types.fukitobi },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.standup,          hit_effect_types.standup },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.extra,            hit_effect_types.extra },
-	{ hit_effect_types.extra_launch,     hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
-	{ hit_effect_types.force_stun,       hit_effect_types.force_stun,       hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.extra,            hit_effect_types.extra },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.launch_nokezori,  hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.hikikomi_launch,  hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.extra,            hit_effect_types.extra },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.launch2,          hit_effect_types.launch2,          hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down },
-	{ hit_effect_types.launch,           hit_effect_types.launch },
-	{ hit_effect_types.extra,            hit_effect_types.extra },
-	{ hit_effect_types.launch,           hit_effect_types.launch },
-	{ hit_effect_types.extra,            hit_effect_types.extra },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-}
-local damaged_move_keys = {}
-for i = 1, #damaged_moves do
-	local k = i == 1 and "通常" or string.format("%2s %s", i - 2, hit_effects[i - 1][1])
-	table.insert(damaged_move_keys, k)
+mem.rg                  = function(id, mask) return (mask == nil) and cpu.state[id].value or (cpu.state[id].value & mask) end
+mem.pc                  = function() return cpu.state["CURPC"].value end
+mem.wp_cnt, mem.rp_cnt  = {}, {} -- 負荷確認のための呼び出す回数カウンター
+local pc_filter         = function(filter)
+	if filter == nil or #filter == 0 then
+		return nil
+	end
+	local accept_pc = util.table_to_set(filter)
+	return function(pc) return accept_pc[pc] ~= true end
+end
+mem.wp8                 = function(addr, cb, filter)
+	local accept_pc = pc_filter(filter)
+	local name = string.format("wp8_%x_%s", addr, #global.holder.taps)
+	if addr % 2 == 0 then
+		table.insert(global.holder.taps, pgm:install_write_tap(addr, addr + 1, name,
+			function(offset, data, mask)
+				mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
+				if accept_pc and accept_pc(mem.pc()) then return data end
+				local ret = {}
+				if mask > 0xFF then
+					cb((data & mask) >> 8, ret)
+					if ret.value then
+						--util.printf("1 %x %x %x %x", data, mask, ret.value, (ret.value << 8) & mask)
+						return (ret.value << 8) & mask
+					end
+				elseif offset == (addr + 1) then
+					cb(data & mask, ret)
+					if ret.value then
+						--util.printf("2 %x %x %x %x", data, mask, ret.value, ret.value & mask)
+						return ret.value & mask
+					end
+				end
+				return data
+			end))
+	else
+		table.insert(global.holder.taps, pgm:install_write_tap(addr - 1, addr, name,
+			function(offset, data, mask)
+				mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
+				if accept_pc and accept_pc(mem.pc()) then return data end
+				local ret = {}
+				if mask == 0xFF or mask == 0xFFFF then
+					cb(0xFF & data, ret)
+					if ret.value then
+						if mask == 0xFFFF then
+							--util.printf("3 %x %x %x %x", data, mask, ret.value, (ret.value & 0xFF) | (0xFF00 & data))
+							return (ret.value & 0xFF) | (0xFF00 & data)
+						else
+							--util.printf("4 %x %x %x %x", data, mask, ret.value, (ret.value & 0xFF) | (0xFF00 & data))
+							return (ret.value & 0xFF) | (0xFF00 & data)
+						end
+					end
+				end
+				return data
+			end))
+	end
+	cb(mem.r8(addr), {})
+end
+mem.wp16                = function(addr, cb, filter)
+	local accept_pc = pc_filter(filter)
+	local name = string.format("wp16_%x_%s", addr, #global.holder.taps)
+	table.insert(global.holder.taps, pgm:install_write_tap(addr, addr + 1, name,
+		function(offset, data, mask)
+			local ret = {}
+			mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
+			if accept_pc and accept_pc(mem.pc()) then return data end
+			if mask == 0xFFFF then
+				cb(data & mask, ret)
+				--util.printf("wp16 %x %x %x %x",addr, data, mask, ret.value or 0)
+				return ret.value or data
+			end
+			local data2, mask2, mask3, data3
+			local prev = mem.r32(addr)
+			if mask == 0xFF00 or mask == 0xFF then mask2 = mask << 16 end
+			mask3 = 0xFFFF ~ mask2
+			data2 = data & mask
+			data3 = (prev & mask3) | data2
+			cb(data3, ret)
+			--util.printf("wp16 %x %x %x %x",addr, data, mask, ret.value or 0)
+			return ret.value or data
+		end))
+	cb(mem.r16(addr), {})
+	--printf("register wp %s %x", name, addr)
+end
+mem.wp32                = function(addr, cb, filter)
+	local accept_pc = pc_filter(filter)
+	local num = #global.holder.taps
+	local name = string.format("wp32_%x_%s", addr, num)
+	table.insert(global.holder.taps, pgm:install_write_tap(addr, addr + 3, name,
+		function(offset, data, mask)
+			mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
+			if accept_pc and accept_pc(mem.pc()) then return data end
+			local ret = {}
+			--util.printf("wp32-1 %x %x %x %x %x", addr, offset, data, data, mask, ret.value or 0)
+			local prev = mem.r32(addr)
+			local data2, mask2, mask3, data3
+			if offset == addr then
+				mask2 = mask << 16
+				data2 = (data << 16) & mask2
+			else
+				mask2 = 0x0000FFFF & mask
+				data2 = data & mask2
+			end
+			mask3 = 0xFFFFFFFF ~ mask2
+			data3 = (prev & mask3) | data2
+			cb(data3, ret)
+			if ret.value then ret.value = addr == offset and (ret.value >> 0x10) or (ret.value & 0xFFFF) end
+			--util.printf("wp32-3 %x %x %x %x %x %x", addr, offset, data, data3, mask, ret.value or 0)
+			return ret.value or data
+		end))
+	cb(mem.r32(addr), {})
+end
+mem.rp8                 = function(addr, cb, filter)
+	local accept_pc = pc_filter(filter)
+	local name = string.format("rp8_%x_%s", addr, #global.holder.taps)
+	if addr % 2 == 0 then
+		table.insert(global.holder.taps, pgm:install_read_tap(addr, addr + 1, name,
+			function(offset, data, mask)
+				mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
+				if accept_pc and accept_pc(mem.pc()) then return data end
+				local ret = {}
+				if mask > 0xFF then
+					cb((data & mask) >> 8, ret)
+					if ret.value then
+						--util.printf("1 %x %x %x %x", data, mask, ret.value, (ret.value << 8) & mask)
+						return (ret.value << 8) & mask
+					end
+				elseif offset == (addr + 1) then
+					cb(data & mask, ret)
+					if ret.value then
+						--util.printf("2 %x %x %x %x", data, mask, ret.value, ret.value & mask)
+						return ret.value & mask
+					end
+				end
+				return data
+			end))
+	else
+		table.insert(global.holder.taps, pgm:install_read_tap(addr - 1, addr, name,
+			function(offset, data, mask)
+				mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
+				if accept_pc and accept_pc(mem.pc()) then return data end
+				local ret = {}
+				if mask == 0xFF or mask == 0xFFFF then
+					cb(0xFF & data, ret)
+					if ret.value then
+						if mask == 0xFFFF then
+							--util.printf("3 %x %x %x %x", data, mask, ret.value, (ret.value & 0xFF) | (0xFF00 & data))
+							return (ret.value & 0xFF) | (0xFF00 & data)
+						else
+							--util.printf("4 %x %x %x %x", data, mask, ret.value, (ret.value & 0xFF) | (0xFF00 & data))
+							return (ret.value & 0xFF) | (0xFF00 & data)
+						end
+					end
+				end
+				return data
+			end))
+	end
+	cb(mem.r8(addr), {})
+end
+mem.rp16                = function(addr, cb, filter)
+	local accept_pc = pc_filter(filter)
+	local num = #global.holder.taps
+	local name = string.format("rp16_%x_%s", addr, num)
+	table.insert(global.holder.taps, pgm:install_read_tap(addr, addr + 1, name,
+		function(offset, data, mask)
+			mem.rp_cnt[addr] = (mem.rp_cnt[addr] or 0) + 1
+			if accept_pc and accept_pc(mem.pc()) then return data end
+			local ret = {}
+			if offset == addr then cb(data, ret) end
+			return ret.value or data
+		end))
+	cb(mem.r16(addr), {})
+end
+mem.rp32                = function(addr, cb, filter)
+	local accept_pc = pc_filter(filter)
+	local num = #global.holder.taps
+	local name = string.format("rp32_%x_%s", addr, num)
+	table.insert(global.holder.taps, pgm:install_read_tap(addr, addr + 3, name,
+		function(offset, data, mask)
+			mem.rp_cnt[addr] = (mem.rp_cnt[addr] or 0) + 1
+			if accept_pc and accept_pc(mem.pc()) then return data end
+			if offset == addr then cb(mem.r32(addr)) end
+			return data
+		end))
+	cb(mem.r32(addr))
 end
 
 -- DIPスイッチ
-local dip_config ={
+local dip_config                = {
+	show_range    = false,
 	show_hitbox   = false,
 	infinity_life = false,
 	easy_super    = false,
@@ -558,3498 +565,110 @@ local dip_config ={
 	alfred        = false,
 	watch_states  = false,
 	cpu_cant_move = false,
+	other_speed   = false,
 }
-
--- 行動の種類
-local act_types = {
-	free = 2 ^ 0,
-	attack = 2 ^ 1,
-	low_attack = 2 ^ 2,
-	provoke = 2 ^ 3,
-	any = 2 ^ 4,
-	overhead = 2 ^ 5,
-	block = 2 ^ 6,
-	hit = 2 ^ 7,
-	startup = 2 ^ 8,
-	wrap = 2 ^ 9,
-	preserve = 2 ^ 10,
-	firing = 2 ^ 11,
-	startup_if_ca = 2 ^ 12, -- CAのときのみ開始動作としてフレームデータを作成する
-	lunging_throw = 2 ^ 13, -- 移動投げ
-	rec_in_detail = 2 ^ 14, -- フレームデータの作成時に判定を詳細に記録する
-	parallel = 2 ^ 15, -- 本体と並列動作する弾
-}
-local sts_flg_names = {
-	[0xC0] = {
-		"ジャンプ振向",
-		"ダウン",
-		"屈途中",
-		"奥後退",
-		"奥前進",
-		"奥振向",
-		"屈振向",
-		"立振向",
-		"スウェーライン上飛び退き～戻り",
-		"スウェーライン上ダッシュ～戻り",
-		"スウェーライン→メイン",
-		"スウェーライン上立",
-		"メインライン→スウェーライン移動中",
-		"スウェーライン上維持",
-		"未確認",
-		"未確認",
-		"着地",
-		"ジャンプ移行",
-		"後方小ジャンプ",
-		"前方小ジャンプ",
-		"垂直小ジャンプ",
-		"後方ジャンプ",
-		"前方ジャンプ",
-		"垂直ジャンプ",
-		"ダッシュ",
-		"飛び退き",
-		"屈前進",
-		"立途中",
-		"屈",
-		"後退",
-		"前進",
-		"立",
-	},
-	[0xC4] = {
-		"避け攻撃",
-		"対スウェーライン下段攻撃",
-		"対スウェーライン上段攻撃",
-		"対メインライン威力大攻撃",
-		"対メインラインB攻撃",
-		"対メインラインA攻撃",
-		"後方小ジャンプC", -- 27 7FC0000
-		"後方小ジャンプB",
-		"後方小ジャンプA",
-		"前方小ジャンプC",
-		"前方小ジャンプB",
-		"前方小ジャンプA",
-		"垂直小ジャンプC",
-		"垂直小ジャンプB",
-		"垂直小ジャンプA", -- 19
-		"後方ジャンプC", -- 18 1FF00
-		"後方ジャンプB",
-		"後方ジャンプA",
-		"前方ジャンプC",
-		"前方ジャンプB",
-		"前方ジャンプA",
-		"垂直ジャンプC",
-		"垂直ジャンプB",
-		"垂直ジャンプA", --9
-		"C4 24",
-		"C4 25",
-		"屈C",
-		"屈B",
-		"屈A",
-		"立C",
-		"立B",
-		"立A",
-	},
-	[0xC8] = {
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"特殊技",
-		"",
-		"",
-		"特殊技",
-		"特殊技",
-		"特殊技",
-		"特殊技",
-		"特殊技",
-		"潜在能力",
-		"潜在能力",
-		"超必殺技",
-		"超必殺技",
-		"必殺技",
-		"必殺技",
-		"必殺技",
-		"必殺技",
-		"必殺技",
-		"必殺技",
-		"必殺技",
-		"必殺技",
-		"必殺技",
-		"必殺技",
-		"必殺技",
-		"必殺技",
-	},
-	[0xCC] = {
-		"CA",
-		"AかB攻撃",
-		"滑り",
-		"必殺投げやられ",
-		"",
-		"空中ガード",
-		"屈ガード",
-		"立ガード",
-		"投げ派生やられ",
-		"つかみ投げやられ",
-		"投げられ",
-		"",
-		"ライン送りやられ",
-		"ダウン",
-		"空中やられ",
-		"地上やられ",
-		"",
-		"気絶",
-		"気絶起き上がり",
-		"挑発",
-		"ブレイクショット",
-		"必殺技中",
-		"",
-		"起き上がり",
-		"フェイント",
-		"つかみ技",
-		"",
-		"投げ追撃",
-		"",
-		"",
-		"空中投げ",
-		"投げ",
-	},
-	[0xD0] = {
-		"",
-		"",
-		"",
-		"ギガティック投げられ",
-		"",
-		"追撃投げ中",
-		"ガード中、やられ中",
-		"攻撃ヒット",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-	},
-}
-local get_flag_name = function(flags, names)
-	local flgtxt = ""
-	if flags <= 0 then
-		return nil
-	end
-	for j = 32, 1, -1 do
-		if flags & 2 ^ (j - 1) ~= 0 then
-			flgtxt = string.format("%s%02d %s ", flgtxt, 32 - j, names[j])
-		end
-	end
-	return flgtxt
-end
-local flag_c0_types = {
-	_00 = 0x1,   -- ジャンプ振向
-	_01 = 0x2,   -- ダウン
-	_02 = 0x4,   -- 屈途中
-	_03 = 0x8,   -- 奥後退
-	_04 = 0x10,  -- 奥前進
-	_05 = 0x20,  -- 奥振向
-	_06 = 0x40,  -- 屈振向
-	_07 = 0x80,  -- 立振向
-	_08 = 0x100, -- スウェーライン上飛び退き～戻り
-	_09 = 0x200, -- スウェーライン上ダッシュ～戻り
-	_10 = 0x400, -- スウェーライン→メイン
-	_11 = 0x800, -- スウェーライン上立
-	_12 = 0x1000, -- メインライン→スウェーライン移動中
-	_13 = 0x2000, -- スウェーライン上維持
-	_14 = 0x4000, -- 未確認
-	_15 = 0x8000, -- 未確認
-	_16 = 0x10000, -- 着地
-	_17 = 0x20000, -- ジャンプ移行
-	_18 = 0x40000, -- 後方小ジャンプ
-	_19 = 0x80000, -- 前方小ジャンプ
-	_20 = 0x100000, -- 垂直小ジャンプ
-	_21 = 0x200000, -- 後方ジャンプ
-	_22 = 0x400000, -- 前方ジャンプ
-	_23 = 0x800000, -- 垂直ジャンプ
-	_24 = 0x1000000, -- ダッシュ
-	_25 = 0x2000000, -- 飛び退き
-	_26 = 0x4000000, -- 屈前進
-	_27 = 0x8000000, -- 立途中
-	_28 = 0x10000000, -- 屈
-	_29 = 0x20000000, -- 後退
-	_30 = 0x40000000, -- 前進
-	_31 = 0x80000000, -- 立
-}
-local flag_c4_types = {
-	_00 = 0x1,   -- 避け攻撃
-	_01 = 0x2,   -- 対スウェーライン下段攻撃
-	_02 = 0x4,   -- 対スウェーライン上段攻撃
-	_03 = 0x8,   -- 対メインライン威力大攻撃
-	_04 = 0x10,  -- 対メインラインB攻撃
-	_05 = 0x20,  -- 対メインラインA攻撃
-	_06 = 0x40,  -- 後方小ジャンプC, -- 27 7FC0000
-	_07 = 0x80,  -- 後方小ジャンプB
-	_08 = 0x100, -- 後方小ジャンプA
-	_09 = 0x200, -- 前方小ジャンプC
-	_10 = 0x400, -- 前方小ジャンプB
-	_11 = 0x800, -- 前方小ジャンプA
-	_12 = 0x1000, -- 垂直小ジャンプC
-	_13 = 0x2000, -- 垂直小ジャンプB
-	_14 = 0x4000, -- 垂直小ジャンプA, -- 19
-	_15 = 0x8000, -- 後方ジャンプC, -- 18 1FF00
-	_16 = 0x10000, -- 後方ジャンプB
-	_17 = 0x20000, -- 後方ジャンプA
-	_18 = 0x40000, -- 前方ジャンプC
-	_19 = 0x80000, -- 前方ジャンプB
-	_20 = 0x100000, -- 前方ジャンプA
-	_21 = 0x200000, -- 垂直ジャンプC
-	_22 = 0x400000, -- 垂直ジャンプB
-	_23 = 0x800000, -- 垂直ジャンプA, --9
-	_24 = 0x1000000, -- C4 24
-	_25 = 0x2000000, -- C4 25
-	_26 = 0x4000000, -- 屈C
-	_27 = 0x8000000, -- 屈B
-	_28 = 0x10000000, -- 屈A
-	_29 = 0x20000000, -- 立C
-	_30 = 0x40000000, -- 立B
-	_31 = 0x80000000, -- 立A
-}
-flag_c4_types.hop = flag_c4_types._06 |
-	flag_c4_types._07 |
-	flag_c4_types._08 |
-	flag_c4_types._09 |
-	flag_c4_types._10 |
-	flag_c4_types._11 |
-	flag_c4_types._12 |
-	flag_c4_types._13 |
-	flag_c4_types._14
-flag_c4_types.jump = flag_c4_types._15 |
-	flag_c4_types._16 |
-	flag_c4_types._17 |
-	flag_c4_types._18 |
-	flag_c4_types._19 |
-	flag_c4_types._20 |
-	flag_c4_types._21 |
-	flag_c4_types._22 |
-	flag_c4_types._23
-local flag_c8_types = {
-	_00 = 0x1,   --
-	_01 = 0x2,   --
-	_02 = 0x4,   --
-	_03 = 0x8,   --
-	_04 = 0x10,  --
-	_05 = 0x20,  --
-	_06 = 0x40,  --
-	_07 = 0x80,  --
-	_08 = 0x100, -- 特殊技
-	_09 = 0x200, --
-	_10 = 0x400, --
-	_11 = 0x800, -- 特殊技
-	_12 = 0x1000, -- 特殊技
-	_13 = 0x2000, -- 特殊技
-	_14 = 0x4000, -- 特殊技
-	_15 = 0x8000, -- 特殊技
-	_16 = 0x10000, -- 潜在能力
-	_17 = 0x20000, -- 潜在能力
-	_18 = 0x40000, -- 超必殺技
-	_19 = 0x80000, -- 超必殺技
-	_20 = 0x100000, -- 必殺技
-	_21 = 0x200000, -- 必殺技
-	_22 = 0x400000, -- 必殺技
-	_23 = 0x800000, -- 必殺技
-	_24 = 0x1000000, -- 必殺技
-	_25 = 0x2000000, -- 必殺技
-	_26 = 0x4000000, -- 必殺技
-	_27 = 0x8000000, -- 必殺技
-	_28 = 0x10000000, -- 必殺技
-	_29 = 0x20000000, -- 必殺技
-	_30 = 0x40000000, -- 必殺技
-	_31 = 0x80000000, -- 必殺技
-}
-local flag_cc_types = {
-	_00 = 0x1,           -- CA
-	_01 = 0x2,           -- AかB攻撃
-	_02 = 0x4,           -- 滑り
-	_03 = 0x8,           -- 必殺投げやられ
-	_04 = 0x10,          --
-	_05 = 0x20,          -- 空中ガード
-	_06 = 0x40,          -- 屈ガード
-	_07 = 0x80,          -- 立ガード
-	_08 = 0x100,         -- 投げ派生やられ
-	_09 = 0x200,         -- つかみ投げやられ
-	_10 = 0x400,         -- 投げられ
-	_11 = 0x800,         --
-	_12 = 0x1000,        -- ライン送りやられ
-	_13 = 0x2000,        -- ダウン
-	_14 = 0x4000,        -- 空中やられ
-	_15 = 0x8000,        -- 地上やられ
-	_16 = 0x10000,       --
-	_17 = 0x20000,       -- 気絶
-	_18 = 0x40000,       -- 気絶起き上がり
-	_19 = 0x80000,       -- 挑発
-	_20 = 0x100000,      -- ブレイクショット
-	_21 = 0x200000,      -- 必殺技中
-	_22 = 0x400000,      --
-	_23 = 0x800000,      -- 起き上がり
-	_24 = 0x1000000,     -- フェイント
-	_25 = 0x2000000,     -- つかみ技
-	_26 = 0x4000000,     --
-	_27 = 0x8000000,     -- 投げ追撃
-	_28 = 0x10000000,    --
-	_29 = 0x20000000,    --
-	_30 = 0x40000000,    -- 空中投げ
-	_31 = 0x80000000,    -- 投げ
-}
-local flag_d0_types = {
-	_00 = 0x1,           --
-	_01 = 0x2,           --
-	_02 = 0x4,           --
-	_03 = 0x8,           -- ギガティック投げられ
-	_04 = 0x10,          --
-	_05 = 0x20,          -- 追撃投げ中
-	_06 = 0x40,          -- ガード中、やられ中
-	_07 = 0x80,          -- 攻撃ヒット
-	_08 = 0x100,         --
-	_09 = 0x200,         --
-	_10 = 0x400,         --
-	_11 = 0x800,         --
-	_12 = 0x1000,        --
-	_13 = 0x2000,        --
-	_14 = 0x4000,        --
-	_15 = 0x8000,        --
-	_16 = 0x10000,       --
-	_17 = 0x20000,       --
-	_18 = 0x40000,       --
-	_19 = 0x80000,       --
-	_20 = 0x100000,      --
-	_21 = 0x200000,      --
-	_22 = 0x400000,      --
-	_23 = 0x800000,      --
-	_24 = 0x1000000,     --
-	_25 = 0x2000000,     --
-	_26 = 0x4000000,     --
-	_27 = 0x8000000,     --
-	_28 = 0x10000000,    --
-	_29 = 0x20000000,    --
-	_30 = 0x40000000,    --
-	_31 = 0x80000000,    --
-}
-flag_cc_types.hitstun = flag_cc_types._03 |    -- 必殺投げやられ
-	flag_cc_types._08 |                        -- 投げ派生やられ
-	flag_cc_types._09 |                        -- つかみ投げやられ
-	flag_cc_types._10 |                        -- 投げられ
-	flag_cc_types._12 |                        -- ライン送りやられ
-	flag_cc_types._13 |                        -- ダウン
-	flag_cc_types._14 |                        -- 空中やられ
-	flag_cc_types._15 |                        -- 地上やられ
-	flag_cc_types._17 |                        -- 気絶
-	flag_cc_types._18 |                        -- 気絶起き上がり
-	flag_cc_types._23                          -- 起き上がり
-flag_cc_types.attacking = flag_cc_types._00 |  -- CA
-	flag_cc_types._01 |                        -- AかB攻撃
-	flag_cc_types._20 |                        -- ブレイクショット
-	flag_cc_types._21 |                        -- 必殺技中
-	flag_cc_types._25 |                        -- つかみ技
-	flag_cc_types._27 |                        -- 投げ追撃
-	flag_cc_types._30 |                        -- 空中投げ
-	flag_cc_types._31                          -- 投げ
-flag_cc_types.grabbing = flag_cc_types._25 |   -- つかみ技
-	flag_cc_types._27                          -- 投げ追撃
-
--- !!注意!!後隙が配列の後ろに来るように定義すること
-local char_acts_base = {
-	-- テリー・ボガード
-	{
-		{ names = { "スウェー戻り" },                       type = act_types.startup | act_types.any,                           ids = { 0x36, }, },
-		{ names = { "近 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,                        ids = { 0x62, 0x63, 0x64, }, },
-		{ names = { "遠 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,                        ids = { 0x25A, 0x25B, 0x25C, }, },
-		{ names = { "避け攻撃" },                             type = act_types.startup | act_types.attack,                        ids = { 0x67 } },
-		{ names = { "近立C" },                                  type = act_types.startup | act_types.attack,                        ids = { 0x43, }, },
-		{ names = { "立B" },                                     type = act_types.startup | act_types.attack,                        ids = { 0x45, }, },
-		{ names = { "立C" },                                     type = act_types.startup | act_types.attack,                        ids = { 0x46, }, },
-		{ names = { "屈A" },                                     type = act_types.startup | act_types.attack,                        ids = { 0x47, }, },
-		{ names = { "フェイント パワーゲイザー" },    type = act_types.startup | act_types.any,                           ids = { 0x113, }, },
-		{ names = { "フェイント バーンナックル" },    type = act_types.startup | act_types.any,                           ids = { 0x112, }, },
-		{ names = { "バスタースルー" },                    type = act_types.startup | act_types.any,                           ids = { 0x6D, 0x6E, }, },
-		{ names = { "ワイルドアッパー" },                 type = act_types.startup | act_types.attack,                        ids = { 0x69, }, },
-		{ names = { "バックスピンキック" },              type = act_types.startup | act_types.attack,                        ids = { 0x68, }, },
-		{ names = { "チャージキック" },                    type = act_types.startup | act_types.overhead,                      ids = { 0x6A, }, },
-		{ names = { "小バーンナックル" },                 type = act_types.startup | act_types.attack,                        ids = { 0x86, 0x87, }, },
-		{ names = { "小バーンナックル" },                 type = act_types.preserve | act_types.any,                          ids = { 0x88, }, },
-		{ names = { "大バーンナックル" },                 type = act_types.startup | act_types.attack,                        ids = { 0x90, 0x91, }, },
-		{ names = { "大バーンナックル" },                 type = act_types.preserve | act_types.any,                          ids = { 0x92, }, },
-		{ names = { "パワーウェイブ" },                    type = act_types.startup | act_types.attack | act_types.firing,     ids = { 0x9A, 0x9B, 0x9C, }, },
-		{ names = { "ラウンドウェイブ" },                 type = act_types.startup | act_types.low_attack | act_types.firing, ids = { 0xA4, 0xA5, }, },
-		{ names = { "ラウンドウェイブ" },                 type = act_types.preserve | act_types.any,                          ids = { 0xA6, }, },
-		{ names = { "ファイヤーキック" },                 type = act_types.startup | act_types.low_attack,                    ids = { 0xB8, 0xB9, }, },
-		{ names = { "ファイヤーキック" },                 type = act_types.preserve | act_types.any,                          ids = { 0xBC, }, },
-		{ names = { "ファイヤーキック ヒット" },       type = act_types.wrap | act_types.attack,                           ids = { 0xBA, 0xBB, }, },
-		{ names = { "クラックシュート" },                 type = act_types.startup | act_types.attack,                        ids = { 0xAE, 0xAF, }, },
-		{ names = { "クラックシュート" },                 type = act_types.preserve | act_types.any,                          ids = { 0xB0, }, },
-		{ names = { "ライジングタックル" },              type = act_types.startup | act_types.attack,                        ids = { 0xCC, 0xCD, 0xCE, }, },
-		{ names = { "ライジングタックル" },              type = act_types.preserve | act_types.any,                          ids = { 0xCF, 0xD0, }, },
-		{ names = { "パッシングスウェー" },              type = act_types.startup | act_types.attack,                        ids = { 0xC2, 0xC3, }, },
-		{ names = { "パッシングスウェー" },              type = act_types.preserve | act_types.attack,                       ids = { 0xC4, }, },
-		{ names = { "パワーゲイザー" },                    type = act_types.startup | act_types.attack | act_types.firing,     ids = { 0xFE, 0xFF, }, },
-		{ names = { "パワーゲイザー" },                    type = act_types.preserve | act_types.attack | act_types.firing,    ids = { 0x100, }, },
-		{ names = { "トリプルゲイザー" },                 type = act_types.startup | act_types.attack | act_types.firing,     ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, }, },
-		{ names = { "トリプルゲイザー" },                 type = act_types.preserve | act_types.attack,                       ids = { 0x10E, }, },
-		{ names = { "CA 立B" },                                  type = act_types.startup | act_types.attack,                        ids = { 0x241, }, },
-		{ names = { "CA 屈B" },                                  type = act_types.startup | act_types.low_attack,                    ids = { 0x242, }, },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                        ids = { 0x244, }, },
-		{ names = { "CA _6+C" },                                  type = act_types.startup | act_types.attack,                        ids = { 0x245, }, },
-		{ names = { "CA _3+C" },                                  type = act_types.startup | act_types.attack,                        ids = { 0x246, }, },
-		{ names = { "CA 屈C" },                                  type = act_types.startup | act_types.low_attack,                    ids = { 0x247, }, },
-		{ names = { "CA 屈C" },                                  type = act_types.startup | act_types.low_attack,                    ids = { 0x247, }, },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                        ids = { 0x240, }, },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                        ids = { 0x24C, }, },
-		{ names = { "CA 屈C" },                                  type = act_types.startup | act_types.attack,                        ids = { 0x243, }, },
-		{ names = { "パワーチャージ" },                    type = act_types.startup | act_types.attack,                        ids = { 0x24D, }, },
-		{ names = { "CA 対スウェーライン上段攻撃" },  type = act_types.startup | act_types.overhead,                      ids = { 0x24A, }, },
-		{ names = { "CA 対スウェーライン下段攻撃" },  type = act_types.startup | act_types.low_attack,                    ids = { 0x24B, }, },
-		{ names = { "パワーダンク" },                       type = act_types.startup | act_types.attack,                        ids = { 0xE0, }, },
-		{ names = { "パワーダンク" },                       type = act_types.preserve | act_types.overhead,                     ids = { 0xE1, }, },
-		{ names = { "パワーダンク" },                       type = act_types.preserve | act_types.attack,                       ids = { 0xE2, }, },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                        ids = { 0x248, }, },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                        ids = { 0x249, }, },
-	},
-	-- アンディ・ボガード
-	{
-		{ names = { "スウェー戻り" },                       type = act_types.startup | act_types.any,                       ids = { 0x36 } },
-		{ names = { "近 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,                    ids = { 0x62, 0x63, 0x64 } },
-		{ names = { "遠 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,                    ids = { 0x25A, 0x25B, 0x25C } },
-		{ names = { "避け攻撃" },                             type = act_types.startup | act_types.low_attack,                ids = { 0x67 } },
-		{ names = { "近立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x43 } },
-		{ names = { "遠立B" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x45 } },
-		{ names = { "遠立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x46 } },
-		{ names = { "屈A" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x47 } },
-		{ names = { "フェイント 残影拳" },                type = act_types.startup | act_types.any,                       ids = { 0x112 } },
-		{ names = { "フェイント 飛翔拳" },                type = act_types.startup | act_types.any,                       ids = { 0x113 } },
-		{ names = { "フェイント 超裂破弾" },             type = act_types.startup | act_types.any,                       ids = { 0x114 } },
-		{ names = { "内股" },                                   type = act_types.startup | act_types.attack,                    ids = { 0x6D, 0x6E } },
-		{ names = { "上げ面" },                                type = act_types.startup | act_types.attack,                    ids = { 0x69 } },
-		{ names = { "浴びせ蹴り" },                          type = act_types.startup | act_types.attack,                    ids = { 0x68 } },
-		{ names = { "小残影拳" },                             type = act_types.startup | act_types.attack,                    ids = { 0x86, 0x87, 0x8A } },
-		{ names = { "小残影拳" },                             type = act_types.preserve | act_types.any,                      ids = { 0x88, 0x89 } },
-		{ names = { "大残影拳" },                             type = act_types.startup | act_types.attack,                    ids = { 0x90, 0x91, 0x94 } },
-		{ names = { "大残影拳" },                             type = act_types.preserve | act_types.any,                      ids = { 0x92 } },
-		{ names = { "疾風裏拳" },                             type = act_types.startup | act_types.attack,                    ids = { 0x95 } },
-		{ names = { "大残影拳", "疾風裏拳" },             type = act_types.preserve | act_types.any,                      ids = { 0x93 } },
-		{ names = { "飛翔拳" },                                type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x9A, 0x9B, 0x9C }, },
-		{ names = { "激飛翔拳" },                             type = act_types.startup | act_types.attack | act_types.firing, ids = { 0xA7, 0xA4, 0xA5 }, },
-		{ names = { "激飛翔拳" },                             type = act_types.preserve | act_types.any,                      ids = { 0xA6 } },
-		{ names = { "昇龍弾" },                                type = act_types.startup | act_types.attack,                    ids = { 0xAE, 0xAF } },
-		{ names = { "昇龍弾" },                                type = act_types.preserve | act_types.any,                      ids = { 0xB0, 0xB1 } },
-		{ names = { "空破弾" },                                type = act_types.startup | act_types.attack,                    ids = { 0xB8, 0xB9, 0xBA } },
-		{ names = { "空破弾" },                                type = act_types.preserve | act_types.any,                      ids = { 0xBB } },
-		{ names = { "幻影不知火" },                          type = act_types.startup | act_types.attack,                    ids = { 0xC8, 0xC2 } },
-		{ names = { "幻影不知火" },                          type = act_types.preserve | act_types.any,                      ids = { 0xC3 } },
-		{ names = { "幻影不知火 地上攻撃" },             type = act_types.startup | act_types.attack,                    ids = { 0xC4, 0xC5, 0xC6 } },
-		{ names = { "幻影不知火 地上攻撃" },             type = act_types.preserve | act_types.any,                      ids = { 0xC7 } },
-		{ names = { "超裂破弾" },                             type = act_types.startup | act_types.attack,                    ids = { 0xFE, 0xFF, 0x100, 0x101 } },
-		{ names = { "男打弾" },                                type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x108, 0x109, 0x10A }, },
-		{ names = { "男打弾 2段目" },                        type = act_types.wrap | act_types.attack | act_types.firing,    ids = { 0x10B }, },
-		{ names = { "男打弾 3段目" },                        type = act_types.wrap | act_types.attack | act_types.firing,    ids = { 0x10C }, },
-		{ names = { "男打弾 4段目" },                        type = act_types.wrap | act_types.attack | act_types.firing,    ids = { 0x10D }, },
-		{ names = { "男打弾 5段目" },                        type = act_types.wrap | act_types.attack | act_types.firing,    ids = { 0x10E, 0x10F }, },
-		{ names = { "CA 立B" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x240 } },
-		{ names = { "CA 屈B" },                                  type = act_types.startup | act_types.low_attack,                ids = { 0x241 } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x242 } },
-		{ names = { "CA _6+C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x243 } },
-		{ names = { "CA _3+C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x245 } },
-		{ names = { "CA 屈C" },                                  type = act_types.startup | act_types.low_attack,                ids = { 0x246 } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x244 } },
-		{ names = { "浴びせ蹴り 追撃" },                   type = act_types.startup | act_types.attack,                    ids = { 0xF4, 0xF5 } },
-		{ names = { "浴びせ蹴り 追撃" },                   type = act_types.preserve | act_types.any,                      ids = { 0xF6 } },
-		{ names = { "上げ面追加 B" },                        type = act_types.startup | act_types.attack,                    ids = { 0x24A, 0x24B } },
-		{ names = { "上げ面追加 B" },                        type = act_types.preserve | act_types.any,                      ids = { 0x24C } },
-		{ names = { "上げ面追加 C" },                        type = act_types.startup | act_types.overhead,                  ids = { 0x24D } },
-		{ names = { "上げ面追加 C" },                        type = act_types.preserve | act_types.any,                      ids = { 0x24E } },
-		{ names = { "上げ面追加 立C" },                     type = act_types.startup | act_types.attack,                    ids = { 0x247 } },
-		{ names = { "上げ面追加 立C" },                     type = act_types.startup | act_types.attack,                    ids = { 0x248 } },
-	},
-	-- 東丈
-	{
-		{ names = { "スウェー戻り" },                          type = act_types.startup | act_types.any,        ids = { 0x36 } },
-		{ names = { "近 対メインライン威力大攻撃" },    type = act_types.startup | act_types.attack,     ids = { 0x62, 0x63, 0x64 } },
-		{ names = { "遠 対メインライン威力大攻撃" },    type = act_types.startup | act_types.attack,     ids = { 0x25A, 0x25B, 0x25C } },
-		{ names = { "避け攻撃" },                                type = act_types.startup | act_types.attack,     ids = { 0x67 } },
-		{ names = { "近立C" },                                     type = act_types.startup | act_types.attack,     ids = { 0x43 } },
-		{ names = { "遠立B" },                                     type = act_types.startup | act_types.attack,     ids = { 0x45 } },
-		{ names = { "遠立C" },                                     type = act_types.startup | act_types.attack,     ids = { 0x46, 0xF7 } },
-		{ names = { "屈A" },                                        type = act_types.startup | act_types.attack,     ids = { 0x47 } },
-		{ names = { "フェイント スラッシュキック" },    type = act_types.startup | act_types.any,        ids = { 0x113 } },
-		{ names = { "フェイント ハリケーンアッパー" }, type = act_types.startup | act_types.any,        ids = { 0x112 } },
-		{ names = { "ジョースペシャル" },                    type = act_types.startup | act_types.any,        ids = { 0x6D, 0x6E, 0x6F, 0x70, 0x71 } },
-		{ names = { "夏のおもひで" },                          type = act_types.startup | act_types.any,        ids = { 0x24E, 0x24F } },
-		{ names = { "膝地獄" },                                   type = act_types.startup | act_types.any,        ids = { 0x81, 0x82, 0x83, 0x84 } },
-		{ names = { "スライディング" },                       type = act_types.startup | act_types.low_attack, ids = { 0x68, 0xF4 } },
-		{ names = { "スライディング" },                       type = act_types.preserve | act_types.any,       ids = { 0xF5 } },
-		{ names = { "ハイキック" },                             type = act_types.startup | act_types.attack,     ids = { 0x69 } },
-		{ names = { "炎の指先" },                                type = act_types.startup | act_types.any,        ids = { 0x6A } },
-		{ names = { "小スラッシュキック" },                 type = act_types.startup | act_types.attack,     ids = { 0x86, 0x87, 0x88 } },
-		{ names = { "小スラッシュキック" },                 type = act_types.preserve | act_types.any,       ids = { 0x89 } },
-		{ names = { "大スラッシュキック" },                 type = act_types.startup | act_types.attack,     ids = { 0x90, 0x91 } },
-		{ names = { "大スラッシュキック ヒット" },       type = act_types.startup | act_types.attack,     ids = { 0x92 } },
-		{
-			names = { "大スラッシュキック", "大スラッシュキック ヒット" },
-			type = act_types.preserve | act_types.any,
-			ids = { 0x93, 0x94 }
-		},
-		{ names = { "黄金のカカト" },             type = act_types.startup | act_types.attack,                    ids = { 0x9A, 0x9B } },
-		{ names = { "黄金のカカト" },             type = act_types.preserve | act_types.any,                      ids = { 0x9C } },
-		{ names = { "タイガーキック" },          type = act_types.startup | act_types.attack,                    ids = { 0xA4, 0xA5 } },
-		{ names = { "タイガーキック" },          type = act_types.preserve | act_types.any,                      ids = { 0xA6, 0xA7 } },
-		{ names = { "爆裂拳" },                      type = act_types.startup | act_types.attack,                    ids = { 0xAE } },
-		{ names = { "爆裂拳 持続" },               type = act_types.preserve  | act_types.attack,                  ids = { 0xAF, 0xB1, 0xB0 } },
-		{ names = { "爆裂拳 隙" },                  type = act_types.wrap | act_types.any,                          ids = { 0xB2 } },
-		{ names = { "爆裂フック" },                type = act_types.startup | act_types.attack,                    ids = { 0xB3, 0xB4 } },
-		{ names = { "爆裂フック" },                type = act_types.preserve | act_types.any,                      ids = { 0xB5 } },
-		{ names = { "爆裂アッパー" },             type = act_types.startup | act_types.attack,                    ids = { 0xF8, 0xF9, 0xFA } },
-		{ names = { "爆裂アッパー" },             type = act_types.preserve | act_types.any,                      ids = { 0xFB } },
-		{ names = { "ハリケーンアッパー" },    type = act_types.startup | act_types.attack | act_types.firing, ids = { 0xB8 } },
-		{ names = { "ハリケーンアッパー" },    type = act_types.preserve | act_types.any | act_types.firing,   ids = { 0xB9, 0xBA }, },
-		{ names = { "爆裂ハリケーン" },          type = act_types.startup | act_types.attack | act_types.firing, ids = { 0xC2, 0xC3, 0xC4, 0xC5 }, },
-		{ names = { "爆裂ハリケーン" },          type = act_types.preserve | act_types.any,                      ids = { 0xC6 } },
-		{ names = { "スクリューアッパー" },    type = act_types.startup | act_types.attack | act_types.firing, ids = { 0xFE, 0xFF }, },
-		{ names = { "スクリューアッパー" },    type = act_types.preserve | act_types.any,                      ids = { 0x100 } },
-		{ names = { "サンダーファイヤー(C)" }, type = act_types.startup | act_types.attack,                    ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, 0x110 } },
-		{ names = { "サンダーファイヤー(C)" }, type = act_types.preserve | act_types.any,                      ids = { 0x111 } },
-		{ names = { "サンダーファイヤー(D)" }, type = act_types.startup | act_types.attack,                    ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA } },
-		{ names = { "サンダーファイヤー(D)" }, type = act_types.preserve | act_types.any,                      ids = { 0xEB } },
-		{ names = { "CA 立A" },                        type = act_types.startup | act_types.attack,                    ids = { 0x24B } },
-		{ names = { "CA 立B" },                        type = act_types.startup | act_types.attack,                    ids = { 0x42 } },
-		{ names = { "CA 立B" },                        type = act_types.startup | act_types.attack,                    ids = { 0x244 } },
-		{ names = { "CA 立C" },                        type = act_types.startup | act_types.attack,                    ids = { 0x245 } },
-		{ names = { "CA 屈B" },                        type = act_types.startup | act_types.low_attack,                ids = { 0x48 } },
-		{ names = { "CA 立A" },                        type = act_types.startup | act_types.attack,                    ids = { 0x24C } },
-		{ names = { "CA 立B" },                        type = act_types.startup | act_types.attack,                    ids = { 0x45 } },
-		{ names = { "CA _3+C" },                        type = act_types.startup | act_types.attack,                    ids = { 0x246 } },
-		{ names = { "CA 立C" },                        type = act_types.startup | act_types.attack,                    ids = { 0x240 } },
-		{ names = { "CA _8+C" },                        type = act_types.startup | act_types.overhead,                  ids = { 0x251, 0x252 } },
-		{ names = { "CA _8+C" },                        type = act_types.preserve | act_types.any,                      ids = { 0x253 } },
-		{ names = { "CA 立C" },                        type = act_types.startup | act_types.attack,                    ids = { 0x46 } },
-		{ names = { "CA _2_3_6+C" },                    type = act_types.startup | act_types.attack,                    ids = { 0x24A } },
-	},
-	-- 不知火舞
-	{
-		{ names = { "スウェー戻り" },                       type = act_types.startup | act_types.any,                       ids = { 0x36 } },
-		{ names = { "近 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,                    ids = { 0x62, 0x63, 0x64 } },
-		{ names = { "遠 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,                    ids = { 0x25A, 0x25B, 0x25C } },
-		{ names = { "避け攻撃" },                             type = act_types.startup | act_types.attack,                    ids = { 0x67 } },
-		{ names = { "近立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x43 } },
-		{ names = { "遠立B" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x45 } },
-		{ names = { "遠立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x46 } },
-		{ names = { "遠立C" },                                  type = act_types.wrap | act_types.attack,                       ids = { 0xF4 } },
-		{ names = { "屈A" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x47 } },
-		{ names = { "フェイント 花蝶扇" },                type = act_types.startup | act_types.attack,                    ids = { 0x112 } },
-		{ names = { "フェイント 花嵐" },                   type = act_types.startup | act_types.attack,                    ids = { 0x113 } },
-		{ names = { "風車崩し・改" },                       type = act_types.startup | act_types.attack,                    ids = { 0x6D, 0x6E } },
-		{ names = { "夢桜・改" },                             type = act_types.startup | act_types.attack,                    ids = { 0x72, 0x73 } },
-		{ names = { "跳ね蹴り" },                             type = act_types.startup | act_types.attack,                    ids = { 0x68 } },
-		{ names = { "三角跳び" },                             type = act_types.startup | act_types.any,                       ids = { 0x69 } },
-		{ names = { "龍の舞" },                                type = act_types.startup | act_types.attack,                    ids = { 0x6A } },
-		{ names = { "花蝶扇" },                                type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x86, 0x87, 0x88 }, },
-		{ names = { "龍炎舞" },                                type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x90, 0x91 }, },
-		{ names = { "龍炎舞" },                                type = act_types.preserve | act_types.any,                      ids = { 0x92 } },
-		{ names = { "小夜千鳥" },                             type = act_types.startup | act_types.attack,                    ids = { 0x9A, 0x9B } },
-		{ names = { "小夜千鳥" },                             type = act_types.preserve | act_types.any,                      ids = { 0x9C } },
-		{ names = { "必殺忍蜂" },                             type = act_types.startup | act_types.attack,                    ids = { 0xA4, 0xA5, 0xA6 } },
-		{ names = { "必殺忍蜂" },                             type = act_types.preserve | act_types.any,                      ids = { 0xA7 } },
-		{ names = { "ムササビの舞" },                       type = act_types.startup | act_types.attack,                    ids = { 0xAE, 0xAF, 0xB0 } },
-		{ names = { "ムササビの舞" },                       type = act_types.preserve | act_types.any,                      ids = { 0xB0 } },
-		{ names = { "超必殺忍蜂" },                          type = act_types.startup | act_types.attack,                    ids = { 0xFE, 0xFF, 0x100, 0x101 } },
-		{ names = { "超必殺忍蜂" },                          type = act_types.preserve | act_types.any,                      ids = { 0x102, 0x103 } },
-		{ names = { "花嵐" },                                   type = act_types.startup | act_types.attack,                    ids = { 0x108 } },
-		{ names = { "花嵐 突進" },                            type = act_types.wrap | act_types.attack,                       ids = { 0x109 } },
-		{ names = { "花嵐 突進" },                            type = act_types.preserve | act_types.any,                      ids = { 0x10F } },
-		{ names = { "花嵐 上昇" },                            type = act_types.wrap | act_types.any,                          ids = { 0x10A, 0x10B, 0x10C } },
-		{ names = { "花嵐 上昇" },                            type = act_types.preserve | act_types.any,                      ids = { 0x10D, 0x10E } },
-		{ names = { "CA 立B" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x42 } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x43 } },
-		{ names = { "CA 屈B" },                                  type = act_types.startup | act_types.low_attack,                ids = { 0x242 } },
-		{ names = { "CA 屈C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x243 } },
-		{ names = { "CA _3+C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x244 } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x246 } },
-		{ names = { "CA 対スウェーライン上段攻撃" },  type = act_types.startup | act_types.overhead,                  ids = { 0x249 } },
-		{ names = { "CA C" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x24A, 0x24B } },
-		{ names = { "CA C" },                                     type = act_types.preserve | act_types.any,                      ids = { 0x24C } },
-		{ names = { "CA B" },                                     type = act_types.startup | act_types.overhead,                  ids = { 0x24D } },
-		{ names = { "CA B" },                                     type = act_types.preserve | act_types.any,                      ids = { 0x24E } },
-		{ names = { "CA C" },                                     type = act_types.startup | act_types.overhead,                  ids = { 0x24F } },
-		{ names = { "CA C" },                                     type = act_types.preserve | act_types.any,                      ids = { 0x250 } },
-		{ names = { "CA 屈C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x247 } },
-	},
-	-- ギース・ハワード
-	{
-		{ names = { "スウェー戻り" },                          type = act_types.startup | act_types.any,                       ids = { 0x36 } },
-		{ names = { "近 対メインライン威力大攻撃" },    type = act_types.startup | act_types.attack,                    ids = { 0x62, 0x63, 0x64 } },
-		{ names = { "遠 対メインライン威力大攻撃" },    type = act_types.startup | act_types.attack,                    ids = { 0x25A, 0x25B, 0x25C } },
-		{ names = { "避け攻撃" },                                type = act_types.startup | act_types.attack,                    ids = { 0x67 } },
-		{ names = { "近立C" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x43 } },
-		{ names = { "遠立B" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x45 } },
-		{ names = { "遠立C" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x46 } },
-		{ names = { "屈A" },                                        type = act_types.startup | act_types.attack,                    ids = { 0x47 } },
-		{ names = { "フェイント 烈風拳" },                   type = act_types.startup | act_types.any,                       ids = { 0x112 } },
-		{ names = { "フェイント レイジングストーム" }, type = act_types.startup | act_types.any,                       ids = { 0x113 } },
-		{ names = { "虎殺投げ" },                                type = act_types.startup | act_types.any,                       ids = { 0x6D, 0x6E } },
-		{ names = { "絶命人中打ち" },                          type = act_types.wrap | act_types.any,                          ids = { 0x7C, 0x7D, 0x7E, 0x7F } },
-		{ names = { "虎殺掌" },                                   type = act_types.startup | act_types.any,                       ids = { 0x81, 0x82, 0x83, 0x84 } },
-		{ names = { "昇天明星打ち" },                          type = act_types.startup | act_types.attack,                    ids = { 0x69 } },
-		{ names = { "飛燕失脚" },                                type = act_types.startup | act_types.overhead,                  ids = { 0x68, 0x6B, 0x6C } },
-		{ names = { "雷光回し蹴り" },                          type = act_types.startup | act_types.attack,                    ids = { 0x6A } },
-		{ names = { "烈風拳" },                                   type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x86, 0x87 }, },
-		{ names = { "烈風拳" },                                   type = act_types.preserve | act_types.any,                      ids = { 0x88 } },
-		{ names = { "ダブル烈風拳" },                          type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x90, 0x91, 0x92 }, },
-		{ names = { "屈段当て身打ち" },                       type = act_types.startup | act_types.any,                       ids = { 0xAE } },
-		{ names = { "屈段当て身打ちキャッチ" },           type = act_types.startup | act_types.attack,                    ids = { 0xAF, 0xB0, 0xB1 } },
-		{ names = { "裏雲隠し" },                                type = act_types.startup | act_types.any,                       ids = { 0xA4 } },
-		{ names = { "裏雲隠しキャッチ" },                    type = act_types.startup | act_types.any,                       ids = { 0xA5, 0xA6, 0xA7 } },
-		{ names = { "上段当て身投げ" },                       type = act_types.startup | act_types.any,                       ids = { 0x9A } },
-		{ names = { "上段当て身投げキャッチ" },           type = act_types.startup | act_types.any,                       ids = { 0x9B, 0x9C, 0x9D } },
-		{ names = { "雷鳴豪波投げ" },                          type = act_types.startup | act_types.any,                       ids = { 0xB8, 0xB9, 0xBA } },
-		{ names = { "真空投げ" },                                type = act_types.startup | act_types.any,                       ids = { 0xC2, 0xC3 } },
-		{ names = { "レイジングストーム" },                 type = act_types.startup | act_types.attack | act_types.firing, ids = { 0xFE, 0xFF, 0x100 }, },
-		{ names = { "羅生門" },                                   type = act_types.startup | act_types.attack,                    ids = { 0x108, 0x109, 0x10A, 0x10B } },
-		{ names = { "デッドリーレイブ" },                    type = act_types.startup | act_types.attack,                    ids = { 0xE0, 0xE1, 0xE2 } },
-		{ names = { "デッドリーレイブ2段目" },             type = act_types.startup | act_types.attack,                    ids = { 0xE3 } },
-		{ names = { "デッドリーレイブ3段目" },             type = act_types.startup | act_types.attack,                    ids = { 0xE4 } },
-		{ names = { "デッドリーレイブ4段目" },             type = act_types.startup | act_types.attack,                    ids = { 0xE5 } },
-		{ names = { "デッドリーレイブ5段目" },             type = act_types.startup | act_types.attack,                    ids = { 0xE6 } },
-		{ names = { "デッドリーレイブ6段目" },             type = act_types.startup | act_types.attack,                    ids = { 0xE7 } },
-		{ names = { "デッドリーレイブ7段目" },             type = act_types.startup | act_types.attack,                    ids = { 0xE8 } },
-		{ names = { "デッドリーレイブ8段目" },             type = act_types.startup | act_types.attack,                    ids = { 0xE9 } },
-		{ names = { "デッドリーレイブ9段目" },             type = act_types.startup | act_types.attack,                    ids = { 0xEA } },
-		{ names = { "デッドリーレイブ10段目" },            type = act_types.startup | act_types.attack,                    ids = { 0xEB, 0xEC } },
-		{ names = { "CA 立B" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x241 } },
-		{ names = { "CA 屈B" },                                     type = act_types.startup | act_types.low_attack,                ids = { 0x242 } },
-		{ names = { "CA 屈C" },                                     type = act_types.startup | act_types.low_attack,                ids = { 0x243 } },
-		{ names = { "CA 立C" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x245 } },
-		{ names = { "CA 屈C" },                                     type = act_types.startup | act_types.low_attack,                ids = { 0x247 } },
-		{ names = { "CA _3+C" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x246 } },
-		{ names = { "CA 立C" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x244 } },
-		{ names = { "CA 屈C" },                                     type = act_types.startup | act_types.low_attack,                ids = { 0x247 } },
-		{ names = { "CA 立C" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x249 } },
-		{ names = { "CA _2+C" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x24E, 0x24F } },
-		{ names = { "CA _2+C" },                                     type = act_types.preserve | act_types.any,                      ids = { 0x250 } },
-		{ names = { "CA 立C" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x24D } },
-		{ names = { "CA 立C" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x240 } },
-		{ names = { "CA 屈C" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x24B } },
-		{ names = { "CA 対スウェーライン上段攻撃" },     type = act_types.startup | act_types.overhead,                  ids = { 0x248 } },
-		{ names = { "CA 対スウェーライン下段攻撃" },     type = act_types.startup | act_types.low_attack,                ids = { 0x24A } },
-	},
-	-- 望月双角,
-	{
-		{ names = { "近 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,                                           ids = { 0x62, 0x63, 0x64 } },
-		{ names = { "遠 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,                                           ids = { 0x25A, 0x25B, 0x25C } },
-		{ names = { "避け攻撃" },                             type = act_types.startup | act_types.low_attack,                                       ids = { 0x67 } },
-		{ names = { "近立C" },                                  type = act_types.startup | act_types.attack,                                           ids = { 0x43 } },
-		{ names = { "遠立B" },                                  type = act_types.startup | act_types.attack,                                           ids = { 0x45 } },
-		{ names = { "遠立C" },                                  type = act_types.startup | act_types.attack,                                           ids = { 0x46, 0x71 } },
-		{ names = { "屈A" },                                     type = act_types.startup | act_types.attack,                                           ids = { 0x47 } },
-		{ names = { "フェイント まきびし" },             type = act_types.startup | act_types.any,                                              ids = { 0x112 } },
-		{ names = { "フェイント いかづち" },             type = act_types.startup | act_types.any,                                              ids = { 0x113 } },
-		{ names = { "無道縛り投げ" },                       type = act_types.startup | act_types.any,                                              ids = { 0x6D, 0x6E } },
-		{ names = { "地獄門" },                                type = act_types.wrap | act_types.any,                                                 ids = { 0x7C, 0x7D, 0x7E, 0x7F } },
-		{ names = { "昇天殺" },                                type = act_types.startup | act_types.attack,                                           ids = { 0x72, 0x73 } },
-		{ names = { "雷撃棍" },                                type = act_types.startup | act_types.any,                                              ids = { 0x69, 0x6A, 0x6B } },
-		{ names = { "錫杖上段打ち" },                       type = act_types.startup | act_types.attack,                                           ids = { 0x68 } },
-		{ names = { "野猿狩り" },                             type = act_types.startup | act_types.attack | act_types.firing,                        ids = { 0x86, 0x87 }, },
-		{ names = { "喝CA 野猿狩り", "野猿狩り" },       type = act_types.startup_if_ca | act_types.wrap | act_types.attack | act_types.firing, ids = { 0x88 }, },
-		{ names = { "野猿狩り", "喝CA 野猿狩り" },       type = act_types.preserve | act_types.any,                                             ids = { 0x89 } },
-		{ names = { "まきびし" },                             type = act_types.startup | act_types.low_attack | act_types.firing,                    ids = { 0x90, 0x91, 0x92 }, },
-		{ names = { "憑依弾" },                                type = act_types.startup | act_types.attack | act_types.firing,                        ids = { 0x9A, 0x9B }, },
-		{ names = { "憑依弾" },                                type = act_types.preserve | act_types.any,                                             ids = { 0x9C, 0x9D } },
-		{ names = { "鬼門陣" },                                type = act_types.startup | act_types.any,                                              ids = { 0xA4, 0xA5, 0xA6, 0xA7 } },
-		{ names = { "邪棍舞" },                                type = act_types.startup | act_types.low_attack | act_types.firing,                    ids = { 0xAE }, },
-		{
-			names = { "邪棍舞 持続", "邪棍舞 突破", "邪棍舞 降破", "邪棍舞 倒破", "邪棍舞 払破", "邪棍舞 天破", },
-			type = act_types.wrap | act_types.low_attack | act_types.firing,
-			ids = { 0xAF },
-		},
-		{
-			names = { "邪棍舞 隙", "邪棍舞 突破", "邪棍舞 降破", "邪棍舞 倒破", "邪棍舞 払破", "邪棍舞 天破", },
-			type = act_types.wrap | act_types.any | act_types.firing,
-			ids = { 0xB0 },
-		},
-		{ names = { "喝" },          type = act_types.startup | act_types.attack | act_types.firing,     ids = { 0xB8, 0xB9, 0xBA, 0xBB }, },
-		{ names = { "渦炎陣" },    type = act_types.startup | act_types.overhead,                      ids = { 0xC2, 0xC3 } },
-		{ names = { "渦炎陣" },    type = act_types.preserve | act_types.any,                          ids = { 0xC4, 0xC5 } },
-		{ names = { "いかづち" }, type = act_types.startup | act_types.attack | act_types.firing,     ids = { 0xFE, 0xFF, 0x103 }, },
-		{ names = { "いかづち" }, type = act_types.preserve | act_types.any,                          ids = { 0x100, 0x101 } },
-		{ names = { "無惨弾" },    type = act_types.startup | act_types.overhead,                      ids = { 0x108, 0x109, 0x10A } },
-		{ names = { "無惨弾" },    type = act_types.preserve | act_types.any,                          ids = { 0x10B, 0x10C } },
-		{ names = { "CA 立C" },      type = act_types.startup | act_types.attack,                        ids = { 0x241 } },
-		{ names = { "CA 立C" },      type = act_types.startup | act_types.attack,                        ids = { 0x240 } },
-		{ names = { "CA _6+C" },      type = act_types.startup | act_types.attack,                        ids = { 0x243 } },
-		{ names = { "CA _2_2+C" },    type = act_types.startup | act_types.low_attack | act_types.firing, ids = { 0x24B }, },
-		{ names = { "CA 6B" },        type = act_types.startup | act_types.attack,                        ids = { 0x247 } },
-		{ names = { "CA _6_2_3+A" },  type = act_types.startup | act_types.attack,                        ids = { 0x242 } },
-		{ names = { "CA 屈C" },      type = act_types.startup | act_types.low_attack,                    ids = { 0x244 } },
-		{ names = { "CA 屈C" },      type = act_types.startup | act_types.low_attack,                    ids = { 0x24D } },
-		{ names = { "CA 立C" },      type = act_types.startup | act_types.attack,                        ids = { 0xBC } },
-	},
-	-- ボブ・ウィルソン
-	{
-		{ names = { "近 対メインライン威力大攻撃" },    type = act_types.startup |act_types.attack,     ids = { 0x62, 0x63, 0x64 } },
-		{ names = { "遠 対メインライン威力大攻撃" },    type = act_types.startup |act_types.attack,     ids = { 0x25A, 0x25B, 0x25C } },
-		{ names = { "避け攻撃" },                                type = act_types.startup | act_types.attack,    ids = { 0x67 } },
-		{ names = { "近立C" },                                     type = act_types.startup |act_types.attack,     ids = { 0x43 } },
-		{ names = { "遠立B" },                                     type = act_types.startup |act_types.attack,     ids = { 0x45 } },
-		{ names = { "遠立C" },                                     type = act_types.startup |act_types.attack,     ids = { 0x46 } },
-		{ names = { "屈A" },                                        type = act_types.startup |act_types.attack,     ids = { 0x47 } },
-		{ names = { "フェイント ダンシングバイソン" }, type = act_types.startup |act_types.any,        ids = { 0x112 } },
-		{ names = { "ファルコン" },                             type = act_types.startup |act_types.any,        ids = { 0x6D, 0x6E } },
-		{ names = { "ホーネットアタック" },                 type = act_types.startup |act_types.any,        ids = { 0x7C, 0x7D, 0x7E } },
-		{ names = { "イーグルキャッチ" },                    type = act_types.startup |act_types.any,        ids = { 0x72, 0x73, 0x74 } },
-		{ names = { "フライングフィッシュ" },              type = act_types.startup |act_types.attack,     ids = { 0x68, 0x77 } },
-		{ names = { "フライングフィッシュ" },              type = act_types.preserve | act_types.any,      ids = { 0x78 } },
-		{ names = { "イーグルステップ" },                    type = act_types.startup |act_types.attack,     ids = { 0x69 } },
-		{ names = { "リンクスファング" },                    type = act_types.startup |act_types.any,        ids = { 0x6A, 0x7A, 0x7B } },
-		{ names = { "エレファントタスク" },                 type = act_types.startup |act_types.attack,     ids = { 0x6B } },
-		{ names = { "H・ヘッジホック" },                      type = act_types.startup |act_types.attack,     ids = { 0x6C } },
-		{ names = { "ローリングタートル" },                 type = act_types.startup |act_types.attack,     ids = { 0x86, 0x87, 0x88 } },
-		{ names = { "ローリングタートル" },                 type = act_types.preserve | act_types.any,      ids = { 0x89 } },
-		{ names = { "サイドワインダー" },                    type = act_types.startup |act_types.low_attack, ids = { 0x90, 0x91, 0x92 } },
-		{ names = { "サイドワインダー" },                    type = act_types.preserve | act_types.any,      ids = { 0x93 } },
-		{ names = { "モンキーダンス" },                       type = act_types.startup |act_types.attack,     ids = { 0xAE, 0xAF } },
-		{ names = { "モンキーダンス" },                       type = act_types.preserve | act_types.any,      ids = { 0xB0, 0xB1 } },
-		{ names = { "ワイルドウルフ" },                       type = act_types.startup |act_types.overhead,   ids = { 0xA4, 0xA5, 0xA6 } },
-		{ names = { "バイソンホーン" },                       type = act_types.startup |act_types.low_attack, ids = { 0x9A, 0x9B } },
-		{ names = { "バイソンホーン" },                       type = act_types.preserve | act_types.any,      ids = { 0x9D, 0x9C } },
-		{ names = { "フロッグハンティング" },              type = act_types.startup |act_types.attack,     ids = { 0xB8, 0xB9 } },
-		{ names = { "フロッグハンティング" },              type = act_types.preserve | act_types.any,      ids = { 0xBD, 0xBE, 0xBA, 0xBB, 0xBC } },
-		{ names = { "デンジャラスウルフ" },                 type = act_types.startup |act_types.overhead,   ids = { 0xFE, 0xFF, 0x100, 0x101, 0x102, 0x103 } },
-		{ names = { "デンジャラスウルフ" },                 type = act_types.preserve | act_types.any,      ids = { 0x104 } },
-		{ names = { "ダンシングバイソン" },                 type = act_types.startup |act_types.attack,     ids = { 0x108, 0x109, 0x10A, 0x10B } },
-		{ names = { "ダンシングバイソン" },                 type = act_types.preserve | act_types.any,      ids = { 0x10C, 0x10D } },
-		{ names = { "CA 立B" },                                     type = act_types.startup |act_types.attack,     ids = { 0x243 } },
-		{ names = { "CA 立C" },                                     type = act_types.startup |act_types.attack,     ids = { 0x240 } },
-		{ names = { "CA _3+C" },                                     type = act_types.startup |act_types.attack,     ids = { 0x242 } },
-		{ names = { "CA 立C" },                                     type = act_types.startup |act_types.attack,     ids = { 0x245 } },
-		{ names = { "CA _6+C" },                                     type = act_types.startup |act_types.attack,     ids = { 0x247 } },
-		{ names = { "CA _8+C" },                                     type = act_types.startup |act_types.overhead,   ids = { 0x24A, 0x24B } },
-		{ names = { "CA _8+C" },                                     type = act_types.preserve |act_types.any,       ids = { 0x24C } },
-		{ names = { "CA 屈B" },                                     type = act_types.startup |act_types.attack,     ids = { 0x249 } },
-		{ names = { "CA 屈C" },                                     type = act_types.startup |act_types.low_attack, ids = { 0x248 } },
-	},
-	-- ホンフゥ
-	{
-		{ names = { "近 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,                  ids = { 0x62, 0x63, 0x64 } },
-		{ names = { "遠 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,                  ids = { 0x25A, 0x25B, 0x25C } },
-		{ names = { "避け攻撃" },                             type = act_types.startup | act_types.attack,                  ids = { 0x67 } },
-		{ names = { "近立C" },                                  type = act_types.startup | act_types.attack,                  ids = { 0x43 } },
-		{ names = { "遠立B" },                                  type = act_types.startup | act_types.attack,                  ids = { 0x45 } },
-		{ names = { "遠立C" },                                  type = act_types.startup | act_types.attack,                  ids = { 0x46 } },
-		{ names = { "屈A" },                                     type = act_types.startup | act_types.attack,                  ids = { 0x47 } },
-		{ names = { "フェイント 制空烈火棍" },          type = act_types.startup | act_types.any,                     ids = { 0x112 } },
-		{ names = { "バックフリップ" },                    type = act_types.startup | act_types.any,                     ids = { 0x6D, 0x6E } },
-		{ names = { "経絡乱打" },                             type = act_types.startup | act_types.any,                     ids = { 0x81, 0x82, 0x83, 0x84 } },
-		{ names = { "ハエタタキ" },                          type = act_types.startup | act_types.attack,                  ids = { 0x69 } },
-		{ names = { "踏み込み側蹴り" },                    type = act_types.startup | act_types.attack,                  ids = { 0x68 } },
-		{ names = { "トドメヌンチャク" },                 type = act_types.startup | act_types.attack,                  ids = { 0x6A } },
-		{ names = { "九龍の読み" },                          type = act_types.startup | act_types.attack,                  ids = { 0x86 } },
-		{ names = { "九龍の読み反撃" },                    type = act_types.startup | act_types.attack,                  ids = { 0x87, 0x88, 0x89 } },
-		{ names = { "黒龍" },                                   type = act_types.startup | act_types.attack,                  ids = { 0xD7, 0xD8 } },
-		{ names = { "黒龍" },                                   type = act_types.preserve | act_types.any,                    ids = { 0xD9, 0xDA } },
-		{ names = { "小 制空烈火棍" },                      type = act_types.startup | act_types.attack,                  ids = { 0x90, 0x91 } },
-		{ names = { "小 制空烈火棍" },                      type = act_types.preserve | act_types.any,                    ids = { 0x92, 0x93 } },
-		{ names = { "大 制空烈火棍" },                      type = act_types.startup | act_types.attack,                  ids = { 0x9A, 0x9B } },
-		{ names = { "大 制空烈火棍", "爆発ゴロー" },   type = act_types.preserve | act_types.any,                    ids = { 0x9D, 0x9C } },
-		{ names = { "電光石火の天" },                       type = act_types.startup | act_types.attack,                  ids = { 0xAE, 0xAF, 0xB0 } },
-		{ names = { "電光石火の地" },                       type = act_types.startup | act_types.low_attack,              ids = { 0xA4, 0xA5 } },
-		{ names = { "電光石火の地" },                       type = act_types.preserve | act_types.any,                    ids = { 0xA6 } },
-		{ names = { "電光パチキ" },                          type = act_types.startup | act_types.attack,                  ids = { 0xA7 } },
-		{ names = { "電光パチキ" },                          type = act_types.preserve | act_types.any,                    ids = { 0xA8 } },
-		{ names = { "炎の種馬" },                             type = act_types.startup | act_types.attack,                  ids = { 0xB8 } },
-		{ names = { "炎の種馬 持続" },                      type = act_types.wrap | act_types.attack,                     ids = { 0xB9, 0xBA, 0xBB } },
-		{ names = { "炎の種馬 最終段" },                   type = act_types.wrap | act_types.attack,                     ids = { 0xBC, 0xBD } },
-		{ names = { "炎の種馬 失敗" },                      type = act_types.wrap | act_types.any,                        ids = { 0xBE, 0xBF, 0xC0 } },
-		{ names = { "必勝！逆襲拳" },                       type = act_types.startup | act_types.any,                     ids = { 0xC2 } },
-		{ names = { "必勝！逆襲拳 1回目" },               type = act_types.startup | act_types.any,                     ids = { 0xC3, 0xC4, 0xC5 } },
-		{ names = { "必勝！逆襲拳 2回目" },               type = act_types.startup | act_types.any,                     ids = { 0xC6, 0xC7, 0xC8 } },
-		{ names = { "必勝！逆襲拳 1段目" },               type = act_types.wrap | act_types.attack,                     ids = { 0xC9, 0xCA, 0xCB } },
-		{ names = { "必勝！逆襲拳 2~5段目" },             type = act_types.wrap | act_types.low_attack,                 ids = { 0xCC } },
-		{ names = { "必勝！逆襲拳 6~7段目" },             type = act_types.wrap | act_types.overhead,                   ids = { 0xCD } },
-		{ names = { "必勝！逆襲拳 8~10段目" },            type = act_types.wrap | act_types.overhead,                   ids = { 0xCE } },
-		{ names = { "必勝！逆襲拳 11~12段目" },           type = act_types.wrap | act_types.attack,                     ids = { 0xCF, 0xD0 } },
-		{ names = { "必勝！逆襲拳 11~12段目" },           type = act_types.preserve | act_types.attack,                 ids = { 0xD1 } },
-		{ names = { "爆発ゴロー" },                          type = act_types.startup | act_types.attack,                  ids = { 0xFE, 0xFF, 0x100, 0x101 } },
-		{ names = { "爆発ゴロー" },                          type = act_types.preserve | act_types.any,                    ids = { 0x102 } },
-		{ names = { "よかトンハンマー" },                 type = act_types.startup | act_types.overhead,                ids = { 0x108, 0x109, 0x10A } },
-		{ names = { "よかトンハンマー" },                 type = act_types.preserve | act_types.any | act_types.firing, ids = { 0x10B }, },
-		{ names = { "CA 立B" },                                  type = act_types.startup | act_types.attack,                  ids = { 0x245 } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                  ids = { 0x240 } },
-		{ names = { "CA _6+C" },                                  type = act_types.startup | act_types.attack,                  ids = { 0x241 } },
-		{ names = { "CA _3+C" },                                  type = act_types.startup | act_types.attack,                  ids = { 0x242 } },
-		{ names = { "CA 屈B" },                                  type = act_types.startup | act_types.low_attack,              ids = { 0x246 } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                  ids = { 0x247 } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                  ids = { 0x248 } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                  ids = { 0x252 } },
-		{ names = { "CA 立B" },                                  type = act_types.startup | act_types.attack,                  ids = { 0x24C, 0x24D } },
-		{ names = { "CA 立B" },                                  type = act_types.preserve | act_types.any,                    ids = { 0x24E } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.overhead,                ids = { 0x24F } },
-		{ names = { "CA 立C" },                                  type = act_types.wrap | act_types.any,                        ids = { 0x250 } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                  ids = { 0x243 } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                  ids = { 0x244 } },
-		{ names = { "CA 屈C" },                                  type = act_types.startup | act_types.attack,                  ids = { 0x24A } },
-		{ names = { "CA 屈C" },                                  type = act_types.startup | act_types.low_attack,              ids = { 0x24B } },
-		{ names = { "CA _3+C " },                                 type = act_types.startup | act_types.low_attack,              ids = { 0x251 } },
-	},
-	-- ブルー・マリー
-	{
-		{ names = { "近 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,      ids = { 0x62, 0x63, 0x64 } },
-		{ names = { "遠 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,      ids = { 0x25A, 0x25B, 0x25C } },
-		{ names = { "避け攻撃" },                             type = act_types.startup | act_types.attack,      ids = { 0x67 } },
-		{ names = { "近立C" },                                  type = act_types.startup | act_types.attack,      ids = { 0x43 } },
-		{ names = { "遠立B" },                                  type = act_types.startup | act_types.attack,      ids = { 0x45 } },
-		{ names = { "遠立C" },                                  type = act_types.startup | act_types.attack,      ids = { 0x46 } },
-		{ names = { "屈A" },                                     type = act_types.startup | act_types.attack,      ids = { 0x47 } },
-		{ names = { "フェイント M.スナッチャー" },     type = act_types.startup | act_types.any,         ids = { 0x112 } },
-		{ names = { "ヘッドスロー" },                       type = act_types.startup | act_types.any,         ids = { 0x6D, 0x6E } },
-		{ names = { "アキレスホールド" },                 type = act_types.wrap | act_types.any,            ids = { 0x7C, 0x7E, 0x7F } },
-		{ names = { "ヒールフォール" },                    type = act_types.startup | act_types.overhead,    ids = { 0x69 } },
-		{ names = { "ダブルローリング" },                 type = act_types.startup | act_types.attack,      ids = { 0x68 } },
-		{ names = { "ダブルローリング" },                 type = act_types.preserve | act_types.low_attack, ids = { 0x6C } },
-		{ names = { "レッグプレス" },                       type = act_types.startup | act_types.any,         ids = { 0x6A } },
-		{ names = { "M.リアルカウンター" },               type = act_types.startup | act_types.attack,      ids = { 0xA4, 0xA5 } },
-		{
-			names = { "CAジャーマンスープレックス", "M.リアルカウンター" },
-			type = act_types.startup_if_ca | act_types.any,
-			ids = { 0xA6 }
-		},
-		{ names = { "M.リアルカウンター投げ移行" }, type = act_types.startup | act_types.any, ids = { 0xAC } },
-		{
-			names = { "ジャーマンスープレックス", "CAジャーマンスープレックス" },
-			type = act_types.preserve | act_types.any,
-			ids = { 0xA7, 0xA8, 0xA9, 0xAA, 0xAB }
-		},
-		{ names = { "フェイスロック" },                  type = act_types.wrap | act_types.any,    ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4 } },
-		{
-			names = { "投げっぱなしジャーマンスープレックス" },
-			type = act_types.wrap | act_types.any,
-			ids = { 0xE5, 0xE6, 0xE7 }
-		},
-		{ names = { "ヤングダイブ" },                type = act_types.startup | act_types.overhead,                         ids = { 0xEA, 0xEB, 0xEC } },
-		{ names = { "ヤングダイブ" },                type = act_types.preserve | act_types.any,                             ids = { 0xED } },
-		{ names = { "リバースキック" },             type = act_types.wrap | act_types.overhead,                            ids = { 0xEE } },
-		{ names = { "リバースキック" },             type = act_types.preserve | act_types.any,                             ids = { 0xEF } },
-		{ names = { "M.スパイダー" },                 type = act_types.startup | act_types.lunging_throw | act_types.attack, ids = { 0x8C, 0x86 } },
-		{ names = { "デンジャラススパイダー" }, type = act_types.wrap | act_types.lunging_throw | act_types.attack,    ids = { 0xF0 } },
-		{ names = { "スピンフォール" },             type = act_types.startup | act_types.attack,                           ids = { 0xAE, 0xAF } },
-		{ names = { "スピンフォール" },             type = act_types.preserve | act_types.attack,                          ids = { 0xB0 } },
-		{
-			names = { "M.スパイダー", "デンジャラススパイダー" },
-			type = act_types.preserve | act_types.any,
-			ids = { 0x87 }
-		},
-		{
-			names = { "ダブルスパイダー", "M.スパイダー", "デンジャラススパイダー" },
-			type = act_types.startup | act_types.any,
-			ids = { 0x88, 0x89, 0x8A, 0x8B }
-		},
-		{ names = { "M.スナッチャー" },     type = act_types.lunging_throw | act_types.startup | act_types.attack, ids = { 0x90 } },
-		{ names = { "M.スナッチャー" },     type = act_types.preserve | act_types.lunging_throw | act_types.any,   ids = { 0x91, 0x92 } },
-		{ names = { "バーチカルアロー" }, type = act_types.startup | act_types.overhead,                         ids = { 0xB8, 0xB9 } },
-		{ names = { "バーチカルアロー" }, type = act_types.preserve | act_types.any,                             ids = { 0xBA, 0xBB } },
-		{
-			names = { "ダブルスナッチャー", "M.スナッチャー" },
-			type = act_types.startup | act_types.any,
-			ids = { 0x93, 0x94, 0x95, 0x96 }
-		},
-		{ names = { "M.クラブクラッチ" },        type = act_types.startup | act_types.low_attack, ids = { 0x9A, 0x9B } },
-		{ names = { "ストレートスライサー" }, type = act_types.startup | act_types.low_attack, ids = { 0xC2, 0xC3 } },
-		{
-			names = { "ストレートスライサー", "M.クラブクラッチ" },
-			type = act_types.preserve | act_types.any,
-			ids = { 0xC4, 0xC5 }
-		},
-		{
-			names = { "ダブルクラッチ", "M.クラブクラッチ" },
-			type = act_types.startup | act_types.any,
-			ids = { 0x9D, 0x9E, 0x9F, 0xA0, 0xA1 }
-		},
-		{ names = { "M.ダイナマイトスウィング" }, type = act_types.startup | act_types.any,                              ids = { 0xCC, 0xCD, 0xCE, 0xCF, 0xD0, 0xD1 } },
-		{ names = { "M.タイフーン" },                   type = act_types.startup | act_types.lunging_throw | act_types.attack, ids = { 0xFE, 0xFF, 0x100 } },
-		{ names = { "M.タイフーン" },                   type = act_types.preserve | act_types.lunging_throw | act_types.any,   ids = { 0x100 } },
-		{ names = { "M.タイフーン ヒット" },         type = act_types.startup | act_types.lunging_throw | act_types.any,    ids = { 0x101, 0x102, 0x103, 0x104, 0x105, 0x106, 0x107, 0x116 } },
-		{ names = { "M.エスカレーション" },          type = act_types.startup | act_types.attack,                           ids = { 0x10B } },
-		{ names = { "M.トリプルエクスタシー" },    type = act_types.startup | act_types.any,                              ids = { 0xD6, 0xD8, 0xD7, 0xD9, 0xDA, 0xDB, 0xDC, 0xDD, 0xDE, 0xDF } },
-		{ names = { "立ち" },                              type = act_types.preserve | act_types.free,                            ids = { 0x109, 0x10A, 0x108 } },
-		{ names = { "CA 立B" },                             type = act_types.startup | act_types.attack,                           ids = { 0x24C } },
-		{ names = { "CA 屈B" },                             type = act_types.startup | act_types.low_attack,                       ids = { 0x251 } },
-		{ names = { "CA 立C" },                             type = act_types.startup | act_types.attack,                           ids = { 0x246 } },
-		{ names = { "CA _6+C" },                             type = act_types.startup | act_types.attack,                           ids = { 0x24E, 0x24F } },
-		{ names = { "CA _6+C" },                             type = act_types.preserve | act_types.any,                             ids = { 0x250 } },
-		{ names = { "CA 屈C" },                             type = act_types.startup | act_types.low_attack,                       ids = { 0x247 } },
-		{ names = { "CA _3+C" },                             type = act_types.startup | act_types.attack,                           ids = { 0x242 } },
-		{ names = { "CA 立C" },                             type = act_types.startup | act_types.attack,                           ids = { 0x241 } },
-		{ names = { "CA 立C" },                             type = act_types.startup | act_types.attack,                           ids = { 0x240 } },
-		{ names = { "CA 立C" },                             type = act_types.startup | act_types.attack,                           ids = { 0x243, 0x244 } },
-		{ names = { "CA 立C" },                             type = act_types.preserve | act_types.any,                             ids = { 0x245 } },
-		{ names = { "CA 立C" },                             type = act_types.startup | act_types.attack,                           ids = { 0x252, 0x253 } },
-		{ names = { "CA _3+C" },                             type = act_types.startup | act_types.attack,                           ids = { 0x24D } },
-		{ names = { "CA _6+C" },                             type = act_types.startup | act_types.attack,                           ids = { 0x249, 0x24A } },
-		{ names = { "CA _6+C" },                             type = act_types.preserve | act_types.any,                             ids = { 0x24B } },
-	},
-	-- フランコ・バッシュ
-	{
-		{ names = { "近 対メインライン威力大攻撃" },       type = act_types.startup | act_types.attack,                      ids = { 0x62, 0x63, 0x64 } },
-		{ names = { "遠 対メインライン威力大攻撃" },       type = act_types.startup | act_types.attack,                      ids = { 0x25A, 0x25B, 0x25C } },
-		{ names = { "避け攻撃" },                                   type = act_types.startup | act_types.attack,                      ids = { 0x67 } },
-		{ names = { "近立C" },                                        type = act_types.startup | act_types.attack,                      ids = { 0x43 } },
-		{ names = { "遠立B" },                                        type = act_types.startup | act_types.attack,                      ids = { 0x45 } },
-		{ names = { "遠立C" },                                        type = act_types.startup | act_types.attack,                      ids = { 0x46 } },
-		{ names = { "屈A" },                                           type = act_types.startup | act_types.attack,                      ids = { 0x47 } },
-		{ names = { "フェイント ガッツダンク" },             type = act_types.startup | act_types.any,                         ids = { 0x113 } },
-		{ names = { "フェイント ハルマゲドンバスター" }, type = act_types.startup | act_types.any,                         ids = { 0x112 } },
-		{ names = { "ゴリラッシュ" },                             type = act_types.startup | act_types.any,                         ids = { 0x6D, 0x6E } },
-		{ names = { "スマッシュ" },                                type = act_types.startup | act_types.attack,                      ids = { 0x68 } },
-		{ names = { "バッシュトルネード" },                    type = act_types.startup | act_types.attack,                      ids = { 0x6A } },
-		{ names = { "バロムパンチ" },                             type = act_types.startup | act_types.low_attack,                  ids = { 0x69 } },
-		{ names = { "ダブルコング" },                             type = act_types.startup | act_types.overhead,                    ids = { 0x86, 0x87, 0x88 } },
-		{ names = { "ダブルコング" },                             type = act_types.preserve | act_types.any,                        ids = { 0x89 } },
-		{ names = { "ザッパー" },                                   type = act_types.startup | act_types.attack | act_types.firing,   ids = { 0x90, 0x91 }, },
-		{ names = { "ザッパー" },                                   type = act_types.preserve | act_types.any | act_types.firing,     ids = { 0x92 }, },
-		{ names = { "ウェービングブロー" },                    type = act_types.startup | act_types.attack,                      ids = { 0x9A, 0x9B } },
-		{ names = { "ガッツダンク" },                             type = act_types.startup | act_types.attack,                      ids = { 0xA4, 0xA5, 0xA6, 0xA7 } },
-		{ names = { "ガッツダンク" },                             type = act_types.preserve | act_types.any,                        ids = { 0xA8, 0xAC } },
-		{ names = { "ゴールデンボンバー" },                    type = act_types.startup | act_types.attack,                      ids = { 0xAD, 0xAE, 0xAF, 0xB0 } },
-		{ names = { "ゴールデンボンバー" },                    type = act_types.preserve | act_types.any,                        ids = { 0xB1 } },
-		{ names = { "ファイナルオメガショット" },           type = act_types.startup | act_types.overhead | act_types.firing, ids = { 0xFE, 0xFF, 0x100 }, },
-		{ names = { "メガトンスクリュー" },                    type = act_types.startup | act_types.attack,                      ids = { 0xF4, 0xF5, 0xF6, 0xF7, 0xFC } },
-		{ names = { "メガトンスクリュー" },                    type = act_types.preserve | act_types.any,                        ids = { 0xF8 } },
-		{ names = { "ハルマゲドンバスター" },                 type = act_types.startup | act_types.attack,                      ids = { 0x108 } },
-		{ names = { "ハルマゲドンバスター" },                 type = act_types.preserve | act_types.any,                        ids = { 0x109 } },
-		{ names = { "ハルマゲドンバスター ヒット" },       type = act_types.startup | act_types.attack,                      ids = { 0x10A } },
-		{ names = { "ハルマゲドンバスター ヒット" },       type = act_types.preserve | act_types.any,                        ids = { 0x10B } },
-		{ names = { "CA 立A" },                                        type = act_types.startup | act_types.attack,                      ids = { 0x248 } },
-		{ names = { "CA 立C" },                                        type = act_types.startup | act_types.low_attack,                  ids = { 0x247 } },
-		{ names = { "CA 屈B" },                                        type = act_types.startup | act_types.low_attack,                  ids = { 0x242 } },
-		{ names = { "CA 立D" },                                        type = act_types.startup | act_types.attack,                      ids = { 0x240 } },
-		{ names = { "CA 立B" },                                        type = act_types.startup | act_types.low_attack,                  ids = { 0x246 } },
-		{ names = { "CA 屈C" },                                        type = act_types.startup | act_types.low_attack,                  ids = { 0x249 } },
-		{ names = { "CA 立C" },                                        type = act_types.startup | act_types.overhead,                    ids = { 0x24A, 0x24B } },
-		{ names = { "CA 立C" },                                        type = act_types.preserve | act_types.any,                        ids = { 0x24C } },
-		{ names = { "CA _3+C" },                                        type = act_types.startup | act_types.attack,                      ids = { 0x24D } },
-	},
-	-- 山崎竜二
-	{
-		{ names = { "近 対メインライン威力大攻撃" }, type = act_types.startup | act_types.low_attack,                ids = { 0x62, 0x63, 0x64 } },
-		{ names = { "遠 対メインライン威力大攻撃" }, type = act_types.startup | act_types.low_attack,                ids = { 0x25A, 0x25B, 0x25C } },
-		{ names = { "避け攻撃" },                             type = act_types.startup | act_types.attack,                    ids = { 0x67 } },
-		{ names = { "近立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x43 } },
-		{ names = { "遠立B" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x45 } },
-		{ names = { "遠立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x46 } },
-		{ names = { "屈A" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x47 } },
-		{ names = { "フェイント 裁きの匕首" },          type = act_types.startup | act_types.any,                       ids = { 0x112 } },
-		{ names = { "ブン投げ" },                             type = act_types.startup | act_types.any,                       ids = { 0x6D, 0x6E } },
-		{ names = { "目ツブシ" },                             type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x68, 0x6C }, },
-		{ names = { "カチ上げ" },                             type = act_types.startup | act_types.attack,                    ids = { 0x69 } },
-		{ names = { "ブッ刺し" },                             type = act_types.startup | act_types.overhead,                  ids = { 0x6A } },
-		{ names = { "昇天" },                                   type = act_types.startup | act_types.attack,                    ids = { 0x6B } },
-		{ names = { "蛇使い・上段かまえ" },              type = act_types.startup | act_types.any,                       ids = { 0x86, 0x87 } },
-		{ names = { "蛇使い・上段" },                       type = act_types.wrap | act_types.attack,                       ids = { 0x88 } },
-		{ names = { "蛇だまし・上段" },                    type = act_types.wrap | act_types.any,                          ids = { 0x89 } },
-		{ names = { "蛇使い・中段かまえ" },              type = act_types.startup | act_types.any,                       ids = { 0x90, 0x91 } },
-		{ names = { "蛇使い・中段" },                       type = act_types.wrap | act_types.attack,                       ids = { 0x92 } },
-		{ names = { "蛇だまし・中段" },                    type = act_types.wrap | act_types.any,                          ids = { 0x93 } },
-		{ names = { "蛇使い・下段かまえ" },              type = act_types.startup | act_types.any,                       ids = { 0x9A, 0x9B } },
-		{ names = { "蛇使い・下段" },                       type = act_types.wrap | act_types.low_attack,                   ids = { 0x9C } },
-		{ names = { "蛇だまし・下段" },                    type = act_types.wrap | act_types.any,                          ids = { 0x9D } },
-		{ names = { "大蛇" },                                   type = act_types.startup | act_types.low_attack,                ids = { 0x94 } },
-		{ names = { "サドマゾ" },                             type = act_types.startup | act_types.any,                       ids = { 0xA4 } },
-		{ names = { "サドマゾ攻撃" },                       type = act_types.startup | act_types.low_attack,                ids = { 0xA5, 0xA6 } },
-		{ names = { "裁きの匕首" },                          type = act_types.startup | act_types.attack,                    ids = { 0xC2, 0xC3 } },
-		{ names = { "裁きの匕首" },                          type = act_types.preserve | act_types.any,                      ids = { 0xC4 } },
-		{ names = { "裁きの匕首 ヒット" },                type = act_types.wrap | act_types.attack,                       ids = { 0xC5 } },
-		{ names = { "ヤキ入れ" },                             type = act_types.startup | act_types.overhead,                  ids = { 0xAE, 0xAF, 0xB0 } },
-		{ names = { "ヤキ入れ" },                             type = act_types.preserve | act_types.any,                      ids = { 0xB4 } },
-		{ names = { "倍返し" },                                type = act_types.startup | act_types.attack,                    ids = { 0xB8 } },
-		{ names = { "倍返し キャッチ" },                   type = act_types.startup | act_types.any,                       ids = { 0xB9 } },
-		{ names = { "倍返し 吸収" },                         type = act_types.wrap | act_types.any,                          ids = { 0xBA } },
-		{ names = { "倍返し 発射" },                         type = act_types.wrap | act_types.attack | act_types.firing,    ids = { 0xBB, 0xBC }, },
-		{ names = { "爆弾パチキ" },                          type = act_types.startup | act_types.any,                       ids = { 0xCC, 0xCD, 0xCE, 0xCF } },
-		{ names = { "トドメ" },                                type = act_types.startup | act_types.any,                       ids = { 0xD6, 0xD7 } },
-		{ names = { "トドメ ヒット" },                      type = act_types.startup | act_types.any,                       ids = { 0xDA, 0xD8, 0xDB, 0xD9 } },
-		{ names = { "ギロチン" },                             type = act_types.startup | act_types.attack,                    ids = { 0xFE, 0xFF, 0x100 } },
-		{ names = { "ギロチン" },                             type = act_types.preserve | act_types.any,                      ids = { 0x101 } },
-		{ names = { "ギロチン ヒット" },                   type = act_types.wrap | act_types.any,                          ids = { 0x102, 0x103 } },
-		{ names = { "ドリル" },                                type = act_types.startup | act_types.any,                       ids = { 0x108, 0x109 } },
-		{ names = { "ドリル ため Lv.1" },                    type = act_types.startup | act_types.any,                       ids = { 0x10A, 0x10B } },
-		{ names = { "ドリル ため Lv.2" },                    type = act_types.startup | act_types.any,                       ids = { 0x10C } },
-		{ names = { "ドリル ため Lv.3" },                    type = act_types.startup | act_types.any,                       ids = { 0x10D } },
-		{ names = { "ドリル ため Lv.4" },                    type = act_types.startup | act_types.any,                       ids = { 0x10E } },
-		{ names = { "ドリル Lv.1" },                           type = act_types.startup | act_types.any,                       ids = { 0xE0, 0xE1, 0xE2 } },
-		{ names = { "ドリル Lv.2" },                           type = act_types.startup | act_types.any,                       ids = { 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9 } },
-		{ names = { "ドリル Lv.3" },                           type = act_types.startup | act_types.any,                       ids = { 0xEA, 0xEB, 0xEC, 0xF1 } },
-		{ names = { "ドリル Lv.4" },                           type = act_types.startup | act_types.any,                       ids = { 0xED, 0xEE, 0xEF, 0xF0 } },
-		{ names = { "ドリル Lv.5" },                           type = act_types.startup | act_types.any,                       ids = { 0xF2, 0xF3, 0xF4, 0xF5, 0xF6 } },
-		{ names = { "ドリル フィニッシュ" },             type = act_types.wrap | act_types.any,                          ids = { 0x10F, 0x110 } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x245 } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x247, 0x248, 0x249 } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x244 } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x24D } },
-		{ names = { "CA _3+C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x242 } },
-		{ names = { "CA _6+C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x241 } },
-	},
-	-- 秦崇秀
-	{
-		{ names = { "近 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,                        ids = { 0x62, 0x63, 0x64 } },
-		{ names = { "遠 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,                        ids = { 0x25A, 0x25B, 0x25C } },
-		{ names = { "避け攻撃" },                             type = act_types.startup | act_types.attack,                        ids = { 0x67 } },
-		{ names = { "近立C" },                                  type = act_types.startup | act_types.attack,                        ids = { 0x43 } },
-		{ names = { "遠立B" },                                  type = act_types.startup | act_types.attack,                        ids = { 0x45 } },
-		{ names = { "遠立C" },                                  type = act_types.startup | act_types.attack,                        ids = { 0x46 } },
-		{ names = { "屈A" },                                     type = act_types.startup | act_types.attack,                        ids = { 0x47 } },
-		{ names = { "フェイント 海龍照臨" },             type = act_types.startup | act_types.any,                           ids = { 0x112 } },
-		{ names = { "発勁龍" },                                type = act_types.startup | act_types.any,                           ids = { 0x6D, 0x6E } },
-		{ names = { "光輪殺" },                                type = act_types.startup | act_types.overhead,                      ids = { 0x68 } },
-		{ names = { "帝王神足拳" },                          type = act_types.startup | act_types.attack,                        ids = { 0x86, 0x87 } },
-		{ names = { "帝王神足拳" },                          type = act_types.preserve | act_types.any,                          ids = { 0x88 } },
-		{ names = { "帝王神足拳 ヒット" },                type = act_types.startup | act_types.any,                           ids = { 0x89, 0x8A } },
-		{ names = { "小 帝王天眼拳" },                      type = act_types.startup | act_types.attack | act_types.firing,     ids = { 0x90, 0x91 }, },
-		{ names = { "小 帝王天眼拳" },                      type = act_types.preserve | act_types.any | act_types.firing,       ids = { 0x92 }, },
-		{ names = { "大 帝王天眼拳" },                      type = act_types.startup | act_types.attack | act_types.firing,     ids = { 0x9A, 0x9B }, },
-		{ names = { "大 帝王天眼拳" },                      type = act_types.preserve | act_types.any | act_types.firing,       ids = { 0x9C }, },
-		{ names = { "小 帝王天耳拳" },                      type = act_types.startup | act_types.attack,                        ids = { 0xA4, 0xA5 } },
-		{ names = { "小 帝王天耳拳" },                      type = act_types.preserve | act_types.any,                          ids = { 0xA6, 0xA7 } },
-		{ names = { "大 帝王天耳拳" },                      type = act_types.startup | act_types.attack,                        ids = { 0xAE, 0xAF } },
-		{ names = { "大 帝王天耳拳" },                      type = act_types.preserve | act_types.any,                          ids = { 0xB0, 0xB1 } },
-		{ names = { "帝王神眼拳（その場）" },           type = act_types.startup | act_types.any,                           ids = { 0xC2, 0xC3 } },
-		{ names = { "帝王神眼拳（空中）" },              type = act_types.startup | act_types.any,                           ids = { 0xCC, 0xCD } },
-		{ names = { "帝王神眼拳（空中攻撃）" },        type = act_types.wrap | act_types.attack,                           ids = { 0xCE } },
-		{ names = { "帝王神眼拳（空中攻撃）" },        type = act_types.preserve | act_types.any,                          ids = { 0xCF } },
-		{ names = { "帝王神眼拳（背後）" },              type = act_types.startup | act_types.any,                           ids = { 0xD6, 0xD7 } },
-		{ names = { "帝王空殺神眼拳" },                    type = act_types.startup | act_types.any,                           ids = { 0xE0, 0xE1 } },
-		{ names = { "竜灯掌" },                                type = act_types.startup | act_types.attack,                        ids = { 0xB8 } },
-		{ names = { "竜灯掌 ヒット" },                      type = act_types.startup | act_types.any,                           ids = { 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE } },
-		{ names = { "竜灯掌・幻殺" },                       type = act_types.wrap | act_types.any,                              ids = { 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB } },
-		{ names = { "帝王漏尽拳" },                          type = act_types.startup | act_types.attack | act_types.firing,     ids = { 0xFE, 0xFF }, },
-		{ names = { "帝王漏尽拳" },                          type = act_types.wrap | act_types.any | act_types.firing,           ids = { 0x100 }, },
-		{ names = { "帝王漏尽拳 ヒット" },                type = act_types.wrap | act_types.any | act_types.firing,           ids = { 0x101 }, },
-		{ names = { "帝王空殺漏尽拳" },                    type = act_types.startup | act_types.low_attack | act_types.firing, ids = { 0xEA, 0xEB, 0xEC }, },
-		{ names = { "帝王空殺漏尽拳 ヒット" },          type = act_types.wrap | act_types.any | act_types.firing,           ids = { 0xED }, },
-		{
-			names = { "帝王空殺漏尽拳", "帝王空殺漏尽拳 ヒット" },
-			type = act_types.preserve | act_types.any | act_types.firing,
-			ids = { 0xEE, 0xEF },
-		},
-		{ names = { "海龍照臨" }, type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x108, 0x109, 0x109, 0x10A }, },
-		{ names = { "海龍照臨" }, type = act_types.preserve | act_types.any | act_types.firing,   ids = { 0x10B }, },
-		{ names = { "立ち" },       type = act_types.preserve | act_types.free,                     ids = { 0x6C } },
-		{ names = { "CA 立A" },      type = act_types.startup | act_types.attack,                    ids = { 0x247 } },
-		{ names = { "CA 立B" },      type = act_types.startup | act_types.attack,                    ids = { 0x246 } },
-		{ names = { "CA 屈B" },      type = act_types.startup | act_types.low_attack,                ids = { 0x24B } },
-		{ names = { "CA 立C" },      type = act_types.startup | act_types.attack,                    ids = { 0x240 } },
-		{ names = { "CA 屈C" },      type = act_types.startup | act_types.low_attack,                ids = { 0x24C } },
-		{ names = { "CA _6+C" },      type = act_types.startup | act_types.attack,                    ids = { 0x242 } },
-		{ names = { "CA _3+C" },      type = act_types.startup | act_types.attack,                    ids = { 0x241 } },
-		{ names = { "龍回頭" },    type = act_types.startup | act_types.low_attack,                ids = { 0x248 } },
-		{ names = { "CA 立C" },      type = act_types.startup | act_types.attack,                    ids = { 0x245 } },
-		{ names = { "CA 立C" },      type = act_types.startup | act_types.attack,                    ids = { 0x243 } },
-		{ names = { "CA _6_4+C" },    type = act_types.startup | act_types.attack,                    ids = { 0x244 } },
-	},
-	-- 秦崇雷,
-	{
-		{ names = { "近 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,                    ids = { 0x62, 0x63, 0x64 } },
-		{ names = { "遠 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,                    ids = { 0x25A, 0x25B, 0x25C } },
-		{ names = { "避け攻撃" },                             type = act_types.startup | act_types.attack,                    ids = { 0x67 } },
-		{ names = { "近立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x43 } },
-		{ names = { "遠立B" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x45 } },
-		{ names = { "遠立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x46 } },
-		{ names = { "屈A" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x47 } },
-		{ names = { "フェイント 帝王宿命拳" },          type = act_types.startup | act_types.any,                       ids = { 0x112 } },
-		{ names = { "発勁龍" },                                type = act_types.startup | act_types.any,                       ids = { 0x6D, 0x6E } },
-		{ names = { "龍脚殺" },                                type = act_types.startup | act_types.overhead,                  ids = { 0x68 } },
-		{ names = { "帝王神足拳" },                          type = act_types.startup | act_types.attack,                    ids = { 0x86, 0x87, 0x89 } },
-		{ names = { "帝王神足拳" },                          type = act_types.preserve | act_types.any,                      ids = { 0x88 } },
-		{ names = { "小 帝王天眼拳" },                      type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x90, 0x91 }, },
-		{ names = { "小 帝王天眼拳" },                      type = act_types.preserve | act_types.any | act_types.firing,   ids = { 0x92 }, },
-		{ names = { "大 帝王天眼拳" },                      type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x9A, 0x9B }, },
-		{ names = { "大 帝王天眼拳" },                      type = act_types.preserve | act_types.any | act_types.firing,   ids = { 0x9C }, },
-		{ names = { "小 帝王天耳拳" },                      type = act_types.startup | act_types.attack,                    ids = { 0xA4, 0xA5 } },
-		{ names = { "小 帝王天耳拳" },                      type = act_types.preserve | act_types.any,                      ids = { 0xA6, 0xA7 } },
-		{ names = { "大 帝王天耳拳" },                      type = act_types.startup | act_types.attack,                    ids = { 0xAE, 0xAF } },
-		{ names = { "大 帝王天耳拳" },                      type = act_types.preserve | act_types.any,                      ids = { 0xB0, 0xB1 } },
-		{ names = { "帝王漏尽拳" },                          type = act_types.startup | act_types.attack | act_types.firing, ids = { 0xB8, 0xB9 }, },
-		{ names = { "帝王漏尽拳" },                          type = act_types.preserve | act_types.any,                      ids = { 0xBC }, },
-		{ names = { "帝王漏尽拳 ヒット" },                type = act_types.wrap | act_types.attack,                       ids = { 0xBB, 0xBA }, },
-		{ names = { "龍転身（前方）" },                    type = act_types.startup | act_types.any,                       ids = { 0xC2, 0xC3, 0xC4 } },
-		{ names = { "龍転身（後方）" },                    type = act_types.preserve | act_types.any,                      ids = { 0xCC, 0xCD, 0xCE } },
-		{ names = { "帝王宿命拳" },                          type = act_types.startup | act_types.attack | act_types.firing, ids = { 0xFE, 0xFF }, },
-		{ names = { "帝王宿命拳" },                          type = act_types.preserve | act_types.any | act_types.firing,   ids = { 0x100 }, },
-		{ names = { "帝王宿命拳2" },                         type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x101, 0x102 }, },
-		{ names = { "帝王宿命拳2" },                         type = act_types.preserve | act_types.any | act_types.firing,   ids = { 0x103 }, },
-		{ names = { "帝王宿命拳3" },                         type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x104, 0x105 }, },
-		{ names = { "帝王宿命拳3" },                         type = act_types.preserve | act_types.any | act_types.firing,   ids = { 0x106 }, },
-		{ names = { "帝王宿命拳4" },                         type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x107, 0x115 }, },
-		{ names = { "帝王宿命拳4" },                         type = act_types.preserve | act_types.any | act_types.firing,   ids = { 0x116 }, },
-		{ names = { "帝王龍声拳" },                          type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x108, 0x109 }, },
-		{ names = { "帝王龍声拳" },                          type = act_types.preserve | act_types.any | act_types.firing,   ids = { 0x10A }, },
-		{ names = { "CA _6+C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x243 } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x242 } },
-		{ names = { "CA _8+C" },                                  type = act_types.startup | act_types.overhead,                  ids = { 0x244, 0x245 } },
-		{ names = { "CA _8+C" },                                  type = act_types.preserve | act_types.any,                      ids = { 0x246 } },
-		{ names = { "CA _3+C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x240 } },
-	},
-	-- ダック・キング
-	{
-		{ names = { "近 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,     ids = { 0x62, 0x63, 0x64 } },
-		{ names = { "遠 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,     ids = { 0x25A, 0x25B, 0x25C } },
-		{ names = { "避け攻撃" },                             type = act_types.startup | act_types.low_attack, ids = { 0x67 } },
-		{ names = { "近立C" },                                  type = act_types.startup | act_types.attack,     ids = { 0x43 } },
-		{ names = { "遠立B" },                                  type = act_types.startup | act_types.attack,     ids = { 0x45, 0x73, 0x74 } },
-		{ names = { "遠立C" },                                  type = act_types.startup | act_types.attack,     ids = { 0x46 } },
-		{ names = { "屈A" },                                     type = act_types.startup | act_types.attack,     ids = { 0x47 } },
-		{ names = { "フェイント ダックダンス" },       type = act_types.startup | act_types.any,        ids = { 0x112 } },
-		{ names = { "ローリングネックスルー" },        type = act_types.startup | act_types.attack,     ids = { 0x6D, 0x6E, 0x6F, 0x70, 0x71 } },
-		{ names = { "ニードルロー" },                       type = act_types.startup | act_types.low_attack, ids = { 0x68 } },
-		{ names = { "ニードルロー" },                       type = act_types.preserve | act_types.any,       ids = { 0x72 } },
-		{ names = { "マッドスピンハンマー" },           type = act_types.startup | act_types.overhead,   ids = { 0x69 } },
-		{ names = { "ショッキングボール" },              type = act_types.startup | act_types.any,        ids = { 0x6A, 0x6B, 0x6C } },
-		{ names = { "小ヘッドスピンアタック" },        type = act_types.startup | act_types.attack,     ids = { 0x86, 0x87 } },
-		{ names = { "小ヘッドスピンアタック" },        type = act_types.preserve | act_types.any,       ids = { 0x8A } },
-		{ names = { "小ヘッドスピンアタック 接触" }, type = act_types.startup | act_types.any,        ids = { 0x88, 0x89 } },
-		{ names = { "大ヘッドスピンアタック" },        type = act_types.startup | act_types.attack,     ids = { 0x90, 0x91 } },
-		{ names = { "大ヘッドスピンアタック" },        type = act_types.preserve | act_types.attack,    ids = { 0x94 } },
-		{ names = { "大ヘッドスピンアタック 接触" }, type = act_types.startup | act_types.any,        ids = { 0x92, 0x93 } },
-		{ names = { "オーバーヘッドキック" },           type = act_types.startup | act_types.attack,     ids = { 0x95 } },
-		{ names = { "オーバーヘッドキック" },           type = act_types.preserve | act_types.any,       ids = { 0x96 } },
-		{
-			names = { "地上振り向き", "小ヘッドスピンアタック", "大ヘッドスピンアタック" },
-			type = act_types.preserve | act_types.any,
-			ids = { 0x3D }
-		},
-		{ names = { "フライングスピンアタック" },        type = act_types.startup | act_types.attack, ids = { 0x9A, 0x9B } },
-		{ names = { "フライングスピンアタック 接触" }, type = act_types.startup | act_types.any,    ids = { 0x9C } },
-		{ names = { "フライングスピンアタック" },        type = act_types.preserve | act_types.any,   ids = { 0x9D, 0x9E } },
-		{ names = { "ダンシングダイブ" },                    type = act_types.startup | act_types.attack, ids = { 0xA4, 0xA5 } },
-		{ names = { "ダンシングダイブ" },                    type = act_types.preserve | act_types.any,   ids = { 0xA6, 0xA7 } },
-		{ names = { "リバースダイブ" },                       type = act_types.startup | act_types.attack, ids = { 0xA8, 0xA9 } },
-		{ names = { "リバースダイブ" },                       type = act_types.preserve | act_types.any,   ids = { 0xAA } },
-		{ names = { "ブレイクストーム" },                    type = act_types.startup | act_types.attack, ids = { 0xAE, 0xAF } },
-		{ names = { "ブレイクストーム" },                    type = act_types.preserve | act_types.any,   ids = { 0xB0, 0xB1 } },
-		{ names = { "ブレイクストーム 2段階目" },         type = act_types.wrap | act_types.attack,    ids = { 0xB2, 0xB6 } },
-		{ names = { "ブレイクストーム 3段階目" },         type = act_types.wrap | act_types.attack,    ids = { 0xB3, 0xB7 } },
-		{
-			names = { "ブレイクストーム", "ブレイクストーム 2段階目", "ブレイクストーム 3段階目" },
-			type = act_types.preserve | act_types.any,
-			ids = { 0xB4, 0xB5 }
-		},
-		{ names = { "ダックフェイント・地" },           type = act_types.startup | act_types.any,    ids = { 0xC2, 0xC3, 0xC4 } },
-		{ names = { "ダックフェイント・空" },           type = act_types.startup | act_types.any,    ids = { 0xB8 } },
-		{ names = { "ダックフェイント・空" },           type = act_types.wrap | act_types.any,       ids = { 0xB9, 0xBA } },
-		{ names = { "クロスヘッドスピン" },              type = act_types.startup | act_types.attack, ids = { 0xD6, 0xD7 } },
-		{ names = { "クロスヘッドスピン" },              type = act_types.preserve | act_types.any,   ids = { 0xD8, 0xD9 } },
-		{ names = { "ダイビングパニッシャー" },        type = act_types.startup | act_types.attack, ids = { 0xE0, 0xE1, } },
-		{ names = { "ダイビングパニッシャー 接触" }, type = act_types.startup | act_types.any,    ids = { 0xE2 } },
-		{
-			names = { "ダイビングパニッシャー", "ダイビングパニッシャー 接触" },
-			type = act_types.preserve | act_types.any,
-			ids = { 0xE3 }
-		},
-		{ names = { "ローリングパニッシャー" },                 type = act_types.startup | act_types.attack,     ids = { 0xE4, 0xE5 } },
-		{ names = { "ローリングパニッシャー" },                 type = act_types.preserve | act_types.any,       ids = { 0xE8 } },
-		{ names = { "ローリングパニッシャー 接触" },          type = act_types.startup | act_types.any,        ids = { 0xE6, 0xE7 } },
-		{ names = { "ダンシングキャリバー" },                    type = act_types.startup | act_types.low_attack, ids = { 0xE9 } },
-		{ names = { "ダンシングキャリバー" },                    type = act_types.preserve | act_types.attack,    ids = { 0xEA, 0xEB, 0xEC } },
-		{ names = { "ダンシングキャリバー" },                    type = act_types.preserve | act_types.any,       ids = { 0xED, 0x115 } },
-		{ names = { "ブレイクハリケーン" },                       type = act_types.startup | act_types.low_attack, ids = { 0xEE, 0xF1 } },
-		{ names = { "ブレイクハリケーン" },                       type = act_types.preserve | act_types.attack,    ids = { 0xEF, 0xF0, 0xF2, 0xF3 } },
-		{ names = { "ブレイクハリケーン" },                       type = act_types.preserve | act_types.any,       ids = { 0x116, 0xF4 } },
-		{ names = { "ブレイクスパイラル" },                       type = act_types.startup | act_types.any,        ids = { 0xFE, 0xFF, 0x100, 0x102 } },
-		{ names = { "ブレイクスパイラルブラザー" },           type = act_types.startup | act_types.any,        ids = { 0xF8 } },
-		{ names = { "ブレイクスパイラルブラザー" },           type = act_types.wrap | act_types.any,           ids = { 0xF9 } },
-		{ names = { "ブレイクスパイラルブラザー" },           type = act_types.wrap | act_types.any,           ids = { 0xFA, 0xFB, 0xFC, 0xFD } },
-		{ names = { "ダックダンス" },                                type = act_types.startup | act_types.attack,     ids = { 0x108 } },
-		{ names = { "ダックダンス Lv.1" },                           type = act_types.wrap | act_types.any,           ids = { 0x109, 0x10C } },
-		{ names = { "ダックダンス Lv.2" },                           type = act_types.wrap | act_types.any,           ids = { 0x10A, 0x10D } },
-		{ names = { "ダックダンス Lv.3" },                           type = act_types.wrap | act_types.any,           ids = { 0x10B, 0x10E } },
-		{ names = { "ダックダンス Lv.4" },                           type = act_types.wrap | act_types.any,           ids = { 0x10F } },
-		{ names = { "スーパーポンピングマシーン" },           type = act_types.startup | act_types.low_attack, ids = { 0x77, 0x78 } },
-		{ names = { "スーパーポンピングマシーン" },           type = act_types.preserve | act_types.any,       ids = { 0x79 } },
-		{ names = { "スーパーポンピングマシーン ヒット" }, type = act_types.startup | act_types.any,        ids = { 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F, 0x82, 0x80, 0x81 } },
-		{ names = { "CA 立B" },                                           type = act_types.startup | act_types.attack,     ids = { 0x24E } },
-		{ names = { "CA 立B" },                                           type = act_types.startup | act_types.attack,     ids = { 0x240 } },
-		{ names = { "CA 屈B" },                                           type = act_types.startup | act_types.low_attack, ids = { 0x24F } },
-		{ names = { "CA 立C" },                                           type = act_types.startup | act_types.attack,     ids = { 0x243 } },
-		{ names = { "CA 屈C" },                                           type = act_types.startup | act_types.low_attack, ids = { 0x24D } },
-		{ names = { "CA _6+C" },                                           type = act_types.startup | act_types.attack,     ids = { 0x242 } },
-		{ names = { "CA _3+C" },                                           type = act_types.startup | act_types.attack,     ids = { 0x244 } },
-		{ names = { "CA 屈C" },                                           type = act_types.startup | act_types.any,        ids = { 0x24C } },
-		{ names = { "CA 屈C" },                                           type = act_types.startup | act_types.low_attack, ids = { 0x245 } },
-		{ names = { "旧ブレイクストーム" },                       type = act_types.startup | act_types.low_attack, ids = { 0x247, 0x248 } },
-		{ names = { "旧ブレイクストーム" },                       type = act_types.preserve | act_types.any,       ids = { 0x249, 0x24A } },
-	},
-	-- キム・カッファン
-	{
-		{ names = { "近 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,     ids = { 0x62, 0x63, 0x64 } },
-		{ names = { "遠 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,     ids = { 0x25A, 0x25B, 0x25C } },
-		{ names = { "避け攻撃" },                             type = act_types.startup | act_types.attack,     ids = { 0x67 } },
-		{ names = { "近立C" },                                  type = act_types.startup | act_types.attack,     ids = { 0x43 } },
-		{ names = { "遠立B" },                                  type = act_types.startup | act_types.attack,     ids = { 0x45 } },
-		{ names = { "遠立C" },                                  type = act_types.startup | act_types.attack,     ids = { 0x46 } },
-		{ names = { "屈A" },                                     type = act_types.startup | act_types.low_attack, ids = { 0x47 } },
-		{ names = { "フェイント 鳳凰脚" },                type = act_types.startup | act_types.any,        ids = { 0x112 } },
-		{ names = { "体落とし" },                             type = act_types.startup | act_types.any,        ids = { 0x6D, 0x6E } },
-		{ names = { "ネリチャギ" },                          type = act_types.startup | act_types.overhead,   ids = { 0x68, 0x69 } },
-		{ names = { "ネリチャギ" },                          type = act_types.preserve | act_types.any,       ids = { 0x6A } },
-		{ names = { "飛燕斬" },                                type = act_types.startup | act_types.attack,     ids = { 0x86, 0x87 } },
-		{ names = { "飛燕斬" },                                type = act_types.preserve | act_types.any,       ids = { 0x88, 0x89 } },
-		{ names = { "小 半月斬" },                            type = act_types.startup | act_types.attack,     ids = { 0x90, 0x91, 0x92 } },
-		{ names = { "大 半月斬" },                            type = act_types.startup | act_types.attack,     ids = { 0x9A, 0x9B, 0x9C } },
-		{ names = { "飛翔脚" },                                type = act_types.startup | act_types.low_attack, ids = { 0xA4, 0xA5 } },
-		{ names = { "飛翔脚" },                                type = act_types.preserve | act_types.any,       ids = { 0xA6 } },
-		{ names = { "戒脚" },                                   type = act_types.startup | act_types.low_attack, ids = { 0xA7, 0xA8 } },
-		{ names = { "戒脚" },                                   type = act_types.preserve | act_types.any,       ids = { 0xA9 } },
-		{ names = { "空砂塵" },                                type = act_types.startup | act_types.attack,     ids = { 0xAE, 0xAF } },
-		{ names = { "空砂塵" },                                type = act_types.preserve | act_types.any,       ids = { 0xB0, 0xB1 } },
-		{ names = { "天昇斬" },                                type = act_types.startup | act_types.attack,     ids = { 0xB2 } },
-		{ names = { "天昇斬" },                                type = act_types.preserve | act_types.any,       ids = { 0xB3, 0xB4 } },
-		{ names = { "覇気脚" },                                type = act_types.startup | act_types.low_attack, ids = { 0xB8 } },
-		{ names = { "鳳凰天舞脚" },                          type = act_types.startup | act_types.low_attack, ids = { 0xFE, 0xFF } },
-		{ names = { "鳳凰天舞脚" },                          type = act_types.preserve | act_types.any,       ids = { 0x100 } },
-		{ names = { "鳳凰天舞脚 ヒット" },                type = act_types.startup | act_types.any,        ids = { 0x101, 0x102, 0x103, 0x104, 0x105, 0x106, 0x107 } },
-		{ names = { "鳳凰脚" },                                type = act_types.startup | act_types.attack,     ids = { 0x108, 0x109, 0x10A } },
-		{ names = { "鳳凰脚 ヒット" },                      type = act_types.startup | act_types.any,        ids = { 0x10B, 0x10C, 0x10D, 0x10E, 0x10F, 0x110, 0x115 } },
-		{ names = { "CA ネリチャギ" },                       type = act_types.startup | act_types.overhead,   ids = { 0x24A, 0x24B } },
-		{ names = { "CA ネリチャギ" },                       type = act_types.preserve | act_types.any,       ids = { 0x24C } },
-		{ names = { "CA 立A" },                                  type = act_types.startup | act_types.attack,     ids = { 0x241 } },
-		{ names = { "CA 立B" },                                  type = act_types.startup | act_types.attack,     ids = { 0x244 } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,     ids = { 0x246, 0x247 } },
-		{ names = { "CA 立C" },                                  type = act_types.preserve | act_types.attack,    ids = { 0x248 } },
-		{ names = { "CA 立A" },                                  type = act_types.startup | act_types.attack,     ids = { 0x240 } },
-		{ names = { "CA 立B" },                                  type = act_types.startup | act_types.attack,     ids = { 0x243 } },
-		{ names = { "CA 立B" },                                  type = act_types.startup | act_types.attack,     ids = { 0x249 } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,     ids = { 0x242 } },
-	},
-	-- ビリー・カーン
-	{
-		{ names = { "近 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,                    ids = { 0x62, 0x63, 0x64 } },
-		{ names = { "遠 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,                    ids = { 0x25A, 0x25B, 0x25C } },
-		{ names = { "避け攻撃" },                             type = act_types.startup | act_types.low_attack,                ids = { 0x67 } },
-		{ names = { "近立C" },                                  type = act_types.startup | act_types.low_attack,                ids = { 0x43 } },
-		{ names = { "遠立B" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x45 } },
-		{ names = { "遠立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x46 } },
-		{ names = { "屈A" },                                     type = act_types.startup | act_types.low_attack,                ids = { 0x47 } },
-		{ names = { "フェイント 強襲飛翔棍" },          type = act_types.startup | act_types.any,                       ids = { 0x112 } },
-		{ names = { "一本釣り投げ" },                       type = act_types.startup | act_types.any,                       ids = { 0x6D, 0x6E } },
-		{ names = { "地獄落とし" },                          type = act_types.startup | act_types.any,                       ids = { 0x81, 0x82, 0x83, 0x84 } },
-		{ names = { "三節棍中段打ち" },                    type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x86, 0x87 }, },
-		{ names = { "三節棍中段打ち" },                    type = act_types.preserve | act_types.any,                      ids = { 0x88, 0x89 } },
-		{ names = { "火炎三節棍中段突き" },              type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x90, 0x91, }, },
-		{ names = { "火炎三節棍中段突き" },              type = act_types.preserve | act_types.any,                      ids = { 0x92, 0x93 } },
-		{ names = { "燕落とし" },                             type = act_types.startup | act_types.attack,                    ids = { 0x9A, 0x9B } },
-		{ names = { "燕落とし" },                             type = act_types.preserve | act_types.any,                      ids = { 0x9C } },
-		{ names = { "火龍追撃棍" },                          type = act_types.startup | act_types.low_attack,                ids = { 0xB8 } },
-		{ names = { "火龍追撃棍" },                          type = act_types.preserve | act_types.attack,                   ids = { 0xB9 } },
-		{ names = { "旋風棍" },                                type = act_types.startup | act_types.attack | act_types.firing, ids = { 0xA4 } },
-		{ names = { "旋風棍 持続" },                         type = act_types.wrap | act_types.attack | act_types.firing,    ids = { 0xA5 } },
-		{ names = { "旋風棍 隙" },                            type = act_types.wrap | act_types.any | act_types.firing,       ids = { 0xA6 } },
-		{ names = { "強襲飛翔棍" },                          type = act_types.startup | act_types.attack,                    ids = { 0xAE, 0xAF, 0xB0 } },
-		{ names = { "強襲飛翔棍" },                          type = act_types.preserve | act_types.any,                      ids = { 0xB1 } },
-		{ names = { "超火炎旋風棍" },                       type = act_types.startup | act_types.attack | act_types.firing, ids = { 0xFE, 0xFF, 0x100 }, },
-		{ names = { "紅蓮殺棍" },                             type = act_types.startup | act_types.attack,                    ids = { 0xF4, 0xF5, 0xF6 } },
-		{ names = { "紅蓮殺棍" },                             type = act_types.preserve | act_types.any,                      ids = { 0xF7, 0xF8 } },
-		{ names = { "サラマンダーストリーム" },        type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C }, },
-		{ names = { "立C" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x46, 0x6C } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.low_attack,                ids = { 0x241 } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x248 } },
-		{ names = { "CA 立C _6C" },                              type = act_types.startup | act_types.attack,                    ids = { 0x242 } },
-		{ names = { "CA 屈C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x243 } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x245 } },
-		{ names = { "集点連破棍" },                          type = act_types.startup | act_types.attack,                    ids = { 0x246 } },
-	},
-	-- チン・シンザン
-	{
-		{ names = { "近 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,                    ids = { 0x62, 0x63, 0x64 } },
-		{ names = { "遠 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,                    ids = { 0x25A, 0x25B, 0x25C } },
-		{ names = { "避け攻撃" },                             type = act_types.startup | act_types.attack,                    ids = { 0x67 } },
-		{ names = { "近立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x43 } },
-		{ names = { "遠立B" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x45 } },
-		{ names = { "遠立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x46 } },
-		{ names = { "遠屈A" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x47 } },
-		{ names = { "フェイント 破岩撃" },                type = act_types.startup | act_types.any,                       ids = { 0x112 } },
-		{ names = { "フェイント クッサメ砲" },          type = act_types.startup | act_types.any,                       ids = { 0x113 } },
-		{ names = { "合気投げ" },                             type = act_types.startup | act_types.any,                       ids = { 0x6D, 0x6E } },
-		{ names = { "頭突殺" },                                type = act_types.startup | act_types.any,                       ids = { 0x81, 0x83, 0x84 } },
-		{ names = { "発勁裏拳" },                             type = act_types.startup | act_types.attack,                    ids = { 0x68 } },
-		{ names = { "落撃双拳" },                             type = act_types.startup | act_types.overhead,                  ids = { 0x69 } },
-		{ names = { "気雷砲（前方）" },                    type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x86, 0x87, 0x88 }, },
-		{ names = { "気雷砲（対空）" },                    type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x90, 0x91, 0x92 }, },
-		{ names = { "小 破岩撃" },                            type = act_types.startup | act_types.low_attack,                ids = { 0xA4, 0xA5 } },
-		{ names = { "小 破岩撃" },                            type = act_types.preserve | act_types.any,                      ids = { 0xA6 } },
-		{ names = { "小 破岩撃 接触" },                     type = act_types.wrap | act_types.any,                          ids = { 0xA7, 0xA8 } },
-		{ names = { "大 破岩撃" },                            type = act_types.startup | act_types.low_attack,                ids = { 0xAE, 0xAF } },
-		{ names = { "大 破岩撃" },                            type = act_types.preserve | act_types.any,                      ids = { 0xB0 } },
-		{ names = { "大 破岩撃 接触" },                     type = act_types.wrap | act_types.any,                          ids = { 0xB1, 0xB2 } },
-		{ names = { "超太鼓腹打ち" },                       type = act_types.startup | act_types.attack,                    ids = { 0x9A, 0x9B } },
-		{ names = { "満腹滞空" },                             type = act_types.startup | act_types.attack,                    ids = { 0x9F, 0xA0 } },
-		{ names = { "超太鼓腹打ち", "滞空滞空" },       type = act_types.preserve | act_types.any,                      ids = { 0x9C } },
-		{
-			names = { "超太鼓腹打ち 接触", "滞空滞空 接触" },
-			type = act_types.wrap | act_types.
-			any,
-			ids = { 0x9D, 0x9E }
-		},
-		{ names = { "軟体オヤジ" },                type = act_types.startup | act_types.any,                           ids = { 0xB8 } },
-		{ names = { "軟体オヤジ 持続" },         type = act_types.wrap | act_types.any,                              ids = { 0xB9 } },
-		{ names = { "軟体オヤジ 隙" },            type = act_types.wrap | act_types.any,                              ids = { 0xBB } },
-		{ names = { "軟体オヤジ 息切れ" },      type = act_types.wrap | act_types.any,                              ids = { 0xBA } },
-		{ names = { "クッサメ砲" },                type = act_types.startup | act_types.low_attack | act_types.firing, ids = { 0xC2, 0xC3 }, },
-		{ names = { "クッサメ砲" },                type = act_types.preserve | act_types.any | act_types.firing,       ids = { 0xC4, 0xC5 }, },
-		{ names = { "爆雷砲" },                      type = act_types.startup | act_types.attack | act_types.firing,     ids = { 0xFE, 0xFF, 0x100 }, },
-		{ names = { "ホエホエ弾" },                type = act_types.startup | act_types.low_attack | act_types.firing, ids = { 0x108, }, },
-		{ names = { "ホエホエ弾 滞空" },         type = act_types.wrap | act_types.low_attack | act_types.firing,    ids = { 0x109, 0x10C, 0x10D, 0x114 }, },
-		{ names = { "ホエホエ弾 落下1" },        type = act_types.wrap | act_types.any | act_types.firing,           ids = { 0x10A }, },
-		{ names = { "ホエホエ弾 着地1" },        type = act_types.wrap | act_types.any | act_types.firing,           ids = { 0x10B }, },
-		{ names = { "ホエホエ弾 落下2" },        type = act_types.preserve | act_types.any | act_types.firing,       ids = { 0x115 }, },
-		{ names = { "ホエホエ弾 着地2" },        type = act_types.wrap | act_types.any | act_types.firing,           ids = { 0x116 }, },
-		{ names = { "ホエホエ弾 落下3" },        type = act_types.wrap | act_types.overhead | act_types.firing,      ids = { 0x10E }, },
-		{ names = { "ホエホエ弾 落下3 接触" }, type = act_types.wrap | act_types.any | act_types.firing,           ids = { 0x10F }, },
-		{ names = { "ホエホエ弾 着地3" },        type = act_types.wrap | act_types.any | act_types.firing,           ids = { 0x110 }, },
-		{ names = { "CA 立C" },                        type = act_types.startup | act_types.low_attack,                    ids = { 0x24A } },
-		{ names = { "CA _3+C(近)" },                   type = act_types.startup | act_types.attack,                        ids = { 0x242 } },
-		{ names = { "CA 立C" },                        type = act_types.startup | act_types.attack,                        ids = { 0x240 } },
-		{ names = { "CA _3+C(遠)" },                   type = act_types.startup | act_types.attack,                        ids = { 0x249 } },
-		{ names = { "CA 立C" },                        type = act_types.startup | act_types.attack,                        ids = { 0x241 } },
-		{ names = { "CA 屈C" },                        type = act_types.startup | act_types.low_attack,                    ids = { 0x246 } },
-		{ names = { "CA 立C2" },                       type = act_types.startup | act_types.attack,                        ids = { 0x24B, 0x24C } },
-		{ names = { "CA 立C2" },                       type = act_types.preserve | act_types.low_attack,                   ids = { 0x24D } },
-		{ names = { "CA 立C3" },                       type = act_types.startup | act_types.low_attack,                    ids = { 0x247 } },
-		{ names = { "CA _6_6+B" },                      type = act_types.startup | act_types.any,                           ids = { 0x248 } },
-		{ names = { "CA D" },                           type = act_types.startup | act_types.overhead,                      ids = { 0x243 } },
-		{ names = { "CA _3+C" },                        type = act_types.startup | act_types.any,                           ids = { 0x244 } },
-		{ names = { "CA _1+C" },                        type = act_types.startup | act_types.any,                           ids = { 0x245 } },
-	},
-	-- タン・フー・ルー,
-	{
-		{ names = { "近 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,                    ids = { 0x62, 0x63, 0x64 } },
-		{ names = { "遠 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,                    ids = { 0x25A, 0x25B, 0x25C } },
-		{ names = { "避け攻撃" },                             type = act_types.startup | act_types.attack,                    ids = { 0x67 } },
-		{ names = { "近立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x43 } },
-		{ names = { "遠立B" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x45 } },
-		{ names = { "遠立C" },                                  type = act_types.startup | act_types.attack,                    ids = { 0x46 } },
-		{ names = { "屈A" },                                     type = act_types.startup | act_types.attack,                    ids = { 0x47 } },
-		{ names = { "フェイント 旋風剛拳" },             type = act_types.startup | act_types.any,                       ids = { 0x112 } },
-		{ names = { "裂千掌" },                                type = act_types.startup | act_types.any,                       ids = { 0x6D, 0x6E } },
-		{ names = { "右降龍" },                                type = act_types.startup | act_types.attack,                    ids = { 0x68 } },
-		{ names = { "衝波" },                                   type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x86, 0x87 }, },
-		{ names = { "衝波" },                                   type = act_types.preserve | act_types.any,                      ids = { 0x88 } },
-		{ names = { "小 箭疾歩" },                            type = act_types.startup | act_types.attack,                    ids = { 0x90, 0x91 } },
-		{ names = { "小 箭疾歩" },                            type = act_types.preserve | act_types.any,                      ids = { 0x92 } },
-		{ names = { "大 箭疾歩" },                            type = act_types.startup | act_types.attack,                    ids = { 0x9A, 0x9B } },
-		{ names = { "大 箭疾歩" },                            type = act_types.preserve | act_types.any,                      ids = { 0x9C } },
-		{ names = { "裂千脚" },                                type = act_types.startup | act_types.attack,                    ids = { 0xAE, 0xAF, 0xB0 } },
-		{ names = { "裂千脚" },                                type = act_types.preserve | act_types.any,                      ids = { 0xB1, 0xB2 } },
-		{ names = { "撃放" },                                   type = act_types.startup | act_types.attack,                    ids = { 0xA4 } },
-		{ names = { "撃放 タメ" },                            type = act_types.wrap | act_types.attack,                       ids = { 0xA5 } },
-		{ names = { "撃放 タメ開放" },                      type = act_types.wrap | act_types.attack,                       ids = { 0xA7, 0xA8, 0xA9 } },
-		{ names = { "撃放 隙" },                               type = act_types.wrap | act_types.any,                          ids = { 0xA6 } },
-		{ names = { "旋風剛拳" },                             type = act_types.startup | act_types.attack,                    ids = { 0xFE, 0xFF, 0x100 } },
-		{ names = { "旋風剛拳" },                             type = act_types.preserve | act_types.any,                      ids = { 0x101, 0x102 } },
-		{ names = { "大撃放" },                                type = act_types.startup | act_types.attack,                    ids = { 0x108, 0x109, 0x10A, 0x10B } },
-		{ names = { "大撃放" },                                type = act_types.preserve | act_types.any,                      ids = { 0x10C } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.overhead,                  ids = { 0x247, 0x248 } },
-		{ names = { "CA 立C" },                                  type = act_types.preserve | act_types.overhead,                 ids = { 0x249 } },
-		{ names = { "挑発2" },                                  type = act_types.startup | act_types.provoke,                   ids = { 0x24A } },
-		{ names = { "挑発3" },                                  type = act_types.startup | act_types.provoke,                   ids = { 0x24B } },
-	},
-	-- ローレンス・ブラッド
-	{
-		{ names = { "近 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack, ids = { 0x62, 0x63, 0x64 } },
-		{ names = { "遠 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack, ids = { 0x25A, 0x25B, 0x25C } },
-		{ names = { "避け攻撃" },                             type = act_types.startup | act_types.attack, ids = { 0x67 } },
-		{ names = { "近立C" },                                  type = act_types.startup | act_types.attack, ids = { 0x43 } },
-		{ names = { "遠立B" },                                  type = act_types.startup | act_types.attack, ids = { 0x45 } },
-		{ names = { "遠立C" },                                  type = act_types.startup | act_types.attack, ids = { 0x46 } },
-		{ names = { "屈A" },                                     type = act_types.startup | act_types.attack, ids = { 0x47 } },
-		{ names = { "マタドールバスター" },              type = act_types.startup | act_types.any,    ids = { 0x6D, 0x6E, 0x6F } },
-		{ names = { "トルネードキック" },                 type = act_types.startup | act_types.attack, ids = { 0x68 } },
-		{ names = { "オーレィ" },                             type = act_types.startup | act_types.any,    ids = { 0x69 } },
-		{ names = { "小ブラッディスピン" },              type = act_types.startup | act_types.attack, ids = { 0x86, 0x87 } },
-		{ names = { "小ブラッディスピン" },              type = act_types.preserve | act_types.any,   ids = { 0x88, 0x89 } },
-		{ names = { "大ブラッディスピン" },              type = act_types.startup | act_types.attack, ids = { 0x90, 0x91 } },
-		{
-			names = { "大ブラッディスピン", "大ブラッディスピン ヒット" },
-			type = act_types.preserve | act_types.any,
-			ids = { 0x93, 0x94 }
-		},
-		{ names = { "大ブラッディスピン ヒット" },             type = act_types.startup | act_types.attack,                    ids = { 0x92 } },
-		{
-			names = { "地上振り向き", "小ブラッディスピン", "大ブラッディスピン" },
-			type = act_types.preserve | act_types.any,
-			ids = { 0x3D }
-		},
-		{ names = { "ブラッディサーベル" },                       type = act_types.startup | act_types.attack | act_types.firing, ids = { 0x9A, 0x9B }, },
-		{ names = { "ブラッディサーベル" },                       type = act_types.preserve | act_types.any,                      ids = { 0x9C } },
-		{ names = { "ブラッディカッター" },                       type = act_types.startup | act_types.attack,                    ids = { 0xAE, 0xAF, 0xB0 } },
-		{ names = { "ブラッディカッター" },                       type = act_types.preserve | act_types.any,                      ids = { 0xB2, 0xB1 } },
-		{ names = { "ブラッディミキサー" },                       type = act_types.startup | act_types.attack | act_types.firing, ids = { 0xA4 }, },
-		{ names = { "ブラッディミキサー持続" },                 type = act_types.wrap | act_types.attack | act_types.firing,    ids = { 0xA5 }, },
-		{ names = { "ブラッディミキサー隙" },                    type = act_types.wrap | act_types.any,                          ids = { 0xA6 } },
-		{ names = { "ブラッディフラッシュ" },                    type = act_types.startup | act_types.attack,                    ids = { 0xFE, 0xFF, 0x100, 0x101 } },
-		{ names = { "ブラッディフラッシュ フィニッシュ" }, type = act_types.wrap | act_types.attack,                       ids = { 0x102 } },
-		{ names = { "ブラッディシャドー" },                       type = act_types.startup | act_types.attack,                    ids = { 0x108 } },
-		{ names = { "ブラッディシャドー ヒット" },             type = act_types.wrap | act_types.any,                          ids = { 0x109, 0x10E, 0x10D, 0x10B, 0x10C } },
-		{ names = { "CA 立C" },                                           type = act_types.startup | act_types.attack,                    ids = { 0x245 } },
-		{ names = { "CA 立C" },                                           type = act_types.startup | act_types.attack,                    ids = { 0x246 } },
-		{ names = { "CA 立D" },                                           type = act_types.startup | act_types.attack,                    ids = { 0x24C } },
-		{ names = { "CA 立C" },                                           type = act_types.startup | act_types.attack,                    ids = { 0x248 } },
-		{ names = { "CA _6_3_2+C" },                                       type = act_types.startup | act_types.overhead,                  ids = { 0x249, 0x24A } },
-		{ names = { "CA _6_3_2+C" },                                       type = act_types.wrap | act_types.any,                          ids = { 0x24B } },
-	},
-	-- ヴォルフガング・クラウザー
-	{
-		{ names = { "近 対メインライン威力大攻撃" },                     type = act_types.startup | act_types.attack,                        ids = { 0x62, 0x63, 0x64 } },
-		{ names = { "遠 対メインライン威力大攻撃" },                     type = act_types.startup | act_types.attack,                        ids = { 0x25A, 0x25B, 0x25C } },
-		{ names = { "避け攻撃" },                                                 type = act_types.startup | act_types.attack,                        ids = { 0x67 } },
-		{ names = { "近立C" },                                                      type = act_types.startup | act_types.attack,                        ids = { 0x43 } },
-		{ names = { "遠立B" },                                                      type = act_types.startup | act_types.attack,                        ids = { 0x45 } },
-		{ names = { "遠立C" },                                                      type = act_types.startup | act_types.attack,                        ids = { 0x46 } },
-		{ names = { "屈A" },                                                         type = act_types.startup | act_types.attack,                        ids = { 0x47 } },
-		{ names = { "フェイント ブリッツボール" },                        type = act_types.startup | act_types.any,                           ids = { 0x112 } },
-		{ names = { "フェイント カイザーウェイブ" },                     type = act_types.startup | act_types.any,                           ids = { 0x113 } },
-		{ names = { "ニースマッシャー" },                                     type = act_types.startup | act_types.any,                           ids = { 0x6D, 0x6E } },
-		{ names = { "デスハンマー" },                                           type = act_types.startup | act_types.overhead,                      ids = { 0x68 } },
-		{ names = { "カイザーボディプレス" },                               type = act_types.startup | act_types.attack,                        ids = { 0x69 } },
-		{ names = { "着地", "ジャンプ着地(カイザーボディプレス)" }, type = act_types.wrap | act_types.any,                              ids = { 0x72 } },
-		{ names = { "ダイビングエルボー" },                                  type = act_types.startup | act_types.any,                           ids = { 0x6A, 0x73, 0x74, 0x75 } },
-		{ names = { "ブリッツボール・上段" },                               type = act_types.startup | act_types.attack | act_types.firing,     ids = { 0x86, 0x87, 0x88 }, },
-		{ names = { "ブリッツボール・下段" },                               type = act_types.startup | act_types.low_attack | act_types.firing, ids = { 0x90, 0x91, 0x92 }, },
-		{ names = { "レッグトマホーク" },                                     type = act_types.startup | act_types.overhead,                      ids = { 0x9A, 0x9B } },
-		{ names = { "レッグトマホーク" },                                     type = act_types.preserve | act_types.any,                          ids = { 0x9C } },
-		{ names = { "デンジャラススルー" },                                  type = act_types.startup | act_types.any,                           ids = { 0xAE, 0xAF } },
-		{ names = { "グリフォンアッパー" },                                  type = act_types.startup | act_types.attack,                        ids = { 0x248 } },
-		{ names = { "リフトアップブロー" },                                  type = act_types.startup | act_types.any,                           ids = { 0xC2, 0xC3 } },
-		{ names = { "フェニックススルー" },                                  type = act_types.startup | act_types.any,                           ids = { 0xA4 } },
-		{ names = { "フェニックススルー 捕獲" },                           type = act_types.startup | act_types.any,                           ids = { 0xA5, 0xA6, 0xA7 } },
-		{ names = { "カイザークロー" },                                        type = act_types.startup | act_types.attack,                        ids = { 0xB8 } },
-		{ names = { "カイザークロー ヒット" },                              type = act_types.startup | act_types.attack,                        ids = { 0xB9, 0xBA } },
-		{ names = { "カイザーウェイブ" },                                     type = act_types.startup | act_types.attack,                        ids = { 0xFE } },
-		{ names = { "カイザーウェイブため" },                               type = act_types.wrap | act_types.attack,                           ids = { 0xFF } },
-		{ names = { "カイザーウェイブ発射" },                               type = act_types.wrap | act_types.attack | act_types.firing,        ids = { 0x100, 0x101, 0x102 }, },
-		{
-			names = { "ギガティックサイクロン", "アンリミテッドデザイア2", "ジャンプ" },
-			type = act_types.preserve | act_types.any,
-			ids = { 0x108, 0x109, 0x10A, 0x10B, 0xC, 0x10C, 0x10D, 0x10C, 0x10E }
-		},
-		{ names = { "アンリミテッドデザイア" },     type = act_types.startup | act_types.attack,     ids = { 0xE0, 0xE1, } },
-		{ names = { "アンリミテッドデザイア" },     type = act_types.preserve | act_types.any,       ids = { 0xE2 } },
-		{ names = { "アンリミテッドデザイア(2)" },  type = act_types.startup | act_types.attack,     ids = { 0xE3 } },
-		{ names = { "アンリミテッドデザイア(3)" },  type = act_types.startup | act_types.attack,     ids = { 0xE4 } },
-		{ names = { "アンリミテッドデザイア(4)" },  type = act_types.startup | act_types.attack,     ids = { 0xE5 } },
-		{ names = { "アンリミテッドデザイア(5)" },  type = act_types.startup | act_types.attack,     ids = { 0xE6 } },
-		{ names = { "アンリミテッドデザイア(6)" },  type = act_types.startup | act_types.attack,     ids = { 0xE7 } },
-		{ names = { "アンリミテッドデザイア(7)" },  type = act_types.startup | act_types.attack,     ids = { 0xE8 } },
-		{ names = { "アンリミテッドデザイア(8)" },  type = act_types.startup | act_types.attack,     ids = { 0xE9 } },
-		{ names = { "アンリミテッドデザイア(9)" },  type = act_types.startup | act_types.attack,     ids = { 0xEA } },
-		{ names = { "アンリミテッドデザイア(10)" }, type = act_types.startup | act_types.attack,     ids = { 0xEB } },
-		{ names = { "CA 立C" },                               type = act_types.startup | act_types.attack,     ids = { 0x240 } },
-		{ names = { "CA 立C" },                               type = act_types.startup | act_types.attack,     ids = { 0x24E } },
-		{ names = { "CA 立C" },                               type = act_types.startup | act_types.attack,     ids = { 0x242 } },
-		{ names = { "CA 立C" },                               type = act_types.startup | act_types.attack,     ids = { 0x241 } },
-		{ names = { "CA 屈C" },                               type = act_types.startup | act_types.low_attack, ids = { 0x244 } },
-		{ names = { "CA 立C" },                               type = act_types.startup | act_types.attack,     ids = { 0x243 } },
-		{ names = { "CA _2_3_6+C" },                           type = act_types.startup | act_types.attack,     ids = { 0x245 } },
-		{ names = { "CA _3+C" },                               type = act_types.startup | act_types.attack,     ids = { 0x247 } },
-	},
-	-- リック・ストラウド
-	{
-		{ names = { "近 対メインライン威力大攻撃" },               type = act_types.startup | act_types.attack,                        ids = { 0x62, 0x63, 0x64 } },
-		{ names = { "遠 対メインライン威力大攻撃" },               type = act_types.startup | act_types.attack,                        ids = { 0x25A, 0x25B, 0x25C } },
-		{ names = { "避け攻撃" },                                           type = act_types.startup | act_types.attack,                        ids = { 0x67 } },
-		{ names = { "近立C" },                                                type = act_types.startup | act_types.attack,                        ids = { 0x43 } },
-		{ names = { "遠立B" },                                                type = act_types.startup | act_types.attack,                        ids = { 0x45 } },
-		{ names = { "遠立C" },                                                type = act_types.startup | act_types.attack,                        ids = { 0x46 } },
-		{ names = { "屈A" },                                                   type = act_types.startup | act_types.attack,                        ids = { 0x47 } },
-		{ names = { "フェイント シューティングスター" },         type = act_types.startup | act_types.any,                           ids = { 0x112 } },
-		{ names = { "ガング・ホー" },                                     type = act_types.startup | act_types.any,                           ids = { 0x6D, 0x6E } },
-		{ names = { "チョッピングライト" },                            type = act_types.startup | act_types.overhead,                      ids = { 0x68, 0x69 } },
-		{ names = { "スマッシュソード" },                               type = act_types.startup | act_types.attack,                        ids = { 0x6A } },
-		{ names = { "パニッシャー" },                                     type = act_types.startup | act_types.attack,                        ids = { 0x6B } },
-		{ names = { "小 シューティングスター" },                     type = act_types.startup | act_types.attack,                        ids = { 0x86, 0x87 } },
-		{ names = { "小 シューティングスター" },                     type = act_types.preserve | act_types.any,                          ids = { 0x8C } },
-		{ names = { "小 シューティングスター ヒット" },           type = act_types.wrap | act_types.attack,                           ids = { 0x88, 0x89, 0x8A } },
-		{ names = { "小 シューティングスター ヒット" },           type = act_types.preserve | act_types.any,                          ids = { 0x8B } },
-		{ names = { "大 シューティングスター" },                     type = act_types.startup | act_types.attack,                        ids = { 0x90, 0x91, 0x92, 0x93, 0x94 } },
-		{ names = { "シューティングスターEX" },                       type = act_types.startup | act_types.attack,                        ids = { 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8 } },
-		{ names = { "シューティングスターEX" },                       type = act_types.preserve | act_types.any,                          ids = { 0xC9, 0xCA } },
-		{ names = { "地上振り向き", "シューティングスターEX" }, type = act_types.preserve | act_types.any,                          ids = { 0x3D } },
-		{ names = { "ブレイジングサンバースト" },                   type = act_types.startup | act_types.attack,                        ids = { 0xB8, 0xB9 } },
-		{ names = { "ブレイジングサンバースト" },                   type = act_types.preserve | act_types.any,                          ids = { 0xBA } },
-		{ names = { "ヘリオン" },                                           type = act_types.startup | act_types.attack,                        ids = { 0xAE, 0xAF, 0xB1 } },
-		{ names = { "ヘリオン" },                                           type = act_types.preserve | act_types.any,                          ids = { 0xB0 } },
-		{ names = { "フルムーンフィーバー" },                         type = act_types.startup | act_types.any,                           ids = { 0xA4 } },
-		{ names = { "フルムーンフィーバー 持続" },                  type = act_types.wrap | act_types.any,                              ids = { 0xA5 } },
-		{ names = { "フルムーンフィーバー 隙" },                     type = act_types.wrap | act_types.any,                              ids = { 0xA6 } },
-		{ names = { "ディバインブラスト" },                            type = act_types.startup | act_types.attack,                        ids = { 0x9A, 0x9B, 0x9C, 0x9D } },
-		{ names = { "ディバインブラスト" },                            type = act_types.preserve | act_types.any,                          ids = { 0x9E } },
-		{ names = { "フェイクブラスト" },                               type = act_types.startup | act_types.any,                           ids = { 0x9F } },
-		{ names = { "ガイアブレス" },                                     type = act_types.startup | act_types.attack | act_types.firing,     ids = { 0xFE, 0xFF }, },
-		{ names = { "ガイアブレス" },                                     type = act_types.preserve | act_types.any,                          ids = { 0x100 } },
-		{ names = { "ハウリング・ブル" },                               type = act_types.startup | act_types.low_attack | act_types.firing, ids = { 0x108, 0x109, 0x10A, 0x10B, 0x10C }, },
-		{ names = { "CA 立B" },                                                type = act_types.startup | act_types.attack,                        ids = { 0x240 } },
-		{ names = { "CA 立C" },                                                type = act_types.startup | act_types.attack,                        ids = { 0x243 } },
-		{ names = { "CA 立B" },                                                type = act_types.startup | act_types.attack,                        ids = { 0x241 } },
-		{ names = { "CA 立C" },                                                type = act_types.startup | act_types.attack,                        ids = { 0x24D } },
-		{ names = { "CA 立C" },                                                type = act_types.startup | act_types.attack,                        ids = { 0x244 } },
-		{ names = { "CA 立C" },                                                type = act_types.startup | act_types.attack,                        ids = { 0x246 } },
-		{ names = { "CA 立C" },                                                type = act_types.startup | act_types.attack,                        ids = { 0x253 } },
-		{ names = { "CA 立C" },                                                type = act_types.startup | act_types.attack,                        ids = { 0x251 } },
-		{ names = { "CA _3C" },                                                 type = act_types.startup | act_types.attack,                        ids = { 0x248 } },
-		{ names = { "CA 屈B" },                                                type = act_types.startup | act_types.low_attack,                    ids = { 0x242 } },
-		{ names = { "CA 屈C" },                                                type = act_types.startup | act_types.low_attack,                    ids = { 0x247 } },
-		{ names = { "CA 立C" },                                                type = act_types.startup | act_types.attack,                        ids = { 0x245 } },
-		{ names = { "CA 立B" },                                                type = act_types.startup | act_types.attack,                        ids = { 0x24C } },
-		{ names = { "CA 屈C" },                                                type = act_types.startup | act_types.low_attack,                    ids = { 0x24A } },
-		{ names = { "CA _6+C" },                                                type = act_types.startup | act_types.attack,                        ids = { 0x24E, 0x24F } },
-		{ names = { "CA _6+C" },                                                type = act_types.wrap | act_types.any,                              ids = { 0x250 } },
-		{ names = { "CA _2_2+C" },                                              type = act_types.startup | act_types.overhead,                      ids = { 0xE6 } },
-		{ names = { "CA _2_2+C" },                                              type = act_types.wrap | act_types.any,                              ids = { 0xE7 } },
-		{ names = { "CA _3_3+B" },                                              type = act_types.startup | act_types.overhead,                      ids = { 0xE0, 0xE1 } },
-		{ names = { "CA _3_3+B" },                                              type = act_types.wrap | act_types.any,                              ids = { 0xE2 } },
-		{ names = { "CA _4+C" },                                                type = act_types.startup | act_types.attack,                        ids = { 0x249 } },
-		{ names = { "CA 立B" },                                                type = act_types.startup | act_types.attack,                        ids = { 0x24B } },
-	},
-	-- 李香緋
-	{
-		{ names = { "近 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,                     ids = { 0x62, 0x63, 0x64 } },
-		{ names = { "遠 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,                     ids = { 0x25A, 0x25B, 0x25C } },
-		{ names = { "避け攻撃" },                             type = act_types.startup | act_types.attack,                     ids = { 0x67 } },
-		{ names = { "近立C" },                                  type = act_types.startup | act_types.attack,                     ids = { 0x43 } },
-		{ names = { "遠立B" },                                  type = act_types.startup | act_types.attack,                     ids = { 0x45 } },
-		{ names = { "遠立C" },                                  type = act_types.startup | act_types.attack,                     ids = { 0x46 } },
-		{ names = { "屈A" },                                     type = act_types.startup | act_types.attack,                     ids = { 0x47 } },
-		{ names = { "フェイント 天崩山" },                type = act_types.startup | act_types.any,                        ids = { 0x113 } },
-		{ names = { "フェイント 大鉄神" },                type = act_types.startup | act_types.any,                        ids = { 0x112 } },
-		{ names = { "力千後宴" },                             type = act_types.startup | act_types.any,                        ids = { 0x6D, 0x6E } },
-		{ names = { "裡門頂肘" },                             type = act_types.startup | act_types.attack,                     ids = { 0x68, 0x69, 0x6A } },
-		{ names = { "後捜腿" },                                type = act_types.startup | act_types.low_attack,                 ids = { 0x6B } },
-		{ names = { "小 那夢波" },                            type = act_types.startup | act_types.attack | act_types.firing,  ids = { 0x86, 0x87, 0x88 }, },
-		{ names = { "大 那夢波" },                            type = act_types.startup | act_types.attack | act_types.firing,  ids = { 0x90, 0x91, 0x92, 0x93 }, },
-		--[[
-		  f = ,  0x9E, 0x9F, 閃里肘皇移動
-		  f = ,  0xA2, 閃里肘皇スカり
-		  f = ,  0xA1, 0xA7, 閃里肘皇ヒット
-		  f = ,  0xAD, 閃里肘皇・心砕把スカり
-		  f = ,  0xA3, 0xA4, 0xA5, 0xA6, 閃里肘皇・貫空
-		  f = ,  0xA8, 0xA9, 0xAA, 0xAB, 0xAC, 閃里肘皇・心砕把
-		]]
-		{ names = { "閃里肘皇" },                             type = act_types.startup | act_types.attack,                     ids = { 0x9E, 0x9F } },
-		{ names = { "閃里肘皇" },                             type = act_types.preserve | act_types.any,                       ids = { 0xA2 } },
-		{ names = { "閃里肘皇 ヒット" },                   type = act_types.startup | act_types.attack,                     ids = { 0xA1, 0xA7 } },
-		{ names = { "閃里肘皇・貫空" },                    type = act_types.wrap | act_types.attack,                        ids = { 0xA3, 0xA4 } },
-		{ names = { "閃里肘皇・貫空" },                    type = act_types.preserve | act_types.attack,                    ids = { 0xA5, 0xA6 } },
-		{ names = { "閃里肘皇・心砕把" },                 type = act_types.wrap | act_types.lunging_throw | act_types.any, ids = { 0xAD } },
-		{ names = { "閃里肘皇・心砕把 ヒット" },       type = act_types.startup | act_types.attack,                     ids = { 0xA8, 0xA9, 0xAA, 0xAB, 0xAC } },
-		{ names = { "天崩山" },                                type = act_types.startup | act_types.attack,                     ids = { 0x9A, 0x9B } },
-		{ names = { "天崩山" },                                type = act_types.preserve | act_types.any,                       ids = { 0x9C, 0x9D } },
-		{ names = { "詠酒・対ジャンプ攻撃" },           type = act_types.startup | act_types.attack,                     ids = { 0xB8 } },
-		{ names = { "詠酒・対立ち攻撃" },                 type = act_types.startup | act_types.attack,                     ids = { 0xAE } },
-		{ names = { "詠酒・対しゃがみ攻撃" },           type = act_types.startup | act_types.low_attack,                 ids = { 0xC2 } },
-		{ names = { "大鉄神" },                                type = act_types.startup | act_types.attack,                     ids = { 0xF4, 0xF5 } },
-		{ names = { "大鉄神" },                                type = act_types.preserve | act_types.any,                       ids = { 0xF6, 0xF7 } },
-		{ names = { "超白龍" },                                type = act_types.startup | act_types.attack,                     ids = { 0xFE, 0xFF } },
-		{ names = { "超白龍 2段目" },                        type = act_types.startup | act_types.attack,                     ids = { 0x100, 0x101, 0x102 } },
-		{ names = { "超白龍 2段目" },                        type = act_types.preserve | act_types.any,                       ids = { 0x103 } },
-		{ names = { "真心牙" },                                type = act_types.startup | act_types.attack | act_types.firing,  ids = { 0x108, 0x109, 0x10D }, },
-		{ names = { "真心牙" },                                type = act_types.preserve | act_types.any,                       ids = { 0x10E, 0x10F, 0x110 } },
-		{ names = { "真心牙 ヒット" },                      type = act_types.wrap | act_types.any,                           ids = { 0x10A, 0x10B, 0x10C } },
-		{ names = { "CA 立A" },                                  type = act_types.startup | act_types.attack,                     ids = { 0x241 } },
-		{ names = { "CA 立A" },                                  type = act_types.startup | act_types.attack,                     ids = { 0x242 } },
-		{ names = { "CA 立A" },                                  type = act_types.startup | act_types.attack,                     ids = { 0x243 } },
-		{ names = { "CA 屈A" },                                  type = act_types.startup | act_types.attack,                     ids = { 0x244 } },
-		{ names = { "CA 屈A" },                                  type = act_types.startup | act_types.attack,                     ids = { 0x245 } },
-		{ names = { "CA 屈A" },                                  type = act_types.startup | act_types.attack,                     ids = { 0x247 } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                     ids = { 0x24C } },
-		{ names = { "CA 立B" },                                  type = act_types.startup | act_types.attack,                     ids = { 0x24D } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.attack,                     ids = { 0x24A } },
-		{ names = { "CA 立A" },                                  type = act_types.startup | act_types.attack,                     ids = { 0x24B } },
-		{ names = { "アッチョンブリケ" },                 type = act_types.startup | act_types.provoke,                    ids = { 0x283 } },
-		{ names = { "CA 立B" },                                  type = act_types.startup | act_types.attack,                     ids = { 0x246 } },
-		{ names = { "CA 屈B" },                                  type = act_types.startup | act_types.low_attack,                 ids = { 0x24E } },
-		{ names = { "CA 立C" },                                  type = act_types.startup | act_types.overhead,                   ids = { 0x249 } },
-		{ names = { "CA _3+C" },                                  type = act_types.startup | act_types.attack,                     ids = { 0x250, 0x251 } },
-		{ names = { "CA _3+C" },                                  type = act_types.wrap | act_types.any,                           ids = { 0x252 } },
-		{ names = { "CA 屈C" },                                  type = act_types.startup | act_types.low_attack,                 ids = { 0x287 } },
-		{ names = { "CA _6_6+A" },                                type = act_types.startup | act_types.any,                        ids = { 0x24F } },
-		{ names = { "CA _N+_C" },                                 type = act_types.startup | act_types.any,                        ids = { 0x284, 0x285, 0x286 } },
-	},
-	-- アルフレッド
-	{
-		{ names = { "近 対メインライン威力大攻撃" },                             type = act_types.startup | act_types.attack,                           ids = { 0x62, 0x63, 0x64 } },
-		{ names = { "遠 対メインライン威力大攻撃" },                             type = act_types.startup | act_types.attack,                           ids = { 0x25A, 0x25B, 0x25C } },
-		{ names = { "避け攻撃" },                                                         type = act_types.startup | act_types.attack,                           ids = { 0x67 } },
-		{ names = { "近立C" },                                                              type = act_types.startup | act_types.attack,                           ids = { 0x43 } },
-		{ names = { "遠立B" },                                                              type = act_types.startup | act_types.attack,                           ids = { 0x45 } },
-		{ names = { "遠立C" },                                                              type = act_types.startup | act_types.attack,                           ids = { 0x46 } },
-		{ names = { "屈A" },                                                                 type = act_types.startup | act_types.attack,                           ids = { 0x47 } },
-		{ names = { "フェイント クリティカルウィング" },                       type = act_types.startup | act_types.any,                              ids = { 0x112 } },
-		{ names = { "フェイント オーグメンターウィング" },                    type = act_types.startup | act_types.any,                              ids = { 0x113 } },
-		{ names = { "バスタソニックウィング" },                                    type = act_types.startup | act_types.any,                              ids = { 0x6D, 0x6E } },
-		{ names = { "フロントステップキック" },                                    type = act_types.startup | act_types.attack,                           ids = { 0x68 } },
-		{ names = { "飛び退きキック" },                                                type = act_types.startup | act_types.attack,                           ids = { 0x78 } },
-		{ names = { "フォッカー" },                                                      type = act_types.startup | act_types.overhead,                         ids = { 0x69 } },
-		{ names = { "フォッカー" },                                                      type = act_types.preserve | act_types.any,                             ids = { 0x79 } },
-		{ names = { "小 クリティカルウィング" },                                   type = act_types.startup | act_types.attack,                           ids = { 0x86, 0x87, 0x88 } },
-		{ names = { "小 クリティカルウィング" },                                   type = act_types.preserve | act_types.any,                             ids = { 0x89 } },
-		{ names = { "大 クリティカルウィング" },                                   type = act_types.startup | act_types.attack,                           ids = { 0x90, 0x91, 0x92 } },
-		{ names = { "大 クリティカルウィング" },                                   type = act_types.preserve | act_types.any,                             ids = { 0x93 } },
-		{ names = { "オーグメンターウィング" },                                    type = act_types.startup | act_types.attack,                           ids = { 0x9A, 0x9B } },
-		{ names = { "オーグメンターウィング" },                                    type = act_types.preserve | act_types.any,                             ids = { 0x9C, 0x9D } },
-		{ names = { "ダイバージェンス" },                                             type = act_types.startup | act_types.attack | act_types.firing,        ids = { 0xA4, 0xA5 }, },
-		{ names = { "メーデーメーデー" },                                             type = act_types.startup | act_types.overhead,                         ids = { 0xAE } },
-		{ names = { "メーデーメーデー" },                                             type = act_types.wrap | act_types.overhead,                            ids = { 0xAF } },
-		{ names = { "メーデーメーデー", "メーデーメーデー 攻撃" },          type = act_types.wrap | act_types.any,                                 ids = { 0xB0 } },
-		{ names = { "メーデーメーデー 攻撃" },                                      type = act_types.startup | act_types.overhead,                         ids = { 0xB1 } },
-		{ names = { "メーデーメーデー 追加1" },                                     type = act_types.startup | act_types.overhead,                         ids = { 0xB2 } },
-		{ names = { "メーデーメーデー 追加2" },                                     type = act_types.startup | act_types.overhead,                         ids = { 0xB3 } },
-		{ names = { "メーデーメーデー?" },                                            type = act_types.startup | act_types.overhead,                         ids = { 0xB4 } },
-		{ names = { "メーデーメーデー 追加3" },                                            type = act_types.startup | act_types.overhead,                         ids = { 0xB5 } },
-		{ names = { "メーデーメーデー 追加1", "メーデーメーデー 追加2", "メーデーメーデー 追加3" }, type = act_types.wrap | act_types.any,                                 ids = { 0xB6 } },
-		{ names = { "メーデーメーデー 追加1", "メーデーメーデー 追加2", "メーデーメーデー 追加3" }, type = act_types.wrap | act_types.any,                                 ids = { 0xB7 } },
-		{ names = { "S.TOL" },                                                                type = act_types.startup | act_types.lunging_throw | act_types.attack, ids = { 0xB8, 0xB9, 0xBA } },
-		{ names = { "S.TOL ヒット" },                                                      type = act_types.startup | act_types.any,                              ids = { 0xBB, 0xBC, 0xBD, 0xBE, 0xBF } },
-		{ names = { "ショックストール" },                                             type = act_types.startup | act_types.attack,                           ids = { 0xFE, 0xFF } },
-		{ names = { "ショックストール" },                                      type = act_types.wrap | act_types.any,                                 ids = { 0x100, 0x101 } },
-		{ names = { "ショックストール ヒット" },                                   type = act_types.wrap | act_types.attack,                              ids = { 0x102, 0x103 } },
-		{ names = { "ショックストール ヒット" },                                   type = act_types.preserve | act_types.any,                             ids = { 0x104, 0x105 } },
-		{ names = { "ショックストール空中 ヒット" },                             type = act_types.wrap | act_types.attack,                              ids = { 0xF4, 0xF5 } },
-		{ names = { "ショックストール空中 ヒット" },                             type = act_types.preserve | act_types.any,                             ids = { 0xF6, 0xF7 } },
-		{ names = { "ウェーブライダー" },                                             type = act_types.startup | act_types.attack,                           ids = { 0x108, 0x109, 0x10A, 0x10B } },
-		{ names = { "ウェーブライダー" },                                             type = act_types.preserve | act_types.any,                             ids = { 0x10C } },
-	},
-	{
-		-- 共通行動
-		{ names = { "立ち" },                      type = act_types.startup | act_types.free,  ids = { 0x0, 0x1, 0x23, 0x22, 0x3C } },
-		{ names = { "立ち振り向き" },          type = act_types.startup | act_types.free,  ids = { 0x1D } },
-		{ names = { "しゃがみ振り向き" },    type = act_types.startup | act_types.free,  ids = { 0x1E } },
-		{ names = { "振り向き中" },             type = act_types.preserve | act_types.free, ids = { 0x3D } },
-		{ names = { "しゃがみ振り向き中" }, type = act_types.preserve | act_types.free, ids = { 0x3E } },
-		{ names = { "しゃがみ" },                type = act_types.startup | act_types.free,  ids = { 0x4, 0x24, 0x25 } },
-		{ names = { "しゃがみ途中" },          type = act_types.startup | act_types.free,  ids = { 0x5 } },
-		{ names = { "立ち途中" },                type = act_types.startup | act_types.free,  ids = { 0x6 } },
-		{ names = { "前歩き" },                   type = act_types.startup | act_types.free,  ids = { 0x2 } },
-		{ names = { "後歩き" },                   type = act_types.startup | act_types.free,  ids = { 0x3 } },
-		{ names = { "しゃがみ歩き" },          type = act_types.startup | act_types.free,  ids = { 0x7 } },
-		{ names = { "立ち" },                      type = act_types.startup | act_types.free,  ids = { 0x21, 0x40, 0x20, 0x3F } },
-		{ names = { "前歩き" },                   type = act_types.startup | act_types.free,  ids = { 0x2D, 0x2C } },
-		{ names = { "後歩き" },                   type = act_types.startup | act_types.free,  ids = { 0x2E, 0x2F } },
-		{
-			names = { "ジャンプ", "アンリミテッドデザイア", "ギガティックサイクロン",
-				"絶命人中打ち", "地獄門", "アキレスホールド" },
-			type = act_types.preserve | act_types.any,
-			ids = {
-				0xB, 0xC, -- 垂直ジャンプ
-				0xD, 0xE, -- 前ジャンプ
-				0xF, 0x10, -- 後ジャンプ
-				0xB, 0x11, 0x12, -- 垂直小ジャンプ
-				0xD, 0x13, 0x14, -- 前小ジャンプ
-				0xF, 0x15, 0x16, -- 後小ジャンプ
-			}
-		},
-		{ names = { "空中ガード後" },                    type = act_types.wrap | act_types.free,     ids = { 0x12F } },
-		{ names = { "ダウン" },                             type = act_types.wrap | act_types.any,      ids = { 0x18E, 0x192, 0x190 } },
-		{ names = { "気絶" },                                type = act_types.wrap | act_types.any,      ids = { 0x194, 0x195 } },
-		{ names = { "ガード" },                             type = act_types.startup | act_types.block, ids = { 0x117, 0x118, 0x119, 0x11A, 0x11B, 0x11C, 0x11D, 0x11E, 0x11F, 0x120, 0x121, 0x122, 0x123, 0x124, 0x125, 0x126, 0x127, 0x128, 0x129, 0x12A, 0x12B, 0x12C, 0x12C, 0x12D, 0x12E, 0x131, 0x132, 0x133, 0x134, 0x135, 0x136, 0x137, 0x139 } },
-		{ names = { "やられ" },                             type = act_types.wrap | act_types.hit,      ids = { 0x13F, 0x140, 0x141, 0x142, 0x143, 0x144, 0x145, 0x146, 0x147, 0x148, 0x149, 0x14A, 0x14B, 0x14C, 0x14C, 0x14D, 0x14E, 0x14F, 0x151, 0x1E9, 0x239 } },
-		{ names = { "ダッシュ" },                          type = act_types.startup | act_types.any,   ids = { 0x17, 0x18, 0x19 } },
-		{ names = { "飛び退き" },                          type = act_types.startup | act_types.any,   ids = { 0x1A, 0x1B, 0x1C } },
-		{ names = { "立スウェー移動" },                 type = act_types.startup | act_types.any,   ids = { 0x26, 0x27, 0x28 } },
-		{ names = { "屈スウェー移動" },                 type = act_types.startup | act_types.any,   ids = { 0x29, 0x2A, 0x2B } },
-		-- { names = {"スウェー戻り",
-		{ names = { "クイックロール" },                 type = act_types.startup | act_types.any,   ids = { 0x39, 0x3A, 0x3B } },
-		{ names = { "スウェーライン上 ダッシュ" }, type = act_types.startup | act_types.any,   ids = { 0x30, 0x31, 0x32 } },
-		{ names = { "スウェーライン上 飛び退き" }, type = act_types.startup | act_types.any,   ids = { 0x33, 0x34, 0x35 } },
-		{
-			names = { "スウェー戻り", "ダッシュ", "飛び退き",
-				"スウェーライン上 ダッシュ", "スウェーライン上 飛び退き" },
-			type = act_types.preserve | act_types.any,
-			ids = { 0x36, 0x37, 0x38 }
-		},
-		{
-			names = { "スウェー振り向き移動", "ダッシュ", "飛び退き",
-				"スウェーライン上 ダッシュ", "スウェーライン上 飛び退き" },
-			type = act_types.preserve | act_types.any,
-			ids = { 0x2BC, 0x2BD }
-		},
-		{ names = { "近 対メインライン上段攻撃" },    type = act_types.startup | act_types.overhead,   ids = { 0x5C, 0x5D, 0x5E } },
-		{ names = { "近 対メインライン下段攻撃" },    type = act_types.startup | act_types.low_attack, ids = { 0x5F, 0x60, 0x61 } },
-		-- { names = {"近 対メインライン威力大攻撃",
-		{ names = { "遠 対メインライン上段攻撃" },    type = act_types.startup | act_types.overhead,   ids = { 0x254, 0x255, 0x256 } },
-		{ names = { "遠 対メインライン下段攻撃" },    type = act_types.startup | act_types.low_attack, ids = { 0x257, 0x258, 0x259 } },
-		{ names = { "遠 対メインライン威力大攻撃" }, type = act_types.startup | act_types.attack,     ids = { 0x25A, 0x25B, 0x25C } },
-		-- { names = { "遠 対メインライン威力大攻撃",
-		{
-			names = { "ジャンプ移行", "絶命人中打ち", "地獄門", "アキレスホールド" },
-			type = act_types.wrap | act_types.any,
-			ids = { 0x8 }
-		},
-		{
-			names = { "着地", "やられ",
-				"絶命人中打ち", "地獄門", "経絡乱打", "アキレスホールド" },
-			type = act_types.wrap | act_types.any,
-			ids = { 0x9 }
-		},
-		{ names = { "グランドスウェー" },             type = act_types.wrap | act_types.any,           ids = { 0x13C, 0x13D, 0x13E } },
-		{ names = { "テクニカルライズ" },             type = act_types.wrap | act_types.any,           ids = { 0x2CA, 0x2C8, 0x2C9 } },
-		{ names = { "近立A" },                              type = act_types.startup | act_types.attack,     ids = { 0x41 } },
-		{ names = { "近立B" },                              type = act_types.startup | act_types.attack,     ids = { 0x42 } },
-		-- { names = {"近立C",
-		{ names = { "遠立A" },                              type = act_types.startup | act_types.attack,     ids = { 0x44 } },
-		-- { names = {"立B",
-		-- { names = {"立C",
-		{ names = { "対スウェーライン上段攻撃" }, type = act_types.startup | act_types.overhead,   ids = { 0x65 } },
-		-- { names = {"屈A",
-		{ names = { "屈B" },                                 type = act_types.startup | act_types.low_attack, ids = { 0x48 } },
-		{ names = { "屈C" },                                 type = act_types.startup | act_types.low_attack, ids = { 0x49 } },
-		{ names = { "対スウェーライン下段攻撃" }, type = act_types.startup | act_types.low_attack, ids = { 0x66 } },
-		{ names = { "着地", "着地(小攻撃後1)" },      type = act_types.wrap | act_types.any,           ids = { 0x56 } },
-		{ names = { "着地", "着地(小攻撃後2)" },      type = act_types.wrap | act_types.any,           ids = { 0x59 } },
-		{ names = { "着地", "着地(大攻撃後3)" },      type = act_types.wrap | act_types.any,           ids = { 0x57 } },
-		{ names = { "着地", "着地(大攻撃後4)" },      type = act_types.wrap | act_types.any,           ids = { 0x5A } },
-		{ names = { "垂直ジャンプA" },                  type = act_types.startup | act_types.overhead,   ids = { 0x4A } },
-		{ names = { "垂直ジャンプB" },                  type = act_types.startup | act_types.overhead,   ids = { 0x4B } },
-		{ names = { "垂直ジャンプC" },                  type = act_types.startup | act_types.overhead,   ids = { 0x4C } },
-		{ names = { "ジャンプ振り向き" },             type = act_types.startup | act_types.any,        ids = { 0x1F } },
-		{ names = { "斜めジャンプA" },                  type = act_types.startup | act_types.overhead,   ids = { 0x4D } },
-		{ names = { "斜めジャンプB" },                  type = act_types.startup | act_types.overhead,   ids = { 0x4E } },
-		{ names = { "斜めジャンプC" },                  type = act_types.startup | act_types.overhead,   ids = { 0x4F } },
-		{ names = { "垂直小ジャンプA" },               type = act_types.startup | act_types.overhead,   ids = { 0x50 } },
-		{ names = { "垂直小ジャンプB" },               type = act_types.startup | act_types.overhead,   ids = { 0x51 } },
-		{ names = { "垂直小ジャンプC" },               type = act_types.startup | act_types.overhead,   ids = { 0x52 } },
-		{ names = { "斜め小ジャンプA" },               type = act_types.startup | act_types.overhead,   ids = { 0x53 } },
-		{ names = { "斜め小ジャンプB" },               type = act_types.startup | act_types.overhead,   ids = { 0x54 } },
-		{ names = { "斜め小ジャンプC" },               type = act_types.startup | act_types.overhead,   ids = { 0x55 } },
-		{ names = { "挑発" },                               type = act_types.startup | act_types.provoke,    ids = { 0x196 } },
-		{ names = { "おきあがり" },                      type = act_types.wrap | act_types.any,           ids = { 0x193, 0x13B, 0x2C7 } },
-	},
-}
-local char_fireball_base = {
-	-- テリー・ボガード
-	{
-		{ names = { "パワーウェイブ" },    type = act_types.preserve | act_types.attack | act_types.parallel, ids = { 0x265, 0x266, 0x26A, }, },
-		{ names = { "ラウンドウェイブ" }, type = act_types.preserve | act_types.low_attack,                  ids = { 0x260, }, },
-		{ names = { "パワーゲイザー" },    type = act_types.preserve |  act_types.attack,                     ids = { 0x261, }, },
-		{ names = { "トリプルゲイザー" }, type = act_types.preserve | act_types.attack,                      ids = { 0x267, }, },
-	},
-	-- アンディ・ボガード
-	{
-		{ names = { "飛翔拳" },    type = act_types.preserve | act_types.attack, ids = { 0x262, 0x263, }, },
-		{ names = { "激飛翔拳" }, type = act_types.preserve | act_types.attack, ids = { 0x266, 0x267, }, },
-	},
-	-- 東丈
-	{
-		{ names = { "ハリケーンアッパー" }, type = act_types.preserve | act_types.attack | act_types.parallel, ids = { 0x266, 0x267, 0x269, }, },
-		{ names = { "スクリューアッパー" }, type = act_types.preserve | act_types.attack | act_types.parallel, ids = { 0x269, 0x26A, 0x26B, }, },
-	},
-	-- 不知火舞
-	{
-		{ names = { "花蝶扇" }, type = act_types.preserve | act_types.attack | act_types.parallel, ids = { 0x261, 0x262, 0x263, }, },
-		{ names = { "龍炎舞" }, type = act_types.preserve | act_types.attack,                      ids = { 0x264, }, },
-	},
-	-- ギース・ハワード
-	{
-		{ names = { "烈風拳" },                   type = act_types.preserve | act_types.attack | act_types.parallel, ids = { 0x261, 0x260, 0x276, }, },
-		{ names = { "ダブル烈風拳" },          type = act_types.preserve | act_types.attack | act_types.parallel, ids = { 0x262, 0x263, 0x264, 0x265, }, },
-		{ names = { "レイジングストーム" }, type = act_types.preserve | act_types.attack,                      ids = { 0x269, 0x26B, 0x26A, }, },
-	},
-	-- 望月双角,
-	{
-		{ names = { "雷撃棍" },           type = act_types.preserve | act_types.attack,                          ids = { 0x260, }, },
-		{ names = { "野猿狩り/掴み" }, type = act_types.preserve | act_types.attack,                          ids = { 0x277, 0x27C, }, },
-		{ names = { "まきびし" },        type = act_types.preserve | act_types.low_attack | act_types.parallel, ids = { 0x274, 0x275, }, },
-		{ names = { "憑依弾" },           type = act_types.preserve | act_types.attack,                          ids = { 0x263, 0x266, }, },
-		{ names = { "邪棍舞" },           type = act_types.preserve | act_types.attack,                          ids = { 0xF4, 0xF5, }, },
-		{ names = { "邪棍舞 天破" },    type = act_types.startup | act_types.attack,                           ids = { 0xF6, }, },
-		{ names = { "邪棍舞 払破" },    type = act_types.startup | act_types.low_attack,                       ids = { 0xF7, }, },
-		{ names = { "邪棍舞 倒破" },    type = act_types.startup | act_types.overhead,                         ids = { 0xF8, }, },
-		{ names = { "邪棍舞 降破" },    type = act_types.startup | act_types.overhead,                         ids = { 0xF9, }, },
-		{ names = { "邪棍舞 突破" },    type = act_types.startup | act_types.attack,                           ids = { 0xFA, }, },
-		{ names = { "喝" },                 type = act_types.preserve | act_types.attack,                          ids = { 0x282, 0x283, }, },
-		{ names = { "いかづち" },        type = act_types.preserve | act_types.attack,                          ids = { 0x286, 0x287, }, },
-	},
-	-- ボブ・ウィルソン
-	{
-	},
-	-- ホンフゥ
-	{
-		{ names = { "よかトンハンマー" }, type = act_types.preserve | act_types.attack, ids = { 0x26B, }, },
-	},
-	-- ブルー・マリー
-	{
-	},
-	-- フランコ・バッシュ
-	{
-		{ names = { "ザッパー" },                         type = act_types.preserve | act_types.attack, ids = { 0x269, }, },
-		{ names = { "ファイナルオメガショット" }, type = act_types.preserve | act_types.attack, ids = { 0x26C, }, },
-	},
-	-- 山崎竜二
-	{
-		{ names = { "目ツブシ" }, type = act_types.preserve | act_types.attack, ids = { 0x261, }, },
-		{ names = { "倍返し" },    type = act_types.preserve | act_types.attack, ids = { 0x262, 0x263, 0x270, 0x26D, }, },
-	},
-	-- 秦崇秀
-	{
-		{ names = { "帝王天眼拳" },       type = act_types.preserve | act_types.attack | act_types.parallel,      ids = { 0x262, 0x263, 0x265, }, },
-		{ names = { "海龍照臨" },          type = act_types.preserve | act_types.attack | act_types.rec_in_detail, ids = { 0x273, 0x274, }, },
-		{ names = { "帝王漏尽拳" },       type = act_types.preserve | act_types.attack,                           ids = { 0x26C, }, },
-		{ names = { "帝王空殺漏尽拳" }, type = act_types.preserve | act_types.low_attack,                       ids = { 0x26F, }, },
-	},
-	-- 秦崇雷,
-	{
-		{ names = { "帝王漏尽拳" }, type = act_types.preserve | act_types.attack,                      ids = { 0x266, }, },
-		{ names = { "帝王天眼拳" }, type = act_types.preserve | act_types.attack | act_types.parallel, ids = { 0x26E, }, },
-		{ names = { "帝王宿命拳" }, type = act_types.preserve | act_types.attack,                      ids = { 0x268, 0x273, }, },
-		{ names = { "帝王龍声拳" }, type = act_types.preserve | act_types.attack,                      ids = { 0x26B, }, },
-	},
-	-- ダック・キング
-	{
-	},
-	-- キム・カッファン
-	{
-	},
-	-- ビリー・カーン
-	{
-		{ names = { "三節棍中段打ち" },             type = act_types.preserve | act_types.attack, ids = { 0x266, }, },
-		{ names = { "火炎三節棍中段突き" },       type = act_types.preserve | act_types.attack, ids = { 0x267, }, },
-		{ names = { "旋風棍" },                         type = act_types.preserve | act_types.attack, ids = { 0x269, }, },
-		{ names = { "超火炎旋風棍（回転）" },    type = act_types.preserve | act_types.attack, ids = { 0x261, }, },
-		{ names = { "超火炎旋風棍" },                type = act_types.preserve | act_types.attack, ids = { 0x263, }, },
-		{ names = { "超火炎旋風棍（消失）" },    type = act_types.preserve | act_types.any,    ids = { 0x262, }, },
-		{ names = { "サラマンダーストリーム" }, type = act_types.preserve | act_types.attack, ids = { 0x27A, 0x278, }, },
-	},
-	-- チン・シンザン
-	{
-		{ names = { "気雷砲（前方）" }, type = act_types.preserve | act_types.attack | act_types.parallel,     ids = { 0x26C, }, },
-		{ names = { "気雷砲（前方）" }, type = act_types.preserve | act_types.low_attack | act_types.parallel, ids = { 0x267, }, },
-		{ names = { "気雷砲（対空）" }, type = act_types.preserve | act_types.attack | act_types.parallel,     ids = { 0x26D, }, },
-		{ names = { "気雷砲（対空）" }, type = act_types.preserve | act_types.low_attack | act_types.parallel, ids = { 0x26E, }, },
-		{ names = { "気雷砲（着弾）" }, type = act_types.preserve | act_types.low_attack | act_types.parallel, ids = { 0x268 }, },
-		{ names = { "爆雷砲（保持）" }, type = act_types.preserve | act_types.attack,                          ids = { 0x287, }, },
-		{ names = { "爆雷砲" },             type = act_types.preserve | act_types.low_attack,                      ids = { 0x272, }, },
-		{ names = { "爆雷砲（着弾）" }, type = act_types.preserve | act_types.low_attack,                      ids = { 0x273, }, },
-		{ names = { "ホエホエ弾" },       type = act_types.preserve | act_types.low_attack,                      ids = { 0x280, 0x281, 0x27E, 0x27F, }, },
-		{ names = { "クッサメ砲" },       type = act_types.preserve | act_types.low_attack,                      ids = { 0x282, }, },
-	},
-	-- タン・フー・ルー,
-	{
-		{ names = { "衝波" }, type = act_types.preserve | act_types.attack, ids = { 0x265, }, },
-	},
-	-- ローレンス・ブラッド
-	{
-		{ names = { "ブラッディサーベル" }, type = act_types.preserve | act_types.attack, ids = { 0x282, }, },
-		{ names = { "ブラッディミキサー" }, type = act_types.preserve | act_types.attack, ids = { 0x284, }, },
-	},
-	-- ヴォルフガング・クラウザー
-	{
-		{ names = { "ブリッツボール・上段" }, type = act_types.preserve | act_types.attack | act_types.parallel,     ids = { 0x263, 0x262, }, },
-		{ names = { "ブリッツボール・下段" }, type = act_types.preserve | act_types.low_attack | act_types.parallel, ids = { 0x263, 0x266 }, },
-		{ names = { "カイザーウェイブ1" },      type = act_types.preserve | act_types.attack,                          ids = { 0x26E, 0x26F, }, },
-		{ names = { "カイザーウェイブ2" },      type = act_types.preserve | act_types.attack,                          ids = { 0x282, 0x270, }, },
-		{ names = { "カイザーウェイブ3" },      type = act_types.preserve | act_types.attack,                          ids = { 0x283, 0x271, }, },
-	},
-	-- リック・ストラウド
-	{
-		{ names = { "ガイアブレス" },       type = act_types.preserve | act_types.attack,     ids = { 0x261, }, },
-		{ names = { "ハウリング・ブル" }, type = act_types.preserve | act_types.low_attack, ids = { 0x26A, 0x26B, 0x267, }, },
-	},
-	-- 李香緋
-	{
-		{ names = { "小 那夢波" }, type = act_types.preserve | act_types.attack, ids = { 0x263, }, },
-		{ names = { "大 那夢波" }, type = act_types.preserve | act_types.attack, ids = { 0x268, }, },
-		{ names = { "真心牙" },     type = act_types.preserve | act_types.attack, ids = { 0x270, }, },
-	},
-	-- アルフレッド
-	{
-		{ names = { "ダイバージェンス" }, type = act_types.preserve | act_types.attack, ids = { 0x264, }, },
-	},
-}
-local extend_act_names = function(acts)
-	acts.name = acts.name or acts.names[1]
-	acts.normal_name = acts.name
-	acts.slide_name = "滑り " .. acts.name
-	acts.bs_name = "BS " .. acts.name
-	local temp_names = acts.names
-	acts.names = {}
-	for _, name in ipairs(temp_names) do
-		table.insert(acts.names, name)
-		table.insert(acts.names, "滑り " .. name)
-		table.insert(acts.names, "BS " .. name)
-	end
-end
-local register_act_datas = function(acts, char_act1sts, char_acts)
-	for i, id in ipairs(acts.ids) do
-		if i == 1 then
-			acts.id_1st = id
-			if testbit(acts.type, act_types.block | act_types.hit) ~= true and
-				testbit(acts.type, act_types.startup | act_types.wrap | act_types.startup_if_ca) then
-				char_act1sts[id] = true
-			end
-		end
-		char_acts[id] = acts
-	end
-end
-for char, acts_base in pairs(char_acts_base) do
-	-- キャラごとのテーブル作成
-	for _, acts in pairs(acts_base) do
-		extend_act_names(acts)
-		register_act_datas(acts, chars[char].act1sts, chars[char].acts)
-	end
-end
-for char, fireballs_base in pairs(char_fireball_base) do
-	for _, acts in pairs(fireballs_base) do
-		extend_act_names(acts)
-		register_act_datas(acts, chars[char].fb1sts, chars[char].fireballs)
-	end
-end
--- TODO この処理はいらないかも
-for char = 1, #chars - 1 do
-	for id, acts in pairs(chars[#chars].acts) do
-		chars[char].acts[id] = acts
-	end
-	for id, st1 in pairs(chars[#chars].act1sts) do
-		chars[char].act1sts[id] = st1
-	end
-	for id, acts in pairs(chars[#chars].fireballs) do
-		chars[char].fireballs[id] = acts
-	end
-	for id, st1 in pairs(chars[#chars].fb1sts) do
-		chars[char].fb1sts[id] = st1
-	end
+-- デバッグDIPのセット
+local set_dip_config            = function()
+	local dip1, dip2, dip3, dip4 = 0x00, 0x00, 0x00, 0x00                   -- デバッグDIP
+	dip1 = dip1 | (in_match and dip_config.show_range and 0x40 or 0)        --cheat "DIP= 1-7 色々な判定表示"
+	dip1 = dip1 | (in_match and dip_config.show_hitbox and 0x80 or 0)       --cheat "DIP= 1-8 当たり判定表示"
+	dip1 = dip1 | (in_match and dip_config.infinity_life and 0x02 or 0)     --cheat "DIP= 1-2 Infinite Energy"
+	dip2 = dip2 | (in_match and dip_config.easy_super and 0x01 or 0)        --Cheat "DIP 2-1 Eeasy Super"
+	dip4 = dip4 | (in_match and dip_config.semiauto_p and 0x08 or 0)        -- DIP4-4
+	dip2 = dip2 | (dip_config.infinity_time and 0x18 or 0)                  -- 2-4 PAUSEを消す + cheat "DIP= 2-5 Disable Time Over"
+	mem.w8(0x10E024, dip_config.infinity_time and 0x03 or 0x02)             -- 家庭用オプション 1:45 2:60 3:90 4:infinity
+	mem.w8(0x107C28, dip_config.infinity_time and 0xAA or dip_config.fix_time) --cheat "Infinite Time"
+	dip1 = dip1 | (dip_config.stage_select and 0x04 or 0)                   --cheat "DIP= 1-3 Stage Select Mode"
+	dip2 = dip2 | (in_player_select and dip_config.alfred and 0x80 or 0)    --cheat "DIP= 2-8 Alfred Code (B+C >A)"
+	dip2 = dip2 | (in_match and dip_config.watch_states and 0x20 or 0)      --cheat "DIP= 2-6 Watch States"
+	dip3 = dip3 | (in_match and dip_config.cpu_cant_move and 0x01 or 0)     --cheat "DIP= 3-1 CPU Can't Move"
+	dip3 = dip3 | (in_match and dip_config.other_speed and 0x10 or 0)       --cheat "DIP= 3-5 移動速度変更"
+	for i, dip in ipairs({ dip1, dip2, dip3, dip4 }) do mem.w8(0x10E000 + i - 1, dip) end
 end
 
-local jump_acts = new_set(0x9, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16)
-local wakeup_acts = new_set(0x193, 0x13B)
-local input_state_types = {
-	step = 1,
-	faint = 2,
-	charge = 3,
-	unknown = 4,
-	followup = 5,
-	shinsoku = 6,
-	todome = 7,
-	drill5 = 8,
-}
-local create_input_states = function()
-	local _1236b = "_1|_2|_3|_6|_B"
-	local _16a = "_1|_6|_A"
-	local _16b = "_1|_6|_B"
-	local _16c = "_1|_6|_C"
-	local _1chg26bc = "_1|^1|_2||_6|_B+_C"
-	local _1chg6b = "_1|^1|_6|_B"
-	local _1chg6c = "_1|^1|_6|_C"
-	local _21416bc = "_2|_1|_4|_1|_6|_B+_C"
-	local _21416c = "_2|_1|_4|_1|_6|_C"
-	local _2146bc = "_2|_1|_4|_6|_B+_C"
-	local _2146c = "_2|_1|_4|_6|_C"
-	local _214a = "_2|_1|_4|_A"
-	local _214b = "_2|_1|_4|_B"
-	local _214bc = "_2|_1|_4|_B+_C"
-	local _214c = "_2|_1|_4|_C"
-	local _214d = "_2|_1|_4|_D"
-	local _22 = "_2|_N|_2"
-	local _22a = "_2|_N|_2|_A"
-	local _22b = "_2|_N|_2|_B"
-	local _22c = "_2|_N|_2|_C"
-	local _22d = "_2|_N|_2|_D"
-	local _2369b = "_2|_3|_6|_9|_B"
-	local _236a = "_2|_3|_6|_A"
-	local _236b = "_2|_3|_6|_B"
-	local _236bc = "_2|_3|_6|_B+_C"
-	local _236c = "_2|_3|_6|_C"
-	local _236d = "_2|_3|_6|_D"
-	local _2486a = "_2|_4|_8|_6|_A"
-	local _2486bc = "_2|_4|_8|_6|_B+_C"
-	local _2486c = "_2|_4|_8|_6|_C"
-	local _2684a = "_2|_6|_8|_4|_A"
-	local _2684bc = "_2|_6|_8|_4|_B+_C"
-	local _2684c = "_2|_6|_8|_4|_C"
-	local _2a = "_2|_A"
-	local _2ab = "_2||_A+_B"
-	local _2ac = "_2|_A+_C"
-	local _2b = "_2||_B"
-	local _2bc = "_2|_B+_C"
-	local _2c = "_2||_C"
-	local _2chg7b = "_2|^2|_7|_B"
-	local _2chg8a = "_2|^2|_8|_A"
-	local _2chg8b = "_2|^2|_8|_B"
-	local _2chg8c = "_2|^2|_8|_C"
-	local _2chg9b = "_2|^2|_9|_B"
-	local _33b = "_3|_N|_3|_B"
-	local _33c = "_3|_N|_3|_C"
-	local _3b = "_3|_B"
-	local _35c = "_3|_N|_C"
-	local _412c = "_4|_1|_2|_C"
-	local _41236a = "_4|_1|_2|_3|_6|_A"
-	local _41236b = "_4|_1|_2|_3|_6|_B"
-	local _41236bc = "_4|_1|_2|_3|_6|_B+_C"
-	local _41236c = "_4|_1|_2|_3|_6|_C"
-	local _421ac = "_4|_2|_1|_A+_C"
-	local _4268a = "_4|_2|_6|_8|_A"
-	local _4268bc = "_4|_2|_6|_8|_B+_C"
-	local _4268c = "_4|_2|_6|_8|_C"
-	local _44 = "_4|_N|_4"
-	local _466bc = "_4|_6|_N|_6|_B+_C"
-	local _46b = "_4|_6|_B"
-	local _46c = "_4|_6|_C"
-	local _4862a = "_4|_8|_6|_2|_A"
-	local _4862bc = "_4|_8|_6|_2|_B+_C"
-	local _4862c = "_4|_8|_6|_2|_C"
-	local _4ac = "_4|_A+_C"
-	local _4chg6a = "_4|^4|_6|_A"
-	local _4chg6b = "_4|^4|_6|_B"
-	local _4chg6bc = "_4|^4|_6|_B+_C"
-	local _4chg6c = "_4|^4|_6|_C"
-	local _616ab = "_6|_1|_6|_A+_B"
-	local _623a = "_6|_2|_3|_A"
-	local _623ab = "_6|_2|_3|_A+_B"
-	local _623b = "_6|_2|_3|_B"
-	local _623bc = "_6|_2|_3|_B+_C"
-	local _623c = "_6|_2|_3|_C"
-	local _6248a = "_6|_2|_4|_8|_A"
-	local _6248bc = "_6|_2|_4|_8|_B+_C"
-	local _6248c = "_6|_2|_4|_8|_C"
-	local _632146a = "_6|_3|_2|_1|_4|_6|_A"
-	local _63214a = "_6|_3|_2|_1|_4|_A"
-	local _63214b = "_6|_3|_2|_1|_4|_B"
-	local _63214bc = "_6|_3|_2|_1|_4|_B+_C"
-	local _63214c = "_6|_3|_2|_1|_4|_C"
-	local _632c = "_6|_3|_2|_C"
-	local _64123bc = "_6|_4|_1|_2|_3|_B+_C"
-	local _64123c = "_6|_4|_1|_2|_3|_C"
-	local _64123d = "_6|_4|_1|_2|_3|_D"
-	local _6428c = "_6|_4|_2|_8|_C"
-	local _646c = "_6|_4|_6|_C"
-	local _64c = "_6|_4|_C"
-	local _66 = "_6|_N|_6"
-	local _666a = "_6|_N|_6|_N|_6|_A"
-	local _66a = "_6|_N|_6|_A"
-	local _666c = "_6|_N|_6|_N|_6|_C"
-	local _6842a = "_6|_8|_4|_2|_A"
-	local _6842bc = "_6|_8|_4|_2|_B+_C"
-	local _6842c = "_6|_8|_4|_2|_C"
-	local _698b = "_6|_9|_8|_B"
-	local _6ac = "_6|_A+_C"
-	local _82d = "_8|_2|_D"
-	local _8426a = "_8|_4|_2|_6|_A"
-	local _8426bc = "_8|_4|_2|_6|_B+_C"
-	local _8426c = "_8|_4|_2|_6|_C"
-	local _8624a = "_8|_6|_2|_4|_A"
-	local _8624bc = "_8|_6|_2|_4|_B+_C"
-	local _8624c = "_8|_6|_2|_4|_C"
-	local _8c = "_8||_C"
-	local _a2 = "_A||_2"
-	local _a6 = "_A||_6"
-	local _a8 = "_A||_8"
-	local _aa = "_A|_A"
-	local _aaaa = "_A|_A|_A|_A"
-	local _bbb = "_B|_B|_B"
-	local _bbbb = "_B|_B|_B|_B"
-	local _bbbbbb = "_B|_B|_B|_B|_B|_B"
-	local _bbbbbbbb = "_B|_B|_B|_B|_B|_B|_B|_B"
-	local _cc = "_C|_C||"
-	local _ccc = "_C|_C|_C"
-	local _cccc = "_C|_C|_C|_C"
-	local _46a = "_4|_6|_A"
-	local _412d = "_4|_1|_2|_D"
-	local _44b = "_4|_N|_4|_B"
-	local _44d = "_4|_N|_4|_D"
-	local _abc = "_A+_B+_C"
-	local _6b = "_6|_B"
-	local _6c = "_6|_C"
+-- キー入力
+local joy_k                     = data.joy_k
+local rev_joy                   = data.rev_joy
+local joy_frontback             = data.joy_frontback
+local joy_pside                 = data.joy_pside
+local joy_neutrala              = data.joy_neutrala
+local joy_neutralp              = data.joy_neutralp
+local joy_ezmap                 = data.joy_ezmap
+local kprops                    = data.kprops
+local cmd_funcs                 = data.cmd_funcs
 
-	local input_states = {
-		{ --テリー・ボガード 11
-			{ addr = 0x02, estab = 0x010600, cmd = _214a, name = "小バーンナックル", },
-			{ addr = 0x06, estab = 0x020600, cmd = _214c, name = "大バーンナックル", },
-			{ addr = 0x0A, estab = 0x030600, cmd = _236a, name = "パワーウェイブ", },
-			{ addr = 0x0E, estab = 0x040600, cmd = _236c, name = "ラウンドウェイブ", },
-			{ addr = 0x12, estab = 0x050600, cmd = _214b, name = "クラックシュート", },
-			{ addr = 0x16, estab = 0x060600, cmd = _236b, name = "ファイヤーキック", },
-			{ addr = 0x1A, estab = 0x070600, cmd = _236d, name = "パッシングスウェー", },
-			{ addr = 0x1E, estab = 0x0600FF, cmd = _2chg8a, type = input_state_types.charge, name = "ライジングタックル", },
-			{ addr = 0x22, estab = 0x100600, cmd = _21416bc, sdm = "a", name = "パワーゲイザー", },
-			{ addr = 0x26, estab = 0x120600, cmd = _21416c, sdm = "c", name = "トリプルゲイザー", },
-			{ addr = 0x2A, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x2E, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "飛び退き", },
-			{ addr = 0x32, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x36, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x3A, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x3E, estab = 0x460600, cmd = _6ac, type = input_state_types.faint, name = "フェイントバーンナックル", },
-			{ addr = 0x42, estab = 0x470600, cmd = _2bc, type = input_state_types.faint, name = "フェイントパワーゲイザー", },
-		},
-		{ --アンディ・ボガード
-			{ addr = 0x02, estab = 0x010600, cmd = _16a, name = "小残影拳", },
-			{ addr = 0x06, estab = 0x020600, cmd = _16c, name = "大残影拳 or 疾風裏拳", },
-			{ addr = 0x0A, estab = 0x030600, cmd = _214a, name = "飛翔拳", },
-			{ addr = 0x0E, estab = 0x040600, cmd = _214c, name = "激飛翔拳", },
-			{ addr = 0x12, estab = 0x050600, cmd = _623c, name = "昇龍弾", },
-			{ addr = 0x16, estab = 0x060600, cmd = _1236b, name = "空破弾", },
-			{ addr = 0x1A, estab = 0x071200, cmd = _214d, name = "幻影不知火", },
-			{ addr = 0x1E, estab = 0x100600, cmd = _21416bc, sdm = "a", name = "超裂破弾", },
-			{ addr = 0x22, estab = 0x120600, cmd = _21416c, sdm = "c", name = "男打弾", },
-			{ addr = 0x26, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x2A, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "飛び退き", },
-			{ addr = 0x2E, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x32, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x36, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x3A, estab = 0x460600, cmd = _6ac, type = input_state_types.faint, name = "フェイント斬影拳", },
-			{ addr = 0x3E, estab = 0x470600, cmd = _2ac, type = input_state_types.faint, name = "フェイント飛翔拳", },
-			{ addr = 0x42, estab = 0x480600, cmd = _2bc, type = input_state_types.faint, name = "フェイント超裂破弾", },
-		},
-		{ --東丈
-			{ addr = 0x02, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x06, estab = 0x010600, cmd = _16b, name = "小スラッシュキック", },
-			{ addr = 0x0A, estab = 0x020600, cmd = _16c, name = "大スラッシュキック", },
-			{ addr = 0x0E, estab = 0x030600, cmd = _214b, name = "黄金のカカト", },
-			{ addr = 0x12, estab = 0x040600, cmd = _623b, name = "タイガーキック", },
-			{ addr = 0x16, estab = 0x050C00, cmd = _aaaa, name = "爆裂拳", },
-			{ addr = 0x1A, estab = 0x000CFF, cmd = _236a, name = "爆裂フック", },
-			{ addr = 0x1E, estab = 0x000CFE, cmd = _236c, name = "爆裂アッパー", },
-			{ addr = 0x22, estab = 0x060600, cmd = _41236a, name = "ハリケーンアッパー", },
-			{ addr = 0x26, estab = 0x070600, cmd = _41236c, name = "爆裂ハリケーン", },
-			{ addr = 0x2A, estab = 0x100600, cmd = _64123bc, sdm = "a", name = "スクリューアッパー", },
-			{ addr = 0x2E, estab = 0x120600, cmd = _64123c, sdm = "c", name = "サンダーファイヤーC", },
-			{ addr = 0x32, estab = 0x130600, cmd = _64123d, sdm = "d", name = "サンダーファイヤーD", },
-			{ addr = 0x36, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x3A, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "飛び退き", },
-			{ addr = 0x3E, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x42, estab = 0x210600, cmd = _2c, type = input_state_types.faint, name = "炎の指先", },
-			{ addr = 0x46, estab = 0x280600, cmd = _236c, name = "CA _2_3_6+_C", },
-			{ addr = 0x4A, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x4E, estab = 0x460600, cmd = _2ac, type = input_state_types.faint, name = "フェイントハリケーンアッパー", },
-			{ addr = 0x52, estab = 0x470600, cmd = _6ac, type = input_state_types.faint, name = "フェイントスラッシュキック", },
-		},
-		{ --不知火舞
-			{ addr = 0x02, estab = 0x010600, cmd = _236a, name = "花蝶扇", },
-			{ addr = 0x06, estab = 0x020600, cmd = _214a, name = "龍炎舞", },
-			{ addr = 0x0A, estab = 0x030600, cmd = _214c, name = "小夜千鳥", },
-			{ addr = 0x0E, estab = 0x040600, cmd = _41236c, name = "必殺忍蜂", },
-			{ addr = 0x12, estab = 0x0600FF, cmd = _2ab, type = input_state_types.faint, name = "ムササビの舞", },
-			{ addr = 0x16, estab = 0x100600, cmd = _64123bc, sdm = "a", name = "超必殺忍蜂", },
-			{ addr = 0x1A, estab = 0x120600, cmd = _64123c, sdm = "c", name = "花嵐", },
-			{ addr = 0x1E, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x22, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "飛び退き", },
-			{ addr = 0x26, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x2A, estab = 0x7800FF, cmd = _ccc, name = "跳ね蹴り", },
-			{ addr = 0x2E, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x32, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x36, estab = 0x460600, cmd = _2ac, type = input_state_types.faint, name = "フェイント花蝶扇", },
-			{ addr = 0x3A, estab = 0x470600, cmd = _2bc, type = input_state_types.faint, name = "フェイント花嵐", },
-		},
-		{ --ギース・ハワード
-			{ addr = 0x02, estab = 0x210600, cmd = _2c, type = input_state_types.faint, name = "雷鳴豪破投げ", },
-			{ addr = 0x06, estab = 0x010600, cmd = _214a, name = "烈風拳", },
-			{ addr = 0x0A, estab = 0x0206FF, cmd = _214c, name = "ダブル烈風拳", },
-			{ addr = 0x0E, estab = 0x030600, cmd = _41236b, name = "上段当身投げ", },
-			{ addr = 0x12, estab = 0x0406FE, cmd = _41236c, name = "裏雲隠し", },
-			{ addr = 0x16, estab = 0x050600, cmd = _41236a, name = "下段当身打ち", },
-			{ addr = 0x1A, estab = 0x100600, cmd = _64123bc, sdm = "a", name = "レイジングストーム", },
-			{ addr = nil, easy_addr = 0x1E, estab = nil, cmd = _22c, sdm = "c", name = "羅生門", },
-			{ addr = 0x1E, easy_addr = 0x22, estab = 0x0706FD, cmd = _632146a, sdm = "d", name = "デッドリーレイブ", },
-			{ addr = 0x22, easy_addr = 0x26, estab = 0x0706FD, cmd = _8624a, name = "真空投げ_8_6_2_4 or CA 真空投げ", },
-			{ addr = 0x26, easy_addr = 0x2A, estab = 0x0706FD, cmd = _6248a, name = "真空投げ_6_2_4_8 or CA 真空投げ", },
-			{ addr = 0x2A, easy_addr = 0x2E, estab = 0x0706FD, cmd = _2486a, name = "真空投げ_2_4_8_6 or CA 真空投げ", },
-			{ addr = 0x2E, easy_addr = 0x32, estab = 0x0706FD, cmd = _4862a, name = "真空投げ_4_8_6_2 or CA 真空投げ", },
-			{ addr = 0x32, easy_addr = 0x36, estab = 0x0706FD, cmd = _8426a, name = "真空投げ_8_4_2_6 or CA 真空投げ", },
-			{ addr = 0x36, easy_addr = 0x3A, estab = 0x0706FD, cmd = _4268a, name = "真空投げ_4_2_6_8 or CA 真空投げ", },
-			{ addr = 0x3A, easy_addr = 0x3E, estab = 0x0706FD, cmd = _2684a, name = "真空投げ_2_6_8_4 or CA 真空投げ", },
-			{ addr = 0x3E, easy_addr = 0x42, estab = 0x0706FD, cmd = _6842a, name = "真空投げ_6_8_4_2 or CA 真空投げ", },
-			{ addr = 0x42, estab = 0x120600, cmd = _8624c, sdm = "x", name = "羅生門_8_6_2_4", },
-			{ addr = 0x46, estab = 0x120600, cmd = _6248c, sdm = "x", name = "羅生門_6_2_4_8", },
-			{ addr = 0x4A, estab = 0x120600, cmd = _2486c, sdm = "x", name = "羅生門_2_4_8_6", },
-			{ addr = 0x4E, estab = 0x120600, cmd = _4862c, sdm = "x", name = "羅生門_4_8_6_2", },
-			{ addr = 0x52, estab = 0x120600, cmd = _8426c, sdm = "x", name = "羅生門_8_4_2_6", },
-			{ addr = 0x56, estab = 0x120600, cmd = _4268c, sdm = "x", name = "羅生門_4_2_6_8", },
-			{ addr = 0x5A, estab = 0x120600, cmd = _2684c, sdm = "x", name = "羅生門_2_6_8_4", },
-			{ addr = 0x5E, estab = 0x120600, cmd = _6842c, sdm = "x", name = "羅生門_6_8_4_2", },
-			{ addr = 0x62, easy_addr = 0x46, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x66, easy_addr = 0x4A, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "飛び退き", },
-			{ addr = 0x6A, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x6E, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x72, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x76, easy_addr = 0x4E, estab = 0x500600, cmd = _632c, name = "絶命人中打ち", },
-			{ addr = 0x7A, estab = 0x510600, cmd = _412c, sdm = "x", name = "絶命人中打ち", },
-			{ addr = 0x7E, easy_addr = 0x52, estab = 0x460600, cmd = _2ac, type = input_state_types.faint, name = "フェイント烈風拳", },
-			{ addr = 0x82, easy_addr = 0x56, estab = 0x470600, cmd = _2bc, type = input_state_types.faint, name = "フェイントレイジングストーム", },
-		},
-		{ --望月双角
-			{ addr = 0x02, estab = 0x010600, cmd = _214a, name = "野猿狩り", },
-			{ addr = 0x06, estab = 0x020600, cmd = _236a, name = "まきびし", },
-			{ addr = 0x0A, estab = 0x030600, cmd = _646c, name = "憑依弾", },
-			{ addr = 0x0E, estab = 0x050CFF, cmd = _aaaa, name = "邪棍舞", },
-			{ addr = 0x12, estab = 0x060600, cmd = _63214b, name = "喝", },
-			{ addr = 0x16, estab = 0x070600, cmd = _82d, name = "禍炎陣", },
-			{ addr = 0x1A, estab = 0x100600, cmd = _64123bc, sdm = "a", name = "いかづち", },
-			{ addr = 0x1E, estab = 0x120600, cmd = _64123c, sdm = "c", name = "無残弾", },
-			{ addr = 0x22, estab = 0x0406FE, cmd = _8624c, name = "鬼門陣_8_6_2_4 or 喝CAの投げ", },
-			{ addr = 0x26, estab = 0x0406FE, cmd = _6248c, name = "鬼門陣_6_2_4_8 or 喝CAの投げ", },
-			{ addr = 0x2A, estab = 0x0406FE, cmd = _2486c, name = "鬼門陣_2_4_8_6 or 喝CAの投げ", },
-			{ addr = 0x2E, estab = 0x0406FE, cmd = _4862c, name = "鬼門陣_4_8_6_2 or 喝CAの投げ", },
-			{ addr = 0x32, estab = 0x0406FE, cmd = _8426c, name = "鬼門陣_8_4_2_6 or 喝CAの投げ", },
-			{ addr = 0x36, estab = 0x0406FE, cmd = _4268c, name = "鬼門陣_4_2_6_8 or 喝CAの投げ", },
-			{ addr = 0x3A, estab = 0x0406FE, cmd = _2684c, name = "鬼門陣_2_6_8_4 or 喝CAの投げ", },
-			{ addr = 0x3E, estab = 0x0406FE, cmd = _6842c, name = "鬼門陣_6_8_4_2 or 喝CAの投げ", },
-			{ addr = 0x42, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x46, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "バックダッシュ", },
-			{ addr = 0x4A, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x4E, estab = 0x210600, cmd = _2c, type = input_state_types.faint, name = "雷撃棍", },
-			{ addr = 0x52, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x56, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x5A, estab = 0x500600, cmd = _632c, name = "地獄門", },
-			{ addr = 0x5E, estab = 0x510600, cmd = _412c, name = "地獄門", },
-			{ addr = 0x62, estab = 0x280600, cmd = _623a, name = "CA _6_2_3+_A", },
-			{ addr = 0x66, estab = 0x290600, cmd = _22c, type = input_state_types.todome, name = "CA _2_2+_C", },
-			{ addr = 0x6A, estab = 0x460600, cmd = _2ac, type = input_state_types.faint, name = "フェイントまきびし", },
-			{ addr = 0x6E, estab = 0x470600, cmd = _2bc, type = input_state_types.faint, name = "フェイントいかづち", },
-		},
-		{ --ボブ・ウィルソン
-			{ addr = 0x02, estab = 0x010600, cmd = _214b, name = "ローリングタートル", },
-			{ addr = 0x06, estab = 0x020600, cmd = _214c, name = "サイドワインダー", },
-			{ addr = 0x0A, estab = 0x030600, cmd = _2chg8c, type = input_state_types.charge, name = "バイソンホーン", },
-			{ addr = 0x0E, estab = 0x040602, cmd = _4chg6b, type = input_state_types.charge, name = "ワイルドウルフ", },
-			{ addr = 0x12, estab = 0x050600, cmd = _623b, name = "モンキーダンス", },
-			{ addr = 0x16, estab = 0x0606FE, cmd = _466bc, name = "フロッグハンティング", },
-			{ addr = 0x1A, estab = 0x100600, cmd = _64123bc, sdm = "a", name = "デンジャラスウルフ", },
-			{ addr = 0x1E, estab = 0x120600, cmd = _64123c, sdm = "c", name = "ダンシングバイソン", },
-			{ addr = 0x22, estab = 0x1EFFFF, cmd = _33c, type = input_state_types.followup, name = "ホーネットアタック", },
-			{ addr = 0x26, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x2A, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "飛び退き", },
-			{ addr = 0x2E, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x32, estab = 0x237800, cmd = _ccc, name = "フライングフィッシュ", },
-			{ addr = 0x36, estab = 0x210600, cmd = _8c, type = input_state_types.faint, name = "リンクスファング", },
-			{ addr = 0x3A, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x3E, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x42, estab = 0x0600FF, cmd = _2bc, type = input_state_types.faint, name = "フェイントダンシングバイソン", },
-		},
-		{ --ホンフゥ
-			{ addr = 0x02, estab = 0x010600, cmd = _41236c, name = "九龍の読み/黒龍", },
-			{ addr = 0x06, estab = 0x020600, cmd = _623a, name = "小制空烈火棍", },
-			{ addr = 0x0A, estab = 0x030600, cmd = _623c, name = "大制空烈火棍", },
-			{ addr = 0x0E, estab = 0x040600, cmd = _1chg6b, type = input_state_types.charge, name = "電光石火の地", },
-			{ addr = 0x12, estab = 0x000CFE, cmd = _bbb, name = "電光パチキ", },
-			{ addr = 0x16, estab = 0x050600, cmd = _214b, name = "電光石火の天", },
-			{ addr = 0x1A, estab = 0x060600, cmd = _214a, name = "炎の種馬", },
-			{ addr = 0x1E, estab = 0x000CFF, cmd = _aaaa, name = "炎の種馬 連打", },
-			{ addr = 0x22, estab = 0x070600, cmd = _214c, name = "必勝！逆襲拳", },
-			{ addr = 0x26, estab = 0x100600, cmd = _21416bc, sdm = "a", name = "爆発ゴロー", },
-			{ addr = 0x2A, estab = 0x120600, cmd = _21416c, sdm = "c", name = "よかトンハンマー", },
-			{ addr = 0x2E, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x32, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "飛び退き", },
-			{ addr = 0x36, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x3A, estab = 0x0600FF, cmd = _2c, type = input_state_types.faint, name = "トドメヌンチャク", },
-			{ addr = 0x3E, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x42, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x46, estab = 0x460600, cmd = _4ac, type = input_state_types.faint, name = "フェイント制空烈火棍", },
-		},
-		{ --ブルー・マリー
-			{ addr = 0x02, estab = 0x210600, cmd = _2c, type = input_state_types.faint, name = "M.ダイナマイトスイング", },
-			{ addr = 0x06, estab = 0x0106FF, cmd = _236c, name = "M.ｽﾊﾟｲﾀﾞｰ or ｽﾋﾟﾝﾌｫｰﾙ or ﾀﾞﾌﾞﾙｽﾊﾟｲﾀﾞｰ", },
-			{ addr = 0x0A, estab = 0x0206FE, cmd = _623b, name = "M.スナッチャー or ダブルスナッチャー", },
-			{ addr = 0x0E, estab = 0x0006FD, cmd = _46b, name = "ダブルクラッチ", },
-			{ addr = 0x12, estab = 0x0306FD, cmd = _4chg6b, type = input_state_types.charge, name = "M.クラブクラッチ", },
-			{ addr = 0x16, estab = 0x040600, cmd = _214a, name = "M.リアルカウンター", },
-			{ addr = 0x1A, estab = 0x060600, cmd = _623a, name = "バーチカルアロー", },
-			{ addr = 0x1E, estab = 0x070600, cmd = _4chg6a, type = input_state_types.charge, name = "ストレートスライサー", },
-			{ addr = 0x22, estab = 0x090600, cmd = _2chg8c, type = input_state_types.charge, name = "ヤングダイブ", },
-			{ addr = 0x26, estab = 0x100600, cmd = _64123bc, sdm = "a", name = "M.タイフーン", },
-			{ addr = 0x2A, estab = 0x120600, cmd = _64123c, sdm = "c", name = "M.エスカレーション", },
-			{ addr = 0x2E, estab = 0x280600, cmd = _33c, type = input_state_types.followup, name = "CA ジャーマンスープレックス", },
-			{ addr = 0x32, estab = 0x500600, cmd = _632c, name = "アキレスホールド", },
-			{ addr = 0x36, estab = 0x510600, cmd = _412c, name = "アキレスホールド", },
-			{ addr = 0x3A, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x3E, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "飛び退き", },
-			{ addr = 0x42, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x46, estab = 0x240600, cmd = _2b, type = input_state_types.faint, name = "レッグプレス", },
-			{ addr = 0x4A, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x4E, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x52, estab = 0x460600, cmd = _4ac, type = input_state_types.faint, name = "フェイントM.スナッチャー", },
-		},
-		{ --フランコ・バッシュ
-			{ addr = 0x02, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x06, estab = 0x010600, cmd = _214a, name = "ダブルコング", },
-			{ addr = 0x0A, estab = 0x020600, cmd = _236a, name = "ザッパー", },
-			{ addr = 0x0E, estab = 0x030600, cmd = _236d, name = "ウエービングブロー", },
-			{ addr = 0x12, estab = 0x0600FF, cmd = _2369b, name = "ガッツダンク", },
-			{ addr = 0x16, estab = 0x0600FF, cmd = _1chg6c, type = input_state_types.charge, name = "ゴールデンボンバー", },
-			{ addr = 0x1A, estab = 0x100600, cmd = _64123bc, name = "ファイナルオメガショット", },
-			{ addr = 0x1E, estab = 0x110600, cmd = _63214bc, name = "メガトンスクリュー", },
-			{ addr = 0x22, estab = 0x120600, cmd = _64123c, name = "ハルマゲドンバスター", },
-			{ addr = 0x26, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x2A, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "飛び退き", },
-			{ addr = 0x2E, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x32, estab = 0x7800FF, cmd = _ccc, name = "スマッシュ", },
-			{ addr = 0x36, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x3A, estab = 0x0600FF, cmd = _2bc, type = input_state_types.faint, name = "フェイントハルマゲドンバスター", },
-			{ addr = 0x3E, estab = 0x0600FF, cmd = _6ac, type = input_state_types.faint, name = "フェイントガッツダンク", },
-		},
-		{ --山崎竜二
-			{ addr = 0x02, estab = 0x0006FE, cmd = _abc, type = input_state_types.drill5, name = "_A_B_C", }, --TODO
-			{ addr = 0x06, estab = 0x0006FF, cmd = _22, type = input_state_types.step, name = "_2_2", },
-			{ addr = 0x0A, estab = 0x010600, cmd = _214a, name = "蛇使い・上段 ", },
-			{ addr = 0x0E, estab = 0x020600, cmd = _214b, name = "蛇使い・中段", },
-			{ addr = 0x12, estab = 0x030600, cmd = _214c, name = "蛇使い・下段", },
-			{ addr = 0x16, estab = 0x040600, cmd = _41236b, name = "サドマゾ", },
-			{ addr = 0x1A, estab = 0x050600, cmd = _623b, name = "ヤキ入れ", },
-			{ addr = 0x1E, estab = 0x060600, cmd = _236c, name = "倍返し", },
-			{ addr = 0x22, estab = 0x070600, cmd = _623a, name = "裁きの匕首", },
-			{ addr = 0x26, estab = 0x080600, cmd = _6428c, name = "爆弾パチキ", },
-			{ addr = 0x2A, estab = 0x090C00, cmd = _22c, type = input_state_types.followup, name = "トドメ", },
-			{ addr = 0x2E, estab = 0x100600, cmd = _64123bc, sdm = "a", name = "ギロチン", },
-			{ addr = 0x32, estab = 0x120600, cmd = _8624c, sdm = "x", name = "ドリル_8_6_2_4", },
-			{ addr = 0x36, estab = 0x120600, cmd = _6248c, sdm = "x", name = "ドリル_6_2_4_8", },
-			{ addr = 0x3A, estab = 0x120600, cmd = _2486c, sdm = "x", name = "ドリル_2_4_8_6", },
-			{ addr = 0x3E, estab = 0x120600, cmd = _4862c, sdm = "x", name = "ドリル_4_8_6_2", },
-			{ addr = 0x42, estab = 0x120600, cmd = _8426c, sdm = "x", name = "ドリル_8_4_2_6", },
-			{ addr = 0x46, estab = 0x120600, cmd = _4268c, sdm = "x", name = "ドリル_4_2_6_8", },
-			{ addr = 0x4A, estab = 0x120600, cmd = _2684c, sdm = "x", name = "ドリル_2_6_8_4", },
-			{ addr = 0x4E, estab = 0x120600, cmd = _6842c, sdm = "x", name = "ドリル_6_8_4_2", },
-			{ addr = nil, easy_addr = 0x32, estab = 0x120600, cmd = _22c, sdm = "c", name = "ドリル", },
-			{ addr = 0x52, easy_addr = 0x36, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x56, easy_addr = 0x3A, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "飛び退き", },
-			{ addr = 0x5A, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x5E, easy_addr = 0x3E, estab = 0x7800FF, cmd = _ccc, name = "砂かけ", },
-			{ addr = 0x62, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x66, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x6A, easy_addr = 0x42, estab = 0x460600, cmd = _6ac, type = input_state_types.faint, name = "フェイント裁きの匕首", },
-		},
-		{ --秦崇秀
-			{ addr = 0x02, estab = 0x010600, cmd = _66a, type = input_state_types.shinsoku, name = "帝王神足拳", },
-			{ addr = 0x06, estab = 0x020600, cmd = _236a, name = "小帝王天眼拳", },
-			{ addr = 0x0A, estab = 0x030600, cmd = _236c, name = "大帝王天眼拳", },
-			{ addr = 0x0E, estab = 0x040600, cmd = _623a, name = "小帝王天耳拳", },
-			{ addr = 0x12, estab = 0x050600, cmd = _623c, name = "大帝王天耳拳", },
-			{ addr = 0x16, estab = 0x0A0600, cmd = _214b, name = "空中 帝王神眼拳", },
-			{ addr = 0x1A, estab = 0x060600, cmd = _236b, name = "竜灯掌", },
-			{ addr = 0x1E, estab = 0x070600, cmd = _63214a, name = "帝王神眼拳A", },
-			{ addr = 0x22, estab = 0x0806FF, cmd = _63214b, name = "帝王神眼拳B or 竜灯掌・幻殺", },
-			{ addr = 0x26, estab = 0x090600, cmd = _63214c, name = "帝王神眼拳C", },
-			{ addr = 0x2A, estab = 0x100600, cmd = _64123bc, sdm = "a", name = "帝王漏尽拳", },
-			{ addr = 0x2E, estab = 0x0A0600, cmd = _2146bc, sdm = "b", name = "帝王空殺漏尽拳", },
-			{ addr = 0x32, estab = 0x120600, cmd = _64123c, sdm = "c", name = "海龍照臨", },
-			{ addr = 0x36, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x3A, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "飛び退き", },
-			{ addr = 0x3E, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x42, estab = 0x280600, cmd = _64c, name = "CA _6_4+_C", },
-			{ addr = 0x46, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x4A, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x4E, estab = 0x460600, cmd = _2bc, type = input_state_types.faint, name = "フェイント海龍照臨", },
-		},
-		{ --秦崇雷
-			{ addr = 0x02, estab = 0x010600, cmd = _66a, type = input_state_types.shinsoku, name = "帝王神足拳", },
-			{ addr = 0x06, estab = 0x0106FF, cmd = _666a, type = input_state_types.shinsoku, name = "真・帝王神足拳", },
-			{ addr = 0x0A, estab = 0x020600, cmd = _236a, name = "小帝王天眼拳", },
-			{ addr = 0x0E, estab = 0x030600, cmd = _236c, name = "大帝王天眼拳", },
-			{ addr = 0x12, estab = 0x040600, cmd = _623a, name = "小帝王天耳拳", },
-			{ addr = 0x16, estab = 0x050600, cmd = _623c, name = "大帝王天耳拳", },
-			{ addr = 0x1A, estab = 0x060600, cmd = _2146c, name = "帝王漏尽拳", },
-			{ addr = 0x1E, estab = 0x070600, cmd = _236b, name = "龍転身（前方）", },
-			{ addr = 0x22, estab = 0x080600, cmd = _214b, name = "龍転身（後方）", },
-			{ addr = 0x26, estab = 0x100600, cmd = _64123bc, sdm = "a", name = "帝王宿命拳", },
-			{ addr = 0x2A, estab = 0x0006FE, cmd = _ccc, name = "_C_C_C" , },
-			{ addr = 0x2E, estab = 0x120600, cmd = _64123c, sdm = "c", name = "帝王龍声拳", },
-			{ addr = 0x32, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x36, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "飛び退き", },
-			{ addr = 0x3A, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x3E, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x42, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x46, estab = 0x460600, cmd = _2bc, type = input_state_types.faint, name = "フェイント帝王宿命拳", },
-		},
-		{ --ダック・キング
-			-- ROMパッチをあてて通常コマンドでﾌﾞﾚｲｸｽﾊﾟｲﾗﾙﾌﾞﾗｻﾞｰを出せるようにしているため
-			-- こちらのほうもコマンド変更4
-			{ addr = 0x02, estab = 0x070600, cmd = _35c, type = input_state_types.unknown, name = "_3_N_C", },
-			{ addr = 0x06, estab = 0x010600, cmd = _236a, name = "小ヘッドスピンアタック", },
-			{ addr = 0x0A, estab = 0x020600, cmd = _236c, name = "大ヘッドスピンアタック", },
-			-- オーバーヘッドキックはCCで成立するが、成立時に次のC入力が1回消費される作りのため見ためが他と違う
-			{ addr = 0x0E, estab = 0x06FFFF, cmd = _cc, type = input_state_types.unknown, name = "オーバーヘッドキック", },
-			{ addr = 0x12, estab = 0x030600, cmd = _214a, name = "フライングスピンアタック", },
-			{ addr = 0x16, estab = 0x040600, cmd = _214b, name = "ダンシングダイブ", },
-			{ addr = 0x1A, estab = 0x0006FE, cmd = _236b, name = "リバースダイブ", },
-			{ addr = 0x1E, estab = 0x050600, cmd = _623b, name = "ブレイクストーム", },
-			{ addr = 0x22, estab = 0x0006FD, cmd = _bbbb, name = "ブレイクストーム追加1段階", },
-			{ addr = 0x26, estab = 0x0006FC, cmd = _bbbbbb, name = "ブレイクストーム追加2段階", },
-			{ addr = 0x2A, estab = 0x0006FB, cmd = _bbbbbbbb, name = "ブレイクストーム追加3段階", },
-			{ addr = 0x2E, estab = 0x060600, cmd = _22, type = input_state_types.step, name = "ダックフェイント・空", },
-			{ addr = 0x32, estab = 0x080600, cmd = _82d, name = "クロスヘッドスピン", },
-			{ addr = 0x36, estab = 0x090600, cmd = _214bc, name = "ﾀﾞｲﾋﾞﾝｸﾞﾊﾟﾆｯｼｬｰ or ﾀﾞﾝｼﾝｸﾞｷｬﾘﾊﾞｰ", },
-			{ addr = 0x3A, estab = 0x0A0600, cmd = _236bc, name = "ローリングパニッシャー", },
-			{ addr = 0x3E, estab = 0x0C0600, cmd = _623bc, name = "ブレイクハリケーン", },
-			{ addr = 0x42, estab = 0x100600, cmd = _8624bc, sdm = "x", name = "ブレイクスパイラル_8_6_2_4", },
-			{ addr = 0x46, estab = 0x100600, cmd = _6248bc, sdm = "x", name = "ブレイクスパイラル_6_2_4_8", },
-			{ addr = 0x4A, estab = 0x100600, cmd = _2486bc, sdm = "x", name = "ブレイクスパイラル_2_4_8_6", },
-			{ addr = 0x4E, estab = 0x100600, cmd = _4862bc, sdm = "x", name = "ブレイクスパイラル_4_8_6_2", },
-			{ addr = 0x52, estab = 0x100600, cmd = _8426bc, sdm = "x", name = "ブレイクスパイラル_8_4_2_6", },
-			{ addr = 0x56, estab = 0x100600, cmd = _4268bc, sdm = "x", name = "ブレイクスパイラル_4_2_6_8", },
-			{ addr = 0x5A, estab = 0x100600, cmd = _2684bc, sdm = "x", name = "ブレイクスパイラル_2_6_8_4", },
-			{ addr = 0x5E, estab = 0x100600, cmd = _6842bc, sdm = "x", name = "ブレイクスパイラル_6_8_4_2", },
-			{ addr = 0x62, estab = 0x1106FA, cmd = _41236bc, sdm = "x", name = "ﾌﾞﾚｲｸｽﾊﾟｲﾗﾙﾌﾞﾗｻﾞｰ or ｸﾚｲｼﾞｰBR", },
-			{ addr = 0x66, estab = 0x130600, cmd = _63214c, sdm = "x", name = "スーパーポンピングマシーン", },
-			{ addr = 0x6A, estab = 0x0006F9, cmd = _623c, sdm = "x", name = "_6_2_3+_C", },
-			{ addr = 0x6E, estab = 0x120600, cmd = _64123c, sdm = "x", name = "ダックダンス", },
-			{ addr = nil, easy_addr = 0x42, estab = nil, cmd = _22c, sdm = "a", name = "ブレイクスパイラル", },
-			{ addr = nil, easy_addr = 0x46, estab = 0x1106FA, cmd = _41236bc, name = "ﾌﾞﾚｲｸｽﾊﾟｲﾗﾙﾌﾞﾗｻﾞｰ or ｸﾚｲｼﾞｰBR", },
-			{ addr = nil, easy_addr = 0x4A, estab = nil, cmd = _64123c, sdm = "c", name = "ダックダンス", },
-			{ addr = nil, easy_addr = 0x4E, estab = nil, cmd = _22d, sdm = "d", name = "スーパーポンピングマシーン", },
-			{ addr = 0x72, easy_addr = 0x52, estab = 0x0006F8, cmd = _cccc, name = "ダックダンスC連打", },
-			{ addr = 0x76, easy_addr = 0x5A, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x7A, easy_addr = 0x5E, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "飛び退き", },
-			{ addr = 0x7E, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x82, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x86, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x8A, easy_addr = 0x6E, estab = 0x210600, cmd = _2c, type = input_state_types.faint, name = "ショッキングボール", },
-			{ addr = 0x8E, easy_addr = 0x72, estab = 0x280600, cmd = _2369b, name = "CA ブレイクストーム", },
-			{ addr = 0x92, easy_addr = 0x76, estab = 0x460600, cmd = _2bc, type = input_state_types.faint, name = "フェイントダックダンス", },
-		},
-		{ --キム・カッファン
-			{ addr = 0x02, estab = 0x010600, cmd = _2chg8b, type = input_state_types.charge, name = "飛燕斬", },
-			{ addr = 0x06, estab = 0x010601, cmd = _2chg9b, type = input_state_types.charge, name = "飛燕斬", },
-			{ addr = 0x0A, estab = 0x010602, cmd = _2chg7b, type = input_state_types.charge, name = "飛燕斬", },
-			{ addr = 0x0E, estab = 0x040800, cmd = _2b, type = input_state_types.faint, name = "飛翔脚", },
-			{ addr = 0x12, estab = 0x0008FF, cmd = _3b, type = input_state_types.faint, name = "戒脚", },
-			{ addr = 0x16, estab = 0x020600, cmd = _214b, name = "小半月斬", },
-			{ addr = 0x1A, estab = 0x030600, cmd = _214c, name = "大半月斬", },
-			{ addr = 0x1E, estab = 0x050600, cmd = _2chg8a, type = input_state_types.charge, name = "空砂塵", },
-			{ addr = 0x22, estab = 0x06FEFF, cmd = _2a, type = input_state_types.faint, name = "天昇斬", },
-			{ addr = 0x26, estab = 0x0006FE, cmd = _22b, type = input_state_types.shinsoku, name = "覇気脚", },
-			{ addr = 0x2A, estab = 0x100600, cmd = _41236bc, sdm = "a", name = "鳳凰天舞脚", },
-			{ addr = 0x2E, estab = 0x120600, cmd = _21416c, sdm = "c", name = "鳳凰脚", },
-			{ addr = 0x32, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x36, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "飛び退き", },
-			{ addr = 0x3A, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x3E, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x42, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x46, estab = 0x460600, cmd = _2bc, type = input_state_types.faint, name = "フェイント鳳凰脚", },
-		},
-		{ --ビリー・カーン
-			{ addr = 0x02, estab = 0x010600, cmd = _4chg6a, type = input_state_types.charge, name = "三節棍中段打ち", },
-			{ addr = 0x06, estab = 0x0006FF, cmd = _46c, name = "火炎三節棍中段突き", },
-			{ addr = 0x0A, estab = 0x030600, cmd = _214a, name = "雀落とし", },
-			{ addr = 0x0E, estab = 0x040C00, cmd = _aaaa, name = "旋風棍", },
-			{ addr = 0x12, estab = 0x050600, cmd = _1236b, name = "強襲飛翔棍", },
-			{ addr = 0x16, estab = 0x060600, cmd = _214b, name = "火龍追撃棍", },
-			{ addr = 0x1A, estab = 0x100600, cmd = _64123bc, sdm = "a", name = "超火炎旋風棍", },
-			{ addr = 0x1E, estab = 0x110600, cmd = _632c, sdm = "b", name = "紅蓮殺棍", },
-			{ addr = 0x22, estab = 0x120600, cmd = _64123c, sdm = "c", name = "サラマンダーストーム", },
-			{ addr = 0x26, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x2A, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "飛び退き", },
-			{ addr = 0x2E, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x32, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x36, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x3A, estab = 0x280600, cmd = _236c, name = "CA 集点連破棍", },
-			{ addr = 0x3E, estab = 0x460600, cmd = _4ac, type = input_state_types.faint, name = "フェイント強襲飛翔棍", },
-		},
-		{ --チン・シンザン
-			{ addr = 0x02, estab = 0x010600, cmd = _236a, name = "氣雷砲（前方）", },
-			{ addr = 0x06, estab = 0x020600, cmd = _623a, name = "氣雷砲（対空）", },
-			{ addr = 0x0A, estab = 0x030600, cmd = _2chg8a, type = input_state_types.charge, name = "超太鼓腹打ち", },
-			{ addr = 0x0E, estab = 0x0006FF, cmd = _aa, name = "満腹滞空", },
-			{ addr = 0x12, estab = 0x040600, cmd = _4chg6b, type = input_state_types.charge, name = "小破岩撃", },
-			{ addr = 0x16, estab = 0x050600, cmd = _4chg6c, type = input_state_types.charge, name = "大破岩撃", },
-			{ addr = 0x1A, estab = 0x060600, cmd = _214b, name = "軟体オヤジ", },
-			{ addr = 0x1E, estab = 0x070600, cmd = _214c, name = "クッサメ砲", },
-			{ addr = 0x22, estab = 0x100600, cmd = _1chg26bc, type = input_state_types.charge, sdm = "a", name = "爆雷砲", },
-			{ addr = 0x26, estab = 0x120600, cmd = _64123c, sdm = "c", name = "ホエホエ弾", },
-			{ addr = 0x2A, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x2E, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "飛び退き", },
-			{ addr = 0x32, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x36, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x3A, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x3E, estab = 0x280600, cmd = _44b, name = "CA _4_4+_B", },
-			{ addr = 0x42, estab = 0x460600, cmd = _6ac, type = input_state_types.faint, name = "フェイント破岩撃", },
-			{ addr = 0x46, estab = 0x470600, cmd = _2ac, type = input_state_types.faint, name = "フェイントクッサメ砲", },
-		},
-		{ --タン・フー・ルー,
-			{ addr = 0x02, estab = 0x010600, cmd = _236a, name = "衝波", },
-			{ addr = 0x06, estab = 0x020600, cmd = _214a, name = "小箭疾歩", },
-			{ addr = 0x0A, estab = 0x030600, cmd = _214c, name = "大箭疾歩", },
-			{ addr = 0x0E, estab = 0x040600, cmd = _236c, name = "撃放", },
-			{ addr = 0x12, estab = 0x050600, cmd = _623b, name = "烈千脚", },
-			{ addr = 0x16, estab = 0x100600, cmd = _64123bc, sdm = "a", name = "旋風剛拳", },
-			{ addr = 0x1A, estab = 0x120600, cmd = _64123c, sdm = "c", name = "大撃砲", },
-			{ addr = 0x1E, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x22, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "飛び退き", },
-			{ addr = 0x26, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x2A, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x2E, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x32, estab = 0x280600, cmd = _6b, type = input_state_types.faint, name = "_6+_B", },
-			{ addr = 0x36, estab = 0x290600, cmd = _6c, type = input_state_types.faint, name = "_6+_C", },
-			{ addr = 0x3A, estab = 0x460600, cmd = _2bc, type = input_state_types.faint, name = "フェイント旋風剛拳", },
-		},
-		{ --ローレンス・ブラッド
-			{ addr = 0x02, estab = 0x010600, cmd = _63214a, name = "小ブラッディスピン", },
-			{ addr = 0x06, estab = 0x020600, cmd = _63214c, name = "大ブラッディスピン", },
-			{ addr = 0x0A, estab = 0x030600, cmd = _4chg6c, type = input_state_types.charge, name = "ブラッディサーベル", },
-			{ addr = 0x0E, estab = 0x0406FF, cmd = _aaaa, name = "ブラッディミキサー", },
-			{ addr = 0x12, estab = 0x050600, cmd = _2chg8c, type = input_state_types.charge, name = "ブラッディカッター", },
-			{ addr = 0x16, estab = 0x100600, cmd = _64123bc, sdm = "a", name = "ブラッディフラッシュ", },
-			{ addr = 0x1A, estab = 0x120600, cmd = _64123c, sdm = "c", name = "ブラッディシャドー", },
-			{ addr = 0x1E, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x22, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "飛び退き", },
-			{ addr = 0x26, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x2A, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x2E, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x32, estab = 0x280600, cmd = _632c, name = "CA _6_3_2_C", },
-		},
-		{ --ヴォルフガング・クラウザー
-			{ addr = 0x02, easy_addr = 0x02, estab = 0x0006FE, cmd = _421ac, name = "アンリミテッドデザイア2 Finish", },
-			{ addr = 0x06, estab = 0x010600, cmd = _214a, name = "小ブリッツボール", },
-			{ addr = 0x0A, estab = 0x0206FF, cmd = _214c, name = "大ブリッツボール", },
-			{ addr = 0x0E, estab = 0x030600, cmd = _236b, name = "レッグトマホーク", },
-			{ addr = 0x12, estab = 0x040600, cmd = _41236c, name = "フェニックススルー", },
-			{ addr = 0x16, estab = 0x050600, cmd = _41236a, name = "デンジャラススルー", },
-			{ addr = 0x1A, estab = 0x0006FD, cmd = _666c, name = "グリフォンアッパー", },
-			{ addr = 0x1E, estab = 0x0606FC, cmd = _623c, name = "カイザークロー", },
-			{ addr = 0x22, estab = 0x070600, cmd = _63214b, name = "リフトアップブロー", },
-			{ addr = 0x26, estab = 0x100600, cmd = _4chg6bc, type = input_state_types.charge, sdm = "a", name = "カイザーウェイブ", },
-			{ addr = 0x2A, estab = 0x120600, cmd = _8624c, sdm = "x", name = "ギガティックサイクロン_8_6_2_4", },
-			{ addr = 0x2E, estab = 0x120600, cmd = _6248c, sdm = "x", name = "ギガティックサイクロン_6_2_4_8", },
-			{ addr = 0x32, estab = 0x120600, cmd = _2486c, sdm = "x", name = "ギガティックサイクロン_2_4_8_6", },
-			{ addr = 0x36, estab = 0x120600, cmd = _4862c, sdm = "x", name = "ギガティックサイクロン_4_8_6_2", },
-			{ addr = 0x3A, estab = 0x120600, cmd = _8426c, sdm = "x", name = "ギガティックサイクロン_8_4_2_6", },
-			{ addr = 0x3E, estab = 0x120600, cmd = _4268c, sdm = "x", name = "ギガティックサイクロン_4_2_6_8", },
-			{ addr = 0x42, estab = 0x120600, cmd = _2684c, sdm = "x", name = "ギガティックサイクロン_2_6_8_4", },
-			{ addr = 0x46, estab = 0x120600, cmd = _6842c, sdm = "x", name = "ギガティックサイクロン_6_8_4_2", },
-			{ addr = nil, easy_addr = 0x2A, estab = nil, cmd = _22c, sdm = "c", name = "ギガティックサイクロン", },
-			{ addr = 0x4A, easy_addr = 0x2E, estab = 0x130600, cmd = _632146a, sdm = "d", name = "アンリミテッドデザイア", },
-			{ addr = 0x4E, easy_addr = 0x32, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x52, easy_addr = 0x36, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "飛び退き", },
-			{ addr = 0x56, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x5A, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x5E, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x62, easy_addr = 0x46, estab = 0x210600, cmd = _2c, type = input_state_types.faint, name = "ダイビングエルボー", },
-			{ addr = 0x66, easy_addr = 0x4A, estab = 0x280600, cmd = _236c, name = "CA _2_3_6_C", },
-			{ addr = 0x6A, easy_addr = 0x4E, estab = 0x460600, cmd = _2ac, type = input_state_types.faint, name = "フェイントブリッツボール", },
-			{ addr = 0x6E, easy_addr = 0x52, estab = 0x470600, cmd = _2bc, type = input_state_types.faint, name = "フェイントカイザーウェイブ", },
-		},
-		{ --リック・ストラウド
-			{ addr = 0x02, estab = 0x010600, cmd = _236a, name = "小シューティングスター", },
-			{ addr = 0x06, estab = 0x0206FF, cmd = _236c, name = "大シューティングスター", },
-			{ addr = 0x0A, estab = 0x030600, cmd = _214c, name = "ディバインブラスト", },
-			{ addr = 0x0E, estab = 0x040600, cmd = _214b, name = "フルムーンフィーバー", },
-			{ addr = 0x12, estab = 0x050600, cmd = _623a, name = "ヘリオン", },
-			{ addr = 0x16, estab = 0x060600, cmd = _214a, name = "ブレイジングサンバースト", },
-			{ addr = 0x1A, estab = 0x100600, cmd = _64123bc, sdm = "a", name = "ガイアブレス", },
-			{ addr = 0x1E, estab = 0x120600, cmd = _64123c, sdm = "c", name = "ハウリング・ブル", },
-			{ addr = 0x22, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x26, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "飛び退き", },
-			{ addr = 0x2A, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x2E, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x32, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x36, estab = 0x280600, cmd = _33b, name = "CA _3_3_B", },
-			{ addr = 0x3A, estab = 0x290600, cmd = _22c, name = "CA _2_2_C", },
-			{ addr = 0x3E, estab = 0x460600, cmd = _6ac, type = input_state_types.faint, name = "フェイントシューティングスター", },
-		},
-		{ --李香緋
-			{ addr = 0x02, estab = 0x070600, cmd = _a8, name = "詠酒・対ジャンプ攻撃", },
-			{ addr = 0x06, estab = 0x080600, cmd = _a6, name = "詠酒・対立ち攻撃", },
-			{ addr = 0x0A, estab = 0x090600, cmd = _a2, name = "詠酒・対しゃがみ攻撃 ", },
-			{ addr = 0x0E, estab = 0x010600, cmd = _236a, name = "小那夢波", },
-			{ addr = 0x12, estab = 0x020600, cmd = _236c, name = "大那夢波", },
-			{ addr = 0x16, estab = 0x0306FF, cmd = _236b, name = "閃里肘皇 or 閃里肘皇・貫空", },
-			{ addr = 0x1A, estab = 0x0006FE, cmd = _214b, name = "閃里肘皇・心砕把", },
-			{ addr = 0x1E, estab = 0x060600, cmd = _623b, name = "天崩山", },
-			{ addr = 0x22, estab = 0x100600, cmd = _64123bc, sdm = "a", name = "大鉄神", },
-			{ addr = 0x26, estab = 0x1106FD, cmd = _616ab, sdm = "b", name = "超白龍 1段目or2段目", },
-			{ addr = 0x2A, estab = 0x0006FD, cmd = _623ab, sdm = "x", name = "超白龍 2段目のみ", },
-			{ addr = 0x2E, estab = 0x120600, cmd = _8624c, sdm = "x", name = "真心牙_8_6_2_4", },
-			{ addr = 0x32, estab = 0x120600, cmd = _6248c, sdm = "x", name = "真心牙_6_2_4_8", },
-			{ addr = 0x36, estab = 0x120600, cmd = _2486c, sdm = "x", name = "真心牙_2_4_8_6", },
-			{ addr = 0x3A, estab = 0x120600, cmd = _4862c, sdm = "x", name = "真心牙_4_8_6_2", },
-			{ addr = 0x3E, estab = 0x120600, cmd = _8426c, sdm = "x", name = "真心牙_8_4_2_6", },
-			{ addr = 0x42, estab = 0x120600, cmd = _4268c, sdm = "x", name = "真心牙_4_2_6_8", },
-			{ addr = 0x46, estab = 0x120600, cmd = _2684c, sdm = "x", name = "真心牙_2_6_8_4", },
-			{ addr = 0x4A, estab = 0x120600, cmd = _6842c, sdm = "x", name = "真心牙_6_8_4_2", },
-			{ addr = nil, easy_addr = 0x2A, estab = nil, cmd = _22c, sdm = "c", name = "真心牙", },
-			{ addr = 0x4E, easy_addr = 0x2E, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x52, easy_addr = 0x32, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "飛び退き", },
-			{ addr = 0x56, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x5A, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x5E, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x62, easy_addr = 0x36, estab = 0x280600, cmd = _66a, name = "CA _6_6_A", },
-			{ addr = 0x66, easy_addr = 0x3A, estab = 0x460600, cmd = _4ac, type = input_state_types.faint, name = "フェイント天崩山", },
-			{ addr = 0x6A, easy_addr = 0x3E, estab = 0x470600, cmd = _2bc, type = input_state_types.faint, name = "フェイント大鉄神", },
-		},
-		{ --アルフレッド
-			{ addr = 0x02, estab = 0x010600, cmd = _214a, name = "小クリティカルウィング", },
-			{ addr = 0x06, estab = 0x020600, cmd = _214c, name = "大クリティカルウィング", },
-			{ addr = 0x0A, estab = 0x030600, cmd = _236a, name = "オーグメンターウィング", },
-			{ addr = 0x0E, estab = 0x040600, cmd = _236c, name = "ダイバージェンス", },
-			{ addr = 0x12, estab = 0x050600, cmd = _214b, name = "メーデーメーデー", },
-			{ addr = 0x16, estab = 0x06FFFF, cmd = _bbb, name = "メーデーメーデー追加", },
-			{ addr = 0x1A, estab = 0x060600, cmd = _698b, name = "S.TOL", },
-			{ addr = 0x1E, estab = 0x100600, cmd = _41236bc, sdm = "a", name = "ショックストール", },
-			{ addr = 0x22, estab = 0x120600, cmd = _64123c, sdm = "c", name = "ウェーブライダー", },
-			{ addr = 0x26, estab = 0x1E0600, cmd = _66, type = input_state_types.step, name = "ダッシュ", },
-			{ addr = 0x2A, estab = 0x1F0600, cmd = _44, type = input_state_types.step, name = "飛び退き", },
-			{ addr = 0x2E, estab = 0x200600, cmd = _46a, name = "_4_6+_A", },
-			{ addr = 0x32, estab = 0x000033, cmd = _412d, name = "_4_1_2+_D", },
-			{ addr = 0x36, estab = 0x000027, cmd = _44d, type = input_state_types.shinsoku, name = "_4_4+_D", },
-			{ addr = 0x3A, estab = 0x460600, cmd = _2ac, type = input_state_types.faint, name = "フェイントクリティカルウィング", },
-			{ addr = 0x3E, estab = 0x470600, cmd = _4ac, type = input_state_types.faint, name = "フェイントオーグメンターウィング", },
-		},
-		{ -- all 調査用
-		},
-	}
-	for ti = 2, 160, 2 do
-		table.insert(input_states[#input_states], {
-			name = string.format("%x", ti),
-			addr = ti,
-			cmd = "?",
-			type = input_state_types.unknown,
-			estab = 0
-		})
-	end
-	local deepcopy
-	deepcopy = function(orig)
-		local orig_type = type(orig)
-		local copy
-		if orig_type == 'table' then
-			copy = {}
-			for orig_key, orig_value in next, orig, nil do
-				copy[deepcopy(orig_key)] = deepcopy(orig_value)
-			end
-			setmetatable(copy, deepcopy(getmetatable(orig)))
-		else -- number, string, boolean, etc
-			copy = orig
-		end
-		return copy
-	end
-	local sdm_cmd = { ["a"] = _22a, ["b"] = _22b, ["c"] = _22c, ["d"] = _22d }
-	local sdm_estab =  { ["a"] = 0x100600, ["b"] = 0x110600, ["c"] = 0x120600, ["d"] = 0x130600 }
-	local id_estab = function(tbl)
-		tbl.estab = sdm_estab[tbl.sdm] or tbl.estab
-		tbl.id = (0xFF0000 & tbl.estab) / 0x10000
-		tbl.estab = tbl.estab & 0xFFFF
-	end
-	local do_remove = function(target, indexies)
-		for i = #indexies, 1, -1 do
-			table.remove(target, indexies[i])
-		end
-	end
-	-- DEBUG DIP 2-1 ON時の簡易コマンドテーブルの準備としてSDMのフラグからコマンド情報を変更
-	local input_easy_states = deepcopy(input_states)
-	for _, char_tbl in ipairs(input_easy_states) do
-		local removes = {}
-		for i, tbl in ipairs(char_tbl) do
-			if tbl.sdm == "x" then
-				-- 削除
-				table.insert(removes, i)
-			elseif tbl.sdm ~= nil then
-				-- 簡易コマンドへ変更
-				tbl.cmd = sdm_cmd[tbl.sdm]
-				tbl.type = input_state_types.followup
-			end
-			tbl.addr = tbl.easy_addr or tbl.addr
-			id_estab(tbl)
-		end
-		do_remove(char_tbl, removes)
-	end
-	-- 通常コマンドテーブルの準備としてアドレスが未定義にしているものを削除
-	for _, char_tbl in ipairs(input_states) do
-		local removes = {}
-		for i, tbl in ipairs(char_tbl) do
-			if tbl.addr == nil then
-				-- 削除
-				table.insert(removes, i)
-			end
-			id_estab(tbl)
-		end
-		do_remove(char_tbl, removes)
-	end
-	local convert = function(input_tables)
-		for _, char_tbl in ipairs(input_tables) do
-			for _, tbl in ipairs(char_tbl) do
-				-- 左右反転コマンド表示用
-				tbl.r_cmd = string.gsub(tbl.cmd, "[134679]", {
-					["1"] = "3", ["3"] = "1", ["4"] = "6", ["6"] = "4", ["7"] = "9", ["9"] = "7",
-				})
-				local r_cmds, cmds = {}, {}
-				for c in string.gmatch(convert(tbl.r_cmd), "([^|]*)|?") do
-					table.insert(r_cmds, c)
-				end
-				for c in string.gmatch(convert(tbl.cmd), "([^|]*)|?") do
-					table.insert(cmds, c)
-				end
-				-- コマンドの右向き左向きをあらわすデータ値をキーにしたテーブルを用意
-				tbl.lr_cmds = { [0x00] = cmds, [0x80] = r_cmds, }
-				tbl.cmds = cmds
-				tbl.name = convert(tbl.name)
-			end
-		end
-		return input_tables
-	end
-	return { normal = convert(input_states), easy = convert(input_easy_states) }
+local rvs_types                 = data.rvs_types
+local hook_cmd_types            = data.hook_cmd_types
+
+local get_next_xs               = function(p, list, cur_menu)
+	local sub_menu, ons = cur_menu[p.num][p.char], {}
+	if sub_menu == nil or list == nil then return nil end
+	for j, s in pairs(list) do if sub_menu.pos.col[j + 1] == 2 then table.insert(ons, s) end end
+	return #ons > 0 and ons[math.random(#ons)] or nil
 end
-local input_states = create_input_states()
+local get_next_rvs              = function(p) return get_next_xs(p, p.char_data and p.char_data.rvs or nil, menu.rvs_menus) end
+local get_next_bs               = function(p) return get_next_xs(p, p.char_data and p.char_data.bs or nil, menu.bs_menus) end
 
--- キー入力2
-local cmd_neutral = function(p, next_joy)
-	next_joy["P" .. p.control .. " Up"] = false
-	next_joy["P" .. p.control .. " Down"] = false
-	next_joy[p.block_side] = false
-	next_joy[p.front_side] = false
-	next_joy["P" .. p.control .. " A"] = false
-	next_joy["P" .. p.control .. " B"] = false
-	next_joy["P" .. p.control .. " C"] = false
-	next_joy["P" .. p.control .. " D"] = false
-end
-local cmd_base = {
-	_5 = cmd_neutral,
-	_7 = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy["P" .. p.control .. " Up"] = true
-		next_joy[p.block_side] = true
-	end,
-	_8 = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy["P" .. p.control .. " Up"] = true
-	end,
-	_9 = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy["P" .. p.control .. " Up"] = true
-		next_joy[p.front_side] = true
-	end,
-	_6 = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy[p.front_side] = true
-	end,
-	_3 = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy[p.front_side] = true
-		next_joy["P" .. p.control .. " Down"] = true
-	end,
-	_2 = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy["P" .. p.control .. " Down"] = true
-	end,
-	_1 = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy["P" .. p.control .. " Down"] = true
-		next_joy[p.block_side] = true
-	end,
-	_4 = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy[p.block_side] = true
-	end,
-	_a = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy["P" .. p.control .. " A"] = true
-	end,
-	_b = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy["P" .. p.control .. " B"] = true
-	end,
-	_c = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy["P" .. p.control .. " C"] = true
-	end,
-	_d = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy["P" .. p.control .. " D"] = true
-	end,
-	_ab = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy["P" .. p.control .. " A"] = true
-		next_joy["P" .. p.control .. " B"] = true
-	end,
-	_bc = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy["P" .. p.control .. " B"] = true
-		next_joy["P" .. p.control .. " C"] = true
-	end,
-	_6a = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy[p.front_side] = true
-		next_joy["P" .. p.control .. " A"] = true
-	end,
-	_3a = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy[p.front_side] = true
-		next_joy["P" .. p.control .. " Down"] = true
-		next_joy["P" .. p.control .. " A"] = true
-	end,
-	_2a = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy["P" .. p.control .. " Down"] = true
-		next_joy["P" .. p.control .. " A"] = true
-	end,
-	_4a = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy[p.block_side] = true
-		next_joy["P" .. p.control .. " A"] = true
-	end,
-	_6b = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy[p.front_side] = true
-		next_joy["P" .. p.control .. " B"] = true
-	end,
-	_3b = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy[p.front_side] = true
-		next_joy["P" .. p.control .. " Down"] = true
-		next_joy["P" .. p.control .. " B"] = true
-	end,
-	_2b = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy["P" .. p.control .. " Down"] = true
-		next_joy["P" .. p.control .. " B"] = true
-	end,
-	_4b = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy[p.block_side] = true
-		next_joy["P" .. p.control .. " B"] = true
-	end,
-	_6c = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy[p.front_side] = true
-		next_joy["P" .. p.control .. " C"] = true
-	end,
-	_3c = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy[p.front_side] = true
-		next_joy["P" .. p.control .. " Down"] = true
-		next_joy["P" .. p.control .. " C"] = true
-	end,
-	_2c = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy["P" .. p.control .. " Down"] = true
-		next_joy["P" .. p.control .. " C"] = true
-	end,
-	_4c = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy[p.block_side] = true
-		next_joy["P" .. p.control .. " C"] = true
-	end,
-	_8d = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy["P" .. p.control .. " Up"] = true
-		next_joy["P" .. p.control .. " D"] = true
-	end,
-	_2d = function(p, next_joy)
-		cmd_neutral(p, next_joy)
-		next_joy["P" .. p.control .. " Down"] = true
-		next_joy["P" .. p.control .. " D"] = true
-	end,
-}
-local rvs_types = {
-	on_wakeup           = 1, -- ダウン起き上がりリバーサル入力
-	jump_landing        = 2, -- 着地リバーサル入力（やられの着地）
-	knock_back_landing  = 3, -- 着地リバーサル入力（通常ジャンプの着地）
-	knock_back_recovery = 4, -- リバーサルじゃない最速入力
-	in_knock_back       = 5, -- のけぞり中のデータをみてのけぞり修了の_2F前に入力確定する
-	dangerous_through   = 6, -- デンジャラススルー用
-	atemi               = 7, -- 当身うち空振りと裏雲隠し用
-}
-local pre_down_acts = new_set(0x142, 0x145, 0x156, 0x15A, 0x15B, 0x15E, 0x15F, 0x160, 0x162, 0x166, 0x16A, 0x16C, 0x16D, 0x174, 0x175, 0x186, 0x188, 0x189, 0x1E0, 0x1E1, 0x2AE, 0x2BA)
-local common_rvs = {
-	{ cmd = cmd_base._2a     , bs = false, common = true, name = "[共通] 屈A", },
-	{ cmd = cmd_base._a      , bs = false, common = true, name = "[共通] 立A", },
-	{ cmd = cmd_base._2b     , bs = false, common = true, name = "[共通] 屈B", },
-	{ cmd = cmd_base._b      , bs = false, common = true, name = "[共通] 立B", },
-	{ cmd = cmd_base._6c     , bs = false, common = true, name = "[共通] 投げ", throw = true, },
-	{ cmd = cmd_base._ab     , bs = false, common = true, name = "[共通] 避け攻撃", },
-	{ id = 0x1F, ver = 0x0600, bs = false, common = true, name = "[共通] 飛び退き", },
-	{ cmd = cmd_base._2c     , bs = false, common = true, name = "[共通] 屈C", },
-	{ cmd = cmd_base._2d     , bs = false, common = true, name = "[共通] 屈D", },
-	{ cmd = cmd_base._c      , bs = false, common = true, name = "[共通] 立C", },
-	{ cmd = cmd_base._d      , bs = false, common = true, name = "[共通] 立D", },
-	{ cmd = cmd_base._8      , bs = false, common = true, name = "[共通] 垂直ジャンプ", jump = true, },
-	{ cmd = cmd_base._9      , bs = false, common = true, name = "[共通] 前ジャンプ", jump = true, },
-	{ cmd = cmd_base._7      , bs = false, common = true, name = "[共通] 後ジャンプ", jump = true, },
-	{ id = 0x1E, ver = 0x0600, bs = false, common = true, name = "[共通] ダッシュ", },
-}
--- idはコマンドテーブル上の技ID
--- verは追加入力フラグとして認識される技ID
-local char_rvs_list = {
-	-- テリー・ボガード
-	{
-		{ cmd = cmd_base._3a     , bs = false, name = "ワイルドアッパー", },
-		{ cmd = cmd_base._6b     , bs = false, name = "バックスピンキック", },
-		{ id = 0x01, ver = 0x0600, bs = true , name = "小バーンナックル", },
-		{ id = 0x02, ver = 0x0600, bs = true , name = "大バーンナックル", },
-		{ id = 0x03, ver = 0x0600, bs = true , name = "パワーウェイブ", },
-		{ id = 0x04, ver = 0x0600, bs = true , name = "ランドウェイブ", },
-		{ id = 0x05, ver = 0x0600, bs = true , name = "クラックシュート", },
-		{ id = 0x06, ver = 0x0600, bs = true , name = "ファイヤーキック", },
-		{ id = 0x07, ver = 0x0600, bs = false, name = "パッシングスウェー", },
-		{ id = 0x08, ver = 0x0600, bs = false, name = "ライジングタックル", },
-		{ id = 0x10, ver = 0x0600, bs = true , name = "パワーゲイザー", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "トリプルゲイザー", },
-		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント バーンナックル", },
-		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント パワーゲイザー", },
-	},
-	-- アンディ・ボガード
-	{
-		{ cmd = cmd_base._3a     , bs = false, name = "上げ面", },
-		{ cmd = cmd_base._6b     , bs = false, name = "浴びせ蹴り", },
-		{ id = 0x01, ver = 0x0600, bs = false, name = "小残影拳", },
-		{ id = 0x02, ver = 0x06FF, bs = false, name = "大残影拳", },
-		{ id = 0x03, ver = 0x0600, bs = true , name = "飛翔拳", },
-		{ id = 0x04, ver = 0x0600, bs = true , name = "激飛翔拳", },
-		{ id = 0x05, ver = 0x0600, bs = true , name = "昇龍弾", },
-		{ id = 0x06, ver = 0x0600, bs = true , name = "空破弾", },
-		-- { id = 0x07, ver = 0x1200, bs = false, name = "幻影不知火", },
-		{ id = 0x10, ver = 0x0600, bs = false, name = "超裂破弾", },
-		{ id = 0x12, ver = 0x0600, bs = true , name = "男打弾", },
-		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 残影拳", },
-		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント 飛翔拳", },
-		{ id = 0x48, ver = 0x0600, bs = false, name = "フェイント 超裂破弾", },
-	},
-	-- 東丈
-	{
-		{ cmd = cmd_base._3c     , bs = false, name = "膝地獄", },
-		{ cmd = cmd_base._3b     , bs = false, name = "上げ面", },
-		{ cmd = cmd_base._4b     , bs = false, name = "ハイキック", },
-		{ id = 0x01, ver = 0x0600, bs = false, name = "小スラッシュキック", },
-		{ id = 0x02, ver = 0x0600, bs = false, name = "大スラッシュキック", },
-		{ id = 0x03, ver = 0x0600, bs = true , name = "黄金のカカト", },
-		{ id = 0x04, ver = 0x0600, bs = true , name = "タイガーキック", },
-		{ id = 0x05, ver = 0x0C00, bs = true , name = "爆裂拳", },
-		-- { id = 0x00, ver = 0x0CFF, bs = false, name = "爆裂フック", },
-		-- { id = 0x00, ver = 0x0CFE, bs = false, name = "爆裂アッパー", },
-		{ id = 0x06, ver = 0x0600, bs = true , name = "ハリケーンアッパー", },
-		{ id = 0x07, ver = 0x0600, bs = true , name = "爆裂ハリケーン", },
-		{ id = 0x10, ver = 0x0600, bs = false, name = "スクリューアッパー", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "サンダーファイヤー(C)", },
-		{ id = 0x13, ver = 0x0600, bs = false, name = "サンダーファイヤー(D)", },
-		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ハリケーンアッパー", },
-		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント スラッシュキック", },
-	},
-	-- 不知火舞
-	{
-		{ cmd = cmd_base._4a     , bs = false, name = "龍の舞", },
-		{ id = 0x01, ver = 0x0600, bs = true , name = "花蝶扇", },
-		{ id = 0x02, ver = 0x0600, bs = true , name = "龍炎舞", },
-		{ id = 0x03, ver = 0x0600, bs = true , name = "小夜千鳥", },
-		{ id = 0x04, ver = 0x0600, bs = true , name = "必殺忍蜂", },
-		-- { id = 0x05, ver = 0x0600, bs = false, name = "ムササビの舞", },
-		{ id = 0x10, ver = 0x0600, bs = false, name = "超必殺忍蜂", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "花嵐", },
-		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 花蝶扇", },
-		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント 花嵐", },
-	},
-	-- ギース・ハワード
-	{
-		{ cmd = cmd_base._3c     , bs = false, name = "虎殺掌", },
-		{ cmd = cmd_base._3a     , bs = false, name = "昇天明星打ち", },
-		{ cmd = cmd_base._6a     , bs = false, name = "飛燕失脚", },
-		{ cmd = cmd_base._4b     , bs = false, name = "雷光回し蹴り", },
-		{ id = 0x01, ver = 0x0600, bs = true , name = "烈風拳", },
-		{ id = 0x02, ver = 0x06FF, bs = true , name = "ダブル烈風拳", },
-		{ id = 0x03, ver = 0x0600, bs = false, name = "上段当て身投げ", },
-		{ id = 0x04, ver = 0x06FE, bs = false, name = "裏雲隠し", },
-		{ id = 0x05, ver = 0x0600, bs = false, name = "下段当て身打ち", },
-		{ id = 0x06, ver = 0x0600, bs = false, name = "雷鳴豪波投げ", },
-		{ id = 0x07, ver = 0x06FD, bs = false, name = "真空投げ", throw = true, },
-		{ id = 0x10, ver = 0x0600, bs = false, name = "レイジングストーム", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "羅生門", throw = true, },
-		{ id = 0x13, ver = 0x0600, bs = true , name = "デッドリーレイブ", },
-		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 烈風拳", },
-		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント レイジングストーム", },
-	},
-	-- 望月双角
-	{
-		{ cmd = cmd_base._3a     , bs = false, name = "錫杖上段打ち", },
-		{ id = 0x01, ver = 0x0600, bs = true , name = "野猿狩り", },
-		{ id = 0x02, ver = 0x0600, bs = true , name = "まきびし", },
-		{ id = 0x03, ver = 0x0600, bs = true , name = "憑依弾", },
-		{ id = 0x04, ver = 0x06FE, bs = false, name = "鬼門陣", throw = true, },
-		{ id = 0x05, ver = 0x0CFF, bs = false, name = "邪棍舞", },
-		{ id = 0x06, ver = 0x0600, bs = true , name = "喝", },
-		{ id = 0x07, ver = 0x0600, bs = false, name = "渦炎陣", },
-		{ id = 0x10, ver = 0x0600, bs = false, name = "いかづち", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "無惨弾", },
-		{ id = 0x21, ver = 0x0600, bs = false, name = "雷撃棍", },
-		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント まきびし", },
-		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント いかづち", },
-	},
-	-- ボブ・ウィルソン
-	{
-		{ cmd = cmd_base._3a     , bs = false, name = "エレファントタスク", },
-		{ id = 0x01, ver = 0x0600, bs = true , name = "ローリングタートル", },
-		{ id = 0x02, ver = 0x0600, bs = true , name = "サイドワインダー", },
-		{ id = 0x03, ver = 0x0600, bs = false, name = "バイソンホーン", },
-		{ id = 0x04, ver = 0x0602, bs = true , name = "ワイルドウルフ", },
-		{ id = 0x05, ver = 0x0600, bs = true , name = "モンキーダンス", },
-		{ id = 0x06, ver = 0x06FE, bs = false, name = "フロッグハンティング", },
-		-- { id = 0x00, ver = 0x1EFF, bs = false, name = "ホーネットアタック", },
-		{ id = 0x10, ver = 0x0600, bs = false, name = "デンジャラスウルフ", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "ダンシングバイソン", },
-		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ダンシングバイソン", },
-	},
-	-- ホンフゥ
-	{
-		{ cmd = cmd_base._3a     , bs = false, name = "ハエタタキ", },
-		{ cmd = cmd_base._6b     , bs = false, name = "踏み込み側蹴り", },
-		{ id = 0x01, ver = 0x0600, bs = false, name = "九龍の読み", },
-		{ id = 0x02, ver = 0x0600, bs = true , name = "小 制空烈火棍", },
-		{ id = 0x03, ver = 0x0600, bs = true , name = "大 制空烈火棍", },
-		{ id = 0x04, ver = 0x0600, bs = true , name = "電光石火の地", },
-		--{ id = 0x00, ver = 0x0CFE, bs = false, name = "電光パチキ", },
-		{ id = 0x05, ver = 0x0600, bs = true , name = "電光石火の天", },
-		{ id = 0x06, ver = 0x0600, bs = false, name = "炎の種馬", },
-		--{ id = 0x00, ver = 0x0CFF, bs = false, name = "炎の種馬連打", },
-		{ id = 0x07, ver = 0x0600, bs = false, name = "必勝！逆襲拳", },
-		{ id = 0x10, ver = 0x0600, bs = false, name = "爆発ゴロー", },
-		{ id = 0x12, ver = 0x0600, bs = true , name = "よかトンハンマー", },
-		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 制空烈火棍", },
-	},
-	-- ブルー・マリー
-	{
-		{ cmd = cmd_base._6b     , bs = false, name = "ヒールフォール", },
-		{ cmd = cmd_base._4b     , bs = false, name = "ダブルローリング", },
-		{ id = 0x01, ver = 0x06FF, bs = false, name = "M.スパイダー", },
-		{ id = 0x02, ver = 0x06FE, bs = true , name = "M.スナッチャー", },
-		{ id = 0x03, ver = 0x06FD, bs = false, name = "M.クラブクラッチ", },
-		--{ id = 0x00, ver = 0x06FD, bs = false, name = "ダブルクラッチ", },
-		{ id = 0x04, ver = 0x0600, bs = false, name = "M.リアルカウンター", },
-		{ id = 0x05, ver = 0x0600, bs = true , name = "スピンフォール", },
-		{ id = 0x06, ver = 0x0600, bs = true , name = "バーチカルアロー", },
-		{ id = 0x07, ver = 0x0600, bs = true , name = "ストレートスライサー", },
-		{ id = 0x09, ver = 0x0600, bs = false, name = "ヤングダイブ", },
-		{ id = 0x08, ver = 0x06F9, bs = false, name = "M.ダイナマイトスウィング", },
-		{ id = 0x10, ver = 0x0600, bs = false, name = "M.タイフーン", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "M.エスカレーション", },
-		-- { id = 0x28, ver = 0x0600, bs = false, name = "M.トリプルエクスタシー", },
-		-- { id = 0x24, ver = 0x0600, bs = false, name = "レッグプレス", },
-		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント M.スナッチャー", },
-	},
-	-- フランコ・バッシュ
-	{
-		{ cmd = cmd_base._6b     , bs = false, name = "バッシュトルネード", },
-		{ cmd = cmd_base._bc     , bs = false, name = "バロムパンチ", },
-		{ id = 0x01, ver = 0x0600, bs = true , name = "ダブルコング", },
-		{ id = 0x02, ver = 0x0600, bs = true , name = "ザッパー", },
-		{ id = 0x03, ver = 0x0600, bs = false, name = "ウェービングブロー", },
-		{ id = 0x04, ver = 0x0600, bs = true , name = "ガッツダンク", },
-		{ id = 0x05, ver = 0x0600, bs = true , name = "ゴールデンボンバー", },
-		{ id = 0x10, ver = 0x0600, bs = true , name = "ファイナルオメガショット", },
-		{ id = 0x11, ver = 0x0600, bs = false, name = "メガトンスクリュー", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "ハルマゲドンバスター", },
-		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ハルマゲドンバスター", },
-		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント ガッツダンク", },
-	},
-	-- 山崎竜二
-	{
-		{ cmd = cmd_base._6a     , bs = false, name = "ブッ刺し", },
-		{ cmd = cmd_base._3a     , bs = false, name = "昇天", },
-		{ id = 0x01, ver = 0x0600, bs = true , name = "蛇使い・上段", },
-		{ id = 0x02, ver = 0x0600, bs = true , name = "蛇使い・中段", },
-		{ id = 0x03, ver = 0x0600, bs = true , name = "蛇使い・下段", },
-		{ id = 0x04, ver = 0x0600, bs = false, name = "サドマゾ", },
-		{ id = 0x05, ver = 0x0600, bs = false, name = "ヤキ入れ", },
-		{ id = 0x06, ver = 0x0600, bs = false, name = "倍返し", },
-		{ id = 0x07, ver = 0x0600, bs = true , name = "裁きの匕首", },
-		{ id = 0x08, ver = 0x0600, bs = false, name = "爆弾パチキ", throw = true, },
-		{ id = 0x09, ver = 0x0C00, bs = false, name = "トドメ", },
-		{ id = 0x10, ver = 0x0600, bs = false, name = "ギロチン", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "ドリル", throw = true, },
-		-- { id = 0x00, ver = 0x06FE, bs = false, name = "ドリル Lv.5", },
-		-- { id = 0x00, ver = 0x06FF, bs = false, name = "?", },
-		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 裁きの匕首", },
-	},
-	-- 秦崇秀
-	{
-		{ cmd = cmd_base._6a     , bs = false, name = "光輪殺", },
-		{ id = 0x01, ver = 0x0600, bs = false, name = "帝王神足拳", },
-		{ id = 0x02, ver = 0x0600, bs = true , name = "小 帝王天眼拳", },
-		{ id = 0x03, ver = 0x0600, bs = true , name = "大 帝王天眼拳", },
-		{ id = 0x04, ver = 0x0600, bs = true , name = "小 帝王天耳拳", },
-		{ id = 0x05, ver = 0x0600, bs = true , name = "大 帝王天耳拳", },
-		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 海龍照臨", },
-		{ id = 0x06, ver = 0x0600, bs = false, name = "竜灯掌", },
-		{ id = 0x07, ver = 0x0600, bs = true , name = "帝王神眼拳（その場）", },
-		{ id = 0x08, ver = 0x06FF, bs = true , name = "帝王神眼拳（空中）", },
-		{ id = 0x09, ver = 0x0600, bs = true , name = "帝王神眼拳（背後）", },
-		-- { id = 0x0A, ver = 0x0600, bs = false, name = "帝王空殺神眼拳", },
-		{ id = 0x10, ver = 0x0600, bs = true , name = "帝王漏尽拳", },
-		-- { id = 0x11, ver = 0x0600, bs = false, name = "帝王空殺漏尽拳", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "海龍照臨", },
-	},
-	-- 秦崇雷,
-	{
-		{ cmd = cmd_base._6b     , bs = false, name = "龍殺脚", },
-		{ id = 0x01, ver = 0x0600, bs = false, name = "帝王神足拳", },
-		{ id = 0x01, ver = 0x06FF, bs = false, name = "真 帝王神足拳", },
-		{ id = 0x02, ver = 0x0600, bs = true , name = "小 帝王天眼拳", },
-		{ id = 0x03, ver = 0x0600, bs = true , name = "大 帝王天眼拳", },
-		{ id = 0x04, ver = 0x0600, bs = true , name = "小 帝王天耳拳", },
-		{ id = 0x05, ver = 0x0600, bs = true , name = "大 帝王天耳拳", },
-		{ id = 0x06, ver = 0x0600, bs = true , name = "帝王漏尽拳", },
-		{ id = 0x07, ver = 0x0600, bs = false, name = "龍転身（前方）", },
-		{ id = 0x08, ver = 0x0600, bs = false, name = "龍転身（後方）", },
-		{ id = 0x10, ver = 0x06FF, bs = false, name = "帝王宿命拳", },
-		--{ id = 0x00, ver = 0x06FE, bs = false, name = "帝王宿命拳(連射)", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "帝王龍声拳", },
-		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 帝王宿命拳", },
-	},
-	-- ダック・キング
-	{
-		{ cmd = cmd_base._3b     , bs = false, name = "ニードルロー", },
-		{ cmd = cmd_base._4a     , bs = false, name = "マッドスピンハンマー", },
-		{ id = 0x01, ver = 0x0600, bs = true , name = "小ヘッドスピンアタック", },
-		{ id = 0x02, ver = 0x0600, bs = true , name = "大ヘッドスピンアタック", },
-		-- { id = 0x02, ver = 0x06FF, bs = true , name = "大ヘッドスピンアタック", },
-		-- { id = 0x00, ver = 0x06FF, bs = false, name = "ヘッドスピンアタック追撃", },
-		{ id = 0x03, ver = 0x0600, bs = false, name = "フライングスピンアタック", },
-		{ id = 0x04, ver = 0x0600, bs = true , name = "ダンシングダイブ", },
-		{ id = 0x00, ver = 0x06FE, bs = false, name = "リバースダイブ", },
-		{ id = 0x05, ver = 0x06FE, bs = false, name = "ブレイクストーム", },
-		-- { id = 0x00, ver = 0x06FD, bs = false, name = "ブレイクストーム追撃1段階目", },
-		-- { id = 0x00, ver = 0x06FC, bs = false, name = "ブレイクストーム追撃2段階目", },
-		-- { id = 0x00, ver = 0x06FB, bs = false, name = "ブレイクストーム追撃3段階目", },
-		-- { id = 0x06, ver = 0x0600, bs = false, name = "ダックフェイント・空", },
-		-- { id = 0x07, ver = 0x0600, bs = false, name = "ダックフェイント・地", },
-		{ id = 0x08, ver = 0x0600, bs = false, name = "クロスヘッドスピン", },
-		{ id = 0x09, ver = 0x0600, bs = false, name = "ダンシングキャリバー", },
-		{ id = 0x0A, ver = 0x0600, bs = false, name = "ローリングパニッシャー", },
-		{ id = 0x0C, ver = 0x0600, bs = false, name = "ブレイクハリケーン", },
-		{ id = 0x10, ver = 0x0600, bs = false, name = "ブレイクスパイラル", throw = true, },
-		--{ id = 0x11, ver = 0x06FA, bs = false, name = "ブレイクスパイラルBR", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "ダックダンス", },
-		--{ id = 0x00, ver = 0x06F8, bs = false, name = "ダックダンス継続", },
-		{ id = 0x13, ver = 0x0600, bs = false, name = "スーパーポンピングマシーン", },
-		-- { id = 0x00, ver = 0x06F9, bs = false, name = "ダイビングパニッシャー?", },
-		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ダックダンス", },
-		-- { id = 0x28, ver = 0x0600, bs = false, name = "旧ブレイクストーム", },
-	},
-	-- キム・カッファン
-	{
-		{ cmd = cmd_base._6b     , bs = false, name = "ネリチャギ", },
-		{ id = 0x01, ver = 0x0600, bs = true , name = "飛燕斬・真上", },
-		{ id = 0x01, ver = 0x0601, bs = true , name = "飛燕斬・前方", },
-		{ id = 0x01, ver = 0x0602, bs = true , name = "飛燕斬・後方", },
-		{ id = 0x02, ver = 0x0600, bs = true , name = "小 半月斬", },
-		{ id = 0x03, ver = 0x0600, bs = true , name = "大 半月斬", },
-		{ id = 0x04, ver = 0x0800, bs = false, name = "飛翔脚", },
-		-- { id = 0x00, ver = 0x08FF, bs = false, name = "戒脚", },
-		{ id = 0x05, ver = 0x0600, bs = false, name = "空砂塵", },
-		{ id = 0x00, ver = 0x06FE, bs = false, name = "天昇斬", },
-		{ id = 0x06, ver = 0x0600, bs = true , name = "覇気脚", },
-		-- { id = 0x10, ver = 0x0600, bs = false, name = "鳳凰天舞脚", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "鳳凰脚", },
-		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 鳳凰脚", },
-	},
-	-- ビリー・カーン
-	{
-		{ cmd = cmd_base._3c     , bs = false, name = "地獄落とし", },
-		{ id = 0x01, ver = 0x0600, bs = false, name = "三節棍中段打ち", },
-		-- { id = 0x00, ver = 0x06FF, bs = false, name = "火炎三節棍中段突き", },
-		{ id = 0x03, ver = 0x0600, bs = true , name = "雀落とし", },
-		{ id = 0x04, ver = 0x0C00, bs = false, name = "旋風棍", },
-		{ id = 0x05, ver = 0x0600, bs = true , name = "強襲飛翔棍", },
-		{ id = 0x06, ver = 0x0600, bs = true , name = "火龍追撃棍", },
-		{ id = 0x10, ver = 0x0600, bs = false, name = "超火炎旋風棍", },
-		{ id = 0x11, ver = 0x0600, bs = false, name = "紅蓮殺棍", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "サラマンダーストリーム", },
-		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 強襲飛翔棍", },
-	},
-	-- チン・シンザン
-	{
-		{ cmd = cmd_base._6a     , bs = false, name = "落撃双拳", },
-		{ cmd = cmd_base._4a     , bs = false, name = "発勁裏拳", },
-		{ id = 0x01, ver = 0x0600, bs = true , name = "気雷砲（前方）", },
-		{ id = 0x02, ver = 0x0600, bs = true , name = "気雷砲（対空）", },
-		{ id = 0x03, ver = 0x0600, bs = false, name = "超太鼓腹打ち", },
-		-- { id = 0x00, ver = 0x06FF, bs = false, name = "満腹対空", },
-		{ id = 0x04, ver = 0x0600, bs = true , name = "小 破岩撃", },
-		{ id = 0x05, ver = 0x0600, bs = true , name = "大 破岩撃", },
-		{ id = 0x06, ver = 0x0600, bs = false, name = "軟体オヤジ", },
-		{ id = 0x07, ver = 0x0600, bs = false, name = "クッサメ砲", },
-		{ id = 0x10, ver = 0x0600, bs = true , name = "爆雷砲", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "ホエホエ弾", },
-		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 破岩撃", },
-		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント クッサメ砲", },
-	},
-	-- タン・フー・ルー,
-	{
-		{ cmd = cmd_base._3a     , bs = false, name = "右降龍", },
-		{ id = 0x01, ver = 0x0600, bs = true , name = "衝波", },
-		{ id = 0x02, ver = 0x0600, bs = true , name = "小 箭疾歩", },
-		{ id = 0x03, ver = 0x0600, bs = true , name = "大 箭疾歩", },
-		{ id = 0x04, ver = 0x0600, bs = false, name = "撃放", },
-		{ id = 0x05, ver = 0x0600, bs = true , name = "裂千脚", },
-		{ id = 0x10, ver = 0x0600, bs = false, name = "旋風剛拳", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "大撃放", },
-		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 旋風剛拳", },
-	},
-	-- ローレンス・ブラッド
-	{
-		{ cmd = cmd_base._6b     , bs = false, name = "トルネードキック", },
-		{ cmd = cmd_base._bc     , bs = false, name = "オーレィ", },
-		{ id = 0x01, ver = 0x0600, bs = true , name = "小 ブラッディスピン", },
-		{ id = 0x02, ver = 0x0600, bs = true , name = "大 ブラッディスピン", },
-		{ id = 0x03, ver = 0x0600, bs = false, name = "ブラッディサーベル", },
-		{ id = 0x04, ver = 0x06FF, bs = false, name = "ブラッディミキサー", },
-		{ id = 0x05, ver = 0x0600, bs = true , name = "ブラッディカッター", },
-		{ id = 0x10, ver = 0x0600, bs = false, name = "ブラッディフラッシュ", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "ブラッディシャドー", },
-	},
-	-- ヴォルフガング・クラウザー
-	{
-		{ cmd = cmd_base._6a     , bs = false, name = "デスハンマー", },
-		{ id = 0x01, ver = 0x0600, bs = false, name = "ブリッツボール・上段", },
-		{ id = 0x02, ver = 0x06FF, bs = false, name = "ブリッツボール・下段", },
-		{ id = 0x03, ver = 0x0600, bs = true , name = "レッグトマホーク", },
-		{ id = 0x04, ver = 0x0600, bs = false, name = "フェニックススルー", throw = true, },
-		{ id = 0x05, ver = 0x0600, bs = false, name = "デンジャラススルー", throw = true, },
-		-- { id = 0x00, ver = 0x06FD, bs = false, name = "グリフォンアッパー", },
-		{ id = 0x06, ver = 0x06FC, bs = false, name = "カイザークロー", },
-		{ id = 0x07, ver = 0x0600, bs = false, name = "リフトアップブロー", },
-		{ id = 0x10, ver = 0x0600, bs = true , name = "カイザーウェイブ", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "ギガティックサイクロン", throw = true, },
-		{ id = 0x13, ver = 0x0600, bs = false, name = "アンリミテッドデザイア", },
-		-- { id = 0x00, ver = 0x06FE, bs = false, name = "アンリミテッドデザイア2", },
-		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント ブリッツボール", },
-		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント カイザーウェイブ", },
-	},
-	-- リック・ストラウド
-	{
-		{ cmd = cmd_base._6a     , bs = false, name = "チョッピングライト", },
-		{ cmd = cmd_base._3a     , bs = false, name = "スマッシュソード", },
-		--{ id = 0x28, ver = 0x0600, bs = true , name = "?", },
-		{ id = 0x01, ver = 0x0600, bs = true , name = "小 シューティングスター", },
-		{ id = 0x02, ver = 0x06FF, bs = false, name = "大 シューティングスター", },
-		{ id = 0x03, ver = 0x0600, bs = true , name = "ディバインブラスト", },
-		{ id = 0x04, ver = 0x0600, bs = false, name = "フルムーンフィーバー", },
-		{ id = 0x05, ver = 0x0600, bs = true , name = "ヘリオン", },
-		{ id = 0x06, ver = 0x0600, bs = true , name = "ブレイジングサンバースト", },
-		-- { id = 0x09, ver = 0x0600, bs = false, name = "?", },
-		{ id = 0x10, ver = 0x0600, bs = false, name = "ガイアブレス", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "ハウリング・ブル", },
-		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント シューティングスター", },
-	},
-	-- 李香緋
-	{
-		{ cmd = cmd_base._6a     , bs = false, name = "裡門頂肘", },
-		{ cmd = cmd_base._4b     , bs = false, name = "後捜腿", },
-		--{ id = 0x28, ver = 0x0600, bs = true , name = "?", },
-		--{ id = 0x29, ver = 0x0600, bs = true , name = "?", },
-		{ id = 0x01, ver = 0x0600, bs = true , name = "小 那夢波", },
-		{ id = 0x02, ver = 0x0600, bs = true , name = "大 那夢波", },
-		{ id = 0x03, ver = 0x06FF, bs = false, name = "閃里肘皇", },
-		{ id = 0x00, ver = 0x06FE, bs = false, name = "閃里肘皇・心砕把", },
-		{ id = 0x06, ver = 0x0600, bs = true , name = "天崩山", },
-		{ id = 0x07, ver = 0x0600, bs = true , name = "詠酒・対ジャンプ攻撃", },
-		{ id = 0x08, ver = 0x0600, bs = true , name = "詠酒・対立ち攻撃", },
-		{ id = 0x09, ver = 0x0600, bs = true , name = "詠酒・対しゃがみ攻撃", },
-		{ id = 0x10, ver = 0x0600, bs = true , name = "大鉄神", },
-		{ id = 0x11, ver = 0x06FD, bs = false, name = "超白龍", },
-		-- { id = 0x00, ver = 0x06FD, bs = false, name = "超白龍2", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "真心牙", throw = true, },
-		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント 天崩山", },
-		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント 大鉄神", },
-	},
-	-- アルフレッド
-	{
-		{ cmd = cmd_base._6b     , bs = false, name = "フロントステップキック", },
-		{ cmd = cmd_base._4b     , bs = false, name = "飛び退きキック", },
-		{ id = 0x01, ver = 0x0600, bs = true , name = "小 クリティカルウィング", },
-		{ id = 0x02, ver = 0x0600, bs = true , name = "大 クリティカルウィング", },
-		{ id = 0x03, ver = 0x0600, bs = true , name = "オーグメンターウィング", },
-		{ id = 0x04, ver = 0x0600, bs = true , name = "ダイバージェンス", },
-		-- { id = 0x05, ver = 0x0600, bs = false, name = "メーデーメーデー", },
-		{ id = 0x06, ver = 0x0600, bs = false, name = "S.TOL", },
-		--{ id = 0x10, ver = 0x0600, bs = false, name = "ショックストール", },
-		{ id = 0x12, ver = 0x0600, bs = false, name = "ウェーブライダー", },
-		{ id = 0x46, ver = 0x0600, bs = false, name = "フェイント クリティカルウィング", },
-		{ id = 0x47, ver = 0x0600, bs = false, name = "フェイント オーグメンターウィング", },
-	},
-}
--- ブレイクショット対応技のみ
-local char_bs_list = {}
-for _, list in pairs(char_rvs_list) do
-	for i, cmd in pairs(common_rvs) do
-		table.insert(list, i, cmd)
-	end
-	local bs_list = {}
-	for _, cmd in pairs(list) do
-		if cmd.bs then
-			table.insert(bs_list, cmd)
-		end
-	end
-	table.insert(char_bs_list, bs_list)
-end
-
-local get_next_counter          = function(targets, p, excludes)
-	local ex, list, len = excludes or {}, {}, 0
-	for _, rvs in ipairs(targets) do
-		if not ex[rvs] then
-			len = len + 1
-			table.insert(list, rvs)
-		end
-	end
-	if len == 0 then
-		return nil
-	elseif len == 1 then
-		return list[1]
-	else
-		return list[math.random(len)]
-	end
-end
-
-local get_next_rvs              = function(p, excludes)
-	local i = p.addr.base == 0x100400 and 1 or 2
-	local rvs_menu = menu.rvs_menus[i][p.char]
-	if not rvs_menu then
-		return nil
-	end
-	p.dummy_rvs_list = {}
-	for j, rvs in pairs(char_rvs_list[p.char]) do
-		if rvs_menu.pos.col[j + 1] == 2 then
-			table.insert(p.dummy_rvs_list, rvs)
-		end
-	end
-
-	local ret = get_next_counter(p.dummy_rvs_list, p, excludes)
-	--printf("get_next_rvs %x %s %s", p.addr.base, ret == nil and "" or ret.name, #p.dummy_rvs_list)
-	return ret
-end
-
-local get_next_bs               = function(p, excludes)
-	local i = p.addr.base == 0x100400 and 1 or 2
-	local bs_menu = menu.bs_menus[i][p.char]
-	if not bs_menu then
-		return nil
-	end
-	p.dummy_bs_list = {}
-	for j, bs in pairs(char_bs_list[p.char]) do
-		if bs_menu.pos.col[j + 1] == 2 then
-			table.insert(p.dummy_bs_list, bs)
-		end
-	end
-
-	local ret = get_next_counter(p.dummy_bs_list, p, excludes)
-	return ret
-end
--- エミュレータ本体の入力取得
-local joyk                      = {
-	p1 = {
-		dn = "P1 Down",  -- joyk.p1.dn
-		lt = "P1 Left",  -- joyk.p1.lt
-		rt = "P1 Right", -- joyk.p1.rt
-		up = "P1 Up",    -- joyk.p1.up
-		a  = "P1 A",     -- joyk.p1.a
-		b  = "P1 B",     -- joyk.p1.b
-		c  = "P1 C",     -- joyk.p1.c
-		d  = "P1 D",     -- joyk.p1.d
-		st = "1 Player Start", -- joyk.p1.st
-	},
-	p2 = {
-		dn = "P2 Down",   -- joyk.p2.dn
-		lt = "P2 Left",   -- joyk.p2.lt
-		rt = "P2 Right",  -- joyk.p2.rt
-		up = "P2 Up",     -- joyk.p2.up
-		a  = "P2 A",      -- joyk.p2.a
-		b  = "P2 B",      -- joyk.p2.b
-		c  = "P2 C",      -- joyk.p2.c
-		d  = "P2 D",      -- joyk.p2.d
-		st = "2 Players Start", -- joyk.p2.st
-	},
-}
 local use_joy                   = {
-	{ port = ":edge:joy:JOY1",  field = joyk.p1.a,  frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1",  field = joyk.p1.b,  frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1",  field = joyk.p1.c,  frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1",  field = joyk.p1.d,  frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1",  field = joyk.p1.dn, frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1",  field = joyk.p1.lt, frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1",  field = joyk.p1.rt, frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1",  field = joyk.p1.up, frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY2",  field = joyk.p2.a,  frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2",  field = joyk.p2.b,  frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2",  field = joyk.p2.c,  frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2",  field = joyk.p2.d,  frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2",  field = joyk.p2.dn, frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2",  field = joyk.p2.lt, frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2",  field = joyk.p2.rt, frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2",  field = joyk.p2.up, frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:START", field = joyk.p2.st, frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:START", field = joyk.p1.st, frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1",  field = joy_k[1].a,  frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1",  field = joy_k[1].b,  frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1",  field = joy_k[1].c,  frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1",  field = joy_k[1].d,  frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1",  field = joy_k[1].dn, frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1",  field = joy_k[1].lt, frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1",  field = joy_k[1].rt, frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY1",  field = joy_k[1].up, frame = 0, prev = 0, player = 1, get = 0, },
+	{ port = ":edge:joy:JOY2",  field = joy_k[2].a,  frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2",  field = joy_k[2].b,  frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2",  field = joy_k[2].c,  frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2",  field = joy_k[2].d,  frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2",  field = joy_k[2].dn, frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2",  field = joy_k[2].lt, frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2",  field = joy_k[2].rt, frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:JOY2",  field = joy_k[2].up, frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:START", field = joy_k[2].st, frame = 0, prev = 0, player = 2, get = 0, },
+	{ port = ":edge:joy:START", field = joy_k[1].st, frame = 0, prev = 0, player = 1, get = 0, },
 }
-local get_joy_base              = function(prev, exclude_player)
-	-- for pname, port in pairs(ioports) do
-	-- 	for fname, field in pairs(port.fields) do
-	-- 		printf("%s %s", pname, fname)
-	-- 	end
-	-- end
-	local ec = scr:frame_number()
-	local joy_port = {}
-	local joy_val = {}
-	local prev_joy_val = {}
+local get_joy                   = function(exclude_player, prev)
+	local frame_number, joy_port, joy_val, prev_joy_val = scr:frame_number(), {}, {}, {}
 	for _, joy in ipairs(use_joy) do
-		local state = 0
-		if not joy_port[joy.port] then
-			joy_port[joy.port] = ioports[joy.port]:read()
-		end
+		joy_port[joy.port] = joy_port[joy.port] or ioports[joy.port]:read()
 		local field = ioports[joy.port].fields[joy.field]
-		state = ((joy_port[joy.port] & field.mask) ~ field.defvalue)
-		if joy.get < ec then
+		local state = ((joy_port[joy.port] & field.mask) ~ field.defvalue)
+		if joy.get < frame_number then
 			joy.prev = joy.frame
 			if state > 0 then
-				-- on
-				if joy.frame > 0 then
-					joy.frame = joy.frame + 1
-				else
-					joy.frame = 1
-				end
+				joy.frame = joy.frame <= 0 and 1 or (joy.frame + 1) -- on
 			else
-				-- off
-				if joy.frame < 0 then
-					joy.frame = joy.frame - 1
-				else
-					joy.frame = -1
-				end
+				joy.frame = joy.frame >= 0 and -1 or (joy.frame - 1) -- off
 			end
 		end
-		joy.get = ec
+		joy.get = frame_number
 		if exclude_player ~= joy.player then
-			joy_val[joy.field] = joy.frame
-			prev_joy_val[joy.field] = joy.prev
+			joy_val[joy.field], prev_joy_val[joy.field] = joy.frame, joy.prev
 		end
 	end
 	return prev and prev_joy_val or joy_val
 end
-local get_joy                   = function(exclude_player)
-	return get_joy_base(false, exclude_player)
+
+local play_cursor_sound         = function()
+	mem.w32(0x10D612, 0x600004)
+	mem.w8(0x10D713, 0x1)
 end
+
 local accept_input              = function(btn, joy_val, state_past)
 	if 12 < state_past then
-		local p1 = btn == "Start" and "1 Player Start" or ("P1 " .. btn)
-		local p2 = btn == "Start" and "2 Players Start" or ("P2 " .. btn)
+		local p1, p2 = joy_k[1][btn], joy_k[2][btn]
 		if btn == "Up" or btn == "Down" or btn == "Right" or btn == "Left" then
 			if (0 < joy_val[p1]) or (0 < joy_val[p2]) then
-				pgm:write_u32(0x0010D612, 0x00600004)
-				pgm:write_u8(0x0010D713, 0x01)
+				play_cursor_sound()
 				return true
 			end
 		else
 			if (0 < joy_val[p1] and state_past >= joy_val[p1]) or
 				(0 < joy_val[p2] and state_past >= joy_val[p2]) then
 				if global.disp_replay then
-					pgm:write_u32(0x0010D612, 0x00610004)
-					pgm:write_u8(0x0010D713, 0x01)
+					play_cursor_sound()
 				end
 				return true
 			end
@@ -4060,96 +679,27 @@ end
 local is_start_a                = function(joy_val, state_past)
 	if 12 < state_past then
 		for i = 1, 2 do
-			local st = i == 1 and "1 Player Start" or "2 Players Start"
-			if (35 < joy_val[st]) then
-				pgm:write_u32(0x0010D612, 0x00610004)
-				pgm:write_u8(0x0010D713, 0x01)
+			if (35 < joy_val[joy_k[i].st]) then
+				play_cursor_sound()
 				return true
 			end
 		end
 	end
 	return false
 end
-local new_next_joy              = function()
-	return new_set_false(joyk.p1.dn, joyk.p1.a, joyk.p2.dn, joyk.p2.a, joyk.p1.lt,
-		joyk.p1.b, joyk.p2.lt, joyk.p2.b, joyk.p1.rt, joyk.p1.c, joyk.p2.rt,
-		joyk.p2.c, joyk.p1.up, joyk.p1.d, joyk.p2.up, joyk.p2.d)
-end
--- 入力の1P、2P反転用のテーブル
-local rev_joy                   = {
-	[joyk.p1.a] = joyk.p2.a,
-	[joyk.p2.a] = joyk.p1.a,
-	[joyk.p1.b] = joyk.p2.b,
-	[joyk.p2.b] = joyk.p1.b,
-	[joyk.p1.c] = joyk.p2.c,
-	[joyk.p2.c] = joyk.p1.c,
-	[joyk.p1.d] = joyk.p2.d,
-	[joyk.p2.d] = joyk.p1.d,
-	[joyk.p1.dn] = joyk.p2.dn,
-	[joyk.p2.dn] = joyk.p1.dn,
-	[joyk.p1.lt] = joyk.p2.lt,
-	[joyk.p2.lt] = joyk.p1.lt,
-	[joyk.p1.rt] = joyk.p2.rt,
-	[joyk.p2.rt] = joyk.p1.rt,
-	[joyk.p1.up] = joyk.p2.up,
-	[joyk.p2.up] = joyk.p1.up,
-}
--- 入力から1P、2Pを判定するテーブル
-local joy_pside                 = {
-	[joyk.p1.dn] = 1,
-	[joyk.p1.a] = 1,
-	[joyk.p2.dn] = 2,
-	[joyk.p2.a] = 2,
-	[joyk.p1.lt] = 1,
-	[joyk.p1.b] = 1,
-	[joyk.p2.lt] = 2,
-	[joyk.p2.b] = 2,
-	[joyk.p1.rt] = 1,
-	[joyk.p1.c] = 1,
-	[joyk.p2.rt] = 2,
-	[joyk.p2.c] = 2,
-	[joyk.p1.up] = 1,
-	[joyk.p1.d] = 1,
-	[joyk.p2.up] = 2,
-	[joyk.p2.d] = 2,
-}
--- 入力の左右反転用のテーブル
-local joy_frontback             = {
-	[joyk.p1.lt] = joyk.p1.rt,
-	[joyk.p2.lt] = joyk.p2.rt,
-	[joyk.p1.rt] = joyk.p1.lt,
-	[joyk.p2.rt] = joyk.p2.lt,
-}
+local new_next_joy              = function() return util.deepcopy(joy_neutrala) end
 -- MAMEへの入力の無効化
 local cls_joy                   = function()
-	for _, joy in ipairs(use_joy) do
-		ioports[joy.port].fields[joy.field]:set_value(0)
-	end
+	for _, joy in ipairs(use_joy) do ioports[joy.port].fields[joy.field]:set_value(0) end
 end
 
 -- キー入力
-local kprops                    = { "d", "c", "b", "a", "rt", "lt", "dn", "up", "sl", "st", }
 local posi_or_pl1               = function(v) return 0 <= v and v + 1 or 1 end
 local nega_or_mi1               = function(v) return 0 >= v and v - 1 or -1 end
 
 -- ポーズ
-local set_freeze                = function(frz_expected)
-	local dswport = ioports[":DSW"]
-	local fzfld = dswport.fields["Freeze"]
-	local freez = ((dswport:read() & fzfld.mask) ~ fzfld.defvalue) <= 0
+local set_freeze                = function(freeze) mem.w8(0x1041D2, freeze and 0x00 or 0xFF) end
 
-	if mem._0x10FD82 ~= 0x00 then
-		if freez ~= frz_expected then
-			fzfld:set_value(global.frz[global.frzc])
-			global.frzc = global.frzc + 1
-			if global.frzc > #global.frz then
-				global.frzc = 1
-			end
-		end
-	else
-		pgm:write_u8(0x1041D2, frz_expected and 0x00 or 0xFF)
-	end
-end
 local new_ggkey_set             = function(p1)
 	local xoffset, yoffset = p1 and 50 or 245, 200
 	local pt0, pt2, ptS, ptP, ptP1, ptP2, ptP3, ptP4 = 0, 1, math.sin(1), 9, 8.4, 8.7, 9.3, 9.6
@@ -4217,165 +767,18 @@ local get_dash_act_addr         = function(p, pgm)
 	02B05C: 2051                     movea.l (A1), A0                              ; A0 = A1のデータ
 	02B05E: 4ED0                     jmp     (A0)                                  ; A0へジャンプ
 	]]
-	local a0, a1, d0, d1 = nil, 0x04B746, p.input1, p.cln_btn
-	d1 = 0xFFFF & (d1 * 8)
-	d0 = d0 + d1
-	d1 = p.char_4times
-	a1 = a1 + d1
-	a0 = pgm:read_u32(a1) + d0
-	d1 = pgm:read_u8(a0)
-	d1 = 0xFFFF & (d1 * 4)
-	a1 = 0x26444
-	a1 = a1 + d1
-	a0 = pgm:read_u32(a1)
-	return a0
+	local d1 = mem.r8(mem.r32(0x04B746 + p.char4) + p.input1 + (0xFFFF & (p.cln_btn * 8)))
+	return mem.r32(0x26444 + 0xFFFF & (d1 * 4))
 end
-
--- 当たり判定
-local type_ck_push              = function(obj, box)
-	obj.height = obj.height or box.bottom - box.top --used for height of ground throwbox
-end
-local type_ck_vuln              = function(obj, box) if not obj.vulnerable then return true end end
-local type_ck_gd                = function(obj, box) end
-local type_ck_atk               = function(obj, box) if obj.harmless then return true end end
-local type_ck_thw               = function(obj, box) if obj.harmless then return true end end
-local type_ck_und               = function(obj, box)
-	--printf("%x, unk box id: %x", obj.base, box.id) --debug
-end
-local box_types                 = {
-	atemi = "atemi",
-	attack = "attack",
-	block = "block",
-	push = "push",
-	throw = "throw",
-	unknown = "unkown",
-	vuln = "vuln",
-}
-local box_type_base             = {
-	a    = { id = 0x00, enabled = true, type_check = type_ck_atk, type = box_types.attack, sort = 4, color = 0xFF00FF, fill = 0x40, outline = 0xFF, sway = false, name = "攻撃", },
-	fa   = { id = 0x00, enabled = false, type_check = type_ck_und, type = box_types.attack, sort = 4, color = 0x00FF00, fill = 0x00, outline = 0xFF, sway = false, name = "攻撃(嘘)", },
-	da   = { id = 0x00, enabled = true, type_check = type_ck_und, type = box_types.attack, sort = 4, color = 0xFF00FF, fill = 0x00, outline = 0xFF, sway = false, name = "攻撃(無効)", },
-	aa   = { id = 0x00, enabled = true, type_check = type_ck_atk, type = box_types.attack, sort = 4, color = 0xFF0033, fill = 0x40, outline = 0xFF, sway = false, name = "攻撃(空中追撃可)", },
-	faa  = { id = 0x00, enabled = false, type_check = type_ck_und, type = box_types.attack, sort = 4, color = 0x00FF33, fill = 0x00, outline = 0xFF, sway = false, name = "攻撃(嘘、空中追撃可)", },
-	daa  = { id = 0x00, enabled = true, type_check = type_ck_und, type = box_types.attack, sort = 4, color = 0xFF0033, fill = 0x00, outline = 0xFF, sway = false, name = "攻撃(無効、空中追撃可)", },
-	t3   = { id = 0x00, enabled = true, type_check = type_ck_thw, type = box_types.throw, sort = -1, color = 0x8B4513, fill = 0x40, outline = 0xFF, sway = false, name = "未使用", },
-	pa   = { id = 0x00, enabled = true, type_check = type_ck_atk, type = box_types.attack, sort = 5, color = 0xFF00FF, fill = 0x40, outline = 0xFF, sway = false, name = "飛び道具", },
-	pfa  = { id = 0x00, enabled = true, type_check = type_ck_atk, type = box_types.attack, sort = 5, color = 0x00FF00, fill = 0x00, outline = 0xFF, sway = false, name = "飛び道具(嘘)", },
-	pda  = { id = 0x00, enabled = true, type_check = type_ck_atk, type = box_types.attack, sort = 5, color = 0xFF00FF, fill = 0x00, outline = 0xFF, sway = false, name = "飛び道具(無効)", },
-	paa  = { id = 0x00, enabled = true, type_check = type_ck_atk, type = box_types.attack, sort = 5, color = 0xFF0033, fill = 0x40, outline = 0xFF, sway = false, name = "飛び道具(空中追撃可)", },
-	pfaa = { id = 0x00, enabled = true, type_check = type_ck_atk, type = box_types.attack, sort = 5, color = 0x00FF33, fill = 0x00, outline = 0xFF, sway = false, name = "飛び道具(嘘、空中追撃可)", },
-	pdaa = { id = 0x00, enabled = true, type_check = type_ck_atk, type = box_types.attack, sort = 5, color = 0xFF0033, fill = 0x00, outline = 0xFF, sway = false, name = "飛び道具(無効、空中追撃可)", },
-	t    = { id = 0x00, enabled = true, type_check = type_ck_thw, type = box_types.throw, sort = 6, color = 0xFFFF00, fill = 0x40, outline = 0xFF, sway = false, name = "投げ", },
-	at   = { id = 0x00, enabled = true, type_check = type_ck_thw, type = box_types.throw, sort = 6, color = 0xFFFF00, fill = 0x40, outline = 0xFF, sway = false, name = "必殺技投げ", },
-	pt   = { id = 0x00, enabled = true, type_check = type_ck_thw, type = box_types.throw, sort = 6, color = 0xFFFF00, fill = 0x40, outline = 0xFF, sway = false, name = "空中投げ", },
-	p    = { id = 0x01, enabled = true, type_check = type_ck_push, type = box_types.push, sort = 1, color = 0xDDDDDD, fill = 0x00, outline = 0xFF, sway = false, name = "押し合い", },
-	v1   = { id = 0x02, enabled = true, type_check = type_ck_vuln, type = box_types.vuln, sort = 2, color = 0x0000FF, fill = 0x40, outline = 0xFF, sway = false, name = "食らい1", },
-	v2   = { id = 0x03, enabled = true, type_check = type_ck_vuln, type = box_types.vuln, sort = 2, color = 0x0000FF, fill = 0x40, outline = 0xFF, sway = false, name = "食らい2", },
-	v3   = { id = 0x04, enabled = true, type_check = type_ck_vuln, type = box_types.vuln, sort = 2, color = 0x00FFFF, fill = 0x80, outline = 0xFF, sway = false, name = "食らい(ダウン追撃のみ可)", },
-	v4   = { id = 0x05, enabled = true, type_check = type_ck_vuln, type = box_types.vuln, sort = 2, color = 0x00FFFF, fill = 0x80, outline = 0xFF, sway = false, name = "食らい(空中追撃のみ可)", },
-	v5   = { id = 0x06, enabled = true, type_check = type_ck_vuln, type = box_types.vuln, sort = 2, color = 0x606060, fill = 0x40, outline = 0xFF, sway = false, name = "食らい5(未使用?)", },
-	v6   = { id = 0x07, enabled = true, type_check = type_ck_vuln, type = box_types.vuln, sort = 2, color = 0x00FFFF, fill = 0x80, outline = 0xFF, sway = false, name = "食らい(対ライン上攻撃)", },
-	x1   = { id = 0x08, enabled = true, type_check = type_ck_vuln, type = box_types.vuln, sort = 2, color = 0x00FFFF, fill = 0x80, outline = 0xFF, sway = false, name = "食らい(対ライン下攻撃)", },
-	x2   = { id = 0x09, enabled = true, type_check = type_ck_und, type = box_types.unknown, sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF, sway = false, name = "用途不明2", },
-	x3   = { id = 0x0A, enabled = true, type_check = type_ck_und, type = box_types.unknown, sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF, sway = false, name = "用途不明3", },
-	x4   = { id = 0x0B, enabled = true, type_check = type_ck_und, type = box_types.unknown, sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF, sway = false, name = "用途不明4", },
-	x5   = { id = 0x0C, enabled = true, type_check = type_ck_und, type = box_types.unknown, sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF, sway = false, name = "用途不明5", },
-	x6   = { id = 0x0D, enabled = true, type_check = type_ck_und, type = box_types.unknown, sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF, sway = false, name = "用途不明6", },
-	x7   = { id = 0x0E, enabled = true, type_check = type_ck_und, type = box_types.unknown, sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF, sway = false, name = "用途不明7", },
-	x8   = { id = 0x0F, enabled = true, type_check = type_ck_und, type = box_types.unknown, sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF, sway = false, name = "用途不明8", },
-	x9   = { id = 0x10, enabled = true, type_check = type_ck_und, type = box_types.unknown, sort = -1, color = 0x00FF00, fill = 0x40, outline = 0xFF, sway = false, name = "用途不明9", },
-	g1   = { id = 0x11, enabled = true, type_check = type_ck_gd, type = box_types.block, sort = 3, color = 0xC0C0C0, fill = 0x40, outline = 0xFF, sway = false, name = "立ガード", },
-	g2   = { id = 0x12, enabled = true, type_check = type_ck_gd, type = box_types.block, sort = 3, color = 0xC0C0C0, fill = 0x40, outline = 0xFF, sway = false, name = "下段ガード", },
-	g3   = { id = 0x13, enabled = true, type_check = type_ck_gd, type = box_types.block, sort = 3, color = 0xC0C0C0, fill = 0x40, outline = 0xFF, sway = false, name = "空中ガード", },
-	g4   = { id = 0x14, enabled = true, type_check = type_ck_gd, type = box_types.atemi, sort = 3, color = 0xFF7F00, fill = 0x40, outline = 0xFF, sway = false, name = "上段当身投げ", },
-	g5   = { id = 0x15, enabled = true, type_check = type_ck_gd, type = box_types.atemi, sort = 3, color = 0xFF7F00, fill = 0x40, outline = 0xFF, sway = false, name = "裏雲隠し", },
-	g6   = { id = 0x16, enabled = true, type_check = type_ck_gd, type = box_types.atemi, sort = 3, color = 0xFF7F00, fill = 0x40, outline = 0xFF, sway = false, name = "下段当身打ち", },
-	g7   = { id = 0x17, enabled = true, type_check = type_ck_gd, type = box_types.atemi, sort = 3, color = 0xFF7F00, fill = 0x40, outline = 0xFF, sway = false, name = "必勝逆襲拳", },
-	g8   = { id = 0x18, enabled = true, type_check = type_ck_gd, type = box_types.atemi, sort = 3, color = 0xFF7F00, fill = 0x40, outline = 0xFF, sway = false, name = "サドマゾ", },
-	g9   = { id = 0x19, enabled = true, type_check = type_ck_gd, type = box_types.atemi, sort = 3, color = 0xFF007F, fill = 0x40, outline = 0xFF, sway = false, name = "倍返し", },
-	g12  = { id = 0x1A, enabled = true, type_check = type_ck_und, type = box_types.block, sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF, sway = false, name = "ガード?1", },
-	g11  = { id = 0x1B, enabled = true, type_check = type_ck_und, type = box_types.block, sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF, sway = false, name = "ガード?2", },
-	g10  = { id = 0x1C, enabled = true, type_check = type_ck_gd, type = box_types.atemi, sort = 3, color = 0xFF7F00, fill = 0x40, outline = 0xFF, sway = false, name = "フェニックススルー", },
-	g13  = { id = 0x1D, enabled = true, type_check = type_ck_und, type = box_types.block, sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF, sway = false, name = "ガード?4", },
-	g14  = { id = 0x1E, enabled = true, type_check = type_ck_gd, type = box_types.block, sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF, sway = false, name = "ガード?5", },
-	g15  = { id = 0x1F, enabled = true, type_check = type_ck_und, type = box_types.block, sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF, sway = false, name = "ガード?6", },
-	g16  = { id = 0x20, enabled = true, type_check = type_ck_und, type = box_types.block, sort = -1, color = 0x006400, fill = 0x40, outline = 0xFF, sway = false, name = "ガード?7", },
-	sv1  = { id = 0x02, enabled = true, type_check = type_ck_vuln, type = box_types.vuln, sort = 2, color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true, name = "食らい1(スウェー中)", },
-	sv2  = { id = 0x03, enabled = true, type_check = type_ck_vuln, type = box_types.vuln, sort = 2, color = 0x7FFF00, fill = 0x40, outline = 0xFF, sway = true, name = "食らい2(スウェー中)", },
-}
-local box_types, sway_box_types = {}, {}
-for _, boxtype in pairs(box_type_base) do
-	if 0 < boxtype.id then
-		if boxtype.sway then
-			sway_box_types[boxtype.id - 1] = boxtype
-		else
-			box_types[boxtype.id - 1] = boxtype
-		end
-	end
-	boxtype.fill    = (0xFFFFFFFF & (boxtype.fill << 24)) | boxtype.color
-	boxtype.outline = (0xFFFFFFFF & (boxtype.outline << 24)) | boxtype.color
-end
-local attack_boxies = new_set(
-	box_type_base.a, -- 攻撃
-	box_type_base.da, -- 攻撃(無効)
-	box_type_base.aa, -- 攻撃(空中追撃可)
-	box_type_base.daa, -- 攻撃(無効、空中追撃可)
-	box_type_base.pa, -- 飛び道具
-	box_type_base.pda, -- 飛び道具(無効)
-	box_type_base.paa, -- 飛び道具(空中追撃可)
-	box_type_base.pdaa, -- 飛び道具(無効、空中追撃可)
-	box_type_base.t, -- 通常投げ
-	box_type_base.at, -- 空中投げ
-	box_type_base.pt, -- 必殺技投げ
-	box_type_base.g10) -- フェニックススルー
-local fake_boxies = new_set(
-	box_type_base.fa, -- 攻撃(嘘)
-	box_type_base.faa, -- 攻撃(嘘、空中追撃可)
-	box_type_base.pfa, -- 飛び道具(嘘)
-	box_type_base.pfaa) -- 飛び道具(嘘、空中追撃可)
-local parry_boxies = new_set(
-	box_type_base.g4, -- 上段当身投げ
-	box_type_base.g5, -- 裏雲隠し
-	box_type_base.g6, -- 下段当身打ち
-	box_type_base.g7, -- 必勝逆襲拳
-	box_type_base.g8, -- サドマゾ
-	box_type_base.g9) -- 倍返し
 
 -- ボタンの色テーブル
-local btn_col = { [convert("_A")] = 0xFFCC0000, [convert("_B")] = 0xFFCC8800, [convert("_C")] = 0xFF3333CC, [convert("_D")] = 0xFF336600, }
-local text_col, shadow_col = 0xFFFFFFFF, 0xFF000000
+local btn_col                   = { [convert("_A")] = 0xFFCC0000, [convert("_B")] = 0xFFCC8800, [convert("_C")] = 0xFF3333CC, [convert("_D")] = 0xFF336600, }
+local text_col, shadow_col      = 0xFFFFFFFF, 0xFF000000
 
-local is_dir = function(name)
-	if type(name) ~= "string" then return false end
-	local cd = lfs.currentdir()
-	local is = lfs.chdir(name) and true or false
-	lfs.chdir(cd)
-	return is
-end
-local mkdir = function(path)
-	if is_dir(path) then
-		return true, nil
-	end
-	local r, err = lfs.mkdir(path)
-	if not r then
-		print(err)
-	end
-	return r, err
-end
-local is_file = function(name)
-	if type(name) ~= "string" then return false end
-	local f = io.open(name, "r")
-	if f then
-		f:close()
-		return true
-	end
-	return false
-end
-
-local rom_patch_path = function(filename)
-	local base = base_path() .. '/rom-patch/'
+local rom_patch_path            = function(filename)
+	local base = base_path() .. '/patch/rom/'
 	local patch = base .. emu.romname() .. '/' .. filename
-	if is_file(patch) then
+	if util.is_file(patch) then
 		return patch
 	else
 		print(patch .. " NOT found")
@@ -4383,82 +786,67 @@ local rom_patch_path = function(filename)
 	return base .. 'rbff2/' .. filename
 end
 
-local ram_patch_path = function(filename)
-	local base = base_path() .. '/ram-patch/'
+local ram_patch_path            = function(filename)
+	local base = base_path() .. '/patch/ram/'
 	local patch = base .. emu.romname() .. '/' .. filename
-	if is_file(patch) then
+	if util.is_file(patch) then
 		return patch
 	end
 	return base .. 'rbff2/' .. filename
 end
 
-local tohex = function(num)
-	local hexstr = '0123456789abcdef'
-	local s = ''
-	while num > 0 do
-		local mod = math.fmod(num, 16)
-		s = string.sub(hexstr, mod + 1, mod + 1) .. s
-		num = math.floor(num / 16)
-	end
-	if s == '' then s = '0' end
-	return s
+local get_string_width          = function(str)
+	return man.ui:get_string_width(str) * scr.width
 end
 
-local tohexnum = function(num)
-	return tonumber(tohex(num))
+local get_line_height          = function()
+	return man.ui.line_height * scr.height
 end
 
--- tableで返す
-local tobits = function(num)
-	-- returns a table of bits, least significant first.
-	local t, rest = {}, 0 -- will contain the bits
-	while num > 0 do
-		rest = math.fmod(num, 2)
-		table.insert(t, rest)
-		num = (num - rest) / 2
-	end
-	return t
-end
-
-local get_digit = function(num)
-	return string.len(tostring(num))
-end
-
--- 16ビット値を0.999上限の数値に変える
-local int16tofloat = function(int16v)
-	if int16v and type(int16v) == "number" then
-		return int16v / 0x10000
-	end
-	return 0
-end
-
-local draw_rtext = function(x, y, str, fgcol, bgcol)
+local draw_rtext                = function(x, y, str, fgcol, bgcol)
 	if not str then
 		return
 	end
 	if type(str) ~= "string" then
 		str = string.format("%s", str)
 	end
-	local xx = -man.ui:get_string_width(str, scr.xscale * scr.height)
-	scr:draw_text(x + xx, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
-	return xx
+	local w = get_string_width(str)
+	scr:draw_text(x - w, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
+	return w
 end
 
-local draw_text_with_shadow = function(x, y, str, fgcol, bgcol)
+local draw_ctext                = function(x, y, str, fgcol, bgcol)
+	if not str then
+		return
+	end
+	if type(str) ~= "string" then
+		str = string.format("%s", str)
+	end
+	local w = get_string_width(str) / 2
+	scr:draw_text(x - w, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
+	return w
+end
+
+local draw_text_with_shadow     = function(x, y, str, fgcol, bgcol)
 	if type(str) ~= "string" then
 		str = string.format("%s", str)
 	end
 	scr:draw_text(x + 0.5, y + 0.5, str, shadow_col, bgcol or 0x00000000)
 	scr:draw_text(x, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
-	return man.ui:get_string_width(str, scr.xscale * scr.height)
+	return get_string_width(str)
 end
 
-local draw_rtext_with_shadow = function(x, y, str, fgcol, bgcol)
+local draw_rtext_with_shadow    = function(x, y, str, fgcol, bgcol)
 	draw_rtext(x + 0.5, y + 0.5, str, shadow_col, bgcol)
 	return draw_rtext(x, y, str, fgcol, bgcol)
 end
 
-local draw_fmt_rtext = function(x, y, fmt, dec)
+local draw_ctext_with_shadow    = function(x, y, str, fgcol, bgcol)
+	draw_ctext(x + 0.5, y + 0.5, str, shadow_col, bgcol)
+	return draw_ctext(x, y, str, fgcol, bgcol)
+end
+
+local draw_fmt_rtext            = function(x, y, fmt, dec)
 	return draw_rtext_with_shadow(x, y, string.format(fmt, dec))
 end
 -- コマンド文字列表示
@@ -4479,7 +867,7 @@ local draw_cmd_text_with_shadow = function(x, y, str, fgcol, bgcol)
 	end
 end
 -- コマンド入力表示
-local draw_cmd = function(p, line, frame, str)
+local draw_cmd                  = function(p, line, frame, str)
 	local p1 = p == 1
 	local xx = p1 and 12 or 294 -- 1Pと2Pで左右に表示し分ける
 	local yy = (line + 10 - 1) * 8 -- +8はオフセット位置
@@ -4503,7 +891,7 @@ local draw_cmd = function(p, line, frame, str)
 	draw_cmd_text_with_shadow(xx, yy, str)
 end
 -- 処理アドレス表示
-local draw_base = function(p, line, frame, addr, act_name, xmov)
+local draw_base                 = function(p, line, frame, addr, act_name, xmov)
 	local p1 = p == 1
 	local xx = p1 and 60 or 195 -- 1Pと2Pで左右に表示し分ける
 	local yy = (line + 10 - 1) * 8 -- +8はオフセット位置
@@ -4520,7 +908,7 @@ local draw_base = function(p, line, frame, addr, act_name, xmov)
 end
 
 -- 当たり判定のオフセット
-local bp_offset = {
+local addr_offset               = {
 	[0x012C42] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 },
 	[0x012C88] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 },
 	[0x012D4C] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 }, --p1 push
@@ -4528,13 +916,13 @@ local bp_offset = {
 	[0x039F2A] = { ["rbff2k"] = 0x0C, ["rbff2h"] = 0x20 }, --special throws
 	[0x017300] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 }, --solid shadows
 }
-local bp_clone = { ["rbff2k"] = -0x104, ["rbff2h"] = 0x20 }
-local fix_bp_addr = function(addr)
-	local fix1 = bp_clone[emu.romname()] or 0
-	local fix2 = bp_offset[addr] and (bp_offset[addr][emu.romname()] or fix1) or fix1
+local addr_clone                = { ["rbff2k"] = -0x104, ["rbff2h"] = 0x20 }
+local fix_addr                  = function(addr)
+	local fix1 = addr_clone[emu.romname()] or 0
+	local fix2 = addr_offset[addr] and (addr_offset[addr][emu.romname()] or fix1) or fix1
 	return addr + fix2
 end
-local hurt_inv_type = {
+local hurt_inv_type             = {
 	-- 全身無敵
 	full    = { type = 0, min_label = "全身", disp_label = "全身無敵", name = "全身無敵" },
 	-- ライン関係の無敵
@@ -4560,13 +948,13 @@ local hurt_inv_type = {
 	otg = { type = 4, min_label = "追撃可", disp_label = "ダウン追撃", name = "ダウン追撃のみ可能" },
 	juggle = { type = 4, min_label = "追撃可", disp_label = "空中追撃", name = "空中追撃のみ可能" },
 }
-hurt_inv_type.values = {
+hurt_inv_type.values            = {
 	hurt_inv_type.full, hurt_inv_type.main, hurt_inv_type.sway_oh, hurt_inv_type.sway_lo, hurt_inv_type.top32, hurt_inv_type.top40,
 	hurt_inv_type.top48, -- hurt_inv_type.top60, hurt_inv_type.top64, hurt_inv_type.top68, hurt_inv_type.top76, hurt_inv_type.top80,
 	hurt_inv_type.low40, hurt_inv_type.low32, hurt_inv_type.low24, hurt_inv_type.otg, hurt_inv_type.juggle
 }
 -- 投げ無敵
-local throw_inv_type = {
+local throw_inv_type            = {
 	time24 = { value = 24, disp_label = "タイマー24", name = "通常投げ" },
 	time20 = { value = 20, disp_label = "タイマー20", name = "M.リアルカウンター投げ" },
 	time10 = { value = 10, disp_label = "タイマー10", name = "真空投げ 羅生門 鬼門陣 M.タイフーン M.スパイダー 爆弾パチキ ドリル ブレスパ ブレスパBR リフトアップブロー デンジャラススルー ギガティックサイクロン マジンガ STOL" },
@@ -4576,410 +964,462 @@ local throw_inv_type = {
 	state  = { value = 256, disp_label = "やられ状態", name = "相互のやられ状態が非通常値" },
 	no_gnd = { value = 256, disp_label = "高度", name = "接地状態ではない（地面へのめり込みも投げ不可）" },
 }
-throw_inv_type.values = {
+throw_inv_type.values           = {
 	throw_inv_type.time24, throw_inv_type.time20, throw_inv_type.time10, throw_inv_type.sway, throw_inv_type.flag1, throw_inv_type.flag2,
 	throw_inv_type.state, throw_inv_type.no_gnd
 }
-hurt_inv_type.get = function(p, real_top, real_bottom, box)
+hurt_inv_type.get               = function(p, real_top, real_bottom, box)
 	local ret, top, low = {}, nil, nil
 	for _, type in ipairs(hurt_inv_type.values) do
-		if type.type == 2 and real_top <= type.value then
-			top = type
-		end
-		if type.type == 3 and real_bottom >= type.value then
-			low = type
-		end
+		if type.type == 2 and real_top <= type.value then top = type end
+		if type.type == 3 and real_bottom >= type.value then low = type end
 	end
-	if top then
-		table.insert(ret, top)
-	end
-	if low then
-		table.insert(ret, low)
-	end
-	if box.type == box_type_base.v3 then                                                            -- 食らい(ダウン追撃のみ可)
+	if top then table.insert(ret, top) end
+	if low then table.insert(ret, low) end
+	if box.type == box_types.down_otg then  -- 食らい(ダウン追撃のみ可)
 		table.insert(ret, hurt_inv_type.otg)
-	elseif box.type == box_type_base.v4 then                                                        -- 食らい(空中追撃のみ可)
+	elseif box.type == box_types.launch then -- 食らい(空中追撃のみ可)
 		table.insert(ret, hurt_inv_type.juggle)
-	elseif box.type == box_type_base.v6 then                                                        -- 食らい(対ライン上攻撃)
+	elseif box.type == box_types.hurt3 then -- 食らい(対ライン上攻撃)
 		table.insert(ret, hurt_inv_type.sway_oh)
-	elseif box.type == box_type_base.x1 then                                                        -- 食らい(対ライン下攻撃)
+	elseif box.type == box_types.hurt4 then -- 食らい(対ライン下攻撃)
 		table.insert(ret, hurt_inv_type.sway_lo)
-	elseif box.type == box_type_base.sv1 or                                                         -- 食らい1(スウェー中)
-		box.type == box_type_base.sv2 then                                                          -- 食らい2(スウェー中)
+	elseif box.type == box_types.sway_hurt1 or -- 食らい1(スウェー中)
+		box.type == box_types.sway_hurt2 then -- 食らい2(スウェー中)
 		table.insert(ret, hurt_inv_type.main)
 	end
 	return #ret == 0 and {} or ret
 end
-throw_inv_type.get = function(p)
-	if p.is_fireball then
-		return {}
-	end
+throw_inv_type.get              = function(p)
+	if p.is_fireball then return {} end
 	local ret = nil
-	for _, type in ipairs(throw_inv_type.values) do
-		if p.tw_frame >= type.value then
-			ret = type
-		end
-	end
+	for _, type in ipairs(throw_inv_type.values) do if p.throw_timer >= type.value then ret = type end end
 	ret = ret == nil and {} or { ret }
-	if p.state ~= 0 or p.op.state ~= 0 then
-		table.insert(ret, throw_inv_type.state)
-	end
-	if p.pos_y ~= 0 then
-		table.insert(ret, throw_inv_type.no_gnd)
-	end
-	if p.sway_status ~= 0x00 then
-		table.insert(ret, throw_inv_type.sway)
-	end
-	if p.tw_muteki ~= 0 then
-		table.insert(ret, throw_inv_type.flag1)
-	end
-	if p.tw_muteki2 ~= 0 then
-		table.insert(ret, throw_inv_type.flag2)
-	end
+	if p.state ~= 0 or p.op.state ~= 0 then table.insert(ret, throw_inv_type.state) end
+	if p.pos_y ~= 0 then table.insert(ret, throw_inv_type.no_gnd) end
+	if p.sway_status ~= 0x00 then table.insert(ret, throw_inv_type.sway) end
+	if p.invincible ~= 0 then table.insert(ret, throw_inv_type.flag1) end
+	if p.tw_muteki2 ~= 0 then table.insert(ret, throw_inv_type.flag2) end
 	return ret
 end
--- 削りダメージ補正
-local chip_dmg_types = {
-	zero = {
-	      -- ゼロ
-		name = "0",
-		calc = function(pure_dmg)
-			return 0
-		end,
-	},
-	rshift4 = {
-	         -- 1/16
-		name = "1/16",
-		calc = function(pure_dmg)
-			return math.max(1, 0xFFFF & (pure_dmg >> 4))
-		end,
-	},
-	rshift5 = {
-	         -- 1/32
-		name = "1/32",
-		calc = function(pure_dmg)
-			return math.max(1, 0xFFFF & (pure_dmg >> 5))
-		end,
-	},
-}
--- 削りダメージ計算種別 補正処理の分岐先の種類分用意する
-local chip_dmg_type_tbl = {
-	chip_dmg_types.zero, --  0 ダメージ無し
-	chip_dmg_types.zero, --  1 ダメージ無し
-	chip_dmg_types.rshift4, --  2 1/16
-	chip_dmg_types.rshift4, --  3 1/16
-	chip_dmg_types.zero, --  4 ダメージ無し
-	chip_dmg_types.zero, --  5 ダメージ無し
-	chip_dmg_types.rshift4, --  6 1/16
-	chip_dmg_types.rshift5, --  7 1/32
-	chip_dmg_types.rshift5, --  8 1/32
-	chip_dmg_types.zero, --  9 ダメージ無し
-	chip_dmg_types.zero, -- 10 ダメージ無し
-	chip_dmg_types.rshift4, -- 11 1/16
-	chip_dmg_types.rshift4, -- 12 1/16
-	chip_dmg_types.rshift4, -- 13 1/16
-	chip_dmg_types.rshift4, -- 14 1/16
-	chip_dmg_types.rshift4, -- 15 1/16
-	chip_dmg_types.zero, -- 16 ダメージ無し
-}
--- 削りダメージ計算種別取得 05B2A4 からの処理
-local get_chip_dmg_type = function(id, pgm)
-	local a0 = fix_bp_addr(0x95CCC)
-	local d0 = 0xF & pgm:read_u8(a0 + id)
-	local func = chip_dmg_type_tbl[d0 + 1]
-	return func
-end
--- ヒット処理の飛び先 家庭用版 0x13120 からのデータテーブル 5種類
-local hit_proc_types = {
-	none      = nil,     -- 常に判定しない
-	same_line = "メイン", -- 同一ライン同士なら判定する
-	diff_line = "メイン,スウェー", -- 異なるライン同士でも判定する
-	unknown   = "",      -- 不明
-	air_onry  = "空中のみ", -- 相手が空中にいれば判定する
-}
-local hit_sub_procs = {
-	[0x01311C] = hit_proc_types.none,   -- 常に判定しない
-	[0x012FF0] = hit_proc_types.same_line, -- → 013038 同一ライン同士なら判定する
-	[0x012FFE] = hit_proc_types.diff_line, -- → 013054 異なるライン同士でも判定する
-	[0x01300A] = hit_proc_types.unknown, -- → 013018 不明
-	[0x012FE2] = hit_proc_types.air_onry, -- → 012ff0 → 013038 相手が空中にいれば判定する
-}
--- 接触判定の取得
--- 家庭用 05C6D0 からの処理
---[[
-D0 ; キャラID
-D1 ; フラグ群 ($c0,A3)
-D2 ; 必殺技フラグ群 ($c8,A3)
-D3 ; Y位置 ($28,A3)
-05C6D0: 0C40 0005                cmpi.w  #$5, D0                      ; d0 == 0x5 ギースか？
-05C6D4: 6606                     bne     $5c6dc                       ;   5c6dcへ
-05C6D6: 0802 000F                btst    #$f, D2                      ; d2 & 0xF == d2 特殊技(飛燕失脚)か？
-05C6DA: 6630                     bne     $5c70c                       ;   5c70cへ
-05C6DC: 0801 0001                btst    #$1, D1                      ; d1 & 0x1 == d1 ダウンか？
-05C6E0: 661C                     bne     $5c6fe                       ;   5c6feへ
-05C6E2: 41FA 0458                lea     ($458,PC) ; ($5cb3c), A0     ; a0 = 0x5cb3c
-05C6E6: 4A83                     tst.l   D3                           ; d3 == 0x0
-05C6E8: 6714                     beq     $5c6fe                       ;   0だったら5c6feへ
-05C6EA: 6100 002C                bsr     $5c718                       ;   5c718へ
-05C6EE: 6620                     bne     $5c710                       ;   0じゃなかったら 5c710 へ
-05C6F0: 0282 FFFF 0000           andi.l  #$ffff0000, D2               ; d2 = d2 & 0xffff0000
-05C6F6: 6718                     beq     $5c710                       ;   0だったら 5c710 へ（必殺技じゃない）
-05C6F8: 41FA 0502                lea     ($502,PC) ; ($5cbfc), A0     ; a0 = 5cbfc
-05C6FC: 6012                     bra     $5c710                       ;   5c710 へ
-05C6FE: 41FA 037C                lea     ($37c,PC) ; ($5ca7c), A0     ; a0 = 5ca7c
-05C702: 2401                     move.l  D1, D2                       ; d2 = d1
-05C704: 0282 1400 0046           andi.l  #$14000046, D2               ; d2 = d2 & 0x14000046
-05C70A: 6604                     bne     $5c710                       ;   0じゃなかったら 5c710 へ
-05C70C: 41FA 02AE                lea     ($2ae,PC) ; ($5c9bc), A0     ; a0 = 0x5c9bc
-05C710: E748                     lsl.w   #3, D0                       ; d0 = d0 << 3
-05C712: 41F0 0000                lea     (A0,D0.w), A0                ; a0 = (a0 + d0)のデータ
-05C716: 4E75                     rts                                  ;
-05C718: 2602                     move.l  D2, D3                       ;  d3 = d2  d3 = C8フラグ
-05C71A: 3800                     move.w  D0, D4                       ;  d4 = d0  d4 = キャラID
-05C71C: D844                     add.w   D4, D4                       ;  d4 = d4 + d4
-05C71E: D844                     add.w   D4, D4                       ;  d4 = d4 + d4
-05C720: 283B 4006                move.l  ($6,PC,D4.w), D4             ;  d4 = 0x6 + PC + d4 ; 05C728
-05C724: C684                     and.l   D4, D3                       ;  d3 = d4
-05C726: 4E75                     rts                                  ;  
-]]
-local get_push_box = function(p)
-	if p.char == 0x5 and testbit(p.flag_c8, flag_c8_types._15) then
-		return p.char_data.push_box[0x5C9BC]
-	end
-	if testbit(p.flag_c0, flag_c0_types._01) ~= true then
-		if p.pos_y ~= 0 then
-			if (p.flag_c8 & p.char_data.push_box_mask) ~= 0 then
-				return p.char_data.push_box[0x5CB3C]
-			end
-			if p.flag_c8 & 0xFFFF0000 == 0 then
-				return p.char_data.push_box[0x5CB3C]
-			end
-			return  p.char_data.push_box[0x5CBFC]
-		end
-	end
-	if p.flag_c0 & 0x14000046 ~= 0 then
-		return p.char_data.push_box[0x5CA7C]
-	end
-	return p.char_data.push_box[0x5C9BC]
+
+local sort_ab                   = function(v1, v2)
+	if v1 <= v2 then return v2, v1 end
+	return v1, v2
 end
 
-local fix_box_scale = function(p, src, dest)
-	dest = dest or {}
-	dest.type = src.type
-	dest.y1 = 0xFFFF & ((src.y1 * p.box_scale) >> 6)
-	dest.y2 = 0xFFFF & ((src.y2 * p.box_scale) >> 6)
-	dest.x1 = 0xFFFF & ((src.x1 * p.box_scale) >> 6)
-	dest.x2 = 0xFFFF & ((src.x2 * p.box_scale) >> 6)
-	dest.log = string.format("%x type=%03x x1=%s x2=%s y1=%s y2=%s", p.addr.base, dest.type, dest.x1, dest.x2, dest.y1, dest.y2)
+local sort_ba                   = function(v1, v2)
+	if v1 <= v2 then return v1, v2 end
+	return v2, v1
+end
+
+local fix_box_scale             = function(p, src, dest)
+	--local prev = string.format("%x id=%02x top=%s bottom=%s left=%s right=%s", p.addr.base, src.id, src.top, src.bottom, src.left, src.right)
+	dest = dest or util.deepcopy(src) -- 計算元のboxを汚さないようにディープコピーしてから処理する
+
+	-- 全座標について p.box_scale / 0x1000 の整数値に計算しなおす
+	dest.top, dest.bottom = util.int16((src.top * p.box_scale) >> 6), util.int16((src.bottom * p.box_scale) >> 6)
+	dest.left, dest.right = util.int16((src.left * p.box_scale) >> 6), util.int16((src.right * p.box_scale) >> 6)
+	--util.printf("%s ->a top=%s bottom=%s left=%s right=%s", prev, dest.reach.top, dest.reach.bottom, dest.reach.left, dest.reach.right)
+
+	if dest.type.kind == box_kinds.attack then
+		-- 攻撃位置から解決した属性を付与する
+		local real_top = math.tointeger(math.max(dest.top, dest.bottom) + screen.top - p.pos_z - p.y)
+		local real_bottom = math.tointeger(math.min(dest.top, dest.bottom) + screen.top - p.pos_z - p.y)
+		dest.blockable = {
+			real_top = real_top,
+			real_bottom = real_bottom,
+			main = util.testbit(dest.reach.possible, possible_types.same_line) and dest.reach.blockable | get_top_type(real_top, top_types) or 0,
+			sway = util.testbit(dest.reach.possible, possible_types.diff_line) and dest.reach.blockable | get_top_type(real_top, top_sway_types) or 0,
+			punish = util.testbit(dest.reach.possible, possible_types.same_line) and get_top_type(real_bottom, top_punish_types) or 0
+		}
+	end
+
+	-- キャラの座標と合算して画面上への表示位置に座標を変換する
+	dest.left, dest.right = p.x - dest.left * p.flip_x, p.x - dest.right * p.flip_x
+	dest.bottom, dest.top = p.y - dest.bottom, p.y - dest.top
+	--util.printf("%s ->b x=%s y=%s top=%s bottom=%s left=%s right=%s", prev, p.x, p.y, dest.top, dest.bottom, dest.left, dest.right)
 	return dest
 end
 
--- 判定枠のチェック処理種類
-local hit_box_proc = function(id, addr)
-	-- 家庭用版 012DBC~012F04のデータ取得処理をベースに判定＆属性チェック
-	-- 家庭用版 012F30~012F96のデータ取得処理をベースに判定＆属性チェック
-	local d2 = id - 0x20
-	if d2 >= 0 then
-		d2 = pgm:read_u8(addr + d2)
-		d2 = 0xFFFF & (d2 + d2)
-		d2 = 0xFFFF & (d2 + d2)
-		local a0 = pgm:read_u32(0x13120 + d2)
-		--printf(" ext attack %x %x %s", id, addr, hit_sub_procs[a0] or "none")
-		return hit_sub_procs[a0]
-	end
-	return hit_proc_types.none
-end
-local hit_box_procs = {
-	normal_hit  = function(id) return hit_box_proc(id, 0x94D2C) end, -- 012DBC: 012DC8: 通常状態へのヒット判定処理
-	down_hit    = function(id) return hit_box_proc(id, 0x94E0C) end, -- 012DE4: 012DF0: ダウン状態へのヒット判定処理
-	air_hit     = function(id) return hit_box_proc(id, 0x94EEC) end, -- 012E0E: 012E1A: 空中追撃可能状態へのヒット判定処理
-	up_block    = function(id) return hit_box_proc(id, 0x950AC) end, -- 012EAC: 012EB8: 上段ガード判定処理
-	low_block   = function(id) return hit_box_proc(id, 0x9518C) end, -- 012ED8: 012EE4: 屈ガード判定処理
-	air_block   = function(id) return hit_box_proc(id, 0x9526C) end, -- 012F04: 012F16: 空中ガード判定処理
-	sway_up_blk  = function(id) return hit_box_proc(id, 0x95A4C) end, -- 012E60: 012E6C: 対ライン上段の謎処理
-	sway_low_blk = function(id) return hit_box_proc(id, 0x95B2C) end, -- 012F3A: 012E90: 対ライン下段の謎処理
-	j_atm_nage  = function(id) return hit_box_proc(id, 0x9534C) end, -- 012F30: 012F82: 上段当身投げの処理
-	urakumo     = function(id) return hit_box_proc(id, 0x9542C) end, -- 012F30: 012F82: 裏雲隠しの処理
-	g_atm_uchi  = function(id) return hit_box_proc(id, 0x9550C) end, -- 012F44: 012F82: 下段当身打ちの処理
-	gyakushu    = function(id) return hit_box_proc(id, 0x955EC) end, -- 012F4E: 012F82: 必勝逆襲拳の処理
-	sadomazo    = function(id) return hit_box_proc(id, 0x956CC) end, -- 012F58: 012F82: サドマゾの処理
-	phx_tw      = function(id) return hit_box_proc(id, 0x9588C) end, -- 012F6C: 012F82: フェニックススルーの処理
-	baigaeshi   = function(id) return hit_box_proc(id, 0x957AC) end, -- 012F62: 012F82: 倍返しの処理
-	unknown1    = function(id) return hit_box_proc(id, 0x94FCC) end, -- 012E38: 012E44: 不明処理、未使用？
-	katsu       = function(id) return hit_box_proc(id, 0x9596C) end, -- : 012FB2: 喝消し
-	nullify     = function(id)                                     -- : 012F9A: 弾消し
-		return (0x20 <= id) and hit_proc_types.same_line or hit_proc_types.none
-	end,
-}
--- 判定の座標から画面座標を反映して位置補正したものを返す
-local new_hitbox = function(p, inbox)
-	local box = { key = inbox.key, id = inbox.id, p = p, visible = true, }
-	local pos_x, pos_y = inbox.pos_x, inbox.pos_y
-	local top, bottom, left, right = inbox.top, inbox.bottom, inbox.left, inbox.right
-	local is_fireball = inbox.is_fireball
-	box.type = nil
-	if (box.id >= #box_types) then
-		box.atk = true
-		local air = hit_box_procs.air_hit(box.id) ~= nil
-		if is_fireball then
-			p.has_atk_box = true
-			if p.atk_count < 0 then
-				p.atk_count = 0
-			end
-			p.atk_count = p.atk_count + 1
-			if air then
-				if p.hit.fake_hit then
-					box.type = box_type_base.pfaa -- 飛び道具(空中追撃可、嘘)
-				elseif p.hit.harmless then
-					box.type = box_type_base.pdaa -- 飛び道具(空中追撃可、無効)
-				else
-					box.type = box_type_base.paa -- 飛び道具(空中追撃可)
-				end
-			else
-				if p.hit.fake_hit then
-					box.type = box_type_base.pfa -- 飛び道具(嘘)
-				elseif p.hit.harmless then
-					box.type = box_type_base.pda -- 飛び道具(無効)
-				else
-					box.type = box_type_base.pa -- 飛び道具
-				end
-			end
-		else
-			if air then
-				if p.hit.fake_hit then
-					box.type = box_type_base.faa -- 攻撃(嘘)
-				elseif p.hit.harmless then
-					box.type = box_type_base.daa -- 攻撃(無効、空中追撃可)
-				else
-					box.type = box_type_base.aa -- 攻撃(空中追撃可)
-				end
-			else
-				if p.hit.fake_hit then
-					box.type = box_type_base.fa -- 攻撃(嘘)
-				elseif p.hit.harmless then
-					box.type = box_type_base.da -- 攻撃(無効)
-				else
-					box.type = box_type_base.a -- 攻撃(空中追撃可)
-				end
-			end
-		end
-	else
-		if p.in_sway_line and sway_box_types[box.id] then
-			box.type = sway_box_types[box.id]
-		else
-			box.type = box_types[box.id]
-		end
-	end
-	box.type = box.type or box_type_base.x1
+-- ROM部分のメモリエリアへパッチあて
+local load_rom_patch            = function()
+	if mem.pached then return end
 
-	if box.type.type == "push" then
-		if is_fireball then
-			-- 飛び道具の押し合い判定は無視する
-			return nil
-		elseif left == 0 and right == 0 then
-			-- 投げ中などに出る前後0の判定は無視する
-			return nil
-		end
-	end
+	mem.pached = mem.pached or util.apply_patch_file(pgm, rom_patch_path("char1-p1.pat"), true)
 
-	local orig_posy                = pos_y
-	pos_y                          = pos_y - p.hit.pos_z
-
-	top                            = pos_y - (0xFFFF & ((top * p.hit.scale) >> 6))
-	bottom                         = pos_y - (0xFFFF & ((bottom * p.hit.scale) >> 6))
-
-	top                            = top & 0xFFFF
-	bottom                         = bottom & 0xFFFF
-	left                           = 0xFFFF & (pos_x - (0xFFFF & ((left * p.hit.scale) >> 6)) * p.hit.flip_x)
-	right                          = 0xFFFF & (pos_x - (0xFFFF & ((right * p.hit.scale) >> 6)) * p.hit.flip_x)
-
-	box.top, box.bottom            = bottom, top
-	box.left, box.right            = left, right
-	box.asis_top, box.asis_bottom  = bottom, top
-	box.asis_left, box.asis_right  = left, right
-	-- printf(" %x type=%03x x1=%s x2=%s y1=%s y2=%s", p.addr.base, box.id, box.left, box.right, box.top, box.bottom)
 	--[[
-	範囲外の描画でも問題がなくなった
-	if ((box.top <= 0 and box.bottom <= 0) or (box.top >= 224 and box.bottom >= 224) or (box.left <= 0 and box.right <= 0) or (box.left >= 320 and box.right >= 320)) then
-		return nil
-	end
+	010668: 0C6C FFEF 0022           cmpi.w  #-$11, ($22,A4)                     ; THE CHALLENGER表示のチェック。
+	01066E: 6704                     beq     $10674                              ; braにしてチェックを飛ばすとすぐにキャラ選択にいく
+	010670: 4E75                     rts                                         ; bp 01066E,1,{PC=00F05E;g} にすると乱入の割り込みからラウンド開始前へ
+	010672: 4E71                     nop                                         ; 4EF9 0000 F05E
 	]]
 
-	-- はみ出し補正
-	if p.hit.flip_x == 1 then
-		if box.right > 320 and box.right > box.left then
-			box.right = 0
-			box.over_right = true
+	mem.wd16(0x1F3BC, 0x4E75) -- 1Pのスコア表示をすぐ抜ける
+	mem.wd16(0x1F550, 0x4E75) -- 2Pのスコア表示をすぐ抜ける
+
+	mem.wd8(0x25DB3, 0x1)     -- H POWERの表示バグを修正する 無駄な3段表示から2段表示へ
+
+	mem.wd32(0xD238, 0x4E714E71) -- 家庭用モードでのクレジット消費をNOPにする
+
+	mem.wd8(0x62E9D, 0x00)    -- 乱入されても常にキャラ選択できる
+
+	-- 対CPU1体目でボスキャラも選択できるようにする サンキューヒマニトさん
+	mem.wd8(0x633EE, 0x60)     -- CPUのキャラテーブルをプレイヤーと同じにする
+	mem.wd8(0x63440, 0x60)     -- CPUの座標テーブルをプレイヤーと同じにする
+	mem.wd32(0x62FF4, 0x4E714E71) -- PLのカーソル座標修正をNOPにする
+	mem.wd32(0x62FF8, 0x4E714E71) -- PLのカーソル座標修正をNOPにする
+
+	mem.wd8(0x62EA6, 0x60)     -- CPU選択時にアイコンを減らすのを無効化
+	mem.wd32(0x63004, 0x4E714E71) -- PLのカーソル座標修正をNOPにする
+
+	-- キャラ選択の時間減らす処理をNOPにする
+	mem.wd16(0x63336, 0x4E71)
+	mem.wd16(0x63338, 0x4E71)
+
+	--時間の値にアイコン用のオフセット値を改変して空表示にする
+	-- 0632D0: 004B -- キャラ選択の時間の内部タイマー初期値1 デフォは4B=75フレーム
+	-- 063332: 004B -- キャラ選択の時間の内部タイマー初期値2 デフォは4B=75フレーム
+	mem.wd16(0x632DC, 0x0DD7)
+
+	-- 常にCPUレベルMAX
+	mem.wd32(fix_addr(0x0500E8), 0x303C0007)
+	mem.wd32(fix_addr(0x050118), 0x3E3C0007)
+	mem.wd32(fix_addr(0x050150), 0x303C0007)
+	mem.wd32(fix_addr(0x0501A8), 0x303C0007)
+	mem.wd32(fix_addr(0x0501CE), 0x303C0007)
+
+	-- 対戦の双角ステージをビリーステージに変更する（MVSと家庭用共通）
+	mem.wd16(0xF290, 0x0004)
+
+	-- 簡易超必ONのときにダックのブレイクスパイラルブラザー（BRも）が出るようにする
+	mem.wd16(0x0CACC8, 0xC37C)
+
+	-- クレジット消費をNOPにする
+	mem.wd32(0x00D238, 0x4E714E71)
+	mem.wd32(0x00D270, 0x4E714E71)
+
+	-- 家庭用の初期クレジット9
+	mem.wd16(0x00DD54, 0x0009)
+	mem.wd16(0x00DD5A, 0x0009)
+	mem.wd16(0x00DF70, 0x0009)
+	mem.wd16(0x00DF76, 0x0009)
+
+	-- 家庭用のクレジット表示をスキップ bp 00C734,1,{PC=c7c8;g}
+	-- CREDITをCREDITSにする判定をスキップ bp C742,1,{PC=C748;g}
+	-- CREDIT表示のルーチンを即RTS
+	mem.wd16(0x00C700, 0x4E75)
+
+	-- デバッグDIPによる自動アンリミのバグ修正
+	mem.wd8(fix_addr(0x049951), 0x2)
+	mem.wd8(fix_addr(0x049947), 0x9)
+
+	--[[ 未適用ハック
+	-- 空振りCAできる。
+	-- 逆にFFにしても個別にCA派生を判定している処理があるため単純に全不可にはできない。
+	-- オリジナル（家庭用）
+	-- maincpu.rd@02FA72=00000000
+	-- maincpu.rd@02FA76=00000000
+	-- maincpu.rd@02FA7A=FFFFFFFF
+	-- maincpu.rd@02FA7E=00FFFF00
+	-- maincpu.rw@02FA82=FFFF
+	パッチ（00をFFにするとヒット時限定になる）
+	for i = 0x02FA72, 0x02FA82 do mem.wd8(i, 0x00) end
+	
+	-- 連キャン、必キャン可否テーブルに連キャンデータを設定する。C0が必、D0で連。
+	for i = 0x085138, 0x08591F do mem.wd8(i, 0xD0) end
+
+	-- 逆襲拳、サドマゾの初段で相手の状態変更しない（相手が投げられなくなる事象が解消する）
+	-- mem.wd8(0x57F43, 0x00)
+	
+	-- よそで見つけたチート
+	-- https://www.neo-geo.com/forums/index.php?threads/universe-bios-released-good-news-for-mvs-owners.41967/page-7
+	mem.wd8 (10E003, 0x0C)       -- Auto SDM combo (RB2) 0x56D98A
+	mem.wd32(1004D5, 0x46A70500) -- 1P Crazy Yamazaki Return (now he can throw projectile "anytime" with some other bug) 0x55FE5C
+	mem.wd16(1004BF, 0x3CC1)     -- 1P Level 2 Blue Mary 0x55FE46
+	-- cheat offset NGX 45F987 = MAME 0
+
+	-- RAM改変によるCPUレベル MAX（ロムハックのほうが楽）
+	-- mem.w16(0x10E792, 0x0007) -- maincpu.pw@10E792=0007
+	-- mem.w16(0x10E796, 0x0007) -- maincpu.pw@10E796=0008
+	]]
+end
+
+-- ヒット効果アドレステーブルの取得
+local load_hit_effects = function()
+	for i, _ in ipairs(hit_effects) do
+		table.insert(hit_effect_moves, mem.r32(0x579DA + (i - 1) * 4))
+		table.insert(hit_effect_move_keys, string.format("%2s %s %x", i, table.concat(hit_effects[i], " "), hit_effect_moves[#hit_effect_moves]))
+	end
+end
+
+local load_hit_system_stops = function()
+	if hit_system_stops["a"] then return end
+	for addr = 0x57C54, 0x57CC0, 4 do hit_system_stops[mem.r32(addr)] = true end
+	hit_system_stops["a"] = true
+end
+
+-- キャラの基本アドレスの取得
+local load_proc_base            = function()
+	if chars[1].proc_base then return end
+	for char = 1, #chars - 1 do
+		local char4 = char << 2
+		chars[char].proc_base = {
+			cancelable    = mem.r32(char4 + 0x850D8),
+			forced_down   = 0x88A12,
+			hitstop       = mem.r32(char4 + fix_addr(0x83C38)),
+			damege        = mem.r32(char4 + fix_addr(0x813F0)),
+			stun          = mem.r32(char4 + fix_addr(0x85CCA)),
+			stun_timer    = mem.r32(char4 + fix_addr(0x85D2A)),
+			max_hit       = mem.r32(char4 + fix_addr(0x827B8)),
+			esaka_range   = mem.r32(char4 + 0x23750),
+			pow_up        = ((0xC == char) and 0x8C274 or (0x10 == char) and 0x8C29C or 0x8C24C),
+			pow_up_ext    = mem.r32(0x8C18C + char4),
+			effect        = -0x20 + fix_addr(0x95BEC),
+			chip_damage   = fix_addr(0x95CCC),
+			hitstun1      = fix_addr(0x95CCC),
+			hitstun2      = 0x16 + 0x2 + fix_addr(0x5AF7C),
+			blockstun     = 0x1A + 0x2 + fix_addr(0x5AF88),
+			bs_pow        = mem.r32(char4 + 0x85920),
+			bs_invincible = mem.r32(char4 + 0x85920) + 0x1,
+			sp_invincible = mem.r32(char4 + 0x8DE62),
+		}
+	end
+end
+
+-- 接触判定の取得
+local load_push_box             = function()
+	if chars[1].push_box then return end
+	-- キャラデータの押し合い判定を作成
+	-- キャラごとの4種類の判定データをロードする
+	for char = 1, #chars - 1 do
+		chars[char].push_box_mask = mem.r32(0x5C728 + (char << 2))
+		chars[char].push_box = {}
+		for _, addr in ipairs({ 0x5C9BC, 0x5CA7C, 0x5CB3C, 0x5CBFC }) do
+			local a2 = addr + (char << 3)
+			local y1, y2, x1, x2 = mem.r8i(a2 + 0x1), mem.r8i(a2 + 0x2), mem.r8i(a2 + 0x3), mem.r8i(a2 + 0x4)
+			chars[char].push_box[addr] = {
+				addr = addr,
+				id = 0,
+				type = box_types.push,
+				front = x1,
+				back = x2,
+				left = math.min(x1, x2),
+				right = math.max(x1, x2),
+				top = math.min(y1, y2),
+				bottom = math.max(y1, y2),
+			}
+			-- printf("char=%s addr=%x type=000 x1=%s x2=%s y1=%s y2=%s", char, a2, x1, x2, y1, y2)
 		end
+	end
+end
+
+local get_push_box              = function(p)
+	-- 家庭用 05C6D0 からの処理
+	local push_box = chars[p.char].push_box
+	if p.char == 0x5 and util.testbit(p.flag_c8, state_flag_c8._15) then
+		return push_box[0x5C9BC]
 	else
-		if box.left > 320 and box.left > box.right then
-			box.left = 0
-			box.over_left = true
+		if util.testbit(p.flag_c0, state_flag_c0._01) ~= true and p.pos_y ~= 0 then
+			if (p.flag_c8 & p.char_data.push_box_mask) ~= 0 then
+				return push_box[0x5CB3C]
+			elseif p.flag_c8 & 0xFFFF0000 == 0 then
+				return push_box[0x5CB3C]
+			else
+				return push_box[0x5CBFC]
+			end
 		end
+		return push_box[(p.flag_c0 & 0x14000046 ~= 0) and 0x5CA7C or 0x5C9BC]
 	end
-	if box.top > box.bottom then
-		if box.top > 224 then
-			box.top = 224
-			box.over_top = true
-		end
-	else
-		if box.bottom > 224 then
-			box.bottom = 0
-			box.over_bottom = true
-		end
-	end
+end
 
-	-- フレーム表示や自動ガードで使うため無効状態の判定を返す
-	if box.top == box.bottom and box.left == box.right then
-		box.visible = false
-	elseif box.type.type_check(p.hit, box) then
-		-- ビリーの旋風棍がヒット、ガードされると判定表示が消えてしまうので飛び道具は状態判断の対象から外す
-		-- ここの判断処理を省いても飛び道具が最大ヒットして無効になった時点で判定が消えるので悪影響はない
-		if is_fireball ~= true then
-			box.visible = false
-		end
-	end
-
-	if box.atk then
-		p.attack_id = box.id
-	end
-	if (box.type == box_type_base.a or box.type == box_type_base.aa) and
-		(is_fireball == true or (p.hit.harmless == false and p.hit.obsl_hit == false)) then
-		-- 攻撃中のフラグをたてる
-		p.attacking = true
-	end
-	if parry_boxies[box.type] == true then
-		-- 攻撃中のフラグをたてる
-		p.attacking = true
-	end
-	if box.type == box_type_base.da or box.type == box_type_base.daa or box.type == box_type_base.pda or box.type == box_type_base.pdaa then
-		p.dmmy_attacking = true
-	end
-	if box.type == box_type_base.aa or box.type == box_type_base.daa or box.type == box_type_base.paa or box.type == box_type_base.pdaa then
-		p.juggling = true
-	end
-	if box.type == box_type_base.v3 then
-		p.can_otg = true
-	end
-	if box.type == box_type_base.v4 then
-		p.can_juggle = true
-	end
-
-	box.fb_pos_x, box.fb_pos_y = pos_x, orig_posy
-	box.pos_x = p.is_fireball and math.floor(p.parent.pos - screen.left) or pos_x
-	box.pos_y = p.is_fireball and math.floor(p.parent.pos_y) or orig_posy
-
+local fix_throw_box_pos         = function(box)
+	box.left, box.right = box.x - box.left * box.flip_x, box.x - box.right * box.flip_x
+	box.bottom, box.top = box.y - box.bottom, box.y - box.top
 	return box
 end
-local get_reach = function(p, box, pos_x, pos_y)
+
+-- 通常投げ間合い
+-- 家庭用0x05D78Cからの処理
+local get_normal_throw_box      = function(p)
+	-- 相手が向き合いか背向けかで押し合い幅を解決して反映
+	local push_box, op_push_box = chars[p.char].push_box[0x5C9BC], chars[p.op.char].push_box[0x5C9BC]
+	local op_edge = (p.internal_side == p.op.internal_side) and op_push_box.back or op_push_box.front
+	local center = util.int16(((push_box.front - math.abs(op_edge)) * p.box_scale) >> 6)
+	local range = mem.r8(fix_addr(0x5D854) + p.char4)
+	return fix_throw_box_pos({
+		id = 0x100, -- dummy
+		type = box_types.normal_throw,
+		left = center - range,
+		right = center + range,
+		top = -0x05, -- 地上投げの範囲をわかりやすくする
+		bottom = 0x05,
+		x = p.pos - screen.left,
+		y = screen.top - p.pos_y - p.pos_z,
+		threshold = mem.r8(0x3A66C), -- 投げのしきい値 039FA4からの処理
+		flip_x = p.internal_side, -- 向き補正値
+	})
+end
+
+-- 必殺投げ間合い
+local get_special_throw_box     = function(p, id)
+	local a0 = 0x3A542 + (0xFFFF & (id << 3))
+	local top, bottom = mem.r16(a0 + 2), mem.r16(a0 + 4)
+	if id == 0xA then
+		top, bottom = 0x1FFF, 0x1FFF -- ダブルクラッチは上下無制限
+	elseif top + bottom == 0 then
+		top, bottom = 0x05, 0x05 -- 地上投げの範囲をわかりやすくする
+	end
+	return fix_throw_box_pos({
+		id = id,
+		type = box_types.special_throw,
+		left = -mem.r16(a0),
+		right = 0x0,
+		top = top,
+		bottom = -bottom,
+		x = p.pos - screen.left,
+		y = screen.top - p.pos_y - p.pos_z,
+		threshold = mem.r8(0x3A66C + (0xFF & id)), -- 投げのしきい値 039FA4からの処理
+		flip_x = p.internal_side,            -- 向き補正値
+	})
+end
+
+-- 空中投げ間合い
+-- MEMO: 0x060566(家庭用)のデータを読まずにハードコードにしている
+local get_air_throw_box         = function(p)
+	return fix_throw_box_pos({
+		id = 0x200, -- dummy
+		type = box_types.air_throw,
+		left = -0x30,
+		right = 0x0,
+		top = -0x20,
+		bottom = 0x20,
+		x = p.pos - screen.left,
+		y = screen.top - p.pos_y - p.pos_z,
+		threshold = 0,      -- 投げのしきい値
+		flip_x = p.internal_side, -- 向き補正値
+	})
+end
+
+local get_throwbox              = function(p, id)
+	if id == 0x100 then
+		return get_normal_throw_box(p)
+	elseif id == 0x200 then
+		return get_air_throw_box(p)
+	end
+	return get_special_throw_box(p, id)
+end
+
+local draw_hitbox               = function(box)
+	--util.printf("%s  %s", box.type.kind, box.type.enabled)
+	if box.type.enabled ~= true then return end
+	-- 背景なしの場合は判定の塗りつぶしをやめる
+	local outline, fill = box.type.outline, global.disp_bg and box.type.fill or 0
+	local x1, x2 = sort_ab(box.left, box.right)
+	local y1, y2 = sort_ab(box.top, box.bottom)
+	scr:draw_box(x1, y1, x1 - 1, y2, 0, outline)
+	scr:draw_box(x2, y1, x2 + 1, y2, 0, outline)
+	scr:draw_box(x1, y1, x2, y1 - 1, 0, outline)
+	scr:draw_box(x1, y2, x2, y2 + 1, outline, outline)
+	scr:draw_box(x1, y1, x2, y2, outline, fill)
+	--util.printf("%s  x1=%s x2=%s y1=%s y2=%s",  box.type.kind, x1, x2, y1, y2)
+end
+
+local draw_range                = function(range)
+	local label, flip_x, x, y, col = range.label, range.flip_x, range.x, range.y, range.within and 0xFFFFFF00 or 0xFFBBBBBB
+	local size = range.within == nil and global.axis_size or global.axis_size2 -- 範囲判定がないものは単純な座標とみなす
+	scr:draw_box(x, y - size, x + flip_x, y + size, 0, col)
+	scr:draw_box(x - size + flip_x, y, x + size + flip_x, y - 1, 0, col)
+	draw_ctext_with_shadow(x, y, label or "", col)
+end
+
+-- 0:攻撃無し 1:ガード継続小 2:ガード継続大
+local get_gd_strength           = function(p, data)
+	if p.is_fireball then return 1 end -- 飛び道具は無視
+	-- 家庭用0271FCからの処理
+	local cond2 = mem.r8(data)      -- ガード判断用 0のときは何もしていない
+	if mem.r8(p.addr.base + 0xA2) ~= 0 then
+		return 1
+	elseif cond2 ~= 0 then
+		local b2 = 0x80 == (0x80 & mem.r8(mem.r32(0x8C9E2 + p.char4) + cond2))
+		return b2 and 2 or 1
+	end
+	return 0
+end
+
+-- 判定枠のチェック処理種類
+local hitbox_possible_map       = {
+	[0x01311C] = possible_types.none,   -- 常に判定しない
+	[0x012FF0] = possible_types.same_line, -- → 013038 同一ライン同士なら判定する
+	[0x012FFE] = possible_types.both_line, -- → 013054 異なるライン同士でも判定する
+	[0x01300A] = possible_types.unknown, -- → 013018 不明
+	[0x012FE2] = possible_types.air_onry, -- → 012ff0 → 013038 相手が空中にいれば判定する
+}
+local get_hitbox_possibles      = function(id)
+	local possibles = {}
+	for k, addr_or_func in pairs(hitbox_possibles) do
+		local ret = possible_types.none
+		if type(addr_or_func) == "number" then
+			-- 家庭用版 012DBC~012F04,012F30~012F96のデータ取得処理をベースに判定＆属性チェック
+			local d2 = 0xFF & (id - 0x20)
+			if d2 >= 0 then ret = hitbox_possible_map[mem.r32(0x13120 + (mem.r8(addr_or_func + d2) << 2))] end
+		else
+			ret = addr_or_func(id)
+		end
+		if possible_types.none ~= ret then possibles[k] = ret end
+	end
+	return possibles
+end
+
+local box_with_bit_types        = {
+	-- 優先順で並べる
+	{ box_type = box_types.fake_juggle_fb,     attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fake | frame_attack_types.juggle },
+	{ box_type = box_types.fake_fireball,      attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fake },
+	{ box_type = box_types.fake_juggle,        attackbit = frame_attack_types.attacking | frame_attack_types.fake | frame_attack_types.juggle },
+	{ box_type = box_types.fake_attack,        attackbit = frame_attack_types.attacking | frame_attack_types.fake },
+
+	{ box_type = box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fullhit | frame_attack_types.juggle },
+	{ box_type = box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.obsolute | frame_attack_types.juggle },
+	{ box_type = box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.harmless | frame_attack_types.juggle },
+	{ box_type = box_types.juggle_fireball,    attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.juggle },
+	{ box_type = box_types.harmless_fireball,  attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fullhit },
+	{ box_type = box_types.harmless_fireball,  attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.obsolute },
+	{ box_type = box_types.harmless_fireball,  attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.harmless },
+	{ box_type = box_types.fireball,           attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.attacking },
+	{ box_type = box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.fullhit | frame_attack_types.juggle },
+	{ box_type = box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.harmless | frame_attack_types.juggle },
+	{ box_type = box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.obsolute | frame_attack_types.juggle },
+	{ box_type = box_types.juggle,             attackbit = frame_attack_types.attacking | frame_attack_types.juggle },
+	{ box_type = box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.fullhit },
+	{ box_type = box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.obsolute },
+	{ box_type = box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.harmless },
+	{ box_type = box_types.attack,             attackbit = frame_attack_types.attacking },
+}
+local fix_box_type              = function(p, box)
+	local type = p.in_sway_line and box.sway_type or box.type
+	if type ~= box_types.attack then return type end
+	-- TODO 多段技の状態
+	p.max_hit_dn = p.max_hit_dn or 0
+	if p.max_hit_dn > 1 or p.max_hit_dn == 0 or (p.char == 0x4 and p.attack == 0x16) then
+	end
+	-- TODO つかみ技はダメージ加算タイミングがわかるようにする
+	if util.testbit(p.flag_cc, state_flag_cc.grabbing) and p.op.last_damage_scaled ~= 0xFF then
+	end
+	for _, item in ipairs(box_with_bit_types) do
+		if util.testbit(p.attackbit & 0x7F, item.attackbit, true) then return item.box_type end
+	end
+	return box_with_bit_types[#box_with_bit_types].box_type
+end
+
+local get_reach                 = function(p, box, pos_x, pos_y)
 	local top_reach    = pos_y - math.min(box.top, box.bottom)
 	local bottom_reach = pos_y - math.max(box.top, box.bottom)
 	local front_reach, back_reach
 
-	local flip_x = p.hit.flip_x == 1
+	local flip_x       = p.hit.flip_x == 1
 	-- 野猿狩りだけ左右反対
 	if p.is_fireball and (p.act == 0x277 or p.act == 0x27c) and p.parent.char == 0x6 then
-		flip_x = not flip_x 
+		flip_x = not flip_x
 	end
 	if flip_x then
 		front_reach = math.max(box.left, box.right) - pos_x
@@ -5006,7 +1446,7 @@ local get_reach = function(p, box, pos_x, pos_y)
 	end
 	local reach_data = {
 		front       = math.floor(front_reach), -- キャラ本体座標からの前のリーチ
-		back        = math.floor(back_reach), -- キャラ本体座標からの後のリーチ
+		back        = math.floor(back_reach),  -- キャラ本体座標からの後のリーチ
 		top         = math.floor(top_reach) - 24, -- キャラ本体座標からの上のリーチ
 		bottom      = math.floor(bottom_reach) - 24, -- キャラ本体座標からの下のリーチ
 		asis_front  = math.floor(asis_front_reach),
@@ -5018,42 +1458,14 @@ local get_reach = function(p, box, pos_x, pos_y)
 	if p.is_fireball then
 		fix_pos_y = p.pos_y
 	else
-		fix_pos_y = testbit(p.flag_c4, flag_c4_types.hop | flag_c4_types.jump) == true and p.pos_miny or p.pos_y
+		fix_pos_y = util.testbit(p.flag_c4, state_flag_c4.hop | state_flag_c4.jump) == true and p.pos_miny or p.pos_y
 	end
 	reach_data.real_top = reach_data.top + fix_pos_y    -- 実際の上のリーチ
 	reach_data.real_bottom = reach_data.bottom + fix_pos_y -- 実際の上のリーチ
 	return reach_data
 end
 
-local in_range = function(top, bottom, atop, abottom)
-	if abottom <= top and top <= atop then
-		return true
-	elseif abottom <= bottom and bottom <= atop then
-		return true
-	end
-	return false
-end
-local block_types = {
-	high = 2 ^ 0,        -- 上ガード
-	high_tung = 2 ^ 1,   -- タンのみ上ガードできる位置
-	high_low = 2 ^ 2,    -- 上ガードだけど上ガードできない位置
-	low = 2 ^ 3,         -- 上ガードだけど上ガードできない位置
-	air = 2 ^ 4,         -- 空中ガード
-	sway_high = 2 ^ 5,   -- スウェー上で上ガード
-	sway_high_tung = 2 ^ 6, -- スウェー上でタンのみ上ガードできる位置
-	sway_high_low = 2 ^ 7, -- スウェー上で上ガードだけど上ガードできない位置
-	sway_low = 2 ^ 8,    -- スウェー上で下ガード
-	sway_pass = 2 ^ 9,   -- スウェー無敵
-}
-local frame_hurt_types = {
-	invincible = 2 ^ 0,
-	gnd_hitstun = 2 ^ 1,
-	otg = 2 ^ 2,
-	juggle = 2 ^ 3,
-	wakeup = 2 ^ 4,
-	op_normal = 2 ^ 8,
-}
-local update_box_summary = function(p, box)
+local update_box_summary        = function(p, box)
 	local summary = p.hit_summary
 	if box then
 		local edge = nil
@@ -5063,101 +1475,101 @@ local update_box_summary = function(p, box)
 			box.reach = get_reach(p, box, box.pos_x, box.pos_y)
 		end
 		if box.atk then
-			summary.normal_hit   = summary.normal_hit or hit_box_procs.normal_hit(box.id)
-			summary.down_hit     = summary.down_hit or hit_box_procs.down_hit(box.id)
-			summary.air_hit      = summary.air_hit or hit_box_procs.air_hit(box.id)
-			summary.up_block     = summary.up_block or hit_box_procs.up_block(box.id)
-			summary.low_block    = summary.low_block or hit_box_procs.low_block(box.id)
-			summary.air_block    = summary.air_block or hit_box_procs.air_block(box.id)
-			summary.sway_up_blk  = summary.sway_up_blk or hit_box_procs.sway_up_blk(box.id)
-			summary.sway_low_blk = summary.sway_low_blk or hit_box_procs.sway_low_blk(box.id)
-			summary.j_atm_nage   = summary.j_atm_nage or hit_box_procs.j_atm_nage(box.id)
-			summary.urakumo      = summary.urakumo or hit_box_procs.urakumo(box.id)
-			summary.g_atm_uchi   = summary.g_atm_uchi or hit_box_procs.g_atm_uchi(box.id)
-			summary.gyakushu     = summary.gyakushu or hit_box_procs.gyakushu(box.id)
-			summary.sadomazo     = summary.sadomazo or hit_box_procs.sadomazo(box.id)
-			summary.phx_tw       = summary.phx_tw or hit_box_procs.phx_tw(box.id)
-			summary.baigaeshi    = summary.baigaeshi or hit_box_procs.baigaeshi(box.id)
-			summary.unknown1     = summary.unknown1 or hit_box_procs.unknown1(box.id)
-			summary.katsu        = summary.katsu or p.is_fireball and 3 <= p.prj_rank and hit_box_procs.katsu(box.id) or nil
-			summary.nullify      = summary.nullify or p.is_fireball and hit_box_procs.nullify(box.id) or nil
+			summary.normal_hit   = summary.normal_hit or hitbox_possibles.normal(box.id)
+			summary.down_hit     = summary.down_hit or hitbox_possibles.down(box.id)
+			summary.juggle       = summary.juggle or hitbox_possibles.juggle(box.id)
+			summary.up_block     = summary.up_block or hitbox_possibles.standing_block(box.id)
+			summary.low_block    = summary.low_block or hitbox_possibles.crouching_block(box.id)
+			summary.air_block    = summary.air_block or hitbox_possibles.air_block(box.id)
+			summary.sway_up_blk  = summary.sway_up_blk or hitbox_possibles.sway_standing(box.id)
+			summary.sway_low_blk = summary.sway_low_blk or hitbox_possibles.sway_crouching(box.id)
+			summary.j_atm_nage   = summary.j_atm_nage or hitbox_possibles.joudan_atemi(box.id)
+			summary.urakumo      = summary.urakumo or hitbox_possibles.urakumo(box.id)
+			summary.g_atm_uchi   = summary.g_atm_uchi or hitbox_possibles.gedan_atemi(box.id)
+			summary.gyakushu     = summary.gyakushu or hitbox_possibles.gyakushu(box.id)
+			summary.sadomazo     = summary.sadomazo or hitbox_possibles.sadomazo(box.id)
+			summary.phx_tw       = summary.phx_tw or hitbox_possibles.phoenix_throw(box.id)
+			summary.baigaeshi    = summary.baigaeshi or hitbox_possibles.baigaeshi(box.id)
+			summary.unknown1     = summary.unknown1 or hitbox_possibles.unknown1(box.id)
+			summary.katsu        = summary.katsu or p.is_fireball and 3 <= p.fireball_rank and hitbox_possibles.katsu(box.id) or nil
+			summary.nullify      = summary.nullify or p.is_fireball and hitbox_possibles.nullify(box.id) or nil
 			summary.bai_catch    = summary.bai_catch or p.bai_catch == true and "v" or nil
-			summary.box_addr     = summary.box_addr or pgm:read_u32(pgm:read_u8(0x094C2C + box.id) * 4 + 0x012CB4)
+			summary.box_addr     = summary.box_addr or mem.r32(mem.r8(0x094C2C + box.id) * 4 + 0x012CB4)
 		end
 
 		-- 攻撃判定に関係なく判定する
-		summary.attacking    = summary.attacking or
+		summary.attacking = summary.attacking or
 			attack_boxies[box.type] == true or
 			parry_boxies[box.type] == true or
 			(fake_boxies[box.type] == false and (
 				(p.is_fireball ~= true and p.attack ~= 0) or
-				(p.is_fireball and p.hitstop_id ~= 0)
+				(p.is_fireball and (p.hurt_attack or 0) ~= 0)
 			))
 		if p.is_fireball ~= true then
-			summary.lunging_throw = summary.lunging_throw or testbit(p.act_data.type, act_types.lunging_throw)
+			summary.lunging_throw = summary.lunging_throw or util.testbit(p.act_data.type, act_types.lunging_throw)
 		end
 
-		if box.type == box_type_base.a or -- 攻撃
-			box.type == box_type_base.pa then -- 飛び道具
+		if box.type == box_types.attack or -- 攻撃
+			box.type == box_types.fireball then -- 飛び道具
 			summary.hit = true
 			edge = summary.edge.hit
-		elseif box.type == box_type_base.da or -- 攻撃(無効)
-			box.type == box_type_base.pfa or -- 飛び道具(嘘)
-			box.type == box_type_base.pda then -- 飛び道具(無効)
+		elseif box.type == box_types.harmless_attack or -- 攻撃(無効)
+			box.type == box_types.fake_fireball or -- 飛び道具(嘘)
+			box.type == box_types.harmless_fireball then -- 飛び道具(無効)
 			edge = summary.edge.hit
-		elseif box.type == box_type_base.aa or -- 攻撃(空中追撃可)
-			box.type == box_type_base.paa then -- 飛び道具(空中追撃可)
+		elseif box.type == box_types.juggle or    -- 攻撃(空中追撃可)
+			box.type == box_types.juggle_fireball then -- 飛び道具(空中追撃可)
 			summary.hit = true
 			summary.juggle = true
 			edge = summary.edge.hit
-		elseif box.type == box_type_base.daa or -- 攻撃(無効、空中追撃可)
-			box.type == box_type_base.pfaa or -- 飛び道具(嘘、空中追撃可)
-			box.type == box_type_base.pdaa then -- 飛び道具(無効、空中追撃可)
+		elseif box.type == box_types.harmless_juggle or -- 攻撃(無効、空中追撃可)
+			box.type == box_types.fake_juggle_fb or -- 飛び道具(嘘、空中追撃可)
+			box.type == box_types.harmless_juggle_fb then -- 飛び道具(無効、空中追撃可)
 			edge = summary.edge.hit
-		elseif box.type == box_type_base.t then -- 通常投げ
+		elseif box.type == box_types.normal_throw then -- 通常投げ
 			summary.n_throw = true
 			summary.tw_threshold = p.tw_threshold
 			edge = summary.edge.throw
-		elseif box.type == box_type_base.at then -- 空中投げ
+		elseif box.type == box_types.special_throw then -- 空中投げ
 			summary.air_throw = true
 			summary.tw_threshold = p.tw_threshold
 			edge = summary.edge.throw
-		elseif box.type == box_type_base.pt then -- 必殺技投げ
+		elseif box.type == box_types.air_throw then -- 必殺技投げ
 			summary.sp_throw     = true
 			summary.sp_throw_id  = p.sp_throw_id
 			summary.tw_threshold = p.tw_threshold
 			edge                 = summary.edge.throw
-		elseif box.type == box_type_base.v1 or -- 食らい1
-			box.type == box_type_base.v2 then -- 食らい2
+		elseif box.type == box_types.hurt1 or -- 食らい1
+			box.type == box_types.hurt2 then -- 食らい2
 			summary.hurt = true
 			edge = summary.edge.hurt
-		elseif box.type == box_type_base.v3 then -- 食らい(ダウン追撃のみ可)
+		elseif box.type == box_types.down_otg then -- 食らい(ダウン追撃のみ可)
 			summary.hurt = true
 			edge = summary.edge.hurt
-		elseif box.type == box_type_base.v4 then -- 食らい(空中追撃のみ可)
+		elseif box.type == box_types.launch then -- 食らい(空中追撃のみ可)
 			summary.hurt = true
 			edge = summary.edge.hurt
-		elseif box.type == box_type_base.v6 then -- 食らい(対ライン上攻撃)
+		elseif box.type == box_types.hurt3 then -- 食らい(対ライン上攻撃)
 			summary.hurt = true
 			edge = summary.edge.hurt
-		elseif box.type == box_type_base.x1 then -- 食らい(対ライン下攻撃)
+		elseif box.type == box_types.hurt4 then -- 食らい(対ライン下攻撃)
 			summary.hurt = true
 			edge = summary.edge.hurt
-		elseif box.type == box_type_base.sv1 or -- 食らい1(スウェー中)
-			box.type == box_type_base.sv2 then -- 食らい2(スウェー中)
+		elseif box.type == box_types.sway_hurt1 or -- 食らい1(スウェー中)
+			box.type == box_types.sway_hurt2 then -- 食らい2(スウェー中)
 			edge = summary.edge.hurt
-		elseif box.type == box_type_base.g1 or -- 立ガード
-			box.type == box_type_base.g2 or -- 屈ガード
-			box.type == box_type_base.g3 then -- 空中ガード
+		elseif box.type == box_types.block_overhead or -- 立ガード
+			box.type == box_types.block_low or   -- 屈ガード
+			box.type == box_types.block_air then -- 空中ガード
 			summary.block = true
 			edge = summary.edge.block
-		elseif box.type == box_type_base.g4 or -- 上段当身投げ
-			box.type == box_type_base.g5 or -- 裏雲隠し
-			box.type == box_type_base.g6 or -- 下段当身打ち
-			box.type == box_type_base.g7 or -- 必勝逆襲拳
-			box.type == box_type_base.g8 or -- サドマゾ
-			box.type == box_type_base.g9 or -- 倍返し
-			box.type == box_type_base.g10 then -- フェニックススルー
+		elseif box.type == box_types.joudan_atemi or -- 上段当身投げ
+			box.type == box_types.urakumo_kakushi or -- 裏雲隠し
+			box.type == box_types.gedan_atemiuchi or -- 下段当身打ち
+			box.type == box_types.gyakusyuken or -- 必勝逆襲拳
+			box.type == box_types.sadomazo or  -- サドマゾ
+			box.type == box_types.baigaeshi or -- 倍返し
+			box.type == box_types.phoenix_throw then -- フェニックススルー
 			summary.parry = true
 			edge = summary.edge.parry
 		end
@@ -5175,12 +1587,12 @@ local update_box_summary = function(p, box)
 				hurtbit = hurtbit | frame_hurt_types.otg
 			end
 			if p.pos_frc_y == 0 and p.pos_y == 0 and
-				testbit(p.flag_cc, flag_cc_types._10 | flag_cc_types._12 | flag_cc_types._15 | flag_cc_types._31) then
+				util.testbit(p.flag_cc, state_flag_cc._10 | state_flag_cc._12 | state_flag_cc._15 | state_flag_cc._31) then
 				hurtbit = hurtbit | frame_hurt_types.gnd_hitstun
 			end
 			if p.has_hurt ~= false then
 				hurtbit = hurtbit | frame_hurt_types.invincible
-				if testbit(p.flag_cc, flag_cc_types._08) then
+				if util.testbit(p.flag_cc, state_flag_cc._08) then
 					hurtbit = hurtbit | frame_hurt_types.wakeup
 				end
 			end
@@ -5228,13 +1640,13 @@ local update_box_summary = function(p, box)
 				local info = box.info
 
 				local blockbit = 0
-				if summary.air_block ~= hit_proc_types.none then
+				if summary.air_block ~= possible_types.none then
 					blockbit = blockbit | block_types.air
 				end
-				if summary.low_block ~= hit_proc_types.none then
+				if summary.low_block ~= possible_types.none then
 					blockbit = blockbit | block_types.low
 				end
-				if summary.up_block ~= hit_proc_types.none then
+				if summary.up_block ~= possible_types.none then
 					if box.over_top ~= true and real_top <= 36 then
 						blockbit = blockbit | block_types.high_low
 						-- printf("high_low %s", real_top)
@@ -5246,8 +1658,8 @@ local update_box_summary = function(p, box)
 						-- printf("high %s", real_top)
 					end
 				end
-				if p.sway_status == 0 and summary.normal_hit == hit_proc_types.diff_line then
-					if summary.sway_up_blk == hit_proc_types.diff_line then
+				if p.sway_status == 0 and summary.normal_hit == possible_types.diff_line then
+					if summary.sway_up_blk == possible_types.diff_line then
 						if box.over_top ~= true and real_top <= 48 then
 							-- 対スウェー全キャラ上段ガード不能
 							blockbit = blockbit | block_types.sway_high_low
@@ -5257,7 +1669,7 @@ local update_box_summary = function(p, box)
 							blockbit = blockbit | block_types.sway_high
 						end
 					end
-					if summary.sway_low_blk == hit_proc_types.diff_line then
+					if summary.sway_low_blk == possible_types.diff_line then
 						blockbit = blockbit | block_types.sway_low
 					end
 				else
@@ -5330,292 +1742,124 @@ local update_box_summary = function(p, box)
 				summary.hurt_inv = hurt_inv_type.get(p, edge.real_top, edge.real_bottom, box)
 			end
 		end
-
-		if box.atk then
-			--[[
-			local memo = ""
-			memo = memo .. " nml=" .. (summary.normal_hit or "-")
-			memo = memo .. " dwn=" .. (summary.down_hit or "-")
-			memo = memo .. " air=" .. (summary.air_hit or "-")
-			memo = memo .. " ugd=" .. (summary.up_block or "-")
-			memo = memo .. " lgd=" .. (summary.low_block or "-")
-			memo = memo .. " agd=" .. (summary.air_block or "-")
-			memo = memo .. " sugd=" .. (summary.sway_up_blk or "-")
-			memo = memo .. " slgd=" .. (summary.sway_low_blk or "-")
-			memo = memo .. " jatm=" .. (summary.j_atm_nage or "-")
-			memo = memo .. " urkm=" .. (summary.urakumo or "-")
-			memo = memo .. " gatm=" .. (summary.g_atm_uchi or "-")
-			memo = memo .. " gsyu=" .. (summary.gyakushu or "-")
-			memo = memo .. " sdmz=" .. (summary.sadomazo or "-")
-			memo = memo .. " phx=" .. (summary.phx_tw or "-")
-			memo = memo .. " bai=" .. (summary.baigaeshi or "-")
-			memo = memo .. " ?1=" .. (summary.unknown1 or "-")
-			memo = memo .. " catch=" .. (summary.bai_catch or "-")
-
-			-- ログ用
-			box.log_txt = string.format(
-				"hit %6x %3x %3x %2s %3s %2x %2x %2x %s %x %2s %4s %4s %4s %2s %2s/%2s %3s %s %2s %2s %2s %2s %2s %2s %2s %2s %2x %3s " .. memo,
-				p.addr.base,          -- 1P:100400 2P:100500 1P弾:100600 2P弾:100700 1P弾:100800 2P弾:100900 1P弾:100A00 2P弾:100B00
-				p.act,                --
-				p.acta,               --
-				p.act_count,          --
-				p.act_frame,          --
-				p.act_contact,        --
-				p.attack,             --
-				p.hitstop_id,         -- ガード硬直のID
-				p.gd_strength,        -- 相手のガード持続の種類
-				box.id,               -- 判定のID
-				p.hit.harmless and "hm" or "", -- 無害化
-				p.hit.fake_hit and "fake" or "", -- 嘘判定
-				p.hit.obsl_hit and "obsl" or "", -- 嘘判定
-				p.hit.full_hit and "full" or "", -- 最大ヒット
-				p.hit.harmless2 and "h2" or "", -- 無害化
-				p.hit.max_hit_nm,     -- p.act_frame中の行動最大ヒット 分子
-				p.hit.max_hit_dn,     -- p.act_frame中の行動最大ヒット 分母
-				p.pure_dmg,           -- 補正前攻撃力 %3s
-				p.chip_dmg_type.calc(p.pure_dmg), -- 補正前削りダメージ %s
-				p.chip_dmg_type.name, -- 削り補正値 %4s
-				p.hitstop,            -- ヒットストップ %2s
-				p.hitstop_gd,         -- ガード時ヒットストップ %2s
-				p.hitstun,            -- ヒット後硬直F %2s
-				p.blockstun,          -- ガード後硬直F %2s
-				p.effect,             -- ヒット効果 %2s
-				p.pure_st,            -- 気絶値 %2s
-				p.pure_st_tm,         -- 気絶タイマー %2s
-				p.prj_rank,           -- 飛び道具の強さ
-				p.esaka_range         -- 詠酒範囲
-			)
-			]]
-		elseif box.type.type_check == type_ck_gd then
-			--[[
-			box.log_txt = string.format("block %6x %x", p.addr.base, box.id)
-			]]
-		end
 	end
 	return box
 end
 
-local new_throwbox = function(p, box, type)
-	-- print("a", box.opp_id, box.top, box.bottom, p.hit.flip_x)
-	p.throwing      = true
-	box.flat_throw  = box.top == nil
-	box.top         = box.top or box.pos_y - global.throwbox_height
-	box.left        = box.pos_x + (box.left or 0)
-	box.right       = box.pos_x + (box.right or 0)
-	box.top         = box.top and box.pos_y - box.top             --air throw
-	box.bottom      = box.bottom and (box.pos_y - box.bottom) or screen.top - p.hit.pos_z
-	box.type        = box.type or box_type_base.t
-	box.visible     = true
-	-- print("b", box.opp_id, box.top, box.bottom, p.hit.flip_x)
-	box.asis_top    = box.top
-	box.asis_bottom = box.bottom
-	box.asis_left   = box.left
-	box.asis_right  = box.right
-	box.type        = type
-	-- printf("lunging_throw %s %s", throw_boxies[box.type], box.type)
-	local base      = ((p.addr.base - 0x100400) / 0x100)
-	box.key         = string.format("t %x %x %s %s %s %s", base, box.id, box.top, box.bottom, box.left, box.right or 0)
-	return box
-end
+-- 遠近間合い取得
+local load_close_far            = function() 
+	if chars[1].close_far then return end
+	-- 地上通常技の近距離間合い 家庭用02DD02からの処理
+	for org_char = 1, #chars - 1 do
+		local char                = org_char - 1
+		local abc_offset          = mem.close_far_offset + (char * 4)
+		local d_offset            = mem.close_far_offset_d + (char * 2)
+		-- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
+		chars[org_char].close_far = {
+			[0x00] = {
+				A = { x1 = 0, x2 = mem.r8(abc_offset) },
+				B = { x1 = 0, x2 = mem.r8(abc_offset + 1) },
+				C = { x1 = 0, x2 = mem.r8(abc_offset + 2) },
+				D = { x1 = 0, x2 = mem.r16(d_offset) },
+			},
+			[0x01] = {},
+			[0x82] = {},
+		}
+	end
 
--- 1:右向き -1:左向き
-local get_flip_x = function(p)
-	local obj_base = p.addr.base
-	local flip_x = pgm:read_i16(obj_base + 0x6A) < 0 and 1 or 0
-	flip_x = flip_x ~ (pgm:read_u8(obj_base + 0x71) & 1)
-	flip_x = flip_x > 0 and 1 or -1
-	return flip_x
-end
-
--- 投げ間合いで使う立ち状態の押し合い判定
--- 家庭用0x05D78Cからの処理
-local get_push_range = function(p, fix)
-	local d5 = pgm:read_u8(fix + fix_bp_addr(0x05C99C) + p.char_8times)
-	if fix == 0x3 then
-		d5 = 0xFF00 + d5
-		if 0 > p.side then -- 位置がマイナスなら
-			d5 = 0x10000 - d5 -- NEG
+	-- 対スウェーライン攻撃の近距離間合い
+	local get_lmo_range_internal = function(ret, name, d0, d1, incl_last)
+		local decd1 = util.int16tofloat(d1)
+		local intd1 = math.floor(decd1)
+		local x1, x2 = 0, 0
+		for d = 1, intd1 do
+			x2 = d * d0
+			ret[name .. d - 1] = { x1 = x1, x2 = x2 - 1 }
+			x1 = x2
 		end
+		if incl_last then
+			ret[name .. intd1] = { x1 = x1, x2 = math.floor(d0 * decd1) } -- 1Fあたりの最大移動量になる距離
+		end
+		return ret
 	end
-	d5 = 0xFFFF & (d5 + d5) -- 2倍値に
-	d5 = 0xFFFF & (d5 + d5) -- さらに2倍値に
-	return d5
-end
-
--- 対スウェーライン攻撃の近距離間合い
--- 地上通常技の近距離間合い
--- char 0=テリー
-local cache_close_far_pos = {}
-local get_close_far_pos = function(char)
-	if cache_close_far_pos[char] then
-		return cache_close_far_pos[char]
-	end
-	local org_char                = char
-	char                          = char - 1
-	local abc_offset              = mem.close_far_offset + (char * 4)
-	-- 家庭用02DD02からの処理
-	local d_offset                = mem.close_far_offset_d + (char * 2)
-	local ret                     = {
-		a = { x1 = 0, x2 = pgm:read_u8(abc_offset) },
-		b = { x1 = 0, x2 = pgm:read_u8(abc_offset + 1) },
-		c = { x1 = 0, x2 = pgm:read_u8(abc_offset + 2) },
-		d = { x1 = 0, x2 = pgm:read_u16(d_offset) },
-	}
-	cache_close_far_pos[org_char] = ret
-	return ret
-end
-
-local get_lmo_range_internal = function(ret, name, d0, d1, incl_last)
-	local decd1 = int16tofloat(d1)
-	local intd1 = math.floor(decd1)
-	local x1, x2 = 0, 0
-	for d = 1, intd1 do
-		x2 = d * d0
-		ret[name .. d - 1] = { x1 = x1, x2 = x2 - 1 }
-		x1 = x2
-	end
-	if incl_last then
-		ret[name .. intd1] = { x1 = x1, x2 = math.floor(d0 * decd1) } -- 1Fあたりの最大移動量になる距離
-	end
-	return ret
-end
-
-local cache_close_far_pos_lmo = {}
-local get_close_far_pos_line_move_attack = function(char, logging)
-	if cache_close_far_pos_lmo[char] then
-		return cache_close_far_pos_lmo[char]
-	end
-
 	-- 家庭用2EC72,2EDEE,2E1FEからの処理
-	local offset = 0x2EE06
-	local d1 = 0x2A000 -- 整数部上部4バイト、少数部下部4バイト
-	local decd1 = int16tofloat(d1)
-	local ret = {}
-	-- 0:近A 1:遠A 2:近B 3:遠B 4:近C 5:遠C
-	for i, act_name in ipairs({ "近A", "遠A", "近B", "遠B", "近C", "遠C" }) do
-		local d0 = pgm:read_u8(pgm:read_u32(offset + (i - 1) * 4) + char * 6)
+	for org_char = 1, #chars - 1 do
+		local ret = {}
 		-- データが近距離、遠距離の2種類しかないのと実質的に意味があるのが近距離のものなので最初のデータだけ返す
-		if i == 1 then
-			get_lmo_range_internal(ret, "", d0, d1, true)
-			ret["近"] = { x1 = 0, x2 = 72 } -- 近距離攻撃になる距離
-
-			if char == 6 then
-				-- 渦炎陣
-				get_lmo_range_internal(ret, "必", 24, 0x40000)
-			elseif char == 14 then
-				-- クロスヘッドスピン
-				get_lmo_range_internal(ret, "必", 24, 0x80000)
+		-- 0x0:近A 0x1:遠A 0x2:近B 0x3:遠B 0x4:近C 0x5:遠C
+		get_lmo_range_internal(ret, "", mem.r8(mem.r32(0x2EE06 + 0x0 * 4) + org_char * 6), 0x2A000, true)
+		ret["近"] = { x1 = 0, x2 = 72 } -- 近距離の対メインライン攻撃になる距離
+		if org_char == 6 then
+			get_lmo_range_internal(ret, "必", 24, 0x40000) -- 渦炎陣
+		elseif org_char == 14 then
+			get_lmo_range_internal(ret, "必", 24, 0x80000) -- クロスヘッドスピン
+		end
+		-- printf("%s %s %x %s %x %s", chars[char].name, act_name, d0, d0, d1, decd1)
+		chars[org_char].close_far[0x80] = ret
+	end
+end
+local reset_memory_tap = function(enabled)
+	if not global.holder then return end
+	if enabled ~= true and global.holder.on == true then
+		for _, tap in ipairs(global.holder.taps) do tap:remove() end
+		global.holder.on = false
+	elseif enabled == true and global.holder.on ~= true then
+		for _, tap in ipairs(global.holder.taps) do tap:reinstall() end
+		global.holder.on = true
+	end
+end
+local load_memory_tap           = function(wps) -- tapの仕込み
+	if global.holder then
+		reset_memory_tap(true)
+		return
+	end
+	global.holder = { on = true, taps = {} }
+	for _, p in ipairs(wps) do
+		for _, k in ipairs({ "wp8", "wp16", "wp32", "rp8", "rp16", "rp32", }) do
+			for any, cb in pairs(p[k] or {}) do
+				local addr = type(any) == "number" and any or any.addr
+				local filter = type(any) == "number" and {} or not any.filter and {} or type(any.filter) == "table" and any.filter or type(any.filter) == "number" and { any.filter }
+				---@diagnostic disable-next-line: redundant-parameter
+				mem[k](addr > 0xFF and addr or ((p.addr and p.addr.base) + addr), cb, filter)
 			end
 		end
-		if logging then
-			printf("%s %s %x %s %x %s", chars[char].name, act_name, d0, d0, d1, decd1)
-		end
 	end
-	cache_close_far_pos_lmo[char] = ret
-	return ret
+end
+
+local apply_attack_infos        = function(p, id, base_addr)
+	--[[ ヒット効果、削り補正、硬直
+	一動作で複数の攻撃判定を持っていてもIDの値は同じになる
+	058232(家庭用版)からの処理
+	1004E9のデータ＝5C83Eでセット 技ID
+	1004E9のデータ-0x20 + 0x95C0C のデータがヒット効果の元ネタ D0
+	D0 = 0x9だったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
+	D0 = 0xAだったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
+	D0 x 4 + 579da
+	d0 = fix_addr(0x0579DA + d0 * 4) --0x0579DA から4バイトのデータの並びがヒット効果の処理アドレスになる
+	]]
+	p.effect        = mem.r8(id + base_addr.effect)
+	-- 削りダメージ計算種別取得 05B2A4 からの処理
+	p.chip_dmg_type = data.chip_dmg_type_tbl[(0xF & mem.r8(base_addr.chip_damage + id)) + 1]
+	p.chip_dmg      = p.chip_dmg_type.calc(p.pure_dmg)
+	-- 硬直時間取得 05AF7C(家庭用版)からの処理
+	local d2        = 0xF & mem.r8(id + base_addr.hitstun1)
+	p.hitstun       = mem.r8(base_addr.hitstun2 + d2) + 1 + 3 -- ヒット硬直
+	p.blockstun     = mem.r8(base_addr.blockstun + d2) + 1 + 2 -- ガード硬直
 end
 
 -- 当たり判定用のキャラ情報更新と判定表示用の情報作成
-local update_object = function(p)
-	local obj_base = p.addr.base
-	p.hit.pos_x    = p.pos - screen.left
-	if p.min_pos then
-		p.hit.min_pos_x = p.min_pos - screen.left
-	else
-		p.hit.min_pos_x = nil
-	end
-	if p.max_pos then
-		p.hit.max_pos_x = p.max_pos - screen.left
-	else
-		p.hit.max_pos_x = nil
-	end
-	p.hit.pos_z      = p.pos_z
-	p.hit.old_pos_y  = p.hit.pos_y
-	p.hit.pos_y      = screen.top - p.pos_y - p.hit.pos_z
-	p.hit.on         = pgm:read_u32(obj_base)
-	p.hit.flip_x     = p.flip_x
-	p.hit.scale      = pgm:read_u8(obj_base + 0x73) + 1
-	p.hit.char_id    = pgm:read_u16(obj_base + 0x10)
-	p.hit.base       = obj_base
-	p.attacking      = false
-	p.dmmy_attacking = false
-	p.juggling       = false
-	p.can_juggle     = false
-	p.can_otg        = false
-	p.attack_id      = 0
-	p.effect         = 0
-	p.throwing       = false
-
-	-- ヒットするかどうか
-	if p.is_fireball then
-		p.hit.harmless = p.obsl_hit or p.full_hit or p.harmless2
-		p.hit.fake_hit = p.fake_hit
-	else
-		p.hit.harmless = p.obsl_hit or p.full_hit
-		p.hit.fake_hit = p.fake_hit or p.harmless2
-	end
-	p.hit.obsl_hit = p.obsl_hit
-	p.hit.full_hit = p.full_hit
-	p.hit.max_hit_dn = p.max_hit_dn
-	p.hit.max_hit_nm = p.max_hit_nm
-	p.hit.harmless2 = p.harmless2
-
-	-- 食らい判定かどうか
-	p.hit.vulnerable = false
-	if p.hit.vulnerable1 == 1 then
-		p.hit.vulnerable = true
-	elseif p.hit.vulnerable21 == 1 then
-		p.hit.vulnerable = p.hit.vulnerable22
-	end
-
-	-- 判定データ排他用のテーブル
-	local buffer = {}
-	for _, box in ipairs(p.buffer) do
-		table.insert(buffer, new_hitbox(p, box))
-	end
-	-- バッファ解放
-	p.buffer = nil
-	-- 通常投げ
-	if p.n_throw and p.n_throw.on == 0x1 then
-		table.insert(buffer, new_throwbox(p, p.n_throw, box_type_base.t))
-	end
-	-- 空投げ
-	if p.air_throw and p.air_throw.on == 0x1 then
-		table.insert(buffer, new_throwbox(p, p.air_throw, box_type_base.at))
-	end
-	-- 必殺投げ
-	if p.sp_throw and p.sp_throw.on == 0x1 then
-		table.insert(buffer, new_throwbox(p, p.sp_throw, box_type_base.pt))
-	end
-	for _, box in ipairs(buffer) do
-		if box.visible then
-			p.uniq_hitboxes[box.key] = box.type
-			update_box_summary(p, box)
-			table.insert(p.hitboxes, box)
-			-- 攻撃情報ログ
-			if global.log.atklog == true and box.log_txt ~= nil then
-				print(box.log_txt)
-			end
-		end
-	end
-
+local update_object             = function(p)
 	-- 判定から解決できない投げ用の設定
 	if p.is_fireball ~= true then
-		if (testbit(p.op.flag_cc,
-				flag_cc_types._03 | -- 必殺投げやられ
-				flag_cc_types._08 | -- 投げ派生やられ
-				flag_cc_types._09 | -- つかみ投げやられ
-				flag_cc_types._10 -- 投げられ
-			) or
-			(p.char == 0xE and p.attack == 0xCC) -- ポンピングマシーンヒット中
-		) and p.op.tmp_dmg ~= 0xFF then
+		if (util.testbit(p.op.flag_cc, state_flag_cc.thrown) or (p.char == 0xE and p.attack == 0xCC)) -- 投げられorポンピングマシーンヒット中
+			and p.op.last_damage_scaled ~= 0xFF then
 			p.attacking = true
 			p.hit_summary.attacking = true
 			if p.pure_dmg == 0 then
 				p.hit_summary.pure_dmg = p.old_pure_dmg
 			end
 		end
-		if testbit(p.act_data.type, act_types.lunging_throw) then
+		if util.testbit(p.act_data.type, act_types.lunging_throw) then
 			-- printf("%s %s %x %x", p.pure_dmg, p.old_pure_dmg, p.old_attack, p.attack)
 			if p.pure_dmg == 0 then
 				p.hit_summary.pure_dmg = p.old_pure_dmg
@@ -5623,62 +1867,45 @@ local update_object = function(p)
 		end
 	end
 
-	-- ヒット効果、削り補正、硬直
-	-- 一動作で複数の攻撃判定を持っていてもIDの値は同じになる
-	-- 058232(家庭用版)からの処理
-	-- 1004E9のデータ＝5C83Eでセット 技ID
-	-- 1004E9のデータ-0x20 + 0x95C0C のデータがヒット効果の元ネタ D0
-	-- D0 = 0x9だったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
-	-- D0 = 0xAだったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
-	-- D0 x 4 + 579da
-	-- d0 = fix_bp_addr(0x0579DA + d0 * 4) --0x0579DA から4バイトのデータの並びがヒット効果の処理アドレスになる
-	p.effect        = pgm:read_u8(p.attack_id - 0x20 + fix_bp_addr(0x95BEC))
-	-- 削りダメージ計算種別取得 05B2A4 からの処理
-	p.chip_dmg_type = get_chip_dmg_type(p.attack_id, pgm)
-	-- 硬直時間取得 05AF7C(家庭用版)からの処理
-	local d2        = 0xF & pgm:read_u8(p.attack_id + fix_bp_addr(0x95CCC))
-	p.hitstun       = pgm:read_u8(0x16 + 0x2 + fix_bp_addr(0x5AF7C) + d2) + 1 + 3 -- ヒット硬直
-	p.blockstun     = pgm:read_u8(0x1A + 0x2 + fix_bp_addr(0x5AF88) + d2) + 1 + 2 -- ガード硬直
-
 	-- 共通情報 判定ができてから作成
 	if (p.is_fireball and p.proc_active) or p.attack_flag then
-		local summary        = p.hit_summary
-		summary.attack       = summary.attack or p.attack                              -- 補正前攻撃力導出元ID
-		summary.pure_dmg     = summary.pure_dmg or p.pure_dmg                          -- 補正前攻撃力
-		summary.pure_st      = summary.pure_st or p.pure_st                            -- 気絶値
-		summary.pure_st_tm   = summary.pure_st_tm or p.pure_st_tm                      -- 気絶タイマー
-		summary.chip_dmg     = summary.chip_dmg or p.chip_dmg_type.calc(summary.pure_dmg) -- 削りダメージ
-		summary.chip_dmg_nm  = summary.chip_dmg_nm or p.chip_dmg_type.name             -- 削りダメージ名
-		summary.attack_id    = summary.attack_id or p.attack_id
-		summary.effect       = summary.effect or p.effect                              -- ヒット効果
-		summary.can_techrise = summary.can_techrise or p.can_techrise                  -- 受け身行動可否
-		summary.gd_strength  = summary.gd_strength or p.gd_strength                    -- 相手のガード持続の種類
-		summary.max_hit_nm   = summary.max_hit_nm or p.hit.max_hit_nm                  -- p.act_frame中の行動最大ヒット 分子
-		summary.max_hit_dn   = summary.max_hit_dn or p.hit.max_hit_dn                  -- p.act_frame中の行動最大ヒット 分母
-		summary.cancelable   = summary.cancelable or p.cancelable or 0                 -- キャンセル可否
-		summary.repeatable   = summary.repeatable or p.repeatable or false             -- 連キャン可否
-		summary.slide_atk    = summary.slide_atk or p.slide_atk                        -- ダッシュ滑り攻撃
-		summary.bs_atk       = summary.bs_atk or p.bs_atk                              -- ブレイクショット
-		summary.hitstun      = summary.hitstun or p.hitstun                            -- ヒット硬直
-		summary.blockstun    = summary.blockstun or p.blockstun                        -- ガード硬直
-		summary.hitstop      = summary.hitstop or p.hitstop                            -- ヒットストップ
-		summary.hitstop_gd   = summary.hitstop_gd or p.hitstop_gd                      -- ガード時ヒットストップ
+		local summary       = p.hit_summary
+		summary.attack      = summary.attack or p.attack                            -- 補正前攻撃力導出元ID
+		summary.pure_dmg    = summary.pure_dmg or p.pure_dmg                        -- 補正前攻撃力
+		summary.pure_st     = summary.pure_st or p.pure_st                          -- 気絶値
+		summary.pure_st_tm  = summary.pure_st_tm or p.pure_st_tm                    -- 気絶タイマー
+		summary.chip_dmg    = summary.chip_dmg or p.chip_dmg_type.calc(summary.pure_dmg) -- 削りダメージ
+		summary.chip_dmg_nm = summary.chip_dmg_nm or p.chip_dmg_type.name           -- 削りダメージ名
+		summary.attack_id   = summary.attack_id or p.attack_id
+		summary.effect      = summary.effect or p.effect                            -- ヒット効果
+		summary.forced_down = summary.forced_down or p.forced_down                  -- 受け身行動可否
+		summary.gd_strength = summary.gd_strength or p.gd_strength                  -- 相手のガード持続の種類
+		summary.max_hit_nm  = summary.max_hit_nm or p.hit.max_hit_nm                -- p.act_frame中の行動最大ヒット 分子
+		summary.max_hit_dn  = summary.max_hit_dn or p.hit.max_hit_dn                -- p.act_frame中の行動最大ヒット 分母
+		summary.cancelable  = summary.cancelable or p.cancelable or 0               -- キャンセル可否
+		summary.repeatable  = summary.repeatable or p.repeatable or false           -- 連キャン可否
+		summary.slide_atk   = summary.slide_atk or p.slide_atk                      -- ダッシュ滑り攻撃
+		summary.bs_atk      = summary.bs_atk or p.bs_atk                            -- ブレイクショット
+		summary.hitstun     = summary.hitstun or p.hitstun                          -- ヒット硬直
+		summary.blockstun   = summary.blockstun or p.blockstun                      -- ガード硬直
+		summary.hitstop     = summary.hitstop or p.hitstop                          -- ヒットストップ
+		summary.blockstop  = summary.blockstop or p.blockstop                    -- ガード時ヒットストップ
 		if p.is_fireball == true then
-			summary.prj_rank   = summary.prj_rank or p.prj_rank                        -- 飛び道具の強さ
-			summary.pow_up     = summary.pow_up or p.parent.pow_up                     -- 状態表示用パワー増加量空振り
-			summary.pow_up_hit = summary.pow_up_hit or p.parent.pow_up_hit             -- 状態表示用パワー増加量ヒット
-			summary.pow_up_gd  = summary.pow_up_gd or p.parent.pow_up_gd               -- 状態表示用パワー増加量ガード
+			summary.fireball_rank = summary.fireball_rank or p.fireball_rank        -- 飛び道具の強さ
+			summary.pow_up        = summary.pow_up or p.parent.pow_up               -- 状態表示用パワー増加量空振り
+			summary.pow_up_hit    = summary.pow_up_hit or p.parent.pow_up_hit       -- 状態表示用パワー増加量ヒット
+			summary.pow_up_gd     = summary.pow_up_gd or p.parent.pow_up_gd         -- 状態表示用パワー増加量ガード
 		else
-			summary.prj_rank   = nil                                                   -- 飛び道具の強さ
-			summary.pow_up     = summary.pow_up or p.pow_up                            -- 状態表示用パワー増加量空振り
-			summary.pow_up_hit = summary.pow_up_hit or p.pow_up_hit                    -- 状態表示用パワー増加量ヒット
-			summary.pow_up_gd  = summary.pow_up_gd or p.pow_up_gd                      -- 状態表示用パワー増加量ガード
+			summary.fireball_rank = nil                                             -- 飛び道具の強さ
+			summary.pow_up        = summary.pow_up or p.pow_up                      -- 状態表示用パワー増加量空振り
+			summary.pow_up_hit    = summary.pow_up_hit or p.pow_up_hit              -- 状態表示用パワー増加量ヒット
+			summary.pow_up_gd     = summary.pow_up_gd or p.pow_up_gd                -- 状態表示用パワー増加量ガード
 		end
-		summary.esaka_range = summary.esaka_range or p.esaka_range                     -- えさか範囲
+		summary.esaka_range = summary.esaka_range or p.esaka_range                  -- えさか範囲
 	end
 end
 
-local dummy_gd_type = {
+local dummy_gd_type             = {
 	none   = 1, -- なし
 	auto   = 2, -- オート
 	bs     = 3, -- ブレイクショット
@@ -5688,218 +1915,181 @@ local dummy_gd_type = {
 	random = 7, -- ランダム
 	force  = 8, -- 強制
 }
-local wakeup_type = {
+local wakeup_type               = {
 	none = 1, -- なし
 	rvs  = 2, -- リバーサル
 	tech = 3, -- テクニカルライズ
 	sway = 4, -- グランドスウェー
 	atk  = 5, -- 起き上がり攻撃
 }
-rbff2.startplugin = function()
-	-- プレイヤーの状態など
-	local players = {}
-	for i = 1, 2 do
+local rvs_wake_types            = util.new_set(wakeup_type.tech, wakeup_type.sway, wakeup_type.rvs)
+rbff2.startplugin               = function()
+	local players, all_wps, all_objects, all_fireballs, hitboxies, ranges = {}, {}, {}, {}, {}, {}
+	local hitboxies_order = function(b1, b2) return (b1.id < b2.id) end
+	local ranges_order = function(r1, r2) return (r1.within and 1 or -1) < (r2.within and 1 or -1) end
+	local find = function(sources, resolver) -- sourcesの要素をresolverを通して得た結果で最初の非nilの値を返す
+		local i, ii, p, a = 1, nil, nil, nil
+		return function()
+			while i <= #sources and p == nil do
+				i, ii, p, a = i + 1, i, resolver(sources[i]), sources[i]
+				if p then return ii, a, p end -- インデックス, sources要素, convert結果
+			end
+		end
+	end
+	local get_object_by_addr = function(addr, default) return all_objects[addr] or default end             -- ベースアドレスからオブジェクト解決
+	local get_object_by_reg = function(reg, default) return all_objects[mem.rg(reg, 0xFFFFFF)] or default end -- レジストリからオブジェクト解決
+	local now = function() return global.frame_number + 1 end
+	for i = 1, 2 do                                                                                        -- プレイヤーの状態など
 		local p1 = (i == 1)
 		local base = p1 and 0x100400 or 0x100500
 		players[i] = {
-			base                       = 0x0,
-			bases                      = {},
+			num               = i,
+			base              = 0x0,
+			bases             = {},
 
-			dummy_act                  = 1,         -- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
-			dummy_gd                   = dummy_gd_type.none, -- なし, オート, ブレイクショット, 1ヒットガード, 1ガード, 常時, ランダム, 強制
-			dummy_wakeup               = wakeup_type.none, -- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
+			dummy_act         = 1,                    -- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
+			dummy_gd          = dummy_gd_type.none,   -- なし, オート, ブレイクショット, 1ヒットガード, 1ガード, 常時, ランダム, 強制
+			dummy_wakeup      = wakeup_type.none,     -- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
 
-			dummy_bs                   = nil,       -- ランダムで選択されたブレイクショット
-			dummy_bs_list              = {},        -- ブレイクショットのコマンドテーブル上の技ID
-			dummy_bs_chr               = 0,         -- ブレイクショットの設定をした時のキャラID
-			bs_count                   = -1,        -- ブレイクショットの実施カウント
+			dummy_bs          = nil,                  -- ランダムで選択されたブレイクショット
+			dummy_bs_list     = {},                   -- ブレイクショットのコマンドテーブル上の技ID
+			dummy_bs_chr      = 0,                    -- ブレイクショットの設定をした時のキャラID
+			bs_count          = -1,                   -- ブレイクショットの実施カウント
 
-			dummy_rvs                  = nil,       -- ランダムで選択されたリバーサル
-			dummy_rvs_list             = {},        -- リバーサルのコマンドテーブル上の技ID
-			dummy_rvs_chr              = 0,         -- リバーサルの設定をした時のキャラID
-			rvs_count                  = -1,        -- リバーサルの実施カウント
-			gd_rvs_enabled             = false,     -- ガードリバーサルの実行可否
+			dummy_rvs         = nil,                  -- ランダムで選択されたリバーサル
+			dummy_rvs_list    = {},                   -- リバーサルのコマンドテーブル上の技ID
+			dummy_rvs_chr     = 0,                    -- リバーサルの設定をした時のキャラID
+			rvs_count         = -1,                   -- リバーサルの実施カウント
+			gd_rvs_enabled    = false,                -- ガードリバーサルの実行可否
 
-			life_rec                   = true,      -- 自動で体力回復させるときtrue
-			red                        = 2,         -- 体力設定     	--"最大", "赤", "ゼロ" ...
-			max                        = 1,         -- パワー設定       --"最大", "半分", "ゼロ" ...
-			disp_hitbox                = 2,         -- 判定表示
-			disp_range                 = 2,         -- 間合い表示
-			disp_base                  = false,     -- 処理のアドレスを表示するときtrue
-			disp_char                  = true,      -- キャラを画面表示するときtrue
-			disp_char_bps              = nil,
-			disp_dmg                   = true,      -- ダメージ表示するときtrue
-			disp_cmd                   = 2,         -- 入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
-			disp_frm                   = 4,         -- フレーム数表示する
-			disp_fbfrm                 = true,      -- 弾のフレーム数表示するときtrue
-			disp_stun                  = true,      -- 気絶表示
-			disp_sts                   = 3,         -- 状態表示 "OFF", "ON", "ON:小表示", "ON:大表示"
+			life_rec          = true,                 -- 自動で体力回復させるときtrue
+			red               = 2,                    -- 体力設定     	--"最大", "赤", "ゼロ" ...
+			max               = 1,                    -- パワー設定       --"最大", "半分", "ゼロ" ...
+			disp_hitbox       = true,                 -- 判定表示
+			disp_range        = true,                 -- 間合い表示
+			disp_base         = false,                -- 処理のアドレスを表示するときtrue
+			hide_char         = false,                -- キャラを画面表示しないときtrue
+			hide_phantasm     = false,                -- 残像を画面表示しないときtrue
+			disp_dmg          = true,                 -- ダメージ表示するときtrue
+			disp_cmd          = 2,                    -- 入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
+			disp_frm          = 4,                    -- フレーム数表示する
+			disp_fbfrm        = true,                 -- 弾のフレーム数表示するときtrue
+			disp_stun         = true,                 -- 気絶表示
+			disp_sts          = 3,                    -- 状態表示 "OFF", "ON", "ON:小表示", "ON:大表示"
 
-			dis_plain_shift            = false,     -- ライン送らない現象
+			dis_plain_shift   = false,                -- ライン送らない現象
 
-			no_hit                     = 0,         -- Nヒット目に空ぶるカウントのカウンタ
-			no_hit_limit               = 0,         -- Nヒット目に空ぶるカウントの上限
+			no_hit            = 0,                    -- Nヒット目に空ぶるカウントのカウンタ
+			no_hit_limit      = 0,                    -- Nヒット目に空ぶるカウントの上限
 
-			combo                      = 0,         -- 最近のコンボ数
-			last_combo                 = 0,
-			last_dmg                   = 0,         -- ダメージ
-			last_pow                   = 0,         -- コンボ表示用POWゲージ増加量
-			tmp_pow                    = 0,         -- コンボ表示用POWゲージ増加量
-			tmp_pow_rsv                = 0,         -- コンボ表示用POWゲージ増加量(予約値)
-			tmp_pow_atc                = 0,         -- コンボ表示用POWゲージ増加量(予約時の行動)
-			tmp_stun                   = 0,
-			tmp_st_timer               = 0,
-			dmg_scaling                = 1,
-			dmg_scl7                   = 0,
-			dmg_scl6                   = 0,
-			dmg_scl5                   = 0,
-			dmg_scl4                   = 0,
-			last_pure_dmg              = 0,
-			last_stun                  = 0,
-			last_st_timer              = 0,
-			last_normal_state          = true,
-			last_effects               = {},
-			life                       = 0, -- いまの体力
-			max_combo                  = 0, -- 最大コンボ数
-			max_dmg                    = 0,
-			max_combo_pow              = 0,
-			max_disp_stun              = 0,
-			max_st_timer               = 0,
-			mv_state                   = 0, -- 動作
-			old_combo                  = 0, -- 前フレームのコンボ数
-			last_combo_dmg             = 0,
-			last_combo_pow             = 0,
-			last_dmg_scaling           = 1,
-			last_combo_stun            = 0,
-			last_combo_st_timer        = 0,
-			old_state                  = 0, -- 前フレームのやられ状態
-			char                       = 0,
-			close_far                  = {
-				a = { x1 = 0, x2 = 0 },
-				b = { x1 = 0, x2 = 0 },
-				c = { x1 = 0, x2 = 0 },
-				d = { x1 = 0, x2 = 0 },
-			},
-			close_far_lma              = {
-				["1"] = { x1 = 0, x2 = 0 },
-				["2"] = { x1 = 0, x2 = 0 },
-				["M"] = { x1 = 0, x2 = 0 },
-				["C"] = { x1 = 0, x2 = 0 },
-			},
-			act                        = 0,
-			acta                       = 0,
-			atk_count                  = 0,
-			attack                     = 0, -- 攻撃中のみ変化
-			old_attack                 = 0,
-			hitstop_id                 = 0, -- ヒット/ガードしている相手側のattackと同値
-			attack_id                  = 0, -- 当たり判定ごとに設定されているID
-			effect                     = 0,
-			attacking                  = false, -- 攻撃判定発生中の場合true
-			dmmy_attacking             = false, -- ヒットしない攻撃判定発生中の場合true（嘘判定のぞく）
-			juggling                   = false, -- 空中追撃判定発生中の場合true
-			throwing                   = false, -- 投げ判定発生中の場合true
-			can_techrise               = false, -- 受け身行動可否
-			pow_up                     = 0, -- 状態表示用パワー増加量空振り
-			pow_up_hit                 = 0, -- 状態表示用パワー増加量ヒット
-			pow_up_gd                  = 0, -- 状態表示用パワー増加量ガード
-			pow_revenge                = 0, -- 状態表示用パワー増加量倍返し反射
-			pow_absorb                 = 0, -- 状態表示用パワー増加量倍返し吸収
-			hitstop                    = 0, -- 攻撃側のガード硬直
-			old_pos                    = 0, -- X座標
-			old_pos_frc                = 0, -- X座標少数部
-			pos                        = 0, -- X座標
-			pos_frc                    = 0, -- X座標少数部
-			old_posd                   = 0, -- X座標
-			posd                       = 0, -- X座標
-			poslr                      = "L", -- 右側か左側か
-			max_pos                    = 0, -- X座標最大
-			min_pos                    = 0, -- X座標最小
-			pos_y                      = 0, -- Y座標
-			pos_frc_y                  = 0, -- Y座標少数部
-			pos_miny                   = 0, -- Y座標の最小値
-			old_pos_y                  = 0, -- Y座標
-			old_pos_frc_y              = 0, -- Y座標少数部
-			old_in_air                 = false,
-			in_air                     = false,
-			chg_air_state              = 0, -- ジャンプの遷移ポイントかどうか
-			force_y_pos                = 1, -- Y座標強制
-			pos_z                      = 0, -- Z座標
-			old_pos_z                  = 0, -- Z座標
-			on_main_line               = 0, -- Z座標メインに移動した瞬間フレーム
-			on_sway_line               = 0, -- Z座標スウェイに移動した瞬間フレーム
-			in_sway_line               = false, -- Z座標
-			sway_status                = 0, --
-			side                       = 0, -- 向き
-			state                      = 0, -- いまのやられ状態
-			flag_c0                    = 0, -- 処理で使われているフラグ群
-			old_flag_c0                = 0, -- 処理で使われているフラグ群
-			flag_cc                    = 0, -- 処理で使われているフラグ群
-			old_flag_cc                = 0, -- 処理で使われているフラグ群
-			attack_flag                = false,
-			flag_c8                    = 0, -- 処理で使われているフラグ群
-			flag_d0                    = 0, -- 処理で使われているフラグ（硬直の判断用）
-			old_flag_d0                = 0, -- 処理で使われているフラグ（硬直の判断用）
-			tmp_combo                  = 0, -- 一次的なコンボ数
-			tmp_combo_dmg              = 0,
-			tmp_combo_pow              = 0,
-			last_combo_stun_offset     = 0,
-			last_combo_st_timer_offset = 0,
-			tmp_dmg                    = 0, -- ダメージが入ったフレーム
-			color                      = 0, -- カラー A=0x00 D=0x01
+			last_normal_state = true,
+			last_effects      = {},
+			life              = 0,   -- いまの体力
+			mv_state          = 0,   -- 動作
+			old_state         = 0,   -- 前フレームのやられ状態
+			char              = 0,
+			close_far         = {},
+			act               = 0,
+			acta              = 0,
+			atk_count         = 0,
+			attack            = 0,       -- 攻撃中のみ変化
+			old_attack        = 0,
+			attack_id         = 0,       -- 当たり判定ごとに設定されているID
+			effect            = 0,
+			attacking         = false,   -- 攻撃判定発生中の場合true
+			dmmy_attacking    = false,   -- ヒットしない攻撃判定発生中の場合true（嘘判定のぞく）
+			juggle            = false,   -- 空中追撃判定発生中の場合true
+			forced_down       = false,   -- 受け身行動可否
+			pow_up            = 0,       -- 状態表示用パワー増加量空振り
+			pow_up_hit        = 0,       -- 状態表示用パワー増加量ヒット
+			pow_up_gd         = 0,       -- 状態表示用パワー増加量ガード
+			pow_revenge       = 0,       -- 状態表示用パワー増加量倍返し反射
+			pow_absorb        = 0,       -- 状態表示用パワー増加量倍返し吸収
+			hitstop           = 0,       -- 攻撃側のガード硬直
+			old_pos           = 0,       -- X座標
+			old_pos_frc       = 0,       -- X座標少数部
+			pos               = 0,       -- X座標
+			pos_frc           = 0,       -- X座標少数部
+			old_posd          = 0,       -- X座標
+			posd              = 0,       -- X座標
+			poslr             = "L",     -- 右側か左側か
+			max_pos           = 0,       -- X座標最大
+			min_pos           = 0,       -- X座標最小
+			pos_y             = 0,       -- Y座標
+			pos_frc_y         = 0,       -- Y座標少数部
+			pos_miny          = 0,       -- Y座標の最小値
+			old_pos_y         = 0,       -- Y座標
+			old_pos_frc_y     = 0,       -- Y座標少数部
+			old_in_air        = false,
+			in_air            = false,
+			chg_air_state     = 0,       -- ジャンプの遷移ポイントかどうか
+			force_y_pos       = 1,       -- Y座標強制
+			pos_z             = 0,       -- Z座標
+			old_pos_z         = 0,       -- Z座標
+			on_main_line      = 0,       -- Z座標メインに移動した瞬間フレーム
+			on_sway_line      = 0,       -- Z座標スウェイに移動した瞬間フレーム
+			in_sway_line      = false,   -- Z座標
+			sway_status       = 0,       --
+			side              = 0,       -- 向き
+			state             = 0,       -- いまのやられ状態
+			flag_c0           = 0,       -- 処理で使われているフラグ群
+			old_flag_c0       = 0,       -- 処理で使われているフラグ群
+			flag_cc           = 0,       -- 処理で使われているフラグ群
+			old_flag_cc       = 0,       -- 処理で使われているフラグ群
+			attack_flag       = false,
+			flag_c8           = 0,       -- 処理で使われているフラグ群
+			flag_d0           = 0,       -- 処理で使われているフラグ（硬直の判断用）
+			old_flag_d0       = 0,       -- 処理で使われているフラグ（硬直の判断用）
+			color             = 0,       -- カラー A=0x00 D=0x01
 
-			frame_gap                  = 0,
-			last_frame_gap             = 0,
-			hist_frame_gap             = { 0 },
-			act_contact                = 0,
-			block1                     = 0, -- ガード時（硬直前後）フレームの判断用
-			on_block                   = 0, -- ガード時（硬直前）フレーム
-			on_block1                  = 0, -- ガード時（硬直後）フレーム
-			hit1                       = 0, -- ヒット時（硬直前後）フレームの判断用
-			on_hit                     = 0, -- ヒット時（硬直前）フレーム
-			on_hit1                    = 0, -- ヒット時（硬直後）フレーム
-			on_punish                  = 0,
-			on_wakeup                  = 0,
-			on_down                    = 0,
-			hit_skip                   = 0,
-			old_skip_frame             = false,
-			skip_frame                 = false,
-			last_blockstun             = 0,
-			last_hitstop               = 0,
+			frame_gap         = 0,
+			last_frame_gap    = 0,
+			hist_frame_gap    = { 0 },
+			block1            = 0,   -- ガード時（硬直前後）フレームの判断用
+			on_block          = 0,   -- ガード時（硬直前）フレーム
+			on_block1         = 0,   -- ガード時（硬直後）フレーム
+			hit1              = 0,   -- ヒット時（硬直前後）フレームの判断用
+			on_hit            = 0,   -- ヒット時（硬直前）フレーム
+			on_hit1           = 0,   -- ヒット時（硬直後）フレーム
+			on_punish         = 0,
+			on_wakeup         = 0,
+			on_down           = 0,
+			hit_skip          = 0,
+			old_skip_frame    = false,
+			skip_frame        = false,
 
-			knock_back1                = 0, -- のけぞり確認用1(色々)
-			knock_back2                = 0, -- のけぞり確認用2(裏雲隠し)
-			knock_back3                = 0, -- のけぞり確認用3(フェニックススルー)
-			old_knock_back1            = 0, -- のけぞり確認用1(色々)
-			old_knock_back2            = 0, -- のけぞり確認用2(裏雲隠し)
-			old_knock_back3            = 0, -- のけぞり確認用3(フェニックススルー)
-			fake_hit                   = false,
-			obsl_hit                   = false, -- 嘘判定チェック用
-			full_hit                   = false, -- 判定チェック用1
-			harmless2                  = false, -- 判定チェック用2 飛び道具専用
-			prj_rank                   = 0, -- 飛び道具の強さ
-			esaka_range                = 0, -- 詠酒の間合いチェック用
+			knock_back1       = 0,    -- のけぞり確認用1(色々)
+			knock_back2       = 0,    -- のけぞり確認用2(裏雲隠し)
+			knock_back3       = 0,    -- のけぞり確認用3(フェニックススルー)
+			konck_back4       = 0,    -- のけぞり確認用4(色々,リバサ表示判断用)
 
-			key_now                    = {}, -- 個別キー入力フレーム
-			key_pre                    = {}, -- 前フレームまでの個別キー入力フレーム
-			key_hist                   = {},
-			ggkey_hist                 = {},
-			key_frames                 = {},
-			act_frame                  = 0,
-			act_frames                 = {},
-			act_frames2                = {},
-			act_frames_total           = 0,
+			old_knock_back1   = 0,    -- のけぞり確認用1(色々)
+			fireball_rank     = 0,    -- 飛び道具の強さ
+			esaka_range       = 0,    -- 詠酒の間合いチェック用
 
-			muteki                     = {
+			key_now           = {},   -- 個別キー入力フレーム
+			key_pre           = {},   -- 前フレームまでの個別キー入力フレーム
+			key_hist          = {},
+			ggkey_hist        = {},
+			key_frames        = {},
+			act_frame         = 0,
+			act_frames        = {},
+			act_frames2       = {},
+			act_frames_total  = 0,
+
+			throw_boxies      = {},
+
+			muteki            = {
 				act_frames  = {},
 				act_frames2 = {},
 			},
 
-			frm_gap                    = {
+			frm_gap           = {
 				act_frames  = {},
 				act_frames2 = {},
 			},
 
-			frame_info                 = {
+			frame_info        = {
 				text = { "", "" },
 				attack = {
 					buff = nil,
@@ -5911,1354 +2101,692 @@ rbff2.startplugin = function()
 				},
 			},
 
-			reg_pcnt                   = 0, -- キー入力 REG_P1CNT or REG_P2CNT
-			reg_st_b                   = 0, -- キー入力 REG_STATUS_B
+			reg_pcnt          = 0,   -- キー入力 REG_P1CNT or REG_P2CNT
+			reg_st_b          = 0,   -- キー入力 REG_STATUS_B
 
-			update_sts                 = 0,
-			update_dmg                 = 0,
-			update_act                 = 0,
-			random_boolean             = math.random(255) % 2 == 0,
+			update_state      = 0,
+			update_act        = 0,
+			random_boolean    = math.random(255) % 2 == 0,
 
-			backstep_killer            = false,
-			need_block                 = false,
-			need_low_block             = false,
+			backstep_killer   = false,
 
-			hitboxes                   = {},
-			buffer                     = {},
-			uniq_hitboxes              = {}, -- key + boolean
-			hitbox_txt                 = "",
-			hurtbox_txt                = "",
-			chg_hitbox_frm             = 0,
-			chg_hurtbox_frm            = 0,
-			type_boxes                 = {}, -- key + count
-			fireball_bases             = new_set(base + 0x200, base + 0x400, base + 0x600),
-			fake_hits                  = p1 and
-				{ [base + 0x200] = 0x10DDF5, [base + 0x400] = 0x10DDF7, [base + 0x600] = 0x10DDF9, } or
-				{ [base + 0x200] = 0x10DDF6, [base + 0x400] = 0x10DDF8, [base + 0x600] = 0x10DDFA, },
-			fireball                   = {},
+			boxies            = {},
+			hitbox_txt        = "",
+			hurtbox_txt       = "",
+			chg_hitbox_frm    = 0,
+			chg_hurtbox_frm   = 0,
+			fireballs         = {},
 
-			bs_hooked                  = 0, -- BSモードのフック処理フレーム数。
-
-			all_summary                = {}, -- 大状態表示のデータ構造
-			atk_summary                = {}, -- 大状態表示のデータ構造の一部
-			hit_summary                = {}, -- 大状態表示のデータ構造の一部
-			old_hit_summary            = {}, -- 大状態表示のデータ構造の一部
-
-			fix_scr_top                = 0xFF, -- screen_topの強制フック用
-
-			hit                        = {
-				pos_x        = 0,
-				pos_z        = 0,
-				pos_y        = 0,
-				on           = 0,
-				flip_x       = 0,
-				scale        = 0,
-				char_id      = 0,
-				vulnerable   = 0,
-				harmless     = false,
-				obsl_hit     = false,
-				full_hit     = false,
-				harmless2    = false,
-				vulnerable1  = 0,
-				vulnerable21 = 0,
-				vulnerable22 = 0, -- 0の時vulnerable=true
-			},
-
-			throw                      = {
-				x1         = 0,
-				x2         = 0,
-				half_range = 0,
-				full_range = 0,
-				in_range   = false,
-			},
-
-			n_throw                    = {
-				addr = {
-					on       = p1 and 0x10CD90 or 0x10CDB0,
-					base     = p1 and 0x10CD91 or 0x10CDB1,
-					opp_base = p1 and 0x10CD95 or 0x10CDB5,
-					opp_id   = p1 and 0x10CD9A or 0x10CDBA,
-					char_id  = p1 and 0x10CD9C or 0x10CDBC,
-					side     = p1 and 0x10CDA0 or 0x10CDC0,
-					range1   = p1 and 0x10CDA1 or 0x10CDC1,
-					range2   = p1 and 0x10CDA2 or 0x10CDC2,
-					range3   = p1 and 0x10CDA3 or 0x10CDC3,
-					range41  = p1 and 0x10CDA4 or 0x10CDC4,
-					range42  = p1 and 0x10CDA5 or 0x10CDC5,
-					range5   = p1 and 0x10CDA6 or 0x10CDC6,
-					id       = p1 and 0x10CDA7 or 0x10CDC7,
-					pos_x    = p1 and 0x10CDA8 or 0x10CDC8,
-					pos_y    = p1 and 0x100DAA or 0x10CDCA,
-				},
-			},
-
-			air_throw                  = {
-				addr = {
-					on       = p1 and 0x10CD00 or 0x10CD20,
-					range_x  = p1 and 0x10CD01 or 0x10CD21,
-					range_y  = p1 and 0x10CD03 or 0x10CD23,
-					base     = p1 and 0x10CD05 or 0x10CD25,
-					opp_base = p1 and 0x10CD09 or 0x10CD29,
-					opp_id   = p1 and 0x10CD0D or 0x10CD2D,
-					side     = p1 and 0x10CD11 or 0x10CD31,
-					id       = p1 and 0x10CD12 or 0x10CD32,
-					pos_x    = p1 and 0x10CD13 or 0x10CD33,
-					pos_y    = p1 and 0x10CD15 or 0x10CD35,
-				},
-			},
-
-			sp_throw                   = {
-				addr = {
-					on       = p1 and 0x10CD40 or 0x10CD60,
-					front    = p1 and 0x10CD41 or 0x10CD61,
-					top      = p1 and 0x10CD43 or 0x10CD63,
-					base     = p1 and 0x10CD45 or 0x10CD65,
-					opp_base = p1 and 0x10CD49 or 0x10CD69,
-					opp_id   = p1 and 0x10CD4D or 0x10CD6D,
-					side     = p1 and 0x10CD51 or 0x10CD71,
-					bottom   = p1 and 0x10CD52 or 0x10CD72,
-					id       = p1 and 0x10CD54 or 0x10CD74,
-					pos_x    = p1 and 0x10CD55 or 0x10CD75,
-					pos_y    = p1 and 0x10CD57 or 0x10CD77,
-				},
-			},
-
-			addr                       = {
-				base         = base,            -- キャラ状態とかのベースのアドレス
-				act          = base + 0x60,     -- 行動ID デバッグディップステータス表示のPと同じ
-				acta         = base + 0x62,     -- 行動ID デバッグディップステータス表示のAと同じ
-				act_count    = base + 0x66,     -- 現在の行動のカウンタ
-				act_boxtype  = base + 0x67,     -- 現在の行動の判定種類
-				act_frame    = base + 0x6F,     -- 現在の行動の残フレーム、ゼロになると次の行動へ
-				act_contact  = base + 0x01,     -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
-				attack       = base + 0xB6,     -- 攻撃中のみ変化、判定チェック用2 0のときは何もしていない、 詠酒の間合いチェック用
-				hitstop_id   = base + 0xEB,     -- 被害中のみ変化
-				can_techrise = base + 0x92,     -- 受け身行動可否チェック用
-				ophit_base   = base + 0x9E,     -- ヒットさせた相手側のベースアドレス
-				char         = p1 and 0x107BA5 or 0x107BA7, -- キャラID
-				color        = p1 and 0x107BAC or 0x107BAD, -- カラー A=0x00 D=0x01
-				combo        = p1 and 0x10B4E4 or 0x10B4E5, -- コンボ
-				combo2       = p1 and 0x10B4E5 or 0x10B4E4, -- 最近のコンボ数のアドレス
-				dmg_id       = base + 0xE9,     -- ダメージ算出の技ID(最後にヒット/ガードした技のID)
-				tmp_combo2   = p1 and 0x10B4E1 or 0x10B4E0, -- 一次的なコンボ数のアドレス
-				max_combo2   = p1 and 0x10B4F0 or 0x10B4EF, -- 最大コンボ数のアドレス
-				dmg_scl7     = p1 and 0x10DE50 or 0x10DE51, -- 補正 7/8 の回数
-				dmg_scl6     = p1 and 0x10DE52 or 0x10DE53, -- 補正 6/8 の回数
-				dmg_scl5     = p1 and 0x10DE54 or 0x10DE55, -- 補正 5/8 の回数
-				dmg_scl4     = p1 and 0x10DE56 or 0x10DE57, -- 補正 4/8 の回数
-				last_dmg     = base + 0x8F,     -- 最終ダメージ
-				tmp_dmg      = p1 and 0x10CA10 or 0x10CA11, -- 最終ダメージの更新フック
-				pure_dmg     = p1 and 0x10DDFB or 0x10DDFC, -- 最終ダメージ(補正前)
-				tmp_pow      = p1 and 0x10DE59 or 0x10DE58, -- POWゲージ増加量
-				tmp_pow_rsv  = p1 and 0x10DE5B or 0x10DE5A, -- POWゲージ増加量(予約値)
-				tmp_stun     = p1 and 0x10DDFD or 0x10DDFF, -- 最終気絶値
-				tmp_st_timer = p1 and 0x10DDFE or 0x10DE00, -- 最終気絶タイマー
-				life         = base + 0x8B,     -- 体力
-				max_combo    = p1 and 0x10B4EF or 0x10B4F0, -- 最大コンボ
-				max_stun     = p1 and 0x10B84E or 0x10B856, -- 最大気絶値
-				corner       = base + 0xB7,     -- 画面端状態 0:端以外 1:画面端 3:端押し付け
-				pos          = base + 0x20,     -- X座標
-				pos_frc      = base + 0x22,     -- X座標 少数部
-				max_pos      = p1 and 0x10DDE6 or 0x10DDE8, -- X座標最大
-				min_pos      = p1 and 0x10DDEA or 0x10DDEC, -- X座標最小
-				pos_y        = base + 0x28,     -- Y座標
-				pos_frc_y    = base + 0x2A,     -- Y座標 少数部
-				pos_z        = base + 0x24,     -- Z座標
-				sway_status  = base + 0x89,     -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
-				side         = base + 0x58,     -- 向き
-				--forward    = base + 0x40, -- 前移動速度 8バイト
-				--backward   = 0x0022FAE -- 後退のベースアドレス
-				input_side   = base + 0x86,     -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
-				input1       = base + 0x82,     -- キー入力 直近Fの入力
-				input2       = base + 0x83,     -- キー入力 1F前の入力
-				cln_btn      = base + 0x84,     -- クリアリングされたボタン入力
-				state        = base + 0x8E,     -- 状態
-				flag_c0      = base + 0xC0,     -- フラグ群
-				flag_c4      = base + 0xC4,     -- フラグ群
-				flag_c8      = base + 0xC8,     -- フラグ群
-				flag_cc      = base + 0xCC,     -- フラグ群 00 00 00 00
-				flag_d0      = base + 0xD0,     -- フラグ群
-				flag_fin     = base + 0x82,     -- 動作の最終Fを表す
-				stop         = base + 0x8D,     -- ヒットストップ
-				knock_back1  = base + 0x69,     -- のけぞり確認用1(色々)
-				knock_back2  = base + 0x16,     -- のけぞり確認用2(裏雲隠し)
-				knock_back3  = base + 0x7E,     -- のけぞり確認用3(フェニックススルー)
-				sp_throw_id  = base + 0xA3,     -- 投げ必殺のID
-				sp_throw_act = base + 0xA4,     -- 投げ必殺の持続残F
-				additional   = base + 0xA5,     -- 追加入力成立時のデータ
-				prj_rank     = base + 0xB5,     -- 飛び道具の強さ
-				input_offset = p1 and 0x0394C4 or 0x0394C8, -- コマンド入力状態のオフセットアドレス
-				no_hit       = p1 and 0x10DDF2 or 0x10DDF1, -- ヒットしないフック
-				-- range        = 0x1004E2 or 0x1005E2 -- 距離 0近距離 1中距離 2遠距離
-				cancelable   = base + 0xAF,     -- キャンセル可否 00不可 C0可 D0可 正確ではない
-				repeatable   = base + 0x6A,     -- 連キャン可否用
-				box_base1    = base + 0x76,     -- 判定の開始アドレス1、判定データはバンク切替されている場合あり
-				box_base2    = base + 0x7A,     -- 判定の開始アドレス2、判定データはバンク切替されている場合あり
-				kaiser_wave  = base + 0xFB,     -- カイザーウェイブのレベル
-				hurt_state   = base + 0xE4,     -- やられ状態
-
-				-- キャラ毎の必殺技の番号 0x1004B8
-				-- 技の内部の進行度 0x1004F7
-
-				stun         = p1 and 0x10B850 or 0x10B858, -- 現在気絶値
-				stun_timer   = p1 and 0x10B854 or 0x10B85C, -- 気絶値ゼロ化までの残フレーム数
-				tmp_combo    = p1 and 0x10B4E0 or 0x10B4E1, -- コンボテンポラリ
-				-- bs_id        = base + 0xB9, -- BSの技ID
-				pow          = base + 0xBC,     -- パワーアドレス
-				reg_pcnt     = p1 and 0x300000 or 0x340000, -- キー入力 REG_P1CNT or REG_P2CNT アドレス
-				reg_st_b     = 0x380000,        -- キー入力 REG_STATUS_B アドレス
-				control1     = base + 0x12,     -- Human 1 or 2, CPU 3
-				control2     = base + 0x13,     -- Human 1 or 2, CPU 3
-
-				select_hook  = p1 and 0x10CDD1 or 0x10CDD5, -- プレイヤーセレクト画面のフック処理用アドレス
-				bs_hook1     = p1 and 0x10DDDA or 0x10DDDE, -- BSモードのフック処理用アドレス。技のID。
-				bs_hook2     = p1 and 0x10DDDB or 0x10DDDF, -- BSモードのフック処理用アドレス。技のバリエーション。
-				bs_hook3     = p1 and 0x10DDDD or 0x10DDE1, -- BSモードのフック処理用アドレス。技発動。
-
-				tw_threshold = p1 and 0x10DDE2 or 0x10DDE3, -- 投げ可能かどうかのフレーム判定のしきい値
-				tw_frame     = base + 0x90,     -- 投げ可能かどうかのフレーム経過
-				tw_accepted  = p1 and 0x10DDE4 or 0x10DDE5, -- 投げ確定時のフレーム経過
-				tw_muteki    = base + 0xF6,     -- 投げ無敵の残フレーム数
-
-				-- フックできないかわり用
-				state2       = p1 and 0x10CA0E or 0x10CA0F, -- 状態
-				act2         = p1 and 0x10CA12 or 0x10CA14, -- 行動ID デバッグディップステータス表示のPと同じ
-
-				-- フックできないかわり用-当たり判定
-				vulnerable1  = p1 and 0x10CB30 or 0x10CB31,
-				vulnerable21 = p1 and 0x10CB32 or 0x10CB33,
-				vulnerable22 = p1 and 0x10CB34 or 0x10CB35, -- 0の時vulnerable=true
-
-				-- ヒットするかどうか
-				fake_hit     = p1 and 0x10DDF3 or 0x10DDF4, -- 出だしから嘘判定のフック
-				obsl_hit     = base + 0x6A,     -- 嘘判定チェック用 3ビット目が立っていると嘘判定
-				full_hit     = base + 0xAA,     -- 判定チェック用1 0じゃないとき全段攻撃ヒット/ガード
-				max_hit_nm   = base + 0xAB,     -- 同一技行動での最大ヒット数 分子
-
-				-- スクショ用
-				fix_scr_top  = p1 and 0x10DE5C or 0x10DE5D, -- screen_topの強制フック用
-
-				force_block  = p1 and 0x10DE5E or 0x10DE5F, -- 強制ガード用
+			addr              = {
+				base        = base,            -- キャラ状態とかのベースのアドレス
+				control     = base + 0x12,     -- Human 1 or 2, CPU 3
+				pos         = base + 0x20,     -- X座標
+				pos_y       = base + 0x28,     -- Y座標
+				sway_status = base + 0x89,     -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
+				input_side  = base + 0x86,     -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
+				life        = base + 0x8B,     -- 体力
+				pow         = base + 0xBC,     -- パワーアドレス
+				hurt_state  = base + 0xE4,     -- やられ状態 ライン送らない状態用
+				stun_limit  = p1 and 0x10B84E or 0x10B856, -- 最大気絶値
+				no_hit      = p1 and 0x10DDF2 or 0x10DDF1, -- ヒットしないフック
+				char        = p1 and 0x107BA5 or 0x107BA7, -- キャラID
+				color       = p1 and 0x107BAC or 0x107BAD, -- カラー A=0x00 D=0x01
+				stun        = p1 and 0x10B850 or 0x10B858, -- 現在気絶値
+				stun_timer  = p1 and 0x10B854 or 0x10B85C, -- 気絶値ゼロ化までの残フレーム数
+				reg_pcnt    = p1 and 0x300000 or 0x340000, -- キー入力 REG_P1CNT or REG_P2CNT アドレス
+				reg_st_b    = 0x380000,        -- キー入力 REG_STATUS_B アドレス
 			},
 		}
 		local p = players[i]
+		for k = 1, #kprops do
+			p.key_now[kprops[k]], p.key_pre[kprops[k]] = 0, 0
+		end
+		for k = 1, 16 do
+			p.key_hist[k], p.key_frames[k], p.act_frames[k] = "", 0, { 0, 0 }
+			p.bases[k] = { count = 0, addr = 0x0, act_data = nil, name = "", pos1 = 0, pos2 = 0, xmov = 0, }
+		end
+		local update_tmp_combo = function(data)
+			if data == 1 then    -- 一次的なコンボ数が1リセットしたタイミングでコンボ用の情報もリセットする
+				p.last_combo             = 1 -- 2以上でのみ0x10B4E4か0x10B4E5が更新されるのでここで1リセットする
+				p.last_stun              = 0
+				p.last_st_timer          = 0
+				p.combo_update           = global.frame_number + 1
+				p.combo_damage           = 0
+				p.combo_start_stun       = p.stun
+				p.combo_start_stun_timer = p.stun_timer
+				p.combo_stun             = 0
+				p.combo_stun_timer       = 0
+				p.combo_pow              = p.hurt_attack == p.op.attack and p.op.pow_up or 0
+			elseif data > 1 then
+				p.combo_update = global.frame_number + 1
+			end
+		end
 		p.wp8 = {
-			[0x10] = function(data)
-				p.char = data
+			[0x16] = function(data) p.knock_back2 = data end, -- のけぞり確認用2(裏雲隠し)
+			[0x69] = function(data) p.knock_back1 = data end, -- のけぞり確認用1(色々)
+			[0x7E] = function(data) p.knock_back3 = data end, -- のけぞり確認用3(フェニックススルー)
+			[{ addr = 0x82, filter = { 0x2668C, 0x2AD24, 0x2AD2C } }] = function(data, ret)
+				local pc = mem.pc()
+				if pc == 0x2668C then p.input1, p.flag_fin = data, false end
+				if pc == 0x2AD24 or pc == 0x2AD2C then p.flag_fin = util.testbit(data, 0x80) end -- キー入力 直近Fの入力, 動作の最終F
 			end,
-			[0x89] = function(data)
-				p.sway_status = data -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
-				p.in_sway_line = data ~= 0x00
-			end,
-			[0x58] = function(data)
-				p.internal_side = data -- 向き
-				p.side          = data < 0 and -1 or 1
-			end,
-			[0xB7] = function(data)
-				p.corner = data -- 画面端状態 0:端以外 1:画面端 3:端押し付け
-			end,
-			[0x82] = function(data)
-				p.input1 = data -- キー入力 直近Fの入力
-				p.flag_fin = data == 0xFF -- 動作の最終Fを表す
-			end,
-			[0x83] = function(data)
-				p.input2 = data -- キー入力 1F前の入力
-			end,
-			[0x86] = function(data)
-				p.input_side = data -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
-			end,
-			[0x84] = function(data)
-				p.cln_btn = data -- クリアリングされたボタン入力
-			end,
-			[0xFA] = function(data)
-				p.kaiser_wave = data -- カイザーウェイブのレベル
-			end,
-			[0xE4] = function(data)
-				p.hurt_state = data -- やられ状態
-			end,
-			[0x8A] = function(data)
-				p.life = data -- 体力
-			end,
-			[0xBC] = function(data)
-				p.pow = data -- パワーアドレス
-			end,
-			[0x00] = function(data)
-				p.act_contact = data -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
-			end,
-			[0xD0] = function(data)
-				p.flag_d0 = data -- フラグ群
+			[0x83] = function(data) p.input2 = data end,                             -- キー入力 1F前の入力
+			[0x84] = function(data) p.cln_btn = data end,                            -- クリアリングされたボタン入力
+			[0x86] = function(data) p.input_side = util.int8(data) < 0 and -1 or 1 end, -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
+			[0x88] = function(data) p.in_bs = data ~= 0 end,                         -- BS動作中
+			[0x89] = function(data) p.sway_status, p.in_sway_line = data, data ~= 0x00 end, -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
+			[0x8B] = function(data, ret)
+				-- 残体力がゼロだと次の削りガードが失敗するため常に1残すようにもする
+				p.life, p.update_dmg, ret.value = data, now(), math.max(data, 1) -- 体力
 			end,
 			[0x8E] = function(data)
-				p.state = data -- 今の状態
-			end,
-			[0xB8] = function(data)
-				p.spid = data -- 必殺技ID？
-			end,
-			[0xB6] = function(data)
-				p.attack       = data -- 攻撃中のみ変化、判定チェック用2 0のときは何もしていない、 詠酒の間合いチェック用
-				p.harmless2    = data == 0
-				p.can_techrise = 2 > pgm:read_u8(0x88A12 + p.attack)
-				p.max_hit_dn   = p.attack > 0 and pgm:read_u8(pgm:read_u32(fix_bp_addr(0x827B8) + p.char_4times) + p.attack) or 0
-			end,
-			[0xE9] = function(data)
-				p.dmg_id = data -- 最後にヒット/ガードした技ID
-			end,
-			[0x90] = function(data)
-				p.tw_frame = data -- 投げ可能かどうかのフレーム経過
-			end,
-			[0xF6] = function(data)
-				p.tw_muteki = data -- 投げ無敵の残フレーム数
-			end,
-			[0xA3] = function(data)
-				p.sp_throw_id = data -- 投げ必殺のID
-			end,
-			[0xA4] = function(data)
-				p.sp_throw_act = data -- 投げ必殺の持続残F
-			end,
-			[0xA5] = function(data)
-				p.additional = data -- 追加入力成立時のデータ
-			end,
-			[0x6A] = function(data)
-				p.obsl_hit = (data & 0xB) == 0 -- 嘘判定チェック用 3ビット目が立っていると嘘判定
-				p.flip_x1  = ((data & 0x80) == 0) and 0 or 1 -- マイナスビットが立っているかどうか
-				-- 1:右向き -1:左向き
-			end,
-			[0x71] = function(data)
-				p.flip_x2 = (data & 1)
-			end,
-			[0xAA] = function(data)
-				p.full_hit = data > 0 -- 判定チェック用1 0じゃないとき全段攻撃ヒット/ガード
-			end,
-			[0xB5] = function(data)
-				p.prj_rank = data
-			end,
-			[0xAB] = function(data)
-				p.max_hit_nm = data -- 同一技行動での最大ヒット数 分子
-			end,
-			[0x66] = function(data)
-				p.act_count = data -- 現在の行動のカウンタ
-			end,
-			[0x67] = function(data)
-				p.act_boxtype = 0xFFFF & (data & 0xC0 * 4) -- 現在の行動の判定種類
-			end,
-			[0x6F] = function(data)
-				p.act_frame = data -- 現在の行動の残フレーム、ゼロになると次の行動へ
-			end,
-			[0x8D] = function(data)
-				p.stop = data -- ヒットストップ
-			end,
-			[0x69] = function(data)
-				p.knock_back1 = data -- のけぞり確認用1(色々)
-			end,
-			[0x16] = function(data)
-				p.knock_back2 = data -- のけぞり確認用2(裏雲隠し)
-			end,
-			[0x7E] = function(data)
-				p.knock_back3 = data -- のけぞり確認用3(フェニックススルー)
-			end,
-			[0xEB] = function(data)
-				p.hitstop_id = data -- 被害中のみ変化
-			end,
-			[p1 and 0x10B84E or 0x10B856] = function(data)
-				p.max_stun = data -- 最大気絶値
-			end,
-			[p1 and 0x10B850 or 0x10B858] = function(data)
-				p.stun = data -- 現在気絶値
-			end,
-			[p1 and 0x10B4E5 or 0x10B4E4] = function(data)
-				p.combo = tohexnum(data) -- 最近のコンボ数
-			end,
-			[p1 and 0x10B4E1 or 0x10B4E0] = function(data)
-				p.tmp_combo = tohexnum(data) -- 一次的なコンボ数
-			end,
-			[p1 and 0x10B4F0 or 0x10B4EF] = function(data)
-				p.max_combo = tohexnum(data) -- 最大コンボ数
-			end,
-			[p1 and 0x10DDFB or 0x10DDFC] = function(data)
-				p.pure_dmg = data -- ダメージ(フック処理)
-			end,
-			[p1 and 0x10DE59 or 0x10DE58] = function(data)
-				p.tmp_pow = data -- POWゲージ増加量
-			end,
-			[p1 and 0x10DE5B or 0x10DE5A] = function(data)
-				p.tmp_pow_rsv = data -- POWゲージ増加量(予約値)
-			end,
-			[p1 and 0x10DDFD or 0x10DDFF] = function(data)
-				p.tmp_stun = data -- 気絶値
-			end,
-			[p1 and 0x10DDFE or 0x10DE00] = function(data)
-				p.tmp_st_timer = data -- 気絶タイマー
-			end,
-			[p1 and 0x10DDE2 or 0x10DDE3] = function(data)
-				p.tw_threshold = data -- 投げ可能かどうかのフレーム判定のしきい値
-			end,
-			[p1 and 0x10DDE4 or 0x10DDE5] = function(data)
-				p.tw_accepted = data -- 投げ確定時のフレーム経過
-			end,
-			[p1 and 0x10DDF3 or 0x10DDF4] = function(data)
-				p.fake_hit = (data & 0xB) == 0 -- 出だしから嘘判定のフック
-			end,
-			[p1 and 0x10CA10 or 0x10CA11] = function(data)
-				p.tmp_dmg = data -- ダメージ
-			end,
-			[0x73] = function(data)
-				p.box_scale = data + 1
-			end,
-			[0x7A] = function(data)
-				if data >  0 then
-					p.box_base2 = (data << 24) | pgm:read_u32(base + 0x7A)
-					p.box_debug = {}
-					p.box_debug_cnt = (p.box_debug_cnt or 0) + 1
-					for d2 = 1, data do
-						local a2 = p.box_base2 + 5 * (d2 - 1)
-						-- 004A9Eからの処理
-						local d5 = pgm:read_u8(a2) -- & 0x1F
-						local y1, y2 = pgm:read_u8(a2 + 0x1), pgm:read_u8(a2 + 0x2)
-						local x1, x2 = pgm:read_i8(a2 + 0x3), pgm:read_i8(a2 + 0x4)
-						table.insert(p.box_debug, {
-							type = d5, x1 = x1, x2 = x2, y1 = y1, y2 = y2,
-							log = string.format(" %x %s addr=%x type=%03x x1=%s x2=%s y1=%s y2=%s", base, d2, a2, d5, x1, x2, y1, y2)
-						})
-					end
+				local changed = p.state ~= data
+				p.change_state = changed and now() or p.change_state -- 状態の変更フレームを記録
+				p.on_block = data == 2 and now() or p.on_block -- ガードへの遷移フレームを記録
+				p.on_hit = data == 1 or data == 3 and now() or p.on_hit -- ヒットへの遷移フレームを記録
+				p.random_boolean = p.state == data and p.random_boolean or (math.random(255) % 2 == 0)
+				p.state, p.update_state = data, now()       -- 今の状態と状態更新フレームを記録
+				if data == 2 then
+					update_tmp_combo(changed and 1 or 2)    -- 連続ガード用のコンボ状態リセット
+					p.last_combo = changed and 1 or p.last_combo + 1
 				end
+			end,
+			[{ addr = 0x8F, filter = { 0x5B134, 0x5B154 } }] = function(data)
+				p.last_damage, p.last_damage_scaled = data, data -- 補正前攻撃力
+			end,
+			[0x90] = function(data) p.throw_timer = data end, -- 投げ可能かどうかのフレーム経過
+			[{ addr = 0xA9, filter = { 0x23284, 0x232B0 } }] = function(data)
+				p.on_vulnerable = now()              -- 判定無敵ではない, 判定無敵ではない+無敵タイマーONではない
+			end,
+			-- [0x92] = function(data) end, -- 弾ヒット?
+			[0xA2] = function(data) p.shooting = data == 0 end, -- 弾発射時に値が入る ガード判断用
+			[0xA3] = function(data)                    -- A3:成立した必殺技コマンドID A4:必殺技コマンドの持続残F
+				if data == 0 then
+					p.on_sp_clear = now()
+				elseif data ~= 0 then
+					p.on_sp_established, p.last_sp = now(), data
+					local sp2, proc_base           = (p.last_sp - 1) * 2, p.char_data.proc_base
+					p.bs_pow, p.bs_invincible      = mem.r8(proc_base.bs_pow + sp2) & 0x7F, mem.r8(proc_base.bs_invincible + sp2)
+					p.bs_invincible                = p.bs_invincible == 0xFF and 0 or p.bs_invincible
+					p.sp_invincible                = mem.r8(proc_base.sp_invincible + p.last_sp - 1)
+				end
+			end,
+			[0xA5] = function(data) p.additional = data end, -- 追加入力成立時のデータ
+			[0xAF] = function(data) p.cancelable_data = data end, -- キャンセル可否 00:不可 C0:可 D0:可 正確ではないかも
+			[0xB6] = function(data)
+				-- 攻撃中のみ変化、判定チェック用2 0のときは何もしていない、 詠酒の間合いチェック用など
+				p.attackbit = util.hex_set(p.attackbit, frame_attack_types.harmless, data ~= 0)
+				if data == 0 then return end
+				if p.attack ~= data then
+					p.cancelable      = false
+					p.cancelable_data = 0
+					p.repeatable      = false
+					p.forced_down     = false
+					p.hitstop         = 0
+					p.blockstop       = 0
+					p.pure_dmg        = 0
+					p.pure_st         = 0
+					p.pure_st_tm      = 0
+					p.max_hit_dn      = 0
+					p.esaka_range     = 0
+					p.pow_up_hit      = 0
+					p.pow_up_gd       = 0
+					p.effect          = 0
+					p.chip_dmg_type   = chip_dmg_types.zero
+					p.chip_dmg        = 0
+					p.hitstun         = 0
+					p.blockstun       = 0
+					p.pow_revenge     = 0
+					p.pow_absorb      = 0
+					p.pow_up_hit      = 0
+					p.pow_revenge     = 0
+					p.pow_up          = 0x58 > data and 0 or p.pow_up
+					p.pow_up_direct   = 0x58 > data and 0 or p.pow_up_direct
+				end
+				-- util.printf("attack %x", data)
+				p.attack         = data
+				p.attackbit      = util.hex_reset(p.attackbit, 0xFFFFFFFF << frame_attack_types.attack, p.attack << frame_attack_types.attack)
+				local base_addr  = p.char_data.proc_base
+				-- キャンセル可否家庭用2AD90からの処理の断片
+				local cancelable = ((data < 0x70) and mem.r8(data + base_addr.cancelable) or p.cancelable_data) & 0xD0 == 0xD0
+				p.cancelable     = cancelable
+				p.repeatable     = cancelable and p.repeatable
+				p.forced_down    = 2 <= mem.r8(data + base_addr.forced_down) -- テクニカルライズ可否 家庭用 05A9BA からの処理
+				-- ヒットストップ 家庭用 攻撃側:05AE2A やられ側:05AE50 からの処理 OK
+				p.hitstop        = math.max(2, (0x7F & mem.r8(data + base_addr.hitstop)) - 1)
+				p.blockstop      = math.max(2, p.hitstop - 1) -- ガード時の補正
+				p.pure_dmg       = mem.r8(data + base_addr.damege) -- 補正前ダメージ  家庭用 05B118 からの処理
+				p.pure_st        = mem.r8(data + base_addr.stun) -- 気絶値 05C1CA からの処理
+				p.pure_st_tm     = mem.r8(data + base_addr.stun_timer) -- 気絶タイマー 05C1CA からの処理
+				p.max_hit_dn     = data > 0 and mem.r8(data + base_addr.max_hit) or 0
+				if 0x58 > data then
+					-- 詠酒距離 家庭用 0236F0 からの処理
+					local esaka = mem.r16(base_addr.esaka_range + ((data + data) & 0xFFFF))
+					p.esaka_range, p.esaka_type = esaka & 0x1FFF, esaka_type_names[esaka & 0xE000] or ""
+					if 0x27 <= data then                                   -- 家庭用 05B37E からの処理
+						p.pow_up_hit = mem.r8((0xFF & (data - 0x27)) + base_addr.pow_up_ext) -- CA技、特殊技
+					else
+						p.pow_up_hit = mem.r8(base_addr.pow_up + data)     -- ビリー、チョンシュ、その他の通常技
+					end
+					p.pow_up_gd = 0xFF & (p.pow_up_hit >> 1)               -- ガード時増加量 d0の右1ビットシフト=1/2
+				end
+				apply_attack_infos(p, data, base_addr)
+				if p.char_data.pow and p.char_data.pow[data] then
+					p.pow_revenge = p.char_data.pow[data].pow_revenge or p.pow_revenge
+					p.pow_absorb = p.char_data.pow[data].pow_absorb or p.pow_absorb
+					p.pow_up_hit = p.char_data.pow[data].pow_up_hit or p.pow_up_hit
+				end
+				-- util.printf("%x dmg %x %s %s %s %s %s", p.addr.base, data, p.pure_dmg, p.pure_st, p.pure_st_tm, p.pow_up_hit, p.pow_up_gd)
+			end,
+			-- [0xB7] = function(data) p.corner = data end, -- 画面端状態 0:端以外 1:画面端 3:端押し付け
+			[0xB8] = function(data)
+				p.spid, p.sp_flag = data, mem.r32(0x3AAAC + (data << 2)) -- 技コマンド成立時の技のID, 0xC8へ設定するデータ(03AA8Aからの処理)
+			end,
+			[{ addr = 0xB9, filter = { 0x58930, 0x58948 } }] = function(data)
+				if data == 0 and mem.pc() == 0x58930 then p.on_bs_clear = now() end            -- BSフラグのクリア
+				if data ~= 0 and mem.pc() == 0x58948 then p.on_bs_established, p.last_bs = now(), data end -- BSフラグ設定
+			end,
+			[0xD0] = function(data) p.flag_d0 = data end,                                      -- フラグ群
+			[0xE4] = function(data) p.hurt_state = data end,                                   -- やられ状態
+			[0xE8] = function(data, ret)
+				if data < 0x10 and p.dummy_gd == dummy_gd_type.force then ret.value = 0x10 end -- 0x10以上でガード
+			end,
+			[0xEC] = function(data) p.push_invincible = data end,                              -- 押し合い判定の透過状態
+			[0xEE] = function(data)
+				p.in_hitstop_value = data
+				--p.in_hitstop = data ~= 0 and (0x7F & data) == data
+				p.in_hitstun = util.testbit(data, 0x80)
+			end,
+			[0xF6] = function(data) p.invincible = data end, -- 打撃と投げの無敵の残フレーム数
+			-- [0xF7] = function(data) end -- 技の内部の進行度
+			[{ addr = 0xFB, filter = { 0x49418, 0x49428 } }] = function(data)
+				p.kaiserwave = p.kaiserwave or {} -- カイザーウェイブのレベルアップ
+				local pc = mem.pc()
+				if (p.kaiserwave[pc] == nil) or p.kaiserwave[pc] + 1 < global.frame_number then
+					p.update_act = now()
+				end
+				p.kaiserwave[pc] = now()
+			end,
+			[p1 and 0x10B4E1 or 0x10B4E0] = update_tmp_combo,
+			[p1 and 0x10B4E5 or 0x10B4E4] = function(data) p.last_combo = data end, -- 最近のコンボ数
+			[p1 and 0x10B4E7 or 0x10B4E8] = function(data) p.konck_back4 = data end, -- 1ならやられ中
+			--[p1 and 0x10B4F0 or 0x10B4EF] = function(data) p.max_combo = data end, -- 最大コンボ数
+			[p1 and 0x10B84E or 0x10B856] = function(data) p.stun_limit = data end, -- 最大気絶値
+			[p1 and 0x10B850 or 0x10B858] = function(data) p.stun = data end, -- 現在気絶値
+			[p1 and 0x1041B0 or 0x1041B4] = function(data, ret)
+				if p.bs_hook and p.bs_hook.cmd_type then
+					-- util.printf("bs_hook cmd %x", p.bs_hook.cmd_type)
+					-- フックの処理量軽減のためまとめてキー入力を記録する
+					mem.w8(p1 and 0x1041AE or 0x1041B2, p.bs_hook.cmd_type) -- 押しっぱずっと有効
+					mem.w8(p1 and 0x1041AF or 0x1041B3, p.bs_hook.cmd_type) -- 押しっぱ有効が5Fのみ
+					ret.value = p.bs_hook.cmd_type           -- 押しっぱ有効が1Fのみ
+				end
+			end,
+		}
+		local special_throws = {
+			[0x39E56] = function() return mem.rg("D0", 0xFF) end, -- 汎用
+			[0x45ADC] = function() return 0x14 end,      -- ブレイクスパイラルBR
+		}
+		local special_throw_addrs = util.get_hash_key(special_throws)
+		local add_throw_box = function(p, box) p.throw_boxies[box.id] = box end
+		local extra_throw_callback = function(data)
+			if in_match then
+				local pc = mem.pc()
+				local id = special_throws[pc]
+				if id then add_throw_box(p.op, get_special_throw_box(p.op, id())) end -- 必殺投げ
+				if pc == 0x06042A then add_throw_box(p, get_air_throw_box(p)) end -- 空中投げ
+			end
+		end
+		local drill_counts = { 0x07, 0x09, 0x0B, 0x0C, 0x3C, } -- { 0x00, 0x01, 0x02, 0x03, 0x04, }
+		p.rp8 = {
+			[{ addr = 0x12, filter = { 0x3DCF8, 0x49B2C } }] = function(data, ret)
+				local check_count = 0
+				if p.char == 0x5 then check_count = global.auto_input.rave == 10 and 9 or (global.auto_input.rave - 1) end
+				if p.char == 0x14 then check_count = global.auto_input.desire == 11 and 9 or (global.auto_input.desire - 1) end
+				if mem.rg("D1", 0xFF) < check_count then ret.value = 0x3 end -- 自動デッドリー、自動アンリミ1
+			end,
+			[{ addr = 0x28, filter = util.table_add_all(special_throw_addrs, { 0x6042A }) }] = extra_throw_callback,
+			[{ addr = 0x8A, filter = { 0x5A9A2, 0x5AB34 } }] = function(data)
+				local pc = mem.pc()
+				if p.dummy_wakeup == wakeup_type.sway and pc == 0x5A9A2 then
+					mem.w8(mem.rg("A0", 0xFFFFFF) + (data & 0x1) * 2, 2) -- 起き上がり動作の入力を更新
+				elseif p.dummy_wakeup == wakeup_type.tech and pc == 0x5AB34 then
+					mem.w8(mem.rg("A0", 0xFFFFFF) + (data & 0x1) * 2, 1) -- 起き上がり動作の入力を更新
+				end
+			end,
+			[{ addr = 0x8E, filter = 0x39F8A }] = function(data)
+				if in_match then add_throw_box(p.op, get_normal_throw_box(p.op)) end -- 通常投げ
+			end,
+			[{ addr = 0x8F, filter = 0x5B41E }] = function(data, ret)
+				-- 残体力を攻撃力が上回ると気絶値が加算がされずにフックが失敗するので、残体力より大きい値を返さないようにもする
+				p.last_damage_scaled, ret.value = data, math.min(p.life, data)
+				p.combo_damage = (p.combo_damage or 0) + p.last_damage_scaled -- 確定した補正後の攻撃力をコンボダメージに加算
+				p.max_combo_damage = math.max(p.max_combo_damage or 0, p.combo_damage)
+			end,
+			[{ addr = 0x90, filter = 0x39FB0 }] = function(data)
+				local timer, threshold = data, mem.rg("D7", 0xFF) -- 投げ成否判断時の相手のタイマーと投げしきい値
+				p.op.throwing = { timer = timer, threshold = threshold, established = threshold < timer, }
+			end,
+			[{ addr = 0x94, filter = 0x42BFE }] = function(data, ret)
+				if global.auto_input.drill > 0 then ret.value = drill_counts[global.auto_input.drill] end -- 自動ドリル
+			end,
+			[{ addr = 0xA5, filter = { 0x3DBE6, 0x49988, 0x42C26 } }] = function(data, ret)
+				if p.char == 0x5 and global.auto_input.rave == 10 then ret.value = 0xFF end -- 自動デッドリー
+				if p.char == 0x14 and global.auto_input.desire == 11 then ret.value = 0xFE end -- 自動アンリミ2
+				if p.char == 0xB and global.auto_input.drill == 5 then ret.value = 0xFE end -- 自動ドリルLv.5
+			end,
+			[{ addr = 0xB9, filter = { 0x396B4, 0x39756 } }] = function(data) p.on_bs_check = now() end, -- BSの技IDチェック
+			[{ addr = 0xBF, filter = { 0x3BEF6, 0x3BF24, 0x5B346, 0x5B368 } }] = function(data)
+				if data ~= 0 then -- 増加量を確認するためなのでBSチェックは省く
+					local pc, pow_up = mem.pc(), 0
+					if pc == 0x3BEF6 then
+						local a3 = mem.r8(base + 0xA3) -- 必殺技発生時のパワー増加 家庭用 03C140 からの処理
+						p.pow_up = a3 ~= 0 and mem.r8(mem.r32(0x8C1EC + p.char4) + a3 - 1) or 0
+						pow_up   = p.pow_up
+					elseif pc == 0x3BF24 then
+						p.pow_up_direct = mem.rg("D0", 0xFF) -- パワー直接増加 家庭用 03BF24 からの処理
+						pow_up = p.pow_up_direct
+					elseif pc == 0x5B346 then
+						pow_up = 1 -- 被ガード時のパワー増加
+					elseif pc == 0x5B368 then
+						pow_up = (p.flag_cc & 0xE0 == 0) and p.pow_up_hit or p.pow_up_gd or 0
+					end
+					p.last_pow_up, p.op.combo_pow = pow_up, (p.op.combo_pow or 0) + pow_up
+					--util.printf("%x %x data=%s last_pow_up=%s combo_pow=%s", base, pc, data, p.last_pow_up, p.op.combo_pow)
+				end
+			end,
+			[{ addr = 0xCD, filter = special_throw_addrs }] = extra_throw_callback,
+			[{ addr = 0xD6, filter = 0x5A7B4 }] = function(data, ret)
+				if p.dummy_wakeup == wakeup_type.atk and p.char_data.wakeup then ret.value = 0x23 end -- 成立コマンド値を返す
 			end,
 		}
 		p.wp16 = {
-			[0x20] = function(data)
-				p.pos = data
-				p.max_pos = math.max(p.max_pos or 0, data)
-				p.min_pos = math.min(p.min_pos or 1000, data)
-				p.pos_total = p.pos + p.pos_frc
-				p.proc_pos = p.max_pos or p.min_pos or p.pos -- 内部の補正前のX座標
-			end,
-			[0x22] = function(data)
-				p.pos_frc = int16tofloat(data)
-				p.pos_total = p.pos + p.pos_frc
-			end,
-			[0x28] = function(data)
-				p.pos_y = data
-			end,
-			[0x2A] = function(data)
-				p.pos_frc_y = int16tofloat(data)
-			end,
-			[0x24] = function(data)
-				p.pos_z = data
-				if 40 == data then
-					p.on_sway_line = global.frame_number + 1
-				end
-				if 24 == data then
-					p.on_main_line = global.frame_number + 1
-				end
-			end,
-			[0x34] = function(data)
-				p.thrust = data
-			end,
-			[0x36] = function(data)
-				p.thrust_frc = int16tofloat(data)
-			end,
-			[0x60] = function(data)
-				p.act     = data -- 行動ID デバッグディップステータス表示のPと同じ
-				p.provoke = 0x0196 == data --挑発中
-			end,
-			[0x62] = function(data)
-				p.acta = data -- 行動ID デバッグディップステータス表示のAと同じ
-			end,
-			[0x92] = function(data)
-				p.anyhit_id = data
-			end,
-			[0x9E] = function(data)
-				p.ophit_base = data -- ヒットさせた相手側のベースアドレス
-			end,
-			[0xDA] = function(data)
-				p.inertia = data
-			end,
-			[0xDC] = function(data)
-				p.inertia_frc = int16tofloat(data)
-			end,
-			[p1 and 0x10B854 or 0x10B85C] = function(data)
-				p.stun_timer = data -- 気絶値ゼロ化までの残フレーム数
-			end,
+			[0x34] = function(data) p.thrust = data end,
+			[0x36] = function(data) p.thrust_frc = util.int16tofloat(data) end,
+			[0x92] = function(data) p.anyhit_id = data end,
+			[0x9E] = function(data) p.ophit_base = data end, -- ヒットさせた相手側のベースアドレス
+			[0xDA] = function(data) p.inertia = data end,
+			[0xDC] = function(data) p.inertia_frc = util.int16tofloat(data) end,
+			[0xE6] = function(data) p.on_hit_any = now() end, -- 0xE6か0xE7 打撃か当身でフラグが立つ
+			[p1 and 0x10B854 or 0x10B85C] = function(data) p.stun_timer = data end, -- 気絶値ゼロ化までの残フレーム数
 		}
-		p.rp32 = {
+		local nohit = function(data, ret)
+			if p.no_hit_limit > 0 and p.last_combo >= p.no_hit_limit then ret.value = 0x311C end --  0x0001311Cの後半を返す
+		end
+		p.rp16 = {
+			[0x13124 + 0x2] = nohit, -- 0x13124の後半読み出しハック
+			[0x13128 + 0x2] = nohit, -- 0x13128の後半読み出しハック 0x1311Cを返す
+			[0x1312C + 0x2] = nohit, -- 0x1312Cの後半読み出しハック 0x1311Cを返す
+			[0x13130 + 0x2] = nohit, -- 0x13130の後半読み出しハック 0x1311Cを返す
 		}
 		p.wp32 = {
-			[0xC0] = function(data)
-				p.flag_c0 = data -- フラグ群
+			[{ addr = 0x00, filter = { 0x58268, 0x582AA } }] = function(data, ret)
+				if global.damaged_move > 1 then ret.value = hit_effect_moves[global.damaged_move] end
 			end,
-			[0xC4] = function(data)
-				p.flag_c4 = data -- フラグ群
-			end,
-			[0xC8] = function(data)
-				p.flag_c8 = data -- フラグ群
-			end,
-			[0xCC] = function(data)
-				p.flag_cc = data -- フラグ群
-			end,
+			-- [0x0C] = function(data) p.reserve_proc = data end,               -- 予約中の処理アドレス
+			[0xC0] = function(data) p.flag_c0 = data end,                    -- フラグ群
+			[0xC4] = function(data) p.flag_c4 = data end,                    -- フラグ群
+			[0xC8] = function(data) p.flag_c8 = data end,                    -- フラグ群
+			[0xCC] = function(data) p.flag_cc = data end,                    -- フラグ群
+			[p1 and 0x0394C4 or 0x0394C8] = function(data) p.input_offset = data end, -- コマンド入力状態のオフセットアドレス
 		}
-		for k = 1, #kprops do
-			p.key_now[kprops[k]] = 0
-			p.key_pre[kprops[k]] = 0
-		end
-		for k = 1, 16 do
-			p.key_hist[k] = ""
-			p.key_frames[k] = 0
-			p.act_frames[k] = { 0, 0 }
-			p.bases[k] = { count = 0, addr = 0x0, act_data = nil, name = "", pos1 = 0, pos2 = 0, xmov = 0, }
-		end
+		all_objects[p.addr.base] = p
 	end
-	players[1].op = players[2]
-	players[2].op = players[1]
-	-- 飛び道具領域の作成
-	for _, p in ipairs(players) do
-		for base, _ in pairs(p.fireball_bases) do
-			p.fireball[base] = {
-				addr = {
-					base        = base, -- キャラ状態とかのベースのアドレス
-					char        = base + 0x10, -- 技のキャラID
-					act         = base + 0x60, -- 技のID デバッグのP
-					acta        = base + 0x62, -- 技のID デバッグのA
-					actb        = base + 0x64, -- 技のID?
-					act_count   = base + 0x66, -- 現在の行動のカウンタ
-					act_boxtype = base + 0x67, -- 現在の行動の判定種類
-					act_frame   = base + 0x6F, -- 現在の行動の残フレーム、ゼロになると次の行動へ
-					act_contact = base + 0x01, -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
-					dmg_id      = base + 0xE9, -- 最後にヒット/ガードしたダメージ算出の技ID
-					pos         = base + 0x20, -- X座標
-					pos_y       = base + 0x28, -- Y座標
-					pos_z       = base + 0x24, -- Z座標
-					attack      = base + 0xBF, -- デバッグのNO
-					hitstop_id  = base + 0xBE, -- ヒット硬直用ID、受け身行動可否チェック用、倍返しチェック2
-					fake_hit    = p.fake_hits[base], -- ヒットするかどうか
-					obsl_hit    = base + 0x6A, -- 嘘判定チェック用 3ビット目が立っていると嘘判定
-					full_hit    = base + 0xAA, -- 判定チェック用1 0じゃないとき全段攻撃ヒット/ガード
-					harmless2   = base + 0xE7, -- 判定チェック用2 0じゃないときヒット/ガード
-					max_hit_nm  = base + 0xAB, -- 同一技行動での最大ヒット数 分子
-					prj_rank    = base + 0xB5, -- 飛び道具の強さ
-					side        = base + 0x58, -- 向き
-					box_base1   = base + 0x76,
-					box_base2   = base + 0x7A,
-					bai_chk1    = base + 0x8A, -- 倍返しチェック1
-				},
+	players[1].op, players[2].op = players[2], players[1]
+	for _, parent in ipairs(players) do -- 飛び道具領域の作成
+		for fb_base = 1, 3 do
+			local base = fb_base * 0x200 + parent.addr.base
+			local p = {
+				is_fireball = true,
+				parent      = parent,
+				addr        = {
+					base = base, -- キャラ状態とかのベースのアドレス
+				}
 			}
+			p.wp8 = {
+				[0xB5] = function(data) p.fireball_rank = data end,
+				[0xE7] = function(data)
+					p.attackbit = util.hex_set(p.attackbit, frame_attack_types.fullhit, data == 0)
+				end,
+				[0x8A] = function(data) p.bai_chk1 = 0x2 >= data end,
+				[0xA3] = function(data) p.shooting = data == 0 end, -- 攻撃中に値が入る ガード判断用
+			}
+			p.wp16 = {
+				[0x64] = function(data) p.actb = data end,
+				[0xBE] = function(data)
+					if data == 0 or p.proc_active ~= true then
+						return
+					end
+					if p.attack ~= data then
+						p.forced_down   = false
+						p.hitstop       = 0
+						p.blockstop    = 0
+						p.pure_dmg      = 0
+						p.pure_st       = 0
+						p.pure_st_tm    = 0
+						p.max_hit_dn    = 0
+						p.effect        = 0
+						p.chip_dmg_type = chip_dmg_types.zero
+						p.chip_dmg      = 0
+						p.hitstun       = 0
+						p.blockstun     = 0
+					end
+					p.addr.proc_base = p.addr.proc_base or { -- TODO 初期化処理を移動させたい
+						forced_down = 0x8E2C0,
+						hitstop     = fix_addr(0x884F2),
+						damege      = fix_addr(0x88472),
+						stun        = fix_addr(0x886F2),
+						stun_timer  = fix_addr(0x88772),
+						max_hit     = fix_addr(0x885F2),
+						baigaeshi   = 0x8E940,
+						effect      = -0x20 + fix_addr(0x95BEC),
+						chip_damage = fix_addr(0x95CCC),
+						hitstun1    = fix_addr(0x95CCC),
+						hitstun2    = 0x16 + 0x2 + fix_addr(0x5AF7C),
+						blockstun   = 0x1A + 0x2 + fix_addr(0x5AF88),
+					}
+					local base_addr  = p.addr.proc_base
+					p.attack         = data
+					p.forced_down    = 2 <= mem.r8(data + base_addr.forced_down)       -- テクニカルライズ可否 家庭用 05A9D6 からの処理
+					p.hitstop        = math.max(2, mem.r8(data + base_addr.hitstop) - 1) -- ヒットストップ 家庭用 弾やられ側:05AE50 からの処理 OK
+					p.blockstop     = math.max(2, p.hitstop - 1)                      -- ガード時の補正
+					p.pure_dmg       = mem.r8(data + base_addr.damege)                 -- 補正前ダメージ 家庭用 05B146 からの処理
+					p.pure_st        = mem.r8(data + base_addr.stun)                   -- 気絶値 家庭用 05C1B0 からの処理
+					p.pure_st_tm     = mem.r8(data + base_addr.stun_timer)             -- 気絶タイマー 家庭用 05C1B0 からの処理
+					p.max_hit_dn     = mem.r8(data + base_addr.max_hit)                -- 最大ヒット数 家庭用 061356 からの処理 OK
+					p.bai_chk2       = mem.r8((0xFFFF & (data + data)) + base_addr.baigaeshi) == 0x01 -- 倍返し可否
+					apply_attack_infos(p, data, base_addr)
+					p.attackbit = util.hex_reset(p.attackbit, 0xFF << frame_attack_types.fb_effect, p.effect << frame_attack_types.fb_effect)
+					-- util.printf("%x %s %s  hitstun %s %s", data, p.hitstop, p.blockstop, p.hitstun, p.blockstun)
+				end,
+			}
+			p.wp32 = {
+				[0x00] = function(data)
+					p.asm         = mem.r16(data)
+					p.proc_active = p.asm ~= 0x4E75 and p.asm ~= 0x197C
+					p.boxies      = p.proc_active and p.boxies or {}
+				end,
+			}
+			parent.fireballs[base], all_objects[base], all_fireballs[base] = p, p, p
 		end
 	end
-
-	-- Fireflower形式のパッチファイルの読込とメモリへの書込
-	local pached = false
-	local ffptn = "%s*(%w+):%s+(%w+)%s+(%w+)%s*[\r\n]*"
-	local fixaddr = function(saddr, offset)
-		local addr = tonumber(saddr, 16) + offset
-		if (addr % 2 == 0) then
-			return addr + 1
-		else
-			return addr - 1
-		end
+	local change_player_input = function()
+		if in_player_select ~= true then return end
+		local a4, sel              = mem.rg("A4", 0xFFFFFF), mem.r8(0x100026)
+		local p_num, op_num, p_sel = mem.r8(a4 + 0x12), 0, {}
+		op_num, p_sel[p_num]       = 3 - p_num, a4 + 0x13
+		if sel == op_num and p_sel[op_num] then mem.w8(p_sel[p_num], op_num) end -- プレイヤー選択時に1P2P操作を入れ替え
 	end
-	local apply_patch = function(s_patch, offset, force)
-		if force ~= true then
-			for saddr, v1, v2 in string.gmatch(s_patch, ffptn) do
-				local before = pgm:read_u8(fixaddr(saddr, offset))
-				if before ~= tonumber(v1, 16) then
-					if before == tonumber(v2, 16) then
-						-- already patched
+	local common_p = {                                                -- プレイヤー別ではない共通のフック
+		wp8 = {
+			[{ addr = 0x107EC6, filter = 0x11DE8 }] = change_player_input,
+			[0x107C22] = function(data, ret)
+				if global.disp_meters ~= true and data == 0x38 then -- ゲージのFIX非表示
+					ret.value = 0x0
+					mem.w8(0x10E024, 0x3)                   -- 3にしないと0x107C2Aのカウントが進まなくなる
+				end
+				if global.disp_bg ~= true and mem.r8(0x107C22) > 0 then -- 背景消し
+					mem.w8(0x107762, 0x00)
+					mem.w16(0x401FFE, 0x5ABB)               -- 背景色
+				end
+			end,
+			[0x10B862] = function(data) mem._0x10B862 = data end, -- 押し合い判定で使用
+		},
+		wp16 = {
+			[mem.stage_base_addr + screen.offset_x] = function(data) screen.left = data + (320 - scr.width * scr.xscale) / 2 end,
+			[mem.stage_base_addr + screen.offset_y] = function(data) screen.top = data + scr.height * scr.yscale end,
+			[{ addr = 0x107BB8, filter = 0xF368 }] = function(data, ret)
+				if global.next_stg3 == 2 then ret.value = 2 end -- 双角ステージの雨バリエーション指定用
+			end,
+			[0x107C2A] = function(data, ret)
+				global.lag_frame, global.last_frame = global.last_frame == data, data
+				if data >= 0x176E then ret.value = 0 end -- 0x176Eで止まるのでリセットしてループさせる
+			end,
+		},
+		wp32 = {
+			[0x100F56] = function(data) global.sp_skip_frame = data ~= 0 end,
+		},
+		rp8 = {
+			[{ addr = 0x107EC6, filter = 0x11DC4 }] = function(data)
+				if in_player_select ~= true then return end
+				if data == mem.rg("D0", 0xFF) then change_player_input(data) end
+			end,
+			[{ addr = 0x107765, filter = { 0x40EE, 004114, 0x413A } }] = function(_, ret)
+				local pc = mem.pc()
+				local a = mem.rg("A4", 0xFFFFFF)
+				local b = mem.r32(a + 0x8A)
+				local c = mem.r16(a + 0xA) + 0x100000
+				local d = mem.r16(c + 0xA) + 0x100000
+				local e = (mem.r32(a + 0x18) << 32) + mem.r32(a + 0x1C)
+				local p_bases = { a, b, c, d, } -- ベースアドレス候補
+				if data.p_chan[e] then ret.value = 0 end
+				for i, addr, p in find(p_bases, get_object_by_addr) do
+					--util.printf("%s %s %6x", global.frame_number, i, addr)
+					if i == 1 and p.hide_char then
+						ret.value = 4
+					elseif i == 2 and p.hide_phantasm then
+						ret.value = 4
+					elseif i >= 3 and p.hide_effect then
+						ret.value = 4
+					end
+					return
+				end
+				if global.hide_effect then
+					ret.value = 4
+					return
+				end
+				--util.printf("%6x %8x %8x %8x | %8x %16x %s", a, b, c, d, pc, e, data.get_obj_name(e))
+			end,
+			[{ addr = 0x107C1F, filter = 0x39456 }] = function(data)
+				local p = get_object_by_reg("A4", {})
+				if p.bs_hook then
+					if p.bs_hook.ver then
+						-- util.printf("bs_hook1 %x %x", p.bs_hook.id, p.bs_hook.ver)
+						mem.w8(p.addr.base + 0xA3, p.bs_hook.id)
+						mem.w16(p.addr.base + 0xA4, p.bs_hook.ver)
 					else
-						print("patch failure in 0x" .. saddr)
-						return false
+						-- util.printf("bs_hook2 %x %x", p.bs_hook.id, p.bs_hook.f)
+						mem.w8(p.addr.base + 0xD6, p.bs_hook.id)
+						mem.w8(p.addr.base + 0xD7, p.bs_hook.f)
 					end
 				end
-			end
-		end
-		for saddr, v1, v2 in string.gmatch(s_patch, ffptn) do
-			pgm:write_direct_u8(fixaddr(saddr, offset), tonumber(v2, 16))
-		end
-		return true
-	end
-	local apply_patch_file = function(patch, force)
-		local ret = false
-		if pgm then
-			local path = rom_patch_path(patch)
-			print(path .. " patch " .. (force and "force" or ""))
-			local f = io.open(path, "r")
-			if f then
-				for line in f:lines() do
-					ret = apply_patch(line, 0x000000, force)
-					if not ret then
-						print("patch failure in [" .. line .. "]")
+			end,
+		},
+		rp16 = {
+			[{ addr = 0x107BB8, filter = {
+				0xF6AC,                                                       -- BGMロード鳴らしたいので  --[[ 0x1589Eと0x158BCは雨発動用にそのままとする ]]
+				0x17694,                                                      -- 必要な事前処理ぽいので
+				0x1E39A,                                                      -- FIXの表示をしたいので
+				0x22AD8,                                                      -- データロードぽいので
+				0x22D32,                                                      -- 必要な事前処理ぽいので
+			} }] = function(data, ret) ret.value = 1 end,                     -- 双角ステージの雨バリエーション時でも1ラウンド相当の前処理を行う
+			[{ addr = 0x107BB0, filter = { 0x1728E, 0x172DE } }] = function(data, ret) -- 影消し=2, 双角ステージの反射→影化=0
+				if global.hide_shadow ~= 2 then ret.value = (global.hide_shadow == 1) and 2 or 0 end
+			end,
+			[mem.stage_base_addr + 0x46] = function(data, ret) if global.fix_scr_top > 1 then ret.value = data + global.fix_scr_top - 20 end end,
+			[mem.stage_base_addr + 0xA4] = function(data, ret) if global.fix_scr_top > 1 then ret.value = data + global.fix_scr_top - 20 end end,
+		},
+		rp32 = {
+			[{ addr = 0x5B1DE, filter = 0x5B1B6 }] = function(data) get_object_by_reg("A4", {}).last_damage_scaling1 = 1 end,
+			[{ addr = 0x5B1E2, filter = 0x5B1B6 }] = function(data) get_object_by_reg("A4", {}).last_damage_scaling1 = 7 / 8 end,
+			[{ addr = 0x5B1E6, filter = 0x5B1B6 }] = function(data) get_object_by_reg("A4", {}).last_damage_scaling1 = 3 / 4 end,
+			[{ addr = 0x5B1EA, filter = 0x5B1B6 }] = function(data) get_object_by_reg("A4", {}).last_damage_scaling1 = 3 / 4 end,
+			[0x5B1EE] = function(data) get_object_by_reg("A4", {}).last_damage_scaling2 = 1 end,
+			[0x5B1F2] = function(data) get_object_by_reg("A4", {}).last_damage_scaling2 = 1 end,
+			[0x5B1F6] = function(data) get_object_by_reg("A4", {}).last_damage_scaling2 = 7 / 8 end,
+			[0x5B1FA] = function(data) get_object_by_reg("A4", {}).last_damage_scaling2 = 3 / 4 end,
+		}
+	}
+	table.insert(all_wps, common_p)
+	for base, p in pairs(all_objects) do
+		p.wp8 = util.hash_add_all(p.wp8, {
+			[0x10] = function(data)
+				p.char, p.char4, p.char8 = data, (data << 2), (data << 3)
+				p.char_data = p.is_fireball and chars[#chars] or chars[data]      -- 弾はダミーを設定する
+			end,
+			[0x58] = function(data) p.internal_side = util.int8(data) < 0 and -1 or 1 end, -- 向き 00:左側 80:右側
+			[0x66] = function(data)
+				p.act_count = data                                                -- 現在の行動のカウンタ
+				if p.is_fireball ~= true then
+					local hits, shifts = p.max_hit_dn or 0, frame_attack_types.act_count
+					if hits > 1 or hits == 0 or (p.char == 0x4 and p.attack == 0x16) then
+						-- 連続ヒットできるものはカウントで区別できるようにする
+						p.attackbit = util.hex_reset(p.attackbit, 0xFF << shifts, p.act_count << shifts)
+					elseif util.testbit(p.flag_cc, state_flag_cc.grabbing) and p.op.last_damage_scaled ~= 0xFF then
+						p.attackbit = util.hex_reset(p.attackbit, 0xFF << shifts, p.op.last_damage_scaled << shifts)
 					end
 				end
-				f:close()
-			end
-		end
-		print(ret and "patch finish" or "patch NOT finish")
-		return ret
+			end,
+			[0x67] = function(data) p.act_boxtype = 0xFFFF & (data & 0xC0 * 4) end, -- 現在の行動の判定種類
+			[0x6A] = function(data)
+				p.repeatable = (data & 0x4) == 0x4                         -- 連打キャンセル判定
+				p.flip_x1 = ((data & 0x80) == 0) and 0 or 1                -- 判定の反転
+				local clear = (data & 0xFB) ~= 0
+				if mem.pc() == fix_addr(0x011DFE) then
+					p.attackbit = util.hex_set(p.attackbit, frame_attack_types.fake, clear) -- 判定無効化
+				else
+					p.attackbit = util.hex_set(p.attackbit, frame_attack_types.obsolute, clear) -- 判定有効化
+				end
+			end,
+			[0x6F] = function(data) p.act_frame = data end, -- 動作パターンの残フレーム
+			[0x71] = function(data) p.flip_x2 = (data & 1) end, -- 判定の反転
+			[0x73] = function(data) p.box_scale = data + 1 end, -- 判定の拡大率
+			[0x7A] = function(data)                    -- 攻撃判定とやられ判定
+				--util.printf("box %x %x %x", p.addr.base, mem.pc(), data)
+				p.boxies = {}
+				if data > 0 then
+					p.attackbit = util.hex_reset(p.attackbit, 0x1F, p.attackbit & frame_attack_types.fake)
+					p.attackbit = util.hex_set(p.attackbit, p.is_fireball and frame_attack_types.fb or 0)
+					local a2base = mem.r32(base + 0x7A)
+					for a2 = a2base, a2base + (data - 1) * 5, 5 do -- 家庭用 004A9E からの処理
+						local id = mem.r8(a2)
+						local top, bottom = sort_ba(mem.r8i(a2 + 0x1), mem.r8i(a2 + 0x2))
+						local left, right = sort_ba(mem.r8i(a2 + 0x3), mem.r8i(a2 + 0x4))
+						local type = main_box_types[id] or (id < 0x20) and box_types.unknown or box_types.attack
+						p.attack_id = type == box_types.attack and id or p.attack_id
+						local reach, possibles
+						if type == box_types.attack then
+							possibles = get_hitbox_possibles(p.attack_id)
+							p.attackbit = util.hex_set(p.attackbit, frame_attack_types.attacking)
+							p.attackbit = util.hex_set(p.attackbit, possibles.juggle and frame_attack_types.juggle or 0)
+							local possible = util.hex_set(util.hex_set(possibles.normal, possibles.sway_standing), possibles.sway_crouching)
+							local blockable = act_types.unblockable -- ガード属性 -- 不能
+							if possibles.crouching_block and possibles.standing_block then
+								blockable = act_types.attack -- 上段
+							elseif possibles.crouching_block then
+								blockable = act_types.low_attack -- 下段
+							elseif possibles.standing_block then
+								blockable = act_types.overhead -- 中段
+							end
+							reach = { blockable = blockable, possible = possible, }
+						end
+						table.insert(p.boxies, {
+							no = #p.boxies + 1,
+							id = id,
+							type = type,
+							left = left,
+							right = right,
+							top = top,
+							bottom = bottom,
+							sway_type = sway_box_types[id] or type,
+							possibles = possibles or {},
+							reach = reach or {}, -- 判定のリーチとその属性
+						})
+						-- util.printf("p=%x %x %x %x %s addr=%x id=%02x l=%s r=%s t=%s b=%s", p.addr.base, data, base, p.box_addr, 0, a2, id, x1, x2, y1, y2)
+					end
+				end
+			end,
+			[0x8D] = function(data)
+				p.hitstop_remain, p.in_hitstop = data, (data > 0 or (p.hitstop_remain and p.hitstop_remain > 0)) and now() or p.in_hitstop -- 0になるタイミングも含める
+			end,
+			[0xAA] = function(data)
+				p.attackbit = util.hex_set(p.attackbit, frame_attack_types.fullhit, data == 0) -- 全段攻撃ヒット/ガード
+			end,
+			[0xAB] = function(data) p.max_hit_nm = data end,                      -- 同一技行動での最大ヒット数 分子
+			[0xB1] = function(data) p.hurt_invincible = data > 0 end,             -- やられ判定無視の全身無敵
+			[0xE9] = function(data) p.dmg_id = data end,                          -- 最後にヒット/ガードした技ID
+			[0xEB] = function(data) p.hurt_attack = data end,                      -- やられ中のみ変化
+		})
+		p.wp16 = util.hash_add_all(p.wp16, {
+			[0x20] = function(data) p.pos, p.max_pos, p.min_pos = data, math.max(p.max_pos or 0, data), math.min(p.min_pos or 1000, data) end,
+			[0x22] = function(data) p.pos_frc = util.int16tofloat(data) end, -- X座標(小数部)
+			[0x24] = function(data)
+				p.pos_z, p.on_sway_line,p.on_main_line = data, 40 == data and now() or p.on_sway_line, 24 == data and now() or p.on_main_line -- Z座標
+			end,
+			[0x28] = function(data) p.pos_y = util.int16(data) end,                                       -- Y座標
+			[0x2A] = function(data) p.pos_frc_y = util.int16tofloat(data) end,                            -- Y座標(小数部)
+			[{ addr = 0x5E, filter = 0x011E10 }] = function(data) p.box_addr = mem.rg("A0", 0xFFFFFFFF) - 0x2 end, -- 判定のアドレス
+			[0x60] = function(data)
+				p.act, p.update_act = data, now()                                       -- 行動ID デバッグディップステータス表示のPと同じ
+				p.attackbit = util.hex_reset(p.attackbit, 0xFFFFFF << frame_attack_types.act, p.act << frame_attack_types.act)
+				if p.parent then
+					if p.parent.char_data then p.act_data = p.parent.char_data.fireballs[data] end
+				elseif p.char_data then
+					p.act_data = p.char_data.acts[data]
+				end
+			end,
+			[0x62] = function(data) p.acta = data end, -- 行動ID デバッグディップステータス表示のAと同じ
+		})
+		table.insert(all_wps, p)
 	end
 
 	-- 場面変更
 	local apply_1p2p_active = function()
-		pgm:write_direct_u8(0x100024, 0x03) -- 1P or 2P
-		pgm:write_direct_u8(0x100027, 0x03) -- 1P or 2P
-	end
-
-	local apply_vs_mode = function(continue)
-		apply_1p2p_active()
-		if not continue then
-			pgm:write_direct_u8(0x107BB5, 0x01) -- vs 1st CPU mode
+		if in_match then
+			mem.wd8(0x100024, 0x03)
+			mem.wd8(0x100027, 0x03)
 		end
 	end
 
 	local goto_player_select = function()
-		dofile(ram_patch_path("player-select.lua"))
-		apply_vs_mode(false)
+		-- プログラム改変
+		mem.wd32(0x10668, 0xC6CFFEF) -- 元の乱入処理
+		mem.wd32(0x1066C, 0x226704) -- 元の乱入処理
+		mem.wd8(0x1066E, 0x60)  -- 乱入時にTHE CHALLENGER表示をさせない
+
+		mem.w8(0x1041D3, 1)     -- 乱入フラグON
+		mem.wd8(0x107BB5, 0x01)
+		mem.w32(0x107BA6, 0x00010001) -- CPU戦の進行数をリセット
+		mem.w32(0x100024, 0x00000000)
+		mem.w16(0x10FDB6, 0x0101)
 	end
 
 	local restart_fight = function(param)
-		param                = param or {}
-		local stg1           = param.next_stage.stg1 or menu.stgs[1].stg1
-		local stg2           = param.next_stage.stg2 or menu.stgs[1].stg2
-		local stg3           = param.next_stage.stg3 or menu.stgs[1].stg3
-		global.no_background = (param.next_stage or menu.stgs[1]).no_background
-		local p1             = param.next_p1 or 1
-		local p2             = param.next_p2 or 21
-		local p1col          = param.next_p1col or 0x00
-		local p2col          = param.next_p2col or 0x01
-		local bgm            = param.next_bgm or 21
+		param              = param or {}
+		global.next_stg3   = param.next_stage.stg3 or mem.r16(0x107BB8)
+		local p1, p2       = param.next_p1 or 1, param.next_p2 or 21
+		local p1col, p2col = param.next_p1col or 0x00, param.next_p2col or 0x01
 
-		dofile(ram_patch_path("vs-restart.lua"))
-		apply_vs_mode(true)
+		-- プログラム改変
+		mem.wd32(0x10668, 0x4EF90000) -- FIGHT表示から対戦開始(F05E)へ飛ばす
+		mem.wd32(0x1066C, 0xF33A4E71) -- FIGHT表示から対戦開始
 
-		local p = players
+		mem.w8(0x1041D3, 1)     -- 乱入フラグで割り込み
+		mem.w8(0x107C1F, 0)     -- キャラデータの読み込み無視フラグをOFF
+		mem.w32(0x107BA6, 0x00010001) -- CPU戦の進行数をリセット
+		mem.wd8(0x100024, 0x03)
+		mem.wd8(0x100027, 0x03)
+		mem.w16(0x10FDB6, 0x0101)
 
-		pgm:write_u8(0x107BB1, stg1)
-		pgm:write_u8(0x107BB7, stg2)
-		pgm:write_u8(0x107BB9, stg3) -- フックさせて無理やり実現するために0xD0を足す（0xD1～0xD5にする）
-		pgm:write_u8(p[1].addr.char, p1)
-		pgm:write_u8(p[1].addr.color, p1col)
-		pgm:write_u8(p[2].addr.char, p2)
-		if p1 == p2 then
-			p2col = p1col == 0x00 and 0x01 or 0x00
-		end
-		pgm:write_u8(p[2].addr.color, p2col)
-		pgm:write_u8(0x10A8D5, bgm) --BGM
+		mem.w16(0x1041D6, 0x0003) -- 対戦モード3
+		mem.w8(0x107BB1, param.next_stage.stg1 or mem.r8(0x107BB1))
+		mem.w8(0x107BB7, param.next_stage.stg2 or mem.r8(0x107BB7))
+		mem.w16(0x107BB8, global.next_stg3) -- ステージのバリエーション
+		mem.w8(players[1].addr.char, p1)
+		mem.w8(players[1].addr.color, p1col)
+		mem.w8(players[2].addr.char, p2)
+		if p1 == p2 then p2col = p1col == 0x00 and 0x01 or 0x00 end
+		mem.w8(players[2].addr.color, p2col)
+		mem.w16(0x10A8D4, param.next_bgm or 21) -- 対戦モード3 BGM
 
 		-- メニュー用にキャラの番号だけ差し替える
-		players[1].char = p1
-		players[2].char = p2
+		players[1].char, players[2].char = p1, p2
 	end
-	--
 
 	-- ブレイクポイント発動時のデバッグ画面表示と停止をさせない
-	local debug_stop = 0
 	local auto_recovery_debug = function()
-		if debugger then
-			if debugger.execution_state ~= "run" then
-				debug_stop = debug_stop + 1
-			end
-			if 3 > debug_stop then
-				debugger.execution_state = "run"
-				debug_stop = 0
-			end
-		end
-	end
-
-	local load_or_set_bps = function(hook_holder, p, enabled, addr, cond, exec)
-		if hook_holder ~= nil then
-			global.set_bps(enabled ~= true, hook_holder)
-		else
-			hook_holder = global.new_hook_holder()
-			global.bp(hook_holder.bps, addr, cond, exec)
-			global.set_bps(enabled ~= true, hook_holder)
-		end
-		return hook_holder
-	end
-
-	-- 詠酒の距離チェックを飛ばす
-	local set_skip_esaka_check = function(p, enabled)
-		p.skip_esaka_check = load_or_set_bps(p.skip_esaka_check, p, enabled,
-			0x0236F2, string.format("(A4)==$%x", p.addr.base), "CURPC=2374C;g")
-	end
-
-	-- 自動 炎の種馬
-	-- bp 04094A,1,{CURPC=040964;g}
-	local set_auto_taneuma = function(p, enabled)
-		p.auto_taneuma = load_or_set_bps(p.auto_taneuma, p, enabled,
-			fix_bp_addr(0x04092A), string.format("(A4)==$%x", p.addr.base), string.format("CURPC=%x;g", fix_bp_addr(0x040944)))
-	end
-
-	-- 必勝！逆襲拳1発キャッチカデンツァ
-	-- bp 0409A6,1,{maincpu.pb@(f7+(A4))=7;D0=7;g}
-	local set_fast_kadenzer = function(p, enabled)
-		p.fast_kadenze = load_or_set_bps(p.fast_kadenze, p, enabled,
-			fix_bp_addr(0x040986), string.format("(A4)==$%x", p.addr.base), "maincpu.pb@(f7+(A4))=7;D0=7;g")
-	end
-
-	-- 自動喝CA
-	-- bp 03F94C,1,{CURPC=03F952;g}
-	-- bp 03F986,1,{CURPC=3F988;g}
-	local set_auto_katsu = function(p, enabled)
-		p.auto_katsu1 = load_or_set_bps(p.auto_katsu1, p, enabled,
-			fix_bp_addr(0x03F92C), string.format("(A4)==$%x", p.addr.base), string.format("CURPC=%x;g", fix_bp_addr(0x03F932)))
-		p.auto_katsu2 = load_or_set_bps(p.auto_katsu2, p, enabled,
-			fix_bp_addr(0x03F966), string.format("(A4)==$%x", p.addr.base), string.format("CURPC=%x;g", fix_bp_addr(0x03F968)))
-	end
-
-	-- 空振りCAできる
-	-- bp 02FA5E,1,{CURPC=02FA6A;g}
-	local set_kara_ca = function(p, enabled)
-		p.kara_ca = load_or_set_bps(p.kara_ca, p, enabled,
-			fix_bp_addr(0x02FA1E), string.format("(A4)==$%x", p.addr.base), string.format("CURPC=%x;g", fix_bp_addr(0x02FA4A)))
-	end
-
-	local new_empty_table = function(len)
-		local tmp_table = {}
-		for i = 1, len do
-			table.insert(tmp_table, nil)
-		end
-		return tmp_table
-	end
-
-	local new_filled_table = function(...)
-		local tmp_table = {}
-		local a = { ... }
-		for j = 1, #a, 2 do
-			local len = a[j]
-			local fill = a[j + 1]
-			for i = 1, len do
-				table.insert(tmp_table, fill)
-			end
-		end
-		return tmp_table
-	end
-
-	--  自動デッドリー
-	local set_auto_deadly = function(p, count)
-		p.auto_deadly = p.auto_deadly or new_empty_table(11)
-		--  自動デッドリー最後
-		p.auto_deadly[11] = load_or_set_bps(p.auto_deadly[11], p, count == 10,
-			fix_bp_addr(0x03DBC4), string.format("(A4)==$%x", p.addr.base), string.format("CURPC=%x;g", fix_bp_addr(0x03DBE2)))
-		--  自動デッドリー途中
-		local check_count = count - 1
-		for i = 1, 10 do
-			p.auto_deadly[i] = load_or_set_bps(p.auto_deadly[i], p, i == check_count,
-				fix_bp_addr(0x03DCE8), string.format("(A4)==$%x&&D1<%x", p.addr.base, i), string.format("CURPC=%x;g", fix_bp_addr(0x03DD16)))
-		end
-	end
-
-	-- 自動マリートリプルエクスタシー
-	local set_auto_3ecst = function(p, enabled)
-		p.auto_3ecst = load_or_set_bps(p.auto_3ecst, p, enabled,
-			fix_bp_addr(0x041CE0), string.format("(A4)==$%x", p.addr.base), string.format("CURPC=%x;g", fix_bp_addr(0x041CFC)))
-	end
-
-	-- ドリルLVセット
-	local set_auto_drill = function(p, count)
-		p.auto_drill = p.auto_drill or new_empty_table(5)
-		local check_count = count - 1
-		for i = 1, 5 do
-			p.auto_drill[i] = load_or_set_bps(p.auto_drill[i], p, i == check_count,
-				fix_bp_addr(0x042C10), string.format("(A4)==$%x", p.addr.base), string.format("D7=%x;g", i))
-		end
-	end
-
-	-- 自動アンリミ
-	local set_auto_unlimit = function(p, count)
-		p.auto_unlimit = p.auto_unlimit or new_empty_table(11)
-		-- 自動アンリミサイクロン
-		p.auto_unlimit[11] = load_or_set_bps(p.auto_unlimit[11], p, count == 11,
-			fix_bp_addr(0x049966), string.format("(A4)==$%x", p.addr.base), string.format("CURPC=%x;g", fix_bp_addr(0x4998A)))
-		-- 自動アンリミ途中
-		local check_count = count == 11 and 9 or (count - 1)
-		for i = 1, 10 do
-			p.auto_unlimit[i] = load_or_set_bps(p.auto_unlimit[i], p, i == check_count,
-				fix_bp_addr(0x049B1C), string.format("(A4)==$%x&&D1<%x", p.addr.base, i), string.format("CURPC=%x;g", fix_bp_addr(0x049B4E)))
-		end
-	end
-	-- 当たり判定と投げ判定用のブレイクポイントとウォッチポイントのセット
-	local set_wps = function(reset)
-		if global.wps then
-			global.set_wps(reset, global.wps)
-		else
-			global.wps = global.new_hook_holder()
-			local wps = global.wps.wps
-
-			--[[
-			pgm:install_write_tap(0x1006BE, 0x1006BF, "gbmode", function (offset, data, mask)
-				printf("%x %x %x", offset, data, mask)
-				return data
-			end)
-			global.wp(wps, "w", 0x1006BF, 1, "wpdata!=0", "maincpu.pb@10CA00=1;g")
-			global.wp(wps, "w", 0x1007BF, 1, "wpdata!=0", "maincpu.pb@10CA01=1;g")
-			global.wp(wps, "w", 0x100620, 1, "wpdata!=0", "maincpu.pb@10CA02=1;g")
-			global.wp(wps, "w", 0x10062C, 1, "wpdata!=0", "maincpu.pb@10CA03=1;g")
-			global.wp(wps, "w", 0x100820, 1, "wpdata!=0", "maincpu.pb@10CA04=1;g")
-			global.wp(wps, "w", 0x10082C, 1, "wpdata!=0", "maincpu.pb@10CA05=1;g")
-			global.wp(wps, "w", 0x100A20, 1, "wpdata!=0", "maincpu.pb@10CA06=1;g")
-			global.wp(wps, "w", 0x100A2C, 1, "wpdata!=0", "maincpu.pb@10CA07=1;g")
-			global.wp(wps, "w", 0x100720, 1, "wpdata!=0", "maincpu.pb@10CA08=1;g")
-			global.wp(wps, "w", 0x10072C, 1, "wpdata!=0", "maincpu.pb@10CA09=1;g")
-			global.wp(wps, "w", 0x100920, 1, "wpdata!=0", "maincpu.pb@10CA0A=1;g")
-			global.wp(wps, "w", 0x10092C, 1, "wpdata!=0", "maincpu.pb@10CA0B=1;g")
-			global.wp(wps, "w", 0x100B20, 1, "wpdata!=0", "maincpu.pb@10CA0C=1;g")
-			global.wp(wps, "w", 0x100B2C, 1, "wpdata!=0", "maincpu.pb@10CA0D=1;g")
-			global.wp(wps, "w", 0x10048E, 1, "wpdata!=0", "maincpu.pb@10CA0E=maincpu.pb@10048E;g")
-			global.wp(wps, "w", 0x10058E, 1, "wpdata!=0", "maincpu.pb@10CA0F=maincpu.pb@10058E;g")
-			global.wp(wps, "w", 0x10048F, 1, "1", "maincpu.pb@10CA10=wpdata;g")
-			global.wp(wps, "w", 0x10058F, 1, "1", "maincpu.pb@10CA11=wpdata;g")
-			global.wp(wps, "w", 0x100460, 1, "wpdata!=0", "maincpu.pw@10CA12=wpdata;g")
-			global.wp(wps, "w", 0x100560, 1, "wpdata!=0", "maincpu.pw@10CA14=wpdata;g")
-
-			-- X軸のMAXとMIN
-			global.wp(wps, "w", 0x100420, 2, "wpdata>maincpu.pw@10DDE6", "maincpu.pw@10DDE6=wpdata;g")
-			global.wp(wps, "w", 0x100420, 2, "wpdata<maincpu.pw@10DDEA", "maincpu.pw@10DDEA=wpdata;g")
-			global.wp(wps, "w", 0x100520, 2, "wpdata>maincpu.pw@10DDE8", "maincpu.pw@10DDE8=wpdata;g")
-			global.wp(wps, "w", 0x100520, 2, "wpdata<maincpu.pw@10DDEC", "maincpu.pw@10DDEC=wpdata;g")
-			]]
-			local wp8 = function(addr, cb)
-				local name = string.format("wp8_%x_%s", addr, #wps)
-				if addr % 2 == 0 then
-					table.insert(wps, pgm:install_write_tap(addr, addr + 1, name,
-						function(offset, data, mask)
-							if mask > 0xFF then
-								cb((data & mask) >> 8, name)
-							else
-								cb(data & mask, name)
-							end
-							return data
-						end))
-				else
-					table.insert(wps, pgm:install_write_tap(addr - 1, addr, name,
-						function(offset, data, mask)
-							if mask == 0xFF or mask == 0xFFFF then
-								cb(0xFF & data, name)
-							end
-							return data
-						end))
-				end
-				cb(pgm:read_u8(addr))
-				printf("register wp %s %x", name, addr)
-			end
-			local wp16 = function(addr, cb)
-				local name = string.format("wp16_%x_%s", addr, #wps)
-				table.insert(wps, pgm:install_write_tap(addr, addr + 1, name,
-					function(offset, data, mask)
-						if mask == 0xFFFF then
-							cb(data & mask, name)
-							return data
-						end
-						local data2, mask2, mask3, data3
-						local prev = pgm:read_u32(addr)
-						if mask == 0xFF00 then
-							mask2 = 0xFF000000
-						elseif mask == 0xFF then
-							mask2 = 0x00FF0000
-						end
-						mask3 = 0xFFFF ~ mask2
-						data2 = data & mask
-						data3 = (prev & mask3) | data2
-						cb(data3, name)
-						return data
-					end))
-				cb(pgm:read_u16(addr))
-				printf("register wp %s %x", name, addr)
-			end
-			local wp32 = function(addr, cb)
-				local num = #wps
-				local name = string.format("wp32_%x_%s", addr, num)
-				table.insert(wps, pgm:install_write_tap(addr, addr + 3, name,
-					function(offset, data, mask)
-						local prev = pgm:read_u32(addr)
-						local data2, mask2, mask3, data3
-						if offset == addr then
-							if mask == 0xFF00 then
-								mask2 = 0xFF000000
-							elseif mask == 0xFF then
-								mask2 = 0x00FF0000
-							else
-								mask2 = 0xFFFF0000
-							end
-							data2 = (data << 16) & mask2
-						else
-							if mask == 0xFF00 then
-								mask2 = 0x0000FF00
-							elseif mask == 0xFF then
-								mask2 = 0x000000FF
-							else
-								mask2 = 0x0000FFFF
-							end
-							data2 = data & mask2
-						end
-						mask3 = 0xFFFFFFFF ~ mask2
-						data3 = (prev & mask3) | data2
-						-- printf("%s %x %x %x %x %x %x", name, addr, offset, data, mask, prev, data3)
-						cb(data3, name)
-						return data
-					end))
-				cb(pgm:read_u32(addr))
-				printf("register wp %s %x", name, addr)
-			end
-			local rp32 = function(addr, cb)
-				local num = #wps
-				local name = string.format("rp32_%x_%s", addr, num)
-				table.insert(wps, pgm:install_read_tap(addr, addr + 3, name,
-					function(offset, data, mask)
-						if offset == addr then
-							cb(nil)
-						end
-						return data
-					end))
-				cb(pgm:read_u32(addr))
-				printf("register rp %s %x", name, addr)
-			end
-			wp16(mem.stage_base_addr + screen.offset_x, function(data)
-				local width = scr.width * scr.xscale
-				screen.left = data + (320 - width) / 2
-				screen.left_raw = data
-			end)
-			wp16(mem.stage_base_addr + screen.offset_y, function(data)
-				local height = scr.height * scr.yscale
-				screen.top = data + height
-			end)
-			for _, p in ipairs(players) do
-				local base = p.addr.base
-				for addr, cb in pairs(p.wp8) do
-					wp8(addr > 0xFF and addr or (base + addr), cb)
-				end
-				for addr, cb in pairs(p.wp16) do
-					wp16(addr > 0xFF and addr or (base + addr), cb)
-				end
-				for addr, cb in pairs(p.wp32) do
-					wp32(addr > 0xFF and addr or (base + addr), cb)
-				end
-				for addr, cb in pairs(p.rp32) do
-					rp32(addr > 0xFF and addr or (base + addr), cb)
-				end
-			end
-			-- コマンド入力状態の記憶場所 A1
-			-- bp 39488,{(A4)==100400},{printf "CURPC=%X A4=%X A1=%X",CURPC,(A4),(A1);g}
-
-			-- タメ状態の調査用
-			-- global.wp(wps, "w", 0x10B548, 160, "wpdata!=FF&&wpdata>0&&maincpu.pb@(wpaddr)==0", "printf \"pos=%X addr=%X wpdata=%X\", (wpaddr - $10B548),wpaddr,wpdata;g")
-
-			-- 必殺技追加入力の調査用
-			-- wp 1004A5,1,r,wpdata!=FF,{printf "CURPC=%X data=%X",CURPC,wpdata;g} -- 追加入力チェックまたは技処理内での消去
-			-- wp 1004A5,1,w,wpdata==0,{printf "CURPC=%X data=%X CLS",CURPC,wpdata;g} -- 更新 追加技入力時
-			-- wp 1004A5,1,w,wpdata!=maincpu.pb@(wpaddr),{printf "CURPC=%X data=%X W",CURPC,wpdata;g} -- 消去（毎フレーム）
-
-			--[[
-			-- コマンド成立の確認用
-			for i, p in ipairs(players) do
-				global.wp(wps, "w", p.addr.base + 0xA4, 2, "wpdata>0",
-					"printf \"wpdata=%X CH=%X CH4=%D CURPC=%X rPC=%X A4=%X A6=%X D1=%X\",wpdata,maincpu.pw@((A4)+10),maincpu.pw@((A4)+10),CURPC,rPC,(A4),(A6),(D1);g")
-			end
-			]]
-			--[[
-			-- 投げ持続フレームの解除の確認用
-			for i, p in ipairs(players) do
-				global.wp(wps, "w", p.addr.base + 0xA4, 2, "wpdata==0&&maincpu.pb@" ..  string.format("%x", p.addr.base) .. ">0",
-					"printf \"wpdata=%X CH=%X CH4=%D CURPC=%X rPC=%X A4=%X A6=%X D1=%X\",wpdata,maincpu.pw@((A4)+10),maincpu.pw@((A4)+10),CURPC,rPC,(A4),(A6),(D1);g")
-			end
-			]]
-		end
-	end
-
-	local set_bps = function(reset)
-		if global.bps then
-			global.set_bps(reset, global.bps)
-		else
-			global.bps = global.new_hook_holder()
-			local bps = global.bps
-
-			if global.infinity_life2 then
-				--bp 05B480,{(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100500)},{CURPC=5B48E;g}
-				global.bp(bps, fix_bp_addr(0x05B460), "1", string.format("CURPC=%x;g", fix_bp_addr(0x05B46E)))
-				global.bp(bps, fix_bp_addr(0x05B466), "1", string.format("CURPC=%x;g", fix_bp_addr(0x05B46E)))
-			end
-
-			-- wp CB23E,16,r,{A4==100400},{printf "A4=%X CURPC=%X A6=%X D1=%X data=%X",A4,CURPC,A6,D1,wpdata;g}
-
-			-- リバーサルとBSモードのフック
-			local bp_cond = "(maincpu.pw@107C22>0)&&((($1E> maincpu.pb@10DDDA)&&(maincpu.pb@10DDDD==$1)&&($100400==((A4)&$FFFFFF)))||(($1E> maincpu.pb@10DDDE)&&(maincpu.pb@10DDE1==$1)&&($100500==((A4)&$FFFFFF))))"
-			local bp_cnd2 = "(maincpu.pw@107C22>0)&&((($1E<=maincpu.pb@10DDDA)&&(maincpu.pb@10DDDD==$1)&&($100400==((A4)&$FFFFFF)))||(($1E<=maincpu.pb@10DDDE)&&(maincpu.pb@10DDE1==$1)&&($100500==((A4)&$FFFFFF))))"
-			-- ダッシュとか用
-			-- BPモードON 未入力で技発動するように
-			global.bp(bps, fix_bp_addr(0x039512), "((A6)==CB242)&&" .. bp_cnd2, "D1=0;g")
-			-- 技入力データの読み込み
-			global.bp(bps, fix_bp_addr(0x03957E), "((A6)==CB244)&&" .. bp_cnd2,
-				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$40);D1=(maincpu.pb@(temp1));A6=((A6)+1);maincpu.pb@((A4)+$D6)=D1;maincpu.pb@((A4)+$D7)=maincpu.pb@(temp1+1);CURPC=((CURPC)+$20);g")
-			-- 必殺技用
-			-- BPモードON 未入力で技発動するように
-			global.bp(bps, fix_bp_addr(0x039512), "((A6)==CB242)&&" .. bp_cond, "D1=0;g")
-			-- 技入力データの読み込み
-			-- bp 03957E,{((A6)==CB244)&&((A4)==100400)&&(maincpu.pb@10048E==2)},{D1=1;g}
-			-- bp 03957E,{((A6)==CB244)&&((A4)==100500)&&(maincpu.pb@10058E==2)},{D1=1;g}
-			-- 0395B2: 1941 00A3                move.b  D1, ($a3,A4) -- 確定した技データ
-			-- 0395B6: 195E 00A4                move.b  (A6)+, ($a4,A4) -- 技データ読込 だいたい06
-			-- 0395BA: 195E 00A5                move.b  (A6)+, ($a5,A4) -- 技データ読込 だいたい00、飛燕斬01、02、03
-			global.bp(bps, fix_bp_addr(0x03957E), "((A6)==CB244)&&" .. bp_cond,
-				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$40);D1=(maincpu.pb@(temp1));A6=((A6)+2);maincpu.pb@((A4)+$A3)=D1;maincpu.pb@((A4)+$A4)=maincpu.pb@(temp1+1);maincpu.pb@((A4)+$A5)=maincpu.pb@(temp1+2);CURPC=((CURPC)+$20);g")
-
-			-- ステージ設定用。メニューでFを設定した場合にのみ動作させる
-			-- ラウンド数を1に初期化→スキップ
-			global.bp(bps, 0x0F368, "maincpu.pw@((A5)-$448)==$F", "CURPC=F36E;g")
-			-- ラウンド2以上の場合の初期化処理→無条件で実施
-			global.bp(bps, 0x22AD8, "maincpu.pw@((A5)-$448)==$F", "CURPC=22AF4;g")
-			-- キャラ読込 ラウンド1の時だけ読み込む→無条件で実施
-			global.bp(bps, 0x22D32, "maincpu.pw@((A5)-$448)==$F", "CURPC=22D3E;g")
-			-- ラウンド2以上の時の処理→データロード直後の状態なので不要。スキップしないとBGMが変わらない
-			global.bp(bps, 0x0F6AC, "maincpu.pw@((A5)-$448)==$F", "CURPC=F6B6;g")
-			-- ラウンド1じゃないときの処理 →スキップ
-			global.bp(bps, 0x1E39A, "maincpu.pw@((A5)-$448)==$F", "CURPC=1E3A4;g")
-			-- ラウンド1の時だけ読み込む →無条件で実施。データを1ラウンド目の値に戻す
-			global.bp(bps, 0x17694, "maincpu.pw@((A5)-$448)==$F", "maincpu.pw@((A5)-$448)=1;CURPC=176A0;g")
-
-			-- 当たり判定用
-			-- 喰らい判定フラグ用
-			global.bp(bps, fix_bp_addr(0x5C2DA),
-				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100500)",
-				"temp1=$10CB30+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=$01;g")
-
-			-- 喰らい判定用
-			global.bp(bps, fix_bp_addr(0x5C2E6),
-				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100500)",
-				"temp1=$10CB32+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=$01;maincpu.pb@(temp1+$2)=(maincpu.pb@(((A4)+$B1)&$FFFFFF));g")
-
-			--判定追加1 攻撃判定
-			global.bp(bps, fix_bp_addr(0x012C42),
-				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100F00)",
-				--"printf \"CURPC=%X A4=%X A2=%X D0=%X CT=%X\",CURPC,A4,A2,D0,($1DC000+((maincpu.pb@10CB40)*$10));"..
-				"temp0=($1DC000+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pd@(temp0+$B)=maincpu.pd@((A2)+$5);maincpu.pw@(temp0+$C)=maincpu.pw@(((A4)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A4)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g")
-
-			--[[
-			判定データ調査用
-			bp 0x012C42,1,{printf "0x012C42 %X %X A3=%X A4=%X A1=%X A2=%X 476=%X 47A=%X 576=%X 57A=%X",maincpu.pw@100460,maincpu.pw@10046E,A3,A4,A1,A2,maincpu.pd@100476,maincpu.pd@10047A,maincpu.pd@100576,maincpu.pd@10057A;g}
-			bp 0x012C88,1,{printf "0x012C88 %X %X A3=%X A4=%X A1=%X A2=%X 476=%X 47A=%X 576=%X 57A=%X",maincpu.pw@100460,maincpu.pw@10046E,A3,A4,A1,A2,maincpu.pd@100476,maincpu.pd@10047A,maincpu.pd@100576,maincpu.pd@10057A;g}
-			]]
-			--判定追加2 攻撃判定
-			global.bp(bps, fix_bp_addr(0x012C88),
-				"(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100F00)",
-				--"printf \"CURPC=%X A3=%X A1=%X D0=%X CT=%X\",CURPC,A3,A1,D0,($1DC000+((maincpu.pb@10CB40)*$10));"..
-				"temp0=($1DC000+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$01;maincpu.pd@(temp0+$B)=maincpu.pd@((A1)+$5);maincpu.pw@(temp0+$C)=maincpu.pw@(((A3)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A3)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g")
-
-			--判定追加3 1P押し合い判定
-			global.bp(bps, fix_bp_addr(0x012D4C),
-				"(maincpu.pw@107C22>0)&&($100400==((A4)&$FFFFFF))",
-				--"printf \"CURPC=%X A4=%X A2=%X D0=%X CT=%X\",CURPC,A4,A2,D0,($1DC000+((maincpu.pb@10CB40)*$10));"..
-				"temp0=($1DC000+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pw@(temp0+$C)=maincpu.pw@(((A4)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A4)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g")
-
-			--判定追加4 2P押し合い判定
-			global.bp(bps, fix_bp_addr(0x012D92),
-				"(maincpu.pw@107C22>0)&&($100500<=((A3)&$FFFFFF))",
-				--"printf \"CURPC=%X A3=%X A1=%X D0=%X CT=%X\",CURPC,A3,A1,D0,($1DC000+((maincpu.pb@10CB40)*$10));"..
-				"temp0=($1DC000+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pw@(temp0+$C)=maincpu.pw@(((A3)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A3)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g")
-
-			-- 地上通常投げ
-			global.bp(bps, fix_bp_addr(0x05D782),
-				"(maincpu.pw@107C22>0)&&((((D7)&$FFFF)!=0x65))&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100500)",
-				"temp1=$10CD90+((((A4)&$FFFFFF)-$100400)/$8);maincpu.pb@(temp1)=$1;maincpu.pd@(temp1+$1)=((A4)&$FFFFFF);maincpu.pd@(temp1+$5)=maincpu.pd@(((A4)&$FFFFFF)+$96);maincpu.pw@(temp1+$A)=maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10);maincpu.pw@(temp1+$C)=maincpu.pw@(((A4)&$FFFFFF)+$10);maincpu.pb@(temp1+$10)=maincpu.pb@(((A4)&$FFFFFF)+$96+$58);maincpu.pb@(temp1+$11)=maincpu.pb@(((A4)&$FFFFFF)+$58);maincpu.pb@(temp1+$12)=maincpu.pb@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$58);maincpu.pb@(temp1+$13)=maincpu.pb@(maincpu.pd@((CURPC)+$2));maincpu.pb@(temp1+$14)=maincpu.pb@((maincpu.pd@((CURPC)+$02))+((maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10))<<3)+$3);maincpu.pb@(temp1+$15)=maincpu.pb@((maincpu.pd@((CURPC)+$02))+((maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10))<<3)+$4);maincpu.pb@(temp1+$16)=maincpu.pb@((maincpu.pd@((CURPC)+$2))+((maincpu.pw@(((A4)&$FFFFFF)+$10))<<3)+$3);maincpu.pb@(temp1+$17)=maincpu.pb@((CURPC)+$D2+(maincpu.pw@((A4)&$FFFFFF)+$10)*4+((((D7)&$FFFF)-$60)&$7));maincpu.pw@(temp1+$18)=maincpu.pw@(($FFFFFF&(A4))+$20);maincpu.pw@(temp1+$1A)=maincpu.pw@(($FFFFFF&(A4))+$28);g")
-
-			-- 空中投げ
-			global.bp(bps, fix_bp_addr(0x060428),
-				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100500)",
-				"temp1=$10CD00+((((A4)&$FFFFFF)-$100400)/$8);maincpu.pb@(temp1)=$1;maincpu.pw@(temp1+$1)=maincpu.pw@(A0);maincpu.pw@(temp1+$3)=maincpu.pw@((A0)+$2);maincpu.pd@(temp1+$5)=$FFFFFF&(A4);maincpu.pd@(temp1+$9)=maincpu.pd@(($FFFFFF&(A4))+$96);maincpu.pw@(temp1+$D)=maincpu.pw@(maincpu.pd@(($FFFFFF&(A4))+$96)+$10);maincpu.pd@(temp1+$11)=maincpu.rb@(($FFFFFF&(A4))+$58);maincpu.pw@(temp1+$13)=maincpu.pw@(($FFFFFF&(A4))+$20);maincpu.pw@(temp1+$15)=maincpu.pw@(($FFFFFF&(A4))+$28);g")
-
-			-- 必殺投げ
-			global.bp(bps, fix_bp_addr(0x039F2A),
-				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100500)",
-				"temp1=$10CD40+((((A4)&$FFFFFF)-$100400)/$8);maincpu.pb@(temp1)=$1;maincpu.pw@(temp1+$1)=maincpu.pw@(A0);maincpu.pw@(temp1+$3)=maincpu.pw@((A0)+$2);maincpu.pd@(temp1+$5)=$FFFFFF&(A4);maincpu.pd@(temp1+$9)=maincpu.pd@(($FFFFFF&(A4))+$96);maincpu.pw@(temp1+$D)=maincpu.pw@(maincpu.pd@(($FFFFFF&(A4))+$96)+$10);maincpu.pd@(temp1+$11)=maincpu.rb@(($FFFFFF&(A4))+$58);maincpu.pw@(temp1+$12)=maincpu.pw@(A0+$4);maincpu.pw@(temp1+$15)=maincpu.pw@(($FFFFFF&(A4))+$20);maincpu.pw@(temp1+$17)=maincpu.pw@(($FFFFFF&(A4))+$28);g")
-			-- プレイヤー選択時のカーソル操作表示用データのオフセット
-			-- CURPC=11EE2のときのA4レジスタのアドレスがプレイヤー選択のアイコンの参照場所
-			-- データの領域を未使用の別メモリ領域に退避して1P操作で2Pカーソル移動ができるようにする
-			-- maincpu.pw@((A4)+$60)=$00F8を付けたすとカーソルをCPUにできる
-			global.bp(bps, 0x11EE2,
-				"(maincpu.pw@((A4)+2)==2D98||maincpu.pw@((A4)+2)==33B8)&&maincpu.pw@100701==10B&&maincpu.pb@10FDAF==2&&maincpu.pw@10FDB6!=0&&maincpu.pb@100026==2",
-				"maincpu.pb@10CDD0=($FF&((maincpu.pb@10CDD0)+1));maincpu.pd@10CDD1=((A4)+$13);g")
-			global.bp(bps, 0x11EE2,
-				"(maincpu.pw@((A4)+2)==2D98||maincpu.pw@((A4)+2)==33B8)&&maincpu.pw@100701==10B&&maincpu.pb@10FDAF==2&&maincpu.pw@10FDB6!=0&&maincpu.pb@100026==1",
-				"maincpu.pb@10CDD0=($FF&((maincpu.pb@10CDD0)+1));maincpu.pd@10CDD5=((A4)+$13);g")
-
-			-- プレイヤー選択時に1Pか2Pの選択ボタン押したときに対戦モードに移行する
-			-- CURPC=  C5D0 読取反映先=?? スタートボタンの読取してるけど関係なし
-			-- CURPC= 12376 読取反映先=D0 スタートボタンの読取してるけど関係なし
-			-- CURPC=C096A8 読取反映先=D1 スタートボタンの読取してるけど関係なし
-			-- CURPC=C1B954 読取反映先=D2 スタートボタンの読取してるとこ
-			global.bp(bps, 0xC1B95A,
-				"(maincpu.pb@100024==1&&maincpu.pw@100701==10B&&maincpu.pb@10FDAF==2&&maincpu.pw@10FDB6!=0)&&((((maincpu.pb@300000)&$10)==0)||(((maincpu.pb@300000)&$80)==0))",
-				"D2=($FF^$04);g")
-			global.bp(bps, 0xC1B95A,
-				"(maincpu.pb@100024==2&&maincpu.pw@100701==10B&&maincpu.pb@10FDAF==2&&maincpu.pw@10FDB6!=0)&&((((maincpu.pb@340000)&$10)==0)||(((maincpu.pb@340000)&$80)==0))",
-				"D2=($FF^$01);g")
-
-			-- 影表示
-			--{base = 0x017300, ["rbff2k"] = 0x28, ["rbff2h"] = 0x0, no_background = true,
-			--			func = function() memory.pgm:write_u8(gr("a4") + 0x82, 0) end},
-			--solid shadows 01
-			--no    shadows FF
-			global.bp(bps, 0x017300, "maincpu.pw@107C22>0&&maincpu.pb@10DDF0==FF", "maincpu.pb@((A4)+$82)=$FF;g")
-
-			-- 潜在ぜったい投げるマン
-			--table.insert(bps, cpu.debug:global.bp(fix_bp_addr(0x039F8C), "1",
-			--	"maincpu.pb@((A3)+$90)=$19;g"))
-			-- 投げ可能判定用フレーム
-			global.bp(bps, fix_bp_addr(0x039F90), "maincpu.pw@107C22>0",
-				"temp1=$10DDE2+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=D7;g")
-			-- 投げ確定時の判定用フレーム
-			global.bp(bps, fix_bp_addr(0x039F96), "maincpu.pw@107C22>0",
-				"temp1=$10DDE4+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@((A3)+$90);g")
-
-			-- 判定の接触判定が無視される
-			-- bp 13118,1,{CURPC=1311C;g}
-
-			-- 攻撃のヒットをむりやりガードに変更する
-			-- $10DE5E $10DE5Fにフラグたっているかをチェックする
-			global.bp(bps, fix_bp_addr(0x0580D4),
-				"maincpu.pw@107C22>0&&((maincpu.pb@10DDF1>0&&(A4)==100500&&maincpu.pb@10DE5F==1&&(maincpu.pb@10058E==0||maincpu.pb@10058E==2))||(maincpu.pb@10DDF1>0&&(A4)==100400&&maincpu.pb@10DE5E==1&&(maincpu.pb@10048E==0||maincpu.pb@10048E==2)))",
-				"CURPC=" .. string.format("%x", fix_bp_addr(0x0580EA)) .. ";g")
-			--[[
-			global.bp(bps, fix_bp_addr(0x012FD0),
-				"maincpu.pw@107C22>0&&((maincpu.pb@10DDF1>0&&(A4)==100500)||(maincpu.pb@10DDF1>0&&(A4)==100400))",
-				"temp1=$10DDF1+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=0;CURPC=" .. string.format("%x", fix_bp_addr(0x012FDA)) .. ";g")
-			]]
-
-			-- N段目で強制空ぶりさせるフック
-			global.bp(bps, fix_bp_addr(0x0130F8),
-				"maincpu.pw@107C22>0&&((D7)<$FFFF)&&((maincpu.pb@10DDF1!=$FF&&(A4)==100500&&maincpu.pb@10DDF1<=maincpu.pb@10B4E0)||(maincpu.pb@10DDF2!=$FF&&(A4)==100400&&maincpu.pb@10DDF2<=maincpu.pb@10B4E1))",
-				"maincpu.pb@(temp1)=0;CURPC=" .. string.format("%x", fix_bp_addr(0x012FDA)) .. ";g")
-			--[[ 空振りフック時の状態確認用
-			global.bp(bps, fix_bp_addr(0x0130F8),
-				"maincpu.pw@107C22>0&&((D7)<$FFFF)&&((A4)==100500||(A4)==100400)",
-				"printf \"A4=%X 1=%X 2=%X E0=%X E1=%X\",(A4),maincpu.pb@10DDF1,maincpu.pb@10DDF2,maincpu.pb@10B4E0,maincpu.pb@10B4E1;g")
-			]]
-
-			-- ヒット後ではなく技の出だしから嘘判定であることの判定用フック
-			global.bp(bps, fix_bp_addr(0x011DFE),
-				"maincpu.pw@107C22>0",
-				"temp1=$10DDF3+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(D5);g")
-
-
-			--[[ 家庭用 補正前のダメージ出力
-			bp 05B1B2,1,{printf "%d",maincpu.pb@(A4+$8f);g}
-			bp 05B1D0,1,{printf "%d",maincpu.pb@(A4+$8f);g}
-			bp 05B13A,1,{printf "%d",maincpu.pb@(A4+$8f);g}
-			bp 05B15A,1,{printf "%d",maincpu.pb@(A4+$8f);g}
-
-			05B11A MVS
-			05B13A MVS
-			]]
-			-- 補正前ダメージ取得用フック
-			global.bp(bps, fix_bp_addr(0x05B11A),
-				"maincpu.pw@107C22>0",
-				"temp1=$10DDFB+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@((A4)+$8F);g")
-			global.bp(bps, fix_bp_addr(0x05B13A),
-				"maincpu.pw@107C22>0",
-				"temp1=$10DDFB+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@((A4)+$8F);g")
-
-			-- 気絶値と気絶値タイマー取得用フック
-			global.bp(bps, fix_bp_addr(0x05C1E0),
-				"maincpu.pw@107C22>0",
-				"temp1=$10DDFD+((((A4)&$FFFFFF)-$100400)/$80);maincpu.pb@(temp1)=(D0);maincpu.pb@(temp1+$1)=(D1);g")
-
-			--ダメージ補正 7/8
-			global.bp(bps, fix_bp_addr(0x5B1E0),
-				"maincpu.pw@107C22>0",
-				"temp1=$10DE50+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@(temp1)+1;g")
-			--ダメージ補正 6/8
-			global.bp(bps, fix_bp_addr(0x5B1F6),
-				"maincpu.pw@107C22>0",
-				"temp1=$10DE52+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@(temp1)+1;g")
-			--ダメージ補正 5/8
-			global.bp(bps, fix_bp_addr(0x5B20C),
-				"maincpu.pw@107C22>0",
-				"temp1=$10DE54+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@(temp1)+1;g")
-			--ダメージ補正 4/8
-			global.bp(bps, fix_bp_addr(0x5B224),
-				"maincpu.pw@107C22>0",
-				"temp1=$10DE56+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@(temp1)+1;g")
-
-			-- POWゲージ増加量取得用フック 通常技
-			-- 中間のチェックをスキップして算出処理へ飛ぶ
-			global.bp(bps, fix_bp_addr(0x03BEDA),
-				"maincpu.pw@107C22>0",
-				string.format("CURPC=%x;g", fix_bp_addr(0x03BEEC)))
-			-- 中間チェックに抵触するパターンは値採取後にRTSへ移動する
-			global.bp(bps, fix_bp_addr(0x05B3AC),
-				"maincpu.pw@107C22>0&&(maincpu.pb@((A3)+$BF)!=$0||maincpu.pb@((A3)+$BC)==$3C)",
-				"temp1=$10DE58+((((A3)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));" .. string.format("CURPC=%x", fix_bp_addr(0x05B34E)) .. ";g")
-			-- 中間チェックに抵触しないパターン
-			global.bp(bps, fix_bp_addr(0x05B3AC),
-				"maincpu.pw@107C22>0&&maincpu.pb@((A3)+$BF)==$0&&maincpu.pb@((A3)+$BC)!=$3C",
-				"temp1=$10DE58+((((A3)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g")
-
-			-- POWゲージ増加量取得用フック 必殺技
-			-- 中間のチェックをスキップして算出処理へ飛ぶ
-			global.bp(bps, fix_bp_addr(0x05B34C),
-				"maincpu.pw@107C22>0",
-				string.format("CURPC=%x;g", fix_bp_addr(0x05B35E)))
-			-- 中間チェックに抵触するパターンは値採取後にRTSへ移動する
-			global.bp(bps, fix_bp_addr(0x03C144),
-				"maincpu.pw@107C22>0&&maincpu.pb@((A4)+$BF)!=$0",
-				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));" .. string.format("CURPC=%x", fix_bp_addr(0x03C13A)) .. ";g")
-			-- 中間チェックに抵触しないパターン
-			global.bp(bps, fix_bp_addr(0x03C144),
-				"maincpu.pw@107C22>0&&maincpu.pb@((A4)+$BF)==$0",
-				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g")
-
-			-- POWゲージ増加量取得用フック 倍返しとか
-			-- 中間のチェック以前に値がD0に入っているのでそれを採取する
-			global.bp(bps, fix_bp_addr(0x03BF04),
-				"maincpu.pw@107C22>0",
-				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));g")
-
-			--[[ ドリル簡易入力
-			デバッグDIP4-4参照箇所の以下まとめて。
-			bp 042BF8,1,{CURPC=042BFA;g}
-			bp 042C1A,1,{CURPC=042C1C;g}
-			bp 04343A,1,{CURPC=04343C;g}
-			bp 0434AA,1,{CURPC=434b6;g}
-			]]
-
-			-- 空振りCAできる
-			-- bp 02FA5E,1,{CURPC=02FA6A;g}
-			-- ↓のテーブルを全部00にするのでも可
-			-- 02FA72: 0000 0000
-			-- 02FA76: 0000 0000
-			-- 02FA7A: FFFF FFFF
-			-- 02FA7E: 00FF FF00
-			-- 02FA82: FFFF
-
-			-- bp 3B5CE,1,{maincpu.pb@1007B5=0;g} -- 2P 飛び道具の強さ0に
-
-			-- bp 39db0,1,{CURPC=39db4;g} -- 必殺投げの高度チェックを無視
-
-			--[[ ライン移動攻撃の移動量のしきい値 調査用
-			table.insert(bps, cpu.debug:bpset(0x029768,
-				"1",
-				"printf \"CH=%D D0=%X D1=%X rPC=%X\",maincpu.pw@((A4)+10), D0,D1,rPC;g"))
-			]]
-
-			--[[ 投げ無敵調査用
-			for _, addr in ipairs({
-				0x00039DAE, -- 投げチェック処理
-				0x00039D52, -- 爆弾パチキ ドリル M.カウンター投げ M.タイフーン 真心牙 S.TOL 鬼門陣
-				0x0003A0D4, -- 真空投げ
-				0x0003A0E6, -- 羅生門
-				0x0003A266, -- ブレイクスパイラル
-				0x0003A426, -- リフトアップブロー
-				0x0003A438, -- デンジャラススルー
-				0x0003A44A, -- ギガティックサイクロン
-				0x00039F36, -- 投げ成立
-				0x00039DFA, -- 無敵Fチェック
-			}) do
-				global.bp(bps, addr, "1", "printf \"A4=%X CH=%D CURPC=%X rPC=%X A0=%X D7=%X\",(A4),maincpu.pw@((A4)+10),CURPC,rPC,(A0),(D7);g"))
-			end
-			]]
-
-			-- bp 058946,1,{CURPC=5895A;g} -- BS出ない
-			-- bp 039782,1,{CURPC=039788;g} -- BS表示でない
-		end
-	end
-
-	local set_bps_rg = function(reset)
-		if global.bps_rg then
-			global.set_bps(reset, global.bps_rg)
-		else
-			global.bps_rg = global.new_hook_holder()
-			local bps_rg = global.bps_rg.bps
-
-			local cond1, cond2
-			if emu.romname() ~= "rbff2" then
-				-- この処理をそのまま有効にすると通常時でも食らい判定が見えるようになるが、MVS版ビリーの本来は攻撃判定無しの垂直ジャンプ攻撃がヒットしてしまう
-				-- ビリーの判定が出ない(maincpu.pb@((A0)+$B6)==0)な垂直小ジャンプAと垂直小ジャンプBと斜め小ジャンプBときはこのワークアラウンドが動作しないようにする
-				cond1 = table.concat({
-					"(maincpu.pw@107C22>0)",
-					"(maincpu.pb@((A0)+$B6)==0)",
-					"(maincpu.pw@((A0)+$60)!=$50)",
-					"(maincpu.pw@((A0)+$60)!=$51)",
-					"(maincpu.pw@((A0)+$60)!=$54)",
-				}, "&&")
-			else
-				cond1 = "(maincpu.pw@107C22>0)"
-			end
-			cond2 = cond1 .. "&&(maincpu.pb@((A3)+$B6)==0)"
-			-- 投げの時だけやられ判定表示（ジョー用）
-			local cond3 = "(maincpu.pw@107C22>0)&&((maincpu.pb@($AA+(A3))|D0)!=0)"
-			global.bp(bps_rg, fix_bp_addr(0x5C2E2), cond3, "CURPC=((CURPC)+$C);g")
-			-- 投げのときだけやられ判定表示（主にボブ用）
-			local cond4 = "(maincpu.pw@107C22>0)&&(maincpu.pb@($7A+(A3))==0)"
-			global.bp(bps_rg, 0x12BB0, cond4, "CURPC=((CURPC)+$E);g")
-
-			--check vuln at all times *** setregister for m68000.CURPC is broken *** --bp 05C2E8, 1, {CURPC=((CURPC)+$6);g}
-			global.bp(bps_rg, fix_bp_addr(0x5C2E8), cond2, "CURPC=((CURPC)+$6);g")
-			--この条件で動作させると攻撃判定がでてしまってヒットしてしまうのでダメ
-			--[[
-			local cond2 = "(maincpu.pw@107C22>0)&&(maincpu.pb@((A0)+$B6)==0)&&((maincpu.pw@((A0)+$60)==$50)||(maincpu.pw@((A0)+$60)==$51)||(maincpu.pw@((A0)+$60)==$54))"
-			global.bp(bps_rg, fix_bp_addr(0x5C2E8), cond2, "maincpu.pb@((A3)+$B6)=1;g")
-			]]
-			--check vuln at all times *** hackish workaround *** --bp 05C2E8, 1, {A3=((A3)-$B5);g}
-			global.bp(bps_rg, fix_bp_addr(0x5C2E8), cond1, "A3=((A3)-$B5);g")
-			--*** fix for hackish workaround *** --bp 05C2EE, 1, {A3=((A3)+$B5);g}
-			global.bp(bps_rg, fix_bp_addr(0x5C2EE), cond1, "A3=((A3)+$B5);g")
-			-- 無理やり条件スキップしたので当たり処理に入らないようにする
-			global.bp(bps_rg, fix_bp_addr(0x5C2F6), "(maincpu.pb@((A3)+$B6)==0)||((maincpu.pb@($AA+(A3))|D0)!=0)", "CURPC=((CURPC)+$8);g")
-		end
-	end
-
-	local hook_reset = nil
-	local set_hook = function(reset)
-		if reset == true then
-			if hook_reset == true then
-				return
-			end
-		else
-			if hook_reset == false then
-				return
-			end
-		end
-		hook_reset = reset == true
-
-		-- キャラデータの押し合い判定を作成
-		-- キャラごとの4種類の判定データをロードする
-		for char = 1, #chars - 1 do
-			if chars[char].push_box == nil then
-				chars[char].push_box_mask = pgm:read_u32(0x5C728 + (char << 2))
-				chars[char].push_box = {}
-				for _, addr in ipairs({ 0x5C9BC, 0x5CA7C, 0x5CB3C, 0x5CBFC }) do
-					local a2 = addr + (char << 3)
-					local y1, y2 = pgm:read_u8(a2 + 0x1), pgm:read_u8(a2 + 0x2)
-					local x1, x2 = pgm:read_i8(a2 + 0x3), pgm:read_i8(a2 + 0x4)
-					chars[char].push_box[addr] = {
-						addr = addr, type = 0, x1 = x1, x2 = x2, y1 = y1, y2 = y2,
-						log = string.format(" char=%s addr=%x type=000 x1=%s x2=%s y1=%s y2=%s", char, a2, x1, x2, y1, y2)
-					}
-					-- print(chars[char].push_box[addr].log)
-				end
-			end
-		end
-
-		set_wps(hook_reset)
-		set_bps(hook_reset)
-		set_bps_rg(hook_reset)
-	end
-
-	-- 誤動作防止のためフックで使用する領域を初期化する
-	local cls_hook = function()
-		-- 各種当たり判定のフック
-		-- 0x10CB40 当たり判定の発生個数
-		-- 0x1DC000 から 0x10 間隔で当たり判定をbpsetのフックで記録する
-		for addr = 0x1DC000, 0x1DC000 + pgm:read_u8(0x10CB40) * 0x11 do
-			pgm:write_u8(addr, 0xFF)
-		end
-		pgm:write_u8(0x10CB40, 0x00)
-
-		for _, p in ipairs(players) do
-			pgm:write_u8(p.addr.state2, 0x00) -- ステータス更新フック
-			pgm:write_u16(p.addr.act2, 0x00) -- 技ID更新フック
-
-			pgm:write_u8(p.addr.vulnerable1, 0xFF) -- 食らい判定のフック
-			pgm:write_u8(p.addr.vulnerable21, 0xFF) -- 食らい判定のフック
-			pgm:write_u8(p.addr.vulnerable22, 0xFF) -- 食らい判定のフック
-
-			pgm:write_u8(p.n_throw.addr.on, 0xFF) -- 投げのフック
-			pgm:write_u8(p.air_throw.addr.on, 0xFF) -- 空中投げのフック
-			pgm:write_u8(p.sp_throw.addr.on, 0xFF) -- 必殺投げのフック
+		if not global.mame_debug_wnd and debugger and debugger.execution_state ~= "run" then
+			debugger.execution_state = "run"
 		end
 	end
 
@@ -7286,339 +2814,10 @@ rbff2.startplugin = function()
 			name  = "スロット" .. i,
 		}
 	end
-	local cmd_funcs    = {
-		make    = function(joykp, ...)
-			local joy = new_next_joy()
-			if ... then
-				for _, k in ipairs({ ... }) do
-					joy[joykp[k]] = true
-				end
-			end
-			return joy
-		end,
-		extract = function(joyk, cmd_ary)
-			if not cmd_ary then
-				return {}
-			end
-			local ret, prev = {}, _5(joyk)
-			for _, cmd in ipairs(cmd_ary) do
-				local typename = type(cmd)
-				if typename == "number" and cmd > 1 then -- 繰り返し回数1は前のコマンドが含まれるので2以上からカウント
-					for i = 2, cmd do
-						table.insert(ret, prev)
-					end
-				elseif typename == "function" then
-					prev = cmd(joyk)
-					table.insert(ret, prev)
-				end
-			end
-			return ret
-		end,
-	}
-	cmd_funcs.merge    = function(cmd_ary1, cmd_ary2)
-		local keys1, keys2 = cmd_funcs.extract(joyk.p1, cmd_ary1), cmd_funcs.extract(joyk.p2, cmd_ary2)
-		local ret, max = {}, math.max(#keys1, #keys2)
-		for i = 1, max do
-			local joy = new_next_joy()
-			for _, key in ipairs({ keys1[i] or {}, keys2[i] or {} }) do
-				for k, v in pairs(key) do
-					if v then
-						joy[k] = v
-					end
-				end
-			end
-			table.insert(ret, joy)
-		end
-		return ret
-	end
 
 	-- 調査用自動再生スロットの準備
-	local research_cmd = function()
-		local _1     = function(joykp) return cmd_funcs.make(joykp, "lt", "dn") end
-		local _1a    = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "a") end
-		local _1b    = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "b") end
-		local _1ab   = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "a", "b") end
-		local _1c    = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "c") end
-		local _1ac   = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "a", "c") end
-		local _1bc   = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "b", "c") end
-		local _1abc  = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "a", "b", "c") end
-		local _1d    = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "d") end
-		local _1ad   = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "a", "d") end
-		local _1bd   = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "b", "d") end
-		local _1abd  = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "a", "b", "d") end
-		local _1cd   = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "c", "d") end
-		local _1acd  = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "a", "c", "d") end
-		local _1bcd  = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "b", "c", "d") end
-		local _1abcd = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "a", "b", "c", "d") end
-		local _2     = function(joykp) return cmd_funcs.make(joykp, "dn") end
-		local _2a    = function(joykp) return cmd_funcs.make(joykp, "dn", "a") end
-		local _2b    = function(joykp) return cmd_funcs.make(joykp, "dn", "b") end
-		local _2ab   = function(joykp) return cmd_funcs.make(joykp, "dn", "a", "b") end
-		local _2c    = function(joykp) return cmd_funcs.make(joykp, "dn", "c") end
-		local _2ac   = function(joykp) return cmd_funcs.make(joykp, "dn", "a", "c") end
-		local _2bc   = function(joykp) return cmd_funcs.make(joykp, "dn", "b", "c") end
-		local _2abc  = function(joykp) return cmd_funcs.make(joykp, "dn", "a", "b", "c") end
-		local _2d    = function(joykp) return cmd_funcs.make(joykp, "dn", "d") end
-		local _2ad   = function(joykp) return cmd_funcs.make(joykp, "dn", "a", "d") end
-		local _2bd   = function(joykp) return cmd_funcs.make(joykp, "dn", "b", "d") end
-		local _2abd  = function(joykp) return cmd_funcs.make(joykp, "dn", "a", "b", "d") end
-		local _2cd   = function(joykp) return cmd_funcs.make(joykp, "dn", "c", "d") end
-		local _2acd  = function(joykp) return cmd_funcs.make(joykp, "dn", "a", "c", "d") end
-		local _2bcd  = function(joykp) return cmd_funcs.make(joykp, "dn", "b", "c", "d") end
-		local _2abcd = function(joykp) return cmd_funcs.make(joykp, "dn", "a", "b", "c", "d") end
-		local _3     = function(joykp) return cmd_funcs.make(joykp, "rt", "dn") end
-		local _3a    = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "a") end
-		local _3b    = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "b") end
-		local _3ab   = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "a", "b") end
-		local _3c    = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "c") end
-		local _3ac   = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "a", "c") end
-		local _3bc   = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "b", "c") end
-		local _3abc  = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "a", "b", "c") end
-		local _3d    = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "d") end
-		local _3ad   = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "a", "d") end
-		local _3bd   = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "b", "d") end
-		local _3abd  = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "a", "b", "d") end
-		local _3cd   = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "c", "d") end
-		local _3acd  = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "a", "c", "d") end
-		local _3bcd  = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "b", "c", "d") end
-		local _3abcd = function(joykp) return cmd_funcs.make(joykp, "rt", "dn", "a", "b", "c", "d") end
-		local _4     = function(joykp) return cmd_funcs.make(joykp, "lt") end
-		local _4a    = function(joykp) return cmd_funcs.make(joykp, "lt", "a") end
-		local _4b    = function(joykp) return cmd_funcs.make(joykp, "lt", "b") end
-		local _4ab   = function(joykp) return cmd_funcs.make(joykp, "lt", "a", "b") end
-		local _4c    = function(joykp) return cmd_funcs.make(joykp, "lt", "c") end
-		local _4ac   = function(joykp) return cmd_funcs.make(joykp, "lt", "a", "c") end
-		local _4bc   = function(joykp) return cmd_funcs.make(joykp, "lt", "b", "c") end
-		local _4abc  = function(joykp) return cmd_funcs.make(joykp, "lt", "a", "b", "c") end
-		local _4d    = function(joykp) return cmd_funcs.make(joykp, "lt", "d") end
-		local _4ad   = function(joykp) return cmd_funcs.make(joykp, "lt", "a", "d") end
-		local _4bd   = function(joykp) return cmd_funcs.make(joykp, "lt", "b", "d") end
-		local _4abd  = function(joykp) return cmd_funcs.make(joykp, "lt", "a", "b", "d") end
-		local _4cd   = function(joykp) return cmd_funcs.make(joykp, "lt", "c", "d") end
-		local _4acd  = function(joykp) return cmd_funcs.make(joykp, "lt", "a", "c", "d") end
-		local _4bcd  = function(joykp) return cmd_funcs.make(joykp, "lt", "b", "c", "d") end
-		local _4abcd = function(joykp) return cmd_funcs.make(joykp, "lt", "a", "b", "c", "d") end
-		local _5     = function(joykp) return cmd_funcs.make(joykp) end
-		local _5a    = function(joykp) return cmd_funcs.make(joykp, "a") end
-		local _5b    = function(joykp) return cmd_funcs.make(joykp, "b") end
-		local _5ab   = function(joykp) return cmd_funcs.make(joykp, "a", "b") end
-		local _5c    = function(joykp) return cmd_funcs.make(joykp, "c") end
-		local _5ac   = function(joykp) return cmd_funcs.make(joykp, "a", "c") end
-		local _5bc   = function(joykp) return cmd_funcs.make(joykp, "b", "c") end
-		local _5abc  = function(joykp) return cmd_funcs.make(joykp, "a", "b", "c") end
-		local _5d    = function(joykp) return cmd_funcs.make(joykp, "d") end
-		local _5ad   = function(joykp) return cmd_funcs.make(joykp, "a", "d") end
-		local _5bd   = function(joykp) return cmd_funcs.make(joykp, "b", "d") end
-		local _5abd  = function(joykp) return cmd_funcs.make(joykp, "a", "b", "d") end
-		local _5cd   = function(joykp) return cmd_funcs.make(joykp, "c", "d") end
-		local _5acd  = function(joykp) return cmd_funcs.make(joykp, "a", "c", "d") end
-		local _5bcd  = function(joykp) return cmd_funcs.make(joykp, "b", "c", "d") end
-		local _5abcd = function(joykp) return cmd_funcs.make(joykp, "a", "b", "c", "d") end
-		local _a     = _5a
-		local _b     = _5b
-		local _ab    = _5ab
-		local _c     = _5c
-		local _ac    = _5ac
-		local _bc    = _5bc
-		local _abc   = _5abc
-		local _d     = _5d
-		local _ad    = _5ad
-		local _bd    = _5bd
-		local _abd   = _5abd
-		local _cd    = _5cd
-		local _acd   = _5acd
-		local _bcd   = _5bcd
-		local _abcd  = _5abcd
-		local _6     = function(joykp) return cmd_funcs.make(joykp, "rt") end
-		local _6a    = function(joykp) return cmd_funcs.make(joykp, "rt", "a") end
-		local _6b    = function(joykp) return cmd_funcs.make(joykp, "rt", "b") end
-		local _6ab   = function(joykp) return cmd_funcs.make(joykp, "rt", "a", "b") end
-		local _6c    = function(joykp) return cmd_funcs.make(joykp, "rt", "c") end
-		local _6ac   = function(joykp) return cmd_funcs.make(joykp, "rt", "a", "c") end
-		local _6bc   = function(joykp) return cmd_funcs.make(joykp, "rt", "b", "c") end
-		local _6abc  = function(joykp) return cmd_funcs.make(joykp, "rt", "a", "b", "c") end
-		local _6d    = function(joykp) return cmd_funcs.make(joykp, "rt", "d") end
-		local _6ad   = function(joykp) return cmd_funcs.make(joykp, "rt", "a", "d") end
-		local _6bd   = function(joykp) return cmd_funcs.make(joykp, "rt", "b", "d") end
-		local _6abd  = function(joykp) return cmd_funcs.make(joykp, "rt", "a", "b", "d") end
-		local _6cd   = function(joykp) return cmd_funcs.make(joykp, "rt", "c", "d") end
-		local _6acd  = function(joykp) return cmd_funcs.make(joykp, "rt", "a", "c", "d") end
-		local _6bcd  = function(joykp) return cmd_funcs.make(joykp, "rt", "b", "c", "d") end
-		local _6abcd = function(joykp) return cmd_funcs.make(joykp, "rt", "a", "b", "c", "d") end
-		local _7     = function(joykp) return cmd_funcs.make(joykp, "lt", "up") end
-		local _7a    = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "a") end
-		local _7b    = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "b") end
-		local _7ab   = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "a", "b") end
-		local _7c    = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "c") end
-		local _7ac   = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "a", "c") end
-		local _7bc   = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "b", "c") end
-		local _7abc  = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "a", "b", "c") end
-		local _7d    = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "d") end
-		local _7ad   = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "a", "d") end
-		local _7bd   = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "b", "d") end
-		local _7abd  = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "a", "b", "d") end
-		local _7cd   = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "c", "d") end
-		local _7acd  = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "a", "c", "d") end
-		local _7bcd  = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "b", "c", "d") end
-		local _7abcd = function(joykp) return cmd_funcs.make(joykp, "lt", "up", "a", "b", "c", "d") end
-		local _8     = function(joykp) return cmd_funcs.make(joykp, "up") end
-		local _8a    = function(joykp) return cmd_funcs.make(joykp, "up", "a") end
-		local _8b    = function(joykp) return cmd_funcs.make(joykp, "up", "b") end
-		local _8ab   = function(joykp) return cmd_funcs.make(joykp, "up", "a", "b") end
-		local _8c    = function(joykp) return cmd_funcs.make(joykp, "up", "c") end
-		local _8ac   = function(joykp) return cmd_funcs.make(joykp, "up", "a", "c") end
-		local _8bc   = function(joykp) return cmd_funcs.make(joykp, "up", "b", "c") end
-		local _8abc  = function(joykp) return cmd_funcs.make(joykp, "up", "a", "b", "c") end
-		local _8d    = function(joykp) return cmd_funcs.make(joykp, "up", "d") end
-		local _8ad   = function(joykp) return cmd_funcs.make(joykp, "up", "a", "d") end
-		local _8bd   = function(joykp) return cmd_funcs.make(joykp, "up", "b", "d") end
-		local _8abd  = function(joykp) return cmd_funcs.make(joykp, "up", "a", "b", "d") end
-		local _8cd   = function(joykp) return cmd_funcs.make(joykp, "up", "c", "d") end
-		local _8acd  = function(joykp) return cmd_funcs.make(joykp, "up", "a", "c", "d") end
-		local _8bcd  = function(joykp) return cmd_funcs.make(joykp, "up", "b", "c", "d") end
-		local _8abcd = function(joykp) return cmd_funcs.make(joykp, "up", "a", "b", "c", "d") end
-		local _9     = function(joykp) return cmd_funcs.make(joykp, "rt", "up") end
-		local _9a    = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "a") end
-		local _9b    = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "b") end
-		local _9ab   = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "a", "b") end
-		local _9c    = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "c") end
-		local _9ac   = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "a", "c") end
-		local _9bc   = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "b", "c") end
-		local _9abc  = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "a", "b", "c") end
-		local _9d    = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "d") end
-		local _9ad   = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "a", "d") end
-		local _9bd   = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "b", "d") end
-		local _9abd  = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "a", "b", "d") end
-		local _9cd   = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "c", "d") end
-		local _9acd  = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "a", "c", "d") end
-		local _9bcd  = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "b", "c", "d") end
-		local _9abcd = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "a", "b", "c", "d") end
-		local ret    = new_filled_table(8, {})
-		--[[
-		ret[1] = cmd_funcs.merge( -- ボブ対クラウザー100% ラグがでると落ちる
-			{
-				_4, 4, _5, 4, _4, 6, _7, 17, _5, 8, _5a, 7, _5c, 12, _4, 30, _5c, 3, _5, 5, _5c, 5, _5, 47, _5a, 5, _5b, 5, _5, 25, _1c, 5, _5, 20, _2bc, 4, _5, 2, _2, 5, _3, 5, _6, 5, _5b, 5, _4, 2,
-				_5, 64, _2, 5, _3, 5, _6, 5, _5b, 5,
-				_5, 64, _2, 5, _3, 5, _6, 6, _5b, 5, _4, 2,
-				_5, 64, _2, 5, _3, 5, _6, 5, _5b, 5,
-				_5, 64, _2, 5, _3, 5, _6, 5, _5b, 5,
-				_5, 53, _4, 16, _5, 2, _6, 5, _3, 5, _2, 5, _1, 5, _5c, 5, _5, 180, _8c, 2, _5, 1,
-			},
-			{ _5, }
-		)
-		]]
-		--[[
-		ret[1] = cmd_funcs.merge( -- 対ビリー 自動ガード+リバサ立A向けの炎の種馬相打ちコンボ
-			{ _4, 11, _2a, 7, _2, 1, _3, 2, _6, 7, _6a, 2, _5, 38, _1a, 15, _5, 7, _6ac, 3, _5, 13, _1a, 6, _5, 16, _5c, 7, _5, 12, _5c, 5, _5, 12, _4, 3, _2, 3, _1c, 3, _5, 76, _4, 15, _5, 16, _2, 3, _5c, 2, _5, 1, },
-			{ _5, }
-		)
-		ret[1] = cmd_funcs.merge( -- 対アンディ 自動ガード+リバサ立A向けの炎の種馬相打ちコンボ
-			{ _4, 11, _2a, 4, _2, 1, _3, 2, _6, 7, _6a, 2, _5, 40, _2a, 6, _2c, 5, _5, 5, _6ac, 3, _5, 28, _1a, 6, _5, 16, _5c, 7, _5, 20, _5c, 5, _5, 23, _4, 6, _2, 4, _1c, 3, _5, 68, _5b, 3, _5, 4, _5b, 4, _5, 33, _2, 3, _5c, 2, _5, 1, },
-			{ _5, }
-		)
-		ret[1] = cmd_funcs.merge( -- 対ギース 自動ガード+リバサ下A向けの炎の種馬相打ちコンボ
-			{ _4, 11, _2a, 4, _2, 1, _3, 2, _6, 7, _6a, 2, _5, 38, _2b, 6, _2c, 5, _5, 9, _6ac, 3, _5, 28, _1a, 6, _5, 16, _5c, 7, _5, 15, _5c, 5, _5, 15, _4, 6, _2, 4, _1c, 3, _5, 76, _4, 15, _5, 16, _2, 3, _5c, 2, _5, 1, },
-			{ _5, }
-		)
-		]]
-		--[[
-		ret[1] = cmd_funcs.merge(  -- ガード解除直前のNのあと2とNの繰り返しでガード硬直延長,をさらに投げる
-			{ _8, _5, 46, _6, 15, _5, 13, _4, _1, 5, _2, 2, _3, 4, _6, 6, _4c, 4, _c, 102, _5, 36, _c, 12, _5, _c, 11, _5, },
-			{ _5, }
-		)
-		]]
-
-		--[[
-		ret[1] = cmd_funcs.merge(  -- ガード解除直前のNのあと2とNの繰り返しでガード硬直延長,をさらに投げる
-			{ _8, _5, 46, _1, 20, _2, 27, _5, 6, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1,
-			_5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1,},
-			{ _8, _5, 46, _2b, _5, 12, _2b, _5, 50, _4, _5, _4, _5, _7, 6, _7d, _5, 15, _c, _5, }
-		)
-		ret[1] = cmd_funcs.merge(  -- ガード解除直前のNのあと2とNの繰り返しでガード硬直延長,をさらに投げる
-			{ _8, _5, 46, _1, 20, _2, 27, _5, 6, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1,
-			_5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1,},
-			{ _8, _5, 46, _2b, _5, 12, _2b, _5, 50, _4, _5, _4, _5, _7, 6, _7d, _5, 41, _c, _5, }
-		)
-		]]
-		-- 真神足拳調査
-		--[[
-		ret[8] = cmd_funcs.merge( --神足拳 ギリギリ遅らせ入力
-			{ _8, _5, 46, _6, 17, _5, 17, _6, _5, 6, _a, _5, 2, _6, _5, },
-			{ }
-		)
-		]]
-
-		--[[
-		ret[1] = cmd_funcs.merge(  -- ガード解除直前のNでガード硬直延長
-			{ _8, _5, 46, _1, 20, _2, 27, _5, },
-			{ _8, _5, 46, _2b, _5, 12, _2b, _5, }
-		)
-		ret[1] = cmd_funcs.merge(  -- ガード解除直前のNのあと2とNの繰り返しでガード硬直延長,をさらに投げる
-			{ _8, _5, 46, _1, 20, _2, 27, _5, 6, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1,
-			_5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1, _5, 2, _2, 1,},
-			{ _8, _5, 46, _2b, _5, 12, _2b, _5, 42, _4, 20, _4c, _5, }
-		)
-
-		-- LINNさんネタの確認 ... リバサバクステキャンセルサイクロンで重ね飛燕失脚の迎撃
-		ret[1] = cmd_funcs.merge( -- バクステ回避
-			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, },
-			{ _8, _5, 46, _2, 15, _2 , _5, 112, _8, _4, _2, _6, _5, _4, _5, _4, })
-		ret[2] = cmd_funcs.merge( -- サイクロン成立
-			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, },
-			{ _8, _5, 46, _2, 15, _2 , _5, 112, _8, _4, _2, _6, _5, _4, _5, _4, _5, 2, _5c, })
-		ret[3] = cmd_funcs.merge( -- サイクロン成立
-			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, },
-			{ _8, _5, 46, _2, 15, _2 , _5, 112, _8, _4, _2, _6, _5, _4, _5, _4, _5, 3, _5c, })
-		ret[4] = cmd_funcs.merge( -- サイクロン成立
-			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, },
-			{ _8, _5, 46, _2, 15, _2 , _5, 112, _8, _4, _2, _6, _5, _4, _5, _4, _5, 4, _c, })
-		ret[5] = cmd_funcs.merge( -- サイクロン成立
-			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, },
-			{ _8, _5, 46, _2, 15, _2 , _5, 112, _8, _4, _2, _6, _5, _4, _5, _4, _5, 5, _c, })
-		ret[3] = cmd_funcs.merge( -- サイクロン不成立
-			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, },
-			{ _8, _5, 46, _2, 15, _2 , _5, 111, _8, _4, _2, _6, _5, _4, _5, _4, _5, 6, _c, })
-		ret[4] = cmd_funcs.merge( -- サイクロン不成立
-			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, },
-			{ _8, _5, 46, _2, 15, _2 , _5, 110, _8, _4, _2, _6, _5, _4, _5, _4, _5, 7, _c, })
-		ret[1] = cmd_funcs.merge( -- リバサバクステキャンセルアンリミ
-			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, },
-			{ _8, _5, 46, _2, 15, _2 , _5, 110, _6, _3, _2, _1, _4, _6, _5, _4, _5, _4, _5, 5, _a, })
-		ret[1] = cmd_funcs.merge( -- リバササイクロンが飛燕失脚を投げられない状態でCがでて喰らう
-			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, }, -- 通常投げ→飛燕失脚重ね
-			{ _8, _5, 46, _2, 15, _2 , _5, 112, _8, _4, _2, _6, _5, _4, _5, _4, _5, 1, _c, })
-		ret[2] = cmd_funcs.merge( -- リバササイクロンが飛燕失脚を投げられない状態でバクステがでる
-			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, }, -- 通常投げ→飛燕失脚重ね
-			{ _8, _5, 46, _2, 15, _2 , _5, 112, _8, _4, _2, _6, _5, _4, _5, _4, _5, 2, _c, })
-		ret[3] = cmd_funcs.merge( -- リバサバクステキャンセルサイクロン
-			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, }, -- 通常投げ→飛燕失脚重ね
-			{ _8, _5, 46, _2, 15, _2 , _5, 112, _8, _4, _2, _6, _5, _4, _5, _4, _5, 3, _c, })
-		ret[4] = cmd_funcs.merge( -- リバサバクステキャンセルサイクロン
-			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, }, -- 通常投げ→飛燕失脚重ね
-			{ _8, _5, 46, _2, 15, _2 , _5, 112, _8, _4, _2, _6, _5, _4, _5, _4, _5, 4, _c, })
-		ret[5] = cmd_funcs.merge( -- リバサバクステキャンセルサイクロン
-			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, }, -- 通常投げ→飛燕失脚重ね
-			{ _8, _5, 46, _2, 15, _2 , _5, 112, _8, _4, _2, _6, _5, _4, _5, _4, _5, 5, _c, })
-		ret[1] = cmd_funcs.merge( -- ガー不飛燕失脚 リバサバクステキャンセルサイクロン
-			{ _8, _5, 46, _6, 15, _6c, _5,  87, _6, _6a, }, -- 通常投げ→飛燕失脚重ね
-			{ _8, _5, 46, _2, 15, _2 , _5, 112, _8, _4, _2, _6, _5, _4, _5, _4, _5, 6, _5c, })
-		ret[2] = cmd_funcs.merge( -- ガー不ジャンプB リバサバクステキャンセルレイブ
-			{ _8, _5, 46, _2a, _5, 5, _2c, _5, 15, _6, _5, _4, _1, _2, _3, _bc, _5, 155, _9, _5, 29, _b, _1, 81, _5, },
-			{ _8, _5, 46, _2, 15, _2 , _5, 191, _4, _1, _2, _3, _6, _4, _5, _6, _5, _6, _5, 4, _a, })
-		ret[2] = cmd_funcs.merge( -- ガー不ジャンプB リバサバクステキャンセルレイブ
-			{ _8, _5, 46, _2a, _5, 5, _2c, _5, 15, _6, _5, _4, _1, _2, _3, _bc, _5, 155, _9, _5, 29, _b, _1, 81, _1, 289, _6, _5, _4, _1, _2, _3, _5, _4, _5, _4, _5, 3, _bc, _5, 178, _4, 23, _5, 26, _cd, _5, 51, _2, _1, _4, _5, _4, _5, _4, 3, _c, _5, 40, _cd, _5 },
-			{ _8, _5, 46, _2, 15, _2 , _5, 191, _4, _1, _2, _3, _6, _4, _5, _6, _5, _6, _5, 4, _a, _5, 340, _4a, _5, 270, _6, _2, _3, _6, _c, _5, 76, _cd, _5  })
-		ret[3] = cmd_funcs.merge( -- ガー不ジャンプB リバサバクステキャンセル真空投げ
-			{ _8, _5, 46, _2a, _5, 5, _2c, _5, 15, _6, _5, _4, _1, _2, _3, _bc, _5, 155, _9, _5, 29, _b, _1, 81, _5, },
-			{ _8, _5, 46, _2, 15, _2 , _5, 191, _2, _4, _8, _6, _2, _4, _5, _6, _5, _6, _5, 4, _5a, })
-		]]
-		return ret
-	end
-	for i, preset_cmd in ipairs(research_cmd()) do
-		local store = recording.slot[i].store
-		for _, joy in ipairs(preset_cmd) do
-			table.insert(store, { joy = joy, pos = { 1, -1 } })
-		end
+	for i, preset_cmd in ipairs(data.research_cmd) do
+		for _, joy in ipairs(preset_cmd) do table.insert(recording.slot[i].store, { joy = joy, pos = { 1, -1 } }) end
 	end
 	recording.player = 1
 	recording.active_slot = recording.slot[1]
@@ -7647,31 +2846,27 @@ rbff2.startplugin = function()
 			local op = p.op
 			p.input_states = {}
 			p.char_data = chars[p.char]
-			p.init_stun = p.char_data.init_stuns
 
 			do_recover(p, op, true)
 
-			p.last_pure_dmg       = 0
-			p.last_dmg            = 0
-			p.last_dmg_scaling    = 0
-			p.last_combo_dmg      = 0
-			p.last_dmg            = 0
-			p.last_combo          = 0
-			p.last_combo_stun     = 0
-			p.last_stun           = 0
-			p.last_combo_st_timer = 0
-			p.last_st_timer       = 0
-			p.last_combo_pow      = 0
-			p.last_pow            = 0
-			p.tmp_combo           = 0
-			p.tmp_dmg             = 0
-			p.tmp_pow             = 0
-			p.tmp_pow_rsv         = 0
-			p.tmp_pow_atc         = 0
-			p.tmp_stun            = 0
-			p.tmp_st_timer        = 0
-			p.tmp_pow             = 0
-			p.tmp_combo_pow       = 0
+			p.combo_update = 0
+			p.combo_damage = 0
+			p.combo_start_stun = 0
+			p.combo_start_stun_timer = 0
+			p.combo_stun = 0
+			p.combo_stun_timer = 0
+			p.combo_pow = 0
+			p.last_damage = 0
+			p.last_damage_scaled = 0
+			p.last_combo = 0
+			p.last_stun = 0
+			p.last_stun_timer = 0
+			p.last_pow_up = 0
+			p.max_combo_damage = 0
+			p.max_combo = 0
+			p.max_combo_stun = 0
+			p.max_combo_stun_timer = 0
+			p.max_combo_pow = 0
 		end
 	end
 
@@ -7684,12 +2879,12 @@ rbff2.startplugin = function()
 	-- リプレイ開始位置記憶
 	rec_fixpos = function()
 		local pos        = { players[1].input_side, players[2].input_side }
-		local fixpos     = { pgm:read_i16(players[1].addr.pos), pgm:read_i16(players[2].addr.pos) }
-		local fixsway    = { pgm:read_u8(players[1].addr.sway_status), pgm:read_u8(players[2].addr.sway_status) }
+		local fixpos     = { mem.r16i(players[1].addr.pos), mem.r16i(players[2].addr.pos) }
+		local fixsway    = { mem.r8(players[1].addr.sway_status), mem.r8(players[2].addr.sway_status) }
 		local fixscr     = {
-			x = pgm:read_u16(mem.stage_base_addr + screen.offset_x),
-			y = pgm:read_u16(mem.stage_base_addr + screen.offset_y),
-			z = pgm:read_u16(mem.stage_base_addr + screen.offset_z),
+			x = mem.r16(mem.stage_base_addr + screen.offset_x),
+			y = mem.r16(mem.stage_base_addr + screen.offset_y),
+			z = mem.r16(mem.stage_base_addr + screen.offset_z),
 		}
 		recording.fixpos = { pos = pos, fixpos = fixpos, fixscr = fixscr, fixsway = fixsway, }
 	end
@@ -7717,7 +2912,7 @@ rbff2.startplugin = function()
 		local next_val = nil
 		local pos = { players[1].input_side, players[2].input_side }
 		for k, f in pairs(joy_val) do
-			if k ~= "1 Player Start" and k ~= "2 Players Start" and f > 0 then
+			if k ~= joy_k[1].st and k ~= joy_k[2].st and f > 0 then
 				if not next_val then
 					next_val = new_next_joy()
 					recording.player = recording.temp_player
@@ -7729,9 +2924,7 @@ rbff2.startplugin = function()
 
 					-- 状態変更
 					-- 初回のみ開始記憶
-					if recording.fixpos == nil then
-						rec_fixpos()
-					end
+					if recording.fixpos == nil then rec_fixpos() end
 					global.rec_main = rec_input
 					print(global.frame_number .. " rec_await_1st_input -> rec_input")
 				end
@@ -7748,7 +2941,7 @@ rbff2.startplugin = function()
 		local next_val = new_next_joy()
 		local pos = { players[1].input_side, players[2].input_side }
 		for k, f in pairs(joy_val) do
-			if k ~= "1 Player Start" and k ~= "2 Players Start" and recording.active_slot.side == joy_pside[rev_joy[k]] then
+			if k ~= joy_k[1].st and k ~= joy_k[2].st and recording.active_slot.side == joy_pside[rev_joy[k]] then
 				-- レコード中は1Pと2P入力が入れ替わっているので反転させて記憶する
 				next_val[rev_joy[k]] = f > 0
 			end
@@ -7798,7 +2991,7 @@ rbff2.startplugin = function()
 		end
 
 		local joy_val = get_joy()
-		if #recording.active_slot.store > 0 and (accept_input("Start", joy_val, state_past) or force_start_play == true) then
+		if #recording.active_slot.store > 0 and (accept_input("st", joy_val, state_past) or force_start_play == true) then
 			recording.force_start_play = false
 			-- 状態変更
 			recording.play_count = 1
@@ -7813,8 +3006,8 @@ rbff2.startplugin = function()
 				if global.replay_reset == 2 or (global.replay_reset == 3 and i == 3) or (global.replay_reset == 4 and i == 4) then
 					local resets = {
 						[mem.w16i] = {
-							[p.addr.pos_y] = 0x00,
-							[p.addr.pos_z] = 0x18,
+							[0x28] = 0x00,
+							[0x24] = 0x18,
 						},
 						[mem.w16] = {
 							[0x60] = 0x01,
@@ -7822,8 +3015,7 @@ rbff2.startplugin = function()
 							[0x6E] = 0x00,
 						},
 						[mem.w32] = {
-							--[p.addr.base] = 0x000261A0, -- 素立ち処理
-							[p.addr.base] = 0x00058D5A, -- やられからの復帰処理
+							[p.addr.base] = 0x58D5A, -- やられからの復帰処理  0x261A0: 素立ち処理
 							[0x28] = 0x00,
 							[0x34] = 0x00,
 							[0x38] = 0x00,
@@ -7848,18 +3040,11 @@ rbff2.startplugin = function()
 							[0xC2] = 0x00,
 							[0xFC] = 0x00,
 							[0xFD] = 0x00,
-							[p.addr.sway_status] = 0x00,
+							[0x89] = 0x00,
 						},
 					}
-					for fnc, tbl in pairs(resets) do
-						for addr, value in pairs(tbl) do
-							fnc(addr, value)
-						end
-					end
-
+					for fnc, tbl in pairs(resets) do for addr, value in pairs(tbl) do fnc(addr, value) end end
 					do_recover(p, op, true)
-
-					p.last_blockstun = 0
 					p.last_frame_gap = 0
 				end
 			end
@@ -7870,23 +3055,21 @@ rbff2.startplugin = function()
 				if fixpos.fixpos then
 					for i, p in ipairs(players) do
 						if global.replay_fix_pos == 3 or (global.replay_fix_pos == 4 and i == 3) or (global.replay_fix_pos == 5 and i == 4) then
-							pgm:write_i16(p.addr.pos, fixpos.fixpos[i])
+							mem.w16i(p.addr.pos, fixpos.fixpos[i])
 						end
 					end
 				end
 				if fixpos.fixscr and global.replay_fix_pos and global.replay_fix_pos ~= 1 then
-					pgm:write_u16(mem.stage_base_addr + screen.offset_x, fixpos.fixscr.x)
-					pgm:write_u16(mem.stage_base_addr + screen.offset_x + 0x30, fixpos.fixscr.x)
-					pgm:write_u16(mem.stage_base_addr + screen.offset_x + 0x2C, fixpos.fixscr.x)
-					pgm:write_u16(mem.stage_base_addr + screen.offset_x + 0x34, fixpos.fixscr.x)
-					pgm:write_u16(mem.stage_base_addr + screen.offset_y, fixpos.fixscr.y)
-					pgm:write_u16(mem.stage_base_addr + screen.offset_z, fixpos.fixscr.z)
+					mem.w16(mem.stage_base_addr + screen.offset_x, fixpos.fixscr.x)
+					mem.w16(mem.stage_base_addr + screen.offset_x + 0x30, fixpos.fixscr.x)
+					mem.w16(mem.stage_base_addr + screen.offset_x + 0x2C, fixpos.fixscr.x)
+					mem.w16(mem.stage_base_addr + screen.offset_x + 0x34, fixpos.fixscr.x)
+					mem.w16(mem.stage_base_addr + screen.offset_y, fixpos.fixscr.y)
+					mem.w16(mem.stage_base_addr + screen.offset_z, fixpos.fixscr.z)
 				end
 			end
-			players[1].input_side = pgm:read_u8(players[1].addr.input_side)
-			players[2].input_side = pgm:read_u8(players[2].addr.input_side)
-			players[1].disp_side  = get_flip_x(players[1])
-			players[2].disp_side  = get_flip_x(players[2])
+			players[1].input_side = mem.r8(players[1].addr.input_side)
+			players[2].input_side = mem.r8(players[2].addr.input_side)
 
 			-- 入力リセット
 			local next_joy        = new_next_joy()
@@ -7926,7 +3109,7 @@ rbff2.startplugin = function()
 
 		local joy_val = get_joy()
 
-		if accept_input("Start", joy_val, state_past) then
+		if accept_input("st", joy_val, state_past) then
 			-- 状態変更
 			global.rec_main = rec_await_play
 			global.input_accepted = ec
@@ -7938,7 +3121,7 @@ rbff2.startplugin = function()
 		local store = recording.active_slot.store[recording.play_count]
 		if store == nil then
 			stop = true
-		elseif pgm:read_u8(players[recording.player].addr.state) == 1 then
+		elseif players[recording.player].state == 1 then
 			if global.replay_stop_on_dmg then
 				stop = true
 			end
@@ -7946,7 +3129,6 @@ rbff2.startplugin = function()
 		if not stop and store then
 			-- 入力再生
 			local pos = { players[1].input_side, players[2].input_side }
-			--local pos = { players[1].disp_side, players[2].disp_side }
 			for _, joy in ipairs(use_joy) do
 				local k = joy.field
 				-- 入力時と向きが変わっている場合は左右反転させて反映する
@@ -7994,7 +3176,7 @@ rbff2.startplugin = function()
 
 		local joy_val = get_joy()
 
-		if accept_input("Start", joy_val, state_past) then
+		if accept_input("st", joy_val, state_past) then
 			-- 状態変更
 			global.rec_main = rec_await_play
 			global.input_accepted = ec
@@ -8051,7 +3233,7 @@ rbff2.startplugin = function()
 				min_count = math.min(min_count, frame1.count)
 			end
 
-			for _, fb in ipairs(p.fireball) do
+			for _, fb in ipairs(p.fireballs) do
 				local frame1 = fb.act_frames[#fb.act_frames]
 				if frame1.count <= 332 then
 					return
@@ -8072,7 +3254,7 @@ rbff2.startplugin = function()
 			frame1 = p.frm_gap.act_frames[#p.frm_gap.act_frames]
 			frame1.count = frame1.count - fix
 
-			for _, fb in ipairs(p.fireball) do
+			for _, fb in ipairs(p.fireballs) do
 				local frame1 = fb.act_frames[#fb.act_frames]
 				frame1.count = frame1.count - fix
 			end
@@ -8129,8 +3311,7 @@ rbff2.startplugin = function()
 			-- グループの名称を描画
 			if show_name and main_frame then
 				if (frame_group[1].col + frame_group[1].line) > 0 then
-					local disp_name = frame_group[1].disp_name or frame_group[1].name
-					draw_text_with_shadow(x + 12, txty + y, disp_name, 0xFFC0C0C0)
+					draw_text_with_shadow(x + 12, txty + y, frame_group[1].name, 0xFFC0C0C0)
 				end
 			end
 			-- グループのフレーム数を末尾から描画
@@ -8272,22 +3453,20 @@ rbff2.startplugin = function()
 		-- 体力と気絶値とMAX気絶値回復
 		local life = { 0xC0, 0x60, 0x00 }
 		local max_life = life[p.red] or (p.red - #life) -- 赤体力にするかどうか
+		local init_stuns = p.char_data and p.char_data.init_stuns or 0
 		if dip_config.infinity_life then
-			pgm:write_u8(p.addr.life, max_life)
-			pgm:write_u8(p.addr.max_stun, p.init_stun) -- 最大気絶値
-			pgm:write_u8(p.addr.init_stun, p.init_stun) -- 最大気絶値
+			mem.w8(p.addr.life, max_life)
+			mem.w8(p.addr.stun_limit, init_stuns) -- 最大気絶値
+			mem.w8(p.addr.init_stun, init_stuns) -- 最大気絶値
 		elseif p.life_rec then
-			-- 回復判定して回復
-			if force or ((math.max(p.update_dmg, op.update_dmg) + 180) <= global.frame_number and p.state == 0) then
-				-- やられ状態から戻ったときに回復させる
-				pgm:write_u8(p.addr.life, max_life) -- 体力
-				pgm:write_u8(p.addr.stun, 0)    -- 気絶値
-				pgm:write_u8(p.addr.max_stun, p.init_stun) -- 最大気絶値
-				pgm:write_u8(p.addr.init_stun, p.init_stun) -- 最大気絶値
-				pgm:write_u16(p.addr.stun_timer, 0) -- 気絶値タイマー
+			if force or (p.addr.life ~= max_life and 180 < math.min(p.throw_timer, op.throw_timer)) then
+				mem.w8(p.addr.life, max_life) -- やられ状態から戻ったときに回復させる
+				mem.w8(p.addr.stun, 0)    -- 気絶値
+				mem.w8(p.addr.stun_limit, init_stuns) -- 最大気絶値
+				mem.w8(p.addr.init_stun, init_stuns) -- 最大気絶値
+				mem.w16(p.addr.stun_timer, 0) -- 気絶値タイマー
 			elseif max_life < p.life then
-				-- 最大値の方が少ない場合は強制で減らす
-				pgm:write_u8(p.addr.life, max_life)
+				mem.w8(p.addr.life, max_life) -- 最大値の方が少ない場合は強制で減らす
 			end
 		end
 
@@ -8297,157 +3476,16 @@ rbff2.startplugin = function()
 		local max_pow = pow[p.max] or (p.max - #pow) -- パワーMAXにするかどうか
 		-- POWモード　1:自動回復 2:固定 3:通常動作
 		if global.pow_mode == 2 then
-			pgm:write_u8(p.addr.pow, max_pow)
+			mem.w8(p.addr.pow, max_pow)
 		elseif global.pow_mode == 1 and p.pow == 0 then
-			pgm:write_u8(p.addr.pow, max_pow)
+			mem.w8(p.addr.pow, max_pow)
 		elseif global.pow_mode ~= 3 and max_pow < p.pow then
 			-- 最大値の方が少ない場合は強制で減らす
-			pgm:write_u8(p.addr.pow, max_pow)
+			mem.w8(p.addr.pow, max_pow)
 		end
 	end
 
-	-- 1Pと2Pの通常投げ間合い取得
-	-- 0x05D78Cからの実装
-	local get_n_throw = function(p, op)
-		-- 相手が向き合いか背向けかで押し合い幅を解決して反映
-		local op_edge = 0xFFFF & (op.proc_pos - ((p.side == op.side) and op.push_back or op.push_front))
-		-- 自身の押し合い判定を反映
-		local p_edge = 0xFFFF & (p.pos - p.push_front)
-
-		local a = 0xFFFF & math.abs(op.proc_pos - op_edge)
-		local tw_center = p_edge - screen.left
-		if 0 > p.side then
-			tw_center = tw_center - a
-		else
-			tw_center = tw_center + a
-		end
-
-		-- 投げ間合いセット
-		p.throw            = {
-			x1 = tw_center - p.tw_half_range,
-			x2 = tw_center + p.tw_half_range,
-			half_range = p.tw_half_range,
-			full_range = p.tw_half_range + p.tw_half_range,
-			in_range = false,
-		}
-		local op_pos       = op.proc_pos - screen.left
-		p.throw.in_range   = p.throw.x1 <= op_pos and op_pos <= p.throw.x2
-
-		-- フックした情報の取得
-		p.n_throw.left     = nil
-		p.n_throw.right    = nil
-		p.n_throw.top      = nil
-		p.n_throw.bottom   = nil
-		p.n_throw.on       = pgm:read_u8(p.n_throw.addr.on)
-		p.n_throw.base     = pgm:read_u32(p.n_throw.addr.base)
-		p.n_throw.opp_base = pgm:read_u32(p.n_throw.addr.opp_base)
-		p.n_throw.opp_id   = pgm:read_u16(p.n_throw.addr.opp_id)
-		p.n_throw.char_id  = pgm:read_u16(p.n_throw.addr.char_id)
-		p.n_throw.side     = p.side
-		p.n_throw.range1   = pgm:read_u8(p.n_throw.addr.range1)
-		p.n_throw.range2   = pgm:read_u8(p.n_throw.addr.range2)
-		p.n_throw.range3   = pgm:read_i8(p.n_throw.addr.range3)
-		p.n_throw.range41  = pgm:read_i8(p.n_throw.addr.range41)
-		p.n_throw.range42  = pgm:read_i8(p.n_throw.addr.range42)
-		p.n_throw.range5   = pgm:read_i8(p.n_throw.addr.range5)
-		p.n_throw.id       = pgm:read_u8(p.n_throw.addr.id)
-		p.n_throw.pos_x    = p.pos - screen.left
-		p.n_throw.pos_y    = screen.top - p.pos_y
-		local range        = (p.n_throw.range1 == p.n_throw.range2 and math.abs(p.n_throw.range42 * 4)) or math.abs(p.n_throw.range41 * 4)
-		range              = range + p.n_throw.range5 * -4
-		range              = range + p.throw.half_range
-		p.n_throw.range    = range
-		p.n_throw.right    = p.n_throw.range * p.side
-		p.n_throw.left     = (p.n_throw.range - p.throw.full_range) * p.side
-		p.n_throw.type     = box_type_base.t
-		p.n_throw.on       = p.addr.base == p.n_throw.base and p.n_throw.on or 0xFF
-	end
-	-- 空中投げ間合い取得
-	-- 0x05FDCA,0x060426からの実装
-	-- TODO アドレスの補正
-	local can_air_throwable_bases = new_set(0x02C9D4, 0x02BF20, 0x02C132, 0x02C338, 0x02C552)
-	local get_air_throw = function(p, op)
-		-- 投げ間合いセット
-		p.air_throw           = p.air_throw or {}
-		-- 参考表示の枠なので簡易的なチェックにする
-		p.air_throw.can_throw = p.in_air == true and op.in_air == true and
-			can_air_throwable_bases[p.base] == true and pgm:read_u8(0x05FDE0 + p.char) ~= 0
-		p.air_throw.x1        = p.side < 0 and -pgm:read_u16(0x060566) or 0
-		p.air_throw.x2        = p.side < 0 and 0 or pgm:read_u16(0x060566)
-		p.air_throw.y1        = pgm:read_u16(0x060568)
-		p.air_throw.y2        = -p.air_throw.y1
-		local op_pos          = op.proc_pos - p.proc_pos
-		local op_pos_y        = op.old_pos_y - p.old_pos_y
-		-- フックした情報の取得
-		p.air_throw.in_range  = p.air_throw.x1 <= op_pos and
-			op_pos <= p.air_throw.x2 and
-			p.air_throw.y1 >= op_pos_y and
-			op_pos_y >= p.air_throw.y2
-		p.air_throw.on        = pgm:read_u8(p.air_throw.addr.on)
-		p.air_throw.range_x   = pgm:read_i16(p.air_throw.addr.range_x)
-		p.air_throw.range_y   = pgm:read_i16(p.air_throw.addr.range_y)
-		p.air_throw.left      = 0
-		p.air_throw.right     = p.air_throw.range_x * p.side
-		p.air_throw.base      = pgm:read_u32(p.air_throw.addr.base)
-		p.air_throw.opp_base  = pgm:read_u32(p.air_throw.addr.opp_base)
-		p.air_throw.opp_id    = pgm:read_u16(p.air_throw.addr.opp_id)
-		p.air_throw.pos_x     = p.pos - screen.left
-		p.air_throw.pos_y     = screen.top - p.old_pos_y - p.old_pos_z
-		p.air_throw.side      = p.side
-		p.air_throw.top       = p.air_throw.range_y
-		p.air_throw.bottom    = -p.air_throw.range_y
-		p.air_throw.type      = box_type_base.at
-		p.air_throw.on        = p.addr.base == p.air_throw.base and p.air_throw.on or 0xFF
-		p.air_throw.id        = pgm:read_u8(p.air_throw.addr.id)
-	end
-	-- 必殺投げ間合い取得
-	local get_sp_throw = function(p, op)
-		-- フックした情報の取得
-		p.sp_throw.left     = nil
-		p.sp_throw.right    = nil
-		p.sp_throw.top      = nil
-		p.sp_throw.bottom   = nil
-		p.sp_throw.on       = pgm:read_u8(p.sp_throw.addr.on)
-		p.sp_throw.front    = pgm:read_i16(p.sp_throw.addr.front)
-		p.sp_throw.top      = -pgm:read_i16(p.sp_throw.addr.top)
-		p.sp_throw.base     = pgm:read_u32(p.sp_throw.addr.base)
-		p.sp_throw.opp_base = pgm:read_u32(p.sp_throw.addr.opp_base)
-		p.sp_throw.opp_id   = pgm:read_u16(p.sp_throw.addr.opp_id)
-		p.sp_throw.side     = p.side
-		p.sp_throw.bottom   = pgm:read_i16(p.sp_throw.addr.bottom)
-		p.sp_throw.pos_x    = p.pos - screen.left
-		p.sp_throw.pos_y    = screen.top - p.old_pos_y - p.old_pos_z
-		p.sp_throw.right    = p.sp_throw.front * p.side
-		p.sp_throw.type     = box_type_base.pt
-		p.sp_throw.on       = p.addr.base == p.sp_throw.base and p.sp_throw.on or 0xFF
-		p.sp_throw.id       = pgm:read_u8(p.sp_throw.addr.id)
-		if p.sp_throw.top == 0 then
-			p.sp_throw.top    = nil
-			p.sp_throw.bottom = nil
-		end
-	end
-	-- 0:攻撃無し 1:ガード継続小 2:ガード継続大
-	local get_gd_strength = function(p)
-		-- 飛び道具は無視
-		if p.addr.base ~= 0x100400 and p.addr.base ~= 0x100500 then
-			return 1
-		end
-		local char_id     = pgm:read_u16(p.addr.base + 0x10)
-		local char_4times = 0xFFFF & (char_id + char_id)
-		char_4times       = 0xFFFF & (char_4times + char_4times)
-		-- 家庭用0271FCからの処理
-		local cond1       = pgm:read_u8(p.addr.base + 0xA2) -- ガード判断用 0のときは何もしていない
-		local cond2       = pgm:read_u8(p.addr.base + 0xB6) -- ガード判断用 0のときは何もしていない
-		local ret         = 0
-		if cond1 ~= 0 then
-			ret = 1
-		elseif cond2 ~= 0 then
-			local b2 = 0x80 == (0x80 & pgm:read_u8(pgm:read_u32(0x8C9E2 + char_4times) + cond2))
-			ret = b2 and 2 or 1
-		end
-		return ret
-	end
-	local summary_rows, summary_sort_key = {
+	local summary_rows, summary_order = {
 		"動作",
 		"動作C0",
 		"動作C4",
@@ -8488,27 +3526,16 @@ rbff2.startplugin = function()
 		"2 やられ範囲",
 		"3 やられ範囲",
 	}, {}
-	for i, k in ipairs(summary_rows) do
-		summary_sort_key[k .. ":"] = i
-	end
-	local sort_summary = function(summary)
-		table.sort(summary, function(row1, row2)
-			local k1 = summary_sort_key[row1[1]] or 100
-			local k2 = summary_sort_key[row2[1]] or 100
-			return (k1 < k2)
-		end)
-		return summary
+	for i, k in ipairs(summary_rows) do summary_order[k .. ":"] = i end
+	local sort_summary = function(sum)
+		table.sort(sum, function(r1, r2) return (summary_order[r1[1]] or 100) < (summary_order[r2[1]] or 100) end)
+		return sum
 	end
 	local check_edge = function(edge)
-		if edge.front and edge.top and edge.bottom and edge.back then
-			return true
-		end
-		return false
+		return edge.front and edge.top and edge.bottom and edge.back
 	end
 	local add_frame_to_summary = function(summary)
-		for _, row in ipairs(summary) do
-			row[3] = global.frame_number
-		end
+		for _, row in ipairs(summary) do row[3] = global.frame_number end
 		return summary
 	end
 	local make_throw_summary = function(p, summary)
@@ -8623,12 +3650,12 @@ rbff2.startplugin = function()
 		end
 		-- キャンセル可否
 		local cancel_label, cancel_advs_label, cancel_advs = "連×/必×", "", {}
-		if p.flag_c8 == 0 and p.cancelable and p.cancelable ~= 0 then
+		if p.flag_c8 == 0 and p.cancelable then
 			if p.char_data.faint_cancel and p.attack_id then
 				for _, fc in ipairs(p.char_data.faint_cancel) do
 					local p1  = 1 + p.hitstop + fc.f
 					local p2h = p.hitstop + p.hitstun
-					local p2g = p.hitstop_gd + p.blockstun
+					local p2g = p.blockstop + p.blockstun
 					table.insert(cancel_advs, string.format(fc.name .. ":当%sF/防%sF", p2h - p1, p2g - p1))
 				end
 			end
@@ -8639,11 +3666,11 @@ rbff2.startplugin = function()
 		end
 		local slide_label = p.slide_atk and "滑(CA×)/" or ""
 		local atk_summary = {
-			{ "詠酒間合い:",          esaka_label },
+			{ "詠酒間合い:", esaka_label },
 			{ "ブレイクショット:", bs_label },
-			{ "キャンセル:",          slide_label .. cancel_label .. string.format("%02x", p.cancelable) },
-			{ "キャンセル補足:",    cancel_advs_label },
-			{ "滑り攻撃補足:",       p.dash_act_info }
+			{ "キャンセル:", slide_label .. cancel_label },
+			{ "キャンセル補足:", cancel_advs_label },
+			{ "滑り攻撃補足:", p.dash_act_info }
 		}
 		return add_frame_to_summary(atk_summary)
 	end
@@ -8652,14 +3679,14 @@ rbff2.startplugin = function()
 		local prefix = fbno == 0 and "" or ("弾" .. fbno)
 		local atkact_summary = {}
 		if p.fake_hit == false and (p.attack_id > 0 or p.is_fireball == true) then
-			for _, box in ipairs(p.hitboxes) do
+			for _, box in ipairs(p.boxies) do
 				if box.atk and box.info then
 					local info = box.info
 
 					-- 避け攻撃つぶし
 					local punish_away_label, asis_punish_away_label
-					if summary.normal_hit == hit_proc_types.same_line or
-						summary.normal_hit == hit_proc_types.diff_line then
+					if summary.normal_hit == possible_types.same_line or
+						summary.normal_hit == possible_types.diff_line then
 						punish_away_label = "上方"
 						asis_punish_away_label = "上方"
 						if info.punish_away == 1 then
@@ -8691,25 +3718,25 @@ rbff2.startplugin = function()
 					end
 
 					local blocks, sway_blocks = {}, {}
-					if testbit(info.blockbit, block_types.high) then
+					if util.testbit(info.blockbit, block_types.high) then
 						table.insert(blocks, "立")
 					end
-					if testbit(info.blockbit, block_types.high_tung) then
+					if util.testbit(info.blockbit, block_types.high_tung) then
 						table.insert(blocks, "立(タンのみ)")
 					end
-					if testbit(info.blockbit, block_types.low) then
+					if util.testbit(info.blockbit, block_types.low) then
 						table.insert(blocks, "屈")
 					end
-					if testbit(info.blockbit, block_types.air) then
+					if util.testbit(info.blockbit, block_types.air) then
 						table.insert(blocks, "空")
 					end
-					if testbit(info.blockbit, block_types.sway_high) then
+					if util.testbit(info.blockbit, block_types.sway_high) then
 						table.insert(sway_blocks, "立")
 					end
-					if testbit(info.blockbit, block_types.sway_high_tung) then
+					if util.testbit(info.blockbit, block_types.sway_high_tung) then
 						table.insert(sway_blocks, "立(タンのみ)")
 					end
-					if testbit(info.blockbit, block_types.sway_low) then
+					if util.testbit(info.blockbit, block_types.sway_low) then
 						table.insert(sway_blocks, "屈")
 					end
 
@@ -8722,7 +3749,7 @@ rbff2.startplugin = function()
 					table.insert(parry, info.range_phx_tw and "フ" or info.phx_tw and "(フ)" or nil) -- フェニックススルー可能
 					table.insert(parry, info.range_baigaeshi and "倍" or info.baigaeshi and "(倍)" or nil) -- 倍返し可能
 					table.insert(parry, info.range_katsu and "喝消し" or info.katsu and "(喝消し)" or nil) -- 喝を相殺可能
-					table.insert(parry, info.nullify and "弾消し" or nil)                -- 弾を相殺可能
+					table.insert(parry, info.nullify and "弾消し" or nil) -- 弾を相殺可能
 					table.insert(summary.boxes, {
 						punish_away_label = punish_away_label,
 						asis_punish_away_label = asis_punish_away_label,
@@ -8759,7 +3786,7 @@ rbff2.startplugin = function()
 				if hit_effects[e][3] then
 					effect_label = effect_label .. " " .. hit_effects[e][3]
 				end
-				if summary.can_techrise == false then
+				if summary.forced_down then
 					effect_label = effect_label .. " 受身不可"
 				end
 			end
@@ -8768,14 +3795,14 @@ rbff2.startplugin = function()
 			if summary.down_hit then
 				table.insert(followups, "ダウン追撃")
 			end
-			if summary.air_hit then
+			if summary.juggle then
 				table.insert(followups, "空中追撃")
 			end
 			local followup_label = #followups == 0 and "" or (table.concat(followups, ","))
 			-- 弾強度
-			local prj_rank_label = ""
+			local fireball_rank_label = ""
 			if p.is_fireball then
-				prj_rank_label = string.format("弾強度:%s%s", summary.prj_rank, (p.fake_hit == true and p.full_hit == false) and "(被相殺)" or "")
+				fireball_rank_label = string.format("弾強度:%s%s", summary.fireball_rank, (p.fake_hit == true and p.harmless1 == false) and "(被相殺)" or "")
 			end
 
 			for box_no, box in ipairs(summary.boxes) do
@@ -8788,7 +3815,7 @@ rbff2.startplugin = function()
 				table.insert(atkact_summary, { box_no .. " 攻撃高さ:", label })
 				table.insert(atkact_summary, { box_no .. " 攻撃範囲:", box.reach_label })
 			end
-			table.insert(atkact_summary, { "攻撃対象:", summary.normal_hit or summary.down_hit or summary.air_hit or "-" })
+			table.insert(atkact_summary, { "攻撃対象:", summary.normal_hit or summary.down_hit or summary.juggle or "-" })
 			table.insert(atkact_summary, { "攻撃範囲 最大:", reach_label })
 			table.insert(atkact_summary, { prefix .. "効果(地/空):", effect_label .. " " .. followup_label })
 			table.insert(atkact_summary, { prefix .. "硬直 当/防(BS):",
@@ -8797,10 +3824,10 @@ rbff2.startplugin = function()
 					p.hitstun and p.hitstun or "-",
 					summary.hitstop,
 					p.blockstun,
-					summary.hitstop_gd) or
+					summary.blockstop) or
 				"-"
 			})
-			table.insert(atkact_summary, { prefix .. "ヒット数:", string.format("%s/%s %s", summary.max_hit_nm, summary.max_hit_dn, prj_rank_label) })
+			table.insert(atkact_summary, { prefix .. "ヒット数:", string.format("%s/%s %s", summary.max_hit_nm, summary.max_hit_dn, fireball_rank_label) })
 
 			return add_frame_to_summary(atkact_summary)
 		end
@@ -8852,13 +3879,13 @@ rbff2.startplugin = function()
 				summary.edge.hurt.bottom + p.pos_y,
 				summary.edge.hurt.back)
 		end
-		local box_cnts = new_tbl_0(box_type_base.v1, box_type_base.v2, box_type_base.v3, box_type_base.v4,
-			box_type_base.v6, box_type_base.x1, box_type_base.g1, box_type_base.g2, box_type_base.g3)
+		local box_cnts = util.new_tbl_0(box_types.hurt1, box_types.hurt2, box_types.down_otg, box_types.launch,
+			box_types.hurt3, box_types.hurt4, box_types.block_overhead, box_types.block_low, box_types.block_air)
 		local push_label = "なし"
 		summary.hurt_boxes = summary.hurt_boxes or {}
-		for _, box in ipairs(p.hitboxes) do
+		for _, box in ipairs(p.boxies) do
 			if not box.atk then
-				if box.type == box_type_base.p then
+				if box.type == box_types.push then
 					push_label = string.format("前%s/上%s(%s)/下%s(%s)/後%s",
 						box.reach.front,
 						box.reach.top + p.pos_y,
@@ -8883,16 +3910,16 @@ rbff2.startplugin = function()
 			end
 		end
 
-		local sides_label -- 00:左側 80:右側
-		sides_label = (p.internal_side == 0x0) and "右" or "左"
-		sides_label = sides_label .. ((p.input_side == 0x0) and "/右" or "/左")
+		local sides_label
+		sides_label = (p.internal_side == 1) and "右" or "左"
+		sides_label = sides_label .. ((p.input_side == 1) and "/右" or "/左")
 		-- 見た目と入力方向が違う状態
 		sides_label = sides_label .. ((p.internal_side == p.input_side) and "" or "＊")
 
 		local hurt_sumamry = {
-			{ "投げ無敵:",           throw_label },
-			{ "方向(動作/入力):",  sides_label },
-			{ "押し合い範囲:",     push_label },
+			{ "投げ無敵:", throw_label },
+			{ "方向(動作/入力):", sides_label },
+			{ "押し合い範囲:", push_label },
 			{ "やられ範囲 最大:", reach_label .. hurt_label },
 		}
 		for _, box in ipairs(summary.hurt_boxes) do
@@ -8906,23 +3933,23 @@ rbff2.startplugin = function()
 
 		-- フラグによる状態の表示
 		if p.flag_c0 > 0 then
-			table.insert(hurt_sumamry, { "動作C0:", get_flag_name(p.flag_c0, sts_flg_names[0xC0]) })
+			table.insert(hurt_sumamry, { "動作C0:", get_flag_name(p.flag_c0, state_flag_names[0xC0]) })
 			table.insert(hurt_sumamry, { "動作C0:", string.format("%016x", p.flag_c0) })
 		end
 		if p.flag_c4 > 0 then
-			table.insert(hurt_sumamry, { "動作C4:", get_flag_name(p.flag_c4, sts_flg_names[0xC4]) })
+			table.insert(hurt_sumamry, { "動作C4:", get_flag_name(p.flag_c4, state_flag_names[0xC4]) })
 			table.insert(hurt_sumamry, { "動作C4:", string.format("%016x", p.flag_c4) })
 		end
 		if p.flag_c8 > 0 then
-			table.insert(hurt_sumamry, { "動作C8:", get_flag_name(p.flag_c8, sts_flg_names[0xC8]) })
+			table.insert(hurt_sumamry, { "動作C8:", get_flag_name(p.flag_c8, state_flag_names[0xC8]) })
 			table.insert(hurt_sumamry, { "動作C8:", string.format("%016x", p.flag_c8) })
 		end
 		if p.flag_cc > 0 then
-			table.insert(hurt_sumamry, { "動作CC:", get_flag_name(p.flag_cc, sts_flg_names[0xCC]) })
+			table.insert(hurt_sumamry, { "動作CC:", get_flag_name(p.flag_cc, state_flag_names[0xCC]) })
 			table.insert(hurt_sumamry, { "動作CC:", string.format("%016x", p.flag_cc) })
 		end
 		if p.flag_d0 > 0 then
-			table.insert(hurt_sumamry, { "動作D0:", get_flag_name(p.flag_d0, sts_flg_names[0xD0]) })
+			table.insert(hurt_sumamry, { "動作D0:", get_flag_name(p.flag_d0, state_flag_names[0xD0]) })
 			table.insert(hurt_sumamry, { "動作D0:", string.format("%016x", p.flag_d0) })
 		end
 
@@ -8954,7 +3981,7 @@ rbff2.startplugin = function()
 			},
 			hurt_inv      = {}, -- やられ判定無敵
 			throw_inv     = throw_inv, -- 投げ無敵
-			throw_inv_set = table_to_set(throw_inv),
+			throw_inv_set = util.table_to_set(throw_inv),
 		}
 		return ret
 	end
@@ -8980,23 +4007,7 @@ rbff2.startplugin = function()
 		on_main_line = 2 ^ 8,
 		on_sway_line = 2 ^ 9,
 	}
-	local frame_attack_types = {
-		attacking = 2 ^ 0, -- 0x1
-		fake = 2 ^ 1, -- 0x10
-		juggling = 2 ^ 3, -- 0x100
-		harmless = 2 ^ 4, -- 0x1000
 
-		-- 本体用
-		x05 = 2 ^ 5, -- attack      5~8
-		x09 = 2 ^ 9, -- act_count  9~16
-		x17 = 2 ^ 17, -- act      17~32
-
-		-- 弾用
-		x05fb = 2 ^ 5, --  hitstop_id 5~12
-		x13fb = 2 ^ 13, -- base       13~14
-		x15fb = 2 ^ 15, -- effect     15~21
-		x22fb = 2 ^ 22, -- act        22~31
-	}
 	local on_frame_func = {
 		gd_str_txt = { "小", "大" },
 		get_break_key = function(p, summary, attackbit)
@@ -9012,7 +4023,7 @@ rbff2.startplugin = function()
 			else
 				break_key = string.format("%s -", break_key)
 			end
-			if summary.effect and testbit(attackbit, frame_attack_types.attacking) then
+			if summary.effect and util.testbit(attackbit, frame_attack_types.attacking) then
 				break_key = string.format("%s %x", break_key, summary.effect)
 			else
 				break_key = string.format("%s -", break_key)
@@ -9022,15 +4033,15 @@ rbff2.startplugin = function()
 	}
 	on_frame_func.break_info = function(info, event_type)
 		-- ブレイク
-		local last_inactive = testbit(info.last_event, frame_event_types.inactive)
-		local last_active = testbit(info.last_event, frame_event_types.active)
+		local last_inactive = util.testbit(info.last_event, frame_event_types.inactive)
+		local last_active = util.testbit(info.last_event, frame_event_types.active)
 		if info.startup and last_inactive and #info.actives == 0 then
 			info.startup = info.count
 		elseif last_active then
 			table.insert(info.actives, { count = info.count, attackbit = info.attackbit })
 			table.insert(info.summaries, info.summary)
 		elseif last_inactive then
-			if testbit(event_type, frame_event_types.active) ~= true and info.recovery then
+			if util.testbit(event_type, frame_event_types.active) ~= true and info.recovery then
 				info.recovery = info.count
 			else
 				table.insert(info.actives, { count = -info.count, attackbit = info.attackbit })
@@ -9050,7 +4061,7 @@ rbff2.startplugin = function()
 				ct = string.format("%sx%s", val, pow)
 			end
 		end
-		table.insert(tbl,  ct)
+		table.insert(tbl, ct)
 	end
 	on_frame_func.build_txt1 = function(ctx, max, count, curr)
 		ctx = ctx or { prev = nil, pow = 0, tbl = {} }
@@ -9177,11 +4188,11 @@ rbff2.startplugin = function()
 
 		return act_txt
 	end
-	on_frame_func.block_txt = function(air_hit, blockbit, esaka_range)
-		local lo = testbit(blockbit, block_types.low)
-		local hi = testbit(blockbit, block_types.high)
-		local hitg = testbit(blockbit, block_types.high_tung)
-		local hilo = testbit(blockbit, block_types.high_low)
+	on_frame_func.block_txt = function(juggle, blockbit, esaka_range)
+		local lo = util.testbit(blockbit, block_types.low)
+		local hi = util.testbit(blockbit, block_types.high)
+		local hitg = util.testbit(blockbit, block_types.high_tung)
+		local hilo = util.testbit(blockbit, block_types.high_low)
 		local blocktxt = ""
 		if lo then
 			if hi == false and hitg == false then
@@ -9213,22 +4224,22 @@ rbff2.startplugin = function()
 		if esaka_range > 0 then
 			blocktxt = string.format("%s(%s)", blocktxt, esaka_range)
 		end
-		if testbit(blockbit, block_types.air) then
+		if util.testbit(blockbit, block_types.air) then
 			blocktxt = blocktxt .. "空"
 		end
-		if air_hit == hit_proc_types.same_line then
+		if juggle == possible_types.same_line then
 			blocktxt = "拾" .. blocktxt
 		end
 		return blocktxt
 	end
 	on_frame_func.sway_block_txt = function(blockbit)
-		if testbit(blockbit, block_types.sway_pass) then
+		if util.testbit(blockbit, block_types.sway_pass) then
 			return "-"
 		end
-		local lo = testbit(blockbit, block_types.sway_low)
-		local hi = testbit(blockbit, block_types.sway_high)
-		local hitg = testbit(blockbit, block_types.sway_high_tung)
-		local hilo = testbit(blockbit, block_types.sway_high_low)
+		local lo = util.testbit(blockbit, block_types.sway_low)
+		local hi = util.testbit(blockbit, block_types.sway_high)
+		local hitg = util.testbit(blockbit, block_types.sway_high_tung)
+		local hilo = util.testbit(blockbit, block_types.sway_high_low)
 		local blocktxt = ""
 		if lo then
 			if hi == false and hitg == false then
@@ -9278,9 +4289,9 @@ rbff2.startplugin = function()
 							end
 						end
 
-						local gnd = has_hurt and testbit(hurtbit, frame_hurt_types.gnd_hitstun)
-						local otg = testbit(hurtbit, frame_hurt_types.otg)
-						local juggle = testbit(hurtbit, frame_hurt_types.juggle)
+						local gnd = has_hurt and util.testbit(hurtbit, frame_hurt_types.gnd_hitstun)
+						local otg = util.testbit(hurtbit, frame_hurt_types.otg)
+						local juggle = util.testbit(hurtbit, frame_hurt_types.juggle)
 						if gnd or otg or juggle then
 							local a = ""
 							if gnd then
@@ -9291,21 +4302,21 @@ rbff2.startplugin = function()
 								a = "J"
 							end
 							-- 追撃可能
-							if testbit(hurtbit, frame_hurt_types.op_normal) then
+							if util.testbit(hurtbit, frame_hurt_types.op_normal) then
 								act_txt = string.format("%s%s%s%s", act_txt, delim, a, active.count)
 								delim = ","
 							else
 								act_txt = string.format("%s(%s%s)", act_txt, a, active.count)
 								delim = ""
 							end
-						elseif testbit(hurtbit, frame_hurt_types.invincible) or
-							testbit(hurtbit, frame_hurt_types.wakeup) then
+						elseif util.testbit(hurtbit, frame_hurt_types.invincible) or
+							util.testbit(hurtbit, frame_hurt_types.wakeup) then
 							-- 無敵
 							act_txt = string.format("%s(%s)", act_txt, active.count)
 							delim = ""
 						end
 					end
-					p.frame_info.hurt.txt = { string.format("[%2x]%3s|%s", info.hitstop_id, info.total, act_txt), "" }
+					p.frame_info.hurt.txt = { string.format("[%2x]%3s|%s", info.hurt_attack or 0, info.total, act_txt), "" }
 					p.frame_info.text = p.frame_info.hurt.txt
 				end
 			end
@@ -9319,10 +4330,10 @@ rbff2.startplugin = function()
 				frame_hurt_types.juggle | frame_hurt_types.op_normal) or "-")
 		-- 初回は新しいデータ構造を作成
 		info = info or {
-			hitstop_id = p.hitstop_id, -- TODO くらいの種類ID
+			hurt_attack = p.hurt_attack or 0, -- TODO くらいの種類ID
 			last_event = event_type, -- 攻撃かどうか
-			count = 0,      -- バッファ
-			break_key = break_key, -- ブレイク条件
+			count = 0,               -- バッファ
+			break_key = break_key,   -- ブレイク条件
 			attackbit = attackbit,
 			summary = summary,
 			total = 0,
@@ -9391,7 +4402,7 @@ rbff2.startplugin = function()
 							-- マイナス値はinactive扱いでカッコで表現
 							act_txt = string.format("%s(%s)", act_txt, -active.count)
 							delim = ""
-						elseif testbit(active.attackbit, frame_attack_types.fake) then
+						elseif util.testbit(active.attackbit, frame_attack_types.fake) then
 							-- 嘘判定は()で表現
 							act_txt = string.format("%s(%s)", act_txt, active.count)
 							delim = ""
@@ -9446,16 +4457,16 @@ rbff2.startplugin = function()
 					local texts = { text2 }
 					for i, s in ipairs(info.summaries) do
 						for j, sv in ipairs((s.attacking ~= true or (s.throw and s.lunging_throw ~= true)) and
-							new_filled_table(8, nil) or
+							util.new_filled_table(8, nil) or
 							{
-								s.hitstop_gd,
+								s.blockstop,
 								func.dmg_txt(s.chip_dmg, s.pure_dmg),
 								func.pow_txt(s.pow_up, s.pow_up_hit, s.pow_up_gd),
 								func.stun_txt(s.pure_st, s.pure_st_tm),
 								func.effect_txt(s.effect, s.gd_strength, s.hitstun, s.blockstun),
-								func.block_txt(s.air_hit, s.blockbit, s.esaka_range or 0),
+								func.block_txt(s.juggle, s.blockbit, s.esaka_range or 0),
 								func.sway_block_txt(s.blockbit),
-								s.prj_rank and s.prj_rank or "-",
+								s.fireball_rank and s.fireball_rank or "-",
 							}) do
 							contexts[j] = build_txt(contexts[j], max, i, sv)
 							if max == i then
@@ -9493,7 +4504,7 @@ rbff2.startplugin = function()
 			last_event = event_type, -- 攻撃かどうか
 			attack = p.attack,
 			count = 0,      -- バッファ
-			hurt_inv = {},   -- 打撃無敵 hurt_inv_types.min_labelをキー、フレーム数を値
+			hurt_inv = {},  -- 打撃無敵 hurt_inv_types.min_labelをキー、フレーム数を値
 			has_hurt = false,
 			throw_inv1 = 0, -- 投げ無敵
 			can_throw1 = false,
@@ -9576,7 +4587,7 @@ rbff2.startplugin = function()
 			info.has_hurt = has_hurt
 		end
 		-- 動作開始からの投げ無敵を判定
-		local throwable = p.sway_status == 0x00 and p.tw_muteki == 0 and p.pos_y == 0
+		local throwable = p.sway_status == 0x00 and p.invincible == 0 and p.pos_y == 0
 		local n_throwable = p.throwable and p.tw_muteki2 == 0
 		if info.can_throw1 == false then
 			info.can_throw1 = throwable
@@ -9599,48 +4610,43 @@ rbff2.startplugin = function()
 			on_frame_event_attack(p, nil, frame_event_types.reset)
 		end
 	end
-	local proc_act_frame = function(p)
-		local op = p.op
+	local proc_act_frame = function(parent)
+		local op = parent.op
 
 		-- 飛び道具
-		local chg_fireball_state, chg_prefireball_state, active_fb, para_fb = false, false, nil, false
+		local chg_fireball_state, chg_prefireball_state, active_fb = false, false, nil
 		local attackbit = 0
-		for _, fb in pairs(p.fireball) do
-			local base = ((fb.addr.base - 0x100400) / 0x100)
-			if fb.proc_active == true then
-			--	printf("fb %x %x %x %x %x", base, fb.base, p.char, fb.hitstop_id, fb.act)
+		for _, p in pairs(parent.fireballs) do
+			local base = ((p.addr.base - 0x100400) / 0x100)
+			if p.proc_active == true then
+				--	printf("fb %x %x %x %x %x", base, fb.base, p.char, fb.hurt_attack, fb.act)
 			end
-			if fb.has_atk_box == true then
-				if fb.atk_count == 1 and fb.act_data_fired.name == p.act_data.name then
+			if p.proc_active == true and #p.boxies > 0 then
+				if p.atk_count == 1 and p.act_data_fired.name == parent.act_data.name then
 					chg_fireball_state = true
 				end
 				attackbit = frame_attack_types.attacking
-				if fb.fake_hit == true then
-					attackbit = attackbit | frame_attack_types.fake
-				elseif fb.obsl_hit == true or fb.full_hit == true or fb.harmless2 == true then
-					attackbit = attackbit | frame_attack_types.harmless
+				attackbit = attackbit | parent.attackbit
+				if p.juggle then
+					attackbit = attackbit | frame_attack_types.juggle
 				end
-				if fb.juggling then
-					attackbit = attackbit | frame_attack_types.juggling
-				end
-				attackbit = attackbit | (fb.hitstop_id * frame_attack_types.x05fb)
-				attackbit = attackbit | base * frame_attack_types.x13fb
-				if fb.max_hit_dn > 1 or fb.max_hit_dn == 0 then
-					attackbit = attackbit | fb.act_count * frame_attack_types.x15fb
-					if testbit(fb.act_data.type, act_types.rec_in_detail) then
-						attackbit = attackbit | fb.act * frame_attack_types.x22fb
+				attackbit = attackbit | (p.hurt_attack << frame_attack_types.attack)
+				attackbit = attackbit | base << frame_attack_types.fb
+				if p.max_hit_dn > 1 or p.max_hit_dn == 0 then
+					attackbit = attackbit | p.act_count << frame_attack_types.fb_effect
+					if util.testbit(p.act_data.type, act_types.rec_in_detail) then
+						attackbit = attackbit | p.act << frame_attack_types.fb_act
 					end
 				else
-					attackbit = attackbit | (fb.effect * frame_attack_types.x15fb)
+					attackbit = attackbit | (p.effect << frame_attack_types.fb_effect)
 				end
-				active_fb = fb
-				para_fb = testbit(active_fb.act_data.type, act_types.parallel)
+				active_fb = p
 				break
 			end
 		end
 		if chg_fireball_state ~= true then
-			for _, fb in pairs(p.fireball) do
-				if fb.proc_active == true and fb.alive ~= true then
+			for _, fb in pairs(parent.fireballs) do
+				if fb.proc_active == true and #fb.boxies == 0 then
 					fb.atk_count = fb.atk_count - 1
 					if fb.atk_count == -1 then
 						chg_prefireball_state = true
@@ -9653,146 +4659,66 @@ rbff2.startplugin = function()
 				end
 			end
 		end
-		p.on_fireball = chg_fireball_state == true
-		p.on_prefb = chg_prefireball_state == true
+		parent.on_fireball = chg_fireball_state == true
+		parent.on_prefb = chg_prefireball_state == true
 
 		--ガード移行できない行動は色替えする
+		local on_check, on_clear, on_established = parent.on_bs_check, parent.on_bs_clear, parent.on_bs_established
 		local col, line = 0xAAF0E68C, 0xDDF0E68C
-		local multi = p.act * frame_attack_types.x17
-		if p.max_hit_dn > 1 or p.max_hit_dn == 0 or
-			(p.char == 0x4 and p.attack == 0x16) then
-			multi = multi | p.act_count * frame_attack_types.x09
-		end
-		-- つかみ技はダメージ加算タイミングがわかるようにする
-		if testbit(p.flag_cc, flag_cc_types.grabbing) and op.tmp_dmg ~= 0xFF then
-			multi = multi | p.pure_dmg * frame_attack_types.x09
-		end
-		if p.skip_frame then
-			col, line = 0xAA888888, 0xDD888888
-		elseif p.attacking then
-			attackbit = frame_attack_types.attacking
-			if p.juggling then
-				attackbit = attackbit | frame_attack_types.juggling
-				col, line = 0xAAFF4500, 0xDDFF4500
+		if on_established == global.frame_number then
+			col, line = 0xAA0022FF, 0xDD0022FF
+		elseif on_clear == global.frame_number then
+			col, line = 0xAA00FF22, 0xDD00FF22
+		elseif parent.in_hitstop == global.frame_number or parent.on_hit_any == global.frame_number or parent.on_hit_any == global.frame_number - 1 then
+			col, line = 0xAA444444, 0xDD444444
+		elseif on_check == global.frame_number then
+			col, line = 0xAAFF0022, 0xDDFF0022
+		elseif parent.hitbox_types and #parent.hitbox_types > 0 then
+			-- 判定タイプをソートする
+			table.sort(parent.hitbox_types, function(t1, t2) return t1.sort > t2.sort end)
+			if parent.hitbox_types[1].sort < 3 and parent.repeatable then
+				-- やられ判定より連キャン状態を優先表示する
+				col, line = 0xAAD2691E, 0xDDD2691E
 			else
-				col, line = 0xAAFF00FF, 0xDDFF00FF
+				col = parent.hitbox_types[1].color
+				col, line = util.hex_set(col, 0xAA000000), util.hex_set(col, 0xDD000000)
 			end
-			attackbit = attackbit | multi
-		elseif p.dmmy_attacking then
-			attackbit = attackbit | frame_attack_types.attacking
-			attackbit = attackbit | frame_attack_types.harmless
-			if p.juggling then
-				attackbit = attackbit | frame_attack_types.juggling
-				col, line = 0x00000000, 0xDDFF4500
-			else
-				col, line = 0x00000000, 0xDDFF00FF
-			end
-			attackbit = attackbit | multi
-		elseif p.throwing then
-			attackbit = frame_attack_types.attacking
-			col, line = 0xAAD2691E, 0xDDD2691E
-		elseif p.act_1st ~= true and p.old_repeatable == true and (p.repeatable == true or p.act_frame > 0) then
-			-- 1F前の状態とあわせて判定する
-			col, line = 0xAAD2691E, 0xDDD2691E
-		elseif p.can_juggle or p.can_otg then
-			if op.act_normal ~= true then
-				col, line = 0x99CCA500, 0x99CCA500
-			else
-				col, line = 0xAAFFA500, 0xDDFFA500
-			end
-		elseif p.act_normal then
-			col, line = 0x44FFFFFF, 0xDDFFFFFF
 		end
 
-		-- 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
-		local reach_memo = ""
-		if p.disp_frm == 3 then
-			reach_memo = p.hitbox_txt .. "&" .. p.hurtbox_txt
-		elseif p.disp_frm == 4 then
-			reach_memo = p.hitbox_txt
-		elseif p.disp_frm == 5 then
-			reach_memo = p.hurtbox_txt
+		-- TODO 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
+		local masked_attackbit = parent.attackbit
+		if parent.disp_frm == 3 then
+			masked_attackbit = masked_attackbit
+		elseif parent.disp_frm == 4 then
+			masked_attackbit = masked_attackbit
+		elseif parent.disp_frm == 5 then
+			masked_attackbit = masked_attackbit
 		end
 
-		local act_count  = p.act_count or 0
-		local max_hit_dn = p.attacking and p.hit.max_hit_dn or 0
+		local frame = parent.act_frames[#parent.act_frames]
+		local name  = frame and frame.name or parent.act_data.name
+		name        = (frame and parent.act_data.name_set and parent.act_data.name_set[name] ~= true) and parent.act_data.name or name
 
-		-- 行動が変わったかのフラグ
-		local frame      = p.act_frames[#p.act_frames]
-		local concrete_name, chg_act_name, disp_name
-		if frame ~= nil then
-			if p.act_data.names then
-				chg_act_name = true
-				for _, name in pairs(p.act_data.names) do
-					if frame.name == name then
-						chg_act_name = false
-						concrete_name = frame.name
-						disp_name = frame.disp_name
-						--p.act_1st = false
-					end
-				end
-				if chg_act_name then
-					concrete_name = p.act_data.name or p.act_data.names[1]
-					disp_name = convert(p.act_data.disp_name or concrete_name)
-				end
-			elseif frame.name ~= p.act_data.name then
-				concrete_name = p.act_data.name
-				disp_name = convert(p.act_data.disp_name or concrete_name)
-				chg_act_name = true
-			else
-				concrete_name = frame.name
-				disp_name = frame.disp_name
-				chg_act_name = false
-			end
-		else
-			concrete_name = p.act_data.name
-			disp_name = convert(p.act_data.disp_name or concrete_name)
-			chg_act_name = true
-		end
-		local is_change_any = function(expecteds, old, current)
-			for _, expected in ipairs(expecteds) do
-				if old ~= expected and current == expected then
-					return true
-				end
-			end
-			return false
-		end
-		if chg_act_name ~= true then
-			-- ダッシュの加速、減速、最終モーション
-			-- スウェーのダッシュの区切り
-			chg_act_name = is_change_any({ 0x18, 0x19, 0x32, 0x34, 0x35, 0x80 }, p.old_act, p.act)
-			chg_act_name = chg_act_name or (p.act == 0x19 and p.base == fix_bp_addr(0x26152))
-		end
-		if chg_act_name ~= true then
-			-- スウェーの切り替え
-			chg_act_name = is_change_any({ 0x00, 0x80, 0x32, 0x34, 0x35, 0x80 }, p.old_sway_status, p.sway_status)
-		end
-		local chg_any_state = #p.act_frames == 0 or	p.chg_air_state ~= 0 or p.act_1st
-		chg_any_state = chg_any_state or (frame and frame.col ~= col) or false
-		chg_any_state = chg_any_state or (frame and frame.reach_memo ~= reach_memo) or false
-		chg_any_state = chg_any_state or (max_hit_dn > 1) and (frame and (frame.act_count ~= act_count) or false)
-		if chg_act_name or p.on_fireball or p.on_prefb or chg_any_state then
+		if frame == nil or frame.attackbit ~= masked_attackbit or frame.col ~= col then
 			--行動IDの更新があった場合にフレーム情報追加
 			frame = {
-				act = p.act,
+				act = parent.act,
 				count = 1,
 				col = col,
-				name = concrete_name,
-				disp_name = disp_name,
+				name = name,
 				line = line,
-				on_fireball = p.on_fireball,
-				on_prefb = p.on_prefb,
-				on_air = p.on_air,
-				on_ground = p.on_ground,
-				act_1st = p.act_1st,
-				reach_memo = reach_memo,
-				act_count = act_count,
-				max_hit_dn = max_hit_dn,
+				on_fireball = parent.on_fireball,
+				on_prefb = parent.on_prefb,
+				on_air = parent.on_air,
+				on_ground = parent.on_ground,
+				act_1st = parent.act_1st,
+
+				attackbit = masked_attackbit,
 			}
-			table.insert(p.act_frames, frame)
-			if 180 < #p.act_frames then
+			table.insert(parent.act_frames, frame)
+			if 180 < #parent.act_frames then
 				--バッファ長調整
-				table.remove(p.act_frames, 1)
+				table.remove(parent.act_frames, 1)
 			end
 		else
 			--同一行動IDが継続している場合はフレーム値加算
@@ -9801,9 +4727,9 @@ rbff2.startplugin = function()
 			end
 		end
 		-- 技名でグループ化したフレームデータの配列をマージ生成する
-		p.act_frames2 = frame_groups(frame, p.act_frames2 or {})
+		parent.act_frames2 = frame_groups(frame, parent.act_frames2 or {})
 		-- 表示可能範囲（最大で横画面幅）以上は加算しない
-		p.act_frames_total = (332 < p.act_frames_total) and 332 or (p.act_frames_total + 1)
+		parent.act_frames_total = (332 < parent.act_frames_total) and 332 or (parent.act_frames_total + 1)
 
 		local body_event = 0
 		--[[
@@ -9814,36 +4740,36 @@ rbff2.startplugin = function()
 		body_event = body_event | (p.on_main_line and frame_event_types.on_main_line or 0)
 		]]
 
-		if p.old_anyhit_id ~= p.anyhit_id then
-			on_frame_event_hitstun(p, active_fb, frame_event_types.reset)
+		if parent.old_anyhit_id ~= parent.anyhit_id then
+			on_frame_event_hitstun(parent, active_fb, frame_event_types.reset)
 		end
-		if p.skip_frame then
-			if p.act ~= p.old_act and p.act_1st then
-				on_frame_event_attack(p, active_fb, frame_event_types.reset)
+		if parent.skip_frame then
+			if parent.act ~= parent.old_act and parent.act_1st then
+				on_frame_event_attack(parent, active_fb, frame_event_types.reset)
 			else
 				-- なにもしない
 				-- printf("%x skip_frame", p.addr.base)
 			end
-		elseif p.in_hitstun then
-			on_frame_event_hitstun(p, active_fb, frame_event_types.active | body_event, 0)
-			on_frame_event_attack(p, active_fb, frame_event_types.reset)
-		elseif p.act_normal then
+		elseif parent.in_hitstun then
+			on_frame_event_hitstun(parent, active_fb, frame_event_types.active | body_event, 0)
+			on_frame_event_attack(parent, active_fb, frame_event_types.reset)
+		elseif parent.act_normal then
 			-- 通常状態
-			on_frame_event_hitstun(p, active_fb, frame_event_types.reset)
-			on_frame_event_attack(p, active_fb, frame_event_types.reset)
+			on_frame_event_hitstun(parent, active_fb, frame_event_types.reset)
+			on_frame_event_attack(parent, active_fb, frame_event_types.reset)
 		else
-			if p.act_1st and (
-				testbit(p.act_data.type, act_types.startup) or
-				(testbit(p.act_data.type, act_types.startup_if_ca) and testbit(p.flag_cc, flag_cc_types._00))
-			) then
-				on_frame_event_attack(p, active_fb, frame_event_types.reset)
+			if parent.act_1st and (
+					util.testbit(parent.act_data.type, act_types.startup) or
+					(util.testbit(parent.act_data.type, act_types.startup_if_ca) and util.testbit(parent.flag_cc, state_flag_cc._00))
+				) then
+				on_frame_event_attack(parent, active_fb, frame_event_types.reset)
 			end
-			if p.attacking or p.dmmy_attacking or p.throwing or attackbit > 0 then
-				-- printf("active %x %s %s", attackbit, p.pure_dmg, p.op.tmp_dmg)
-				on_frame_event_attack(p, active_fb, frame_event_types.active | body_event, attackbit)
+			if parent.attacking or parent.dmmy_attacking or parent.throwing or attackbit > 0 then
+				-- printf("active %x %s %s", attackbit, p.pure_dmg, p.op.last_damage_scaled)
+				on_frame_event_attack(parent, active_fb, frame_event_types.active | body_event, attackbit)
 			else
-				-- printf("inactive %x %s %s", attackbit, p.pure_dmg, p.op.tmp_dmg)
-				on_frame_event_attack(p, active_fb, frame_event_types.inactive | body_event, attackbit)
+				-- printf("inactive %x %s %s", attackbit, p.pure_dmg, p.op.last_damage_scaled)
+				on_frame_event_attack(parent, active_fb, frame_event_types.inactive | body_event, attackbit)
 			end
 		end
 		-- 後の処理用に最終フレームを保持
@@ -9893,7 +4819,6 @@ rbff2.startplugin = function()
 				count = 1,
 				col = col,
 				name = last_frame.name,
-				disp_name = last_frame.disp_name,
 				line = line,
 				act_1st = p.act_1st,
 			}
@@ -9976,7 +4901,6 @@ rbff2.startplugin = function()
 				count = 1,
 				col = col,
 				name = last_frame.name,
-				disp_name = last_frame.disp_name,
 				line = line,
 				act_1st = p.act_1st,
 			}
@@ -9999,80 +4923,61 @@ rbff2.startplugin = function()
 		end
 	end
 
-	local proc_fb_frame = function(p)
-		local last_frame = p.act_frames[#p.act_frames]
+	local proc_fb_frame = function(parent)
+		local last_frame = parent.act_frames[#parent.act_frames]
 		local fb_upd_groups = {}
 
 		-- 飛び道具2
-		for fb_base, fb in pairs(p.fireball) do
-			local frame = fb.act_frames[#fb.act_frames]
-			local reset, new_name = false, fb.act_data_fired.name
-			if testbit(p.act_data.type, act_types.firing) then
-				if p.act_1st then
-					reset = true
-				elseif not frame or frame.name ~= fb.act_data_fired.name then
-					reset = true
-				end
-			elseif fb.act == 0 and (not frame or frame.name ~= "") then
-				reset = true
-				new_name = ""
-			end
-			local col, line, act
-			if p.skip_frame then
-				col, line, act = 0x00000000, 0x00000000, 0
-			elseif fb.has_atk_box == true then
-				if fb.fake_hit == true then
-					col, line, act = 0xAA00FF33, 0xDD00FF33, 2
-				elseif fb.obsl_hit == true or fb.full_hit == true or fb.harmless2 == true then
-					if fb.juggling then
-						col, line, act = 0x00000000, 0xDDFF4500, 1
-					else
-						col, line, act = 0x00000000, 0xDDFF1493, 0
-					end
+		for fb_base, p in pairs(parent.fireballs) do
+			local col, line, act = 0, 0, 0
+			if p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number or p.on_hit_any == global.frame_number - 1 then
+				col, line = 0xAA444444, 0xDD444444
+			elseif p.hitbox_types and #p.hitbox_types > 0 then
+				-- 判定タイプをソートする
+				table.sort(p.hitbox_types, function(t1, t2) return t1.sort > t2.sort end)
+				if p.hitbox_types[1].sort < 3 and p.repeatable then
+					-- やられ判定より連キャン状態を優先表示する
+					col, line = 0xAAD2691E, 0xDDD2691E
 				else
-					if fb.juggling then
-						col, line, act = 0xAAFF4500, 0xDDFF4500, 1
-					else
-						col, line, act = 0xAAFF00FF, 0xDDFF00FF, 1
-					end
+					col = p.hitbox_types[1].color
+					col, line = util.hex_set(col, 0xAA000000), util.hex_set(col, 0xDD000000)
 				end
-			else
-				col, line, act = 0x00000000, 0x00000000, 0
 			end
 
 			-- 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
-			local reach_memo = ""
-			if fb.disp_frm == 3 then
-				reach_memo = fb.hitbox_txt .. "&" .. fb.hurtbox_txt
+			local masked_attackbit = p.attackbit
+			if p.disp_frm == 3 then
+				masked_attackbit = masked_attackbit
 			elseif p.disp_frm == 4 then
-				reach_memo = fb.hitbox_txt
+				masked_attackbit = masked_attackbit
 			elseif p.disp_frm == 5 then
-				reach_memo = fb.hurtbox_txt
+				masked_attackbit = masked_attackbit
 			end
-			local act_count  = fb.actb
-			local max_hit_dn = fb.hit.max_hit_dn
 
-			if #fb.act_frames == 0 or (frame == nil) or frame.col ~= col or reset or frame.reach_memo ~= reach_memo or (max_hit_dn > 1 and frame.act_count ~= act_count) then
+			local frame = p.act_frames[#p.act_frames]
+			local name  = frame and frame.name or p.act_data_fired.name
+			name        = (frame and p.act_data_fired.name_set and p.act_data_fired.name_set[name] ~= true) and p.act_data_fired.name or name
+
+			if frame == nil or frame.attackbit ~= masked_attackbit then
 				-- 軽量化のため攻撃の有無だけで記録を残す
 				frame = {
-					act        = act,
-					count      = 1,
-					col        = col,
-					name       = new_name,
-					line       = line,
-					act_1st    = reset,
-					reach_memo = reach_memo,
-					act_count  = act_count,
-					max_hit_dn = max_hit_dn,
+					act       = act,
+					count     = 1,
+					col       = col,
+					name      = name,
+					line      = line,
+					-- act_1st    = reset,
+
+					attackbit = masked_attackbit,
 				}
 				-- 関数の使いまわすためact_framesは配列にするが明細を表示ないので1個しかもたなくていい
-				fb.act_frames[1] = frame
+				p.act_frames[1] = frame
 			else
 				-- 同一行動IDが継続している場合はフレーム値加算
 				frame.count = frame.count + 1
 			end
 			-- 技名でグループ化したフレームデータの配列をマージ生成する
-			fb.act_frames2, fb_upd_groups[fb_base] = frame_groups(frame, fb.act_frames2 or {})
+			p.act_frames2, fb_upd_groups[fb_base] = frame_groups(frame, p.act_frames2 or {})
 		end
 
 		-- メインフレーム表示からの描画開始位置を記憶させる
@@ -10081,383 +4986,125 @@ rbff2.startplugin = function()
 				last_frame.fireball = last_frame.fireball or {}
 				last_frame.fireball[fb_base] = last_frame.fireball[fb_upd_group] or {}
 				local last_fb_frame = last_frame.fireball[fb_base]
-				table.insert(last_fb_frame, p.fireball[fb_base].act_frames2[# p.fireball[fb_base].act_frames2])
+				table.insert(last_fb_frame, parent.fireballs[fb_base].act_frames2[# parent.fireballs[fb_base].act_frames2])
 				last_fb_frame[#last_fb_frame].parent_count = last_frame.last_total
+			end
+		end
+	end
+
+	local input_rvs = function(rvs_type, p, logtxt)
+		if global.log.rvslog and logtxt then emu.print_info(logtxt) end
+		if util.testbit(p.dummy_rvs.hook_type, hook_cmd_types.throw) then
+			if p.act == 0x9 and p.act_frame > 1 then return end -- 着地硬直は投げでないのでスルー
+			if p.op.in_air then return end
+			if p.op.sway_status ~= 0x00 then return end -- 全投げ無敵
+		elseif util.testbit(p.dummy_rvs.hook_type, hook_cmd_types.jump) then
+			if p.state == 0 and p.old_state == 0 and (p.flag_c0 | p.old_flag_c0) & 0x10000 == 0x10000 then
+				return -- 連続通常ジャンプを繰り返さない
+			end
+		end
+		p.bs_hook = p.dummy_rvs.id and p.dummy_rvs or nil
+		if p.dummy_rvs.cmd_type then
+			if rvs_types.knock_back_recovery ~= rvs_type then
+				if (((p.flag_c0 | p.old_flag_c0) & 0x2 == 0x2) or pre_down_acts[p.act]) and p.dummy_rvs.cmd_type == data.cmd_types._2d then
+					-- no act
+				else
+					p.bs_hook = p.dummy_rvs
+				end
 			end
 		end
 	end
 
 	-- トレモのメイン処理
 	menu.tra_main.proc = function()
-		-- 画面表示
-		if global.no_background or global.disp_gauge == false then
-			if pgm:read_u8(0x107BB9) == 0x01 or pgm:read_u8(0x107BB9) == 0x0F then
-				local match = pgm:read_u8(0x107C22)
-				if match == 0x38 then --HUD
-					pgm:write_u8(0x107C22, 0x33)
-				end
-				if match ~= 0 then --BG layers
-					if global.no_background then
-						pgm:write_u8(0x107762, 0x00)
-					end
-					pgm:write_u8(0x107765, 0x01)
-				end
-			end
-			if global.no_background then
-				--pgm:write_u16(0x401FFE, 0x8F8F)
-				pgm:write_u16(0x401FFE, 0x5ABB)
-				pgm:write_u8(global.no_background_addr, 0xFF)
-			end
-		else
-			pgm:write_u8(global.no_background_addr, 0x00)
-		end
-
-		-- 強制位置補正
-		local p1, p2 = players[1], players[2]
-		global.fix_pos = false
-		if p1.fix_scr_top == 0xFF then
-			pgm:write_u8(p1.addr.fix_scr_top, 0xFF)
-		else
-			pgm:write_i8(p1.addr.fix_scr_top, p1.fix_scr_top - 1)
-			global.fix_pos = true
-		end
-		if p2.fix_scr_top == 0xFF then
-			pgm:write_u8(p2.addr.fix_scr_top, 0xFF)
-		else
-			pgm:write_i8(p2.addr.fix_scr_top, p2.fix_scr_top - 92)
-			global.fix_pos = true
-		end
-
-		local cond = "maincpu.pw@107C22>0"
-		local pc = "CURPC=$4112;g"
-
-		for i, p in ipairs(players) do
-			if p.disp_char_bps then
-				global.set_bps(p.disp_char, p.disp_char_bps)
-			elseif p.disp_char == false then
-				p.disp_char_bps = global.new_hook_holder()
-				local bps = p.disp_char_bps.bps
-				local cond3 = cond .. "&&(A3)==$100400"
-				if i == 1 then
-					-- bp 40AE,{(A4)==100400||(A4)==100600||(A4)==100800||(A4)==100A00},{CURPC=4112;g} -- 2Pだけ消す
-					cond3 = cond3 .. "&&((A4)==$100400||(A4)==$100600||(A4)==$100800||(A4)==$100A00)"
-				else
-					-- bp 40AE,{(A4)==100500||(A4)==100700||(A4)==100900||(A4)==100B00},{CURPC=4112;g} -- 1Pだけ消す
-					cond3 = cond3 .. "&&((A4)==$100500||(A4)==$100700||(A4)==$100900||(A4)==$100B00)"
-				end
-				global.bp(bps, 0x0040AE, cond3, pc)
-			end
-		end
-
-		if global.disp_effect_bps then
-			global.set_bps(global.disp_effect, global.disp_effect_bps)
-		elseif global.disp_effect == false then
-			global.disp_effect_bps = global.new_hook_holder()
-			local bps = global.disp_effect_bps.bps
-			--pc = "printf \"A3=%X A4=%X PREF=%X\",A3,A4,rPC;CURPC=$4112;g"
-			global.bp(bps, 0x03BCC2, cond, "CURPC=$3BCC8;g")
-			-- ファイヤーキックの砂煙だけ抑止する
-			local cond2 = cond .. "&&maincpu.pw@((A3)+$10)==$1&&maincpu.pw@((A3)+$60)==$B8"
-			global.bp(bps, 0x03BB1E, cond2, "CURPC=$3BC00;g")
-			global.bp(bps, 0x0357B0, cond, "CURPC=$35756;g")
-			global.bp(bps, 0x015A82, cond, pc)    -- rts 015A88
-			global.bp(bps, 0x015AAC, cond, pc)    -- rts 015AB2
-			global.bp(bps, 0x015AD8, cond, pc)    -- rts 015ADE
-			global.bp(bps, 0x0173B2, cond, pc)    -- rts 0173B8 影
-			global.bp(bps, 0x017750, cond, pc)    -- rts 017756
-			global.bp(bps, 0x02559E, cond, pc)    -- rts 0255FA
-			global.bp(bps, 0x0256FA, cond, pc)    -- rts 025700
-			global.bp(bps, 0x036172, cond, pc)    -- rts 036178
-			global.bp(bps, 0x03577C, cond2, pc)   -- rts 035782 技エフェクト
-			global.bp(bps, 0x03BB60, cond2, pc)   -- rts 03BB66 技エフェクト
-			global.bp(bps, 0x060BDA, cond, pc)    -- rts 060BE0 ヒットマーク
-			global.bp(bps, 0x060F2C, cond, pc)    -- rts 060F32 ヒットマーク
-			global.bp(bps, 0x061150, cond, "CURPC=$061156;g") -- rts 061156 ヒットマーク、パワーウェイブの一部
-			global.bp(bps, 0x0610E0, cond, pc)    -- rts 0610E6
-
-			-- コンボ表示抑制＝ヒット数を2以上にしない
-			-- bp 0252E8,1,{D7=0;PC=0252EA;g}
-			global.bp(bps, 0x0252E8, "1", "D7=0;CURPC=0252EA;g")
-			-- bp 039782,1,{CURPC=039788;g} -- BS表示でない
-			global.bp(bps, 0x039782, "1", "CURPC=039788;g")
-			-- bp 03C604,1,{CURPC=03C60A;g} -- 潜在表示でない
-			global.bp(bps, 0x03C604, "1", "CURPC=03C60A;g")
-			-- bp 039850,1,{CURPC=039856;g} -- リバサ表示でない
-			global.bp(bps, 0x039850, "1", "CURPC=039856;g")
-			-- いろんな割り込み文字が出ない、開幕にONにしておくと進まない
-			-- bp 2378,1,{CURPC=2376;g}
-			-- global.bp(bps, 0x002378, "1", "CURPC=002376;g")
-		end
-
-		if global.fix_pos_bps then
-			global.set_bps(global.fix_pos ~= true, global.fix_pos_bps)
-		elseif global.fix_pos then
-			global.fix_pos_bps = global.new_hook_holder()
-			-- bp 0040AE,1,{CURPC=$4112;g} -- 描画全部無視
-			local bps = global.fix_pos_bps.bps
-			-- 画面表示高さを1Pか2Pの高いほうにあわせる
-			-- bp 013B6E,1,{D0=((maincpu.pw@100428)-(D0)+4);g}
-			-- bp 013B6E,1,{D0=((maincpu.pw@100428)-(D0)-24);g}
-			-- bp 013BBA,1,{D0=(maincpu.pw@100428);g}
-			-- bp 013AF0,1,{CURPC=13B28;g} -- 潜在演出無視
-			-- bp 013AF0,1,{CURPC=13B76;g} -- 潜在演出強制（上に制限が付く）
-			global.bp(bps, 0x013B6E, cond .. "&&(maincpu.pb@10DE5C)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5C)+#40);g")
-			global.bp(bps, 0x013B6E, cond .. "&&(maincpu.pb@10DE5D)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5D)+#40);g")
-			global.bp(bps, 0x013BBA, cond .. "&&(maincpu.pb@10DE5C)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5C)+#40);g")
-			global.bp(bps, 0x013BBA, cond .. "&&(maincpu.pb@10DE5D)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5D)+#40);g")
-			global.bp(bps, 0x013AF0, cond, "CURPC=$13B28;g")
-		end
-
-		-- メイン処理
-		if not match_active then
-			return
-		end
-		-- ポーズ中は状態を更新しない
-		if mem._0x10E043 ~= 0 then
-			return
-		end
-
-		if menu.reset_pos then
-			menu.update_pos()
-		end
-
-		local next_joy = new_next_joy()
-
-		local ec = scr:frame_number()
-		local state_past = ec - global.input_accepted
-		local joy_val = get_joy()
-
+		if not in_match or mem._0x10E043 ~= 0 then return end -- ポーズ中は状態を更新しない
+		if menu.reset_pos then menu.update_pos() end
 		global.frame_number = global.frame_number + 1
-
-		-- ポーズ解除状態
-		set_freeze((not match_active) or true)
+		local next_joy, joy_val, state_past = new_next_joy(), get_joy(), scr:frame_number() - global.input_accepted
+		set_freeze((not in_match) or true) -- ポーズ解除状態
 
 		-- スタートボタン（リプレイモード中のみスタートボタンおしっぱでメニュー表示へ切り替え
 		if (global.dummy_mode == 6 and is_start_a(joy_val, state_past)) or
-			(global.dummy_mode ~= 6 and accept_input("Start", joy_val, state_past)) then
+			(global.dummy_mode ~= 6 and accept_input("st", joy_val, state_past)) then
 			-- メニュー表示状態へ切り替え
-			global.input_accepted = ec
-			menu.state = menu
+			global.input_accepted, menu.state = global.frame_number, menu
 			cls_joy()
 			return
 		end
 
-		--FBA removes the side margins for some games
-		--[[
-		screen.left     = pgm:read_i16(mem.stage_base_addr + screen.offset_x) + (320 - width) / 2
-		screen.top      = pgm:read_i16(mem.stage_base_addr + screen.offset_y)
-		]]
-
-		-- プレイヤーと飛び道具のベースアドレスをキー、オブジェクトを値にするバッファ
-		local temp_hits = {}
-
-		-- ラグ発生時は処理をしないで戻る
-		if global.lag_frame == true then
-			return
-		end
+		if global.lag_frame == true then return end -- ラグ発生時は処理をしないで戻る
 
 		-- 1Pと2Pの状態読取
 		for i, p in ipairs(players) do
-			local op        = players[3 - i]
-			p.op            = op
-			p.base          = pgm:read_u32(p.addr.base)
-			p.char          = pgm:read_u8(p.addr.char)
-			p.char_data     = chars[p.char]
-			p.char_4times   = 0xFFFF & (p.char + p.char)
-			p.char_4times   = 0xFFFF & (p.char_4times + p.char_4times)
-			p.char_8times   = 0xFFFF & (p.char << 3)
-			p.close_far     = get_close_far_pos(p.char)
-			p.close_far_lma = get_close_far_pos_line_move_attack(p.char)
-			p.init_stun     = p.char_data.init_stuns
-			p.push_front    = get_push_range(p, 0x3)                     -- 正面
-			p.push_back     = get_push_range(p, 0x4)                     -- 背後
-			p.tw_half_range = pgm:read_u8(fix_bp_addr(0x5D854) + p.char_4times) -- 投げ間合い半数
-
-			-- p.life            = pgm:read_u8(p.addr.life) -- 今の体力
-			p.old_state     = p.state -- 前フレームの状態保存
-			--p.state           = pgm:read_u8(p.addr.state) -- 今の状態
-			p.old_flag_c0   = p.flag_c0
-			p.old_flag_cc   = p.flag_cc
-			p.old_flag_d0   = p.flag_d0
-			--[[
-			p.flag_c0         = pgm:read_u32(p.addr.flag_c0)
-			p.flag_c4         = pgm:read_u32(p.addr.flag_c4)
-			p.flag_c8         = pgm:read_u32(p.addr.flag_c8)
-			p.flag_cc         = pgm:read_u32(p.addr.flag_cc)
-			p.flag_d0         = pgm:read_u8(p.addr.flag_d0)
-			p.flag_fin        = pgm:read_u8(p.addr.flag_fin) == 0xFF
-			p.box_base1       = pgm:read_u32(p.addr.box_base1)
-			p.box_base2       = pgm:read_u32(p.addr.box_base2)
-			]]
-			p.old_kaiser_wave = p.kaiser_wave -- 前フレームのカイザーウェイブのレベル
-			--[[
-			p.kaiser_wave     = pgm:read_u8(p.addr.kaiser_wave) -- カイザーウェイブのレベル
-			p.hurt_state      = pgm:read_u8(p.addr.hurt_state)
-			]]
-			p.slide_atk = testbit(p.flag_cc, flag_cc_types._02) -- ダッシュ滑り攻撃
+			local op      = players[3 - i]
+			p.op          = op
+			p.base        = mem.r32(p.addr.base)
+			p.char        = mem.r8(p.addr.char)
+			p.char_data   = chars[p.char]
+			p.char4       = 0xFFFF & (p.char << 2)
+			p.char8       = 0xFFFF & (p.char << 3)
+			p.old_state   = p.state -- 前フレームの状態保存
+			p.old_flag_c0 = p.flag_c0
+			p.old_flag_cc = p.flag_cc
+			p.slide_atk   = util.testbit(p.flag_cc, state_flag_cc._02) -- ダッシュ滑り攻撃
 			-- ブレイクショット
-			if testbit(p.flag_cc, flag_cc_types._21) == true and
-				(testbit(p.old_flag_cc, flag_cc_types._20) == true or p.bs_atk == true) then
-				p.bs_atk = true
-			else
-				p.bs_atk = false
-			end
+			p.bs_atk      = util.testbit(p.flag_cc, state_flag_cc._21) and (util.testbit(p.old_flag_cc, state_flag_cc._20) or p.bs_atk)
 			-- やられ状態
-			if p.flag_fin or testbit(p.flag_c0, flag_c0_types._16) then
+			if p.flag_fin or util.testbit(p.flag_c0, state_flag_c0._16) then
 				-- 最終フレームか着地フレームの場合は前フレームのを踏襲する
 				p.in_hitstun = p.in_hitstun
-			elseif p.flag_c8 == 0 then
+			elseif p.flag_c8 == 0 and p.hurt_state then
 				p.in_hitstun = p.hurt_state > 0 or
-					testbit(p.flag_cc, flag_cc_types.hitstun) or
-					testbit(p.flag_d0, flag_d0_types._06) or -- ガード中、やられ中
-					testbit(p.flag_c0, flag_c0_types._01) -- ダウン
+					util.testbit(p.flag_cc, state_flag_cc.hitstun) or
+					util.testbit(p.flag_d0, state_flag_d0._06) or -- ガード中、やられ中
+					util.testbit(p.flag_c0, state_flag_c0._01) -- ダウン
 			else
 				p.in_hitstun = false
 			end
-			p.attack_flag     = testbit(p.flag_cc, flag_cc_types.attacking) or (p.flag_c8 > 0) or (p.flag_c4 > 0)
-			p.spid            = testbit(p.flag_cc, flag_cc_types._21) and pgm:read_u8(p.addr.base + 0xB8) or 0
-			p.state_bits      = tobits(p.flag_c0)
-			p.old_blkstn_bits = p.blkstn_bits
-			p.blkstn_bits     = tobits(p.flag_d0)
+			--[[
+			p.attack_flag     = util.testbit(p.flag_cc, state_flag_cc.attacking) or (p.flag_c8 > 0) or (p.flag_c4 > 0)
+			p.spid            = util.testbit(p.flag_cc, state_flag_cc._21) and mem.r8(p.addr.base + 0xB8) or 0
 			p.pos_miny        = 0
-			if testbit(p.flag_c4, flag_c4_types.hop) then
+			]]
+			if util.testbit(p.flag_c4, state_flag_c4.hop) then
 				p.pos_miny = p.char_data.min_sy
-			elseif testbit(p.flag_c4, flag_c4_types.jump) then
+			elseif util.testbit(p.flag_c4, state_flag_c4.jump) then
 				p.pos_miny = p.char_data.min_y
 			end
 			p.last_normal_state = p.normal_state
-			p.normal_state      = p.state == 0                    -- 素立ち
-			p.combo             = tohexnum(pgm:read_u8(p.addr.combo2)) -- 最近のコンボ数
-			p.tmp_combo         = tohexnum(pgm:read_u8(p.addr.tmp_combo2)) -- 一次的なコンボ数
-			p.max_combo         = tohexnum(pgm:read_u8(p.addr.max_combo2)) -- 最大コンボ数
-			p.tmp_dmg           = pgm:read_u8(p.addr.tmp_dmg)     -- ダメージ
+			p.normal_state      = p.state == 0 -- 素立ち
 			p.old_attack        = p.attack
-			p.attack            = pgm:read_u8(p.addr.attack)
-			p.dmg_id            = pgm:read_u8(p.addr.dmg_id) -- 最後にヒット/ガードした技ID
-			-- キャンセル可否家庭用2AD90からの処理の断片
-			if p.attack < 0x70 then
-				p.cancelable = pgm:read_u8(pgm:read_u32(p.char_4times + 0x850D8) + p.attack)
-			else
-				p.cancelable = pgm:read_u8(p.addr.cancelable)
-			end
-			p.old_repeatable = p.repeatable
-			p.repeatable     = (p.cancelable & 0xD0 == 0xD0) and (pgm:read_u8(p.addr.repeatable) & 0x4 == 0x4)
-			p.old_pure_dmg   = p.pure_dmg
-			p.pure_dmg       = pgm:read_u8(p.addr.pure_dmg) -- ダメージ(フック処理)
-			p.chip_dmg_type  = chip_dmg_types.zero
-			p.tmp_pow        = pgm:read_u8(p.addr.tmp_pow) -- POWゲージ増加量
-			p.tmp_pow_rsv    = pgm:read_u8(p.addr.tmp_pow_rsv) -- POWゲージ増加量(予約値)
-			if p.tmp_pow_rsv > 0 then
-				p.tmp_pow_atc = p.attack              -- POWゲージ増加量(予約時の行動)
-			end
-
-			p.tmp_stun     = pgm:read_u8(p.addr.tmp_stun) -- 気絶値
-			p.tmp_st_timer = pgm:read_u8(p.addr.tmp_st_timer) -- 気絶タイマー
-			pgm:write_u8(p.addr.tmp_dmg, 0xFF)
-			pgm:write_u8(p.addr.pure_dmg, 0)
-			pgm:write_u8(p.addr.tmp_pow, 0)
-			pgm:write_u8(p.addr.tmp_pow_rsv, 0)
-			pgm:write_u8(p.addr.tmp_stun, 0)
-			pgm:write_u8(p.addr.tmp_st_timer, 0)
-			p.tw_threshold   = pgm:read_u8(p.addr.tw_threshold)
-			p.tw_accepted    = pgm:read_u8(p.addr.tw_accepted)
-			-- p.tw_frame       = pgm:read_u8(p.addr.tw_frame)
-			p.old_tw_muteki  = p.tw_muteki or 0
-			-- p.tw_muteki      = pgm:read_u8(p.addr.tw_muteki)
+			p.old_repeatable    = p.repeatable
+			p.old_pure_dmg      = p.pure_dmg
+			p.old_invincible    = p.invincible or 0
 			-- 通常投げ無敵判断 その2(HOME 039FC6から03A000の処理を再現して投げ無敵の値を求める)
-			p.old_tw_muteki2 = p.tw_muteki2 or 0
-			p.tw_muteki2     = 0
-			if 0x70 <= p.attack then
-				p.tw_muteki2 = pgm:read_u8(pgm:read_u32(p.char_4times + 0x89692) + p.attack - 0x70)
-			end
-			p.throwable   = p.state == 0 and op.state == 0 and p.tw_frame > 24 and p.sway_status == 0x00 and p.tw_muteki == 0 -- 投げ可能ベース
-			p.n_throwable = p.throwable and p.tw_muteki2 == 0                                                            -- 通常投げ可能
-			--[[
-			p.sp_throw_id     = pgm:read_u8(p.addr.sp_throw_id)                                                          -- 投げ必殺のID
-			p.sp_throw_act    = pgm:read_u8(p.addr.sp_throw_act)                                                         -- 投げ必殺の持続残F
-			p.additional      = pgm:read_u8(p.addr.additional)
-			]]
-
-			p.old_act         = p.act or 0x00
-			p.act             = pgm:read_u16(p.addr.act)
-			p.acta            = pgm:read_u16(p.addr.acta)
-			p.old_act_count   = p.act_count
-			p.act_count       = pgm:read_u8(p.addr.act_count)
-			-- 家庭用004A6Aからの処理
-			-- p.act_boxtype     = 0xFFFF & (pgm:read_u8(p.addr.act_boxtype) & 0xC0 * 4)
-			p.old_act_frame   = p.act_frame
-			-- p.act_frame       = pgm:read_u8(p.addr.act_frame)
-			p.provoke         = 0x0196 == p.act --挑発中
-			-- p.stop            = pgm:read_u8(p.addr.stop)
-			p.gd_strength     = get_gd_strength(p)
-			p.old_knock_back1 = p.knock_back1
-			p.old_knock_back2 = p.knock_back2
-			p.old_knock_back3 = p.knock_back3
-			--[[
-			p.knock_back1     = pgm:read_u8(p.addr.knock_back1)
-			p.knock_back2     = pgm:read_u8(p.addr.knock_back2)
-			p.knock_back3     = pgm:read_u8(p.addr.knock_back3)
-			p.hitstop_id      = pgm:read_u8(p.addr.hitstop_id)
-			]]
-			p.attack_id      = 0
-			p.old_attacking  = p.attacking
-			p.attacking      = false
-			p.dmmy_attacking = false
-			p.juggling       = false
-			p.can_juggle     = false
-			p.can_otg        = false
-			p.old_throwing   = p.throwing
-			p.throwing       = false
-			p.can_techrise   = 2 > pgm:read_u8(0x88A12 + p.attack)
-			p.old_anyhit_id  = p.anyhit_id
-			p.anyhit_id      = pgm:read_u16(p.addr.can_techrise)
-			p.pow_up_hit     = 0
-			p.pow_up_gd      = 0
-			p.pow_up         = 0
-			p.pow_revenge    = 0
-			p.pow_absorb     = 0
-			p.esaka_range    = 0
-			p.hitstop        = 0
-			p.hitstop_gd     = 0
-			p.pure_dmg       = 0
-			p.pure_st        = 0
-			p.pure_st_tm     = 0
-			p.chip_dmg_type  = chip_dmg_types.zero
-			p.fake_hit       = (pgm:read_u8(p.addr.fake_hit) & 0xB) == 0
-			p.obsl_hit       = (pgm:read_u8(p.addr.obsl_hit) & 0xB) == 0
-			p.full_hit       = pgm:read_u8(p.addr.full_hit) > 0
-			p.harmless2      = pgm:read_u8(p.addr.attack) == 0
-			p.prj_rank       = pgm:read_u8(p.addr.prj_rank)
-			p.old_posd       = p.posd
-			p.posd           = pgm:read_i32(p.addr.pos)
-			p.poslr          = p.posd == op.posd and "=" or p.posd < op.posd and "L" or "R"
-			p.old_pos        = p.pos
-			p.old_pos_frc    = p.pos_frc
-			--p.pos             = pgm:read_i16(p.addr.pos)
-			--p.pos_frc         = pgm:read_u16(p.addr.pos_frc)
-			p.thrust         = p.thrust + p.thrust_frc
-			p.inertia        = p.inertia + p.inertia_frc
-			--p.pos_total       = p.pos + int16tofloat(p.pos_frc)
-			p.pos_total      = p.pos + p.pos_frc
-			p.old_pos_total  = p.old_pos + int16tofloat(p.old_pos_frc)
-			p.diff_pos_total = p.pos_total - p.old_pos_total
-			--p.max_pos         = pgm:read_i16(p.addr.max_pos)
-			if p.max_pos == 0 or p.max_pos == p.pos then
-				p.max_pos = nil
-			end
-			--pgm:write_i16(p.addr.max_pos, 0)
-			--p.min_pos = pgm:read_i16(p.addr.min_pos)
-			if p.min_pos == 1000 or p.min_pos == p.pos then
-				p.min_pos = nil
-			end
-			--pgm:write_i16(p.addr.min_pos, 1000)
-			--p.proc_pos      = p.max_pos or p.min_pos or p.pos -- 内部の補正前のX座標
-			p.old_pos_y     = p.pos_y
-			p.old_pos_frc_y = p.pos_frc_y
-			p.old_in_air    = p.in_air
-			--p.pos_y         = pgm:read_i16(p.addr.pos_y)
-			--p.pos_frc_y     = int16tofloat(pgm:read_u16(p.addr.pos_frc_y))
-			p.in_air        = 0 < p.pos_y or 0 < p.pos_frc_y
+			p.old_tw_muteki2    = p.tw_muteki2 or 0
+			p.throwable         = p.state == 0 and op.state == 0 and p.throw_timer > 24 and p.sway_status == 0x00 and p.invincible == 0 -- 投げ可能ベース
+			p.n_throwable       = p.throwable and p.tw_muteki2 == 0                                                            -- 通常投げ可能
+			p.old_act           = p.act or 0x00
+			p.old_act_count     = p.act_count
+			p.old_act_frame     = p.act_frame
+			p.gd_strength       = get_gd_strength(p)
+			p.old_knock_back1   = p.knock_back1
+			p.dmmy_attacking    = false
+			p.juggle            = false
+			p.can_juggle        = false
+			p.can_otg           = false
+			p.old_anyhit_id     = p.anyhit_id
+			p.old_posd          = p.posd
+			p.posd              = p.pos + p.pos_frc
+			p.poslr             = p.posd == op.posd and "=" or p.posd < op.posd and "L" or "R"
+			p.old_pos           = p.pos
+			p.old_pos_frc       = p.pos_frc
+			p.thrust            = p.thrust + p.thrust_frc
+			p.inertia           = p.inertia + p.inertia_frc
+			p.pos_total         = p.pos + p.pos_frc
+			p.old_pos_total     = p.old_pos + util.int16tofloat(p.old_pos_frc)
+			p.diff_pos_total    = p.pos_total - p.old_pos_total
+			p.old_pos_y         = p.pos_y
+			p.old_pos_frc_y     = p.pos_frc_y
+			p.old_in_air        = p.in_air
+			p.in_air            = 0 < p.pos_y or 0 < p.pos_frc_y
 
 			-- ジャンプの遷移ポイントかどうか
 			if p.old_in_air ~= true and p.in_air == true then
@@ -10480,32 +5127,9 @@ rbff2.startplugin = function()
 				p.pos_y_down = 0
 			end
 			p.old_pos_z = p.pos_z
-			-- p.pos_z           = pgm:read_i16(p.addr.pos_z)
-			-- p.on_sway_line    = (40 == p.pos_z and 40 > p.old_pos_z) and global.frame_number or p.on_sway_line
-			-- p.on_main_line    = (24 == p.pos_z and 24 < p.old_pos_z) and global.frame_number or p.on_main_line
-			-- p.old_sway_status = p.sway_status
-			-- p.sway_status     = pgm:read_u8(p.addr.sway_status) -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
-			-- if p.sway_status == 0x00 then
-			-- 	p.in_sway_line = false
-			-- else
-			-- 	p.in_sway_line = true
-			-- end
-			--[[
-			p.internal_side = pgm:read_u8(p.addr.side)
-			p.side          = pgm:read_i8(p.addr.side) < 0 and -1 or 1
-			p.corner        = pgm:read_u8(p.addr.corner)               -- 画面端状態 0:端以外 1:画面端 3:端押し付け
-			p.input_side    = pgm:read_u8(p.addr.input_side)           -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
-			p.disp_side     = get_flip_x(players[1])
-			p.push_front    = get_push_range(p, 0x3)                   -- 正面
-			p.push_back     = get_push_range(p, 0x4)                   -- 背後
-			p.tw_half_range = pgm:read_u8(fix_bp_addr(0x5D854) + p.char_4times) -- 投げ間合い半数
-			p.input1        = pgm:read_u8(p.addr.input1)
-			p.input2        = pgm:read_u8(p.addr.input2)
-			p.cln_btn       = pgm:read_u8(p.addr.cln_btn)
-			]]
-			p.flip_x = (p.flip_x1 ~ p.flip_x2) > 0 and 1 or -1
+			p.old_sway_status = p.sway_status
 			-- 滑り属性の攻撃か慣性残しの立ち攻撃か
-			if p.slide_atk == true or (p.old_act == 0x19 and p.inertia > 0 and testbit(p.flag_c0, 0x32)) then
+			if p.slide_atk == true or (p.old_act == 0x19 and p.inertia > 0 and util.testbit(p.flag_c0, 0x32)) then
 				p.dash_act_addr = get_dash_act_addr(p, pgm)
 				p.dash_act_info = string.format("%s %s+%s %x",
 					p.slide_atk == true and "滑り属性" or "慣性残し",
@@ -10517,180 +5141,47 @@ rbff2.startplugin = function()
 				p.dash_act_info = p.dash_act_info or ""
 			end
 
-			--[[
-			p.life        = pgm:read_u8(p.addr.life)
-			p.pow         = pgm:read_u8(p.addr.pow)
-			p.max_stun    = pgm:read_u8(p.addr.max_stun)
-			p.stun        = pgm:read_u8(p.addr.stun)
-			p.stun_timer  = pgm:read_u16(p.addr.stun_timer)
-			p.act_contact = pgm:read_u8(p.addr.act_contact)
-			p.ophit_base  = pgm:read_u32(p.addr.ophit_base)
-			p.init_stun   = p.char_data.init_stuns
-			]]
 			p.ophit = nil
 			if p.ophit_base == 0x100400 or p.ophit_base == 0x100500 then
 				p.ophit = op
 			else
-				p.ophit = op.fireball[p.ophit_base]
+				p.ophit = op.fireballs[p.ophit_base]
 			end
 
 			-- ライン送らない状態のデータ書き込み
 			if p.dis_plain_shift then
-				pgm:write_u8(p.addr.hurt_state, p.hurt_state | 0x40)
+				mem.w8(p.addr.hurt_state, p.hurt_state | 0x40)
 			end
 		end
 
 		-- 1Pと2Pの状態読取 ゲージ
 		for _, p in ipairs(players) do
-			local op         = p.op
-
-			local hit_attack = p.attack
-
-			--[[
-			if hit_attack ~= 0 and op.hitstop_id ~= 0 and op.flag_c0 > 0 and op.flag_cc > 0 then
-				hit_attack = op.hitstop_id
-			end
-			]]
-
-			if hit_attack ~= 0 then
-				p.hitstop    = 0x7F & pgm:read_u8(pgm:read_u32(fix_bp_addr(0x83C38) + p.char_4times) + hit_attack)
-				p.hitstop    = p.hitstop == 0 and 2 or p.hitstop + 1 -- システムで消費される分を加算
-				p.hitstop_gd = math.max(2, p.hitstop - 1) -- ガード時の補正
-
-				-- 補正前ダメージ量取得 家庭用 05B118 からの処理
-				p.pure_dmg   = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x813F0)) + hit_attack)
-				-- printf("%x %x %x p.pure_dmg %s", p.attack, op.hitstop_id, hit_attack, p.pure_dmg)
-				-- 気絶値と気絶タイマー取得 05C1CA からの処理
-				p.pure_st    = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x85CCA)) + hit_attack)
-				p.pure_st_tm = pgm:read_u8(pgm:read_u32(p.char_4times + fix_bp_addr(0x85D2A)) + hit_attack)
-
-				if 0x58 > hit_attack then
-					-- 家庭用 0236F0 からの処理
-					local d1 = pgm:read_u8(p.addr.attack)
-					local d0 = pgm:read_u16(pgm:read_u32(p.char_4times + 0x23750) + ((d1 + d1) & 0xFFFF)) & 0x1FFF
-					if d0 ~= 0 then
-						p.esaka_range = d0
-					end
-
-					-- 家庭用 05B37E からの処理
-					if 0x27 <= hit_attack then -- CA技、特殊技かどうかのチェック
-						p.pow_up_hit = pgm:read_u8((0xFF & (hit_attack - 0x27)) + pgm:read_u32(0x8C18C + p.char_4times))
-					else
-						-- 通常技 ビリーとチョンシュか、それ以外でアドレスが違う
-						local a0 = 0x8C24C
-						if 0xC == p.char then
-							a0 = 0x8C274
-						elseif 0x10 == p.char then
-							a0 = 0x8C29C
-						end
-						p.pow_up_hit = pgm:read_u8(a0 + hit_attack)
-					end
-					-- ガード時増加量 d0の右1ビットシフト=1/2
-					p.pow_up_gd = 0xFF & (p.pow_up_hit >> 1)
-				end
-
-				-- 必殺技のパワー増加 家庭用 03C140 からの処理
-				-- 03BEF6: 4A2C 00BF                tst.b   ($bf,A4) beqのときのみ
-				-- 03BF00: 082C 0004 00CD           btst    #$4, ($cd,A4) beqのときのみ
-				-- base+A3の値は技発動時の処理中にしか採取できないのでこの処理は機能しない
-				-- local d0, a0 = pgm:read_u8(p.addr.base + 0xA3), 0
-				-- 0xB8=技コマンド成立時の技のID
-				-- TODO ビリーのA中段打ちが記録されない
-				if p.spid > 0 then
-					p.pow_up = pgm:read_u8(pgm:read_u32(0x8C1EC + p.char_4times) + p.spid - 1)
-				end
-
-				-- トドメ=ヒットで+7、雷撃棍=発生で+5、倍返し=返しで+7、吸収で+20、蛇使い は個別に設定が必要
-				local yama_pows = new_set(0x06, 0x70, 0x71, 0x75, 0x76, 0x77, 0x7C, 0x7D)
-				if p.char == 0x6 and p.attack == 0x28 then
-					p.pow_up_hit = 0
-					p.pow_up_gd  = 0
-					p.pow_up     = 5
-				elseif p.char == 0xB and yama_pows[p.attack] then
-					p.pow_up_hit = 0
-					p.pow_up_gd  = 0
-					p.pow_up     = 5
-				elseif p.char == 0xB and p.attack == 0x8E then
-					p.pow_up_hit  = 0
-					p.pow_up_gd   = 0
-					p.pow_up      = 0
-					p.pow_revenge = 7
-					p.pow_absorb  = 20
-				elseif p.char == 0xB and p.attack == 0xA0 then
-					p.pow_up_hit = 7
-					p.pow_up_gd  = 0
-					p.pow_up     = 0
-				elseif p.char == 0xB and p.attack == 0x82 then
-					p.pow_revenge = 6 -- サドマゾ
-				elseif p.char == 0x14 and p.attack == 0x82 then
-					p.pow_revenge = 6 -- フェニックススルー
-				elseif p.char == 0x8 and p.attack == 0x94 then
-					p.pow_revenge = 6 -- 逆襲
-				elseif p.char == 0x5 and p.attack == 0x82 then
-					p.pow_revenge = 6 -- 当身投げ
-				elseif p.char == 0x5 and p.attack == 0x7c then
-					p.pow_revenge = 6 -- 当身投げ
-				elseif p.char == 0x5 and p.attack == 0x88 then
-					p.pow_revenge = 6 -- 当身投げ
-				end
-			end
-
-			-- p.max_hit_dn    = p.attack > 0 and pgm:read_u8(pgm:read_u32(fix_bp_addr(0x827B8) + p.char_4times) + p.attack) or 0
-			-- p.max_hit_nm    = pgm:read_u8(p.addr.max_hit_nm)
-			p.last_dmg      = p.last_dmg or 0
 			p.last_pow      = p.last_pow or 0
 			p.last_pure_dmg = p.last_pure_dmg or 0
 			p.last_stun     = p.last_stun or 0
 			p.last_st_timer = p.last_st_timer or 0
 			p.last_effects  = p.last_effects or {}
-			p.dmg_scl7      = pgm:read_u8(p.addr.dmg_scl7)
-			p.dmg_scl6      = pgm:read_u8(p.addr.dmg_scl6)
-			p.dmg_scl5      = pgm:read_u8(p.addr.dmg_scl5)
-			p.dmg_scl4      = pgm:read_u8(p.addr.dmg_scl4)
-			pgm:write_u8(p.addr.dmg_scl7, 0)
-			pgm:write_u8(p.addr.dmg_scl6, 0)
-			pgm:write_u8(p.addr.dmg_scl5, 0)
-			pgm:write_u8(p.addr.dmg_scl4, 0)
-			p.dmg_scaling = 1
-			if p.dmg_scl7 > 0 then
-				p.dmg_scaling = p.dmg_scaling * (0.875 ^ p.dmg_scl7)
-			end
-			if p.dmg_scl6 > 0 then
-				p.dmg_scaling = p.dmg_scaling * (0.75 ^ p.dmg_scl6)
-			end
-			if p.dmg_scl5 > 0 then
-				p.dmg_scaling = p.dmg_scaling * (0.625 ^ p.dmg_scl5)
-			end
-			if p.dmg_scl4 > 0 then
-				p.dmg_scaling = p.dmg_scaling * (0.5 ^ p.dmg_scl4)
-			end
 		end
 
 		-- 1Pと2Pの状態読取 入力
 		global.old_all_act_normal = global.all_act_normal
 		global.all_act_normal = true
 		for _, p in ipairs(players) do
-			local op           = p.op
-
-			p.input_offset     = pgm:read_u32(p.addr.input_offset)
 			p.old_input_states = p.input_states or {}
 			p.input_states     = {}
-			local debug        = false
+			local debug        = false -- 調査時のみtrue
 			local states       = dip_config.easy_super and input_states.easy or input_states.normal
 			states             = debug and states[#states] or states[p.char]
 			for ti, tbl in ipairs(states) do
 				local old = p.old_input_states[ti]
 				local addr = tbl.addr + p.input_offset
-				local on = pgm:read_u8(addr - 1)
+				local on, chg_remain = mem.r8(addr - 1), mem.r8(addr)
 				local on_prev = on
-				local chg_remain = pgm:read_u8(addr)
 				local max = (old and old.on_prev == on_prev) and old.max or chg_remain
 				local input_estab = old and old.input_estab or false
-				local charging = false
+				local charging, reset, force_reset = false, false, false
 
 				-- コマンド種類ごとの表示用の補正
-				local reset = false
-				local force_reset = false
 				if tbl.type == input_state_types.drill5 then
 					force_reset = on > 1 or chg_remain > 0 or max > 0
 					chg_remain, on, max = 0, 0, 0
@@ -10756,14 +5247,8 @@ rbff2.startplugin = function()
 					if p.char ~= old.char or on == 1 then
 						input_estab = false
 					else
-						if 0 < tbl.id  and tbl.id < 0x1E  then
-							local id_estab = pgm:read_u8(0xB8 + p.addr.base)
-							local cmd_estab = pgm:read_u8(0xA5 + p.addr.base)
-							local exp_extab = tbl.estab & 0x00FF
-							reset = cmd_estab == exp_extab and id_estab == tbl.id or input_estab
-						else
-							--local id_estab = pgm:read_u8(0xD6 + p.addr.base)
-							--reset = id_estab == tbl.id or input_estab
+						if 0 < tbl.id and tbl.id < 0x1E then
+							reset = p.additional == tbl.exp_extab and p.spid == tbl.id or input_estab
 						end
 						if chg_remain == 0 and on == 0 and reset then
 							input_estab = true
@@ -10790,21 +5275,15 @@ rbff2.startplugin = function()
 			--フレーム数
 			p.frame_gap      = p.frame_gap or 0
 			p.last_frame_gap = p.last_frame_gap or 0
-			p.last_blockstun = p.last_blockstun or 0
-			p.last_hitstop   = p.last_hitstop or 0
 			p.on_hit         = p.on_hit or 0
 			p.on_block       = p.on_block or 0
 			p.hit_skip       = p.hit_skip or 0
 			p.on_punish      = p.on_punish or 0
 
-			if mem._0x10B862 ~= 0 and p.act_contact ~= 0 then
+			if mem._0x10B862 ~= 0 then
 				if p.state == 2 then
-					-- ガードへの遷移フレームを記録
-					p.on_block = global.frame_number
 					p.on_punish = -1
 				elseif p.state == 1 or p.state == 3 then
-					-- ヒットへの遷移フレームを記録
-					p.on_hit = global.frame_number
 					if p.act_normal ~= true and p.old_state == 0 then
 						-- 確定反撃フレームを記録
 						p.on_punish = global.frame_number
@@ -10816,21 +5295,17 @@ rbff2.startplugin = function()
 						p.on_punish = -1
 					end
 				end
-				if pgm:read_u8(p.addr.base + 0xAB) > 0 or p.ophit then
+				if mem.r8(p.addr.base + 0xAB) > 0 or p.ophit then
 					p.hit_skip = 2
 				end
 			end
-			if p.state == 0 and p.act_normal ~= true and mem._0x10B862 ~= 0 and op.act_contact ~= 0 then
+			if p.state == 0 and p.act_normal ~= true and mem._0x10B862 ~= 0 then
 				p.on_punish = -1
 			end
 
 			-- 起き上がりフレーム
 			if wakeup_acts[p.old_act] ~= true and wakeup_acts[p.act] == true then
 				p.on_wakeup = global.frame_number
-			end
-			-- ダウンフレーム
-			if (p.old_flag_c0 & 0x2 == 0x0) and (p.flag_c0 & 0x2 == 0x2) then
-				p.on_down = global.frame_number
 			end
 			-- フレーム表示用処理
 			p.act_frames          = p.act_frames or {}
@@ -10855,16 +5330,16 @@ rbff2.startplugin = function()
 					p.act_data.name = p.act_data.normal_name
 				end
 				-- CAのときのみ開始動作として評価する
-				if testbit(p.act_data.type, act_types.startup_if_ca) then
-					if testbit(p.flag_cc, flag_cc_types._00) then
-						p.act_1st  = true
+				if util.testbit(p.act_data.type, act_types.startup_if_ca) then
+					if util.testbit(p.flag_cc, state_flag_cc._00) then
+						p.act_1st = true
 					else
-						p.act_1st  = false
+						p.act_1st = false
 					end
 				end
 			else
 				p.act_data = {
-					name = (p.state == 1 or p.state == 3) and "やられ" or tohex(p.act),
+					name = (p.state == 1 or p.state == 3) and "やられ" or util.tohex(p.act),
 					type = act_types.preserve | act_types.any,
 				}
 				p.act_1st  = false
@@ -10878,21 +5353,17 @@ rbff2.startplugin = function()
 				}
 				p.act_1st  = false
 			end
-			-- カイザーウェイブのレベルアップ
-			if p.char == 0x14 and p.old_kaiser_wave ~= p.kaiser_wave then
-				p.act_1st = true
-			end
 			p.old_act_normal = p.act_normal
 			-- ガード移行可否
 			p.act_normal = nil
 			if p.state == 2 or
 				(p.flag_cc & 0xFFFFFF3F) ~= 0 or
 				(p.flag_c0 & 0x03FFD723) ~= 0 or
-				(pgm:read_u8(p.addr.base + 0xB6) | p.flag_c4 | p.flag_c8) ~= 0 then
+				(mem.r8(p.addr.base + 0xB6) | p.flag_c4 | p.flag_c8) ~= 0 then
 				p.act_normal = false
 			else
 				p.act_normal = true -- 移動中など
-				p.act_normal = testbit(p.act_data.type, act_types.free | act_types.block)
+				p.act_normal = util.testbit(p.act_data.type, act_types.free | act_types.block)
 			end
 			global.all_act_normal = global.all_act_normal and p.act_normal
 
@@ -10919,72 +5390,14 @@ rbff2.startplugin = function()
 			end
 
 			-- 飛び道具の状態読取
-			for _, fb in pairs(p.fireball) do
-				fb.parent         = p
-				fb.is_fireball    = true
+			for _, fb in pairs(p.fireballs) do
 				fb.old_act        = fb.act
-				fb.act            = pgm:read_u16(fb.addr.act)
-				fb.acta           = pgm:read_u16(fb.addr.acta)
-				fb.actb           = pgm:read_u16(fb.addr.actb)
-				fb.act_count      = pgm:read_u8(fb.addr.act_count) -- 現在の行動のカウンタ
-				-- 家庭用004A6Aからの処理
-				fb.act_boxtype    = 0xFFFF & (pgm:read_u8(fb.addr.act_boxtype) & 0xC0 * 4)
-				fb.act_frame      = pgm:read_u8(fb.addr.act_frame) -- 現在の行動の残フレーム、ゼロになると次の行動へ
-				fb.act_contact    = pgm:read_u8(fb.addr.act_contact) -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
-				fb.pos            = pgm:read_i16(fb.addr.pos)
-				fb.pos_y          = pgm:read_i16(fb.addr.pos_y)
-				fb.pos_miny       = 0
-				fb.pos_z          = pgm:read_i16(fb.addr.pos_z)
 				fb.gd_strength    = get_gd_strength(fb)
-				fb.base           = pgm:read_u32(fb.addr.base)
-				fb.asm            = pgm:read_u16(fb.base)
 				fb.old_proc_act   = fb.proc_active
-				fb.proc_active    = (fb.asm ~= 0x4E75 and fb.asm ~= 0x197C)
-				fb.attack         = pgm:read_u16(pgm:read_u32(fb.addr.attack)) -- 攻撃中のみ変化
-				fb.hitstop_id     = pgm:read_u16(fb.addr.hitstop_id)
-				fb.attack_id      = 0
-				fb.old_attacking  = p.attacking
 				fb.attacking      = false
 				fb.dmmy_attacking = false
-				fb.juggling       = false
-				if fb.hitstop_id == 0 then
-					fb.hitstop    = 0
-					fb.hitstop_gd = 0
-					fb.pure_dmg   = 0
-					fb.chip_dmg_type = chip_dmg_types.zero
-					fb.pure_st    = 0
-					fb.pure_st_tm = 0
-				else
-					-- ヒットストップ取得 家庭用 061656 からの処理
-					fb.hitstop    = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x884F2))
-					fb.hitstop    = fb.hitstop == 0 and 2 or fb.hitstop + 1 -- システムで消費される分を加算
-					fb.hitstop_gd = math.max(2, fb.hitstop - 1) -- ガード時の補正
-					-- 補正前ダメージ量取得 家庭用 05B146 からの処理
-					fb.pure_dmg   = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x88472))
-					-- printf("fb.pure_dmg %s", fb.pure_dmg)
-					-- 気絶値と気絶タイマー取得 家庭用 05C1B0 からの処理
-					fb.pure_st    = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x886F2))
-					fb.pure_st_tm = pgm:read_u8(fb.hitstop_id + fix_bp_addr(0x88772))
-				end
-				-- 受け身行動可否 家庭用 05A9B8 からの処理
-				fb.can_techrise   = 2 > pgm:read_u8(0x8E2C0 + pgm:read_u8(fb.addr.hitstop_id))
-				fb.fake_hit       = (pgm:read_u8(fb.addr.fake_hit) & 0xB) == 0
-				fb.obsl_hit       = (pgm:read_u8(fb.addr.obsl_hit) & 0xB) == 0 -- 嘘判定チェック用
-				fb.full_hit       = pgm:read_u8(fb.addr.full_hit) > 0 -- 判定チェック用1
-				fb.harmless2      = pgm:read_u8(fb.addr.harmless2) > 0 -- 判定チェック用2 飛び道具専用
-				fb.prj_rank       = pgm:read_u8(fb.addr.prj_rank)  -- 飛び道具の強さ
-				fb.side           = pgm:read_u8(fb.addr.side)
-				fb.box_base1      = pgm:read_u32(fb.addr.box_base1)
-				fb.box_base2      = pgm:read_u32(fb.addr.box_base2)
-				--倍返しチェック 家庭用05C8CEからの処理
-				fb.bai_chk1       = pgm:read_u8(fb.addr.bai_chk1)
-				fb.bai_chk2       = pgm:read_u8(0x8E940 + (0xFFFF & (pgm:read_u16(fb.addr.hitstop_id) + fb.hitstop_id)))
-				fb.bai_catch      = 0x2 >= fb.bai_chk1 and fb.bai_chk2 == 0x01
-				fb.max_hit_dn     = pgm:read_u8(fix_bp_addr(0x885F2) + fb.hitstop_id) -- 同一技行動での最大ヒット数 分母
-				fb.max_hit_nm     = pgm:read_u8(fb.addr.max_hit_nm)       -- 同一技行動での最大ヒット数 分子
-				fb.hitboxes       = {}
-				fb.buffer         = {}
-				fb.uniq_hitboxes  = {}       -- key + boolean
+				fb.juggle         = false
+				fb.bai_catch      = fb.bai_chk1 and fb.bai_chk2
 				fb.hit_summary    = fb.hit_summary or {} -- 大状態表示のデータ構造の一部
 				fb.hit            = fb.hit or {
 					pos_x      = 0,
@@ -10995,11 +5408,6 @@ rbff2.startplugin = function()
 					scale      = 0,
 					char_id    = 0,
 					vulnerable = 0,
-					harmless   = false,
-					fake_hit   = false,
-					obsl_hit   = false,
-					full_hit   = false,
-					harmless2  = false,
 					max_hit_dn = 0,
 					max_hit_nm = 0,
 				}
@@ -11010,11 +5418,8 @@ rbff2.startplugin = function()
 				fb.act_frames2    = fb.act_frames2 or {}
 
 				-- 当たり判定の構築
-				fb.has_atk_box    = false
 				if fb.proc_active == true then --0x4E75 is rts instruction
-					fb.alive                = true
-					temp_hits[fb.addr.base] = fb
-					fb.atk_count            = fb.atk_count or 0
+					fb.atk_count = fb.atk_count or 0
 					-- 主に邪棍舞の派生で動作切り替え
 					if p.char_data.fb1sts[fb.act] then
 						p.act_data = chars[p.char].fireballs[fb.act]
@@ -11024,143 +5429,120 @@ rbff2.startplugin = function()
 							p.update_act = global.frame_number
 						end
 					end
-					--[[
-					if p.char == 0x6 then
-						if new_set(0xFA, 0xF9, 0xF8, 0xF7, 0xF6)[fb.act] then
-							p.act_data = chars[p.char].fireballs[fb.act]
-							fb.act_data_fired = p.act_data -- 発射したタイミングの行動ID
-							if (fb.old_act == 0xF4 or fb.old_act == 0xF5) then
-								p.act_1st = true
-								p.update_act = global.frame_number
-							end
-						end
-						-- printf("jakonbu %x %s", fb.act, p.act_1st)
-					end
-					]]
-				else
-					fb.alive      = false
-					fb.atk_count  = 0
-					fb.hitstop    = 0
-					fb.pure_dmg   = 0
-					fb.pure_st    = 0
-					fb.pure_st_tm = 0
 				end
-				global.all_act_normal = global.all_act_normal and (fb.alive == false)
+				global.all_act_normal = global.all_act_normal and (fb.proc_active == false)
 
 				fb.hit_summary = new_box_summary(fb)
 			end
 
-			-- 値更新のフック確認
-			p.update_sts = (pgm:read_u8(p.addr.state2) ~= 0) and global.frame_number or p.update_sts
-			p.update_dmg = (p.tmp_dmg ~= 0xFF) and global.frame_number or p.update_dmg
-			p.act2       = pgm:read_u16(p.addr.act2)
-			if testbit(p.flag_cc, flag_cc_types._25 | flag_cc_types._30 | flag_cc_types._31) ~= true then
-				p.update_act = (p.act2 ~= 0) and global.frame_number or p.update_act
-			end
-			p.act_1st    = p.update_act == global.frame_number and p.act_1st == true
-			if p.act_1st == true then
-				p.atk_count = 1
-			else
-				p.atk_count = p.atk_count + 1
-			end
-
-			-- 硬直フレーム設定
-			p.last_blockstun   = p.last_blockstun or 0
-
-			-- 当たり判定のフック確認
-			p.hit.vulnerable1  = pgm:read_u8(p.addr.vulnerable1)
-			p.hit.vulnerable21 = pgm:read_u8(p.addr.vulnerable21)
-			p.hit.vulnerable22 = pgm:read_u8(p.addr.vulnerable22) == 0 --0の時vulnerable=true
+			p.act_1st = p.update_act == global.frame_number and p.act_1st == true
+			p.atk_count = p.act_1st == true and 1 or (p.atk_count + 1)
 
 			-- リーチ
-			p.hit_summary      = new_box_summary(p)
-
-			-- 投げ判定取得
-			get_n_throw(p, op)
-
-			-- 空中投げ判定取得
-			get_air_throw(p, op)
-
-			-- 必殺投げ判定取得
-			get_sp_throw(p, op)
-
-			-- 当たり判定の構築用バッファのリフレッシュ
-			p.hitboxes             = {}
-			p.buffer               = {}
-			p.uniq_hitboxes        = {} -- key + boolean
-			p.type_boxes           = {}
-			temp_hits[p.addr.base] = p
-
-			--攻撃種類,ガード要否
-			if global.frame_number <= p.update_sts and p.state ~= p.old_state then
-				p.random_boolean = math.random(255) % 2 == 0
-			end
-			op.need_block     = false
-			op.need_low_block = false
-			op.need_ovh_block = false
-			if p.act ~= 0 and 0 < p.char and p.char < 25 then
-				op.need_block     = testbit(p.act_data.type, act_types.low_attack | act_types.attack | act_types.overhead)
-				op.need_low_block = testbit(p.act_data.type, act_types.low_attack)
-				op.need_ovh_block = testbit(p.act_data.type, act_types.overhead)
-			end
-			for _, fb in pairs(p.fireball) do
-				-- 飛び道具の状態チェック
-				if fb.act ~= nil and fb.act > 0 and fb.act ~= 0xC then
-					local act_type = act_types.attack
-					if p.char_data.fireballs[fb.act] then
-						-- 双角だけ中段と下段の飛び道具がある
-						act_type = p.char_data.fireballs[fb.act].type
-						fb.act_data = p.char_data.fireballs[fb.act]
-					end
-					op.need_block     = op.need_block or testbit(act_type, act_types.low_attack | act_types.attack | act_types.overhead)
-					op.need_low_block = op.need_low_block or testbit(act_type, act_types.low_attack)
-					op.need_ovh_block = op.need_ovh_block or testbit(act_type, act_types.overhead)
-					-- printf("%x %x %x %s", fb.act, fb.acta, fb.actb, act_type) -- debug
-				end
-			end
-		end
-
-		-- キャラと飛び道具の当たり判定取得
-		for addr = 0x1DC000, 0x1DC000 + pgm:read_u8(0x10CB40) * 0x10, 0x10 do
-			local box = {
-				on     = pgm:read_u8(addr),
-				id     = pgm:read_u8(addr + 0x1),
-				top    = pgm:read_i8(addr + 0x2),
-				bottom = pgm:read_i8(addr + 0x3),
-				left   = pgm:read_i8(addr + 0x4),
-				right  = pgm:read_i8(addr + 0x5),
-				base   = pgm:read_u32(addr + 0x6),
-				pos_x  = pgm:read_i16(addr + 0xC) - screen.left,
-				pos_y  = screen.top - pgm:read_i16(addr + 0xE),
-			}
-			if box.on ~= 0xFF and temp_hits[box.base] then
-				box.is_fireball = temp_hits[box.base].is_fireball == true
-				local p = temp_hits[box.base]
-				local base = ((p.addr.base - 0x100400) / 0x100)
-				box.key = string.format(" %x type=%03x x1=%s x2=%s y1=%s y2=%s", base, box.id, box.left, box.right, box.top, box.bottom)
-				if p.uniq_hitboxes[box.key] == nil then
-					p.uniq_hitboxes[box.key] = true
-					table.insert(p.buffer, box)
-					-- print(box.key)
-				end
-			end
+			p.hit_summary    = new_box_summary(p)
 		end
 
 		-- キャラと飛び道具への当たり判定の反映
+		-- 判定表示前の座標補正
+		for _, p in pairs(all_objects) do
+			p.x = p.pos - screen.left                                     -- 画面上のX座標
+			p.y = screen.top - p.pos_y - p.pos_z                          -- 画面上のY座標
+			p.flip_x = (p.flip_x1 ~ p.flip_x2) > 0 and 1 or -1            -- 向き補正値
+			p.calc_range_x = function(range_x) return p.x + range_x * p.flip_x end -- 範囲の点計算
+			p.within = function(x1, x2)                                   -- 範囲内かどうかの関数
+				if p.flip_x < 0 then x1, x2 = sort_ab(x1, x2) else x1, x2 = sort_ba(x1, x2) end
+				return x1 <= p.op.x and p.op.x <= x2
+			end
+		end
+
+		hitboxies, ranges = {}, {} -- ソート前の判定のバッファ
+		for _, p in pairs(all_objects) do
+			if p.char_data and (p.is_fireball ~= true or p.proc_active) then
+				p.hitboxies, p.ranges, p.hitbox_types = {}, {}, {} -- 座標補正後データ格納のためバッファのクリア
+
+				-- 当たりとやられ判定判定
+				p.vulnerable = (p.invincible and p.invincible > 0) or p.hurt_invincible or p.on_vulnerable ~= global.frame_number
+				for _, box in ipairs(p.boxies) do
+					local type = fix_box_type(p, box) -- 属性はヒット状況などで変わるので都度解決する
+					if not (hurt_boxies[type] and p.vulnerable) then
+						local fixbox = fix_box_scale(p, box)
+						fixbox.type = type
+						table.insert(p.hitboxies, fixbox)
+						table.insert(p.hitbox_types, type)
+					end
+				end
+
+				-- 押し合い判定（本体のみ）
+				if p.push_invincible and p.push_invincible == 0 and mem._0x10B862 == 0 then
+					local box = fix_box_scale(p, get_push_box(p))
+					table.insert(p.hitboxies, box)
+					table.insert(p.hitbox_types, box.type)
+				end
+
+				if p.is_fireball ~= true then
+					-- 投げ判定
+					local last_throw_ids = {}
+					for _, box in pairs(p.throw_boxies) do
+						table.insert(p.hitboxies, box)
+						table.insert(p.hitbox_types, box.type)
+						table.insert(last_throw_ids, { char = p.char, id = box.id })
+					end
+					if 0 < #last_throw_ids then
+						p.throw_boxies, p.last_throw_ids = {}, last_throw_ids
+					elseif p.last_throw_ids then
+						for _, item in ipairs(p.last_throw_ids) do
+							if item.char == p.char then
+								local box = get_throwbox(p, item.id)
+								box.type = box_types.push
+								table.insert(p.hitboxies, box)
+							end
+						end
+					end
+
+					-- 詠酒を発動される範囲
+					if p.esaka_range and p.esaka_range > 0 then
+						local x2 = p.calc_range_x(p.esaka_range)
+						-- 内側に太線を引きたいのでflipを反転する
+						table.insert(p.ranges, { label = string.format("E%sP%s", p.num, p.esaka_type), x = x2, y = p.y, flip_x = -p.flip_x, within = p.within(p.x, x2) })
+					end
+
+					-- 座標
+					table.insert(p.ranges, { label = string.format("%sP", p.num), x = p.x, y = p.y, flip_x = p.input_side })
+
+					-- 地上通常技かライン移動技の遠近判断距離
+					if p.pos_y + p.pos_frc_y == 0 then
+						for label, close_far in pairs(p.char_data.close_far[p.sway_status]) do
+							local x1, x2 = close_far.x1 == 0 and p.x or p.calc_range_x(close_far.x1), p.calc_range_x(close_far.x2)
+							-- 内側に太線を引きたいのでflipを反転する
+							table.insert(p.ranges, { label = label, x = x2, y = p.y, flip_x = -p.flip_x, within = p.within(x1, x2) })
+						end
+					end
+				end
+
+				-- 全体バッファに保存する
+				if p.disp_hitbox or (p.parent and p.parent.disp_hitbox) then hitboxies = util.table_add_all(hitboxies, p.hitboxies) end
+				if p.disp_range or (p.parent and p.parent.disp_range) then ranges = util.table_add_all(ranges, p.ranges) end
+			end
+		end
+		table.sort(hitboxies, hitboxies_order)
+		table.sort(ranges, ranges_order)
+
+		--[[
 		for _, p in pairs(temp_hits) do
 			-- update_objectはキャラの位置情報と当たり判定の情報を読み込んだ後で実行すること
 			update_object(p)
 
 			-- 飛び道具の有効無効確定
+			local alive = false
 			if p.is_fireball == true then
-				p.alive = #p.hitboxes > 0
+				alive = #p.hitboxies > 0
 			end
 
 			local hitbox_keys = {}
 			local hurtbox_keys = {}
-			for k, boxtype in pairs(p.uniq_hitboxes) do
-				if boxtype == true then
-				elseif boxtype.type == "attack" or boxtype.type == "throw" or boxtype.type == "atemi" then
+			for k, box in pairs(p.boxies) do
+				if box.type == true then
+				elseif box.type.kind == box_kinds.attack or box.type.kind == box_kinds.throw or box.type.kind == box_kinds.parry then
 					table.insert(hitbox_keys, k)
 				else
 					table.insert(hurtbox_keys, k)
@@ -11168,7 +5550,7 @@ rbff2.startplugin = function()
 			end
 			table.sort(hitbox_keys)
 			table.sort(hurtbox_keys)
-			local hitbox_txt = string.format("%s %s %s ", p.attack_id, p.hit.fake_hit, p.alive) .. table.concat(hitbox_keys, "&")
+			local hitbox_txt = string.format("%s %s %s ", p.attack_id, p.hit.fake_hit, alive) .. table.concat(hitbox_keys, "&")
 			local hurtbox_txt = table.concat(hurtbox_keys, "&")
 			if p.hitbox_txt ~= hitbox_txt then
 				p.chg_hitbox_frm = global.frame_number
@@ -11222,7 +5604,7 @@ rbff2.startplugin = function()
 				p.summary_p_atkid = p.attack_id
 			end
 			-- 攻撃モーション単位で変わるサマリ情報 弾
-			for _, fb in pairs(p.fireball) do
+			for _, fb in pairs(p.fireballs) do
 				if fb.alive then
 					fb.dmg_summary = make_dmg_summary(fb, fb.hit_summary) or fb.dmg_summary
 					p.dmg_summary = fb.dmg_summary
@@ -11251,6 +5633,7 @@ rbff2.startplugin = function()
 			end
 			p.all_summary = sort_summary(all_summary)
 		end
+		]]
 
 		-- フレーム表示などの前処理1
 		for _, p in ipairs(players) do
@@ -11259,11 +5642,11 @@ rbff2.startplugin = function()
 			--フレーム数
 			p.frame_gap      = p.frame_gap or 0
 			p.last_frame_gap = p.last_frame_gap or 0
-			if mem._0x10B862 ~= 0 and p.act_contact ~= 0 then
+			if mem._0x10B862 ~= 0 then
 				local hitstun, blockstun = 0, 0
-				if p.ophit and p.ophit.hitboxes then
-					for _, box in pairs(p.ophit.hitboxes) do
-						if box.type.type == "attack" then
+				if p.ophit and p.ophit.hitboxies then
+					for _, box in pairs(p.ophit.hitboxies) do
+						if box.type.kind == box_kinds.attack then
 							hitstun, blockstun = box.hitstun, box.blockstun
 							break
 						end
@@ -11274,53 +5657,39 @@ rbff2.startplugin = function()
 				if p.ophit and (on_block or on_hit) then
 					-- ガード時硬直, ヒット時硬直
 					p.last_blockstun = on_block and blockstun or hitstun
-					p.last_hitstop   = on_block and p.ophit.hitstop_gd or p.ophit.hitstop
 				end
 			elseif op.char == 20 and op.act == 0x00AF and op.act_count == 0x00 and op.act_frame == 0x09 then
 				-- デンジャラススルー専用
-				p.last_blockstun = p.stop + 2
-				p.last_hitstop = p.stop
+				p.last_blockstun = p.hitstop_remain + 2
 			elseif op.char == 5 and op.act == 0x00A7 and op.act_count == 0x00 and op.act_frame == 0x06 then
 				-- 裏雲隠し専用
 				p.last_blockstun = p.knock_back2 + 3
-				p.last_hitstop = 0
 			end
 		end
 
 		-- フレーム表示などの前処理2
 		for _, p in ipairs(players) do
 			-- 起き上がりと投げやられ演出の停止はフレーム差の計算に邪魔なので停止扱いしない
-			local stop = p.stop ~= 0 and testbit(p.flag_cc,
-				flag_cc_types._03 | -- 必殺投げやられ
-				flag_cc_types._08 | -- 投げ派生やられ
-				flag_cc_types._09 | -- つかみ投げやられ
-				flag_cc_types._10 | -- 投げられ
-				flag_cc_types._27 | -- 投げ追撃
-				flag_cc_types._30 | -- 空中投げ
-				flag_cc_types._31 | -- 投げ
-				flag_cc_types._23 -- 起き上がり
+			local stop = p.hitstop_remain ~= 0 and util.testbit(p.flag_cc,
+				state_flag_cc._03 |                  -- 必殺投げやられ
+				state_flag_cc._08 |                  -- 投げ派生やられ
+				state_flag_cc._09 |                  -- つかみ投げやられ
+				state_flag_cc._10 |                  -- 投げられ
+				state_flag_cc._27 |                  -- 投げ追撃
+				state_flag_cc._30 |                  -- 空中投げ
+				state_flag_cc._31 |                  -- 投げ
+				state_flag_cc._23                    -- 起き上がり
 			) ~= true
-			if testbit(p.flag_c0, flag_c0_types._01) and -- ダウン
-				testbit(p.flag_cc, flag_cc_types._13) -- ダウン
+			if util.testbit(p.flag_c0, state_flag_c0._01) and -- ダウン
+				util.testbit(p.flag_cc, state_flag_cc._13) -- ダウン
 			then
 				stop = false
 			end
 
-			--停止演出のチェック
-			p.old_skip_frame = p.skip_frame
-			if global.no_background then
-				p.skip_frame = p.hit_skip ~= 0 or stop
-			else
-				-- 停止演出のチェックで背景なしチートの影響箇所をチェックするので背景なしONときは停止演出のチェックを飛ばす
-				p.skip_frame = p.hit_skip ~= 0 or stop or (mem._0x100F56 == 0xFFFFFFFF or mem._0x100F56 == 0x0000FFFF)
-			end
-
-			if p.hit_skip ~= 0 or mem._0x100F56 ~= 0 then
-				--停止フレームはフレーム計算しない
-				if p.hit_skip ~= 0 then
-					--ヒットストップの減算
-					p.hit_skip = p.hit_skip - 1
-				end
+			p.old_skip_frame = p.skip_frame                 --停止演出のチェック
+			p.skip_frame = p.hit_skip ~= 0 or stop or global.sp_skip_frame
+			if p.hit_skip ~= 0 or global.sp_skip_frame then -- 停止フレームはフレーム計算しない
+				if p.hit_skip ~= 0 then p.hit_skip = p.hit_skip - 1 end --ヒットストップの減算
 			end
 
 			-- ヒットフレームの判断
@@ -11336,12 +5705,12 @@ rbff2.startplugin = function()
 				p.on_hit1 = global.frame_number
 			end
 
-			-- ガードフレームの判断
 			if p.state ~= 2 then
-				p.block1 = 0
+				p.block1 = 0 -- ガードフレームの判断
 			elseif p.on_block == global.frame_number then
 				p.block1 = 1 -- 1ガード確定
 			end
+
 			-- 停止時間なしのヒットガードのためelseifで繋げない
 			if (p.block1 == 1 and p.skip_frame == false) or
 				(p.state == 2 and p.old_skip_frame == true and p.skip_frame == false) then
@@ -11350,80 +5719,14 @@ rbff2.startplugin = function()
 			end
 		end
 
-		-- ログ表示
-		if global.log.baselog or global.log.keylog or global.log.poslog then
-			local p1, p2 = players[1], players[2]
-			local log1, log2 = string.format("P1 %s ", p1.act_data.name, string.format("P2 %s ", p2.act_data.name))
-
-			-- ベースアドレスログ
-			if global.log.baselog then
-				local b1 = p1.bases[#players[1].bases]
-				local b2 = p2.bases[#players[2].bases]
-				log1 = string.format("%s addr %3s %8x %0.03f ", log1, 999 < b1.count and "LOT" or b1.count, b1.addr, b1.xmov)
-				log2 = string.format("%s addr %3s %8x %0.03f ", log2, 999 < b2.count and "LOT" or b2.count, b2.addr, b2.xmov)
-			end
-
-			-- 入力ログ
-			if global.log.keylog then
-				log1 = string.format("%s key %s ", log1, p1.key_hist[#p1.key_hist])
-				log2 = string.format("%s key %s ", log2, p2.key_hist[#p2.key_hist])
-			end
-
-			-- 位置ログ
-			if global.log.poslog then
-				log1 = string.format("%s pos %4d.%05d %4d.%05d %2s %3s", log1, p1.pos, p1.pos_frc, p1.pos_y, p1.pos_frc_y, p1.act_count, p1.act_frame)
-				log2 = string.format("%s pos %4d.%05d %4d.%05d %2s %3s", log2, p2.pos, p2.pos_frc, p2.pos_y, p2.pos_frc_y, p2.act_count, p2.act_frame)
-			end
-
-			print(log1, log2)
-		end
-
-		-- フック処理のデータ反映
-		for _, p in ipairs(players) do
-			-- リバーサルのランダム選択
-			p.dummy_rvs = nil
-			if p.dummy_bs_chr == p.char then
-				if (p.dummy_wakeup == wakeup_type.tech or p.dummy_wakeup == wakeup_type.sway or p.dummy_wakeup == wakeup_type.rvs) and #p.dummy_rvs_list > 0 then
-					p.dummy_rvs = get_next_rvs(p)
-				end
-			end
-			-- ブレイクショットのランダム選択
-			p.dummy_bs = nil
-			if p.dummy_rvs_chr == p.char then
-				if p.dummy_gd == dummy_gd_type.bs and #p.dummy_bs_list > 0 then
-					if p.state == 2 and p.skip_frame then
-						p.dummy_bs = get_next_bs(p)
-					end
-				end
-			end
-			-- BSモード用技ID更新フック用の値更新
-			if p.bs_hooked + 2 < global.frame_number then
-				pgm:write_u8(p.addr.bs_hook3, 0xFF) -- 初期化
-			end
-			p.write_bs_hook = function(bs_hook)
-				if bs_hook and bs_hook.id then
-					pgm:write_u8(p.addr.bs_hook1, bs_hook.id or 0x00)
-					pgm:write_u16(p.addr.bs_hook2, bs_hook.ver or 0x0600)
-					pgm:write_u8(p.addr.bs_hook3, 0x01)
-					p.bs_hooked = global.frame_number
-					--printf("bshook %s %x %x %x", global.frame_number, p.act, bs_hook.id or 0x20, bs_hook.ver or 0x0600)
-				else
-					pgm:write_u8(p.addr.bs_hook1, 0x00)
-					pgm:write_u16(p.addr.bs_hook2, 0x0600)
-					pgm:write_u8(p.addr.bs_hook3, 0xFF)
-					-- printf("bshook %s %x %x %x", global.frame_number, 0x20, 0x0600))
-				end
-			end
-		end
-
 		-- キャラ間の距離
-		p_space         = players[1].pos - players[2].pos
+		prev_space, p_space = (p_space ~= 0) and p_space or prev_space, players[1].pos - players[2].pos
 
 		-- プレイヤー操作事前設定（それぞれCPUか人力か入れ替えか）
 		-- キー入力の取得（1P、2Pの操作を入れ替えていたりする場合もあるのでモード判定と一緒に処理する）
-		local reg_p1cnt = pgm:read_u8(players[1].addr.reg_pcnt)
-		local reg_p2cnt = pgm:read_u8(players[2].addr.reg_pcnt)
-		local reg_st_b  = pgm:read_u8(players[1].addr.reg_st_b)
+		local reg_p1cnt     = mem.r8(players[1].addr.reg_pcnt)
+		local reg_p2cnt     = mem.r8(players[2].addr.reg_pcnt)
+		local reg_st_b      = mem.r8(players[1].addr.reg_st_b)
 		for i, p in ipairs(players) do
 			-- プレイヤー vs プレイヤー, プレイヤー vs CPU, CPU vs プレイヤー, 1P&2P入れ替え, レコード, 同じ位置でリプレイ, その場でリプレイ
 			if global.dummy_mode == 2 then
@@ -11435,8 +5738,7 @@ rbff2.startplugin = function()
 			else
 				p.control = i
 			end
-			pgm:write_u8(p.addr.control1, p.control) -- Human 1 or 2, CPU 3
-			pgm:write_u8(p.addr.control2, p.control) -- Human 1 or 2, CPU 3
+			mem.w16(p.addr.control, 0x0101 * p.control) -- Human 1 or 2, CPU 3
 
 			-- キー入力
 			if p.control == 1 then
@@ -11465,7 +5767,7 @@ rbff2.startplugin = function()
 					p.hist_frame_gap = {}
 					p.muteki.act_frames = {}
 					p.muteki.act_frames2 = {}
-					for _, fb in pairs(p.fireball) do
+					for _, fb in pairs(p.fireballs) do
 						fb.act_frames = {}
 						fb.act_frames2 = {}
 					end
@@ -11490,33 +5792,25 @@ rbff2.startplugin = function()
 			end
 		end
 
-		-- フレーム経過による硬直差の減少
-		for _, p in ipairs(players) do
-			if p.last_hitstop > 0 then
-				p.last_hitstop = p.last_hitstop - 1
-			elseif p.last_blockstun > 0 then
-				p.last_blockstun = p.last_blockstun - 1
-			end
-		end
-
 		-- キーディス用の処理
 		for i, p in ipairs(players) do
-			local p1      = i == 1
-			local op      = p.op
+			local p1                         = i == 1
+			local op                         = p.op
+			local key_now                    = p.key_now
+			local lever, lever_no
+			local btn_a, btn_b, btn_c, btn_d = false, false, false, false
 
 			-- 入力表示用の情報構築
-			local key_now = p.key_now
-			key_now.d     = (p.reg_pcnt & 0x80) == 0x00 and posi_or_pl1(key_now.d) or nega_or_mi1(key_now.d)           -- Button D
-			key_now.c     = (p.reg_pcnt & 0x40) == 0x00 and posi_or_pl1(key_now.c) or nega_or_mi1(key_now.c)           -- Button C
-			key_now.b     = (p.reg_pcnt & 0x20) == 0x00 and posi_or_pl1(key_now.b) or nega_or_mi1(key_now.b)           -- Button B
-			key_now.a     = (p.reg_pcnt & 0x10) == 0x00 and posi_or_pl1(key_now.a) or nega_or_mi1(key_now.a)           -- Button A
-			key_now.rt    = (p.reg_pcnt & 0x08) == 0x00 and posi_or_pl1(key_now.rt) or nega_or_mi1(key_now.rt)         -- Right
-			key_now.lt    = (p.reg_pcnt & 0x04) == 0x00 and posi_or_pl1(key_now.lt) or nega_or_mi1(key_now.lt)         -- Left
-			key_now.dn    = (p.reg_pcnt & 0x02) == 0x00 and posi_or_pl1(key_now.dn) or nega_or_mi1(key_now.dn)         -- Down
-			key_now.up    = (p.reg_pcnt & 0x01) == 0x00 and posi_or_pl1(key_now.up) or nega_or_mi1(key_now.up)         -- Up
-			key_now.sl    = (p.reg_st_b & (p1 and 0x02 or 0x08)) == 0x00 and posi_or_pl1(key_now.sl) or nega_or_mi1(key_now.sl) -- Select
-			key_now.st    = (p.reg_st_b & (p1 and 0x01 or 0x04)) == 0x00 and posi_or_pl1(key_now.st) or nega_or_mi1(key_now.st) -- Start
-			local lever, lever_no
+			key_now.d                        = (p.reg_pcnt & 0x80) == 0x00 and posi_or_pl1(key_now.d) or nega_or_mi1(key_now.d)           -- Button D
+			key_now.c                        = (p.reg_pcnt & 0x40) == 0x00 and posi_or_pl1(key_now.c) or nega_or_mi1(key_now.c)           -- Button C
+			key_now.b                        = (p.reg_pcnt & 0x20) == 0x00 and posi_or_pl1(key_now.b) or nega_or_mi1(key_now.b)           -- Button B
+			key_now.a                        = (p.reg_pcnt & 0x10) == 0x00 and posi_or_pl1(key_now.a) or nega_or_mi1(key_now.a)           -- Button A
+			key_now.rt                       = (p.reg_pcnt & 0x08) == 0x00 and posi_or_pl1(key_now.rt) or nega_or_mi1(key_now.rt)         -- Right
+			key_now.lt                       = (p.reg_pcnt & 0x04) == 0x00 and posi_or_pl1(key_now.lt) or nega_or_mi1(key_now.lt)         -- Left
+			key_now.dn                       = (p.reg_pcnt & 0x02) == 0x00 and posi_or_pl1(key_now.dn) or nega_or_mi1(key_now.dn)         -- Down
+			key_now.up                       = (p.reg_pcnt & 0x01) == 0x00 and posi_or_pl1(key_now.up) or nega_or_mi1(key_now.up)         -- Up
+			key_now.sl                       = (p.reg_st_b & (p1 and 0x02 or 0x08)) == 0x00 and posi_or_pl1(key_now.sl) or nega_or_mi1(key_now.sl) -- Select
+			key_now.st                       = (p.reg_st_b & (p1 and 0x01 or 0x04)) == 0x00 and posi_or_pl1(key_now.st) or nega_or_mi1(key_now.st) -- Start
 			if (p.reg_pcnt & 0x05) == 0x00 then
 				lever, lever_no = "_7", 7
 			elseif (p.reg_pcnt & 0x09) == 0x00 then
@@ -11536,89 +5830,27 @@ rbff2.startplugin = function()
 			else
 				lever, lever_no = "_N", 5
 			end
-			local btn_a, btn_b, btn_c, btn_d = false, false, false, false
-			if (p.reg_pcnt & 0x10) == 0x00 then
-				lever = lever .. "_A"
-				btn_a = true
-			end
-			if (p.reg_pcnt & 0x20) == 0x00 then
-				lever = lever .. "_B"
-				btn_b = true
-			end
-			if (p.reg_pcnt & 0x40) == 0x00 then
-				lever = lever .. "_C"
-				btn_c = true
-			end
-			if (p.reg_pcnt & 0x80) == 0x00 then
-				lever = lever .. "_D"
-				btn_d = true
-			end
+			if (p.reg_pcnt & 0x10) == 0x00 then lever, btn_a = lever .. "_A", true end
+			if (p.reg_pcnt & 0x20) == 0x00 then lever, btn_b = lever .. "_B", true end
+			if (p.reg_pcnt & 0x40) == 0x00 then lever, btn_c = lever .. "_C", true end
+			if (p.reg_pcnt & 0x80) == 0x00 then lever, btn_d = lever .. "_D", true end
 			-- GG風キーディスの更新
 			table.insert(p.ggkey_hist, { l = lever_no, a = btn_a, b = btn_b, c = btn_c, d = btn_d, })
-			while 60 < #p.ggkey_hist do
-				--バッファ長調整
-				table.remove(p.ggkey_hist, 1)
-			end
+			while 60 < #p.ggkey_hist do table.remove(p.ggkey_hist, 1) end --バッファ長調整
 			-- キーログの更新
 			if p.key_hist[#p.key_hist] ~= lever then
 				for k = 2, #p.key_hist do
-					p.key_hist[k - 1] = p.key_hist[k]
-					p.key_frames[k - 1] = p.key_frames[k]
+					p.key_hist[k - 1], p.key_frames[k - 1] = p.key_hist[k], p.key_frames[k]
 				end
 				if 16 ~= #p.key_hist then
-					p.key_hist[#p.key_hist + 1] = lever
-					p.key_frames[#p.key_frames + 1] = 1
+					p.key_hist[#p.key_hist + 1], p.key_frames[#p.key_frames + 1] = lever, 1
 				else
-					p.key_hist[#p.key_hist] = lever
-					p.key_frames[#p.key_frames] = 1
+					p.key_hist[#p.key_hist], p.key_frames[#p.key_frames] = lever, 1
 				end
 			else
 				local frmcount = p.key_frames[#p.key_frames]
 				--フレーム数が多すぎる場合は加算をやめる
 				p.key_frames[#p.key_frames] = (999 < frmcount) and 1000 or (frmcount + 1)
-			end
-
-			-- コンボ数とコンボダメージの処理
-			if p.normal_state == true then
-				p.tmp_combo_dmg = 0
-				p.last_combo_stun_offset = p.stun
-				p.last_combo_st_timer_offset = p.stun_timer
-			end
-			if p.tmp_pow_rsv > 0 then
-				p.tmp_pow = p.tmp_pow + p.tmp_pow_rsv
-			end
-			if p.tmp_pow > 0 then
-				p.last_pow = p.tmp_pow
-				-- TODO: 大バーン→クラックシュートみたいな繋ぎのときにちゃんと加算されない
-				if p.last_normal_state == true and p.normal_state == true then
-					p.tmp_combo_pow = p.tmp_pow
-				elseif p.last_normal_state == true and p.normal_state == false then
-					p.tmp_combo_pow = p.tmp_pow
-				elseif p.tmp_combo == 1 then
-					p.tmp_combo_pow = p.tmp_pow
-				else
-					p.tmp_combo_pow = p.tmp_combo_pow + p.tmp_pow
-				end
-				p.last_combo_pow = p.tmp_combo_pow
-				p.max_combo_pow = math.max(p.max_combo_pow, p.tmp_combo_pow)
-			end
-			if p.pure_dmg > 0 then -- ヒットしなくても算出しているのでp.tmp_dmgでチェックしない
-				p.last_pure_dmg = p.pure_dmg
-			end
-			if p.tmp_dmg ~= 0xFF then
-				p.last_dmg = p.tmp_dmg
-				p.tmp_combo_dmg = p.tmp_combo_dmg + p.tmp_dmg
-				p.last_combo = p.tmp_combo
-				p.last_combo_dmg = p.tmp_combo_dmg
-				p.last_dmg_scaling = p.dmg_scaling
-				p.max_dmg = math.max(p.max_dmg, p.tmp_combo_dmg)
-				p.last_stun = p.tmp_stun
-				p.last_st_timer = p.tmp_st_timer
-				p.last_combo_stun = p.stun - p.last_combo_stun_offset
-				p.last_combo_st_timer = math.max(0, p.stun_timer - p.last_combo_st_timer_offset)
-				p.max_disp_stun = math.max(p.max_disp_stun, p.last_combo_stun)
-				p.max_st_timer = math.max(p.max_st_timer, p.last_combo_st_timer)
-				p.init_stun = p.char_data.init_stuns
 			end
 
 			do_recover(p, op)
@@ -11629,11 +5861,38 @@ rbff2.startplugin = function()
 			local op = p.op
 			if p.control == 1 or p.control == 2 then
 				--前進とガード方向
-				local sp = p_space == 0 and prev_p_space or p_space
+				local sp = p_space == 0 and prev_space or p_space
 				sp = i == 1 and sp or (sp * -1)
-				local lt, rt = "P" .. p.control .. " Left", "P" .. p.control .. " Right"
-				p.block_side = 0 < sp and rt or lt
-				p.front_side = 0 < sp and lt or rt
+				local front_back = {
+					[data.cmd_types.front] = 0 < sp and data.cmd_types._4 or data.cmd_types._6,
+					[data.cmd_types.back] = 0 < sp and data.cmd_types._6 or data.cmd_types._4,
+				}
+				local check_cmd_hook = function()
+					p.bs_hook = (p.bs_hook and p.bs_hook.cmd_type) and p.bs_hook or { cmd_type = data.cmd_types._5 }
+				end
+				local add_cmd_hook = function(input)
+					check_cmd_hook()
+					input = front_back[input] or input
+					p.bs_hook.cmd_type = p.bs_hook.cmd_type & data.cmd_masks[input]
+					p.bs_hook.cmd_type = p.bs_hook.cmd_type | input
+				end
+				local clear_cmd_hook = function(mask)
+					check_cmd_hook()
+					mask = 0xFF ~ (front_back[mask] or mask)
+					p.bs_hook.cmd_type = p.bs_hook.cmd_type & mask
+				end
+				local reset_cmd_hook = function(input)
+					check_cmd_hook()
+					input = front_back[input] or input
+					p.bs_hook = { cmd_type = input }
+				end
+				local is_block_cmd_hook = function()
+					return p.bs_hook and p.bs_hook.cmd_type and
+						util.testbit(p.bs_hook.cmd_type, front_back[data.cmd_types.back]) and
+						util.testbit(p.bs_hook.cmd_type, data.cmd_types._2) ~= true
+				end
+				local reset_sp_hook = function(hook) p.bs_hook = hook end
+				reset_sp_hook()
 
 				-- レコード中、リプレイ中は行動しないためのフラグ
 				local accept_control = true
@@ -11649,41 +5908,33 @@ rbff2.startplugin = function()
 				-- { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" },
 				-- レコード中、リプレイ中は行動しない
 				if accept_control then
-					if p.dummy_act == 1 then
-					elseif p.dummy_act == 2 and p.sway_status == 0x00 then
-						next_joy["P" .. p.control .. " Down"] = true
+					if p.dummy_act == 2 and p.sway_status == 0x00 then
+						reset_cmd_hook(data.cmd_types._2) -- しゃがみ
 					elseif p.dummy_act == 3 and p.sway_status == 0x00 then
-						next_joy["P" .. p.control .. " Up"] = true
-					elseif p.dummy_act == 4 and p.sway_status == 0x00 and p.state_bits[18] ~= 1 then
-						-- 地上のジャンプ移行モーション以外だったら上入力
-						next_joy["P" .. p.control .. " Up"] = true
+						reset_cmd_hook(data.cmd_types._8) -- ジャンプ
+					elseif p.dummy_act == 4 and p.sway_status == 0x00 and util.testbit(p.flag_c0, state_flag_c0._17) then
+						reset_cmd_hook(data.cmd_types._8) -- 地上のジャンプ移行モーション以外だったら上入力 TODO 修正する
 					elseif p.dummy_act == 5 then
 						if p.in_sway_line ~= true and p.state == 0 and op.in_sway_line ~= true and op.act ~= 0x65 and op.act ~= 0x66 then
-							if joy_val["P" .. p.control .. " D"] < 0 then
-								next_joy["P" .. p.control .. " D"] = true
-							end
-							next_joy["P" .. p.control .. " Down"] = true
+							reset_cmd_hook(data.cmd_types._2d) -- スウェー移動
 						elseif p.in_sway_line == true then
-							next_joy["P" .. p.control .. " Up"] = true
+							reset_cmd_hook(data.cmd_types._8) -- スウェー待機
 						end
 					end
 				end
 
-				-- なし, オート, 1ヒットガード, 1ガード, 常時, ランダム, 強制
-				if p.dummy_gd == dummy_gd_type.force then
-					pgm:write_u8(p.addr.force_block, 0x01)
-				else
-					pgm:write_u8(p.addr.force_block, 0x00)
+				local act_type = op.act_data.type
+				for _, fb in pairs(op.fireballs) do
+					if fb.proc_active and fb.act_data then act_type = act_type | fb.act_data.type end
 				end
 				-- リプレイ中は自動ガードしない
-				if (p.need_block or p.need_low_block or p.need_ovh_block) and accept_control then
+				if util.testbit(act_type, act_types.attack) and accept_control then
 					if jump_acts[p.act] then
-						next_joy["P" .. p.control .. " Up"] = false
+						clear_cmd_hook(data.cmd_types._8)
 					end
 					if p.dummy_gd == dummy_gd_type.fixed then
 						-- 常時（ガード方向はダミーモードに従う）
-						next_joy[p.block_side] = true
-						p.backstep_killer = true
+						add_cmd_hook(data.cmd_types.back)
 					elseif p.dummy_gd == dummy_gd_type.auto or     -- オート
 						p.dummy_gd == dummy_gd_type.bs or          -- ブレイクショット
 						(p.dummy_gd == dummy_gd_type.random and p.random_boolean) or -- ランダム
@@ -11691,31 +5942,24 @@ rbff2.startplugin = function()
 						(p.dummy_gd == dummy_gd_type.block1)       -- 1ガード
 					then
 						-- 中段から優先
-						if p.need_ovh_block then
-							next_joy["P" .. p.control .. " Down"] = false
-							p.backstep_killer = true
-						elseif p.need_low_block then
-							next_joy["P" .. p.control .. " Up"] = false
-							next_joy["P" .. p.control .. " Down"] = true
-							p.backstep_killer = false
-						else
-							p.backstep_killer = true
+						if util.testbit(act_type, act_types.overhead, true) then
+							clear_cmd_hook(data.cmd_types._2)
+						elseif util.testbit(act_type, act_types.low_attack, true) then
+							add_cmd_hook(data.cmd_types._2)
 						end
 						if p.dummy_gd == dummy_gd_type.block1 and p.next_block ~= true then
 							-- 1ガードの時は連続ガードの上下段のみ対応させる
-							next_joy[p.block_side] = false
-							p.backstep_killer = false
+							clear_cmd_hook(data.cmd_types.back)
 						else
-							next_joy[p.block_side] = true
+							add_cmd_hook(data.cmd_types.back)
 						end
 					end
-				else
-					if p.backstep_killer then
-						-- コマンド入力状態を無効にしてバクステ暴発を防ぐ
-						local bs_addr = dip_config.easy_super and p.char_data.easy_bs_addr or p.char_data.bs_addr
-						pgm:write_u8(p.input_offset + bs_addr, 0x00)
-						p.backstep_killer = false
-					end
+					p.backstep_killer = is_block_cmd_hook()
+				elseif p.backstep_killer then
+					-- コマンド入力状態を無効にしてバクステ暴発を防ぐ
+					local bs_addr = dip_config.easy_super and p.char_data.easy_bs_addr or p.char_data.bs_addr
+					mem.w8(p.input_offset + bs_addr, 0x00)
+					p.backstep_killer = false
 				end
 
 				-- 次のガード要否を判断する
@@ -11765,49 +6009,8 @@ rbff2.startplugin = function()
 				end
 
 				--挑発中は前進
-				if p.fwd_prov and op.provoke then
-					next_joy[p.front_side] = true
-				end
-
-				local input_bs = function()
-					p.write_bs_hook(p.dummy_bs)
-				end
-				local input_rvs = function(rvs_type, p, logtxt)
-					if global.log.rvslog and logtxt then
-						print(logtxt)
-					end
-					if p.dummy_rvs.throw then
-						if p.act == 0x9 and p.act_frame > 1 then -- 着地硬直は投げでないのでスルー
-							return
-						end
-						if op.in_air then
-							return
-						end
-						if op.sway_status ~= 0x00 then -- 全投げ無敵
-							return
-						end
-						if p.dummy_rvs.cmd then -- 通常投げ
-							if not p.n_throwable or not p.throw.in_range then
-								--return
-							end
-						end
-					elseif p.dummy_rvs.jump then
-						if p.state == 0 and p.old_state == 0 and (p.flag_c0 | p.old_flag_c0) & 0x10000 == 0x10000 then
-							-- 連続通常ジャンプを繰り返さない
-							return
-						end
-					end
-					if p.dummy_rvs.cmd then
-						if rvs_types.knock_back_recovery ~= rvs_type then
-							if (((p.flag_c0 | p.old_flag_c0) & 0x2 == 0x2) or pre_down_acts[p.act]) and p.dummy_rvs.cmd == cmd_base._2d then
-								-- no act
-							else
-								p.dummy_rvs.cmd(p, next_joy)
-							end
-						end
-					else
-						p.write_bs_hook(p.dummy_rvs)
-					end
+				if p.fwd_prov and util.testbit(op.act_data.type, act_types.provoke) then
+					add_cmd_hook(data.cmd_types.front)
 				end
 
 				-- ガードリバーサル
@@ -11825,55 +6028,57 @@ rbff2.startplugin = function()
 				end
 
 				-- TODO: ライン送られのリバーサルを修正する。猶予1F
-				-- print(p.state, p.knock_back1, p.knock_back2, p.knock_back3, p.stop, rvs_types.in_knock_back, p.last_blockstun, string.format("%x", p.act), p.act_count, p.act_frame)
+				-- print(p.state, p.knock_back1, p.knock_back2, p.knock_back3, p.hitstop_remain, rvs_types.in_knock_back, p.last_blockstun, string.format("%x", p.act), p.act_count, p.act_frame)
 				-- ヒットストップ中は無視
 				if not p.skip_frame then
 					-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
-					if (p.dummy_wakeup == wakeup_type.tech or p.dummy_wakeup == wakeup_type.sway or p.dummy_wakeup == wakeup_type.rvs) and p.dummy_rvs then
+					if rvs_wake_types[p.dummy_wakeup] and p.dummy_rvs then
 						-- ダウン起き上がりリバーサル入力
 						if wakeup_acts[p.act] and (p.char_data.wakeup_frms - 3) <= (global.frame_number - p.on_wakeup) then
-							input_rvs(rvs_types.on_wakeup, p, string.format("ダウン起き上がりリバーサル入力1 %s %s",
+							input_rvs(rvs_types.on_wakeup, p, string.format("[Reversal] wakeup %s %s",
 								p.char_data.wakeup_frms, (global.frame_number - p.on_wakeup)))
 						end
 						-- 着地リバーサル入力（やられの着地）
 						if 1 < p.pos_y_down and p.old_pos_y > p.pos_y and p.in_air ~= true then
-							input_rvs(rvs_types.knock_back_landing, p, "着地リバーサル入力（やられの着地）")
+							input_rvs(rvs_types.knock_back_landing, p, "[Reversal] blown landing")
 						end
 						-- 着地リバーサル入力（通常ジャンプの着地）
 						if p.act == 0x9 and (p.act_frame == 2 or p.act_frame == 0) then
-							input_rvs(rvs_types.jump_landing, p, "着地リバーサル入力（通常ジャンプの着地）")
+							input_rvs(rvs_types.jump_landing, p, "[Reversal] jump landing")
 						end
 						-- リバーサルじゃない最速入力
 						if p.state == 0 and p.act_data.name ~= "やられ" and p.old_act_data.name == "やられ" and p.knock_back1 == 0 then
-							input_rvs(rvs_types.knock_back_recovery, p, "リバーサルじゃない最速入力")
+							input_rvs(rvs_types.knock_back_recovery, p, "[Reversal] blockstun 1")
 						end
 						-- のけぞりのリバーサル入力
-						if (p.state == 1 or (p.state == 2 and p.gd_rvs_enabled)) and p.stop == 0 then
+						if (p.state == 1 or (p.state == 2 and p.gd_rvs_enabled)) and p.hitstop_remain == 0 then
 							-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する
 							-- 奥ラインへ送った場合だけ無視する（p.act ~= 0x14A）
 							if p.knock_back3 == 0x80 and p.knock_back1 == 0 and p.act ~= 0x14A then
-								input_rvs(rvs_types.in_knock_back, p, "のけぞり中のデータをみてのけぞり終了の2F前に入力確定する1")
+								-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する1
+								input_rvs(rvs_types.in_knock_back, p, "[Reversal] blockstun 2")
 							elseif p.old_knock_back1 > 0 and p.knock_back1 == 0 then
-								input_rvs(rvs_types.in_knock_back, p, "のけぞり中のデータをみてのけぞり終了の2F前に入力確定する2")
+								-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する2
+								input_rvs(rvs_types.in_knock_back, p, "[Reversal] blockstun 3")
 							end
 							-- デンジャラススルー用
-							if p.knock_back3 == 0x0 and p.stop < 3 and p.base == 0x34538 then
-								input_rvs(rvs_types.dangerous_through, p, "デンジャラススルー用")
+							if p.knock_back3 == 0x0 and p.hitstop_remain < 3 and p.base == 0x34538 then
+								input_rvs(rvs_types.dangerous_through, p, "[Reversal] blockstun 4")
 							end
-						elseif p.state == 3 and p.stop == 0 and p.knock_back2 <= 1 then
+						elseif p.state == 3 and p.hitstop_remain == 0 and p.knock_back2 <= 1 then
 							-- 当身うち空振りと裏雲隠し用
-							input_rvs(rvs_types.atemi, p, "当身うち空振りと裏雲隠し用")
+							input_rvs(rvs_types.atemi, p, "[Reversal] blockstun 5")
 						end
 						-- 奥ラインへ送ったあとのリバサ
-						if p.act == 0x14A and (p.act_count == 4 or p.act_count == 5) and p.old_act_frame == 0 and p.act_frame == 0 and p.tw_frame == 0 then
-							input_rvs(rvs_types.in_knock_back, p, string.format("奥ラインへ送ったあとのリバサ %x %x %x %s", p.act, p.act_count, p.act_frame, p.tw_frame))
+						if p.act == 0x14A and (p.act_count == 4 or p.act_count == 5) and p.old_act_frame == 0 and p.act_frame == 0 and p.throw_timer == 0 then
+							input_rvs(rvs_types.in_knock_back, p, string.format("[Reversal] plane shift %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer))
 						end
 						-- テクニカルライズのリバサ
-						if p.act == 0x2C9 and p.act_count == 2 and p.act_frame == 0 and p.tw_frame == 0 then
-							input_rvs(rvs_types.in_knock_back, p, string.format("テクニカルライズのリバサ1 %x %x %x %s", p.act, p.act_count, p.act_frame, p.tw_frame))
+						if p.act == 0x2C9 and p.act_count == 2 and p.act_frame == 0 and p.throw_timer == 0 then
+							input_rvs(rvs_types.in_knock_back, p, string.format("[Reversal] tech-rise1 %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer))
 						end
-						if p.act == 0x2C9 and p.act_count == 0 and p.act_frame == 2 and p.tw_frame == 0 then
-							input_rvs(rvs_types.in_knock_back, p, string.format("テクニカルライズのリバサ2 %x %x %x %s", p.act, p.act_count, p.act_frame, p.tw_frame))
+						if p.act == 0x2C9 and p.act_count == 0 and p.act_frame == 2 and p.throw_timer == 0 then
+							input_rvs(rvs_types.in_knock_back, p, string.format("[Reversal] tech-rise2 %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer))
 						end
 						-- グランドスウェー
 						local sway_act_frame = 0
@@ -11881,107 +6086,43 @@ rbff2.startplugin = function()
 							sway_act_frame = 1
 						end
 						if p.act == 0x13E and p.act_count == p.char_data.sway_act_counts and p.act_frame == sway_act_frame then
-							input_rvs(rvs_types.in_knock_back, p, string.format("グランドスウェーのあとのリバサ %x %x %x %s", p.act, p.act_count, p.act_frame, p.tw_frame))
+							input_rvs(rvs_types.in_knock_back, p, string.format("[Reversal] ground sway %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer))
 						end
-					end
-					if p.dummy_wakeup == wakeup_type.tech and p.on_down == global.frame_number then
-						-- テクニカルライズ入力
-						cmd_base._2d(p, next_joy)
-					elseif p.dummy_wakeup == wakeup_type.sway and p.on_down == global.frame_number then
-						-- グランドスウェー入力
-						cmd_base._8d(p, next_joy)
-					elseif p.dummy_wakeup == wakeup_type.atk and p.on_down == global.frame_number and (p.char == 0x04 or p.char == 0x07 or p.char == 0x0A or p.char == 0x0B) then
-						-- 起き上がり攻撃入力
-						-- 舞、ボブ、フランコ、山崎のみなのでキャラをチェックする
-						p.write_bs_hook({ id = 0x23, ver = 0x7800, bs = false, name = "起き上がり攻撃", })
 					end
 				end
 
 				-- 自動ダウン追撃
 				if op.act == 0x190 or op.act == 0x192 or op.act == 0x18E or op.act == 0x13B then
-					-- 自動ダウン投げ
-					-- TODO 間合い管理
-					if global.auto_input.otg_thw then
-						if p.char == 5 then
-							-- ギース
-							p.write_bs_hook({ id = 0x06, ver = 0x0600, bs = false, name = "雷鳴豪波投げ", })
-						elseif p.char == 9 then
-							-- マリー
-							p.write_bs_hook({ id = 0x08, ver = 0x06F9, bs = false, name = "M.ダイナマイトスウィング", })
-						end
+					if global.auto_input.otg_thw and p.char_data.otg_throw then
+						reset_sp_hook(p.char_data.otg_throw) -- 自動ダウン投げ
 					end
-					-- 自動ダウン攻撃
-					-- TODO 間合い管理
-					if global.auto_input.otg_atk then
-						if p.char == 9 then
-							-- マリー
-							p.write_bs_hook({ id = 0x24, ver = 0x0600, bs = false, name = "レッグプレス", })
-						elseif p.char == 11 then
-							-- 山崎
-							p.write_bs_hook({ id = 0x09, ver = 0x0C00, bs = false, name = "トドメ", })
-						elseif p.char == 3 or p.char == 6 or p.char == 7 or p.char == 8 or p.char == 14 or p.char == 20 then
-							-- ジョー、双角、ボブ、ホンフゥ、ダック、クラウザー
-							-- TODO ホンフゥはタイミングがわるいと全然あたらない
-							p.write_bs_hook({ id = 0x21, ver = 0x0600, bs = false, name = "ダウン攻撃", })
-						end
+					if global.auto_input.otg_atk and p.char_data.otg_stomp then
+						reset_sp_hook(p.char_data.otg_stomp) -- 自動ダウン攻撃
 					end
 				end
 
 				-- 自動投げ追撃
 				if global.auto_input.thw_otg then
-					if p.char == 7 then
-						-- ボブ
-						if p.act == 0x6D and p.act_count == 5 and p.act_frame == 0 then
-							p.write_bs_hook({ id = 0x00, ver = 0x1EFF, bs = false, name = "ホーネットアタック", })
-						end
-					elseif p.char == 3 then
-						-- ジョー
-						if p.act == 0x70 and p.act_count == 0 and p.act_frame == 11 then
-							cmd_base._2c(p, next_joy)
-						end
-					elseif p.char == 5 then
-						-- ギース
-						if p.act == 0x6D and p.act_count == 0 and p.act_frame == 0 then
-							p.write_bs_hook({ id = 0x50, ver = 0x0600, bs = false, name = "絶命人中打ち", })
-						end
-					elseif p.char == 6 then
-						-- 双角
-						if p.act == 0x6D and p.act_count == 0 and p.act_frame == 0 then
-							p.write_bs_hook({ id = 0x50, ver = 0x0600, bs = false, name = "地獄門", })
-						end
-					elseif p.char == 9 then
-						-- マリー
-						if p.act == 0x6D and p.act_count == 0 and p.act_frame == 0 then
-							p.write_bs_hook({ id = 0x50, ver = 0x0600, bs = false, name = "アキレスホールド", })
-						end
-					elseif p.char == 22 then
-						if p.act == 0xA1 and p.act_count == 6 and p.act_frame >= 0 then
-							p.write_bs_hook({ id = 0x03, ver = 0x06FF, bs = false, name = "閃里肘皇", })
-						end
+					if p.char == 3 and p.act == 0x70 then
+						reset_cmd_hook(data.cmd_types._2c) -- ジョー
+					elseif p.act == 0x6D and p.char_data.add_throw then
+						reset_sp_hook(p.char_data.add_throw) -- ボブ、ギース、双角、マリー
+					elseif p.char == 22 and p.act == 0x9F and p.act_count == 2 and p.act_frame >= 0 and p.char_data.add_throw then
+						reset_sp_hook(p.char_data.add_throw) -- 閃里肘皇・心砕把
 					end
 				end
+
 				-- 自動超白龍
 				if 1 < global.auto_input.pairon and p.char == 22 then
 					if p.act == 0x43 and p.act_count >= 0 and p.act_count <= 3 and p.act_frame >= 0 and 2 == global.auto_input.pairon then
-						p.write_bs_hook({ id = 0x11, ver = 0x06FD, bs = false, name = "超白龍", })
+						reset_sp_hook(data.rvs_bs_list[p.char][28]) -- 超白龍
 					elseif p.act == 0x43 and p.act_count == 3 and p.act_count <= 3 and p.act_frame >= 0 and 3 == global.auto_input.pairon then
-						p.write_bs_hook({ id = 0x11, ver = 0x06FD, bs = false, name = "超白龍", })
-					elseif p.act == 0x9F and p.act_count == 2 and p.act_frame >= 0 then
-						--p.write_bs_hook({ id = 0x00, ver = 0x06FE, bs = false, name = "閃里肘皇・心砕把", })
+						reset_sp_hook(data.rvs_bs_list[p.char][28]) -- 超白龍
+					elseif p.act == 0xA1 and p.act_count == 6 and p.act_frame >= 0 then
+						reset_sp_hook(data.rvs_bs_list[p.char][21]) -- 閃里肘皇・貫空
 					end
-					--p.write_bs_hook({ id = 0x00, ver = 0x06FD, bs = false, name = "超白龍2", })
-				end
-				-- 自動M.リアルカウンター
-				if 1 < global.auto_input.real_counter and p.char == 9 then
-					if p.act == 0xA5 and p.act_count == 0 then
-						local real_tw = global.auto_input.real_counter == 5 and math.random(2, 4) or global.auto_input.real_counter
-						if 2 == real_tw then
-							cmd_base._a(p, next_joy)
-						elseif 3 == real_tw then
-							cmd_base._b(p, next_joy)
-						elseif 4 == real_tw then
-							cmd_base._c(p, next_joy)
-						end
+					if p.act == 0xFE then
+						reset_sp_hook(data.rvs_bs_list[p.char][29]) -- 超白龍2
 					end
 				end
 
@@ -11989,7 +6130,7 @@ rbff2.startplugin = function()
 				if p.dummy_gd == dummy_gd_type.bs and p.on_block == global.frame_number then
 					p.bs_count = (p.bs_count < 1) and 1 or p.bs_count + 1
 					if global.dummy_bs_cnt <= p.bs_count and p.dummy_bs then
-						input_bs()
+						reset_sp_hook(p.dummy_bs)
 						p.bs_count = -1
 					end
 				end
@@ -12013,46 +6154,31 @@ rbff2.startplugin = function()
 			end
 		end
 
-		-- ヒットしない処理のデータ更新
-		for _, p in ipairs(players) do
-			pgm:write_u8(p.addr.no_hit, p.no_hit_limit == 0 and 0xFF or (p.no_hit_limit - 1))
-		end
-
 		-- Y座標強制
 		for _, p in ipairs(players) do
 			if p.force_y_pos > 1 then
-				pgm:write_i16(p.addr.pos_y, force_y_pos[p.force_y_pos])
+				mem.w16i(p.addr.pos_y, force_y_pos[p.force_y_pos])
 			end
 		end
 		-- X座標同期とY座標をだいぶ下に
 		if global.sync_pos_x ~= 1 then
 			local from = global.sync_pos_x - 1
 			local to   = 3 - from
-			pgm:write_i16(players[to].addr.pos, players[from].pos)
-			pgm:write_i16(players[to].addr.pos_y, players[from].pos_y - 124)
+			mem.w16i(players[to].addr.pos, players[from].pos)
+			mem.w16i(players[to].addr.pos_y, players[from].pos_y - 124)
 		end
 
 		-- 強制ポーズ処理
 		global.pause = false
+		-- 判定が出たらポーズさせる
+		for _, box in ipairs(hitboxies) do
+			if (box.type.kind == box_kinds.throw and global.pause_hitbox == 2) or
+				((box.type.kind == box_kinds.attack or box.type.kind == box_kinds.parry) and global.pause_hitbox == 3) then
+				global.pause = true
+				break
+			end
+		end
 		for _, p in ipairs(players) do
-			-- 判定が出たらポーズさせる
-			for _, box in ipairs(p.hitboxes) do
-				if (box.type.type == "throw" and global.pause_hitbox == 2) or
-					((box.type.type == "attack" or box.type.type == "atemi") and global.pause_hitbox == 3) then
-					global.pause = true
-					break
-				end
-			end
-			for _, fb in pairs(p.fireball) do
-				for _, box in ipairs(fb.hitboxes) do
-					if (box.type.type == "throw" and global.pause_hitbox == 2) or
-						(box.type.type == "attack" and global.pause_hitbox == 3) then
-						global.pause = true
-						break
-					end
-				end
-			end
-
 			-- ヒット時にポーズさせる
 			if p.state ~= 0 and p.state ~= p.old_state and global.pause_hit > 0 then
 				-- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
@@ -12068,246 +6194,24 @@ rbff2.startplugin = function()
 	end
 
 	local draw_summary = function(i, summary)
-		if summary == nil or #summary == 0 then
-			return summary
-		end
+		if summary == nil or #summary == 0 then return summary end
 		local x, y = i == 1 and 162 or 2, 2
 		scr:draw_box(x - 2, y - 2, x + 158, y + 2 + 7 * #summary, 0x80404040, 0x80404040)
 		for _, row in ipairs(summary) do
 			local k, v, frame = row[1], row[2], row[3] or 0
 			local col = global.frame_number == frame and 0xFF00FFFF or 0xFFFFFFFF
 			scr:draw_text(x, y, k, col)
-			if v then
-				if type(v) == "number" then
-					scr:draw_text(x + 47, y, v .. "", col)
-				else
-					scr:draw_text(x + 47, y, v, col)
-				end
-			end
+			if v then scr:draw_text(x + 47, y, v .. "", col) end
 			y = y + 7
-		end
-	end
-
-	local draw_hitbox = function(left, top, right, bottom, outline, fill, over_left, over_top, over_right, over_bottom)
-		if outline and 0 < outline then
-			if over_left ~= true then
-				scr:draw_box(left, top, left + 1, bottom, 0, outline)
-			end
-			if over_top ~= true then
-				scr:draw_box(left, top, right, top + 1, 0, outline)
-			end
-			if over_right ~= true then
-				scr:draw_box(right + 1, top, right, bottom, 0, outline)
-			end
-			if over_bottom ~= true then
-				scr:draw_box(left, bottom + 1, right, bottom, 0, outline)
-			end
-		end
-		if fill and 0 < fill then
-			scr:draw_box(left, top, right, bottom, outline, fill)
-		end
-	end
-	local draw_vline = function(x1, y1, y2, color)
-		scr:draw_box(x1, y1, x1 + 1, y2 + 1, 0, color)
-	end
-	local draw_hline = function(x1, x2, y1, color)
-		scr:draw_box(x1, y1, x2 + 1, y1 + 1, 0, color)
-	end
-	local draw_axis = function(i, p, x, col)
-		if x then
-			local axis = p.disp_hitbox == 2 and global.axis_size or global.axis_size2
-			draw_vline(x, p.hit.pos_y - axis, p.hit.pos_y + axis, col)
-			draw_hline(x - axis, x + axis, p.hit.pos_y, col)
-			if p.disp_hitbox == 2 then
-				draw_text_with_shadow(x - 1.5, p.hit.pos_y + axis, string.format("%d", i), col)
-			end
-		end
-	end
-	local draw_esaka = function(i, x, col)
-		if x and 0 <= x then
-			local y1, y2 = 0, 200 + global.axis_size
-			draw_vline(x, y1, y2, col)
-			draw_text_with_shadow(x - 2.5, y2, string.format("え%d", i), col)
-		end
-	end
-	local draw_close_far = function(i, p, btn, x1, x2)
-		local op = p.op
-		if x1 and x2 then
-			local diff = math.abs(p.pos - op.pos)
-			local in_range = x1 <= diff and diff <= x2
-			x1 = p.hit.pos_x + x1 * p.side
-			x2 = p.hit.pos_x + x2 * p.side
-			-- 間合い
-			local color = in_range and 0xFFFFFF00 or 0xFFBBBBBB
-			draw_hline(x2 - 2, x2 + 2, p.hit.pos_y, color)
-			draw_vline(x2, p.hit.pos_y - 2, p.hit.pos_y + 2, color)
-			if in_range then
-				draw_text_with_shadow(x2 - 2.5, p.hit.pos_y + 4, string.format("%s%d", btn, i), color)
-			end
-		end
-	end
-
-	local table_add_all = function(t1, t2, pre_add)
-		for _, r in ipairs(t2) do
-			if pre_add then
-				pre_add(r)
-			end
-			table.insert(t1, r)
 		end
 	end
 
 	menu.tra_main.draw = function()
 		-- メイン処理
-		if match_active then
-			-- 判定表示（キャラ、飛び道具）
-			local hitboxes = {}
-			for _, p in ipairs(players) do
-				if p.disp_hitbox > 1 then
-					local callback = nil
-					if p.disp_hitbox == 3 then
-						callback = function(box)
-							box.type_count = nil
-						end
-					end
-					table_add_all(hitboxes, p.hitboxes, callback)
-					for _, fb in pairs(p.fireball) do
-						if fb.hitboxes == nil then
-							-- ラウンド開始直後のラグ扱いフレームでエラーが出るのでスキップする
-							return
-						end
-						table_add_all(hitboxes, fb.hitboxes, callback)
-					end
-				end
-			end
-			table.sort(hitboxes, function(box1, box2)
-				return (box1.type.sort < box2.type.sort)
-			end)
-			for _, box in ipairs(hitboxes) do
-				if box.flat_throw then
-					if box.visible == true and box.type.enabled == true then
-						if global.no_background ~= true then
-							draw_hitbox(box.left, box.top - 8, box.right, box.bottom + 8, box.type.fill, box.type.fill)
-						end
-						draw_hline(box.left, box.right, box.bottom, box.type.outline)
-						draw_vline(box.left, box.top - 8, box.bottom + 8, box.type.outline)
-						draw_vline(box.right, box.top - 8, box.bottom + 8, box.type.outline)
-					end
-				else
-					if box.visible == true and box.type.enabled == true then
-						-- 背景なしの場合は判定の塗りつぶしをやめる
-						if global.no_background then
-							draw_hitbox(box.left, box.top, box.right, box.bottom, box.type.outline, 0,
-								box.over_left, box.over_top, box.over_right, box.over_bottom)
-						else
-							draw_hitbox(box.left, box.top, box.right, box.bottom, box.type.outline, box.type.fill,
-								box.over_left, box.over_top, box.over_right, box.over_bottom)
-						end
-						if box.type_count then
-							local x1, x2 = math.min(box.left, box.right), math.max(box.left, box.right)
-							local y1, y2 = math.min(box.top, box.bottom), math.max(box.top, box.bottom)
-							local x = math.floor((x2 - x1) / 2) + x1 - 2
-							local y = math.floor((y2 - y1) / 2) + y1 - 4
-							scr:draw_text(x + 0.5, y + 0.5, box.type_count .. "", shadow_col)
-							scr:draw_text(x, y, box.type_count .. "", box.type.outline)
-						end
-					end
-				end
-			end
-
-			-- 座標表示
-			for i, p in ipairs(players) do
-				if p.in_air ~= true and p.sway_status == 0x00 then
-					-- 通常投げ間合い
-					if p.disp_range == 2 or p.disp_range == 3 then
-						local color = p.throw.in_range and 0xFFFFFF00 or 0xFFBBBBBB
-						draw_hline(p.throw.x1, p.throw.x2, p.hit.pos_y, color)
-						draw_vline(p.throw.x1, p.hit.pos_y - 4, p.hit.pos_y + 4, color)
-						draw_vline(p.throw.x2, p.hit.pos_y - 4, p.hit.pos_y + 4, color)
-						if p.throw.in_range then
-							draw_text_with_shadow(p.throw.x1 + 2.5, p.hit.pos_y + 4, string.format("投%d", i), color)
-						end
-					end
-
-					-- 地上通常技の遠近判断距離
-					if p.disp_range == 2 or p.disp_range == 4 then
-						for btn, range in pairs(p.close_far) do
-							draw_close_far(i, p, string.upper(btn), range.x1, range.x2)
-						end
-					end
-				elseif p.sway_status == 0x80 then
-					-- ライン移動技の遠近判断距離
-					if p.disp_range == 2 or p.disp_range == 4 then
-						for btn, range in pairs(p.close_far_lma) do
-							draw_close_far(i, p, string.upper(btn), range.x1, range.x2)
-						end
-					end
-				elseif p.air_throw.can_throw == true or p.air_throw.on == 0x1 then
-					-- 通常投げ間合い
-					if p.disp_range == 2 or p.disp_range == 3 then
-						local color = p.air_throw.in_range and 0xFFFFFF00 or 0xFFBBBBBB
-						draw_hitbox(
-							p.air_throw.x1 + p.hit.pos_x,
-							p.air_throw.y1 + p.hit.old_pos_y,
-							p.air_throw.x2 + p.hit.pos_x,
-							p.air_throw.y2 + p.hit.old_pos_y,
-							color,
-							0,
-							false, false, false, false)
-						if p.air_throw.in_range then
-							draw_text_with_shadow(p.air_throw.x1 + 2.5, 0, string.format("投%d", i), color)
-						end
-					end
-				end
-
-				-- 詠酒範囲
-				if p.disp_range == 2 or p.disp_range == 5 then
-					if p.esaka_range > 0 then
-						draw_esaka(i, p.hit.pos_x + p.esaka_range, global.axis_internal_color)
-						draw_esaka(i, p.hit.pos_x - p.esaka_range, global.axis_internal_color)
-					end
-				end
-
-				-- 中心座標
-				if p.disp_hitbox > 1 then
-					draw_axis(i, p, p.hit.pos_x, p.in_air == true and global.axis_air_color or global.axis_color)
-					if p.disp_hitbox == 2 then
-						draw_axis(i, p, p.hit.max_pos_x, global.axis_internal_color)
-						draw_axis(i, p, p.hit.min_pos_x, global.axis_internal_color)
-					end
-				end
-			end
-
-			for _, p in ipairs(players) do
-				printf("%x %s x=%s y=%s z=%s left=%s left=%s top=%s", p.addr.base, p.box_debug_cnt, p.pos, p.pos_y, p.pos_z, screen.left, screen.left_raw, screen.top)
-				printf("%x %s x=%s y=%s", p.addr.base, p.box_debug_cnt, p.hit.pos_x, p.hit.pos_y)
-				local x = p.pos - screen.left
-				local y = screen.top - p.pos_y - p.pos_z
-				local flip_x = (p.flip_x1 ~ p.flip_x2) > 0 and 1 or -1
-				local push_box = fix_box_scale(p, get_push_box(p))
-				scr:draw_box(
-					0xFFFF & (x - push_box.x1 * flip_x),
-					0xFFFF & (y - push_box.y1),
-					0xFFFF & (x - push_box.x2 * flip_x),
-					0xFFFF & (y - push_box.y2),
-					0xFFFFFFFF,
-					0)
-				print(push_box.log)
-
-				for _, box in ipairs(p.box_debug) do
-					if p.box_debug_cnt > 0 then
-						box = fix_box_scale(p, box, box)
-					end
-					scr:draw_box(
-						0xFFFF & (x - box.x1 * flip_x),
-						0xFFFF & (y - box.y1),
-						0xFFFF & (x - box.x2 * flip_x),
-						0xFFFF & (y - box.y2),
-						0xFFFFFFFF,
-						0)
-					print(box.log)
-				end
-				p.box_debug_cnt = 0
-			end
+		if in_match then
+			-- 順番に判定表示（キャラ、飛び道具）
+			for _, range in ipairs(ranges) do draw_range(range) end -- 座標と範囲
+			for _, box in ipairs(hitboxies) do draw_hitbox(box) end -- 各種判定
 
 			-- スクショ保存
 			for _, p in ipairs(players) do
@@ -12316,8 +6220,7 @@ rbff2.startplugin = function()
 				local chg_hit = p.chg_hitbox_frm == global.frame_number
 				local chg_hurt = p.chg_hurtbox_frm == global.frame_number
 				local chg_sway = p.on_sway_line == global.frame_number or p.on_main_line == global.frame_number
-				local chg_actc = p.atk_count ~= 1 and (p.old_act_count ~= p.act_count)
-				for _, fb in pairs(p.fireball) do
+				for _, fb in pairs(p.fireballs) do
 					if fb.chg_hitbox_frm == global.frame_number then
 						chg_hit = true
 					end
@@ -12337,21 +6240,17 @@ rbff2.startplugin = function()
 					-- 画像保存先のディレクトリ作成
 					local frame_group = p.act_frames2[#p.act_frames2]
 					local name, sub_name, dir_name = frame_group[#frame_group].name, "_", base_path() .. "/capture"
-					mkdir(dir_name)
+					util.mkdir(dir_name)
 					dir_name = dir_name .. "/" .. p.char_data.names2
-					mkdir(dir_name)
-					if p.slide_atk then
-						sub_name = "_SLIDE_"
-					elseif p.bs_atk then
-						sub_name = "_BS_"
-					end
+					util.mkdir(dir_name)
+					if p.slide_atk then sub_name = "_SLIDE_" elseif p.bs_atk then sub_name = "_BS_" end
 					name = string.format("%s%s%04x_%s_%03d", p.char_data.names2, sub_name, p.act_data.id_1st or 0, name, p.atk_count)
 					dir_name = dir_name .. string.format("/%04x", p.act_data.id_1st or 0)
-					mkdir(dir_name)
+					util.mkdir(dir_name)
 
 					-- ファイル名を設定してMAMEのスクショ機能で画像保存
 					local filename, dowrite = dir_name .. "/" .. name .. ".png", false
-					if is_file(filename) then
+					if util.is_file(filename) then
 						if global.save_snapshot == 3 then
 							dowrite = true
 							os.remove(filename)
@@ -12370,9 +6269,7 @@ rbff2.startplugin = function()
 			for i, p in ipairs(players) do
 				-- コマンド入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
 				if p.disp_cmd == 2 or p.disp_cmd == 3 then
-					for k = 1, #p.key_hist do
-						draw_cmd(i, k, p.key_frames[k], p.key_hist[k])
-					end
+					for k = 1, #p.key_hist do draw_cmd(i, k, p.key_frames[k], p.key_hist[k]) end
 					draw_cmd(i, #p.key_hist + 1, 0, "")
 				end
 			end
@@ -12380,9 +6277,8 @@ rbff2.startplugin = function()
 			-- ベースアドレス表示
 			for i, p in ipairs(players) do
 				for k = 1, #p.bases do
-					if p.disp_base then
-						draw_base(i, k, p.bases[k].count, p.bases[k].addr, p.bases[k].name, p.bases[k].xmov)
-					end
+					local bk = p.bases[k]
+					if p.disp_base then draw_base(i, k, bk.count, bk.addr, bk.name, bk.xmov) end
 				end
 			end
 			-- ダメージとコンボ表示
@@ -12392,41 +6288,79 @@ rbff2.startplugin = function()
 
 				-- コンボ表示などの四角枠
 				if p.disp_dmg then
-					if p1 then
-						scr:draw_box(184 + 40, 40, 274 + 40, 84, 0x80404040, 0x80404040)
-					else
-						scr:draw_box(45 - 40, 40, 134 - 40, 84, 0x80404040, 0x80404040)
-					end
-
 					-- コンボ表示
-					scr:draw_text(p1 and 228 or 9, 41, "補正:")
-					scr:draw_text(p1 and 228 or 9, 48, "ダメージ:")
-					scr:draw_text(p1 and 228 or 9, 55, "コンボ:")
-					scr:draw_text(p1 and 228 or 9, 62, "気絶値:")
-					scr:draw_text(p1 and 228 or 9, 69, "気絶値持続:")
-					scr:draw_text(p1 and 228 or 9, 76, "POW:")
-					draw_rtext(p1 and 296 or 77, 41, string.format("%s>%s(%s%%)", p.last_pure_dmg, op.last_dmg, (op.last_dmg_scaling - 1) * 100))
-					draw_rtext(p1 and 296 or 77, 48, string.format("%s(+%s)", op.last_combo_dmg, op.last_dmg))
-					draw_rtext(p1 and 296 or 77, 55, op.last_combo)
-					draw_rtext(p1 and 296 or 77, 62, string.format("%s(+%s)", op.last_combo_stun, op.last_stun))
-					draw_rtext(p1 and 296 or 77, 69, string.format("%s(+%s)", op.last_combo_st_timer, op.last_st_timer))
-					draw_rtext(p1 and 296 or 77, 76, string.format("%s(+%s)", op.last_combo_pow, op.last_pow))
-					scr:draw_text(p1 and 301 or 82, 41, "最大")
-					draw_rtext(p1 and 311 or 92, 48, op.max_dmg)
-					draw_rtext(p1 and 311 or 92, 55, op.max_combo)
-					draw_rtext(p1 and 311 or 92, 62, op.max_disp_stun)
-					draw_rtext(p1 and 311 or 92, 69, op.max_st_timer)
-					draw_rtext(p1 and 311 or 92, 76, op.max_combo_pow)
+					local combo_label1, combo_label2, combo_label3 = {
+						"Scaling",
+						"Damage",
+						"Combo",
+						"Stun",
+						"Timer",
+						"Power",
+					}, {}, {}
+					local y, blockable = 83, nil
+					for _, xp in util.sorted_pairs(util.hash_add_all({ [p.addr.base] = p }, p.fireballs)) do
+						if xp.num or xp.proc_active then
+							table.insert(combo_label1, string.format("Damage %3s/%1s  Stun %2s/%2s Fra.", xp.pure_dmg or 0, xp.chip_dmg or 0, xp.pure_st or 0, xp.pure_st_tm or 0))
+							table.insert(combo_label1, string.format("HitStop %2s/%2s HitStun %2s/%2s", xp.hitstop or 0, xp.blockstop or 0, xp.hitstun or 0, xp.blockstun or 0))
+							table.insert(combo_label1, string.format("%2s", data.hit_effect_name(xp.effect)))
+							if xp.num then
+								table.insert(combo_label1, string.format("Pow. %2s/%2s/%2s Rev.%2s Abs.%2s", p.pow_up_direct == 0 and p.pow_up or p.pow_up_direct or 0, p.pow_up_hit or 0, p.pow_up_gd or 0, p.pow_revenge or 0, p.pow_absorb or 0))
+								table.insert(combo_label1, string.format("Inv.%2s  BS-Pow.%2s BS-Inv.%2s", xp.sp_invincible or 0, xp.bs_pow or 0, xp.bs_invincible or 0))
+								table.insert(combo_label1, string.format("%s/%s Hit  Esaka %s %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.esaka_range or 0, p.esaka_type or ""))
+								table.insert(combo_label1, string.format("Cancel %-2s/%-2s Teching %s", xp.repeatable and "Ch" or "", xp.cancelable and "Sp" or "",
+									xp.forced_down or xp.in_bs and "No" or "Yes"))
+							elseif xp.proc_active then
+								table.insert(combo_label1, string.format("%s/%s Hit  Fireball-Lv. %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.fireball_rank or 0))
+							end
+							for _, box in ipairs(xp.hitboxies) do
+								if box.blockable then
+									blockable = box.blockable
+									table.insert(combo_label1, string.format("Box Top %3s Bottom %3s", blockable.real_top, blockable.real_bottom))
+									table.insert(combo_label1, string.format("Main %-5s  Sway %-5s", data.top_type_name(blockable.main), data.top_type_name(blockable.sway)))
+									table.insert(combo_label1, string.format("Punish %-9s", data.top_punish_name(blockable.punish)))
+								end
+							end
+						end
+					end
+					local last_damage_scaling = 100.00
+					if op.last_damage_scaling1 and op.last_damage_scaling2 then
+						last_damage_scaling = (op.last_damage_scaling1 * op.last_damage_scaling2) * 100
+					end
+					if op.combo_update == global.frame_number then
+						local stun, timer                       = math.max(op.stun - op.combo_start_stun), math.max(op.stun_timer - op.combo_start_stun_timer, 0)
+						op.combo_stun, op.last_stun             = stun, math.max(stun - op.combo_stun, 0)
+						op.combo_stun_timer, op.last_stun_timer = timer, math.max(timer - op.combo_stun_timer, 0)
+						op.max_combo                            = math.max(op.max_combo or 0, op.last_combo)
+						op.max_combo_pow                        = math.max(op.max_combo_pow or 0, op.combo_pow)
+						op.max_combo_stun                       = math.max(op.max_combo_stun or 0, op.combo_stun)
+						op.max_combo_stun_timer                 = math.max(op.max_combo_stun_timer or 0, op.combo_stun_timer)
+					end
+					table.insert(combo_label2, string.format("%3s>%3s(%6s%%)", op.last_damage, op.last_damage_scaled, last_damage_scaling))
+					table.insert(combo_label2, string.format("%3s(+%3s)", op.combo_damage or 0, op.last_damage_scaled))
+					table.insert(combo_label2, string.format("%3s", op.last_combo))
+					table.insert(combo_label2, string.format("%3s(+%3s)", op.combo_stun or 0, op.last_stun))
+					table.insert(combo_label2, string.format("%3s(+%3s)", op.combo_stun_timer or 0, op.last_stun_timer or 0))
+					table.insert(combo_label2, string.format("%3s(+%3s)", op.combo_pow or 0, p.last_pow_up or 0))
+					table.insert(combo_label3, "")
+					table.insert(combo_label3, string.format("%3s", op.max_combo_damage))
+					table.insert(combo_label3, string.format("%3s", op.max_combo))
+					table.insert(combo_label3, string.format("%3s", op.max_combo_stun))
+					table.insert(combo_label3, string.format("%3s", op.max_combo_stun_timer))
+					table.insert(combo_label3, string.format("%3s", op.max_combo_pow))
+					local box_bottom = #combo_label1 * get_line_height()
+					scr:draw_box(p1 and 224 or 0, 40, p1 and 320 or 96, 40 + box_bottom, 0x80404040, 0x80404040)
+					scr:draw_text(p1 and 224 + 4 or 4, 40, table.concat(combo_label1, "\n"))
+					scr:draw_text(p1 and 224 + 36 or 36, 40, table.concat(combo_label2, "\n"))
+					scr:draw_text(p1 and 224 + 68 or 68, 40, table.concat(combo_label3, "\n"))
 				end
-
 				-- 状態 小表示
 				if p.disp_sts == 2 or p.disp_sts == 3 then
 					scr:draw_box(p1 and 2 or 277, 0, p1 and 40 or 316, 36, 0x80404040, 0x80404040)
 
 					scr:draw_text(p1 and 4 or 278, 1, string.format("%s", p.state))
-					draw_rtext(p1 and 16 or 290, 1, string.format("%02d", p.tw_threshold))
-					draw_rtext(p1 and 28 or 302, 1, string.format("%03d", p.tw_accepted))
-					draw_rtext(p1 and 40 or 314, 1, string.format("%03d", p.tw_frame))
+					draw_rtext(p1 and 16 or 290, 1, string.format("%02d", p.throwing and p.throwing.threshold or 0))
+					draw_rtext(p1 and 28 or 302, 1, string.format("%03d", p.throwing and p.throwing.timer or 0))
+					draw_rtext(p1 and 40 or 314, 1, string.format("%03d", p.throw_timer))
 
 					local diff_pos_y = p.pos_y + p.pos_frc_y - p.old_pos_y - p.old_pos_frc_y
 					draw_rtext(p1 and 16 or 290, 7, string.format("%0.03f", diff_pos_y))
@@ -12435,7 +6369,7 @@ rbff2.startplugin = function()
 					draw_rtext(p1 and 10 or 284, 13, string.format("%02x", p.spid))
 					draw_rtext(p1 and 19 or 293, 13, string.format("%02x", p.attack))
 					draw_rtext(p1 and 30 or 304, 13, string.format("%02x", p.attack_id))
-					draw_rtext(p1 and 40 or 314, 13, string.format("%02x", p.hitstop_id))
+					-- draw_rtext(p1 and 40 or 314, 13, string.format("%02x", p.hurt_attack))
 
 					draw_rtext(p1 and 16 or 290, 19, string.format("%04x", p.act))
 					draw_rtext(p1 and 28 or 302, 19, string.format("%02x", p.act_count))
@@ -12446,22 +6380,22 @@ rbff2.startplugin = function()
 					draw_rtext(p1 and 40 or 314, 25, string.format("%02x", p.additional))
 
 					--[[
-						p.tw_frame のしきい値。しきい値より大きければ投げ処理継続可能。
+						p.throw_timer のしきい値。しきい値より大きければ投げ処理継続可能。
 						0  空投げ M.スナッチャー0
 						10 真空投げ 羅生門 鬼門陣 M.タイフーン M.スパイダー 爆弾パチキ ドリル ブレスパ ブレスパBR リフトアップブロー デンジャラススルー ギガティックサイクロン マジンガ STOL
 						20 M.リアルカウンター投げ
 						24 通常投げ しんさいは
 					]]
-					if not p.hit.vulnerable or not p.n_throwable or not p.throwable then
+					if not p.vulnerable or not p.n_throwable or not p.throwable then
 						local throw_txt = p.throwable and "" or "投"
-						if p.tw_frame <= 10 then
+						if p.throw_timer <= 10 then
 							throw_txt = throw_txt .. "<"
 						end
-						if p.tw_frame <= 20 then
+						if p.throw_timer <= 20 then
 							throw_txt = throw_txt .. "<"
 						end
 						scr:draw_text(p1 and 1 or 275, 31, "無敵")
-						scr:draw_text(p1 and 15 or 289, 31, p.hit.vulnerable and "" or "打")
+						scr:draw_text(p1 and 15 or 289, 31, p.vulnerable and "" or "打")
 						scr:draw_text(p1 and 24 or 298, 31, p.n_throwable and "" or "通")
 						scr:draw_text(p1 and 30 or 304, 31, p.throwable and "" or throw_txt)
 					end
@@ -12469,26 +6403,17 @@ rbff2.startplugin = function()
 
 				-- コマンド入力状態表示
 				if global.disp_input_sts - 1 == i then
-					local col_orange = 0xFFFF8800
-					local col_orange2 = 0xC0FF8800
-					local col_red = 0xFFFF0000
-					local col_green = 0xC07FFF00
-					local col_green2 = 0xFF7FFF00
-					local col_yellow = 0xC0FFFF00
-					local col_yellow2 = 0xFFFFFF00
-					local col_white = 0xC0FFFFFF
 					for ti, input_state in ipairs(p.input_states) do
 						local x = 147
 						local y = 25 + ti * 5
 						local x1, x2, y2 = x + 15, x - 8, y + 4
-						draw_text_with_shadow(x1, y - 2, input_state.tbl.name,
-							input_state.input_estab == true and col_orange2 or col_white)
+						draw_text_with_shadow(x1, y - 2, input_state.tbl.name, input_state.input_estab == true and input_state_col.orange2 or input_state_col.white)
 						if input_state.on > 0 and input_state.chg_remain > 0 then
 							local col, col2
 							if input_state.charging == true then
-								col, col2 = col_green, col_green2
+								col, col2 = input_state_col.green, input_state_col.green2
 							else
-								col, col2 = col_yellow, col_yellow2
+								col, col2 = input_state_col.yellow, input_state_col.yellow2
 							end
 							scr:draw_box(x2 + input_state.max * 2, y, x2, y2, col2, 0)
 							scr:draw_box(x2 + input_state.chg_remain * 2, y, x2, y2, 0, col)
@@ -12499,9 +6424,9 @@ rbff2.startplugin = function()
 							if c ~= "" then
 								cmdx = cmdx + math.max(5.5,
 									draw_text_with_shadow(cmdx, y, c,
-										input_state.input_estab == true and col_orange or
-										input_state.on > ci and col_red or
-										(ci == 1 and input_state.on >= ci) and col_red or nil))
+										input_state.input_estab == true and input_state_col.orange or
+										input_state.on > ci and input_state_col.red or
+										(ci == 1 and input_state.on >= ci) and input_state_col.red or nil))
 							end
 						end
 						draw_rtext_with_shadow(x + 1, y, input_state.chg_remain)
@@ -12515,7 +6440,7 @@ rbff2.startplugin = function()
 				end
 
 				-- BS状態表示
-				if p.dummy_gd == dummy_gd_type.bs and global.no_background ~= true then
+				if p.dummy_gd == dummy_gd_type.bs and global.disp_bg then
 					if p1 then
 						scr:draw_box(106, 40, 150, 50, 0x80404040, 0x80404040)
 					else
@@ -12526,7 +6451,7 @@ rbff2.startplugin = function()
 				end
 
 				-- ガードリバーサル状態表示
-				if p.dummy_wakeup == wakeup_type.rvs and global.no_background ~= true then
+				if p.dummy_wakeup == wakeup_type.rvs and global.disp_bg then
 					if p1 then
 						scr:draw_box(106, 50, 150, 60, 0x80404040, 0x80404040)
 					else
@@ -12544,8 +6469,8 @@ rbff2.startplugin = function()
 
 				-- 気絶表示
 				if p.disp_stun then
-					scr:draw_box(p1 and (138 - p.max_stun) or 180, 29, p1 and 140 or (182 + p.max_stun), 34, 0, 0xDDC0C0C0) -- 枠
-					scr:draw_box(p1 and (139 - p.max_stun) or 181, 30, p1 and 139 or (181 + p.max_stun), 33, 0, 0xDD000000) -- 黒背景
+					scr:draw_box(p1 and (138 - p.stun_limit) or 180, 29, p1 and 140 or (182 + p.stun_limit), 34, 0, 0xDDC0C0C0) -- 枠
+					scr:draw_box(p1 and (139 - p.stun_limit) or 181, 30, p1 and 139 or (181 + p.stun_limit), 33, 0, 0xDD000000) -- 黒背景
 					scr:draw_box(p1 and (139 - p.stun) or 181, 30, p1 and 139 or (181 + p.stun), 33, 0, 0xDDFF0000) -- 気絶値
 					draw_rtext_with_shadow(p1 and 135 or 190, 28, p.stun)
 
@@ -12565,8 +6490,7 @@ rbff2.startplugin = function()
 					if global.disp_frmgap == 2 then
 						draw_frame_groups(p.act_frames2, p.act_frames_total, 30, p1 and 64 or 72, 8, true)
 						local j = 0
-						for base, _ in pairs(p.fireball_bases) do
-							local fb = p.fireball[base]
+						for _, fb in pairs(p.fireballs) do
 							if fb.act_frames2 ~= nil and p.disp_fbfrm == true then
 								draw_frame_groups(fb.act_frames2, p.act_frames_total, 30, p1 and 64 or 70, 8, true)
 							end
@@ -12622,20 +6546,18 @@ rbff2.startplugin = function()
 			-- キャラ間の距離表示
 			local abs_space = math.abs(p_space)
 			if global.disp_pos then
-				local y = 216 -- math.floor(get_digit(abs_space)/2)
-				draw_rtext_with_shadow(167, y, abs_space)
+				local y = 216
+				draw_ctext_with_shadow(scr.width / 2, y, abs_space)
 
 				-- キャラの向き
 				for i, p in ipairs(players) do
 					local p1     = i == 1
-					local side   = p.side == 1 and "(>)" or "(<)" -- 内部の向き 1:右向き -1:左向き
-					local i_side = p.input_side == 0x00 and "[>]" or "[<]" -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側 -- p.poslr
+					local side   = p.internal_side == 1 and "(>)" or "(<)" -- 内部の向き 1:右向き -1:左向き
+					local i_side = p.input_side == 1 and "[>]" or "[<]" -- コマンド入力でのキャラ向き
 					if p1 then
-						local flip_x = p.disp_side == 1 and ">" or "<" -- 判定の向き 1:右向き -1:左向き
-						draw_rtext_with_shadow(150, y, string.format("%s%s%s", flip_x, side, i_side))
+						draw_rtext_with_shadow(150, y, string.format("%s%s%s", p.flip_x, side, i_side))
 					else
-						local flip_x = p.disp_side == 1 and "<" or ">" -- 判定の向き 1:左向き -1:右向き
-						draw_text_with_shadow(170, y, string.format("%s%s%s", i_side, side, flip_x))
+						draw_text_with_shadow(170, y, string.format("%s%s%s", i_side, side, p.flip_x))
 					end
 					if p.old_pos_y ~= p.pos_y or p.last_posy_txt == nil then
 						p.last_posy_txt = string.format("%3s>%3s", p.old_pos_y or 0, p.pos_y)
@@ -12773,50 +6695,6 @@ rbff2.startplugin = function()
 				end
 			end
 		end
-
-		--[[
-		-- ログ
-		local log = ""
-		for _, p in ipairs(players) do
-			log = log .. string.format(
-				"%6x %1s %1s %s %4x %4x %4x ",
-				p.addr.base,
-				p.char,
-				p.state,
-				p.act_contact,
-				p.act,
-				p.acta,
-				p.attack
-			--,	p.act_count, p.act_frame
-			)
-			for _, box in ipairs(p.hitboxes) do
-				local atk, air = " ", " "
-
-				if box.type == box_type_base.a then
-					atk, air = "A", " "
-				elseif box.type == box_type_base.da then
-					atk, air = "A", " "
-				elseif box.type == box_type_base.aa then
-					atk, air = "A", "A"
-				elseif box.type == box_type_base.daa then
-					atk, air = "A", "A"
-				end
-				log = log .. string.format("%2x %1s %1s ", box.id or 0xFF, atk, air)
-
-				local tw, range = " ", " "
-				if box.type == box_type_base.t then
-					tw, range = "NT", string.format("%sx%s", math.abs(box.left - box.right), math.abs(box.top - box.bottom))
-				elseif box.type == box_type_base.at then
-					tw, range = "AT", string.format("%sx%s", math.abs(box.left - box.right), math.abs(box.top - box.bottom))
-				elseif box.type == box_type_base.pt then
-					tw, range = "PT", string.format("%sx%s", math.abs(box.left - box.right), math.abs(box.top - box.bottom))
-				else
-					tw, range = "", ""
-				end
-				log = log .. string.format("%2x %1s %1s ", box.id or 0xFF, tw, range)
-			end
-		end
-		]]
 	end
 
 	emu.register_start(function()
@@ -12835,25 +6713,20 @@ rbff2.startplugin = function()
 	local setup_char_manu = function()
 		-- キャラにあわせたメニュー設定
 		for _, p in ipairs(players) do
-			local tmp_chr = pgm:read_u8(p.addr.char)
+			local tmp_chr = mem.r8(p.addr.char)
 
 			-- ブレイクショット
 			if not p.dummy_bs_chr or p.dummy_bs_chr ~= tmp_chr then
-				p.char = tmp_chr
-				p.dummy_bs_chr = p.char
-				p.dummy_bs_list = {}
+				p.char, p.char_data, p.dummy_bs_chr = tmp_chr, chars[tmp_chr], tmp_chr
 				p.dummy_bs = get_next_bs(p)
 			end
 
 			-- リバーサル
 			if not p.dummy_rvs_chr or p.dummy_rvs_chr ~= tmp_chr then
-				p.char = tmp_chr
-				p.dummy_rvs_chr = tmp_chr
-				p.dummy_rvs_list = {}
+				p.char, p.char_data, p.dummy_rvs_chr = tmp_chr, chars[tmp_chr], tmp_chr
 				p.dummy_rvs = get_next_rvs(p)
 			end
 
-			p.char_data      = chars[p.char]
 			p.gd_rvs_enabled = false
 			p.rvs_count      = -1
 		end
@@ -12863,15 +6736,15 @@ rbff2.startplugin = function()
 		local row               = menu.training.pos.row
 		local p                 = players
 
-		global.dummy_mode       = col[1]  -- ダミーモード
+		global.dummy_mode       = col[1] -- ダミーモード
 		-- レコード・リプレイ設定
-		p[1].dummy_act          = col[3]  -- 1P アクション
-		p[2].dummy_act          = col[4]  -- 2P アクション
-		p[1].dummy_gd           = col[5]  -- 1P ガード
-		p[2].dummy_gd           = col[6]  -- 2P ガード
+		p[1].dummy_act          = col[3] -- 1P アクション
+		p[2].dummy_act          = col[4] -- 2P アクション
+		p[1].dummy_gd           = col[5] -- 1P ガード
+		p[2].dummy_gd           = col[6] -- 2P ガード
 		global.next_block_grace = col[7] - 1 -- 1ガード持続フレーム数
-		global.dummy_bs_cnt     = col[8]  -- ブレイクショット設定
-		p[1].dummy_wakeup       = col[9]  -- 1P やられ時行動
+		global.dummy_bs_cnt     = col[8] -- ブレイクショット設定
+		p[1].dummy_wakeup       = col[9] -- 1P やられ時行動
 		p[2].dummy_wakeup       = col[10] -- 2P やられ時行動
 		global.dummy_rvs_cnt    = col[11] -- ガードリバーサル設定
 		p[2].no_hit_limit       = col[12] - 1 -- 1P 強制空振り
@@ -12883,19 +6756,13 @@ rbff2.startplugin = function()
 		global.sync_pos_x       = col[18] -- X座標同期
 		for _, p in ipairs(players) do
 			if p.dummy_gd == dummy_gd_type.hit1 then
-				p.next_block = false
-				p.next_block_ec = 75 -- カウンター初期化
+				p.next_block, p.next_block_ec = false, 75 -- カウンター初期化 false
 			elseif p.dummy_gd == dummy_gd_type.block1 then
-				p.next_block = true
-				p.next_block_ec = 75 -- カウンター初期化
+				p.next_block, p.next_block_ec = true, 75 -- カウンター初期化 true
 			end
-			p.bs_count = -1 -- BSガードカウンター初期化
-			p.rvs_count = -1 -- リバサカウンター初期化
 			p.block1 = 0
-			p.dummy_rvs_chr = p.char
-			p.dummy_rvs = get_next_rvs(p)
-			p.dummy_bs_chr = p.char
-			p.dummy_bs = get_next_bs(p)
+			p.rvs_count, p.dummy_rvs_chr, p.dummy_rvs = -1, p.char, get_next_rvs(p) -- リバサガードカウンター初期化、キャラとBSセット
+			p.bs_count, p.dummy_bs_chr, p.dummy_bs = -1, p.char, get_next_bs(p) -- BSガードカウンター初期化、キャラとBSセット
 		end
 
 		global.old_dummy_mode = global.dummy_mode
@@ -12915,8 +6782,8 @@ rbff2.startplugin = function()
 			menu.replay.pos.col[11] = recording.do_repeat and 2 or 1 -- 繰り返し
 			menu.replay.pos.col[12] = recording.repeat_interval + 1 -- 繰り返し間隔
 			menu.replay.pos.col[13] = global.await_neutral and 2 or 1 -- 繰り返し開始条件
-			menu.replay.pos.col[14] = global.replay_fix_pos        -- 開始間合い固定
-			menu.replay.pos.col[15] = global.replay_reset          -- 状態リセット
+			menu.replay.pos.col[14] = global.replay_fix_pos       -- 開始間合い固定
+			menu.replay.pos.col[15] = global.replay_reset         -- 状態リセット
 			menu.replay.pos.col[16] = global.disp_replay and 2 or 1 -- ガイド表示
 			menu.replay.pos.col[17] = global.replay_stop_on_dmg and 2 or 1 -- ダメージでリプレイ中止
 			if not cancel and row == 1 then
@@ -12934,7 +6801,7 @@ rbff2.startplugin = function()
 					return
 				end
 				-- リバーサル やられ時行動のメニュー設定
-				if not cancel and row == (8 + i) and (p.dummy_wakeup == wakeup_type.tech or p.dummy_wakeup == wakeup_type.sway or p.dummy_wakeup == wakeup_type.rvs) then
+				if not cancel and row == (8 + i) and rvs_wake_types[p.dummy_wakeup] then
 					menu.current = menu.rvs_menus[i][p.char]
 					return
 				end
@@ -12954,7 +6821,7 @@ rbff2.startplugin = function()
 	for i = 1, 0x3C do
 		table.insert(pow_range, i)
 	end
-	local bar_menu_to_main         = function(cancel)
+	local bar_menu_to_main         = function()
 		local col                = menu.bar.pos.col
 		local p                  = players
 		--  タイトルラベル
@@ -12965,84 +6832,75 @@ rbff2.startplugin = function()
 		dip_config.infinity_life = col[6] == 2 -- 体力ゲージモード
 		global.pow_mode          = col[7] -- POWゲージモード
 
-		menu.current                 = menu.main
+		menu.current             = menu.main
 	end
-	local bar_menu_to_main_cancel  = function()
-		bar_menu_to_main(true)
-	end
-	local disp_menu_to_main        = function(cancel)
-		local col             = menu.disp.pos.col
-		local p               = players
+	local disp_menu_to_main        = function()
+		local col               = menu.disp.pos.col
+		local p                 = players
 		--  タイトルラベル
-		p[1].disp_hitbox        = col[2]   -- 1P 判定表示
-		p[2].disp_hitbox        = col[3]   -- 2P 判定表示
-		p[1].disp_range         = col[4]   -- 1P 間合い表示
-		p[2].disp_range         = col[5]   -- 2P 間合い表示
+		p[1].disp_hitbox        = col[2] == 2 -- 1P 判定表示
+		p[2].disp_hitbox        = col[3] == 2 -- 2P 判定表示
+		p[1].disp_range         = col[4] == 2 -- 1P 間合い表示
+		p[2].disp_range         = col[5] == 2 -- 2P 間合い表示
 		p[1].disp_stun          = col[6] == 2 -- 1P 気絶ゲージ表示
 		p[2].disp_stun          = col[7] == 2 -- 2P 気絶ゲージ表示
 		p[1].disp_dmg           = col[8] == 2 -- 1P ダメージ表示
 		p[2].disp_dmg           = col[9] == 2 -- 2P ダメージ表示
-		p[1].disp_cmd           = col[10]  -- 1P 入力表示
-		p[2].disp_cmd           = col[11]  -- 2P 入力表示
-		global.disp_input_sts   = col[12]  -- コマンド入力状態表示
-		global.disp_normal_frms = col[13]  -- 通常動作フレーム非表示
-		global.disp_frmgap      = col[14]  -- フレーム差表示
-		p[1].disp_frm           = col[15]  -- 1P フレーム数表示
-		p[2].disp_frm           = col[16]  -- 2P フレーム数表示
+		p[1].disp_cmd           = col[10] -- 1P 入力表示
+		p[2].disp_cmd           = col[11] -- 2P 入力表示
+		global.disp_input_sts   = col[12] -- コマンド入力状態表示
+		global.disp_normal_frms = col[13] -- 通常動作フレーム非表示
+		global.disp_frmgap      = col[14] -- フレーム差表示
+		p[1].disp_frm           = col[15] -- 1P フレーム数表示
+		p[2].disp_frm           = col[16] -- 2P フレーム数表示
 		p[1].disp_fbfrm         = col[17] == 2 -- 1P 弾フレーム数表示
 		p[2].disp_fbfrm         = col[18] == 2 -- 2P 弾フレーム数表示
-		p[1].disp_sts           = col[19]  -- 1P 状態表示
-		p[2].disp_sts           = col[20]  -- 2P 状態表示
+		p[1].disp_sts           = col[19] -- 1P 状態表示
+		p[2].disp_sts           = col[20] -- 2P 状態表示
 		p[1].disp_base          = col[21] == 2 -- 1P 処理アドレス表示
 		p[2].disp_base          = col[22] == 2 -- 2P 処理アドレス表示
 		global.disp_pos         = col[23] == 2 -- 1P 2P 距離表示
-		p[1].disp_char          = col[24] == 2 -- 1P キャラ表示
-		p[2].disp_char          = col[25] == 2 -- 2P キャラ表示
-		global.disp_effect      = col[26] == 2 -- エフェクト表示
+		p[1].hide_char          = col[24] == 1 -- 1P キャラ表示
+		p[2].hide_char          = col[25] == 1 -- 2P キャラ表示
+		p[1].hide_phantasm      = col[26] == 1 -- 1P 残像表示
+		p[2].hide_phantasm      = col[27] == 1 -- 2P 残像表示
+		p[1].hide_effect        = col[28] == 1 -- 1P エフェクト表示
+		p[2].hide_effect        = col[29] == 1 -- 2P エフェクト表示
+		global.hide_p_chan      = col[30] == 1 -- Pちゃん表示
+		global.hide_effect      = col[31] == 1 -- エフェクト表示
 		menu.current            = menu.main
 	end
-	local disp_menu_to_main_cancel = function()
-		disp_menu_to_main(true)
-	end
-	local ex_menu_to_main          = function(cancel)
+	local ex_menu_to_main          = function()
 		local col             = menu.extra.pos.col
 		local p               = players
 		-- タイトルラベル
-		dip_config.easy_super = col[2] == 2               -- 簡易超必
-		dip_config.semiauto_p = col[3] == 2               -- 半自動潜在能力
+		dip_config.easy_super = col[2] == 2          -- 簡易超必
+		dip_config.semiauto_p = col[3] == 2          -- 半自動潜在能力
 		p[1].dis_plain_shift  = col[4] == 2 or col[4] == 3 -- ライン送らない現象
 		p[2].dis_plain_shift  = col[4] == 2 or col[4] == 4 -- ライン送らない現象
-		global.pause_hit      = col[5]                    -- ヒット時にポーズ
-		global.pause_hitbox   = col[6]                    -- 判定発生時にポーズ
-		global.save_snapshot  = col[7]                    -- 技画像保存
-		global.mame_debug_wnd = col[8] == 2               -- MAMEデバッグウィンドウ
-		global.damaged_move   = col[9]                    -- ヒット効果確認用
-		global.log.poslog     = col[10] == 2              -- 位置ログ
-		global.log.atklog     = col[11] == 2              -- 攻撃情報ログ
-		global.log.baselog    = col[12] == 2              -- 処理アドレスログ
-		global.log.keylog     = col[13] == 2              -- 入力ログ
-		global.log.rvslog     = col[14] == 2              -- リバサログ
+		global.pause_hit      = col[5]               -- ヒット時にポーズ
+		global.pause_hitbox   = col[6]               -- 判定発生時にポーズ
+		global.save_snapshot  = col[7]               -- 技画像保存
+		global.mame_debug_wnd = col[8] == 2          -- MAMEデバッグウィンドウ
+		global.damaged_move   = col[9]               -- ヒット効果確認用
+		global.all_bs         = col[10] == 2         -- 全必殺技BS
 
-		local dmove           = damaged_moves[global.damaged_move]
-		if dmove and dmove > 0 then
-			for i = 0x0579BA, 0x057B02, 4 do
-				pgm:write_direct_u32(fix_bp_addr(i), dmove == 0 and 0 or fix_bp_addr(dmove))
-			end
+		if global.all_bs then
+			-- 全必殺技BS可能
+			for addr = 0x85980, 0x85CE8, 2 do mem.wd16(addr, 0x007F|0x8000) end -- 0パワー消費 無敵7Fフレーム
+			mem.wd32(0x39F24, 0x4E714E71) -- 6600 0014 nop化
 		else
-			local ii = 2
-			for i = 0x0579BA, 0x057B02, 4 do
-				local dmove = damaged_moves[ii]
-				pgm:write_direct_u32(fix_bp_addr(i), dmove == 0 and 0 or fix_bp_addr(dmove))
-				ii = ii + 1
+			local addr = 0x85980
+			for _, b16 in ipairs(data.bs_data) do
+				mem.wd16(addr, b16)
+				addr = addr + 2
 			end
+			mem.wd32(0x39F24, 0x66000014)
 		end
 
 		menu.current = menu.main
 	end
-	local ex_menu_to_main_cancel   = function()
-		ex_menu_to_main(true)
-	end
-	local auto_menu_to_main        = function(cancel)
+	local auto_menu_to_main        = function()
 		local col                       = menu.auto.pos.col
 		-- 自動入力設定
 		global.auto_input.otg_thw       = col[2] == 2 -- ダウン投げ
@@ -13057,47 +6915,47 @@ rbff2.startplugin = function()
 		global.auto_input.auto_taneuma  = col[11] == 2 -- 炎の種馬
 		global.auto_input.auto_katsu    = col[12] == 2 -- 喝CA
 		-- 入力設定
-		global.auto_input.esaka_check   = col[14] == 2 -- 詠酒距離チェック
+		global.auto_input.esaka_check   = col[14] -- 詠酒チェック
 		global.auto_input.fast_kadenzer = col[15] == 2 -- 必勝！逆襲拳
 		global.auto_input.kara_ca       = col[16] == 2 -- 空振りCA
 
-		for _, p in ipairs(players) do
-			set_auto_deadly(p, global.auto_input.rave)
-			set_auto_unlimit(p, global.auto_input.desire)
-			set_auto_drill(p, global.auto_input.drill)
-			set_skip_esaka_check(p, global.auto_input.esaka_check)
-			set_auto_taneuma(p, global.auto_input.auto_taneuma)
-			set_fast_kadenzer(p, global.auto_input.fast_kadenzer)
-			set_auto_katsu(p, global.auto_input.auto_katsu)
-			set_kara_ca(p, global.auto_input.kara_ca)
-			set_auto_3ecst(p, global.auto_input.auto_3ecst)
+		--"ジャーマン", "フェイスロック", "投げっぱなしジャーマン"
+		if global.auto_input.real_counter > 1 then
+			mem.wd16(0x413EE, 0x1C3C) -- ボタン読み込みをボタンデータ設定に変更
+			mem.wd16(0x413F0, 0x10 * (2 ^ (global.auto_input.real_counter - 2)))
+			mem.wd16(0x413F2, 0x4E71)
+		else
+			mem.wd32(0x413EE, 0x4EB90002)
+			mem.wd16(0x413F2, 0x6396)
 		end
+
+		-- 詠酒の条件チェックを飛ばす
+		mem.wd32(0x23748, global.auto_input.esaka_check == 2 and 0x4E714E71 or 0x6E00FC6A) -- 技種類と距離チェック飛ばす
+		mem.wd32(0x236FC, global.auto_input.esaka_check == 3 and 0x604E4E71 or 0x6400FCB6) -- 距離チェックNOP
+
+		-- 自動 炎の種馬
+		mem.wd16(0x4094A, global.auto_input.auto_taneuma and 0x6018 or 0x6704) -- 連打チェックを飛ばす
+
+		-- 必勝！逆襲拳1発キャッチカデンツァ
+		mem.wd16(0x4098C, global.auto_input.fast_kadenzer and 0x7003 or 0x5210) -- カウンターに3を直接設定する
+
+		-- 自動喝CA
+		mem.wd8(0x3F94C, global.auto_input.auto_katsu and 0x60 or 0x67) -- 入力チェックを飛ばす
+		mem.wd16(0x3F986, global.auto_input.auto_katsu and 0x4E71 or 0x6628) -- 入力チェックをNOPに
+
+		-- 空振りCAできる
+		mem.wd8(0x2FA5E, global.auto_input.kara_ca and 0x60 or 0x67) -- テーブルチェックを飛ばす
+
+		-- 自動マリートリプルエクスタシー
+		mem.wd8(0x41D00, global.auto_input.auto_3ecst and 0x60 or 0x66) -- デバッグDIPチェックを飛ばす
+
 		menu.current = menu.main
 	end
-	local auto_menu_to_main_cancel = function()
-		auto_menu_to_main(true)
-	end
-	local box_type_col_list        = {
-		box_type_base.a, box_type_base.fa, box_type_base.da, box_type_base.aa, box_type_base.faa, box_type_base.daa,
-		box_type_base.pa, box_type_base.pfa, box_type_base.pda, box_type_base.paa, box_type_base.pfaa, box_type_base.pdaa,
-		box_type_base.t3, box_type_base.t, box_type_base.at, box_type_base.pt,
-		box_type_base.p, box_type_base.v1, box_type_base.sv1, box_type_base.v2, box_type_base.sv2, box_type_base.v3,
-		box_type_base.v4, box_type_base.v5, box_type_base.v6, box_type_base.x1, box_type_base.x2, box_type_base.x3,
-		box_type_base.x4, box_type_base.x5, box_type_base.x6, box_type_base.x7, box_type_base.x8, box_type_base.x9,
-		box_type_base.g1, box_type_base.g2, box_type_base.g3, box_type_base.g4, box_type_base.g5, box_type_base.g6,
-		box_type_base.g7, box_type_base.g8, box_type_base.g9, box_type_base.g10, box_type_base.g11, box_type_base.g12,
-		box_type_base.g13, box_type_base.g14, box_type_base.g15, box_type_base.g16, }
-	local col_menu_to_main         = function(cancel)
+	local col_menu_to_main         = function()
 		local col = menu.color.pos.col
-
-		for i = 2, #col do
-			box_type_col_list[i - 1].enabled = col[i] == 2
-		end
-
+		--util.printf("col_menu_to_main %s %s", #col, #data.box_type_list)
+		for i = 2, #col do data.box_type_list[i - 1].enabled = col[i] == 2 end
 		menu.current = menu.main
-	end
-	local col_menu_to_main_cancel  = function()
-		col_menu_to_main(true)
 	end
 	local menu_rec_to_tra          = function() menu.current = menu.training end
 	local exit_menu_to_rec         = function(slot_no)
@@ -13106,10 +6964,10 @@ rbff2.startplugin = function()
 		global.rec_main       = rec_await_no_input
 		global.input_accepted = ec
 		-- 選択したプレイヤー側の反対側の操作をいじる
-		recording.temp_player = (pgm:read_u8(players[1].addr.reg_pcnt) ~= 0xFF) and 2 or 1
+		recording.temp_player = (mem.r8(players[1].addr.reg_pcnt) ~= 0xFF) and 2 or 1
 		recording.last_slot   = slot_no
 		recording.active_slot = recording.slot[slot_no]
-		menu.current              = menu.main
+		menu.current          = menu.main
 		menu.exit()
 	end
 	local exit_menu_to_play_common = function()
@@ -13133,7 +6991,7 @@ rbff2.startplugin = function()
 		global.rec_main = rec_fixpos
 		global.input_accepted = ec
 		-- 選択したプレイヤー側の反対側の操作をいじる
-		recording.temp_player = (pgm:read_u8(players[1].addr.reg_pcnt) ~= 0xFF) and 2 or 1
+		recording.temp_player = (mem.r8(players[1].addr.reg_pcnt) ~= 0xFF) and 2 or 1
 		exit_menu_to_play_common()
 		menu.current = menu.main
 		menu.exit()
@@ -13202,31 +7060,36 @@ rbff2.startplugin = function()
 		local p = players
 		local g = global
 		-- タイトルラベル
-		col[2] = p[1].disp_hitbox      -- 判定表示
-		col[3] = p[2].disp_hitbox      -- 判定表示
-		col[4] = p[1].disp_range       -- 間合い表示
-		col[5] = p[2].disp_range       -- 間合い表示
+		col[2] = p[1].disp_hitbox and 2 or 1 -- 判定表示
+		col[3] = p[2].disp_hitbox and 2 or 1 -- 判定表示
+		col[4] = p[1].disp_range and 2 or 1 -- 間合い表示
+		col[5] = p[2].disp_range and 2 or 1 -- 間合い表示
 		col[6] = p[1].disp_stun and 2 or 1 -- 1P 気絶ゲージ表示
 		col[7] = p[2].disp_stun and 2 or 1 -- 2P 気絶ゲージ表示
 		col[8] = p[1].disp_dmg and 2 or 1 -- 1P ダメージ表示
 		col[9] = p[2].disp_dmg and 2 or 1 -- 2P ダメージ表示
-		col[10] = p[1].disp_cmd        -- 1P 入力表示
-		col[11] = p[2].disp_cmd        -- 2P 入力表示
-		col[12] = g.disp_input_sts     -- コマンド入力状態表示
-		col[13] = g.disp_normal_frms   -- 通常動作フレーム非表示
-		col[14] = g.disp_frmgap        -- フレーム差表示
-		col[15] = p[1].disp_frm        -- 1P フレーム数表示
-		col[16] = p[2].disp_frm        -- 2P フレーム数表示
+		col[10] = p[1].disp_cmd           -- 1P 入力表示
+		col[11] = p[2].disp_cmd           -- 2P 入力表示
+		col[12] = g.disp_input_sts        -- コマンド入力状態表示
+		col[13] = g.disp_normal_frms      -- 通常動作フレーム非表示
+		col[14] = g.disp_frmgap           -- フレーム差表示
+		col[15] = p[1].disp_frm           -- 1P フレーム数表示
+		col[16] = p[2].disp_frm           -- 2P フレーム数表示
 		col[17] = p[1].disp_fbfrm and 2 or 1 -- 1P 弾フレーム数表示
 		col[18] = p[2].disp_fbfrm and 2 or 1 -- 2P 弾フレーム数表示
-		col[19] = p[1].disp_sts        -- 1P 状態表示
-		col[20] = p[2].disp_sts        -- 2P 状態表示
+		col[19] = p[1].disp_sts           -- 1P 状態表示
+		col[20] = p[2].disp_sts           -- 2P 状態表示
 		col[21] = p[1].disp_base and 2 or 1 -- 1P 処理アドレス表示
 		col[22] = p[2].disp_base and 2 or 1 -- 2P 処理アドレス表示
-		col[23] = g.disp_pos and 2 or 1 -- 1P 2P 距離表示
-		col[24] = p[1].disp_char and 2 or 1 -- 1P キャラ表示
-		col[25] = p[2].disp_char and 2 or 1 -- 2P キャラ表示
-		col[26] = g.disp_effect and 2 or 1 -- エフェクト表示
+		col[23] = g.disp_pos and 2 or 1   -- 1P 2P 距離表示
+		col[24] = p[1].hide_char and 1 or 2 -- 1P キャラ表示
+		col[25] = p[2].hide_char and 1 or 2 -- 2P キャラ表示
+		col[26] = p[1].hide_phantasm and 1 or 2 -- 1P 残像表示
+		col[27] = p[2].hide_phantasm and 1 or 2 -- 2P 残像表示
+		col[28] = p[1].hide_effect and 1 or 2 -- 1P エフェクト表示
+		col[29] = p[2].hide_effect and 1 or 2 -- 2P エフェクト表示
+		col[30] = g.hide_p_chan and 1 or 2 -- Pちゃん表示
+		col[31] = g.hide_effect and 1 or 2 -- エフェクト表示
 	end
 	local init_ex_menu_config      = function()
 		local col = menu.extra.pos.col
@@ -13248,11 +7111,6 @@ rbff2.startplugin = function()
 		col[7] = g.save_snapshot       -- 技画像保存
 		col[8] = g.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ
 		col[9] = g.damaged_move        -- ヒット効果確認用
-		col[10] = g.log.poslog and 2 or 1 -- 位置ログ
-		col[11] = g.log.atklog and 2 or 1 -- 攻撃情報ログ
-		col[12] = g.log.baselog and 2 or 1 -- 処理アドレスログ
-		col[13] = g.log.keylog and 2 or 1 -- 入力ログ
-		col[14] = g.log.rvslog and 2 or 1 -- リバサログ
 	end
 	local init_auto_menu_config    = function()
 		local col = menu.auto.pos.col
@@ -13270,7 +7128,7 @@ rbff2.startplugin = function()
 		col[11] = global.auto_input.auto_taneuma and 2 or 1 -- 炎の種馬
 		col[12] = global.auto_input.auto_katsu and 2 or 1 -- 喝CA
 		-- -- 入力設定
-		col[14] = global.auto_input.esaka_check and 2 or 1 -- 詠酒距離チェック
+		col[14] = global.auto_input.esaka_check        -- 詠酒距離チェック
 		col[15] = global.auto_input.fast_kadenzer and 2 or 1 -- 必勝！逆襲拳
 		col[16] = global.auto_input.kara_ca and 2 or 1 -- 空振りCA
 	end
@@ -13290,10 +7148,10 @@ rbff2.startplugin = function()
 	end
 	local menu_player_select       = function()
 		--main_menu.pos.row = 1
-		cls_hook()
-		goto_player_select()
-		cls_joy()
 		cls_ps()
+		goto_player_select()
+		--cls_joy()
+		--cls_ps()
 		-- 初期化
 		menu_to_main(false, true)
 		-- メニューを抜ける
@@ -13311,27 +7169,39 @@ rbff2.startplugin = function()
 	end
 	local menu_restart_fight       = function()
 		--main_menu.pos.row = 1
-		cls_hook()
-		global.disp_gauge = menu.main.pos.col[15] == 2 -- 体力,POWゲージ表示
+		global.disp_meters = menu.main.pos.col[15] == 2 -- 体力,POWゲージ表示
+		global.disp_bg = menu.main.pos.col[16] == 2  -- 背景表示
+		global.hide_shadow = menu.main.pos.col[17]   -- 影表示
 		restart_fight({
-			next_p1    = menu.main.pos.col[9],   -- 1P セレクト
-			next_p2    = menu.main.pos.col[10],  -- 2P セレクト
-			next_p1col = menu.main.pos.col[11] - 1, -- 1P カラー
-			next_p2col = menu.main.pos.col[12] - 1, -- 2P カラー
+			next_p1    = menu.main.pos.col[9],       -- 1P セレクト
+			next_p2    = menu.main.pos.col[10],      -- 2P セレクト
+			next_p1col = menu.main.pos.col[11] - 1,  -- 1P カラー
+			next_p2col = menu.main.pos.col[12] - 1,  -- 2P カラー
 			next_stage = menu.stgs[menu.main.pos.col[13]], -- ステージセレクト
 			next_bgm   = menu.bgms[menu.main.pos.col[14]].id, -- BGMセレクト
 		})
-		local fix_scr_top = menu.main.pos.col[16]
-		if fix_scr_top == 1 then
-			players[1].fix_scr_top = 0xFF
-			players[2].fix_scr_top = 0xFF
-		elseif fix_scr_top <= 91 then
-			players[1].fix_scr_top = fix_scr_top
-			players[2].fix_scr_top = 0xFF
+		global.fix_scr_top = menu.main.pos.col[18]
+		if global.fix_scr_top == 1 then -- 1:OFF
+			-- 演出のためのカメラワークテーブルを戻す
+			for addr = 0x13C60, 0x13CBF, 4 do mem.wd32(addr, 0x00000000) end
+			mem.wd32(0x13C6C, 0x00030000)
+			mem.wd32(0x13C70, 0x000A0000)
+			mem.wd32(0x13C7C, 0x000A0000)
+			mem.wd32(0x13C80, 0x000A0000)
+			mem.wd32(0x13C84, 0x00010000)
+			mem.wd32(0x13C88, 0x00020000)
+			mem.wd32(0x13C98, 0x00300000)
+			mem.wd32(0x13C9C, 0x00020000)
+			mem.wd32(0x13CA0, 0x00040000)
+			mem.wd32(0x13CBC, 0x00020000)
 		else
-			players[1].fix_scr_top = 0xFF
-			players[2].fix_scr_top = fix_scr_top
+			-- 演出のためのカメラワークテーブルをすべてFにしてキャラを追従可能にする
+			for addr = 0x13C60, 0x13CBF, 4 do mem.wd32(addr, 0xFFFFFFFF) end
 		end
+		-- 画面の上限設定を飛ばす
+		mem.wd8(0x13AF0, global.fix_scr_top == 1 and 0x67 or 0x60) -- 013AF0: 6700 0036 beq $13b28
+		mem.wd8(0x13B9A, global.fix_scr_top == 1 and 0x6A or 0x60) -- 013B9A: 6A04      bpl $13ba0
+
 		cls_joy()
 		cls_ps()
 		-- 初期化
@@ -13362,14 +7232,16 @@ rbff2.startplugin = function()
 			{ "判定個別設定" },
 			{ "プレイヤーセレクト画面" },
 			{ "                          クイックセレクト" },
-			{ "1P セレクト",            menu.labels.chars },
-			{ "2P セレクト",            menu.labels.chars },
-			{ "1P カラー",              { "A", "D" } },
-			{ "2P カラー",              { "A", "D" } },
-			{ "ステージセレクト",       menu.labels.stgs },
-			{ "BGMセレクト",            menu.labels.bgms },
-			{ "体力,POWゲージ表示",     menu.labels.off_on, },
-			{ "背景なし時位置補正",     menu.labels.fix_scr_tops, },
+			{ "1P セレクト", menu.labels.chars },
+			{ "2P セレクト", menu.labels.chars },
+			{ "1P カラー", { "A", "D" } },
+			{ "2P カラー", { "A", "D" } },
+			{ "ステージセレクト", menu.labels.stgs },
+			{ "BGMセレクト", menu.labels.bgms },
+			{ "体力,POWゲージ表示", menu.labels.off_on, },
+			{ "背景表示", menu.labels.off_on, },
+			{ "影表示", { "OFF", "ON", "ON:反射→影", } },
+			{ "位置補正", menu.labels.fix_scr_tops, },
 			{ "リスタート" },
 		},
 		pos = {
@@ -13392,8 +7264,10 @@ rbff2.startplugin = function()
 				1, -- ステージセレクト       13
 				1, -- BGMセレクト            14
 				1, -- 体力,POWゲージ表示     15
-				1, -- 背景なし時位置補正     16
-				0, -- リスタート             18
+				2, -- 背景表示               16
+				2, -- 影表示                 17
+				1, -- 背景なし時位置補正     18
+				0, -- リスタート             19
 			},
 		},
 		on_a = {
@@ -13412,33 +7286,35 @@ rbff2.startplugin = function()
 			menu_restart_fight, -- ステージセレクト
 			menu_restart_fight, -- BGMセレクト
 			menu_restart_fight, -- 体力,POWゲージ表示
+			menu_restart_fight, -- 背景表示
+			menu_restart_fight, -- 影表示
 			menu_restart_fight, -- 背景なし時位置補正
 			menu_restart_fight, -- リスタート
 		},
-		on_b = new_filled_table(18, menu.exit),
+		on_b = util.new_filled_table(19, menu.exit),
 	}
-	menu.current                       = menu.main -- デフォルト設定
+	menu.current                   = menu.main  -- デフォルト設定
 	menu.update_pos                = function()
 		-- メニューの更新
-		menu.main.pos.col[9] = math.min(math.max(pgm:read_u8(0x107BA5), 1), #menu.labels.chars)
-		menu.main.pos.col[10] = math.min(math.max(pgm:read_u8(0x107BA7), 1), #menu.labels.chars)
-		menu.main.pos.col[11] = math.min(math.max(pgm:read_u8(0x107BAC) + 1, 1), 2)
-		menu.main.pos.col[12] = math.min(math.max(pgm:read_u8(0x107BAD) + 1, 1), 2)
+		menu.main.pos.col[9] = math.min(math.max(mem.r8(0x107BA5), 1), #menu.labels.chars)
+		menu.main.pos.col[10] = math.min(math.max(mem.r8(0x107BA7), 1), #menu.labels.chars)
+		menu.main.pos.col[11] = math.min(math.max(mem.r8(0x107BAC) + 1, 1), 2)
+		menu.main.pos.col[12] = math.min(math.max(mem.r8(0x107BAD) + 1, 1), 2)
 
 		menu.reset_pos = false
 
-		local stg1 = pgm:read_u8(0x107BB1)
-		local stg2 = pgm:read_u8(0x107BB7)
-		local stg3 = pgm:read_u8(0x107BB9) == 1 and 0x01 or 0x0F
+		local stg1 = mem.r8(0x107BB1)
+		local stg2 = mem.r8(0x107BB7)
+		local stg3 = mem.r8(0x107BB8)
 		menu.main.pos.col[13] = 1
 		for i, data in ipairs(menu.stgs) do
-			if data.stg1 == stg1 and data.stg2 == stg2 and data.stg3 == stg3 and global.no_background == data.no_background then
+			if data.stg1 == stg1 and data.stg2 == stg2 and data.stg3 == stg3 and global.disp_bg == data.disp_bg then
 				menu.main.pos.col[13] = i
 				break
 			end
 		end
 
-		local bgmid, found = pgm:read_u8(0x10A8D5), false
+		local bgmid, found = mem.r8(0x10A8D5), false
 		for _, bgm in ipairs(menu.bgms) do
 			if bgmid == bgm.id then
 				menu.main.pos.col[14] = bgm.name_idx
@@ -13450,20 +7326,15 @@ rbff2.startplugin = function()
 			menu.main.pos.col[14] = 1
 		end
 
-		menu.main.pos.col[15] = global.disp_gauge and 2 or 1 -- 体力,POWゲージ表示
-
-		if players[1].fix_scr_top ~= 0xFF then
-			menu.main.pos.col[16] = players[1].fix_scr_top
-		elseif players[2].fix_scr_top ~= 0xFF then
-			menu.main.pos.col[16] = players[2].fix_scr_top
-		else
-			menu.main.pos.col[16] = 1
-		end
+		menu.main.pos.col[15] = global.disp_meters and 2 or 1 -- 体力,POWゲージ表示
+		menu.main.pos.col[16] = global.disp_bg and 2 or 1 -- 背景表示
+		menu.main.pos.col[17] = global.hide_shadow      -- 影表示
+		menu.main.pos.col[18] = global.fix_scr_top
 
 		setup_char_manu()
 	end
 	-- ブレイクショットメニュー
-	menu.bs_menus, menu.rvs_menus            = {}, {}
+	menu.bs_menus, menu.rvs_menus  = {}, {}
 	local bs_blocks, rvs_blocks    = {}, {}
 	for i = 1, 60 do
 		table.insert(bs_blocks, string.format("%s回ガード後に発動", i))
@@ -13486,7 +7357,7 @@ rbff2.startplugin = function()
 			end
 		end
 		-- 共通行動の設定を全キャラにコピー反映
-		for _, a_bs_menu in ipairs(cur_prvs) do
+		for _, a_bs_menu in ipairs(cur_prvs or {}) do
 			if menu.current ~= a_bs_menu then
 				for _, rvs in ipairs(a_bs_menu.list) do
 					if rvs.common then
@@ -13501,31 +7372,21 @@ rbff2.startplugin = function()
 		local pbs, prvs = {}, {}
 		table.insert(menu.bs_menus, pbs)
 		table.insert(menu.rvs_menus, prvs)
-		for _, bs_list in pairs(char_bs_list) do
+		for _, bs_list in pairs(data.char_bs_list) do
 			local list, on_ab, col = {}, {}, {}
 			table.insert(list, { "     ONにしたスロットからランダムで発動されます。" })
 			table.insert(on_ab, menu_bs_to_tra_menu)
 			table.insert(col, 0)
 			for _, bs in pairs(bs_list) do
-				table.insert(list, { bs.name, menu.labels.off_on, common = bs.common == true, row = #list, })
+				local name = bs.name
+				if util.testbit(bs.hook_type, hook_cmd_types.ex_breakshot, true) then bs.name = "*" .. bs.name end
+				table.insert(list, { name, menu.labels.off_on, common = bs.common == true, row = #list, })
 				table.insert(on_ab, menu_bs_to_tra_menu)
 				table.insert(col, 1)
 			end
-
-			local a_bs_menu = {
-				list = list,
-				pos = {
-					-- メニュー内の選択位置
-					offset = 1,
-					row = 2,
-					col = col,
-				},
-				on_a = on_ab,
-				on_b = on_ab,
-			}
-			table.insert(pbs, a_bs_menu)
+			table.insert(pbs, { list = list, pos = { offset = 1, row = 2, col = col, }, on_a = on_ab, on_b = on_ab, })
 		end
-		for _, rvs_list in pairs(char_rvs_list) do
+		for _, rvs_list in pairs(data.char_rvs_list) do
 			local list, on_ab, col = {}, {}, {}
 			table.insert(list, { "     ONにしたスロットからランダムで発動されます。" })
 			table.insert(on_ab, menu_rvs_to_tra_menu)
@@ -13535,19 +7396,7 @@ rbff2.startplugin = function()
 				table.insert(on_ab, menu_rvs_to_tra_menu)
 				table.insert(col, 1)
 			end
-
-			local a_rvs_menu = {
-				list = list,
-				pos = {
-					-- メニュー内の選択位置
-					offset = 1,
-					row = 2,
-					col = col,
-				},
-				on_a = on_ab,
-				on_b = on_ab,
-			}
-			table.insert(prvs, a_rvs_menu)
+			table.insert(prvs, { list = list, pos = { offset = 1, row = 2, col = col, }, on_a = on_ab, on_b = on_ab, })
 		end
 	end
 	local gd_frms = {}
@@ -13560,24 +7409,24 @@ rbff2.startplugin = function()
 	end
 	menu.training = {
 		list = {
-			{ "ダミーモード",           { "プレイヤー vs プレイヤー", "プレイヤー vs CPU", "CPU vs プレイヤー", "1P&2P入れ替え", "レコード", "リプレイ" }, },
+			{ "ダミーモード", { "プレイヤー vs プレイヤー", "プレイヤー vs CPU", "CPU vs プレイヤー", "1P&2P入れ替え", "レコード", "リプレイ" }, },
 			{ "                         ダミー設定" },
-			{ "1P アクション",          { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
-			{ "2P アクション",          { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
-			{ "1P ガード",              { "なし", "オート", "ブレイクショット（Aで選択画面へ）", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
-			{ "2P ガード",              { "なし", "オート", "ブレイクショット（Aで選択画面へ）", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
-			{ "1ガード持続フレーム数",  gd_frms, },
-			{ "ブレイクショット設定",   bs_blocks },
-			{ "1P やられ時行動",        { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ（Aで選択画面へ）", "グランドスウェー（Aで選択画面へ）", "起き上がり攻撃", }, },
-			{ "2P やられ時行動",        { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ（Aで選択画面へ）", "グランドスウェー（Aで選択画面へ）", "起き上がり攻撃", }, },
-			{ "ガードリバーサル設定",   bs_blocks },
-			{ "1P 強制空振り",          no_hit_row, },
-			{ "2P 強制空振り",          no_hit_row, },
-			{ "1P 挑発で前進",          menu.labels.off_on, },
-			{ "2P 挑発で前進",          menu.labels.off_on, },
-			{ "1P Y座標強制",           force_y_pos, },
-			{ "2P Y座標強制",           force_y_pos, },
-			{ "画面下に移動",           { "OFF", "2Pを下に移動", "1Pを下に移動", }, },
+			{ "1P アクション", { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
+			{ "2P アクション", { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
+			{ "1P ガード", { "なし", "オート", "ブレイクショット（Aで選択画面へ）", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
+			{ "2P ガード", { "なし", "オート", "ブレイクショット（Aで選択画面へ）", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
+			{ "1ガード持続フレーム数", gd_frms, },
+			{ "ブレイクショット設定", bs_blocks },
+			{ "1P やられ時行動", { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ（Aで選択画面へ）", "グランドスウェー（Aで選択画面へ）", "起き上がり攻撃", }, },
+			{ "2P やられ時行動", { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ（Aで選択画面へ）", "グランドスウェー（Aで選択画面へ）", "起き上がり攻撃", }, },
+			{ "ガードリバーサル設定", bs_blocks },
+			{ "1P 強制空振り", no_hit_row, },
+			{ "2P 強制空振り", no_hit_row, },
+			{ "1P 挑発で前進", menu.labels.off_on, },
+			{ "2P 挑発で前進", menu.labels.off_on, },
+			{ "1P Y座標強制", force_y_pos, },
+			{ "2P Y座標強制", force_y_pos, },
+			{ "画面下に移動", { "OFF", "2Pを下に移動", "1Pを下に移動", }, },
 		},
 		pos = { -- メニュー内の選択位置
 			offset = 1,
@@ -13603,22 +7452,22 @@ rbff2.startplugin = function()
 				1, -- X座標同期              18
 			},
 		},
-		on_a = new_filled_table(18, menu_to_main),
-		on_b = new_filled_table(18, menu_to_main_cancel),
+		on_a = util.new_filled_table(18, menu_to_main),
+		on_b = util.new_filled_table(18, menu_to_main_cancel),
 	}
 
 	menu.bar = {
 		list = {
 			{ "                         ゲージ設定" },
-			{ "1P 体力ゲージ量",         life_range, }, -- "最大", "赤", "ゼロ" ...
-			{ "2P 体力ゲージ量",         life_range, }, -- "最大", "赤", "ゼロ" ...
-			{ "1P POWゲージ量",          pow_range, }, -- "最大", "半分", "ゼロ" ...
-			{ "2P POWゲージ量",          pow_range, }, -- "最大", "半分", "ゼロ" ...
-			{ "体力ゲージモード",        { "自動回復", "固定" }, },
-			{ "POWゲージモード",         { "自動回復", "固定", "通常動作" }, },
+			{ "1P 体力ゲージ量", life_range, }, -- "最大", "赤", "ゼロ" ...
+			{ "2P 体力ゲージ量", life_range, }, -- "最大", "赤", "ゼロ" ...
+			{ "1P POWゲージ量", pow_range, }, -- "最大", "半分", "ゼロ" ...
+			{ "2P POWゲージ量", pow_range, }, -- "最大", "半分", "ゼロ" ...
+			{ "体力ゲージモード", { "自動回復", "固定" }, },
+			{ "POWゲージモード", { "自動回復", "固定", "通常動作" }, },
 		},
 		pos = {
-		  -- メニュー内の選択位置
+			-- メニュー内の選択位置
 			offset = 1,
 			row = 2,
 			col = {
@@ -13631,41 +7480,46 @@ rbff2.startplugin = function()
 				2, -- POWゲージモード         7
 			},
 		},
-		on_a = new_filled_table(7, bar_menu_to_main),
-		on_b = new_filled_table(7, bar_menu_to_main_cancel),
+		on_a = util.new_filled_table(7, bar_menu_to_main),
+		on_b = util.new_filled_table(7, bar_menu_to_main),
 	}
 
 	menu.disp = {
 		list = {
 			{ "                          表示設定" },
-			{ "1P 判定表示",             { "OFF", "ON", "ON:P番号なし", }, },
-			{ "2P 判定表示",             { "OFF", "ON", "ON:P番号なし", }, },
-			{ "1P 間合い表示",           { "OFF", "ON", "ON:投げ", "ON:遠近攻撃", "ON:詠酒", }, },
-			{ "2P 間合い表示",           { "OFF", "ON", "ON:投げ", "ON:遠近攻撃", "ON:詠酒", }, },
-			{ "1P 気絶ゲージ表示",       menu.labels.off_on, },
-			{ "2P 気絶ゲージ表示",       menu.labels.off_on, },
-			{ "1P ダメージ表示",         menu.labels.off_on, },
-			{ "2P ダメージ表示",         menu.labels.off_on, },
-			{ "1P 入力表示",             { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
-			{ "2P 入力表示",             { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
-			{ "コマンド入力状態表示",    { "OFF", "1P", "2P", }, },
-			{ "通常動作フレーム非表示",  menu.labels.off_on, },
-			{ "フレーム差表示",          { "OFF", "数値とグラフ", "数値" }, },
-			{ "1P フレーム数表示",       { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
-			{ "2P フレーム数表示",       { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
-			{ "1P 弾フレーム数表示",     menu.labels.off_on, },
-			{ "2P 弾フレーム数表示",     menu.labels.off_on, },
-			{ "1P 状態表示",             { "OFF", "ON", "ON:小表示", "ON:大表示" }, },
-			{ "2P 状態表示",             { "OFF", "ON", "ON:小表示", "ON:大表示" }, },
-			{ "1P 処理アドレス表示",     menu.labels.off_on, },
-			{ "2P 処理アドレス表示",     menu.labels.off_on, },
-			{ "1P 2P 距離表示",          menu.labels.off_on, },
-			{ "1P キャラ表示",           menu.labels.off_on, },
-			{ "2P キャラ表示",           menu.labels.off_on, },
-			{ "エフェクト表示",          menu.labels.off_on, },
+			{ "1P 判定表示", { "OFF", "ON", }, },
+			{ "2P 判定表示", { "OFF", "ON", }, },
+			{ "1P 間合い表示", { "OFF", "ON", }, },
+			{ "2P 間合い表示", { "OFF", "ON", }, },
+			{ "1P 気絶ゲージ表示", menu.labels.off_on, },
+			{ "2P 気絶ゲージ表示", menu.labels.off_on, },
+			{ "1P ダメージ表示", menu.labels.off_on, },
+			{ "2P ダメージ表示", menu.labels.off_on, },
+			{ "1P 入力表示", { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
+			{ "2P 入力表示", { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
+			{ "コマンド入力状態表示", { "OFF", "1P", "2P", }, },
+			{ "通常動作フレーム非表示", menu.labels.off_on, },
+			{ "フレーム差表示", { "OFF", "数値とグラフ", "数値" }, },
+			{ "1P フレーム数表示", { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
+			{ "2P フレーム数表示", { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
+			{ "1P 弾フレーム数表示", menu.labels.off_on, },
+			{ "2P 弾フレーム数表示", menu.labels.off_on, },
+			{ "1P 状態表示", { "OFF", "ON", "ON:小表示", "ON:大表示" }, },
+			{ "2P 状態表示", { "OFF", "ON", "ON:小表示", "ON:大表示" }, },
+			{ "1P 処理アドレス表示", menu.labels.off_on, },
+			{ "2P 処理アドレス表示", menu.labels.off_on, },
+			{ "1P 2P 距離表示", menu.labels.off_on, },
+			{ "1P キャラ表示", menu.labels.off_on, },
+			{ "2P キャラ表示", menu.labels.off_on, },
+			{ "1P 残像表示", menu.labels.off_on, },
+			{ "2P 残像表示", menu.labels.off_on, },
+			{ "1P エフェクト表示", menu.labels.off_on, },
+			{ "2P エフェクト表示", menu.labels.off_on, },
+			{ "Pちゃん表示", menu.labels.off_on, },
+			{ "エフェクト表示", menu.labels.off_on, },
 		},
 		pos = {
-		  -- メニュー内の選択位置
+			-- メニュー内の選択位置
 			offset = 1,
 			row = 2,
 			col = {
@@ -13694,31 +7548,32 @@ rbff2.startplugin = function()
 				1, -- 1P 2P 距離表示         23
 				2, -- 1P キャラ表示          24
 				2, -- 2P キャラ表示          25
-				2, -- エフェクト表示         26
+				2, -- 1P 残像表示            26
+				2, -- 2P 残像表示            27
+				2, -- 1P エフェクト表示      28
+				2, -- 2P エフェクト表示      29
+				2, -- Pちゃん表示            30
+				2, -- エフェクト表示         31
 			},
 		},
-		on_a = new_filled_table(26, disp_menu_to_main),
-		on_b = new_filled_table(26, disp_menu_to_main_cancel),
+		on_a = util.new_filled_table(31, disp_menu_to_main),
+		on_b = util.new_filled_table(31, disp_menu_to_main),
 	}
 	menu.extra = {
 		list = {
 			{ "                          特殊設定" },
-			{ "簡易超必",               menu.labels.off_on, },
-			{ "半自動潜在能力",         menu.labels.off_on, },
-			{ "ライン送らない現象",     { "OFF", "ON", "ON:1Pのみ", "ON:2Pのみ" }, },
-			{ "ヒット時にポーズ",       { "OFF", "ON", "ON:やられのみ", "ON:投げやられのみ", "ON:打撃やられのみ", "ON:ガードのみ", }, },
-			{ "判定発生時にポーズ",     { "OFF", "投げ", "攻撃", "変化時", }, },
-			{ "技画像保存",             { "OFF", "ON:新規", "ON:上書き", }, },
+			{ "簡易超必", menu.labels.off_on, },
+			{ "半自動潜在能力", menu.labels.off_on, },
+			{ "ライン送らない現象", { "OFF", "ON", "ON:1Pのみ", "ON:2Pのみ" }, },
+			{ "ヒット時にポーズ", { "OFF", "ON", "ON:やられのみ", "ON:投げやられのみ", "ON:打撃やられのみ", "ON:ガードのみ", }, },
+			{ "判定発生時にポーズ", { "OFF", "投げ", "攻撃", "変化時", }, },
+			{ "技画像保存", { "OFF", "ON:新規", "ON:上書き", }, },
 			{ "MAMEデバッグウィンドウ", menu.labels.off_on, },
-			{ "ヒット効果確認用",       damaged_move_keys },
-			{ "位置ログ",               menu.labels.off_on, },
-			{ "攻撃情報ログ",           menu.labels.off_on, },
-			{ "処理アドレスログ",       menu.labels.off_on, },
-			{ "入力ログ",               menu.labels.off_on, },
-			{ "リバサログ",             menu.labels.off_on, },
+			{ "ヒット効果確認用", hit_effect_move_keys },
+			{ "全必殺技BS", menu.labels.off_on, }
 		},
 		pos = {
-		  -- メニュー内の選択位置
+			-- メニュー内の選択位置
 			offset = 1,
 			row = 2,
 			col = {
@@ -13731,38 +7586,34 @@ rbff2.startplugin = function()
 				1, -- 技画像保存              7
 				1, -- MAMEデバッグウィンドウ  8
 				1, -- ヒット効果確認用        9
-				1, -- 位置ログ               10
-				1, -- 攻撃情報ログ           11
-				1, -- 処理アドレスログ       12
-				1, -- 入力ログ               13
-				1, -- リバサログ             14
+				1, -- 全必殺技BS             10
 			},
 		},
-		on_a = new_filled_table(14, ex_menu_to_main),
-		on_b = new_filled_table(14, ex_menu_to_main_cancel),
+		on_a = util.new_filled_table(10, ex_menu_to_main),
+		on_b = util.new_filled_table(10, ex_menu_to_main),
 	}
 
 	menu.auto = {
 		list = {
 			{ "                        自動入力設定" },
-			{ "ダウン投げ"            , menu.labels.off_on, },
-			{ "ダウン攻撃"            , menu.labels.off_on, },
-			{ "通常投げの派生技"      , menu.labels.off_on, },
-			{ "デッドリーレイブ"      , { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, },
+			{ "ダウン投げ", menu.labels.off_on, },
+			{ "ダウン攻撃", menu.labels.off_on, },
+			{ "通常投げの派生技", menu.labels.off_on, },
+			{ "デッドリーレイブ", { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, },
 			{ "アンリミテッドデザイア", { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "ギガティックサイクロン" }, },
-			{ "ドリル"                , { 1, 2, 3, 4, 5 }, },
-			{ "超白龍"                , { "OFF", "C攻撃-判定発生前", "C攻撃-判定発生後" }, },
-			{ "M.リアルカウンター"    , { "OFF", "ジャーマン", "フェイスロック", "投げっぱなしジャーマン", "ランダム", }, },
+			{ "ドリル", { 1, 2, 3, 4, 5 }, },
+			{ "超白龍", { "OFF", "C攻撃-判定発生前", "C攻撃-判定発生後" }, },
+			{ "M.リアルカウンター", { "OFF", "ジャーマン", "フェイスロック", "投げっぱなしジャーマン", }, },
 			{ "M.トリプルエクスタシー", menu.labels.off_on, },
-			{ "炎の種馬"              , menu.labels.off_on, },
-			{ "喝CA"                  , menu.labels.off_on, },
+			{ "炎の種馬", menu.labels.off_on, },
+			{ "喝CA", menu.labels.off_on, },
 			{ "                          入力設定" },
-			{ "詠酒距離チェック"      , menu.labels.off_on, },
-			{ "必勝！逆襲拳"          , menu.labels.off_on, },
-			{ "空振りCA"              , menu.labels.off_on, },
+			{ "詠酒チェック", { "OFF", "詠酒距離チェックなし", "いつでも詠酒" }, },
+			{ "必勝！逆襲拳", menu.labels.off_on, },
+			{ "空振りCA", menu.labels.off_on, },
 		},
 		pos = {
-		  -- メニュー内の選択位置
+			-- メニュー内の選択位置
 			offset = 1,
 			row = 2,
 			col = {
@@ -13784,14 +7635,14 @@ rbff2.startplugin = function()
 				1, -- 空振りCA               16
 			},
 		},
-		on_a = new_filled_table(16, auto_menu_to_main),
-		on_b = new_filled_table(16, auto_menu_to_main_cancel),
+		on_a = util.new_filled_table(16, auto_menu_to_main),
+		on_b = util.new_filled_table(16, auto_menu_to_main),
 	}
 
 	menu.color = {
 		list = {},
 		pos = {
-		  -- メニュー内の選択位置
+			-- メニュー内の選択位置
 			offset = 1,
 			row = 2,
 			col = {},
@@ -13802,28 +7653,28 @@ rbff2.startplugin = function()
 	table.insert(menu.color.list, { "                          判定個別設定" })
 	table.insert(menu.color.pos.col, 0)
 	table.insert(menu.color.on_a, col_menu_to_main)
-	table.insert(menu.color.on_b, col_menu_to_main_cancel)
-	for _, box in pairs(box_type_col_list) do
+	table.insert(menu.color.on_b, col_menu_to_main)
+	for _, box in pairs(data.box_type_list) do -- TODO 修正する
 		table.insert(menu.color.list, { box.name, menu.labels.off_on, { fill = box.fill, outline = box.outline } })
 		table.insert(menu.color.pos.col, box.enabled and 2 or 1)
 		table.insert(menu.color.on_a, col_menu_to_main)
-		table.insert(menu.color.on_b, col_menu_to_main_cancel)
+		table.insert(menu.color.on_b, col_menu_to_main)
 	end
 
 	menu.recording = {
 		list = {
 			{ "            選択したスロットに記憶されます。" },
-			{ "スロット1",              { "Aでレコード開始", }, },
-			{ "スロット2",              { "Aでレコード開始", }, },
-			{ "スロット3",              { "Aでレコード開始", }, },
-			{ "スロット4",              { "Aでレコード開始", }, },
-			{ "スロット5",              { "Aでレコード開始", }, },
-			{ "スロット6",              { "Aでレコード開始", }, },
-			{ "スロット7",              { "Aでレコード開始", }, },
-			{ "スロット8",              { "Aでレコード開始", }, },
+			{ "スロット1", { "Aでレコード開始", }, },
+			{ "スロット2", { "Aでレコード開始", }, },
+			{ "スロット3", { "Aでレコード開始", }, },
+			{ "スロット4", { "Aでレコード開始", }, },
+			{ "スロット5", { "Aでレコード開始", }, },
+			{ "スロット6", { "Aでレコード開始", }, },
+			{ "スロット7", { "Aでレコード開始", }, },
+			{ "スロット8", { "Aでレコード開始", }, },
 		},
 		pos = {
-		  -- メニュー内の選択位置
+			-- メニュー内の選択位置
 			offset = 1,
 			row = 2,
 			col = {
@@ -13849,7 +7700,7 @@ rbff2.startplugin = function()
 			function() exit_menu_to_rec(7) end, -- スロット7
 			function() exit_menu_to_rec(8) end, -- スロット8
 		},
-		on_b = new_filled_table(1, menu_rec_to_tra, 8, menu_to_tra),
+		on_b = util.new_filled_table(1, menu_rec_to_tra, 8, menu_to_tra),
 	}
 	local play_interval = {}
 	for i = 1, 301 do
@@ -13858,25 +7709,25 @@ rbff2.startplugin = function()
 	menu.replay = {
 		list = {
 			{ "     ONにしたスロットからランダムでリプレイされます。" },
-			{ "スロット1",              menu.labels.off_on, },
-			{ "スロット2",              menu.labels.off_on, },
-			{ "スロット3",              menu.labels.off_on, },
-			{ "スロット4",              menu.labels.off_on, },
-			{ "スロット5",              menu.labels.off_on, },
-			{ "スロット6",              menu.labels.off_on, },
-			{ "スロット7",              menu.labels.off_on, },
-			{ "スロット8",              menu.labels.off_on, },
+			{ "スロット1", menu.labels.off_on, },
+			{ "スロット2", menu.labels.off_on, },
+			{ "スロット3", menu.labels.off_on, },
+			{ "スロット4", menu.labels.off_on, },
+			{ "スロット5", menu.labels.off_on, },
+			{ "スロット6", menu.labels.off_on, },
+			{ "スロット7", menu.labels.off_on, },
+			{ "スロット8", menu.labels.off_on, },
 			{ "                        リプレイ設定" },
-			{ "繰り返し",               menu.labels.off_on, },
-			{ "繰り返し間隔",           play_interval, },
-			{ "繰り返し開始条件",       { "なし", "両キャラがニュートラル", }, },
-			{ "開始間合い固定",         { "OFF", "Aでレコード開始", "1Pと2P", "1P", "2P", }, },
-			{ "状態リセット",           { "OFF", "1Pと2P", "1P", "2P", }, },
-			{ "ガイド表示",             menu.labels.off_on, },
+			{ "繰り返し", menu.labels.off_on, },
+			{ "繰り返し間隔", play_interval, },
+			{ "繰り返し開始条件", { "なし", "両キャラがニュートラル", }, },
+			{ "開始間合い固定", { "OFF", "Aでレコード開始", "1Pと2P", "1P", "2P", }, },
+			{ "状態リセット", { "OFF", "1Pと2P", "1P", "2P", }, },
+			{ "ガイド表示", menu.labels.off_on, },
 			{ "ダメージでリプレイ中止", menu.labels.off_on, },
 		},
 		pos = {
-		  -- メニュー内の選択位置
+			-- メニュー内の選択位置
 			offset = 1,
 			row = 2,
 			col = {
@@ -13899,9 +7750,9 @@ rbff2.startplugin = function()
 				2,         -- ダメージでリプレイ中止 17
 			},
 		},
-		on_a = new_filled_table(17, exit_menu_to_play),
+		on_a = util.new_filled_table(17, exit_menu_to_play),
 		-- TODO キャンセル時にも間合い固定の設定とかが変わるように
-		on_b = new_filled_table(17, exit_menu_to_play_cancel),
+		on_b = util.new_filled_table(17, exit_menu_to_play_cancel),
 	}
 	init_auto_menu_config()
 	init_disp_menu_config()
@@ -13911,10 +7762,7 @@ rbff2.startplugin = function()
 	init_restart_fight()
 	menu_to_main(true)
 
-	menu.proc = function()
-		-- メニュー表示中はDIPかポーズでフリーズさせる
-		set_freeze(false)
-	end
+	menu.proc = function() set_freeze(false) end -- メニュー表示中はDIPかポーズでフリーズさせる
 	local menu_cur_updown = function(add_val)
 		local temp_row = menu.current.pos.row
 		while true do
@@ -13963,7 +7811,7 @@ rbff2.startplugin = function()
 		local width = scr.width * scr.xscale
 		local height = scr.height * scr.yscale
 
-		if not match_active or player_select_active then
+		if not in_match or in_player_select then
 			return
 		end
 
@@ -13976,33 +7824,33 @@ rbff2.startplugin = function()
 
 		local joy_val = get_joy()
 
-		if accept_input("Start", joy_val, state_past) then
+		if accept_input("st", joy_val, state_past) then
 			-- Menu ON/OFF
 			global.input_accepted = ec
-		elseif accept_input("A", joy_val, state_past) then
+		elseif accept_input("a", joy_val, state_past) then
 			-- サブメニューへの遷移（あれば）
 			menu.current.on_a[menu.current.pos.row]()
 			global.input_accepted = ec
-		elseif accept_input("B", joy_val, state_past) then
+		elseif accept_input("b", joy_val, state_past) then
 			-- メニューから戻る
 			menu.current.on_b[menu.current.pos.row]()
 			global.input_accepted = ec
-		elseif accept_input("Up", joy_val, state_past) then
+		elseif accept_input("up", joy_val, state_past) then
 			-- カーソル上移動
 			menu_cur_updown(-1)
-		elseif accept_input("Down", joy_val, state_past) then
+		elseif accept_input("dn", joy_val, state_past) then
 			-- カーソル下移動
 			menu_cur_updown(1)
-		elseif accept_input("Left", joy_val, state_past) then
+		elseif accept_input("lt", joy_val, state_past) then
 			-- カーソル左移動
 			menu_cur_lr(-1, true)
-		elseif accept_input("Right", joy_val, state_past) then
+		elseif accept_input("rt", joy_val, state_past) then
 			-- カーソル右移動
 			menu_cur_lr(1, true)
-		elseif accept_input("C", joy_val, state_past) then
+		elseif accept_input("c", joy_val, state_past) then
 			-- カーソル左10移動
 			menu_cur_lr(-10, false)
-		elseif accept_input("D", joy_val, state_past) then
+		elseif accept_input("d", joy_val, state_past) then
 			-- カーソル右10移動
 			menu_cur_lr(10, false)
 		end
@@ -14066,355 +7914,74 @@ rbff2.startplugin = function()
 		p2.min_pos = 1000
 	end
 
-	local bufuf = {}
 	local active_mem_0x100701 = {}
 	for i = 0x022E, 0x0615 do
 		active_mem_0x100701[i] = true
 	end
 
 	menu.state = menu.tra_main -- menu or tra_main
-	local main_or_menu = function()
-		if not cpu then
-			return
-		end
 
-		-- フレーム更新しているかチェック更新
-		local ec = scr:frame_number()
-		if mem.last_time == ec then
-			return
-		end
-		mem.last_time = ec
+	emu.register_pause(function() menu.state.draw() end)
 
-		-- メモリ値の読込と更新
-		mem._0x100701 = pgm:read_u16(0x100701) -- 22e 22f 対戦中
-		mem._0x107C22 = pgm:read_u16(0x107C22) -- 対戦中4400
-		mem._0x10B862 = pgm:read_u8(0x10B862) -- 対戦中00
-		mem._0x100F56 = pgm:read_u32(0x100F56) --100F56 100F58
-		mem._0x10FD82 = pgm:read_u8(0x10FD82)
-		mem._0x10FDAF = pgm:read_u8(0x10FDAF)
-		mem._0x10FDB6 = pgm:read_u16(0x10FDB6)
-		mem.biostest  = bios_test()
-		mem._0x10E043 = pgm:read_u8(0x10E043)
-		mem.old_0x107C2A = mem._0x107C2A
-		mem._0x107C2A = pgm:read_u16(0x107C2A)
-		global.lag_frame = mem.old_0x107C2A == mem._0x107C2A
-		if mem._0x107C2A >= 0x176E then
-			pgm:write_u16(0x107C2A, 0) -- リセット
-		end
-		prev_p_space  = (p_space ~= 0) and p_space or prev_p_space
-
-		-- 対戦中かどうかの判定
-		if not mem.biostest
-			and active_mem_0x100701[mem._0x100701] ~= nil
-			and mem._0x107C22 == 0x4400
-			and mem._0x10FDAF == 2
-			and (mem._0x10FDB6 == 0x0100 or mem._0x10FDB6 == 0x0101) then
-			match_active = true
-		else
-			match_active = false
-		end
-		-- プレイヤーセレクト中かどうかの判定
-		if not mem.biostest
-			and mem._0x100701 == 0x10B
-			and (mem._0x107C22 == 0x0000 or mem._0x107C22 == 0x5500)
-			and mem._0x10FDAF == 2
-			and mem._0x10FDB6 ~= 0
-			and mem._0x10E043 == 0 then
-			pgm:write_u32(mem._0x100F56, 0x00000000)
-			player_select_active = true
-		else
-			player_select_active = false -- 状態リセット
-			pgm:write_u8(mem._0x10CDD0, 0x00)
-			pgm:write_u32(players[1].addr.select_hook)
-			pgm:write_u32(players[2].addr.select_hook)
-		end
-
-		-- ROM部分のメモリエリアへパッチあて
-		if mem.biostest then
-			pached = false -- 状態リセット
-		elseif not pached then
-			pached = apply_patch_file("char1-p1.pat", true)
-
-			-- キャラ選択の時間減らす処理をNOPにする
-			pgm:write_direct_u16(0x63336, 0x4E71)
-			pgm:write_direct_u16(0x63338, 0x4E71)
-			--時間の値にアイコン用のオフセット値を足しこむ処理で空表示にする 0632DA: 0640 00EE                addi.w  #$ee, D0
-			pgm:write_direct_u16(0x632DC, 0x0DD7)
-
-			-- 0632D0: 004B -- キャラ選択の時間の内部タイマー初期値1 デフォは4B=75フレーム
-			-- 063332: 004B -- キャラ選択の時間の内部タイマー初期値2 デフォは4B=75フレーム
-
-			-- 0xCB240から16バイト実質効いていない旧避け攻撃ぽいコマンドデータ
-			-- ここを1発BS用のリバーサルとBSモードの入れ物に使う
-			-- BSモードONの時は CB241 を 00 にして未入力で技データを読み込ませる
-			-- 技データ希望の技IDを設定していれば技が出る
-			pgm:write_direct_u16(0xCB240, 0xF020) -- F0 は入力データ起点    20 はあり得ない入力
-			pgm:write_direct_u16(0xCB242, 0xFF01) -- FF は技データへの繋ぎ  00 は技データ（なにもしない）
-			pgm:write_direct_u16(0xCB244, 0x0600) -- 追加技データ
-
-			--[[ 判定の色 座標の色で確認
-			maincpu.rw@500C=100F  -- 青色
-			maincpu.rw@500C=102D  -- 暗い青色
-			maincpu.rw@500C=20F0  -- 緑色
-			maincpu.rw@500C=30FF  -- 水色
-			maincpu.rw@500C=4F00  -- 赤色
-			maincpu.rw@500C=5F0F  -- ドピンク
-			maincpu.rw@500C=6F70  -- オレンジに近い色
-			maincpu.rw@500C=6FF0  -- 黄色
-			maincpu.rw@500C=7F77  -- 薄い朱色
-			maincpu.rw@500C=7FFF  -- 白色
-			]]
-
-			--[[
-			-- スタートボタンで判定表示
-			maincpu.rd@0047B0=08390000;maincpu.rd@0047B4=00380000;maincpu.rd@0047B8=670001C8;maincpu.rd@0047BC=4E714E71;maincpu.rd@0047C0=4E714E71
-			-- スタートボタンで判定色付けチェックへジャンプ
-			maincpu.rd@004F52=08390000;maincpu.rd@004F56=00380000;maincpu.rw@004F5A=6702
-			-- 判定色のメモリがゼロなら色付け処理へジャンプ
-			maincpu.rd@004F5E=41F90040;maincpu.rd@004F62=1c023210;maincpu.rd@004F66=67024E75
-			-- 判定色付けのメモリ範囲の不足修正
-			maincpu.rw@004F74=7216
-			-- 判定色付け用のメモリ領域の初期化を修正
-			maincpu.rd@0110C4=0000500A
-			]]
-
-			--[[ 没案
-			-- スタートボタンで無敵表示
-			maincpu.rd@05BCAC=08390000;
-			maincpu.rd@05BCB0=00380000;
-			maincpu.rd@05BCB4=67000004;
-			maincpu.rd@05BCB8=4E7549ED;
-			maincpu.rd@05BCBC=84004E71;
-			maincpu.rd@05BCC0=4E714E71;
-
-			maincpu.rd@05BCD8=4E714E71;
-			maincpu.rd@05BCDC=4E714E71;
-
-			-- デバッグの飛び道具のID表示の代わりに投げ無敵フレームを表示
-			maincpu.rd@05BCAC=08390000;
-			maincpu.rd@05BCB0=00380000;
-			maincpu.rd@05BCB4=67000004;
-			maincpu.rd@05BCB8=4E7549ED;
-			maincpu.rd@05BCBC=84004E71;
-			maincpu.rd@05BCC0=4E714E71;
-			maincpu.rd@05BCC4=363C7107;
-			maincpu.rd@05BCC8=610000E6;
-
-			maincpu.rd@05BCD8=4E714E71;
-			maincpu.rd@05BCDC=4E714E71;
-			maincpu.rd@05BCE0=363C72A7;
-			maincpu.rd@05BCE4=610000CA;
-
-			maincpu.rd@05BDB0=1E2C0090;
-			maincpu.rd@05BDB4=4E714E71;maincpu.rw@05BDB8=4E71;
-			-- 24Fよりおおきいかどうかがわかるようにしたい
-
-			-- 無敵表示位置
-			maincpu.rw@05BCC6=7065
-			maincpu.rw@05BCE2=7445
-			maincpu.rw@05BCCE=7066
-			maincpu.rw@05BCEA=7446
-			-- 無敵表示を-M-表記に
-			maincpu.rw@05BEEC=0002
-			maincpu.rd@05BF2D=2D4D2DFF
-			-- ダメージ表示位置
-			maincpu.rw@05B446=7065
-			maincpu.rw@05B45C=7445
-			-- ダメージ表示を白色
-			maincpu.rw@05BDC0=2F00
-			maincpu.rw@05B44A=2F00
-			maincpu.rw@05B460=2F00
-			]]
-
-			-- 乱入されても常にキャラ選択できる
-			-- MVS                    家庭用
-			-- maincpu.rb@062E7C=00   maincpu.rb@062E9D=00
-
-			--[[ 空振りCAできる
-			オリジナル
-			maincpu.rd@02FA72=00000000
-			maincpu.rd@02FA76=00000000
-			maincpu.rd@02FA7A=FFFFFFFF
-			maincpu.rd@02FA7E=00FFFF00
-			maincpu.rw@02FA82=FFFF
-
-			パッチ（00をFFにするとヒット時限定になる）
-			maincpu.rd@02FA72=00000000
-			maincpu.rd@02FA76=00000000
-			maincpu.rd@02FA7A=00000000
-			maincpu.rd@02FA7E=00000000
-			maincpu.rw@02FA82=0000
-			]]
-
-			--[[ 連キャン、必キャン可否テーブルに連キャンデータを設定する
-			for i = 0x085138, 0x08591F do
-				pgm:write_direct_u8(i, 0xD0)
-			end
-			]]
-
-			--[[ 常にCPUレベルMAX
-			MVS                          家庭用
-			maincpu.rd@0500E8=303C0007   maincpu.rd@050108=303C0007
-			maincpu.rd@050118=3E3C0007   maincpu.rd@050138=3E3C0007
-			maincpu.rd@050150=303C0007   maincpu.rd@050170=303C0007
-			maincpu.rd@0501A8=303C0007   maincpu.rd@0501C8=303C0007
-			maincpu.rd@0501CE=303C0007   maincpu.rd@0501EE=303C0007
-			]]
-			pgm:write_direct_u32(fix_bp_addr(0x0500E8), 0x303C0007)
-			pgm:write_direct_u32(fix_bp_addr(0x050118), 0x3E3C0007)
-			pgm:write_direct_u32(fix_bp_addr(0x050150), 0x303C0007)
-			pgm:write_direct_u32(fix_bp_addr(0x0501A8), 0x303C0007)
-			pgm:write_direct_u32(fix_bp_addr(0x0501CE), 0x303C0007)
-
-			-- 対戦の双角ステージをビリーステージに変更する MVSと家庭用共通
-			pgm:write_direct_u16(0xF290, 0x0004)
-
-			-- 簡易超必ONのときにダックのブレイクスパイラルブラザー（BRも）が出るようにする
-			pgm:write_direct_u16(0x0CACC8, 0xC37C)
-
-			-- クレジット消費をNOPにする
-			pgm:write_direct_u32(0x00D238, 0x4E714E71)
-			pgm:write_direct_u32(0x00D270, 0x4E714E71)
-
-			-- 家庭用の初期クレジット9
-			pgm:write_direct_u16(0x00DD54, 0x0009)
-			pgm:write_direct_u16(0x00DD5A, 0x0009)
-			pgm:write_direct_u16(0x00DF70, 0x0009)
-			pgm:write_direct_u16(0x00DF76, 0x0009)
-
-			-- 家庭用のクレジット表示をスキップ bp 00C734,1,{PC=c7c8;g}
-			-- CREDITをCREDITSにする判定をスキップ bp C742,1,{PC=C748;g}
-			-- CREDIT表示のルーチンを即RTS
-			pgm:write_direct_u16(0x00C700, 0x4E75)
-
-			-- 自動アンリミのバグ修正
-			pgm:write_direct_u8(fix_bp_addr(0x049951), 0x2)
-			pgm:write_direct_u8(fix_bp_addr(0x049947), 0x9)
-
-			-- 逆襲拳、サドマゾの初段で相手の状態変更しない（相手が投げられなくなる事象が解消する）
-			-- pgm:write_direct_u8(0x57F43, 0x00)
-
-			--[[ WIP
-			-- https://www.neo-geo.com/forums/index.php?threads/universe-bios-released-good-news-for-mvs-owners.41967/page-7
-			-- pgm:write_direct_u8 (10E003, 0x0C)       -- Auto SDM combo (RB2) 0x56D98A
-			-- pgm:write_direct_u32(1004D5, 0x46A70500) -- 1P Crazy Yamazaki Return (now he can throw projectile "anytime" with some other bug) 0x55FE5C
-			-- pgm:write_direct_u16(1004BF, 0x3CC1)     -- 1P Level 2 Blue Mary 0x55FE46
-			-- cheat offset NGX 45F987 = MAME 0
-			]]
-		end
-
-		-- 強制的に家庭用モードに変更
-		if not mem.biostest then
-			pgm:write_direct_u16(0x10FE32, 0x0000)
-		end
-
-		-- デバッグDIP
-		local dip1, dip2, dip3, dip4 = 0x00, 0x00, 0x00, 0x00
-		if match_active and dip_config.show_hitbox then
-			--dip1 = dip1 | 0x40    --cheat "DIP= 1-7 色々な判定表示"
-			dip1 = dip1 | 0x80 --cheat "DIP= 1-8 当たり判定表示"
-		end
-		if match_active and dip_config.infinity_life then
-			dip1 = dip1 | 0x02 --cheat "DIP= 1-2 Infinite Energy"
-		end
-		if match_active and dip_config.easy_super then
-			dip2 = dip2 | 0x01 --Cheat "DIP 2-1 Eeasy Super"
-		end
-		if match_active and dip_config.semiauto_p then
-			dip4 = dip4 | 0x08 -- DIP4-4
-		end
-		if dip_config.infinity_time then
-			dip2 = dip2 | 0x10  --cheat "DIP= 2-5 Disable Time Over"
-			-- 家庭用オプションの時間無限大設定
-			pgm:write_u8(0x10E024, 0x03) -- 1:45 2:60 3:90 4:infinity
-			pgm:write_u8(0x107C28, 0xAA) --cheat "Infinite Time"
-		else
-			pgm:write_u8(0x107C28, dip_config.fix_time)
-		end
-		if dip_config.stage_select then
-			dip1 = dip1 | 0x04 --cheat "DIP= 1-3 Stage Select Mode"
-		end
-		if player_select_active and dip_config.alfred then
-			dip2 = dip2 | 0x80 --cheat "DIP= 2-8 Alfred Code (B+C >A)"
-		end
-		if match_active and dip_config.watch_states then
-			dip2 = dip2 | 0x20 --cheat "DIP= 2-6 Watch States"
-		end
-		if match_active and dip_config.cpu_cant_move then
-			dip3 = dip3 | 0x01 --cheat "DIP= 3-1 CPU Can't Move"
-		end
-		--dip3 = dip3 | 0x10    --cheat "DIP= 3-5 移動速度変更"
-
-		pgm:write_u8(0x10E000, dip1)
-		pgm:write_u8(0x10E001, dip2)
-		pgm:write_u8(0x10E002, dip3)
-		pgm:write_u8(0x10E003, dip4)
-
-		-- CPUレベル MAX（ロムハックのほうが楽）
-		-- maincpu.pw@10E792=0007
-		-- maincpu.pw@10E796=0008
-		-- pgm:write_u16(0x10E792, 0x0007)
-		-- pgm:write_u16(0x10E796, 0x0007)
-
-		if match_active then
-			-- 1Pと2Pの操作の設定
-			for i, p in ipairs(players) do
-				pgm:write_u8(p.addr.control1, i) -- Human 1 or 2, CPU 3
-				pgm:write_u8(p.addr.control2, i) -- Human 1 or 2, CPU 3
-			end
-		end
-		if player_select_active then
-			if pgm:read_u8(mem._0x10CDD0) > 12 then
-				local addr1 = 0xFFFFFF & pgm:read_u32(players[1].addr.select_hook)
-				local addr2 = 0xFFFFFF & pgm:read_u32(players[2].addr.select_hook)
-				if addr1 > 0 then
-					pgm:write_u8(addr1, 2)
-				end
-				if addr2 > 0 then
-					pgm:write_u8(addr2, 1)
-				end
-			end
-		end
-
-		-- 更新フックの仕込み、フックにはデバッガ必須
-		set_hook()
-
-		-- メニュー初期化前に処理されないようにする
-		menu.state.proc()
-
-		-- メニュー切替のタイミングでフック用に記録した値が状態変更後に謝って読みこまれないように常に初期化する
-		cls_hook()
-	end
-
-	emu.register_pause(function()
-		menu.state.draw()
-	end)
-
-	emu.register_resume(function()
-		global.pause = false
-	end)
+	emu.register_resume(function() global.pause = false end)
 
 	emu.register_frame_done(function()
-		if machine then
-			if machine.paused == false then
-				menu.state.draw()
-				--collectgarbage("collect")
-
-				if global.pause then
-					emu.pause()
-				end
-			end
+		if not machine then return end
+		if machine.paused == false then
+			menu.state.draw()
+			--collectgarbage("collect")
+			if global.pause then emu.pause() end
 		end
 	end)
 
+	local bios_test = function()
+		local ram_value1, ram_value2  = mem.r16(players[1].addr.base), mem.r16(players[2].addr.base)
+		for _, test_value in ipairs({0x5555, 0xAAAA, 0xFFFF & players[1].addr.base, 0xFFFF & players[2].addr.base}) do
+			if ram_value1 == test_value then
+				return true
+			elseif ram_value2 == test_value then
+				return true
+			end
+		end
+		return false
+	end
+
 	emu.register_periodic(function()
-		if machine then
-			if machine.paused == false then
-				main_or_menu()
+		auto_recovery_debug()
+		if not machine then return end
+		if machine.paused then return end
+		local ec = scr:frame_number() -- フレーム更新しているか
+		if mem.last_time == ec then return end
+		mem.last_time   = ec
+
+		-- メモリ値の読込と更新
+		local _0x100701 = mem.r16(0x100701) -- 22e 22f 対戦中
+		local _0x107C22 = mem.r8(0x107C22) -- 対戦中44
+		local _0x10FDAF = mem.r8(0x10FDAF)
+		local _0x10FDB6 = mem.r16(0x10FDB6)
+		mem._0x10E043   = mem.r8(0x10E043)
+		if bios_test() then
+			in_match, in_player_select, mem.pached = false, false, false -- 状態リセット
+			reset_memory_tap(false)
+		else
+			-- プレイヤーセレクト中かどうかの判定
+			in_player_select = _0x100701 == 0x10B and (_0x107C22 == 0 or _0x107C22 == 0x55) and _0x10FDAF == 2 and _0x10FDB6 ~= 0 and mem._0x10E043 == 0
+			-- 対戦中かどうかの判定
+			in_match = active_mem_0x100701[_0x100701] ~= nil and _0x107C22 == 0x44 and _0x10FDAF == 2 and _0x10FDB6 ~= 0
+			if in_match then
+				mem.w16(0x10FDB6, 0x0101) -- 操作の設定
+				for i, p in ipairs(players) do mem.w16(p.addr.control, i * 0x0101) end
 			end
-			if global.mame_debug_wnd == false then
-				auto_recovery_debug()
-			end
+			load_rom_patch()  -- ROM部分のメモリエリアへパッチあて
+			mem.wd16(0x10FE32, 0x0000) -- 強制的に家庭用モードに変更
+			set_dip_config()  -- デバッグDIPのセット
+			load_hit_effects() -- ヒット効果アドレステーブルの取得
+			load_hit_system_stops() -- ヒット時のシステム内での中間処理による停止アドレス取得
+			load_proc_base()  -- キャラの基本アドレスの取得
+			load_push_box()   -- 接触判定の取得
+			load_close_far()  -- 遠近間合い取得
+			load_memory_tap(all_wps) -- tapの仕込み
+			menu.state.proc() -- メニュー初期化前に処理されないようにする
 		end
 	end)
 end
