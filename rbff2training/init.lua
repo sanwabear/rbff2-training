@@ -407,12 +407,14 @@ local global = {
 	set_wps             = function(disable, holder)
 		if disable == true and holder.on == true then
 			for _, wp in ipairs(holder.wps) do
-				cpu.debug:wpdisable(wp)
+				--cpu.debug:wpdisable(wp)
+				wp:remove()
 			end
 			holder.on = false
 		elseif disable ~= true and holder.on ~= true then
 			for _, wp in ipairs(holder.wps) do
-				cpu.debug:wpenable(wp)
+				--cpu.debug:wpenable(wp)
+				wp:reinstall()
 			end
 			holder.on = true
 		end
@@ -2535,6 +2537,7 @@ for char = 1, #chars - 1 do
 		chars[char].fb1sts[id] = st1
 	end
 end
+
 local jump_acts = new_set(0x9, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16)
 local wakeup_acts = new_set(0x193, 0x13B)
 local input_state_types = {
@@ -4701,6 +4704,76 @@ local hit_sub_procs = {
 	[0x01300A] = hit_proc_types.unknown, -- → 013018 不明
 	[0x012FE2] = hit_proc_types.air_onry, -- → 012ff0 → 013038 相手が空中にいれば判定する
 }
+-- 接触判定の取得
+-- 家庭用 05C6D0 からの処理
+--[[
+D0 ; キャラID
+D1 ; フラグ群 ($c0,A3)
+D2 ; 必殺技フラグ群 ($c8,A3)
+D3 ; Y位置 ($28,A3)
+05C6D0: 0C40 0005                cmpi.w  #$5, D0                      ; d0 == 0x5 ギースか？
+05C6D4: 6606                     bne     $5c6dc                       ;   5c6dcへ
+05C6D6: 0802 000F                btst    #$f, D2                      ; d2 & 0xF == d2 特殊技(飛燕失脚)か？
+05C6DA: 6630                     bne     $5c70c                       ;   5c70cへ
+05C6DC: 0801 0001                btst    #$1, D1                      ; d1 & 0x1 == d1 ダウンか？
+05C6E0: 661C                     bne     $5c6fe                       ;   5c6feへ
+05C6E2: 41FA 0458                lea     ($458,PC) ; ($5cb3c), A0     ; a0 = 0x5cb3c
+05C6E6: 4A83                     tst.l   D3                           ; d3 == 0x0
+05C6E8: 6714                     beq     $5c6fe                       ;   0だったら5c6feへ
+05C6EA: 6100 002C                bsr     $5c718                       ;   5c718へ
+05C6EE: 6620                     bne     $5c710                       ;   0じゃなかったら 5c710 へ
+05C6F0: 0282 FFFF 0000           andi.l  #$ffff0000, D2               ; d2 = d2 & 0xffff0000
+05C6F6: 6718                     beq     $5c710                       ;   0だったら 5c710 へ（必殺技じゃない）
+05C6F8: 41FA 0502                lea     ($502,PC) ; ($5cbfc), A0     ; a0 = 5cbfc
+05C6FC: 6012                     bra     $5c710                       ;   5c710 へ
+05C6FE: 41FA 037C                lea     ($37c,PC) ; ($5ca7c), A0     ; a0 = 5ca7c
+05C702: 2401                     move.l  D1, D2                       ; d2 = d1
+05C704: 0282 1400 0046           andi.l  #$14000046, D2               ; d2 = d2 & 0x14000046
+05C70A: 6604                     bne     $5c710                       ;   0じゃなかったら 5c710 へ
+05C70C: 41FA 02AE                lea     ($2ae,PC) ; ($5c9bc), A0     ; a0 = 0x5c9bc
+05C710: E748                     lsl.w   #3, D0                       ; d0 = d0 << 3
+05C712: 41F0 0000                lea     (A0,D0.w), A0                ; a0 = (a0 + d0)のデータ
+05C716: 4E75                     rts                                  ;
+05C718: 2602                     move.l  D2, D3                       ;  d3 = d2  d3 = C8フラグ
+05C71A: 3800                     move.w  D0, D4                       ;  d4 = d0  d4 = キャラID
+05C71C: D844                     add.w   D4, D4                       ;  d4 = d4 + d4
+05C71E: D844                     add.w   D4, D4                       ;  d4 = d4 + d4
+05C720: 283B 4006                move.l  ($6,PC,D4.w), D4             ;  d4 = 0x6 + PC + d4 ; 05C728
+05C724: C684                     and.l   D4, D3                       ;  d3 = d4
+05C726: 4E75                     rts                                  ;  
+]]
+local get_push_box = function(p)
+	if p.char == 0x5 and testbit(p.flag_c8, flag_c8_types._15) then
+		return p.char_data.push_box[0x5C9BC]
+	end
+	if testbit(p.flag_c0, flag_c0_types._01) ~= true then
+		if p.pos_y ~= 0 then
+			if (p.flag_c8 & p.char_data.push_box_mask) ~= 0 then
+				return p.char_data.push_box[0x5CB3C]
+			end
+			if p.flag_c8 & 0xFFFF0000 == 0 then
+				return p.char_data.push_box[0x5CB3C]
+			end
+			return  p.char_data.push_box[0x5CBFC]
+		end
+	end
+	if p.flag_c0 & 0x14000046 ~= 0 then
+		return p.char_data.push_box[0x5CA7C]
+	end
+	return p.char_data.push_box[0x5C9BC]
+end
+
+local fix_box_scale = function(p, src, dest)
+	dest = dest or {}
+	dest.type = src.type
+	dest.y1 = 0xFFFF & ((src.y1 * p.box_scale) >> 6)
+	dest.y2 = 0xFFFF & ((src.y2 * p.box_scale) >> 6)
+	dest.x1 = 0xFFFF & ((src.x1 * p.box_scale) >> 6)
+	dest.x2 = 0xFFFF & ((src.x2 * p.box_scale) >> 6)
+	dest.log = string.format("%x type=%03x x1=%s x2=%s y1=%s y2=%s", p.addr.base, dest.type, dest.x1, dest.x2, dest.y1, dest.y2)
+	return dest
+end
+
 -- 判定枠のチェック処理種類
 local hit_box_proc = function(id, addr)
 	-- 家庭用版 012DBC~012F04のデータ取得処理をベースに判定＆属性チェック
@@ -4824,7 +4897,7 @@ local new_hitbox = function(p, inbox)
 	box.left, box.right            = left, right
 	box.asis_top, box.asis_bottom  = bottom, top
 	box.asis_left, box.asis_right  = left, right
-
+	-- printf(" %x type=%03x x1=%s x2=%s y1=%s y2=%s", p.addr.base, box.id, box.left, box.right, box.top, box.bottom)
 	--[[
 	範囲外の描画でも問題がなくなった
 	if ((box.top <= 0 and box.bottom <= 0) or (box.top >= 224 and box.bottom >= 224) or (box.left <= 0 and box.right <= 0) or (box.left >= 320 and box.right >= 320)) then
@@ -5323,7 +5396,6 @@ local update_box_summary = function(p, box)
 end
 
 local new_throwbox = function(p, box, type)
-	local height    = scr.height * scr.yscale
 	-- print("a", box.opp_id, box.top, box.bottom, p.hit.flip_x)
 	p.throwing      = true
 	box.flat_throw  = box.top == nil
@@ -5331,7 +5403,7 @@ local new_throwbox = function(p, box, type)
 	box.left        = box.pos_x + (box.left or 0)
 	box.right       = box.pos_x + (box.right or 0)
 	box.top         = box.top and box.pos_y - box.top             --air throw
-	box.bottom      = box.bottom and (box.pos_y - box.bottom) or height + screen.top - p.hit.pos_z
+	box.bottom      = box.bottom and (box.pos_y - box.bottom) or screen.top - p.hit.pos_z
 	box.type        = box.type or box_type_base.t
 	box.visible     = true
 	-- print("b", box.opp_id, box.top, box.bottom, p.hit.flip_x)
@@ -5355,9 +5427,96 @@ local get_flip_x = function(p)
 	return flip_x
 end
 
+-- 投げ間合いで使う立ち状態の押し合い判定
+-- 家庭用0x05D78Cからの処理
+local get_push_range = function(p, fix)
+	local d5 = pgm:read_u8(fix + fix_bp_addr(0x05C99C) + p.char_8times)
+	if fix == 0x3 then
+		d5 = 0xFF00 + d5
+		if 0 > p.side then -- 位置がマイナスなら
+			d5 = 0x10000 - d5 -- NEG
+		end
+	end
+	d5 = 0xFFFF & (d5 + d5) -- 2倍値に
+	d5 = 0xFFFF & (d5 + d5) -- さらに2倍値に
+	return d5
+end
+
+-- 対スウェーライン攻撃の近距離間合い
+-- 地上通常技の近距離間合い
+-- char 0=テリー
+local cache_close_far_pos = {}
+local get_close_far_pos = function(char)
+	if cache_close_far_pos[char] then
+		return cache_close_far_pos[char]
+	end
+	local org_char                = char
+	char                          = char - 1
+	local abc_offset              = mem.close_far_offset + (char * 4)
+	-- 家庭用02DD02からの処理
+	local d_offset                = mem.close_far_offset_d + (char * 2)
+	local ret                     = {
+		a = { x1 = 0, x2 = pgm:read_u8(abc_offset) },
+		b = { x1 = 0, x2 = pgm:read_u8(abc_offset + 1) },
+		c = { x1 = 0, x2 = pgm:read_u8(abc_offset + 2) },
+		d = { x1 = 0, x2 = pgm:read_u16(d_offset) },
+	}
+	cache_close_far_pos[org_char] = ret
+	return ret
+end
+
+local get_lmo_range_internal = function(ret, name, d0, d1, incl_last)
+	local decd1 = int16tofloat(d1)
+	local intd1 = math.floor(decd1)
+	local x1, x2 = 0, 0
+	for d = 1, intd1 do
+		x2 = d * d0
+		ret[name .. d - 1] = { x1 = x1, x2 = x2 - 1 }
+		x1 = x2
+	end
+	if incl_last then
+		ret[name .. intd1] = { x1 = x1, x2 = math.floor(d0 * decd1) } -- 1Fあたりの最大移動量になる距離
+	end
+	return ret
+end
+
+local cache_close_far_pos_lmo = {}
+local get_close_far_pos_line_move_attack = function(char, logging)
+	if cache_close_far_pos_lmo[char] then
+		return cache_close_far_pos_lmo[char]
+	end
+
+	-- 家庭用2EC72,2EDEE,2E1FEからの処理
+	local offset = 0x2EE06
+	local d1 = 0x2A000 -- 整数部上部4バイト、少数部下部4バイト
+	local decd1 = int16tofloat(d1)
+	local ret = {}
+	-- 0:近A 1:遠A 2:近B 3:遠B 4:近C 5:遠C
+	for i, act_name in ipairs({ "近A", "遠A", "近B", "遠B", "近C", "遠C" }) do
+		local d0 = pgm:read_u8(pgm:read_u32(offset + (i - 1) * 4) + char * 6)
+		-- データが近距離、遠距離の2種類しかないのと実質的に意味があるのが近距離のものなので最初のデータだけ返す
+		if i == 1 then
+			get_lmo_range_internal(ret, "", d0, d1, true)
+			ret["近"] = { x1 = 0, x2 = 72 } -- 近距離攻撃になる距離
+
+			if char == 6 then
+				-- 渦炎陣
+				get_lmo_range_internal(ret, "必", 24, 0x40000)
+			elseif char == 14 then
+				-- クロスヘッドスピン
+				get_lmo_range_internal(ret, "必", 24, 0x80000)
+			end
+		end
+		if logging then
+			printf("%s %s %x %s %x %s", chars[char].name, act_name, d0, d0, d1, decd1)
+		end
+	end
+	cache_close_far_pos_lmo[char] = ret
+	return ret
+end
+
 -- 当たり判定用のキャラ情報更新と判定表示用の情報作成
 local update_object = function(p)
-	local height   = scr.height * scr.yscale
 	local obj_base = p.addr.base
 	p.hit.pos_x    = p.pos - screen.left
 	if p.min_pos then
@@ -5372,10 +5531,9 @@ local update_object = function(p)
 	end
 	p.hit.pos_z      = p.pos_z
 	p.hit.old_pos_y  = p.hit.pos_y
-	p.hit.pos_y      = height - p.pos_y - p.hit.pos_z
-	p.hit.pos_y      = screen.top + p.hit.pos_y
+	p.hit.pos_y      = screen.top - p.pos_y - p.hit.pos_z
 	p.hit.on         = pgm:read_u32(obj_base)
-	p.hit.flip_x     = get_flip_x(p)
+	p.hit.flip_x     = p.flip_x
 	p.hit.scale      = pgm:read_u8(obj_base + 0x73) + 1
 	p.hit.char_id    = pgm:read_u16(obj_base + 0x10)
 	p.hit.base       = obj_base
@@ -5540,10 +5698,10 @@ local wakeup_type = {
 rbff2.startplugin = function()
 	-- プレイヤーの状態など
 	local players = {}
-	for p = 1, 2 do
-		local p1 = (p == 1)
+	for i = 1, 2 do
+		local p1 = (i == 1)
 		local base = p1 and 0x100400 or 0x100500
-		players[p] = {
+		players[i] = {
 			base                       = 0x0,
 			bases                      = {},
 
@@ -5983,16 +6141,269 @@ rbff2.startplugin = function()
 				force_block  = p1 and 0x10DE5E or 0x10DE5F, -- 強制ガード用
 			},
 		}
-
-		for i = 1, #kprops do
-			players[p].key_now[kprops[i]] = 0
-			players[p].key_pre[kprops[i]] = 0
+		local p = players[i]
+		p.wp8 = {
+			[0x10] = function(data)
+				p.char = data
+			end,
+			[0x89] = function(data)
+				p.sway_status = data -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
+				p.in_sway_line = data ~= 0x00
+			end,
+			[0x58] = function(data)
+				p.internal_side = data -- 向き
+				p.side          = data < 0 and -1 or 1
+			end,
+			[0xB7] = function(data)
+				p.corner = data -- 画面端状態 0:端以外 1:画面端 3:端押し付け
+			end,
+			[0x82] = function(data)
+				p.input1 = data -- キー入力 直近Fの入力
+				p.flag_fin = data == 0xFF -- 動作の最終Fを表す
+			end,
+			[0x83] = function(data)
+				p.input2 = data -- キー入力 1F前の入力
+			end,
+			[0x86] = function(data)
+				p.input_side = data -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
+			end,
+			[0x84] = function(data)
+				p.cln_btn = data -- クリアリングされたボタン入力
+			end,
+			[0xFA] = function(data)
+				p.kaiser_wave = data -- カイザーウェイブのレベル
+			end,
+			[0xE4] = function(data)
+				p.hurt_state = data -- やられ状態
+			end,
+			[0x8A] = function(data)
+				p.life = data -- 体力
+			end,
+			[0xBC] = function(data)
+				p.pow = data -- パワーアドレス
+			end,
+			[0x00] = function(data)
+				p.act_contact = data -- 通常=2、必殺技中=3 ガードヒット=5 潜在ガード=6
+			end,
+			[0xD0] = function(data)
+				p.flag_d0 = data -- フラグ群
+			end,
+			[0x8E] = function(data)
+				p.state = data -- 今の状態
+			end,
+			[0xB8] = function(data)
+				p.spid = data -- 必殺技ID？
+			end,
+			[0xB6] = function(data)
+				p.attack       = data -- 攻撃中のみ変化、判定チェック用2 0のときは何もしていない、 詠酒の間合いチェック用
+				p.harmless2    = data == 0
+				p.can_techrise = 2 > pgm:read_u8(0x88A12 + p.attack)
+				p.max_hit_dn   = p.attack > 0 and pgm:read_u8(pgm:read_u32(fix_bp_addr(0x827B8) + p.char_4times) + p.attack) or 0
+			end,
+			[0xE9] = function(data)
+				p.dmg_id = data -- 最後にヒット/ガードした技ID
+			end,
+			[0x90] = function(data)
+				p.tw_frame = data -- 投げ可能かどうかのフレーム経過
+			end,
+			[0xF6] = function(data)
+				p.tw_muteki = data -- 投げ無敵の残フレーム数
+			end,
+			[0xA3] = function(data)
+				p.sp_throw_id = data -- 投げ必殺のID
+			end,
+			[0xA4] = function(data)
+				p.sp_throw_act = data -- 投げ必殺の持続残F
+			end,
+			[0xA5] = function(data)
+				p.additional = data -- 追加入力成立時のデータ
+			end,
+			[0x6A] = function(data)
+				p.obsl_hit = (data & 0xB) == 0 -- 嘘判定チェック用 3ビット目が立っていると嘘判定
+				p.flip_x1  = ((data & 0x80) == 0) and 0 or 1 -- マイナスビットが立っているかどうか
+				-- 1:右向き -1:左向き
+			end,
+			[0x71] = function(data)
+				p.flip_x2 = (data & 1)
+			end,
+			[0xAA] = function(data)
+				p.full_hit = data > 0 -- 判定チェック用1 0じゃないとき全段攻撃ヒット/ガード
+			end,
+			[0xB5] = function(data)
+				p.prj_rank = data
+			end,
+			[0xAB] = function(data)
+				p.max_hit_nm = data -- 同一技行動での最大ヒット数 分子
+			end,
+			[0x66] = function(data)
+				p.act_count = data -- 現在の行動のカウンタ
+			end,
+			[0x67] = function(data)
+				p.act_boxtype = 0xFFFF & (data & 0xC0 * 4) -- 現在の行動の判定種類
+			end,
+			[0x6F] = function(data)
+				p.act_frame = data -- 現在の行動の残フレーム、ゼロになると次の行動へ
+			end,
+			[0x8D] = function(data)
+				p.stop = data -- ヒットストップ
+			end,
+			[0x69] = function(data)
+				p.knock_back1 = data -- のけぞり確認用1(色々)
+			end,
+			[0x16] = function(data)
+				p.knock_back2 = data -- のけぞり確認用2(裏雲隠し)
+			end,
+			[0x7E] = function(data)
+				p.knock_back3 = data -- のけぞり確認用3(フェニックススルー)
+			end,
+			[0xEB] = function(data)
+				p.hitstop_id = data -- 被害中のみ変化
+			end,
+			[p1 and 0x10B84E or 0x10B856] = function(data)
+				p.max_stun = data -- 最大気絶値
+			end,
+			[p1 and 0x10B850 or 0x10B858] = function(data)
+				p.stun = data -- 現在気絶値
+			end,
+			[p1 and 0x10B4E5 or 0x10B4E4] = function(data)
+				p.combo = tohexnum(data) -- 最近のコンボ数
+			end,
+			[p1 and 0x10B4E1 or 0x10B4E0] = function(data)
+				p.tmp_combo = tohexnum(data) -- 一次的なコンボ数
+			end,
+			[p1 and 0x10B4F0 or 0x10B4EF] = function(data)
+				p.max_combo = tohexnum(data) -- 最大コンボ数
+			end,
+			[p1 and 0x10DDFB or 0x10DDFC] = function(data)
+				p.pure_dmg = data -- ダメージ(フック処理)
+			end,
+			[p1 and 0x10DE59 or 0x10DE58] = function(data)
+				p.tmp_pow = data -- POWゲージ増加量
+			end,
+			[p1 and 0x10DE5B or 0x10DE5A] = function(data)
+				p.tmp_pow_rsv = data -- POWゲージ増加量(予約値)
+			end,
+			[p1 and 0x10DDFD or 0x10DDFF] = function(data)
+				p.tmp_stun = data -- 気絶値
+			end,
+			[p1 and 0x10DDFE or 0x10DE00] = function(data)
+				p.tmp_st_timer = data -- 気絶タイマー
+			end,
+			[p1 and 0x10DDE2 or 0x10DDE3] = function(data)
+				p.tw_threshold = data -- 投げ可能かどうかのフレーム判定のしきい値
+			end,
+			[p1 and 0x10DDE4 or 0x10DDE5] = function(data)
+				p.tw_accepted = data -- 投げ確定時のフレーム経過
+			end,
+			[p1 and 0x10DDF3 or 0x10DDF4] = function(data)
+				p.fake_hit = (data & 0xB) == 0 -- 出だしから嘘判定のフック
+			end,
+			[p1 and 0x10CA10 or 0x10CA11] = function(data)
+				p.tmp_dmg = data -- ダメージ
+			end,
+			[0x73] = function(data)
+				p.box_scale = data + 1
+			end,
+			[0x7A] = function(data)
+				if data >  0 then
+					p.box_base2 = (data << 24) | pgm:read_u32(base + 0x7A)
+					p.box_debug = {}
+					p.box_debug_cnt = (p.box_debug_cnt or 0) + 1
+					for d2 = 1, data do
+						local a2 = p.box_base2 + 5 * (d2 - 1)
+						-- 004A9Eからの処理
+						local d5 = pgm:read_u8(a2) -- & 0x1F
+						local y1, y2 = pgm:read_u8(a2 + 0x1), pgm:read_u8(a2 + 0x2)
+						local x1, x2 = pgm:read_i8(a2 + 0x3), pgm:read_i8(a2 + 0x4)
+						table.insert(p.box_debug, {
+							type = d5, x1 = x1, x2 = x2, y1 = y1, y2 = y2,
+							log = string.format(" %x %s addr=%x type=%03x x1=%s x2=%s y1=%s y2=%s", base, d2, a2, d5, x1, x2, y1, y2)
+						})
+					end
+				end
+			end,
+		}
+		p.wp16 = {
+			[0x20] = function(data)
+				p.pos = data
+				p.max_pos = math.max(p.max_pos or 0, data)
+				p.min_pos = math.min(p.min_pos or 1000, data)
+				p.pos_total = p.pos + p.pos_frc
+				p.proc_pos = p.max_pos or p.min_pos or p.pos -- 内部の補正前のX座標
+			end,
+			[0x22] = function(data)
+				p.pos_frc = int16tofloat(data)
+				p.pos_total = p.pos + p.pos_frc
+			end,
+			[0x28] = function(data)
+				p.pos_y = data
+			end,
+			[0x2A] = function(data)
+				p.pos_frc_y = int16tofloat(data)
+			end,
+			[0x24] = function(data)
+				p.pos_z = data
+				if 40 == data then
+					p.on_sway_line = global.frame_number + 1
+				end
+				if 24 == data then
+					p.on_main_line = global.frame_number + 1
+				end
+			end,
+			[0x34] = function(data)
+				p.thrust = data
+			end,
+			[0x36] = function(data)
+				p.thrust_frc = int16tofloat(data)
+			end,
+			[0x60] = function(data)
+				p.act     = data -- 行動ID デバッグディップステータス表示のPと同じ
+				p.provoke = 0x0196 == data --挑発中
+			end,
+			[0x62] = function(data)
+				p.acta = data -- 行動ID デバッグディップステータス表示のAと同じ
+			end,
+			[0x92] = function(data)
+				p.anyhit_id = data
+			end,
+			[0x9E] = function(data)
+				p.ophit_base = data -- ヒットさせた相手側のベースアドレス
+			end,
+			[0xDA] = function(data)
+				p.inertia = data
+			end,
+			[0xDC] = function(data)
+				p.inertia_frc = int16tofloat(data)
+			end,
+			[p1 and 0x10B854 or 0x10B85C] = function(data)
+				p.stun_timer = data -- 気絶値ゼロ化までの残フレーム数
+			end,
+		}
+		p.rp32 = {
+		}
+		p.wp32 = {
+			[0xC0] = function(data)
+				p.flag_c0 = data -- フラグ群
+			end,
+			[0xC4] = function(data)
+				p.flag_c4 = data -- フラグ群
+			end,
+			[0xC8] = function(data)
+				p.flag_c8 = data -- フラグ群
+			end,
+			[0xCC] = function(data)
+				p.flag_cc = data -- フラグ群
+			end,
+		}
+		for k = 1, #kprops do
+			p.key_now[kprops[k]] = 0
+			p.key_pre[kprops[k]] = 0
 		end
-		for i = 1, 16 do
-			players[p].key_hist[i] = ""
-			players[p].key_frames[i] = 0
-			players[p].act_frames[i] = { 0, 0 }
-			players[p].bases[i] = { count = 0, addr = 0x0, act_data = nil, name = "", pos1 = 0, pos2 = 0, xmov = 0, }
+		for k = 1, 16 do
+			p.key_hist[k] = ""
+			p.key_frames[k] = 0
+			p.act_frames[k] = { 0, 0 }
+			p.bases[k] = { count = 0, addr = 0x0, act_data = nil, name = "", pos1 = 0, pos2 = 0, xmov = 0, }
 		end
 	end
 	players[1].op = players[2]
@@ -6149,79 +6560,6 @@ rbff2.startplugin = function()
 		end
 	end
 
-	-- 対スウェーライン攻撃の近距離間合い
-	-- 地上通常技の近距離間合い
-	-- char 0=テリー
-	local cache_close_far_pos = {}
-	local get_close_far_pos = function(char)
-		if cache_close_far_pos[char] then
-			return cache_close_far_pos[char]
-		end
-		local org_char                = char
-		char                          = char - 1
-		local abc_offset              = mem.close_far_offset + (char * 4)
-		-- 家庭用02DD02からの処理
-		local d_offset                = mem.close_far_offset_d + (char * 2)
-		local ret                     = {
-			a = { x1 = 0, x2 = pgm:read_u8(abc_offset) },
-			b = { x1 = 0, x2 = pgm:read_u8(abc_offset + 1) },
-			c = { x1 = 0, x2 = pgm:read_u8(abc_offset + 2) },
-			d = { x1 = 0, x2 = pgm:read_u16(d_offset) },
-		}
-		cache_close_far_pos[org_char] = ret
-		return ret
-	end
-
-	local get_lmo_range_internal = function(ret, name, d0, d1, incl_last)
-		local decd1 = int16tofloat(d1)
-		local intd1 = math.floor(decd1)
-		local x1, x2 = 0, 0
-		for d = 1, intd1 do
-			x2 = d * d0
-			ret[name .. d - 1] = { x1 = x1, x2 = x2 - 1 }
-			x1 = x2
-		end
-		if incl_last then
-			ret[name .. intd1] = { x1 = x1, x2 = math.floor(d0 * decd1) } -- 1Fあたりの最大移動量になる距離
-		end
-		return ret
-	end
-
-	local cache_close_far_pos_lmo = {}
-	local get_close_far_pos_line_move_attack = function(char, logging)
-		if cache_close_far_pos_lmo[char] then
-			return cache_close_far_pos_lmo[char]
-		end
-
-		-- 家庭用2EC72,2EDEE,2E1FEからの処理
-		local offset = 0x2EE06
-		local d1 = 0x2A000 -- 整数部上部4バイト、少数部下部4バイト
-		local decd1 = int16tofloat(d1)
-		local ret = {}
-		-- 0:近A 1:遠A 2:近B 3:遠B 4:近C 5:遠C
-		for i, act_name in ipairs({ "近A", "遠A", "近B", "遠B", "近C", "遠C" }) do
-			local d0 = pgm:read_u8(pgm:read_u32(offset + (i - 1) * 4) + char * 6)
-			-- データが近距離、遠距離の2種類しかないのと実質的に意味があるのが近距離のものなので最初のデータだけ返す
-			if i == 1 then
-				get_lmo_range_internal(ret, "", d0, d1, true)
-				ret["近"] = { x1 = 0, x2 = 72 } -- 近距離攻撃になる距離
-
-				if char == 6 then
-					-- 渦炎陣
-					get_lmo_range_internal(ret, "必", 24, 0x40000)
-				elseif char == 14 then
-					-- クロスヘッドスピン
-					get_lmo_range_internal(ret, "必", 24, 0x80000)
-				end
-			end
-			if logging then
-				printf("%s %s %x %s %x %s", chars[char].name, act_name, d0, d0, d1, decd1)
-			end
-		end
-		cache_close_far_pos_lmo[char] = ret
-		return ret
-	end
-
 	local load_or_set_bps = function(hook_holder, p, enabled, addr, cond, exec)
 		if hook_holder ~= nil then
 			global.set_bps(enabled ~= true, hook_holder)
@@ -6236,14 +6574,14 @@ rbff2.startplugin = function()
 	-- 詠酒の距離チェックを飛ばす
 	local set_skip_esaka_check = function(p, enabled)
 		p.skip_esaka_check = load_or_set_bps(p.skip_esaka_check, p, enabled,
-			0x0236F2, string.format("(A4)==$%x", p.addr.base), "PC=2374C;g")
+			0x0236F2, string.format("(A4)==$%x", p.addr.base), "CURPC=2374C;g")
 	end
 
 	-- 自動 炎の種馬
-	-- bp 04094A,1,{PC=040964;g}
+	-- bp 04094A,1,{CURPC=040964;g}
 	local set_auto_taneuma = function(p, enabled)
 		p.auto_taneuma = load_or_set_bps(p.auto_taneuma, p, enabled,
-			fix_bp_addr(0x04092A), string.format("(A4)==$%x", p.addr.base), string.format("PC=%x;g", fix_bp_addr(0x040944)))
+			fix_bp_addr(0x04092A), string.format("(A4)==$%x", p.addr.base), string.format("CURPC=%x;g", fix_bp_addr(0x040944)))
 	end
 
 	-- 必勝！逆襲拳1発キャッチカデンツァ
@@ -6254,20 +6592,20 @@ rbff2.startplugin = function()
 	end
 
 	-- 自動喝CA
-	-- bp 03F94C,1,{PC=03F952;g}
-	-- bp 03F986,1,{PC=3F988;g}
+	-- bp 03F94C,1,{CURPC=03F952;g}
+	-- bp 03F986,1,{CURPC=3F988;g}
 	local set_auto_katsu = function(p, enabled)
 		p.auto_katsu1 = load_or_set_bps(p.auto_katsu1, p, enabled,
-			fix_bp_addr(0x03F92C), string.format("(A4)==$%x", p.addr.base), string.format("PC=%x;g", fix_bp_addr(0x03F932)))
+			fix_bp_addr(0x03F92C), string.format("(A4)==$%x", p.addr.base), string.format("CURPC=%x;g", fix_bp_addr(0x03F932)))
 		p.auto_katsu2 = load_or_set_bps(p.auto_katsu2, p, enabled,
-			fix_bp_addr(0x03F966), string.format("(A4)==$%x", p.addr.base), string.format("PC=%x;g", fix_bp_addr(0x03F968)))
+			fix_bp_addr(0x03F966), string.format("(A4)==$%x", p.addr.base), string.format("CURPC=%x;g", fix_bp_addr(0x03F968)))
 	end
 
 	-- 空振りCAできる
-	-- bp 02FA5E,1,{PC=02FA6A;g}
+	-- bp 02FA5E,1,{CURPC=02FA6A;g}
 	local set_kara_ca = function(p, enabled)
 		p.kara_ca = load_or_set_bps(p.kara_ca, p, enabled,
-			fix_bp_addr(0x02FA1E), string.format("(A4)==$%x", p.addr.base), string.format("PC=%x;g", fix_bp_addr(0x02FA4A)))
+			fix_bp_addr(0x02FA1E), string.format("(A4)==$%x", p.addr.base), string.format("CURPC=%x;g", fix_bp_addr(0x02FA4A)))
 	end
 
 	local new_empty_table = function(len)
@@ -6296,19 +6634,19 @@ rbff2.startplugin = function()
 		p.auto_deadly = p.auto_deadly or new_empty_table(11)
 		--  自動デッドリー最後
 		p.auto_deadly[11] = load_or_set_bps(p.auto_deadly[11], p, count == 10,
-			fix_bp_addr(0x03DBC4), string.format("(A4)==$%x", p.addr.base), string.format("PC=%x;g", fix_bp_addr(0x03DBE2)))
+			fix_bp_addr(0x03DBC4), string.format("(A4)==$%x", p.addr.base), string.format("CURPC=%x;g", fix_bp_addr(0x03DBE2)))
 		--  自動デッドリー途中
 		local check_count = count - 1
 		for i = 1, 10 do
 			p.auto_deadly[i] = load_or_set_bps(p.auto_deadly[i], p, i == check_count,
-				fix_bp_addr(0x03DCE8), string.format("(A4)==$%x&&D1<%x", p.addr.base, i), string.format("PC=%x;g", fix_bp_addr(0x03DD16)))
+				fix_bp_addr(0x03DCE8), string.format("(A4)==$%x&&D1<%x", p.addr.base, i), string.format("CURPC=%x;g", fix_bp_addr(0x03DD16)))
 		end
 	end
 
 	-- 自動マリートリプルエクスタシー
 	local set_auto_3ecst = function(p, enabled)
 		p.auto_3ecst = load_or_set_bps(p.auto_3ecst, p, enabled,
-			fix_bp_addr(0x041CE0), string.format("(A4)==$%x", p.addr.base), string.format("PC=%x;g", fix_bp_addr(0x041CFC)))
+			fix_bp_addr(0x041CE0), string.format("(A4)==$%x", p.addr.base), string.format("CURPC=%x;g", fix_bp_addr(0x041CFC)))
 	end
 
 	-- ドリルLVセット
@@ -6326,15 +6664,14 @@ rbff2.startplugin = function()
 		p.auto_unlimit = p.auto_unlimit or new_empty_table(11)
 		-- 自動アンリミサイクロン
 		p.auto_unlimit[11] = load_or_set_bps(p.auto_unlimit[11], p, count == 11,
-			fix_bp_addr(0x049966), string.format("(A4)==$%x", p.addr.base), string.format("PC=%x;g", fix_bp_addr(0x4998A)))
+			fix_bp_addr(0x049966), string.format("(A4)==$%x", p.addr.base), string.format("CURPC=%x;g", fix_bp_addr(0x4998A)))
 		-- 自動アンリミ途中
 		local check_count = count == 11 and 9 or (count - 1)
 		for i = 1, 10 do
 			p.auto_unlimit[i] = load_or_set_bps(p.auto_unlimit[i], p, i == check_count,
-				fix_bp_addr(0x049B1C), string.format("(A4)==$%x&&D1<%x", p.addr.base, i), string.format("PC=%x;g", fix_bp_addr(0x049B4E)))
+				fix_bp_addr(0x049B1C), string.format("(A4)==$%x&&D1<%x", p.addr.base, i), string.format("CURPC=%x;g", fix_bp_addr(0x049B4E)))
 		end
 	end
-
 	-- 当たり判定と投げ判定用のブレイクポイントとウォッチポイントのセット
 	local set_wps = function(reset)
 		if global.wps then
@@ -6342,6 +6679,12 @@ rbff2.startplugin = function()
 		else
 			global.wps = global.new_hook_holder()
 			local wps = global.wps.wps
+
+			--[[
+			pgm:install_write_tap(0x1006BE, 0x1006BF, "gbmode", function (offset, data, mask)
+				printf("%x %x %x", offset, data, mask)
+				return data
+			end)
 			global.wp(wps, "w", 0x1006BF, 1, "wpdata!=0", "maincpu.pb@10CA00=1;g")
 			global.wp(wps, "w", 0x1007BF, 1, "wpdata!=0", "maincpu.pb@10CA01=1;g")
 			global.wp(wps, "w", 0x100620, 1, "wpdata!=0", "maincpu.pb@10CA02=1;g")
@@ -6368,30 +6711,150 @@ rbff2.startplugin = function()
 			global.wp(wps, "w", 0x100420, 2, "wpdata<maincpu.pw@10DDEA", "maincpu.pw@10DDEA=wpdata;g")
 			global.wp(wps, "w", 0x100520, 2, "wpdata>maincpu.pw@10DDE8", "maincpu.pw@10DDE8=wpdata;g")
 			global.wp(wps, "w", 0x100520, 2, "wpdata<maincpu.pw@10DDEC", "maincpu.pw@10DDEC=wpdata;g")
-
+			]]
+			local wp8 = function(addr, cb)
+				local name = string.format("wp8_%x_%s", addr, #wps)
+				if addr % 2 == 0 then
+					table.insert(wps, pgm:install_write_tap(addr, addr + 1, name,
+						function(offset, data, mask)
+							if mask > 0xFF then
+								cb((data & mask) >> 8, name)
+							else
+								cb(data & mask, name)
+							end
+							return data
+						end))
+				else
+					table.insert(wps, pgm:install_write_tap(addr - 1, addr, name,
+						function(offset, data, mask)
+							if mask == 0xFF or mask == 0xFFFF then
+								cb(0xFF & data, name)
+							end
+							return data
+						end))
+				end
+				cb(pgm:read_u8(addr))
+				printf("register wp %s %x", name, addr)
+			end
+			local wp16 = function(addr, cb)
+				local name = string.format("wp16_%x_%s", addr, #wps)
+				table.insert(wps, pgm:install_write_tap(addr, addr + 1, name,
+					function(offset, data, mask)
+						if mask == 0xFFFF then
+							cb(data & mask, name)
+							return data
+						end
+						local data2, mask2, mask3, data3
+						local prev = pgm:read_u32(addr)
+						if mask == 0xFF00 then
+							mask2 = 0xFF000000
+						elseif mask == 0xFF then
+							mask2 = 0x00FF0000
+						end
+						mask3 = 0xFFFF ~ mask2
+						data2 = data & mask
+						data3 = (prev & mask3) | data2
+						cb(data3, name)
+						return data
+					end))
+				cb(pgm:read_u16(addr))
+				printf("register wp %s %x", name, addr)
+			end
+			local wp32 = function(addr, cb)
+				local num = #wps
+				local name = string.format("wp32_%x_%s", addr, num)
+				table.insert(wps, pgm:install_write_tap(addr, addr + 3, name,
+					function(offset, data, mask)
+						local prev = pgm:read_u32(addr)
+						local data2, mask2, mask3, data3
+						if offset == addr then
+							if mask == 0xFF00 then
+								mask2 = 0xFF000000
+							elseif mask == 0xFF then
+								mask2 = 0x00FF0000
+							else
+								mask2 = 0xFFFF0000
+							end
+							data2 = (data << 16) & mask2
+						else
+							if mask == 0xFF00 then
+								mask2 = 0x0000FF00
+							elseif mask == 0xFF then
+								mask2 = 0x000000FF
+							else
+								mask2 = 0x0000FFFF
+							end
+							data2 = data & mask2
+						end
+						mask3 = 0xFFFFFFFF ~ mask2
+						data3 = (prev & mask3) | data2
+						-- printf("%s %x %x %x %x %x %x", name, addr, offset, data, mask, prev, data3)
+						cb(data3, name)
+						return data
+					end))
+				cb(pgm:read_u32(addr))
+				printf("register wp %s %x", name, addr)
+			end
+			local rp32 = function(addr, cb)
+				local num = #wps
+				local name = string.format("rp32_%x_%s", addr, num)
+				table.insert(wps, pgm:install_read_tap(addr, addr + 3, name,
+					function(offset, data, mask)
+						if offset == addr then
+							cb(nil)
+						end
+						return data
+					end))
+				cb(pgm:read_u32(addr))
+				printf("register rp %s %x", name, addr)
+			end
+			wp16(mem.stage_base_addr + screen.offset_x, function(data)
+				local width = scr.width * scr.xscale
+				screen.left = data + (320 - width) / 2
+				screen.left_raw = data
+			end)
+			wp16(mem.stage_base_addr + screen.offset_y, function(data)
+				local height = scr.height * scr.yscale
+				screen.top = data + height
+			end)
+			for _, p in ipairs(players) do
+				local base = p.addr.base
+				for addr, cb in pairs(p.wp8) do
+					wp8(addr > 0xFF and addr or (base + addr), cb)
+				end
+				for addr, cb in pairs(p.wp16) do
+					wp16(addr > 0xFF and addr or (base + addr), cb)
+				end
+				for addr, cb in pairs(p.wp32) do
+					wp32(addr > 0xFF and addr or (base + addr), cb)
+				end
+				for addr, cb in pairs(p.rp32) do
+					rp32(addr > 0xFF and addr or (base + addr), cb)
+				end
+			end
 			-- コマンド入力状態の記憶場所 A1
-			-- bp 39488,{(A4)==100400},{printf "PC=%X A4=%X A1=%X",PC,(A4),(A1);g}
+			-- bp 39488,{(A4)==100400},{printf "CURPC=%X A4=%X A1=%X",CURPC,(A4),(A1);g}
 
 			-- タメ状態の調査用
 			-- global.wp(wps, "w", 0x10B548, 160, "wpdata!=FF&&wpdata>0&&maincpu.pb@(wpaddr)==0", "printf \"pos=%X addr=%X wpdata=%X\", (wpaddr - $10B548),wpaddr,wpdata;g")
 
 			-- 必殺技追加入力の調査用
-			-- wp 1004A5,1,r,wpdata!=FF,{printf "PC=%X data=%X",PC,wpdata;g} -- 追加入力チェックまたは技処理内での消去
-			-- wp 1004A5,1,w,wpdata==0,{printf "PC=%X data=%X CLS",PC,wpdata;g} -- 更新 追加技入力時
-			-- wp 1004A5,1,w,wpdata!=maincpu.pb@(wpaddr),{printf "PC=%X data=%X W",PC,wpdata;g} -- 消去（毎フレーム）
+			-- wp 1004A5,1,r,wpdata!=FF,{printf "CURPC=%X data=%X",CURPC,wpdata;g} -- 追加入力チェックまたは技処理内での消去
+			-- wp 1004A5,1,w,wpdata==0,{printf "CURPC=%X data=%X CLS",CURPC,wpdata;g} -- 更新 追加技入力時
+			-- wp 1004A5,1,w,wpdata!=maincpu.pb@(wpaddr),{printf "CURPC=%X data=%X W",CURPC,wpdata;g} -- 消去（毎フレーム）
 
 			--[[
 			-- コマンド成立の確認用
 			for i, p in ipairs(players) do
 				global.wp(wps, "w", p.addr.base + 0xA4, 2, "wpdata>0",
-					"printf \"wpdata=%X CH=%X CH4=%D PC=%X PREF_ADDR=%X A4=%X A6=%X D1=%X\",wpdata,maincpu.pw@((A4)+10),maincpu.pw@((A4)+10),PC,PREF_ADDR,(A4),(A6),(D1);g")
+					"printf \"wpdata=%X CH=%X CH4=%D CURPC=%X rPC=%X A4=%X A6=%X D1=%X\",wpdata,maincpu.pw@((A4)+10),maincpu.pw@((A4)+10),CURPC,rPC,(A4),(A6),(D1);g")
 			end
 			]]
 			--[[
 			-- 投げ持続フレームの解除の確認用
 			for i, p in ipairs(players) do
 				global.wp(wps, "w", p.addr.base + 0xA4, 2, "wpdata==0&&maincpu.pb@" ..  string.format("%x", p.addr.base) .. ">0",
-					"printf \"wpdata=%X CH=%X CH4=%D PC=%X PREF_ADDR=%X A4=%X A6=%X D1=%X\",wpdata,maincpu.pw@((A4)+10),maincpu.pw@((A4)+10),PC,PREF_ADDR,(A4),(A6),(D1);g")
+					"printf \"wpdata=%X CH=%X CH4=%D CURPC=%X rPC=%X A4=%X A6=%X D1=%X\",wpdata,maincpu.pw@((A4)+10),maincpu.pw@((A4)+10),CURPC,rPC,(A4),(A6),(D1);g")
 			end
 			]]
 		end
@@ -6405,12 +6868,12 @@ rbff2.startplugin = function()
 			local bps = global.bps
 
 			if global.infinity_life2 then
-				--bp 05B480,{(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100500)},{PC=5B48E;g}
-				global.bp(bps, fix_bp_addr(0x05B460), "1", string.format("PC=%x;g", fix_bp_addr(0x05B46E)))
-				global.bp(bps, fix_bp_addr(0x05B466), "1", string.format("PC=%x;g", fix_bp_addr(0x05B46E)))
+				--bp 05B480,{(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100500)},{CURPC=5B48E;g}
+				global.bp(bps, fix_bp_addr(0x05B460), "1", string.format("CURPC=%x;g", fix_bp_addr(0x05B46E)))
+				global.bp(bps, fix_bp_addr(0x05B466), "1", string.format("CURPC=%x;g", fix_bp_addr(0x05B46E)))
 			end
 
-			-- wp CB23E,16,r,{A4==100400},{printf "A4=%X PC=%X A6=%X D1=%X data=%X",A4,PC,A6,D1,wpdata;g}
+			-- wp CB23E,16,r,{A4==100400},{printf "A4=%X CURPC=%X A6=%X D1=%X data=%X",A4,CURPC,A6,D1,wpdata;g}
 
 			-- リバーサルとBSモードのフック
 			local bp_cond = "(maincpu.pw@107C22>0)&&((($1E> maincpu.pb@10DDDA)&&(maincpu.pb@10DDDD==$1)&&($100400==((A4)&$FFFFFF)))||(($1E> maincpu.pb@10DDDE)&&(maincpu.pb@10DDE1==$1)&&($100500==((A4)&$FFFFFF))))"
@@ -6420,7 +6883,7 @@ rbff2.startplugin = function()
 			global.bp(bps, fix_bp_addr(0x039512), "((A6)==CB242)&&" .. bp_cnd2, "D1=0;g")
 			-- 技入力データの読み込み
 			global.bp(bps, fix_bp_addr(0x03957E), "((A6)==CB244)&&" .. bp_cnd2,
-				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$40);D1=(maincpu.pb@(temp1));A6=((A6)+1);maincpu.pb@((A4)+$D6)=D1;maincpu.pb@((A4)+$D7)=maincpu.pb@(temp1+1);PC=((PC)+$20);g")
+				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$40);D1=(maincpu.pb@(temp1));A6=((A6)+1);maincpu.pb@((A4)+$D6)=D1;maincpu.pb@((A4)+$D7)=maincpu.pb@(temp1+1);CURPC=((CURPC)+$20);g")
 			-- 必殺技用
 			-- BPモードON 未入力で技発動するように
 			global.bp(bps, fix_bp_addr(0x039512), "((A6)==CB242)&&" .. bp_cond, "D1=0;g")
@@ -6431,21 +6894,21 @@ rbff2.startplugin = function()
 			-- 0395B6: 195E 00A4                move.b  (A6)+, ($a4,A4) -- 技データ読込 だいたい06
 			-- 0395BA: 195E 00A5                move.b  (A6)+, ($a5,A4) -- 技データ読込 だいたい00、飛燕斬01、02、03
 			global.bp(bps, fix_bp_addr(0x03957E), "((A6)==CB244)&&" .. bp_cond,
-				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$40);D1=(maincpu.pb@(temp1));A6=((A6)+2);maincpu.pb@((A4)+$A3)=D1;maincpu.pb@((A4)+$A4)=maincpu.pb@(temp1+1);maincpu.pb@((A4)+$A5)=maincpu.pb@(temp1+2);PC=((PC)+$20);g")
+				"temp1=$10DDDA+((((A4)&$FFFFFF)-$100400)/$40);D1=(maincpu.pb@(temp1));A6=((A6)+2);maincpu.pb@((A4)+$A3)=D1;maincpu.pb@((A4)+$A4)=maincpu.pb@(temp1+1);maincpu.pb@((A4)+$A5)=maincpu.pb@(temp1+2);CURPC=((CURPC)+$20);g")
 
 			-- ステージ設定用。メニューでFを設定した場合にのみ動作させる
 			-- ラウンド数を1に初期化→スキップ
-			global.bp(bps, 0x0F368, "maincpu.pw@((A5)-$448)==$F", "PC=F36E;g")
+			global.bp(bps, 0x0F368, "maincpu.pw@((A5)-$448)==$F", "CURPC=F36E;g")
 			-- ラウンド2以上の場合の初期化処理→無条件で実施
-			global.bp(bps, 0x22AD8, "maincpu.pw@((A5)-$448)==$F", "PC=22AF4;g")
+			global.bp(bps, 0x22AD8, "maincpu.pw@((A5)-$448)==$F", "CURPC=22AF4;g")
 			-- キャラ読込 ラウンド1の時だけ読み込む→無条件で実施
-			global.bp(bps, 0x22D32, "maincpu.pw@((A5)-$448)==$F", "PC=22D3E;g")
+			global.bp(bps, 0x22D32, "maincpu.pw@((A5)-$448)==$F", "CURPC=22D3E;g")
 			-- ラウンド2以上の時の処理→データロード直後の状態なので不要。スキップしないとBGMが変わらない
-			global.bp(bps, 0x0F6AC, "maincpu.pw@((A5)-$448)==$F", "PC=F6B6;g")
+			global.bp(bps, 0x0F6AC, "maincpu.pw@((A5)-$448)==$F", "CURPC=F6B6;g")
 			-- ラウンド1じゃないときの処理 →スキップ
-			global.bp(bps, 0x1E39A, "maincpu.pw@((A5)-$448)==$F", "PC=1E3A4;g")
+			global.bp(bps, 0x1E39A, "maincpu.pw@((A5)-$448)==$F", "CURPC=1E3A4;g")
 			-- ラウンド1の時だけ読み込む →無条件で実施。データを1ラウンド目の値に戻す
-			global.bp(bps, 0x17694, "maincpu.pw@((A5)-$448)==$F", "maincpu.pw@((A5)-$448)=1;PC=176A0;g")
+			global.bp(bps, 0x17694, "maincpu.pw@((A5)-$448)==$F", "maincpu.pw@((A5)-$448)=1;CURPC=176A0;g")
 
 			-- 当たり判定用
 			-- 喰らい判定フラグ用
@@ -6461,7 +6924,7 @@ rbff2.startplugin = function()
 			--判定追加1 攻撃判定
 			global.bp(bps, fix_bp_addr(0x012C42),
 				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100F00)",
-				--"printf \"PC=%X A4=%X A2=%X D0=%X CT=%X\",PC,A4,A2,D0,($1DC000+((maincpu.pb@10CB40)*$10));"..
+				--"printf \"CURPC=%X A4=%X A2=%X D0=%X CT=%X\",CURPC,A4,A2,D0,($1DC000+((maincpu.pb@10CB40)*$10));"..
 				"temp0=($1DC000+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pd@(temp0+$B)=maincpu.pd@((A2)+$5);maincpu.pw@(temp0+$C)=maincpu.pw@(((A4)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A4)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g")
 
 			--[[
@@ -6472,25 +6935,25 @@ rbff2.startplugin = function()
 			--判定追加2 攻撃判定
 			global.bp(bps, fix_bp_addr(0x012C88),
 				"(maincpu.pw@107C22>0)&&($100400<=((A3)&$FFFFFF))&&(((A3)&$FFFFFF)<=$100F00)",
-				--"printf \"PC=%X A3=%X A1=%X D0=%X CT=%X\",PC,A3,A1,D0,($1DC000+((maincpu.pb@10CB40)*$10));"..
+				--"printf \"CURPC=%X A3=%X A1=%X D0=%X CT=%X\",CURPC,A3,A1,D0,($1DC000+((maincpu.pb@10CB40)*$10));"..
 				"temp0=($1DC000+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$01;maincpu.pd@(temp0+$B)=maincpu.pd@((A1)+$5);maincpu.pw@(temp0+$C)=maincpu.pw@(((A3)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A3)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g")
 
 			--判定追加3 1P押し合い判定
 			global.bp(bps, fix_bp_addr(0x012D4C),
 				"(maincpu.pw@107C22>0)&&($100400==((A4)&$FFFFFF))",
-				--"printf \"PC=%X A4=%X A2=%X D0=%X CT=%X\",PC,A4,A2,D0,($1DC000+((maincpu.pb@10CB40)*$10));"..
+				--"printf \"CURPC=%X A4=%X A2=%X D0=%X CT=%X\",CURPC,A4,A2,D0,($1DC000+((maincpu.pb@10CB40)*$10));"..
 				"temp0=($1DC000+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A2);maincpu.pb@(temp0+2)=maincpu.pb@((A2)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A2)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A2)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A2)+$4);maincpu.pd@(temp0+6)=((A4)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pw@(temp0+$C)=maincpu.pw@(((A4)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A4)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g")
 
 			--判定追加4 2P押し合い判定
 			global.bp(bps, fix_bp_addr(0x012D92),
 				"(maincpu.pw@107C22>0)&&($100500<=((A3)&$FFFFFF))",
-				--"printf \"PC=%X A3=%X A1=%X D0=%X CT=%X\",PC,A3,A1,D0,($1DC000+((maincpu.pb@10CB40)*$10));"..
+				--"printf \"CURPC=%X A3=%X A1=%X D0=%X CT=%X\",CURPC,A3,A1,D0,($1DC000+((maincpu.pb@10CB40)*$10));"..
 				"temp0=($1DC000+((maincpu.pb@10CB40)*$10));maincpu.pb@(temp0)=1;maincpu.pb@(temp0+1)=maincpu.pb@(A1);maincpu.pb@(temp0+2)=maincpu.pb@((A1)+$1);maincpu.pb@(temp0+3)=maincpu.pb@((A1)+$2);maincpu.pb@(temp0+4)=maincpu.pb@((A1)+$3);maincpu.pb@(temp0+5)=maincpu.pb@((A1)+$4);maincpu.pd@(temp0+6)=((A3)&$FFFFFFFF);maincpu.pb@(temp0+$A)=$FF;maincpu.pw@(temp0+$C)=maincpu.pw@(((A3)&$FFFFFF)+$20);maincpu.pw@(temp0+$E)=maincpu.pw@(((A3)&$FFFFFF)+$28);maincpu.pb@10CB40=((maincpu.pb@10CB40)+1);g")
 
 			-- 地上通常投げ
 			global.bp(bps, fix_bp_addr(0x05D782),
 				"(maincpu.pw@107C22>0)&&((((D7)&$FFFF)!=0x65))&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100500)",
-				"temp1=$10CD90+((((A4)&$FFFFFF)-$100400)/$8);maincpu.pb@(temp1)=$1;maincpu.pd@(temp1+$1)=((A4)&$FFFFFF);maincpu.pd@(temp1+$5)=maincpu.pd@(((A4)&$FFFFFF)+$96);maincpu.pw@(temp1+$A)=maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10);maincpu.pw@(temp1+$C)=maincpu.pw@(((A4)&$FFFFFF)+$10);maincpu.pb@(temp1+$10)=maincpu.pb@(((A4)&$FFFFFF)+$96+$58);maincpu.pb@(temp1+$11)=maincpu.pb@(((A4)&$FFFFFF)+$58);maincpu.pb@(temp1+$12)=maincpu.pb@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$58);maincpu.pb@(temp1+$13)=maincpu.pb@(maincpu.pd@((PC)+$2));maincpu.pb@(temp1+$14)=maincpu.pb@((maincpu.pd@((PC)+$02))+((maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10))<<3)+$3);maincpu.pb@(temp1+$15)=maincpu.pb@((maincpu.pd@((PC)+$02))+((maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10))<<3)+$4);maincpu.pb@(temp1+$16)=maincpu.pb@((maincpu.pd@((PC)+$2))+((maincpu.pw@(((A4)&$FFFFFF)+$10))<<3)+$3);maincpu.pb@(temp1+$17)=maincpu.pb@((PC)+$D2+(maincpu.pw@((A4)&$FFFFFF)+$10)*4+((((D7)&$FFFF)-$60)&$7));maincpu.pw@(temp1+$18)=maincpu.pw@(($FFFFFF&(A4))+$20);maincpu.pw@(temp1+$1A)=maincpu.pw@(($FFFFFF&(A4))+$28);g")
+				"temp1=$10CD90+((((A4)&$FFFFFF)-$100400)/$8);maincpu.pb@(temp1)=$1;maincpu.pd@(temp1+$1)=((A4)&$FFFFFF);maincpu.pd@(temp1+$5)=maincpu.pd@(((A4)&$FFFFFF)+$96);maincpu.pw@(temp1+$A)=maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10);maincpu.pw@(temp1+$C)=maincpu.pw@(((A4)&$FFFFFF)+$10);maincpu.pb@(temp1+$10)=maincpu.pb@(((A4)&$FFFFFF)+$96+$58);maincpu.pb@(temp1+$11)=maincpu.pb@(((A4)&$FFFFFF)+$58);maincpu.pb@(temp1+$12)=maincpu.pb@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$58);maincpu.pb@(temp1+$13)=maincpu.pb@(maincpu.pd@((CURPC)+$2));maincpu.pb@(temp1+$14)=maincpu.pb@((maincpu.pd@((CURPC)+$02))+((maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10))<<3)+$3);maincpu.pb@(temp1+$15)=maincpu.pb@((maincpu.pd@((CURPC)+$02))+((maincpu.pw@((maincpu.pd@(((A4)&$FFFFFF)+$96))+$10))<<3)+$4);maincpu.pb@(temp1+$16)=maincpu.pb@((maincpu.pd@((CURPC)+$2))+((maincpu.pw@(((A4)&$FFFFFF)+$10))<<3)+$3);maincpu.pb@(temp1+$17)=maincpu.pb@((CURPC)+$D2+(maincpu.pw@((A4)&$FFFFFF)+$10)*4+((((D7)&$FFFF)-$60)&$7));maincpu.pw@(temp1+$18)=maincpu.pw@(($FFFFFF&(A4))+$20);maincpu.pw@(temp1+$1A)=maincpu.pw@(($FFFFFF&(A4))+$28);g")
 
 			-- 空中投げ
 			global.bp(bps, fix_bp_addr(0x060428),
@@ -6502,7 +6965,7 @@ rbff2.startplugin = function()
 				"(maincpu.pw@107C22>0)&&($100400<=((A4)&$FFFFFF))&&(((A4)&$FFFFFF)<=$100500)",
 				"temp1=$10CD40+((((A4)&$FFFFFF)-$100400)/$8);maincpu.pb@(temp1)=$1;maincpu.pw@(temp1+$1)=maincpu.pw@(A0);maincpu.pw@(temp1+$3)=maincpu.pw@((A0)+$2);maincpu.pd@(temp1+$5)=$FFFFFF&(A4);maincpu.pd@(temp1+$9)=maincpu.pd@(($FFFFFF&(A4))+$96);maincpu.pw@(temp1+$D)=maincpu.pw@(maincpu.pd@(($FFFFFF&(A4))+$96)+$10);maincpu.pd@(temp1+$11)=maincpu.rb@(($FFFFFF&(A4))+$58);maincpu.pw@(temp1+$12)=maincpu.pw@(A0+$4);maincpu.pw@(temp1+$15)=maincpu.pw@(($FFFFFF&(A4))+$20);maincpu.pw@(temp1+$17)=maincpu.pw@(($FFFFFF&(A4))+$28);g")
 			-- プレイヤー選択時のカーソル操作表示用データのオフセット
-			-- PC=11EE2のときのA4レジスタのアドレスがプレイヤー選択のアイコンの参照場所
+			-- CURPC=11EE2のときのA4レジスタのアドレスがプレイヤー選択のアイコンの参照場所
 			-- データの領域を未使用の別メモリ領域に退避して1P操作で2Pカーソル移動ができるようにする
 			-- maincpu.pw@((A4)+$60)=$00F8を付けたすとカーソルをCPUにできる
 			global.bp(bps, 0x11EE2,
@@ -6513,10 +6976,10 @@ rbff2.startplugin = function()
 				"maincpu.pb@10CDD0=($FF&((maincpu.pb@10CDD0)+1));maincpu.pd@10CDD5=((A4)+$13);g")
 
 			-- プレイヤー選択時に1Pか2Pの選択ボタン押したときに対戦モードに移行する
-			-- PC=  C5D0 読取反映先=?? スタートボタンの読取してるけど関係なし
-			-- PC= 12376 読取反映先=D0 スタートボタンの読取してるけど関係なし
-			-- PC=C096A8 読取反映先=D1 スタートボタンの読取してるけど関係なし
-			-- PC=C1B954 読取反映先=D2 スタートボタンの読取してるとこ
+			-- CURPC=  C5D0 読取反映先=?? スタートボタンの読取してるけど関係なし
+			-- CURPC= 12376 読取反映先=D0 スタートボタンの読取してるけど関係なし
+			-- CURPC=C096A8 読取反映先=D1 スタートボタンの読取してるけど関係なし
+			-- CURPC=C1B954 読取反映先=D2 スタートボタンの読取してるとこ
 			global.bp(bps, 0xC1B95A,
 				"(maincpu.pb@100024==1&&maincpu.pw@100701==10B&&maincpu.pb@10FDAF==2&&maincpu.pw@10FDB6!=0)&&((((maincpu.pb@300000)&$10)==0)||(((maincpu.pb@300000)&$80)==0))",
 				"D2=($FF^$04);g")
@@ -6542,23 +7005,23 @@ rbff2.startplugin = function()
 				"temp1=$10DDE4+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=maincpu.pb@((A3)+$90);g")
 
 			-- 判定の接触判定が無視される
-			-- bp 13118,1,{PC=1311C;g}
+			-- bp 13118,1,{CURPC=1311C;g}
 
 			-- 攻撃のヒットをむりやりガードに変更する
 			-- $10DE5E $10DE5Fにフラグたっているかをチェックする
 			global.bp(bps, fix_bp_addr(0x0580D4),
 				"maincpu.pw@107C22>0&&((maincpu.pb@10DDF1>0&&(A4)==100500&&maincpu.pb@10DE5F==1&&(maincpu.pb@10058E==0||maincpu.pb@10058E==2))||(maincpu.pb@10DDF1>0&&(A4)==100400&&maincpu.pb@10DE5E==1&&(maincpu.pb@10048E==0||maincpu.pb@10048E==2)))",
-				"PC=" .. string.format("%x", fix_bp_addr(0x0580EA)) .. ";g")
+				"CURPC=" .. string.format("%x", fix_bp_addr(0x0580EA)) .. ";g")
 			--[[
 			global.bp(bps, fix_bp_addr(0x012FD0),
 				"maincpu.pw@107C22>0&&((maincpu.pb@10DDF1>0&&(A4)==100500)||(maincpu.pb@10DDF1>0&&(A4)==100400))",
-				"temp1=$10DDF1+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=0;PC=" .. string.format("%x", fix_bp_addr(0x012FDA)) .. ";g")
+				"temp1=$10DDF1+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=0;CURPC=" .. string.format("%x", fix_bp_addr(0x012FDA)) .. ";g")
 			]]
 
 			-- N段目で強制空ぶりさせるフック
 			global.bp(bps, fix_bp_addr(0x0130F8),
 				"maincpu.pw@107C22>0&&((D7)<$FFFF)&&((maincpu.pb@10DDF1!=$FF&&(A4)==100500&&maincpu.pb@10DDF1<=maincpu.pb@10B4E0)||(maincpu.pb@10DDF2!=$FF&&(A4)==100400&&maincpu.pb@10DDF2<=maincpu.pb@10B4E1))",
-				"maincpu.pb@(temp1)=0;PC=" .. string.format("%x", fix_bp_addr(0x012FDA)) .. ";g")
+				"maincpu.pb@(temp1)=0;CURPC=" .. string.format("%x", fix_bp_addr(0x012FDA)) .. ";g")
 			--[[ 空振りフック時の状態確認用
 			global.bp(bps, fix_bp_addr(0x0130F8),
 				"maincpu.pw@107C22>0&&((D7)<$FFFF)&&((A4)==100500||(A4)==100400)",
@@ -6614,11 +7077,11 @@ rbff2.startplugin = function()
 			-- 中間のチェックをスキップして算出処理へ飛ぶ
 			global.bp(bps, fix_bp_addr(0x03BEDA),
 				"maincpu.pw@107C22>0",
-				string.format("PC=%x;g", fix_bp_addr(0x03BEEC)))
+				string.format("CURPC=%x;g", fix_bp_addr(0x03BEEC)))
 			-- 中間チェックに抵触するパターンは値採取後にRTSへ移動する
 			global.bp(bps, fix_bp_addr(0x05B3AC),
 				"maincpu.pw@107C22>0&&(maincpu.pb@((A3)+$BF)!=$0||maincpu.pb@((A3)+$BC)==$3C)",
-				"temp1=$10DE58+((((A3)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));" .. string.format("PC=%x", fix_bp_addr(0x05B34E)) .. ";g")
+				"temp1=$10DE58+((((A3)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));" .. string.format("CURPC=%x", fix_bp_addr(0x05B34E)) .. ";g")
 			-- 中間チェックに抵触しないパターン
 			global.bp(bps, fix_bp_addr(0x05B3AC),
 				"maincpu.pw@107C22>0&&maincpu.pb@((A3)+$BF)==$0&&maincpu.pb@((A3)+$BC)!=$3C",
@@ -6628,11 +7091,11 @@ rbff2.startplugin = function()
 			-- 中間のチェックをスキップして算出処理へ飛ぶ
 			global.bp(bps, fix_bp_addr(0x05B34C),
 				"maincpu.pw@107C22>0",
-				string.format("PC=%x;g", fix_bp_addr(0x05B35E)))
+				string.format("CURPC=%x;g", fix_bp_addr(0x05B35E)))
 			-- 中間チェックに抵触するパターンは値採取後にRTSへ移動する
 			global.bp(bps, fix_bp_addr(0x03C144),
 				"maincpu.pw@107C22>0&&maincpu.pb@((A4)+$BF)!=$0",
-				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));" .. string.format("PC=%x", fix_bp_addr(0x03C13A)) .. ";g")
+				"temp1=$10DE5A+((((A4)&$FFFFFF)-$100400)/$100);maincpu.pb@(temp1)=(maincpu.pb@(temp1)+(D0));" .. string.format("CURPC=%x", fix_bp_addr(0x03C13A)) .. ";g")
 			-- 中間チェックに抵触しないパターン
 			global.bp(bps, fix_bp_addr(0x03C144),
 				"maincpu.pw@107C22>0&&maincpu.pb@((A4)+$BF)==$0",
@@ -6646,14 +7109,14 @@ rbff2.startplugin = function()
 
 			--[[ ドリル簡易入力
 			デバッグDIP4-4参照箇所の以下まとめて。
-			bp 042BF8,1,{PC=042BFA;g}
-			bp 042C1A,1,{PC=042C1C;g}
-			bp 04343A,1,{PC=04343C;g}
-			bp 0434AA,1,{PC=434b6;g}
+			bp 042BF8,1,{CURPC=042BFA;g}
+			bp 042C1A,1,{CURPC=042C1C;g}
+			bp 04343A,1,{CURPC=04343C;g}
+			bp 0434AA,1,{CURPC=434b6;g}
 			]]
 
 			-- 空振りCAできる
-			-- bp 02FA5E,1,{PC=02FA6A;g}
+			-- bp 02FA5E,1,{CURPC=02FA6A;g}
 			-- ↓のテーブルを全部00にするのでも可
 			-- 02FA72: 0000 0000
 			-- 02FA76: 0000 0000
@@ -6663,12 +7126,12 @@ rbff2.startplugin = function()
 
 			-- bp 3B5CE,1,{maincpu.pb@1007B5=0;g} -- 2P 飛び道具の強さ0に
 
-			-- bp 39db0,1,{PC=39db4;g} -- 必殺投げの高度チェックを無視
+			-- bp 39db0,1,{CURPC=39db4;g} -- 必殺投げの高度チェックを無視
 
 			--[[ ライン移動攻撃の移動量のしきい値 調査用
 			table.insert(bps, cpu.debug:bpset(0x029768,
 				"1",
-				"printf \"CH=%D D0=%X D1=%X PREF_ADDR=%X\",maincpu.pw@((A4)+10), D0,D1,PREF_ADDR;g"))
+				"printf \"CH=%D D0=%X D1=%X rPC=%X\",maincpu.pw@((A4)+10), D0,D1,rPC;g"))
 			]]
 
 			--[[ 投げ無敵調査用
@@ -6684,12 +7147,12 @@ rbff2.startplugin = function()
 				0x00039F36, -- 投げ成立
 				0x00039DFA, -- 無敵Fチェック
 			}) do
-				global.bp(bps, addr, "1", "printf \"A4=%X CH=%D PC=%X PREF_ADDR=%X A0=%X D7=%X\",(A4),maincpu.pw@((A4)+10),PC,PREF_ADDR,(A0),(D7);g"))
+				global.bp(bps, addr, "1", "printf \"A4=%X CH=%D CURPC=%X rPC=%X A0=%X D7=%X\",(A4),maincpu.pw@((A4)+10),CURPC,rPC,(A0),(D7);g"))
 			end
 			]]
 
-			-- bp 058946,1,{PC=5895A;g} -- BS出ない
-			-- bp 039782,1,{PC=039788;g} -- BS表示でない
+			-- bp 058946,1,{CURPC=5895A;g} -- BS出ない
+			-- bp 039782,1,{CURPC=039788;g} -- BS表示でない
 		end
 	end
 
@@ -6717,13 +7180,13 @@ rbff2.startplugin = function()
 			cond2 = cond1 .. "&&(maincpu.pb@((A3)+$B6)==0)"
 			-- 投げの時だけやられ判定表示（ジョー用）
 			local cond3 = "(maincpu.pw@107C22>0)&&((maincpu.pb@($AA+(A3))|D0)!=0)"
-			global.bp(bps_rg, fix_bp_addr(0x5C2E2), cond3, "PC=((PC)+$C);g")
+			global.bp(bps_rg, fix_bp_addr(0x5C2E2), cond3, "CURPC=((CURPC)+$C);g")
 			-- 投げのときだけやられ判定表示（主にボブ用）
 			local cond4 = "(maincpu.pw@107C22>0)&&(maincpu.pb@($7A+(A3))==0)"
-			global.bp(bps_rg, 0x12BB0, cond4, "PC=((PC)+$E);g")
+			global.bp(bps_rg, 0x12BB0, cond4, "CURPC=((CURPC)+$E);g")
 
-			--check vuln at all times *** setregister for m68000.pc is broken *** --bp 05C2E8, 1, {PC=((PC)+$6);g}
-			global.bp(bps_rg, fix_bp_addr(0x5C2E8), cond2, "PC=((PC)+$6);g")
+			--check vuln at all times *** setregister for m68000.CURPC is broken *** --bp 05C2E8, 1, {CURPC=((CURPC)+$6);g}
+			global.bp(bps_rg, fix_bp_addr(0x5C2E8), cond2, "CURPC=((CURPC)+$6);g")
 			--この条件で動作させると攻撃判定がでてしまってヒットしてしまうのでダメ
 			--[[
 			local cond2 = "(maincpu.pw@107C22>0)&&(maincpu.pb@((A0)+$B6)==0)&&((maincpu.pw@((A0)+$60)==$50)||(maincpu.pw@((A0)+$60)==$51)||(maincpu.pw@((A0)+$60)==$54))"
@@ -6734,7 +7197,7 @@ rbff2.startplugin = function()
 			--*** fix for hackish workaround *** --bp 05C2EE, 1, {A3=((A3)+$B5);g}
 			global.bp(bps_rg, fix_bp_addr(0x5C2EE), cond1, "A3=((A3)+$B5);g")
 			-- 無理やり条件スキップしたので当たり処理に入らないようにする
-			global.bp(bps_rg, fix_bp_addr(0x5C2F6), "(maincpu.pb@((A3)+$B6)==0)||((maincpu.pb@($AA+(A3))|D0)!=0)", "PC=((PC)+$8);g")
+			global.bp(bps_rg, fix_bp_addr(0x5C2F6), "(maincpu.pb@((A3)+$B6)==0)||((maincpu.pb@($AA+(A3))|D0)!=0)", "CURPC=((CURPC)+$8);g")
 		end
 	end
 
@@ -6750,6 +7213,26 @@ rbff2.startplugin = function()
 			end
 		end
 		hook_reset = reset == true
+
+		-- キャラデータの押し合い判定を作成
+		-- キャラごとの4種類の判定データをロードする
+		for char = 1, #chars - 1 do
+			if chars[char].push_box == nil then
+				chars[char].push_box_mask = pgm:read_u32(0x5C728 + (char << 2))
+				chars[char].push_box = {}
+				for _, addr in ipairs({ 0x5C9BC, 0x5CA7C, 0x5CB3C, 0x5CBFC }) do
+					local a2 = addr + (char << 3)
+					local y1, y2 = pgm:read_u8(a2 + 0x1), pgm:read_u8(a2 + 0x2)
+					local x1, x2 = pgm:read_i8(a2 + 0x3), pgm:read_i8(a2 + 0x4)
+					chars[char].push_box[addr] = {
+						addr = addr, type = 0, x1 = x1, x2 = x2, y1 = y1, y2 = y2,
+						log = string.format(" char=%s addr=%x type=000 x1=%s x2=%s y1=%s y2=%s", char, a2, x1, x2, y1, y2)
+					}
+					-- print(chars[char].push_box[addr].log)
+				end
+			end
+		end
+
 		set_wps(hook_reset)
 		set_bps(hook_reset)
 		set_bps_rg(hook_reset)
@@ -7825,7 +8308,7 @@ rbff2.startplugin = function()
 
 	-- 1Pと2Pの通常投げ間合い取得
 	-- 0x05D78Cからの実装
-	local get_n_throw = function(p, op, height)
+	local get_n_throw = function(p, op)
 		-- 相手が向き合いか背向けかで押し合い幅を解決して反映
 		local op_edge = 0xFFFF & (op.proc_pos - ((p.side == op.side) and op.push_back or op.push_front))
 		-- 自身の押し合い判定を反映
@@ -7869,7 +8352,7 @@ rbff2.startplugin = function()
 		p.n_throw.range5   = pgm:read_i8(p.n_throw.addr.range5)
 		p.n_throw.id       = pgm:read_u8(p.n_throw.addr.id)
 		p.n_throw.pos_x    = p.pos - screen.left
-		p.n_throw.pos_y    = height - p.pos_y - screen.top
+		p.n_throw.pos_y    = screen.top - p.pos_y
 		local range        = (p.n_throw.range1 == p.n_throw.range2 and math.abs(p.n_throw.range42 * 4)) or math.abs(p.n_throw.range41 * 4)
 		range              = range + p.n_throw.range5 * -4
 		range              = range + p.throw.half_range
@@ -7883,7 +8366,7 @@ rbff2.startplugin = function()
 	-- 0x05FDCA,0x060426からの実装
 	-- TODO アドレスの補正
 	local can_air_throwable_bases = new_set(0x02C9D4, 0x02BF20, 0x02C132, 0x02C338, 0x02C552)
-	local get_air_throw = function(p, op, height)
+	local get_air_throw = function(p, op)
 		-- 投げ間合いセット
 		p.air_throw           = p.air_throw or {}
 		-- 参考表示の枠なので簡易的なチェックにする
@@ -7909,7 +8392,7 @@ rbff2.startplugin = function()
 		p.air_throw.opp_base  = pgm:read_u32(p.air_throw.addr.opp_base)
 		p.air_throw.opp_id    = pgm:read_u16(p.air_throw.addr.opp_id)
 		p.air_throw.pos_x     = p.pos - screen.left
-		p.air_throw.pos_y     = screen.top + height - p.old_pos_y - p.old_pos_z
+		p.air_throw.pos_y     = screen.top - p.old_pos_y - p.old_pos_z
 		p.air_throw.side      = p.side
 		p.air_throw.top       = p.air_throw.range_y
 		p.air_throw.bottom    = -p.air_throw.range_y
@@ -7918,7 +8401,7 @@ rbff2.startplugin = function()
 		p.air_throw.id        = pgm:read_u8(p.air_throw.addr.id)
 	end
 	-- 必殺投げ間合い取得
-	local get_sp_throw = function(p, op, height)
+	local get_sp_throw = function(p, op)
 		-- フックした情報の取得
 		p.sp_throw.left     = nil
 		p.sp_throw.right    = nil
@@ -7933,7 +8416,7 @@ rbff2.startplugin = function()
 		p.sp_throw.side     = p.side
 		p.sp_throw.bottom   = pgm:read_i16(p.sp_throw.addr.bottom)
 		p.sp_throw.pos_x    = p.pos - screen.left
-		p.sp_throw.pos_y    = screen.top + height - p.old_pos_y - p.old_pos_z
+		p.sp_throw.pos_y    = screen.top - p.old_pos_y - p.old_pos_z
 		p.sp_throw.right    = p.sp_throw.front * p.side
 		p.sp_throw.type     = box_type_base.pt
 		p.sp_throw.on       = p.addr.base == p.sp_throw.base and p.sp_throw.on or 0xFF
@@ -8481,46 +8964,6 @@ rbff2.startplugin = function()
 	end
 	for i = -1, -256, -1 do
 		table.insert(force_y_pos, i)
-	end
-
-	-- 判定データの取得
-	local debug_box = function(p, pgm)
-		-- do_debug_box(p, pgm)
-	end
-	local do_debug_box = function(p, pgm)
-		-- メモリのコピー処理を再現できないかぎり無理
-		-- 家庭用004A76からの処理、必要かどうか不明
-		if pgm:read_u16(0x107EC6) ~= p.act_boxtype then
-		end
-		local d0 = p.side ~ pgm:read_u8(p.addr.base + 0x6A)
-		print("frame=%s %x %s x=%s y=%s,%s %x %x",
-			global.frame_number, p.addr.base, (0 < d0) and ">" or "<",
-			p.pos, p.pos_y, p.pos_z, p.act_boxtype, pgm:read_u16(0x107EC6))
-		for d2 = 1, pgm:read_u8(p.addr.box_base2) do
-			local a2 = p.box_base2 + 5 * (d2 - 1)
-			-- 004A9Eからの処理
-			-- local d5 = 0xFFFF & ((0xFF & ((pgm:read_u8(a2) & 0x1F) - 0x20)) * 256)
-			local d5 = pgm:read_u8(a2) & 0x1F
-			local y1, y2 = pgm:read_u8(a2 + 0x1), pgm:read_u8(a2 + 0x2)
-			local x1, x2 = pgm:read_u8(a2 + 0x3), pgm:read_u8(a2 + 0x4)
-			printf("  %s addr=%x data=%02x%02x%02x%02x%02x type=%03x y1=%s y2=%s x1=%s x2=%s",
-				d2, a2, d5, y1, y2, x1, x2, d5, y1, y2, x1, x2)
-		end
-	end
-
-	-- 投げ間合いで使う立ち状態の押し合い判定
-	-- 家庭用0x05D78Cからの処理
-	local get_push_range = function(p, fix)
-		local d5 = pgm:read_u8(fix + fix_bp_addr(0x05C99C) + p.char_8times)
-		if fix == 0x3 then
-			d5 = 0xFF00 + d5
-			if 0 > p.side then -- 位置がマイナスなら
-				d5 = 0x10000 - d5 -- NEG
-			end
-		end
-		d5 = 0xFFFF & (d5 + d5) -- 2倍値に
-		d5 = 0xFFFF & (d5 + d5) -- さらに2倍値に
-		return d5
 	end
 
 	local frame_event_types = {
@@ -9686,7 +10129,7 @@ rbff2.startplugin = function()
 		end
 
 		local cond = "maincpu.pw@107C22>0"
-		local pc = "PC=$4112;g"
+		local pc = "CURPC=$4112;g"
 
 		for i, p in ipairs(players) do
 			if p.disp_char_bps then
@@ -9696,10 +10139,10 @@ rbff2.startplugin = function()
 				local bps = p.disp_char_bps.bps
 				local cond3 = cond .. "&&(A3)==$100400"
 				if i == 1 then
-					-- bp 40AE,{(A4)==100400||(A4)==100600||(A4)==100800||(A4)==100A00},{PC=4112;g} -- 2Pだけ消す
+					-- bp 40AE,{(A4)==100400||(A4)==100600||(A4)==100800||(A4)==100A00},{CURPC=4112;g} -- 2Pだけ消す
 					cond3 = cond3 .. "&&((A4)==$100400||(A4)==$100600||(A4)==$100800||(A4)==$100A00)"
 				else
-					-- bp 40AE,{(A4)==100500||(A4)==100700||(A4)==100900||(A4)==100B00},{PC=4112;g} -- 1Pだけ消す
+					-- bp 40AE,{(A4)==100500||(A4)==100700||(A4)==100900||(A4)==100B00},{CURPC=4112;g} -- 1Pだけ消す
 					cond3 = cond3 .. "&&((A4)==$100500||(A4)==$100700||(A4)==$100900||(A4)==$100B00)"
 				end
 				global.bp(bps, 0x0040AE, cond3, pc)
@@ -9711,12 +10154,12 @@ rbff2.startplugin = function()
 		elseif global.disp_effect == false then
 			global.disp_effect_bps = global.new_hook_holder()
 			local bps = global.disp_effect_bps.bps
-			--pc = "printf \"A3=%X A4=%X PREF=%X\",A3,A4,PREF_ADDR;PC=$4112;g"
-			global.bp(bps, 0x03BCC2, cond, "PC=$3BCC8;g")
+			--pc = "printf \"A3=%X A4=%X PREF=%X\",A3,A4,rPC;CURPC=$4112;g"
+			global.bp(bps, 0x03BCC2, cond, "CURPC=$3BCC8;g")
 			-- ファイヤーキックの砂煙だけ抑止する
 			local cond2 = cond .. "&&maincpu.pw@((A3)+$10)==$1&&maincpu.pw@((A3)+$60)==$B8"
-			global.bp(bps, 0x03BB1E, cond2, "PC=$3BC00;g")
-			global.bp(bps, 0x0357B0, cond, "PC=$35756;g")
+			global.bp(bps, 0x03BB1E, cond2, "CURPC=$3BC00;g")
+			global.bp(bps, 0x0357B0, cond, "CURPC=$35756;g")
 			global.bp(bps, 0x015A82, cond, pc)    -- rts 015A88
 			global.bp(bps, 0x015AAC, cond, pc)    -- rts 015AB2
 			global.bp(bps, 0x015AD8, cond, pc)    -- rts 015ADE
@@ -9729,40 +10172,40 @@ rbff2.startplugin = function()
 			global.bp(bps, 0x03BB60, cond2, pc)   -- rts 03BB66 技エフェクト
 			global.bp(bps, 0x060BDA, cond, pc)    -- rts 060BE0 ヒットマーク
 			global.bp(bps, 0x060F2C, cond, pc)    -- rts 060F32 ヒットマーク
-			global.bp(bps, 0x061150, cond, "PC=$061156;g") -- rts 061156 ヒットマーク、パワーウェイブの一部
+			global.bp(bps, 0x061150, cond, "CURPC=$061156;g") -- rts 061156 ヒットマーク、パワーウェイブの一部
 			global.bp(bps, 0x0610E0, cond, pc)    -- rts 0610E6
 
 			-- コンボ表示抑制＝ヒット数を2以上にしない
 			-- bp 0252E8,1,{D7=0;PC=0252EA;g}
-			global.bp(bps, 0x0252E8, "1", "D7=0;PC=0252EA;g")
-			-- bp 039782,1,{PC=039788;g} -- BS表示でない
-			global.bp(bps, 0x039782, "1", "PC=039788;g")
-			-- bp 03C604,1,{PC=03C60A;g} -- 潜在表示でない
-			global.bp(bps, 0x03C604, "1", "PC=03C60A;g")
-			-- bp 039850,1,{PC=039856;g} -- リバサ表示でない
-			global.bp(bps, 0x039850, "1", "PC=039856;g")
+			global.bp(bps, 0x0252E8, "1", "D7=0;CURPC=0252EA;g")
+			-- bp 039782,1,{CURPC=039788;g} -- BS表示でない
+			global.bp(bps, 0x039782, "1", "CURPC=039788;g")
+			-- bp 03C604,1,{CURPC=03C60A;g} -- 潜在表示でない
+			global.bp(bps, 0x03C604, "1", "CURPC=03C60A;g")
+			-- bp 039850,1,{CURPC=039856;g} -- リバサ表示でない
+			global.bp(bps, 0x039850, "1", "CURPC=039856;g")
 			-- いろんな割り込み文字が出ない、開幕にONにしておくと進まない
-			-- bp 2378,1,{PC=2376;g}
-			-- global.bp(bps, 0x002378, "1", "PC=002376;g")
+			-- bp 2378,1,{CURPC=2376;g}
+			-- global.bp(bps, 0x002378, "1", "CURPC=002376;g")
 		end
 
 		if global.fix_pos_bps then
 			global.set_bps(global.fix_pos ~= true, global.fix_pos_bps)
 		elseif global.fix_pos then
 			global.fix_pos_bps = global.new_hook_holder()
-			-- bp 0040AE,1,{PC=$4112;g} -- 描画全部無視
+			-- bp 0040AE,1,{CURPC=$4112;g} -- 描画全部無視
 			local bps = global.fix_pos_bps.bps
 			-- 画面表示高さを1Pか2Pの高いほうにあわせる
 			-- bp 013B6E,1,{D0=((maincpu.pw@100428)-(D0)+4);g}
 			-- bp 013B6E,1,{D0=((maincpu.pw@100428)-(D0)-24);g}
 			-- bp 013BBA,1,{D0=(maincpu.pw@100428);g}
-			-- bp 013AF0,1,{PC=13B28;g} -- 潜在演出無視
-			-- bp 013AF0,1,{PC=13B76;g} -- 潜在演出強制（上に制限が付く）
+			-- bp 013AF0,1,{CURPC=13B28;g} -- 潜在演出無視
+			-- bp 013AF0,1,{CURPC=13B76;g} -- 潜在演出強制（上に制限が付く）
 			global.bp(bps, 0x013B6E, cond .. "&&(maincpu.pb@10DE5C)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5C)+#40);g")
 			global.bp(bps, 0x013B6E, cond .. "&&(maincpu.pb@10DE5D)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5D)+#40);g")
 			global.bp(bps, 0x013BBA, cond .. "&&(maincpu.pb@10DE5C)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5C)+#40);g")
 			global.bp(bps, 0x013BBA, cond .. "&&(maincpu.pb@10DE5D)!=0xFF", "D0=((maincpu.pw@100428)-(maincpu.pb@10DE5D)+#40);g")
-			global.bp(bps, 0x013AF0, cond, "PC=$13B28;g")
+			global.bp(bps, 0x013AF0, cond, "CURPC=$13B28;g")
 		end
 
 		-- メイン処理
@@ -9782,8 +10225,6 @@ rbff2.startplugin = function()
 
 		local ec = scr:frame_number()
 		local state_past = ec - global.input_accepted
-		local height = scr.height * scr.yscale
-		local width = scr.width * scr.xscale
 		local joy_val = get_joy()
 
 		global.frame_number = global.frame_number + 1
@@ -9801,8 +10242,11 @@ rbff2.startplugin = function()
 			return
 		end
 
-		screen.left     = pgm:read_i16(mem.stage_base_addr + screen.offset_x) + (320 - width) / 2 --FBA removes the side margins for some games
+		--FBA removes the side margins for some games
+		--[[
+		screen.left     = pgm:read_i16(mem.stage_base_addr + screen.offset_x) + (320 - width) / 2
 		screen.top      = pgm:read_i16(mem.stage_base_addr + screen.offset_y)
+		]]
 
 		-- プレイヤーと飛び道具のベースアドレスをキー、オブジェクトを値にするバッファ
 		local temp_hits = {}
@@ -9814,22 +10258,28 @@ rbff2.startplugin = function()
 
 		-- 1Pと2Pの状態読取
 		for i, p in ipairs(players) do
-			local op          = players[3 - i]
-			p.op              = op
-			p.base            = pgm:read_u32(p.addr.base)
-			p.char            = pgm:read_u8(p.addr.char)
-			p.char_data       = chars[p.char]
-			p.char_4times     = 0xFFFF & (p.char + p.char)
-			p.char_4times     = 0xFFFF & (p.char_4times + p.char_4times)
-			p.char_8times     = 0xFFFF & (p.char << 3)
-			p.close_far       = get_close_far_pos(p.char)
-			p.close_far_lma   = get_close_far_pos_line_move_attack(p.char)
-			p.life            = pgm:read_u8(p.addr.life) -- 今の体力
-			p.old_state       = p.state          -- 前フレームの状態保存
-			p.state           = pgm:read_u8(p.addr.state) -- 今の状態
-			p.old_flag_c0     = p.flag_c0
-			p.old_flag_cc     = p.flag_cc
-			p.old_flag_d0     = p.flag_d0
+			local op        = players[3 - i]
+			p.op            = op
+			p.base          = pgm:read_u32(p.addr.base)
+			p.char          = pgm:read_u8(p.addr.char)
+			p.char_data     = chars[p.char]
+			p.char_4times   = 0xFFFF & (p.char + p.char)
+			p.char_4times   = 0xFFFF & (p.char_4times + p.char_4times)
+			p.char_8times   = 0xFFFF & (p.char << 3)
+			p.close_far     = get_close_far_pos(p.char)
+			p.close_far_lma = get_close_far_pos_line_move_attack(p.char)
+			p.init_stun     = p.char_data.init_stuns
+			p.push_front    = get_push_range(p, 0x3)                     -- 正面
+			p.push_back     = get_push_range(p, 0x4)                     -- 背後
+			p.tw_half_range = pgm:read_u8(fix_bp_addr(0x5D854) + p.char_4times) -- 投げ間合い半数
+
+			-- p.life            = pgm:read_u8(p.addr.life) -- 今の体力
+			p.old_state     = p.state -- 前フレームの状態保存
+			--p.state           = pgm:read_u8(p.addr.state) -- 今の状態
+			p.old_flag_c0   = p.flag_c0
+			p.old_flag_cc   = p.flag_cc
+			p.old_flag_d0   = p.flag_d0
+			--[[
 			p.flag_c0         = pgm:read_u32(p.addr.flag_c0)
 			p.flag_c4         = pgm:read_u32(p.addr.flag_c4)
 			p.flag_c8         = pgm:read_u32(p.addr.flag_c8)
@@ -9838,10 +10288,13 @@ rbff2.startplugin = function()
 			p.flag_fin        = pgm:read_u8(p.addr.flag_fin) == 0xFF
 			p.box_base1       = pgm:read_u32(p.addr.box_base1)
 			p.box_base2       = pgm:read_u32(p.addr.box_base2)
-			p.old_kaiser_wave = p.kaiser_wave          -- 前フレームのカイザーウェイブのレベル
+			]]
+			p.old_kaiser_wave = p.kaiser_wave -- 前フレームのカイザーウェイブのレベル
+			--[[
 			p.kaiser_wave     = pgm:read_u8(p.addr.kaiser_wave) -- カイザーウェイブのレベル
 			p.hurt_state      = pgm:read_u8(p.addr.hurt_state)
-			p.slide_atk       = testbit(p.flag_cc, flag_cc_types._02) -- ダッシュ滑り攻撃
+			]]
+			p.slide_atk = testbit(p.flag_cc, flag_cc_types._02) -- ダッシュ滑り攻撃
 			-- ブレイクショット
 			if testbit(p.flag_cc, flag_cc_types._21) == true and
 				(testbit(p.old_flag_cc, flag_cc_types._20) == true or p.bs_atk == true) then
@@ -9908,20 +10361,22 @@ rbff2.startplugin = function()
 			pgm:write_u8(p.addr.tmp_st_timer, 0)
 			p.tw_threshold   = pgm:read_u8(p.addr.tw_threshold)
 			p.tw_accepted    = pgm:read_u8(p.addr.tw_accepted)
-			p.tw_frame       = pgm:read_u8(p.addr.tw_frame)
+			-- p.tw_frame       = pgm:read_u8(p.addr.tw_frame)
 			p.old_tw_muteki  = p.tw_muteki or 0
-			p.tw_muteki      = pgm:read_u8(p.addr.tw_muteki)
+			-- p.tw_muteki      = pgm:read_u8(p.addr.tw_muteki)
 			-- 通常投げ無敵判断 その2(HOME 039FC6から03A000の処理を再現して投げ無敵の値を求める)
 			p.old_tw_muteki2 = p.tw_muteki2 or 0
 			p.tw_muteki2     = 0
 			if 0x70 <= p.attack then
 				p.tw_muteki2 = pgm:read_u8(pgm:read_u32(p.char_4times + 0x89692) + p.attack - 0x70)
 			end
-			p.throwable       = p.state == 0 and op.state == 0 and p.tw_frame > 24 and p.sway_status == 0x00 and p.tw_muteki == 0 -- 投げ可能ベース
-			p.n_throwable     = p.throwable and p.tw_muteki2 == 0                                                        -- 通常投げ可能
+			p.throwable   = p.state == 0 and op.state == 0 and p.tw_frame > 24 and p.sway_status == 0x00 and p.tw_muteki == 0 -- 投げ可能ベース
+			p.n_throwable = p.throwable and p.tw_muteki2 == 0                                                            -- 通常投げ可能
+			--[[
 			p.sp_throw_id     = pgm:read_u8(p.addr.sp_throw_id)                                                          -- 投げ必殺のID
 			p.sp_throw_act    = pgm:read_u8(p.addr.sp_throw_act)                                                         -- 投げ必殺の持続残F
 			p.additional      = pgm:read_u8(p.addr.additional)
+			]]
 
 			p.old_act         = p.act or 0x00
 			p.act             = pgm:read_u16(p.addr.act)
@@ -9929,76 +10384,79 @@ rbff2.startplugin = function()
 			p.old_act_count   = p.act_count
 			p.act_count       = pgm:read_u8(p.addr.act_count)
 			-- 家庭用004A6Aからの処理
-			p.act_boxtype     = 0xFFFF & (pgm:read_u8(p.addr.act_boxtype) & 0xC0 * 4)
+			-- p.act_boxtype     = 0xFFFF & (pgm:read_u8(p.addr.act_boxtype) & 0xC0 * 4)
 			p.old_act_frame   = p.act_frame
-			p.act_frame       = pgm:read_u8(p.addr.act_frame)
+			-- p.act_frame       = pgm:read_u8(p.addr.act_frame)
 			p.provoke         = 0x0196 == p.act --挑発中
-			p.stop            = pgm:read_u8(p.addr.stop)
+			-- p.stop            = pgm:read_u8(p.addr.stop)
 			p.gd_strength     = get_gd_strength(p)
 			p.old_knock_back1 = p.knock_back1
 			p.old_knock_back2 = p.knock_back2
 			p.old_knock_back3 = p.knock_back3
+			--[[
 			p.knock_back1     = pgm:read_u8(p.addr.knock_back1)
 			p.knock_back2     = pgm:read_u8(p.addr.knock_back2)
 			p.knock_back3     = pgm:read_u8(p.addr.knock_back3)
 			p.hitstop_id      = pgm:read_u8(p.addr.hitstop_id)
-			p.attack_id       = 0
-			p.old_attacking   = p.attacking
-			p.attacking       = false
-			p.dmmy_attacking  = false
-			p.juggling        = false
-			p.can_juggle      = false
-			p.can_otg         = false
-			p.old_throwing    = p.throwing
-			p.throwing        = false
-			p.can_techrise    = 2 > pgm:read_u8(0x88A12 + p.attack)
-			p.old_anyhit_id   = p.anyhit_id
-			p.anyhit_id       = pgm:read_u16(p.addr.can_techrise)
-			p.pow_up_hit      = 0
-			p.pow_up_gd       = 0
-			p.pow_up          = 0
-			p.pow_revenge     = 0
-			p.pow_absorb      = 0
-			p.esaka_range     = 0
-			p.hitstop         = 0
-			p.hitstop_gd      = 0
-			p.pure_dmg        = 0
-			p.pure_st         = 0
-			p.pure_st_tm      = 0
-			p.chip_dmg_type   = chip_dmg_types.zero
-			p.fake_hit        = (pgm:read_u8(p.addr.fake_hit) & 0xB) == 0
-			p.obsl_hit        = (pgm:read_u8(p.addr.obsl_hit) & 0xB) == 0
-			p.full_hit        = pgm:read_u8(p.addr.full_hit) > 0
-			p.harmless2       = pgm:read_u8(p.addr.attack) == 0
-			p.prj_rank        = pgm:read_u8(p.addr.prj_rank)
-			p.old_posd        = p.posd
-			p.posd            = pgm:read_i32(p.addr.pos)
-			p.poslr           = p.posd == op.posd and "=" or p.posd < op.posd and "L" or "R"
-			p.old_pos         = p.pos
-			p.old_pos_frc     = p.pos_frc
-			p.pos             = pgm:read_i16(p.addr.pos)
-			p.pos_frc         = pgm:read_u16(p.addr.pos_frc)
-			p.thrust          = pgm:read_i16(p.addr.base + 0x34) + int16tofloat(pgm:read_u16(p.addr.base + 0x36))
-			p.inertia         = pgm:read_i16(p.addr.base + 0xDA) + int16tofloat(pgm:read_u16(p.addr.base + 0xDC))
-			p.pos_total       = p.pos + int16tofloat(p.pos_frc)
-			p.old_pos_total   = p.old_pos + int16tofloat(p.old_pos_frc)
-			p.diff_pos_total  = p.pos_total - p.old_pos_total
-			p.max_pos         = pgm:read_i16(p.addr.max_pos)
+			]]
+			p.attack_id      = 0
+			p.old_attacking  = p.attacking
+			p.attacking      = false
+			p.dmmy_attacking = false
+			p.juggling       = false
+			p.can_juggle     = false
+			p.can_otg        = false
+			p.old_throwing   = p.throwing
+			p.throwing       = false
+			p.can_techrise   = 2 > pgm:read_u8(0x88A12 + p.attack)
+			p.old_anyhit_id  = p.anyhit_id
+			p.anyhit_id      = pgm:read_u16(p.addr.can_techrise)
+			p.pow_up_hit     = 0
+			p.pow_up_gd      = 0
+			p.pow_up         = 0
+			p.pow_revenge    = 0
+			p.pow_absorb     = 0
+			p.esaka_range    = 0
+			p.hitstop        = 0
+			p.hitstop_gd     = 0
+			p.pure_dmg       = 0
+			p.pure_st        = 0
+			p.pure_st_tm     = 0
+			p.chip_dmg_type  = chip_dmg_types.zero
+			p.fake_hit       = (pgm:read_u8(p.addr.fake_hit) & 0xB) == 0
+			p.obsl_hit       = (pgm:read_u8(p.addr.obsl_hit) & 0xB) == 0
+			p.full_hit       = pgm:read_u8(p.addr.full_hit) > 0
+			p.harmless2      = pgm:read_u8(p.addr.attack) == 0
+			p.prj_rank       = pgm:read_u8(p.addr.prj_rank)
+			p.old_posd       = p.posd
+			p.posd           = pgm:read_i32(p.addr.pos)
+			p.poslr          = p.posd == op.posd and "=" or p.posd < op.posd and "L" or "R"
+			p.old_pos        = p.pos
+			p.old_pos_frc    = p.pos_frc
+			--p.pos             = pgm:read_i16(p.addr.pos)
+			--p.pos_frc         = pgm:read_u16(p.addr.pos_frc)
+			p.thrust         = p.thrust + p.thrust_frc
+			p.inertia        = p.inertia + p.inertia_frc
+			--p.pos_total       = p.pos + int16tofloat(p.pos_frc)
+			p.pos_total      = p.pos + p.pos_frc
+			p.old_pos_total  = p.old_pos + int16tofloat(p.old_pos_frc)
+			p.diff_pos_total = p.pos_total - p.old_pos_total
+			--p.max_pos         = pgm:read_i16(p.addr.max_pos)
 			if p.max_pos == 0 or p.max_pos == p.pos then
 				p.max_pos = nil
 			end
-			pgm:write_i16(p.addr.max_pos, 0)
-			p.min_pos = pgm:read_i16(p.addr.min_pos)
+			--pgm:write_i16(p.addr.max_pos, 0)
+			--p.min_pos = pgm:read_i16(p.addr.min_pos)
 			if p.min_pos == 1000 or p.min_pos == p.pos then
 				p.min_pos = nil
 			end
-			pgm:write_i16(p.addr.min_pos, 1000)
-			p.proc_pos      = p.max_pos or p.min_pos or p.pos -- 内部の補正前のX座標
+			--pgm:write_i16(p.addr.min_pos, 1000)
+			--p.proc_pos      = p.max_pos or p.min_pos or p.pos -- 内部の補正前のX座標
 			p.old_pos_y     = p.pos_y
 			p.old_pos_frc_y = p.pos_frc_y
 			p.old_in_air    = p.in_air
-			p.pos_y         = pgm:read_i16(p.addr.pos_y)
-			p.pos_frc_y     = int16tofloat(pgm:read_u16(p.addr.pos_frc_y))
+			--p.pos_y         = pgm:read_i16(p.addr.pos_y)
+			--p.pos_frc_y     = int16tofloat(pgm:read_u16(p.addr.pos_frc_y))
 			p.in_air        = 0 < p.pos_y or 0 < p.pos_frc_y
 
 			-- ジャンプの遷移ポイントかどうか
@@ -10021,17 +10479,18 @@ rbff2.startplugin = function()
 			else
 				p.pos_y_down = 0
 			end
-			p.old_pos_z       = p.pos_z
-			p.pos_z           = pgm:read_i16(p.addr.pos_z)
-			p.on_sway_line    = (40 == p.pos_z and 40 > p.old_pos_z) and global.frame_number or p.on_sway_line
-			p.on_main_line    = (24 == p.pos_z and 24 < p.old_pos_z) and global.frame_number or p.on_main_line
-			p.old_sway_status = p.sway_status
-			p.sway_status     = pgm:read_u8(p.addr.sway_status) -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
-			if p.sway_status == 0x00 then
-				p.in_sway_line = false
-			else
-				p.in_sway_line = true
-			end
+			p.old_pos_z = p.pos_z
+			-- p.pos_z           = pgm:read_i16(p.addr.pos_z)
+			-- p.on_sway_line    = (40 == p.pos_z and 40 > p.old_pos_z) and global.frame_number or p.on_sway_line
+			-- p.on_main_line    = (24 == p.pos_z and 24 < p.old_pos_z) and global.frame_number or p.on_main_line
+			-- p.old_sway_status = p.sway_status
+			-- p.sway_status     = pgm:read_u8(p.addr.sway_status) -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
+			-- if p.sway_status == 0x00 then
+			-- 	p.in_sway_line = false
+			-- else
+			-- 	p.in_sway_line = true
+			-- end
+			--[[
 			p.internal_side = pgm:read_u8(p.addr.side)
 			p.side          = pgm:read_i8(p.addr.side) < 0 and -1 or 1
 			p.corner        = pgm:read_u8(p.addr.corner)               -- 画面端状態 0:端以外 1:画面端 3:端押し付け
@@ -10043,6 +10502,8 @@ rbff2.startplugin = function()
 			p.input1        = pgm:read_u8(p.addr.input1)
 			p.input2        = pgm:read_u8(p.addr.input2)
 			p.cln_btn       = pgm:read_u8(p.addr.cln_btn)
+			]]
+			p.flip_x = (p.flip_x1 ~ p.flip_x2) > 0 and 1 or -1
 			-- 滑り属性の攻撃か慣性残しの立ち攻撃か
 			if p.slide_atk == true or (p.old_act == 0x19 and p.inertia > 0 and testbit(p.flag_c0, 0x32)) then
 				p.dash_act_addr = get_dash_act_addr(p, pgm)
@@ -10056,15 +10517,17 @@ rbff2.startplugin = function()
 				p.dash_act_info = p.dash_act_info or ""
 			end
 
+			--[[
 			p.life        = pgm:read_u8(p.addr.life)
 			p.pow         = pgm:read_u8(p.addr.pow)
-			p.init_stun   = p.char_data.init_stuns
 			p.max_stun    = pgm:read_u8(p.addr.max_stun)
 			p.stun        = pgm:read_u8(p.addr.stun)
 			p.stun_timer  = pgm:read_u16(p.addr.stun_timer)
 			p.act_contact = pgm:read_u8(p.addr.act_contact)
 			p.ophit_base  = pgm:read_u32(p.addr.ophit_base)
-			p.ophit       = nil
+			p.init_stun   = p.char_data.init_stuns
+			]]
+			p.ophit = nil
 			if p.ophit_base == 0x100400 or p.ophit_base == 0x100500 then
 				p.ophit = op
 			else
@@ -10172,8 +10635,8 @@ rbff2.startplugin = function()
 				end
 			end
 
-			p.max_hit_dn    = p.attack > 0 and pgm:read_u8(pgm:read_u32(fix_bp_addr(0x827B8) + p.char_4times) + p.attack) or 0
-			p.max_hit_nm    = pgm:read_u8(p.addr.max_hit_nm)
+			-- p.max_hit_dn    = p.attack > 0 and pgm:read_u8(pgm:read_u32(fix_bp_addr(0x827B8) + p.char_4times) + p.attack) or 0
+			-- p.max_hit_nm    = pgm:read_u8(p.addr.max_hit_nm)
 			p.last_dmg      = p.last_dmg or 0
 			p.last_pow      = p.last_pow or 0
 			p.last_pure_dmg = p.last_pure_dmg or 0
@@ -10585,9 +11048,6 @@ rbff2.startplugin = function()
 				global.all_act_normal = global.all_act_normal and (fb.alive == false)
 
 				fb.hit_summary = new_box_summary(fb)
-				if fb.alive then
-					debug_box(fb, pgm)
-				end
 			end
 
 			-- 値更新のフック確認
@@ -10614,16 +11074,15 @@ rbff2.startplugin = function()
 
 			-- リーチ
 			p.hit_summary      = new_box_summary(p)
-			debug_box(p, pgm)
 
 			-- 投げ判定取得
-			get_n_throw(p, op, height)
+			get_n_throw(p, op)
 
 			-- 空中投げ判定取得
-			get_air_throw(p, op, height)
+			get_air_throw(p, op)
 
 			-- 必殺投げ判定取得
-			get_sp_throw(p, op, height)
+			get_sp_throw(p, op)
 
 			-- 当たり判定の構築用バッファのリフレッシュ
 			p.hitboxes             = {}
@@ -10672,16 +11131,17 @@ rbff2.startplugin = function()
 				right  = pgm:read_i8(addr + 0x5),
 				base   = pgm:read_u32(addr + 0x6),
 				pos_x  = pgm:read_i16(addr + 0xC) - screen.left,
-				pos_y  = height - pgm:read_i16(addr + 0xE) + screen.top,
+				pos_y  = screen.top - pgm:read_i16(addr + 0xE),
 			}
 			if box.on ~= 0xFF and temp_hits[box.base] then
 				box.is_fireball = temp_hits[box.base].is_fireball == true
 				local p = temp_hits[box.base]
 				local base = ((p.addr.base - 0x100400) / 0x100)
-				box.key = string.format("%x %x %s %s %s %s", base, box.id, box.top, box.bottom, box.left, box.right)
+				box.key = string.format(" %x type=%03x x1=%s x2=%s y1=%s y2=%s", base, box.id, box.left, box.right, box.top, box.bottom)
 				if p.uniq_hitboxes[box.key] == nil then
 					p.uniq_hitboxes[box.key] = true
 					table.insert(p.buffer, box)
+					-- print(box.key)
 				end
 			end
 		end
@@ -11817,6 +12277,38 @@ rbff2.startplugin = function()
 				end
 			end
 
+			for _, p in ipairs(players) do
+				printf("%x %s x=%s y=%s z=%s left=%s left=%s top=%s", p.addr.base, p.box_debug_cnt, p.pos, p.pos_y, p.pos_z, screen.left, screen.left_raw, screen.top)
+				printf("%x %s x=%s y=%s", p.addr.base, p.box_debug_cnt, p.hit.pos_x, p.hit.pos_y)
+				local x = p.pos - screen.left
+				local y = screen.top - p.pos_y - p.pos_z
+				local flip_x = (p.flip_x1 ~ p.flip_x2) > 0 and 1 or -1
+				local push_box = fix_box_scale(p, get_push_box(p))
+				scr:draw_box(
+					0xFFFF & (x - push_box.x1 * flip_x),
+					0xFFFF & (y - push_box.y1),
+					0xFFFF & (x - push_box.x2 * flip_x),
+					0xFFFF & (y - push_box.y2),
+					0xFFFFFFFF,
+					0)
+				print(push_box.log)
+
+				for _, box in ipairs(p.box_debug) do
+					if p.box_debug_cnt > 0 then
+						box = fix_box_scale(p, box, box)
+					end
+					scr:draw_box(
+						0xFFFF & (x - box.x1 * flip_x),
+						0xFFFF & (y - box.y1),
+						0xFFFF & (x - box.x2 * flip_x),
+						0xFFFF & (y - box.y2),
+						0xFFFFFFFF,
+						0)
+					print(box.log)
+				end
+				p.box_debug_cnt = 0
+			end
+
 			-- スクショ保存
 			for _, p in ipairs(players) do
 				local chg_y = p.chg_air_state ~= 0
@@ -11932,9 +12424,9 @@ rbff2.startplugin = function()
 					scr:draw_box(p1 and 2 or 277, 0, p1 and 40 or 316, 36, 0x80404040, 0x80404040)
 
 					scr:draw_text(p1 and 4 or 278, 1, string.format("%s", p.state))
-					draw_rtext(p1 and 16 or 290, 1, string.format("%02s", p.tw_threshold))
-					draw_rtext(p1 and 28 or 302, 1, string.format("%03s", p.tw_accepted))
-					draw_rtext(p1 and 40 or 314, 1, string.format("%03s", p.tw_frame))
+					draw_rtext(p1 and 16 or 290, 1, string.format("%02d", p.tw_threshold))
+					draw_rtext(p1 and 28 or 302, 1, string.format("%03d", p.tw_accepted))
+					draw_rtext(p1 and 40 or 314, 1, string.format("%03d", p.tw_frame))
 
 					local diff_pos_y = p.pos_y + p.pos_frc_y - p.old_pos_y - p.old_pos_frc_y
 					draw_rtext(p1 and 16 or 290, 7, string.format("%0.03f", diff_pos_y))
@@ -13566,6 +14058,12 @@ rbff2.startplugin = function()
 
 			row_num = row_num + 1
 		end
+
+		local p1, p2 = players[1], players[2]
+		p1.max_pos = 0
+		p1.min_pos = 1000
+		p2.max_pos = 0
+		p2.min_pos = 1000
 	end
 
 	local bufuf = {}
