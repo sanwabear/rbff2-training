@@ -4225,31 +4225,31 @@ rbff2.startplugin               = function()
 				reset_sp_hook()
 
 				-- レコード中、リプレイ中は行動しないためのフラグ
-				local accept_control = true
+				local in_rec_replay = true
 				if global.dummy_mode == 5 then
-					accept_control = false
+					in_rec_replay = false
 				elseif global.dummy_mode == 6 then
 					if global.rec_main == rec_play and recording.player == p.control then
-						accept_control = false
+						in_rec_replay = false
 					end
 				end
 
 				-- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
 				-- { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" },
 				-- レコード中、リプレイ中は行動しない
-				if accept_control then
-					if p.dummy_act == 2 and p.sway_status == 0x00 then
-						reset_cmd_hook(data.cmd_types._2) -- しゃがみ
-					elseif p.dummy_act == 3 and p.sway_status == 0x00 then
-						reset_cmd_hook(data.cmd_types._8) -- ジャンプ
-					elseif p.dummy_act == 4 and p.sway_status == 0x00 and util.testbit(p.flag_c0, state_flag_c0._17) then
-						reset_cmd_hook(data.cmd_types._8) -- 地上のジャンプ移行モーション以外だったら上入力 TODO 修正する
-					elseif p.dummy_act == 5 then
-						if p.in_sway_line ~= true and p.state == 0 and op.in_sway_line ~= true and op.act ~= 0x65 and op.act ~= 0x66 then
-							reset_cmd_hook(data.cmd_types._2d) -- スウェー移動
-						elseif p.in_sway_line == true then
-							reset_cmd_hook(data.cmd_types._8) -- スウェー待機
+				if in_rec_replay then
+					if p.sway_status == 0x00 then
+						if p.dummy_act == 2 then
+							reset_cmd_hook(data.cmd_types._2) -- しゃがみ
+						elseif p.dummy_act == 3 then
+							reset_cmd_hook(data.cmd_types._8) -- ジャンプ
+						elseif p.dummy_act == 4 and not util.testbit(p.flag_c0, state_flag_c0._17, true) then
+							reset_cmd_hook(data.cmd_types._8) -- 地上のジャンプ移行モーション以外だったら上入力
+						elseif p.dummy_act == 5 and op.sway_status == 0x00 and p.state == 0 then
+							reset_cmd_hook(data.cmd_types._2d) -- スウェー待機(スウェー移動)
 						end
+					elseif p.dummy_act == 5 and p.in_sway_line then
+						reset_cmd_hook(data.cmd_types._8) -- スウェー待機
 					end
 				end
 
@@ -4258,7 +4258,7 @@ rbff2.startplugin               = function()
 					if fb.proc_active and fb.act_data then act_type = act_type | fb.act_data.type end
 				end
 				-- リプレイ中は自動ガードしない
-				if util.testbit(act_type, act_types.attack) and accept_control then
+				if util.testbit(act_type, act_types.attack) and in_rec_replay then
 					if jump_acts[p.act] then
 						clear_cmd_hook(data.cmd_types._8)
 					end
