@@ -1928,6 +1928,7 @@ rbff2.startplugin               = function()
 	local hitboxies_order = function(b1, b2) return (b1.id < b2.id) end
 	local ranges_order = function(r1, r2) return (r1.within and 1 or -1) < (r2.within and 1 or -1) end
 	local find = function(sources, resolver) -- sourcesの要素をresolverを通して得た結果で最初の非nilの値を返す
+		sources = sources or {}
 		local i, ii, p, a = 1, nil, nil, nil
 		return function()
 			while i <= #sources and p == nil do
@@ -6297,7 +6298,6 @@ rbff2.startplugin               = function()
 						"Timer",
 						"Power",
 					}, {}, {}
-					local y, blockable = 83, nil
 					for _, xp in util.sorted_pairs(util.hash_add_all({ [p.addr.base] = p }, p.fireballs)) do
 						if xp.num or xp.proc_active then
 							table.insert(combo_label1, string.format("Damage %3s/%1s  Stun %2s/%2s Fra.", xp.pure_dmg or 0, xp.chip_dmg or 0, xp.pure_st or 0, xp.pure_st_tm or 0))
@@ -6312,13 +6312,10 @@ rbff2.startplugin               = function()
 							elseif xp.proc_active then
 								table.insert(combo_label1, string.format("%s/%s Hit  Fireball-Lv. %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.fireball_rank or 0))
 							end
-							for _, box in ipairs(xp.hitboxies) do
-								if box.blockable then
-									blockable = box.blockable
-									table.insert(combo_label1, string.format("Box Top %3s Bottom %3s", blockable.real_top, blockable.real_bottom))
-									table.insert(combo_label1, string.format("Main %-5s  Sway %-5s", data.top_type_name(blockable.main), data.top_type_name(blockable.sway)))
-									table.insert(combo_label1, string.format("Punish %-9s", data.top_punish_name(blockable.punish)))
-								end
+							for _, box, blockable in find(xp.hitboxies, function(box) return box.blockable end) do
+								table.insert(combo_label1, string.format("Box Top %3s Bottom %3s", blockable.real_top, blockable.real_bottom))
+								table.insert(combo_label1, string.format("Main %-5s  Sway %-5s", data.top_type_name(blockable.main), data.top_type_name(blockable.sway)))
+								table.insert(combo_label1, string.format("Punish %-9s", data.top_punish_name(blockable.punish)))
 							end
 						end
 					end
