@@ -6306,14 +6306,6 @@ rbff2.startplugin               = function()
 						end
 					end
 				end
-				util.table_add_all(combo_label1, { -- コンボ表示
-					"Scaling",
-					"Damage",
-					"Combo",
-					"Stun",
-					"Timer",
-					"Power",
-				})
 				local last_damage_scaling = 100.00
 				if op.last_damage_scaling1 and op.last_damage_scaling2 then
 					last_damage_scaling = (op.last_damage_scaling1 * op.last_damage_scaling2) * 100
@@ -6339,13 +6331,19 @@ rbff2.startplugin               = function()
 				table.insert(combo_label3, string.format("%3s", op.max_combo_stun or 0))
 				table.insert(combo_label3, string.format("%3s", op.max_combo_stun_timer or 0))
 				table.insert(combo_label3, string.format("%3s", op.max_combo_pow or 0))
-				local combo_label = {}
-				if p.disp_dmg then util.table_add_all(combo_label, combo_label1) end
-				if p.disp_sts == 2 or p.disp_sts == 4 then util.table_add_all(combo_label, sts_label) end
-				if #combo_label > 0 then
-					local box_bottom = #combo_label * get_line_height()
-					scr:draw_box(p1 and 224 or 0, 40, p1 and 320 or 96, 40 + box_bottom, 0x80404040, 0x80404040) -- コンボ表示などの四角枠
-					scr:draw_text(p1 and 224 + 4 or 4, 40, table.concat(combo_label, "\n"))
+				if p.disp_dmg then util.table_add_all(combo_label1,  { -- コンボ表示
+					"Scaling",
+					"Damage",
+					"Combo",
+					"Stun",
+					"Timer",
+					"Power",
+				}) end
+				if p.disp_sts == 2 or p.disp_sts == 4 then util.table_add_all(combo_label1, sts_label) end
+				if #combo_label1 > 0 then
+					local box_bottom = #combo_label1 * get_line_height()
+					scr:draw_box(p1 and 224 or 0, 40, p1 and 320 or 96, 40 + box_bottom, 0x80404040, 0x80404040) -- 四角枠
+					scr:draw_text(p1 and 224 + 4 or 4, 40, table.concat(combo_label1, "\n"))
 					if p.disp_dmg then scr:draw_text(p1 and 224 + 36 or 36, 40, table.concat(combo_label2, "\n")) end
 					if p.disp_dmg then scr:draw_text(p1 and 224 + 68 or 68, 40, table.concat(combo_label3, "\n")) end
 				end
@@ -6353,29 +6351,13 @@ rbff2.startplugin               = function()
 				-- 状態 小表示
 				if p.disp_sts == 2 or p.disp_sts == 3 then
 					local state_label = {}
-					table.insert(state_label,  string.format("%s %02d %03d %03d", p.state, p.throwing and p.throwing.threshold or 0, p.throwing and p.throwing.timer or 0, p.throw_timer))
+					table.insert(state_label,  string.format("%s %02d %03d %03d",
+						p.state, p.throwing and p.throwing.threshold or 0, p.throwing and p.throwing.timer or 0, p.throw_timer))
 					local diff_pos_y = p.pos_y + p.pos_frc_y - p.old_pos_y - p.old_pos_frc_y
 					table.insert(state_label,  string.format("%0.03f %0.03f", diff_pos_y, p.pos_y + p.pos_frc_y))
 					table.insert(state_label,  string.format("%02x %02x %02x", p.spid, p.attack, p.attack_id))
 					table.insert(state_label,  string.format("%03x %02x %02x", p.act, p.act_count, p.act_frame))
 					table.insert(state_label,  string.format("%02x %02x %02x", p.hurt_state, p.sway_status, p.additional))
-					--[[
-						p.throw_timer のしきい値。しきい値より大きければ投げ処理継続可能。
-						0  空投げ M.スナッチャー0
-						10 真空投げ 羅生門 鬼門陣 M.タイフーン M.スパイダー 爆弾パチキ ドリル ブレスパ ブレスパBR リフトアップブロー デンジャラススルー ギガティックサイクロン マジンガ STOL
-						20 M.リアルカウンター投げ
-						24 通常投げ しんさいは
-					]]
-					if not p.vulnerable or not p.n_throwable or not p.throwable then
-						local throw_txt = p.throwable and "" or "Th."
-						if p.throw_timer <= 10 then
-							throw_txt = throw_txt .. "<"
-						end
-						if p.throw_timer <= 20 then
-							throw_txt = throw_txt .. "<"
-						end
-						--table.insert(state_label, string.format("Inv. %s %s %-5s", p.vulnerable and "" or "H", p.n_throwable and "" or "N", p.throwable and "" or throw_txt))
-					end
 					local box_bottom = #state_label * get_line_height()
 					scr:draw_box(p1 and 0 or 277, 0, p1 and 40 or 316, box_bottom, 0x80404040, 0x80404040)
 					scr:draw_text(p1 and 4 or 278, 0, table.concat(state_label, "\n"))
@@ -6384,10 +6366,10 @@ rbff2.startplugin               = function()
 				-- コマンド入力状態表示
 				if global.disp_input_sts - 1 == i then
 					for ti, input_state in ipairs(p.input_states) do
-						local x = 147
-						local y = 25 + ti * 5
+						local x, y = 147, 25 + ti * 5
 						local x1, x2, y2 = x + 15, x - 8, y + 4
-						draw_text_with_shadow(x1, y - 2, input_state.tbl.name, input_state.input_estab == true and input_state_col.orange2 or input_state_col.white)
+						draw_text_with_shadow(x1, y - 2, input_state.tbl.name,
+							input_state.input_estab == true and input_state_col.orange2 or input_state_col.white)
 						if input_state.on > 0 and input_state.chg_remain > 0 then
 							local col, col2
 							if input_state.charging == true then
