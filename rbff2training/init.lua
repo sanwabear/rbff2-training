@@ -3987,12 +3987,8 @@ rbff2.startplugin               = function()
 		return ret
 	end
 	local force_y_pos = { "OFF", 0 }
-	for i = 1, 256 do
-		table.insert(force_y_pos, i)
-	end
-	for i = -1, -256, -1 do
-		table.insert(force_y_pos, i)
-	end
+	for i = 1, 256 do table.insert(force_y_pos, i) end
+	for i = -1, -256, -1 do table.insert(force_y_pos, i) end
 
 	local frame_event_types = {
 		reset = 2 ^ 0,
@@ -6287,95 +6283,82 @@ rbff2.startplugin               = function()
 				local p1 = i == 1
 				local op = p.op
 
-				-- コンボ表示などの四角枠
-				if p.disp_dmg then
-					-- コンボ表示
-					local combo_label1, combo_label2, combo_label3 = {
-						"Scaling",
-						"Damage",
-						"Combo",
-						"Stun",
-						"Timer",
-						"Power",
-					}, {}, {}
-					for _, xp in util.sorted_pairs(util.hash_add_all({ [p.addr.base] = p }, p.fireballs)) do
-						if xp.num or xp.proc_active then
-							table.insert(combo_label1, string.format("Damage %3s/%1s  Stun %2s/%2s Fra.", xp.pure_dmg or 0, xp.chip_dmg or 0, xp.pure_st or 0, xp.pure_st_tm or 0))
-							table.insert(combo_label1, string.format("HitStop %2s/%2s HitStun %2s/%2s", xp.hitstop or 0, xp.blockstop or 0, xp.hitstun or 0, xp.blockstun or 0))
-							table.insert(combo_label1, string.format("%2s", data.hit_effect_name(xp.effect)))
-							if xp.num then
-								table.insert(combo_label1, string.format("Pow. %2s/%2s/%2s Rev.%2s Abs.%2s", p.pow_up_direct == 0 and p.pow_up or p.pow_up_direct or 0, p.pow_up_hit or 0, p.pow_up_gd or 0, p.pow_revenge or 0, p.pow_absorb or 0))
-								table.insert(combo_label1, string.format("Inv.%2s  BS-Pow.%2s BS-Inv.%2s", xp.sp_invincible or 0, xp.bs_pow or 0, xp.bs_invincible or 0))
-								table.insert(combo_label1, string.format("%s/%s Hit  Esaka %s %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.esaka_range or 0, p.esaka_type or ""))
-								table.insert(combo_label1, string.format("Cancel %-2s/%-2s Teching %s", xp.repeatable and "Ch" or "", xp.cancelable and "Sp" or "",
-									xp.forced_down or xp.in_bs and "No" or "Yes"))
-							elseif xp.proc_active then
-								table.insert(combo_label1, string.format("%s/%s Hit  Fireball-Lv. %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.fireball_rank or 0))
-							end
-							for _, box, blockable in find(xp.hitboxies, function(box) return box.blockable end) do
-								table.insert(combo_label1, string.format("Box Top %3s Bottom %3s", blockable.real_top, blockable.real_bottom))
-								table.insert(combo_label1, string.format("Main %-5s  Sway %-5s", data.top_type_name(blockable.main), data.top_type_name(blockable.sway)))
-								table.insert(combo_label1, string.format("Punish %-9s", data.top_punish_name(blockable.punish)))
-							end
+				local combo_label1, combo_label2, combo_label3, sts_label = {}, {}, {}, {}
+				for _, xp in util.sorted_pairs(util.hash_add_all({ [p.addr.base] = p }, p.fireballs)) do
+					if xp.num or xp.proc_active then
+						table.insert(sts_label, string.format("Damage %3s/%1s  Stun %2s/%2s Fra.", xp.pure_dmg or 0, xp.chip_dmg or 0, xp.pure_st or 0, xp.pure_st_tm or 0))
+						table.insert(sts_label, string.format("HitStop %2s/%2s HitStun %2s/%2s", xp.hitstop or 0, xp.blockstop or 0, xp.hitstun or 0, xp.blockstun or 0))
+						table.insert(sts_label, string.format("%2s", data.hit_effect_name(xp.effect)))
+						if xp.num then
+							table.insert(sts_label, string.format("Pow. %2s/%2s/%2s Rev.%2s Abs.%2s",
+								p.pow_up_direct == 0 and p.pow_up or p.pow_up_direct or 0, p.pow_up_hit or 0, p.pow_up_gd or 0, p.pow_revenge or 0, p.pow_absorb or 0))
+							table.insert(sts_label, string.format("Inv.%2s  BS-Pow.%2s BS-Inv.%2s", xp.sp_invincible or 0, xp.bs_pow or 0, xp.bs_invincible or 0))
+							table.insert(sts_label, string.format("%s/%s Hit  Esaka %s %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.esaka_range or 0, p.esaka_type or ""))
+							table.insert(sts_label, string.format("Cancel %-2s/%-2s Teching %s", xp.repeatable and "Ch" or "", xp.cancelable and "Sp" or "",
+								xp.forced_down or xp.in_bs and "No" or "Yes"))
+						elseif xp.proc_active then
+							table.insert(sts_label, string.format("%s/%s Hit  Fireball-Lv. %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.fireball_rank or 0))
+						end
+						for _, _, blockable in find(xp.hitboxies, function(box) return box.blockable end) do
+							table.insert(sts_label, string.format("Box Top %3s Bottom %3s", blockable.real_top, blockable.real_bottom))
+							table.insert(sts_label, string.format("Main %-5s  Sway %-5s", data.top_type_name(blockable.main), data.top_type_name(blockable.sway)))
+							table.insert(sts_label, string.format("Punish %-9s", data.top_punish_name(blockable.punish)))
 						end
 					end
-					local last_damage_scaling = 100.00
-					if op.last_damage_scaling1 and op.last_damage_scaling2 then
-						last_damage_scaling = (op.last_damage_scaling1 * op.last_damage_scaling2) * 100
-					end
-					if op.combo_update == global.frame_number then
-						local stun, timer                       = math.max(op.stun - op.combo_start_stun), math.max(op.stun_timer - op.combo_start_stun_timer, 0)
-						op.combo_stun, op.last_stun             = stun, math.max(stun - op.combo_stun, 0)
-						op.combo_stun_timer, op.last_stun_timer = timer, math.max(timer - op.combo_stun_timer, 0)
-						op.max_combo                            = math.max(op.max_combo or 0, op.last_combo)
-						op.max_combo_pow                        = math.max(op.max_combo_pow or 0, op.combo_pow)
-						op.max_combo_stun                       = math.max(op.max_combo_stun or 0, op.combo_stun)
-						op.max_combo_stun_timer                 = math.max(op.max_combo_stun_timer or 0, op.combo_stun_timer)
-					end
-					table.insert(combo_label2, string.format("%3s>%3s(%6s%%)", op.last_damage, op.last_damage_scaled, last_damage_scaling))
-					table.insert(combo_label2, string.format("%3s(+%3s)", op.combo_damage or 0, op.last_damage_scaled))
-					table.insert(combo_label2, string.format("%3s", op.last_combo))
-					table.insert(combo_label2, string.format("%3s(+%3s)", op.combo_stun or 0, op.last_stun))
-					table.insert(combo_label2, string.format("%3s(+%3s)", op.combo_stun_timer or 0, op.last_stun_timer or 0))
-					table.insert(combo_label2, string.format("%3s(+%3s)", op.combo_pow or 0, p.last_pow_up or 0))
-					table.insert(combo_label3, "")
-					table.insert(combo_label3, string.format("%3s", op.max_combo_damage))
-					table.insert(combo_label3, string.format("%3s", op.max_combo))
-					table.insert(combo_label3, string.format("%3s", op.max_combo_stun))
-					table.insert(combo_label3, string.format("%3s", op.max_combo_stun_timer))
-					table.insert(combo_label3, string.format("%3s", op.max_combo_pow))
-					local box_bottom = #combo_label1 * get_line_height()
-					scr:draw_box(p1 and 224 or 0, 40, p1 and 320 or 96, 40 + box_bottom, 0x80404040, 0x80404040)
-					scr:draw_text(p1 and 224 + 4 or 4, 40, table.concat(combo_label1, "\n"))
-					scr:draw_text(p1 and 224 + 36 or 36, 40, table.concat(combo_label2, "\n"))
-					scr:draw_text(p1 and 224 + 68 or 68, 40, table.concat(combo_label3, "\n"))
 				end
+				util.table_add_all(combo_label1, { -- コンボ表示
+					"Scaling",
+					"Damage",
+					"Combo",
+					"Stun",
+					"Timer",
+					"Power",
+				})
+				local last_damage_scaling = 100.00
+				if op.last_damage_scaling1 and op.last_damage_scaling2 then
+					last_damage_scaling = (op.last_damage_scaling1 * op.last_damage_scaling2) * 100
+				end
+				if op.combo_update == global.frame_number then
+					local stun, timer                       = math.max(op.stun - op.combo_start_stun), math.max(op.stun_timer - op.combo_start_stun_timer, 0)
+					op.combo_stun, op.last_stun             = stun, math.max(stun - op.combo_stun, 0)
+					op.combo_stun_timer, op.last_stun_timer = timer, math.max(timer - op.combo_stun_timer, 0)
+					op.max_combo                            = math.max(op.max_combo or 0, op.last_combo)
+					op.max_combo_pow                        = math.max(op.max_combo_pow or 0, op.combo_pow)
+					op.max_combo_stun                       = math.max(op.max_combo_stun or 0, op.combo_stun)
+					op.max_combo_stun_timer                 = math.max(op.max_combo_stun_timer or 0, op.combo_stun_timer)
+				end
+				table.insert(combo_label2, string.format("%3s>%3s(%6s%%)", op.last_damage, op.last_damage_scaled, last_damage_scaling))
+				table.insert(combo_label2, string.format("%3s(+%3s)", op.combo_damage or 0, op.last_damage_scaled))
+				table.insert(combo_label2, string.format("%3s", op.last_combo))
+				table.insert(combo_label2, string.format("%3s(+%3s)", op.combo_stun or 0, op.last_stun))
+				table.insert(combo_label2, string.format("%3s(+%3s)", op.combo_stun_timer or 0, op.last_stun_timer or 0))
+				table.insert(combo_label2, string.format("%3s(+%3s)", op.combo_pow or 0, p.last_pow_up or 0))
+				table.insert(combo_label3, "")
+				table.insert(combo_label3, string.format("%3s", op.max_combo_damage or 0))
+				table.insert(combo_label3, string.format("%3s", op.max_combo or 0))
+				table.insert(combo_label3, string.format("%3s", op.max_combo_stun or 0))
+				table.insert(combo_label3, string.format("%3s", op.max_combo_stun_timer or 0))
+				table.insert(combo_label3, string.format("%3s", op.max_combo_pow or 0))
+				local combo_label = {}
+				if p.disp_dmg then util.table_add_all(combo_label, combo_label1) end
+				if p.disp_sts == 2 or p.disp_sts == 4 then util.table_add_all(combo_label, sts_label) end
+				if #combo_label > 0 then
+					local box_bottom = #combo_label * get_line_height()
+					scr:draw_box(p1 and 224 or 0, 40, p1 and 320 or 96, 40 + box_bottom, 0x80404040, 0x80404040) -- コンボ表示などの四角枠
+					scr:draw_text(p1 and 224 + 4 or 4, 40, table.concat(combo_label, "\n"))
+					if p.disp_dmg then scr:draw_text(p1 and 224 + 36 or 36, 40, table.concat(combo_label2, "\n")) end
+					if p.disp_dmg then scr:draw_text(p1 and 224 + 68 or 68, 40, table.concat(combo_label3, "\n")) end
+				end
+
 				-- 状態 小表示
 				if p.disp_sts == 2 or p.disp_sts == 3 then
-					scr:draw_box(p1 and 2 or 277, 0, p1 and 40 or 316, 36, 0x80404040, 0x80404040)
-
-					scr:draw_text(p1 and 4 or 278, 1, string.format("%s", p.state))
-					draw_rtext(p1 and 16 or 290, 1, string.format("%02d", p.throwing and p.throwing.threshold or 0))
-					draw_rtext(p1 and 28 or 302, 1, string.format("%03d", p.throwing and p.throwing.timer or 0))
-					draw_rtext(p1 and 40 or 314, 1, string.format("%03d", p.throw_timer))
-
+					local state_label = {}
+					table.insert(state_label,  string.format("%s %02d %03d %03d", p.state, p.throwing and p.throwing.threshold or 0, p.throwing and p.throwing.timer or 0, p.throw_timer))
 					local diff_pos_y = p.pos_y + p.pos_frc_y - p.old_pos_y - p.old_pos_frc_y
-					draw_rtext(p1 and 16 or 290, 7, string.format("%0.03f", diff_pos_y))
-					draw_rtext(p1 and 40 or 314, 7, string.format("%0.03f", p.pos_y + p.pos_frc_y))
-
-					draw_rtext(p1 and 10 or 284, 13, string.format("%02x", p.spid))
-					draw_rtext(p1 and 19 or 293, 13, string.format("%02x", p.attack))
-					draw_rtext(p1 and 30 or 304, 13, string.format("%02x", p.attack_id))
-					-- draw_rtext(p1 and 40 or 314, 13, string.format("%02x", p.hurt_attack))
-
-					draw_rtext(p1 and 16 or 290, 19, string.format("%04x", p.act))
-					draw_rtext(p1 and 28 or 302, 19, string.format("%02x", p.act_count))
-					draw_rtext(p1 and 40 or 314, 19, string.format("%02x", p.act_frame))
-
-					draw_rtext(p1 and 16 or 290, 25, string.format("%02x", p.hurt_state))
-					draw_rtext(p1 and 28 or 302, 25, string.format("%02x", p.sway_status))
-					draw_rtext(p1 and 40 or 314, 25, string.format("%02x", p.additional))
-
+					table.insert(state_label,  string.format("%0.03f %0.03f", diff_pos_y, p.pos_y + p.pos_frc_y))
+					table.insert(state_label,  string.format("%02x %02x %02x", p.spid, p.attack, p.attack_id))
+					table.insert(state_label,  string.format("%03x %02x %02x", p.act, p.act_count, p.act_frame))
+					table.insert(state_label,  string.format("%02x %02x %02x", p.hurt_state, p.sway_status, p.additional))
 					--[[
 						p.throw_timer のしきい値。しきい値より大きければ投げ処理継続可能。
 						0  空投げ M.スナッチャー0
@@ -6384,18 +6367,18 @@ rbff2.startplugin               = function()
 						24 通常投げ しんさいは
 					]]
 					if not p.vulnerable or not p.n_throwable or not p.throwable then
-						local throw_txt = p.throwable and "" or "投"
+						local throw_txt = p.throwable and "" or "Th."
 						if p.throw_timer <= 10 then
 							throw_txt = throw_txt .. "<"
 						end
 						if p.throw_timer <= 20 then
 							throw_txt = throw_txt .. "<"
 						end
-						scr:draw_text(p1 and 1 or 275, 31, "無敵")
-						scr:draw_text(p1 and 15 or 289, 31, p.vulnerable and "" or "打")
-						scr:draw_text(p1 and 24 or 298, 31, p.n_throwable and "" or "通")
-						scr:draw_text(p1 and 30 or 304, 31, p.throwable and "" or throw_txt)
+						--table.insert(state_label, string.format("Inv. %s %s %-5s", p.vulnerable and "" or "H", p.n_throwable and "" or "N", p.throwable and "" or throw_txt))
 					end
+					local box_bottom = #state_label * get_line_height()
+					scr:draw_box(p1 and 0 or 277, 0, p1 and 40 or 316, box_bottom, 0x80404040, 0x80404040)
+					scr:draw_text(p1 and 4 or 278, 0, table.concat(state_label, "\n"))
 				end
 
 				-- コマンド入力状態表示
@@ -6531,12 +6514,6 @@ rbff2.startplugin               = function()
 							draw_text_with_shadow(170, 46, "確定反撃", col2(p.on_punish))
 						end
 					end
-				end
-			end
-
-			for i, p in ipairs(players) do
-				if p.disp_sts == 2 or p.disp_sts == 4 then
-					draw_summary(i, p.all_summary)
 				end
 			end
 
@@ -6807,17 +6784,10 @@ rbff2.startplugin               = function()
 
 		menu.current = menu.main
 	end
-	local menu_to_main_cancel = function()
-		menu_to_main(true, false)
-	end
-	local life_range = { "最大", "赤", "ゼロ", }
-	for i = 1, 0xC0 do
-		table.insert(life_range, i)
-	end
-	local pow_range = { "最大", "半分", "ゼロ", }
-	for i = 1, 0x3C do
-		table.insert(pow_range, i)
-	end
+	local menu_to_main_cancel = function() menu_to_main(true, false) end
+	local life_range,  pow_range = { "最大", "赤", "ゼロ", },  { "最大", "半分", "ゼロ", }
+	for i = 1, 0xC0 do table.insert(life_range, i) end
+	for i = 1, 0x3C do table.insert(pow_range, i) end
 	local bar_menu_to_main         = function()
 		local col                = menu.bar.pos.col
 		local p                  = players
@@ -6915,7 +6885,6 @@ rbff2.startplugin               = function()
 		global.auto_input.esaka_check   = col[14] -- 詠酒チェック
 		global.auto_input.fast_kadenzer = col[15] == 2 -- 必勝！逆襲拳
 		global.auto_input.kara_ca       = col[16] == 2 -- 空振りCA
-
 		--"ジャーマン", "フェイスロック", "投げっぱなしジャーマン"
 		if global.auto_input.real_counter > 1 then
 			mem.wd16(0x413EE, 0x1C3C) -- ボタン読み込みをボタンデータ設定に変更
@@ -6925,27 +6894,20 @@ rbff2.startplugin               = function()
 			mem.wd32(0x413EE, 0x4EB90002)
 			mem.wd16(0x413F2, 0x6396)
 		end
-
 		-- 詠酒の条件チェックを飛ばす
 		mem.wd32(0x23748, global.auto_input.esaka_check == 2 and 0x4E714E71 or 0x6E00FC6A) -- 技種類と距離チェック飛ばす
 		mem.wd32(0x236FC, global.auto_input.esaka_check == 3 and 0x604E4E71 or 0x6400FCB6) -- 距離チェックNOP
-
 		-- 自動 炎の種馬
 		mem.wd16(0x4094A, global.auto_input.auto_taneuma and 0x6018 or 0x6704) -- 連打チェックを飛ばす
-
 		-- 必勝！逆襲拳1発キャッチカデンツァ
 		mem.wd16(0x4098C, global.auto_input.fast_kadenzer and 0x7003 or 0x5210) -- カウンターに3を直接設定する
-
 		-- 自動喝CA
 		mem.wd8(0x3F94C, global.auto_input.auto_katsu and 0x60 or 0x67) -- 入力チェックを飛ばす
 		mem.wd16(0x3F986, global.auto_input.auto_katsu and 0x4E71 or 0x6628) -- 入力チェックをNOPに
-
 		-- 空振りCAできる
 		mem.wd8(0x2FA5E, global.auto_input.kara_ca and 0x60 or 0x67) -- テーブルチェックを飛ばす
-
 		-- 自動マリートリプルエクスタシー
 		mem.wd8(0x41D00, global.auto_input.auto_3ecst and 0x60 or 0x66) -- デバッグDIPチェックを飛ばす
-
 		menu.current = menu.main
 	end
 	local col_menu_to_main         = function()
@@ -7216,9 +7178,7 @@ rbff2.startplugin               = function()
 		end
 	end
 	-- 半角スペースで始まっているメニューはラベル行とみなす
-	local is_label_line            = function(str)
-		return str:find('^' .. "  +") ~= nil
-	end
+	local is_label_line            = function(str) return str:find('^' .. "  +") ~= nil end
 	menu.main                      = {
 		list = {
 			{ "ダミー設定" },
@@ -7337,9 +7297,7 @@ rbff2.startplugin               = function()
 		table.insert(bs_blocks, string.format("%s回ガード後に発動", i))
 		table.insert(rvs_blocks, string.format("%s回ガード後に発動", i))
 	end
-	local menu_bs_to_tra_menu = function()
-		menu_to_tra()
-	end
+	local menu_bs_to_tra_menu = function() menu_to_tra() end
 	local menu_rvs_to_tra_menu = function()
 		local cur_prvs = nil
 		for i, prvs in ipairs(menu.rvs_menus) do
@@ -7397,13 +7355,9 @@ rbff2.startplugin               = function()
 		end
 	end
 	local gd_frms = {}
-	for i = 1, 61 do
-		table.insert(gd_frms, string.format("%sF後にガード解除", (i - 1)))
-	end
+	for i = 1, 61 do table.insert(gd_frms, string.format("%sF後にガード解除", (i - 1))) end
 	local no_hit_row = { "OFF", }
-	for i = 1, 99 do
-		table.insert(no_hit_row, string.format("%s段目で空振り", i))
-	end
+	for i = 1, 99 do table.insert(no_hit_row, string.format("%s段目で空振り", i)) end
 	menu.training = {
 		list = {
 			{ "ダミーモード", { "プレイヤー vs プレイヤー", "プレイヤー vs CPU", "CPU vs プレイヤー", "1P&2P入れ替え", "レコード", "リプレイ" }, },
@@ -7700,9 +7654,7 @@ rbff2.startplugin               = function()
 		on_b = util.new_filled_table(1, menu_rec_to_tra, 8, menu_to_tra),
 	}
 	local play_interval = {}
-	for i = 1, 301 do
-		table.insert(play_interval, i - 1)
-	end
+	for i = 1, 301 do table.insert(play_interval, i - 1) end
 	menu.replay = {
 		list = {
 			{ "     ONにしたスロットからランダムでリプレイされます。" },
@@ -7807,20 +7759,11 @@ rbff2.startplugin               = function()
 		local state_past = ec - global.input_accepted
 		local width = scr.width * scr.xscale
 		local height = scr.height * scr.yscale
-
-		if not in_match or in_player_select then
-			return
-		end
-
-		-- 初回のメニュー表示時は状態更新
-		if menu.prev_state ~= menu and menu.state == menu then
-			menu.update_pos()
-		end
-		-- 前フレームのメニューを更新
-		menu.prev_state = menu.state
+		if not in_match or in_player_select then return end
+		if menu.prev_state ~= menu and menu.state == menu then menu.update_pos() end -- 初回のメニュー表示時は状態更新
+		menu.prev_state = menu.state -- 前フレームのメニューを更新
 
 		local joy_val = get_joy()
-
 		if accept_input("st", joy_val, state_past) then
 			-- Menu ON/OFF
 			global.input_accepted = ec
@@ -7912,9 +7855,7 @@ rbff2.startplugin               = function()
 	end
 
 	local active_mem_0x100701 = {}
-	for i = 0x022E, 0x0615 do
-		active_mem_0x100701[i] = true
-	end
+	for i = 0x022E, 0x0615 do active_mem_0x100701[i] = true end
 
 	menu.state = menu.tra_main -- menu or tra_main
 
