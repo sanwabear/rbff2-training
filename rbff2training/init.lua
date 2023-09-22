@@ -2015,7 +2015,7 @@ rbff2.startplugin               = function()
 			[0x9E] = function(data) p.ophit_base = data end, -- ヒットさせた相手側のベースアドレス
 			[0xDA] = function(data) p.inertia = data end,
 			[0xDC] = function(data) p.inertia_frc = util.int16tofloat(data) end,
-			[0xE6] = function(data) p.on_hit_any = now() end, -- 0xE6か0xE7 打撃か当身でフラグが立つ
+			[0xE6] = function(data) p.on_hit_any = now() + 1 end, -- 0xE6か0xE7 打撃か当身でフラグが立つ
 			[p1 and 0x10B854 or 0x10B85C] = function(data) p.stun_timer = data end, -- 気絶値ゼロ化までの残フレーム数
 		}
 		local nohit = function(data, ret)
@@ -3105,9 +3105,6 @@ rbff2.startplugin               = function()
 		local attackbit = 0
 		for _, p in pairs(parent.fireballs) do
 			local base = ((p.addr.base - 0x100400) / 0x100)
-			if p.proc_active == true then
-				--	printf("fb %x %x %x %x %x", base, fb.base, p.char, fb.hurt_attack, fb.act)
-			end
 			if p.proc_active == true and #p.boxies > 0 then
 				if p.atk_count == 1 and p.act_data_fired.name == parent.act_data.name then
 					chg_fireball_state = true
@@ -3150,15 +3147,14 @@ rbff2.startplugin               = function()
 		parent.on_prefb = chg_prefireball_state == true
 
 		--ガード移行できない行動は色替えする
-		local on_check, on_clear, on_established = parent.on_bs_check, parent.on_bs_clear, parent.on_bs_established
 		local col, line = 0xAAF0E68C, 0xDDF0E68C
-		if on_established == global.frame_number then
+		if parent.on_bs_established == global.frame_number then
 			col, line = 0xAA0022FF, 0xDD0022FF
-		elseif on_clear == global.frame_number then
+		elseif parent.on_bs_clear == global.frame_number then
 			col, line = 0xAA00FF22, 0xDD00FF22
-		elseif parent.in_hitstop == global.frame_number or parent.on_hit_any == global.frame_number or parent.on_hit_any == global.frame_number - 1 then
+		elseif parent.in_hitstop == global.frame_number or parent.on_hit_any == global.frame_number then
 			col, line = 0xAA444444, 0xDD444444
-		elseif on_check == global.frame_number then
+		elseif parent.on_bs_check == global.frame_number then
 			col, line = 0xAAFF0022, 0xDDFF0022
 		elseif parent.hitbox_types and #parent.hitbox_types > 0 then
 			-- 判定タイプをソートする
@@ -3378,7 +3374,7 @@ rbff2.startplugin               = function()
 		-- 飛び道具2
 		for fb_base, p in pairs(parent.fireballs) do
 			local col, line, act = 0, 0, 0
-			if p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number or p.on_hit_any == global.frame_number - 1 then
+			if p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number then
 				col, line = 0xAA444444, 0xDD444444
 			elseif p.hitbox_types and #p.hitbox_types > 0 then
 				-- 判定タイプをソートする
