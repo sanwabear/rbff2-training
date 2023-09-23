@@ -1814,6 +1814,7 @@ rbff2.startplugin               = function()
 			end,
 			[0x8E] = function(data)
 				local changed = p.state ~= data
+				if (data == 1 or data == 3) and not p.act_normal and p.state == 0 then p.on_punish = now() + 10 end -- 確定反撃
 				p.change_state = changed and now() or p.change_state -- 状態の変更フレームを記録
 				p.on_block = data == 2 and now() or p.on_block -- ガードへの遷移フレームを記録
 				p.on_hit = data == 1 or data == 3 and now() or p.on_hit -- ヒットへの遷移フレームを記録
@@ -3754,24 +3755,6 @@ rbff2.startplugin               = function()
 			p.on_hit         = p.on_hit or 0
 			p.on_block       = p.on_block or 0
 			p.hit_skip       = p.hit_skip or 0
-			p.on_punish      = p.on_punish or 0
-
-			if mem._0x10B862 ~= 0 then
-				if p.state == 2 then
-					p.on_punish = -1
-				elseif p.state == 1 or p.state == 3 then
-					if p.act_normal ~= true and p.old_state == 0 then
-						-- 確定反撃フレームを記録
-						p.on_punish = global.frame_number
-					elseif p.old_state == 0 or p.old_state == 2 then
-						p.on_punish = -1
-					end
-				else
-					if p.act_normal ~= true and (p.on_punish + 60) >= global.frame_number then p.on_punish = -1 end
-				end
-				if mem.r8(p.addr.base + 0xAB) > 0 or p.ophit then p.hit_skip = 2 end
-			end
-			if p.state == 0 and p.act_normal ~= true and mem._0x10B862 ~= 0 then p.on_punish = -1 end
 
 			-- 起き上がりフレーム
 			if wakeup_acts[p.old_act] ~= true and wakeup_acts[p.act] == true then p.on_wakeup = global.frame_number end
@@ -4757,38 +4740,13 @@ rbff2.startplugin               = function()
 						draw_frame_groups(p.muteki.act_frames2, p.act_frames_total, 30, p1 and 68 or 76, 3, true)
 						-- draw_frame_groups(p.frm_gap.act_frames2, p.act_frames_total, 30, p1 and 65 or 73, 3, true)
 					end
-					if p.disp_frm > 1 then
-						draw_frames(p.act_frames2, p1 and 160 or 285, true, true, p1 and 40 or 165, 63, 8, 16, p.disp_fbfrm)
-					end
+					draw_frames(p.act_frames2, p1 and 160 or 285, true, true, p1 and 40 or 165, 63, 8, 16, p.disp_fbfrm)
 				end
-				--フレーム差表示
+				--フレーム差と確定反撃の表示
 				if global.disp_frmgap > 1 then
-					local col = function(gap)
-						if gap == 0 then
-							return 0xFFFFFFFF
-						elseif gap > 0 then
-							return 0xFF00FFFF
-						else
-							return 0xFFFF0000
-						end
-					end
-					local col2 = function(frame_number)
-						if (frame_number + 10) <= global.frame_number then
-							return 0xFFFFFFFF
-						else
-							return 0xFF00FFFF
-						end
-					end
-					draw_rtext_with_shadow(p1 and 155 or 170, 40, p.last_frame_gap, col(p.last_frame_gap))
-
-					-- 確定反撃の表示
-					if p.on_punish > 0 and p.on_punish <= global.frame_number then
-						if p1 then
-							draw_rtext_with_shadow(155, 46, "確定反撃", col2(p.on_punish))
-						else
-							draw_text_with_shadow(170, 46, "確定反撃", col2(p.on_punish))
-						end
-					end
+					draw_text_with_shadow(p1 and 140 or 165, 40, string.format("%4d", p.last_frame_gap),
+						p.last_frame_gap == 0 and 0xFFFFFFFF or p.last_frame_gap > 0 and 0xFF00FFFF or 0xFFFF0000)
+					draw_text_with_shadow(p1 and 112 or 184, 40, "PUNISH", p.on_punish <= global.frame_number and 0xFF808080 or 0xFF00FFFF)
 				end
 			end
 
