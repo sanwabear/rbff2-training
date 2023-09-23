@@ -166,7 +166,32 @@ local frame_attack_types   = {
 	act_count = 7 + 8 + 16, -- act_count 31ビット左シフト 本体の動作区切り用
 	fb_effect = 7 + 8 + 16, -- effect 31ビット左シフト 弾の動作区切り用
 }
-
+local hitbox_grab_bits     = {
+	none          = 0,
+	joudan_atemi  = 2 ^ 0,
+	urakumo       = 2 ^ 1,
+	gedan_atemi   = 2 ^ 2,
+	gyakushu      = 2 ^ 3,
+	sadomazo      = 2 ^ 4,
+	phoenix_throw = 2 ^ 5,
+	baigaeshi     = 2 ^ 6,
+	katsu         = 2 ^ 7,
+	nullify       = 2 ^ 8,
+	unknown1      = 2 ^ 8,
+}
+local hitbox_grab_types    = {
+	{ name = "none",          label = "",  value = hitbox_grab_bits.none },
+	{ name = "joudan_atemi",  label = "J", value = hitbox_grab_bits.joudan_atemi }, -- 上段当身投げ
+	{ name = "urakumo",       label = "U", value = hitbox_grab_bits.urakumo },    -- 裏雲隠し
+	{ name = "gedan_atemi",   label = "G", value = hitbox_grab_bits.gedan_atemi }, -- 下段当身打ち
+	{ name = "gyakushu",      label = "H", value = hitbox_grab_bits.gyakushu },   -- 必勝逆襲拳
+	{ name = "sadomazo",      label = "S", value = hitbox_grab_bits.sadomazo },   -- サドマゾ
+	{ name = "phoenix_throw", label = "P", value = hitbox_grab_bits.phoenix_throw }, -- フェニックススルー
+	{ name = "baigaeshi",     label = "B", value = hitbox_grab_bits.baigaeshi },  -- 倍返し
+	{ name = "katsu",         label = "K", value = hitbox_grab_bits.katsu },      -- 喝消し
+	{ name = "nullify",       label = "N", value = hitbox_grab_bits.nullify },    -- 弾消し
+	{ name = "unknown1",      label = "?", value = hitbox_grab_bits.unknown1 },   -- 喝消し
+}
 -- 状態フラグ
 local esaka_type_names     = data.esaka_type_names
 local get_flag_name        = function(flags, names)
@@ -2056,7 +2081,7 @@ rbff2.startplugin               = function()
 				[0xE7] = function(data)
 					p.attackbit = util.hex_set(p.attackbit, frame_attack_types.fullhit, data == 0)
 				end,
-				[0x8A] = function(data) p.bai_chk1 = 0x2 >= data end,
+				[0x8A] = function(data) p.grabbable1 = 0x2 >= data end,
 				[0xA3] = function(data) p.shooting = data == 0 end, -- 攻撃中に値が入る ガード判断用
 			}
 			p.wp16 = {
@@ -2068,7 +2093,7 @@ rbff2.startplugin               = function()
 					if p.attack ~= data then
 						p.forced_down   = false
 						p.hitstop       = 0
-						p.blockstop    = 0
+						p.blockstop     = 0
 						p.pure_dmg      = 0
 						p.pure_st       = 0
 						p.pure_st_tm    = 0
@@ -2097,12 +2122,12 @@ rbff2.startplugin               = function()
 					p.attack         = data
 					p.forced_down    = 2 <= mem.r8(data + base_addr.forced_down)       -- テクニカルライズ可否 家庭用 05A9D6 からの処理
 					p.hitstop        = math.max(2, mem.r8(data + base_addr.hitstop) - 1) -- ヒットストップ 家庭用 弾やられ側:05AE50 からの処理 OK
-					p.blockstop     = math.max(2, p.hitstop - 1)                      -- ガード時の補正
+					p.blockstop      = math.max(2, p.hitstop - 1)                      -- ガード時の補正
 					p.pure_dmg       = mem.r8(data + base_addr.damege)                 -- 補正前ダメージ 家庭用 05B146 からの処理
 					p.pure_st        = mem.r8(data + base_addr.stun)                   -- 気絶値 家庭用 05C1B0 からの処理
 					p.pure_st_tm     = mem.r8(data + base_addr.stun_timer)             -- 気絶タイマー 家庭用 05C1B0 からの処理
 					p.max_hit_dn     = mem.r8(data + base_addr.max_hit)                -- 最大ヒット数 家庭用 061356 からの処理 OK
-					p.bai_chk2       = mem.r8((0xFFFF & (data + data)) + base_addr.baigaeshi) == 0x01 -- 倍返し可否
+					p.grabbable2     = mem.r8((0xFFFF & (data + data)) + base_addr.baigaeshi) == 0x01 -- 倍返し可否
 					apply_attack_infos(p, data, base_addr)
 					p.attackbit = util.hex_reset(p.attackbit, 0xFF << frame_attack_types.fb_effect, p.effect << frame_attack_types.fb_effect)
 					-- util.printf("%x %s %s  hitstun %s %s", data, p.hitstop, p.blockstop, p.hitstun, p.blockstun)
@@ -2112,7 +2137,7 @@ rbff2.startplugin               = function()
 				[0x00] = function(data)
 					p.asm         = mem.r16(data)
 					p.proc_active = p.asm ~= 0x4E75 and p.asm ~= 0x197C
-					p.boxies      = p.proc_active and p.boxies or {}
+					if not p.proc_active then p.boxies, p.grabbable, p.attack_id, p.attackbit = {}, 0, 0, 0 end
 				end,
 			}
 			parent.fireballs[base], all_objects[base], all_fireballs[base] = p, p, p
@@ -2267,7 +2292,7 @@ rbff2.startplugin               = function()
 			[0x73] = function(data) p.box_scale = data + 1 end, -- 判定の拡大率
 			[0x7A] = function(data)                    -- 攻撃判定とやられ判定
 				--util.printf("box %x %x %x", p.addr.base, mem.pc(), data)
-				p.boxies = {}
+				p.boxies, p.grabbable = {}, 0
 				if data > 0 then
 					p.attackbit = util.hex_reset(p.attackbit, 0x1F, p.attackbit & frame_attack_types.fake)
 					p.attackbit = util.hex_set(p.attackbit, p.is_fireball and frame_attack_types.fb or 0)
@@ -2293,6 +2318,7 @@ rbff2.startplugin               = function()
 								blockable = act_types.overhead -- 中段
 							end
 							reach = { blockable = blockable, possible = possible, }
+							for _, t in ipairs(hitbox_grab_types) do p.grabbable = p.grabbable | (possibles[t.name] and t.value or 0) end
 						end
 						table.insert(p.boxies, {
 							no = #p.boxies + 1,
@@ -3831,7 +3857,6 @@ rbff2.startplugin               = function()
 				fb.old_act        = fb.act
 				fb.gd_strength    = get_gd_strength(fb)
 				fb.old_proc_act   = fb.proc_active
-				fb.bai_catch      = fb.bai_chk1 and fb.bai_chk2
 				fb.type_boxes     = {}
 				fb.act_data_fired = p.act_data -- 発射したタイミングの行動ID
 				fb.act_frames     = fb.act_frames or {}
@@ -3860,6 +3885,7 @@ rbff2.startplugin               = function()
 				-- 判定表示前の座標補正
 				p.x, p.y, p.flip_x = p.pos - screen.left, screen.top - p.pos_y - p.pos_z, (p.flip_x1 ~ p.flip_x2) > 0 and 1 or -1
 				p.vulnerable = (p.invincible and p.invincible > 0) or p.hurt_invincible or p.on_vulnerable ~= global.frame_number
+				p.grabbable = p.grabbable | (p.grabbable1 and p.grabbable2 and hitbox_grab_bits.baigaeshi or 0)
 				p.hitboxies, p.ranges, p.hitbox_types = {}, {}, {} -- 座標補正後データ格納のためバッファのクリア
 
 				-- 当たりとやられ判定判定
@@ -4568,11 +4594,16 @@ rbff2.startplugin               = function()
 						table.insert(sts_label, string.format("Damage %3s/%1s  Stun %2s/%2s Fra.", xp.pure_dmg or 0, xp.chip_dmg or 0, xp.pure_st or 0, xp.pure_st_tm or 0))
 						table.insert(sts_label, string.format("HitStop %2s/%2s HitStun %2s/%2s", xp.hitstop or 0, xp.blockstop or 0, xp.hitstun or 0, xp.blockstun or 0))
 						table.insert(sts_label, string.format("%2s", data.hit_effect_name(xp.effect)))
+						local grabl = ""
+						for _, t in ipairs(hitbox_grab_types) do
+							grabl = grabl .. (util.testbit(xp.grabbable, t.value, true) and t.label or "- ")
+						end
+						table.insert(sts_label, string.format("Grab %-s", grabl))
 						if xp.num then
 							table.insert(sts_label, string.format("Pow. %2s/%2s/%2s Rev.%2s Abs.%2s",
 								p.pow_up_direct == 0 and p.pow_up or p.pow_up_direct or 0, p.pow_up_hit or 0, p.pow_up_gd or 0, p.pow_revenge or 0, p.pow_absorb or 0))
 							table.insert(sts_label, string.format("Inv.%2s  BS-Pow.%2s BS-Inv.%2s", xp.sp_invincible or 0, xp.bs_pow or 0, xp.bs_invincible or 0))
-							table.insert(sts_label, string.format("%s/%s Hit  Esaka %s %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.esaka_range or 0, p.esaka_type or ""))
+							table.insert(sts_label, string.format("%s/%s Hit  Esaka %s %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.esaka or 0, p.esaka_type or ""))
 							table.insert(sts_label, string.format("Cancel %-2s/%-2s Teching %s", xp.repeatable and "Ch" or "", xp.cancelable and "Sp" or "",
 								xp.forced_down or xp.in_bs and "No" or "Yes"))
 						elseif xp.proc_active then
