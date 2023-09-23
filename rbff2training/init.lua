@@ -824,8 +824,8 @@ local get_string_width          = function(str)
 	return man.ui:get_string_width(str) * scr.width
 end
 
-local get_line_height          = function()
-	return man.ui.line_height * scr.height
+local get_line_height          = function(lines)
+	return man.ui.line_height * scr.height * (lines or 1)
 end
 
 local draw_rtext                = function(x, y, str, fgcol, bgcol)
@@ -3469,7 +3469,7 @@ rbff2.startplugin               = function()
 	end
 
 	local input_rvs = function(rvs_type, p, logtxt)
-		if global.log.rvslog and logtxt then emu.print_info(logtxt) end
+		if global.rvslog and logtxt then emu.print_info(logtxt) end
 		if util.testbit(p.dummy_rvs.hook_type, hook_cmd_types.throw) then
 			if p.act == 0x9 and p.act_frame > 1 then return end -- 着地硬直は投げでないのでスルー
 			if p.op.in_air then return end
@@ -4585,19 +4585,14 @@ rbff2.startplugin               = function()
 			end
 			-- ダメージとコンボ表示
 			for i, p in ipairs(players) do
-				local p1 = i == 1
-				local op = p.op
-
-				local combo_label1, combo_label2, combo_label3, sts_label = {}, {}, {}, {}
+				local p1, op, combo_label1, combo_label2, combo_label3, sts_label = i == 1, p.op, {}, {}, {}, {}
 				for _, xp in util.sorted_pairs(util.hash_add_all({ [p.addr.base] = p }, p.fireballs)) do
 					if xp.num or xp.proc_active then
 						table.insert(sts_label, string.format("Damage %3s/%1s  Stun %2s/%2s Fra.", xp.pure_dmg or 0, xp.chip_dmg or 0, xp.pure_st or 0, xp.pure_st_tm or 0))
 						table.insert(sts_label, string.format("HitStop %2s/%2s HitStun %2s/%2s", xp.hitstop or 0, xp.blockstop or 0, xp.hitstun or 0, xp.blockstun or 0))
 						table.insert(sts_label, string.format("%2s", data.hit_effect_name(xp.effect)))
 						local grabl = ""
-						for _, t in ipairs(hitbox_grab_types) do
-							grabl = grabl .. (util.testbit(xp.grabbable, t.value, true) and t.label or "- ")
-						end
+						for _, t in ipairs(hitbox_grab_types) do grabl = grabl .. (util.testbit(xp.grabbable, t.value, true) and t.label or "- ") end
 						table.insert(sts_label, string.format("Grab %-s", grabl))
 						if xp.num then
 							table.insert(sts_label, string.format("Pow. %2s/%2s/%2s Rev.%2s Abs.%2s",
@@ -4641,17 +4636,19 @@ rbff2.startplugin               = function()
 				table.insert(combo_label3, string.format("%3s", op.max_combo_stun or 0))
 				table.insert(combo_label3, string.format("%3s", op.max_combo_stun_timer or 0))
 				table.insert(combo_label3, string.format("%3s", op.max_combo_pow or 0))
-				if p.disp_dmg then util.table_add_all(combo_label1,  { -- コンボ表示
-					"Scaling",
-					"Damage",
-					"Combo",
-					"Stun",
-					"Timer",
-					"Power",
-				}) end
+				if p.disp_dmg then
+					util.table_add_all(combo_label1, { -- コンボ表示
+						"Scaling",
+						"Damage",
+						"Combo",
+						"Stun",
+						"Timer",
+						"Power",
+					})
+				end
 				if p.disp_sts == 2 or p.disp_sts == 4 then util.table_add_all(combo_label1, sts_label) end
 				if #combo_label1 > 0 then
-					local box_bottom = #combo_label1 * get_line_height()
+					local box_bottom = get_line_height(#combo_label1)
 					scr:draw_box(p1 and 224 or 0, 40, p1 and 320 or 96, 40 + box_bottom, 0x80404040, 0x80404040) -- 四角枠
 					scr:draw_text(p1 and 224 + 4 or 4, 40, table.concat(combo_label1, "\n"))
 					if p.disp_dmg then scr:draw_text(p1 and 224 + 36 or 36, 40, table.concat(combo_label2, "\n")) end
@@ -4661,14 +4658,14 @@ rbff2.startplugin               = function()
 				-- 状態 小表示
 				if p.disp_sts == 2 or p.disp_sts == 3 then
 					local state_label = {}
-					table.insert(state_label,  string.format("%s %02d %03d %03d",
+					table.insert(state_label, string.format("%s %02d %03d %03d",
 						p.state, p.throwing and p.throwing.threshold or 0, p.throwing and p.throwing.timer or 0, p.throw_timer))
 					local diff_pos_y = p.pos_y + p.pos_frc_y - p.old_pos_y - p.old_pos_frc_y
-					table.insert(state_label,  string.format("%0.03f %0.03f", diff_pos_y, p.pos_y + p.pos_frc_y))
-					table.insert(state_label,  string.format("%02x %02x %02x", p.spid, p.attack, p.attack_id))
-					table.insert(state_label,  string.format("%03x %02x %02x", p.act, p.act_count, p.act_frame))
-					table.insert(state_label,  string.format("%02x %02x %02x", p.hurt_state, p.sway_status, p.additional))
-					local box_bottom = #state_label * get_line_height()
+					table.insert(state_label, string.format("%0.03f %0.03f", diff_pos_y, p.pos_y + p.pos_frc_y))
+					table.insert(state_label, string.format("%02x %02x %02x", p.spid, p.attack, p.attack_id))
+					table.insert(state_label, string.format("%03x %02x %02x", p.act, p.act_count, p.act_frame))
+					table.insert(state_label, string.format("%02x %02x %02x", p.hurt_state, p.sway_status, p.additional))
+					local box_bottom = get_line_height(#state_label)
 					scr:draw_box(p1 and 0 or 277, 0, p1 and 40 or 316, box_bottom, 0x80404040, 0x80404040)
 					scr:draw_text(p1 and 4 or 278, 0, table.concat(state_label, "\n"))
 				end
@@ -4712,44 +4709,33 @@ rbff2.startplugin               = function()
 				end
 
 				-- BS状態表示
-				if p.dummy_gd == dummy_gd_type.bs and global.disp_bg then
-					if p1 then
-						scr:draw_box(106, 40, 150, 50, 0x80404040, 0x80404040)
-					else
-						scr:draw_box(169, 40, 213, 50, 0x80404040, 0x80404040)
-					end
-					scr:draw_text(p1 and 115 or 180, 41, "回ガードでB.S.")
-					draw_rtext(p1 and 115 or 180, 41, global.dummy_bs_cnt - math.max(p.bs_count, 0))
-				end
-
 				-- ガードリバーサル状態表示
-				if p.dummy_wakeup == wakeup_type.rvs and global.disp_bg then
-					if p1 then
-						scr:draw_box(106, 50, 150, 60, 0x80404040, 0x80404040)
-					else
-						scr:draw_box(169, 50, 213, 60, 0x80404040, 0x80404040)
+				if global.disp_bg then
+					local bs_label = {}
+					if p.dummy_gd == dummy_gd_type.bs and global.dummy_bs_cnt > 1 then 
+						table.insert(bs_label, string.format("%02d回ガードでBS", global.dummy_bs_cnt - math.max(p.bs_count, 0)))
 					end
-					scr:draw_text(p1 and 115 or 180, 51, "回ガードでG.R.")
-					local count = 0
-					if p.gd_rvs_enabled and global.dummy_rvs_cnt > 1 then
-						count = 0
-					else
-						count = global.dummy_rvs_cnt - math.max(p.rvs_count, 0)
+					if p.dummy_wakeup == wakeup_type.rvs and global.dummy_rvs_cnt > 1 then
+						table.insert(bs_label, string.format("%02d回ガードでRev.", 
+							p.gd_rvs_enabled and global.dummy_rvs_cnt > 1 and 0 or (global.dummy_rvs_cnt - math.max(p.rvs_count, 0))))
 					end
-					draw_rtext(p1 and 115 or 180, 51, count)
+					if #bs_label > 0 then
+						scr:draw_box(p1 and 110 or 173, 40, p1 and 150 or 213, 40 + get_line_height(#bs_label), 0x80404040, 0x80404040)
+						scr:draw_text(p1 and 110 or 173, 40, table.concat(bs_label, "\n"))
+					end
 				end
 
 				-- 気絶表示
 				if p.disp_stun then
+					draw_text_with_shadow(p1 and 112 or 184, 19.7, string.format("%3s/%3s", p.life, 0xC0))
 					scr:draw_box(p1 and (138 - p.stun_limit) or 180, 29, p1 and 140 or (182 + p.stun_limit), 34, 0, 0xDDC0C0C0) -- 枠
 					scr:draw_box(p1 and (139 - p.stun_limit) or 181, 30, p1 and 139 or (181 + p.stun_limit), 33, 0, 0xDD000000) -- 黒背景
 					scr:draw_box(p1 and (139 - p.stun) or 181, 30, p1 and 139 or (181 + p.stun), 33, 0, 0xDDFF0000) -- 気絶値
-					draw_rtext_with_shadow(p1 and 135 or 190, 28, p.stun)
-
+					draw_text_with_shadow(p1 and 112 or 184, 28, string.format("%3s/%3s", p.stun, p.stun_limit))
 					scr:draw_box(p1 and (138 - 90) or 180, 35, p1 and 140 or (182 + 90), 40, 0, 0xDDC0C0C0)      -- 枠
 					scr:draw_box(p1 and (139 - 90) or 181, 36, p1 and 139 or (181 + 90), 39, 0, 0xDD000000)      -- 黒背景
 					scr:draw_box(p1 and (139 - p.stun_timer) or 181, 36, p1 and 139 or (181 + p.stun_timer), 39, 0, 0xDDFFFF00) -- 気絶値
-					draw_rtext_with_shadow(p1 and 135 or 190, 34, p.stun_timer)
+					draw_text_with_shadow(p1 and 112 or 184, 34, string.format("%3s", p.stun_timer))
 				end
 			end
 
