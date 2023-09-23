@@ -1780,6 +1780,7 @@ rbff2.startplugin               = function()
 			end,
 			[0xA5] = function(data) p.additional = data end, -- 追加入力成立時のデータ
 			[0xAF] = function(data) p.cancelable_data = data end, -- キャンセル可否 00:不可 C0:可 D0:可 正確ではないかも
+			[0x68] = function(data) p.sp_skip_frame = data ~= 0 end, -- 潜在能力強制停止
 			[0xB6] = function(data)
 				-- 攻撃中のみ変化、判定チェック用2 0のときは何もしていない、 詠酒の間合いチェック用など
 				p.attackbit = util.hex_set(p.attackbit, frame_attack_types.harmless, data ~= 0)
@@ -2098,6 +2099,8 @@ rbff2.startplugin               = function()
 				end
 			end,
 			[0x10B862] = function(data) mem._0x10B862 = data end, -- 押し合い判定で使用
+			[0x107C1F] = function(data) global.sp_skip_frame1 = data ~= 0 end, -- 潜在能力強制停止
+			[0x107EBF] = function(data) global.sp_skip_frame2 = data ~= 0 end, -- 潜在能力強制停止
 		},
 		wp16 = {
 			[mem.stage_base_addr + screen.offset_x] = function(data) screen.left = data + (320 - scr.width * scr.xscale) / 2 end,
@@ -2111,7 +2114,6 @@ rbff2.startplugin               = function()
 			end,
 		},
 		wp32 = {
-			[0x100F56] = function(data) global.sp_skip_frame = data ~= 0 end,
 		},
 		rp8 = {
 			[{ addr = 0x107EC6, filter = 0x11DC4 }] = function(data)
@@ -3114,7 +3116,9 @@ rbff2.startplugin               = function()
 
 		--ガード移行できない行動は色替えする
 		local col, line = 0xAAF0E68C, 0xDDF0E68C
-		if parent.on_bs_established == global.frame_number then
+		if parent.skip_frame then
+			col, line = 0xAA000000, 0xAA000000
+		elseif parent.on_bs_established == global.frame_number then
 			col, line = 0xAA0022FF, 0xDD0022FF
 		elseif parent.on_bs_clear == global.frame_number then
 			col, line = 0xAA00FF22, 0xDD00FF22
@@ -3340,7 +3344,9 @@ rbff2.startplugin               = function()
 		-- 飛び道具2
 		for fb_base, p in pairs(parent.fireballs) do
 			local col, line, act = 0, 0, 0
-			if p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number then
+			if p.skip_frame then
+				col, line = 0xFF000000, 0xFF000000
+			elseif p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number then
 				col, line = 0xAA444444, 0xDD444444
 			elseif p.hitbox_types and #p.hitbox_types > 0 then
 				-- 判定タイプをソートする
@@ -3687,7 +3693,6 @@ rbff2.startplugin               = function()
 			p.last_frame_gap = p.last_frame_gap or 0
 			p.on_hit         = p.on_hit or 0
 			p.on_block       = p.on_block or 0
-			p.hit_skip       = p.hit_skip or 0
 
 			-- 起き上がりフレーム
 			if wakeup_acts[p.old_act] ~= true and wakeup_acts[p.act] == true then p.on_wakeup = global.frame_number end
@@ -3904,28 +3909,8 @@ rbff2.startplugin               = function()
 
 		-- フレーム表示などの前処理2
 		for _, p in ipairs(players) do
-			-- 起き上がりと投げやられ演出の停止はフレーム差の計算に邪魔なので停止扱いしない
-			local stop = p.hitstop_remain ~= 0 and util.testbit(p.flag_cc,
-				state_flag_cc._03 |                  -- 必殺投げやられ
-				state_flag_cc._08 |                  -- 投げ派生やられ
-				state_flag_cc._09 |                  -- つかみ投げやられ
-				state_flag_cc._10 |                  -- 投げられ
-				state_flag_cc._27 |                  -- 投げ追撃
-				state_flag_cc._30 |                  -- 空中投げ
-				state_flag_cc._31 |                  -- 投げ
-				state_flag_cc._23                    -- 起き上がり
-			) ~= true
-			if util.testbit(p.flag_c0, state_flag_c0._01) and -- ダウン
-				util.testbit(p.flag_cc, state_flag_cc._13) -- ダウン
-			then
-				stop = false
-			end
-
-			p.old_skip_frame = p.skip_frame                 --停止演出のチェック
-			p.skip_frame = p.hit_skip ~= 0 or stop or global.sp_skip_frame
-			if p.hit_skip ~= 0 or global.sp_skip_frame then -- 停止フレームはフレーム計算しない
-				if p.hit_skip ~= 0 then p.hit_skip = p.hit_skip - 1 end --ヒットストップの減算
-			end
+			p.old_skip_frame = p.skip_frame
+			p.skip_frame = global.sp_skip_frame1 or global.sp_skip_frame2 or p.sp_skip_frame
 
 			-- ヒットフレームの判断
 			if p.state ~= 1 and p.state ~= 3 then
