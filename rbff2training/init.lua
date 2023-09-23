@@ -4753,29 +4753,28 @@ rbff2.startplugin               = function()
 			-- キャラ間の距離表示
 			local abs_space = math.abs(p_space)
 			if global.disp_pos then
-				local y = 216
-				draw_ctext_with_shadow(scr.width / 2, y, abs_space)
 
 				-- キャラの向き
+				local foot_label = {}
 				for i, p in ipairs(players) do
-					local p1     = i == 1
-					local side   = p.internal_side == 1 and "(>)" or "(<)" -- 内部の向き 1:右向き -1:左向き
-					local i_side = p.input_side == 1 and "[>]" or "[<]" -- コマンド入力でのキャラ向き
-					if p1 then
-						draw_rtext_with_shadow(150, y, string.format("%s%s%s", p.flip_x, side, i_side))
-					else
-						draw_text_with_shadow(170, y, string.format("%s%s%s", i_side, side, p.flip_x))
-					end
+					local flip   = p.flip_x == 1 and ">" or "<" -- 内部の向き 見た目の向き
+					local side   = p.internal_side == 1 and ">" or "<" -- 内部の向き 1:右向き -1:左向き
+					local i_side = p.input_side == 1 and ">" or "<" -- コマンド入力でのキャラ向き
 					if p.old_pos_y ~= p.pos_y or p.last_posy_txt == nil then
-						p.last_posy_txt = string.format("%3s>%3s", p.old_pos_y or 0, p.pos_y)
+						p.last_posy_txt = string.format("Y %3s>%3s", p.old_pos_y or 0, p.pos_y)
 					end
-					draw_rtext_with_shadow(p1 and 110 or 230, y, p.last_posy_txt)
+					if i == 1 then
+						table.insert(foot_label, string.format("%s  Disp.%s Block.%s Input.%s", p.last_posy_txt, flip, side, i_side))
+					else
+						table.insert(foot_label, string.format("Input.%s Block.%s Disp.%s  %s", i_side, side, flip, p.last_posy_txt))
+					end
 				end
+				table.insert(foot_label, 2, string.format("%3d", abs_space))
+				draw_ctext_with_shadow(scr.width / 2, 216, table.concat(foot_label, " "))
 			end
 
 			-- GG風コマンド入力表示
 			for i, p in ipairs(players) do
-				local p1 = i == 1
 				-- コマンド入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
 				if p.disp_cmd == 2 or p.disp_cmd == 4 then
 					local xoffset, yoffset = ggkey_set[i].xoffset, ggkey_set[i].yoffset
