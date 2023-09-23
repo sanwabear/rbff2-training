@@ -673,14 +673,21 @@ local get_joy                   = function(exclude_player, prev)
 			joy_val[joy.field], prev_joy_val[joy.field] = joy.frame, joy.prev
 		end
 	end
-	return prev and prev_joy_val or joy_val
+	return joy_val, prev_joy_val
 end
 
 local play_cursor_sound         = function()
 	mem.w32(0x10D612, 0x600004)
 	mem.w8(0x10D713, 0x1)
 end
-
+local input_1f = function(btn, joy_val, prev_joy)
+	local k1, k2 = joy_k[1][btn], joy_k[2][btn]
+	local j1, j2, p1, p2 = joy_val[k1], joy_val[k2], prev_joy[k1], prev_joy[k2]
+	if (p1 < 0 and 0 < j1) or (p2 < 0 and 0 < j2) then
+		return true
+	end
+	return false
+end
 local accept_input              = function(btn, joy_val, state_past)
 	if 12 < state_past then
 		local p1, p2 = joy_k[1][btn], joy_k[2][btn]
@@ -1767,6 +1774,8 @@ rbff2.startplugin               = function()
 					p.bs_pow, p.bs_invincible      = mem.r8(proc_base.bs_pow + sp2) & 0x7F, mem.r8(proc_base.bs_invincible + sp2)
 					p.bs_invincible                = p.bs_invincible == 0xFF and 0 or p.bs_invincible
 					p.sp_invincible                = mem.r8(proc_base.sp_invincible + p.last_sp - 1)
+					p.bs_invincible                = math.max(p.bs_invincible - 1, 0) -- 発生時に即-1される
+					p.sp_invincible                = math.max(p.sp_invincible - 1, 0) -- 発生時に即-1される
 				end
 			end,
 			[0xA5] = function(data) p.additional = data end, -- 追加入力成立時のデータ
@@ -3419,10 +3428,20 @@ rbff2.startplugin               = function()
 	-- トレモのメイン処理
 	menu.tra_main.proc = function()
 		if not in_match or mem._0x10E043 ~= 0 then return end -- ポーズ中は状態を更新しない
+		if global.pause then -- ポーズ解除判定
+			local curr, prev = get_joy()
+			if input_1f("a", curr, prev) or input_1f("b", curr, prev) or input_1f("c", curr, prev) or input_1f("d", curr, prev) then
+				global.pause = false
+				set_freeze(true)
+				for _, joy in ipairs(use_joy) do ioports[joy.port].fields[joy.field]:set_value(0) end
+			end
+			return
+		end
 		if menu.reset_pos then menu.update_pos() end
 		global.frame_number = global.frame_number + 1
-		local next_joy, joy_val, state_past = new_next_joy(), get_joy(), scr:frame_number() - global.input_accepted
 		set_freeze((not in_match) or true) -- ポーズ解除状態
+
+		local next_joy, joy_val, state_past = new_next_joy(), get_joy(), scr:frame_number() - global.input_accepted
 
 		-- スタートボタン（リプレイモード中のみスタートボタンおしっぱでメニュー表示へ切り替え
 		if (global.dummy_mode == 6 and is_start_a(joy_val, state_past)) or
@@ -4111,7 +4130,7 @@ rbff2.startplugin               = function()
 				end
 				-- リプレイ中は自動ガードしない
 				if p.dummy_gd ~= dummy_gd_type.none and util.testbit(act_type, act_types.attack) and in_rec_replay then
-					if jump_acts[p.act] then p.clear_cmd_hook(data.cmd_types._8) end
+					p.clear_cmd_hook(data.cmd_types._8) -- 上は無効化
 					if p.dummy_gd == dummy_gd_type.fixed then
 						-- 常時（ガード方向はダミーモードに従う）
 						p.add_cmd_hook(data.cmd_types.back)
@@ -4369,6 +4388,8 @@ rbff2.startplugin               = function()
 				end
 			end
 		end
+
+		set_freeze(not global.pause)
 	end
 
 	menu.tra_main.draw = function()
@@ -5973,14 +5994,13 @@ rbff2.startplugin               = function()
 
 	emu.register_pause(function() menu.state.draw() end)
 
-	emu.register_resume(function() global.pause = false end)
+	emu.register_resume(function() end)
 
 	emu.register_frame_done(function()
 		if not machine then return end
 		if machine.paused == false then
 			menu.state.draw()
 			--collectgarbage("collect")
-			if global.pause then emu.pause() end
 		end
 	end)
 
