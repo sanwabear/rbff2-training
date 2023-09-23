@@ -1576,181 +1576,77 @@ rbff2.startplugin               = function()
 		local p1 = (i == 1)
 		local base = p1 and 0x100400 or 0x100500
 		players[i] = {
-			num               = i,
-			base              = 0x0,
-			bases             = {},
+			num              = i,
+			base             = 0x0,
+			bases            = {},
+			dummy_act        = 1,         -- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
+			dummy_gd         = dummy_gd_type.none, -- なし, オート, ブレイクショット, 1ヒットガード, 1ガード, 常時, ランダム, 強制
+			dummy_wakeup     = wakeup_type.none, -- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
 
-			dummy_act         = 1,                    -- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
-			dummy_gd          = dummy_gd_type.none,   -- なし, オート, ブレイクショット, 1ヒットガード, 1ガード, 常時, ランダム, 強制
-			dummy_wakeup      = wakeup_type.none,     -- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
+			dummy_bs         = nil,       -- ランダムで選択されたブレイクショット
+			dummy_bs_list    = {},        -- ブレイクショットのコマンドテーブル上の技ID
+			dummy_bs_chr     = 0,         -- ブレイクショットの設定をした時のキャラID
+			bs_count         = -1,        -- ブレイクショットの実施カウント
 
-			dummy_bs          = nil,                  -- ランダムで選択されたブレイクショット
-			dummy_bs_list     = {},                   -- ブレイクショットのコマンドテーブル上の技ID
-			dummy_bs_chr      = 0,                    -- ブレイクショットの設定をした時のキャラID
-			bs_count          = -1,                   -- ブレイクショットの実施カウント
+			dummy_rvs        = nil,       -- ランダムで選択されたリバーサル
+			dummy_rvs_list   = {},        -- リバーサルのコマンドテーブル上の技ID
+			dummy_rvs_chr    = 0,         -- リバーサルの設定をした時のキャラID
+			rvs_count        = -1,        -- リバーサルの実施カウント
+			gd_rvs_enabled   = false,     -- ガードリバーサルの実行可否
 
-			dummy_rvs         = nil,                  -- ランダムで選択されたリバーサル
-			dummy_rvs_list    = {},                   -- リバーサルのコマンドテーブル上の技ID
-			dummy_rvs_chr     = 0,                    -- リバーサルの設定をした時のキャラID
-			rvs_count         = -1,                   -- リバーサルの実施カウント
-			gd_rvs_enabled    = false,                -- ガードリバーサルの実行可否
+			life_rec         = true,      -- 自動で体力回復させるときtrue
+			red              = 2,         -- 体力設定     	--"最大", "赤", "ゼロ" ...
+			max              = 1,         -- パワー設定       --"最大", "半分", "ゼロ" ...
+			disp_hitbox      = true,      -- 判定表示
+			disp_range       = true,      -- 間合い表示
+			disp_base        = false,     -- 処理のアドレスを表示するときtrue
+			hide_char        = false,     -- キャラを画面表示しないときtrue
+			hide_phantasm    = false,     -- 残像を画面表示しないときtrue
+			disp_dmg         = true,      -- ダメージ表示するときtrue
+			disp_cmd         = 2,         -- 入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
+			disp_frm         = 4,         -- フレーム数表示する
+			disp_fbfrm       = true,      -- 弾のフレーム数表示するときtrue
+			disp_stun        = true,      -- 気絶表示
+			disp_sts         = 3,         -- 状態表示 "OFF", "ON", "ON:小表示", "ON:大表示"
+			dis_plain_shift  = false,     -- ライン送らない現象
+			no_hit           = 0,         -- Nヒット目に空ぶるカウントのカウンタ
+			no_hit_limit     = 0,         -- Nヒット目に空ぶるカウントの上限
+			force_y_pos      = 1,         -- Y座標強制
 
-			life_rec          = true,                 -- 自動で体力回復させるときtrue
-			red               = 2,                    -- 体力設定     	--"最大", "赤", "ゼロ" ...
-			max               = 1,                    -- パワー設定       --"最大", "半分", "ゼロ" ...
-			disp_hitbox       = true,                 -- 判定表示
-			disp_range        = true,                 -- 間合い表示
-			disp_base         = false,                -- 処理のアドレスを表示するときtrue
-			hide_char         = false,                -- キャラを画面表示しないときtrue
-			hide_phantasm     = false,                -- 残像を画面表示しないときtrue
-			disp_dmg          = true,                 -- ダメージ表示するときtrue
-			disp_cmd          = 2,                    -- 入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
-			disp_frm          = 4,                    -- フレーム数表示する
-			disp_fbfrm        = true,                 -- 弾のフレーム数表示するときtrue
-			disp_stun         = true,                 -- 気絶表示
-			disp_sts          = 3,                    -- 状態表示 "OFF", "ON", "ON:小表示", "ON:大表示"
+			atk_count        = 0,         -- TODO 消したい
 
-			dis_plain_shift   = false,                -- ライン送らない現象
+			frame_gap        = 0,
+			last_frame_gap   = 0,
+			on_punish      = 0,
+			hist_frame_gap   = { 0 },
 
-			no_hit            = 0,                    -- Nヒット目に空ぶるカウントのカウンタ
-			no_hit_limit      = 0,                    -- Nヒット目に空ぶるカウントの上限
+			key_now          = {}, -- 個別キー入力フレーム
+			key_pre          = {}, -- 前フレームまでの個別キー入力フレーム
+			key_hist         = {},
+			ggkey_hist       = {},
+			key_frames       = {},
+			act_frame        = 0,
+			act_frames       = {},
+			act_frames2      = {},
 
-			last_normal_state = true,
-			last_effects      = {},
-			life              = 0,   -- いまの体力
-			mv_state          = 0,   -- 動作
-			old_state         = 0,   -- 前フレームのやられ状態
-			char              = 0,
-			close_far         = {},
-			act               = 0,
-			acta              = 0,
-			atk_count         = 0,
-			attack            = 0,       -- 攻撃中のみ変化
-			old_attack        = 0,
-			attack_id         = 0,       -- 当たり判定ごとに設定されているID
-			effect            = 0,
-			attacking         = false,   -- 攻撃判定発生中の場合true
-			dmmy_attacking    = false,   -- ヒットしない攻撃判定発生中の場合true（嘘判定のぞく）
-			juggle            = false,   -- 空中追撃判定発生中の場合true
-			forced_down       = false,   -- 受け身行動可否
-			pow_up            = 0,       -- 状態表示用パワー増加量空振り
-			pow_up_hit        = 0,       -- 状態表示用パワー増加量ヒット
-			pow_up_gd         = 0,       -- 状態表示用パワー増加量ガード
-			pow_revenge       = 0,       -- 状態表示用パワー増加量倍返し反射
-			pow_absorb        = 0,       -- 状態表示用パワー増加量倍返し吸収
-			hitstop           = 0,       -- 攻撃側のガード硬直
-			old_pos           = 0,       -- X座標
-			old_pos_frc       = 0,       -- X座標少数部
-			pos               = 0,       -- X座標
-			pos_frc           = 0,       -- X座標少数部
-			old_posd          = 0,       -- X座標
-			posd              = 0,       -- X座標
-			poslr             = "L",     -- 右側か左側か
-			max_pos           = 0,       -- X座標最大
-			min_pos           = 0,       -- X座標最小
-			pos_y             = 0,       -- Y座標
-			pos_frc_y         = 0,       -- Y座標少数部
-			pos_miny          = 0,       -- Y座標の最小値
-			old_pos_y         = 0,       -- Y座標
-			old_pos_frc_y     = 0,       -- Y座標少数部
-			old_in_air        = false,
-			in_air            = false,
-			chg_air_state     = 0,       -- ジャンプの遷移ポイントかどうか
-			force_y_pos       = 1,       -- Y座標強制
-			pos_z             = 0,       -- Z座標
-			old_pos_z         = 0,       -- Z座標
-			on_main_line      = 0,       -- Z座標メインに移動した瞬間フレーム
-			on_sway_line      = 0,       -- Z座標スウェイに移動した瞬間フレーム
-			in_sway_line      = false,   -- Z座標
-			sway_status       = 0,       --
-			side              = 0,       -- 向き
-			state             = 0,       -- いまのやられ状態
-			flag_c0           = 0,       -- 処理で使われているフラグ群
-			old_flag_c0       = 0,       -- 処理で使われているフラグ群
-			flag_cc           = 0,       -- 処理で使われているフラグ群
-			old_flag_cc       = 0,       -- 処理で使われているフラグ群
-			attack_flag       = false,
-			flag_c8           = 0,       -- 処理で使われているフラグ群
-			flag_d0           = 0,       -- 処理で使われているフラグ（硬直の判断用）
-			old_flag_d0       = 0,       -- 処理で使われているフラグ（硬直の判断用）
-			color             = 0,       -- カラー A=0x00 D=0x01
+			throw_boxies     = {},
 
-			frame_gap         = 0,
-			last_frame_gap    = 0,
-			hist_frame_gap    = { 0 },
-			block1            = 0,   -- ガード時（硬直前後）フレームの判断用
-			on_block          = 0,   -- ガード時（硬直前）フレーム
-			on_block1         = 0,   -- ガード時（硬直後）フレーム
-			hit1              = 0,   -- ヒット時（硬直前後）フレームの判断用
-			on_hit            = 0,   -- ヒット時（硬直前）フレーム
-			on_hit1           = 0,   -- ヒット時（硬直後）フレーム
-			on_punish         = 0,
-			on_wakeup         = 0,
-			on_down           = 0,
-			hit_skip          = 0,
-			old_skip_frame    = false,
-			skip_frame        = false,
-
-			knock_back1       = 0,    -- のけぞり確認用1(色々)
-			knock_back2       = 0,    -- のけぞり確認用2(裏雲隠し)
-			knock_back3       = 0,    -- のけぞり確認用3(フェニックススルー)
-			konck_back4       = 0,    -- のけぞり確認用4(色々,リバサ表示判断用)
-
-			old_knock_back1   = 0,    -- のけぞり確認用1(色々)
-			fireball_rank     = 0,    -- 飛び道具の強さ
-			esaka_range       = 0,    -- 詠酒の間合いチェック用
-
-			key_now           = {},   -- 個別キー入力フレーム
-			key_pre           = {},   -- 前フレームまでの個別キー入力フレーム
-			key_hist          = {},
-			ggkey_hist        = {},
-			key_frames        = {},
-			act_frame         = 0,
-			act_frames        = {},
-			act_frames2       = {},
-			act_frames_total  = 0,
-
-			throw_boxies      = {},
-
-			muteki            = {
+			muteki           = {
 				act_frames  = {},
 				act_frames2 = {},
 			},
 
-			frm_gap           = {
+			frm_gap          = {
 				act_frames  = {},
 				act_frames2 = {},
 			},
 
-			frame_info        = {
-				text = { "", "" },
-				attack = {
-					buff = nil,
-					txt = { "", "" }
-				},
-				hurt = {
-					buff = nil,
-					txt = { "", "" }
-				},
-			},
+			random_boolean   = math.random(255) % 2 == 0,
 
-			reg_pcnt          = 0,   -- キー入力 REG_P1CNT or REG_P2CNT
-			reg_st_b          = 0,   -- キー入力 REG_STATUS_B
+			boxies           = {},
+			fireballs        = {},
 
-			update_state      = 0,
-			update_act        = 0,
-			random_boolean    = math.random(255) % 2 == 0,
-
-			backstep_killer   = false,
-
-			boxies            = {},
-			hitbox_txt        = "",
-			hurtbox_txt       = "",
-			chg_hitbox_frm    = 0,
-			chg_hurtbox_frm   = 0,
-			fireballs         = {},
-
-			addr              = {
+			addr             = {
 				base        = base,            -- キャラ状態とかのベースのアドレス
 				control     = base + 0x12,     -- Human 1 or 2, CPU 3
 				pos         = base + 0x20,     -- X座標
@@ -3570,7 +3466,6 @@ rbff2.startplugin               = function()
 			p.old_anyhit_id     = p.anyhit_id
 			p.old_posd          = p.posd
 			p.posd              = p.pos + p.pos_frc
-			p.poslr             = p.posd == op.posd and "=" or p.posd < op.posd and "L" or "R"
 			p.old_pos           = p.pos
 			p.old_pos_frc       = p.pos_frc
 			p.thrust            = p.thrust + p.thrust_frc
@@ -3629,15 +3524,6 @@ rbff2.startplugin               = function()
 			if p.dis_plain_shift then
 				mem.w8(p.addr.hurt_state, p.hurt_state | 0x40)
 			end
-		end
-
-		-- 1Pと2Pの状態読取 ゲージ
-		for _, p in ipairs(players) do
-			p.last_pow      = p.last_pow or 0
-			p.last_pure_dmg = p.last_pure_dmg or 0
-			p.last_stun     = p.last_stun or 0
-			p.last_st_timer = p.last_st_timer or 0
-			p.last_effects  = p.last_effects or {}
 		end
 
 		-- 1Pと2Pの状態読取 入力
@@ -4642,10 +4528,10 @@ rbff2.startplugin               = function()
 				if p.disp_sts == 2 or p.disp_sts == 3 then
 					local state_label = {}
 					table.insert(state_label, string.format("%s %02d %03d %03d",
-						p.state, p.throwing and p.throwing.threshold or 0, p.throwing and p.throwing.timer or 0, p.throw_timer))
-					local diff_pos_y = p.pos_y + p.pos_frc_y - p.old_pos_y - p.old_pos_frc_y
+						p.state, p.throwing and p.throwing.threshold or 0, p.throwing and p.throwing.timer or 0, p.throw_timer or 0))
+					local diff_pos_y = p.pos_y + p.pos_frc_y - (p.old_pos_y and (p.old_pos_y + p.old_pos_frc_y) or 0)
 					table.insert(state_label, string.format("%0.03f %0.03f", diff_pos_y, p.pos_y + p.pos_frc_y))
-					table.insert(state_label, string.format("%02x %02x %02x", p.spid, p.attack, p.attack_id))
+					table.insert(state_label, string.format("%02x %02x %02x", p.spid or 0, p.attack or 0, p.attack_id or 0))
 					table.insert(state_label, string.format("%03x %02x %02x", p.act, p.act_count, p.act_frame))
 					table.insert(state_label, string.format("%02x %02x %02x", p.hurt_state, p.sway_status, p.additional))
 					local box_bottom = get_line_height(#state_label)
