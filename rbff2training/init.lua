@@ -1172,7 +1172,7 @@ local load_proc_base            = function()
 			stun          = mem.r32(char4 + fix_addr(0x85CCA)),
 			stun_timer    = mem.r32(char4 + fix_addr(0x85D2A)),
 			max_hit       = mem.r32(char4 + fix_addr(0x827B8)),
-			esaka_range   = mem.r32(char4 + 0x23750),
+			esaka         = mem.r32(char4 + 0x23750),
 			pow_up        = ((0xC == char) and 0x8C274 or (0x10 == char) and 0x8C29C or 0x8C24C),
 			pow_up_ext    = mem.r32(0x8C18C + char4),
 			effect        = -0x20 + fix_addr(0x95BEC),
@@ -1869,8 +1869,8 @@ rbff2.startplugin               = function()
 				p.max_hit_dn     = data > 0 and mem.r8(data + base_addr.max_hit) or 0
 				if 0x58 > data then
 					-- 詠酒距離 家庭用 0236F0 からの処理
-					local esaka = mem.r16(base_addr.esaka_range + ((data + data) & 0xFFFF))
-					p.esaka_range, p.esaka_type = esaka & 0x1FFF, esaka_type_names[esaka & 0xE000] or ""
+					local esaka = mem.r16(base_addr.esaka + ((data + data) & 0xFFFF))
+					p.esaka, p.esaka_type = esaka & 0x1FFF, esaka_type_names[esaka & 0xE000] or ""
 					if 0x27 <= data then                                   -- 家庭用 05B37E からの処理
 						p.pow_up_hit = mem.r8((0xFF & (data - 0x27)) + base_addr.pow_up_ext) -- CA技、特殊技
 					else
@@ -2229,9 +2229,6 @@ rbff2.startplugin               = function()
 	for base, p in pairs(all_objects) do
 		-- 判定表示前の座標がらみの関数
 		p.x, p.y, p.flip_x = 0, 0, 0
-		p.resolve_xy = function() -- 自身の画面上の座標
-			p.x, p.y, p.flip_x = p.pos - screen.left, screen.top - p.pos_y - p.pos_z, (p.flip_x1 ~ p.flip_x2) > 0 and 1 or -1
-		end
 		p.calc_range_x = function(range_x) return p.x + range_x * p.flip_x end -- 自身の範囲の座標計算
 		-- 自身が指定の範囲内かどうかの関数
 		p.within = function(x1, x2) return (x1 <= p.op.x and p.op.x <= x2) or (x1 >= p.op.x and p.op.x >= x2) end
@@ -3744,27 +3741,18 @@ rbff2.startplugin               = function()
 						p.on_punish = -1
 					end
 				else
-					if p.act_normal ~= true and (p.on_punish + 60) >= global.frame_number then
-						p.on_punish = -1
-					end
+					if p.act_normal ~= true and (p.on_punish + 60) >= global.frame_number then p.on_punish = -1 end
 				end
-				if mem.r8(p.addr.base + 0xAB) > 0 or p.ophit then
-					p.hit_skip = 2
-				end
+				if mem.r8(p.addr.base + 0xAB) > 0 or p.ophit then p.hit_skip = 2 end
 			end
-			if p.state == 0 and p.act_normal ~= true and mem._0x10B862 ~= 0 then
-				p.on_punish = -1
-			end
+			if p.state == 0 and p.act_normal ~= true and mem._0x10B862 ~= 0 then p.on_punish = -1 end
 
 			-- 起き上がりフレーム
-			if wakeup_acts[p.old_act] ~= true and wakeup_acts[p.act] == true then
-				p.on_wakeup = global.frame_number
-			end
+			if wakeup_acts[p.old_act] ~= true and wakeup_acts[p.act] == true then p.on_wakeup = global.frame_number end
 			-- フレーム表示用処理
 			p.act_frames          = p.act_frames or {}
 			p.act_frames2         = p.act_frames2 or {}
 			p.act_frames_total    = p.act_frames_total or 0
-
 			p.muteki.act_frames   = p.muteki.act_frames or {}
 			p.muteki.act_frames2  = p.muteki.act_frames2 or {}
 			p.frm_gap.act_frames  = p.frm_gap.act_frames or {}
@@ -3784,11 +3772,7 @@ rbff2.startplugin               = function()
 				end
 				-- CAのときのみ開始動作として評価する
 				if util.testbit(p.act_data.type, act_types.startup_if_ca) then
-					if util.testbit(p.flag_cc, state_flag_cc._00) then
-						p.act_1st = true
-					else
-						p.act_1st = false
-					end
+					p.act_1st = util.testbit(p.flag_cc, state_flag_cc._00)
 				end
 			else
 				p.act_data = {
@@ -3847,32 +3831,13 @@ rbff2.startplugin               = function()
 				fb.old_act        = fb.act
 				fb.gd_strength    = get_gd_strength(fb)
 				fb.old_proc_act   = fb.proc_active
-				fb.attacking      = false
-				fb.dmmy_attacking = false
-				fb.juggle         = false
 				fb.bai_catch      = fb.bai_chk1 and fb.bai_chk2
-				fb.hit            = fb.hit or {
-					pos_x      = 0,
-					pos_z      = 0,
-					pos_y      = 0,
-					on         = 0,
-					flip_x     = 0,
-					scale      = 0,
-					char_id    = 0,
-					vulnerable = 0,
-					max_hit_dn = 0,
-					max_hit_nm = 0,
-				}
 				fb.type_boxes     = {}
 				fb.act_data_fired = p.act_data -- 発射したタイミングの行動ID
-
 				fb.act_frames     = fb.act_frames or {}
 				fb.act_frames2    = fb.act_frames2 or {}
-
-				-- 当たり判定の構築
 				if fb.proc_active == true then --0x4E75 is rts instruction
 					fb.atk_count = fb.atk_count or 0
-					-- 主に邪棍舞の派生で動作切り替え
 					if p.char_data.fb1sts[fb.act] then
 						p.act_data = chars[p.char].fireballs[fb.act]
 						fb.act_data_fired = p.act_data -- 発射したタイミングの行動ID
@@ -3884,7 +3849,6 @@ rbff2.startplugin               = function()
 				end
 				global.all_act_normal = global.all_act_normal and (fb.proc_active == false)
 			end
-
 			p.act_1st = p.update_act == global.frame_number and p.act_1st == true
 			p.atk_count = p.act_1st == true and 1 or (p.atk_count + 1)
 		end
@@ -3892,12 +3856,13 @@ rbff2.startplugin               = function()
 		-- キャラと飛び道具への当たり判定の反映
 		hitboxies, ranges = {}, {}                     -- ソート前の判定のバッファ
 		for _, p in pairs(all_objects) do
-			p.resolve_xy()                             -- 判定表示前の座標補正
 			if p.char_data and (p.is_fireball ~= true or p.proc_active) then
+				-- 判定表示前の座標補正
+				p.x, p.y, p.flip_x = p.pos - screen.left, screen.top - p.pos_y - p.pos_z, (p.flip_x1 ~ p.flip_x2) > 0 and 1 or -1
+				p.vulnerable = (p.invincible and p.invincible > 0) or p.hurt_invincible or p.on_vulnerable ~= global.frame_number
 				p.hitboxies, p.ranges, p.hitbox_types = {}, {}, {} -- 座標補正後データ格納のためバッファのクリア
 
 				-- 当たりとやられ判定判定
-				p.vulnerable = (p.invincible and p.invincible > 0) or p.hurt_invincible or p.on_vulnerable ~= global.frame_number
 				for _, box in ipairs(p.boxies) do
 					local type = fix_box_type(p, box) -- 属性はヒット状況などで変わるので都度解決する
 					if not (hurt_boxies[type] and p.vulnerable) then
@@ -3936,10 +3901,10 @@ rbff2.startplugin               = function()
 					end
 
 					-- 詠酒を発動される範囲
-					if p.esaka_range and p.esaka_range > 0 then
-						local x2 = p.calc_range_x(p.esaka_range)
+					if p.esaka and p.esaka > 0 then
 						-- 内側に太線を引きたいのでflipを反転する
-						table.insert(p.ranges, { label = string.format("E%sP%s", p.num, p.esaka_type), x = x2, y = p.y, flip_x = -p.flip_x, within = p.within(p.x, x2) })
+						p.esaka_range = p.calc_range_x(p.esaka)
+						table.insert(p.ranges, { label = string.format("E%sP%s", p.num, p.esaka_type), x = p.esaka_range, y = p.y, flip_x = -p.flip_x, within = p.within(p.x, p.esaka_range) })
 					end
 
 					-- 座標
