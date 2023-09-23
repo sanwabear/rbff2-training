@@ -2227,6 +2227,15 @@ rbff2.startplugin               = function()
 	}
 	table.insert(all_wps, common_p)
 	for base, p in pairs(all_objects) do
+		-- 判定表示前の座標がらみの関数
+		p.x, p.y, p.flip_x = 0, 0, 0
+		p.resolve_xy = function() -- 自身の画面上の座標
+			p.x, p.y, p.flip_x = p.pos - screen.left, screen.top - p.pos_y - p.pos_z, (p.flip_x1 ~ p.flip_x2) > 0 and 1 or -1
+		end
+		p.calc_range_x = function(range_x) return p.x + range_x * p.flip_x end -- 自身の範囲の座標計算
+		-- 自身が指定の範囲内かどうかの関数
+		p.within = function(x1, x2) return (x1 <= p.op.x and p.op.x <= x2) or (x1 >= p.op.x and p.op.x >= x2) end
+
 		p.wp8 = util.hash_add_all(p.wp8, {
 			[0x10] = function(data)
 				p.char, p.char4, p.char8 = data, (data << 2), (data << 3)
@@ -3881,20 +3890,9 @@ rbff2.startplugin               = function()
 		end
 
 		-- キャラと飛び道具への当たり判定の反映
-		-- 判定表示前の座標補正
+		hitboxies, ranges = {}, {}                     -- ソート前の判定のバッファ
 		for _, p in pairs(all_objects) do
-			p.x = p.pos - screen.left                                     -- 画面上のX座標
-			p.y = screen.top - p.pos_y - p.pos_z                          -- 画面上のY座標
-			p.flip_x = (p.flip_x1 ~ p.flip_x2) > 0 and 1 or -1            -- 向き補正値
-			p.calc_range_x = function(range_x) return p.x + range_x * p.flip_x end -- 範囲の点計算
-			p.within = function(x1, x2)                                   -- 範囲内かどうかの関数
-				if p.flip_x < 0 then x1, x2 = sort_ab(x1, x2) else x1, x2 = sort_ba(x1, x2) end
-				return x1 <= p.op.x and p.op.x <= x2
-			end
-		end
-
-		hitboxies, ranges = {}, {} -- ソート前の判定のバッファ
-		for _, p in pairs(all_objects) do
+			p.resolve_xy()                             -- 判定表示前の座標補正
 			if p.char_data and (p.is_fireball ~= true or p.proc_active) then
 				p.hitboxies, p.ranges, p.hitbox_types = {}, {}, {} -- 座標補正後データ格納のためバッファのクリア
 
