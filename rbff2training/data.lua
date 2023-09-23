@@ -1853,9 +1853,9 @@ local cmd_types = {
 	_4c   = cmd_bytes._4 | cmd_bytes._c,
 	_8d   = cmd_bytes._8 | cmd_bytes._d,
 	_2d   = cmd_bytes._2 | cmd_bytes._d,
-	front = cmd_bytes.front,
-	back  = cmd_bytes.back,
 }
+cmd_types.front = { [-1] = cmd_types._4, [1] = cmd_types._6, }
+cmd_types.back = { [-1] = cmd_types._6, [1] = cmd_types._4, }
 local hook_cmd_types = {
 	none = 0,
 	reversal = 2 ^ 0,

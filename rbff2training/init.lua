@@ -1269,7 +1269,7 @@ end
 local get_normal_throw_box      = function(p)
 	-- 相手が向き合いか背向けかで押し合い幅を解決して反映
 	local push_box, op_push_box = chars[p.char].push_box[0x5C9BC], chars[p.op.char].push_box[0x5C9BC]
-	local op_edge = (p.internal_side == p.op.internal_side) and op_push_box.back or op_push_box.front
+	local op_edge = (p.block_side == p.op.block_side) and op_push_box.back or op_push_box.front
 	local center = util.int16(((push_box.front - math.abs(op_edge)) * p.box_scale) >> 6)
 	local range = mem.r8(fix_addr(0x5D854) + p.char4)
 	return fix_throw_box_pos({
@@ -1282,7 +1282,7 @@ local get_normal_throw_box      = function(p)
 		x = p.pos - screen.left,
 		y = screen.top - p.pos_y - p.pos_z,
 		threshold = mem.r8(0x3A66C), -- 投げのしきい値 039FA4からの処理
-		flip_x = p.internal_side, -- 向き補正値
+		flip_x = p.block_side, -- 向き補正値
 	})
 end
 
@@ -1305,7 +1305,7 @@ local get_special_throw_box     = function(p, id)
 		x = p.pos - screen.left,
 		y = screen.top - p.pos_y - p.pos_z,
 		threshold = mem.r8(0x3A66C + (0xFF & id)), -- 投げのしきい値 039FA4からの処理
-		flip_x = p.internal_side,            -- 向き補正値
+		flip_x = p.block_side,            -- 向き補正値
 	})
 end
 
@@ -1322,7 +1322,7 @@ local get_air_throw_box         = function(p)
 		x = p.pos - screen.left,
 		y = screen.top - p.pos_y - p.pos_z,
 		threshold = 0,      -- 投げのしきい値
-		flip_x = p.internal_side, -- 向き補正値
+		flip_x = p.block_side, -- 向き補正値
 	})
 end
 
@@ -1652,7 +1652,7 @@ rbff2.startplugin               = function()
 				pos         = base + 0x20,     -- X座標
 				pos_y       = base + 0x28,     -- Y座標
 				sway_status = base + 0x89,     -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
-				input_side  = base + 0x86,     -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
+				cmd_side    = base + 0x86,     -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
 				life        = base + 0x8B,     -- 体力
 				pow         = base + 0xBC,     -- パワーアドレス
 				hurt_state  = base + 0xE4,     -- やられ状態 ライン送らない状態用
@@ -1665,6 +1665,34 @@ rbff2.startplugin               = function()
 				reg_pcnt    = p1 and 0x300000 or 0x340000, -- キー入力 REG_P1CNT or REG_P2CNT アドレス
 				reg_st_b    = 0x380000,        -- キー入力 REG_STATUS_B アドレス
 			},
+
+			add_cmd_hook = function(input)
+				local p = players[i]
+				p.bs_hook = (p.bs_hook and p.bs_hook.cmd_type) and p.bs_hook or { cmd_type = data.cmd_types._5 }
+				input = type(input) == "table" and input[p.cmd_side] or input
+				p.bs_hook.cmd_type = p.bs_hook.cmd_type & data.cmd_masks[input]
+				p.bs_hook.cmd_type = p.bs_hook.cmd_type | input
+			end,
+			clear_cmd_hook = function(mask)
+				local p = players[i]
+				p.bs_hook = (p.bs_hook and p.bs_hook.cmd_type) and p.bs_hook or { cmd_type = data.cmd_types._5 }
+				mask = type(mask) == "table" and mask[p.cmd_side] or mask
+				mask = 0xFF ~ mask
+				p.bs_hook.cmd_type = p.bs_hook.cmd_type & mask
+			end,
+			reset_cmd_hook = function(input)
+				local p = players[i]
+				p.bs_hook = (p.bs_hook and p.bs_hook.cmd_type) and p.bs_hook or { cmd_type = data.cmd_types._5 }
+				input = type(input) == "table" and input[p.cmd_side] or input
+				p.bs_hook = { cmd_type = input }
+			end,
+			is_block_cmd_hook = function()
+				local p = players[i]
+				return p.bs_hook and p.bs_hook.cmd_type and
+					util.testbit(p.bs_hook.cmd_type, data.cmd_types.back[p.cmd_side]) and
+					util.testbit(p.bs_hook.cmd_type, data.cmd_types._2) ~= true
+			end,
+			reset_sp_hook = function(hook) players[i].bs_hook = hook end,
 		}
 		local p = players[i]
 		for k = 1, #kprops do
@@ -1701,7 +1729,7 @@ rbff2.startplugin               = function()
 			end,
 			[0x83] = function(data) p.input2 = data end,                             -- キー入力 1F前の入力
 			[0x84] = function(data) p.cln_btn = data end,                            -- クリアリングされたボタン入力
-			[0x86] = function(data) p.input_side = util.int8(data) < 0 and -1 or 1 end, -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
+			[0x86] = function(data) p.cmd_side = util.int8(data) < 0 and -1 or 1 end, -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
 			[0x88] = function(data) p.in_bs = data ~= 0 end,                         -- BS動作中
 			[0x89] = function(data) p.sway_status, p.in_sway_line = data, data ~= 0x00 end, -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
 			[0x8B] = function(data, ret)
@@ -1845,7 +1873,7 @@ rbff2.startplugin               = function()
 			[p1 and 0x10B850 or 0x10B858] = function(data) p.stun = data end, -- 現在気絶値
 			[p1 and 0x1041B0 or 0x1041B4] = function(data, ret)
 				if p.bs_hook and p.bs_hook.cmd_type then
-					-- util.printf("bs_hook cmd %x", p.bs_hook.cmd_type)
+					util.printf("%s bs_hook cmd %x", p.num, p.bs_hook.cmd_type)
 					-- フックの処理量軽減のためまとめてキー入力を記録する
 					mem.w8(p1 and 0x1041AE or 0x1041B2, p.bs_hook.cmd_type) -- 押しっぱずっと有効
 					mem.w8(p1 and 0x1041AF or 0x1041B3, p.bs_hook.cmd_type) -- 押しっぱ有効が5Fのみ
@@ -2111,11 +2139,11 @@ rbff2.startplugin               = function()
 				local p = get_object_by_reg("A4", {})
 				if p.bs_hook then
 					if p.bs_hook.ver then
-						-- util.printf("bs_hook1 %x %x", p.bs_hook.id, p.bs_hook.ver)
+						util.printf("bs_hook1 %x %x", p.bs_hook.id, p.bs_hook.ver)
 						mem.w8(p.addr.base + 0xA3, p.bs_hook.id)
 						mem.w16(p.addr.base + 0xA4, p.bs_hook.ver)
 					else
-						-- util.printf("bs_hook2 %x %x", p.bs_hook.id, p.bs_hook.f)
+						util.printf("bs_hook2 %x %x", p.bs_hook.id, p.bs_hook.f)
 						mem.w8(p.addr.base + 0xD6, p.bs_hook.id)
 						mem.w8(p.addr.base + 0xD7, p.bs_hook.f)
 					end
@@ -2160,7 +2188,7 @@ rbff2.startplugin               = function()
 				p.char, p.char4, p.char8 = data, (data << 2), (data << 3)
 				p.char_data = p.is_fireball and chars[#chars] or chars[data]      -- 弾はダミーを設定する
 			end,
-			[0x58] = function(data) p.internal_side = util.int8(data) < 0 and -1 or 1 end, -- 向き 00:左側 80:右側
+			[0x58] = function(data) p.block_side = util.int8(data) < 0 and -1 or 1 end, -- 向き 00:左側 80:右側
 			[0x66] = function(data)
 				p.act_count = data                                                -- 現在の行動のカウンタ
 				if p.is_fireball ~= true then
@@ -2415,7 +2443,7 @@ rbff2.startplugin               = function()
 	end
 	-- リプレイ開始位置記憶
 	rec_fixpos = function()
-		local pos        = { players[1].input_side, players[2].input_side }
+		local pos        = { players[1].cmd_side, players[2].cmd_side }
 		local fixpos     = { mem.r16i(players[1].addr.pos), mem.r16i(players[2].addr.pos) }
 		local fixsway    = { mem.r8(players[1].addr.sway_status), mem.r8(players[2].addr.sway_status) }
 		local fixscr     = {
@@ -2447,7 +2475,7 @@ rbff2.startplugin               = function()
 		local joy_val = get_joy(recording.temp_player)
 
 		local next_val = nil
-		local pos = { players[1].input_side, players[2].input_side }
+		local pos = { players[1].cmd_side, players[2].cmd_side }
 		for k, f in pairs(joy_val) do
 			if k ~= joy_k[1].st and k ~= joy_k[2].st and f > 0 then
 				if not next_val then
@@ -2476,7 +2504,7 @@ rbff2.startplugin               = function()
 
 		-- 入力保存
 		local next_val = new_next_joy()
-		local pos = { players[1].input_side, players[2].input_side }
+		local pos = { players[1].cmd_side, players[2].cmd_side }
 		for k, f in pairs(joy_val) do
 			if k ~= joy_k[1].st and k ~= joy_k[2].st and recording.active_slot.side == joy_pside[rev_joy[k]] then
 				-- レコード中は1Pと2P入力が入れ替わっているので反転させて記憶する
@@ -2605,8 +2633,8 @@ rbff2.startplugin               = function()
 					mem.w16(mem.stage_base_addr + screen.offset_z, fixpos.fixscr.z)
 				end
 			end
-			players[1].input_side = mem.r8(players[1].addr.input_side)
-			players[2].input_side = mem.r8(players[2].addr.input_side)
+			players[1].cmd_side = mem.r8(players[1].addr.cmd_side)
+			players[2].cmd_side = mem.r8(players[2].addr.cmd_side)
 
 			-- 入力リセット
 			local next_joy        = new_next_joy()
@@ -2665,7 +2693,7 @@ rbff2.startplugin               = function()
 		end
 		if not stop and store then
 			-- 入力再生
-			local pos = { players[1].input_side, players[2].input_side }
+			local pos = { players[1].cmd_side, players[2].cmd_side }
 			for _, joy in ipairs(use_joy) do
 				local k = joy.field
 				-- 入力時と向きが変わっている場合は左右反転させて反映する
@@ -3803,7 +3831,7 @@ rbff2.startplugin               = function()
 					end
 
 					-- 座標
-					table.insert(p.ranges, { label = string.format("%sP", p.num), x = p.x, y = p.y, flip_x = p.input_side })
+					table.insert(p.ranges, { label = string.format("%sP", p.num), x = p.x, y = p.y, flip_x = p.cmd_side })
 
 					-- 地上通常技かライン移動技の遠近判断距離
 					if p.pos_y + p.pos_frc_y == 0 then
@@ -4043,40 +4071,10 @@ rbff2.startplugin               = function()
 		-- プレイヤー操作
 		for i, p in ipairs(players) do
 			local op = p.op
+			p.bs_hook = nil
 			if p.control == 1 or p.control == 2 then
 				--前進とガード方向
-				local sp = p_space == 0 and prev_space or p_space
-				sp = i == 1 and sp or (sp * -1)
-				local front_back = {
-					[data.cmd_types.front] = 0 < sp and data.cmd_types._4 or data.cmd_types._6,
-					[data.cmd_types.back] = 0 < sp and data.cmd_types._6 or data.cmd_types._4,
-				}
-				local check_cmd_hook = function()
-					p.bs_hook = (p.bs_hook and p.bs_hook.cmd_type) and p.bs_hook or { cmd_type = data.cmd_types._5 }
-				end
-				local add_cmd_hook = function(input)
-					check_cmd_hook()
-					input = front_back[input] or input
-					p.bs_hook.cmd_type = p.bs_hook.cmd_type & data.cmd_masks[input]
-					p.bs_hook.cmd_type = p.bs_hook.cmd_type | input
-				end
-				local clear_cmd_hook = function(mask)
-					check_cmd_hook()
-					mask = 0xFF ~ (front_back[mask] or mask)
-					p.bs_hook.cmd_type = p.bs_hook.cmd_type & mask
-				end
-				local reset_cmd_hook = function(input)
-					check_cmd_hook()
-					input = front_back[input] or input
-					p.bs_hook = { cmd_type = input }
-				end
-				local is_block_cmd_hook = function()
-					return p.bs_hook and p.bs_hook.cmd_type and
-						util.testbit(p.bs_hook.cmd_type, front_back[data.cmd_types.back]) and
-						util.testbit(p.bs_hook.cmd_type, data.cmd_types._2) ~= true
-				end
-				local reset_sp_hook = function(hook) p.bs_hook = hook end
-				reset_sp_hook()
+				p.reset_sp_hook()
 
 				-- レコード中、リプレイ中は行動しないためのフラグ
 				local in_rec_replay = true
@@ -4094,16 +4092,16 @@ rbff2.startplugin               = function()
 				if in_rec_replay then
 					if p.sway_status == 0x00 then
 						if p.dummy_act == 2 then
-							reset_cmd_hook(data.cmd_types._2) -- しゃがみ
+							p.reset_cmd_hook(data.cmd_types._2) -- しゃがみ
 						elseif p.dummy_act == 3 then
-							reset_cmd_hook(data.cmd_types._8) -- ジャンプ
+							p.reset_cmd_hook(data.cmd_types._8) -- ジャンプ
 						elseif p.dummy_act == 4 and not util.testbit(p.flag_c0, state_flag_c0._17, true) then
-							reset_cmd_hook(data.cmd_types._8) -- 地上のジャンプ移行モーション以外だったら上入力
+							p.reset_cmd_hook(data.cmd_types._8) -- 地上のジャンプ移行モーション以外だったら上入力
 						elseif p.dummy_act == 5 and op.sway_status == 0x00 and p.state == 0 then
-							reset_cmd_hook(data.cmd_types._2d) -- スウェー待機(スウェー移動)
+							p.reset_cmd_hook(data.cmd_types._2d) -- スウェー待機(スウェー移動)
 						end
 					elseif p.dummy_act == 5 and p.in_sway_line then
-						reset_cmd_hook(data.cmd_types._8) -- スウェー待機
+						p.reset_cmd_hook(data.cmd_types._8) -- スウェー待機
 					end
 				end
 
@@ -4112,13 +4110,11 @@ rbff2.startplugin               = function()
 					if fb.proc_active and fb.act_data then act_type = act_type | fb.act_data.type end
 				end
 				-- リプレイ中は自動ガードしない
-				if util.testbit(act_type, act_types.attack) and in_rec_replay then
-					if jump_acts[p.act] then
-						clear_cmd_hook(data.cmd_types._8)
-					end
+				if p.dummy_gd ~= dummy_gd_type.none and util.testbit(act_type, act_types.attack) and in_rec_replay then
+					if jump_acts[p.act] then p.clear_cmd_hook(data.cmd_types._8) end
 					if p.dummy_gd == dummy_gd_type.fixed then
 						-- 常時（ガード方向はダミーモードに従う）
-						add_cmd_hook(data.cmd_types.back)
+						p.add_cmd_hook(data.cmd_types.back)
 					elseif p.dummy_gd == dummy_gd_type.auto or     -- オート
 						p.dummy_gd == dummy_gd_type.bs or          -- ブレイクショット
 						(p.dummy_gd == dummy_gd_type.random and p.random_boolean) or -- ランダム
@@ -4127,18 +4123,18 @@ rbff2.startplugin               = function()
 					then
 						-- 中段から優先
 						if util.testbit(act_type, act_types.overhead, true) then
-							clear_cmd_hook(data.cmd_types._2)
+							p.clear_cmd_hook(data.cmd_types._2)
 						elseif util.testbit(act_type, act_types.low_attack, true) then
-							add_cmd_hook(data.cmd_types._2)
+							p.add_cmd_hook(data.cmd_types._2)
 						end
 						if p.dummy_gd == dummy_gd_type.block1 and p.next_block ~= true then
 							-- 1ガードの時は連続ガードの上下段のみ対応させる
-							clear_cmd_hook(data.cmd_types.back)
+							p.clear_cmd_hook(data.cmd_types.back)
 						else
-							add_cmd_hook(data.cmd_types.back)
+							p.add_cmd_hook(data.cmd_types.back)
 						end
 					end
-					p.backstep_killer = is_block_cmd_hook()
+					p.backstep_killer = p.is_block_cmd_hook()
 				elseif p.backstep_killer then
 					-- コマンド入力状態を無効にしてバクステ暴発を防ぐ
 					local bs_addr = dip_config.easy_super and p.char_data.easy_bs_addr or p.char_data.bs_addr
@@ -4193,9 +4189,7 @@ rbff2.startplugin               = function()
 				end
 
 				--挑発中は前進
-				if p.fwd_prov and util.testbit(op.act_data.type, act_types.provoke) then
-					add_cmd_hook(data.cmd_types.front)
-				end
+				if p.fwd_prov and util.testbit(op.act_data.type, act_types.provoke) then p.add_cmd_hook(data.cmd_types.front) end
 
 				-- ガードリバーサル
 				if global.dummy_rvs_cnt == 1 then
@@ -4278,35 +4272,35 @@ rbff2.startplugin               = function()
 				-- 自動ダウン追撃
 				if op.act == 0x190 or op.act == 0x192 or op.act == 0x18E or op.act == 0x13B then
 					if global.auto_input.otg_thw and p.char_data.otg_throw then
-						reset_sp_hook(p.char_data.otg_throw) -- 自動ダウン投げ
+						p.reset_sp_hook(p.char_data.otg_throw) -- 自動ダウン投げ
 					end
 					if global.auto_input.otg_atk and p.char_data.otg_stomp then
-						reset_sp_hook(p.char_data.otg_stomp) -- 自動ダウン攻撃
+						p.reset_sp_hook(p.char_data.otg_stomp) -- 自動ダウン攻撃
 					end
 				end
 
 				-- 自動投げ追撃
 				if global.auto_input.thw_otg then
 					if p.char == 3 and p.act == 0x70 then
-						reset_cmd_hook(data.cmd_types._2c) -- ジョー
+						p.reset_cmd_hook(data.cmd_types._2c) -- ジョー
 					elseif p.act == 0x6D and p.char_data.add_throw then
-						reset_sp_hook(p.char_data.add_throw) -- ボブ、ギース、双角、マリー
+						p.reset_sp_hook(p.char_data.add_throw) -- ボブ、ギース、双角、マリー
 					elseif p.char == 22 and p.act == 0x9F and p.act_count == 2 and p.act_frame >= 0 and p.char_data.add_throw then
-						reset_sp_hook(p.char_data.add_throw) -- 閃里肘皇・心砕把
+						p.reset_sp_hook(p.char_data.add_throw) -- 閃里肘皇・心砕把
 					end
 				end
 
 				-- 自動超白龍
 				if 1 < global.auto_input.pairon and p.char == 22 then
 					if p.act == 0x43 and p.act_count >= 0 and p.act_count <= 3 and p.act_frame >= 0 and 2 == global.auto_input.pairon then
-						reset_sp_hook(data.rvs_bs_list[p.char][28]) -- 超白龍
+						p.reset_sp_hook(data.rvs_bs_list[p.char][28]) -- 超白龍
 					elseif p.act == 0x43 and p.act_count == 3 and p.act_count <= 3 and p.act_frame >= 0 and 3 == global.auto_input.pairon then
-						reset_sp_hook(data.rvs_bs_list[p.char][28]) -- 超白龍
+						p.reset_sp_hook(data.rvs_bs_list[p.char][28]) -- 超白龍
 					elseif p.act == 0xA1 and p.act_count == 6 and p.act_frame >= 0 then
-						reset_sp_hook(data.rvs_bs_list[p.char][21]) -- 閃里肘皇・貫空
+						p.reset_sp_hook(data.rvs_bs_list[p.char][21]) -- 閃里肘皇・貫空
 					end
 					if p.act == 0xFE then
-						reset_sp_hook(data.rvs_bs_list[p.char][29]) -- 超白龍2
+						p.reset_sp_hook(data.rvs_bs_list[p.char][29]) -- 超白龍2
 					end
 				end
 
@@ -4314,7 +4308,7 @@ rbff2.startplugin               = function()
 				if p.dummy_gd == dummy_gd_type.bs and p.on_block == global.frame_number then
 					p.bs_count = (p.bs_count < 1) and 1 or p.bs_count + 1
 					if global.dummy_bs_cnt <= p.bs_count and p.dummy_bs then
-						reset_sp_hook(p.dummy_bs)
+						p.reset_sp_hook(p.dummy_bs)
 						p.bs_count = -1
 					end
 				end
@@ -4493,18 +4487,18 @@ rbff2.startplugin               = function()
 					op.max_combo_stun                       = math.max(op.max_combo_stun or 0, op.combo_stun)
 					op.max_combo_stun_timer                 = math.max(op.max_combo_stun_timer or 0, op.combo_stun_timer)
 				end
-				table.insert(combo_label2, string.format("%3s>%3s(%6s%%)", op.last_damage, op.last_damage_scaled, last_damage_scaling))
-				table.insert(combo_label2, string.format("%3s(+%3s)", op.combo_damage or 0, op.last_damage_scaled))
-				table.insert(combo_label2, string.format("%3s", op.last_combo))
-				table.insert(combo_label2, string.format("%3s(+%3s)", op.combo_stun or 0, op.last_stun))
-				table.insert(combo_label2, string.format("%3s(+%3s)", op.combo_stun_timer or 0, op.last_stun_timer or 0))
-				table.insert(combo_label2, string.format("%3s(+%3s)", op.combo_pow or 0, p.last_pow_up or 0))
+				table.insert(combo_label2, string.format("%3d>%3d(%.3f%%)", op.last_damage, op.last_damage_scaled, last_damage_scaling))
+				table.insert(combo_label2, string.format("%3d(%4s)", op.combo_damage or 0, string.format("+%d", op.last_damage_scaled)))
+				table.insert(combo_label2, string.format("%3d", op.last_combo))
+				table.insert(combo_label2, string.format("%3d(%4s)", op.combo_stun or 0, string.format("+%d", op.last_stun or 0)))
+				table.insert(combo_label2, string.format("%3d(%4s)", op.combo_stun_timer or 0, string.format("+%d", op.last_stun_timer or 0)))
+				table.insert(combo_label2, string.format("%3d(%4s)", op.combo_pow or 0, string.format("+%d", p.last_pow_up or 0)))
 				table.insert(combo_label3, "")
-				table.insert(combo_label3, string.format("%3s", op.max_combo_damage or 0))
-				table.insert(combo_label3, string.format("%3s", op.max_combo or 0))
-				table.insert(combo_label3, string.format("%3s", op.max_combo_stun or 0))
-				table.insert(combo_label3, string.format("%3s", op.max_combo_stun_timer or 0))
-				table.insert(combo_label3, string.format("%3s", op.max_combo_pow or 0))
+				table.insert(combo_label3, string.format("%3d", op.max_combo_damage or 0))
+				table.insert(combo_label3, string.format("%3d", op.max_combo or 0))
+				table.insert(combo_label3, string.format("%3d", op.max_combo_stun or 0))
+				table.insert(combo_label3, string.format("%3d", op.max_combo_stun_timer or 0))
+				table.insert(combo_label3, string.format("%3d", op.max_combo_pow or 0))
 				if p.disp_dmg then
 					util.table_add_all(combo_label1, { -- コンボ表示
 						"Scaling",
@@ -4558,7 +4552,7 @@ rbff2.startplugin               = function()
 						end
 						local cmdx = x - 50
 						y = y - 2
-						for ci, c in ipairs(input_state.tbl.lr_cmds[p.input_side]) do
+						for ci, c in ipairs(input_state.tbl.lr_cmds[p.cmd_side]) do
 							if c ~= "" then
 								cmdx = cmdx + math.max(5.5,
 									draw_text_with_shadow(cmdx, y, c,
@@ -4643,9 +4637,9 @@ rbff2.startplugin               = function()
 				-- キャラの向き
 				local foot_label = {}
 				for i, p in ipairs(players) do
-					local flip   = p.flip_x == 1 and ">" or "<" -- 内部の向き 見た目の向き
-					local side   = p.internal_side == 1 and ">" or "<" -- 内部の向き 1:右向き -1:左向き
-					local i_side = p.input_side == 1 and ">" or "<" -- コマンド入力でのキャラ向き
+					local flip   = p.flip_x == 1 and ">" or "<" -- 見た目と判定の向き
+					local side   = p.block_side == 1 and ">" or "<" -- ガード方向や内部の向き 1:右向き -1:左向き
+					local i_side = p.cmd_side == 1 and ">" or "<" -- コマンド入力の向き
 					if p.old_pos_y ~= p.pos_y or p.last_posy_txt == nil then
 						p.last_posy_txt = string.format("Y %3s>%3s", p.old_pos_y or 0, p.pos_y)
 					end
