@@ -1504,7 +1504,7 @@ local load_memory_tap           = function(label, wps) -- tapの仕込み
 	end
 	if global.holder == nil then
 		global.holder = { on = true, taps = {}, sub = {}, cnt = 0, }
-		global.holder.countup = function()
+		global.holder.countup = function(label)
 			global.holder.cnt = global.holder.cnt + 1
 			return global.holder.cnt
 		end
@@ -2005,6 +2005,7 @@ rbff2.startplugin               = function()
 	end
 	players[1].op, players[2].op = players[2], players[1]
 	for _, body in ipairs(players) do -- 飛び道具領域の作成
+		body.objects = { body }
 		for fb_base = 1, 3 do
 			local base = fb_base * 0x200 + body.addr.base
 			local p = {
@@ -2078,9 +2079,9 @@ rbff2.startplugin               = function()
 					if not p.proc_active then p.boxies, p.grabbable, p.attack_id, p.attackbit = {}, 0, 0, 0 end
 				end,
 			}
+			table.insert(body.objects, p)
 			body.fireballs[base], all_objects[base], all_fireballs[base] = p, p, p
 		end
-		body.objects = ut.hash_add_all({ [body.addr.base] = body }, body.fireballs)
 	end
 	local change_player_input = function()
 		if in_player_select ~= true then return end
@@ -2218,7 +2219,7 @@ rbff2.startplugin               = function()
 			[0x10] = function(data)
 				p.char, p.char4, p.char8 = data, (data << 2), (data << 3)
 				p.char_data = p.is_fireball and chars[#chars] or chars[data]      -- 弾はダミーを設定する
-				p.proc_active = true
+				if not p.is_fireball then p.proc_active = true end
 			end,
 			[0x58] = function(data) p.block_side = ut.int8(data) < 0 and -1 or 1 end, -- 向き 00:左側 80:右側
 			[0x66] = function(data)
@@ -4453,23 +4454,23 @@ rbff2.startplugin               = function()
 			-- ダメージとコンボ表示
 			for i, p in ipairs(players) do
 				local p1, op, combo_label1, combo_label2, combo_label3, state_label = i == 1, p.op, {}, {}, {}, {}
-				for _, xp in ut.sorted_pairs(p.objects) do
-					if xp.num or xp.proc_active then
+				for _, xp in ipairs(p.objects) do
+					if xp.proc_active then
 						table.insert(state_label, string.format("Damage %3s/%1s  Stun %2s/%2s Fra.", xp.pure_dmg or 0, xp.chip_dmg or 0, xp.pure_st or 0, xp.pure_st_tm or 0))
 						table.insert(state_label, string.format("HitStop %2s/%2s HitStun %2s/%2s", xp.hitstop or 0, xp.blockstop or 0, xp.hitstun or 0, xp.blockstun or 0))
 						table.insert(state_label, string.format("%2s", db.hit_effect_name(xp.effect)))
 						local grabl = ""
 						for _, t in ipairs(hitbox_grab_types) do grabl = grabl .. (ut.tstb(xp.grabbable, t.value, true) and t.label or "- ") end
 						table.insert(state_label, string.format("Grab %-s", grabl))
-						if xp.num then
+						if xp.is_fireball then
+							table.insert(state_label, string.format("%s/%s Hit  Fireball-Lv. %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.fireball_rank or 0))
+						else
 							table.insert(state_label, string.format("Pow. %2s/%2s/%2s Rev.%2s Abs.%2s",
 								p.pow_up_direct == 0 and p.pow_up or p.pow_up_direct or 0, p.pow_up_hit or 0, p.pow_up_gd or 0, p.pow_revenge or 0, p.pow_absorb or 0))
 							table.insert(state_label, string.format("Inv.%2s  BS-Pow.%2s BS-Inv.%2s", xp.sp_invincible or 0, xp.bs_pow or 0, xp.bs_invincible or 0))
 							table.insert(state_label, string.format("%s/%s Hit  Esaka %s %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.esaka or 0, p.esaka_type or ""))
 							table.insert(state_label, string.format("Cancel %-2s/%-2s Teching %s", xp.repeatable and "Ch" or "", xp.cancelable and "Sp" or "",
 								xp.forced_down or xp.in_bs and "No" or "Yes"))
-						elseif xp.proc_active then
-							table.insert(state_label, string.format("%s/%s Hit  Fireball-Lv. %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.fireball_rank or 0))
 						end
 						for _, _, blockable in find(xp.hitboxies, function(box) return box.blockable end) do
 							table.insert(state_label, string.format("Box Top %3s Bottom %3s", blockable.real_top, blockable.real_bottom))
