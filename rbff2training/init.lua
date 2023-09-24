@@ -385,22 +385,16 @@ local global            = {
 mem.rg                  = function(id, mask) return (mask == nil) and cpu.state[id].value or (cpu.state[id].value & mask) end
 mem.pc                  = function() return cpu.state["CURPC"].value end
 mem.wp_cnt, mem.rp_cnt  = {}, {} -- 負荷確認のための呼び出す回数カウンター
-local pc_filter         = function(filter)
-	if filter == nil or #filter == 0 then
-		return nil
-	end
-	local accept_pc = ut.table_to_set(filter)
-	return function(pc) return accept_pc[pc] ~= true end
-end
+mem.wp = function(addr1, addr2, name, cb) return pgm:install_write_tap(addr1, addr2, name, cb) end
+mem.rp = function(addr1, addr2, name, cb) return pgm:install_read_tap(addr1, addr2, name, cb) end
 mem.wp8                         = function(addr, cb, filter)
-	local accept_pc = pc_filter(filter)
 	local num = global.holder.countup()
 	local name = string.format("wp8_%x_%s", addr, num)
 	if addr % 2 == 0 then
-		global.holder.taps[name] = pgm:install_write_tap(addr, addr + 1, name,
+		global.holder.taps[name] = mem.wp(addr, addr + 1, name,
 			function(offset, data, mask)
 				mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
-				if accept_pc and accept_pc(mem.pc()) then return data end
+				if filter and filter[mem.pc()] ~= true then return data end
 				local ret = {}
 				if mask > 0xFF then
 					cb((data & mask) >> 8, ret)
@@ -418,10 +412,10 @@ mem.wp8                         = function(addr, cb, filter)
 				return data
 			end)
 	else
-		global.holder.taps[name] = pgm:install_write_tap(addr - 1, addr, name,
+		global.holder.taps[name] = mem.wp(addr - 1, addr, name,
 			function(offset, data, mask)
 				mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
-				if accept_pc and accept_pc(mem.pc()) then return data end
+				if filter and filter[mem.pc()] ~= true then return data end
 				local ret = {}
 				if mask == 0xFF or mask == 0xFFFF then
 					cb(0xFF & data, ret)
@@ -442,14 +436,13 @@ mem.wp8                         = function(addr, cb, filter)
 	return global.holder.taps[name]
 end
 mem.wp16                        = function(addr, cb, filter)
-	local accept_pc = pc_filter(filter)
 	local num = global.holder.countup()
 	local name = string.format("wp16_%x_%s", addr, num)
-	global.holder.taps[name] = pgm:install_write_tap(addr, addr + 1, name,
+	global.holder.taps[name] = mem.wp(addr, addr + 1, name,
 		function(offset, data, mask)
 			local ret = {}
 			mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
-			if accept_pc and accept_pc(mem.pc()) then return data end
+			if filter and filter[mem.pc()] ~= true then return data end
 			if mask == 0xFFFF then
 				cb(data & mask, ret)
 				--ut.printf("wp16 %x %x %x %x",addr, data, mask, ret.value or 0)
@@ -470,13 +463,12 @@ mem.wp16                        = function(addr, cb, filter)
 	return global.holder.taps[name]
 end
 mem.wp32                        = function(addr, cb, filter)
-	local accept_pc = pc_filter(filter)
 	local num = global.holder.countup()
 	local name = string.format("wp32_%x_%s", addr, num)
-	global.holder.taps[name] = pgm:install_write_tap(addr, addr + 3, name,
+	global.holder.taps[name] = mem.wp(addr, addr + 3, name,
 		function(offset, data, mask)
 			mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
-			if accept_pc and accept_pc(mem.pc()) then return data end
+			if filter and filter[mem.pc()] ~= true then return data end
 			local ret = {}
 			--ut.printf("wp32-1 %x %x %x %x %x", addr, offset, data, data, mask, ret.value or 0)
 			local prev = mem.r32(addr)
@@ -499,14 +491,13 @@ mem.wp32                        = function(addr, cb, filter)
 	return global.holder.taps[name]
 end
 mem.rp8                         = function(addr, cb, filter)
-	local accept_pc = pc_filter(filter)
 	local num = global.holder.countup()
 	local name = string.format("rp8_%x_%s", addr, num)
 	if addr % 2 == 0 then
-		global.holder.taps[name] = pgm:install_read_tap(addr, addr + 1, name,
+		global.holder.taps[name] = mem.rp(addr, addr + 1, name,
 			function(offset, data, mask)
 				mem.rp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
-				if accept_pc and accept_pc(mem.pc()) then return data end
+				if filter and filter[mem.pc()] ~= true then return data end
 				local ret = {}
 				if mask > 0xFF then
 					cb((data & mask) >> 8, ret)
@@ -524,10 +515,10 @@ mem.rp8                         = function(addr, cb, filter)
 				return data
 			end)
 	else
-		global.holder.taps[name] = pgm:install_read_tap(addr - 1, addr, name,
+		global.holder.taps[name] = mem.rp(addr - 1, addr, name,
 			function(offset, data, mask)
 				mem.rp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
-				if accept_pc and accept_pc(mem.pc()) then return data end
+				if filter and filter[mem.pc()] ~= true then return data end
 				local ret = {}
 				if mask == 0xFF or mask == 0xFFFF then
 					cb(0xFF & data, ret)
@@ -548,13 +539,12 @@ mem.rp8                         = function(addr, cb, filter)
 	return global.holder.taps[name]
 end
 mem.rp16                        = function(addr, cb, filter)
-	local accept_pc = pc_filter(filter)
 	local num = global.holder.countup()
 	local name = string.format("rp16_%x_%s", addr, num)
-	global.holder.taps[name] = pgm:install_read_tap(addr, addr + 1, name,
+	global.holder.taps[name] = mem.rp(addr, addr + 1, name,
 		function(offset, data, mask)
 			mem.rp_cnt[addr] = (mem.rp_cnt[addr] or 0) + 1
-			if accept_pc and accept_pc(mem.pc()) then return data end
+			if filter and filter[mem.pc()] ~= true then return data end
 			local ret = {}
 			if offset == addr then cb(data, ret) end
 			return ret.value or data
@@ -563,13 +553,12 @@ mem.rp16                        = function(addr, cb, filter)
 	return global.holder.taps[name]
 end
 mem.rp32                        = function(addr, cb, filter)
-	local accept_pc = pc_filter(filter)
 	local num = global.holder.countup()
 	local name = string.format("rp32_%x_%s", addr, num)
-	global.holder.taps[name] = pgm:install_read_tap(addr, addr + 3, name,
+	global.holder.taps[name] = mem.rp(addr, addr + 3, name,
 		function(offset, data, mask)
 			mem.rp_cnt[addr] = (mem.rp_cnt[addr] or 0) + 1
-			if accept_pc and accept_pc(mem.pc()) then return data end
+			if filter and filter[mem.pc()] ~= true then return data end
 			if offset == addr then cb(mem.r32(addr)) end
 			return data
 		end)
@@ -1525,13 +1514,13 @@ local load_memory_tap           = function(label, wps) -- tapの仕込み
 		for _, k in ipairs({ "wp8", "wp16", "wp32", "rp8", "rp16", "rp32", }) do
 			for any, cb in pairs(p[k] or {}) do
 				local addr = type(any) == "number" and any or any.addr
-				local filter = type(any) == "number" and {} or not any.filter and {} or type(any.filter) == "table" and any.filter or type(any.filter) == "number" and { any.filter }
+				addr = addr > 0xFF and addr or ((p.addr and p.addr.base) + addr)
+				local filter = type(any) == "number" and {} or not any.filter and {} or
+					type(any.filter) == "table" and any.filter or type(any.filter) == "number" and { any.filter }
 				---@diagnostic disable-next-line: redundant-parameter
-				local wp = mem[k](addr > 0xFF and addr or ((p.addr and p.addr.base) + addr), cb, filter)
+				local wp = mem[k](addr, cb, filter and #filter > 0 and ut.table_to_set(filter) or nil)
 				---@diagnostic disable-next-line: need-check-nil
 				sub.taps[wp.name] = wp
-				---@diagnostic disable-next-line: need-check-nil
-				--ut.printf("%s install tap", label)
 			end
 		end
 	end
