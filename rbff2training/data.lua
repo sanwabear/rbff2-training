@@ -23,9 +23,8 @@ local convert_lib = require("data/button_char")
 local convert     = function(str)
 	return str and convert_lib(str) or str
 end
-local util        = require("rbff2training/util")
-
-local data        = {}
+local ut          = require("rbff2training/util")
+local db          = {}
 
 --------------------------------------------------------------------------------------
 -- キャラの基本データ
@@ -35,19 +34,19 @@ local data        = {}
 local chars       = {
 	{ id = 0x1, min_y = 9, min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x2E, easy_bs_addr = 0x2E, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "テリー・ボガード", },
 	{ id = 0x2, min_y = 10, min_sy = 4, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "アンディ・ボガード", },
-	{ id = 0x3 , min_y = 8, min_sy = 3, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x3A, easy_bs_addr = 0x3A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "東丈", },
-	{ id = 0x4 , min_y = 10, min_sy = 3, init_stuns = 29, wakeup_frms = 17, sway_act_counts = 0x3, bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "不知火舞", },
-	{ id = 0x5 , min_y = 8, min_sy = 1, init_stuns = 33, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x66, easy_bs_addr = 0x4A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 19 }, }, name = "ギース・ハワード", },
-	{ id = 0x6 , min_y = 2, min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x46, easy_bs_addr = 0x46, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "望月双角", },
-	{ id = 0x7 , min_y = 9, min_sy = 6, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 19 }, }, name = "ボブ・ウィルソン", },
-	{ id = 0x8 , min_y = 10, min_sy = 3, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x32, easy_bs_addr = 0x32, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 16 }, }, name = "ホンフゥ", },
-	{ id = 0x9 , min_y = 9, min_sy = 7, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x3E, easy_bs_addr = 0x3E, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 41 }, }, name = "ブルー・マリー", },
-	{ id = 0xA , min_y = 9, min_sy = 4, init_stuns = 35, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 15 }, }, name = "フランコ・バッシュ", },
-	{ id = 0xB , min_y = 9, min_sy = 4, init_stuns = 38, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x56, easy_bs_addr = 0x3A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 18 }, { name = "中蛇", f = 9, } }, name = "山崎竜二", },
-	{ id = 0xC , min_y = 11, min_sy = 1, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC, bs_addr = 0x3A, easy_bs_addr = 0x3A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 57 }, { name = "真眼", f = 47, } }, name = "秦崇秀", },
-	{ id = 0xD , min_y = 11, min_sy = 4, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC, bs_addr = 0x36, easy_bs_addr = 0x36, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 27 }, { name = "龍転", f = 25, } }, name = "秦崇雷", },
-	{ id = 0xE , min_y = 9, min_sy = 6, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x7A, easy_bs_addr = 0x5E, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 47 }, }, name = "ダック・キング", },
-	{ id = 0xF , min_y = 9, min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x36, easy_bs_addr = 0x36, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 19 }, { name = "覇気", f = 28, } }, name = "キム・カッファン", },
+	{ id = 0x3, min_y = 8, min_sy = 3, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x3A, easy_bs_addr = 0x3A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "東丈", },
+	{ id = 0x4, min_y = 10, min_sy = 3, init_stuns = 29, wakeup_frms = 17, sway_act_counts = 0x3, bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "不知火舞", },
+	{ id = 0x5, min_y = 8, min_sy = 1, init_stuns = 33, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x66, easy_bs_addr = 0x4A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 19 }, }, name = "ギース・ハワード", },
+	{ id = 0x6, min_y = 2, min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x46, easy_bs_addr = 0x46, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "望月双角", },
+	{ id = 0x7, min_y = 9, min_sy = 6, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 19 }, }, name = "ボブ・ウィルソン", },
+	{ id = 0x8, min_y = 10, min_sy = 3, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x32, easy_bs_addr = 0x32, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 16 }, }, name = "ホンフゥ", },
+	{ id = 0x9, min_y = 9, min_sy = 7, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x3E, easy_bs_addr = 0x3E, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 41 }, }, name = "ブルー・マリー", },
+	{ id = 0xA, min_y = 9, min_sy = 4, init_stuns = 35, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 15 }, }, name = "フランコ・バッシュ", },
+	{ id = 0xB, min_y = 9, min_sy = 4, init_stuns = 38, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x56, easy_bs_addr = 0x3A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 18 }, { name = "中蛇", f = 9, } }, name = "山崎竜二", },
+	{ id = 0xC, min_y = 11, min_sy = 1, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC, bs_addr = 0x3A, easy_bs_addr = 0x3A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 57 }, { name = "真眼", f = 47, } }, name = "秦崇秀", },
+	{ id = 0xD, min_y = 11, min_sy = 4, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC, bs_addr = 0x36, easy_bs_addr = 0x36, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 27 }, { name = "龍転", f = 25, } }, name = "秦崇雷", },
+	{ id = 0xE, min_y = 9, min_sy = 6, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x7A, easy_bs_addr = 0x5E, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 47 }, }, name = "ダック・キング", },
+	{ id = 0xF, min_y = 9, min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x36, easy_bs_addr = 0x36, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 19 }, { name = "覇気", f = 28, } }, name = "キム・カッファン", },
 	{ id = 0x10, min_y = 4, min_sy = 3, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 42 }, }, name = "ビリー・カーン", },
 	{ id = 0x11, min_y = 9, min_sy = 6, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2E, easy_bs_addr = 0x2E, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 23 }, { name = "軟体", f = 20, } }, name = "チン・シンザン", },
 	{ id = 0x12, min_y = 11, min_sy = 0, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 19 }, }, name = "タン・フー・ルー", },
@@ -58,7 +57,7 @@ local chars       = {
 	{ id = 0x17, min_y = 10, min_sy = 4, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x0, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 13 }, }, name = "アルフレッド", },
 	{ id = 0x18, min_y = 0, min_sy = 0, init_stuns = 0, wakeup_frms = 0, sway_act_counts = 0x0, bs_addr = 0x0, easy_bs_addr = 0x0, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = {}, name = "common", },
 }
-data.chars        = chars
+db.chars          = chars
 
 chars[0x5].pow    = {
 	[0x82] = { pow_revenge = 6 }, -- 当身投げ
@@ -66,9 +65,9 @@ chars[0x5].pow    = {
 	[0x88] = { pow_revenge = 6 },
 }
 chars[0xB].pow    = {
-	[0x82] = { pow_revenge = 6 },                -- サドマゾ
+	[0x82] = { pow_revenge = 6 },               -- サドマゾ
 	[0x8E] = { pow_revenge = 7, pow_absorb = 20 }, -- 倍返し
-	[0xA0] = { pow_up_hit = 7 },                 -- トドメ
+	[0xA0] = { pow_up_hit = 7 },                -- トドメ
 }
 chars[0x8].pow    = {
 	[0x94] = { pow_revenge = 6 }, -- 逆襲脚
@@ -83,7 +82,7 @@ for _, char_data in ipairs(chars) do
 		table.insert(char_names, char_data.name)
 	end
 end
-data.char_names = char_names
+db.char_names = char_names
 
 
 --------------------------------------------------------------------------------------
@@ -112,23 +111,23 @@ local act_types            = {
 act_types.low_attack       = act_types.attack | act_types.low_attack
 act_types.overhead         = act_types.attack |act_types.overhead
 act_types.unblockable      = act_types.low_attack | act_types.overhead
-data.act_types             = act_types
+db.act_types               = act_types
 
 local block_types          = {
-	high = 2 ^ 0,                                  -- 上ガード
-	tung = 2 ^ 1,                                  -- タンのみ上ガードできる位置
-	high_low = 2 ^ 2,                              -- 上ガードだけど上ガードできない位置
-	low = 2 ^ 3,                                   -- 下ガード
-	air = 2 ^ 4,                                   -- 空中ガード可能
-	sway = 2 ^ 5,                                  -- スウェー上でガード
-	sway_pass = 2 ^ 6,                             -- スウェー無敵
+	high = 2 ^ 0,   -- 上ガード
+	tung = 2 ^ 1,   -- タンのみ上ガードできる位置
+	high_low = 2 ^ 2, -- 上ガードだけど上ガードできない位置
+	low = 2 ^ 3,    -- 下ガード
+	air = 2 ^ 4,    -- 空中ガード可能
+	sway = 2 ^ 5,   -- スウェー上でガード
+	sway_pass = 2 ^ 6, -- スウェー無敵
 }
-block_types.high_tung      = block_types.high | block_types.tung 
+block_types.high_tung      = block_types.high | block_types.tung
 block_types.sway_high      = block_types.sway | block_types.high      -- スウェー上で上ガード
 block_types.sway_high_tung = block_types.sway | block_types.high_tung -- スウェー上でタンのみ上ガードできる位置
 block_types.sway_high_low  = block_types.sway | block_types.high_low  -- スウェー上で上ガードだけど上ガードできない位置
 block_types.sway_low       = block_types.sway | block_types.low       -- スウェー上で下ガード
-data.block_types           = block_types
+db.block_types             = block_types
 
 --- メインライン上の下段ガードが必要（中段ガードの範囲外）になる高さ
 local top_types            = {
@@ -164,39 +163,39 @@ local top_punish_types     = {
 	{ top = 40,     act_type = punish_types.waving_blow }, -- ウェービングブロー,龍転身,ダブルローリングつぶし
 	{ top = 32,     act_type = punish_types.away },       -- 全避けつぶし
 }
-data.top_types             = top_types
-data.top_sway_types        = top_sway_types
-data.punish_types          = punish_types
-data.top_punish_types      = top_punish_types
-data.top_type_name = function(type)
-	if util.testbit(type, act_types.unblockable, true) then
+db.top_types               = top_types
+db.top_sway_types          = top_sway_types
+db.punish_types            = punish_types
+db.top_punish_types        = top_punish_types
+db.top_type_name           = function(type)
+	if ut.tstb(type, act_types.unblockable, true) then
 		return "Unbl."
-	elseif util.testbit(type, act_types.overhead, true) then -- 中段
+	elseif ut.tstb(type, act_types.overhead, true) then -- 中段
 		return "Mid"
-	elseif util.testbit(type, act_types.low_attack, true) then -- 下段
+	elseif ut.tstb(type, act_types.low_attack, true) then -- 下段
 		return "Low"
-	elseif util.testbit(type, act_types.attack, true) then -- 上段
+	elseif ut.tstb(type, act_types.attack, true) then  -- 上段
 		return "High"
 	else
 		return "-"
 	end
 end
-data.top_punish_name = function(type)
-	if util.testbit(type, data.punish_types.away, true) then
+db.top_punish_name         = function(type)
+	if ut.tstb(type, db.punish_types.away, true) then
 		return "Away"
-	elseif util.testbit(type, data.punish_types.waving_blow, true) then
+	elseif ut.tstb(type, db.punish_types.waving_blow, true) then
 		return "W.Blow"
-	elseif util.testbit(type, data.punish_types.laurence_away, true) then
+	elseif ut.tstb(type, db.punish_types.laurence_away, true) then
 		return "Lau.Away"
-	elseif util.testbit(type, data.punish_types.crounch60, true) then
+	elseif ut.tstb(type, db.punish_types.crounch60, true) then
 		return "c.Andy"
-	elseif util.testbit(type, data.punish_types.crounch64, true) then
+	elseif ut.tstb(type, db.punish_types.crounch64, true) then
 		return "c.Terry"
-	elseif util.testbit(type, data.punish_types.crounch68, true) then
+	elseif ut.tstb(type, db.punish_types.crounch68, true) then
 		return "c.Laurence"
-	elseif util.testbit(type, data.punish_types.crounch76, true) then
+	elseif ut.tstb(type, db.punish_types.crounch76, true) then
 		return "c.Franco"
-	elseif util.testbit(type, data.punish_types.crounch80, true) then
+	elseif ut.tstb(type, db.punish_types.crounch80, true) then
 		return "c.Krauser"
 	else
 		return "-"
@@ -1716,7 +1715,7 @@ local char_fireball_base   = {
 }
 local extend_act_names     = function(acts)
 	for i = 1, #acts.names do acts.names[i] = convert(acts.names[i]) end
-	acts.name_set = util.table_to_set(acts.names)
+	acts.name_set = ut.table_to_set(acts.names)
 	acts.name = acts.names[1]
 	acts.normal_name = acts.name
 	acts.slide_name = "滑り " .. acts.name
@@ -1733,8 +1732,8 @@ local register_act_datas   = function(acts, char_act1sts, char_acts)
 	for i, id in ipairs(acts.ids) do
 		if i == 1 then
 			acts.id_1st = id
-			if util.testbit(acts.type, act_types.block | act_types.hit) ~= true and
-				util.testbit(acts.type, act_types.startup | act_types.wrap | act_types.startup_if_ca) then
+			if ut.tstb(acts.type, act_types.block | act_types.hit) ~= true and
+				ut.tstb(acts.type, act_types.startup | act_types.wrap | act_types.startup_if_ca) then
 				char_act1sts[id] = true
 			end
 		end
@@ -1770,9 +1769,9 @@ for char = 1, #chars - 1 do
 	end
 end
 
-data.jump_acts = util.new_set(0x9, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16)
-data.wakeup_acts = util.new_set(0x193, 0x13B)
-data.pre_down_acts = util.new_set(0x142, 0x145, 0x156, 0x15A, 0x15B, 0x15E, 0x15F, 0x160, 0x162, 0x166, 0x16A, 0x16C, 0x16D, 0x174, 0x175, 0x186, 0x188, 0x189, 0x1E0, 0x1E1, 0x2AE, 0x2BA)
+db.jump_acts = ut.new_set(0x9, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16)
+db.wakeup_acts = ut.new_set(0x193, 0x13B)
+db.pre_down_acts = ut.new_set(0x142, 0x145, 0x156, 0x15A, 0x15B, 0x15E, 0x15F, 0x160, 0x162, 0x166, 0x16A, 0x16C, 0x16D, 0x174, 0x175, 0x186, 0x188, 0x189, 0x1E0, 0x1E1, 0x2AE, 0x2BA)
 
 --------------------------------------------------------------------------------------
 -- ブレイクショットデータおよびリバーサルコマンド
@@ -1824,35 +1823,35 @@ local cmd_masks = {
 	[cmd_bytes._d] = 0xFF,
 }
 local cmd_types = {
-	_1    = cmd_bytes._1,
-	_2    = cmd_bytes._2,
-	_3    = cmd_bytes._3,
-	_4    = cmd_bytes._4,
-	_5    = cmd_bytes._5,
-	_6    = cmd_bytes._6,
-	_7    = cmd_bytes._7,
-	_8    = cmd_bytes._8,
-	_9    = cmd_bytes._9,
-	_a    = cmd_bytes._a,
-	_b    = cmd_bytes._b,
-	_c    = cmd_bytes._c,
-	_d    = cmd_bytes._d,
-	_ab   = cmd_bytes._a | cmd_bytes._b,
-	_bc   = cmd_bytes._b | cmd_bytes._c,
-	_6a   = cmd_bytes._6 | cmd_bytes._a,
-	_3a   = cmd_bytes._3 | cmd_bytes._a,
-	_2a   = cmd_bytes._2 | cmd_bytes._a,
-	_4a   = cmd_bytes._4 | cmd_bytes._a,
-	_6b   = cmd_bytes._6 | cmd_bytes._b,
-	_3b   = cmd_bytes._3 | cmd_bytes._b,
-	_2b   = cmd_bytes._2 | cmd_bytes._b,
-	_4b   = cmd_bytes._4 | cmd_bytes._b,
-	_6c   = cmd_bytes._6 | cmd_bytes._c,
-	_3c   = cmd_bytes._3 | cmd_bytes._c,
-	_2c   = cmd_bytes._2 | cmd_bytes._c,
-	_4c   = cmd_bytes._4 | cmd_bytes._c,
-	_8d   = cmd_bytes._8 | cmd_bytes._d,
-	_2d   = cmd_bytes._2 | cmd_bytes._d,
+	_1  = cmd_bytes._1,
+	_2  = cmd_bytes._2,
+	_3  = cmd_bytes._3,
+	_4  = cmd_bytes._4,
+	_5  = cmd_bytes._5,
+	_6  = cmd_bytes._6,
+	_7  = cmd_bytes._7,
+	_8  = cmd_bytes._8,
+	_9  = cmd_bytes._9,
+	_a  = cmd_bytes._a,
+	_b  = cmd_bytes._b,
+	_c  = cmd_bytes._c,
+	_d  = cmd_bytes._d,
+	_ab = cmd_bytes._a | cmd_bytes._b,
+	_bc = cmd_bytes._b | cmd_bytes._c,
+	_6a = cmd_bytes._6 | cmd_bytes._a,
+	_3a = cmd_bytes._3 | cmd_bytes._a,
+	_2a = cmd_bytes._2 | cmd_bytes._a,
+	_4a = cmd_bytes._4 | cmd_bytes._a,
+	_6b = cmd_bytes._6 | cmd_bytes._b,
+	_3b = cmd_bytes._3 | cmd_bytes._b,
+	_2b = cmd_bytes._2 | cmd_bytes._b,
+	_4b = cmd_bytes._4 | cmd_bytes._b,
+	_6c = cmd_bytes._6 | cmd_bytes._c,
+	_3c = cmd_bytes._3 | cmd_bytes._c,
+	_2c = cmd_bytes._2 | cmd_bytes._c,
+	_4c = cmd_bytes._4 | cmd_bytes._c,
+	_8d = cmd_bytes._8 | cmd_bytes._d,
+	_2d = cmd_bytes._2 | cmd_bytes._d,
 }
 cmd_types.front = { [-1] = cmd_types._4, [1] = cmd_types._6, }
 cmd_types.back = { [-1] = cmd_types._6, [1] = cmd_types._4, }
@@ -2307,209 +2306,36 @@ for char, list in pairs(rvs_bs_list) do
 	for i, rvs in pairs(list) do
 		if rvs.id and rvs.id < 0x1E then rvs.ver = (rvs.f << 0x8) | rvs.a end
 		local type = rvs.hook_type
-		if util.testbit(type, hook_cmd_types.breakshot) then table.insert(bs_list, rvs) end
-		if util.testbit(type, hook_cmd_types.reversal) then table.insert(rvs_list, rvs) end
-		if util.testbit(type, hook_cmd_types.otg_stomp) then chars[char].otg_stomp = rvs end
-		if util.testbit(type, hook_cmd_types.otg_throw) then chars[char].otg_throw = rvs end
-		if util.testbit(type, hook_cmd_types.add_throw) then chars[char].add_throw = rvs end
-		if util.testbit(type, hook_cmd_types.wakeup) then chars[char].wakeup = rvs end
+		if ut.tstb(type, hook_cmd_types.breakshot) then table.insert(bs_list, rvs) end
+		if ut.tstb(type, hook_cmd_types.reversal) then table.insert(rvs_list, rvs) end
+		if ut.tstb(type, hook_cmd_types.otg_stomp) then chars[char].otg_stomp = rvs end
+		if ut.tstb(type, hook_cmd_types.otg_throw) then chars[char].otg_throw = rvs end
+		if ut.tstb(type, hook_cmd_types.add_throw) then chars[char].add_throw = rvs end
+		if ut.tstb(type, hook_cmd_types.wakeup) then chars[char].wakeup = rvs end
 	end
 	table.insert(char_rvs_list, rvs_list)
 	table.insert(char_bs_list, bs_list)
 	chars[char].rvs, chars[char].bs, chars[char].exbs = rvs_list, bs_list, ex_bs_list
 end
 
-data.hook_cmd_types = hook_cmd_types
-data.rvs_types = rvs_types
-data.cmd_masks = cmd_masks
-data.cmd_types = cmd_types
-data.char_rvs_list = char_rvs_list
-data.char_bs_list = char_bs_list
-data.rvs_bs_list = rvs_bs_list
+db.hook_cmd_types                    = hook_cmd_types
+db.rvs_types                         = rvs_types
+db.cmd_masks                         = cmd_masks
+db.cmd_types                         = cmd_types
+db.char_rvs_list                     = char_rvs_list
+db.char_bs_list                      = char_bs_list
+db.rvs_bs_list                       = rvs_bs_list
 
 --------------------------------------------------------------------------------------
 -- 状態フラグ
 --------------------------------------------------------------------------------------
 
-data.esaka_type_names = {
+db.esaka_type_names                  = {
 	[0x2000] = "Low",
 	[0x4000] = "High",
 	[0x8000] = "Anti-Air",
 }
-
-data.state_flag_names = {
-	[0xC0] = {
-		"ジャンプ振向",
-		"ダウン",
-		"屈途中",
-		"奥後退",
-		"奥前進",
-		"奥振向",
-		"屈振向",
-		"立振向",
-		"スウェーライン上飛び退き～戻り",
-		"スウェーライン上ダッシュ～戻り",
-		"スウェーライン→メイン",
-		"スウェーライン上立",
-		"メインライン→スウェーライン移動中",
-		"スウェーライン上維持",
-		"未確認",
-		"未確認",
-		"着地",
-		"ジャンプ移行",
-		"後方小ジャンプ",
-		"前方小ジャンプ",
-		"垂直小ジャンプ",
-		"後方ジャンプ",
-		"前方ジャンプ",
-		"垂直ジャンプ",
-		"ダッシュ",
-		"飛び退き",
-		"屈前進",
-		"立途中",
-		"屈",
-		"後退",
-		"前進",
-		"立",
-	},
-	[0xC4] = {
-		"避け攻撃",
-		"対スウェーライン下段攻撃",
-		"対スウェーライン上段攻撃",
-		"対メインライン威力大攻撃",
-		"対メインラインB攻撃",
-		"対メインラインA攻撃",
-		"後方小ジャンプC", -- 27 7FC0000
-		"後方小ジャンプB",
-		"後方小ジャンプA",
-		"前方小ジャンプC",
-		"前方小ジャンプB",
-		"前方小ジャンプA",
-		"垂直小ジャンプC",
-		"垂直小ジャンプB",
-		"垂直小ジャンプA", -- 19
-		"後方ジャンプC", -- 18 1FF00
-		"後方ジャンプB",
-		"後方ジャンプA",
-		"前方ジャンプC",
-		"前方ジャンプB",
-		"前方ジャンプA",
-		"垂直ジャンプC",
-		"垂直ジャンプB",
-		"垂直ジャンプA", --9
-		"C4 24",
-		"C4 25",
-		"屈C",
-		"屈B",
-		"屈A",
-		"立C",
-		"立B",
-		"立A",
-	},
-	[0xC8] = {
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"特殊技",
-		"",
-		"",
-		"特殊技",
-		"特殊技",
-		"特殊技",
-		"特殊技",
-		"特殊技",
-		"潜在能力",
-		"潜在能力",
-		"超必殺技",
-		"超必殺技",
-		"必殺技",
-		"必殺技",
-		"必殺技",
-		"必殺技",
-		"必殺技",
-		"必殺技",
-		"必殺技",
-		"必殺技",
-		"必殺技",
-		"必殺技",
-		"必殺技",
-		"必殺技",
-	},
-	[0xCC] = {
-		"CA",
-		"AかB攻撃",
-		"滑り",
-		"必殺投げやられ",
-		"",
-		"空中ガード",
-		"屈ガード",
-		"立ガード",
-		"投げ派生やられ",
-		"つかみ投げやられ",
-		"投げられ",
-		"",
-		"ライン送りやられ",
-		"ダウン",
-		"空中やられ",
-		"地上やられ",
-		"",
-		"気絶",
-		"気絶起き上がり",
-		"挑発",
-		"ブレイクショット",
-		"必殺技中",
-		"",
-		"起き上がり",
-		"フェイント",
-		"つかみ技",
-		"",
-		"投げ追撃",
-		"",
-		"",
-		"空中投げ",
-		"投げ",
-	},
-	[0xD0] = {
-		"",
-		"",
-		"",
-		"ギガティック投げられ",
-		"",
-		"追撃投げ中",
-		"ガード中、やられ中",
-		"攻撃ヒット",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-		"",
-	},
-}
-local state_flag_c0 = {
+local flag_c0                        = {
 	_00 = 0x1,     -- ジャンプ振向
 	_01 = 0x2,     -- ダウン
 	_02 = 0x4,     -- 屈途中
@@ -2543,7 +2369,7 @@ local state_flag_c0 = {
 	_30 = 0x40000000, -- 前進
 	_31 = 0x80000000, -- 立
 }
-local state_flag_c4 = {
+local flag_c4                        = {
 	_00 = 0x1,     -- 避け攻撃
 	_01 = 0x2,     -- 対スウェーライン下段攻撃
 	_02 = 0x4,     -- 対スウェーライン上段攻撃
@@ -2578,26 +2404,26 @@ local state_flag_c4 = {
 	_31 = 0x80000000, -- 立A
 }
 -- 小ジャンプ
-state_flag_c4.hop = state_flag_c4._06 |
-	state_flag_c4._07 |
-	state_flag_c4._08 |
-	state_flag_c4._09 |
-	state_flag_c4._10 |
-	state_flag_c4._11 |
-	state_flag_c4._12 |
-	state_flag_c4._13 |
-	state_flag_c4._14
+flag_c4.hop                          = flag_c4._06 |
+	flag_c4._07 |
+	flag_c4._08 |
+	flag_c4._09 |
+	flag_c4._10 |
+	flag_c4._11 |
+	flag_c4._12 |
+	flag_c4._13 |
+	flag_c4._14
 -- ジャンプ
-state_flag_c4.jump = state_flag_c4._15 |
-	state_flag_c4._16 |
-	state_flag_c4._17 |
-	state_flag_c4._18 |
-	state_flag_c4._19 |
-	state_flag_c4._20 |
-	state_flag_c4._21 |
-	state_flag_c4._22 |
-	state_flag_c4._23
-local state_flag_c8 = {
+flag_c4.jump                         = flag_c4._15 |
+	flag_c4._16 |
+	flag_c4._17 |
+	flag_c4._18 |
+	flag_c4._19 |
+	flag_c4._20 |
+	flag_c4._21 |
+	flag_c4._22 |
+	flag_c4._23
+local flag_c8                        = {
 	_00 = 0x1,     --
 	_01 = 0x2,     --
 	_02 = 0x4,     --
@@ -2631,7 +2457,7 @@ local state_flag_c8 = {
 	_30 = 0x40000000, -- 必殺技
 	_31 = 0x80000000, -- 必殺技
 }
-local state_flag_cc = {
+local flag_cc                        = {
 	_00 = 0x1,     -- CA
 	_01 = 0x2,     -- AかB攻撃
 	_02 = 0x4,     -- 滑り
@@ -2665,52 +2491,207 @@ local state_flag_cc = {
 	_30 = 0x40000000, -- 空中投げ
 	_31 = 0x80000000, -- 投げ
 }
-local state_flag_d0 = {
-	_00 = 0x1,                                --
-	_01 = 0x2,                                --
-	_02 = 0x4,                                --
-	_03 = 0x8,                                -- ギガティック投げられ
-	_04 = 0x10,                               --
-	_05 = 0x20,                               -- 追撃投げ中
-	_06 = 0x40,                               -- ガード中、やられ中
-	_07 = 0x80,                               -- 攻撃ヒット
+local flag_d0                        = {
+	_00 = 0x1,                                 --
+	_01 = 0x2,                                 --
+	_02 = 0x4,                                 --
+	_03 = 0x8,                                 -- ギガティック投げられ
+	_04 = 0x10,                                --
+	_05 = 0x20,                                -- 追撃投げ中
+	_06 = 0x40,                                -- ガード中、やられ中
+	_07 = 0x80,                                -- 攻撃ヒット
 }
-state_flag_cc.hitstun = state_flag_cc._03 |   -- 必殺投げやられ
-	state_flag_cc._08 |                       -- 投げ派生やられ
-	state_flag_cc._09 |                       -- つかみ投げやられ
-	state_flag_cc._10 |                       -- 投げられ
-	state_flag_cc._12 |                       -- ライン送りやられ
-	state_flag_cc._13 |                       -- ダウン
-	state_flag_cc._14 |                       -- 空中やられ
-	state_flag_cc._15 |                       -- 地上やられ
-	state_flag_cc._17 |                       -- 気絶
-	state_flag_cc._18 |                       -- 気絶起き上がり
-	state_flag_cc._23                         -- 起き上がり
-state_flag_cc.attacking = state_flag_cc._00 | -- CA
-	state_flag_cc._01 |                       -- AかB攻撃
-	state_flag_cc._20 |                       -- ブレイクショット
-	state_flag_cc._21 |                       -- 必殺技中
-	state_flag_cc._25 |                       -- つかみ技
-	state_flag_cc._27 |                       -- 投げ追撃
-	state_flag_cc._30 |                       -- 空中投げ
-	state_flag_cc._31                         -- 投げ
-state_flag_cc.grabbing = state_flag_cc._25 |  -- つかみ技
-	state_flag_cc._27                         -- 投げ追撃
-state_flag_cc.thrown = state_flag_cc._03 |    -- 必殺投げやられ
-	state_flag_cc._08 |                       -- 投げ派生やられ
-	state_flag_cc._09 |                       -- つかみ投げやられ
-	state_flag_cc._10                         -- 投げられ
-data.state_flag_c0 = state_flag_c0
-data.state_flag_c4 = state_flag_c4
-data.state_flag_c8 = state_flag_c8
-data.state_flag_cc = state_flag_cc
-data.state_flag_d0 = state_flag_d0
+flag_cc.hitstun                      = flag_cc._03 | -- 必殺投げやられ
+	flag_cc._08 |                              -- 投げ派生やられ
+	flag_cc._09 |                              -- つかみ投げやられ
+	flag_cc._10 |                              -- 投げられ
+	flag_cc._12 |                              -- ライン送りやられ
+	flag_cc._13 |                              -- ダウン
+	flag_cc._14 |                              -- 空中やられ
+	flag_cc._15 |                              -- 地上やられ
+	flag_cc._17 |                              -- 気絶
+	flag_cc._18 |                              -- 気絶起き上がり
+	flag_cc._23                                -- 起き上がり
+flag_cc.attacking                    = flag_cc._00 | -- CA
+	flag_cc._01 |                              -- AかB攻撃
+	flag_cc._20 |                              -- ブレイクショット
+	flag_cc._21 |                              -- 必殺技中
+	flag_cc._25 |                              -- つかみ技
+	flag_cc._27 |                              -- 投げ追撃
+	flag_cc._30 |                              -- 空中投げ
+	flag_cc._31                                -- 投げ
+flag_cc.grabbing                     = flag_cc._25 | -- つかみ技
+	flag_cc._27                                -- 投げ追撃
+flag_cc.thrown                       = flag_cc._03 | -- 必殺投げやられ
+	flag_cc._08 |                              -- 投げ派生やられ
+	flag_cc._09 |                              -- つかみ投げやられ
+	flag_cc._10                                -- 投げられ
+db.flag_c0                           = flag_c0
+db.flag_c4                           = flag_c4
+db.flag_c8                           = flag_c8
+db.flag_cc                           = flag_cc
+db.flag_d0                           = flag_d0
+
+db.flag_names_c0                     = {
+	"ジャンプ振向",
+	"ダウン",
+	"屈途中",
+	"奥後退",
+	"奥前進",
+	"奥振向",
+	"屈振向",
+	"立振向",
+	"スウェーライン上飛び退き～戻り",
+	"スウェーライン上ダッシュ～戻り",
+	"スウェーライン→メイン",
+	"スウェーライン上立",
+	"メインライン→スウェーライン移動中",
+	"スウェーライン上維持",
+	"未確認",
+	"未確認",
+	"着地",
+	"ジャンプ移行",
+	"後方小ジャンプ",
+	"前方小ジャンプ",
+	"垂直小ジャンプ",
+	"後方ジャンプ",
+	"前方ジャンプ",
+	"垂直ジャンプ",
+	"ダッシュ",
+	"飛び退き",
+	"屈前進",
+	"立途中",
+	"屈",
+	"後退",
+	"前進",
+	"立",
+}
+db.flag_names_c4                     = 	{
+	"避け攻撃",
+	"対スウェーライン下段攻撃",
+	"対スウェーライン上段攻撃",
+	"対メインライン威力大攻撃",
+	"対メインラインB攻撃",
+	"対メインラインA攻撃",
+	"後方小ジャンプC", -- 27 7FC0000
+	"後方小ジャンプB",
+	"後方小ジャンプA",
+	"前方小ジャンプC",
+	"前方小ジャンプB",
+	"前方小ジャンプA",
+	"垂直小ジャンプC",
+	"垂直小ジャンプB",
+	"垂直小ジャンプA", -- 19
+	"後方ジャンプC", -- 18 1FF00
+	"後方ジャンプB",
+	"後方ジャンプA",
+	"前方ジャンプC",
+	"前方ジャンプB",
+	"前方ジャンプA",
+	"垂直ジャンプC",
+	"垂直ジャンプB",
+	"垂直ジャンプA", --9
+	"C4 24",
+	"C4 25",
+	"屈C",
+	"屈B",
+	"屈A",
+	"立C",
+	"立B",
+	"立A",
+}
+db.flag_names_c8                     =  {
+	"",
+	"",
+	"",
+	"",
+	"",
+	"",
+	"",
+	"",
+	"特殊技",
+	"",
+	"",
+	"特殊技",
+	"特殊技",
+	"特殊技",
+	"特殊技",
+	"特殊技",
+	"潜在能力",
+	"潜在能力",
+	"超必殺技",
+	"超必殺技",
+	"必殺技",
+	"必殺技",
+	"必殺技",
+	"必殺技",
+	"必殺技",
+	"必殺技",
+	"必殺技",
+	"必殺技",
+	"必殺技",
+	"必殺技",
+	"必殺技",
+	"必殺技",
+}
+db.flag_names_cc                     = {
+	"CA",
+	"AかB攻撃",
+	"滑り",
+	"必殺投げやられ",
+	"",
+	"空中ガード",
+	"屈ガード",
+	"立ガード",
+	"投げ派生やられ",
+	"つかみ投げやられ",
+	"投げられ",
+	"",
+	"ライン送りやられ",
+	"ダウン",
+	"空中やられ",
+	"地上やられ",
+	"",
+	"気絶",
+	"気絶起き上がり",
+	"挑発",
+	"ブレイクショット",
+	"必殺技中",
+	"",
+	"起き上がり",
+	"フェイント",
+	"つかみ技",
+	"",
+	"投げ追撃",
+	"",
+	"",
+	"空中投げ",
+	"投げ",
+}
+db.flag_names_d0                     =  {
+	"",
+	"",
+	"",
+	"ギガティック投げられ",
+	"",
+	"追撃投げ中",
+	"ガード中、やられ中",
+	"攻撃ヒット",
+}
+db.get_flag_name        = function(flags, names)
+	local flgtxt = ""
+	if flags <= 0 then return nil end
+	for j = 32, 1, -1 do
+		if flags & 2 ^ (j - 1) ~= 0 then flgtxt = string.format("%s%02d %s ", flgtxt, 32 - j, names[j]) end
+	end
+	return flgtxt
+end
 
 --------------------------------------------------------------------------------------
 -- ヒット効果
 --------------------------------------------------------------------------------------
 
-local hit_effect_types = {
+local hit_effect_types               = {
 	down = "ダ", -- ダウン
 	extra = "特", -- 特殊なやられ
 	extra_launch = "特浮", -- 特殊な空中追撃可能ダウン
@@ -2728,32 +2709,32 @@ local hit_effect_types = {
 	plane_shift_down = "送ダ", -- スウェーライン送りダウン
 	standup = "立", -- 強制立のけぞり
 }
-local hit_effect_en_types = {
-	[hit_effect_types.down] = "Down", -- ダウン
-	[hit_effect_types.extra] = "Ex.", -- 特殊なやられ
-	[hit_effect_types.extra_launch] = "Ex.Launch", -- 特殊な空中追撃可能ダウン
-	[hit_effect_types.force_stun] = "Stun", -- 強制気絶
-	[hit_effect_types.fukitobi] = "Blow off", -- 吹き飛び
-	[hit_effect_types.hikikomi] = "Rev.Knockback", -- 後ろ向きのけぞり
-	[hit_effect_types.hikikomi_launch] = "Launch", -- 後ろ向き浮き
-	[hit_effect_types.launch] = "Launch", -- 空中とダウン追撃可能ダウン
-	[hit_effect_types.launch2] = "Ex.Launch", -- 浮のけぞり～ダウン
-	[hit_effect_types.launch_nokezori] = "Launch", -- 浮のけぞり
-	[hit_effect_types.nokezori] = "Knockback", -- のけぞり
-	[hit_effect_types.nokezori2] = "Knockback/*Down", -- のけぞり 対スウェー時はダウン追撃可能ダウン
-	[hit_effect_types.otg_down] = "*Down", -- ダウン追撃可能ダウン
-	[hit_effect_types.plane_shift] = "Plane shift", -- スウェーライン送り
+local hit_effect_en_types            = {
+	[hit_effect_types.down] = "Down",                      -- ダウン
+	[hit_effect_types.extra] = "Ex.",                      -- 特殊なやられ
+	[hit_effect_types.extra_launch] = "Ex.Launch",         -- 特殊な空中追撃可能ダウン
+	[hit_effect_types.force_stun] = "Stun",                -- 強制気絶
+	[hit_effect_types.fukitobi] = "Blow off",              -- 吹き飛び
+	[hit_effect_types.hikikomi] = "Rev.Knockback",         -- 後ろ向きのけぞり
+	[hit_effect_types.hikikomi_launch] = "Launch",         -- 後ろ向き浮き
+	[hit_effect_types.launch] = "Launch",                  -- 空中とダウン追撃可能ダウン
+	[hit_effect_types.launch2] = "Ex.Launch",              -- 浮のけぞり～ダウン
+	[hit_effect_types.launch_nokezori] = "Launch",         -- 浮のけぞり
+	[hit_effect_types.nokezori] = "Knockback",             -- のけぞり
+	[hit_effect_types.nokezori2] = "Knockback/*Down",      -- のけぞり 対スウェー時はダウン追撃可能ダウン
+	[hit_effect_types.otg_down] = "*Down",                 -- ダウン追撃可能ダウン
+	[hit_effect_types.plane_shift] = "Plane shift",        -- スウェーライン送り
 	[hit_effect_types.plane_shift_down] = "Plane shift down", -- スウェーライン送りダウン
-	[hit_effect_types.standup] = "Standup", -- 強制立のけぞり
+	[hit_effect_types.standup] = "Standup",                -- 強制立のけぞり
 }
-local hit_effect_nokezoris = util.new_set(
+local hit_effect_nokezoris           = ut.new_set(
 	hit_effect_types.nokezori,
 	hit_effect_types.nokezori2,
 	hit_effect_types.standup,
 	hit_effect_types.hikikomi,
 	hit_effect_types.plane_shift)
 
-local hit_effects = {
+local hit_effects                    = {
 	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
 	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
 	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
@@ -2839,14 +2820,14 @@ local hit_effects = {
 	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
 }
 
-data.hit_effect_types = hit_effect_types
-data.hit_effect_en_types = hit_effect_en_types
-data.hit_effect_nokezoris = hit_effect_nokezoris
-data.hit_effects = hit_effects
-data.hit_effect_name = function(effect)
+db.hit_effect_types                  = hit_effect_types
+db.hit_effect_en_types               = hit_effect_en_types
+db.hit_effect_nokezoris              = hit_effect_nokezoris
+db.hit_effects                       = hit_effects
+db.hit_effect_name                   = function(effect)
 	local e = hit_effects[effect]
 	if e then
-		return string.format("%-16s/%-16s", (data.hit_effect_en_types[e[1]] or ""), (data.hit_effect_en_types[e[2]]or ""))
+		return string.format("%-16s/%-16s", (db.hit_effect_en_types[e[1]] or ""), (db.hit_effect_en_types[e[2]] or ""))
 	else
 		return string.format("%s", effect)
 	end
@@ -2856,7 +2837,7 @@ end
 -- コマンド入力状態
 --------------------------------------------------------------------------------------
 
-local input_state_types = {
+local input_state_types              = {
 	step = 1,
 	faint = 2,
 	charge = 3,
@@ -2866,7 +2847,7 @@ local input_state_types = {
 	todome = 7,
 	drill5 = 8,
 }
-local create_input_states = function()
+local create_input_states            = function()
 	local _1236b = "_1|_2|_3|_6|_B"
 	local _16a = "_1|_6|_A"
 	local _16b = "_1|_6|_B"
@@ -3550,7 +3531,7 @@ local create_input_states = function()
 		end
 	end
 	-- DEBUG DIP 2-1 ON時の簡易コマンドテーブルの準備としてSDMのフラグからコマンド情報を変更
-	local input_easy_states = util.deepcopy(input_states)
+	local input_easy_states = ut.deepcopy(input_states)
 	for _, char_tbl in ipairs(input_easy_states) do
 		local removes = {}
 		for i, tbl in ipairs(char_tbl) do
@@ -3604,9 +3585,9 @@ local create_input_states = function()
 	return { normal = input_convert(input_states), easy = input_convert(input_easy_states) }
 end
 
-data.input_state_types = input_state_types
-data.input_states = create_input_states()
-data.input_state_col = {
+db.input_state_types                 = input_state_types
+db.input_states                      = create_input_states()
+db.input_state_col                   = {
 	orange = 0xFFFF8800,
 	ol_orange2 = 0xC0FF8800,
 	red = 0xFFFF0000,
@@ -3679,7 +3660,7 @@ for _, boxtype in pairs(box_types) do
 	boxtype.fill    = (0xFFFFFFFF & (boxtype.fill << 24)) | boxtype.color
 	boxtype.outline = (0xFFFFFFFF & (boxtype.outline << 24)) | boxtype.color
 end
-local attack_boxies     = util.new_set(
+local attack_boxies     = ut.new_set(
 	box_types.attack,          -- 攻撃
 	box_types.harmless_attack, -- 攻撃(無効)
 	box_types.juggle,          -- 攻撃(空中追撃可)
@@ -3692,18 +3673,18 @@ local attack_boxies     = util.new_set(
 	box_types.special_throw,   -- 空中投げ
 	box_types.air_throw,       -- 必殺技投げ
 	box_types.phoenix_throw)   -- フェニックススルー
-local juggle_boxies     = util.new_set(
+local juggle_boxies     = ut.new_set(
 	box_types.juggle,          -- 攻撃(空中追撃可)
 	box_types.fake_juggle,     -- 攻撃(嘘、空中追撃可)
 	box_types.juggle_fireball, -- 飛び道具(空中追撃可)
 	box_types.fake_juggle_fb)  -- 飛び道具(嘘、空中追撃可)
-local fake_boxies       = util.new_set(
+local fake_boxies       = ut.new_set(
 	box_types.fake_attack,     -- 攻撃(嘘)
 	box_types.fake_juggle,     -- 攻撃(嘘、空中追撃可)
 	box_types.fake_fireball,   -- 飛び道具(嘘)
 	box_types.fake_juggle_fb)  -- 飛び道具(嘘、空中追撃可)
-local all_attack_boxies = util.new_set(util.table_add_all(util.table_add_all({}, attack_boxies), fake_boxies))
-local hitstun_boxies    = util.new_set(
+local all_attack_boxies = ut.new_set(ut.table_add_all(ut.table_add_all({}, attack_boxies), fake_boxies))
+local hitstun_boxies    = ut.new_set(
 	box_types.hurt1,        -- 食らい1
 	box_types.hurt2,        -- 食らい2
 	box_types.down_otg,     -- 食らい(ダウン追撃のみ可)
@@ -3712,11 +3693,11 @@ local hitstun_boxies    = util.new_set(
 	box_types.hurt4,        -- 食らい(対ライン下攻撃)
 	box_types.sway_hurt1,   -- 食らい1(スウェー中)
 	box_types.sway_hurt2)   -- 食らい2(スウェー中)
-local block_boxies      = util.new_set(
+local block_boxies      = ut.new_set(
 	box_types.block_overhead, -- 立ガード
 	box_types.block_low,    -- 屈ガード
 	box_types.block_air)    -- 空中ガード
-local parry_boxies      = util.new_set(
+local parry_boxies      = ut.new_set(
 	box_types.joudan_atemi, -- 上段当身投げ
 	box_types.urakumo_kakushi, -- 裏雲隠し
 	box_types.gedan_atemiuchi, -- 下段当身打ち
@@ -3724,7 +3705,7 @@ local parry_boxies      = util.new_set(
 	box_types.sadomazo,     -- サドマゾ
 	box_types.baigaeshi,    -- 倍返し
 	box_types.phoenix_throw) -- フェニックススルー
-local hurt_boxies       = util.new_set(
+local hurt_boxies       = ut.new_set(
 	box_types.hurt1,        -- 食らい1
 	box_types.hurt2,        -- 食らい2
 	box_types.down_otg,     -- 食らい(ダウン追撃のみ可)
@@ -3736,26 +3717,26 @@ local box_type_list     = {}
 for _, box_type in pairs(box_types) do table.insert(box_type_list, box_type) end
 table.sort(box_type_list, function(a, b) return a.no < b.no end)
 
-data.box_kinds = box_kinds
-data.box_types = box_types
-data.main_box_types = main_box_types
-data.sway_box_types = sway_box_types
-data.attack_boxies = attack_boxies
-data.juggle_boxies = juggle_boxies
-data.fake_boxies = fake_boxies
-data.hitstun_boxies = hitstun_boxies
-data.block_boxies = block_boxies
-data.parry_boxies = parry_boxies
-data.hurt_boxies = hurt_boxies
-data.all_attack_boxies = all_attack_boxies
-data.box_type_list = box_type_list
+db.box_kinds = box_kinds
+db.box_types = box_types
+db.main_box_types = main_box_types
+db.sway_box_types = sway_box_types
+db.attack_boxies = attack_boxies
+db.juggle_boxies = juggle_boxies
+db.fake_boxies = fake_boxies
+db.hitstun_boxies = hitstun_boxies
+db.block_boxies = block_boxies
+db.parry_boxies = parry_boxies
+db.hurt_boxies = hurt_boxies
+db.all_attack_boxies = all_attack_boxies
+db.box_type_list = box_type_list
 
 
 --------------------------------------------------------------------------------------
 -- ステージデータ
 --------------------------------------------------------------------------------------
 
-data.stage_list                  = {
+db.stage_list                    = {
 	{ stg1 = 0x01, stg2 = 0x00, stg3 = 0x01, no_background = false, name = "日本 [1] 舞", },
 	{ stg1 = 0x01, stg2 = 0x01, stg3 = 0x01, no_background = false, name = "日本 [2] 双角1", },
 	{ stg1 = 0x01, stg2 = 0x01, stg3 = 0x02, no_background = false, name = "日本 [2] 双角2", },
@@ -3784,7 +3765,7 @@ data.stage_list                  = {
 	{ stg1 = 0x07, stg2 = 0x02, stg3 = 0x01, no_background = true, name = "背景なし(1ライン)", },
 }
 
-data.bgm_list                    = {
+db.bgm_list                      = {
 	{ id = 0x00, name = "なし", },
 	{ id = 0x01, name = "クリといつまでも", },
 	{ id = 0x02, name = "雷波濤外伝", },
@@ -3847,7 +3828,7 @@ local cmd_funcs         = {}
 --cmd_funcs._f            = _f
 --cmd_funcs._start        = _start
 cmd_funcs.make          = function(joykp, ...)
-	local joy = util.deepcopy(joy_neutrala)
+	local joy = ut.deepcopy(joy_neutrala)
 	if ... then
 		for _, k in ipairs({ ... }) do
 			joy[joykp[k]] = true
@@ -3877,7 +3858,7 @@ cmd_funcs.merge         = function(cmd_ary1, cmd_ary2)
 	local keys1, keys2 = cmd_funcs.extract(joy_k[1], cmd_ary1), cmd_funcs.extract(joy_k[2], cmd_ary2)
 	local ret, max = {}, math.max(#keys1, #keys2)
 	for i = 1, max do
-		local joy = util.deepcopy(joy_neutrala)
+		local joy = ut.deepcopy(joy_neutrala)
 		for _, key in ipairs({ keys1[i] or {}, keys2[i] or {} }) do
 			for k, v in pairs(key) do
 				if v then
@@ -4051,7 +4032,7 @@ local cmd_base          = {
 	_9abcd = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "a", "b", "c", "d") end,
 }
 local research_cmd      = function()
-	local ret = util.new_filled_table(8, {})
+	local ret = ut.new_filled_table(8, {})
 	-- TODO: 変数設定
 	--[[
 	ret[1] = cmd_funcs.merge( -- ボブ対クラウザー100% ラグがでると落ちる
@@ -4161,16 +4142,16 @@ local research_cmd      = function()
 	return ret
 end
 
-data.joy_k              = joy_k
-data.rev_joy            = rev_joy
-data.joy_frontback      = joy_frontback
-data.joy_pside          = joy_pside
-data.joy_neutrala       = joy_neutrala
-data.joy_neutralp       = joy_neutralp
-data.kprops             = kprops
-data.cmd_funcs          = cmd_funcs
-data.cmd_base           = cmd_base
-data.research_cmd       = research_cmd()
+db.joy_k                = joy_k
+db.rev_joy              = rev_joy
+db.joy_frontback        = joy_frontback
+db.joy_pside            = joy_pside
+db.joy_neutrala         = joy_neutrala
+db.joy_neutralp         = joy_neutralp
+db.kprops               = kprops
+db.cmd_funcs            = cmd_funcs
+db.cmd_base             = cmd_base
+db.research_cmd         = research_cmd()
 
 -- 削りダメージ補正
 local chip_dmg_types    = {
@@ -4198,13 +4179,13 @@ local chip_dmg_type_tbl = {
 	chip_dmg_types.rshift4, -- 15 1/16
 	chip_dmg_types.zero, -- 16 ダメージ無し
 }
-data.chip_dmg_types     = chip_dmg_types
-data.chip_dmg_type_tbl  = chip_dmg_type_tbl
+db.chip_dmg_types       = chip_dmg_types
+db.chip_dmg_type_tbl    = chip_dmg_type_tbl
 
 --------------------------------------------------------------------------------------
 -- 描画用データ
 --------------------------------------------------------------------------------------
-local obj_names = {
+local obj_names         = {
 	[0x20204c4556455220] = "  LEVER ",
 	[0x2020502053414e20] = "  P SAN ",
 	[0x20425554544f4e20] = " BUTTON ",
@@ -4329,11 +4310,11 @@ local obj_names = {
 	[0x59455320204e4f20] = "YES  NO ",
 	[0x00c0042600c00426] = "", -- how to playのダッシュ中キャラ
 }
-local p_chan = {
+local p_chan            = {
 	[0x2020502053414e20] = "  P SAN ",
 	[0x2050204348414e20] = " P CHAN ",
 }
-for k, v in pairs(util.deepcopy(obj_names)) do
+for k, v in pairs(ut.deepcopy(obj_names)) do
 	obj_names[0xFFFFFFFF & k] = v
 end
 local get_obj_name = function(value)
@@ -4348,11 +4329,11 @@ local get_obj_name = function(value)
 	obj_names[bak] = name
 	return name, true
 end
-local shadow_addr = util.new_set(0x17300)
-local nobg_addr = util.new_set(
-	--0x3bb12, -- ヒットエフェクト へび
-	--0x3bb88, -- ヒットエフェクト バーン
-	--0x3576e, -- ヒットエフェクト 電撃、燃える 舞の桜
+local shadow_addr = ut.new_set(0x17300)
+local nobg_addr = ut.new_set(
+--0x3bb12, -- ヒットエフェクト へび
+--0x3bb88, -- ヒットエフェクト バーン
+--0x3576e, -- ヒットエフェクト 電撃、燃える 舞の桜
 	0x6114a, -- ヒットエフェクト
 	0x60b72, -- 弾
 	0x3580a, -- 電撃、燃える
@@ -4364,19 +4345,20 @@ local nobg_addr = util.new_set(
 	--0x15ac6, -- アンディステージの花びら
 	--0x15d7a, -- 双角ステージの雨
 	0x17300 -- 影、アンディステージの花びら
-	--0x17472, -- 水たまり反射
-	--0x17738, -- フランコステージのカメラのフラッシュ
-	--0x261A0, -- 双角ステージの雨
-	--0x6114a -- PPOW MES
+--0x17472, -- 水たまり反射
+--0x17738, -- フランコステージのカメラのフラッシュ
+--0x261A0, -- 双角ステージの雨
+--0x6114a -- PPOW MES
 )
-data.get_obj_name = get_obj_name
-data.p_chan = p_chan
-data.nobg_addr = nobg_addr
-data.shadow_addr = shadow_addr
+db.get_obj_name = get_obj_name
+db.p_chan = p_chan
+db.nobg_addr = nobg_addr
+db.shadow_addr = shadow_addr
 
 
 -- BSゲージ消費と無敵フレームデータのオリジナル
-data.bs_data = { 0x981C,
+db.bs_data = {
+	0x981C,
 	0x981C,
 	0x98FF,
 	0x98FF,
@@ -4815,4 +4797,4 @@ data.bs_data = { 0x981C,
 	0x0000, }
 
 print("data loaded")
-return data
+return db

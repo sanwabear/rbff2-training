@@ -19,22 +19,22 @@
 --LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 --OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 --SOFTWARE.
-local lfs             = require("lfs")
+local lfs           = require("lfs")
 
-local util            = {}
+local ut            = {}
 
-util.cur_dir          = lfs.currentdir
+ut.cur_dir          = lfs.currentdir
 
-local is_dir          = function(name)
+local is_dir        = function(name)
 	if type(name) ~= "string" then return false end
 	local cd = lfs.currentdir()
 	local is = lfs.chdir(name) and true or false
 	lfs.chdir(cd)
 	return is
 end
-util.is_dir           = is_dir
+ut.is_dir           = is_dir
 
-util.mkdir            = function(path)
+ut.mkdir            = function(path)
 	if is_dir(path) then
 		return true, nil
 	end
@@ -45,7 +45,7 @@ util.mkdir            = function(path)
 	return r, err
 end
 
-util.is_file          = function(name)
+ut.is_file          = function(name)
 	if type(name) ~= "string" then return false end
 	local f = io.open(name, "r")
 	if f then
@@ -55,7 +55,7 @@ util.is_file          = function(name)
 	return false
 end
 
-local tohex           = function(num)
+local tohex         = function(num)
 	local hexstr = '0123456789abcdef'
 	local s = ''
 	while num > 0 do
@@ -66,12 +66,12 @@ local tohex           = function(num)
 	if s == '' then s = '0' end
 	return s
 end
-util.tohex            = tohex
+ut.tohex            = tohex
 
-util.tohexnum         = function(num) return tonumber(tohex(num)) end
+ut.tohexnum         = function(num) return tonumber(tohex(num)) end
 
 -- tableで返す
-util.tobits           = function(num)
+ut.tobits           = function(num)
 	-- returns a table of bits, least significant first.
 	local t, rest = {}, 0 -- will contain the bits
 	while num > 0 do
@@ -82,7 +82,7 @@ util.tobits           = function(num)
 	return t
 end
 
-local bin_lookup      = {
+local bin_lookup    = {
 	["0"] = "0000",
 	["1"] = "0001",
 	["2"] = "0010",
@@ -101,30 +101,30 @@ local bin_lookup      = {
 	["F"] = "1111"
 }
 
-util.tobitstr         = function(value)
+ut.tobitstr         = function(value)
 	local hs = string.format("%.2X", value) -- convert number to HEX
-	local ln, str = hs:len(), ""            -- get length of string
-	for i = 1, ln do                        -- loop through each hex character
-		local index = hs:sub(i, i)          -- each character in order
-		str = str .. bin_lookup[index]      -- lookup a table
-		str = str .. ""                     -- add a space
+	local ln, str = hs:len(), ""         -- get length of string
+	for i = 1, ln do                     -- loop through each hex character
+		local index = hs:sub(i, i)       -- each character in order
+		str = str .. bin_lookup[index]   -- lookup a table
+		str = str .. ""                  -- add a space
 	end
 	return str
 end
 
-util.get_digit        = function(num) return string.len(tostring(num)) end
+ut.get_digit        = function(num) return string.len(tostring(num)) end
 
 -- 16ビット値を0.999上限の数値に変える
-util.int16tofloat     = function(int16v)
+ut.int16tofloat     = function(int16v)
 	if int16v and type(int16v) == "number" then
 		return int16v / 0x10000
 	end
 	return 0
 end
 
-util.printf           = function(format, ...) print(string.format(format, ...)) end
+ut.printf           = function(format, ...) print(string.format(format, ...)) end
 
-util.int8            = function(pos)
+ut.int8             = function(pos)
 	if 127 < pos or pos < -128 then
 		-- (pos + 2 ^ 15) % 2 ^ 16 - 2 ^ 15
 		return (pos + 128) % 256 - 128
@@ -132,7 +132,7 @@ util.int8            = function(pos)
 	return pos
 end
 
-util.int16            = function(pos)
+ut.int16            = function(pos)
 	if 32767 < pos or pos < -32768 then
 		-- (pos + 2 ^ 15) % 2 ^ 16 - 2 ^ 15
 		return (pos + 32768) % 65536 - 32768
@@ -141,7 +141,7 @@ util.int16            = function(pos)
 end
 
 local deepcopy
-deepcopy              = function(orig)
+deepcopy            = function(orig)
 	local orig_type = type(orig)
 	local copy
 	if orig_type == 'table' then
@@ -155,9 +155,9 @@ deepcopy              = function(orig)
 	end
 	return copy
 end
-util.deepcopy         = deepcopy
+ut.deepcopy         = deepcopy
 
-util.table_add_all    = function(t1, t2, pre_add)
+ut.table_add_all    = function(t1, t2, pre_add)
 	t1 = t1 or {}
 	for _, r in ipairs(t2 or {}) do
 		if pre_add then
@@ -168,7 +168,7 @@ util.table_add_all    = function(t1, t2, pre_add)
 	return t1
 end
 
-util.hash_add_all     = function(t1, t2, pre_add)
+ut.hash_add_all     = function(t1, t2, pre_add)
 	t1 = t1 or {}
 	for k, v in pairs(t2 or {}) do
 		if pre_add then
@@ -179,7 +179,7 @@ util.hash_add_all     = function(t1, t2, pre_add)
 	return t1
 end
 
-util.sorted_pairs     = function(tbl, order_func)
+ut.sorted_pairs     = function(tbl, order_func)
 	local a = {}
 	for n in pairs(tbl) do a[#a + 1] = n end
 	table.sort(a, order_func)
@@ -190,7 +190,7 @@ util.sorted_pairs     = function(tbl, order_func)
 	end
 end
 
-util.get_hash_key     = function(tbl)
+ut.get_hash_key     = function(tbl)
 	local ret = {}
 	for k, _ in pairs(tbl) do
 		table.insert(ret, k)
@@ -198,7 +198,7 @@ util.get_hash_key     = function(tbl)
 	return ret
 end
 
-util.new_set          = function(...)
+ut.new_set          = function(...)
 	local ret = {}
 	for _, v in ipairs({ ... }) do
 		ret[v] = true
@@ -206,7 +206,7 @@ util.new_set          = function(...)
 	return ret
 end
 
-util.new_set_false    = function(...)
+ut.new_set_false    = function(...)
 	local ret = {}
 	for _, v in ipairs({ ... }) do
 		ret[v] = false
@@ -214,7 +214,7 @@ util.new_set_false    = function(...)
 	return ret
 end
 
-util.new_tbl_0        = function(...)
+ut.new_tbl_0        = function(...)
 	local ret = {}
 	for _, v in ipairs({ ... }) do
 		ret[v] = 0
@@ -222,7 +222,7 @@ util.new_tbl_0        = function(...)
 	return ret
 end
 
-util.table_to_set     = function(tbl)
+ut.table_to_set     = function(tbl)
 	local ret = {}
 	for _, v in ipairs(tbl or {}) do
 		ret[v] = true
@@ -230,7 +230,7 @@ util.table_to_set     = function(tbl)
 	return ret
 end
 
-util.new_empty_table  = function(len)
+ut.new_empty_table  = function(len)
 	local tmp_table = {}
 	for i = 1, len do
 		table.insert(tmp_table, nil)
@@ -238,7 +238,7 @@ util.new_empty_table  = function(len)
 	return tmp_table
 end
 
-util.new_filled_table = function(...)
+ut.new_filled_table = function(...)
 	local tmp_table = {}
 	local a = { ... }
 	for j = 1, #a, 2 do
@@ -251,35 +251,33 @@ util.new_filled_table = function(...)
 	return tmp_table
 end
 
-util.testbit          = function(target, hex, strict)
+ut.tstb             = function(target, hex, strict)
 	if strict then
-		local ret = ((target or 0) & hex) == hex
-		return ret
+		return ((target or 0) & hex) == hex
 	else
-		local ret = ((target or 0) & hex) ~= 0
-		return ret
+		return ((target or 0) & hex) ~= 0
 	end
 end
 
-util.hex_set           = function(target, hex, clear)
+ut.hex_set          = function(target, hex, clear)
 	local ret = (target or 0) | (hex or 0)
 	if clear then ret = ret - (hex or 0) end
 	return ret
 end
 
-util.hex_clear           = function(target, hex)
-	return util.hex_set(target, hex, true)
+ut.hex_clear        = function(target, hex)
+	return ut.hex_set(target, hex, true)
 end
 
-util.hex_reset           = function(target, clr_mask, hex)
-	local ret = util.hex_clear(target, clr_mask)
-	ret = util.hex_set(ret, hex)
+ut.hex_reset        = function(target, clr_mask, hex)
+	local ret = ut.hex_clear(target, clr_mask)
+	ret = ut.hex_set(ret, hex)
 	return ret
 end
 
-local ffptn           = "%s*(%w+):%s+(%w+)%s+(%w+)%s*[\r\n]*"
+local ffptn         = "%s*(%w+):%s+(%w+)%s+(%w+)%s*[\r\n]*"
 
-local fixaddr         = function(saddr, offset)
+local fixaddr       = function(saddr, offset)
 	local addr = tonumber(saddr, 16) + offset
 	if (addr % 2 == 0) then
 		return addr + 1
@@ -288,7 +286,7 @@ local fixaddr         = function(saddr, offset)
 	end
 end
 
-local apply_patch     = function(pgm, s_patch, offset, force)
+local apply_patch   = function(pgm, s_patch, offset, force)
 	if force ~= true then
 		for saddr, v1, v2 in string.gmatch(s_patch, ffptn) do
 			local before = pgm:read_direct_u8(fixaddr(saddr, offset))
@@ -308,7 +306,7 @@ local apply_patch     = function(pgm, s_patch, offset, force)
 	return true
 end
 
-util.apply_patch_file = function(pgm, path, force)
+ut.apply_patch_file = function(pgm, path, force)
 	local ret = false
 	if pgm then
 		print(path .. " patch " .. (force and "force" or ""))
@@ -328,4 +326,4 @@ util.apply_patch_file = function(pgm, path, force)
 end
 
 print("util loaded")
-return util
+return ut
