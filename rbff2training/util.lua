@@ -83,6 +83,7 @@ ut.tobits           = function(num)
 end
 
 local bin_lookup    = {
+	[" "] = "0000",
 	["0"] = "0000",
 	["1"] = "0001",
 	["2"] = "0010",
@@ -98,19 +99,29 @@ local bin_lookup    = {
 	["C"] = "1100",
 	["D"] = "1101",
 	["E"] = "1110",
-	["F"] = "1111"
+	["F"] = "1111",
+	["a"] = "1010",
+	["b"] = "1011",
+	["c"] = "1100",
+	["d"] = "1101",
+	["e"] = "1110",
+	["f"] = "1111",
 }
-
-ut.tobitstr         = function(value)
-	local hs = string.format("%.2X", value) -- convert number to HEX
-	local ln, str = hs:len(), ""         -- get length of string
+ut.hextobitstr      = function(hex, delim)
+	local ln, str = hex:len(), ""         -- get length of string
+	delim = delim or ""
 	for i = 1, ln do                     -- loop through each hex character
-		local index = hs:sub(i, i)       -- each character in order
+		local index = hex:sub(i, i)       -- each character in order
 		str = str .. bin_lookup[index]   -- lookup a table
-		str = str .. ""                  -- add a space
+		str = str .. delim               -- add a space
 	end
 	return str
 end
+ut.tobitstr         = function(value, delim)
+	local hex = string.format("%X", value) -- convert number to HEX
+	return ut.hextobitstr(hex, delim)
+end
+print(string.format("%.2X", 0x23506A))
 
 ut.get_digit        = function(num) return string.len(tostring(num)) end
 
