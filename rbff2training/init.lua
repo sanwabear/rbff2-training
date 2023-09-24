@@ -2080,6 +2080,7 @@ rbff2.startplugin               = function()
 			}
 			body.fireballs[base], all_objects[base], all_fireballs[base] = p, p, p
 		end
+		body.objects = ut.hash_add_all({ [body.addr.base] = body }, body.fireballs)
 	end
 	local change_player_input = function()
 		if in_player_select ~= true then return end
@@ -3881,6 +3882,7 @@ rbff2.startplugin               = function()
 		table.sort(hitboxies, hitboxies_order)
 		table.sort(ranges, ranges_order)
 
+		--[[
 		-- フレーム表示などの前処理1
 		for _, p in ipairs(players) do
 			local op         = p.op
@@ -3941,6 +3943,7 @@ rbff2.startplugin               = function()
 				p.on_block1 = global.frame_number
 			end
 		end
+		]]
 
 		-- キャラ間の距離
 		prev_space, p_space = (p_space ~= 0) and p_space or prev_space, players[1].pos - players[2].pos
@@ -4446,10 +4449,11 @@ rbff2.startplugin               = function()
 					if p.disp_base then draw_base(i, k, bk.count, bk.addr, bk.name, bk.xmov) end
 				end
 			end
+
 			-- ダメージとコンボ表示
 			for i, p in ipairs(players) do
 				local p1, op, combo_label1, combo_label2, combo_label3, state_label = i == 1, p.op, {}, {}, {}, {}
-				for _, xp in ut.sorted_pairs(ut.hash_add_all({ [p.addr.base] = p }, p.fireballs)) do
+				for _, xp in ut.sorted_pairs(p.objects) do
 					if xp.num or xp.proc_active then
 						table.insert(state_label, string.format("Damage %3s/%1s  Stun %2s/%2s Fra.", xp.pure_dmg or 0, xp.chip_dmg or 0, xp.pure_st or 0, xp.pure_st_tm or 0))
 						table.insert(state_label, string.format("HitStop %2s/%2s HitStun %2s/%2s", xp.hitstop or 0, xp.blockstop or 0, xp.hitstun or 0, xp.blockstun or 0))
@@ -4514,8 +4518,10 @@ rbff2.startplugin               = function()
 					local box_bottom = get_line_height(#combo_label1)
 					scr:draw_box(p1 and 224 or 0, 40, p1 and 320 or 96, 40 + box_bottom, 0x80404040, 0x80404040) -- 四角枠
 					scr:draw_text(p1 and 224 + 4 or 4, 40, table.concat(combo_label1, "\n"))
-					if p.disp_dmg then scr:draw_text(p1 and 224 + 36 or 36, 40, table.concat(combo_label2, "\n")) end
-					if p.disp_dmg then scr:draw_text(p1 and 224 + 68 or 68, 40, table.concat(combo_label3, "\n")) end
+					if p.disp_dmg then
+						scr:draw_text(p1 and 224 + 36 or 36, 40, table.concat(combo_label2, "\n"))
+						scr:draw_text(p1 and 224 + 68 or 68, 40, table.concat(combo_label3, "\n"))
+					end
 				end
 
 				-- 状態 小表示
