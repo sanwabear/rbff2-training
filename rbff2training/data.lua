@@ -2492,40 +2492,51 @@ local flag_cc                        = {
 	_31 = 0x80000000, -- 投げ
 }
 local flag_d0                        = {
-	_00 = 0x1,                                 --
-	_01 = 0x2,                                 --
-	_02 = 0x4,                                 --
-	_03 = 0x8,                                 -- ギガティック投げられ
-	_04 = 0x10,                                --
-	_05 = 0x20,                                -- 追撃投げ中
-	_06 = 0x40,                                -- ガード中、やられ中
-	_07 = 0x80,                                -- 攻撃ヒット
+	_00 = 0x1,                                       --
+	_01 = 0x2,                                       --
+	_02 = 0x4,                                       --
+	_03 = 0x8,                                       -- ギガティック投げられ
+	_04 = 0x10,                                      --
+	_05 = 0x20,                                      -- 追撃投げ中
+	_06 = 0x40,                                      -- ガード中、やられ中
+	_07 = 0x80,                                      -- 攻撃ヒット
 }
 flag_cc.hitstun                      = flag_cc._03 | -- 必殺投げやられ
-	flag_cc._08 |                              -- 投げ派生やられ
-	flag_cc._09 |                              -- つかみ投げやられ
-	flag_cc._10 |                              -- 投げられ
-	flag_cc._12 |                              -- ライン送りやられ
-	flag_cc._13 |                              -- ダウン
-	flag_cc._14 |                              -- 空中やられ
-	flag_cc._15 |                              -- 地上やられ
-	flag_cc._17 |                              -- 気絶
-	flag_cc._18 |                              -- 気絶起き上がり
-	flag_cc._23                                -- 起き上がり
+	flag_cc._08 |                                    -- 投げ派生やられ
+	flag_cc._09 |                                    -- つかみ投げやられ
+	flag_cc._10 |                                    -- 投げられ
+	flag_cc._12 |                                    -- ライン送りやられ
+	flag_cc._13 |                                    -- ダウン
+	flag_cc._14 |                                    -- 空中やられ
+	flag_cc._15 |                                    -- 地上やられ
+	flag_cc._17 |                                    -- 気絶
+	flag_cc._18 |                                    -- 気絶起き上がり
+	flag_cc._23                                      -- 起き上がり
+flag_cc.blocking                     = flag_cc._00  | -- CA
+	flag_cc._01 |                                    -- AかB攻撃
+	flag_cc._02 |                                    -- 滑り
+	flag_cc._03 |                                    -- 必殺投げやられ
+	flag_cc._04 |                                    --
+	flag_cc._05 |                                    -- 空中ガード
+	flag_cc._06 |                                    -- 屈ガード
+	flag_cc._07                                      -- 立ガード
 flag_cc.attacking                    = flag_cc._00 | -- CA
-	flag_cc._01 |                              -- AかB攻撃
-	flag_cc._20 |                              -- ブレイクショット
-	flag_cc._21 |                              -- 必殺技中
-	flag_cc._25 |                              -- つかみ技
-	flag_cc._27 |                              -- 投げ追撃
-	flag_cc._30 |                              -- 空中投げ
-	flag_cc._31                                -- 投げ
+	flag_cc._01 |                                    -- AかB攻撃
+	flag_cc._20 |                                    -- ブレイクショット
+	flag_cc._21 |                                    -- 必殺技中
+	flag_cc._25 |                                    -- つかみ技
+	flag_cc._27 |                                    -- 投げ追撃
+	flag_cc._30 |                                    -- 空中投げ
+	flag_cc._31                                      -- 投げ
 flag_cc.grabbing                     = flag_cc._25 | -- つかみ技
-	flag_cc._27                                -- 投げ追撃
+	flag_cc._27                                      -- 投げ追撃
 flag_cc.thrown                       = flag_cc._03 | -- 必殺投げやられ
-	flag_cc._08 |                              -- 投げ派生やられ
-	flag_cc._09 |                              -- つかみ投げやられ
-	flag_cc._10                                -- 投げられ
+	flag_cc._08 |                                    -- 投げ派生やられ
+	flag_cc._09 |                                    -- つかみ投げやられ
+	flag_cc._10                                      -- 投げられ
+flag_d0.hurt                         = flag_d0._03 | -- ギガティック投げられ
+	flag_d0._06 |                                    -- ガード中、やられ中
+	flag_d0._07                                      -- 攻撃ヒット
 db.flag_c0                           = flag_c0
 db.flag_c4                           = flag_c4
 db.flag_c8                           = flag_c8
@@ -2566,7 +2577,7 @@ db.flag_names_c0                     = {
 	"前進",
 	"立",
 }
-db.flag_names_c4                     = 	{
+db.flag_names_c4                     = {
 	"避け攻撃",
 	"対スウェーライン下段攻撃",
 	"対スウェーライン上段攻撃",
@@ -2600,7 +2611,7 @@ db.flag_names_c4                     = 	{
 	"立B",
 	"立A",
 }
-db.flag_names_c8                     =  {
+db.flag_names_c8                     = {
 	"",
 	"",
 	"",
@@ -2668,7 +2679,7 @@ db.flag_names_cc                     = {
 	"空中投げ",
 	"投げ",
 }
-db.flag_names_d0                     =  {
+db.flag_names_d0                     = {
 	"",
 	"",
 	"",
@@ -2678,7 +2689,7 @@ db.flag_names_d0                     =  {
 	"ガード中、やられ中",
 	"攻撃ヒット",
 }
-db.get_flag_name        = function(flags, names)
+db.get_flag_name                     = function(flags, names)
 	local flgtxt = ""
 	if flags <= 0 then return nil end
 	for j = 32, 1, -1 do

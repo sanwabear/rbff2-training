@@ -290,13 +290,27 @@ local screen            = {
 	left     = 0,
 	top      = 0,
 }
-
+local hide_options              = {
+	none = 0,
+	effect = 2 ^ 0,   -- ヒットマークなど
+	shadow1 = 2 ^ 1,  -- 影
+	shadow2 = 2 ^ 2,  -- 双角ステージの反射→影
+	meters = 2 ^ 3,   -- ゲージ
+	background = 2 ^ 4, -- 背景
+	p_chan = 2 ^ 5,   -- Pちゃん
+	p1_phantasm = 2 ^ 6, -- 1P残像
+	p1_effect = 2 ^ 7, -- 1Pエフェクト
+	p1_char = 2 ^ 8,  -- 1Pキャラ
+	p2_phantasm = 2 ^ 9, -- 2P残像
+	p2_effect = 2 ^ 10, -- 2Pエフェクト
+	p2_char = 2 ^ 11, -- 1Pキャラ
+}
 local global            = {
 	frame_number        = 0,
 	lag_frame           = false,
 	all_act_normal      = false,
 	old_all_act_normal  = false,
-	skip_frame       = false,
+	skip_frame          = false,
 	fix_scr_top         = 1,
 
 	-- 当たり判定用
@@ -313,9 +327,7 @@ local global            = {
 	sync_pos_x          = 1,  -- 1: OFF, 2:1Pと同期, 3:2Pと同期
 
 	disp_pos            = true, -- 1P 2P 距離表示
-	hide_p_chan         = false, -- Pちゃん表示するときfalse
-	hide_effect         = false, -- ヒットマークなど画面表示するときfalse
-	hide_shadow         = 2,  -- 1:OFF, 2:ON, 3:ON:双角ステージの反射→影
+	hide                = hide_options.none,
 	disp_frmgap         = 3,  -- フレーム差表示
 	disp_input_sts      = 1,  -- コマンド入力状態表示 1:OFF 2:1P 3:2P
 	disp_normal_frms    = 2,  -- 通常動作フレーム非表示 1:OFF 2:ON
@@ -380,11 +392,12 @@ local pc_filter         = function(filter)
 	local accept_pc = ut.table_to_set(filter)
 	return function(pc) return accept_pc[pc] ~= true end
 end
-mem.wp8                 = function(addr, cb, filter)
+mem.wp8                         = function(addr, cb, filter)
 	local accept_pc = pc_filter(filter)
-	local name = string.format("wp8_%x_%s", addr, #global.holder.taps)
+	local num = global.holder.countup()
+	local name = string.format("wp8_%x_%s", addr, num)
 	if addr % 2 == 0 then
-		table.insert(global.holder.taps, pgm:install_write_tap(addr, addr + 1, name,
+		global.holder.taps[name] = pgm:install_write_tap(addr, addr + 1, name,
 			function(offset, data, mask)
 				mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
 				if accept_pc and accept_pc(mem.pc()) then return data end
@@ -403,9 +416,9 @@ mem.wp8                 = function(addr, cb, filter)
 					end
 				end
 				return data
-			end))
+			end)
 	else
-		table.insert(global.holder.taps, pgm:install_write_tap(addr - 1, addr, name,
+		global.holder.taps[name] = pgm:install_write_tap(addr - 1, addr, name,
 			function(offset, data, mask)
 				mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
 				if accept_pc and accept_pc(mem.pc()) then return data end
@@ -423,14 +436,16 @@ mem.wp8                 = function(addr, cb, filter)
 					end
 				end
 				return data
-			end))
+			end)
 	end
 	cb(mem.r8(addr), {})
+	return global.holder.taps[name]
 end
-mem.wp16                = function(addr, cb, filter)
+mem.wp16                        = function(addr, cb, filter)
 	local accept_pc = pc_filter(filter)
-	local name = string.format("wp16_%x_%s", addr, #global.holder.taps)
-	table.insert(global.holder.taps, pgm:install_write_tap(addr, addr + 1, name,
+	local num = global.holder.countup()
+	local name = string.format("wp16_%x_%s", addr, num)
+	global.holder.taps[name] = pgm:install_write_tap(addr, addr + 1, name,
 		function(offset, data, mask)
 			local ret = {}
 			mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
@@ -449,15 +464,16 @@ mem.wp16                = function(addr, cb, filter)
 			cb(data3, ret)
 			--ut.printf("wp16 %x %x %x %x",addr, data, mask, ret.value or 0)
 			return ret.value or data
-		end))
+		end)
 	cb(mem.r16(addr), {})
 	--printf("register wp %s %x", name, addr)
+	return global.holder.taps[name]
 end
-mem.wp32                = function(addr, cb, filter)
+mem.wp32                        = function(addr, cb, filter)
 	local accept_pc = pc_filter(filter)
-	local num = #global.holder.taps
+	local num = global.holder.countup()
 	local name = string.format("wp32_%x_%s", addr, num)
-	table.insert(global.holder.taps, pgm:install_write_tap(addr, addr + 3, name,
+	global.holder.taps[name] = pgm:install_write_tap(addr, addr + 3, name,
 		function(offset, data, mask)
 			mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
 			if accept_pc and accept_pc(mem.pc()) then return data end
@@ -478,16 +494,18 @@ mem.wp32                = function(addr, cb, filter)
 			if ret.value then ret.value = addr == offset and (ret.value >> 0x10) or (ret.value & 0xFFFF) end
 			--ut.printf("wp32-3 %x %x %x %x %x %x", addr, offset, data, data3, mask, ret.value or 0)
 			return ret.value or data
-		end))
+		end)
 	cb(mem.r32(addr), {})
+	return global.holder.taps[name]
 end
-mem.rp8                 = function(addr, cb, filter)
+mem.rp8                         = function(addr, cb, filter)
 	local accept_pc = pc_filter(filter)
-	local name = string.format("rp8_%x_%s", addr, #global.holder.taps)
+	local num = global.holder.countup()
+	local name = string.format("rp8_%x_%s", addr, num)
 	if addr % 2 == 0 then
-		table.insert(global.holder.taps, pgm:install_read_tap(addr, addr + 1, name,
+		global.holder.taps[name] = pgm:install_read_tap(addr, addr + 1, name,
 			function(offset, data, mask)
-				mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
+				mem.rp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
 				if accept_pc and accept_pc(mem.pc()) then return data end
 				local ret = {}
 				if mask > 0xFF then
@@ -504,11 +522,11 @@ mem.rp8                 = function(addr, cb, filter)
 					end
 				end
 				return data
-			end))
+			end)
 	else
-		table.insert(global.holder.taps, pgm:install_read_tap(addr - 1, addr, name,
+		global.holder.taps[name] = pgm:install_read_tap(addr - 1, addr, name,
 			function(offset, data, mask)
-				mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
+				mem.rp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
 				if accept_pc and accept_pc(mem.pc()) then return data end
 				local ret = {}
 				if mask == 0xFF or mask == 0xFFFF then
@@ -524,38 +542,40 @@ mem.rp8                 = function(addr, cb, filter)
 					end
 				end
 				return data
-			end))
+			end)
 	end
 	cb(mem.r8(addr), {})
+	return global.holder.taps[name]
 end
-mem.rp16                = function(addr, cb, filter)
+mem.rp16                        = function(addr, cb, filter)
 	local accept_pc = pc_filter(filter)
-	local num = #global.holder.taps
+	local num = global.holder.countup()
 	local name = string.format("rp16_%x_%s", addr, num)
-	table.insert(global.holder.taps, pgm:install_read_tap(addr, addr + 1, name,
+	global.holder.taps[name] = pgm:install_read_tap(addr, addr + 1, name,
 		function(offset, data, mask)
 			mem.rp_cnt[addr] = (mem.rp_cnt[addr] or 0) + 1
 			if accept_pc and accept_pc(mem.pc()) then return data end
 			local ret = {}
 			if offset == addr then cb(data, ret) end
 			return ret.value or data
-		end))
+		end)
 	cb(mem.r16(addr), {})
+	return global.holder.taps[name]
 end
-mem.rp32                = function(addr, cb, filter)
+mem.rp32                        = function(addr, cb, filter)
 	local accept_pc = pc_filter(filter)
-	local num = #global.holder.taps
+	local num = global.holder.countup()
 	local name = string.format("rp32_%x_%s", addr, num)
-	table.insert(global.holder.taps, pgm:install_read_tap(addr, addr + 3, name,
+	global.holder.taps[name] = pgm:install_read_tap(addr, addr + 3, name,
 		function(offset, data, mask)
 			mem.rp_cnt[addr] = (mem.rp_cnt[addr] or 0) + 1
 			if accept_pc and accept_pc(mem.pc()) then return data end
 			if offset == addr then cb(mem.r32(addr)) end
 			return data
-		end))
+		end)
 	cb(mem.r32(addr))
+	return global.holder.taps[name]
 end
-
 -- DIPスイッチ
 local dip_config                = {
 	show_range    = false,
@@ -1474,32 +1494,49 @@ local load_close_far            = function()
 		chars[org_char].close_far[0x80] = ret
 	end
 end
-local reset_memory_tap = function(enabled)
+local reset_memory_tap          = function(label, enabled)
 	if not global.holder then return end
-	if enabled ~= true and global.holder.on == true then
-		for _, tap in ipairs(global.holder.taps) do tap:remove() end
-		global.holder.on = false
-	elseif enabled == true and global.holder.on ~= true then
-		for _, tap in ipairs(global.holder.taps) do tap:reinstall() end
-		global.holder.on = true
+	local sub = global.holder.sub[label]
+	if not sub then return end
+	if not enabled and sub.on == true then
+		sub.on = false
+		for name, tap in pairs(sub.taps) do tap:remove() end
+		--ut.printf("remove %s", label)
+	elseif enabled and sub.on ~= true then
+		sub.on = true
+		for name, tap in pairs(sub.taps) do tap:reinstall() end
+		--ut.printf("reinstall %s", label)
 	end
 end
-local load_memory_tap           = function(wps) -- tapの仕込み
-	if global.holder then
-		reset_memory_tap(true)
+local load_memory_tap           = function(label, wps) -- tapの仕込み
+	if global.holder and global.holder.sub[label] then
+		reset_memory_tap(label, true)
 		return
 	end
-	global.holder = { on = true, taps = {} }
+	if global.holder == nil then
+		global.holder = { on = true, taps = {}, sub = {}, cnt = 0, }
+		global.holder.countup = function()
+			global.holder.cnt = global.holder.cnt + 1
+			return global.holder.cnt
+		end
+	end
+	local sub = { on = true, taps = {} }
 	for _, p in ipairs(wps) do
 		for _, k in ipairs({ "wp8", "wp16", "wp32", "rp8", "rp16", "rp32", }) do
 			for any, cb in pairs(p[k] or {}) do
 				local addr = type(any) == "number" and any or any.addr
 				local filter = type(any) == "number" and {} or not any.filter and {} or type(any.filter) == "table" and any.filter or type(any.filter) == "number" and { any.filter }
 				---@diagnostic disable-next-line: redundant-parameter
-				mem[k](addr > 0xFF and addr or ((p.addr and p.addr.base) + addr), cb, filter)
+				local wp = mem[k](addr > 0xFF and addr or ((p.addr and p.addr.base) + addr), cb, filter)
+				---@diagnostic disable-next-line: need-check-nil
+				sub.taps[wp.name] = wp
+				---@diagnostic disable-next-line: need-check-nil
+				--ut.printf("%s install tap", label)
 			end
 		end
 	end
+	global.holder.sub[label] = sub
+	--ut.printf("install %s", label)
 end
 
 local apply_attack_infos        = function(p, id, base_addr)
@@ -1642,6 +1679,10 @@ rbff2.startplugin               = function()
 				cmd_side    = base + 0x86,     -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
 				life        = base + 0x8B,     -- 体力
 				pow         = base + 0xBC,     -- パワーアドレス
+				flag_c0     = base + 0xC0,
+				flag_c4     = base + 0xC4,
+				flag_c8     = base + 0xC8,
+				flag_cc     = base + 0xCC,
 				hurt_state  = base + 0xE4,     -- やられ状態 ライン送らない状態用
 				stun_limit  = p1 and 0x10B84E or 0x10B856, -- 最大気絶値
 				no_hit      = p1 and 0x10DDF2 or 0x10DDF1, -- ヒットしないフック
@@ -1837,10 +1878,7 @@ rbff2.startplugin               = function()
 				if data < 0x10 and p.dummy_gd == dummy_gd_type.force then ret.value = 0x10 end -- 0x10以上でガード
 			end,
 			[0xEC] = function(data) p.push_invincible = data end,                              -- 押し合い判定の透過状態
-			[0xEE] = function(data)
-				p.in_hitstop_value = data
-				p.in_hitstun = ut.tstb(data, 0x80)
-			end,
+			[0xEE] = function(data) p.in_hitstop_value, p.in_hitstun = data, ut.tstb(data, 0x80) end,
 			[0xF6] = function(data) p.invincible = data end, -- 打撃と投げの無敵の残フレーム数
 			-- [0xF7] = function(data) end -- 技の内部の進行度
 			[{ addr = 0xFB, filter = { 0x49418, 0x49428 } }] = function(data)
@@ -1851,7 +1889,7 @@ rbff2.startplugin               = function()
 				end
 				p.kaiserwave[pc] = now()
 			end,
-			[p1 and 0x10B4E1 or 0x10B4E0] = update_tmp_combo,
+			[p1 and 0x10B4E1 or 0x10B4E0] = p.update_tmp_combo,
 			[p1 and 0x10B4E5 or 0x10B4E4] = function(data) p.last_combo = data end, -- 最近のコンボ数
 			[p1 and 0x10B4E7 or 0x10B4E8] = function(data) p.konck_back4 = data end, -- 1ならやられ中
 			--[p1 and 0x10B4F0 or 0x10B4EF] = function(data) p.max_combo = data end, -- 最大コンボ数
@@ -1968,10 +2006,10 @@ rbff2.startplugin               = function()
 				if global.damaged_move > 1 then ret.value = hit_effect_moves[global.damaged_move] end
 			end,
 			-- [0x0C] = function(data) p.reserve_proc = data end,               -- 予約中の処理アドレス
-			[0xC0] = function(data) p.flag_c0 = data end,                    -- フラグ群
-			[0xC4] = function(data) p.flag_c4 = data end,                    -- フラグ群
-			[0xC8] = function(data) p.flag_c8 = data end,                    -- フラグ群
-			[0xCC] = function(data) p.flag_cc = data end,                    -- フラグ群
+			-- [0xC0] = function(data) p.flag_c0 = data end,                    -- フラグ群
+			-- [0xC4] = function(data) p.flag_c4 = data end,                    -- フラグ群
+			-- [0xC8] = function(data) p.flag_c8 = data end,                    -- フラグ群
+			-- [0xCC] = function(data) p.flag_cc = data end,                    -- フラグ群
 			[p1 and 0x0394C4 or 0x0394C8] = function(data) p.input_offset = data end, -- コマンド入力状態のオフセットアドレス
 		}
 		all_objects[p.addr.base] = p
@@ -2063,19 +2101,8 @@ rbff2.startplugin               = function()
 	end
 	local common_p = {                                                -- プレイヤー別ではない共通のフック
 		wp8 = {
-			[{ addr = 0x107EC6, filter = 0x11DE8 }] = change_player_input,
-			[0x107C22] = function(data, ret)
-				if global.disp_meters ~= true and data == 0x38 then -- ゲージのFIX非表示
-					ret.value = 0x0
-					mem.w8(0x10E024, 0x3)                   -- 3にしないと0x107C2Aのカウントが進まなくなる
-				end
-				if global.disp_bg ~= true and mem.r8(0x107C22) > 0 then -- 背景消し
-					mem.w8(0x107762, 0x00)
-					mem.w16(0x401FFE, 0x5ABB)               -- 背景色
-				end
-			end,
 			[0x10B862] = function(data) mem._0x10B862 = data end, -- 押し合い判定で使用
-			[0x107C1F] = function(data) global.skip_frame1 = data ~= 0 end, -- 潜在能力強制停止
+			--[0x107C1F] = function(data) global.skip_frame1 = data ~= 0 end, -- 潜在能力強制停止
 			[0x107EBF] = function(data) global.skip_frame2 = data ~= 0 end, -- 潜在能力強制停止
 		},
 		wp16 = {
@@ -2092,36 +2119,6 @@ rbff2.startplugin               = function()
 		wp32 = {
 		},
 		rp8 = {
-			[{ addr = 0x107EC6, filter = 0x11DC4 }] = function(data)
-				if in_player_select ~= true then return end
-				if data == mem.rg("D0", 0xFF) then change_player_input(data) end
-			end,
-			[{ addr = 0x107765, filter = { 0x40EE, 004114, 0x413A } }] = function(_, ret)
-				local pc = mem.pc()
-				local a = mem.rg("A4", 0xFFFFFF)
-				local b = mem.r32(a + 0x8A)
-				local c = mem.r16(a + 0xA) + 0x100000
-				local d = mem.r16(c + 0xA) + 0x100000
-				local e = (mem.r32(a + 0x18) << 32) + mem.r32(a + 0x1C)
-				local p_bases = { a, b, c, d, } -- ベースアドレス候補
-				if db.p_chan[e] then ret.value = 0 end
-				for i, addr, p in find(p_bases, get_object_by_addr) do
-					--ut.printf("%s %s %6x", global.frame_number, i, addr)
-					if i == 1 and p.hide_char then
-						ret.value = 4
-					elseif i == 2 and p.hide_phantasm then
-						ret.value = 4
-					elseif i >= 3 and p.hide_effect then
-						ret.value = 4
-					end
-					return
-				end
-				if global.hide_effect then
-					ret.value = 4
-					return
-				end
-				--ut.printf("%6x %8x %8x %8x | %8x %16x %s", a, b, c, d, pc, e, data.get_obj_name(e))
-			end,
 			[{ addr = 0x107C1F, filter = 0x39456 }] = function(data)
 				local p = get_object_by_reg("A4", {})
 				if p.bs_hook then
@@ -2145,9 +2142,6 @@ rbff2.startplugin               = function()
 				0x22AD8,                                                      -- データロードぽいので
 				0x22D32,                                                      -- 必要な事前処理ぽいので
 			} }] = function(data, ret) ret.value = 1 end,                     -- 双角ステージの雨バリエーション時でも1ラウンド相当の前処理を行う
-			[{ addr = 0x107BB0, filter = { 0x1728E, 0x172DE } }] = function(data, ret) -- 影消し=2, 双角ステージの反射→影化=0
-				if global.hide_shadow ~= 2 then ret.value = (global.hide_shadow == 1) and 2 or 0 end
-			end,
 			[mem.stage_base_addr + 0x46] = function(data, ret) if global.fix_scr_top > 1 then ret.value = data + global.fix_scr_top - 20 end end,
 			[mem.stage_base_addr + 0xA4] = function(data, ret) if global.fix_scr_top > 1 then ret.value = data + global.fix_scr_top - 20 end end,
 		},
@@ -2160,6 +2154,66 @@ rbff2.startplugin               = function()
 			[0x5B1F2] = function(data) get_object_by_reg("A4", {}).last_damage_scaling2 = 1 end,
 			[0x5B1F6] = function(data) get_object_by_reg("A4", {}).last_damage_scaling2 = 7 / 8 end,
 			[0x5B1FA] = function(data) get_object_by_reg("A4", {}).last_damage_scaling2 = 3 / 4 end,
+		}
+	}
+	local hide_wps = {
+		wp8 = {
+			[0x107C22] = function(data, ret)
+				if ut.tstb(global.hide, hide_options.meters, true) and data == 0x38 then -- ゲージのFIX非表示
+					ret.value = 0x0
+					mem.w8(0x10E024, 0x3)                   -- 3にしないと0x107C2Aのカウントが進まなくなる
+				end
+				if ut.tstb(global.hide, hide_options.background, true) and mem.r8(0x107C22) > 0 then -- 背景消し
+					mem.w8(0x107762, 0x00)
+					mem.w16(0x401FFE, 0x5ABB)               -- 背景色
+				end
+			end,
+		},
+		rp8 = {
+			[{ addr = 0x107765, filter = { 0x40EE, 004114, 0x413A } }] = function(_, ret)
+				local pc = mem.pc()
+				local a = mem.rg("A4", 0xFFFFFF)
+				local b = mem.r32(a + 0x8A)
+				local c = mem.r16(a + 0xA) + 0x100000
+				local d = mem.r16(c + 0xA) + 0x100000
+				local e = (mem.r32(a + 0x18) << 32) + mem.r32(a + 0x1C)
+				local p_bases = { a, b, c, d, } -- ベースアドレス候補
+				if db.p_chan[e] then ret.value = 0 end
+				for i, addr, p in find(p_bases, get_object_by_addr) do
+					--ut.printf("%s %s %6x", global.frame_number, i, addr)
+					if i == 1 and ut.tstb(global.hide, hide_options["p" .. p.num .. "_char"], true) then
+						ret.value = 4
+					elseif i == 2 and ut.tstb(global.hide, hide_options["p" .. p.num .. "_phantasm"], true) then
+						ret.value = 4
+					elseif i >= 3 and ut.tstb(global.hide, hide_options["p" .. p.num .. "_effect"], true) then
+						ret.value = 4
+					end
+					return
+				end
+				if ut.tstb(global.hide, hide_options.effect, true) then
+					ret.value = 4
+					return
+				end
+				--ut.printf("%6x %8x %8x %8x | %8x %16x %s", a, b, c, d, pc, e, data.get_obj_name(e))
+			end,
+		},
+		rp16 = {
+			[{ addr = 0x107BB0, filter = { 0x1728E, 0x172DE } }] = function(data, ret) -- 影消し or 双角ステージの反射→影化
+				if ut.tstb(global.hide, hide_options.shadow1 |hide_options.shadow2) then
+					ret.value = ut.tstb(global.hide, hide_options.shadow1, true) and 2 or 0
+				end
+			end,
+		},
+	}
+	local select_wps = {
+		wp8 = {
+			[{ addr = 0x107EC6, filter = 0x11DE8 }] = change_player_input,
+		},
+		rp8 = {
+			[{ addr = 0x107EC6, filter = 0x11DC4 }] = function(data)
+				if in_player_select ~= true then return end
+				if data == mem.rg("D0", 0xFF) then change_player_input() end
+			end,
 		}
 	}
 	table.insert(all_wps, common_p)
@@ -3443,6 +3497,10 @@ rbff2.startplugin               = function()
 			p.char4       = 0xFFFF & (p.char << 2)
 			p.char8       = 0xFFFF & (p.char << 3)
 			p.old_state   = p.state -- 前フレームの状態保存
+			p.flag_c0     = mem.r32(p.addr.flag_c0)
+			p.flag_c4     = mem.r32(p.addr.flag_c4)
+			p.flag_c8     = mem.r32(p.addr.flag_c8)
+			p.flag_cc     = mem.r32(p.addr.flag_cc)
 			p.old_flag_c0 = p.flag_c0
 			p.old_flag_cc = p.flag_cc
 			p.slide_atk   = ut.tstb(p.flag_cc, db.flag_cc._02) -- ダッシュ滑り攻撃
@@ -4486,12 +4544,12 @@ rbff2.startplugin               = function()
 					scr:draw_box(p1 and 0 or 277, 0, p1 and 40 or 316, box_bottom, 0x80404040, 0x80404040)
 					scr:draw_text(p1 and 4 or 278, 0, table.concat(state_label, "\n"))
 
-					table.insert(flag_label, string.format("C0 %-32s", ut.hextobitstr(string.format("%08X", p.flag_c0), " ")))
-					table.insert(flag_label, string.format("C4 %-32s", ut.hextobitstr(string.format("%08X", p.flag_c4), " ")))
-					table.insert(flag_label, string.format("C8 %-32s", ut.hextobitstr(string.format("%08X", p.flag_c8), " ")))
-					table.insert(flag_label, string.format("CC %-32s", ut.hextobitstr(string.format("%08X", p.flag_cc), " ")))
-					table.insert(flag_label, string.format("D0 %-32s", ut.hextobitstr(string.format("%02X", p.flag_d0), " ")))
-					scr:draw_text(80, 60 + get_line_height(p1 and 0 or 4), table.concat(flag_label, "\n"))
+					table.insert(flag_label, string.format("C0 %-32s", ut.hextobitstr(string.format("%08X", p.flag_c0 or 0), " ")))
+					table.insert(flag_label, string.format("C4 %-32s", ut.hextobitstr(string.format("%08X", p.flag_c4 or 0), " ")))
+					table.insert(flag_label, string.format("C8 %-32s", ut.hextobitstr(string.format("%08X", p.flag_c8 or 0), " ")))
+					table.insert(flag_label, string.format("CC %-32s", ut.hextobitstr(string.format("%08X", p.flag_cc or 0), " ")))
+					table.insert(flag_label, string.format("D0 %-32s", ut.hextobitstr(string.format("%02X", p.flag_d0 or 0), " ")))
+					scr:draw_text(80, 60 + get_line_height(p1 and 0 or 5), table.concat(flag_label, "\n"))
 				end
 
 				-- コマンド入力状態表示
@@ -4900,14 +4958,14 @@ rbff2.startplugin               = function()
 		p[1].disp_base          = col[21] == 2 -- 1P 処理アドレス表示
 		p[2].disp_base          = col[22] == 2 -- 2P 処理アドレス表示
 		global.disp_pos         = col[23] == 2 -- 1P 2P 距離表示
-		p[1].hide_char          = col[24] == 1 -- 1P キャラ表示
-		p[2].hide_char          = col[25] == 1 -- 2P キャラ表示
-		p[1].hide_phantasm      = col[26] == 1 -- 1P 残像表示
-		p[2].hide_phantasm      = col[27] == 1 -- 2P 残像表示
-		p[1].hide_effect        = col[28] == 1 -- 1P エフェクト表示
-		p[2].hide_effect        = col[29] == 1 -- 2P エフェクト表示
-		global.hide_p_chan      = col[30] == 1 -- Pちゃん表示
-		global.hide_effect      = col[31] == 1 -- エフェクト表示
+		global.hide             = ut.hex_set(global.hide, hide_options.p1_char, col[24] ~= 1) -- 1P キャラ表示
+		global.hide             = ut.hex_set(global.hide, hide_options.p2_char, col[25] ~= 1) -- 2P キャラ表示
+		global.hide             = ut.hex_set(global.hide, hide_options.p1_phantasm, col[26] ~= 1) -- 1P 残像表示
+		global.hide             = ut.hex_set(global.hide, hide_options.p2_phantasm, col[27] ~= 1) -- 2P 残像表示
+		global.hide             = ut.hex_set(global.hide, hide_options.p1_effect, col[28] ~= 1) -- 1P エフェクト表示
+		global.hide             = ut.hex_set(global.hide, hide_options.p2_effect, col[29] ~= 1) -- 2P エフェクト表示
+		global.hide             = ut.hex_set(global.hide, hide_options.p_chan, col[30] ~= 1) -- Pちゃん表示
+		global.hide             = ut.hex_set(global.hide, hide_options.effect, col[31] ~= 1) -- エフェクト表示
 		menu.current            = menu.main
 	end
 	local ex_menu_to_main          = function()
@@ -5114,14 +5172,14 @@ rbff2.startplugin               = function()
 		col[21] = p[1].disp_base and 2 or 1 -- 1P 処理アドレス表示
 		col[22] = p[2].disp_base and 2 or 1 -- 2P 処理アドレス表示
 		col[23] = g.disp_pos and 2 or 1   -- 1P 2P 距離表示
-		col[24] = p[1].hide_char and 1 or 2 -- 1P キャラ表示
-		col[25] = p[2].hide_char and 1 or 2 -- 2P キャラ表示
-		col[26] = p[1].hide_phantasm and 1 or 2 -- 1P 残像表示
-		col[27] = p[2].hide_phantasm and 1 or 2 -- 2P 残像表示
-		col[28] = p[1].hide_effect and 1 or 2 -- 1P エフェクト表示
-		col[29] = p[2].hide_effect and 1 or 2 -- 2P エフェクト表示
-		col[30] = g.hide_p_chan and 1 or 2 -- Pちゃん表示
-		col[31] = g.hide_effect and 1 or 2 -- エフェクト表示
+		col[24] = ut.tstb(global.hide, hide_options.p1_char) and 1 or 2 -- 1P キャラ表示
+		col[25] = ut.tstb(global.hide, hide_options.p2_char) and 1 or 2 -- 2P キャラ表示
+		col[26] = ut.tstb(global.hide, hide_options.p1_phantasm) and 1 or 2 -- 1P 残像表示
+		col[27] = ut.tstb(global.hide, hide_options.p2_phantasm) and 1 or 2 -- 2P 残像表示
+		col[28] = ut.tstb(global.hide, hide_options.p1_effect) and 1 or 2 -- 1P エフェクト表示
+		col[29] = ut.tstb(global.hide, hide_options.p2_effect) and 1 or 2 -- 2P エフェクト表示
+		col[30] = ut.tstb(global.hide, hide_options.p_chan) and 1 or 2 -- Pちゃん表示
+		col[31] = ut.tstb(global.hide, hide_options.effect) and 1 or 2 -- エフェクト表示
 	end
 	local init_ex_menu_config      = function()
 		local col = menu.extra.pos.col
@@ -5201,9 +5259,10 @@ rbff2.startplugin               = function()
 	end
 	local menu_restart_fight       = function()
 		--main_menu.pos.row = 1
-		global.disp_meters = menu.main.pos.col[15] == 2 -- 体力,POWゲージ表示
-		global.disp_bg = menu.main.pos.col[16] == 2  -- 背景表示
-		global.hide_shadow = menu.main.pos.col[17]   -- 影表示
+		global.hide = ut.hex_set(global.hide, hide_options.meters, menu.main.pos.col[15] == 2) -- 体力,POWゲージ表示
+		global.hide = ut.hex_set(global.hide, hide_options.background, menu.main.pos.col[16] == 2) -- 背景表示
+		global.hide = ut.hex_set(global.hide, hide_options.shadow1, menu.main.pos.col[17] ~= 2) -- 影表示
+		global.hide = ut.hex_set(global.hide, hide_options.shadow2, menu.main.pos.col[17] ~= 3) -- 影表示
 		restart_fight({
 			next_p1    = menu.main.pos.col[9],       -- 1P セレクト
 			next_p2    = menu.main.pos.col[10],      -- 2P セレクト
@@ -5270,7 +5329,7 @@ rbff2.startplugin               = function()
 			{ "BGMセレクト", menu.labels.bgms },
 			{ "体力,POWゲージ表示", menu.labels.off_on, },
 			{ "背景表示", menu.labels.off_on, },
-			{ "影表示", { "OFF", "ON", "ON:反射→影", } },
+			{ "影表示", { "ON", "OFF", "ON:反射→影", } },
 			{ "位置補正", menu.labels.fix_scr_tops, },
 			{ "リスタート" },
 		},
@@ -5355,10 +5414,10 @@ rbff2.startplugin               = function()
 		if not found then
 			menu.main.pos.col[14] = 1
 		end
-
-		menu.main.pos.col[15] = global.disp_meters and 2 or 1 -- 体力,POWゲージ表示
-		menu.main.pos.col[16] = global.disp_bg and 2 or 1 -- 背景表示
-		menu.main.pos.col[17] = global.hide_shadow      -- 影表示
+		menu.main.pos.col[15] = ut.tstb(global.hide, hide_options.meters, true) and 1 or 2 -- 体力,POWゲージ表示
+		menu.main.pos.col[16] = ut.tstb(global.hide, hide_options.background, true) and 1 or 2 -- 背景表示
+		menu.main.pos.col[17] = ut.tstb(global.hide, hide_options.shadow1, true) and 2 or
+			ut.tstb(global.hide, hide_options.shadow2, true) and 3 or 1      -- 影表示
 		menu.main.pos.col[18] = global.fix_scr_top
 
 		setup_char_manu()
@@ -5932,7 +5991,11 @@ rbff2.startplugin               = function()
 
 	menu.state = menu.tra_main -- menu or tra_main
 
-	emu.register_pause(function() menu.state.draw() end)
+	emu.register_pause(function()
+		menu.state.draw()
+		--for addr, cnt in pairs(mem.wp_cnt) do ut.printf("wp %x %s" ,addr,cnt) end
+		--for addr, cnt in pairs(mem.rp_cnt) do ut.printf("rp %x %s" ,addr,cnt) end
+	end)
 
 	emu.register_resume(function() end)
 
@@ -5972,7 +6035,9 @@ rbff2.startplugin               = function()
 		mem._0x10E043   = mem.r8(0x10E043)
 		if bios_test() then
 			in_match, in_player_select, mem.pached = false, false, false -- 状態リセット
-			reset_memory_tap(false)
+			reset_memory_tap("all_wps")
+			reset_memory_tap("hide_wps")
+			reset_memory_tap("select_wps")
 		else
 			-- プレイヤーセレクト中かどうかの判定
 			in_player_select = _0x100701 == 0x10B and (_0x107C22 == 0 or _0x107C22 == 0x55) and _0x10FDAF == 2 and _0x10FDB6 ~= 0 and mem._0x10E043 == 0
@@ -5990,7 +6055,17 @@ rbff2.startplugin               = function()
 			load_proc_base()  -- キャラの基本アドレスの取得
 			load_push_box()   -- 接触判定の取得
 			load_close_far()  -- 遠近間合い取得
-			load_memory_tap(all_wps) -- tapの仕込み
+			load_memory_tap("all_wps", all_wps) -- tapの仕込み
+			if global.hide > 0 then
+				load_memory_tap("hide_wps", { hide_wps })
+			else
+				reset_memory_tap("hide_wps")
+			end
+			if in_player_select then
+				load_memory_tap("select_wps", { select_wps })
+			else
+				reset_memory_tap("select_wps")
+			end
 			menu.state.proc() -- メニュー初期化前に処理されないようにする
 		end
 	end)
