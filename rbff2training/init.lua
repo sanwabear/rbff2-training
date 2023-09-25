@@ -866,9 +866,6 @@ local draw_ctext_with_shadow    = function(x, y, str, fgcol, bgcol)
 	return draw_ctext(x, y, str, fgcol, bgcol)
 end
 
-local draw_fmt_rtext            = function(x, y, fmt, dec)
-	return draw_rtext_with_shadow(x, y, string.format(fmt, dec))
-end
 -- コマンド文字列表示
 local draw_cmd_text_with_shadow = function(x, y, str, fgcol, bgcol)
 	-- 変換しつつUnicodeの文字配列に落とし込む
@@ -888,16 +885,13 @@ local draw_cmd_text_with_shadow = function(x, y, str, fgcol, bgcol)
 end
 -- コマンド入力表示
 local draw_cmd                  = function(p, line, frame, str)
-	local p1 = p == 1
-	local xx = p1 and 12 or 294 -- 1Pと2Pで左右に表示し分ける
-	local yy = (line + 10 - 1) * 8 -- +8はオフセット位置
-
+	local xx, yy = p == 1 and 12 or 294, get_line_height(line + 9)
 	if 0 < frame then
-		local cframe = 999 < frame and "LOT" or frame
-		draw_rtext_with_shadow(p1 and 10 or 292, yy, cframe, text_col)
+		local cframe = 999 < frame and "LOT" or string.format("%03d", frame)
+		draw_text_with_shadow(p == 1 and 1 or 283, yy, cframe, text_col)
 	end
 	local col = 0xFAFFFFFF
-	if p1 then
+	if p == 1 then
 		for i = 1, 50 do
 			scr:draw_line(i, yy, i + 1, yy, col)
 			col = col - 0x05000000
