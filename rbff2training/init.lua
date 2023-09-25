@@ -910,21 +910,19 @@ local draw_cmd                  = function(p, line, frame, str)
 	end
 	draw_cmd_text_with_shadow(xx, yy, str)
 end
--- 処理アドレス表示
-local draw_base                 = function(p, line, frame, addr, act_name, xmov)
-	local p1 = p == 1
-	local xx = p1 and 60 or 195 -- 1Pと2Pで左右に表示し分ける
-	local yy = (line + 10 - 1) * 8 -- +8はオフセット位置
 
-	local cframe
-	if 0 < frame then
-		cframe = 999 < frame and "LOT" or frame
-	else
-		cframe = "0"
+-- 処理アドレス表示
+local draw_base                 = function(p, bases)
+	local lines = {}
+	for _, base in ipairs(bases) do
+		local frame, addr, act_name, xmov, cframe = base.count, base.addr, base.name, base.xmov, "000"
+		if 999 < frame then cframe = "LOT" else string.format("%03d", frame) end
+		local smov = (xmov < 0 and "-" or "+") .. string.format("%03d", math.abs(math.floor(xmov))) .. string.sub(string.format("%0.03f", xmov), -4)
+		table.insert(lines, string.format("%3s %05X %8s %-s", cframe, addr, smov, act_name))
 	end
-	local sline = string.format("%3s %8x %0.03f %s", cframe, addr, xmov, act_name)
-	scr:draw_text(xx + 0.5, yy + 0.5, sline, 0xFF000000) -- 文字の影
-	scr:draw_text(xx, yy, sline, text_col)
+	local xx, txt = p == 1 and 60 or 195, table.concat(lines, "\n") -- 1Pと2Pで左右に表示し分ける
+	scr:draw_text(xx + 0.5, 80.5, txt, 0xFF000000)               -- 文字の影
+	scr:draw_text(xx, 80, txt, text_col)
 end
 
 -- 当たり判定のオフセット
@@ -4445,10 +4443,7 @@ rbff2.startplugin               = function()
 
 			-- ベースアドレス表示
 			for i, p in ipairs(players) do
-				for k = 1, #p.bases do
-					local bk = p.bases[k]
-					if p.disp_base then draw_base(i, k, bk.count, bk.addr, bk.name, bk.xmov) end
-				end
+				if p.disp_base then draw_base(i, p.bases) end
 			end
 
 			-- ダメージとコンボ表示
