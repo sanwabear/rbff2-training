@@ -2798,33 +2798,17 @@ rbff2.startplugin               = function()
 		local min_count = 332
 		for _, p in ipairs(players) do
 			local frame1 = p.act_frames[#p.act_frames]
-			if frame1.count <= 332 then
-				return
-			else
-				min_count = math.min(min_count, frame1.count)
-			end
+			if frame1.count > 332 then min_count = math.min(min_count, frame1.count) end
 
 			frame1 = p.muteki.act_frames[#p.muteki.act_frames]
-			if frame1.count <= 332 then
-				return
-			else
-				min_count = math.min(min_count, frame1.count)
-			end
+			if frame1.count > 332 then min_count = math.min(min_count, frame1.count) end
 
 			frame1 = p.frm_gap.act_frames[#p.frm_gap.act_frames]
-			if frame1.count <= 332 then
-				return
-			else
-				min_count = math.min(min_count, frame1.count)
-			end
+			if frame1.count > 332 then min_count = math.min(min_count, frame1.count) end
 
 			for _, fb in ipairs(p.fireballs) do
 				local frame1 = fb.act_frames[#fb.act_frames]
-				if frame1.count <= 332 then
-					return
-				else
-					min_count = math.min(min_count, frame1.count)
-				end
+				if frame1.count > 332 then min_count = math.min(min_count, frame1.count) end
 			end
 		end
 
@@ -3061,11 +3045,9 @@ rbff2.startplugin               = function()
 		elseif p.on_bs_check == global.frame_number then
 			col, line = 0xAAFF0022, 0xDDFF0022
 		elseif p.hitbox_types and #p.hitbox_types > 0 then
-			-- 判定タイプをソートする
-			table.sort(p.hitbox_types, function(t1, t2) return t1.sort > t2.sort end)
+			table.sort(p.hitbox_types, function(t1, t2) return t1.sort > t2.sort end) -- ソート
 			if p.hitbox_types[1].sort < 3 and p.repeatable then
-				-- やられ判定より連キャン状態を優先表示する
-				col, line = 0xAAD2691E, 0xDDD2691E
+				col, line = 0xAAD2691E, 0xDDD2691E -- やられ判定より連キャン状態を優先表示する
 			else
 				col = p.hitbox_types[1].color
 				col, line = ut.hex_set(col, 0xAA000000), ut.hex_set(col, 0xDD000000)
@@ -3598,15 +3580,6 @@ rbff2.startplugin               = function()
 			p.old_skip_frame = p.skip_frame
 			p.skip_frame     = global.skip_frame1 or global.skip_frame2 or p.skip_frame
 
-			-- フレーム表示用処理
-			p.act_frames          = p.act_frames or {}
-			p.act_frames2         = p.act_frames2 or {}
-			p.act_frames_total    = p.act_frames_total or 0
-			p.muteki.act_frames   = p.muteki.act_frames or {}
-			p.muteki.act_frames2  = p.muteki.act_frames2 or {}
-			p.frm_gap.act_frames  = p.frm_gap.act_frames or {}
-			p.frm_gap.act_frames2 = p.frm_gap.act_frames2 or {}
-
 			p.old_act_data        = p.act_data or { name = "", type = act_types.free | act_types.preserve, }
 			if p.flag_c4 == 0 and p.flag_c8 == 0 then
 				local name
@@ -3871,14 +3844,11 @@ rbff2.startplugin               = function()
 
 			-- キー入力
 			if p.control == 1 then
-				p.reg_pcnt = reg_p1cnt
-				p.reg_st_b = reg_st_b
+				p.reg_pcnt, p.reg_st_b = reg_p1cnt, reg_st_b
 			elseif p.control == 2 then
-				p.reg_pcnt = reg_p2cnt
-				p.reg_st_b = reg_st_b
+				p.reg_pcnt, p.reg_st_b = reg_p2cnt, reg_st_b
 			else
-				p.reg_pcnt = 0xFF
-				p.reg_st_b = 0xFF
+				p.reg_pcnt, p.reg_st_b = 0xFF, 0xFF
 			end
 		end
 		apply_1p2p_active()
@@ -3887,7 +3857,7 @@ rbff2.startplugin               = function()
 		if global.disp_normal_frms == 1 or (global.disp_normal_frms == 2 and global.all_act_normal == false) then
 			-- キャラ、弾ともに通常動作状態ならリセットする
 			if global.disp_normal_frms == 2 and global.old_all_act_normal == true then
-				for _, p in ipairs(players) do
+				for _, p in ipairs(all_objects) do
 					p.act_frames_total = 0
 					p.act_frames = {}
 					p.act_frames2 = {}
@@ -3896,10 +3866,6 @@ rbff2.startplugin               = function()
 					p.hist_frame_gap = {}
 					p.muteki.act_frames = {}
 					p.muteki.act_frames2 = {}
-					for _, fb in pairs(p.fireballs) do
-						fb.act_frames = {}
-						fb.act_frames2 = {}
-					end
 					p.frame_gap      = 0
 					p.last_frame_gap = 0
 				end
@@ -3993,10 +3959,8 @@ rbff2.startplugin               = function()
 				local in_rec_replay = true
 				if global.dummy_mode == 5 then
 					in_rec_replay = false
-				elseif global.dummy_mode == 6 then
-					if global.rec_main == rec_play and recording.player == p.control then
-						in_rec_replay = false
-					end
+				elseif global.dummy_mode == 6 and global.rec_main == rec_play and recording.player == p.control then
+					in_rec_replay = false
 				end
 
 				-- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
@@ -4067,37 +4031,28 @@ rbff2.startplugin               = function()
 					if p.next_block == false then
 						-- カウンター消費しきったらヒットするように切り替える
 						p.next_block_ec = p.next_block_ec and (p.next_block_ec - 1) or 0
-						if p.next_block_ec == 0 then
-							p.next_block = false
-						end
+						if p.next_block_ec == 0 then p.next_block = false end
 					end
 				elseif p.dummy_gd == dummy_gd_type.block1 then
 					if p.block1 == 0 and p.next_block_ec == 75 then
 						p.next_block = true
 					elseif p.block1 == 1 then
-						p.next_block = true
-						p.next_block_ec = 75 -- カウンター初期化
+						p.next_block, p.next_block_ec  = true, 75 -- カウンター初期化
 					elseif p.block1 == 2 and global.frame_number <= (p.on_block1 + global.next_block_grace) then
 						p.next_block = true
 					else
 						-- カウンター消費しきったらガードするように切り替える
 						p.next_block_ec = p.next_block_ec and (p.next_block_ec - 1) or 0
 						if p.next_block_ec == 0 then
-							p.next_block = true
-							p.next_block_ec = 75 -- カウンター初期化
-							p.block1 = 0
+							p.next_block, p.next_block_ec, p. block1 = true, 75, 0 -- カウンター初期化
 						elseif global.frame_number == p.on_block then
-							p.next_block_ec = 75 -- カウンター初期化
-							p.next_block = false
+							p.next_block_ec, p.next_block = 75, false -- カウンター初期化
 						else
 							p.next_block = false
 						end
 					end
-					if global.frame_number == p.on_hit then
-						-- ヒット時はガードに切り替え
-						p.next_block = true
-						p.next_block_ec = 75 -- カウンター初期化
-						p.block1 = 0
+					if global.frame_number == p.on_hit then -- ヒット時はガードに切り替え
+						p.next_block, p.next_block_ec, p. block1 = true, 75, 0 -- カウンター初期化
 					end
 				end
 
@@ -4109,14 +4064,8 @@ rbff2.startplugin               = function()
 					p.gd_rvs_enabled = true
 				elseif p.gd_rvs_enabled ~= true and p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs and p.on_block == global.frame_number then
 					p.rvs_count = (p.rvs_count < 1) and 1 or p.rvs_count + 1
-					if global.dummy_rvs_cnt <= p.rvs_count and p.dummy_rvs then
-						p.gd_rvs_enabled = true
-						p.rvs_count = -1
-					end
-				elseif p.gd_rvs_enabled and p.state ~= 2 then
-					-- ガード状態が解除されたらリバサ解除
-					p.gd_rvs_enabled = false
-				end
+					if global.dummy_rvs_cnt <= p.rvs_count and p.dummy_rvs then p.gd_rvs_enabled, p.rvs_count = true, -1 end
+				elseif p.gd_rvs_enabled and p.state ~= 2 then p.gd_rvs_enabled = false end -- ガード状態が解除されたらリバサ解除
 
 				-- TODO: ライン送られのリバーサルを修正する。猶予1F
 				-- print(p.state, p.knock_back1, p.knock_back2, p.knock_back3, p.hitstop_remain, rvs_types.in_knock_back, p.last_blockstun, string.format("%x", p.act), p.act_count, p.act_frame)
@@ -4247,9 +4196,7 @@ rbff2.startplugin               = function()
 
 		-- Y座標強制
 		for _, p in ipairs(players) do
-			if p.force_y_pos > 1 then
-				mem.w16i(p.addr.pos_y, force_y_pos[p.force_y_pos])
-			end
+			if p.force_y_pos > 1 then mem.w16i(p.addr.pos_y, force_y_pos[p.force_y_pos]) end
 		end
 		-- X座標同期とY座標をだいぶ下に
 		if global.sync_pos_x ~= 1 then
