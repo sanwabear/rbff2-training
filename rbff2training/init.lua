@@ -2429,7 +2429,7 @@ rbff2.startplugin               = function()
 			p.input_states = {}
 			p.char_data = chars[p.char]
 
-			do_recover(p, op, true)
+			do_recover(p, true)
 
 			p.combo_update = 0
 			p.combo_damage = 0
@@ -2626,7 +2626,7 @@ rbff2.startplugin               = function()
 						},
 					}
 					for fnc, tbl in pairs(resets) do for addr, value in pairs(tbl) do fnc(addr, value) end end
-					do_recover(p, op, true)
+					do_recover(p, true)
 					p.last_frame_gap = 0
 				end
 			end
@@ -2978,7 +2978,7 @@ rbff2.startplugin               = function()
 		end
 	end
 
-	do_recover = function(p, op, force)
+	do_recover = function(p, force)
 		-- 体力と気絶値とMAX気絶値回復
 		local life = { 0xC0, 0x60, 0x00 }
 		local max_life = life[p.red] or (p.red - #life) -- 赤体力にするかどうか
@@ -2988,7 +2988,7 @@ rbff2.startplugin               = function()
 			mem.w8(p.addr.stun_limit, init_stuns) -- 最大気絶値
 			mem.w8(p.addr.init_stun, init_stuns) -- 最大気絶値
 		elseif p.life_rec then
-			if force or (p.addr.life ~= max_life and 180 < math.min(p.throw_timer, op.throw_timer)) then
+			if force or (p.addr.life ~= max_life and 180 < math.min(p.throw_timer, p.op.throw_timer)) then
 				mem.w8(p.addr.life, max_life) -- やられ状態から戻ったときに回復させる
 				mem.w8(p.addr.stun, 0)    -- 気絶値
 				mem.w8(p.addr.stun_limit, init_stuns) -- 最大気絶値
@@ -3916,7 +3916,7 @@ rbff2.startplugin               = function()
 				p.key_frames[#p.key_frames] = (999 < frmcount) and 1000 or (frmcount + 1)
 			end
 
-			do_recover(p, p.op)
+			do_recover(p)
 		end
 
 		-- プレイヤー操作
