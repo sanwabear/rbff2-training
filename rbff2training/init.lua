@@ -4292,19 +4292,13 @@ rbff2.startplugin               = function()
 				local chg_hurt = p.chg_hurtbox_frm == global.frame_number
 				local chg_sway = p.on_sway_line == global.frame_number or p.on_main_line == global.frame_number
 				for _, fb in pairs(p.fireballs) do
-					if fb.chg_hitbox_frm == global.frame_number then
-						chg_hit = true
-					end
-					if fb.chg_hurtbox_frm == global.frame_number then
-						chg_hurt = true
-					end
+					if fb.chg_hitbox_frm == global.frame_number then chg_hit = true end
+					if fb.chg_hurtbox_frm == global.frame_number then chg_hurt = true end
 				end
 				local chg_hitbox = p.act_normal ~= true and (p.atk_count == 1 or chg_act or chg_y or chg_hit or chg_hurt or chg_sway)
 
 				-- 判定が変わったらポーズさせる
-				if chg_hitbox and global.pause_hitbox == 4 then
-					global.pause = true
-				end
+				if chg_hitbox and global.pause_hitbox == 4 then global.pause = true end
 
 				-- 画像保存 1:OFF 2:1P動作 3:2P動作
 				if (chg_hitbox or p.state ~= 0) and global.save_snapshot > 1 then
