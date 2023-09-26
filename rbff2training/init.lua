@@ -3863,7 +3863,7 @@ rbff2.startplugin               = function()
 				p.old_skip_frame   = 0
 			end
 		end
-		
+
 		-- 全キャラ特別な動作でない場合はフレーム記録しない
 		if global.disp_normal_frms == 1 or (global.disp_normal_frms == 2 and global.all_act_normal == false) then
 			for _, p in ipairs(players) do
@@ -3877,50 +3877,30 @@ rbff2.startplugin               = function()
 
 		-- キーディス用の処理
 		for i, p in ipairs(players) do
-			local p1                         = i == 1
-			local op                         = p.op
-			local key_now                    = p.key_now
-			local lever, lever_no
-			local btn_a, btn_b, btn_c, btn_d = false, false, false, false
+			local p1, key_now = i == 1, p.key_now
 
 			-- 入力表示用の情報構築
-			key_now.d                        = (p.reg_pcnt & 0x80) == 0x00 and posi_or_pl1(key_now.d) or nega_or_mi1(key_now.d)           -- Button D
-			key_now.c                        = (p.reg_pcnt & 0x40) == 0x00 and posi_or_pl1(key_now.c) or nega_or_mi1(key_now.c)           -- Button C
-			key_now.b                        = (p.reg_pcnt & 0x20) == 0x00 and posi_or_pl1(key_now.b) or nega_or_mi1(key_now.b)           -- Button B
-			key_now.a                        = (p.reg_pcnt & 0x10) == 0x00 and posi_or_pl1(key_now.a) or nega_or_mi1(key_now.a)           -- Button A
-			key_now.rt                       = (p.reg_pcnt & 0x08) == 0x00 and posi_or_pl1(key_now.rt) or nega_or_mi1(key_now.rt)         -- Right
-			key_now.lt                       = (p.reg_pcnt & 0x04) == 0x00 and posi_or_pl1(key_now.lt) or nega_or_mi1(key_now.lt)         -- Left
-			key_now.dn                       = (p.reg_pcnt & 0x02) == 0x00 and posi_or_pl1(key_now.dn) or nega_or_mi1(key_now.dn)         -- Down
-			key_now.up                       = (p.reg_pcnt & 0x01) == 0x00 and posi_or_pl1(key_now.up) or nega_or_mi1(key_now.up)         -- Up
-			key_now.sl                       = (p.reg_st_b & (p1 and 0x02 or 0x08)) == 0x00 and posi_or_pl1(key_now.sl) or nega_or_mi1(key_now.sl) -- Select
-			key_now.st                       = (p.reg_st_b & (p1 and 0x01 or 0x04)) == 0x00 and posi_or_pl1(key_now.st) or nega_or_mi1(key_now.st) -- Start
-			if (p.reg_pcnt & 0x05) == 0x00 then
-				lever, lever_no = "_7", 7
-			elseif (p.reg_pcnt & 0x09) == 0x00 then
-				lever, lever_no = "_9", 9
-			elseif (p.reg_pcnt & 0x06) == 0x00 then
-				lever, lever_no = "_1", 1
-			elseif (p.reg_pcnt & 0x0A) == 0x00 then
-				lever, lever_no = "_3", 3
-			elseif (p.reg_pcnt & 0x01) == 0x00 then
-				lever, lever_no = "_8", 8
-			elseif (p.reg_pcnt & 0x02) == 0x00 then
-				lever, lever_no = "_2", 2
-			elseif (p.reg_pcnt & 0x04) == 0x00 then
-				lever, lever_no = "_4", 4
-			elseif (p.reg_pcnt & 0x08) == 0x00 then
-				lever, lever_no = "_6", 6
-			else
-				lever, lever_no = "_N", 5
+			for iv, k in ipairs({ "up", "dn", "lt", "rt", "a", "b", "c", "d", }) do
+				key_now[k] = (p.reg_pcnt & (2 ^ (iv - 1))) == 0 and posi_or_pl1(key_now[k]) or nega_or_mi1(key_now[k])
 			end
-			if (p.reg_pcnt & 0x10) == 0x00 then lever, btn_a = lever .. "_A", true end
-			if (p.reg_pcnt & 0x20) == 0x00 then lever, btn_b = lever .. "_B", true end
-			if (p.reg_pcnt & 0x40) == 0x00 then lever, btn_c = lever .. "_C", true end
-			if (p.reg_pcnt & 0x80) == 0x00 then lever, btn_d = lever .. "_D", true end
+			key_now.sl  = (p.reg_st_b & (p1 and 0x02 or 0x08)) == 0x00 and posi_or_pl1(key_now.sl) or nega_or_mi1(key_now.sl)
+			key_now.st  = (p.reg_st_b & (p1 and 0x01 or 0x04)) == 0x00 and posi_or_pl1(key_now.st) or nega_or_mi1(key_now.st) 
+
+			local lever = "_N"
+			local ggkey = { l = 5, a = false, b = false, c = false, d = false, }
+
 			-- GG風キーディスの更新
-			table.insert(p.ggkey_hist, { l = lever_no, a = btn_a, b = btn_b, c = btn_c, d = btn_d, })
+			for l, mask in ipairs({ 0x06, 0x02, 0x0A, 0x04, 0xFF, 0x08, 0x05, 0x01, 0x09, }) do
+				if (p.reg_pcnt & 0xF) + mask == 0xF then lever, ggkey.l = "_" .. l, l end
+			end
+			for iv, btn in ipairs({ "a", "b", "c", "d" }) do
+				if (p.reg_pcnt & ((2 ^ (iv - 1)) * 0x10)) == 0 then lever, ggkey[btn] = lever .. "_" .. btn, true end
+			end
+			table.insert(p.ggkey_hist, ggkey)
 			while 60 < #p.ggkey_hist do table.remove(p.ggkey_hist, 1) end --バッファ長調整
+
 			-- キーログの更新
+			lever = string.upper(lever)
 			if p.key_hist[#p.key_hist] ~= lever then
 				for k = 2, #p.key_hist do
 					p.key_hist[k - 1], p.key_frames[k - 1] = p.key_hist[k], p.key_frames[k]
@@ -3936,7 +3916,7 @@ rbff2.startplugin               = function()
 				p.key_frames[#p.key_frames] = (999 < frmcount) and 1000 or (frmcount + 1)
 			end
 
-			do_recover(p, op)
+			do_recover(p, p.op)
 		end
 
 		-- プレイヤー操作
