@@ -1155,20 +1155,24 @@ local load_rom_patch            = function()
 	-- mem.w16(0x10E792, 0x0007) -- maincpu.pw@10E792=0007
 	-- mem.w16(0x10E796, 0x0007) -- maincpu.pw@10E796=0008
 	]]
+	print("load_rom_patch done")
 end
 
 -- ヒット効果アドレステーブルの取得
 local load_hit_effects = function()
+	if #hit_effect_moves > 0 then return end
 	for i, _ in ipairs(hit_effects) do
 		table.insert(hit_effect_moves, mem.r32(0x579DA + (i - 1) * 4))
 		table.insert(hit_effect_move_keys, string.format("%2s %s %x", i, table.concat(hit_effects[i], " "), hit_effect_moves[#hit_effect_moves]))
 	end
+	print("load_hit_effects")
 end
 
 local load_hit_system_stops = function()
 	if hit_system_stops["a"] then return end
 	for addr = 0x57C54, 0x57CC0, 4 do hit_system_stops[mem.r32(addr)] = true end
 	hit_system_stops["a"] = true
+	print("load_hit_system_stops")
 end
 
 -- キャラの基本アドレスの取得
@@ -1197,6 +1201,7 @@ local load_proc_base            = function()
 			sp_invincible = mem.r32(char4 + 0x8DE62),
 		}
 	end
+	print("load_proc_base done")
 end
 
 -- 接触判定の取得
@@ -1224,6 +1229,7 @@ local load_push_box             = function()
 			-- printf("char=%s addr=%x type=000 x1=%s x2=%s y1=%s y2=%s", char, a2, x1, x2, y1, y2)
 		end
 	end
+	print("load_push_box done")
 end
 
 local get_push_box              = function(p)
@@ -1461,7 +1467,9 @@ local load_close_far            = function()
 		-- printf("%s %s %x %s %x %s", chars[char].name, act_name, d0, d0, d1, decd1)
 		chars[org_char].close_far[0x80] = ret
 	end
+	print("load_close_far done")
 end
+
 local reset_memory_tap          = function(label, enabled)
 	if not global.holder then return end
 	local sub = global.holder.sub[label]
@@ -1476,6 +1484,7 @@ local reset_memory_tap          = function(label, enabled)
 		--ut.printf("reinstall %s", label)
 	end
 end
+
 local load_memory_tap           = function(label, wps) -- tapの仕込み
 	if global.holder and global.holder.sub[label] then
 		reset_memory_tap(label, true)
@@ -1504,7 +1513,7 @@ local load_memory_tap           = function(label, wps) -- tapの仕込み
 		end
 	end
 	global.holder.sub[label] = sub
-	--ut.printf("install %s", label)
+	print("load_memory_tap [" .. label .. "] done")
 end
 
 local apply_attack_infos        = function(p, id, base_addr)
@@ -2059,10 +2068,10 @@ rbff2.startplugin               = function()
 			p.last_frame_gap   = 0
 			p.hist_frame_gap   = { 0 }
 			p.act_frames       = {}
-			p.act_frames2      = {}
+			p.frame_groups     = {}
 			p.act_frames_total = 0
-			p.muteki           = { act_frames = {}, act_frames2 = {}, }
-			p.frm_gap          = { act_frames = {}, act_frames2 = {}, }
+			p.muteki           = { act_frames = {}, frame_groups = {}, }
+			p.frm_gap          = { act_frames = {}, frame_groups = {}, }
 			p.old_skip_frame   = 0
 		end
 	end
@@ -2792,60 +2801,57 @@ rbff2.startplugin               = function()
 		local min_count = 332
 		for _, p in ipairs(players) do
 			local frame1 = p.act_frames[#p.act_frames]
-			if frame1.count > 332 then min_count = math.min(min_count, frame1.count) end
+			if frame1 and frame1.count > 332 then min_count = math.min(min_count, frame1.count) end
 
 			frame1 = p.muteki.act_frames[#p.muteki.act_frames]
-			if frame1.count > 332 then min_count = math.min(min_count, frame1.count) end
+			if frame1 and frame1.count > 332 then min_count = math.min(min_count, frame1.count) end
 
 			frame1 = p.frm_gap.act_frames[#p.frm_gap.act_frames]
-			if frame1.count > 332 then min_count = math.min(min_count, frame1.count) end
+			if frame1 and frame1.count > 332 then min_count = math.min(min_count, frame1.count) end
 
 			for _, fb in ipairs(p.fireballs) do
 				local frame1 = fb.act_frames[#fb.act_frames]
-				if frame1.count > 332 then min_count = math.min(min_count, frame1.count) end
+				if frame1 and frame1.count > 332 then min_count = math.min(min_count, frame1.count) end
 			end
 		end
 
 		local fix = min_count - 332
 		for _, p in ipairs(players) do
 			local frame1 = p.act_frames[#p.act_frames]
-			frame1.count = frame1.count - fix
+			if frame1 then frame1.count = frame1.count - fix end
 
 			frame1 = p.muteki.act_frames[#p.muteki.act_frames]
-			frame1.count = frame1.count - fix
+			if frame1 then frame1.count = frame1.count - fix end
 
 			frame1 = p.frm_gap.act_frames[#p.frm_gap.act_frames]
-			frame1.count = frame1.count - fix
+			if frame1 then frame1.count = frame1.count - fix end
 
 			for _, fb in ipairs(p.fireballs) do
 				local frame1 = fb.act_frames[#fb.act_frames]
-				frame1.count = frame1.count - fix
+				if frame1 then frame1.count = frame1.count - fix end
 			end
 		end
 	end
 
 	-- 技名でグループ化したフレームデータの配列をマージ生成する
-	local frame_groups = function(frame, frames2)
-		local upd = false
-		local frame_group = #frames2 > 0 and frames2[#frames2] or {}
-		local prev_frame  = frame_group ~= nil and frame_group[#frame_group] or nil
-		local prev_name   = prev_frame ~= nil and prev_frame.name or nil
-		if prev_name ~= frame.name or (frame.act_1st and frame.count == 1) then
-			upd = true
-			frame_group = {} -- ブレイクしたので新規にグループ作成
-			table.insert(frames2, frame_group)
-			table.insert(frame_group, frame)
-			if 180 < #frames2 then table.remove(frames2, 1) end --バッファ長調整 TODO
-			-- グループの先頭はフレーム合計ゼロ開始
-			frame.last_total = 0
-		else
-			if prev_frame and prev_frame ~= frame then
-				table.insert(frame_group, frame)
-				frame.last_total = prev_frame.last_total + prev_frame.count -- 直前までのフレーム合計加算して保存
-			end
+	local update_frame_groups = function(frame, frame_groups)
+		local last_group = frame_groups[#frame_groups]
+		local last_frame = last_group and last_group[#last_group] or nil
+		if not last_frame or last_frame.name ~= frame.name or     -- 名前違いでブレイク
+			(frame.act_1st and frame.count == 1)                   -- カウンタでブレイク
+		then
+			table.insert(frame_groups, { frame })                  -- ブレイクしたので新規にグループ作成
+			while 180 < #frame_groups do table.remove(frame_groups, 1) end --バッファ長調整
+			frame.last_total = 0                                   -- グループの先頭はフレーム合計ゼロ開始
+			return true
+		elseif last_frame and last_frame ~= frame then
+			table.insert(last_group, frame) -- 同一グループに合計加算して保存
+			frame.last_total = last_frame.last_total + last_frame.count
+			while 180 < #last_group do table.remove(last_group, 1) end --バッファ長調整
 		end
-		return frames2, upd
+		return false
 	end
+
 	-- グラフでフレームデータを表示する
 	local dodraw = function(x1, y, frame_group, main_frame, height, xmin, xmax, show_name, show_count, x, scr, txty, draw_if_overflow)
 		local grp_len = #frame_group
@@ -3052,9 +3058,8 @@ rbff2.startplugin               = function()
 		end
 
 		local frame = p.act_frames[#p.act_frames]
-		local name  = frame and frame.name or p.act_data.name
-		local prev  = name
-		name        = (frame and p.act_data.name_set and p.act_data.name_set[name] ~= true) and p.act_data.name or name
+		local prev  = frame and frame.name
+		local name  = (frame and p.act_data.name_set and p.act_data.name_set[prev]) and prev or p.act_data.name
 
 		if frame == nil or frame.attackbit ~= masked_attackbit or frame.col ~= col or p.on_fireball ~= 0 or p.on_prefb ~= 0 then
 			--行動IDの更新があった場合にフレーム情報追加
@@ -3071,7 +3076,8 @@ rbff2.startplugin               = function()
 				act_1st = p.act_1st,
 				attackbit = masked_attackbit,
 			}
-			ut.printf("%5X %3X %s %X %X %2s %2s %-5s %-5s %-5s %s",
+			--[[
+			ut.printf("%5X %03X %s %X %X %2s %2s %-5s %-5s %-5s %s",
 			p.addr.base,
 			frame.act,
 			frame.count,
@@ -3083,14 +3089,15 @@ rbff2.startplugin               = function()
 			frame.on_ground,
 			frame.act_1st,
 			string.gsub(string.format("%64s", ut.tobitstr(frame.attackbit)), " ", "0"))
+			]]
 			table.insert(p.act_frames, frame)
-			if 180 < #p.act_frames then table.remove(p.act_frames, 1) end --バッファ長調整
+			while 180 < #p.act_frames do table.remove(p.act_frames, 1) end --バッファ長調整
 		else
 			--同一行動IDが継続している場合はフレーム値加算
 			if frame then frame.count = frame.count + 1 end
 		end
 		-- 技名でグループ化したフレームデータの配列をマージ生成する
-		p.act_frames2 = frame_groups(frame, p.act_frames2)
+		update_frame_groups(frame, p.frame_groups)
 		-- 表示可能範囲（最大で横画面幅）以上は加算しない
 		if p.act_frames_total then
 			p.act_frames_total = (332 < p.act_frames_total) and 332 or (p.act_frames_total + 1)
@@ -3157,12 +3164,11 @@ rbff2.startplugin               = function()
 			frame.count = frame.count + 1
 		end
 		-- 技名でグループ化したフレームデータの配列をマージ生成する
-		local upd_group
-		p.muteki.act_frames2, upd_group = frame_groups(frame, p.muteki.act_frames2 or {})
+		local upd_group = update_frame_groups(frame, p.muteki.frame_groups or {})
 		-- メインフレーム表示からの描画開始位置を記憶させる
 		if upd_group and last_frame then
 			last_frame.muteki = last_frame.muteki or {}
-			table.insert(last_frame.muteki, p.muteki.act_frames2[#p.muteki.act_frames2])
+			table.insert(last_frame.muteki, p.muteki.frame_groups[#p.muteki.frame_groups])
 		end
 
 		return frame
@@ -3239,12 +3245,11 @@ rbff2.startplugin               = function()
 			frame.count = frame.count + 1
 		end
 		-- 技名でグループ化したフレームデータの配列をマージ生成する
-		local upd_group
-		p.frm_gap.act_frames2, upd_group = frame_groups(frame, p.frm_gap.act_frames2 or {})
+		local upd_group = update_frame_groups(frame, p.frm_gap.frame_groups or {})
 		-- メインフレーム表示からの描画開始位置を記憶させる
 		if upd_group and last_frame then
 			last_frame.frm_gap = last_frame.frm_gap or {}
-			table.insert(last_frame.frm_gap, p.frm_gap.act_frames2[#p.frm_gap.act_frames2])
+			table.insert(last_frame.frm_gap, p.frm_gap.frame_groups[#p.frm_gap.frame_groups])
 		end
 	end
 
@@ -3304,7 +3309,7 @@ rbff2.startplugin               = function()
 					frame.count = frame.count + 1
 				end
 				-- 技名でグループ化したフレームデータの配列をマージ生成する
-				p.act_frames2, fb_upd_groups[fb_base] = frame_groups(frame, p.act_frames2 or {})
+				fb_upd_groups[fb_base] = update_frame_groups(frame, p.frame_groups or {})
 			end
 		end
 
@@ -3314,7 +3319,7 @@ rbff2.startplugin               = function()
 				last_frame.fireball = last_frame.fireball or {}
 				last_frame.fireball[fb_base] = last_frame.fireball[fb_upd_group] or {}
 				local last_fb_frame = last_frame.fireball[fb_base]
-				table.insert(last_fb_frame, body.fireballs[fb_base].act_frames2[# body.fireballs[fb_base].act_frames2])
+				table.insert(last_fb_frame, body.fireballs[fb_base].frame_groups[# body.fireballs[fb_base].frame_groups])
 				last_fb_frame[#last_fb_frame].body_count = last_frame.last_total
 			end
 		end
@@ -3342,8 +3347,6 @@ rbff2.startplugin               = function()
 			end
 		end
 	end
-
-	local act_data_cache = {}
 
 	-- トレモのメイン処理
 	menu.tra_main.proc = function()
@@ -3580,7 +3583,8 @@ rbff2.startplugin               = function()
 
 			p.old_act_data        = p.act_data or { name = "", type = act_types.startup | act_types.free, }
 			if p.flag_c4 == 0 and p.flag_c8 == 0 then
-				local name
+				local name = nil
+				--{ names = { "ウェーブライダー" }, type = act_types.preserve | act_types.any, ids = { 0x10C } },
 				if ut.tstb(p.flag_cc, db.flag_cc._18, true) then
 					name = ut.tstb(p.flag_c0, db.flag_c0._30, true) and "ダウン" or "やられ"
 				elseif ut.tstb(p.flag_cc, db.flag_cc._16 | db.flag_cc._17 | db.flag_cc._19 | db.flag_cc._21 | db.flag_cc._22 | db.flag_cc._23 | db.flag_cc._28, true) then
@@ -3592,10 +3596,13 @@ rbff2.startplugin               = function()
 				else
 					name = db.get_flag_name(p.flag_c0, db.flag_names_c0)
 				end
-				p.act_data = act_data_cache[name]
-				if not p.act_data then
-					p.act_data = { bs_name= name, name= name, normal_name= name, slide_name= name, type = act_types.free | act_types.startup, }
-					act_data_cache[name] = p.act_data
+				if name then
+					p.act_data_cache = p.act_data_cache or {}
+					p.act_data = p.act_data_cache[name]
+					if not p.act_data then
+						p.act_data = { bs_name= name, name= name, normal_name= name, slide_name= name, type = act_types.free | act_types.startup, count = 1 }
+						p.act_data_cache[name] = p.act_data
+					end
 				end
 				p.act_1st = p.old_act_data ~= p.act_data
 				p.update_act = p.act_1st
@@ -3817,6 +3824,37 @@ rbff2.startplugin               = function()
 		end
 		]]
 
+		for _, p in pairs(all_objects) do
+			-- キャラ、弾ともに通常動作状態ならリセットする
+			if not global.all_act_normal and global.old_all_act_normal then
+				p.frame_gap        = 0
+				p.last_frame_gap   = 0
+				p.hist_frame_gap   = { 0 }
+				p.act_frames       = {}
+				p.frame_groups      = {}
+				p.act_frames_total = 0
+				p.muteki           = { act_frames = {}, frame_groups = {}, }
+				p.frm_gap          = { act_frames = {}, frame_groups = {}, }
+				p.old_skip_frame   = 0
+			end
+
+			--[[
+			ut.printf("%X %s %s %s %s %s %s %s", p.addr.base, #p.hist_frame_gap, #p.act_frames, #p.frame_groups, #p.muteki.act_frames, #p.muteki.frame_groups,
+			#p.frm_gap.act_frames, #p.frm_gap.frame_groups)
+			]]
+
+			-- 全キャラ特別な動作でない場合はフレーム記録しない
+			if global.disp_normal_frms == 1 or (global.disp_normal_frms == 2 and global.all_act_normal == false) then
+				if not p.is_fireball then
+					local _, chg_act_name = proc_act_frame(p) -- フレームデータの構築処理
+					--proc_muteki_frame(p, chg_act_name)
+					--proc_frame_gap(p, chg_act_name)
+					--proc_fb_frame(p)
+				end
+			end
+		end
+		fix_max_framecount() --1Pと2Pともにフレーム数が多すぎる場合は加算をやめる
+
 		-- キャラ間の距離
 		prev_space, p_space = (p_space ~= 0) and p_space or prev_space, players[1].pos - players[2].pos
 
@@ -3848,32 +3886,6 @@ rbff2.startplugin               = function()
 			end
 		end
 		apply_1p2p_active()
-
-		-- キャラ、弾ともに通常動作状態ならリセットする
-		if not global.all_act_normal and global.old_all_act_normal then
-			for _, p in pairs(all_objects) do
-				p.frame_gap        = 0
-				p.last_frame_gap   = 0
-				p.hist_frame_gap   = { 0 }
-				p.act_frames       = {}
-				p.act_frames2      = {}
-				p.act_frames_total = 0
-				p.muteki           = { act_frames = {}, act_frames2 = {}, }
-				p.frm_gap          = { act_frames = {}, act_frames2 = {}, }
-				p.old_skip_frame   = 0
-			end
-		end
-
-		-- 全キャラ特別な動作でない場合はフレーム記録しない
-		if global.disp_normal_frms == 1 or (global.disp_normal_frms == 2 and global.all_act_normal == false) then
-			for _, p in ipairs(players) do
-				local _, chg_act_name = proc_act_frame(p) -- フレームデータの構築処理
-				proc_muteki_frame(p, chg_act_name)
-				proc_frame_gap(p, chg_act_name)
-				proc_fb_frame(p)
-			end
-			fix_max_framecount() --1Pと2Pともにフレーム数が多すぎる場合は加算をやめる
-		end
 
 		-- キーディス用の処理
 		for i, p in ipairs(players) do
@@ -4222,7 +4234,7 @@ rbff2.startplugin               = function()
 				-- 画像保存 1:OFF 2:1P動作 3:2P動作
 				if (chg_hitbox or p.state ~= 0) and global.save_snapshot > 1 then
 					-- 画像保存先のディレクトリ作成
-					local frame_group = p.act_frames2[#p.act_frames2]
+					local frame_group = p.frame_groups[#p.frame_groups]
 					local name, sub_name, dir_name = frame_group[#frame_group].name, "_", base_path() .. "/capture"
 					ut.mkdir(dir_name)
 					dir_name = dir_name .. "/" .. p.char_data.names2
@@ -4259,9 +4271,7 @@ rbff2.startplugin               = function()
 			end
 
 			-- ベースアドレス表示
-			for i, p in ipairs(players) do
-				if p.disp_base then draw_base(i, p.bases) end
-			end
+			for i, p in ipairs(players) do if p.disp_base then draw_base(i, p.bases) end end
 
 			-- ダメージとコンボ表示
 			for i, p in ipairs(players) do
@@ -4440,15 +4450,15 @@ rbff2.startplugin               = function()
 					if global.disp_frmgap == 2 then
 						for _, xp in ipairs(p.objects) do
 							if not xp.is_fireball then
-								draw_frame_groups(p.act_frames2, p.act_frames_total, 30, p1 and 64 or 72, 8, true)
-							elseif xp.act_frames2 ~= nil and p.disp_fbfrm == true then
-								draw_frame_groups(xp.act_frames2, p.act_frames_total, 30, p1 and 64 or 70, 8, true)
+								draw_frame_groups(p.frame_groups, p.act_frames_total, 30, p1 and 64 or 72, 8, true)
+							elseif xp.frame_groups ~= nil and p.disp_fbfrm == true then
+								draw_frame_groups(xp.frame_groups, p.act_frames_total, 30, p1 and 64 or 70, 8, true)
 							end
 						end
-						--draw_frame_groups(p.muteki.act_frames2, p.act_frames_total, 30, p1 and 68 or 76, 3, true)
-						--draw_frame_groups(p.frm_gap.act_frames2, p.act_frames_total, 30, p1 and 65 or 73, 3, true)
+						--draw_frame_groups(p.muteki.frame_groups, p.act_frames_total, 30, p1 and 68 or 76, 3, true)
+						--draw_frame_groups(p.frm_gap.frame_groups, p.act_frames_total, 30, p1 and 65 or 73, 3, true)
 					end
-					draw_frames(p.act_frames2, p1 and 160 or 285, true, true, p1 and 40 or 165, 63, 8, 16, p.disp_fbfrm)
+					draw_frames(p.frame_groups, p1 and 160 or 285, true, true, p1 and 40 or 165, 63, 8, 16, p.disp_fbfrm)
 				end
 				--フレーム差と確定反撃の表示
 				if global.disp_frmgap > 1 then
@@ -5768,9 +5778,7 @@ rbff2.startplugin               = function()
 
 	emu.register_frame_done(function()
 		if not machine then return end
-		if machine.paused == false then
-			menu.state.draw()
-		end
+		if machine.paused == false then menu.state.draw() end
 		collectgarbage("collect")
 	end)
 
