@@ -1561,6 +1561,12 @@ local wakeup_type               = {
 local rvs_wake_types            = ut.new_set(wakeup_type.tech, wakeup_type.sway, wakeup_type.rvs)
 rbff2.startplugin               = function()
 	local players, all_wps, all_objects, all_fireballs, hitboxies, ranges = {}, {}, {}, {}, {}, {}
+	local old_copy = function(src)
+		if type(src) ~= "table" then return src end
+		local dest = {}
+		for k, v in pairs(src) do if v ~= nil and type(v) ~= "table" then dest[k] = v end end
+		return dest
+	end
 	local hitboxies_order = function(b1, b2) return (b1.id < b2.id) end
 	local ranges_order = function(r1, r2) return (r1.within and 1 or -1) < (r2.within and 1 or -1) end
 	local find = function(sources, resolver) -- sourcesの要素をresolverを通して得た結果で最初の非nilの値を返す
@@ -2061,7 +2067,7 @@ rbff2.startplugin               = function()
 			p.act_frames_total = 0
 			p.muteki           = { act_frames = {}, frame_groups = {}, }
 			p.frm_gap          = { act_frames = {}, frame_groups = {}, }
-			p.old_skip_frame   = 0
+			p.old              = old_copy(p)
 		end
 	end
 	local change_player_input = function()
@@ -3118,7 +3124,7 @@ rbff2.startplugin               = function()
 		--printf("top %s, hi %s, lo %s", screen_top, vul_hi, vul_lo)
 
 		local frame = p.muteki.act_frames[#p.muteki.act_frames]
-		if frame == nil or chg_act_name or frame.col ~= col or p.state ~= p.old_state or p.act_1st then
+		if frame == nil or chg_act_name or frame.col ~= col or p.state ~= p.old.state or p.act_1st then
 			--行動IDの更新があった場合にフレーム情報追加
 			frame = {
 				act = p.act,
@@ -3181,7 +3187,7 @@ rbff2.startplugin               = function()
 			p.frame_gap = 0
 		elseif p.act_normal then
 			-- 直前が行動中ならリセットする
-			if not p.old_act_normal then
+			if not p.old.act_normal then
 				p.frame_gap = 0
 			end
 			p.frame_gap = p.frame_gap + 1
@@ -3189,7 +3195,7 @@ rbff2.startplugin               = function()
 			col, line = 0xAA0000FF, 0xDD0000FF
 		elseif not p.act_normal then
 			-- 直前が行動中ならリセットする
-			if not op.old_act_normal then
+			if not op.old.act_normal then
 				p.frame_gap = 0
 			end
 			p.frame_gap = p.frame_gap - 1
@@ -3306,14 +3312,14 @@ rbff2.startplugin               = function()
 			if p.op.in_air then return end
 			if p.op.sway_status ~= 0x00 then return end -- 全投げ無敵
 		elseif ut.tstb(p.dummy_rvs.hook_type, hook_cmd_types.jump) then
-			if p.state == 0 and p.old_state == 0 and (p.flag_c0 | p.old_flag_c0) & 0x10000 == 0x10000 then
+			if p.state == 0 and p.old.state == 0 and (p.flag_c0 | p.old.flag_c0) & 0x10000 == 0x10000 then
 				return -- 連続通常ジャンプを繰り返さない
 			end
 		end
 		p.bs_hook = p.dummy_rvs.id and p.dummy_rvs or nil
 		if p.dummy_rvs.cmd_type then
 			if rvs_types.knock_back_recovery ~= rvs_type then
-				if (((p.flag_c0 | p.old_flag_c0) & 0x2 == 0x2) or pre_down_acts[p.act]) and p.dummy_rvs.cmd_type == db.cmd_types._2d then
+				if (((p.flag_c0 | p.old.flag_c0) & 0x2 == 0x2) or pre_down_acts[p.act]) and p.dummy_rvs.cmd_type == db.cmd_types._2d then
 					-- no act
 				else
 					p.bs_hook = p.dummy_rvs
@@ -3352,6 +3358,8 @@ rbff2.startplugin               = function()
 
 		if global.lag_frame == true then return end -- ラグ発生時は処理をしないで戻る
 
+		for _, p in pairs(all_objects) do p.old = old_copy(p) end
+
 		-- 1Pと2Pの状態読取
 		for i, p in ipairs(players) do
 			local op      = players[3 - i]
@@ -3361,21 +3369,16 @@ rbff2.startplugin               = function()
 			p.char_data   = chars[p.char]
 			p.char4       = 0xFFFF & (p.char << 2)
 			p.char8       = 0xFFFF & (p.char << 3)
-			p.old_state   = p.state -- 前フレームの状態保存
-			p.old_flag_c0 = p.flag_c0
-			p.old_flag_c4 = p.flag_c4
-			p.old_flag_c8 = p.flag_c8
-			p.old_flag_cc = p.flag_cc
 			p.flag_c0     = mem.r32(p.addr.flag_c0)
 			p.flag_c4     = mem.r32(p.addr.flag_c4)
 			p.flag_c8     = mem.r32(p.addr.flag_c8)
 			p.flag_cc     = mem.r32(p.addr.flag_cc)
-			p.change_c0   = p.flag_c0 ~= p.old_flag_c0
-			p.change_c4   = p.flag_c4 ~= p.old_flag_c4
-			p.change_c8   = p.flag_c8 ~= p.old_flag_c8
+			p.change_c0   = p.flag_c0 ~= p.old.flag_c0
+			p.change_c4   = p.flag_c4 ~= p.old.flag_c4
+			p.change_c8   = p.flag_c8 ~= p.old.flag_c8
 			p.slide_atk   = ut.tstb(p.flag_cc, db.flag_cc._02) -- ダッシュ滑り攻撃
 			-- ブレイクショット
-			p.bs_atk      = ut.tstb(p.flag_cc, db.flag_cc._21) and (ut.tstb(p.old_flag_cc, db.flag_cc._20) or p.bs_atk)
+			p.bs_atk      = ut.tstb(p.flag_cc, db.flag_cc._21) and (ut.tstb(p.old.flag_cc, db.flag_cc._20) or p.bs_atk)
 			-- やられ状態
 			if p.flag_fin or ut.tstb(p.flag_c0, db.flag_c0._16) then
 				-- 最終フレームか着地フレームの場合は前フレームのを踏襲する
@@ -3395,35 +3398,19 @@ rbff2.startplugin               = function()
 			end
 			p.last_normal_state = p.normal_state
 			p.normal_state      = p.state == 0 -- 素立ち
-			p.old_attack        = p.attack
-			p.old_repeatable    = p.repeatable
-			p.old_pure_dmg      = p.pure_dmg
-			p.old_invincible    = p.invincible or 0
 			-- 通常投げ無敵判断 その2(HOME 039FC6から03A000の処理を再現して投げ無敵の値を求める)
-			p.old_tw_muteki2    = p.tw_muteki2 or 0
 			p.throwable         = p.state == 0 and op.state == 0 and p.throw_timer > 24 and p.sway_status == 0x00 and p.invincible == 0 -- 投げ可能ベース
 			p.n_throwable       = p.throwable and p.tw_muteki2 == 0                                                            -- 通常投げ可能
-			p.old_act           = p.act or 0x00
-			p.old_act_count     = p.act_count
-			p.old_act_frame     = p.act_frame
-			p.old_knock_back1   = p.knock_back1
-			p.posd              = p.pos + p.pos_frc
-			p.old_pos           = p.pos
-			p.old_pos_frc       = p.pos_frc
 			p.thrust            = p.thrust + p.thrust_frc
 			p.inertia           = p.inertia + p.inertia_frc
 			p.pos_total         = p.pos + p.pos_frc
-			p.old_pos_total     = p.old_pos + ut.int16tofloat(p.old_pos_frc)
-			p.diff_pos_total    = p.pos_total - p.old_pos_total
-			p.old_pos_y         = p.pos_y
-			p.old_pos_frc_y     = p.pos_frc_y
-			p.old_in_air        = p.in_air
+			p.diff_pos_total    = p.old.pos_total and p.pos_total - p.old.pos_total or 0
 			p.in_air            = 0 < p.pos_y or 0 < p.pos_frc_y
 
 			-- ジャンプの遷移ポイントかどうか
-			if p.old_in_air ~= true and p.in_air == true then
+			if p.old.in_air ~= true and p.in_air == true then
 				p.chg_air_state = 1
-			elseif p.old_in_air == true and p.in_air ~= true then
+			elseif p.old.in_air == true and p.in_air ~= true then
 				p.chg_air_state = -1
 			else
 				p.chg_air_state = 0
@@ -3435,15 +3422,13 @@ rbff2.startplugin               = function()
 			else
 				p.pos_y_peek = 0
 			end
-			if p.pos_y < p.old_pos_y or (p.pos_y == p.old_pos_y and p.pos_frc_y < p.old_pos_frc_y) then
+			if p.pos_y < p.old.pos_y or (p.pos_y == p.old.pos_y and p.pos_frc_y < p.old.pos_frc_y) then
 				p.pos_y_down = p.pos_y_down and (p.pos_y_down + 1) or 1
 			else
 				p.pos_y_down = 0
 			end
-			p.old_pos_z = p.pos_z
-			p.old_sway_status = p.sway_status
 			-- 滑り属性の攻撃か慣性残しの立ち攻撃か
-			if p.slide_atk == true or (p.old_act == 0x19 and p.inertia > 0 and ut.tstb(p.flag_c0, 0x32)) then
+			if p.slide_atk == true or (p.old.act == 0x19 and p.inertia > 0 and ut.tstb(p.flag_c0, 0x32)) then
 				p.dash_act_addr = get_dash_act_addr(p, pgm)
 				p.dash_act_info = string.format("%s %s+%s %x",
 					p.slide_atk == true and "滑り属性" or "慣性残し",
@@ -3471,13 +3456,13 @@ rbff2.startplugin               = function()
 		-- 1Pと2Pの状態読取 入力
 		global.old_all_act_normal, global.all_act_normal = global.all_act_normal, true
 		for _, p in ipairs(players) do
-			p.old_input_states = p.input_states or {}
+			p.old.input_states = p.input_states or {}
 			p.input_states     = {}
 			local debug        = false -- 調査時のみtrue
 			local states       = dip_config.easy_super and input_states.easy or input_states.normal
 			states             = debug and states[#states] or states[p.char]
 			for ti, tbl in ipairs(states) do
-				local old, addr = p.old_input_states[ti], tbl.addr + p.input_offset
+				local old, addr = p.old.input_states[ti], tbl.addr + p.input_offset
 				local on, chg_remain = mem.r8(addr - 1), mem.r8(addr)
 				local on_prev = on
 				local max = (old and old.on_prev == on_prev) and old.max or chg_remain
@@ -3555,7 +3540,7 @@ rbff2.startplugin               = function()
 			--フレーム数
 			p.skip_frame     = global.skip_frame1 or global.skip_frame2 or p.skip_frame
 
-			p.old_act_data        = p.act_data or { name = "", type = act_types.startup | act_types.free, }
+			p.old.act_data        = p.act_data or { name = "", type = act_types.startup | act_types.free, }
 			if p.flag_c4 == 0 and p.flag_c8 == 0 then
 				local name = nil
 				--{ names = { "ウェーブライダー" }, type = act_types.preserve | act_types.any, ids = { 0x10C } },
@@ -3578,7 +3563,7 @@ rbff2.startplugin               = function()
 						p.act_data_cache[name] = p.act_data
 					end
 				end
-				p.act_1st = p.old_act_data ~= p.act_data
+				p.act_1st = p.old.act_data ~= p.act_data
 				p.update_act = p.act_1st
 			elseif p.char_data.acts and p.char_data.acts[p.act] then
 				p.act_data = p.char_data.acts[p.act]
@@ -3589,7 +3574,7 @@ rbff2.startplugin               = function()
 			-- 技動作は滑りかBSかを付与する
 			p.act_data.name = p.slide_atk and p.act_data.slide_name or p.bs_atk and p.act_data.bs_name or p.act_data.normal_name
 			-- ガード移行可否
-			p.old_act_normal, p.act_normal = p.act_normal, true
+			p.act_normal = true
 			if p.state == 2 or (p.attack_data | p.flag_c4 | p.flag_c8) ~= 0 or
 				ut.tstb(p.flag_cc, 0xFFFFFF3F) or ut.tstb(p.flag_c0, 0x03FFD723) or
 				not ut.tstb(p.act_data.type, act_types.free | act_types.block) then
@@ -3614,13 +3599,10 @@ rbff2.startplugin               = function()
 			end
 			if 16 < #p.bases then table.remove(p.bases, 1) end --バッファ長調整
 			-- 飛び道具の状態読取
-			local on_fireball, on_prefb = 0, 0
-			local off_fireball, off_prefb = 0, 0
+			local on_fireball, on_prefb, off_fireball, off_prefb = 0, 0, 0, 0
 			for _, fb in pairs(p.fireballs) do
 				if fb.proc_active then
-					fb.old_act        = fb.act
 					fb.atk_count      = fb.atk_count or 0
-					fb.old_skip_frame = fb.skip_frame
 					fb.skip_frame     = p.skip_frame -- 親オブジェクトの停止フレームを反映
 					on_fireball       = math.max(on_fireball, fb.on_fireball or 0)
 					on_prefb          = math.max(on_prefb, fb.on_prefb or 0)
@@ -3778,7 +3760,7 @@ rbff2.startplugin               = function()
 			end
 			-- 停止時間なしのヒットガードのためelseifで繋げない
 			if (p.hit1 == 1 and p.skip_frame == false) or
-				((p.state == 1 or p.state == 3) and p.old_skip_frame == true and p.skip_frame == false) then
+				((p.state == 1 or p.state == 3) and p.old.skip_frame == true and p.skip_frame == false) then
 				p.hit1 = 2 -- ヒット後のヒットストップ解除フレームの記録
 				p.on_hit1 = global.frame_number
 			end
@@ -3791,7 +3773,7 @@ rbff2.startplugin               = function()
 
 			-- 停止時間なしのヒットガードのためelseifで繋げない
 			if (p.block1 == 1 and p.skip_frame == false) or
-				(p.state == 2 and p.old_skip_frame == true and p.skip_frame == false) then
+				(p.state == 2 and p.old.skip_frame == true and p.skip_frame == false) then
 				p.block1 = 2 -- ガード後のヒットストップ解除フレームの記録
 				p.on_block1 = global.frame_number
 			end
@@ -3809,7 +3791,6 @@ rbff2.startplugin               = function()
 				p.act_frames_total = 0
 				p.muteki           = { act_frames = {}, frame_groups = {}, }
 				p.frm_gap          = { act_frames = {}, frame_groups = {}, }
-				p.old_skip_frame   = 0
 			end
 
 			--[[
@@ -4035,7 +4016,7 @@ rbff2.startplugin               = function()
 								p.char_data.wakeup_frms, (global.frame_number - p.on_wakeup)))
 						end
 						-- 着地リバーサル入力（やられの着地）
-						if 1 < p.pos_y_down and p.old_pos_y > p.pos_y and p.in_air ~= true then
+						if 1 < p.pos_y_down and p.old.pos_y > p.pos_y and p.in_air ~= true then
 							input_rvs(rvs_types.knock_back_landing, p, "[Reversal] blown landing")
 						end
 						-- 着地リバーサル入力（通常ジャンプの着地）
@@ -4043,7 +4024,7 @@ rbff2.startplugin               = function()
 							input_rvs(rvs_types.jump_landing, p, "[Reversal] jump landing")
 						end
 						-- リバーサルじゃない最速入力
-						if p.state == 0 and p.act_data.name ~= "やられ" and p.old_act_data.name == "やられ" and p.knock_back1 == 0 then
+						if p.state == 0 and p.act_data.name ~= "やられ" and p.old.act_data.name == "やられ" and p.knock_back1 == 0 then
 							input_rvs(rvs_types.knock_back_recovery, p, "[Reversal] blockstun 1")
 						end
 						-- のけぞりのリバーサル入力
@@ -4053,7 +4034,7 @@ rbff2.startplugin               = function()
 							if p.knock_back3 == 0x80 and p.knock_back1 == 0 and p.act ~= 0x14A then
 								-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する1
 								input_rvs(rvs_types.in_knock_back, p, "[Reversal] blockstun 2")
-							elseif p.old_knock_back1 > 0 and p.knock_back1 == 0 then
+							elseif p.old.knock_back1 > 0 and p.knock_back1 == 0 then
 								-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する2
 								input_rvs(rvs_types.in_knock_back, p, "[Reversal] blockstun 3")
 							end
@@ -4066,7 +4047,7 @@ rbff2.startplugin               = function()
 							input_rvs(rvs_types.atemi, p, "[Reversal] blockstun 5")
 						end
 						-- 奥ラインへ送ったあとのリバサ
-						if p.act == 0x14A and (p.act_count == 4 or p.act_count == 5) and p.old_act_frame == 0 and p.act_frame == 0 and p.throw_timer == 0 then
+						if p.act == 0x14A and (p.act_count == 4 or p.act_count == 5) and p.old.act_frame == 0 and p.act_frame == 0 and p.throw_timer == 0 then
 							input_rvs(rvs_types.in_knock_back, p, string.format("[Reversal] plane shift %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer))
 						end
 						-- テクニカルライズのリバサ
@@ -4145,9 +4126,7 @@ rbff2.startplugin               = function()
 
 		-- ジョイスティック入力の反映
 		for _, joy in ipairs(use_joy) do
-			if next_joy[joy.field] ~= nil then
-				ioports[joy.port].fields[joy.field]:set_value(next_joy[joy.field] and 1 or 0)
-			end
+			if next_joy[joy.field] then ioports[joy.port].fields[joy.field]:set_value(1) end
 		end
 
 		-- Y座標強制
@@ -4165,7 +4144,7 @@ rbff2.startplugin               = function()
 		-- 強制ポーズ処理
 		for _, p in ipairs(players) do
 			-- ヒット時にポーズさせる
-			if p.state ~= 0 and p.state ~= p.old_state and global.pause_hit > 0 then
+			if p.state ~= 0 and p.state ~= p.old.state and global.pause_hit > 0 then
 				-- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
 				if global.pause_hit == 2 or
 					(global.pause_hit == 6 and p.state == 2) or
@@ -4190,7 +4169,7 @@ rbff2.startplugin               = function()
 			-- スクショ保存
 			for _, p in ipairs(players) do
 				local chg_y = p.chg_air_state ~= 0
-				local chg_act = p.old_act_normal ~= p.act_normal
+				local chg_act = p.old.act_normal ~= p.act_normal
 				local chg_hit = p.chg_hitbox_frm == global.frame_number
 				local chg_hurt = p.chg_hurtbox_frm == global.frame_number
 				local chg_sway = p.on_sway_line == global.frame_number or p.on_main_line == global.frame_number
@@ -4325,7 +4304,7 @@ rbff2.startplugin               = function()
 					local state_label = {}
 					table.insert(state_label, string.format("%s %02d %03d %03d",
 						p.state, p.throwing and p.throwing.threshold or 0, p.throwing and p.throwing.timer or 0, p.throw_timer or 0))
-					local diff_pos_y = p.pos_y + p.pos_frc_y - (p.old_pos_y and (p.old_pos_y + p.old_pos_frc_y) or 0)
+					local diff_pos_y = p.pos_y + p.pos_frc_y - (p.old.pos_y and (p.old.pos_y + p.old.pos_frc_y) or 0)
 					table.insert(state_label, string.format("%0.03f %0.03f", diff_pos_y, p.pos_y + p.pos_frc_y))
 					table.insert(state_label, string.format("%02x %02x %02x", p.spid or 0, p.attack or 0, p.attack_id or 0))
 					table.insert(state_label, string.format("%03x %02x %02x", p.act, p.act_count, p.act_frame))
@@ -4448,8 +4427,8 @@ rbff2.startplugin               = function()
 					local flip   = p.flip_x == 1 and ">" or "<" -- 見た目と判定の向き
 					local side   = p.block_side == 1 and ">" or "<" -- ガード方向や内部の向き 1:右向き -1:左向き
 					local i_side = p.cmd_side == 1 and ">" or "<" -- コマンド入力の向き
-					if p.old_pos_y ~= p.pos_y or p.last_posy_txt == nil then
-						p.last_posy_txt = string.format("Y %3s>%3s", p.old_pos_y or 0, p.pos_y)
+					if p.old.pos_y ~= p.pos_y or p.last_posy_txt == nil then
+						p.last_posy_txt = string.format("Y %3s>%3s", p.old.pos_y or 0, p.pos_y)
 					end
 					if i == 1 then
 						table.insert(foot_label, string.format("%s  Disp.%s Block.%s Input.%s", p.last_posy_txt, flip, side, i_side))
