@@ -1210,7 +1210,7 @@ local load_proc_base            = function()
 		stun_timer  = fix_addr(0x88772),
 		max_hit     = fix_addr(0x885F2),
 		baigaeshi   = 0x8E940,
-		effect_calc   = function(id) return mem.r8(id - 0x20 + fix_addr(0x95BEC)) end, -- 家庭用58232からの処理
+		effect      = fix_addr(0x95BEC) - 0x20, -- 家庭用58232からの処理
 		chip_damage = fix_addr(0x95CCC),
 		hitstun1    = fix_addr(0x95CCC),
 		hitstun2    = 0x16 + 0x2 + fix_addr(0x5AF7C),
@@ -2245,11 +2245,12 @@ rbff2.startplugin               = function()
 						local reach, possibles
 						if type == box_types.attack then
 							possibles = get_hitbox_possibles(p.attack_id)
+							p.effect    = mem.r8(p.attack_id + chars[#chars].proc_base.effect) -- ヒット効果
 							p.attackbit = ut.hex_set(p.attackbit, frame_attack_types.attacking)
 							p.attackbit = ut.hex_set(p.attackbit, possibles.juggle and frame_attack_types.juggle or 0)
-							p.effect    = chars[#chars].proc_base.effect_calc(p.attack_id)
 							if p.is_fireball then
 								p.attackbit = ut.hex_reset(p.attackbit, 0xFF << frame_attack_types.fb_effect, p.effect << frame_attack_types.fb_effect)
+								p.on_fireball = p.on_fireball < 0 and now() or p.on_fireball
 							end
 							local possible = ut.hex_set(ut.hex_set(possibles.normal, possibles.sway_standing), possibles.sway_crouching)
 							local blockable = act_types.unblockable -- ガード属性 -- 不能
@@ -2262,7 +2263,6 @@ rbff2.startplugin               = function()
 							end
 							reach = { blockable = blockable, possible = possible, }
 							for _, t in ipairs(hitbox_grab_types) do p.grabbable = p.grabbable | (possibles[t.name] and t.value or 0) end
-							if p.is_fireball and p.on_fireball < 0 then p.on_fireball = now() end
 						end
 						table.insert(p.boxies, {
 							no = #p.boxies + 1,
@@ -3041,62 +3041,43 @@ rbff2.startplugin               = function()
 		end
 
 		-- TODO 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
-		local masked_attackbit = p.attackbit
+		local attackbit_mask = 0xFFFFFFFFFFFFFFFF
 		if p.disp_frm == 3 then
-			masked_attackbit = masked_attackbit
 		elseif p.disp_frm == 4 then
-			masked_attackbit = masked_attackbit
 		elseif p.disp_frm == 5 then
-			masked_attackbit = masked_attackbit
 		end
 
 		local frame = p.act_frames[#p.act_frames]
 		local prev  = frame and frame.name
-		local name  = (frame and p.act_data.name_set and p.act_data.name_set[prev]) and prev or p.act_data.name
+		local act_data = p.body.act_data
+		local name  = (frame and act_data.name_set and act_data.name_set[prev]) and prev or act_data.name
 
-		if frame == nil or frame.attackbit ~= masked_attackbit or frame.col ~= col or p.on_fireball ~= 0 or p.on_prefb ~= 0 then
+		if frame == nil or frame.col ~= col or p.on_fireball ~= 0 or p.on_prefb ~= 0 or
+			frame.attackbit ~= (p.attackbit & attackbit_mask) then
 			--行動IDの更新があった場合にフレーム情報追加
-			frame = {
-				act = p.act,
-				count = 1,
-				col = col,
-				name = name,
-				line = line,
+			table.insert(p.act_frames, {
+				act         = p.act,
+				count       = 1,
+				col         = col,
+				name        = name,
+				line        = line,
 				on_fireball = p.on_fireball or 0,
-				on_prefb = p.on_prefb or 0,
-				on_air = p.on_air,
-				on_ground = p.on_ground,
-				act_1st = p.act_1st,
-				attackbit = masked_attackbit,
-			}
-			--[[
-			ut.printf("%5X %03X %s %X %X %2s %2s %-5s %-5s %-5s %s",
-			p.addr.base,
-			frame.act,
-			frame.count,
-			frame.col,
-			frame.line,
-			frame.on_fireball,
-			frame.on_prefb,
-			frame.on_air,
-			frame.on_ground,
-			frame.act_1st,
-			string.gsub(string.format("%64s", ut.tobitstr(frame.attackbit)), " ", "0"))
-			]]
-			table.insert(p.act_frames, frame)
+				on_prefb    = p.on_prefb or 0,
+				on_air      = p.on_air,
+				on_ground   = p.on_ground,
+				act_1st     = p.act_1st,
+				attackbit   = (p.attackbit & attackbit_mask),
+				fireballs   = {},
+			})
 			while 180 < #p.act_frames do table.remove(p.act_frames, 1) end --バッファ長調整
-		else
-			--同一行動IDが継続している場合はフレーム値加算
-			if frame then frame.count = frame.count + 1 end
+			frame = p.act_frames[#p.act_frames]
+		elseif frame then
+			frame.count = frame.count + 1                      --同一行動IDが継続している場合はフレーム値加算
 		end
-		-- 技名でグループ化したフレームデータの配列をマージ生成する
-		update_frame_groups(frame, p.frame_groups)
+		local upd_group = update_frame_groups(frame, p.frame_groups) -- フレームデータをグループ化
 		-- 表示可能範囲（最大で横画面幅）以上は加算しない
-		if p.act_frames_total then
-			p.act_frames_total = (332 < p.act_frames_total) and 332 or (p.act_frames_total + 1)
-		end
-		-- 後の処理用に最終フレームを保持
-		return frame, name ~= prev
+		p.act_frames_total = not p.act_frames_total and 0 or (332 < p.act_frames_total) and 332 or (p.act_frames_total + 1)
+		return frame, upd_group
 	end
 
 	local proc_muteki_frame = function(p, chg_act_name)
@@ -3817,7 +3798,7 @@ rbff2.startplugin               = function()
 		end
 		]]
 
-		for _, p in pairs(all_objects) do
+		for base, p in pairs(all_objects) do
 			-- キャラ、弾ともに通常動作状態ならリセットする
 			if not global.all_act_normal and global.old_all_act_normal then
 				p.frame_gap        = 0
@@ -3838,11 +3819,12 @@ rbff2.startplugin               = function()
 
 			-- 全キャラ特別な動作でない場合はフレーム記録しない
 			if global.disp_normal_frms == 1 or (global.disp_normal_frms == 2 and global.all_act_normal == false) then
-				if not p.is_fireball then
-					local _, chg_act_name = proc_act_frame(p) -- フレームデータの構築処理
-					--proc_muteki_frame(p, chg_act_name)
-					--proc_frame_gap(p, chg_act_name)
-					--proc_fb_frame(p)
+				local last_frame, changed = proc_act_frame(p) -- フレームデータの構築処理
+				--proc_muteki_frame(p, changed)
+				--proc_frame_gap(p, changed)
+				if p.is_fireball and changed then
+					local plast_frame = p.body.act_frames[#p.body.act_frames]
+					if plast_frame then plast_frame.fireballs[base] = last_frame end
 				end
 			end
 		end
@@ -3915,10 +3897,8 @@ rbff2.startplugin               = function()
 				else
 					p.key_hist[#p.key_hist], p.key_frames[#p.key_frames] = lever, 1
 				end
-			else
-				local frmcount = p.key_frames[#p.key_frames]
-				--フレーム数が多すぎる場合は加算をやめる
-				p.key_frames[#p.key_frames] = (999 < frmcount) and 1000 or (frmcount + 1)
+			elseif p.key_frames[#p.key_frames] < 999 then
+				p.key_frames[#p.key_frames] = p.key_frames[#p.key_frames] + 1 --999が上限
 			end
 
 			do_recover(p)
@@ -3926,7 +3906,6 @@ rbff2.startplugin               = function()
 
 		-- プレイヤー操作
 		for i, p in ipairs(players) do
-			local op = p.op
 			p.bs_hook = nil
 			if p.control == 1 or p.control == 2 then
 				--前進とガード方向
@@ -3951,7 +3930,7 @@ rbff2.startplugin               = function()
 							p.reset_cmd_hook(db.cmd_types._8) -- ジャンプ
 						elseif p.dummy_act == 4 and not ut.tstb(p.flag_c0, db.flag_c0._17, true) then
 							p.reset_cmd_hook(db.cmd_types._8) -- 地上のジャンプ移行モーション以外だったら上入力
-						elseif p.dummy_act == 5 and op.sway_status == 0x00 and p.state == 0 then
+						elseif p.dummy_act == 5 and p.op.sway_status == 0x00 and p.state == 0 then
 							p.reset_cmd_hook(db.cmd_types._2d) -- スウェー待機(スウェー移動)
 						end
 					elseif p.dummy_act == 5 and p.in_sway_line then
@@ -3959,8 +3938,8 @@ rbff2.startplugin               = function()
 					end
 				end
 
-				local act_type = op.act_data.type
-				for _, fb in pairs(op.fireballs) do
+				local act_type = p.op.act_data.type
+				for _, fb in pairs(p.op.fireballs) do
 					if fb.proc_active and fb.act_data then act_type = act_type | fb.act_data.type end
 				end
 				-- リプレイ中は自動ガードしない
@@ -4034,7 +4013,7 @@ rbff2.startplugin               = function()
 				end
 
 				--挑発中は前進
-				if p.fwd_prov and ut.tstb(op.act_data.type, act_types.provoke) then p.add_cmd_hook(db.cmd_types.front) end
+				if p.fwd_prov and ut.tstb(p.op.act_data.type, act_types.provoke) then p.add_cmd_hook(db.cmd_types.front) end
 
 				-- ガードリバーサル
 				if global.dummy_rvs_cnt == 1 then
@@ -4109,7 +4088,7 @@ rbff2.startplugin               = function()
 				end
 
 				-- 自動ダウン追撃
-				if op.act == 0x190 or op.act == 0x192 or op.act == 0x18E or op.act == 0x13B then
+				if p.op.act == 0x190 or p.op.act == 0x192 or p.op.act == 0x18E or p.op.act == 0x13B then
 					if global.auto_input.otg_thw and p.char_data.otg_throw then
 						p.reset_sp_hook(p.char_data.otg_throw) -- 自動ダウン投げ
 					end
