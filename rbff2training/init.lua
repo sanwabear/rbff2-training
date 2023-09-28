@@ -82,8 +82,8 @@ local pre_down_acts        = db.pre_down_acts
 local hit_effect_types     = db.hit_effect_types
 local hit_effect_nokezoris = db.hit_effect_nokezoris
 local hit_effects          = db.hit_effects
-local hit_effect_moves     = { 0 }
-local hit_effect_move_keys = { "OFF" }
+local hit_effect_addrs     = {}
+local hit_effect_menus     = {}
 
 -- ヒット時のシステム内での中間処理による停止アドレス
 local hit_system_stops     = {}
@@ -1160,10 +1160,12 @@ end
 
 -- ヒット効果アドレステーブルの取得
 local load_hit_effects = function()
-	if #hit_effect_moves > 0 then return end
+	if #hit_effect_addrs > 0 then return end
+	hit_effect_addrs     = { 0 }
+	hit_effect_menus     = { "OFF" }
 	for i, _ in ipairs(hit_effects) do
-		table.insert(hit_effect_moves, mem.r32(0x579DA + (i - 1) * 4))
-		table.insert(hit_effect_move_keys, string.format("%2s %s %x", i, table.concat(hit_effects[i], " "), hit_effect_moves[#hit_effect_moves]))
+		table.insert(hit_effect_addrs, mem.r32(0x579DA + (i - 1) * 4))
+		table.insert(hit_effect_menus, string.format("%2s %s %x", i, table.concat(hit_effects[i], " "), hit_effect_addrs[#hit_effect_addrs]))
 	end
 	print("load_hit_effects")
 end
@@ -1191,7 +1193,6 @@ local load_proc_base            = function()
 			esaka         = mem.r32(char4 + 0x23750),
 			pow_up        = ((0xC == char) and 0x8C274 or (0x10 == char) and 0x8C29C or 0x8C24C),
 			pow_up_ext    = mem.r32(0x8C18C + char4),
-			effect        = -0x20 + fix_addr(0x95BEC),
 			chip_damage   = fix_addr(0x95CCC),
 			hitstun1      = fix_addr(0x95CCC),
 			hitstun2      = 0x16 + 0x2 + fix_addr(0x5AF7C),
@@ -1201,6 +1202,20 @@ local load_proc_base            = function()
 			sp_invincible = mem.r32(char4 + 0x8DE62),
 		}
 	end
+	chars[#chars].proc_base = { -- 共通枠に弾のベースアドレスを入れておく
+		forced_down = 0x8E2C0,
+		hitstop     = fix_addr(0x884F2),
+		damege      = fix_addr(0x88472),
+		stun        = fix_addr(0x886F2),
+		stun_timer  = fix_addr(0x88772),
+		max_hit     = fix_addr(0x885F2),
+		baigaeshi   = 0x8E940,
+		effect_calc   = function(id) return mem.r8(id - 0x20 + fix_addr(0x95BEC)) end, -- 家庭用58232からの処理
+		chip_damage = fix_addr(0x95CCC),
+		hitstun1    = fix_addr(0x95CCC),
+		hitstun2    = 0x16 + 0x2 + fix_addr(0x5AF7C),
+		blockstun   = 0x1A + 0x2 + fix_addr(0x5AF88),
+	}
 	print("load_proc_base done")
 end
 
@@ -1517,17 +1532,6 @@ local load_memory_tap           = function(label, wps) -- tapの仕込み
 end
 
 local apply_attack_infos        = function(p, id, base_addr)
-	--[[ ヒット効果、削り補正、硬直
-	一動作で複数の攻撃判定を持っていてもIDの値は同じになる
-	058232(家庭用版)からの処理
-	1004E9のデータ＝5C83Eでセット 技ID
-	1004E9のデータ-0x20 + 0x95C0C のデータがヒット効果の元ネタ D0
-	D0 = 0x9だったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
-	D0 = 0xAだったら 1005E4 くらった側E4 OR 0x40の結果をセット （7ビット目に1）
-	D0 x 4 + 579da
-	d0 = fix_addr(0x0579DA + d0 * 4) --0x0579DA から4バイトのデータの並びがヒット効果の処理アドレスになる
-	]]
-	p.effect        = mem.r8(id + base_addr.effect)
 	-- 削りダメージ計算種別取得 05B2A4 からの処理
 	p.chip_dmg_type = db.chip_dmg_type_tbl[(0xF & mem.r8(base_addr.chip_damage + id)) + 1]
 	p.chip_dmg      = p.chip_dmg_type.calc(p.pure_dmg)
@@ -1963,7 +1967,7 @@ rbff2.startplugin               = function()
 		}
 		p.wp32 = {
 			[{ addr = 0x00, filter = { 0x58268, 0x582AA } }] = function(data, ret)
-				if global.damaged_move > 1 then ret.value = hit_effect_moves[global.damaged_move] end
+				if global.damaged_move > 1 then ret.value = hit_effect_addrs[global.damaged_move] end
 			end,
 			-- [0x0C] = function(data) p.reserve_proc = data end,               -- 予約中の処理アドレス
 			-- [0xC0] = function(data) p.flag_c0 = data end,                    -- フラグ群
@@ -2014,21 +2018,7 @@ rbff2.startplugin               = function()
 						p.hitstun       = 0
 						p.blockstun     = 0
 					end
-					p.addr.proc_base = p.addr.proc_base or { -- TODO 初期化処理を移動させたい
-						forced_down = 0x8E2C0,
-						hitstop     = fix_addr(0x884F2),
-						damege      = fix_addr(0x88472),
-						stun        = fix_addr(0x886F2),
-						stun_timer  = fix_addr(0x88772),
-						max_hit     = fix_addr(0x885F2),
-						baigaeshi   = 0x8E940,
-						effect      = -0x20 + fix_addr(0x95BEC),
-						chip_damage = fix_addr(0x95CCC),
-						hitstun1    = fix_addr(0x95CCC),
-						hitstun2    = 0x16 + 0x2 + fix_addr(0x5AF7C),
-						blockstun   = 0x1A + 0x2 + fix_addr(0x5AF88),
-					}
-					local base_addr  = p.addr.proc_base
+					local base_addr  = chars[#chars].proc_base
 					p.attack         = data
 					p.forced_down    = 2 <= mem.r8(data + base_addr.forced_down)       -- テクニカルライズ可否 家庭用 05A9D6 からの処理
 					p.hitstop        = math.max(2, mem.r8(data + base_addr.hitstop) - 1) -- ヒットストップ 家庭用 弾やられ側:05AE50 からの処理 OK
@@ -2039,7 +2029,6 @@ rbff2.startplugin               = function()
 					p.max_hit_dn     = mem.r8(data + base_addr.max_hit)                -- 最大ヒット数 家庭用 061356 からの処理 OK
 					p.grabbable2     = mem.r8((0xFFFF & (data + data)) + base_addr.baigaeshi) == 0x01 -- 倍返し可否
 					apply_attack_infos(p, data, base_addr)
-					p.attackbit = ut.hex_reset(p.attackbit, 0xFF << frame_attack_types.fb_effect, p.effect << frame_attack_types.fb_effect)
 					-- ut.printf("%x %s %s  hitstun %s %s", data, p.hitstop, p.blockstop, p.hitstun, p.blockstun)
 				end,
 			}
@@ -2258,6 +2247,10 @@ rbff2.startplugin               = function()
 							possibles = get_hitbox_possibles(p.attack_id)
 							p.attackbit = ut.hex_set(p.attackbit, frame_attack_types.attacking)
 							p.attackbit = ut.hex_set(p.attackbit, possibles.juggle and frame_attack_types.juggle or 0)
+							p.effect    = chars[#chars].proc_base.effect_calc(p.attack_id)
+							if p.is_fireball then
+								p.attackbit = ut.hex_reset(p.attackbit, 0xFF << frame_attack_types.fb_effect, p.effect << frame_attack_types.fb_effect)
+							end
 							local possible = ut.hex_set(ut.hex_set(possibles.normal, possibles.sway_standing), possibles.sway_crouching)
 							local blockable = act_types.unblockable -- ガード属性 -- 不能
 							if possibles.crouching_block and possibles.standing_block then
@@ -5428,7 +5421,7 @@ rbff2.startplugin               = function()
 			{ "判定発生時にポーズ", { "OFF", "投げ", "攻撃", "変化時", }, },
 			{ "技画像保存", { "OFF", "ON:新規", "ON:上書き", }, },
 			{ "MAMEデバッグウィンドウ", menu.labels.off_on, },
-			{ "ヒット効果確認用", hit_effect_move_keys },
+			{ "ヒット効果確認用", hit_effect_menus },
 			{ "全必殺技BS", menu.labels.off_on, }
 		},
 		pos = {

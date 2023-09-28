@@ -2837,7 +2837,7 @@ db.hit_effect_en_types               = hit_effect_en_types
 db.hit_effect_nokezoris              = hit_effect_nokezoris
 db.hit_effects                       = hit_effects
 db.hit_effect_name                   = function(effect)
-	local e = hit_effects[effect]
+	local e = effect and hit_effects[effect + 1] or nil --luaの配列は1からになるので+1する
 	if e then
 		return string.format("%-16s/%-16s", (db.hit_effect_en_types[e[1]] or ""), (db.hit_effect_en_types[e[2]] or ""))
 	else
