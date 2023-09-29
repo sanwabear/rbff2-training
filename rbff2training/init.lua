@@ -2238,52 +2238,51 @@ rbff2.startplugin               = function()
 			[0x7A] = function(data)                    -- 攻撃判定とやられ判定
 				--ut.printf("box %x %x %x", p.addr.base, mem.pc(), data)
 				p.boxies, p.grabbable = {}, 0
-				if data > 0 then
-					p.attackbit = ut.hex_reset(p.attackbit, 0x1F, p.attackbit & frame_attack_types.fake)
-					p.attackbit = ut.hex_set(p.attackbit, p.is_fireball and frame_attack_types.fb or 0)
-					local a2base = mem.r32(base + 0x7A)
-					for a2 = a2base, a2base + (data - 1) * 5, 5 do -- 家庭用 004A9E からの処理
-						local id = mem.r8(a2)
-						local top, bottom = sort_ba(mem.r8i(a2 + 0x1), mem.r8i(a2 + 0x2))
-						local left, right = sort_ba(mem.r8i(a2 + 0x3), mem.r8i(a2 + 0x4))
-						local type = main_box_types[id] or (id < 0x20) and box_types.unknown or box_types.attack
-						p.attack_id = type == box_types.attack and id or p.attack_id
-						local reach, possibles
-						if type == box_types.attack then
-							possibles = get_hitbox_possibles(p.attack_id)
-							p.effect    = mem.r8(p.attack_id + chars[#chars].proc_base.effect) -- ヒット効果
-							p.attackbit = ut.hex_set(p.attackbit, frame_attack_types.attacking)
-							p.attackbit = ut.hex_set(p.attackbit, possibles.juggle and frame_attack_types.juggle or 0)
-							if p.is_fireball then
-								p.attackbit = ut.hex_reset(p.attackbit, 0xFF << frame_attack_types.fb_effect, p.effect << frame_attack_types.fb_effect)
-								p.on_fireball = p.on_fireball < 0 and now() or p.on_fireball
-							end
-							local possible = ut.hex_set(ut.hex_set(possibles.normal, possibles.sway_standing), possibles.sway_crouching)
-							local blockable = act_types.unblockable -- ガード属性 -- 不能
-							if possibles.crouching_block and possibles.standing_block then
-								blockable = act_types.attack -- 上段
-							elseif possibles.crouching_block then
-								blockable = act_types.low_attack -- 下段
-							elseif possibles.standing_block then
-								blockable = act_types.overhead -- 中段
-							end
-							reach = { blockable = blockable, possible = possible, }
-							for _, t in ipairs(hitbox_grab_types) do p.grabbable = p.grabbable | (possibles[t.name] and t.value or 0) end
+				if data <= 0 then return end
+				p.attackbit = ut.hex_reset(p.attackbit, 0x1F, p.attackbit & frame_attack_types.fake)
+				p.attackbit = ut.hex_set(p.attackbit, p.is_fireball and frame_attack_types.fb or 0)
+				local a2base = mem.r32(base + 0x7A)
+				for a2 = a2base, a2base + (data - 1) * 5, 5 do -- 家庭用 004A9E からの処理
+					local id = mem.r8(a2)
+					local top, bottom = sort_ba(mem.r8i(a2 + 0x1), mem.r8i(a2 + 0x2))
+					local left, right = sort_ba(mem.r8i(a2 + 0x3), mem.r8i(a2 + 0x4))
+					local type = main_box_types[id] or (id < 0x20) and box_types.unknown or box_types.attack
+					p.attack_id = type == box_types.attack and id or p.attack_id
+					local reach, possibles
+					if type == box_types.attack then
+						possibles = get_hitbox_possibles(p.attack_id)
+						p.effect    = mem.r8(p.attack_id + chars[#chars].proc_base.effect) -- ヒット効果
+						p.attackbit = ut.hex_set(p.attackbit, frame_attack_types.attacking)
+						p.attackbit = ut.hex_set(p.attackbit, possibles.juggle and frame_attack_types.juggle or 0)
+						if p.is_fireball then
+							p.attackbit = ut.hex_reset(p.attackbit, 0xFF << frame_attack_types.fb_effect, p.effect << frame_attack_types.fb_effect)
+							p.on_fireball = p.on_fireball < 0 and now() or p.on_fireball
 						end
-						table.insert(p.boxies, {
-							no = #p.boxies + 1,
-							id = id,
-							type = type,
-							left = left,
-							right = right,
-							top = top,
-							bottom = bottom,
-							sway_type = sway_box_types[id] or type,
-							possibles = possibles or {},
-							reach = reach or {}, -- 判定のリーチとその属性
-						})
-						-- ut.printf("p=%x %x %x %x %s addr=%x id=%02x l=%s r=%s t=%s b=%s", p.addr.base, data, base, p.box_addr, 0, a2, id, x1, x2, y1, y2)
+						local possible = ut.hex_set(ut.hex_set(possibles.normal, possibles.sway_standing), possibles.sway_crouching)
+						local blockable = act_types.unblockable -- ガード属性 -- 不能
+						if possibles.crouching_block and possibles.standing_block then
+							blockable = act_types.attack -- 上段
+						elseif possibles.crouching_block then
+							blockable = act_types.low_attack -- 下段
+						elseif possibles.standing_block then
+							blockable = act_types.overhead -- 中段
+						end
+						reach = { blockable = blockable, possible = possible, }
+						for _, t in ipairs(hitbox_grab_types) do p.grabbable = p.grabbable | (possibles[t.name] and t.value or 0) end
 					end
+					table.insert(p.boxies, {
+						no = #p.boxies + 1,
+						id = id,
+						type = type,
+						left = left,
+						right = right,
+						top = top,
+						bottom = bottom,
+						sway_type = sway_box_types[id] or type,
+						possibles = possibles or {},
+						reach = reach or {}, -- 判定のリーチとその属性
+					})
+					-- ut.printf("p=%x %x %x %x %s addr=%x id=%02x l=%s r=%s t=%s b=%s", p.addr.base, data, base, p.box_addr, 0, a2, id, x1, x2, y1, y2)
 				end
 			end,
 			[0x8D] = function(data)
