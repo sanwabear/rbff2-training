@@ -2577,7 +2577,7 @@ rbff2.startplugin               = function()
 		if #tmp_slots > 0 then
 			recording.active_slot = tmp_slots[math.random(#tmp_slots)]
 		else
-			recording.active_slot = { store = {}, name = "空" }
+			recording.active_slot = { store = {}, name = "EMPTY" }
 		end
 
 		local joy_val = get_joy()
@@ -3074,6 +3074,8 @@ rbff2.startplugin               = function()
 				act_1st     = p.act_1st,
 				attackbit   = (p.attackbit & attackbit_mask),
 				fireballs   = {},
+				frm_gap     = {},
+				muteki      = {},
 			})
 			while 180 < #p.act_frames do table.remove(p.act_frames, 1) end --バッファ長調整
 			frame = p.act_frames[#p.act_frames]
@@ -3143,70 +3145,42 @@ rbff2.startplugin               = function()
 			--同一行動IDが継続している場合はフレーム値加算
 			frame.count = frame.count + 1
 		end
-		-- 技名でグループ化したフレームデータの配列をマージ生成する
-		local upd_group = update_frame_groups(frame, p.muteki.frame_groups or {})
+		local upd_group = update_frame_groups(frame, p.muteki.frame_groups or {}) -- フレームデータをグループ化
 		-- メインフレーム表示からの描画開始位置を記憶させる
 		if upd_group and last_frame then
-			last_frame.muteki = last_frame.muteki or {}
 			table.insert(last_frame.muteki, p.muteki.frame_groups[#p.muteki.frame_groups])
+			while 180 < #p.muteki.frame_groups do table.remove(p.muteki.frame_groups, 1) end --バッファ長調整
 		end
 
 		return frame
 	end
 
-	local proc_frame_gap = function(p, chg_act_name)
-		local op = p.op
+	local proc_frame_gap = function(p, update)
 		local last_frame = p.act_frames[#p.act_frames]
 
-		-- フレーム差
-		-- フレーム差のバッファ
-		local old_last_frame_gap = p.last_frame_gap
-		local save_frame_gap = function()
-			local upd = false
-			if old_last_frame_gap > 0 and old_last_frame_gap > p.last_frame_gap then
-				upd = true
-			elseif old_last_frame_gap < 0 and old_last_frame_gap < p.last_frame_gap then
-				upd = true
-			elseif old_last_frame_gap ~= 0 and p.last_frame_gap == 0 then
-				upd = true
-			end
-			if upd then
-				table.insert(p.hist_frame_gap, old_last_frame_gap)
-				if 10 < #p.hist_frame_gap then
-					--バッファ長調整
-					table.remove(p.hist_frame_gap, 1)
-				end
-			end
-		end
 		-- フレーム差の更新
+		local hist = p.last_frame_gap
 		local col, line = 0x00000000, 0x00000000
-		if p.act_normal == op.act_normal then
-			if p.act_normal ~= op.act_normal then
-				p.last_frame_gap = 0
-			end
+		if p.act_normal == p.op.act_normal then
+			if p.act_normal ~= p.op.act_normal then p.last_frame_gap = 0 end
 			p.frame_gap = 0
 		elseif p.act_normal then
-			-- 直前が行動中ならリセットする
-			if not p.old.act_normal then
-				p.frame_gap = 0
-			end
-			p.frame_gap = p.frame_gap + 1
-			p.last_frame_gap = p.frame_gap
+			if not p.old.act_normal then p.frame_gap = 0 end -- 直前が行動中ならリセットする
+			p.frame_gap, p.last_frame_gap = p.frame_gap + 1, p.frame_gap
 			col, line = 0xAA0000FF, 0xDD0000FF
 		elseif not p.act_normal then
-			-- 直前が行動中ならリセットする
-			if not op.old.act_normal then
-				p.frame_gap = 0
-			end
-			p.frame_gap = p.frame_gap - 1
-			p.last_frame_gap = p.frame_gap
-			col, line = 0xAAFF6347, 0xDDFF6347
+			if not p.op.old.act_normal then p.frame_gap = 0 end -- 直前が行動中ならリセットする
+			p.frame_gap, p.last_frame_gap = p.frame_gap - 1, p.frame_gap
+			col, line                     = 0xAAFF6347, 0xDDFF6347
 		end
-		save_frame_gap()
+
+		if (hist > 0 and hist > p.last_frame_gap) or (hist < 0 and hist < p.last_frame_gap) or (hist ~= 0 and p.last_frame_gap == 0) then
+			table.insert(p.hist_frame_gap, hist)                        -- バッファ更新
+			while 10 < #p.hist_frame_gap do table.remove(p.hist_frame_gap, 1) end --バッファ長調整
+		end
 
 		local frame = p.frm_gap.act_frames[#p.frm_gap.act_frames]
-		if frame == nil or chg_act_name or (frame.col ~= col and (p.frame_gap == 0 or p.frame_gap == -1 or p.frame_gap == 1)) or p.act_1st then
-			--行動IDの更新があった場合にフレーム情報追加
+		if not frame or update or (frame.col ~= col and (math.abs(p.frame_gap) <= 1)) or p.act_1st then
 			frame = {
 				act = p.act,
 				count = 1,
@@ -3216,20 +3190,16 @@ rbff2.startplugin               = function()
 				act_1st = p.act_1st,
 			}
 			table.insert(p.frm_gap.act_frames, frame)
-			if 180 < #p.frm_gap.act_frames then
-				--バッファ長調整
-				table.remove(p.frm_gap.act_frames, 1)
-			end
+			while 180 < #p.frm_gap.act_frames do table.remove(p.frm_gap.act_frames, 1) end --バッファ長調整
 		else
-			--同一行動IDが継続している場合はフレーム値加算
-			frame.count = frame.count + 1
+			frame.count = frame.count + 1                                         --同一行動IDが継続している場合はフレーム値加算
 		end
-		-- 技名でグループ化したフレームデータの配列をマージ生成する
-		local upd_group = update_frame_groups(frame, p.frm_gap.frame_groups or {})
+
+		local upd_group = update_frame_groups(frame, p.frm_gap.frame_groups or {}) -- フレームデータをグループ化
 		-- メインフレーム表示からの描画開始位置を記憶させる
 		if upd_group and last_frame then
-			last_frame.frm_gap = last_frame.frm_gap or {}
 			table.insert(last_frame.frm_gap, p.frm_gap.frame_groups[#p.frm_gap.frame_groups])
+			while 180 < #p.frm_gap.frame_groups do table.remove(p.frm_gap.frame_groups, 1) end --バッファ長調整
 		end
 	end
 
