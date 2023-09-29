@@ -3368,19 +3368,13 @@ rbff2.startplugin               = function()
 
 			-- ジャンプの遷移ポイントかどうか
 			if p.old.in_air ~= true and p.in_air == true then
-				p.chg_air_state = 1
+				p.on_air, p.on_ground = true, false
 			elseif p.old.in_air == true and p.in_air ~= true then
-				p.chg_air_state = -1
+				p.on_air, p.on_ground = false, true
 			else
-				p.chg_air_state = 0
+				p.on_air, p.on_ground = false, false
 			end
-			p.on_air = p.chg_air_state == 1
-			p.on_ground = p.chg_air_state == -1
-			if p.in_air then
-				p.pos_y_peek = math.max(p.pos_y_peek or 0, p.pos_y)
-			else
-				p.pos_y_peek = 0
-			end
+			p.pos_y_peek = p.in_air and math.max(p.pos_y_peek or 0, p.pos_y) or 0
 			if p.pos_y < p.old.pos_y or (p.pos_y == p.old.pos_y and p.pos_frc_y < p.old.pos_frc_y) then
 				p.pos_y_down = p.pos_y_down and (p.pos_y_down + 1) or 1
 			else
@@ -4126,7 +4120,7 @@ rbff2.startplugin               = function()
 
 			-- スクショ保存
 			for _, p in ipairs(players) do
-				local chg_y = p.chg_air_state ~= 0
+				local chg_y = p.on_air or p.on_ground
 				local chg_act = p.old.act_normal ~= p.act_normal
 				local chg_hit = p.chg_hitbox_frm == global.frame_number
 				local chg_hurt = p.chg_hurtbox_frm == global.frame_number
@@ -4184,29 +4178,29 @@ rbff2.startplugin               = function()
 
 			-- ダメージとコンボ表示
 			for i, p in ipairs(players) do
-				local p1, op, combo_label1, combo_label2, combo_label3, state_label = i == 1, p.op, {}, {}, {}, {}
+				local p1, op, col1, col2, col3, label = i == 1, p.op, {}, {}, {}, {}
 				for _, xp in ipairs(p.objects) do
 					if xp.proc_active then
-						table.insert(state_label, string.format("Damage %3s/%1s  Stun %2s/%2s Fra.", xp.pure_dmg or 0, xp.chip_dmg or 0, xp.pure_st or 0, xp.pure_st_tm or 0))
-						table.insert(state_label, string.format("HitStop %2s/%2s HitStun %2s/%2s", xp.hitstop or 0, xp.blockstop or 0, xp.hitstun or 0, xp.blockstun or 0))
-						table.insert(state_label, string.format("%2s", db.hit_effect_name(xp.effect)))
+						table.insert(label, string.format("Damage %3s/%1s  Stun %2s/%2s Fra.", xp.pure_dmg or 0, xp.chip_dmg or 0, xp.pure_st or 0, xp.pure_st_tm or 0))
+						table.insert(label, string.format("HitStop %2s/%2s HitStun %2s/%2s", xp.hitstop or 0, xp.blockstop or 0, xp.hitstun or 0, xp.blockstun or 0))
+						table.insert(label, string.format("%2s", db.hit_effect_name(xp.effect)))
 						local grabl = ""
 						for _, t in ipairs(hitbox_grab_types) do grabl = grabl .. (ut.tstb(xp.grabbable, t.value, true) and t.label or "- ") end
-						table.insert(state_label, string.format("Grab %-s", grabl))
+						table.insert(label, string.format("Grab %-s", grabl))
 						if xp.is_fireball then
-							table.insert(state_label, string.format("%s/%s Hit  Fireball-Lv. %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.fireball_rank or 0))
+							table.insert(label, string.format("%s/%s Hit  Fireball-Lv. %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.fireball_rank or 0))
 						else
-							table.insert(state_label, string.format("Pow. %2s/%2s/%2s Rev.%2s Abs.%2s",
+							table.insert(label, string.format("Pow. %2s/%2s/%2s Rev.%2s Abs.%2s",
 								p.pow_up_direct == 0 and p.pow_up or p.pow_up_direct or 0, p.pow_up_hit or 0, p.pow_up_gd or 0, p.pow_revenge or 0, p.pow_absorb or 0))
-							table.insert(state_label, string.format("Inv.%2s  BS-Pow.%2s BS-Inv.%2s", xp.sp_invincible or 0, xp.bs_pow or 0, xp.bs_invincible or 0))
-							table.insert(state_label, string.format("%s/%s Hit  Esaka %s %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.esaka or 0, p.esaka_type or ""))
-							table.insert(state_label, string.format("Cancel %-2s/%-2s Teching %s", xp.repeatable and "Ch" or "", xp.cancelable and "Sp" or "",
+							table.insert(label, string.format("Inv.%2s  BS-Pow.%2s BS-Inv.%2s", xp.sp_invincible or 0, xp.bs_pow or 0, xp.bs_invincible or 0))
+							table.insert(label, string.format("%s/%s Hit  Esaka %s %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.esaka or 0, p.esaka_type or ""))
+							table.insert(label, string.format("Cancel %-2s/%-2s Teching %s", xp.repeatable and "Ch" or "", xp.cancelable and "Sp" or "",
 								xp.forced_down or xp.in_bs and "No" or "Yes"))
 						end
 						for _, _, blockable in find(xp.hitboxies, function(box) return box.blockable end) do
-							table.insert(state_label, string.format("Box Top %3s Bottom %3s", blockable.real_top, blockable.real_bottom))
-							table.insert(state_label, string.format("Main %-5s  Sway %-5s", db.top_type_name(blockable.main), db.top_type_name(blockable.sway)))
-							table.insert(state_label, string.format("Punish %-9s", db.top_punish_name(blockable.punish)))
+							table.insert(label, string.format("Box Top %3s Bottom %3s", blockable.real_top, blockable.real_bottom))
+							table.insert(label, string.format("Main %-5s  Sway %-5s", db.top_type_name(blockable.main), db.top_type_name(blockable.sway)))
+							table.insert(label, string.format("Punish %-9s", db.top_punish_name(blockable.punish)))
 						end
 					end
 				end
@@ -4223,20 +4217,20 @@ rbff2.startplugin               = function()
 					op.max_combo_stun                       = math.max(op.max_combo_stun or 0, op.combo_stun)
 					op.max_combo_stun_timer                 = math.max(op.max_combo_stun_timer or 0, op.combo_stun_timer)
 				end
-				table.insert(combo_label2, string.format("%3d>%3d(%.3f%%)", op.last_damage, op.last_damage_scaled, last_damage_scaling))
-				table.insert(combo_label2, string.format("%3d(%4s)", op.combo_damage or 0, string.format("+%d", op.last_damage_scaled)))
-				table.insert(combo_label2, string.format("%3d", op.last_combo))
-				table.insert(combo_label2, string.format("%3d(%4s)", op.combo_stun or 0, string.format("+%d", op.last_stun or 0)))
-				table.insert(combo_label2, string.format("%3d(%4s)", op.combo_stun_timer or 0, string.format("+%d", op.last_stun_timer or 0)))
-				table.insert(combo_label2, string.format("%3d(%4s)", op.combo_pow or 0, string.format("+%d", p.last_pow_up or 0)))
-				table.insert(combo_label3, "")
-				table.insert(combo_label3, string.format("%3d", op.max_combo_damage or 0))
-				table.insert(combo_label3, string.format("%3d", op.max_combo or 0))
-				table.insert(combo_label3, string.format("%3d", op.max_combo_stun or 0))
-				table.insert(combo_label3, string.format("%3d", op.max_combo_stun_timer or 0))
-				table.insert(combo_label3, string.format("%3d", op.max_combo_pow or 0))
+				table.insert(col2, string.format("%3d>%3d(%.3f%%)", op.last_damage, op.last_damage_scaled, last_damage_scaling))
+				table.insert(col2, string.format("%3d(%4s)", op.combo_damage or 0, string.format("+%d", op.last_damage_scaled)))
+				table.insert(col2, string.format("%3d", op.last_combo))
+				table.insert(col2, string.format("%3d(%4s)", op.combo_stun or 0, string.format("+%d", op.last_stun or 0)))
+				table.insert(col2, string.format("%3d(%4s)", op.combo_stun_timer or 0, string.format("+%d", op.last_stun_timer or 0)))
+				table.insert(col2, string.format("%3d(%4s)", op.combo_pow or 0, string.format("+%d", p.last_pow_up or 0)))
+				table.insert(col3, "")
+				table.insert(col3, string.format("%3d", op.max_combo_damage or 0))
+				table.insert(col3, string.format("%3d", op.max_combo or 0))
+				table.insert(col3, string.format("%3d", op.max_combo_stun or 0))
+				table.insert(col3, string.format("%3d", op.max_combo_stun_timer or 0))
+				table.insert(col3, string.format("%3d", op.max_combo_pow or 0))
 				if p.disp_dmg then
-					ut.table_add_all(combo_label1, { -- コンボ表示
+					ut.table_add_all(col1, { -- コンボ表示
 						"Scaling",
 						"Damage",
 						"Combo",
@@ -4245,65 +4239,58 @@ rbff2.startplugin               = function()
 						"Power",
 					})
 				end
-				if p.disp_sts == 2 or p.disp_sts == 4 then ut.table_add_all(combo_label1, state_label) end
-				if #combo_label1 > 0 then
-					local box_bottom = get_line_height(#combo_label1)
+				if p.disp_sts == 2 or p.disp_sts == 4 then ut.table_add_all(col1, label) end
+				if #col1 > 0 then
+					local box_bottom = get_line_height(#col1)
 					scr:draw_box(p1 and 224 or 0, 40, p1 and 320 or 96, 40 + box_bottom, 0x80404040, 0x80404040) -- 四角枠
-					scr:draw_text(p1 and 224 + 4 or 4, 40, table.concat(combo_label1, "\n"))
+					scr:draw_text(p1 and 224 + 4 or 4, 40, table.concat(col1, "\n"))
 					if p.disp_dmg then
-						scr:draw_text(p1 and 224 + 36 or 36, 40, table.concat(combo_label2, "\n"))
-						scr:draw_text(p1 and 224 + 68 or 68, 40, table.concat(combo_label3, "\n"))
+						scr:draw_text(p1 and 224 + 36 or 36, 40, table.concat(col2, "\n"))
+						scr:draw_text(p1 and 224 + 68 or 68, 40, table.concat(col3, "\n"))
 					end
 				end
 
 				-- 状態 小表示
 				if p.disp_sts == 2 or p.disp_sts == 3 then
-					local flag_label = {}
-					local state_label = {}
-					table.insert(state_label, string.format("%s %02d %03d %03d",
+					local label1, label2 = {}, {}
+					table.insert(label1, string.format("%s %02d %03d %03d",
 						p.state, p.throwing and p.throwing.threshold or 0, p.throwing and p.throwing.timer or 0, p.throw_timer or 0))
 					local diff_pos_y = p.pos_y + p.pos_frc_y - (p.old.pos_y and (p.old.pos_y + p.old.pos_frc_y) or 0)
-					table.insert(state_label, string.format("%0.03f %0.03f", diff_pos_y, p.pos_y + p.pos_frc_y))
-					table.insert(state_label, string.format("%02x %02x %02x", p.spid or 0, p.attack or 0, p.attack_id or 0))
-					table.insert(state_label, string.format("%03x %02x %02x", p.act, p.act_count, p.act_frame))
-					table.insert(state_label, string.format("%02x %02x %02x", p.hurt_state, p.sway_status, p.additional))
-					local box_bottom = get_line_height(#state_label)
+					table.insert(label1, string.format("%0.03f %0.03f", diff_pos_y, p.pos_y + p.pos_frc_y))
+					table.insert(label1, string.format("%02x %02x %02x", p.spid or 0, p.attack or 0, p.attack_id or 0))
+					table.insert(label1, string.format("%03x %02x %02x", p.act, p.act_count, p.act_frame))
+					table.insert(label1, string.format("%02x %02x %02x", p.hurt_state, p.sway_status, p.additional))
+					local box_bottom = get_line_height(#label1)
 					scr:draw_box(p1 and 0 or 277, 0, p1 and 40 or 316, box_bottom, 0x80404040, 0x80404040)
-					scr:draw_text(p1 and 4 or 278, 0, table.concat(state_label, "\n"))
+					scr:draw_text(p1 and 4 or 278, 0, table.concat(label1, "\n"))
 					local c0, c4 = string.format("%08X", p.flag_c0 or 0), string.format("%08X", p.flag_c4 or 0)
 					local c8, cc = string.format("%08X", p.flag_c8 or 0), string.format("%08X", p.flag_cc or 0)
 					local d0 = string.format("%02X", p.flag_d0 or 0)
-					table.insert(flag_label, string.format("C0 %-32s %s %-s", ut.hextobitstr(c0, " "), c0, db.get_flag_name(p.flag_c0, db.flag_names_c0)))
-					table.insert(flag_label, string.format("C4 %-32s %s %-s", ut.hextobitstr(c4, " "), c4, db.get_flag_name(p.flag_c4, db.flag_names_c4)))
-					table.insert(flag_label, string.format("C8 %-32s %s %-s", ut.hextobitstr(c8, " "), c8, db.get_flag_name(p.flag_c8, db.flag_names_c8)))
-					table.insert(flag_label, string.format("CC %-32s %s %-s", ut.hextobitstr(cc, " "), cc, db.get_flag_name(p.flag_cc, db.flag_names_cc)))
-					table.insert(flag_label, string.format("D0 %-32s %s %-s", ut.hextobitstr(d0, " "), d0, db.get_flag_name(p.flag_d0, db.flag_names_d0)))
-					scr:draw_text(40, 60 + get_line_height(p1 and 0 or 5), table.concat(flag_label, "\n"))
+					table.insert(label2, string.format("C0 %-32s %s %-s", ut.hextobitstr(c0, " "), c0, db.get_flag_name(p.flag_c0, db.flag_names_c0)))
+					table.insert(label2, string.format("C4 %-32s %s %-s", ut.hextobitstr(c4, " "), c4, db.get_flag_name(p.flag_c4, db.flag_names_c4)))
+					table.insert(label2, string.format("C8 %-32s %s %-s", ut.hextobitstr(c8, " "), c8, db.get_flag_name(p.flag_c8, db.flag_names_c8)))
+					table.insert(label2, string.format("CC %-32s %s %-s", ut.hextobitstr(cc, " "), cc, db.get_flag_name(p.flag_cc, db.flag_names_cc)))
+					table.insert(label2, string.format("D0 %-32s %s %-s", ut.hextobitstr(d0, " "), d0, db.get_flag_name(p.flag_d0, db.flag_names_d0)))
+					scr:draw_text(40, 60 + get_line_height(p1 and 0 or 5), table.concat(label2, "\n"))
 				end
 
 				-- コマンド入力状態表示
 				if global.disp_input_sts - 1 == i then
 					for ti, input_state in ipairs(p.input_states) do
 						local x, y = 147, 25 + ti * 5
-						local x1, x2, y2 = x + 15, x - 8, y + 4
-						draw_text_with_shadow(x1, y - 2, input_state.tbl.name,
+						local x1, x2, y2, cmdx, cmdy = x + 15, x - 8, y + 4, x - 50, y - 2
+						draw_text_with_shadow(x1, cmdy, input_state.tbl.name,
 							input_state.input_estab == true and input_state_col.orange2 or input_state_col.white)
 						if input_state.on > 0 and input_state.chg_remain > 0 then
-							local col, col2
-							if input_state.charging == true then
-								col, col2 = input_state_col.green, input_state_col.green2
-							else
-								col, col2 = input_state_col.yellow, input_state_col.yellow2
-							end
+							local col, col2 = input_state_col.yellow, input_state_col.yellow2
+							if input_state.charging == true then col, col2 = input_state_col.green, input_state_col.green2 end
 							scr:draw_box(x2 + input_state.max * 2, y, x2, y2, col2, 0)
 							scr:draw_box(x2 + input_state.chg_remain * 2, y, x2, y2, 0, col)
 						end
-						local cmdx = x - 50
-						y = y - 2
 						for ci, c in ipairs(input_state.tbl.lr_cmds[p.cmd_side]) do
 							if c ~= "" then
 								cmdx = cmdx + math.max(5.5,
-									draw_text_with_shadow(cmdx, y, c,
+									draw_text_with_shadow(cmdx, cmdy, c,
 										input_state.input_estab == true and input_state_col.orange or
 										input_state.on > ci and input_state_col.red or
 										(ci == 1 and input_state.on >= ci) and input_state_col.red or nil))
