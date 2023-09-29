@@ -3128,19 +3128,14 @@ rbff2.startplugin               = function()
 		local frame = p.muteki.act_frames[#p.muteki.act_frames]
 		if frame == nil or chg_act_name or frame.col ~= col or p.state ~= p.old.state or p.act_1st then
 			--行動IDの更新があった場合にフレーム情報追加
-			frame = {
+			frame = ut.table_add(p.muteki.act_frames,{
 				act = p.act,
 				count = 1,
 				col = col,
 				name = last_frame.name,
 				line = line,
 				act_1st = p.act_1st,
-			}
-			table.insert(p.muteki.act_frames, frame)
-			if 180 < #p.muteki.act_frames then
-				--バッファ長調整
-				table.remove(p.muteki.act_frames, 1)
-			end
+			}, 180)
 		else
 			--同一行動IDが継続している場合はフレーム値加算
 			frame.count = frame.count + 1
@@ -3148,8 +3143,7 @@ rbff2.startplugin               = function()
 		local upd_group = update_frame_groups(frame, p.muteki.frame_groups or {}) -- フレームデータをグループ化
 		-- メインフレーム表示からの描画開始位置を記憶させる
 		if upd_group and last_frame then
-			table.insert(last_frame.muteki, p.muteki.frame_groups[#p.muteki.frame_groups])
-			while 180 < #p.muteki.frame_groups do table.remove(p.muteki.frame_groups, 1) end --バッファ長調整
+			ut.table_add(last_frame.muteki, p.muteki.frame_groups[#p.muteki.frame_groups], 180)
 		end
 
 		return frame
@@ -3175,22 +3169,19 @@ rbff2.startplugin               = function()
 		end
 
 		if (hist > 0 and hist > p.last_frame_gap) or (hist < 0 and hist < p.last_frame_gap) or (hist ~= 0 and p.last_frame_gap == 0) then
-			table.insert(p.hist_frame_gap, hist)                        -- バッファ更新
-			while 10 < #p.hist_frame_gap do table.remove(p.hist_frame_gap, 1) end --バッファ長調整
+			ut.table_add(p.hist_frame_gap, hist, 10)                        -- バッファ更新
 		end
 
 		local frame = p.frm_gap.act_frames[#p.frm_gap.act_frames]
 		if not frame or update or (frame.col ~= col and (math.abs(p.frame_gap) <= 1)) or p.act_1st then
-			frame = {
+			frame = ut.table_add(p.frm_gap.act_frames, {
 				act = p.act,
 				count = 1,
 				col = col,
 				name = last_frame.name,
 				line = line,
 				act_1st = p.act_1st,
-			}
-			table.insert(p.frm_gap.act_frames, frame)
-			while 180 < #p.frm_gap.act_frames do table.remove(p.frm_gap.act_frames, 1) end --バッファ長調整
+			},  180 )
 		else
 			frame.count = frame.count + 1                                         --同一行動IDが継続している場合はフレーム値加算
 		end
@@ -3198,8 +3189,7 @@ rbff2.startplugin               = function()
 		local upd_group = update_frame_groups(frame, p.frm_gap.frame_groups or {}) -- フレームデータをグループ化
 		-- メインフレーム表示からの描画開始位置を記憶させる
 		if upd_group and last_frame then
-			table.insert(last_frame.frm_gap, p.frm_gap.frame_groups[#p.frm_gap.frame_groups])
-			while 180 < #p.frm_gap.frame_groups do table.remove(p.frm_gap.frame_groups, 1) end --バッファ長調整
+			ut.table_add(last_frame.frm_gap, p.frm_gap.frame_groups[#p.frm_gap.frame_groups], 180)
 		end
 	end
 
@@ -3269,7 +3259,7 @@ rbff2.startplugin               = function()
 				last_frame.fireball = last_frame.fireball or {}
 				last_frame.fireball[fb_base] = last_frame.fireball[fb_upd_group] or {}
 				local last_fb_frame = last_frame.fireball[fb_base]
-				table.insert(last_fb_frame, body.fireballs[fb_base].frame_groups[# body.fireballs[fb_base].frame_groups])
+				ut.table_add(last_fb_frame, body.fireballs[fb_base].frame_groups[# body.fireballs[fb_base].frame_groups], 180)
 				last_fb_frame[#last_fb_frame].body_count = last_frame.last_total
 			end
 		end
@@ -3834,8 +3824,7 @@ rbff2.startplugin               = function()
 			for iv, btn in ipairs({ "a", "b", "c", "d" }) do
 				if (p.reg_pcnt & ((2 ^ (iv - 1)) * 0x10)) == 0 then lever, ggkey[btn] = lever .. "_" .. btn, true end
 			end
-			table.insert(p.ggkey_hist, ggkey)
-			while 60 < #p.ggkey_hist do table.remove(p.ggkey_hist, 1) end --バッファ長調整
+			ut.table_add(p.ggkey_hist, ggkey, 60)
 
 			-- キーログの更新
 			lever = string.upper(lever)

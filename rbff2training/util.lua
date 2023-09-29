@@ -168,6 +168,14 @@ deepcopy            = function(orig)
 end
 ut.deepcopy         = deepcopy
 
+ut.table_add = function(tbl, item, limit)
+	table.insert(tbl, item)
+	if limit then
+		while limit < #tbl do table.remove(tbl, 1) end -- FIFO
+	end
+	return item
+end
+
 ut.table_add_all    = function(t1, t2, pre_add)
 	t1 = t1 or {}
 	for _, r in ipairs(t2 or {}) do
