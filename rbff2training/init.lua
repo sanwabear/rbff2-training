@@ -71,17 +71,7 @@ end
 
 local rbff2                = exports
 
--- キャラと動作データ
-local chars                = db.chars
-local jump_acts            = db.jump_acts
-local wakeup_acts          = db.wakeup_acts
-local act_types            = db.act_types
-local pre_down_acts        = db.pre_down_acts
-
 -- ヒット効果
-local hit_effect_types     = db.hit_effect_types
-local hit_effect_nokezoris = db.hit_effect_nokezoris
-local hit_effects          = db.hit_effects
 local hit_effect_addrs     = {}
 local hit_effect_menus     = {}
 
@@ -89,21 +79,6 @@ local hit_effect_menus     = {}
 local hit_system_stops     = {}
 
 -- 判定種類
-local box_kinds            = db.box_kinds
-local box_types            = db.box_types
-local main_box_types       = db.main_box_types
-local sway_box_types       = db.sway_box_types
-local attack_boxies        = db.attack_boxies
-local juggle_boxies        = db.juggle_boxies
-local fake_boxies          = db.fake_boxies
-local hitstun_boxies       = db.hitstun_boxies
-local block_boxies         = db.block_boxies
-local parry_boxies         = db.parry_boxies
-local hurt_boxies          = db.hurt_boxies
-local top_types            = db.top_types
-local top_sway_types       = db.top_sway_types
-local top_punish_types     = db.top_punish_types
-local block_types          = db.block_types
 local frame_hurt_types     = {
 	invincible = 2 ^ 0,
 	gnd_hitstun = 2 ^ 1,
@@ -126,6 +101,13 @@ local get_top_type         = function(top, types)
 	local type = 0
 	for _, t in ipairs(types) do
 		if top <= t.top then type = type | t.act_type end
+	end
+	return type
+end
+local get_bottom_type         = function(bottom, types)
+	local type = 0
+	for _, t in ipairs(types) do
+		if bottom >= t.bottom then type = type | t.act_type end
 	end
 	return type
 end
@@ -934,37 +916,6 @@ local fix_addr                  = function(addr)
 	local fix2 = addr_offset[addr] and (addr_offset[addr][emu.romname()] or fix1) or fix1
 	return addr + fix2
 end
-local hurt_inv_type             = {
-	-- 全身無敵
-	full    = { type = 0, min_label = "全身", disp_label = "全身無敵", name = "全身無敵" },
-	-- ライン関係の無敵
-	main    = { type = 1, min_label = "メイン", disp_label = "メイン攻撃無敵", name = "メインライン攻撃無敵" },
-	sway_oh = { type = 1, min_label = "対上", disp_label = "対メイン上段無敵", name = "対メインライン上段攻撃無敵" },
-	sway_lo = { type = 1, min_label = "対下", disp_label = "対メイン下段無敵", name = "対メインライン下段攻撃無敵" },
-	-- やられ判定の高さ
-	top32   = { type = 2, value = 32, min_label = "膝上", disp_label = "上半身無敵1", name = "32 避け" },
-	top40   = { type = 2, value = 40, min_label = "膝上", disp_label = "上半身無敵2", name = "40 ウェービングブロー,龍転身,ダブルローリング" },
-	top48   = { type = 2, value = 48, min_label = "膝上", disp_label = "上半身無敵3", name = "48 ローレンス避け" },
-	--[[
-	top60 = { type = 2, value = 60, min_label = "上部", disp_label = "頭部無敵1", name = "60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン"},
-	top64 = { type = 2, value = 64, min_label = "上部", disp_label = "頭部無敵2", name = "64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド"},
-	top68 = { type = 2, value = 68, min_label = "上部", disp_label = "頭部無敵3", name = "68 屈 ローレンス"},
-	top76 = { type = 2, value = 76, min_label = "上部", disp_label = "頭部無敵4", name = "76 屈 フランコ"},
-	top80 = { type = 2, value = 80, min_label = "上部", disp_label = "頭部無敵5", name = "80 屈 クラウザー"},
-	]]
-	-- 足元無敵
-	low40 = { type = 3, value = 40, min_label = "足元", disp_label = "足元無敵1", name = "対アンディ屈C" },
-	low32 = { type = 3, value = 32, min_label = "足元", disp_label = "足元無敵2", name = "対ギース屈C" },
-	low24 = { type = 3, value = 24, min_label = "足元", disp_label = "足元無敵3", name = "対だいたいの屈B（キムとボブ以外）" },
-	-- 特殊やられ
-	otg = { type = 4, min_label = "追撃可", disp_label = "ダウン追撃", name = "ダウン追撃のみ可能" },
-	juggle = { type = 4, min_label = "追撃可", disp_label = "空中追撃", name = "空中追撃のみ可能" },
-}
-hurt_inv_type.values            = {
-	hurt_inv_type.full, hurt_inv_type.main, hurt_inv_type.sway_oh, hurt_inv_type.sway_lo, hurt_inv_type.top32, hurt_inv_type.top40,
-	hurt_inv_type.top48, -- hurt_inv_type.top60, hurt_inv_type.top64, hurt_inv_type.top68, hurt_inv_type.top76, hurt_inv_type.top80,
-	hurt_inv_type.low40, hurt_inv_type.low32, hurt_inv_type.low24, hurt_inv_type.otg, hurt_inv_type.juggle
-}
 -- 投げ無敵
 local throw_inv_type            = {
 	time24 = { value = 24, disp_label = "タイマー24", name = "通常投げ" },
@@ -980,28 +931,6 @@ throw_inv_type.values           = {
 	throw_inv_type.time24, throw_inv_type.time20, throw_inv_type.time10, throw_inv_type.sway, throw_inv_type.flag1, throw_inv_type.flag2,
 	throw_inv_type.state, throw_inv_type.no_gnd
 }
-hurt_inv_type.get               = function(p, real_top, real_bottom, box)
-	local ret, top, low = {}, nil, nil
-	for _, type in ipairs(hurt_inv_type.values) do
-		if type.type == 2 and real_top <= type.value then top = type end
-		if type.type == 3 and real_bottom >= type.value then low = type end
-	end
-	if top then table.insert(ret, top) end
-	if low then table.insert(ret, low) end
-	if box.type == box_types.down_otg then  -- 食らい(ダウン追撃のみ可)
-		table.insert(ret, hurt_inv_type.otg)
-	elseif box.type == box_types.launch then -- 食らい(空中追撃のみ可)
-		table.insert(ret, hurt_inv_type.juggle)
-	elseif box.type == box_types.hurt3 then -- 食らい(対ライン上攻撃)
-		table.insert(ret, hurt_inv_type.sway_oh)
-	elseif box.type == box_types.hurt4 then -- 食らい(対ライン下攻撃)
-		table.insert(ret, hurt_inv_type.sway_lo)
-	elseif box.type == box_types.sway_hurt1 or -- 食らい1(スウェー中)
-		box.type == box_types.sway_hurt2 then -- 食らい2(スウェー中)
-		table.insert(ret, hurt_inv_type.main)
-	end
-	return #ret == 0 and {} or ret
-end
 throw_inv_type.get              = function(p)
 	if p.is_fireball then return {} end
 	local ret = nil
@@ -1028,29 +957,24 @@ end
 local fix_box_scale             = function(p, src, dest)
 	--local prev = string.format("%x id=%02x top=%s bottom=%s left=%s right=%s", p.addr.base, src.id, src.top, src.bottom, src.left, src.right)
 	dest = dest or ut.deepcopy(src) -- 計算元のboxを汚さないようにディープコピーしてから処理する
-
 	-- 全座標について p.box_scale / 0x1000 の整数値に計算しなおす
 	dest.top, dest.bottom = ut.int16((src.top * p.box_scale) >> 6), ut.int16((src.bottom * p.box_scale) >> 6)
 	dest.left, dest.right = ut.int16((src.left * p.box_scale) >> 6), ut.int16((src.right * p.box_scale) >> 6)
 	--ut.printf("%s ->a top=%s bottom=%s left=%s right=%s", prev, dest.reach.top, dest.reach.bottom, dest.reach.left, dest.reach.right)
-
-	if dest.type.kind == box_kinds.attack then
-		-- 攻撃位置から解決した属性を付与する
-		local real_top = math.tointeger(math.max(dest.top, dest.bottom) + screen.top - p.pos_z - p.y)
-		local real_bottom = math.tointeger(math.min(dest.top, dest.bottom) + screen.top - p.pos_z - p.y)
-		dest.blockable = {
-			real_top = real_top,
-			real_bottom = real_bottom,
-			main = ut.tstb(dest.reach.possible, possible_types.same_line) and dest.reach.blockable | get_top_type(real_top, top_types) or 0,
-			sway = ut.tstb(dest.reach.possible, possible_types.diff_line) and dest.reach.blockable | get_top_type(real_top, top_sway_types) or 0,
-			punish = ut.tstb(dest.reach.possible, possible_types.same_line) and get_top_type(real_bottom, top_punish_types) or 0
-		}
-	end
-
 	-- キャラの座標と合算して画面上への表示位置に座標を変換する
+	local real_top = math.tointeger(math.max(dest.top, dest.bottom) + screen.top - p.pos_z - p.y)
+	local real_bottom = math.tointeger(math.min(dest.top, dest.bottom) + screen.top - p.pos_z - p.y) + 1
+	dest.real_top, dest.real_bottom = real_top, real_bottom
 	dest.left, dest.right = p.x - dest.left * p.flip_x, p.x - dest.right * p.flip_x
 	dest.bottom, dest.top = p.y - dest.bottom, p.y - dest.top
 	--ut.printf("%s ->b x=%s y=%s top=%s bottom=%s left=%s right=%s", prev, p.x, p.y, dest.top, dest.bottom, dest.left, dest.right)
+	if dest.type.kind == db.box_kinds.attack then -- 攻撃位置から解決した属性を付与する
+		dest.blockable = {
+			main = ut.tstb(dest.reach.possible, possible_types.same_line) and dest.reach.blockable | get_top_type(real_top, db.top_types) or 0,
+			sway = ut.tstb(dest.reach.possible, possible_types.diff_line) and dest.reach.blockable | get_top_type(real_top, db.top_sway_types) or 0,
+			punish = ut.tstb(dest.reach.possible, possible_types.same_line) and get_top_type(real_bottom, db.top_punish_types) or 0,
+		}
+	end
 	return dest
 end
 
@@ -1163,9 +1087,9 @@ local load_hit_effects = function()
 	if #hit_effect_addrs > 0 then return end
 	hit_effect_addrs     = { 0 }
 	hit_effect_menus     = { "OFF" }
-	for i, _ in ipairs(hit_effects) do
+	for i, _ in ipairs(db.hit_effects) do
 		table.insert(hit_effect_addrs, mem.r32(0x579DA + (i - 1) * 4))
-		table.insert(hit_effect_menus, string.format("%2s %s %x", i, table.concat(hit_effects[i], " "), hit_effect_addrs[#hit_effect_addrs]))
+		table.insert(hit_effect_menus, string.format("%2s %s %x", i, table.concat(db.hit_effects[i], " "), hit_effect_addrs[#hit_effect_addrs]))
 	end
 	print("load_hit_effects")
 end
@@ -1179,10 +1103,10 @@ end
 
 -- キャラの基本アドレスの取得
 local load_proc_base            = function()
-	if chars[1].proc_base then return end
-	for char = 1, #chars - 1 do
+	if db.chars[1].proc_base then return end
+	for char = 1, #db.chars - 1 do
 		local char4 = char << 2
-		chars[char].proc_base = {
+		db.chars[char].proc_base = {
 			cancelable    = mem.r32(char4 + 0x850D8),
 			forced_down   = 0x88A12,
 			hitstop       = mem.r32(char4 + fix_addr(0x83C38)),
@@ -1202,7 +1126,7 @@ local load_proc_base            = function()
 			sp_invincible = mem.r32(char4 + 0x8DE62),
 		}
 	end
-	chars[#chars].proc_base = { -- 共通枠に弾のベースアドレスを入れておく
+	db.chars[#db.chars].proc_base = { -- 共通枠に弾のベースアドレスを入れておく
 		forced_down = 0x8E2C0,
 		hitstop     = fix_addr(0x884F2),
 		damege      = fix_addr(0x88472),
@@ -1221,19 +1145,19 @@ end
 
 -- 接触判定の取得
 local load_push_box             = function()
-	if chars[1].push_box then return end
+	if db.chars[1].push_box then return end
 	-- キャラデータの押し合い判定を作成
 	-- キャラごとの4種類の判定データをロードする
-	for char = 1, #chars - 1 do
-		chars[char].push_box_mask = mem.r32(0x5C728 + (char << 2))
-		chars[char].push_box = {}
+	for char = 1, #db.chars - 1 do
+		db.chars[char].push_box_mask = mem.r32(0x5C728 + (char << 2))
+		db.chars[char].push_box = {}
 		for _, addr in ipairs({ 0x5C9BC, 0x5CA7C, 0x5CB3C, 0x5CBFC }) do
 			local a2 = addr + (char << 3)
 			local y1, y2, x1, x2 = mem.r8i(a2 + 0x1), mem.r8i(a2 + 0x2), mem.r8i(a2 + 0x3), mem.r8i(a2 + 0x4)
-			chars[char].push_box[addr] = {
+			db.chars[char].push_box[addr] = {
 				addr = addr,
 				id = 0,
-				type = box_types.push,
+				type = db.box_types.push,
 				front = x1,
 				back = x2,
 				left = math.min(x1, x2),
@@ -1249,7 +1173,7 @@ end
 
 local get_push_box              = function(p)
 	-- 家庭用 05C6D0 からの処理
-	local push_box = chars[p.char].push_box
+	local push_box = db.chars[p.char].push_box
 	if p.char == 0x5 and ut.tstb(p.flag_c8, db.flag_c8._15) then
 		return push_box[0x5C9BC]
 	else
@@ -1276,13 +1200,13 @@ end
 -- 家庭用0x05D78Cからの処理
 local get_normal_throw_box      = function(p)
 	-- 相手が向き合いか背向けかで押し合い幅を解決して反映
-	local push_box, op_push_box = chars[p.char].push_box[0x5C9BC], chars[p.op.char].push_box[0x5C9BC]
+	local push_box, op_push_box = db.chars[p.char].push_box[0x5C9BC], db.chars[p.op.char].push_box[0x5C9BC]
 	local op_edge = (p.block_side == p.op.block_side) and op_push_box.back or op_push_box.front
 	local center = ut.int16(((push_box.front - math.abs(op_edge)) * p.box_scale) >> 6)
 	local range = mem.r8(fix_addr(0x5D854) + p.char4)
 	return fix_throw_box_pos({
 		id = 0x100, -- dummy
-		type = box_types.normal_throw,
+		type = db.box_types.normal_throw,
 		left = center - range,
 		right = center + range,
 		top = -0x05, -- 地上投げの範囲をわかりやすくする
@@ -1305,7 +1229,7 @@ local get_special_throw_box     = function(p, id)
 	end
 	return fix_throw_box_pos({
 		id = id,
-		type = box_types.special_throw,
+		type = db.box_types.special_throw,
 		left = -mem.r16(a0),
 		right = 0x0,
 		top = top,
@@ -1322,7 +1246,7 @@ end
 local get_air_throw_box         = function(p)
 	return fix_throw_box_pos({
 		id = 0x200, -- dummy
-		type = box_types.air_throw,
+		type = db.box_types.air_throw,
 		left = -0x30,
 		right = 0x0,
 		top = -0x20,
@@ -1393,31 +1317,31 @@ end
 
 local box_with_bit_types        = {
 	-- 優先順で並べる
-	{ box_type = box_types.fake_juggle_fb,     attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fake | frame_attack_types.juggle },
-	{ box_type = box_types.fake_fireball,      attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fake },
-	{ box_type = box_types.fake_juggle,        attackbit = frame_attack_types.attacking | frame_attack_types.fake | frame_attack_types.juggle },
-	{ box_type = box_types.fake_attack,        attackbit = frame_attack_types.attacking | frame_attack_types.fake },
+	{ box_type = db.box_types.fake_juggle_fb,     attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fake | frame_attack_types.juggle },
+	{ box_type = db.box_types.fake_fireball,      attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fake },
+	{ box_type = db.box_types.fake_juggle,        attackbit = frame_attack_types.attacking | frame_attack_types.fake | frame_attack_types.juggle },
+	{ box_type = db.box_types.fake_attack,        attackbit = frame_attack_types.attacking | frame_attack_types.fake },
 
-	{ box_type = box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fullhit | frame_attack_types.juggle },
-	{ box_type = box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.obsolute | frame_attack_types.juggle },
-	{ box_type = box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.harmless | frame_attack_types.juggle },
-	{ box_type = box_types.juggle_fireball,    attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.juggle },
-	{ box_type = box_types.harmless_fireball,  attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fullhit },
-	{ box_type = box_types.harmless_fireball,  attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.obsolute },
-	{ box_type = box_types.harmless_fireball,  attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.harmless },
-	{ box_type = box_types.fireball,           attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.attacking },
-	{ box_type = box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.fullhit | frame_attack_types.juggle },
-	{ box_type = box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.harmless | frame_attack_types.juggle },
-	{ box_type = box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.obsolute | frame_attack_types.juggle },
-	{ box_type = box_types.juggle,             attackbit = frame_attack_types.attacking | frame_attack_types.juggle },
-	{ box_type = box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.fullhit },
-	{ box_type = box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.obsolute },
-	{ box_type = box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.harmless },
-	{ box_type = box_types.attack,             attackbit = frame_attack_types.attacking },
+	{ box_type = db.box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fullhit | frame_attack_types.juggle },
+	{ box_type = db.box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.obsolute | frame_attack_types.juggle },
+	{ box_type = db.box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.harmless | frame_attack_types.juggle },
+	{ box_type = db.box_types.juggle_fireball,    attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.juggle },
+	{ box_type = db.box_types.harmless_fireball,  attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fullhit },
+	{ box_type = db.box_types.harmless_fireball,  attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.obsolute },
+	{ box_type = db.box_types.harmless_fireball,  attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.harmless },
+	{ box_type = db.box_types.fireball,           attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.attacking },
+	{ box_type = db.box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.fullhit | frame_attack_types.juggle },
+	{ box_type = db.box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.harmless | frame_attack_types.juggle },
+	{ box_type = db.box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.obsolute | frame_attack_types.juggle },
+	{ box_type = db.box_types.juggle,             attackbit = frame_attack_types.attacking | frame_attack_types.juggle },
+	{ box_type = db.box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.fullhit },
+	{ box_type = db.box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.obsolute },
+	{ box_type = db.box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.harmless },
+	{ box_type = db.box_types.attack,             attackbit = frame_attack_types.attacking },
 }
 local fix_box_type              = function(p, box)
 	local type = p.in_sway_line and box.sway_type or box.type
-	if type ~= box_types.attack then return type end
+	if type ~= db.box_types.attack then return type end
 	-- TODO 多段技の状態
 	p.max_hit_dn = p.max_hit_dn or 0
 	if p.max_hit_dn > 1 or p.max_hit_dn == 0 or (p.char == 0x4 and p.attack == 0x16) then
@@ -1433,14 +1357,14 @@ end
 
 -- 遠近間合い取得
 local load_close_far            = function() 
-	if chars[1].close_far then return end
+	if db.chars[1].close_far then return end
 	-- 地上通常技の近距離間合い 家庭用02DD02からの処理
-	for org_char = 1, #chars - 1 do
+	for org_char = 1, #db.chars - 1 do
 		local char                = org_char - 1
 		local abc_offset          = mem.close_far_offset + (char * 4)
 		local d_offset            = mem.close_far_offset_d + (char * 2)
 		-- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
-		chars[org_char].close_far = {
+		db.chars[org_char].close_far = {
 			[0x00] = {
 				A = { x1 = 0, x2 = mem.r8(abc_offset) },
 				B = { x1 = 0, x2 = mem.r8(abc_offset + 1) },
@@ -1468,7 +1392,7 @@ local load_close_far            = function()
 		return ret
 	end
 	-- 家庭用2EC72,2EDEE,2E1FEからの処理
-	for org_char = 1, #chars - 1 do
+	for org_char = 1, #db.chars - 1 do
 		local ret = {}
 		-- データが近距離、遠距離の2種類しかないのと実質的に意味があるのが近距離のものなので最初のデータだけ返す
 		-- 0x0:近A 0x1:遠A 0x2:近B 0x3:遠B 0x4:近C 0x5:遠C
@@ -1480,7 +1404,7 @@ local load_close_far            = function()
 			get_lmo_range_internal(ret, "必", 24, 0x80000) -- クロスヘッドスピン
 		end
 		-- printf("%s %s %x %s %x %s", chars[char].name, act_name, d0, d0, d1, decd1)
-		chars[org_char].close_far[0x80] = ret
+		db.chars[org_char].close_far[0x80] = ret
 	end
 	print("load_close_far done")
 end
@@ -1574,6 +1498,16 @@ rbff2.startplugin               = function()
 		local i, ii, p, a = 1, nil, nil, nil
 		return function()
 			while i <= #sources and p == nil do
+				i, ii, p, a = i + 1, i, resolver(sources[i]), sources[i]
+				if p then return ii, a, p end -- インデックス, sources要素, convert結果
+			end
+		end
+	end
+	local find_all = function(sources, resolver) -- sourcesの要素をresolverを通して得た結果で非nilの値を返す
+		sources = sources or {}
+		local i, ii, p, a = 1, nil, nil, nil
+		return function()
+			while i <= #sources do
 				i, ii, p, a = i + 1, i, resolver(sources[i]), sources[i]
 				if p then return ii, a, p end -- インデックス, sources要素, convert結果
 			end
@@ -2024,7 +1958,7 @@ rbff2.startplugin               = function()
 						p.hitstun       = 0
 						p.blockstun     = 0
 					end
-					local base_addr  = chars[#chars].proc_base
+					local base_addr  = db.chars[#db.chars].proc_base
 					p.attack         = data
 					p.forced_down    = 2 <= mem.r8(data + base_addr.forced_down)       -- テクニカルライズ可否 家庭用 05A9D6 からの処理
 					p.hitstop        = math.max(2, mem.r8(data + base_addr.hitstop) - 1) -- ヒットストップ 家庭用 弾やられ側:05AE50 からの処理 OK
@@ -2205,7 +2139,7 @@ rbff2.startplugin               = function()
 		p.wp8 = ut.hash_add_all(p.wp8, {
 			[0x10] = function(data)
 				p.char, p.char4, p.char8 = data, (data << 2), (data << 3)
-				p.char_data = p.is_fireball and chars[#chars] or chars[data]      -- 弾はダミーを設定する
+				p.char_data = p.is_fireball and db.chars[#db.chars] or db.chars[data]      -- 弾はダミーを設定する
 				if not p.is_fireball then p.proc_active = true end
 			end,
 			[0x58] = function(data) p.block_side = ut.int8(data) < 0 and -1 or 1 end, -- 向き 00:左側 80:右側
@@ -2246,12 +2180,12 @@ rbff2.startplugin               = function()
 					local id = mem.r8(a2)
 					local top, bottom = sort_ba(mem.r8i(a2 + 0x1), mem.r8i(a2 + 0x2))
 					local left, right = sort_ba(mem.r8i(a2 + 0x3), mem.r8i(a2 + 0x4))
-					local type = main_box_types[id] or (id < 0x20) and box_types.unknown or box_types.attack
-					p.attack_id = type == box_types.attack and id or p.attack_id
+					local type = db.main_box_types[id] or (id < 0x20) and db.box_types.unknown or db.box_types.attack
+					p.attack_id = type == db.box_types.attack and id or p.attack_id
 					local reach, possibles
-					if type == box_types.attack then
+					if type == db.box_types.attack then
 						possibles = get_hitbox_possibles(p.attack_id)
-						p.effect    = mem.r8(p.attack_id + chars[#chars].proc_base.effect) -- ヒット効果
+						p.effect    = mem.r8(p.attack_id + db.chars[#db.chars].proc_base.effect) -- ヒット効果
 						p.attackbit = ut.hex_set(p.attackbit, frame_attack_types.attacking)
 						p.attackbit = ut.hex_set(p.attackbit, possibles.juggle and frame_attack_types.juggle or 0)
 						if p.is_fireball then
@@ -2259,13 +2193,13 @@ rbff2.startplugin               = function()
 							p.on_fireball = p.on_fireball < 0 and now() or p.on_fireball
 						end
 						local possible = ut.hex_set(ut.hex_set(possibles.normal, possibles.sway_standing), possibles.sway_crouching)
-						local blockable = act_types.unblockable -- ガード属性 -- 不能
+						local blockable = db.act_types.unblockable -- ガード属性 -- 不能
 						if possibles.crouching_block and possibles.standing_block then
-							blockable = act_types.attack -- 上段
+							blockable = db.act_types.attack -- 上段
 						elseif possibles.crouching_block then
-							blockable = act_types.low_attack -- 下段
+							blockable = db.act_types.low_attack -- 下段
 						elseif possibles.standing_block then
-							blockable = act_types.overhead -- 中段
+							blockable = db.act_types.overhead -- 中段
 						end
 						reach = { blockable = blockable, possible = possible, }
 						for _, t in ipairs(hitbox_grab_types) do p.grabbable = p.grabbable | (possibles[t.name] and t.value or 0) end
@@ -2278,7 +2212,7 @@ rbff2.startplugin               = function()
 						right = right,
 						top = top,
 						bottom = bottom,
-						sway_type = sway_box_types[id] or type,
+						sway_type = db.sway_box_types[id] or type,
 						possibles = possibles or {},
 						reach = reach or {}, -- 判定のリーチとその属性
 					})
@@ -2434,7 +2368,7 @@ rbff2.startplugin               = function()
 		for _, p in ipairs(players) do
 			local op = p.op
 			p.input_states = {}
-			p.char_data = chars[p.char]
+			p.char_data = db.chars[p.char]
 
 			do_recover(p, true)
 
@@ -3278,7 +3212,7 @@ rbff2.startplugin               = function()
 		p.bs_hook = p.dummy_rvs.id and p.dummy_rvs or nil
 		if p.dummy_rvs.cmd_type then
 			if rvs_types.knock_back_recovery ~= rvs_type then
-				if (((p.flag_c0 | p.old.flag_c0) & 0x2 == 0x2) or pre_down_acts[p.act]) and p.dummy_rvs.cmd_type == db.cmd_types._2d then
+				if (((p.flag_c0 | p.old.flag_c0) & 0x2 == 0x2) or db.pre_down_acts[p.act]) and p.dummy_rvs.cmd_type == db.cmd_types._2d then
 					-- no act
 				else
 					p.bs_hook = p.dummy_rvs
@@ -3325,7 +3259,7 @@ rbff2.startplugin               = function()
 			p.op          = op
 			p.base        = mem.r32(p.addr.base)
 			p.char        = mem.r8(p.addr.char)
-			p.char_data   = chars[p.char]
+			p.char_data   = db.chars[p.char]
 			p.char4       = 0xFFFF & (p.char << 2)
 			p.char8       = 0xFFFF & (p.char << 3)
 			p.flag_c0     = mem.r32(p.addr.flag_c0)
@@ -3493,7 +3427,7 @@ rbff2.startplugin               = function()
 			--フレーム数
 			p.skip_frame     = global.skip_frame1 or global.skip_frame2 or p.skip_frame
 
-			p.old.act_data        = p.act_data or { name = "", type = act_types.startup | act_types.free, }
+			p.old.act_data        = p.act_data or { name = "", type = db.act_types.startup | db.act_types.free, }
 			if p.flag_c4 == 0 and p.flag_c8 == 0 then
 				local name = nil
 				--{ names = { "ウェーブライダー" }, type = act_types.preserve | act_types.any, ids = { 0x10C } },
@@ -3512,7 +3446,7 @@ rbff2.startplugin               = function()
 					p.act_data_cache = p.act_data_cache or {}
 					p.act_data = p.act_data_cache[name]
 					if not p.act_data then
-						p.act_data = { bs_name= name, name= name, normal_name= name, slide_name= name, type = act_types.free | act_types.startup, count = 1 }
+						p.act_data = { bs_name= name, name= name, normal_name= name, slide_name= name, type = db.act_types.free | db.act_types.startup, count = 1 }
 						p.act_data_cache[name] = p.act_data
 					end
 				end
@@ -3520,7 +3454,7 @@ rbff2.startplugin               = function()
 				p.update_act = p.act_1st
 			elseif p.char_data.acts and p.char_data.acts[p.act] then
 				p.act_data = p.char_data.acts[p.act]
-				p.act_1st = ut.tstb(p.act_data.type, act_types.startup_if_ca) and ut.tstb(p.flag_cc, db.flag_cc._00) or p.char_data.act1sts[p.act]
+				p.act_1st = ut.tstb(p.act_data.type, db.act_types.startup_if_ca) and ut.tstb(p.flag_cc, db.flag_cc._00) or p.char_data.act1sts[p.act]
 			else
 				p.act_data.name = string.format("%X", p.act)
 			end
@@ -3530,7 +3464,7 @@ rbff2.startplugin               = function()
 			p.act_normal = true
 			if p.state == 2 or (p.attack_data | p.flag_c4 | p.flag_c8) ~= 0 or
 				ut.tstb(p.flag_cc, 0xFFFFFF3F) or ut.tstb(p.flag_c0, 0x03FFD723) or
-				not ut.tstb(p.act_data.type, act_types.free | act_types.block) then
+				not ut.tstb(p.act_data.type, db.act_types.free | db.act_types.block) then
 				p.act_normal = false
 			end
 			global.all_act_normal = p.act_normal and global.all_act_normal
@@ -3577,23 +3511,31 @@ rbff2.startplugin               = function()
 				p.x, p.y, p.flip_x = p.pos - screen.left, screen.top - p.pos_y - p.pos_z, (p.flip_x1 ~ p.flip_x2) > 0 and 1 or -1
 				p.vulnerable = (p.invincible and p.invincible > 0) or p.hurt_invincible or p.on_vulnerable ~= global.frame_number
 				p.grabbable = p.grabbable | (p.grabbable1 and p.grabbable2 and hitbox_grab_bits.baigaeshi or 0)
-				p.hitboxies, p.hitbox_types = {}, {} -- 座標補正後データ格納のためバッファのクリア
+				p.hitboxies, p.hitbox_types, p.hurt = {}, {}, {} -- 座標補正後データ格納のためバッファのクリア
 
 				-- 当たりとやられ判定判定
 				for _, box in ipairs(p.boxies) do
 					local type = fix_box_type(p, box) -- 属性はヒット状況などで変わるので都度解決する
-					if not (hurt_boxies[type] and p.vulnerable) then
-						local fixbox = fix_box_scale(p, box)
-						fixbox.type = type
-						if (type.kind == box_kinds.attack or type.kind == box_kinds.parry) and global.pause_hitbox == 3 then
+					if not (db.hurt_boxies[type] and p.vulnerable) then
+						box = fix_box_scale(p, box)
+						box.type = type
+						if (type.kind == db.box_kinds.attack or type.kind == db.box_kinds.parry) and global.pause_hitbox == 3 then
 							global.pause = true -- 強制ポーズ
 						end
+						if type.kind == db.box_kinds.hurt then
+							-- and ut.tstb(box.reach.possible, possible_types.same_line)
+							local top = math.max(p.hurt and p.hurt.max_top or 0, box.real_top)
+							local bottom = math.min(p.hurt and p.hurt.min_bottom or 0xFFFF, box.real_bottom)
+							local dodge = get_top_type(top, db.hurt_dodge_types) | get_bottom_type(bottom, db.hurt_dodge_types)
+							p.hurt = { max_top = top, min_bottom = bottom, dodge = dodge, }
+						end
 						if p.body.disp_hitbox then
-							table.insert(p.hitboxies, fixbox)
-							table.insert(hitboxies, fixbox)
+							table.insert(p.hitboxies, box)
+							table.insert(hitboxies, box)
 							table.insert(p.hitbox_types, type)
 						end
 					end
+					if p.vulnerable then p.hurt = { max_top = 0, min_bottom = 0, dodge = db.dodge_types.full, } end
 				end
 
 				if global.pause_hitbox == 2 and #p.body.throw_boxies then global.pause = true end -- 強制ポーズ
@@ -3621,7 +3563,7 @@ rbff2.startplugin               = function()
 						for _, item in ipairs(p.last_throw_ids) do
 							if item.char == p.char then
 								local box = get_throwbox(p, item.id)
-								box.type = box_types.push
+								box.type = db.box_types.push
 								table.insert(p.hitboxies, box)
 								table.insert(hitboxies, box)
 							end
@@ -3682,7 +3624,7 @@ rbff2.startplugin               = function()
 				local hitstun, blockstun = 0, 0
 				if p.ophit and p.ophit.hitboxies then
 					for _, box in pairs(p.ophit.hitboxies) do
-						if box.type.kind == box_kinds.attack then
+						if box.type.kind == db.box_kinds.attack then
 							hitstun, blockstun = box.hitstun, box.blockstun
 							break
 						end
@@ -3876,7 +3818,7 @@ rbff2.startplugin               = function()
 					if fb.proc_active and fb.act_data then act_type = act_type | fb.act_data.type end
 				end
 				-- リプレイ中は自動ガードしない
-				if p.dummy_gd ~= dummy_gd_type.none and ut.tstb(act_type, act_types.attack) and in_rec_replay then
+				if p.dummy_gd ~= dummy_gd_type.none and ut.tstb(act_type, db.act_types.attack) and in_rec_replay then
 					p.clear_cmd_hook(db.cmd_types._8) -- 上は無効化
 					if p.dummy_gd == dummy_gd_type.fixed then
 						-- 常時（ガード方向はダミーモードに従う）
@@ -3888,9 +3830,9 @@ rbff2.startplugin               = function()
 						(p.dummy_gd == dummy_gd_type.block1)       -- 1ガード
 					then
 						-- 中段から優先
-						if ut.tstb(act_type, act_types.overhead, true) then
+						if ut.tstb(act_type, db.act_types.overhead, true) then
 							p.clear_cmd_hook(db.cmd_types._2)
-						elseif ut.tstb(act_type, act_types.low_attack, true) then
+						elseif ut.tstb(act_type, db.act_types.low_attack, true) then
 							p.add_cmd_hook(db.cmd_types._2)
 						end
 						if p.dummy_gd == dummy_gd_type.block1 and p.next_block ~= true then
@@ -3946,7 +3888,7 @@ rbff2.startplugin               = function()
 				end
 
 				--挑発中は前進
-				if p.fwd_prov and ut.tstb(p.op.act_data.type, act_types.provoke) then p.add_cmd_hook(db.cmd_types.front) end
+				if p.fwd_prov and ut.tstb(p.op.act_data.type, db.act_types.provoke) then p.add_cmd_hook(db.cmd_types.front) end
 
 				-- ガードリバーサル
 				if global.dummy_rvs_cnt == 1 then
@@ -3963,7 +3905,7 @@ rbff2.startplugin               = function()
 					-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
 					if rvs_wake_types[p.dummy_wakeup] and p.dummy_rvs then
 						-- ダウン起き上がりリバーサル入力
-						if wakeup_acts[p.act] and (p.char_data.wakeup_frms - 3) <= (global.frame_number - p.on_wakeup) then
+						if db.wakeup_acts[p.act] and (p.char_data.wakeup_frms - 3) <= (global.frame_number - p.on_wakeup) then
 							input_rvs(rvs_types.on_wakeup, p, string.format("[Reversal] wakeup %s %s",
 								p.char_data.wakeup_frms, (global.frame_number - p.on_wakeup)))
 						end
@@ -4197,8 +4139,12 @@ rbff2.startplugin               = function()
 							table.insert(label, string.format("Cancel %-2s/%-2s Teching %s", xp.repeatable and "Ch" or "", xp.cancelable and "Sp" or "",
 								xp.forced_down or xp.in_bs and "No" or "Yes"))
 						end
-						for _, _, blockable in find(xp.hitboxies, function(box) return box.blockable end) do
-							table.insert(label, string.format("Box Top %3s Bottom %3s", blockable.real_top, blockable.real_bottom))
+						if p.hurt then
+							table.insert(label, string.format("Hurt Box Top %3s Bottom %3s", p.hurt.max_top, p.hurt.min_bottom))
+							table.insert(label, string.format("Dodge %-9s", db.dodge_name(p.hurt.dodge)))
+						end
+						for _, box, blockable in find_all(xp.hitboxies, function(box) return box.blockable end) do
+							table.insert(label, string.format("Hit Box Top %3s Bottom %3s", box.real_top, box.real_bottom))
 							table.insert(label, string.format("Main %-5s  Sway %-5s", db.top_type_name(blockable.main), db.top_type_name(blockable.sway)))
 							table.insert(label, string.format("Punish %-9s", db.top_punish_name(blockable.punish)))
 						end
@@ -4494,13 +4440,13 @@ rbff2.startplugin               = function()
 
 			-- ブレイクショット
 			if not p.dummy_bs_chr or p.dummy_bs_chr ~= tmp_chr then
-				p.char, p.char_data, p.dummy_bs_chr = tmp_chr, chars[tmp_chr], tmp_chr
+				p.char, p.char_data, p.dummy_bs_chr = tmp_chr, db.chars[tmp_chr], tmp_chr
 				p.dummy_bs = get_next_bs(p)
 			end
 
 			-- リバーサル
 			if not p.dummy_rvs_chr or p.dummy_rvs_chr ~= tmp_chr then
-				p.char, p.char_data, p.dummy_rvs_chr = tmp_chr, chars[tmp_chr], tmp_chr
+				p.char, p.char_data, p.dummy_rvs_chr = tmp_chr, db.chars[tmp_chr], tmp_chr
 				p.dummy_rvs = get_next_rvs(p)
 			end
 
