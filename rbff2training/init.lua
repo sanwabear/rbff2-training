@@ -100,14 +100,14 @@ possible_types.both_line   = possible_types.same_line | possible_types.diff_line
 local get_top_type         = function(top, types)
 	local type = 0
 	for _, t in ipairs(types) do
-		if top <= t.top then type = type | t.act_type end
+		if t.top and top <= t.top then type = type | t.act_type end
 	end
 	return type
 end
 local get_bottom_type         = function(bottom, types)
 	local type = 0
 	for _, t in ipairs(types) do
-		if bottom >= t.bottom then type = type | t.act_type end
+		if t.bottom and bottom >= t.bottom then type = type | t.act_type end
 	end
 	return type
 end
@@ -972,7 +972,7 @@ local fix_box_scale             = function(p, src, dest)
 		dest.blockable = {
 			main = ut.tstb(dest.reach.possible, possible_types.same_line) and dest.reach.blockable | get_top_type(real_top, db.top_types) or 0,
 			sway = ut.tstb(dest.reach.possible, possible_types.diff_line) and dest.reach.blockable | get_top_type(real_top, db.top_sway_types) or 0,
-			punish = ut.tstb(dest.reach.possible, possible_types.same_line) and get_top_type(real_bottom, db.top_punish_types) or 0,
+			punish = ut.tstb(dest.reach.possible, possible_types.same_line) and get_top_type(real_bottom, db.hurt_dodge_types) or 0,
 		}
 	end
 	return dest
@@ -4140,13 +4140,13 @@ rbff2.startplugin               = function()
 								xp.forced_down or xp.in_bs and "No" or "Yes"))
 						end
 						if p.hurt then
-							table.insert(label, string.format("Hurt Box Top %3s Bottom %3s", p.hurt.max_top, p.hurt.min_bottom))
-							table.insert(label, string.format("Dodge %-9s", db.dodge_name(p.hurt.dodge)))
+							table.insert(label, string.format("Hurt Top %3s Bottom %3s", p.hurt.max_top, p.hurt.min_bottom))
+							table.insert(label, string.format("Dodge %-s", db.get_dodge_name(p.hurt.dodge)))
 						end
 						for _, box, blockable in find_all(xp.hitboxies, function(box) return box.blockable end) do
-							table.insert(label, string.format("Hit Box Top %3s Bottom %3s", box.real_top, box.real_bottom))
+							table.insert(label, string.format("Hit Top %3s Bottom %3s", box.real_top, box.real_bottom))
 							table.insert(label, string.format("Main %-5s  Sway %-5s", db.top_type_name(blockable.main), db.top_type_name(blockable.sway)))
-							table.insert(label, string.format("Punish %-9s", db.top_punish_name(blockable.punish)))
+							table.insert(label, string.format("Punish %-9s", db.get_punish_name(blockable.punish)))
 						end
 					end
 				end

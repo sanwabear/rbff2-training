@@ -142,17 +142,6 @@ local top_sway_types       = {
 	{ top = 48,     act_type = act_types.low_attack }, -- 全キャラ
 }
 --- 低やられ判定への攻撃可能な高さ
-local punish_types         = {
-	away = 2 ^ 0,
-	waving_blow = 2 ^ 1,
-	laurence_away = 2 ^ 2,
-	crounch60 = 2 ^ 3,
-	crounch64 = 2 ^ 4,
-	crounch68 = 2 ^ 5,
-	crounch76 = 2 ^ 6,
-	crounch80 = 2 ^ 7,
-}
---- 低やられ判定への攻撃可能な高さ
 local dodge_types          = {
 	otg           = 2 ^ 0, -- ダウン追撃のみ可能
 	juggle        = 2 ^ 1, -- 空中追撃のみ可能
@@ -174,93 +163,63 @@ local dodge_types          = {
 }
 -- モーションによる部分無敵
 local hurt_dodge_types     = {
-	{ top = 0, bottom = 0xFFFF, act_type = 0 },
-	{ top = 0, bottom = 0xFFFF, act_type = dodge_types.otg, },         -- ダウン追撃のみ可能
-	{ top = 0, bottom = 0xFFFF, act_type = dodge_types.juggle, },      -- 空中追撃のみ可能
-	{ top = 0, bottom = 0xFFFF, act_type = dodge_types.full, },        -- 全身無敵
-	{ top = 0, bottom = 0xFFFF, act_type = dodge_types.main, },        -- メインライン攻撃無敵
-	{ top = 0, bottom = 0xFFFF, act_type = dodge_types.sway_oh, },     -- 対メインライン上段攻撃無敵
-	{ top = 0, bottom = 0xFFFF, act_type = dodge_types.sway_lo, },     -- 対メインライン下段攻撃無敵
-	{ top = 0, bottom = 24,     act_type = dodge_types.levitate24, },  -- 足元無敵 対だいたいの屈B（キムとボブ以外）
-	{ top = 0, bottom = 32,     act_type = dodge_types.levitate32, },  -- 足元無敵 対ギース屈C
-	{ top = 0, bottom = 40,     act_type = dodge_types.levitate40, },  -- 足元無敵 対アンディ屈C
-	{ top = 80,     bottom = 0xFFFF, act_type = dodge_types.crounch80, },   -- 頭部無敵 80 屈 クラウザー
-	{ top = 76,     bottom = 0xFFFF, act_type = dodge_types.crounch76, },   -- 頭部無敵 76 屈 フランコ
-	{ top = 68,     bottom = 0xFFFF, act_type = dodge_types.crounch68, },   -- 頭部無敵 68 屈 ローレンス
-	{ top = 64,     bottom = 0xFFFF, act_type = dodge_types.crounch64, },   -- 頭部無敵 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
-	{ top = 60,     bottom = 0xFFFF, act_type = dodge_types.crounch60, },   -- 頭部無敵 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
-	{ top = 48,     bottom = 0xFFFF, act_type = dodge_types.laurence_away, }, -- 上半身無敵 48 ローレンス避け
-	{ top = 40,     bottom = 0xFFFF, act_type = dodge_types.waving_blow, }, -- 上半身無敵 40 ウェービングブロー,龍転身,ダブルローリング
-	{ top = 32,     bottom = 0xFFFF, act_type = dodge_types.away, },        --上半身無敵 32 避け
+	{ top = nil, bottom = nil, act_type = 0 },
+	{ top = nil, bottom = nil, act_type = dodge_types.otg, },         -- ダウン追撃のみ可能
+	{ top = nil, bottom = nil, act_type = dodge_types.juggle, },      -- 空中追撃のみ可能
+	{ top = nil, bottom = nil, act_type = dodge_types.full, },        -- 全身無敵
+	{ top = nil, bottom = nil, act_type = dodge_types.main, },        -- メインライン攻撃無敵
+	{ top = nil, bottom = nil, act_type = dodge_types.sway_oh, },     -- 対メインライン上段攻撃無敵
+	{ top = nil, bottom = nil, act_type = dodge_types.sway_lo, },     -- 対メインライン下段攻撃無敵
+	{ top = nil, bottom = 24,  act_type = dodge_types.levitate24, },  -- 足元無敵 対だいたいの屈B（キムとボブ以外）
+	{ top = nil, bottom = 32,  act_type = dodge_types.levitate32, },  -- 足元無敵 対ギース屈C
+	{ top = nil, bottom = 40,  act_type = dodge_types.levitate40, },  -- 足元無敵 対アンディ屈C
+	{ top = 80,  bottom = nil, act_type = dodge_types.crounch80, },   -- 頭部無敵 80 屈 クラウザー
+	{ top = 76,  bottom = nil, act_type = dodge_types.crounch76, },   -- 頭部無敵 76 屈 フランコ
+	{ top = 68,  bottom = nil, act_type = dodge_types.crounch68, },   -- 頭部無敵 68 屈 ローレンス
+	{ top = 64,  bottom = nil, act_type = dodge_types.crounch64, },   -- 頭部無敵 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
+	{ top = 60,  bottom = nil, act_type = dodge_types.crounch60, },   -- 頭部無敵 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
+	{ top = 48,  bottom = nil, act_type = dodge_types.laurence_away, }, -- 上半身無敵 48 ローレンス避け
+	{ top = 40,  bottom = nil, act_type = dodge_types.waving_blow, }, -- 上半身無敵 40 ウェービングブロー,龍転身,ダブルローリング
+	{ top = 32,  bottom = nil, act_type = dodge_types.away, },        --上半身無敵 32 避け
 }
-db.dodge_name              = function(type)
-	if ut.tstb(type, dodge_types.full, true) then return "Full" end
-	local label = {}
-	if ut.tstb(type, dodge_types.levitate40, true) then
-		table.insert(label, "c.C(Andy)")
-	elseif ut.tstb(type, dodge_types.levitate32, true) then
-		table.insert(label, "c.C(Geese)")
-	elseif ut.tstb(type, dodge_types.levitate24, true) then
-		table.insert(label, "c.B(Always)")
-	end
+db.get_punish_name         = function(type)
 	if ut.tstb(type, dodge_types.away, true) then
-		table.insert(label, "Away")
+		return "Away"
 	elseif ut.tstb(type, dodge_types.waving_blow, true) then
-		table.insert(label, "W.Blow")
+		return "W.Blow"
 	elseif ut.tstb(type, dodge_types.laurence_away, true) then
-		table.insert(label, "Lau.Away")
+		return "Lau.Away"
 	elseif ut.tstb(type, dodge_types.crounch60, true) then
-		table.insert(label, "c.Andy")
+		return "c.Andy"
 	elseif ut.tstb(type, dodge_types.crounch64, true) then
-		table.insert(label, "c.Terry")
+		return "c.Terry"
 	elseif ut.tstb(type, dodge_types.crounch68, true) then
-		table.insert(label, "c.Laurence")
+		return "c.Laurence"
 	elseif ut.tstb(type, dodge_types.crounch76, true) then
-		table.insert(label, "c.Franco")
+		return "c.Franco"
 	elseif ut.tstb(type, dodge_types.crounch80, true) then
-		table.insert(label, "c.Krauser")
+		return "c.Krauser"
 	end
-	return table.concat(label, ",")
+	return ""
 end
-local get_dodge_types      = function(p, real_top, real_bottom, box)
-	local ret, top, low = {}, nil, nil
-	for _, type in ipairs(hurt_dodge_types.values) do
-		if type.type == 2 and real_top <= type.value then top = type end
-		if type.type == 3 and real_bottom >= type.value then low = type end
+db.get_low_dodge_name = function(type)
+	if ut.tstb(type, dodge_types.levitate40, true) then
+		return"c.Andy-C"
+	elseif ut.tstb(type, dodge_types.levitate32, true) then
+		return "c.Geese-C"
+	elseif ut.tstb(type, dodge_types.levitate24, true) then
+		return "c.B"
 	end
-	if top then table.insert(ret, top) end
-	if low then table.insert(ret, low) end
-	if box.type == db.box_types.down_otg then  -- 食らい(ダウン追撃のみ可)
-		table.insert(ret, hurt_dodge_types.otg)
-	elseif box.type == db.box_types.launch then -- 食らい(空中追撃のみ可)
-		table.insert(ret, hurt_dodge_types.juggle)
-	elseif box.type == db.box_types.hurt3 then -- 食らい(対ライン上攻撃)
-		table.insert(ret, hurt_dodge_types.sway_oh)
-	elseif box.type == db.box_types.hurt4 then -- 食らい(対ライン下攻撃)
-		table.insert(ret, hurt_dodge_types.sway_lo)
-	elseif box.type == db.box_types.sway_hurt1 or -- 食らい1(スウェー中)
-		box.type == db.box_types.sway_hurt2 then -- 食らい2(スウェー中)
-		table.insert(ret, hurt_dodge_types.main)
-	end
-	return #ret == 0 and {} or ret
+	return ""
 end
-local top_punish_types     = {
-	{ top = 0xFFFF, act_type = 0 },
-	{ top = 80,     act_type = punish_types.crounch80 },  -- 屈 クラウザー
-	{ top = 76,     act_type = punish_types.crounch76 },  -- 屈 フランコ
-	{ top = 68,     act_type = punish_types.crounch68 },  -- 屈 ローレンス
-	{ top = 64,     act_type = punish_types.crounch64 },  -- 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
-	{ top = 60,     act_type = punish_types.crounch60 },  -- 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
-	{ top = 48,     act_type = punish_types.laurence_away }, -- ローレンス避けつぶし
-	{ top = 40,     act_type = punish_types.waving_blow }, -- ウェービングブロー,龍転身,ダブルローリングつぶし
-	{ top = 32,     act_type = punish_types.away },       -- 全避けつぶし
-}
+db.get_dodge_name              = function(type)
+	if ut.tstb(type, dodge_types.full, true) then return "Full" end -- 全身無敵
+	return string.format("%-10s/%-10s", db.get_punish_name(type), db.get_low_dodge_name(type)) -- 部分無敵
+end
 db.hurt_dodge_types        = hurt_dodge_types
 db.dodge_types             = dodge_types
 db.top_types               = top_types
 db.top_sway_types          = top_sway_types
-db.punish_types            = punish_types
-db.top_punish_types        = top_punish_types
 db.top_type_name           = function(type)
 	if ut.tstb(type, act_types.unblockable, true) then
 		return "Unbl."
@@ -274,28 +233,6 @@ db.top_type_name           = function(type)
 		return "-"
 	end
 end
-db.top_punish_name         = function(type)
-	if ut.tstb(type, punish_types.away, true) then
-		return "Away"
-	elseif ut.tstb(type, punish_types.waving_blow, true) then
-		return "W.Blow"
-	elseif ut.tstb(type, punish_types.laurence_away, true) then
-		return "Lau.Away"
-	elseif ut.tstb(type, punish_types.crounch60, true) then
-		return "c.Andy"
-	elseif ut.tstb(type, punish_types.crounch64, true) then
-		return "c.Terry"
-	elseif ut.tstb(type, punish_types.crounch68, true) then
-		return "c.Laurence"
-	elseif ut.tstb(type, punish_types.crounch76, true) then
-		return "c.Franco"
-	elseif ut.tstb(type, punish_types.crounch80, true) then
-		return "c.Krauser"
-	else
-		return "-"
-	end
-end
-
 -- !!注意!!後隙が配列の後ろに来るように定義すること
 local char_acts_base       = {
 	-- テリー・ボガード
