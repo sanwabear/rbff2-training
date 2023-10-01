@@ -968,13 +968,6 @@ local fix_box_scale             = function(p, src, dest)
 	dest.left, dest.right = p.x - dest.left * p.flip_x, p.x - dest.right * p.flip_x
 	dest.bottom, dest.top = p.y - dest.bottom, p.y - dest.top
 	--ut.printf("%s ->b x=%s y=%s top=%s bottom=%s left=%s right=%s", prev, p.x, p.y, dest.top, dest.bottom, dest.left, dest.right)
-	if dest.type.kind == db.box_kinds.attack then -- 攻撃位置から解決した属性を付与する
-		dest.blockable = {
-			main = ut.tstb(dest.reach.possible, possible_types.same_line) and dest.reach.blockable | get_top_type(real_top, db.top_types) or 0,
-			sway = ut.tstb(dest.reach.possible, possible_types.diff_line) and dest.reach.blockable | get_top_type(real_top, db.top_sway_types) or 0,
-			punish = ut.tstb(dest.reach.possible, possible_types.same_line) and get_top_type(real_bottom, db.hurt_dodge_types) or 0,
-		}
-	end
 	return dest
 end
 
@@ -2201,7 +2194,7 @@ rbff2.startplugin               = function()
 						elseif possibles.standing_block then
 							blockable = db.act_types.overhead -- 中段
 						end
-						reach = { blockable = blockable, possible = possible, }
+						reach = { possible = possible, blockable = blockable, }
 						for _, t in ipairs(hitbox_grab_types) do p.grabbable = p.grabbable | (possibles[t.name] and t.value or 0) end
 					end
 					table.insert(p.boxies, {
@@ -3522,11 +3515,36 @@ rbff2.startplugin               = function()
 						if (type.kind == db.box_kinds.attack or type.kind == db.box_kinds.parry) and global.pause_hitbox == 3 then
 							global.pause = true -- 強制ポーズ
 						end
-						if type.kind == db.box_kinds.hurt then
-							-- and ut.tstb(box.reach.possible, possible_types.same_line)
+						if box.type.kind == db.box_kinds.attack then -- 攻撃位置から解決した属性を付与する
+							box.blockable = {
+								main = ut.tstb(box.reach.possible, possible_types.same_line) and box.reach.blockable | get_top_type(box.real_top, db.top_types) or 0,
+								sway = ut.tstb(box.reach.possible, possible_types.diff_line) and box.reach.blockable | get_top_type(box.real_top, db.top_sway_types) or 0,
+								punish = ut.tstb(box.reach.possible, possible_types.same_line) and get_top_type(box.real_bottom, db.hurt_dodge_types) or 0,
+							}
+						elseif type.kind == db.box_kinds.hurt then -- くらいの無敵(部分無敵)の属性を付与する
 							local top = math.max(p.hurt and p.hurt.max_top or 0, box.real_top)
 							local bottom = math.min(p.hurt and p.hurt.min_bottom or 0xFFFF, box.real_bottom)
 							local dodge = get_top_type(top, db.hurt_dodge_types) | get_bottom_type(bottom, db.hurt_dodge_types)
+
+							if p.sway_status == 0 then
+								if type == db.box_types.hurt1 or type == db.box_types.hurt2 then -- 食らい1 食らい2
+								elseif type == db.box_types.down_otg then            -- 食らい(ダウン追撃のみ可)
+								elseif type == db.box_types.launch then              -- 食らい(空中追撃のみ可)
+								elseif type == db.box_types.hurt3 then               -- 食らい(対ライン上攻撃) 対メイン上段無敵
+									dodge = dodge | (p.sway_status == 0 and db.dodge_types.main_high)
+								elseif type == db.box_types.hurt4 then               -- 食らい(対ライン下攻撃) 対メイン下段無敵
+									dodge = dodge | (p.sway_status == 0 and db.dodge_types.main_low)
+								end
+							else
+								if type == db.box_types.sway_hurt1 or type == db.box_types.sway_hurt2 then          -- 食らい(スウェー中)
+									dodge = dodge | db.dodge_types.main
+									if box.real_top <= 32 then -- 上半身無敵
+										dodge = dodge | db.dodge_types.sway_high
+									elseif box.real_bottom <= 60 then -- 下半身無敵
+										dodge = dodge | db.dodge_types.sway_low
+									end
+								end
+							end
 							p.hurt = { max_top = top, min_bottom = bottom, dodge = dodge, }
 						end
 						if p.body.disp_hitbox then
