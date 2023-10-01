@@ -960,7 +960,7 @@ local fix_box_scale             = function(p, src, dest)
 	-- 全座標について p.box_scale / 0x1000 の整数値に計算しなおす
 	dest.top, dest.bottom = ut.int16((src.top * p.box_scale) >> 6), ut.int16((src.bottom * p.box_scale) >> 6)
 	dest.left, dest.right = ut.int16((src.left * p.box_scale) >> 6), ut.int16((src.right * p.box_scale) >> 6)
-	--ut.printf("%s ->a top=%s bottom=%s left=%s right=%s", prev, dest.reach.top, dest.reach.bottom, dest.reach.left, dest.reach.right)
+	--ut.printf("%s ->a top=%s bottom=%s left=%s right=%s", prev, dest.top, dest.bottom, dest.left, dest.right)
 	-- キャラの座標と合算して画面上への表示位置に座標を変換する
 	local real_top = math.tointeger(math.max(dest.top, dest.bottom) + screen.top - p.pos_z - p.y)
 	local real_bottom = math.tointeger(math.min(dest.top, dest.bottom) + screen.top - p.pos_z - p.y) + 1
@@ -2175,7 +2175,7 @@ rbff2.startplugin               = function()
 					local left, right = sort_ba(mem.r8i(a2 + 0x3), mem.r8i(a2 + 0x4))
 					local type = db.main_box_types[id] or (id < 0x20) and db.box_types.unknown or db.box_types.attack
 					p.attack_id = type == db.box_types.attack and id or p.attack_id
-					local reach, possibles
+					local blockable, possible, possibles
 					if type == db.box_types.attack then
 						possibles = get_hitbox_possibles(p.attack_id)
 						p.effect    = mem.r8(p.attack_id + db.chars[#db.chars].proc_base.effect) -- ヒット効果
@@ -2185,8 +2185,8 @@ rbff2.startplugin               = function()
 							p.attackbit = ut.hex_reset(p.attackbit, 0xFF << frame_attack_types.fb_effect, p.effect << frame_attack_types.fb_effect)
 							p.on_fireball = p.on_fireball < 0 and now() or p.on_fireball
 						end
-						local possible = ut.hex_set(ut.hex_set(possibles.normal, possibles.sway_standing), possibles.sway_crouching)
-						local blockable = db.act_types.unblockable -- ガード属性 -- 不能
+						possible = ut.hex_set(ut.hex_set(possibles.normal, possibles.sway_standing), possibles.sway_crouching)
+						blockable = db.act_types.unblockable -- ガード属性 -- 不能
 						if possibles.crouching_block and possibles.standing_block then
 							blockable = db.act_types.attack -- 上段
 						elseif possibles.crouching_block then
@@ -2194,7 +2194,6 @@ rbff2.startplugin               = function()
 						elseif possibles.standing_block then
 							blockable = db.act_types.overhead -- 中段
 						end
-						reach = { possible = possible, blockable = blockable, }
 						for _, t in ipairs(hitbox_grab_types) do p.grabbable = p.grabbable | (possibles[t.name] and t.value or 0) end
 					end
 					table.insert(p.boxies, {
@@ -2207,7 +2206,8 @@ rbff2.startplugin               = function()
 						bottom = bottom,
 						sway_type = db.sway_box_types[id] or type,
 						possibles = possibles or {},
-						reach = reach or {}, -- 判定のリーチとその属性
+						possible = possible or 0,
+						blockable = blockable or 0,
 					})
 					-- ut.printf("p=%x %x %x %x %s addr=%x id=%02x l=%s r=%s t=%s b=%s", p.addr.base, data, base, p.box_addr, 0, a2, id, x1, x2, y1, y2)
 				end
@@ -3014,64 +3014,49 @@ rbff2.startplugin               = function()
 		return frame, upd_group
 	end
 
-	local proc_muteki_frame = function(p, chg_act_name)
-		local last_frame = p.act_frames[#p.act_frames]
+	local frame_dodges = {
+		db.dodge_types.full,
+		--db.dodge_types.main,
+		--db.dodge_types.sway,
+		db.dodge_types.main_high,
+		db.dodge_types.main_low,
+		db.dodge_types.sway_high,
+		db.dodge_types.sway_low,
+		db.dodge_types.away,
+		db.dodge_types.waving_blow,
+		db.dodge_types.laurence_away,
+		db.dodge_types.levitate40,
+		db.dodge_types.levitate32,
+		db.dodge_types.levitate24,
+	}
 
-		-- 無敵表示
-		local col, line = 0x00000000, 0x00000000
-		--[[
-		for _, hurt_inv in ipairs(p.hit_summary.hurt_inv) do
-			if 0x400 > p.flag_cc then
-				if hurt_inv.type == 0 then -- 全身無敵
-					col, line = 0xAAB0E0E6, 0xDDAFEEEE
-					break
-				elseif hurt_inv.type == 1 then -- スウェー上
-					col, line = 0xAAFFA500, 0xDDAFEEEE
-					break
-				elseif hurt_inv.type == 2 then -- 上半身無敵（地上）
-					col, line = 0xAA32CD32, 0xDDAFEEEE
-					break
-				elseif hurt_inv.type == 3 then -- 足元無敵（地上）
-					col, line = 0xAA9400D3, 0xDDAFEEEE
-					break
-				elseif hurt_inv.type == 0 then -- ダウンor空中追撃のみ可能
-					col, line = 0xAAB0E0E6, 0xDDAFEEEE
-					break
-				end
-			else
-				if hurt_inv.type == 0 then -- 全身無敵
-					col, line = 0xAAB0E0E6, 0xDDAFEEEE
-					break
-				elseif hurt_inv.type == 1 then -- スウェー上
-					col, line = 0xAAFFA500, 0xDDAFEEEE
-					break
-				end
+	local proc_dodge_frame = function(p, update)
+		local last_frame, dodge = p.act_frames[#p.act_frames], p.hurt and p.hurt.dodge or 0
+		local col, line = 0, 0
+		if p.skip_frame then
+		elseif p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number then
+		elseif p.state == 0 then
+			for _, type in ipairs(frame_dodges) do
+				if ut.tstb(dodge, type, true) then col, line = 0xAAB0E0E6, 0xDDB0E0E6 end
 			end
 		end
-		]]
-		--printf("top %s, hi %s, lo %s", screen_top, vul_hi, vul_lo)
-
 		local frame = p.muteki.act_frames[#p.muteki.act_frames]
-		if frame == nil or chg_act_name or frame.col ~= col or p.state ~= p.old.state or p.act_1st then
-			--行動IDの更新があった場合にフレーム情報追加
-			frame = ut.table_add(p.muteki.act_frames,{
+		if frame == nil or update or frame.col ~= col or frame.dodge ~= dodge or p.act_1st then
+			frame = ut.table_add(p.muteki.act_frames, {
 				act = p.act,
 				count = 1,
 				col = col,
 				name = last_frame.name,
 				line = line,
+				dodge = dodge,
 				act_1st = p.act_1st,
 			}, 180)
 		else
-			--同一行動IDが継続している場合はフレーム値加算
 			frame.count = frame.count + 1
 		end
 		local upd_group = update_frame_groups(frame, p.muteki.frame_groups or {}) -- フレームデータをグループ化
 		-- メインフレーム表示からの描画開始位置を記憶させる
-		if upd_group and last_frame then
-			ut.table_add(last_frame.muteki, p.muteki.frame_groups[#p.muteki.frame_groups], 180)
-		end
-
+		if upd_group and last_frame then ut.table_add(last_frame.muteki, p.muteki.frame_groups[#p.muteki.frame_groups], 180) end
 		return frame
 	end
 
@@ -3286,13 +3271,12 @@ rbff2.startplugin               = function()
 			p.normal_state      = p.state == 0 -- 素立ち
 			-- 通常投げ無敵判断 その2(HOME 039FC6から03A000の処理を再現して投げ無敵の値を求める)
 			p.throwable         = p.state == 0 and op.state == 0 and p.throw_timer > 24 and p.sway_status == 0x00 and p.invincible == 0 -- 投げ可能ベース
-			p.n_throwable       = p.throwable and p.tw_muteki2 == 0                                                            -- 通常投げ可能
+			p.n_throwable       = p.throwable and p.tw_muteki2 == 0 -- 通常投げ可能
 			p.thrust            = p.thrust + p.thrust_frc
 			p.inertia           = p.inertia + p.inertia_frc
 			p.pos_total         = p.pos + p.pos_frc
 			p.diff_pos_total    = p.old.pos_total and p.pos_total - p.old.pos_total or 0
-			p.in_air            = 0 < p.pos_y or 0 < p.pos_frc_y
-
+			p.in_air            = 0 ~= p.pos_y or 0 ~= p.pos_frc_y
 			-- ジャンプの遷移ポイントかどうか
 			if p.old.in_air ~= true and p.in_air == true then
 				p.on_air, p.on_ground = true, false
@@ -3301,6 +3285,11 @@ rbff2.startplugin               = function()
 			else
 				p.on_air, p.on_ground = false, false
 			end
+			-- ジャンプ以降直後に空中になっていればジャンプ中とみなす
+			-- 部分無敵の判断にジャンプ中かどうかを使う
+			p.jumping = ut.tstb(p.old.flag_c0, db.flag_c0._17, true) and p.on_air or p.jumping
+			-- 高さが0になった時点でジャンプ中状態を解除する
+			if p.on_ground then p.jumping = false end
 			p.pos_y_peek = p.in_air and math.max(p.pos_y_peek or 0, p.pos_y) or 0
 			if p.pos_y < p.old.pos_y or (p.pos_y == p.old.pos_y and p.pos_frc_y < p.old.pos_frc_y) then
 				p.pos_y_down = p.pos_y_down and (p.pos_y_down + 1) or 1
@@ -3432,6 +3421,8 @@ rbff2.startplugin               = function()
 					name = "ガード"
 				elseif ut.tstb(p.flag_cc, db.flag_cc._13 | db.flag_cc._14, true) then
 					name = "気絶"
+				elseif ut.tstb(p.flag_cc, db.flag_cc._23, true) then
+					name = "起き上がり"
 				else
 					name = db.get_flag_name(p.flag_c0, db.flag_names_c0)
 				end
@@ -3516,34 +3507,30 @@ rbff2.startplugin               = function()
 							global.pause = true -- 強制ポーズ
 						end
 						if box.type.kind == db.box_kinds.attack then -- 攻撃位置から解決した属性を付与する
-							box.blockable = {
-								main = ut.tstb(box.reach.possible, possible_types.same_line) and box.reach.blockable | get_top_type(box.real_top, db.top_types) or 0,
-								sway = ut.tstb(box.reach.possible, possible_types.diff_line) and box.reach.blockable | get_top_type(box.real_top, db.top_sway_types) or 0,
-								punish = ut.tstb(box.reach.possible, possible_types.same_line) and get_top_type(box.real_bottom, db.hurt_dodge_types) or 0,
+							box.blockables = {
+								main = ut.tstb(box.possible, possible_types.same_line) and box.blockable | get_top_type(box.real_top, db.top_types) or 0,
+								sway = ut.tstb(box.possible, possible_types.diff_line) and box.blockable | get_top_type(box.real_top, db.top_sway_types) or 0,
+								punish = ut.tstb(box.possible, possible_types.same_line) and get_top_type(box.real_bottom, db.hurt_dodge_types) or 0,
 							}
 						elseif type.kind == db.box_kinds.hurt then -- くらいの無敵(部分無敵)の属性を付与する
 							local top = math.max(p.hurt and p.hurt.max_top or 0, box.real_top)
 							local bottom = math.min(p.hurt and p.hurt.min_bottom or 0xFFFF, box.real_bottom)
-							local dodge = get_top_type(top, db.hurt_dodge_types) | get_bottom_type(bottom, db.hurt_dodge_types)
-
-							if p.sway_status == 0 then
+							local dodge = 0
+							if p.jumping then -- ジャンプ中
+							elseif p.sway_status == 0 then -- メインライン
+								dodge = get_top_type(top, db.hurt_dodge_types) | get_bottom_type(bottom, db.hurt_dodge_types)
 								if type == db.box_types.hurt1 or type == db.box_types.hurt2 then -- 食らい1 食らい2
-								elseif type == db.box_types.down_otg then            -- 食らい(ダウン追撃のみ可)
-								elseif type == db.box_types.launch then              -- 食らい(空中追撃のみ可)
-								elseif type == db.box_types.hurt3 then               -- 食らい(対ライン上攻撃) 対メイン上段無敵
-									dodge = dodge | (p.sway_status == 0 and db.dodge_types.main_high)
-								elseif type == db.box_types.hurt4 then               -- 食らい(対ライン下攻撃) 対メイン下段無敵
-									dodge = dodge | (p.sway_status == 0 and db.dodge_types.main_low)
+								elseif type == db.box_types.down_otg then -- 食らい(ダウン追撃のみ可)
+								elseif type == db.box_types.launch then  -- 食らい(空中追撃のみ可)
+								elseif type == db.box_types.hurt3 then   -- 食らい(対ライン上攻撃) 対メイン上段無敵
+									dodge = dodge | (p.sway_status == 0 and db.dodge_types.main_high or 0)
+								elseif type == db.box_types.hurt4 then   -- 食らい(対ライン下攻撃) 対メイン下段無敵
+									dodge = dodge | (p.sway_status == 0 and db.dodge_types.main_low or 0)
 								end
-							else
-								if type == db.box_types.sway_hurt1 or type == db.box_types.sway_hurt2 then          -- 食らい(スウェー中)
-									dodge = dodge | db.dodge_types.main
-									if box.real_top <= 32 then -- 上半身無敵
-										dodge = dodge | db.dodge_types.sway_high
-									elseif box.real_bottom <= 60 then -- 下半身無敵
-										dodge = dodge | db.dodge_types.sway_low
-									end
-								end
+							elseif type == db.box_types.sway_hurt1 or type == db.box_types.sway_hurt2 then
+								dodge = dodge | db.dodge_types.main              -- 食らい(スウェー中) メイン無敵
+								dodge = dodge | (box.real_top <= 32 and db.dodge_types.sway_high or 0) -- 上半身無敵
+								dodge = dodge | (box.real_bottom <= 60 and db.dodge_types.sway_low or 0) -- 下半身無敵
 							end
 							p.hurt = { max_top = top, min_bottom = bottom, dodge = dodge, }
 						end
@@ -3714,7 +3701,7 @@ rbff2.startplugin               = function()
 			-- 全キャラ特別な動作でない場合はフレーム記録しない
 			if global.disp_normal_frms == 1 or (global.disp_normal_frms == 2 and global.all_act_normal == false) then
 				local last_frame, changed = proc_act_frame(p) -- フレームデータの構築処理
-				--proc_muteki_frame(p, changed)
+				proc_dodge_frame(p, changed)
 				--proc_frame_gap(p, changed)
 				if p.is_fireball and changed then
 					local plast_frame = p.body.act_frames[#p.body.act_frames]
@@ -4159,12 +4146,12 @@ rbff2.startplugin               = function()
 						end
 						if p.hurt then
 							table.insert(label, string.format("Hurt Top %3s Bottom %3s", p.hurt.max_top, p.hurt.min_bottom))
-							table.insert(label, string.format("Dodge %-s", db.get_dodge_name(p.hurt.dodge)))
+							table.insert(label, string.format(" Dodge %-s", db.get_dodge_name(p.hurt.dodge)))
 						end
-						for _, box, blockable in find_all(xp.hitboxies, function(box) return box.blockable end) do
+						for _, box, blockables in find_all(xp.hitboxies, function(box) return box.blockables end) do
 							table.insert(label, string.format("Hit Top %3s Bottom %3s", box.real_top, box.real_bottom))
-							table.insert(label, string.format("Main %-5s  Sway %-5s", db.top_type_name(blockable.main), db.top_type_name(blockable.sway)))
-							table.insert(label, string.format("Punish %-9s", db.get_punish_name(blockable.punish)))
+							table.insert(label, string.format(" Main %-5s  Sway %-5s", db.top_type_name(blockables.main), db.top_type_name(blockables.sway)))
+							table.insert(label, string.format(" Punish %-9s", db.get_punish_name(blockables.punish)))
 						end
 					end
 				end
