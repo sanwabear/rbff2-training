@@ -1987,8 +1987,6 @@ rbff2.startplugin               = function()
 		end
 		for _, p in pairs(all_objects) do -- 初期化
 			p.frame_gap        = 0
-			p.last_frame_gap   = 0
-			p.hist_frame_gap   = { 0 }
 			p.act_frames       = {}
 			p.frame_groups     = {}
 			p.act_frames_total = 0
@@ -2561,7 +2559,7 @@ rbff2.startplugin               = function()
 					}
 					for fnc, tbl in pairs(resets) do for addr, value in pairs(tbl) do fnc(addr, value) end end
 					do_recover(p, true)
-					p.last_frame_gap = 0
+					p.old.frame_gap = 0
 				end
 			end
 
@@ -3032,30 +3030,31 @@ rbff2.startplugin               = function()
 
 	local proc_dodge_frame = function(p, update)
 		local last_frame, dodge = p.act_frames[#p.act_frames], p.hurt and p.hurt.dodge or 0
-		local col, line = 0, 0
-		if p.skip_frame then
-		elseif p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number then
-		elseif p.state == 0 then
+		local col, line, key = 0, 0xEE444444, 0
+		if p.skip_frame or p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number then
+		elseif ut.tstb(dodge, db.dodge_types.full, true) then
+			col, line, key = 0xAAB0E0FF, 0xDDB0E0FF, db.dodge_types.full
+		else
 			for _, type in ipairs(frame_dodges) do
-				if ut.tstb(dodge, type, true) then col, line = 0xAAB0E0E6, 0xDDB0E0E6 end
+				if ut.tstb(dodge, type, true) then col, line, key = 0xAAB0C0EE, 0xDDB0C0EE, key | type end
 			end
 		end
+
 		local frame = p.muteki.act_frames[#p.muteki.act_frames]
-		if frame == nil or update or frame.col ~= col or frame.dodge ~= dodge or p.act_1st then
+		if not frame or update or p.act_1st or frame.key ~= key then
 			frame = ut.table_add(p.muteki.act_frames, {
 				act = p.act,
 				count = 1,
 				col = col,
 				name = last_frame.name,
 				line = line,
-				dodge = dodge,
 				act_1st = p.act_1st,
+				key = key,
 			}, 180)
 		else
 			frame.count = frame.count + 1
 		end
-		local upd_group = update_frame_groups(frame, p.muteki.frame_groups or {}) -- フレームデータをグループ化
-		-- メインフレーム表示からの描画開始位置を記憶させる
+		local upd_group = update_frame_groups(frame, p.muteki.frame_groups or {})
 		if upd_group and last_frame then ut.table_add(last_frame.muteki, p.muteki.frame_groups[#p.muteki.frame_groups], 180) end
 		return frame
 	end
@@ -3064,27 +3063,20 @@ rbff2.startplugin               = function()
 		local last_frame = p.act_frames[#p.act_frames]
 
 		-- フレーム差の更新
-		local hist = p.last_frame_gap
-		local col, line = 0x00000000, 0x00000000
+		local col, line, key
 		if p.act_normal == p.op.act_normal then
-			if p.act_normal ~= p.op.act_normal then p.last_frame_gap = 0 end
-			p.frame_gap = 0
+			if p.act_normal ~= p.op.act_normal then p.old.frame_gap = 0 end
+			p.frame_gap, col, line, key = 0, 0, 0xEE444444, "="
 		elseif p.act_normal then
 			if not p.old.act_normal then p.frame_gap = 0 end -- 直前が行動中ならリセットする
-			p.frame_gap, p.last_frame_gap = p.frame_gap + 1, p.frame_gap
-			col, line = 0xAA0000FF, 0xDD0000FF
-		elseif not p.act_normal then
+			p.frame_gap, p.old.frame_gap, col, line, key = p.frame_gap + 1, p.frame_gap, 0xAA0000FF, 0xDD0000FF, "+"
+		else
 			if not p.op.old.act_normal then p.frame_gap = 0 end -- 直前が行動中ならリセットする
-			p.frame_gap, p.last_frame_gap = p.frame_gap - 1, p.frame_gap
-			col, line                     = 0xAAFF6347, 0xDDFF6347
-		end
-
-		if (hist > 0 and hist > p.last_frame_gap) or (hist < 0 and hist < p.last_frame_gap) or (hist ~= 0 and p.last_frame_gap == 0) then
-			ut.table_add(p.hist_frame_gap, hist, 10)                        -- バッファ更新
+			p.frame_gap, p.old.frame_gap, col, line, key = p.frame_gap - 1, p.frame_gap, 0xAAFF6347, 0xDDFF6347, "-"
 		end
 
 		local frame = p.frm_gap.act_frames[#p.frm_gap.act_frames]
-		if not frame or update or (frame.col ~= col and (math.abs(p.frame_gap) <= 1)) or p.act_1st then
+		if not frame or update or p.act_1st or frame.key ~= key then
 			frame = ut.table_add(p.frm_gap.act_frames, {
 				act = p.act,
 				count = 1,
@@ -3092,16 +3084,14 @@ rbff2.startplugin               = function()
 				name = last_frame.name,
 				line = line,
 				act_1st = p.act_1st,
+				key = key,
 			},  180 )
 		else
-			frame.count = frame.count + 1                                         --同一行動IDが継続している場合はフレーム値加算
+			frame.count = frame.count + 1
 		end
-
-		local upd_group = update_frame_groups(frame, p.frm_gap.frame_groups or {}) -- フレームデータをグループ化
-		-- メインフレーム表示からの描画開始位置を記憶させる
-		if upd_group and last_frame then
-			ut.table_add(last_frame.frm_gap, p.frm_gap.frame_groups[#p.frm_gap.frame_groups], 180)
-		end
+		local upd_group = update_frame_groups(frame, p.frm_gap.frame_groups or {})
+		if upd_group and last_frame then ut.table_add(last_frame.frm_gap, p.frm_gap.frame_groups[#p.frm_gap.frame_groups], 180) end
+		return frame
 	end
 
 	local proc_fb_frame = function(body)
@@ -3247,9 +3237,9 @@ rbff2.startplugin               = function()
 			p.change_c0   = p.flag_c0 ~= p.old.flag_c0
 			p.change_c4   = p.flag_c4 ~= p.old.flag_c4
 			p.change_c8   = p.flag_c8 ~= p.old.flag_c8
-			p.slide_atk   = ut.tstb(p.flag_cc, db.flag_cc._02) -- ダッシュ滑り攻撃
+			p.sliding     = ut.tstb(p.flag_cc, db.flag_cc._02) -- ダッシュ滑り攻撃
 			-- ブレイクショット
-			p.bs_atk      = ut.tstb(p.flag_cc, db.flag_cc._21) and (ut.tstb(p.old.flag_cc, db.flag_cc._20) or p.bs_atk)
+			p.breakshot   = ut.tstb(p.flag_cc, db.flag_cc._21) and (ut.tstb(p.old.flag_cc, db.flag_cc._20) or p.breakshot)
 			-- やられ状態
 			if p.flag_fin or ut.tstb(p.flag_c0, db.flag_c0._16) then
 				-- 最終フレームか着地フレームの場合は前フレームのを踏襲する
@@ -3274,6 +3264,7 @@ rbff2.startplugin               = function()
 			p.n_throwable       = p.throwable and p.tw_muteki2 == 0 -- 通常投げ可能
 			p.thrust            = p.thrust + p.thrust_frc
 			p.inertia           = p.inertia + p.inertia_frc
+			p.inertial          = not p.sliding and p.thrust == 0 and p.inertia > 0 and ut.tstb(p.flag_c0, db.flag_c0._31) -- ダッシュ慣性残し
 			p.pos_total         = p.pos + p.pos_frc
 			p.diff_pos_total    = p.old.pos_total and p.pos_total - p.old.pos_total or 0
 			p.in_air            = 0 ~= p.pos_y or 0 ~= p.pos_frc_y
@@ -3285,28 +3276,16 @@ rbff2.startplugin               = function()
 			else
 				p.on_air, p.on_ground = false, false
 			end
+			-- 高さが0になった時点でジャンプ中状態を解除する
+			if p.on_ground then p.jumping = false end
 			-- ジャンプ以降直後に空中になっていればジャンプ中とみなす
 			-- 部分無敵の判断にジャンプ中かどうかを使う
 			p.jumping = ut.tstb(p.old.flag_c0, db.flag_c0._17, true) and p.on_air or p.jumping
-			-- 高さが0になった時点でジャンプ中状態を解除する
-			if p.on_ground then p.jumping = false end
 			p.pos_y_peek = p.in_air and math.max(p.pos_y_peek or 0, p.pos_y) or 0
 			if p.pos_y < p.old.pos_y or (p.pos_y == p.old.pos_y and p.pos_frc_y < p.old.pos_frc_y) then
 				p.pos_y_down = p.pos_y_down and (p.pos_y_down + 1) or 1
 			else
 				p.pos_y_down = 0
-			end
-			-- 滑り属性の攻撃か慣性残しの立ち攻撃か
-			if p.slide_atk == true or (p.old.act == 0x19 and p.inertia > 0 and ut.tstb(p.flag_c0, 0x32)) then
-				p.dash_act_addr = get_dash_act_addr(p, pgm)
-				p.dash_act_info = string.format("%s %s+%s %x",
-					p.slide_atk == true and "滑り属性" or "慣性残し",
-					slide_rev[p.input1] or p.input1,
-					slide_btn[p.cln_btn] or p.cln_btn,
-					p.dash_act_addr or 0)
-			else
-				p.dash_act_addr = p.dash_act_addr or 0
-				p.dash_act_info = p.dash_act_info or ""
 			end
 
 			p.ophit = nil
@@ -3443,7 +3422,7 @@ rbff2.startplugin               = function()
 				p.act_data.name = string.format("%X", p.act)
 			end
 			-- 技動作は滑りかBSかを付与する
-			p.act_data.name = p.slide_atk and p.act_data.slide_name or p.bs_atk and p.act_data.bs_name or p.act_data.normal_name
+			p.act_data.name = p.sliding and p.act_data.slide_name or p.breakshot and p.act_data.bs_name or p.act_data.normal_name
 			-- ガード移行可否
 			p.act_normal = true
 			if p.state == 2 or (p.attack_data | p.flag_c4 | p.flag_c8) ~= 0 or
@@ -3624,7 +3603,7 @@ rbff2.startplugin               = function()
 
 			--フレーム数
 			p.frame_gap      = p.frame_gap or 0
-			p.last_frame_gap = p.last_frame_gap or 0
+			p.old.frame_gap = p.old.frame_gap or 0
 			if mem._0x10B862 ~= 0 then
 				local hitstun, blockstun = 0, 0
 				if p.ophit and p.ophit.hitboxies then
@@ -3684,8 +3663,6 @@ rbff2.startplugin               = function()
 			-- キャラ、弾ともに通常動作状態ならリセットする
 			if not global.all_act_normal and global.old_all_act_normal then
 				p.frame_gap        = 0
-				p.last_frame_gap   = 0
-				p.hist_frame_gap   = { 0 }
 				p.act_frames       = {}
 				p.frame_groups      = {}
 				p.act_frames_total = 0
@@ -3694,18 +3671,16 @@ rbff2.startplugin               = function()
 			end
 
 			--[[
-			ut.printf("%X %s %s %s %s %s %s %s", p.addr.base, #p.hist_frame_gap, #p.act_frames, #p.frame_groups, #p.muteki.act_frames, #p.muteki.frame_groups,
+			ut.printf("%X %s %s %s %s %s %s %s", p.addr.base, #p.act_frames, #p.frame_groups, #p.muteki.act_frames, #p.muteki.frame_groups,
 			#p.frm_gap.act_frames, #p.frm_gap.frame_groups)
 			]]
 
 			-- 全キャラ特別な動作でない場合はフレーム記録しない
 			if global.disp_normal_frms == 1 or (global.disp_normal_frms == 2 and global.all_act_normal == false) then
-				local last_frame, changed = proc_act_frame(p) -- フレームデータの構築処理
-				proc_dodge_frame(p, changed)
-				--proc_frame_gap(p, changed)
-				if p.is_fireball and changed then
-					local plast_frame = p.body.act_frames[#p.body.act_frames]
-					if plast_frame then plast_frame.fireballs[base] = last_frame end
+				if not p.is_fireball then
+					local _, changed = proc_act_frame(p) -- 本体
+					proc_dodge_frame(p, changed) -- 無敵
+					proc_frame_gap(p, changed) -- フレーム差
 				end
 			end
 		end
@@ -4089,7 +4064,7 @@ rbff2.startplugin               = function()
 					ut.mkdir(dir_name)
 					dir_name = dir_name .. "/" .. p.char_data.names2
 					ut.mkdir(dir_name)
-					if p.slide_atk then sub_name = "_SLIDE_" elseif p.bs_atk then sub_name = "_BS_" end
+					if p.sliding then sub_name = "_SLIDE_" elseif p.breakshot then sub_name = "_BS_" end
 					name = string.format("%s%s%04x_%s_%03d", p.char_data.names2, sub_name, p.act_data.id_1st or 0, name, p.atk_count)
 					dir_name = dir_name .. string.format("/%04x", p.act_data.id_1st or 0)
 					ut.mkdir(dir_name)
@@ -4143,6 +4118,7 @@ rbff2.startplugin               = function()
 							table.insert(label, string.format("%s/%s Hit  Esaka %s %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.esaka or 0, p.esaka_type or ""))
 							table.insert(label, string.format("Cancel %-2s/%-2s Teching %s", xp.repeatable and "Ch" or "", xp.cancelable and "Sp" or "",
 								xp.forced_down or xp.in_bs and "No" or "Yes"))
+							table.insert(label, string.format(" %-8s/%-8s", p.sliding and "Slide" or "", p.inertial and "Inertial" or ""))
 						end
 						if p.hurt then
 							table.insert(label, string.format("Hurt Top %3s Bottom %3s", p.hurt.max_top, p.hurt.min_bottom))
@@ -4309,8 +4285,8 @@ rbff2.startplugin               = function()
 				end
 				--フレーム差と確定反撃の表示
 				if global.disp_frmgap > 1 then
-					draw_text_with_shadow(p1 and 140 or 165, 40, string.format("%4d", p.last_frame_gap),
-						p.last_frame_gap == 0 and 0xFFFFFFFF or p.last_frame_gap > 0 and 0xFF00FFFF or 0xFFFF0000)
+					draw_text_with_shadow(p1 and 140 or 165, 40, string.format("%4d", p.old.frame_gap),
+						p.old.frame_gap == 0 and 0xFFFFFFFF or p.old.frame_gap > 0 and 0xFF00FFFF or 0xFFFF0000)
 					draw_text_with_shadow(p1 and 112 or 184, 40, "PUNISH", p.on_punish <= global.frame_number and 0xFF808080 or 0xFF00FFFF)
 				end
 			end
