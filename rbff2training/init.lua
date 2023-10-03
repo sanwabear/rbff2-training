@@ -32,6 +32,18 @@ exports.author             = { name = "Sanwabear" }
 
 local ut                   = require("rbff2training/util")
 local db                   = require("rbff2training/data")
+local UTF8toSJIS           = require("rbff2training/UTF8toSJIS")
+
+local saveText = function(path, score)
+	local file, err = io.open(UTF8toSJIS:UTF8_to_SJIS_str_cnv(path), 'w') -- windows向け
+	if file then
+		file:write(tostring(score))
+		file:close()
+	else
+		print("error:", err)
+	end
+end
+--saveText(ut.cur_dir() .. "/plugins/rbff2training/テスト.txt", "")
 
 -- MAMEのLuaオブジェクトの変数と初期化処理
 local man
@@ -66,7 +78,6 @@ local setup_emu            = function()
 		local dir = ut.cur_dir()
 		return dir .. "/" .. base
 	end
-	dofile(base_path() .. "/data.lua")
 end
 
 local rbff2                = exports
