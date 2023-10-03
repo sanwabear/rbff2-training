@@ -166,6 +166,20 @@ dodge_types.main_high      = dodge_types.main | dodge_types.high
 dodge_types.main_low       = dodge_types.main | dodge_types.low
 dodge_types.sway_high      = dodge_types.sway | dodge_types.high
 dodge_types.sway_low       = dodge_types.sway | dodge_types.low
+dodge_types.frame_dodges   =  --  フレーム表示に反映する部分無敵
+	--dodge_types.full |
+	--dodge_types.main |
+	--dodge_types.sway |
+	dodge_types.main_high |
+	dodge_types.main_low |
+	dodge_types.sway_high |
+	dodge_types.sway_low |
+	dodge_types.away |
+	dodge_types.waving_blow |
+	dodge_types.laurence_away |
+	dodge_types.levitate40 |
+	dodge_types.levitate32 |
+	dodge_types.levitate24
 -- モーションによる部分無敵
 local hurt_dodge_types     = {
 	{ top = nil, bottom = nil, act_type = 0 },

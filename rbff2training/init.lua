@@ -111,6 +111,26 @@ local get_bottom_type         = function(bottom, types)
 	end
 	return type
 end
+local get_dodge         = function(p, box, top, bottom)
+	local dodge = 0
+	if p.sway_status == 0 then -- メインライン
+		dodge = get_top_type(top, db.hurt_dodge_types) | get_bottom_type(bottom, db.hurt_dodge_types)
+		if type == db.box_types.hurt1 or type == db.box_types.hurt2 then -- 食らい1 食らい2
+		elseif type == db.box_types.down_otg then -- 食らい(ダウン追撃のみ可)
+		elseif type == db.box_types.launch then  -- 食らい(空中追撃のみ可)
+		elseif type == db.box_types.hurt3 then   -- 食らい(対ライン上攻撃) 対メイン上段無敵
+			dodge = dodge | (p.sway_status == 0 and db.dodge_types.main_high or 0)
+		elseif type == db.box_types.hurt4 then   -- 食らい(対ライン下攻撃) 対メイン下段無敵
+			dodge = dodge | (p.sway_status == 0 and db.dodge_types.main_low or 0)
+		end
+	elseif type == db.box_types.sway_hurt1 or type == db.box_types.sway_hurt2 then
+		dodge = dodge | db.dodge_types.main              -- 食らい(スウェー中) メイン無敵
+		dodge = dodge | (box.real_top <= 32 and db.dodge_types.sway_high or 0) -- 上半身無敵
+		dodge = dodge | (box.real_bottom <= 60 and db.dodge_types.sway_low or 0) -- 下半身無敵
+	end
+	return dodge
+end
+
 local hitbox_possibles     = {
 	normal          = 0x94D2C,  -- 012DBC: 012DC8: 通常状態へのヒット判定処理
 	down            = 0x94E0C,  -- 012DE4: 012DF0: ダウン状態へのヒット判定処理
@@ -133,20 +153,23 @@ local hitbox_possibles     = {
 		return (0x20 <= id) and possible_types.same_line or possible_types.none
 	end,
 }
-local frame_attack_types   = {
-	fb = 2 ^ 0,          -- 0x 1 0000 0001 弾
-	attacking = 2 ^ 1,   -- 0x 2 0000 0010 攻撃動作中
-	juggle = 2 ^ 2,      -- 0x 4 0000 0100 空中追撃可能
-	fake = 2 ^ 3,        -- 0x 8 0000 1000 攻撃能力なし(判定初期から)
-	obsolute = 2 ^ 4,    -- 0x F 0001 0000 攻撃能力なし(動作途中から)
-	fullhit = 2 ^ 5,     -- 0x20 0010 0000 全段ヒット状態
-	harmless = 2 ^ 6,    -- 0x40 0100 0000 攻撃データIDなし
+local frame_attack_types = {
+	fb = 2 ^ 0,     -- 0x 1 0000 0001 弾
+	attacking = 2 ^ 1, -- 0x 2 0000 0010 攻撃動作中
+	juggle = 2 ^ 2, -- 0x 4 0000 0100 空中追撃可能
+	fake = 2 ^ 3,   -- 0x 8 0000 1000 攻撃能力なし(判定初期から)
+	obsolute = 2 ^ 4, -- 0x F 0001 0000 攻撃能力なし(動作途中から)
+	fullhit = 2 ^ 5, -- 0x20 0010 0000 全段ヒット状態
+	harmless = 2 ^ 6, -- 0x40 0100 0000 攻撃データIDなし
 
-	attack = 7,          -- attack 7ビット左シフト
-	act = 7 + 8,         -- act 15ビット左シフト
+	attack = 7,     -- attack 7ビット左シフト
+	act = 15,       -- act 15(7+8)ビット左シフト
 
-	act_count = 7 + 8 + 16, -- act_count 31ビット左シフト 本体の動作区切り用
-	fb_effect = 7 + 8 + 16, -- effect 31ビット左シフト 弾の動作区切り用
+	act_count = 31, -- act_count 31(7+8+16)ビット左シフト 本体の動作区切り用
+	fb_effect = 31, -- effect 31(7+8+16)ビット左シフト 弾の動作区切り用
+
+	pre_fireball = 2 ^ 32, -- 飛び道具処理中
+	on_fireball = 2 ^ 33, -- 飛び道具判定あり
 }
 local hitbox_grab_bits     = {
 	none          = 0,
@@ -1486,7 +1509,7 @@ rbff2.startplugin               = function()
 	end
 	local hitboxies_order = function(b1, b2) return (b1.id < b2.id) end
 	local ranges_order = function(r1, r2) return (r1.within and 1 or -1) < (r2.within and 1 or -1) end
-	local find = function(sources, resolver) -- sourcesの要素をresolverを通して得た結果で最初の非nilの値を返す
+	local ifind = function(sources, resolver) -- sourcesの要素をresolverを通して得た結果で最初の非nilの値を返す
 		sources = sources or {}
 		local i, ii, p, a = 1, nil, nil, nil
 		return function()
@@ -1496,13 +1519,26 @@ rbff2.startplugin               = function()
 			end
 		end
 	end
-	local find_all = function(sources, resolver) -- sourcesの要素をresolverを通して得た結果で非nilの値を返す
+	local ifind_all = function(sources, resolver) -- sourcesの要素をresolverを通して得た結果で非nilの値を返す
 		sources = sources or {}
 		local i, ii, p, a = 1, nil, nil, nil
 		return function()
 			while i <= #sources do
 				i, ii, p, a = i + 1, i, resolver(sources[i]), sources[i]
 				if p then return ii, a, p end -- インデックス, sources要素, convert結果
+			end
+		end
+	end
+	local find_all = function(sources, resolver) -- sourcesの要素をresolverを通して得た結果で非nilの値を返す
+		local i, col, ret = 1, {}, nil
+		for k, v in pairs(sources) do
+			local v2 = resolver(k, v)
+			if v2 then table.insert(col, {k, v, v2}) end
+		end
+		return function()
+			while i <= #col do
+				i, ret = i + 1, col[i]
+				return ret[1] ,ret[2], ret[3]
 			end
 		end
 	end
@@ -2082,7 +2118,7 @@ rbff2.startplugin               = function()
 				local e = (mem.r32(a + 0x18) << 32) + mem.r32(a + 0x1C)
 				local p_bases = { a, b, c, d, } -- ベースアドレス候補
 				if db.p_chan[e] then ret.value = 0 end
-				for i, addr, p in find(p_bases, get_object_by_addr) do
+				for i, addr, p in ifind(p_bases, get_object_by_addr) do
 					--ut.printf("%s %s %6x", global.frame_number, i, addr)
 					if i == 1 and ut.tstb(global.hide, hide_options["p" .. p.num .. "_char"], true) then
 						ret.value = 4
@@ -3012,32 +3048,15 @@ rbff2.startplugin               = function()
 		return frame, upd_group
 	end
 
-	local frame_dodges = {
-		db.dodge_types.full,
-		--db.dodge_types.main,
-		--db.dodge_types.sway,
-		db.dodge_types.main_high,
-		db.dodge_types.main_low,
-		db.dodge_types.sway_high,
-		db.dodge_types.sway_low,
-		db.dodge_types.away,
-		db.dodge_types.waving_blow,
-		db.dodge_types.laurence_away,
-		db.dodge_types.levitate40,
-		db.dodge_types.levitate32,
-		db.dodge_types.levitate24,
-	}
-
 	local proc_dodge_frame = function(p, update)
 		local last_frame, dodge = p.act_frames[#p.act_frames], p.hurt and p.hurt.dodge or 0
 		local col, line, key = 0, 0xEE444444, 0
-		if p.skip_frame or p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number then
+		if p.skip_frame or p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number or p.jumping then
+			-- 無視
 		elseif ut.tstb(dodge, db.dodge_types.full, true) then
-			col, line, key = 0xAAB0E0FF, 0xDDB0E0FF, db.dodge_types.full
-		else
-			for _, type in ipairs(frame_dodges) do
-				if ut.tstb(dodge, type, true) then col, line, key = 0xAAB0C0EE, 0xDDB0C0EE, key | type end
-			end
+			col, line, key = 0xAAB0E0FF, 0xDDB0E0FF, db.dodge_types.full -- 全身無敵
+		elseif ut.tstb(dodge, db.dodge_types.frame_dodges) then
+			col, line, key = 0xAAB0C0EE, 0xDDB0C0EE, dodge & db.dodge_types.frame_dodges -- 部分無敵
 		end
 
 		local frame = p.muteki.act_frames[#p.muteki.act_frames]
@@ -3468,127 +3487,111 @@ rbff2.startplugin               = function()
 
 		-- キャラと飛び道具への当たり判定の反映
 		hitboxies, ranges = {}, {}                     -- ソート前の判定のバッファ
-		for _, p in pairs(all_objects) do
-			if p.proc_active then
-				-- 判定表示前の座標補正
-				p.x, p.y, p.flip_x = p.pos - screen.left, screen.top - p.pos_y - p.pos_z, (p.flip_x1 ~ p.flip_x2) > 0 and 1 or -1
-				p.vulnerable = (p.invincible and p.invincible > 0) or p.hurt_invincible or p.on_vulnerable ~= global.frame_number
-				p.grabbable = p.grabbable | (p.grabbable1 and p.grabbable2 and hitbox_grab_bits.baigaeshi or 0)
-				p.hitboxies, p.hitbox_types, p.hurt = {}, {}, {} -- 座標補正後データ格納のためバッファのクリア
 
-				-- 当たりとやられ判定判定
-				for _, box in ipairs(p.boxies) do
-					local type = fix_box_type(p, box) -- 属性はヒット状況などで変わるので都度解決する
-					if not (db.hurt_boxies[type] and p.vulnerable) then
-						box = fix_box_scale(p, box)
-						box.type = type
-						if (type.kind == db.box_kinds.attack or type.kind == db.box_kinds.parry) and global.pause_hitbox == 3 then
-							global.pause = true -- 強制ポーズ
-						end
-						if box.type.kind == db.box_kinds.attack then -- 攻撃位置から解決した属性を付与する
-							box.blockables = {
-								main = ut.tstb(box.possible, possible_types.same_line) and box.blockable | get_top_type(box.real_top, db.top_types) or 0,
-								sway = ut.tstb(box.possible, possible_types.diff_line) and box.blockable | get_top_type(box.real_top, db.top_sway_types) or 0,
-								punish = ut.tstb(box.possible, possible_types.same_line) and get_top_type(box.real_bottom, db.hurt_dodge_types) or 0,
-							}
-						elseif type.kind == db.box_kinds.hurt then -- くらいの無敵(部分無敵)の属性を付与する
-							local top = math.max(p.hurt and p.hurt.max_top or 0, box.real_top)
-							local bottom = math.min(p.hurt and p.hurt.min_bottom or 0xFFFF, box.real_bottom)
-							local dodge = 0
-							if p.jumping then -- ジャンプ中
-							elseif p.sway_status == 0 then -- メインライン
-								dodge = get_top_type(top, db.hurt_dodge_types) | get_bottom_type(bottom, db.hurt_dodge_types)
-								if type == db.box_types.hurt1 or type == db.box_types.hurt2 then -- 食らい1 食らい2
-								elseif type == db.box_types.down_otg then -- 食らい(ダウン追撃のみ可)
-								elseif type == db.box_types.launch then  -- 食らい(空中追撃のみ可)
-								elseif type == db.box_types.hurt3 then   -- 食らい(対ライン上攻撃) 対メイン上段無敵
-									dodge = dodge | (p.sway_status == 0 and db.dodge_types.main_high or 0)
-								elseif type == db.box_types.hurt4 then   -- 食らい(対ライン下攻撃) 対メイン下段無敵
-									dodge = dodge | (p.sway_status == 0 and db.dodge_types.main_low or 0)
-								end
-							elseif type == db.box_types.sway_hurt1 or type == db.box_types.sway_hurt2 then
-								dodge = dodge | db.dodge_types.main              -- 食らい(スウェー中) メイン無敵
-								dodge = dodge | (box.real_top <= 32 and db.dodge_types.sway_high or 0) -- 上半身無敵
-								dodge = dodge | (box.real_bottom <= 60 and db.dodge_types.sway_low or 0) -- 下半身無敵
-							end
-							p.hurt = { max_top = top, min_bottom = bottom, dodge = dodge, }
-						end
-						if p.body.disp_hitbox then
-							table.insert(p.hitboxies, box)
-							table.insert(hitboxies, box)
-							table.insert(p.hitbox_types, type)
-						end
-					end
-					if p.vulnerable then p.hurt = { max_top = 0, min_bottom = 0, dodge = db.dodge_types.full, } end
+		for _, p in find_all(all_objects, function(_, p) return p.proc_active end) do
+			-- 判定表示前の座標補正
+			p.x, p.y, p.flip_x = p.pos - screen.left, screen.top - p.pos_y - p.pos_z, (p.flip_x1 ~ p.flip_x2) > 0 and 1 or -1
+			p.vulnerable = (p.invincible and p.invincible > 0) or p.hurt_invincible or p.on_vulnerable ~= global.frame_number
+			p.grabbable = p.grabbable | (p.grabbable1 and p.grabbable2 and hitbox_grab_bits.baigaeshi or 0)
+			p.hitboxies, p.hitbox_types, p.hurt = {}, {}, {} -- 座標補正後データ格納のためバッファのクリア
+			p.hurt = { max_top = -0xFFFF, min_bottom = 0xFFFF, dodge = p.vulnerable and db.dodge_types.full or 0, }
+
+			-- 当たりとやられ判定判定
+			for _, _, box in ifind_all(p.boxies, function(box)
+				local type = fix_box_type(p, box) -- 属性はヒット状況などで変わるので都度解決する
+				if not (db.hurt_boxies[type] and p.vulnerable) then
+					box = fix_box_scale(p, box)
+					box.type = type
+					return box
+				end
+			end) do
+				if (box.type.kind == db.box_kinds.attack or box.type.kind == db.box_kinds.parry) and global.pause_hitbox == 3 then
+					global.pause = true    -- 強制ポーズ
+				end
+				if box.type.kind == db.box_kinds.attack then -- 攻撃位置から解決した属性を付与する
+					box.blockables = {
+						main = ut.tstb(box.possible, possible_types.same_line) and box.blockable | get_top_type(box.real_top, db.top_types) or 0,
+						sway = ut.tstb(box.possible, possible_types.diff_line) and box.blockable | get_top_type(box.real_top, db.top_sway_types) or 0,
+						punish = ut.tstb(box.possible, possible_types.same_line) and get_top_type(box.real_bottom, db.hurt_dodge_types) or 0,
+					}
+				elseif box.type.kind == db.box_kinds.hurt then -- くらいの無敵(部分無敵)の属性を付与する
+					p.hurt.max_top = math.max(p.hurt.max_top or 0, box.real_top)
+					p.hurt.min_bottom = math.min(p.hurt.min_bottom or 0xFFFF, box.real_bottom)
+					p.hurt.dodge = get_dodge(p, box, p.hurt.max_top, p.hurt.min_bottom)
+				end
+				if p.body.disp_hitbox then
+					table.insert(p.hitboxies, box)
+					table.insert(hitboxies, box)
+					table.insert(p.hitbox_types, box.type)
+				end
+			end
+
+			if global.pause_hitbox == 2 and #p.body.throw_boxies then global.pause = true end -- 強制ポーズ
+
+			if p.body.disp_hitbox and p.is_fireball ~= true then
+				-- 押し合い判定（本体のみ）
+				if p.push_invincible and p.push_invincible == 0 and mem._0x10B862 == 0 then
+					local box = fix_box_scale(p, get_push_box(p))
+					table.insert(p.hitboxies, box)
+					table.insert(hitboxies, box)
+					table.insert(p.hitbox_types, box.type)
 				end
 
-				if global.pause_hitbox == 2 and #p.body.throw_boxies then global.pause = true end -- 強制ポーズ
-
-				if p.body.disp_hitbox and p.is_fireball ~= true then
-					-- 押し合い判定（本体のみ）
-					if p.push_invincible and p.push_invincible == 0 and mem._0x10B862 == 0 then
-						local box = fix_box_scale(p, get_push_box(p))
-						table.insert(p.hitboxies, box)
-						table.insert(hitboxies, box)
-						table.insert(p.hitbox_types, box.type)
-					end
-
-					-- 投げ判定
-					local last_throw_ids = {}
-					for _, box in pairs(p.throw_boxies) do
-						table.insert(p.hitboxies, box)
-						table.insert(hitboxies, box)
-						table.insert(p.hitbox_types, box.type)
-						table.insert(last_throw_ids, { char = p.char, id = box.id })
-					end
-					if 0 < #last_throw_ids then
-						p.throw_boxies, p.last_throw_ids = {}, last_throw_ids
-					elseif p.last_throw_ids then
-						for _, item in ipairs(p.last_throw_ids) do
-							if item.char == p.char then
-								local box = get_throwbox(p, item.id)
-								box.type = db.box_types.push
-								table.insert(p.hitboxies, box)
-								table.insert(hitboxies, box)
-							end
+				-- 投げ判定
+				local last_throw_ids = {}
+				for _, box in pairs(p.throw_boxies) do
+					table.insert(p.hitboxies, box)
+					table.insert(hitboxies, box)
+					table.insert(p.hitbox_types, box.type)
+					table.insert(last_throw_ids, { char = p.char, id = box.id })
+				end
+				if 0 < #last_throw_ids then
+					p.throw_boxies, p.last_throw_ids = {}, last_throw_ids
+				elseif p.last_throw_ids then
+					for _, item in ipairs(p.last_throw_ids) do
+						if item.char == p.char then
+							local box = get_throwbox(p, item.id)
+							box.type = db.box_types.push
+							table.insert(p.hitboxies, box)
+							table.insert(hitboxies, box)
 						end
 					end
+				end
 
-					-- 座標
+				-- 座標
+				table.insert(ranges, {
+					label = string.format("%sP", p.num),
+					x = p.x,
+					y = p.y,
+					flip_x = p.cmd_side,
+					within = false,
+				})
+			end
+
+			if p.body.disp_range and p.is_fireball ~= true then
+				-- 詠酒を発動される範囲
+				if p.esaka and p.esaka > 0 then
+					p.esaka_range = p.calc_range_x(p.esaka) -- 位置を反映した座標を計算
 					table.insert(ranges, {
-						label = string.format("%sP", p.num),
-						x = p.x,
+						label = string.format("E%sP%s", p.num, p.esaka_type),
+						x = p.esaka_range,
 						y = p.y,
-						flip_x = p.cmd_side,
-						within = false,
+						flip_x = -p.flip_x, -- 内側に太線を引きたいのでflipを反転する
+						within = p.within(p.x, p.esaka_range)
 					})
 				end
 
-				if p.body.disp_range and p.is_fireball ~= true then
-					-- 詠酒を発動される範囲
-					if p.esaka and p.esaka > 0 then
-						p.esaka_range = p.calc_range_x(p.esaka) -- 位置を反映した座標を計算
+				-- 地上通常技かライン移動技の遠近判断距離
+				if p.pos_y + p.pos_frc_y == 0 then
+					for label, close_far in pairs(p.char_data.close_far[p.sway_status]) do
+						local x1, x2 = close_far.x1 == 0 and p.x or p.calc_range_x(close_far.x1), p.calc_range_x(close_far.x2)
 						table.insert(ranges, {
-							label = string.format("E%sP%s", p.num, p.esaka_type),
-							x = p.esaka_range,
+							label = label,
+							x = x2,
 							y = p.y,
 							flip_x = -p.flip_x, -- 内側に太線を引きたいのでflipを反転する
-							within = p.within(p.x, p.esaka_range)
+							within = p.within(x1, x2)
 						})
-					end
-
-					-- 地上通常技かライン移動技の遠近判断距離
-					if p.pos_y + p.pos_frc_y == 0 then
-						for label, close_far in pairs(p.char_data.close_far[p.sway_status]) do
-							local x1, x2 = close_far.x1 == 0 and p.x or p.calc_range_x(close_far.x1), p.calc_range_x(close_far.x2)
-							table.insert(ranges, {
-								label = label,
-								x = x2,
-								y = p.y,
-								flip_x = -p.flip_x, -- 内側に太線を引きたいのでflipを反転する
-								within = p.within(x1, x2)
-							})
-						end
 					end
 				end
 			end
@@ -4124,7 +4127,7 @@ rbff2.startplugin               = function()
 							table.insert(label, string.format("Hurt Top %3s Bottom %3s", p.hurt.max_top, p.hurt.min_bottom))
 							table.insert(label, string.format(" Dodge %-s", db.get_dodge_name(p.hurt.dodge)))
 						end
-						for _, box, blockables in find_all(xp.hitboxies, function(box) return box.blockables end) do
+						for _, box, blockables in ifind_all(xp.hitboxies, function(box) return box.blockables end) do
 							table.insert(label, string.format("Hit Top %3s Bottom %3s", box.real_top, box.real_bottom))
 							table.insert(label, string.format(" Main %-5s  Sway %-5s", db.top_type_name(blockables.main), db.top_type_name(blockables.sway)))
 							table.insert(label, string.format(" Punish %-9s", db.get_punish_name(blockables.punish)))
