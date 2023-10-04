@@ -344,5 +344,16 @@ ut.apply_patch_file = function(pgm, path, force)
 	return ret
 end
 
+ut.get_polygon = function(x, y, sides, rad_odd, rad_even, rotation)
+	local ret, angle = {}, (math.pi * 2) / sides
+	rotation = math.rad(-((rotation or 0) % 360)) + (angle / 2)
+	for i = 0, sides, 1 do
+		local a = angle * i + rotation
+		local rad = (i % 2 == 0) and rad_even or rad_odd
+		table.insert(ret, { x = math.sin(a) * rad + x, y = math.cos(a) * rad + y })
+	end
+	return ret
+end
+
 print("util loaded")
 return ut
