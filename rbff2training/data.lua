@@ -150,37 +150,32 @@ local frame_attack_types        = {
 	obsolute      = 2 ^ 4, -- 0x F 0001 0000 攻撃能力なし(動作途中から)
 	fullhit       = 2 ^ 5, -- 0x20 0010 0000 全段ヒット状態
 	harmless      = 2 ^ 6, -- 0x40 0100 0000 攻撃データIDなし
-
-	attack        = 7,   -- attack 7ビット左シフト
-	act           = 15,  -- act 15(7+8)ビット左シフト
-
-	act_count     = 31,  -- act_count 31(7+8+16)ビット左シフト 本体の動作区切り用
-	fb_effect     = 31,  -- effect 31(7+8+16)ビット左シフト 弾の動作区切り用
-
-	pre_fireball  = 2 ^ 32, -- 飛び道具処理中
-	on_fireball   = 2 ^ 33, -- 飛び道具判定あり
-
-	hurt_otg      = 2 ^ 34, -- ダウン追撃のみ可能
-	hurt_juggle   = 2 ^ 35, -- 空中追撃のみ可能
-	full          = 2 ^ 36, -- 全身無敵
-	main          = 2 ^ 37, -- メインライン攻撃無敵
-	sway          = 2 ^ 38, -- メインライン攻撃無敵
-	high          = 2 ^ 39, -- 上段攻撃無敵
-	low           = 2 ^ 40, -- 下段攻撃無敵
-	away          = 2 ^ 41, --上半身無敵 32 避け
-	waving_blow   = 2 ^ 42, -- 上半身無敵 40 ウェービングブロー,龍転身,ダブルローリング
-	laurence_away = 2 ^ 43, -- 上半身無敵 48 ローレンス避け
-	crounch60     = 2 ^ 44, -- 頭部無敵 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
-	crounch64     = 2 ^ 45, -- 頭部無敵 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
-	crounch68     = 2 ^ 46, -- 頭部無敵 68 屈 ローレンス
-	crounch76     = 2 ^ 47, -- 頭部無敵 76 屈 フランコ
-	crounch80     = 2 ^ 48, -- 頭部無敵 80 屈 クラウザー
-	levitate40    = 2 ^ 49, -- 足元無敵 対アンディ屈C
-	levitate32    = 2 ^ 50, -- 足元無敵 対ギース屈C
-	levitate24    = 2 ^ 51, -- 足元無敵 対だいたいの屈B（キムとボブ以外）
-
-	frame_plus    = 2 ^ 52, -- フレーム有利：Frame advantage
-	frame_minus   = 2 ^ 53, -- フレーム不利：Frame disadvantage, 
+	frame_plus    = 2 ^ 7, -- フレーム有利：Frame advantage
+	frame_minus   = 2 ^ 8, -- フレーム不利：Frame disadvantage,
+	pre_fireball  = 2 ^ 9, -- 飛び道具処理中
+	post_fireball = 2 ^ 10, -- 飛び道具処理中
+	on_fireball   = 2 ^ 11, -- 飛び道具判定あり
+	off_fireball  = 2 ^ 12, -- 飛び道具判定あり
+	full          = 2 ^ 13, -- 全身無敵
+	main          = 2 ^ 14, -- メインライン攻撃無敵
+	sway          = 2 ^ 15, -- メインライン攻撃無敵
+	high          = 2 ^ 16, -- 上段攻撃無敵
+	low           = 2 ^ 17, -- 下段攻撃無敵
+	away          = 2 ^ 18, --上半身無敵 32 避け
+	waving_blow   = 2 ^ 19, -- 上半身無敵 40 ウェービングブロー,龍転身,ダブルローリング
+	laurence_away = 2 ^ 20, -- 上半身無敵 48 ローレンス避け
+	crounch60     = 2 ^ 21, -- 頭部無敵 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
+	crounch64     = 2 ^ 22, -- 頭部無敵 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
+	crounch68     = 2 ^ 23, -- 頭部無敵 68 屈 ローレンス
+	crounch76     = 2 ^ 24, -- 頭部無敵 76 屈 フランコ
+	crounch80     = 2 ^ 25, -- 頭部無敵 80 屈 クラウザー
+	levitate40    = 2 ^ 26, -- 足元無敵 対アンディ屈C
+	levitate32    = 2 ^ 27, -- 足元無敵 対ギース屈C
+	levitate24    = 2 ^ 28, -- 足元無敵 対だいたいの屈B（キムとボブ以外）
+	act_count     = 29,  -- act_count 本体の動作区切り用
+	fb_effect     = 29,  -- effect 弾の動作区切り用
+	attack        = 38,  -- attack
+	act           = 47,  -- act
 }
 frame_attack_types.main_high    = frame_attack_types.main | frame_attack_types.high
 frame_attack_types.main_low     = frame_attack_types.main | frame_attack_types.low
