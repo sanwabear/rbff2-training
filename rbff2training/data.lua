@@ -174,14 +174,24 @@ local frame_attack_types        = {
 	levitate24    = 2 ^ 28, -- 足元無敵 対だいたいの屈B（キムとボブ以外）
 	act_count     = 29,  -- act_count 本体の動作区切り用
 	fb_effect     = 29,  -- effect 弾の動作区切り用
-	attack        = 38,  -- attack
-	act           = 47,  -- act
+	attack        = 37,  -- attack
+	act           = 45,  -- act
 }
-frame_attack_types.main_high    = frame_attack_types.main | frame_attack_types.high
-frame_attack_types.main_low     = frame_attack_types.main | frame_attack_types.low
-frame_attack_types.sway_high    = frame_attack_types.sway | frame_attack_types.high
-frame_attack_types.sway_low     = frame_attack_types.sway | frame_attack_types.low
-frame_attack_types.frame_dodges =   --  フレーム表示に反映する部分無敵
+frame_attack_types.mask_act_count = 0xFF << frame_attack_types.act_count
+frame_attack_types.mask_fb_effect = 0xFF << frame_attack_types.fb_effect
+frame_attack_types.mask_attack    = 0xFF << frame_attack_types.attack
+frame_attack_types.mask_act       = 0xFFFF << frame_attack_types.act
+frame_attack_types.mask_fake      = frame_attack_types.fake
+frame_attack_types.mask_fireball  =
+	frame_attack_types.pre_fireball |
+	frame_attack_types.post_fireball |
+	frame_attack_types.on_fireball |
+	frame_attack_types.off_fireball
+frame_attack_types.main_high     = frame_attack_types.main | frame_attack_types.high
+frame_attack_types.main_low      = frame_attack_types.main | frame_attack_types.low
+frame_attack_types.sway_high     = frame_attack_types.sway | frame_attack_types.high
+frame_attack_types.sway_low      = frame_attack_types.sway | frame_attack_types.low
+frame_attack_types.frame_dodges  = --  フレーム表示に反映する部分無敵
 	--frame_attack_types.full |
 	--frame_attack_types.main |
 	--frame_attack_types.sway |

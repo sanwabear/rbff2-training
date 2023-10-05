@@ -2783,7 +2783,11 @@ rbff2.startplugin               = function()
 				if deco2 then scr:draw_text(evx - get_string_width(deco2) * 0.5, txty + y - 4.5, deco2) end
 				scr:draw_box(x1, y, x2, y + height, frame.line, frame.col)
 				if frame.xline and frame.xline > 0 then
-					for i = 0.5, height, 1.5 do scr:draw_box(x1, y + i, x2, math.min(y + height, y + i + 0.5), 0, frame.xline) end
+					if ut.tstb(frame.attackbit, frame_attack_types.full) then
+						for i = 0.5, height, 1.5 do scr:draw_box(x1, y + i, x2, math.min(y + height, y + i + 0.5), 0, frame.xline) end
+					else
+						for i = 1.5, height, 3 do scr:draw_box(x1, y + i, x2, math.min(y + height, y + i + 1), 0, frame.xline) end
+					end
 				end
 				local txtx = (frame.count > 5) and (x2 + 1) or (3 > frame.count) and (x2 - 1) or x2
 				local count_txt = 300 < frame.count and "LOT" or ("" .. frame.count)
@@ -2943,12 +2947,20 @@ rbff2.startplugin               = function()
 		end
 
 		-- TODO 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
-		local attackbit_mask = 0xFFFFFFFFFFFFFFFF
+		local attackbit_mask = 0
+		--attackbit_mask = attackbit_mask | frame_attack_types.mask_act_count
+		--attackbit_mask = attackbit_mask | frame_attack_types.mask_fb_effect
+		--attackbit_mask = attackbit_mask | frame_attack_types.mask_attack
+		--attackbit_mask = attackbit_mask | frame_attack_types.mask_act
+		--attackbit_mask = attackbit_mask | frame_attack_types.mask_fake
+		--attackbit_mask = attackbit_mask | frame_attack_types.mask_fireball
+		attackbit_mask = ut.hex_clear(0xFFFFFFFFFFFFFFFF, attackbit_mask)
 		if p.disp_frm == 3 then
 		elseif p.disp_frm == 4 then
 		elseif p.disp_frm == 5 then
 		end
-		attackbit      = attackbit & attackbit_mask
+		attackbit = attackbit & attackbit_mask
+		--ut.printf("%x %x %x | %s", p.num, attackbit_mask, attackbit, ut.tobitstr(attackbit, " "))
 
 		local frame    = p.act_frames[#p.act_frames]
 		local prev     = frame and frame.name
