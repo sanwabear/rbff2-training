@@ -141,101 +141,122 @@ local top_sway_types       = {
 	{ top = 59,     act_type = act_types.low_attack }, -- タン以外
 	{ top = 48,     act_type = act_types.low_attack }, -- 全キャラ
 }
---- 低やられ判定への攻撃可能な高さ
-local dodge_types          = {
-	otg           = 2 ^ 0, -- ダウン追撃のみ可能
-	juggle        = 2 ^ 1, -- 空中追撃のみ可能
-	full          = 2 ^ 2, -- 全身無敵
-	main          = 2 ^ 3, -- メインライン攻撃無敵
-	sway          = 2 ^ 4, -- メインライン攻撃無敵
-	high          = 2 ^ 5, -- 上段攻撃無敵
-	low           = 2 ^ 6, -- 下段攻撃無敵
-	away          = 2 ^ 7, --上半身無敵 32 避け
-	waving_blow   = 2 ^ 8, -- 上半身無敵 40 ウェービングブロー,龍転身,ダブルローリング
-	laurence_away = 2 ^ 9, -- 上半身無敵 48 ローレンス避け
-	crounch60     = 2 ^ 10, -- 頭部無敵 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
-	crounch64     = 2 ^ 11, -- 頭部無敵 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
-	crounch68     = 2 ^ 12, -- 頭部無敵 68 屈 ローレンス
-	crounch76     = 2 ^ 13, -- 頭部無敵 76 屈 フランコ
-	crounch80     = 2 ^ 14, -- 頭部無敵 80 屈 クラウザー
-	levitate40    = 2 ^ 15, -- 足元無敵 対アンディ屈C
-	levitate32    = 2 ^ 16, -- 足元無敵 対ギース屈C
-	levitate24    = 2 ^ 17, -- 足元無敵 対だいたいの屈B（キムとボブ以外）
+
+local frame_attack_types        = {
+	fb            = 2 ^ 0, -- 0x 1 0000 0001 弾
+	attacking     = 2 ^ 1, -- 0x 2 0000 0010 攻撃動作中
+	juggle        = 2 ^ 2, -- 0x 4 0000 0100 空中追撃可能
+	fake          = 2 ^ 3, -- 0x 8 0000 1000 攻撃能力なし(判定初期から)
+	obsolute      = 2 ^ 4, -- 0x F 0001 0000 攻撃能力なし(動作途中から)
+	fullhit       = 2 ^ 5, -- 0x20 0010 0000 全段ヒット状態
+	harmless      = 2 ^ 6, -- 0x40 0100 0000 攻撃データIDなし
+
+	attack        = 7,   -- attack 7ビット左シフト
+	act           = 15,  -- act 15(7+8)ビット左シフト
+
+	act_count     = 31,  -- act_count 31(7+8+16)ビット左シフト 本体の動作区切り用
+	fb_effect     = 31,  -- effect 31(7+8+16)ビット左シフト 弾の動作区切り用
+
+	pre_fireball  = 2 ^ 32, -- 飛び道具処理中
+	on_fireball   = 2 ^ 33, -- 飛び道具判定あり
+
+	hurt_otg      = 2 ^ 34, -- ダウン追撃のみ可能
+	hurt_juggle   = 2 ^ 35, -- 空中追撃のみ可能
+	full          = 2 ^ 36, -- 全身無敵
+	main          = 2 ^ 37, -- メインライン攻撃無敵
+	sway          = 2 ^ 38, -- メインライン攻撃無敵
+	high          = 2 ^ 39, -- 上段攻撃無敵
+	low           = 2 ^ 40, -- 下段攻撃無敵
+	away          = 2 ^ 41, --上半身無敵 32 避け
+	waving_blow   = 2 ^ 42, -- 上半身無敵 40 ウェービングブロー,龍転身,ダブルローリング
+	laurence_away = 2 ^ 43, -- 上半身無敵 48 ローレンス避け
+	crounch60     = 2 ^ 44, -- 頭部無敵 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
+	crounch64     = 2 ^ 45, -- 頭部無敵 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
+	crounch68     = 2 ^ 46, -- 頭部無敵 68 屈 ローレンス
+	crounch76     = 2 ^ 47, -- 頭部無敵 76 屈 フランコ
+	crounch80     = 2 ^ 48, -- 頭部無敵 80 屈 クラウザー
+	levitate40    = 2 ^ 49, -- 足元無敵 対アンディ屈C
+	levitate32    = 2 ^ 50, -- 足元無敵 対ギース屈C
+	levitate24    = 2 ^ 51, -- 足元無敵 対だいたいの屈B（キムとボブ以外）
+
+	frame_plus    = 2 ^ 52, -- フレーム有利：Frame advantage
+	frame_minus   = 2 ^ 53, -- フレーム不利：Frame disadvantage, 
 }
-dodge_types.main_high      = dodge_types.main | dodge_types.high
-dodge_types.main_low       = dodge_types.main | dodge_types.low
-dodge_types.sway_high      = dodge_types.sway | dodge_types.high
-dodge_types.sway_low       = dodge_types.sway | dodge_types.low
-dodge_types.frame_dodges   =  --  フレーム表示に反映する部分無敵
-	--dodge_types.full |
-	--dodge_types.main |
-	--dodge_types.sway |
-	dodge_types.main_high |
-	dodge_types.main_low |
-	dodge_types.sway_high |
-	dodge_types.sway_low |
-	dodge_types.away |
-	dodge_types.waving_blow |
-	dodge_types.laurence_away |
-	dodge_types.levitate40 |
-	dodge_types.levitate32 |
-	dodge_types.levitate24
+frame_attack_types.main_high    = frame_attack_types.main | frame_attack_types.high
+frame_attack_types.main_low     = frame_attack_types.main | frame_attack_types.low
+frame_attack_types.sway_high    = frame_attack_types.sway | frame_attack_types.high
+frame_attack_types.sway_low     = frame_attack_types.sway | frame_attack_types.low
+frame_attack_types.frame_dodges =   --  フレーム表示に反映する部分無敵
+	--frame_attack_types.full |
+	--frame_attack_types.main |
+	--frame_attack_types.sway |
+	frame_attack_types.main_high |
+	frame_attack_types.main_low |
+	frame_attack_types.sway_high |
+	frame_attack_types.sway_low |
+	frame_attack_types.away |
+	frame_attack_types.waving_blow |
+	frame_attack_types.laurence_away |
+	frame_attack_types.levitate40 |
+	frame_attack_types.levitate32 |
+	frame_attack_types.levitate24
+db.frame_attack_types = frame_attack_types
+
 -- モーションによる部分無敵
 local hurt_dodge_types     = {
 	{ top = nil, bottom = nil, act_type = 0 },
-	{ top = nil, bottom = 24,  act_type = dodge_types.levitate24, },  -- 足元無敵 対だいたいの屈B（キムとボブ以外）
-	{ top = nil, bottom = 32,  act_type = dodge_types.levitate32, },  -- 足元無敵 対ギース屈C
-	{ top = nil, bottom = 40,  act_type = dodge_types.levitate40, },  -- 足元無敵 対アンディ屈C
-	{ top = 80,  bottom = nil, act_type = dodge_types.crounch80, },   -- 頭部無敵 80 屈 クラウザー
-	{ top = 76,  bottom = nil, act_type = dodge_types.crounch76, },   -- 頭部無敵 76 屈 フランコ
-	{ top = 68,  bottom = nil, act_type = dodge_types.crounch68, },   -- 頭部無敵 68 屈 ローレンス
-	{ top = 64,  bottom = nil, act_type = dodge_types.crounch64, },   -- 頭部無敵 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
-	{ top = 60,  bottom = nil, act_type = dodge_types.crounch60, },   -- 頭部無敵 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
-	{ top = 48,  bottom = nil, act_type = dodge_types.laurence_away, }, -- 上半身無敵 48 ローレンス避け
-	{ top = 40,  bottom = nil, act_type = dodge_types.waving_blow, }, -- 上半身無敵 40 ウェービングブロー,龍転身,ダブルローリング
-	{ top = 32,  bottom = nil, act_type = dodge_types.away, },        --上半身無敵 32 避け
+	{ top = nil, bottom = 24,  act_type = frame_attack_types.levitate24, },  -- 足元無敵 対だいたいの屈B（キムとボブ以外）
+	{ top = nil, bottom = 32,  act_type = frame_attack_types.levitate32, },  -- 足元無敵 対ギース屈C
+	{ top = nil, bottom = 40,  act_type = frame_attack_types.levitate40, },  -- 足元無敵 対アンディ屈C
+	{ top = 80,  bottom = nil, act_type = frame_attack_types.crounch80, },   -- 頭部無敵 80 屈 クラウザー
+	{ top = 76,  bottom = nil, act_type = frame_attack_types.crounch76, },   -- 頭部無敵 76 屈 フランコ
+	{ top = 68,  bottom = nil, act_type = frame_attack_types.crounch68, },   -- 頭部無敵 68 屈 ローレンス
+	{ top = 64,  bottom = nil, act_type = frame_attack_types.crounch64, },   -- 頭部無敵 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
+	{ top = 60,  bottom = nil, act_type = frame_attack_types.crounch60, },   -- 頭部無敵 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
+	{ top = 48,  bottom = nil, act_type = frame_attack_types.laurence_away, }, -- 上半身無敵 48 ローレンス避け
+	{ top = 40,  bottom = nil, act_type = frame_attack_types.waving_blow, }, -- 上半身無敵 40 ウェービングブロー,龍転身,ダブルローリング
+	{ top = 32,  bottom = nil, act_type = frame_attack_types.away, },        --上半身無敵 32 避け
 }
 db.get_punish_name         = function(type)
-	if ut.tstb(type, dodge_types.away, true) then
+	if ut.tstb(type, frame_attack_types.away, true) then
 		return "Away"
-	elseif ut.tstb(type, dodge_types.waving_blow, true) then
+	elseif ut.tstb(type, frame_attack_types.waving_blow, true) then
 		return "W.Blow"
-	elseif ut.tstb(type, dodge_types.laurence_away, true) then
+	elseif ut.tstb(type, frame_attack_types.laurence_away, true) then
 		return "Lau.Away"
-	elseif ut.tstb(type, dodge_types.crounch60, true) then
+	elseif ut.tstb(type, frame_attack_types.crounch60, true) then
 		return "c.Andy"
-	elseif ut.tstb(type, dodge_types.crounch64, true) then
+	elseif ut.tstb(type, frame_attack_types.crounch64, true) then
 		return "c.Terry"
-	elseif ut.tstb(type, dodge_types.crounch68, true) then
+	elseif ut.tstb(type, frame_attack_types.crounch68, true) then
 		return "c.Laurence"
-	elseif ut.tstb(type, dodge_types.crounch76, true) then
+	elseif ut.tstb(type, frame_attack_types.crounch76, true) then
 		return "c.Franco"
-	elseif ut.tstb(type, dodge_types.crounch80, true) then
+	elseif ut.tstb(type, frame_attack_types.crounch80, true) then
 		return "c.Krauser"
 	end
 	return ""
 end
 db.get_low_dodge_name = function(type)
-	if ut.tstb(type, dodge_types.levitate40, true) then
+	if ut.tstb(type, frame_attack_types.levitate40, true) then
 		return"c.Andy-C"
-	elseif ut.tstb(type, dodge_types.levitate32, true) then
+	elseif ut.tstb(type, frame_attack_types.levitate32, true) then
 		return "c.Geese-C"
-	elseif ut.tstb(type, dodge_types.levitate24, true) then
+	elseif ut.tstb(type, frame_attack_types.levitate24, true) then
 		return "c.B"
 	end
 	return ""
 end
 db.get_dodge_name          = function(type)
-	if ut.tstb(type, dodge_types.main_high, true) then return "Sway High" end               -- 食らい(対ライン上攻撃) 対メイン上段無敵
-	if ut.tstb(type, dodge_types.main_low, true) then return "Sway Low" end                 -- 食らい(対ライン下攻撃) 対メイン下段無敵
-	if ut.tstb(type, dodge_types.sway_high, true) then return "High" end                    -- 食らい1(スウェー中) 対スウェー上段無敵
-	if ut.tstb(type, dodge_types.sway_low, true) then return "Low" end                      -- 食らい2(スウェー中) 対スウェー下段無敵
-	if ut.tstb(type, dodge_types.main, true) then return "Main" end                         -- メイン無敵
-	if ut.tstb(type, dodge_types.full, true) then return "Full" end                         -- 全身無敵
+	if ut.tstb(type, frame_attack_types.main_high, true) then return "Sway High" end               -- 食らい(対ライン上攻撃) 対メイン上段無敵
+	if ut.tstb(type, frame_attack_types.main_low, true) then return "Sway Low" end                 -- 食らい(対ライン下攻撃) 対メイン下段無敵
+	if ut.tstb(type, frame_attack_types.sway_high, true) then return "High" end                    -- 食らい1(スウェー中) 対スウェー上段無敵
+	if ut.tstb(type, frame_attack_types.sway_low, true) then return "Low" end                      -- 食らい2(スウェー中) 対スウェー下段無敵
+	if ut.tstb(type, frame_attack_types.main, true) then return "Main" end                         -- メイン無敵
+	if ut.tstb(type, frame_attack_types.full, true) then return "Full" end                         -- 全身無敵
 	return string.format("%-10s/%-10s", db.get_punish_name(type), db.get_low_dodge_name(type)) -- 部分無敵
 end
 db.hurt_dodge_types        = hurt_dodge_types
-db.dodge_types             = dodge_types
 db.top_types               = top_types
 db.top_sway_types          = top_sway_types
 db.top_type_name           = function(type)

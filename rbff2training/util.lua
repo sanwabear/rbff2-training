@@ -354,6 +354,18 @@ ut.get_polygon = function(x, y, sides, rad_odd, rad_even, rotation)
 	end
 	return ret
 end
+--[[
+	local py, sides, rad = 200, 8, (360 / 8) * 1.5
+	for _, px in ipairs({50, 245}) do
+		for ni = 9, 10.2, 0.3 do
+			local poly, p1, p2 = ut.get_polygon(px, py, sides, ni, ni + 1.3, rad)
+			for i = 1, #poly - 1 do
+				p1, p2 = poly[i], poly[i + 1]
+				scr:draw_line(p1.x, p1.y, p2.x, p2.y, 0xDDCCCCCC)
+			end
+		end
+	end
+]]
 
 print("util loaded")
 return ut

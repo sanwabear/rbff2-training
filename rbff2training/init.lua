@@ -90,14 +90,7 @@ local hit_effect_menus     = {}
 local hit_system_stops     = {}
 
 -- 判定種類
-local frame_hurt_types     = {
-	invincible = 2 ^ 0,
-	gnd_hitstun = 2 ^ 1,
-	otg = 2 ^ 2,
-	juggle = 2 ^ 3,
-	wakeup = 2 ^ 4,
-	op_normal = 2 ^ 8,
-}
+local frame_attack_types        = db.frame_attack_types
 -- ヒット処理の飛び先 家庭用版 0x13120 からのデータテーブル 5種類
 local possible_types       = {
 	none      = 0,  -- 常に判定しない
@@ -130,14 +123,14 @@ local get_dodge         = function(p, box, top, bottom)
 		elseif type == db.box_types.down_otg then -- 食らい(ダウン追撃のみ可)
 		elseif type == db.box_types.launch then  -- 食らい(空中追撃のみ可)
 		elseif type == db.box_types.hurt3 then   -- 食らい(対ライン上攻撃) 対メイン上段無敵
-			dodge = dodge | (p.sway_status == 0 and db.dodge_types.main_high or 0)
+			dodge = dodge | (p.sway_status == 0 and frame_attack_types.main_high or 0)
 		elseif type == db.box_types.hurt4 then   -- 食らい(対ライン下攻撃) 対メイン下段無敵
-			dodge = dodge | (p.sway_status == 0 and db.dodge_types.main_low or 0)
+			dodge = dodge | (p.sway_status == 0 and frame_attack_types.main_low or 0)
 		end
 	elseif type == db.box_types.sway_hurt1 or type == db.box_types.sway_hurt2 then
-		dodge = dodge | db.dodge_types.main              -- 食らい(スウェー中) メイン無敵
-		dodge = dodge | (box.real_top <= 32 and db.dodge_types.sway_high or 0) -- 上半身無敵
-		dodge = dodge | (box.real_bottom <= 60 and db.dodge_types.sway_low or 0) -- 下半身無敵
+		dodge = dodge | frame_attack_types.main              -- 食らい(スウェー中) メイン無敵
+		dodge = dodge | (box.real_top <= 32 and frame_attack_types.sway_high or 0) -- 上半身無敵
+		dodge = dodge | (box.real_bottom <= 60 and frame_attack_types.sway_low or 0) -- 下半身無敵
 	end
 	return dodge
 end
@@ -163,24 +156,6 @@ local hitbox_possibles     = {
 	nullify         = function(id) -- : 012F9A: 弾消し
 		return (0x20 <= id) and possible_types.same_line or possible_types.none
 	end,
-}
-local frame_attack_types = {
-	fb = 2 ^ 0,     -- 0x 1 0000 0001 弾
-	attacking = 2 ^ 1, -- 0x 2 0000 0010 攻撃動作中
-	juggle = 2 ^ 2, -- 0x 4 0000 0100 空中追撃可能
-	fake = 2 ^ 3,   -- 0x 8 0000 1000 攻撃能力なし(判定初期から)
-	obsolute = 2 ^ 4, -- 0x F 0001 0000 攻撃能力なし(動作途中から)
-	fullhit = 2 ^ 5, -- 0x20 0010 0000 全段ヒット状態
-	harmless = 2 ^ 6, -- 0x40 0100 0000 攻撃データIDなし
-
-	attack = 7,     -- attack 7ビット左シフト
-	act = 15,       -- act 15(7+8)ビット左シフト
-
-	act_count = 31, -- act_count 31(7+8+16)ビット左シフト 本体の動作区切り用
-	fb_effect = 31, -- effect 31(7+8+16)ビット左シフト 弾の動作区切り用
-
-	pre_fireball = 2 ^ 32, -- 飛び道具処理中
-	on_fireball = 2 ^ 33, -- 飛び道具判定あり
 }
 local hitbox_grab_bits     = {
 	none          = 0,
@@ -771,41 +746,7 @@ local new_ggkey_set             = function(p1)
 	}
 	return { xoffset = xoffset, yoffset = yoffset, oct_vt = oct_vt, key_xy = key_xy, }
 end
-local ggkey_set                 = {
-	new_ggkey_set(true),
-	new_ggkey_set(false)
-}
-
-local slide_btn                 = { [0] = "-", [1] = "A", [2] = "B", [3] = "C", [4] = "D", [5] = "AB", [6] = "BC", [7] = "CD", }
-local slide_rev                 = { [0] = "N", [1] = "↑", [2] = "↓", [3] = "→", [4] = "↗", [5] = "↘", [6] = "←", [7] = "↖", [8] = "↙", }
--- ダッシュ中の行動アドレス 家庭用0x02B024からの処理
-local get_dash_act_addr         = function(p, pgm)
-	--[[
-	02B024: 43F9 0004 B746           lea     $4b746.l, A1                          ; A1 = 4b746
-	02B02A: 297C 0000 0004 00CC      move.l  #$4, ($cc,A4)                         ; 動作フラグセット 0000 0004 滑り攻撃
-	02B032: 6100 B63A                bsr     $2666e                                ; 方向キーセット D0=方向 100*83=入力 100*82=入力1F前
-	02B036: 7200                     moveq   #$0, D1                               ; D1 = 0
-	02B038: 122C 0084                move.b  ($84,A4), D1                          ; D1 = 100*84 クリアリング後のボタン入力
-	02B03C: E748                     lsl.w   #3, D0                                ; 3ビットシフト D0 *= 8
-	02B03E: D041                     add.w   D1, D0                                ; D0 = D0 + D1
-	02B040: 322C 0010                move.w  ($10,A4), D1                          ; D1 = キャラID
-	02B044: D241                     add.w   D1, D1                                ; D1 = D1 + D1
-	02B046: D241                     add.w   D1, D1                                ; D1 = D1 + D1
-	02B048: D3C1                     adda.l  D1, A1                                ; A1 = A1 + D1
-	02B04A: 2051                     movea.l (A1), A0                              ; A0 = A1のデータ
-	02B04C: D1C0                     adda.l  D0, A0                                ; A0 = A0 + D0
-	02B04E: 7200                     moveq   #$0, D1                               ; D1 = 0
-	02B050: 1210                     move.b  (A0), D1                              ; D1 = A0のデータ1バイト
-	02B052: D241                     add.w   D1, D1                                ; D1 = D1 + D1
-	02B054: D241                     add.w   D1, D1                                ; D1 = D1 + D1
-	02B056: 43FA B3EC                lea     (-$4c14,PC) ; ($26444), A1            ; A1 = 26444 ダッシュ攻撃の最終的なテーブル
-	02B05A: D3C1                     adda.l  D1, A1                                ; A1 = A1 + D1
-	02B05C: 2051                     movea.l (A1), A0                              ; A0 = A1のデータ
-	02B05E: 4ED0                     jmp     (A0)                                  ; A0へジャンプ
-	]]
-	local d1 = mem.r8(mem.r32(0x04B746 + p.char4) + p.input1 + (0xFFFF & (p.cln_btn * 8)))
-	return mem.r32(0x26444 + 0xFFFF & (d1 * 4))
-end
+local ggkey_set                 = { new_ggkey_set(true), new_ggkey_set(false) }
 
 -- ボタンの色テーブル
 local btn_col                   = { [convert("_A")] = 0xFFCC0000, [convert("_B")] = 0xFFCC8800, [convert("_C")] = 0xFF3333CC, [convert("_D")] = 0xFF336600, }
@@ -818,15 +759,6 @@ local rom_patch_path            = function(filename)
 		return patch
 	else
 		print(patch .. " NOT found")
-	end
-	return base .. 'rbff2/' .. filename
-end
-
-local ram_patch_path            = function(filename)
-	local base = base_path() .. '/patch/ram/'
-	local patch = base .. emu.romname() .. '/' .. filename
-	if ut.is_file(patch) then
-		return patch
 	end
 	return base .. 'rbff2/' .. filename
 end
@@ -2866,12 +2798,13 @@ rbff2.startplugin               = function()
 					scr:draw_box(x1, y, x2, y + height, frame.line, frame.col)
 					if show_count then
 						local count_txt = 300 < frame.count and "LOT" or ("" .. frame.count)
+						local font_col = frame.font_col or 0xFFFFFFFF
 						if frame.count > 5 then
-							draw_text_with_shadow(x2 + 1, txty + y, count_txt)
+							draw_text_with_shadow(x2 + 1, txty + y, count_txt, font_col)
 						elseif 3 > frame.count then
-							draw_text_with_shadow(x2 - 1, txty + y, count_txt)
+							draw_text_with_shadow(x2 - 1, txty + y, count_txt, font_col)
 						else
-							draw_text_with_shadow(x2, txty + y, count_txt)
+							draw_text_with_shadow(x2, txty + y, count_txt, font_col)
 						end
 					end
 				end
@@ -2995,25 +2928,56 @@ rbff2.startplugin               = function()
 	for i = -1, -256, -1 do table.insert(force_y_pos, i) end
 
 	local proc_act_frame = function(p)
-		--ガード移行できない行動は色替えする
-		local col, line = 0xAAF0E68C, 0xDDF0E68C
-		if p.skip_frame then
-			col, line = 0xAA000000, 0xAA000000
-		elseif p.on_bs_established == global.frame_number then
-			col, line = 0xAA0022FF, 0xDD0022FF
-		elseif p.on_bs_clear == global.frame_number then
-			col, line = 0xAA00FF22, 0xDD00FF22
-		elseif p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number then
-			col, line = 0xAA444444, 0xDD444444
-		elseif p.on_bs_check == global.frame_number then
-			col, line = 0xAAFF0022, 0xDDFF0022
-		elseif p.hitbox_types and #p.hitbox_types > 0 then
-			table.sort(p.hitbox_types, function(t1, t2) return t1.sort > t2.sort end) -- ソート
-			if p.hitbox_types[1].sort < 3 and p.repeatable then
-				col, line = 0xAAD2691E, 0xDDD2691E -- やられ判定より連キャン状態を優先表示する
-			else
-				col = p.hitbox_types[1].color
-				col, line = ut.hex_set(col, 0xAA000000), ut.hex_set(col, 0xDD000000)
+		local col, font_col, line, xline, attackbit, dodge, gap = 0xAAF0E68C, 0xFFFFFFFF, 0xDDF0E68C, 0, 0, 0, 0
+		for _, xp in ipairs(p.objects) do
+			if xp.proc_active and xp.hitbox_types and #xp.hitbox_types > 0 then
+				attackbit = attackbit | p.attackbit
+				table.sort(xp.hitbox_types, function(t1, t2) return t1.sort > t2.sort end) -- ソート
+				if xp.hitbox_types[1].sort < 3 and xp.repeatable then
+					col, line = 0xAAD2691E, 0xDDD2691E                         -- やられ判定より連キャン状態を優先表示する
+				else
+					col = xp.hitbox_types[1].color
+					col, line = ut.hex_set(col, 0xAA000000), ut.hex_set(col, 0xDD000000)
+				end
+			end
+			if not xp.is_fireball then
+				-- 本体状態
+				if xp.skip_frame then
+					col, line = 0xAA000000, 0xAA000000
+				elseif xp.on_bs_established == global.frame_number then
+					col, line = 0xAA0022FF, 0xDD0022FF
+				elseif xp.on_bs_clear == global.frame_number then
+					col, line = 0xAA00FF22, 0xDD00FF22
+				elseif xp.in_hitstop == global.frame_number or xp.on_hit_any == global.frame_number then
+					col, line = 0xAA444444, 0xDD444444
+				elseif xp.on_bs_check == global.frame_number then
+					col, line = 0xAAFF0022, 0xDDFF0022
+				end
+
+				-- 無敵
+				if p.skip_frame or p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number or p.jumping then
+					-- 無視
+				elseif ut.tstb(p.hurt.dodge, frame_attack_types.full, true) then
+					xline, dodge = 0xEE00FFFF, frame_attack_types.full  -- 全身無敵
+				elseif ut.tstb(p.hurt.dodge, frame_attack_types.frame_dodges) then
+					xline, dodge = 0xDD00BBDD, dodge & frame_attack_types.frame_dodges -- 部分無敵
+				end
+				attackbit = attackbit | dodge
+
+				-- フレーム差
+				if p.act_normal == p.op.act_normal then
+					if p.act_normal ~= p.op.act_normal then p.old.frame_gap = 0 end
+					p.frame_gap, gap = 0, 0
+				elseif p.act_normal then
+					if not p.old.act_normal then p.frame_gap = 0 end
+					p.frame_gap, p.old.frame_gap, gap = p.frame_gap + 1, p.frame_gap, frame_attack_types.frame_plus
+					font_col = 0xFF00FFFF
+				else
+					if not p.op.old.act_normal then p.frame_gap = 0 end
+					p.frame_gap, p.old.frame_gap, gap = p.frame_gap - 1, p.frame_gap, frame_attack_types.frame_minus
+					font_col = 0xFFFF0000
+				end
+				attackbit = attackbit | gap
 			end
 		end
 
@@ -3023,27 +2987,27 @@ rbff2.startplugin               = function()
 		elseif p.disp_frm == 4 then
 		elseif p.disp_frm == 5 then
 		end
+		attackbit      = attackbit & attackbit_mask
 
-		local frame = p.act_frames[#p.act_frames]
-		local prev  = frame and frame.name
+		local frame    = p.act_frames[#p.act_frames]
+		local prev     = frame and frame.name
 		local act_data = p.body.act_data
-		local name  = (frame and act_data.name_set and act_data.name_set[prev]) and prev or act_data.name
+		local name     = (frame and act_data.name_set and act_data.name_set[prev]) and prev or act_data.name
 
-		if frame == nil or frame.col ~= col or p.on_fireball ~= 0 or p.on_prefb ~= 0 or
-			frame.attackbit ~= (p.attackbit & attackbit_mask) then
+		if not frame or frame.col ~= col or p.on_fireball ~= 0 or p.on_prefb ~= 0 or frame.attackbit ~= attackbit then
 			--行動IDの更新があった場合にフレーム情報追加
 			table.insert(p.act_frames, {
 				act         = p.act,
 				count       = 1,
 				col         = col,
 				name        = name,
-				line        = line,
+				line        = xline > 0 and xline or line,
 				on_fireball = p.on_fireball or 0,
 				on_prefb    = p.on_prefb or 0,
 				on_air      = p.on_air,
 				on_ground   = p.on_ground,
 				act_1st     = p.act_1st,
-				attackbit   = (p.attackbit & attackbit_mask),
+				attackbit   = attackbit,
 				fireballs   = {},
 				frm_gap     = {},
 				muteki      = {},
@@ -3056,37 +3020,27 @@ rbff2.startplugin               = function()
 		local upd_group = update_frame_groups(frame, p.frame_groups) -- フレームデータをグループ化
 		-- 表示可能範囲（最大で横画面幅）以上は加算しない
 		p.act_frames_total = not p.act_frames_total and 0 or (332 < p.act_frames_total) and 332 or (p.act_frames_total + 1)
-		return frame, upd_group
-	end
 
-	local proc_dodge_frame = function(p, update)
-		local last_frame, dodge = p.act_frames[#p.act_frames], p.hurt and p.hurt.dodge or 0
-		local col, line, key = 0, 0xEE444444, 0
-		if p.skip_frame or p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number or p.jumping then
-			-- 無視
-		elseif ut.tstb(dodge, db.dodge_types.full, true) then
-			col, line, key = 0xAAB0E0FF, 0xDDB0E0FF, db.dodge_types.full -- 全身無敵
-		elseif ut.tstb(dodge, db.dodge_types.frame_dodges) then
-			col, line, key = 0xAAB0C0EE, 0xDDB0C0EE, dodge & db.dodge_types.frame_dodges -- 部分無敵
-		end
-
-		local frame = p.muteki.act_frames[#p.muteki.act_frames]
-		if not frame or update or p.act_1st or frame.key ~= key then
-			frame = ut.table_add(p.muteki.act_frames, {
+		local last_frame = frame
+		frame = p.frm_gap.act_frames[#p.frm_gap.act_frames]
+		if not frame or upd_group or p.act_1st or frame.key ~= gap then
+			frame = ut.table_add(p.frm_gap.act_frames, {
 				act = p.act,
 				count = 1,
-				col = col,
+				font_col = font_col,
+				col = 0,
 				name = last_frame.name,
-				line = line,
+				line = 0x66FFFFFFFF & font_col,
 				act_1st = p.act_1st,
-				key = key,
-			}, 180)
+				key = gap,
+			},  180 )
 		else
 			frame.count = frame.count + 1
 		end
-		local upd_group = update_frame_groups(frame, p.muteki.frame_groups or {})
-		if upd_group and last_frame then ut.table_add(last_frame.muteki, p.muteki.frame_groups[#p.muteki.frame_groups], 180) end
-		return frame
+		local upd_group = update_frame_groups(frame, p.frm_gap.frame_groups or {})
+		if upd_group and last_frame then ut.table_add(last_frame.frm_gap, p.frm_gap.frame_groups[#p.frm_gap.frame_groups], 180) end
+
+		return last_frame, upd_group
 	end
 
 	local proc_frame_gap = function(p, update)
@@ -3122,78 +3076,6 @@ rbff2.startplugin               = function()
 		local upd_group = update_frame_groups(frame, p.frm_gap.frame_groups or {})
 		if upd_group and last_frame then ut.table_add(last_frame.frm_gap, p.frm_gap.frame_groups[#p.frm_gap.frame_groups], 180) end
 		return frame
-	end
-
-	local proc_fb_frame = function(body)
-		local last_frame = body.act_frames[#body.act_frames]
-		local fb_upd_groups = {}
-
-		-- 飛び道具2
-		for fb_base, p in pairs(body.fireballs) do
-			if p.proc_active then
-				local col, line, act = 0, 0, 0
-				if p.skip_frame then
-					col, line = 0xFF000000, 0xFF000000
-				elseif p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number then
-					col, line = 0xAA444444, 0xDD444444
-				elseif p.hitbox_types and #p.hitbox_types > 0 then
-					-- 判定タイプをソートする
-					table.sort(p.hitbox_types, function(t1, t2) return t1.sort > t2.sort end)
-					if p.hitbox_types[1].sort < 3 and p.repeatable then
-						-- やられ判定より連キャン状態を優先表示する
-						col, line = 0xAAD2691E, 0xDDD2691E
-					else
-						col = p.hitbox_types[1].color
-						col, line = ut.hex_set(col, 0xAA000000), ut.hex_set(col, 0xDD000000)
-					end
-				end
-
-				-- 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
-				local masked_attackbit = p.attackbit
-				if p.disp_frm == 3 then
-					masked_attackbit = masked_attackbit
-				elseif p.disp_frm == 4 then
-					masked_attackbit = masked_attackbit
-				elseif p.disp_frm == 5 then
-					masked_attackbit = masked_attackbit
-				end
-
-				local frame = p.act_frames[#p.act_frames]
-				local name  = frame and frame.name or p.body.act_data.name
-
-				if frame == nil or frame.attackbit ~= masked_attackbit then
-					-- 軽量化のため攻撃の有無だけで記録を残す
-					frame = {
-						act       = act,
-						count     = 1,
-						col       = col,
-						name      = name,
-						line      = line,
-						-- act_1st    = reset,
-
-						attackbit = masked_attackbit,
-					}
-					-- 関数の使いまわすためact_framesは配列にするが明細を表示ないので1個しかもたなくていい
-					p.act_frames[1] = frame
-				else
-					-- 同一行動IDが継続している場合はフレーム値加算
-					frame.count = frame.count + 1
-				end
-				-- 技名でグループ化したフレームデータの配列をマージ生成する
-				fb_upd_groups[fb_base] = update_frame_groups(frame, p.frame_groups or {})
-			end
-		end
-
-		-- メインフレーム表示からの描画開始位置を記憶させる
-		for fb_base, fb_upd_group in pairs(fb_upd_groups) do
-			if fb_upd_group and last_frame then
-				last_frame.fireball = last_frame.fireball or {}
-				last_frame.fireball[fb_base] = last_frame.fireball[fb_upd_group] or {}
-				local last_fb_frame = last_frame.fireball[fb_base]
-				ut.table_add(last_fb_frame, body.fireballs[fb_base].frame_groups[# body.fireballs[fb_base].frame_groups], 180)
-				last_fb_frame[#last_fb_frame].body_count = last_frame.last_total
-			end
-		end
 	end
 
 	local input_rvs = function(rvs_type, p, logtxt)
@@ -3505,7 +3387,7 @@ rbff2.startplugin               = function()
 			p.vulnerable = (p.invincible and p.invincible > 0) or p.hurt_invincible or p.on_vulnerable ~= global.frame_number
 			p.grabbable = p.grabbable | (p.grabbable1 and p.grabbable2 and hitbox_grab_bits.baigaeshi or 0)
 			p.hitboxies, p.hitbox_types, p.hurt = {}, {}, {} -- 座標補正後データ格納のためバッファのクリア
-			p.hurt = { max_top = -0xFFFF, min_bottom = 0xFFFF, dodge = p.vulnerable and db.dodge_types.full or 0, }
+			p.hurt = { max_top = -0xFFFF, min_bottom = 0xFFFF, dodge = p.vulnerable and frame_attack_types.full or 0, }
 
 			-- 当たりとやられ判定判定
 			for _, _, box in ifind_all(p.boxies, function(box)
@@ -3691,11 +3573,7 @@ rbff2.startplugin               = function()
 
 			-- 全キャラ特別な動作でない場合はフレーム記録しない
 			if global.disp_normal_frms == 1 or (global.disp_normal_frms == 2 and global.all_act_normal == false) then
-				if not p.is_fireball then
-					local _, changed = proc_act_frame(p) -- 本体
-					proc_dodge_frame(p, changed) -- 無敵
-					proc_frame_gap(p, changed) -- フレーム差
-				end
+				if not p.is_fireball then proc_act_frame(p) end
 			end
 		end
 		fix_max_framecount() --1Pと2Pともにフレーム数が多すぎる場合は加算をやめる
