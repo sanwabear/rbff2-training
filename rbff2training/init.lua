@@ -2791,13 +2791,13 @@ rbff2.startplugin               = function()
 					if prefb < 0 then deco1 = "◇" end
 					if fb > 0 then deco1 = "●" end
 					if prefb > 0 then deco1 = "◆" end
-					if air then deco2 = "▲" end
-					if gnd then deco2 = "▼" end
+					if air then deco2 = "▴" end
+					if gnd then deco2 = "▾" end
 					if deco1 then scr:draw_text(evx - get_string_width(deco1) * 0.5, txty + y - 6, deco1) end
-					if deco2 then scr:draw_text(evx - get_string_width(deco2) * 0.5, txty + y - 6, deco2) end
+					if deco2 then scr:draw_text(evx - get_string_width(deco2) * 0.5, txty + y - 4.5, deco2) end
 					scr:draw_box(x1, y, x2, y + height, frame.line, frame.col)
 					if frame.xline and frame.xline > 0 then
-						for i = 0, height - 1, 2 do scr:draw_box(x1, y + i, x2, y + i + 0.5, 0, frame.xline) end
+						for i = 0.5, height, 1 do scr:draw_box(x1, y + i, x2, math.min(y + height, y + i + 0.5), 0, frame.xline) end
 					end
 					if show_count then
 						local count_txt = 300 < frame.count and "LOT" or ("" .. frame.count)
@@ -2817,10 +2817,10 @@ rbff2.startplugin               = function()
 		end
 		return overflow
 	end
-	local draw_frames = function(frames2, xmax, show_name, show_count, x, y, height, span, disp_fbfrm)
+	local draw_frames = function(frames2, xmax, show_name, show_count, x, y, height, span)
 		if frames2 == nil or #frames2 == 0 then return end
 		span = span or height
-		local txty = math.max(-2, height - 8)
+		local txty = math.max(-2, height - get_line_height())
 
 		-- 縦に描画
 		local x1 = xmax
@@ -2829,25 +2829,10 @@ rbff2.startplugin               = function()
 		end
 		for j = #frames2 - math.min(#frames2 - 1, 6), #frames2 do
 			local frame_group = frames2[j]
-			local overflow = dodraw(x1, y + span, frame_group, true, height, x, xmax, show_name, show_count, x, scr, txty)
-
+			dodraw(x1, y + span, frame_group, true, height, x, xmax, show_name, show_count, x, scr, txty)
 			for _, frame in ipairs(frame_group) do
-				if frame.fireball and disp_fbfrm == true then
-					for _, fb in pairs(frame.fireball) do
-						for _, sub_group in ipairs(fb) do
-							dodraw(x1, y + 0 + span, sub_group, false, height, x, xmax, show_name, show_count, x + sub_group.body_count - overflow, scr, txty - 1)
-						end
-					end
-				end
-				if frame.frm_gap then
-					for _, sub_group in ipairs(frame.frm_gap) do
-						dodraw(x1, y + 6 + span, sub_group, false, height - 3, x, xmax, show_name, show_count, x, scr, txty - 1)
-					end
-				end
-				if frame.muteki then
-					for _, sub_group in ipairs(frame.muteki) do
-						dodraw(x1, y + 11 + span, sub_group, false, height - 3, x, xmax, show_name, show_count, x, scr, txty - 1)
-					end
+				for _, sub_group in ipairs(frame.frm_gap or {}) do
+					dodraw(x1, y + get_line_height() + span, sub_group, false, height - 1, x, xmax, show_name, show_count, x, scr, txty - 0.5)
 				end
 			end
 			y = y + span
@@ -2974,11 +2959,11 @@ rbff2.startplugin               = function()
 				elseif p.act_normal then
 					if not p.old.act_normal then p.frame_gap = 0 end
 					p.frame_gap, p.old.frame_gap, gap = p.frame_gap + 1, p.frame_gap, frame_attack_types.frame_plus
-					font_col = 0xFF00FFFF
+					font_col = 0xFF0088FF
 				else
 					if not p.op.old.act_normal then p.frame_gap = 0 end
 					p.frame_gap, p.old.frame_gap, gap = p.frame_gap - 1, p.frame_gap, frame_attack_types.frame_minus
-					font_col = 0xFFFF0000
+					font_col = 0xFFFF0088
 				end
 				attackbit = attackbit | gap
 			end
@@ -4132,22 +4117,16 @@ rbff2.startplugin               = function()
 				--行動IDとフレーム数表示
 				if global.disp_frmgap > 1 or p.disp_frm > 1 then
 					if global.disp_frmgap == 2 then
-						for _, xp in ipairs(p.objects) do
-							if not xp.is_fireball then
-								draw_frame_groups(p.frame_groups, p.act_frames_total, 30, p1 and 64 or 72, 8, true)
-							elseif xp.frame_groups ~= nil and p.disp_fbfrm == true then
-								draw_frame_groups(xp.frame_groups, p.act_frames_total, 30, p1 and 64 or 70, 8, true)
-							end
-						end
+						draw_frame_groups(p.frame_groups, p.act_frames_total, 30, p1 and 64 or 70, get_line_height(), true)
 						--draw_frame_groups(p.muteki.frame_groups, p.act_frames_total, 30, p1 and 68 or 76, 3, true)
 						--draw_frame_groups(p.frm_gap.frame_groups, p.act_frames_total, 30, p1 and 65 or 73, 3, true)
 					end
-					draw_frames(p.frame_groups, p1 and 160 or 285, true, true, p1 and 40 or 165, 63, 8, 16, p.disp_fbfrm)
+					draw_frames(p.frame_groups, p1 and 160 or 285, true, true, p1 and 40 or 165, 63, get_line_height(), get_line_height() * 2.2)
 				end
 				--フレーム差と確定反撃の表示
 				if global.disp_frmgap > 1 then
-					draw_text_with_shadow(p1 and 140 or 165, 40, string.format("%4d", p.old.frame_gap),
-						p.old.frame_gap == 0 and 0xFFFFFFFF or p.old.frame_gap > 0 and 0xFF00FFFF or 0xFFFF0000)
+					draw_text_with_shadow(p1 and 140 or 165, 40, string.format("%4s", string.format(p.old.frame_gap > 0 and "+%d" or "%d", p.old.frame_gap)),
+						p.old.frame_gap == 0 and 0xFFFFFFFF or p.old.frame_gap > 0 and 0xFF0088FF or 0xFFFF0088)
 					draw_text_with_shadow(p1 and 112 or 184, 40, "PUNISH", p.on_punish <= global.frame_number and 0xFF808080 or 0xFF00FFFF)
 				end
 			end
