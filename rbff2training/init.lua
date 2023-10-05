@@ -2796,6 +2796,9 @@ rbff2.startplugin               = function()
 					if deco1 then scr:draw_text(evx - get_string_width(deco1) * 0.5, txty + y - 6, deco1) end
 					if deco2 then scr:draw_text(evx - get_string_width(deco2) * 0.5, txty + y - 6, deco2) end
 					scr:draw_box(x1, y, x2, y + height, frame.line, frame.col)
+					if frame.xline and frame.xline > 0 then
+						for i = 0, height - 1, 2 do scr:draw_box(x1, y + i, x2, y + i + 0.5, 0, frame.xline) end
+					end
 					if show_count then
 						local count_txt = 300 < frame.count and "LOT" or ("" .. frame.count)
 						local font_col = frame.font_col or 0xFFFFFFFF
@@ -2958,9 +2961,9 @@ rbff2.startplugin               = function()
 				if p.skip_frame or p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number or p.jumping then
 					-- 無視
 				elseif ut.tstb(p.hurt.dodge, frame_attack_types.full, true) then
-					xline, dodge = 0xEE00FFFF, frame_attack_types.full  -- 全身無敵
+					xline, dodge = 0xFF00FFFF, frame_attack_types.full  -- 全身無敵
 				elseif ut.tstb(p.hurt.dodge, frame_attack_types.frame_dodges) then
-					xline, dodge = 0xDD00BBDD, dodge & frame_attack_types.frame_dodges -- 部分無敵
+					xline, dodge = 0xFF00BBDD, dodge & frame_attack_types.frame_dodges -- 部分無敵
 				end
 				attackbit = attackbit | dodge
 
@@ -2999,9 +3002,10 @@ rbff2.startplugin               = function()
 			table.insert(p.act_frames, {
 				act         = p.act,
 				count       = 1,
-				col         = col,
 				name        = name,
-				line        = xline > 0 and xline or line,
+				col         = col,
+				line        = line,
+				xline       = xline,
 				on_fireball = p.on_fireball or 0,
 				on_prefb    = p.on_prefb or 0,
 				on_air      = p.on_air,
@@ -3028,9 +3032,9 @@ rbff2.startplugin               = function()
 				act = p.act,
 				count = 1,
 				font_col = font_col,
-				col = 0,
 				name = last_frame.name,
-				line = 0x66FFFFFFFF & font_col,
+				col = 0x22FFFFFF & font_col,
+				line = 0xCCFFFFFF & font_col,
 				act_1st = p.act_1st,
 				key = gap,
 			},  180 )
@@ -3041,41 +3045,6 @@ rbff2.startplugin               = function()
 		if upd_group and last_frame then ut.table_add(last_frame.frm_gap, p.frm_gap.frame_groups[#p.frm_gap.frame_groups], 180) end
 
 		return last_frame, upd_group
-	end
-
-	local proc_frame_gap = function(p, update)
-		local last_frame = p.act_frames[#p.act_frames]
-
-		-- フレーム差の更新
-		local col, line, key
-		if p.act_normal == p.op.act_normal then
-			if p.act_normal ~= p.op.act_normal then p.old.frame_gap = 0 end
-			p.frame_gap, col, line, key = 0, 0, 0xEE444444, "="
-		elseif p.act_normal then
-			if not p.old.act_normal then p.frame_gap = 0 end -- 直前が行動中ならリセットする
-			p.frame_gap, p.old.frame_gap, col, line, key = p.frame_gap + 1, p.frame_gap, 0xAA0000FF, 0xDD0000FF, "+"
-		else
-			if not p.op.old.act_normal then p.frame_gap = 0 end -- 直前が行動中ならリセットする
-			p.frame_gap, p.old.frame_gap, col, line, key = p.frame_gap - 1, p.frame_gap, 0xAAFF6347, 0xDDFF6347, "-"
-		end
-
-		local frame = p.frm_gap.act_frames[#p.frm_gap.act_frames]
-		if not frame or update or p.act_1st or frame.key ~= key then
-			frame = ut.table_add(p.frm_gap.act_frames, {
-				act = p.act,
-				count = 1,
-				col = col,
-				name = last_frame.name,
-				line = line,
-				act_1st = p.act_1st,
-				key = key,
-			},  180 )
-		else
-			frame.count = frame.count + 1
-		end
-		local upd_group = update_frame_groups(frame, p.frm_gap.frame_groups or {})
-		if upd_group and last_frame then ut.table_add(last_frame.frm_gap, p.frm_gap.frame_groups[#p.frm_gap.frame_groups], 180) end
-		return frame
 	end
 
 	local input_rvs = function(rvs_type, p, logtxt)
