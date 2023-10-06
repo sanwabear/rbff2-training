@@ -1280,7 +1280,6 @@ local box_with_bit_types        = {
 	{ box_type = db.box_types.fake_fireball,      attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fake },
 	{ box_type = db.box_types.fake_juggle,        attackbit = frame_attack_types.attacking | frame_attack_types.fake | frame_attack_types.juggle },
 	{ box_type = db.box_types.fake_attack,        attackbit = frame_attack_types.attacking | frame_attack_types.fake },
-
 	{ box_type = db.box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fullhit | frame_attack_types.juggle },
 	{ box_type = db.box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.obsolute | frame_attack_types.juggle },
 	{ box_type = db.box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.harmless | frame_attack_types.juggle },
@@ -1298,7 +1297,8 @@ local box_with_bit_types        = {
 	{ box_type = db.box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.harmless },
 	{ box_type = db.box_types.attack,             attackbit = frame_attack_types.attacking },
 }
-local fix_box_type              = function(p, box)
+table.sort(box_with_bit_types, function(t1, t2) return t1.box_type.sort < t2.box_type.sort end) -- ソート
+local fix_box_type       = function(p, box)
 	local type = p.in_sway_line and box.sway_type or box.type
 	if type ~= db.box_types.attack then return type end
 	-- TODO 多段技の状態
@@ -1309,11 +1309,13 @@ local fix_box_type              = function(p, box)
 	if ut.tstb(p.flag_cc, db.flag_cc.grabbing) and p.op.last_damage_scaled ~= 0xFF then
 	end
 	for _, item in ipairs(box_with_bit_types) do
-		if ut.tstb(p.attackbit & 0x7F, item.attackbit, true) then return item.box_type end
+		if ut.tstb(p.attackbit, item.attackbit, true) then
+			--ut.printf("%x %s", p.addr.base, item.box_type.name_en)
+			return item.box_type
+		end
 	end
 	return box_with_bit_types[#box_with_bit_types].box_type
 end
-
 -- 遠近間合い取得
 local load_close_far            = function() 
 	if db.chars[1].close_far then return end
@@ -1500,6 +1502,8 @@ rbff2.startplugin               = function()
 			dummy_gd         = dummy_gd_type.none, -- なし, オート, ブレイクショット, 1ヒットガード, 1ガード, 常時, ランダム, 強制
 			dummy_wakeup     = wakeup_type.none, -- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
 
+			attackbits       = {},
+
 			dummy_bs         = nil,       -- ランダムで選択されたブレイクショット
 			dummy_bs_list    = {},        -- ブレイクショットのコマンドテーブル上の技ID
 			dummy_bs_chr     = 0,         -- ブレイクショットの設定をした時のキャラID
@@ -1672,7 +1676,7 @@ rbff2.startplugin               = function()
 			[0x68] = function(data) p.skip_frame = data ~= 0 end, -- 潜在能力強制停止
 			[0xB6] = function(data)
 				-- 攻撃中のみ変化、判定チェック用2 0のときは何もしていない、 詠酒の間合いチェック用など
-				p.attackbit = ut.hex_set(p.attackbit, frame_attack_types.harmless, data ~= 0)
+				p.attackbits.harmless = data == 0
 				p.attack_data = data
 				if data == 0 then return end
 				if p.attack ~= data then
@@ -1703,7 +1707,7 @@ rbff2.startplugin               = function()
 				end
 				-- ut.printf("attack %x", data)
 				p.attack         = data
-				p.attackbit      = ut.hex_reset(p.attackbit, 0xFFFFFFFF << frame_attack_types.attack, p.attack << frame_attack_types.attack)
+				p.attackbits.attack = data
 				local base_addr  = p.char_data.proc_base
 				-- キャンセル可否家庭用2AD90からの処理の断片
 				local cancelable = ((data < 0x70) and mem.r8(data + base_addr.cancelable) or p.cancelable_data) & 0xD0 == 0xD0
@@ -1900,24 +1904,21 @@ rbff2.startplugin               = function()
 				is_fireball = true,
 				body        = body,
 				bases       = ut.new_filled_table(16, { count = 0, addr = 0x0, act_data = nil, name = "", pos1 = 0, pos2 = 0, xmov = 0, }),
+				attackbits  = {},
 				addr        = {
 					base = base, -- キャラ状態とかのベースのアドレス
 				}
 			}
 			p.wp8 = {
 				[0xB5] = function(data) p.fireball_rank = data end,
-				[0xE7] = function(data)
-					p.attackbit = ut.hex_set(p.attackbit, frame_attack_types.fullhit, data == 0)
-				end,
+				[0xE7] = function(data) p.attackbits.fullhit = data ~= 0 end,
 				[0x8A] = function(data) p.grabbable1 = 0x2 >= data end,
 				[0xA3] = function(data) p.shooting = data == 0 end, -- 攻撃中に値が入る ガード判断用
 			}
 			p.wp16 = {
 				[0x64] = function(data) p.actb = data end,
 				[0xBE] = function(data)
-					if data == 0 or not p.proc_active then
-						return
-					end
+					if data == 0 or not p.proc_active then return end
 					if p.attack ~= data then
 						p.forced_down   = false
 						p.hitstop       = 0
@@ -1954,7 +1955,7 @@ rbff2.startplugin               = function()
 					if p.proc_active and not proc_active then reset, p.on_prefb = true, now() * -1 end
 					if not p.proc_active and proc_active then reset, p.on_prefb = true, now() end
 					if reset then
-						p.grabbable, p.attack_id, p.attackbit = 0, 0, 0
+						p.grabbable, p.attack_id, p.attackbits = 0, 0, {}
 						p.boxies, p.on_fireball, p.body.act_data = #p.boxies == 0 and p.boxies or {}, -1, nil
 					end
 					p.proc_active = proc_active
@@ -2118,9 +2119,9 @@ rbff2.startplugin               = function()
 					local hits, shifts = p.max_hit_dn or 0, frame_attack_types.act_count
 					if hits > 1 or hits == 0 or (p.char == 0x4 and p.attack == 0x16) then
 						-- 連続ヒットできるものはカウントで区別できるようにする
-						p.attackbit = ut.hex_reset(p.attackbit, 0xFF << shifts, p.act_count << shifts)
+						p.attackbits.act_count = data
 					elseif ut.tstb(p.flag_cc, db.flag_cc.grabbing) and p.op.last_damage_scaled ~= 0xFF then
-						p.attackbit = ut.hex_reset(p.attackbit, 0xFF << shifts, p.op.last_damage_scaled << shifts)
+						p.attackbits.act_count = p.op.last_damage_scaled
 					end
 				end
 			end,
@@ -2128,12 +2129,9 @@ rbff2.startplugin               = function()
 			[0x6A] = function(data)
 				p.repeatable = (data & 0x4) == 0x4                         -- 連打キャンセル判定
 				p.flip_x1 = ((data & 0x80) == 0) and 0 or 1                -- 判定の反転
-				local clear = (data & 0xFB) ~= 0
-				if mem.pc() == fix_addr(0x011DFE) then
-					p.attackbit = ut.hex_set(p.attackbit, frame_attack_types.fake, clear) -- 判定無効化
-				else
-					p.attackbit = ut.hex_set(p.attackbit, frame_attack_types.obsolute, clear) -- 判定有効化
-				end
+				local fake, fake_pc = (data & 0xFB) == 0, mem.pc() == fix_addr(0x011DFE)
+				p.attackbits.fake = fake_pc and fake
+				p.attackbits.obsolute = (not fake_pc) and fake
 			end,
 			[0x6F] = function(data) p.act_frame = data end, -- 動作パターンの残フレーム
 			[0x71] = function(data) p.flip_x2 = (data & 1) end, -- 判定の反転
@@ -2142,8 +2140,10 @@ rbff2.startplugin               = function()
 				--ut.printf("box %x %x %x", p.addr.base, mem.pc(), data)
 				p.boxies, p.grabbable = {}, 0
 				if data <= 0 then return end
-				p.attackbit = ut.hex_reset(p.attackbit, 0x1F, p.attackbit & frame_attack_types.fake)
-				p.attackbit = ut.hex_set(p.attackbit, p.is_fireball and frame_attack_types.fb or 0)
+				p.attackbits.fb = p.is_fireball
+				p.attackbits.attacking = false
+				p.attackbits.juggle = false
+				p.attackbits.fb_effect = 0
 				local a2base = mem.r32(base + 0x7A)
 				for a2 = a2base, a2base + (data - 1) * 5, 5 do -- 家庭用 004A9E からの処理
 					local id = mem.r8(a2)
@@ -2155,11 +2155,13 @@ rbff2.startplugin               = function()
 					if type == db.box_types.attack then
 						possibles = get_hitbox_possibles(p.attack_id)
 						p.effect    = mem.r8(p.attack_id + db.chars[#db.chars].proc_base.effect) -- ヒット効果
-						p.attackbit = ut.hex_set(p.attackbit, frame_attack_types.attacking)
-						p.attackbit = ut.hex_set(p.attackbit, possibles.juggle and frame_attack_types.juggle or 0)
+						p.attackbits.attacking = true
+						p.attackbits.juggle = possibles.juggle and true or false
 						if p.is_fireball then
-							p.attackbit = ut.hex_reset(p.attackbit, 0xFF << frame_attack_types.fb_effect, p.effect << frame_attack_types.fb_effect)
+							p.attackbits.fb_effect = p.effect
 							p.on_fireball = p.on_fireball < 0 and now() or p.on_fireball
+						else
+							p.attackbits.fb_effect = 0
 						end
 						possible = ut.hex_set(ut.hex_set(possibles.normal, possibles.sway_standing), possibles.sway_crouching)
 						blockable = db.act_types.unblockable -- ガード属性 -- 不能
@@ -2192,7 +2194,7 @@ rbff2.startplugin               = function()
 				p.hitstop_remain, p.in_hitstop = data, (data > 0 or (p.hitstop_remain and p.hitstop_remain > 0)) and now() or p.in_hitstop -- 0になるタイミングも含める
 			end,
 			[0xAA] = function(data)
-				p.attackbit = ut.hex_set(p.attackbit, frame_attack_types.fullhit, data == 0) -- 全段攻撃ヒット/ガード
+				p.attackbits.fullhit = data ~= 0
 				if p.is_fireball and data == 0xFF then p.on_fireball = now() * -1 end
 			end,
 			[0xAB] = function(data) p.max_hit_nm = data end,                      -- 同一技行動での最大ヒット数 分子
@@ -2211,7 +2213,7 @@ rbff2.startplugin               = function()
 			[{ addr = 0x5E, filter = 0x011E10 }] = function(data) p.box_addr = mem.rg("A0", 0xFFFFFFFF) - 0x2 end, -- 判定のアドレス
 			[0x60] = function(data)
 				p.act, p.update_act = data, now()                                       -- 行動ID デバッグディップステータス表示のPと同じ
-				p.attackbit = ut.hex_reset(p.attackbit, 0xFFFFFF << frame_attack_types.act, p.act << frame_attack_types.act)
+				p.attackbits.act = data
 				if p.is_fireball then
 					p.act_data = p.body.char_data and p.body.char_data.fireballs[data] or p.act_data
 				elseif p.char_data then
@@ -3278,18 +3280,27 @@ rbff2.startplugin               = function()
 			global.all_act_normal = p.act_normal and global.all_act_normal
 
 			-- 飛び道具の状態読取
-			p.attackbit = ut.hex_clear(p.attackbit, frame_attack_types.pre_fireball | frame_attack_types.post_fireball| frame_attack_types.on_fireball | frame_attack_types.off_fireball)
+			p.attackbits.pre_fireball = false
+			p.attackbits.post_fireball = false
+			p.attackbits.on_fireball = false
+			p.attackbits.off_fireball = false
 			for _, fb in pairs(p.fireballs) do
-				local bit = 0
 				if fb.proc_active then
 					fb.atk_count, fb.skip_frame = fb.atk_count or 0, p.skip_frame -- 親オブジェクトの停止フレームを反映
-					if fb.on_prefb == global.frame_number then bit = frame_attack_types.pre_fireball end
-					if fb.on_fireball == global.frame_number then bit = frame_attack_types.on_fireball end
-					if fb.on_fireball == -global.frame_number then bit = frame_attack_types.off_fireball end
+					if fb.on_prefb == global.frame_number then
+						p.attackbits.pre_fireball = true
+					end
+					if fb.on_fireball == global.frame_number then
+						p.attackbits.on_fireball = true
+					end
+					if fb.on_fireball == -global.frame_number then
+						p.attackbits.off_fireball = true
+					end
 				else
-					if fb.on_prefb == -global.frame_number then bit = frame_attack_types.post_fireball end
+					if fb.on_prefb == -global.frame_number then
+						p.attackbits.post_fireball = true
+					end
 				end
-				p.attackbit = p.attackbit | bit
 			end
 			p.act_1st = p.update_act == global.frame_number and p.act_1st == true
 			p.atk_count = p.act_1st == true and 1 or (p.atk_count + 1)
@@ -3322,6 +3333,15 @@ rbff2.startplugin               = function()
 			p.grabbable = p.grabbable | (p.grabbable1 and p.grabbable2 and hitbox_grab_bits.baigaeshi or 0)
 			p.hitboxies, p.hitbox_types, p.hurt = {}, {}, {} -- 座標補正後データ格納のためバッファのクリア
 			p.hurt = { max_top = -0xFFFF, min_bottom = 0xFFFF, dodge = p.vulnerable and frame_attack_types.full or 0, }
+			p.attackbit = 0
+			for k, v in pairs(p.attackbits) do
+				local type = frame_attack_types[k]
+				if k == "act_count" or k == "fb_effect" or k == "attack" or k == "act" then
+					p.attackbit = p.attackbit | (v << type)
+				elseif v == 1 or v == true then
+					p.attackbit = p.attackbit | type
+				end
+			end
 
 			-- 当たりとやられ判定判定
 			for _, _, box in ifind_all(p.boxies, function(box)
