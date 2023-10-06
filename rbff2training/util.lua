@@ -168,6 +168,11 @@ deepcopy            = function(orig)
 end
 ut.deepcopy         = deepcopy
 
+ut.table_sort = function(tbl, order)
+	table.sort(tbl, order)
+	return tbl
+end
+
 ut.table_add = function(tbl, item, limit)
 	table.insert(tbl, item)
 	if limit then
