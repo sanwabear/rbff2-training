@@ -370,6 +370,7 @@ local global            = {
 	mame_debug_wnd      = false, -- MAMEデバッグウィンドウ表示のときtrue
 	debug_stop          = 0,  -- カウンタ
 	damaged_move        = 1,
+	all_bs              = false,
 	disp_replay         = true, -- レコードリプレイガイド表示
 	save_snapshot       = 1,  -- 技画像保存 1:OFF 2:新規 3:上書き
 }
@@ -1042,13 +1043,15 @@ local load_rom_patch            = function()
 end
 
 -- ヒット効果アドレステーブルの取得
+for i, _ in ipairs(db.hit_effects) do
+	table.insert(hit_effect_menus, string.format("%02d %s", i, table.concat(db.hit_effects[i], " ")))
+end
 local load_hit_effects = function()
-	if #hit_effect_addrs > 0 then return end
+	if #hit_effect_addrs > 1 then return end
 	hit_effect_addrs     = { 0 }
 	hit_effect_menus     = { "OFF" }
 	for i, _ in ipairs(db.hit_effects) do
 		table.insert(hit_effect_addrs, mem.r32(0x579DA + (i - 1) * 4))
-		table.insert(hit_effect_menus, string.format("%2s %s %x", i, table.concat(db.hit_effects[i], " "), hit_effect_addrs[#hit_effect_addrs]))
 	end
 	print("load_hit_effects")
 end
@@ -1965,6 +1968,7 @@ rbff2.startplugin               = function()
 		end
 		for _, p in pairs(all_objects) do -- 初期化
 			p.frame_gap        = 0
+
 			p.act_frames       = {}
 			p.frame_groups     = {}
 			p.act_frames_total = 0
@@ -3493,9 +3497,9 @@ rbff2.startplugin               = function()
 			if not global.all_act_normal and global.old_all_act_normal then
 				p.frame_gap        = 0
 				p.act_frames       = {}
-				p.frame_groups      = {}
+				p.frame_groups     = {}
 				p.act_frames_total = 0
-				p.gap_frames          = { act_frames = {}, frame_groups = {}, }
+				p.gap_frames       = { act_frames = {}, frame_groups = {}, }
 			end
 
 			--[[
@@ -4622,6 +4626,7 @@ rbff2.startplugin               = function()
 		col[7] = g.save_snapshot       -- 技画像保存
 		col[8] = g.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ
 		col[9] = g.damaged_move        -- ヒット効果確認用
+		col[10] = g.all_bs and 2 or 1  -- 全必殺技BS
 	end
 	local init_auto_menu_config    = function()
 		local col = menu.auto.pos.col
@@ -5073,7 +5078,7 @@ rbff2.startplugin               = function()
 			{ "判定発生時にポーズ", { "OFF", "投げ", "攻撃", "変化時", }, },
 			{ "技画像保存", { "OFF", "ON:新規", "ON:上書き", }, },
 			{ "MAMEデバッグウィンドウ", menu.labels.off_on, },
-			{ "ヒット効果確認用", hit_effect_menus },
+			{ "ヒット効果確認用", hit_effect_menus, },
 			{ "全必殺技BS", menu.labels.off_on, }
 		},
 		pos = {
