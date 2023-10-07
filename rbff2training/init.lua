@@ -1860,8 +1860,8 @@ rbff2.startplugin               = function()
 		p.wp16 = {
 			[0x34] = function(data) p.thrust = data end,
 			[0x36] = function(data) p.thrust_frc = ut.int16tofloat(data) end,
-			[0x92] = function(data) p.anyhit_id = data end,
-			[0x9E] = function(data) p.ophit_base = data end, -- ヒットさせた相手側のベースアドレス
+			--[0x92] = function(data) p.anyhit_id = data end,
+			--[0x9E] = function(data) p.ophit = all_objects[data] end, -- ヒットさせた相手側のベースアドレス
 			[0xDA] = function(data) p.inertia = data end,
 			[0xDC] = function(data) p.inertia_frc = ut.int16tofloat(data) end,
 			[0xE6] = function(data) p.on_hit_any = now() + 1 end, -- 0xE6か0xE7 打撃か当身でフラグが立つ
@@ -1968,8 +1968,7 @@ rbff2.startplugin               = function()
 			p.act_frames       = {}
 			p.frame_groups     = {}
 			p.act_frames_total = 0
-			p.muteki           = { act_frames = {}, frame_groups = {}, }
-			p.frm_gap          = { act_frames = {}, frame_groups = {}, }
+			p.gap_frames       = { act_frames = {}, frame_groups = {}, }
 			p.old              = old_copy(p)
 		end
 	end
@@ -2719,16 +2718,8 @@ rbff2.startplugin               = function()
 			local frame1 = p.act_frames[#p.act_frames]
 			if frame1 and frame1.count > 332 then min_count = math.min(min_count, frame1.count) end
 
-			frame1 = p.muteki.act_frames[#p.muteki.act_frames]
+			frame1 = p.gap_frames.act_frames[#p.gap_frames.act_frames]
 			if frame1 and frame1.count > 332 then min_count = math.min(min_count, frame1.count) end
-
-			frame1 = p.frm_gap.act_frames[#p.frm_gap.act_frames]
-			if frame1 and frame1.count > 332 then min_count = math.min(min_count, frame1.count) end
-
-			for _, fb in ipairs(p.fireballs) do
-				local frame1 = fb.act_frames[#fb.act_frames]
-				if frame1 and frame1.count > 332 then min_count = math.min(min_count, frame1.count) end
-			end
 		end
 
 		local fix = min_count - 332
@@ -2736,16 +2727,8 @@ rbff2.startplugin               = function()
 			local frame1 = p.act_frames[#p.act_frames]
 			if frame1 then frame1.count = frame1.count - fix end
 
-			frame1 = p.muteki.act_frames[#p.muteki.act_frames]
+			frame1 = p.gap_frames.act_frames[#p.gap_frames.act_frames]
 			if frame1 then frame1.count = frame1.count - fix end
-
-			frame1 = p.frm_gap.act_frames[#p.frm_gap.act_frames]
-			if frame1 then frame1.count = frame1.count - fix end
-
-			for _, fb in ipairs(p.fireballs) do
-				local frame1 = fb.act_frames[#fb.act_frames]
-				if frame1 then frame1.count = frame1.count - fix end
-			end
 		end
 	end
 
@@ -2820,7 +2803,7 @@ rbff2.startplugin               = function()
 		for j = #frame_groups - math.min(#frame_groups - 1, 6), #frame_groups do
 			dodraw(y, 0, frame_groups[j], true, height, x, xmax)
 			for _, frame in ipairs(frame_groups[j]) do
-				for _, sub_group in ipairs(frame.frm_gap or {}) do
+				for _, sub_group in ipairs(frame.gap_frames or {}) do
 					dodraw(y + get_line_height(), -0.5, sub_group, false, height - 1, x, xmax)
 				end
 			end
@@ -2993,7 +2976,7 @@ rbff2.startplugin               = function()
 				act_1st   = p.act_1st,
 				attackbit = attackbit,
 				fireballs = {},
-				frm_gap   = {},
+				gap_frames   = {},
 				muteki    = {},
 			}, 180)
 		elseif frame then
@@ -3004,9 +2987,9 @@ rbff2.startplugin               = function()
 		p.act_frames_total = not p.act_frames_total and 0 or (332 < p.act_frames_total) and 332 or (p.act_frames_total + 1)
 
 		local last_frame = frame
-		frame = p.frm_gap.act_frames[#p.frm_gap.act_frames]
+		frame = p.gap_frames.act_frames[#p.gap_frames.act_frames]
 		if not frame or upd_group or p.act_1st or frame.key ~= gap then
-			frame = ut.table_add(p.frm_gap.act_frames, {
+			frame = ut.table_add(p.gap_frames.act_frames, {
 				act = p.act,
 				count = 1,
 				font_col = font_col,
@@ -3019,8 +3002,8 @@ rbff2.startplugin               = function()
 		else
 			frame.count = frame.count + 1
 		end
-		local upd_group = update_frame_groups(frame, p.frm_gap.frame_groups or {})
-		if upd_group and last_frame then ut.table_add(last_frame.frm_gap, p.frm_gap.frame_groups[#p.frm_gap.frame_groups], 180) end
+		local upd_group = update_frame_groups(frame, p.gap_frames.frame_groups or {})
+		if upd_group and last_frame then ut.table_add(last_frame.gap_frames, p.gap_frames.frame_groups[#p.gap_frames.frame_groups], 180) end
 		return last_frame, upd_group
 	end
 
@@ -3081,22 +3064,22 @@ rbff2.startplugin               = function()
 
 		-- 1Pと2Pの状態読取
 		for i, p in ipairs(players) do
-			local op      = players[3 - i]
-			p.op          = op
-			p.char        = mem.r8(p.addr.char)
-			p.char_data   = db.chars[p.char]
-			p.char4       = 0xFFFF & (p.char << 2)
-			p.char8       = 0xFFFF & (p.char << 3)
-			p.flag_c0     = mem.r32(p.addr.flag_c0)
-			p.flag_c4     = mem.r32(p.addr.flag_c4)
-			p.flag_c8     = mem.r32(p.addr.flag_c8)
-			p.flag_cc     = mem.r32(p.addr.flag_cc)
-			p.change_c0   = p.flag_c0 ~= p.old.flag_c0
-			p.change_c4   = p.flag_c4 ~= p.old.flag_c4
-			p.change_c8   = p.flag_c8 ~= p.old.flag_c8
-			p.sliding     = ut.tstb(p.flag_cc, db.flag_cc._02) -- ダッシュ滑り攻撃
+			local op    = players[3 - i]
+			p.op        = op
+			p.char      = mem.r8(p.addr.char)
+			p.char_data = db.chars[p.char]
+			p.char4     = 0xFFFF & (p.char << 2)
+			p.char8     = 0xFFFF & (p.char << 3)
+			p.flag_c0   = mem.r32(p.addr.flag_c0)
+			p.flag_c4   = mem.r32(p.addr.flag_c4)
+			p.flag_c8   = mem.r32(p.addr.flag_c8)
+			p.flag_cc   = mem.r32(p.addr.flag_cc)
+			p.change_c0 = p.flag_c0 ~= p.old.flag_c0
+			p.change_c4 = p.flag_c4 ~= p.old.flag_c4
+			p.change_c8 = p.flag_c8 ~= p.old.flag_c8
+			p.sliding   = ut.tstb(p.flag_cc, db.flag_cc._02) -- ダッシュ滑り攻撃
 			-- ブレイクショット
-			p.breakshot   = ut.tstb(p.flag_cc, db.flag_cc._21) and (ut.tstb(p.old.flag_cc, db.flag_cc._20) or p.breakshot)
+			p.breakshot = ut.tstb(p.flag_cc, db.flag_cc._21) and (ut.tstb(p.old.flag_cc, db.flag_cc._20) or p.breakshot)
 			-- やられ状態
 			if p.flag_fin or ut.tstb(p.flag_c0, db.flag_c0._16) then
 				-- 最終フレームか着地フレームの場合は前フレームのを踏襲する
@@ -3115,10 +3098,10 @@ rbff2.startplugin               = function()
 				p.pos_miny = p.char_data.min_y
 			end
 			p.last_normal_state = p.normal_state
-			p.normal_state      = p.state == 0 -- 素立ち
+			p.normal_state      = p.state == 0                                                                                 -- 素立ち
 			-- 通常投げ無敵判断 その2(HOME 039FC6から03A000の処理を再現して投げ無敵の値を求める)
 			p.throwable         = p.state == 0 and op.state == 0 and p.throw_timer > 24 and p.sway_status == 0x00 and p.invincible == 0 -- 投げ可能ベース
-			p.n_throwable       = p.throwable and p.tw_muteki2 == 0 -- 通常投げ可能
+			p.n_throwable       = p.throwable and p.tw_muteki2 == 0                                                            -- 通常投げ可能
 			p.thrust            = p.thrust + p.thrust_frc
 			p.inertia           = p.inertia + p.inertia_frc
 			p.inertial          = not p.sliding and p.thrust == 0 and p.inertia > 0 and ut.tstb(p.flag_c0, db.flag_c0._31) -- ダッシュ慣性残し
@@ -3143,13 +3126,6 @@ rbff2.startplugin               = function()
 				p.pos_y_down = p.pos_y_down and (p.pos_y_down + 1) or 1
 			else
 				p.pos_y_down = 0
-			end
-
-			p.ophit = nil
-			if p.ophit_base == 0x100400 or p.ophit_base == 0x100500 then
-				p.ophit = op
-			else
-				p.ophit = op.fireballs[p.ophit_base]
 			end
 
 			-- ライン送らない状態のデータ書き込み
@@ -3521,13 +3497,12 @@ rbff2.startplugin               = function()
 				p.act_frames       = {}
 				p.frame_groups      = {}
 				p.act_frames_total = 0
-				p.muteki           = { act_frames = {}, frame_groups = {}, }
-				p.frm_gap          = { act_frames = {}, frame_groups = {}, }
+				p.gap_frames          = { act_frames = {}, frame_groups = {}, }
 			end
 
 			--[[
 			ut.printf("%X %s %s %s %s %s %s %s", p.addr.base, #p.act_frames, #p.frame_groups, #p.muteki.act_frames, #p.muteki.frame_groups,
-			#p.frm_gap.act_frames, #p.frm_gap.frame_groups)
+			#p.gap_frames.act_frames, #p.gap_frames.frame_groups)
 			]]
 
 			-- 全キャラ特別な動作でない場合はフレーム記録しない
@@ -4128,7 +4103,7 @@ rbff2.startplugin               = function()
 					if global.disp_frmgap == 2 then
 						draw_frame_groups(p.frame_groups, p.act_frames_total, 30, p1 and 64 or 70, get_line_height(), true)
 						--draw_frame_groups(p.muteki.frame_groups, p.act_frames_total, 30, p1 and 68 or 76, 3, true)
-						--draw_frame_groups(p.frm_gap.frame_groups, p.act_frames_total, 30, p1 and 65 or 73, 3, true)
+						--draw_frame_groups(p.gap_frames.frame_groups, p.act_frames_total, 30, p1 and 65 or 73, 3, true)
 					end
 					draw_frames(p.frame_groups, p1 and 160 or 285, p1 and 40 or 165, 63, get_line_height(), 0.2)
 				end
