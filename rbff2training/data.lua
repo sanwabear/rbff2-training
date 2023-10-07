@@ -90,7 +90,7 @@ db.char_names = char_names
 -- キャラの基本データに追加する
 --------------------------------------------------------------------------------------
 
-local act_types            = {
+local act_types                   = {
 	free = 2 ^ 0,
 	attack = 2 ^ 1,
 	low_attack = 2 ^ 2,
@@ -108,12 +108,12 @@ local act_types            = {
 	rec_in_detail = 2 ^ 14, -- フレームデータの作成時に判定を詳細に記録する
 	parallel = 2 ^ 15,   -- 本体と並列動作する弾
 }
-act_types.low_attack       = act_types.attack | act_types.low_attack
-act_types.overhead         = act_types.attack |act_types.overhead
-act_types.unblockable      = act_types.low_attack | act_types.overhead
-db.act_types               = act_types
+act_types.low_attack              = act_types.attack | act_types.low_attack
+act_types.overhead                = act_types.attack |act_types.overhead
+act_types.unblockable             = act_types.low_attack | act_types.overhead
+db.act_types                      = act_types
 
-local block_types          = {
+local block_types                 = {
 	high = 2 ^ 0,   -- 上ガード
 	tung = 2 ^ 1,   -- タンのみ上ガードできる位置
 	high_low = 2 ^ 2, -- 上ガードだけど上ガードできない位置
@@ -122,27 +122,27 @@ local block_types          = {
 	sway = 2 ^ 5,   -- スウェー上でガード
 	sway_pass = 2 ^ 6, -- スウェー無敵
 }
-block_types.high_tung      = block_types.high | block_types.tung
-block_types.sway_high      = block_types.sway | block_types.high      -- スウェー上で上ガード
-block_types.sway_high_tung = block_types.sway | block_types.high_tung -- スウェー上でタンのみ上ガードできる位置
-block_types.sway_high_low  = block_types.sway | block_types.high_low  -- スウェー上で上ガードだけど上ガードできない位置
-block_types.sway_low       = block_types.sway | block_types.low       -- スウェー上で下ガード
-db.block_types             = block_types
+block_types.high_tung             = block_types.high | block_types.tung
+block_types.sway_high             = block_types.sway | block_types.high -- スウェー上で上ガード
+block_types.sway_high_tung        = block_types.sway | block_types.high_tung -- スウェー上でタンのみ上ガードできる位置
+block_types.sway_high_low         = block_types.sway | block_types.high_low -- スウェー上で上ガードだけど上ガードできない位置
+block_types.sway_low              = block_types.sway | block_types.low -- スウェー上で下ガード
+db.block_types                    = block_types
 
 --- メインライン上の下段ガードが必要（中段ガードの範囲外）になる高さ
-local top_types            = {
+local top_types                   = {
 	{ top = 0xFFFF, act_type = act_types.attack },
 	{ top = 48,     act_type = act_types.low_attack }, -- タン以外
 	{ top = 36,     act_type = act_types.low_attack }, -- 全キャラ
 }
 --- スウェーライン上の下段ガードが必要（中段ガードの範囲外）になる高さ
-local top_sway_types       = {
+local top_sway_types              = {
 	{ top = 0xFFFF, act_type = act_types.attack },
 	{ top = 59,     act_type = act_types.low_attack }, -- タン以外
 	{ top = 48,     act_type = act_types.low_attack }, -- 全キャラ
 }
 
-local frame_attack_types        = {
+local frame_attack_types          = {
 	fb            = 2 ^ 0, -- 0x 1 0000 0001 弾
 	attacking     = 2 ^ 1, -- 0x 2 0000 0010 攻撃動作中
 	juggle        = 2 ^ 2, -- 0x 4 0000 0100 空中追撃可能
@@ -189,14 +189,14 @@ frame_attack_types.mask_fireball  =
 	frame_attack_types.post_fireball |
 	frame_attack_types.on_fireball |
 	frame_attack_types.off_fireball
-frame_attack_types.main_high     = frame_attack_types.main | frame_attack_types.high
-frame_attack_types.main_low      = frame_attack_types.main | frame_attack_types.low
-frame_attack_types.sway_high     = frame_attack_types.sway | frame_attack_types.high
-frame_attack_types.sway_low      = frame_attack_types.sway | frame_attack_types.low
-frame_attack_types.frame_dodges  = --  フレーム表示に反映する部分無敵
-	--frame_attack_types.full |
-	--frame_attack_types.main |
-	--frame_attack_types.sway |
+frame_attack_types.main_high      = frame_attack_types.main | frame_attack_types.high
+frame_attack_types.main_low       = frame_attack_types.main | frame_attack_types.low
+frame_attack_types.sway_high      = frame_attack_types.sway | frame_attack_types.high
+frame_attack_types.sway_low       = frame_attack_types.sway | frame_attack_types.low
+frame_attack_types.frame_dodges   = --  フレーム表示に反映する部分無敵
+--frame_attack_types.full |
+--frame_attack_types.main |
+--frame_attack_types.sway |
 	frame_attack_types.main_high |
 	frame_attack_types.main_low |
 	frame_attack_types.sway_high |
@@ -207,24 +207,24 @@ frame_attack_types.frame_dodges  = --  フレーム表示に反映する部分�
 	frame_attack_types.levitate40 |
 	frame_attack_types.levitate32 |
 	frame_attack_types.levitate24
-db.frame_attack_types = frame_attack_types
+db.frame_attack_types             = frame_attack_types
 
 -- モーションによる部分無敵
-local hurt_dodge_types     = {
+local hurt_dodge_types            = {
 	{ top = nil, bottom = nil, act_type = 0 },
-	{ top = nil, bottom = 24,  act_type = frame_attack_types.levitate24, },  -- 足元無敵 対だいたいの屈B（キムとボブ以外）
-	{ top = nil, bottom = 32,  act_type = frame_attack_types.levitate32, },  -- 足元無敵 対ギース屈C
-	{ top = nil, bottom = 40,  act_type = frame_attack_types.levitate40, },  -- 足元無敵 対アンディ屈C
-	{ top = 80,  bottom = nil, act_type = frame_attack_types.crounch80, },   -- 頭部無敵 80 屈 クラウザー
-	{ top = 76,  bottom = nil, act_type = frame_attack_types.crounch76, },   -- 頭部無敵 76 屈 フランコ
-	{ top = 68,  bottom = nil, act_type = frame_attack_types.crounch68, },   -- 頭部無敵 68 屈 ローレンス
-	{ top = 64,  bottom = nil, act_type = frame_attack_types.crounch64, },   -- 頭部無敵 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
-	{ top = 60,  bottom = nil, act_type = frame_attack_types.crounch60, },   -- 頭部無敵 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
+	{ top = nil, bottom = 24,  act_type = frame_attack_types.levitate24, }, -- 足元無敵 対だいたいの屈B（キムとボブ以外）
+	{ top = nil, bottom = 32,  act_type = frame_attack_types.levitate32, }, -- 足元無敵 対ギース屈C
+	{ top = nil, bottom = 40,  act_type = frame_attack_types.levitate40, }, -- 足元無敵 対アンディ屈C
+	{ top = 80,  bottom = nil, act_type = frame_attack_types.crounch80, },  -- 頭部無敵 80 屈 クラウザー
+	{ top = 76,  bottom = nil, act_type = frame_attack_types.crounch76, },  -- 頭部無敵 76 屈 フランコ
+	{ top = 68,  bottom = nil, act_type = frame_attack_types.crounch68, },  -- 頭部無敵 68 屈 ローレンス
+	{ top = 64,  bottom = nil, act_type = frame_attack_types.crounch64, },  -- 頭部無敵 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
+	{ top = 60,  bottom = nil, act_type = frame_attack_types.crounch60, },  -- 頭部無敵 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
 	{ top = 48,  bottom = nil, act_type = frame_attack_types.laurence_away, }, -- 上半身無敵 48 ローレンス避け
 	{ top = 40,  bottom = nil, act_type = frame_attack_types.waving_blow, }, -- 上半身無敵 40 ウェービングブロー,龍転身,ダブルローリング
-	{ top = 32,  bottom = nil, act_type = frame_attack_types.away, },        --上半身無敵 32 避け
+	{ top = 32,  bottom = nil, act_type = frame_attack_types.away, },       --上半身無敵 32 避け
 }
-db.get_punish_name         = function(type)
+db.get_punish_name                = function(type)
 	if ut.tstb(type, frame_attack_types.away, true) then
 		return "Away"
 	elseif ut.tstb(type, frame_attack_types.waving_blow, true) then
@@ -244,9 +244,9 @@ db.get_punish_name         = function(type)
 	end
 	return ""
 end
-db.get_low_dodge_name = function(type)
+db.get_low_dodge_name             = function(type)
 	if ut.tstb(type, frame_attack_types.levitate40, true) then
-		return"c.Andy-C"
+		return "c.Andy-C"
 	elseif ut.tstb(type, frame_attack_types.levitate32, true) then
 		return "c.Geese-C"
 	elseif ut.tstb(type, frame_attack_types.levitate24, true) then
@@ -254,19 +254,19 @@ db.get_low_dodge_name = function(type)
 	end
 	return ""
 end
-db.get_dodge_name          = function(type)
-	if ut.tstb(type, frame_attack_types.main_high, true) then return "Sway High" end               -- 食らい(対ライン上攻撃) 対メイン上段無敵
-	if ut.tstb(type, frame_attack_types.main_low, true) then return "Sway Low" end                 -- 食らい(対ライン下攻撃) 対メイン下段無敵
-	if ut.tstb(type, frame_attack_types.sway_high, true) then return "High" end                    -- 食らい1(スウェー中) 対スウェー上段無敵
-	if ut.tstb(type, frame_attack_types.sway_low, true) then return "Low" end                      -- 食らい2(スウェー中) 対スウェー下段無敵
-	if ut.tstb(type, frame_attack_types.main, true) then return "Main" end                         -- メイン無敵
-	if ut.tstb(type, frame_attack_types.full, true) then return "Full" end                         -- 全身無敵
+db.get_dodge_name                 = function(type)
+	if ut.tstb(type, frame_attack_types.main_high, true) then return "Sway High" end        -- 食らい(対ライン上攻撃) 対メイン上段無敵
+	if ut.tstb(type, frame_attack_types.main_low, true) then return "Sway Low" end          -- 食らい(対ライン下攻撃) 対メイン下段無敵
+	if ut.tstb(type, frame_attack_types.sway_high, true) then return "High" end             -- 食らい1(スウェー中) 対スウェー上段無敵
+	if ut.tstb(type, frame_attack_types.sway_low, true) then return "Low" end               -- 食らい2(スウェー中) 対スウェー下段無敵
+	if ut.tstb(type, frame_attack_types.main, true) then return "Main" end                  -- メイン無敵
+	if ut.tstb(type, frame_attack_types.full, true) then return "Full" end                  -- 全身無敵
 	return string.format("%-10s/%-10s", db.get_punish_name(type), db.get_low_dodge_name(type)) -- 部分無敵
 end
-db.hurt_dodge_types        = hurt_dodge_types
-db.top_types               = top_types
-db.top_sway_types          = top_sway_types
-db.top_type_name           = function(type)
+db.hurt_dodge_types               = hurt_dodge_types
+db.top_types                      = top_types
+db.top_sway_types                 = top_sway_types
+db.top_type_name                  = function(type)
 	if ut.tstb(type, act_types.unblockable, true) then
 		return "Unbl."
 	elseif ut.tstb(type, act_types.overhead, true) then -- 中段
@@ -280,7 +280,7 @@ db.top_type_name           = function(type)
 	end
 end
 -- !!注意!!後隙が配列の後ろに来るように定義すること
-local char_acts_base       = {
+local char_acts_base              = {
 	-- テリー・ボガード
 	{
 		{ names = { "スウェー戻り" }, type = act_types.startup | act_types.any, ids = { 0x36, }, },
@@ -1650,7 +1650,7 @@ local char_acts_base       = {
 		{ names = { "おきあがり" }, type = act_types.wrap | act_types.any, ids = { 0x193, 0x13B, 0x2C7 } },
 	},
 }
-local char_fireball_base   = {
+local char_fireball_base          = {
 	-- テリー・ボガード
 	{
 		{ names = { "パワーウェイブ" }, type = act_types.preserve | act_types.attack | act_types.parallel, ids = { 0x265, 0x266, 0x26A, }, },
@@ -1790,7 +1790,7 @@ local char_fireball_base   = {
 		{ names = { "ダイバージェンス" }, type = act_types.preserve | act_types.attack, ids = { 0x264, }, },
 	},
 }
-local extend_act_names     = function(acts)
+local extend_act_names            = function(acts)
 	for i = 1, #acts.names do acts.names[i] = convert(acts.names[i]) end
 	acts.name_set = ut.table_to_set(acts.names)
 	acts.name = acts.names[1]
@@ -1805,7 +1805,7 @@ local extend_act_names     = function(acts)
 		table.insert(acts.names, "BS " .. name)
 	end
 end
-local register_act_datas   = function(acts, char_act1sts, char_acts)
+local register_act_datas          = function(acts, char_act1sts, char_acts)
 	for i, id in ipairs(acts.ids) do
 		if i == 1 then
 			acts.id_1st = id
@@ -2569,51 +2569,51 @@ local flag_cc                        = {
 	_31 = 0x80000000, -- 投げ
 }
 local flag_d0                        = {
-	_00 = 0x1,                                       --
-	_01 = 0x2,                                       --
-	_02 = 0x4,                                       --
-	_03 = 0x8,                                       -- ギガティック投げられ
-	_04 = 0x10,                                      --
-	_05 = 0x20,                                      -- 追撃投げ中
-	_06 = 0x40,                                      -- ガード中、やられ中
-	_07 = 0x80,                                      -- 攻撃ヒット
+	_00 = 0x1,                                        --
+	_01 = 0x2,                                        --
+	_02 = 0x4,                                        --
+	_03 = 0x8,                                        -- ギガティック投げられ
+	_04 = 0x10,                                       --
+	_05 = 0x20,                                       -- 追撃投げ中
+	_06 = 0x40,                                       -- ガード中、やられ中
+	_07 = 0x80,                                       -- 攻撃ヒット
 }
-flag_cc.hitstun                      = flag_cc._03 | -- 必殺投げやられ
-	flag_cc._08 |                                    -- 投げ派生やられ
-	flag_cc._09 |                                    -- つかみ投げやられ
-	flag_cc._10 |                                    -- 投げられ
-	flag_cc._12 |                                    -- ライン送りやられ
-	flag_cc._13 |                                    -- ダウン
-	flag_cc._14 |                                    -- 空中やられ
-	flag_cc._15 |                                    -- 地上やられ
-	flag_cc._17 |                                    -- 気絶
-	flag_cc._18 |                                    -- 気絶起き上がり
-	flag_cc._23                                      -- 起き上がり
+flag_cc.hitstun                      = flag_cc._03 |  -- 必殺投げやられ
+	flag_cc._08 |                                     -- 投げ派生やられ
+	flag_cc._09 |                                     -- つかみ投げやられ
+	flag_cc._10 |                                     -- 投げられ
+	flag_cc._12 |                                     -- ライン送りやられ
+	flag_cc._13 |                                     -- ダウン
+	flag_cc._14 |                                     -- 空中やられ
+	flag_cc._15 |                                     -- 地上やられ
+	flag_cc._17 |                                     -- 気絶
+	flag_cc._18 |                                     -- 気絶起き上がり
+	flag_cc._23                                       -- 起き上がり
 flag_cc.blocking                     = flag_cc._00  | -- CA
-	flag_cc._01 |                                    -- AかB攻撃
-	flag_cc._02 |                                    -- 滑り
-	flag_cc._03 |                                    -- 必殺投げやられ
-	flag_cc._04 |                                    --
-	flag_cc._05 |                                    -- 空中ガード
-	flag_cc._06 |                                    -- 屈ガード
-	flag_cc._07                                      -- 立ガード
-flag_cc.attacking                    = flag_cc._00 | -- CA
-	flag_cc._01 |                                    -- AかB攻撃
-	flag_cc._20 |                                    -- ブレイクショット
-	flag_cc._21 |                                    -- 必殺技中
-	flag_cc._25 |                                    -- つかみ技
-	flag_cc._27 |                                    -- 投げ追撃
-	flag_cc._30 |                                    -- 空中投げ
-	flag_cc._31                                      -- 投げ
-flag_cc.grabbing                     = flag_cc._25 | -- つかみ技
-	flag_cc._27                                      -- 投げ追撃
-flag_cc.thrown                       = flag_cc._03 | -- 必殺投げやられ
-	flag_cc._08 |                                    -- 投げ派生やられ
-	flag_cc._09 |                                    -- つかみ投げやられ
-	flag_cc._10                                      -- 投げられ
-flag_d0.hurt                         = flag_d0._03 | -- ギガティック投げられ
-	flag_d0._06 |                                    -- ガード中、やられ中
-	flag_d0._07                                      -- 攻撃ヒット
+	flag_cc._01 |                                     -- AかB攻撃
+	flag_cc._02 |                                     -- 滑り
+	flag_cc._03 |                                     -- 必殺投げやられ
+	flag_cc._04 |                                     --
+	flag_cc._05 |                                     -- 空中ガード
+	flag_cc._06 |                                     -- 屈ガード
+	flag_cc._07                                       -- 立ガード
+flag_cc.attacking                    = flag_cc._00 |  -- CA
+	flag_cc._01 |                                     -- AかB攻撃
+	flag_cc._20 |                                     -- ブレイクショット
+	flag_cc._21 |                                     -- 必殺技中
+	flag_cc._25 |                                     -- つかみ技
+	flag_cc._27 |                                     -- 投げ追撃
+	flag_cc._30 |                                     -- 空中投げ
+	flag_cc._31                                       -- 投げ
+flag_cc.grabbing                     = flag_cc._25 |  -- つかみ技
+	flag_cc._27                                       -- 投げ追撃
+flag_cc.thrown                       = flag_cc._03 |  -- 必殺投げやられ
+	flag_cc._08 |                                     -- 投げ派生やられ
+	flag_cc._09 |                                     -- つかみ投げやられ
+	flag_cc._10                                       -- 投げられ
+flag_d0.hurt                         = flag_d0._03 |  -- ギガティック投げられ
+	flag_d0._06 |                                     -- ガード中、やられ中
+	flag_d0._07                                       -- 攻撃ヒット
 db.flag_c0                           = flag_c0
 db.flag_c4                           = flag_c4
 db.flag_c8                           = flag_c8

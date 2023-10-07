@@ -19,22 +19,22 @@
 --LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 --OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 --SOFTWARE.
-local lfs           = require("lfs")
+local lfs        = require("lfs")
 
-local ut            = {}
+local ut         = {}
 
-ut.cur_dir          = lfs.currentdir
+ut.cur_dir       = lfs.currentdir
 
-local is_dir        = function(name)
+local is_dir     = function(name)
 	if type(name) ~= "string" then return false end
 	local cd = lfs.currentdir()
 	local is = lfs.chdir(name) and true or false
 	lfs.chdir(cd)
 	return is
 end
-ut.is_dir           = is_dir
+ut.is_dir        = is_dir
 
-ut.mkdir            = function(path)
+ut.mkdir         = function(path)
 	if is_dir(path) then
 		return true, nil
 	end
@@ -45,7 +45,7 @@ ut.mkdir            = function(path)
 	return r, err
 end
 
-ut.is_file          = function(name)
+ut.is_file       = function(name)
 	if type(name) ~= "string" then return false end
 	local f = io.open(name, "r")
 	if f then
@@ -55,7 +55,7 @@ ut.is_file          = function(name)
 	return false
 end
 
-local tohex         = function(num)
+local tohex      = function(num)
 	local hexstr = '0123456789abcdef'
 	local s = ''
 	while num > 0 do
@@ -66,12 +66,12 @@ local tohex         = function(num)
 	if s == '' then s = '0' end
 	return s
 end
-ut.tohex            = tohex
+ut.tohex         = tohex
 
-ut.tohexnum         = function(num) return tonumber(tohex(num)) end
+ut.tohexnum      = function(num) return tonumber(tohex(num)) end
 
 -- tableで返す
-ut.tobits           = function(num)
+ut.tobits        = function(num)
 	-- returns a table of bits, least significant first.
 	local t, rest = {}, 0 -- will contain the bits
 	while num > 0 do
@@ -82,7 +82,7 @@ ut.tobits           = function(num)
 	return t
 end
 
-local bin_lookup    = {
+local bin_lookup = {
 	[" "] = "0000",
 	["0"] = "0000",
 	["1"] = "0001",
@@ -107,17 +107,17 @@ local bin_lookup    = {
 	["e"] = "1110",
 	["f"] = "1111",
 }
-ut.hextobitstr      = function(hex, delim)
-	local ln, str = hex:len(), ""         -- get length of string
+ut.hextobitstr   = function(hex, delim)
+	local ln, str = hex:len(), "" -- get length of string
 	delim = delim or ""
-	for i = 1, ln do                     -- loop through each hex character
-		local index = hex:sub(i, i)       -- each character in order
-		str = str .. bin_lookup[index]   -- lookup a table
-		str = str .. delim               -- add a space
+	for i = 1, ln do             -- loop through each hex character
+		local index = hex:sub(i, i) -- each character in order
+		str = str .. bin_lookup[index] -- lookup a table
+		str = str .. delim       -- add a space
 	end
 	return str
 end
-ut.tobitstr         = function(value, delim)
+ut.tobitstr      = function(value, delim)
 	local hex = string.format("%X", value) -- convert number to HEX
 	return ut.hextobitstr(hex, delim)
 end
@@ -168,12 +168,12 @@ deepcopy            = function(orig)
 end
 ut.deepcopy         = deepcopy
 
-ut.table_sort = function(tbl, order)
+ut.table_sort       = function(tbl, order)
 	table.sort(tbl, order)
 	return tbl
 end
 
-ut.table_add = function(tbl, item, limit)
+ut.table_add        = function(tbl, item, limit)
 	table.insert(tbl, item)
 	if limit then
 		while limit < #tbl do table.remove(tbl, 1) end -- FIFO
@@ -349,7 +349,7 @@ ut.apply_patch_file = function(pgm, path, force)
 	return ret
 end
 
-ut.get_polygon = function(x, y, sides, rad_odd, rad_even, rotation)
+ut.get_polygon      = function(x, y, sides, rad_odd, rad_even, rotation)
 	local ret, angle = {}, (math.pi * 2) / sides
 	rotation = math.rad(-((rotation or 0) % 360)) + (angle / 2)
 	for i = 0, sides, 1 do
