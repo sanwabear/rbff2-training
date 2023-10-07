@@ -2128,8 +2128,8 @@ rbff2.startplugin               = function()
 			[0x6A] = function(data)
 				p.repeatable = (data & 0x4) == 0x4                         -- 連打キャンセル判定
 				p.flip_x1 = ((data & 0x80) == 0) and 0 or 1                -- 判定の反転
-				local fake, fake2, fake_pc = (data & 0xFB) == 0, ut.tstb(data, 0x8) == false, mem.pc() == fix_addr(0x011DFE)
-				p.attackbits.fake = fake_pc and (fake or fake2)
+				local fake, fake_pc = ((data & 0xFB) == 0 or ut.tstb(data, 0x8) == false), mem.pc() == fix_addr(0x011DFE)
+				p.attackbits.fake = fake_pc and fake
 				p.attackbits.obsolute = (not fake_pc) and fake
 				--if base == 0x100600 then ut.printf("W %s %X %X %X %s %s", now(), mem.pc(), base, data, (fake or fake2), ut.tobitstr(data)) end
 			end,
