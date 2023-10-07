@@ -172,10 +172,12 @@ local frame_attack_types        = {
 	levitate40    = 2 ^ 26, -- 足元無敵 対アンディ屈C
 	levitate32    = 2 ^ 27, -- 足元無敵 対ギース屈C
 	levitate24    = 2 ^ 28, -- 足元無敵 対だいたいの屈B（キムとボブ以外）
-	act_count     = 29,  -- act_count 本体の動作区切り用
-	fb_effect     = 29,  -- effect 弾の動作区切り用
-	attack        = 37,  -- attack
-	act           = 45,  -- act
+	on_air        = 2 ^ 29, -- ジャンプ
+	on_ground     = 2 ^ 30, -- 着地
+	act_count     = 31,  -- act_count 本体の動作区切り用
+	fb_effect     = 31,  -- effect 弾の動作区切り用
+	attack        = 39,  -- attack
+	act           = 47,  -- act
 }
 frame_attack_types.mask_act_count = 0xFF << frame_attack_types.act_count
 frame_attack_types.mask_fb_effect = 0xFF << frame_attack_types.fb_effect

@@ -1656,7 +1656,7 @@ rbff2.startplugin               = function()
 			[0x90] = function(data) p.throw_timer = data end,                                     -- 投げ可能かどうかのフレーム経過
 			[{ addr = 0xA9, filter = { 0x23284, 0x232B0 } }] = function(data) p.on_vulnerable = now() end, -- 判定無敵でない, 判定無敵+無敵タイマーONでない
 			-- [0x92] = function(data) end, -- 弾ヒット?
-			[0xA2] = function(data) p.shooting = data == 0 end,                                   -- 弾発射時に値が入る ガード判断用
+			[0xA2] = function(data) p.firing = data == 0 end,                                   -- 弾発射時に値が入る ガード判断用
 			[0xA3] = function(data)                                                               -- A3:成立した必殺技コマンドID A4:必殺技コマンドの持続残F
 				if data == 0 then
 					p.on_sp_clear = now()
@@ -1912,7 +1912,7 @@ rbff2.startplugin               = function()
 				[0xB5] = function(data) p.fireball_rank = data end,
 				[0xE7] = function(data) p.attackbits.fullhit = data ~= 0 end,
 				[0x8A] = function(data) p.grabbable1 = 0x2 >= data end,
-				[0xA3] = function(data) p.shooting = data == 0 end, -- 攻撃中に値が入る ガード判断用
+				[0xA3] = function(data) p.firing = data == 0 end, -- 攻撃中に値が入る ガード判断用
 			}
 			p.wp16 = {
 				[0x64] = function(data) p.actb = data end,
@@ -2778,7 +2778,7 @@ rbff2.startplugin               = function()
 		end
 		for k = #frame_group, 1, -1 do
 			local frame = frame_group[k]
-			local x2, air, gnd = x1 - frame.count, frame.on_air, frame.on_ground
+			local x2 = x1 - frame.count
 			if x2 + x1 < xmin and not main_frame then
 				break
 			elseif x2 < xmin then
@@ -2791,8 +2791,8 @@ rbff2.startplugin               = function()
 				if ut.tstb(frame.attackbit, frame_attack_types.post_fireball) then deco1 = "◇" end
 				if ut.tstb(frame.attackbit, frame_attack_types.pre_fireball) then deco1 = "◆" end
 				if ut.tstb(frame.attackbit, frame_attack_types.on_fireball) then deco1 = "●" end
-				if air then deco2 = "▴" end
-				if gnd then deco2 = "▾" end
+				if ut.tstb(frame.attackbit, frame_attack_types.on_air) then deco2 = "▴" end
+				if ut.tstb(frame.attackbit, frame_attack_types.on_ground) then deco2 = "▾" end
 				if deco1 then scr:draw_text(evx - get_string_width(deco1) * 0.5, txty + y - 6, deco1) end
 				if deco2 then scr:draw_text(evx - get_string_width(deco2) * 0.5, txty + y - 4.5, deco2) end
 				scr:draw_box(x1, y, x2, y + height, frame.line, frame.col)
@@ -2990,8 +2990,6 @@ rbff2.startplugin               = function()
 				col       = col,
 				line      = line,
 				xline     = xline,
-				on_air    = p.on_air,
-				on_ground = p.on_ground,
 				act_1st   = p.act_1st,
 				attackbit = attackbit,
 				fireballs = {},
@@ -3128,18 +3126,18 @@ rbff2.startplugin               = function()
 			p.diff_pos_total    = p.old.pos_total and p.pos_total - p.old.pos_total or 0
 			p.in_air            = 0 ~= p.pos_y or 0 ~= p.pos_frc_y
 			-- ジャンプの遷移ポイントかどうか
-			if p.old.in_air ~= true and p.in_air == true then
-				p.on_air, p.on_ground = true, false
-			elseif p.old.in_air == true and p.in_air ~= true then
-				p.on_air, p.on_ground = false, true
+			if not p.old.in_air and p.in_air then
+				p.attackbits.on_air, p.attackbits.on_ground = true, false
+			elseif p.old.in_air and not p.in_air then
+				p.attackbits.on_air, p.attackbits.on_ground = false, true
 			else
-				p.on_air, p.on_ground = false, false
+				p.attackbits.on_air, p.attackbits.on_ground = false, false
 			end
 			-- 高さが0になった時点でジャンプ中状態を解除する
-			if p.on_ground then p.jumping = false end
+			if p.attackbits.on_ground then p.jumping = false end
 			-- ジャンプ以降直後に空中になっていればジャンプ中とみなす
 			-- 部分無敵の判断にジャンプ中かどうかを使う
-			p.jumping = ut.tstb(p.old.flag_c0, db.flag_c0._17, true) and p.on_air or p.jumping
+			p.jumping = ut.tstb(p.old.flag_c0, db.flag_c0._17, true) and p.attackbits.on_air or p.jumping
 			p.pos_y_peek = p.in_air and math.max(p.pos_y_peek or 0, p.pos_y) or 0
 			if p.pos_y < p.old.pos_y or (p.pos_y == p.old.pos_y and p.pos_frc_y < p.old.pos_frc_y) then
 				p.pos_y_down = p.pos_y_down and (p.pos_y_down + 1) or 1
@@ -3287,9 +3285,8 @@ rbff2.startplugin               = function()
 			if p.state == 2 or (p.attack_data | p.flag_c4 | p.flag_c8) ~= 0 or
 				ut.tstb(p.flag_cc, 0xFFFFFF3F) or ut.tstb(p.flag_c0, 0x03FFD723) or
 				not ut.tstb(p.act_data.type, db.act_types.free | db.act_types.block) then
-				p.act_normal = false
+				p.act_normal, global.all_act_normal = false, false
 			end
-			global.all_act_normal = p.act_normal and global.all_act_normal
 
 			-- 飛び道具の状態読取
 			p.attackbits.pre_fireball = false
@@ -3298,6 +3295,7 @@ rbff2.startplugin               = function()
 			p.attackbits.off_fireball = false
 			for _, fb in pairs(p.fireballs) do
 				if fb.proc_active then
+					global.all_act_normal = false
 					fb.atk_count, fb.skip_frame = fb.atk_count or 0, p.skip_frame -- 親オブジェクトの停止フレームを反映
 					p.attackbits.pre_fireball = p.attackbits.pre_fireball or fb.on_prefb == global.frame_number
 					p.attackbits.on_fireball = p.attackbits.on_fireball or fb.on_fireball == global.frame_number
@@ -3895,7 +3893,7 @@ rbff2.startplugin               = function()
 
 			-- スクショ保存
 			for _, p in ipairs(players) do
-				local chg_y = p.on_air or p.on_ground
+				local chg_y = p.attackbits.on_air or p.attackbits.on_ground
 				local chg_act = p.old.act_normal ~= p.act_normal
 				local chg_hit = p.chg_hitbox_frm == global.frame_number
 				local chg_hurt = p.chg_hurtbox_frm == global.frame_number
