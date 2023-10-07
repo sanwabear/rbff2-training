@@ -2975,9 +2975,7 @@ rbff2.startplugin               = function()
 				xline     = xline,
 				act_1st   = p.act_1st,
 				attackbit = attackbit,
-				fireballs = {},
 				gap_frames   = {},
-				muteki    = {},
 			}, 180)
 		elseif frame then
 			frame.count = frame.count + 1                      --同一行動IDが継続している場合はフレーム値加算
