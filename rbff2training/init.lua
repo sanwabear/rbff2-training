@@ -1599,6 +1599,11 @@ rbff2.startplugin          = function()
 		}
 		local p    = players[i]
 		p.body     = players[i] -- プレイヤーデータ自身、fireballとの互換用
+		p.update_char = function(data)
+			p.char, p.char4, p.char8 = data, (data << 2), (data << 3)
+			p.char_data = p.is_fireball and db.chars[#db.chars] or db.chars[data] -- 弾はダミーを設定する
+			if not p.is_fireball then p.proc_active = true end
+		end
 		for k = 1, #kprops do p.key_now[kprops[k]], p.key_pre[kprops[k]] = 0, 0 end
 		p.update_tmp_combo = function(data)
 			if data == 1 then    -- 一次的なコンボ数が1リセットしたタイミングでコンボ用の情報もリセットする
@@ -1632,7 +1637,7 @@ rbff2.startplugin          = function()
 			[0x89] = function(data) p.sway_status, p.in_sway_line = data, data ~= 0x00 end, -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
 			[0x8B] = function(data, ret)
 				-- 残体力がゼロだと次の削りガードが失敗するため常に1残すようにもする
-				p.life, p.update_dmg, ret.value = data, now(), math.max(data, 1) -- 体力
+				p.life, p.on_damage, ret.value = data, now(), math.max(data, 1) -- 体力
 			end,
 			[0x8E] = function(data)
 				local changed = p.state ~= data
@@ -1755,7 +1760,7 @@ rbff2.startplugin          = function()
 				p.kaiserwave = p.kaiserwave or {} -- カイザーウェイブのレベルアップ
 				local pc = mem.pc()
 				if (p.kaiserwave[pc] == nil) or p.kaiserwave[pc] + 1 < global.frame_number then
-					p.update_act = now()
+					p.on_update_act = now()
 				end
 				p.kaiserwave[pc] = now()
 			end,
@@ -1880,10 +1885,10 @@ rbff2.startplugin          = function()
 				end
 			end,
 			-- [0x0C] = function(data) p.reserve_proc = data end,               -- 予約中の処理アドレス
-			-- [0xC0] = function(data) p.flag_c0 = data end,                    -- フラグ群
-			-- [0xC4] = function(data) p.flag_c4 = data end,                    -- フラグ群
-			-- [0xC8] = function(data) p.flag_c8 = data end,                    -- フラグ群
-			-- [0xCC] = function(data) p.flag_cc = data end,                    -- フラグ群
+			[0xC0] = function(data) p.flag_c0 = data end,                    -- フラグ群
+			[0xC4] = function(data) p.flag_c4 = data end,                    -- フラグ群
+			[0xC8] = function(data) p.flag_c8 = data end,                    -- フラグ群
+			[0xCC] = function(data) p.flag_cc = data end,                    -- フラグ群
 			[p1 and 0x0394C4 or 0x0394C8] = function(data) p.input_offset = data end, -- コマンド入力状態のオフセットアドレス
 		}
 		all_objects[p.addr.base] = p
@@ -1958,12 +1963,14 @@ rbff2.startplugin          = function()
 			body.fireballs[base], all_objects[base] = p, p
 		end
 		for _, p in pairs(all_objects) do -- 初期化
-			p.frame_gap        = 0
-
-			p.act_frames       = {}
-			p.frame_groups     = {}
-			p.act_frames_total = 0
-			p.gap_frames       = { act_frames = {}, frame_groups = {}, }
+			p.clear_frame_data = function()
+				p.frame_gap        = 0
+				p.act_frames       = {}
+				p.frame_groups     = {}
+				p.act_frames_total = 0
+				p.gap_frames       = { act_frames = {}, frame_groups = {}, }
+			end
+			p.clear_frame_data()
 			p.old              = old_copy(p)
 		end
 	end
@@ -2100,11 +2107,7 @@ rbff2.startplugin          = function()
 		p.within = function(x1, x2) return (x1 <= p.op.x and p.op.x <= x2) or (x1 >= p.op.x and p.op.x >= x2) end
 
 		p.wp8 = ut.hash_add_all(p.wp8, {
-			[0x10] = function(data)
-				p.char, p.char4, p.char8 = data, (data << 2), (data << 3)
-				p.char_data = p.is_fireball and db.chars[#db.chars] or db.chars[data] -- 弾はダミーを設定する
-				if not p.is_fireball then p.proc_active = true end
-			end,
+			[0x10] = p.update_char,
 			[0x58] = function(data) p.block_side = ut.int8(data) < 0 and -1 or 1 end, -- 向き 00:左側 80:右側
 			[0x66] = function(data)
 				p.act_count = data                                           -- 現在の行動のカウンタ
@@ -2218,7 +2221,7 @@ rbff2.startplugin          = function()
 			[0x2A] = function(data) p.pos_frc_y = ut.int16tofloat(data) end,                                                       -- Y座標(小数部)
 			[{ addr = 0x5E, filter = 0x011E10 }] = function(data) p.box_addr = mem.rg("A0", 0xFFFFFFFF) - 0x2 end,                 -- 判定のアドレス
 			[0x60] = function(data)
-				p.act, p.update_act = data, now()                                                                                  -- 行動ID デバッグディップステータス表示のPと同じ
+				p.act, p.on_update_act = data, now()                                                                                  -- 行動ID デバッグディップステータス表示のPと同じ
 				p.attackbits.act = data
 				if p.is_fireball then
 					p.act_data = p.body.char_data and p.body.char_data.fireballs[data] or p.act_data
@@ -2585,7 +2588,7 @@ rbff2.startplugin          = function()
 		-- 繰り返し前の行動が完了するまで待つ
 		local p, op, p_ok = players[3 - recording.player], players[recording.player], true
 		if global.await_neutral == true then
-			p_ok = p.act_normal or (not p.act_normal and p.update_act == global.frame_number and recording.last_act ~= p.act)
+			p_ok = p.act_normal or (not p.act_normal and p.on_update_act == global.frame_number and recording.last_act ~= p.act)
 		end
 		if p_ok then
 			if recording.last_pos_y == 0 or (recording.last_pos_y > 0 and p.pos_y == 0) then
@@ -3053,20 +3056,14 @@ rbff2.startplugin          = function()
 
 		if global.lag_frame == true then return end -- ラグ発生時は処理をしないで戻る
 
+		global.old_all_act_normal, global.all_act_normal = global.all_act_normal, true
 		for _, p in pairs(all_objects) do p.old = old_copy(p) end
 
 		-- 1Pと2Pの状態読取
 		for i, p in ipairs(players) do
 			local op    = players[3 - i]
 			p.op        = op
-			p.char      = mem.r8(p.addr.char)
-			p.char_data = db.chars[p.char]
-			p.char4     = 0xFFFF & (p.char << 2)
-			p.char8     = 0xFFFF & (p.char << 3)
-			p.flag_c0   = mem.r32(p.addr.flag_c0)
-			p.flag_c4   = mem.r32(p.addr.flag_c4)
-			p.flag_c8   = mem.r32(p.addr.flag_c8)
-			p.flag_cc   = mem.r32(p.addr.flag_cc)
+			p.update_char(mem.r8(p.addr.char))
 			p.change_c0 = p.flag_c0 ~= p.old.flag_c0
 			p.change_c4 = p.flag_c4 ~= p.old.flag_c4
 			p.change_c8 = p.flag_c8 ~= p.old.flag_c8
@@ -3125,10 +3122,74 @@ rbff2.startplugin          = function()
 			if p.dis_plain_shift then
 				mem.w8(p.addr.hurt_state, p.hurt_state | 0x40)
 			end
+
+			--フレーム数
+			p.skip_frame   = global.skip_frame1 or global.skip_frame2 or p.skip_frame
+
+			p.old.act_data = p.act_data or { name = "", type = db.act_types.startup | db.act_types.free, }
+			if p.flag_c4 == 0 and p.flag_c8 == 0 then
+				local name = nil
+				--{ names = { "ウェーブライダー" }, type = act_types.preserve | act_types.any, ids = { 0x10C } },
+				if ut.tstb(p.flag_cc, db.flag_cc._18, true) then
+					name = ut.tstb(p.flag_c0, db.flag_c0._30, true) and "ダウン" or "やられ"
+				elseif ut.tstb(p.flag_cc, db.flag_cc._16 | db.flag_cc._17 | db.flag_cc._19 | db.flag_cc._21 | db.flag_cc._22 | db.flag_cc._23 | db.flag_cc._28, true) then
+					name = "やられ"
+				elseif ut.tstb(p.flag_cc, db.flag_cc._24 | db.flag_cc._25 | db.flag_cc._26, true) then
+					name = "ガード"
+				elseif ut.tstb(p.flag_cc, db.flag_cc._13 | db.flag_cc._14, true) then
+					name = "気絶"
+				elseif ut.tstb(p.flag_cc, db.flag_cc._23, true) then
+					name = "起き上がり"
+				else
+					name = db.get_flag_name(p.flag_c0, db.flag_names_c0)
+				end
+				if name then
+					p.act_data_cache = p.act_data_cache or {}
+					p.act_data = p.act_data_cache[name]
+					if not p.act_data then
+						p.act_data = { bs_name = name, name = name, normal_name = name, slide_name = name, type = db.act_types.free | db.act_types.startup, count = 1 }
+						p.act_data_cache[name] = p.act_data
+					end
+				end
+				p.act_1st = p.old.act_data ~= p.act_data
+				p.on_update_act = p.act_1st
+			elseif p.char_data.acts and p.char_data.acts[p.act] then
+				p.act_data = p.char_data.acts[p.act]
+				p.act_1st = ut.tstb(p.act_data.type, db.act_types.startup_if_ca) and ut.tstb(p.flag_cc, db.flag_cc._00) or p.char_data.act1sts[p.act]
+			else
+				p.act_data.name = string.format("%X", p.act)
+			end
+			-- 技動作は滑りかBSかを付与する
+			p.act_data.name = p.sliding and p.act_data.slide_name or p.breakshot and p.act_data.bs_name or p.act_data.normal_name
+			-- ガード移行可否
+			p.act_normal = true
+			if p.state == 2 or (p.attack_data | p.flag_c4 | p.flag_c8) ~= 0 or
+				ut.tstb(p.flag_cc, 0xFFFFFF3F) or ut.tstb(p.flag_c0, 0x03FFD723) or
+				not ut.tstb(p.act_data.type, db.act_types.free | db.act_types.block) then
+				p.act_normal, global.all_act_normal = false, false
+			end
+
+			-- 飛び道具の状態読取
+			p.attackbits.pre_fireball = false
+			p.attackbits.post_fireball = false
+			p.attackbits.on_fireball = false
+			p.attackbits.off_fireball = false
+			for _, fb in pairs(p.fireballs) do
+				if fb.proc_active then
+					global.all_act_normal = false
+					fb.atk_count, fb.skip_frame = fb.atk_count or 0, p.skip_frame -- 親オブジェクトの停止フレームを反映
+					p.attackbits.pre_fireball = p.attackbits.pre_fireball or fb.on_prefb == global.frame_number
+					p.attackbits.on_fireball = p.attackbits.on_fireball or fb.on_fireball == global.frame_number
+					p.attackbits.off_fireball = p.attackbits.off_fireball or fb.on_fireball == -global.frame_number
+				else
+					p.attackbits.post_fireball = p.attackbits.post_fireball or fb.on_prefb == -global.frame_number
+				end
+			end
+			p.act_1st = p.on_update_act == global.frame_number and p.act_1st == true
+			p.atk_count = p.act_1st == true and 1 or (p.atk_count + 1)
 		end
 
 		-- 1Pと2Pの状態読取 入力
-		global.old_all_act_normal, global.all_act_normal = global.all_act_normal, true
 		for _, p in ipairs(players) do
 			p.old.input_states = p.input_states or {}
 			p.input_states     = {}
@@ -3210,71 +3271,6 @@ rbff2.startplugin          = function()
 					max = max,
 				})
 			end
-
-			--フレーム数
-			p.skip_frame   = global.skip_frame1 or global.skip_frame2 or p.skip_frame
-
-			p.old.act_data = p.act_data or { name = "", type = db.act_types.startup | db.act_types.free, }
-			if p.flag_c4 == 0 and p.flag_c8 == 0 then
-				local name = nil
-				--{ names = { "ウェーブライダー" }, type = act_types.preserve | act_types.any, ids = { 0x10C } },
-				if ut.tstb(p.flag_cc, db.flag_cc._18, true) then
-					name = ut.tstb(p.flag_c0, db.flag_c0._30, true) and "ダウン" or "やられ"
-				elseif ut.tstb(p.flag_cc, db.flag_cc._16 | db.flag_cc._17 | db.flag_cc._19 | db.flag_cc._21 | db.flag_cc._22 | db.flag_cc._23 | db.flag_cc._28, true) then
-					name = "やられ"
-				elseif ut.tstb(p.flag_cc, db.flag_cc._24 | db.flag_cc._25 | db.flag_cc._26, true) then
-					name = "ガード"
-				elseif ut.tstb(p.flag_cc, db.flag_cc._13 | db.flag_cc._14, true) then
-					name = "気絶"
-				elseif ut.tstb(p.flag_cc, db.flag_cc._23, true) then
-					name = "起き上がり"
-				else
-					name = db.get_flag_name(p.flag_c0, db.flag_names_c0)
-				end
-				if name then
-					p.act_data_cache = p.act_data_cache or {}
-					p.act_data = p.act_data_cache[name]
-					if not p.act_data then
-						p.act_data = { bs_name = name, name = name, normal_name = name, slide_name = name, type = db.act_types.free | db.act_types.startup, count = 1 }
-						p.act_data_cache[name] = p.act_data
-					end
-				end
-				p.act_1st = p.old.act_data ~= p.act_data
-				p.update_act = p.act_1st
-			elseif p.char_data.acts and p.char_data.acts[p.act] then
-				p.act_data = p.char_data.acts[p.act]
-				p.act_1st = ut.tstb(p.act_data.type, db.act_types.startup_if_ca) and ut.tstb(p.flag_cc, db.flag_cc._00) or p.char_data.act1sts[p.act]
-			else
-				p.act_data.name = string.format("%X", p.act)
-			end
-			-- 技動作は滑りかBSかを付与する
-			p.act_data.name = p.sliding and p.act_data.slide_name or p.breakshot and p.act_data.bs_name or p.act_data.normal_name
-			-- ガード移行可否
-			p.act_normal = true
-			if p.state == 2 or (p.attack_data | p.flag_c4 | p.flag_c8) ~= 0 or
-				ut.tstb(p.flag_cc, 0xFFFFFF3F) or ut.tstb(p.flag_c0, 0x03FFD723) or
-				not ut.tstb(p.act_data.type, db.act_types.free | db.act_types.block) then
-				p.act_normal, global.all_act_normal = false, false
-			end
-
-			-- 飛び道具の状態読取
-			p.attackbits.pre_fireball = false
-			p.attackbits.post_fireball = false
-			p.attackbits.on_fireball = false
-			p.attackbits.off_fireball = false
-			for _, fb in pairs(p.fireballs) do
-				if fb.proc_active then
-					global.all_act_normal = false
-					fb.atk_count, fb.skip_frame = fb.atk_count or 0, p.skip_frame -- 親オブジェクトの停止フレームを反映
-					p.attackbits.pre_fireball = p.attackbits.pre_fireball or fb.on_prefb == global.frame_number
-					p.attackbits.on_fireball = p.attackbits.on_fireball or fb.on_fireball == global.frame_number
-					p.attackbits.off_fireball = p.attackbits.off_fireball or fb.on_fireball == -global.frame_number
-				else
-					p.attackbits.post_fireball = p.attackbits.post_fireball or fb.on_prefb == -global.frame_number
-				end
-			end
-			p.act_1st = p.update_act == global.frame_number and p.act_1st == true
-			p.atk_count = p.act_1st == true and 1 or (p.atk_count + 1)
 		end
 
 		for _, p in pairs(all_objects) do -- 処理アドレス保存
@@ -3485,13 +3481,7 @@ rbff2.startplugin          = function()
 
 		for base, p in pairs(all_objects) do
 			-- キャラ、弾ともに通常動作状態ならリセットする
-			if not global.all_act_normal and global.old_all_act_normal then
-				p.frame_gap        = 0
-				p.act_frames       = {}
-				p.frame_groups     = {}
-				p.act_frames_total = 0
-				p.gap_frames       = { act_frames = {}, frame_groups = {}, }
-			end
+			if not global.all_act_normal and global.old_all_act_normal then p.clear_frame_data() end
 
 			--[[
 			ut.printf("%X %s %s %s %s %s %s %s", p.addr.base, #p.act_frames, #p.frame_groups, #p.muteki.act_frames, #p.muteki.frame_groups,
