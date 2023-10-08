@@ -3115,8 +3115,6 @@ rbff2.startplugin          = function()
 			p.change_c4 = p.flag_c4 ~= p.old.flag_c4
 			p.change_c8 = p.flag_c8 ~= p.old.flag_c8
 			p.sliding   = ut.tstb(p.flag_cc, db.flag_cc._02) -- ダッシュ滑り攻撃
-			-- ブレイクショット
-			p.breakshot = ut.tstb(p.flag_cc, db.flag_cc._21) and (ut.tstb(p.old.flag_cc, db.flag_cc._20) or p.breakshot)
 			-- やられ状態
 			if p.flag_fin or ut.tstb(p.flag_c0, db.flag_c0._16) then
 				-- 最終フレームか着地フレームの場合は前フレームのを踏襲する
@@ -3226,7 +3224,7 @@ rbff2.startplugin          = function()
 				p.act_data.name = string.format("%X", p.act)
 			end
 			-- 技動作は滑りかBSかを付与する
-			p.act_data.name = p.sliding and p.act_data.slide_name or p.breakshot and p.act_data.bs_name or p.act_data.normal_name
+			p.act_data.name = p.sliding and p.act_data.slide_name or p.in_bs and p.act_data.bs_name or p.act_data.normal_name
 			-- ガード移行可否
 			p.act_normal = true
 			if p.state == 2 or (p.attack_data | p.flag_c4 | p.flag_c8) ~= 0 or
@@ -3941,7 +3939,7 @@ rbff2.startplugin          = function()
 					ut.mkdir(dir_name)
 					dir_name = dir_name .. "/" .. p.char_data.names2
 					ut.mkdir(dir_name)
-					if p.sliding then sub_name = "_SLIDE_" elseif p.breakshot then sub_name = "_BS_" end
+					if p.sliding then sub_name = "_SLIDE_" elseif p.in_bs then sub_name = "_BS_" end
 					name = string.format("%s%s%04x_%s_%03d", p.char_data.names2, sub_name, p.act_data.id_1st or 0, name, p.atk_count)
 					dir_name = dir_name .. string.format("/%04x", p.act_data.id_1st or 0)
 					ut.mkdir(dir_name)
