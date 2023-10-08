@@ -1680,29 +1680,9 @@ rbff2.startplugin          = function()
 				p.attack_data = data
 				if data == 0 then return end
 				if p.attack ~= data then
-					p.cancelable      = false
-					p.cancelable_data = 0
-					p.repeatable      = false
-					p.forced_down     = false
-					p.hitstop         = 0
-					p.blockstop       = 0
-					p.damage          = 0
-					p.stun            = 0
-					p.stun_timer      = 0
-					p.max_hit_dn      = 0
-					p.esaka_range     = 0
-					p.pow_up_hit      = 0
-					p.pow_up_gd       = 0
-					p.effect          = 0
-					p.chip            = 0
-					p.hitstun         = 0
-					p.blockstun       = 0
-					p.pow_revenge     = 0
-					p.pow_absorb      = 0
-					p.pow_up_hit      = 0
-					p.pow_revenge     = 0
-					p.pow_up          = 0x58 > data and 0 or p.pow_up
-					p.pow_up_direct   = 0x58 > data and 0 or p.pow_up_direct
+					p.clear_damages()
+					p.pow_up        = 0x58 > data and 0 or p.pow_up
+					p.pow_up_direct = 0x58 > data and 0 or p.pow_up_direct
 				end
 				-- ut.printf("attack %x", data)
 				p.attack            = data
@@ -1918,19 +1898,7 @@ rbff2.startplugin          = function()
 				[0x64] = function(data) p.actb = data end,
 				[0xBE] = function(data)
 					if data == 0 or not p.proc_active then return end
-					if p.attack ~= data then
-						p.forced_down = false
-						p.hitstop     = 0
-						p.blockstop   = 0
-						p.damage      = 0
-						p.stun        = 0
-						p.stun_timer  = 0
-						p.max_hit_dn  = 0
-						p.effect      = 0
-						p.chip        = 0
-						p.hitstun     = 0
-						p.blockstun   = 0
-					end
+					if p.attack ~= data then p.clear_damages() end
 					local base_addr = db.chars[#db.chars].proc_base
 					p.attack        = data
 					p.forced_down   = 2 <= mem.r8(data + base_addr.forced_down)       -- テクニカルライズ可否 家庭用 05A9D6 からの処理
@@ -1963,6 +1931,34 @@ rbff2.startplugin          = function()
 			body.fireballs[base], all_objects[base] = p, p
 		end
 		for _, p in pairs(all_objects) do -- 初期化
+			p.clear_damages = function()
+				if not p.is_fireball then
+					p.cancelable      = false
+					p.cancelable_data = 0
+					p.repeatable      = false
+					p.forced_down     = false
+					p.esaka_range     = 0
+					p.pow_up_hit      = 0
+					p.pow_up_gd       = 0
+					p.pow_revenge     = 0
+					p.pow_absorb      = 0
+					p.pow_up_hit      = 0
+					p.pow_revenge     = 0
+					p.pow_up          = 0
+					p.pow_up_direct   = 0
+				end
+				p.hitstop = 0
+				p.hitstun = 0
+				p.blockstop = 0
+				p.blockstun = 0
+				p.damage = 0
+				p.chip = 0
+				p.stun = 0
+				p.stun_timer = 0
+				p.effect = 0
+				p.forced_down = false
+				p.max_hit_dn = 0
+			end
 			p.clear_frame_data = function()
 				p.frame_gap        = 0
 				p.act_frames       = {}
