@@ -304,29 +304,22 @@ local mod                       = {
 	training = function()
 		mem.wd16(0x1F3BC, 0x4E75) -- 1Pのスコア表示をすぐ抜ける
 		mem.wd16(0x1F550, 0x4E75) -- 2Pのスコア表示をすぐ抜ける
-
 		mem.wd32(0xD238, 0x4E714E71) -- 家庭用モードでのクレジット消費をNOPにする
-
 		mem.wd8(0x62E9D, 0x00) -- 乱入されても常にキャラ選択できる
-
 		-- 対CPU1体目でボスキャラも選択できるようにする サンキューヒマニトさん
 		mem.wd8(0x633EE, 0x60)  -- CPUのキャラテーブルをプレイヤーと同じにする
 		mem.wd8(0x63440, 0x60)  -- CPUの座標テーブルをプレイヤーと同じにする
 		mem.wd32(0x62FF4, 0x4E714E71) -- PLのカーソル座標修正をNOPにする
 		mem.wd32(0x62FF8, 0x4E714E71) -- PLのカーソル座標修正をNOPにする
-
 		mem.wd8(0x62EA6, 0x60)  -- CPU選択時にアイコンを減らすのを無効化
 		mem.wd32(0x63004, 0x4E714E71) -- PLのカーソル座標修正をNOPにする
-
 		-- キャラ選択の時間減らす処理をNOPにする
 		mem.wd16(0x63336, 0x4E71)
 		mem.wd16(0x63338, 0x4E71)
-
 		--時間の値にアイコン用のオフセット値を改変して空表示にする
 		-- 0632D0: 004B -- キャラ選択の時間の内部タイマー初期値1 デフォは4B=75フレーム
 		-- 063332: 004B -- キャラ選択の時間の内部タイマー初期値2 デフォは4B=75フレーム
 		mem.wd16(0x632DC, 0x0DD7)
-
 		-- 常にCPUレベルMAX
 		--[[ RAM改変によるCPUレベル MAX（ロムハックのほうが楽）
 		mem.w16(0x10E792, 0x0007) -- maincpu.pw@10E792=0007
@@ -337,25 +330,20 @@ local mod                       = {
 		mem.wd32(fix_addr(0x050150), 0x303C0007)
 		mem.wd32(fix_addr(0x0501A8), 0x303C0007)
 		mem.wd32(fix_addr(0x0501CE), 0x303C0007)
-
 		-- 対戦の双角ステージをビリーステージに変更する（MVSと家庭用共通）
 		mem.wd16(0xF290, 0x0004)
-
 		-- クレジット消費をNOPにする
 		mem.wd32(0x00D238, 0x4E714E71)
 		mem.wd32(0x00D270, 0x4E714E71)
-
 		-- 家庭用の初期クレジット9
 		mem.wd16(0x00DD54, 0x0009)
 		mem.wd16(0x00DD5A, 0x0009)
 		mem.wd16(0x00DF70, 0x0009)
 		mem.wd16(0x00DF76, 0x0009)
-
 		-- 家庭用のクレジット表示をスキップ bp 00C734,1,{PC=c7c8;g}
 		-- CREDITをCREDITSにする判定をスキップ bp C742,1,{PC=C748;g}
 		-- CREDIT表示のルーチンを即RTS
 		mem.wd16(0x00C700, 0x4E75)
-
 		--[[ 未適用ハック よそで見つけたチート
 		-- https://www.neo-geo.com/forums/index.php?threads/universe-bios-released-good-news-for-mvs-owners.41967/page-7
 		mem.wd8 (10E003, 0x0C)       -- Auto SDM combo (RB2) 0x56D98A
@@ -439,8 +427,8 @@ local mod                       = {
 			mem.wd8(0x41D00, enabled and 0x60 or 0x66)       -- デバッグDIPチェックを飛ばす
 		end,
 	},
-	camerawork = function(mode)
-		if mode == 1 then -- 1:OFF
+	camerawork = function(enabled)
+		if enabled then
 			-- 演出のためのカメラワークテーブルを戻す
 			for addr = 0x13C60, 0x13CBF, 4 do mem.wd32(addr, 0x00000000) end
 			mem.wd32(0x13C6C, 0x00030000)
@@ -458,8 +446,8 @@ local mod                       = {
 			for addr = 0x13C60, 0x13CBF, 4 do mem.wd32(addr, 0xFFFFFFFF) end
 		end
 		-- 画面の上限設定を飛ばす
-		mem.wd8(0x13AF0, mode == 1 and 0x67 or 0x60) -- 013AF0: 6700 0036 beq $13b28
-		mem.wd8(0x13B9A, mode == 1 and 0x6A or 0x60) -- 013B9A: 6A04      bpl $13ba0
+		mem.wd8(0x13AF0, enabled and 0x67 or 0x60) -- 013AF0: 6700 0036 beq $13b28
+		mem.wd8(0x13B9A, enabled and 0x6A or 0x60) -- 013B9A: 6A04      bpl $13ba0
 	end,
 }
 local in_match                  = false -- 対戦画面のときtrue
@@ -1691,9 +1679,9 @@ rbff2.startplugin          = function()
 			end
 		end
 		p.wp8 = {
-			[0x16] = function(data) p.knock_back2 = data end, -- のけぞり確認用2(裏雲隠し)
-			[0x69] = function(data) p.knock_back1 = data end, -- のけぞり確認用1(色々)
-			[0x7E] = function(data) p.knock_back3 = data end, -- のけぞり確認用3(フェニックススルー)
+			[0x16] = function(data) p.knockback1 = data end, -- のけぞり確認用2(裏雲隠し)
+			[0x69] = function(data) p.knockback2 = data end, -- のけぞり確認用1(色々)
+			[0x7E] = function(data) p.knockback3 = data end, -- のけぞり確認用3(フェニックススルー)
 			[{ addr = 0x82, filter = { 0x2668C, 0x2AD24, 0x2AD2C } }] = function(data, ret)
 				local pc = mem.pc()
 				if pc == 0x2668C then p.input1, p.flag_fin = data, false end
@@ -3509,7 +3497,7 @@ rbff2.startplugin          = function()
 				p.last_blockstun = p.hitstop_remain + 2
 			elseif op.char == 5 and op.act == 0x00A7 and op.act_count == 0x00 and op.act_frame == 0x06 then
 				-- 裏雲隠し専用
-				p.last_blockstun = p.knock_back2 + 3
+				p.last_blockstun = p.knockback1 + 3
 			end
 		end
 
@@ -3754,7 +3742,7 @@ rbff2.startplugin          = function()
 				end -- ガード状態が解除されたらリバサ解除
 
 				-- TODO: ライン送られのリバーサルを修正する。猶予1F
-				-- print(p.state, p.knock_back1, p.knock_back2, p.knock_back3, p.hitstop_remain, rvs_types.in_knock_back, p.last_blockstun, string.format("%x", p.act), p.act_count, p.act_frame)
+				-- print(p.state, p.knockback2, p.knockback1, p.knockback3, p.hitstop_remain, rvs_types.in_knock_back, p.last_blockstun, string.format("%x", p.act), p.act_count, p.act_frame)
 				-- ヒットストップ中は無視
 				if not p.skip_frame then
 					-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
@@ -3773,25 +3761,25 @@ rbff2.startplugin          = function()
 							input_rvs(rvs_types.jump_landing, p, "[Reversal] jump landing")
 						end
 						-- リバーサルじゃない最速入力
-						if p.state == 0 and p.act_data.name ~= "やられ" and p.old.act_data.name == "やられ" and p.knock_back1 == 0 then
+						if p.state == 0 and p.act_data.name ~= "やられ" and p.old.act_data.name == "やられ" and p.knockback2 == 0 then
 							input_rvs(rvs_types.knock_back_recovery, p, "[Reversal] blockstun 1")
 						end
 						-- のけぞりのリバーサル入力
 						if (p.state == 1 or (p.state == 2 and p.gd_rvs_enabled)) and p.hitstop_remain == 0 then
 							-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する
 							-- 奥ラインへ送った場合だけ無視する（p.act ~= 0x14A）
-							if p.knock_back3 == 0x80 and p.knock_back1 == 0 and p.act ~= 0x14A then
+							if p.knockback3 == 0x80 and p.knockback2 == 0 and p.act ~= 0x14A then
 								-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する1
 								input_rvs(rvs_types.in_knock_back, p, "[Reversal] blockstun 2")
-							elseif p.old.knock_back1 > 0 and p.knock_back1 == 0 then
+							elseif p.old.knockback2 > 0 and p.knockback2 == 0 then
 								-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する2
 								input_rvs(rvs_types.in_knock_back, p, "[Reversal] blockstun 3")
 							end
 							-- デンジャラススルー用
-							if p.knock_back3 == 0x0 and p.hitstop_remain < 3 and p.base == 0x34538 then
+							if p.knockback3 == 0x0 and p.hitstop_remain < 3 and p.base == 0x34538 then
 								input_rvs(rvs_types.dangerous_through, p, "[Reversal] blockstun 4")
 							end
-						elseif p.state == 3 and p.hitstop_remain == 0 and p.knock_back2 <= 1 then
+						elseif p.state == 3 and p.hitstop_remain == 0 and p.knockback1 <= 1 then
 							-- 当身うち空振りと裏雲隠し用
 							input_rvs(rvs_types.atemi, p, "[Reversal] blockstun 5")
 						end
@@ -4725,7 +4713,7 @@ rbff2.startplugin          = function()
 			next_bgm   = menu.bgms[menu.main.pos.col[14]].id,                                -- BGMセレクト
 		})
 		global.fix_scr_top = menu.main.pos.col[18]
-		mod.camerawork(global.fix_scr_top)
+		mod.camerawork(global.fix_scr_top == 1)
 
 		cls_joy()
 		cls_ps()
