@@ -241,7 +241,20 @@ for _, bgm in ipairs(menu.bgms) do
 		bgm.name_idx = #menu.labels.bgms
 	end
 end
-
+local addr_offset               = {
+	[0x012C42] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 },
+	[0x012C88] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 },
+	[0x012D4C] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 }, --p1 push
+	[0x012D92] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 }, --p2 push
+	[0x039F2A] = { ["rbff2k"] = 0x0C, ["rbff2h"] = 0x20 }, --special throws
+	[0x017300] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 }, --solid shadows
+}
+local addr_clone                = { ["rbff2k"] = -0x104, ["rbff2h"] = 0x20 }
+local fix_addr                  = function(addr)
+	local fix1 = addr_clone[emu.romname()] or 0
+	local fix2 = addr_offset[addr] and (addr_offset[addr][emu.romname()] or fix1) or fix1
+	return addr + fix2
+end
 local mem                       = {
 	last_time          = 0,     -- 最終読込フレーム(キャッシュ用)
 	_0x10E043          = 0,     -- 手動でポーズしたときに00以外になる
@@ -264,6 +277,190 @@ local mem                       = {
 	r8i                = function(addr, value) return pgm:read_i8(addr, value) end,
 	r16i               = function(addr, value) return pgm:read_i16(addr, value) end,
 	r32i               = function(addr, value) return pgm:read_i32(addr, value) end,
+}
+-- プログラム改変
+local mod                       = {
+	p1_patch = function()
+		local base = base_path() .. '/patch/rom/'
+		local filename = "char1-p1.pat"
+		local patch = base .. emu.romname() .. '/' .. filename
+		if not ut.is_file(patch) then ut.printf("%s NOT found", patch) end
+		return ut.apply_patch_file(pgm, patch, true)
+	end,
+	aes = function()
+		mem.wd16(0x10FE32, 0x0000) -- 強制的に家庭用モードに変更
+	end,
+	bugfix   = function()
+		-- H POWERの表示バグを修正する 無駄な3段表示から2段表示へ
+		mem.wd8(0x25DB3, 0x1)
+		-- 簡易超必ONのときにダックのブレイクスパイラルブラザー（BRも）が出るようにする
+		mem.wd16(0x0CACC8, 0xC37C)
+		-- デバッグDIPによる自動アンリミのバグ修正
+		mem.wd8(fix_addr(0x049951), 0x2)
+		mem.wd8(fix_addr(0x049947), 0x9)
+		-- 逆襲拳、サドマゾの初段で相手の状態変更しない（相手が投げられなくなる事象が解消する）
+		-- mem.wd8(0x57F43, 0x00)
+	end,
+	training = function()
+		mem.wd16(0x1F3BC, 0x4E75) -- 1Pのスコア表示をすぐ抜ける
+		mem.wd16(0x1F550, 0x4E75) -- 2Pのスコア表示をすぐ抜ける
+
+		mem.wd32(0xD238, 0x4E714E71) -- 家庭用モードでのクレジット消費をNOPにする
+
+		mem.wd8(0x62E9D, 0x00) -- 乱入されても常にキャラ選択できる
+
+		-- 対CPU1体目でボスキャラも選択できるようにする サンキューヒマニトさん
+		mem.wd8(0x633EE, 0x60)  -- CPUのキャラテーブルをプレイヤーと同じにする
+		mem.wd8(0x63440, 0x60)  -- CPUの座標テーブルをプレイヤーと同じにする
+		mem.wd32(0x62FF4, 0x4E714E71) -- PLのカーソル座標修正をNOPにする
+		mem.wd32(0x62FF8, 0x4E714E71) -- PLのカーソル座標修正をNOPにする
+
+		mem.wd8(0x62EA6, 0x60)  -- CPU選択時にアイコンを減らすのを無効化
+		mem.wd32(0x63004, 0x4E714E71) -- PLのカーソル座標修正をNOPにする
+
+		-- キャラ選択の時間減らす処理をNOPにする
+		mem.wd16(0x63336, 0x4E71)
+		mem.wd16(0x63338, 0x4E71)
+
+		--時間の値にアイコン用のオフセット値を改変して空表示にする
+		-- 0632D0: 004B -- キャラ選択の時間の内部タイマー初期値1 デフォは4B=75フレーム
+		-- 063332: 004B -- キャラ選択の時間の内部タイマー初期値2 デフォは4B=75フレーム
+		mem.wd16(0x632DC, 0x0DD7)
+
+		-- 常にCPUレベルMAX
+		--[[ RAM改変によるCPUレベル MAX（ロムハックのほうが楽）
+		mem.w16(0x10E792, 0x0007) -- maincpu.pw@10E792=0007
+		mem.w16(0x10E796, 0x0007) -- maincpu.pw@10E796=0008
+		]]
+		mem.wd32(fix_addr(0x0500E8), 0x303C0007)
+		mem.wd32(fix_addr(0x050118), 0x3E3C0007)
+		mem.wd32(fix_addr(0x050150), 0x303C0007)
+		mem.wd32(fix_addr(0x0501A8), 0x303C0007)
+		mem.wd32(fix_addr(0x0501CE), 0x303C0007)
+
+		-- 対戦の双角ステージをビリーステージに変更する（MVSと家庭用共通）
+		mem.wd16(0xF290, 0x0004)
+
+		-- クレジット消費をNOPにする
+		mem.wd32(0x00D238, 0x4E714E71)
+		mem.wd32(0x00D270, 0x4E714E71)
+
+		-- 家庭用の初期クレジット9
+		mem.wd16(0x00DD54, 0x0009)
+		mem.wd16(0x00DD5A, 0x0009)
+		mem.wd16(0x00DF70, 0x0009)
+		mem.wd16(0x00DF76, 0x0009)
+
+		-- 家庭用のクレジット表示をスキップ bp 00C734,1,{PC=c7c8;g}
+		-- CREDITをCREDITSにする判定をスキップ bp C742,1,{PC=C748;g}
+		-- CREDIT表示のルーチンを即RTS
+		mem.wd16(0x00C700, 0x4E75)
+
+		--[[ 未適用ハック よそで見つけたチート
+		-- https://www.neo-geo.com/forums/index.php?threads/universe-bios-released-good-news-for-mvs-owners.41967/page-7
+		mem.wd8 (10E003, 0x0C)       -- Auto SDM combo (RB2) 0x56D98A
+		mem.wd32(1004D5, 0x46A70500) -- 1P Crazy Yamazaki Return (now he can throw projectile "anytime" with some other bug) 0x55FE5C
+		mem.wd16(1004BF, 0x3CC1)     -- 1P Level 2 Blue Mary 0x55FE46
+		]]
+	end,
+	fast_select = function()
+		--[[
+		010668: 0C6C FFEF 0022           cmpi.w  #-$11, ($22,A4)                     ; THE CHALLENGER表示のチェック。
+		01066E: 6704                     beq     $10674                              ; braにしてチェックを飛ばすとすぐにキャラ選択にいく
+		010670: 4E75                     rts                                         ; bp 01066E,1,{PC=00F05E;g} にすると乱入の割り込みからラウンド開始前へ
+		010672: 4E71                     nop                                         ; 4EF9 0000 F05E
+		]]
+		mem.wd32(0x10668, 0xC6CFFEF) -- 元の乱入処理
+		mem.wd32(0x1066C, 0x226704) -- 元の乱入処理
+		mem.wd8(0x1066E, 0x60) -- 乱入時にTHE CHALLENGER表示をさせない
+	end,
+	fast_restart = function()
+		mem.wd32(0x10668, 0x4EF90000) -- FIGHT表示から対戦開始(F05E)へ飛ばす
+		mem.wd32(0x1066C, 0xF33A4E71) -- FIGHT表示から対戦開始
+	end,
+	all_bs = function(enabled)
+		if enabled then
+			-- 全必殺技BS可能
+			for addr = 0x85980, 0x85CE8, 2 do mem.wd16(addr, 0x007F|0x8000) end -- 0パワー消費 無敵7Fフレーム
+			mem.wd32(0x39F24, 0x4E714E71)                              -- 6600 0014 nop化
+		else
+			local addr = 0x85980
+			for _, b16 in ipairs(db.bs_data) do
+				mem.wd16(addr, b16)
+				addr = addr + 2
+			end
+			mem.wd32(0x39F24, 0x66000014)
+		end
+	end,
+	easy_move = {
+		real_counter = function(mode) -- 1:OFF 2:ジャーマン 3:フェイスロック 4:投げっぱなしジャーマン"
+			if mode > 1 then
+				mem.wd16(0x413EE, 0x1C3C) -- ボタン読み込みをボタンデータ設定に変更
+				mem.wd16(0x413F0, 0x10 * (2 ^ (mode - 2)))
+				mem.wd16(0x413F2, 0x4E71)
+			else
+				mem.wd32(0x413EE, 0x4EB90002)
+				mem.wd16(0x413F2, 0x6396)
+			end
+		end,
+		esaka_check = function(mode)                         -- 詠酒の条件チェックを飛ばす 1:OFF
+			mem.wd32(0x23748, mode == 2 and 0x4E714E71 or 0x6E00FC6A) -- 2:技種類と距離チェック飛ばす
+			mem.wd32(0x236FC, mode == 3 and 0x604E4E71 or 0x6400FCB6) -- 3:距離チェックNOP
+		end,
+		taneuma_finish = function(enabled)                   -- 自動 炎の種馬
+			mem.wd16(0x4094A, enabled and 0x6018 or 0x6704)  -- 連打チェックを飛ばす
+		end,
+		fast_kadenzer = function(enabled)                    -- 必勝！逆襲拳1発キャッチカデンツァ
+			mem.wd16(0x4098C, enabled and 0x7003 or 0x5210)  -- カウンターに3を直接設定する
+		end,
+		katsu_ca = function(enabled)                         -- 自動喝CA
+			mem.wd8(0x3F94C, enabled and 0x60 or 0x67)       -- 入力チェックを飛ばす
+			mem.wd16(0x3F986, enabled and 0x4E71 or 0x6628)  -- 入力チェックをNOPに
+		end,
+		kara_ca = function(enabled)                          -- 空振りCAできる
+			mem.wd8(0x2FA5E, enabled and 0x60 or 0x67)       -- テーブルチェックを飛ばす
+			--[[ 未適用
+			-- 逆にFFにしても個別にCA派生を判定している処理があるため単純に全不可にはできない。
+			-- オリジナル（家庭用）
+			-- maincpu.rd@02FA72=00000000
+			-- maincpu.rd@02FA76=00000000
+			-- maincpu.rd@02FA7A=FFFFFFFF
+			-- maincpu.rd@02FA7E=00FFFF00
+			-- maincpu.rw@02FA82=FFFF
+			パッチ（00をFFにするとヒット時限定になる）
+			for i = 0x02FA72, 0x02FA82 do mem.wd8(i, 0x00) end
+			]]
+		end,
+		rapid = function(mode)
+			-- 連キャン、必キャン可否テーブルに連キャンデータを設定する。C0が必、D0で連。
+			for i = 0x085138, 0x08591F do mem.wd8(i, 0xD0) end
+		end,
+		triple_ecstasy = function(enabled)                   -- 自動マリートリプルエクスタシー
+			mem.wd8(0x41D00, enabled and 0x60 or 0x66)       -- デバッグDIPチェックを飛ばす
+		end,
+	},
+	camerawork = function(mode)
+		if mode == 1 then -- 1:OFF
+			-- 演出のためのカメラワークテーブルを戻す
+			for addr = 0x13C60, 0x13CBF, 4 do mem.wd32(addr, 0x00000000) end
+			mem.wd32(0x13C6C, 0x00030000)
+			mem.wd32(0x13C70, 0x000A0000)
+			mem.wd32(0x13C7C, 0x000A0000)
+			mem.wd32(0x13C80, 0x000A0000)
+			mem.wd32(0x13C84, 0x00010000)
+			mem.wd32(0x13C88, 0x00020000)
+			mem.wd32(0x13C98, 0x00300000)
+			mem.wd32(0x13C9C, 0x00020000)
+			mem.wd32(0x13CA0, 0x00040000)
+			mem.wd32(0x13CBC, 0x00020000)
+		else
+			-- 演出のためのカメラワークテーブルをすべてFにしてキャラを追従可能にする
+			for addr = 0x13C60, 0x13CBF, 4 do mem.wd32(addr, 0xFFFFFFFF) end
+		end
+		-- 画面の上限設定を飛ばす
+		mem.wd8(0x13AF0, mode == 1 and 0x67 or 0x60) -- 013AF0: 6700 0036 beq $13b28
+		mem.wd8(0x13B9A, mode == 1 and 0x6A or 0x60) -- 013B9A: 6A04      bpl $13ba0
+	end,
 }
 local in_match                  = false -- 対戦画面のときtrue
 local in_player_select          = false -- プレイヤー選択画面のときtrue
@@ -749,17 +946,6 @@ local ggkey_set                 = { new_ggkey_set(true), new_ggkey_set(false) }
 local btn_col                   = { [ut.convert("_A")] = 0xFFCC0000, [ut.convert("_B")] = 0xFFCC8800, [ut.convert("_C")] = 0xFF3333CC, [ut.convert("_D")] = 0xFF336600, }
 local text_col, shadow_col      = 0xFFFFFFFF, 0xFF000000
 
-local rom_patch_path            = function(filename)
-	local base = base_path() .. '/patch/rom/'
-	local patch = base .. emu.romname() .. '/' .. filename
-	if ut.is_file(patch) then
-		return patch
-	else
-		print(patch .. " NOT found")
-	end
-	return base .. 'rbff2/' .. filename
-end
-
 local get_string_width          = function(str)
 	return man.ui:get_string_width(str) * scr.width
 end
@@ -863,22 +1049,6 @@ local draw_base                 = function(p, bases)
 	scr:draw_text(xx + 0.5, 80.5, txt, 0xFF000000)               -- 文字の影
 	scr:draw_text(xx, 80, txt, text_col)
 end
-
--- 当たり判定のオフセット
-local addr_offset               = {
-	[0x012C42] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 },
-	[0x012C88] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 },
-	[0x012D4C] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 }, --p1 push
-	[0x012D92] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 }, --p2 push
-	[0x039F2A] = { ["rbff2k"] = 0x0C, ["rbff2h"] = 0x20 }, --special throws
-	[0x017300] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 }, --solid shadows
-}
-local addr_clone                = { ["rbff2k"] = -0x104, ["rbff2h"] = 0x20 }
-local fix_addr                  = function(addr)
-	local fix1 = addr_clone[emu.romname()] or 0
-	local fix2 = addr_offset[addr] and (addr_offset[addr][emu.romname()] or fix1) or fix1
-	return addr + fix2
-end
 -- 投げ無敵
 local throw_inv_type            = {
 	time24 = { value = 24, disp_label = "タイマー24", name = "通常投げ" },
@@ -937,104 +1107,9 @@ end
 -- ROM部分のメモリエリアへパッチあて
 local load_rom_patch            = function()
 	if mem.pached then return end
-
-	mem.pached = mem.pached or ut.apply_patch_file(pgm, rom_patch_path("char1-p1.pat"), true)
-
-	--[[
-	010668: 0C6C FFEF 0022           cmpi.w  #-$11, ($22,A4)                     ; THE CHALLENGER表示のチェック。
-	01066E: 6704                     beq     $10674                              ; braにしてチェックを飛ばすとすぐにキャラ選択にいく
-	010670: 4E75                     rts                                         ; bp 01066E,1,{PC=00F05E;g} にすると乱入の割り込みからラウンド開始前へ
-	010672: 4E71                     nop                                         ; 4EF9 0000 F05E
-	]]
-
-	mem.wd16(0x1F3BC, 0x4E75) -- 1Pのスコア表示をすぐ抜ける
-	mem.wd16(0x1F550, 0x4E75) -- 2Pのスコア表示をすぐ抜ける
-
-	mem.wd8(0x25DB3, 0x1)     -- H POWERの表示バグを修正する 無駄な3段表示から2段表示へ
-
-	mem.wd32(0xD238, 0x4E714E71) -- 家庭用モードでのクレジット消費をNOPにする
-
-	mem.wd8(0x62E9D, 0x00)    -- 乱入されても常にキャラ選択できる
-
-	-- 対CPU1体目でボスキャラも選択できるようにする サンキューヒマニトさん
-	mem.wd8(0x633EE, 0x60)     -- CPUのキャラテーブルをプレイヤーと同じにする
-	mem.wd8(0x63440, 0x60)     -- CPUの座標テーブルをプレイヤーと同じにする
-	mem.wd32(0x62FF4, 0x4E714E71) -- PLのカーソル座標修正をNOPにする
-	mem.wd32(0x62FF8, 0x4E714E71) -- PLのカーソル座標修正をNOPにする
-
-	mem.wd8(0x62EA6, 0x60)     -- CPU選択時にアイコンを減らすのを無効化
-	mem.wd32(0x63004, 0x4E714E71) -- PLのカーソル座標修正をNOPにする
-
-	-- キャラ選択の時間減らす処理をNOPにする
-	mem.wd16(0x63336, 0x4E71)
-	mem.wd16(0x63338, 0x4E71)
-
-	--時間の値にアイコン用のオフセット値を改変して空表示にする
-	-- 0632D0: 004B -- キャラ選択の時間の内部タイマー初期値1 デフォは4B=75フレーム
-	-- 063332: 004B -- キャラ選択の時間の内部タイマー初期値2 デフォは4B=75フレーム
-	mem.wd16(0x632DC, 0x0DD7)
-
-	-- 常にCPUレベルMAX
-	mem.wd32(fix_addr(0x0500E8), 0x303C0007)
-	mem.wd32(fix_addr(0x050118), 0x3E3C0007)
-	mem.wd32(fix_addr(0x050150), 0x303C0007)
-	mem.wd32(fix_addr(0x0501A8), 0x303C0007)
-	mem.wd32(fix_addr(0x0501CE), 0x303C0007)
-
-	-- 対戦の双角ステージをビリーステージに変更する（MVSと家庭用共通）
-	mem.wd16(0xF290, 0x0004)
-
-	-- 簡易超必ONのときにダックのブレイクスパイラルブラザー（BRも）が出るようにする
-	mem.wd16(0x0CACC8, 0xC37C)
-
-	-- クレジット消費をNOPにする
-	mem.wd32(0x00D238, 0x4E714E71)
-	mem.wd32(0x00D270, 0x4E714E71)
-
-	-- 家庭用の初期クレジット9
-	mem.wd16(0x00DD54, 0x0009)
-	mem.wd16(0x00DD5A, 0x0009)
-	mem.wd16(0x00DF70, 0x0009)
-	mem.wd16(0x00DF76, 0x0009)
-
-	-- 家庭用のクレジット表示をスキップ bp 00C734,1,{PC=c7c8;g}
-	-- CREDITをCREDITSにする判定をスキップ bp C742,1,{PC=C748;g}
-	-- CREDIT表示のルーチンを即RTS
-	mem.wd16(0x00C700, 0x4E75)
-
-	-- デバッグDIPによる自動アンリミのバグ修正
-	mem.wd8(fix_addr(0x049951), 0x2)
-	mem.wd8(fix_addr(0x049947), 0x9)
-
-	--[[ 未適用ハック
-	-- 空振りCAできる。
-	-- 逆にFFにしても個別にCA派生を判定している処理があるため単純に全不可にはできない。
-	-- オリジナル（家庭用）
-	-- maincpu.rd@02FA72=00000000
-	-- maincpu.rd@02FA76=00000000
-	-- maincpu.rd@02FA7A=FFFFFFFF
-	-- maincpu.rd@02FA7E=00FFFF00
-	-- maincpu.rw@02FA82=FFFF
-	パッチ（00をFFにするとヒット時限定になる）
-	for i = 0x02FA72, 0x02FA82 do mem.wd8(i, 0x00) end
-	
-	-- 連キャン、必キャン可否テーブルに連キャンデータを設定する。C0が必、D0で連。
-	for i = 0x085138, 0x08591F do mem.wd8(i, 0xD0) end
-
-	-- 逆襲拳、サドマゾの初段で相手の状態変更しない（相手が投げられなくなる事象が解消する）
-	-- mem.wd8(0x57F43, 0x00)
-	
-	-- よそで見つけたチート
-	-- https://www.neo-geo.com/forums/index.php?threads/universe-bios-released-good-news-for-mvs-owners.41967/page-7
-	mem.wd8 (10E003, 0x0C)       -- Auto SDM combo (RB2) 0x56D98A
-	mem.wd32(1004D5, 0x46A70500) -- 1P Crazy Yamazaki Return (now he can throw projectile "anytime" with some other bug) 0x55FE5C
-	mem.wd16(1004BF, 0x3CC1)     -- 1P Level 2 Blue Mary 0x55FE46
-	-- cheat offset NGX 45F987 = MAME 0
-
-	-- RAM改変によるCPUレベル MAX（ロムハックのほうが楽）
-	-- mem.w16(0x10E792, 0x0007) -- maincpu.pw@10E792=0007
-	-- mem.w16(0x10E796, 0x0007) -- maincpu.pw@10E796=0008
-	]]
+	mem.pached = mem.pached or mod.p1_patch()
+	mod.bugfix()
+	mod.training()
 	print("load_rom_patch done")
 end
 
@@ -1417,8 +1492,8 @@ local apply_attack_infos   = function(p, id, base_addr)
 	p.chip      = db.calc_chip((0xF & mem.r8(base_addr.chip + id)) + 1, p.damage)
 	-- 硬直時間取得 05AF7C(家庭用版)からの処理
 	local d2    = 0xF & mem.r8(id + base_addr.hitstun1)
-	p.hitstun   = mem.r8(base_addr.hitstun2 + d2) + 1 + 3   -- ヒット硬直
-	p.blockstun = mem.r8(base_addr.blockstun + d2) + 1 + 2  -- ガード硬直
+	p.hitstun   = mem.r8(base_addr.hitstun2 + d2) + 1 + 3 -- ヒット硬直
+	p.blockstun = mem.r8(base_addr.blockstun + d2) + 1 + 2 -- ガード硬直
 end
 
 local dummy_gd_type        = {
@@ -1441,12 +1516,6 @@ local wakeup_type          = {
 local rvs_wake_types       = ut.new_set(wakeup_type.tech, wakeup_type.sway, wakeup_type.rvs)
 rbff2.startplugin          = function()
 	local players, all_wps, all_objects, hitboxies, ranges = {}, {}, {}, {}, {}
-	local old_copy = function(src)
-		if type(src) ~= "table" then return src end
-		local dest = {}
-		for k, v in pairs(src) do if v ~= nil and type(v) ~= "table" then dest[k] = v end end
-		return dest
-	end
 	local hitboxies_order = function(b1, b2) return (b1.id < b2.id) end
 	local ranges_order = function(r1, r2) return (r1.within and 1 or -1) < (r2.within and 1 or -1) end
 	local ifind = function(sources, resolver) -- sourcesの要素をresolverを通して得た結果で最初の非nilの値を返す
@@ -1486,9 +1555,9 @@ rbff2.startplugin          = function()
 	local get_object_by_reg = function(reg, default) return all_objects[mem.rg(reg, 0xFFFFFF)] or default end -- レジストリからオブジェクト解決
 	local now = function() return global.frame_number + 1 end
 	for i = 1, 2 do                                                                                        -- プレイヤーの状態など
-		local p1   = (i == 1)
-		local base = p1 and 0x100400 or 0x100500
-		players[i] = {
+		local p1      = (i == 1)
+		local base    = p1 and 0x100400 or 0x100500
+		players[i]    = {
 			num               = i,
 			is_fireball       = false,
 			base              = 0x0,
@@ -1597,8 +1666,8 @@ rbff2.startplugin          = function()
 			end,
 			reset_sp_hook     = function(hook) players[i].bs_hook = hook end,
 		}
-		local p    = players[i]
-		p.body     = players[i] -- プレイヤーデータ自身、fireballとの互換用
+		local p       = players[i]
+		p.body        = players[i] -- プレイヤーデータ自身、fireballとの互換用
 		p.update_char = function(data)
 			p.char, p.char4, p.char8 = data, (data << 2), (data << 3)
 			p.char_data = p.is_fireball and db.chars[#db.chars] or db.chars[data] -- 弾はダミーを設定する
@@ -1641,13 +1710,13 @@ rbff2.startplugin          = function()
 			end,
 			[0x8E] = function(data)
 				local changed = p.state ~= data
-				p.on_block = data == 2 and now() or p.on_block                                 -- ガードへの遷移フレームを記録
-				p.on_hit = data == 1 or data == 3 and now() or p.on_hit                        -- ヒットへの遷移フレームを記録
+				p.on_block = data == 2 and now() or p.on_block                          -- ガードへの遷移フレームを記録
+				p.on_hit = data == 1 or data == 3 and now() or p.on_hit                 -- ヒットへの遷移フレームを記録
 				if p.state == 0 and p.on_hit and not p.act_normal then p.on_punish = now() + 10 end -- 確定反撃
 				p.random_boolean = changed and (math.random(255) % 2 == 0) or p.random_boolean
-				p.state, p.change_state = data, changed and now() or p.change_state -- 今の状態と状態更新フレームを記録
+				p.state, p.change_state = data, changed and now() or p.change_state     -- 今の状態と状態更新フレームを記録
 				if data == 2 then
-					p.update_tmp_combo(changed and 1 or 2)                                     -- 連続ガード用のコンボ状態リセット
+					p.update_tmp_combo(changed and 1 or 2)                              -- 連続ガード用のコンボ状態リセット
 					p.last_combo = changed and 1 or p.last_combo + 1
 				end
 			end,
@@ -1967,7 +2036,14 @@ rbff2.startplugin          = function()
 				p.gap_frames       = { act_frames = {}, frame_groups = {}, }
 			end
 			p.clear_frame_data()
-			p.old              = old_copy(p)
+			local old_copy = function(src)
+				if type(src) ~= "table" then return src end
+				local dest = {}
+				for k, v in pairs(src) do if v ~= nil and type(v) ~= "table" then dest[k] = v end end
+				return dest
+			end
+			p.old_copy = function() p.old = old_copy(p) end
+			p.old_copy()
 		end
 	end
 	local change_player_input = function()
@@ -2217,7 +2293,7 @@ rbff2.startplugin          = function()
 			[0x2A] = function(data) p.pos_frc_y = ut.int16tofloat(data) end,                                                       -- Y座標(小数部)
 			[{ addr = 0x5E, filter = 0x011E10 }] = function(data) p.box_addr = mem.rg("A0", 0xFFFFFFFF) - 0x2 end,                 -- 判定のアドレス
 			[0x60] = function(data)
-				p.act, p.on_update_act = data, now()                                                                                  -- 行動ID デバッグディップステータス表示のPと同じ
+				p.act, p.on_update_act = data, now()                                                                               -- 行動ID デバッグディップステータス表示のPと同じ
 				p.attackbits.act = data
 				if p.is_fireball then
 					p.act_data = p.body.char_data and p.body.char_data.fireballs[data] or p.act_data
@@ -2233,19 +2309,15 @@ rbff2.startplugin          = function()
 	-- 場面変更
 	local apply_1p2p_active = function()
 		if in_match then
-			mem.wd8(0x100024, 0x03)
-			mem.wd8(0x100027, 0x03)
+			mem.w8(0x100024, 0x03)
+			mem.w8(0x100027, 0x03)
 		end
 	end
 
 	local goto_player_select = function()
-		-- プログラム改変
-		mem.wd32(0x10668, 0xC6CFFEF) -- 元の乱入処理
-		mem.wd32(0x1066C, 0x226704) -- 元の乱入処理
-		mem.wd8(0x1066E, 0x60)  -- 乱入時にTHE CHALLENGER表示をさせない
-
+		mod.fast_select()
 		mem.w8(0x1041D3, 1)     -- 乱入フラグON
-		mem.wd8(0x107BB5, 0x01)
+		mem.w8(0x107BB5, 0x01)
 		mem.w32(0x107BA6, 0x00010001) -- CPU戦の進行数をリセット
 		mem.w32(0x100024, 0x00000000)
 		mem.w16(0x10FDB6, 0x0101)
@@ -2256,16 +2328,12 @@ rbff2.startplugin          = function()
 		global.next_stg3   = param.next_stage.stg3 or mem.r16(0x107BB8)
 		local p1, p2       = param.next_p1 or 1, param.next_p2 or 21
 		local p1col, p2col = param.next_p1col or 0x00, param.next_p2col or 0x01
-
-		-- プログラム改変
-		mem.wd32(0x10668, 0x4EF90000) -- FIGHT表示から対戦開始(F05E)へ飛ばす
-		mem.wd32(0x1066C, 0xF33A4E71) -- FIGHT表示から対戦開始
-
-		mem.w8(0x1041D3, 1)     -- 乱入フラグで割り込み
+		mod.fast_restart()
+		mem.w8(0x1041D3, 1)     -- 乱入フラグON
 		mem.w8(0x107C1F, 0)     -- キャラデータの読み込み無視フラグをOFF
 		mem.w32(0x107BA6, 0x00010001) -- CPU戦の進行数をリセット
-		mem.wd8(0x100024, 0x03)
-		mem.wd8(0x100027, 0x03)
+		mem.w8(0x100024, 0x03)
+		mem.w8(0x100027, 0x03)
 		mem.w16(0x10FDB6, 0x0101)
 
 		mem.w16(0x1041D6, 0x0003) -- 対戦モード3
@@ -3053,12 +3121,12 @@ rbff2.startplugin          = function()
 		if global.lag_frame == true then return end -- ラグ発生時は処理をしないで戻る
 
 		global.old_all_act_normal, global.all_act_normal = global.all_act_normal, true
-		for _, p in pairs(all_objects) do p.old = old_copy(p) end
+		for _, p in pairs(all_objects) do p.old_copy() end
 
 		-- 1Pと2Pの状態読取
 		for i, p in ipairs(players) do
-			local op    = players[3 - i]
-			p.op        = op
+			local op = players[3 - i]
+			p.op     = op
 			p.update_char(mem.r8(p.addr.char))
 			p.change_c0 = p.flag_c0 ~= p.old.flag_c0
 			p.change_c4 = p.flag_c4 ~= p.old.flag_c4
@@ -4387,18 +4455,7 @@ rbff2.startplugin          = function()
 		global.damaged_move   = col[9]               -- ヒット効果確認用
 		global.all_bs         = col[10] == 2         -- 全必殺技BS
 
-		if global.all_bs then
-			-- 全必殺技BS可能
-			for addr = 0x85980, 0x85CE8, 2 do mem.wd16(addr, 0x007F|0x8000) end -- 0パワー消費 無敵7Fフレーム
-			mem.wd32(0x39F24, 0x4E714E71)                              -- 6600 0014 nop化
-		else
-			local addr = 0x85980
-			for _, b16 in ipairs(db.bs_data) do
-				mem.wd16(addr, b16)
-				addr = addr + 2
-			end
-			mem.wd32(0x39F24, 0x66000014)
-		end
+		mod.all_bs(global.all_bs)
 
 		menu.current = menu.main
 	end
@@ -4421,28 +4478,19 @@ rbff2.startplugin          = function()
 		global.auto_input.fast_kadenzer = col[15] == 2 -- 必勝！逆襲拳
 		global.auto_input.kara_ca       = col[16] == 2 -- 空振りCA
 		--"ジャーマン", "フェイスロック", "投げっぱなしジャーマン"
-		if global.auto_input.real_counter > 1 then
-			mem.wd16(0x413EE, 0x1C3C) -- ボタン読み込みをボタンデータ設定に変更
-			mem.wd16(0x413F0, 0x10 * (2 ^ (global.auto_input.real_counter - 2)))
-			mem.wd16(0x413F2, 0x4E71)
-		else
-			mem.wd32(0x413EE, 0x4EB90002)
-			mem.wd16(0x413F2, 0x6396)
-		end
+		mod.easy_move.real_counter(global.auto_input.real_counter)
 		-- 詠酒の条件チェックを飛ばす
-		mem.wd32(0x23748, global.auto_input.esaka_check == 2 and 0x4E714E71 or 0x6E00FC6A) -- 技種類と距離チェック飛ばす
-		mem.wd32(0x236FC, global.auto_input.esaka_check == 3 and 0x604E4E71 or 0x6400FCB6) -- 距離チェックNOP
+		mod.easy_move.esaka_check(global.auto_input.esaka_check)
 		-- 自動 炎の種馬
-		mem.wd16(0x4094A, global.auto_input.auto_taneuma and 0x6018 or 0x6704)       -- 連打チェックを飛ばす
+		mod.easy_move.taneuma_finish(global.auto_input.auto_taneuma)
 		-- 必勝！逆襲拳1発キャッチカデンツァ
-		mem.wd16(0x4098C, global.auto_input.fast_kadenzer and 0x7003 or 0x5210)      -- カウンターに3を直接設定する
+		mod.easy_move.fast_kadenzer(global.auto_input.fast_kadenzer)
 		-- 自動喝CA
-		mem.wd8(0x3F94C, global.auto_input.auto_katsu and 0x60 or 0x67)              -- 入力チェックを飛ばす
-		mem.wd16(0x3F986, global.auto_input.auto_katsu and 0x4E71 or 0x6628)         -- 入力チェックをNOPに
+		mod.easy_move.katsu_ca(global.auto_input.auto_katsu)
 		-- 空振りCAできる
-		mem.wd8(0x2FA5E, global.auto_input.kara_ca and 0x60 or 0x67)                 -- テーブルチェックを飛ばす
+		mod.easy_move.kara_ca(global.auto_input.kara_ca)
 		-- 自動マリートリプルエクスタシー
-		mem.wd8(0x41D00, global.auto_input.auto_3ecst and 0x60 or 0x66)              -- デバッグDIPチェックを飛ばす
+		mod.easy_move.triple_ecstasy(global.auto_input.auto_3ecst)
 		menu.current = menu.main
 	end
 	local col_menu_to_main         = function()
@@ -4677,26 +4725,7 @@ rbff2.startplugin          = function()
 			next_bgm   = menu.bgms[menu.main.pos.col[14]].id,                                -- BGMセレクト
 		})
 		global.fix_scr_top = menu.main.pos.col[18]
-		if global.fix_scr_top == 1 then -- 1:OFF
-			-- 演出のためのカメラワークテーブルを戻す
-			for addr = 0x13C60, 0x13CBF, 4 do mem.wd32(addr, 0x00000000) end
-			mem.wd32(0x13C6C, 0x00030000)
-			mem.wd32(0x13C70, 0x000A0000)
-			mem.wd32(0x13C7C, 0x000A0000)
-			mem.wd32(0x13C80, 0x000A0000)
-			mem.wd32(0x13C84, 0x00010000)
-			mem.wd32(0x13C88, 0x00020000)
-			mem.wd32(0x13C98, 0x00300000)
-			mem.wd32(0x13C9C, 0x00020000)
-			mem.wd32(0x13CA0, 0x00040000)
-			mem.wd32(0x13CBC, 0x00020000)
-		else
-			-- 演出のためのカメラワークテーブルをすべてFにしてキャラを追従可能にする
-			for addr = 0x13C60, 0x13CBF, 4 do mem.wd32(addr, 0xFFFFFFFF) end
-		end
-		-- 画面の上限設定を飛ばす
-		mem.wd8(0x13AF0, global.fix_scr_top == 1 and 0x67 or 0x60) -- 013AF0: 6700 0036 beq $13b28
-		mem.wd8(0x13B9A, global.fix_scr_top == 1 and 0x6A or 0x60) -- 013B9A: 6A04      bpl $13ba0
+		mod.camerawork(global.fix_scr_top)
 
 		cls_joy()
 		cls_ps()
@@ -5452,7 +5481,7 @@ rbff2.startplugin          = function()
 				for i, p in ipairs(players) do mem.w16(p.addr.control, i * 0x0101) end
 			end
 			load_rom_patch()           -- ROM部分のメモリエリアへパッチあて
-			mem.wd16(0x10FE32, 0x0000) -- 強制的に家庭用モードに変更
+			mod.aes()
 			set_dip_config()           -- デバッグDIPのセット
 			load_hit_effects()         -- ヒット効果アドレステーブルの取得
 			load_hit_system_stops()    -- ヒット時のシステム内での中間処理による停止アドレス取得
