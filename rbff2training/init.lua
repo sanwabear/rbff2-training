@@ -267,8 +267,8 @@ local mem                       = {
 }
 local in_match                  = false -- 対戦画面のときtrue
 local in_player_select          = false -- プレイヤー選択画面のときtrue
-local p_space                   = 0 -- 1Pと2Pの間隔
-local prev_space                = 0 -- 1Pと2Pの間隔(前フレーム)
+local p_space                   = 0     -- 1Pと2Pの間隔
+local prev_space                = 0     -- 1Pと2Pの間隔(前フレーム)
 
 local screen                    = {
 	offset_x = 0x20,
@@ -1381,7 +1381,7 @@ local reset_memory_tap     = function(label, enabled)
 	end
 end
 
-local load_memory_tap      = function(label, wps)      -- tapの仕込み
+local load_memory_tap      = function(label, wps) -- tapの仕込み
 	if global.holder and global.holder.sub[label] then
 		reset_memory_tap(label, true)
 		return
@@ -1414,11 +1414,11 @@ end
 
 local apply_attack_infos   = function(p, id, base_addr)
 	-- 削りダメージ計算種別取得 05B2A4 からの処理
-	p.chip          = db.calc_chip((0xF & mem.r8(base_addr.chip + id)) + 1, p.damage)
+	p.chip      = db.calc_chip((0xF & mem.r8(base_addr.chip + id)) + 1, p.damage)
 	-- 硬直時間取得 05AF7C(家庭用版)からの処理
-	local d2        = 0xF & mem.r8(id + base_addr.hitstun1)
-	p.hitstun       = mem.r8(base_addr.hitstun2 + d2) + 1 + 3 -- ヒット硬直
-	p.blockstun     = mem.r8(base_addr.blockstun + d2) + 1 + 2 -- ガード硬直
+	local d2    = 0xF & mem.r8(id + base_addr.hitstun1)
+	p.hitstun   = mem.r8(base_addr.hitstun2 + d2) + 1 + 3   -- ヒット硬直
+	p.blockstun = mem.r8(base_addr.blockstun + d2) + 1 + 2  -- ガード硬直
 end
 
 local dummy_gd_type        = {
@@ -1493,7 +1493,7 @@ rbff2.startplugin          = function()
 			is_fireball       = false,
 			base              = 0x0,
 			bases             = ut.new_filled_table(16, { count = 0, addr = 0x0, act_data = nil, name = "", pos1 = 0, pos2 = 0, xmov = 0, }),
-			dummy_act         = 1,        -- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
+			dummy_act         = 1,         -- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
 			dummy_gd          = dummy_gd_type.none, -- なし, オート, ブレイクショット, 1ヒットガード, 1ガード, 常時, ランダム, 強制
 			dummy_wakeup      = wakeup_type.none, -- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
 
@@ -1598,7 +1598,7 @@ rbff2.startplugin          = function()
 			reset_sp_hook     = function(hook) players[i].bs_hook = hook end,
 		}
 		local p    = players[i]
-		p.body     = players[i]   -- プレイヤーデータ自身、fireballとの互換用
+		p.body     = players[i] -- プレイヤーデータ自身、fireballとの互換用
 		for k = 1, #kprops do p.key_now[kprops[k]], p.key_pre[kprops[k]] = 0, 0 end
 		p.update_tmp_combo = function(data)
 			if data == 1 then    -- 一次的なコンボ数が1リセットしたタイミングでコンボ用の情報もリセットする
@@ -1914,27 +1914,27 @@ rbff2.startplugin          = function()
 				[0xBE] = function(data)
 					if data == 0 or not p.proc_active then return end
 					if p.attack ~= data then
-						p.forced_down   = false
-						p.hitstop       = 0
-						p.blockstop     = 0
-						p.damage        = 0
-						p.stun       = 0
-						p.stun_timer    = 0
-						p.max_hit_dn    = 0
-						p.effect        = 0
-						p.chip          = 0
-						p.hitstun       = 0
-						p.blockstun     = 0
+						p.forced_down = false
+						p.hitstop     = 0
+						p.blockstop   = 0
+						p.damage      = 0
+						p.stun        = 0
+						p.stun_timer  = 0
+						p.max_hit_dn  = 0
+						p.effect      = 0
+						p.chip        = 0
+						p.hitstun     = 0
+						p.blockstun   = 0
 					end
 					local base_addr = db.chars[#db.chars].proc_base
 					p.attack        = data
-					p.forced_down   = 2 <= mem.r8(data + base_addr.forced_down)        -- テクニカルライズ可否 家庭用 05A9D6 からの処理
+					p.forced_down   = 2 <= mem.r8(data + base_addr.forced_down)       -- テクニカルライズ可否 家庭用 05A9D6 からの処理
 					p.hitstop       = math.max(2, mem.r8(data + base_addr.hitstop) - 1) -- ヒットストップ 家庭用 弾やられ側:05AE50 からの処理 OK
-					p.blockstop     = math.max(2, p.hitstop - 1)                       -- ガード時の補正
-					p.damage        = mem.r8(data + base_addr.damege)                  -- 補正前ダメージ 家庭用 05B146 からの処理
-					p.stun       = mem.r8(data + base_addr.stun)                    -- 気絶値 家庭用 05C1B0 からの処理
-					p.stun_timer    = mem.r8(data + base_addr.stun_timer)              -- 気絶タイマー 家庭用 05C1B0 からの処理
-					p.max_hit_dn    = mem.r8(data + base_addr.max_hit)                 -- 最大ヒット数 家庭用 061356 からの処理 OK
+					p.blockstop     = math.max(2, p.hitstop - 1)                      -- ガード時の補正
+					p.damage        = mem.r8(data + base_addr.damege)                 -- 補正前ダメージ 家庭用 05B146 からの処理
+					p.stun          = mem.r8(data + base_addr.stun)                   -- 気絶値 家庭用 05C1B0 からの処理
+					p.stun_timer    = mem.r8(data + base_addr.stun_timer)             -- 気絶タイマー 家庭用 05C1B0 からの処理
+					p.max_hit_dn    = mem.r8(data + base_addr.max_hit)                -- 最大ヒット数 家庭用 061356 からの処理 OK
 					p.grabbable2    = mem.r8((0xFFFF & (data + data)) + base_addr.baigaeshi) == 0x01 -- 倍返し可否
 					apply_attack_infos(p, data, base_addr)
 					-- ut.printf("%x %s %s  hitstun %s %s", data, p.hitstop, p.blockstop, p.hitstun, p.blockstun)
@@ -2210,15 +2210,15 @@ rbff2.startplugin          = function()
 		]]
 		p.wp16 = ut.hash_add_all(p.wp16, {
 			[0x20] = function(data) p.pos, p.max_pos, p.min_pos = data, math.max(p.max_pos or 0, data), math.min(p.min_pos or 1000, data) end,
-			[0x22] = function(data) p.pos_frc = ut.int16tofloat(data) end,                                                        -- X座標(小数部)
+			[0x22] = function(data) p.pos_frc = ut.int16tofloat(data) end,                                                         -- X座標(小数部)
 			[0x24] = function(data)
 				p.pos_z, p.on_sway_line, p.on_main_line = data, 40 == data and now() or p.on_sway_line, 24 == data and now() or p.on_main_line -- Z座標
 			end,
-			[0x28] = function(data) p.pos_y = ut.int16(data) end,                                                                 -- Y座標
-			[0x2A] = function(data) p.pos_frc_y = ut.int16tofloat(data) end,                                                      -- Y座標(小数部)
-			[{ addr = 0x5E, filter = 0x011E10 }] = function(data) p.box_addr = mem.rg("A0", 0xFFFFFFFF) - 0x2 end,                -- 判定のアドレス
+			[0x28] = function(data) p.pos_y = ut.int16(data) end,                                                                  -- Y座標
+			[0x2A] = function(data) p.pos_frc_y = ut.int16tofloat(data) end,                                                       -- Y座標(小数部)
+			[{ addr = 0x5E, filter = 0x011E10 }] = function(data) p.box_addr = mem.rg("A0", 0xFFFFFFFF) - 0x2 end,                 -- 判定のアドレス
 			[0x60] = function(data)
-				p.act, p.update_act = data, now()                                                                                 -- 行動ID デバッグディップステータス表示のPと同じ
+				p.act, p.update_act = data, now()                                                                                  -- 行動ID デバッグディップステータス表示のPと同じ
 				p.attackbits.act = data
 				if p.is_fireball then
 					p.act_data = p.body.char_data and p.body.char_data.fireballs[data] or p.act_data
@@ -3681,7 +3681,7 @@ rbff2.startplugin          = function()
 							p.next_block = false
 						end
 					end
-					if global.frame_number == p.on_hit then  -- ヒット時はガードに切り替え
+					if global.frame_number == p.on_hit then -- ヒット時はガードに切り替え
 						p.next_block, p.next_block_ec, p.block1 = true, 75, 0 -- カウンター初期化
 					end
 				end
@@ -3697,7 +3697,7 @@ rbff2.startplugin          = function()
 					if global.dummy_rvs_cnt <= p.rvs_count and p.dummy_rvs then p.gd_rvs_enabled, p.rvs_count = true, -1 end
 				elseif p.gd_rvs_enabled and p.state ~= 2 then
 					p.gd_rvs_enabled = false
-				end                                                            -- ガード状態が解除されたらリバサ解除
+				end -- ガード状態が解除されたらリバサ解除
 
 				-- TODO: ライン送られのリバーサルを修正する。猶予1F
 				-- print(p.state, p.knock_back1, p.knock_back2, p.knock_back3, p.hitstop_remain, rvs_types.in_knock_back, p.last_blockstun, string.format("%x", p.act), p.act_count, p.act_frame)
