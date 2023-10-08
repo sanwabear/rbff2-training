@@ -1645,7 +1645,7 @@ rbff2.startplugin          = function()
 				p.on_hit = data == 1 or data == 3 and now() or p.on_hit                        -- ヒットへの遷移フレームを記録
 				if p.state == 0 and p.on_hit and not p.act_normal then p.on_punish = now() + 10 end -- 確定反撃
 				p.random_boolean = changed and (math.random(255) % 2 == 0) or p.random_boolean
-				p.state, p.update_state, p.change_state = data, now(), changed and now() or p.change_state -- 今の状態と状態更新フレームを記録
+				p.state, p.change_state = data, changed and now() or p.change_state -- 今の状態と状態更新フレームを記録
 				if data == 2 then
 					p.update_tmp_combo(changed and 1 or 2)                                     -- 連続ガード用のコンボ状態リセット
 					p.last_combo = changed and 1 or p.last_combo + 1
