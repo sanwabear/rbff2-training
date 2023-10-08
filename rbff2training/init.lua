@@ -280,17 +280,17 @@ local mem                       = {
 }
 -- プログラム改変
 local mod                       = {
-	p1_patch = function()
+	p1_patch     = function()
 		local base = base_path() .. '/patch/rom/'
 		local filename = "char1-p1.pat"
 		local patch = base .. emu.romname() .. '/' .. filename
 		if not ut.is_file(patch) then ut.printf("%s NOT found", patch) end
 		return ut.apply_patch_file(pgm, patch, true)
 	end,
-	aes = function()
+	aes          = function()
 		mem.wd16(0x10FE32, 0x0000) -- 強制的に家庭用モードに変更
 	end,
-	bugfix   = function()
+	bugfix       = function()
 		-- H POWERの表示バグを修正する 無駄な3段表示から2段表示へ
 		mem.wd8(0x25DB3, 0x1)
 		-- 簡易超必ONのときにダックのブレイクスパイラルブラザー（BRも）が出るようにする
@@ -301,11 +301,11 @@ local mod                       = {
 		-- 逆襲拳、サドマゾの初段で相手の状態変更しない（相手が投げられなくなる事象が解消する）
 		-- mem.wd8(0x57F43, 0x00)
 	end,
-	training = function()
+	training     = function()
 		mem.wd16(0x1F3BC, 0x4E75) -- 1Pのスコア表示をすぐ抜ける
 		mem.wd16(0x1F550, 0x4E75) -- 2Pのスコア表示をすぐ抜ける
 		mem.wd32(0xD238, 0x4E714E71) -- 家庭用モードでのクレジット消費をNOPにする
-		mem.wd8(0x62E9D, 0x00) -- 乱入されても常にキャラ選択できる
+		mem.wd8(0x62E9D, 0x00)  -- 乱入されても常にキャラ選択できる
 		-- 対CPU1体目でボスキャラも選択できるようにする サンキューヒマニトさん
 		mem.wd8(0x633EE, 0x60)  -- CPUのキャラテーブルをプレイヤーと同じにする
 		mem.wd8(0x63440, 0x60)  -- CPUの座標テーブルをプレイヤーと同じにする
@@ -351,7 +351,7 @@ local mod                       = {
 		mem.wd16(1004BF, 0x3CC1)     -- 1P Level 2 Blue Mary 0x55FE46
 		]]
 	end,
-	fast_select = function()
+	fast_select  = function()
 		--[[
 		010668: 0C6C FFEF 0022           cmpi.w  #-$11, ($22,A4)                     ; THE CHALLENGER表示のチェック。
 		01066E: 6704                     beq     $10674                              ; braにしてチェックを飛ばすとすぐにキャラ選択にいく
@@ -366,7 +366,7 @@ local mod                       = {
 		mem.wd32(0x10668, 0x4EF90000) -- FIGHT表示から対戦開始(F05E)へ飛ばす
 		mem.wd32(0x1066C, 0xF33A4E71) -- FIGHT表示から対戦開始
 	end,
-	all_bs = function(enabled)
+	all_bs       = function(enabled)
 		if enabled then
 			-- 全必殺技BS可能
 			for addr = 0x85980, 0x85CE8, 2 do mem.wd16(addr, 0x007F|0x8000) end -- 0パワー消費 無敵7Fフレーム
@@ -380,7 +380,7 @@ local mod                       = {
 			mem.wd32(0x39F24, 0x66000014)
 		end
 	end,
-	easy_move = {
+	easy_move    = {
 		real_counter = function(mode) -- 1:OFF 2:ジャーマン 3:フェイスロック 4:投げっぱなしジャーマン"
 			if mode > 1 then
 				mem.wd16(0x413EE, 0x1C3C) -- ボタン読み込みをボタンデータ設定に変更
@@ -423,11 +423,11 @@ local mod                       = {
 			-- 連キャン、必キャン可否テーブルに連キャンデータを設定する。C0が必、D0で連。
 			for i = 0x085138, 0x08591F do mem.wd8(i, 0xD0) end
 		end,
-		triple_ecstasy = function(enabled)                   -- 自動マリートリプルエクスタシー
-			mem.wd8(0x41D00, enabled and 0x60 or 0x66)       -- デバッグDIPチェックを飛ばす
+		triple_ecstasy = function(enabled)    -- 自動マリートリプルエクスタシー
+			mem.wd8(0x41D00, enabled and 0x60 or 0x66) -- デバッグDIPチェックを飛ばす
 		end,
 	},
-	camerawork = function(enabled)
+	camerawork   = function(enabled)
 		if enabled then
 			-- 演出のためのカメラワークテーブルを戻す
 			for addr = 0x13C60, 0x13CBF, 4 do mem.wd32(addr, 0x00000000) end
@@ -1745,10 +1745,6 @@ rbff2.startplugin          = function()
 				p.attack            = data
 				p.attackbits.attack = data
 				local base_addr     = p.char_data.proc_base
-				-- キャンセル可否家庭用2AD90からの処理の断片
-				local cancelable    = ((data < 0x70) and mem.r8(data + base_addr.cancelable) or p.cancelable_data) & 0xD0 == 0xD0
-				p.cancelable        = cancelable
-				p.repeatable        = cancelable and p.repeatable
 				p.forced_down       = 2 <= mem.r8(data + base_addr.forced_down) -- テクニカルライズ可否 家庭用 05A9BA からの処理
 				-- ヒットストップ 家庭用 攻撃側:05AE2A やられ側:05AE50 からの処理 OK
 				p.hitstop           = math.max(2, (0x7F & mem.r8(data + base_addr.hitstop)) - 1)
@@ -3168,6 +3164,25 @@ rbff2.startplugin          = function()
 				p.pos_y_down = p.pos_y_down and (p.pos_y_down + 1) or 1
 			else
 				p.pos_y_down = 0
+			end
+
+			--[[ キャンセル可否家庭用2AD90からの処理と各種呼び出し元からの断片
+			029940: 6408                     bcc     $2994a                    ; キャリーフラグがないならジャンプ
+			029942: 082C 0005 007E           btst    #$5, ($7e,A4)
+			029948: 660C                     bne     $29956
+			02994A: D000                     add.b   D0, D0
+			02994C: 6442                     bcc     $29990                    ; キャリーフラグがないならジャンプ
+			02994E: 082C 0004 007E           btst    #$4, ($7e,A4)
+			]]
+			p.cancelable = false
+			p.repeatable = false
+			if p.attack and p.attack < 0x70 then
+				if (p.cancelable_data + p.cancelable_data) > 0xFF then
+					p.cancelable = ut.tstb(p.knockback3, 2 ^ 5, true)
+				elseif (p.cancelable_data << 2) > 0xFF then
+					p.cancelable = ut.tstb(p.knockback3, 2 ^ 4, true)
+				end
+				p.repeatable = p.cancelable_data & 0xD0 == 0xD0
 			end
 
 			-- ライン送らない状態のデータ書き込み
