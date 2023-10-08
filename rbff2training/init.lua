@@ -1617,7 +1617,6 @@ rbff2.startplugin          = function()
 				flag_cc     = base + 0xCC,
 				hurt_state  = base + 0xE4,     -- やられ状態 ライン送らない状態用
 				stun_limit  = p1 and 0x10B84E or 0x10B856, -- 最大気絶値
-				no_hit      = p1 and 0x10DDF2 or 0x10DDF1, -- ヒットしないフック
 				char        = p1 and 0x107BA5 or 0x107BA7, -- キャラID
 				color       = p1 and 0x107BAC or 0x107BAD, -- カラー A=0x00 D=0x01
 				stun        = p1 and 0x10B850 or 0x10B858, -- 現在気絶値
