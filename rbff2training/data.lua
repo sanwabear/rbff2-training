@@ -19,10 +19,6 @@
 --LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 --OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 --SOFTWARE.
-local convert_lib = require("data/button_char")
-local convert     = function(str)
-	return str and convert_lib(str) or str
-end
 local ut          = require("rbff2training/util")
 local db          = {}
 
@@ -1791,7 +1787,7 @@ local char_fireball_base          = {
 	},
 }
 local extend_act_names            = function(acts)
-	for i = 1, #acts.names do acts.names[i] = convert(acts.names[i]) end
+	for i = 1, #acts.names do acts.names[i] = ut.convert(acts.names[i]) end
 	acts.name_set = ut.table_to_set(acts.names)
 	acts.name = acts.names[1]
 	acts.normal_name = acts.name
@@ -3657,16 +3653,16 @@ local create_input_states            = function()
 					["1"] = "3", ["3"] = "1", ["4"] = "6", ["6"] = "4", ["7"] = "9", ["9"] = "7",
 				})
 				local r_cmds, cmds = {}, {}
-				for c in string.gmatch(convert(tbl.r_cmd), "([^|]*)|?") do
+				for c in string.gmatch(ut.convert(tbl.r_cmd), "([^|]*)|?") do
 					table.insert(r_cmds, c)
 				end
-				for c in string.gmatch(convert(tbl.cmd), "([^|]*)|?") do
+				for c in string.gmatch(ut.convert(tbl.cmd), "([^|]*)|?") do
 					table.insert(cmds, c)
 				end
 				-- コマンドの右向き左向きをあらわすデータ値をキーにしたテーブルを用意
 				tbl.lr_cmds = { [1] = cmds, [-1] = r_cmds, }
 				tbl.cmds = cmds
-				tbl.name = convert(tbl.name)
+				tbl.name = ut.convert(tbl.name)
 			end
 		end
 		return input_tables
@@ -4243,33 +4239,37 @@ db.cmd_base             = cmd_base
 db.research_cmd         = research_cmd()
 
 -- 削りダメージ補正
-local chip_dmg_types    = {
+local chip_types        = {
 	zero = { name = "0", calc = function(pure_dmg) return 0 end },
 	rshift4 = { name = "1/16", calc = function(pure_dmg) return math.max(1, 0xFFFF & (pure_dmg >> 4)) end },
 	rshift5 = { name = "1/32", calc = function(pure_dmg) return math.max(1, 0xFFFF & (pure_dmg >> 5)) end },
 }
 -- 削りダメージ計算種別 補正処理の分岐先の種類分用意する
-local chip_dmg_type_tbl = {
-	chip_dmg_types.zero, --  0 ダメージ無し
-	chip_dmg_types.zero, --  1 ダメージ無し
-	chip_dmg_types.rshift4, --  2 1/16
-	chip_dmg_types.rshift4, --  3 1/16
-	chip_dmg_types.zero, --  4 ダメージ無し
-	chip_dmg_types.zero, --  5 ダメージ無し
-	chip_dmg_types.rshift4, --  6 1/16
-	chip_dmg_types.rshift5, --  7 1/32
-	chip_dmg_types.rshift5, --  8 1/32
-	chip_dmg_types.zero, --  9 ダメージ無し
-	chip_dmg_types.zero, -- 10 ダメージ無し
-	chip_dmg_types.rshift4, -- 11 1/16
-	chip_dmg_types.rshift4, -- 12 1/16
-	chip_dmg_types.rshift4, -- 13 1/16
-	chip_dmg_types.rshift4, -- 14 1/16
-	chip_dmg_types.rshift4, -- 15 1/16
-	chip_dmg_types.zero, -- 16 ダメージ無し
+local chip_type_table   = {
+	chip_types.zero, --  0 ダメージ無し
+	chip_types.zero, --  1 ダメージ無し
+	chip_types.rshift4, --  2 1/16
+	chip_types.rshift4, --  3 1/16
+	chip_types.zero, --  4 ダメージ無し
+	chip_types.zero, --  5 ダメージ無し
+	chip_types.rshift4, --  6 1/16
+	chip_types.rshift5, --  7 1/32
+	chip_types.rshift5, --  8 1/32
+	chip_types.zero, --  9 ダメージ無し
+	chip_types.zero, -- 10 ダメージ無し
+	chip_types.rshift4, -- 11 1/16
+	chip_types.rshift4, -- 12 1/16
+	chip_types.rshift4, -- 13 1/16
+	chip_types.rshift4, -- 14 1/16
+	chip_types.rshift4, -- 15 1/16
+	chip_types.zero, -- 16 ダメージ無し
 }
-db.chip_dmg_types       = chip_dmg_types
-db.chip_dmg_type_tbl    = chip_dmg_type_tbl
+db.chip_types           = chip_types
+db.chip_type_table      = chip_type_table
+db.calc_chip            = function(addr, damage)
+	local chip_type     = db.chip_type_table[addr]
+	return chip_type.calc(damage)
+end
 
 --------------------------------------------------------------------------------------
 -- 描画用データ

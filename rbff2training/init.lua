@@ -20,10 +20,6 @@
 --OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 --SOFTWARE.
 local exports            = {}
-local convert_lib        = require("data/button_char")
-local convert            = function(str)
-	return str and convert_lib(str) or str
-end
 exports.name             = "rbff2training"
 exports.version          = "0.0.1"
 exports.description      = "RBFF2 Training"
@@ -34,7 +30,7 @@ local ut                 = require("rbff2training/util")
 local db                 = require("rbff2training/data")
 local UTF8toSJIS         = require("rbff2training/UTF8toSJIS")
 
-local saveText           = function(path, score)
+local save_file          = function(path, score)
 	local file, err = io.open(UTF8toSJIS:UTF8_to_SJIS_str_cnv(path), 'w') -- windows向け
 	if file then
 		file:write(tostring(score))
@@ -43,7 +39,7 @@ local saveText           = function(path, score)
 		print("error:", err)
 	end
 end
---saveText(ut.cur_dir() .. "/plugins/rbff2training/テスト.txt", "")
+--save_file(ut.cur_dir() .. "/plugins/rbff2training/テスト.txt", "")
 
 -- MAMEのLuaオブジェクトの変数と初期化処理
 local man
@@ -189,7 +185,7 @@ local input_state_types  = db.input_state_types
 local input_states       = db.input_states
 local input_state_col    = db.input_state_col
 
-local chip_dmg_types     = db.chip_dmg_types
+local chip_types         = db.chip_types
 
 -- メニュー用変数
 local menu               = {
@@ -750,7 +746,7 @@ end
 local ggkey_set                 = { new_ggkey_set(true), new_ggkey_set(false) }
 
 -- ボタンの色テーブル
-local btn_col                   = { [convert("_A")] = 0xFFCC0000, [convert("_B")] = 0xFFCC8800, [convert("_C")] = 0xFF3333CC, [convert("_D")] = 0xFF336600, }
+local btn_col                   = { [ut.convert("_A")] = 0xFFCC0000, [ut.convert("_B")] = 0xFFCC8800, [ut.convert("_C")] = 0xFF3333CC, [ut.convert("_D")] = 0xFF336600, }
 local text_col, shadow_col      = 0xFFFFFFFF, 0xFF000000
 
 local rom_patch_path            = function(filename)
@@ -818,13 +814,13 @@ end
 -- コマンド文字列表示
 local draw_cmd_text_with_shadow = function(x, y, str, fgcol, bgcol)
 	-- 変換しつつUnicodeの文字配列に落とし込む
-	local cstr, xx = convert(str), x
+	local cstr, xx = ut.convert(str), x
 	for c in string.gmatch(cstr, "([%z\1-\127\194-\244][\128-\191]*)") do
 		-- 文字の影
 		scr:draw_text(xx + 0.5, y + 0.5, c, 0xFF000000)
 		if btn_col[c] then
 			-- ABCDボタンの場合は黒の●を表示した後ABCDを書いて文字の部分を黒く見えるようにする
-			scr:draw_text(xx, y, convert("_("), text_col)
+			scr:draw_text(xx, y, ut.convert("_("), text_col)
 			scr:draw_text(xx, y, c, fgcol or btn_col[c])
 		else
 			scr:draw_text(xx, y, c, fgcol or text_col)
@@ -1077,7 +1073,7 @@ local load_proc_base        = function()
 			esaka         = mem.r32(char4 + 0x23750),
 			pow_up        = ((0xC == char) and 0x8C274 or (0x10 == char) and 0x8C29C or 0x8C24C),
 			pow_up_ext    = mem.r32(0x8C18C + char4),
-			chip_damage   = fix_addr(0x95CCC),
+			chip          = fix_addr(0x95CCC),
 			hitstun1      = fix_addr(0x95CCC),
 			hitstun2      = 0x16 + 0x2 + fix_addr(0x5AF7C),
 			blockstun     = 0x1A + 0x2 + fix_addr(0x5AF88),
@@ -1095,7 +1091,7 @@ local load_proc_base        = function()
 		max_hit     = fix_addr(0x885F2),
 		baigaeshi   = 0x8E940,
 		effect      = fix_addr(0x95BEC) - 0x20, -- 家庭用58232からの処理
-		chip_damage = fix_addr(0x95CCC),
+		chip        = fix_addr(0x95CCC),
 		hitstun1    = fix_addr(0x95CCC),
 		hitstun2    = 0x16 + 0x2 + fix_addr(0x5AF7C),
 		blockstun   = 0x1A + 0x2 + fix_addr(0x5AF88),
@@ -1418,8 +1414,7 @@ end
 
 local apply_attack_infos   = function(p, id, base_addr)
 	-- 削りダメージ計算種別取得 05B2A4 からの処理
-	p.chip_dmg_type = db.chip_dmg_type_tbl[(0xF & mem.r8(base_addr.chip_damage + id)) + 1]
-	p.chip_dmg      = p.chip_dmg_type.calc(p.pure_dmg)
+	p.chip          = db.calc_chip((0xF & mem.r8(base_addr.chip + id)) + 1, p.damage)
 	-- 硬直時間取得 05AF7C(家庭用版)からの処理
 	local d2        = 0xF & mem.r8(id + base_addr.hitstun1)
 	p.hitstun       = mem.r8(base_addr.hitstun2 + d2) + 1 + 3 -- ヒット硬直
@@ -1686,16 +1681,15 @@ rbff2.startplugin          = function()
 					p.forced_down     = false
 					p.hitstop         = 0
 					p.blockstop       = 0
-					p.pure_dmg        = 0
-					p.pure_st         = 0
-					p.pure_st_tm      = 0
+					p.damage          = 0
+					p.stun            = 0
+					p.stun_timer      = 0
 					p.max_hit_dn      = 0
 					p.esaka_range     = 0
 					p.pow_up_hit      = 0
 					p.pow_up_gd       = 0
 					p.effect          = 0
-					p.chip_dmg_type   = chip_dmg_types.zero
-					p.chip_dmg        = 0
+					p.chip            = 0
 					p.hitstun         = 0
 					p.blockstun       = 0
 					p.pow_revenge     = 0
@@ -1717,9 +1711,9 @@ rbff2.startplugin          = function()
 				-- ヒットストップ 家庭用 攻撃側:05AE2A やられ側:05AE50 からの処理 OK
 				p.hitstop           = math.max(2, (0x7F & mem.r8(data + base_addr.hitstop)) - 1)
 				p.blockstop         = math.max(2, p.hitstop - 1) -- ガード時の補正
-				p.pure_dmg          = mem.r8(data + base_addr.damege) -- 補正前ダメージ  家庭用 05B118 からの処理
-				p.pure_st           = mem.r8(data + base_addr.stun) -- 気絶値 05C1CA からの処理
-				p.pure_st_tm        = mem.r8(data + base_addr.stun_timer) -- 気絶タイマー 05C1CA からの処理
+				p.damage            = mem.r8(data + base_addr.damege) -- 補正前ダメージ  家庭用 05B118 からの処理
+				p.stun              = mem.r8(data + base_addr.stun) -- 気絶値 05C1CA からの処理
+				p.stun_timer        = mem.r8(data + base_addr.stun_timer) -- 気絶タイマー 05C1CA からの処理
 				p.max_hit_dn        = data > 0 and mem.r8(data + base_addr.max_hit) or 0
 				if 0x58 > data then
 					-- 詠酒距離 家庭用 0236F0 からの処理
@@ -1738,7 +1732,7 @@ rbff2.startplugin          = function()
 					p.pow_absorb = p.char_data.pow[data].pow_absorb or p.pow_absorb
 					p.pow_up_hit = p.char_data.pow[data].pow_up_hit or p.pow_up_hit
 				end
-				-- ut.printf("%x dmg %x %s %s %s %s %s", p.addr.base, data, p.pure_dmg, p.pure_st, p.pure_st_tm, p.pow_up_hit, p.pow_up_gd)
+				-- ut.printf("%x dmg %x %s %s %s %s %s", p.addr.base, data, p.damage, p.stun, p.stun_timer, p.pow_up_hit, p.pow_up_gd)
 			end,
 			-- [0xB7] = function(data) p.corner = data end, -- 画面端状態 0:端以外 1:画面端 3:端押し付け
 			[0xB8] = function(data)
@@ -1923,13 +1917,12 @@ rbff2.startplugin          = function()
 						p.forced_down   = false
 						p.hitstop       = 0
 						p.blockstop     = 0
-						p.pure_dmg      = 0
-						p.pure_st       = 0
-						p.pure_st_tm    = 0
+						p.damage        = 0
+						p.stun       = 0
+						p.stun_timer    = 0
 						p.max_hit_dn    = 0
 						p.effect        = 0
-						p.chip_dmg_type = chip_dmg_types.zero
-						p.chip_dmg      = 0
+						p.chip          = 0
 						p.hitstun       = 0
 						p.blockstun     = 0
 					end
@@ -1938,9 +1931,9 @@ rbff2.startplugin          = function()
 					p.forced_down   = 2 <= mem.r8(data + base_addr.forced_down)        -- テクニカルライズ可否 家庭用 05A9D6 からの処理
 					p.hitstop       = math.max(2, mem.r8(data + base_addr.hitstop) - 1) -- ヒットストップ 家庭用 弾やられ側:05AE50 からの処理 OK
 					p.blockstop     = math.max(2, p.hitstop - 1)                       -- ガード時の補正
-					p.pure_dmg      = mem.r8(data + base_addr.damege)                  -- 補正前ダメージ 家庭用 05B146 からの処理
-					p.pure_st       = mem.r8(data + base_addr.stun)                    -- 気絶値 家庭用 05C1B0 からの処理
-					p.pure_st_tm    = mem.r8(data + base_addr.stun_timer)              -- 気絶タイマー 家庭用 05C1B0 からの処理
+					p.damage        = mem.r8(data + base_addr.damege)                  -- 補正前ダメージ 家庭用 05B146 からの処理
+					p.stun       = mem.r8(data + base_addr.stun)                    -- 気絶値 家庭用 05C1B0 からの処理
+					p.stun_timer    = mem.r8(data + base_addr.stun_timer)              -- 気絶タイマー 家庭用 05C1B0 からの処理
 					p.max_hit_dn    = mem.r8(data + base_addr.max_hit)                 -- 最大ヒット数 家庭用 061356 からの処理 OK
 					p.grabbable2    = mem.r8((0xFFFF & (data + data)) + base_addr.baigaeshi) == 0x01 -- 倍返し可否
 					apply_attack_infos(p, data, base_addr)
@@ -3935,7 +3928,7 @@ rbff2.startplugin          = function()
 				local p1, op, col1, col2, col3, label = i == 1, p.op, {}, {}, {}, {}
 				for _, xp in ipairs(p.objects) do
 					if xp.proc_active then
-						table.insert(label, string.format("Damage %3s/%1s  Stun %2s/%2s Fra.", xp.pure_dmg or 0, xp.chip_dmg or 0, xp.pure_st or 0, xp.pure_st_tm or 0))
+						table.insert(label, string.format("Damage %3s/%1s  Stun %2s/%2s Fra.", xp.damage or 0, xp.chip or 0, xp.stun or 0, xp.stun_timer or 0))
 						table.insert(label, string.format("HitStop %2s/%2s HitStun %2s/%2s", xp.hitstop or 0, xp.blockstop or 0, xp.hitstun or 0, xp.blockstun or 0))
 						table.insert(label, string.format("%2s", db.hit_effect_name(xp.effect)))
 						local grabl = ""
@@ -4190,8 +4183,8 @@ rbff2.startplugin          = function()
 							{ key = "c", btn = "_C", x = key_xy[5].x + 21,   y = key_xy[5].y - 3,    col = 0xFFFFFFFF },
 							{ key = "d", btn = "_D", x = key_xy[5].x + 26,   y = key_xy[5].y - 2,    col = 0xFFFFFFFF },
 						}) do
-							local xx, yy, btn, on = ctl.x, ctl.y, convert(ctl.btn), ctl.key == "" or ggkey[ctl.key]
-							scr:draw_text(xx, yy, convert("_("), on and ctl.col or 0xDDCCCCCC)
+							local xx, yy, btn, on = ctl.x, ctl.y, ut.convert(ctl.btn), ctl.key == "" or ggkey[ctl.key]
+							scr:draw_text(xx, yy, ut.convert("_("), on and ctl.col or 0xDDCCCCCC)
 							scr:draw_text(xx, yy, btn, on and btn_col[btn] or 0xDD444444)
 						end
 					end

@@ -20,8 +20,13 @@
 --OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 --SOFTWARE.
 local lfs        = require("lfs")
+local _convert   = require("data/button_char")
 
 local ut         = {}
+
+ut.convert       = function(str)
+	return str and _convert(str) or str
+end
 
 ut.cur_dir       = lfs.currentdir
 
