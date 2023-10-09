@@ -185,6 +185,17 @@ frame_attack_types.mask_fireball  =
 	frame_attack_types.post_fireball |
 	frame_attack_types.on_fireball |
 	frame_attack_types.off_fireball
+frame_attack_types.mask_jump  =
+	frame_attack_types.on_air |
+	frame_attack_types.on_ground
+frame_attack_types.mask_hitbox  =
+	frame_attack_types.attacking |
+	frame_attack_types.fake |
+	frame_attack_types.fb |
+	frame_attack_types.fullhit |
+	frame_attack_types.harmless |
+	frame_attack_types.juggle |
+	frame_attack_types.obsolute
 frame_attack_types.main_high      = frame_attack_types.main | frame_attack_types.high
 frame_attack_types.main_low       = frame_attack_types.main | frame_attack_types.low
 frame_attack_types.sway_high      = frame_attack_types.sway | frame_attack_types.high

@@ -2977,18 +2977,17 @@ rbff2.startplugin          = function()
 
 		-- TODO 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
 		local attackbit_mask = 0
-		--attackbit_mask = attackbit_mask | frame_attack_types.mask_act_count
-		--attackbit_mask = attackbit_mask | frame_attack_types.mask_fb_effect
-		--attackbit_mask = attackbit_mask | frame_attack_types.mask_attack
-		--attackbit_mask = attackbit_mask | frame_attack_types.mask_act
-		--attackbit_mask = attackbit_mask | frame_attack_types.mask_fake
-		--attackbit_mask = attackbit_mask | frame_attack_types.mask_fireball
+		attackbit_mask = attackbit_mask | frame_attack_types.mask_act_count
+		attackbit_mask = attackbit_mask | frame_attack_types.mask_fb_effect
+		attackbit_mask = attackbit_mask | frame_attack_types.mask_attack
+		attackbit_mask = attackbit_mask | frame_attack_types.mask_act
+		attackbit_mask = attackbit_mask | frame_attack_types.mask_hitbox
 		attackbit_mask = ut.hex_clear(0xFFFFFFFFFFFFFFFF, attackbit_mask)
+		attackbit      = attackbit & attackbit_mask
 		if p.disp_frm == 3 then
 		elseif p.disp_frm == 4 then
 		elseif p.disp_frm == 5 then
 		end
-		attackbit      = attackbit & attackbit_mask
 		--ut.printf("%x %x %x | %s", p.num, attackbit_mask, attackbit, ut.tobitstr(attackbit, " "))
 
 		local frame    = p.act_frames[#p.act_frames]
@@ -2996,7 +2995,9 @@ rbff2.startplugin          = function()
 		local act_data = p.body.act_data
 		local name     = (frame and act_data.name_set and act_data.name_set[prev]) and prev or act_data.name
 
-		if p.update_act or not frame or frame.col ~= col or frame.attackbit ~= attackbit then
+		if p.update_act or not frame or frame.col ~= col or frame.key ~= attackbit then
+			-- 弾とジャンプ状態はキーから省いて無駄な区切りを取り除く
+			local key_mask = ut.hex_clear(0xFFFFFFFFFFFFFFFF, frame_attack_types.mask_fireball | frame_attack_types.mask_jump)
 			--行動IDの更新があった場合にフレーム情報追加
 			frame = ut.table_add(p.act_frames, {
 				act        = p.act,
@@ -3007,6 +3008,7 @@ rbff2.startplugin          = function()
 				xline      = xline,
 				update     = p.update_act,
 				attackbit  = attackbit,
+				key        = key_mask & attackbit,
 				gap_frames = {},
 			}, 180)
 		elseif frame then
@@ -3138,6 +3140,7 @@ rbff2.startplugin          = function()
 			else
 				p.attackbits.on_air, p.attackbits.on_ground = false, false
 			end
+			--p.attackbits.in_air, p.attackbits.in_ground = p.in_air, not p.in_air
 			-- 高さが0になった時点でジャンプ中状態を解除する
 			if p.attackbits.on_ground then p.jumping = false end
 			-- ジャンプ以降直後に空中になっていればジャンプ中とみなす
