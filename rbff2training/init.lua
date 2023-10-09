@@ -1713,6 +1713,7 @@ rbff2.startplugin          = function()
 				end
 			end,
 			[0xA5] = function(data) p.additional = data end, -- 追加入力成立時のデータ
+			--[0xAD] = function(data)  end, -- ガード動作用
 			[0xAF] = function(data) p.cancelable_data = data end, -- キャンセル可否 00:不可 C0:可 D0:可 正確ではないかも
 			[0x68] = function(data) p.skip_frame = data ~= 0 end, -- 潜在能力強制停止
 			[0xB6] = function(data)
@@ -3151,17 +3152,15 @@ rbff2.startplugin          = function()
 
 			-- キャンセル可否家庭用2AD90からの処理と各種呼び出し元からの断片
 			p.cancelable = false
-			p.repeatable = false
 			if p.attack and p.attack < 0x70 then
 				if (p.cancelable_data + p.cancelable_data) > 0xFF then
 					p.cancelable = ut.tstb(p.flag_7e, db.flag_7e._05, true)
 				elseif (p.cancelable_data << 2) > 0xFF then
 					p.cancelable = ut.tstb(p.flag_7e, db.flag_7e._04, true)
 				end
-				p.repeatable = p.cancelable_data & 0xD0 == 0xD0
 			end
 
-			-- ガード持続の種類 家庭用0271FCからの処理 0:攻撃無し 1:ガード継続小 2:ガード継続大
+			-- ガード持続の種類 家庭用 0271FC からの処理 0:攻撃無し 1:ガード継続小 2:ガード継続大
 			if p.firing then
 				p.kagenui_type = 2
 			elseif p.attack and p.attack ~= 0 then
@@ -3172,23 +3171,14 @@ rbff2.startplugin          = function()
 			end
 
 			-- ライン送らない状態のデータ書き込み
-			if p.dis_plain_shift then
-				mem.w8(p.addr.hurt_state, p.hurt_state | 0x40)
-			end
+			if p.dis_plain_shift then mem.w8(p.addr.hurt_state, p.hurt_state | 0x40) end
 
-			--フレーム数
+			--フレーム用
 			p.skip_frame   = global.skip_frame1 or global.skip_frame2 or p.skip_frame
-
 			p.old.act_data = p.act_data or { name = "", type = db.act_types.startup | db.act_types.free, }
 			if p.flag_c4 == 0 and p.flag_c8 == 0 then
-				local name = nil
-				if ut.tstb(p.flag_cc, db.flag_cc.blocking) then
-					name = "ガード"
-				elseif p.flag_cc > 0 then
-					name = db.get_flag_name(p.flag_cc, db.flag_names_cc)
-				else
-					name = db.get_flag_name(p.flag_c0, db.flag_names_c0)
-				end
+				local name = ut.tstb(p.flag_cc, db.flag_cc.blocking) and "ガード" or p.flag_cc > 0 and
+					db.get_flag_name(p.flag_cc, db.flag_names_cc) or db.get_flag_name(p.flag_c0, db.flag_names_c0)
 				if name then
 					p.act_data_cache = p.act_data_cache or {}
 					p.act_data = p.act_data_cache[name]
@@ -3974,7 +3964,7 @@ rbff2.startplugin          = function()
 						if xp.is_fireball then
 							table.insert(label, string.format("%s/%s Hit  Fireball-Lv. %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.fireball_rank or 0))
 						else
-							local kagenui_names = { "-", "weak", "strong" }
+							local kagenui_names = { "-", "Weak", "Strong" }
 							table.insert(label, string.format("Pow. %2s/%2s/%2s Rev.%2s Abs.%2s",
 								p.pow_up_direct == 0 and p.pow_up or p.pow_up_direct or 0, p.pow_up_hit or 0, p.pow_up_block or 0, p.pow_revenge or 0, p.pow_absorb or 0))
 							table.insert(label, string.format("Inv.%2s  BS-Pow.%2s BS-Inv.%2s", xp.sp_invincible or 0, xp.bs_pow or 0, xp.bs_invincible or 0))
