@@ -1680,10 +1680,7 @@ rbff2.startplugin          = function()
 		p.wp8 = {
 			[0x16] = function(data) p.knockback1 = data end, -- のけぞり確認用2(裏雲隠し)
 			[0x69] = function(data) p.knockback2 = data end, -- のけぞり確認用1(色々)
-			[0x7E] = function(data)
-				p.flag_7e = data -- のけぞり確認用3(フェニックススルー)
-				--if ut.tstb(data, db.flag_7e._03) then  p.on_update_act = now() + 1 end
-			end,
+			[0x7E] = function(data) p.flag_7e = data end, -- のけぞり確認用3(フェニックススルー)
 			[{ addr = 0x82, filter = { 0x2668C, 0x2AD24, 0x2AD2C } }] = function(data, ret)
 				local pc = mem.pc()
 				if pc == 0x2668C then p.input1, p.flag_fin = data, false end
@@ -1776,7 +1773,7 @@ rbff2.startplugin          = function()
 			end,
 			-- [0xB7] = function(data) p.corner = data end, -- 画面端状態 0:端以外 1:画面端 3:端押し付け
 			[0xB8] = function(data)
-				p.spid, p.sp_flag = data, mem.r32(0x3AAAC + (data << 2)) -- 技コマンド成立時の技のID, 0xC8へ設定するデータ(03AA8Aからの処理)
+				p.spid, p.sp_flag, p.on_update_spid = data, mem.r32(0x3AAAC + (data << 2)), now() -- 技コマンド成立時の技のID, 0xC8へ設定するデータ(03AA8Aからの処理)
 			end,
 			[{ addr = 0xB9, filter = { 0x58930, 0x58948 } }] = function(data)
 				if data == 0 and mem.pc() == 0x58930 then p.on_bs_clear = now() end            -- BSフラグのクリア
@@ -2785,7 +2782,7 @@ rbff2.startplugin          = function()
 		local last_group = frame_groups[#frame_groups]
 		local last_frame = last_group and last_group[#last_group] or nil
 		if not last_frame or last_frame.name ~= frame.name or     -- 名前違いでブレイク
-			(frame.act_1st and frame.count == 1)                  -- カウンタでブレイク
+			(frame.update and frame.count == 1)                  -- カウンタでブレイク
 		then
 			table.insert(frame_groups, { frame })                 -- ブレイクしたので新規にグループ作成
 			while 180 < #frame_groups do table.remove(frame_groups, 1) end --バッファ長調整
@@ -3011,8 +3008,9 @@ rbff2.startplugin          = function()
 		local prev     = frame and frame.name
 		local act_data = p.body.act_data
 		local name     = (frame and act_data.name_set and act_data.name_set[prev]) and prev or act_data.name
+		local update   = (p.spid > 0 and p.on_update_spid == global.frame_number) or (p.spid == 0 and p.on_update_act == global.frame_number)
 
-		if not frame or frame.col ~= col or frame.attackbit ~= attackbit then
+		if update or not frame or frame.col ~= col or frame.attackbit ~= attackbit then
 			--行動IDの更新があった場合にフレーム情報追加
 			frame = ut.table_add(p.act_frames, {
 				act        = p.act,
@@ -3021,7 +3019,7 @@ rbff2.startplugin          = function()
 				col        = col,
 				line       = line,
 				xline      = xline,
-				act_1st    = p.act_1st,
+				update     = update,
 				attackbit  = attackbit,
 				gap_frames = {},
 			}, 180)
@@ -3034,7 +3032,7 @@ rbff2.startplugin          = function()
 
 		local last_frame = frame
 		frame = p.gap_frames.act_frames[#p.gap_frames.act_frames]
-		if not frame or upd_group or p.act_1st or frame.key ~= gap then
+		if update or not frame or upd_group or frame.key ~= gap then
 			frame = ut.table_add(p.gap_frames.act_frames, {
 				act = p.act,
 				count = 1,
@@ -3042,8 +3040,8 @@ rbff2.startplugin          = function()
 				name = last_frame.name,
 				col = 0x22FFFFFF & font_col,
 				line = 0xCCFFFFFF & font_col,
-				act_1st = p.act_1st,
-				key = gap,
+				update  = update,
+				key = gap,  
 			}, 180)
 		else
 			frame.count = frame.count + 1
@@ -3166,21 +3164,14 @@ rbff2.startplugin          = function()
 				p.pos_y_down = 0
 			end
 
-			--[[ キャンセル可否家庭用2AD90からの処理と各種呼び出し元からの断片
-			029940: 6408                     bcc     $2994a                    ; キャリーフラグがないならジャンプ
-			029942: 082C 0005 007E           btst    #$5, ($7e,A4)
-			029948: 660C                     bne     $29956
-			02994A: D000                     add.b   D0, D0
-			02994C: 6442                     bcc     $29990                    ; キャリーフラグがないならジャンプ
-			02994E: 082C 0004 007E           btst    #$4, ($7e,A4)
-			]]
+			-- キャンセル可否家庭用2AD90からの処理と各種呼び出し元からの断片
 			p.cancelable = false
 			p.repeatable = false
 			if p.attack and p.attack < 0x70 then
 				if (p.cancelable_data + p.cancelable_data) > 0xFF then
-					p.cancelable = ut.tstb(p.flag_7e, 2 ^ 5, true)
+					p.cancelable = ut.tstb(p.flag_7e, db.flag_7e._05, true)
 				elseif (p.cancelable_data << 2) > 0xFF then
-					p.cancelable = ut.tstb(p.flag_7e, 2 ^ 4, true)
+					p.cancelable = ut.tstb(p.flag_7e, db.flag_7e._04, true)
 				end
 				p.repeatable = p.cancelable_data & 0xD0 == 0xD0
 			end
@@ -3206,7 +3197,6 @@ rbff2.startplugin          = function()
 			p.old.act_data = p.act_data or { name = "", type = db.act_types.startup | db.act_types.free, }
 			if p.flag_c4 == 0 and p.flag_c8 == 0 then
 				local name = nil
-				--{ names = { "ウェーブライダー" }, type = act_types.preserve | act_types.any, ids = { 0x10C } },
 				if ut.tstb(p.flag_cc, db.flag_cc._18, true) then
 					name = ut.tstb(p.flag_c0, db.flag_c0._30, true) and "ダウン" or "やられ"
 				elseif ut.tstb(p.flag_cc, db.flag_cc._16 | db.flag_cc._17 | db.flag_cc._19 | db.flag_cc._21 | db.flag_cc._22 | db.flag_cc._23 | db.flag_cc._28, true) then
@@ -3228,11 +3218,8 @@ rbff2.startplugin          = function()
 						p.act_data_cache[name] = p.act_data
 					end
 				end
-				p.act_1st = p.old.act_data ~= p.act_data
-				p.on_update_act = p.act_1st
 			elseif p.char_data.acts and p.char_data.acts[p.act] then
 				p.act_data = p.char_data.acts[p.act]
-				p.act_1st = ut.tstb(p.act_data.type, db.act_types.startup_if_ca) and ut.tstb(p.flag_cc, db.flag_cc._00) or p.char_data.act1sts[p.act]
 			else
 				p.act_data.name = string.format("%X", p.act)
 			end
@@ -3262,8 +3249,8 @@ rbff2.startplugin          = function()
 					p.attackbits.post_fireball = p.attackbits.post_fireball or fb.on_prefb == -global.frame_number
 				end
 			end
-			p.act_1st = p.on_update_act == global.frame_number and p.act_1st == true
-			p.atk_count = p.act_1st == true and 1 or (p.atk_count + 1)
+
+			p.atk_count = p.on_update_act == global.frame_number and 1 or (p.atk_count + 1)
 		end
 
 		-- 1Pと2Pの状態読取 入力
