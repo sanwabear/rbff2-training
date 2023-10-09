@@ -1549,18 +1549,13 @@ rbff2.startplugin          = function()
 			num               = i,
 			is_fireball       = false,
 			base              = 0x0,
-			bases             = ut.new_filled_table(16, { count = 0, addr = 0x0, act_data = nil, name = "", pos1 = 0, pos2 = 0, xmov = 0, }),
 			dummy_act         = 1,         -- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
 			dummy_gd          = dummy_gd_type.none, -- なし, オート, ブレイクショット, 1ヒットガード, 1ガード, 常時, ランダム, 強制
 			dummy_wakeup      = wakeup_type.none, -- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
-
-			attackbits        = {},
-
 			dummy_bs          = nil, -- ランダムで選択されたブレイクショット
 			dummy_bs_list     = {}, -- ブレイクショットのコマンドテーブル上の技ID
 			dummy_bs_chr      = 0, -- ブレイクショットの設定をした時のキャラID
 			bs_count          = -1, -- ブレイクショットの実施カウント
-
 			dummy_rvs         = nil, -- ランダムで選択されたリバーサル
 			dummy_rvs_list    = {}, -- リバーサルのコマンドテーブル上の技ID
 			dummy_rvs_chr     = 0, -- リバーサルの設定をした時のキャラID
@@ -1585,37 +1580,27 @@ rbff2.startplugin          = function()
 			no_hit            = 0, -- Nヒット目に空ぶるカウントのカウンタ
 			no_hit_limit      = 0, -- Nヒット目に空ぶるカウントの上限
 			force_y_pos       = 1, -- Y座標強制
-
-			atk_count         = 0, -- TODO 消したい
+			update_act        = false,
+			move_count        = 0, -- スクショ用の動作カウント
 			on_punish         = 0,
-
 			key_now           = {}, -- 個別キー入力フレーム
 			key_pre           = {}, -- 前フレームまでの個別キー入力フレーム
 			key_hist          = ut.new_filled_table(16, ""),
 			key_frames        = ut.new_filled_table(16, 0),
 			ggkey_hist        = {},
-
 			throw_boxies      = {},
-
-			random_boolean    = math.random(255) % 2 == 0,
-
-			boxies            = {},
 			fireballs         = {},
-
+			random_boolean    = math.random(255) % 2 == 0,
 			addr              = {
 				base        = base, -- キャラ状態とかのベースのアドレス
 				control     = base + 0x12, -- Human 1 or 2, CPU 3
 				pos         = base + 0x20, -- X座標
 				pos_y       = base + 0x28, -- Y座標
-				sway_status = base + 0x89, -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
 				cmd_side    = base + 0x86, -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
+				sway_status = base + 0x89, -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
 				life        = base + 0x8B, -- 体力
 				pow         = base + 0xBC, -- パワーアドレス
-				flag_c0     = base + 0xC0,
-				flag_c4     = base + 0xC4,
-				flag_c8     = base + 0xC8,
-				flag_cc     = base + 0xCC,
-				hurt_state  = base + 0xE4,     -- やられ状態 ライン送らない状態用
+				hurt_state  = base + 0xE4, -- やられ状態 ライン送らない状態用
 				stun_limit  = p1 and 0x10B84E or 0x10B856, -- 最大気絶値
 				char        = p1 and 0x107BA5 or 0x107BA7, -- キャラID
 				color       = p1 and 0x107BAC or 0x107BAD, -- カラー A=0x00 D=0x01
@@ -1761,7 +1746,7 @@ rbff2.startplugin          = function()
 					else
 						p.pow_up_hit = mem.r8(base_addr.pow_up + data)     -- ビリー、チョンシュ、その他の通常技
 					end
-					p.pow_up_gd = 0xFF & (p.pow_up_hit >> 1)               -- ガード時増加量 d0の右1ビットシフト=1/2
+					p.pow_up_block = 0xFF & (p.pow_up_hit >> 1)               -- ガード時増加量 d0の右1ビットシフト=1/2
 				end
 				apply_attack_infos(p, data, base_addr)
 				if p.char_data.pow and p.char_data.pow[data] then
@@ -1769,7 +1754,7 @@ rbff2.startplugin          = function()
 					p.pow_absorb = p.char_data.pow[data].pow_absorb or p.pow_absorb
 					p.pow_up_hit = p.char_data.pow[data].pow_up_hit or p.pow_up_hit
 				end
-				-- ut.printf("%x dmg %x %s %s %s %s %s", p.addr.base, data, p.damage, p.stun, p.stun_timer, p.pow_up_hit, p.pow_up_gd)
+				-- ut.printf("%x dmg %x %s %s %s %s %s", p.addr.base, data, p.damage, p.stun, p.stun_timer, p.pow_up_hit, p.pow_up_block)
 			end,
 			-- [0xB7] = function(data) p.corner = data end, -- 画面端状態 0:端以外 1:画面端 3:端押し付け
 			[0xB8] = function(data)
@@ -1878,7 +1863,7 @@ rbff2.startplugin          = function()
 					elseif pc == 0x5B346 then
 						pow_up = 1 -- 被ガード時のパワー増加
 					elseif pc == 0x5B368 then
-						pow_up = (p.flag_cc & 0xE0 == 0) and p.pow_up_hit or p.pow_up_gd or 0
+						pow_up = (p.flag_cc & 0xE0 == 0) and p.pow_up_hit or p.pow_up_block or 0
 					end
 					p.last_pow_up, p.op.combo_pow = pow_up, (p.op.combo_pow or 0) + pow_up
 					--ut.printf("%x %x data=%s last_pow_up=%s combo_pow=%s", base, pc, data, p.last_pow_up, p.op.combo_pow)
@@ -1934,8 +1919,6 @@ rbff2.startplugin          = function()
 				fb_num      = fb_base,
 				is_fireball = true,
 				body        = body,
-				bases       = ut.new_filled_table(16, { count = 0, addr = 0x0, act_data = nil, name = "", pos1 = 0, pos2 = 0, xmov = 0, }),
-				attackbits  = {},
 				addr        = {
 					base = base, -- キャラ状態とかのベースのアドレス
 				}
@@ -1983,6 +1966,9 @@ rbff2.startplugin          = function()
 			body.fireballs[base], all_objects[base] = p, p
 		end
 		for _, p in pairs(all_objects) do -- 初期化
+			p.attackbits    = {}
+			p.boxies        = {}
+			p.bases         = ut.new_filled_table(16, { count = 0, addr = 0x0, act_data = nil, name = "", pos1 = 0, pos2 = 0, xmov = 0, })
 			p.clear_damages = function()
 				if not p.is_fireball then
 					p.cancelable      = false
@@ -1991,7 +1977,7 @@ rbff2.startplugin          = function()
 					p.forced_down     = false
 					p.esaka_range     = 0
 					p.pow_up_hit      = 0
-					p.pow_up_gd       = 0
+					p.pow_up_block    = 0
 					p.pow_revenge     = 0
 					p.pow_absorb      = 0
 					p.pow_up_hit      = 0
@@ -3008,9 +2994,8 @@ rbff2.startplugin          = function()
 		local prev     = frame and frame.name
 		local act_data = p.body.act_data
 		local name     = (frame and act_data.name_set and act_data.name_set[prev]) and prev or act_data.name
-		local update   = (p.spid > 0 and p.on_update_spid == global.frame_number) or (p.spid == 0 and p.on_update_act == global.frame_number)
 
-		if update or not frame or frame.col ~= col or frame.attackbit ~= attackbit then
+		if p.update_act or not frame or frame.col ~= col or frame.attackbit ~= attackbit then
 			--行動IDの更新があった場合にフレーム情報追加
 			frame = ut.table_add(p.act_frames, {
 				act        = p.act,
@@ -3019,7 +3004,7 @@ rbff2.startplugin          = function()
 				col        = col,
 				line       = line,
 				xline      = xline,
-				update     = update,
+				update     = p.update_act,
 				attackbit  = attackbit,
 				gap_frames = {},
 			}, 180)
@@ -3032,7 +3017,7 @@ rbff2.startplugin          = function()
 
 		local last_frame = frame
 		frame = p.gap_frames.act_frames[#p.gap_frames.act_frames]
-		if update or not frame or upd_group or frame.key ~= gap then
+		if p.update_act or not frame or upd_group or frame.key ~= gap then
 			frame = ut.table_add(p.gap_frames.act_frames, {
 				act = p.act,
 				count = 1,
@@ -3040,7 +3025,7 @@ rbff2.startplugin          = function()
 				name = last_frame.name,
 				col = 0x22FFFFFF & font_col,
 				line = 0xCCFFFFFF & font_col,
-				update  = update,
+				update  = p.update_act,
 				key = gap,  
 			}, 180)
 		else
@@ -3241,7 +3226,7 @@ rbff2.startplugin          = function()
 			for _, fb in pairs(p.fireballs) do
 				if fb.proc_active then
 					global.all_act_normal = false
-					fb.atk_count, fb.skip_frame = fb.atk_count or 0, p.skip_frame -- 親オブジェクトの停止フレームを反映
+					fb.skip_frame = p.skip_frame -- 親オブジェクトの停止フレームを反映
 					p.attackbits.pre_fireball = p.attackbits.pre_fireball or fb.on_prefb == global.frame_number
 					p.attackbits.on_fireball = p.attackbits.on_fireball or fb.on_fireball == global.frame_number
 					p.attackbits.off_fireball = p.attackbits.off_fireball or fb.on_fireball == -global.frame_number
@@ -3250,7 +3235,8 @@ rbff2.startplugin          = function()
 				end
 			end
 
-			p.atk_count = p.on_update_act == global.frame_number and 1 or (p.atk_count + 1)
+			p.update_act = (p.spid > 0 and p.on_update_spid == global.frame_number) or (p.spid == 0 and p.on_update_act == global.frame_number)
+			p.move_count = p.update_act and 1 or (p.move_count + 1)
 		end
 
 		-- 1Pと2Pの状態読取 入力
@@ -3926,7 +3912,7 @@ rbff2.startplugin          = function()
 					if fb.chg_hitbox_frm == global.frame_number then chg_hit = true end
 					if fb.chg_hurtbox_frm == global.frame_number then chg_hurt = true end
 				end
-				local chg_hitbox = p.act_normal ~= true and (p.atk_count == 1 or chg_act or chg_y or chg_hit or chg_hurt or chg_sway)
+				local chg_hitbox = p.act_normal ~= true and (p.update_act or chg_act or chg_y or chg_hit or chg_hurt or chg_sway)
 
 				-- 判定が変わったらポーズさせる
 				if chg_hitbox and global.pause_hitbox == 4 then global.pause = true end
@@ -3940,7 +3926,7 @@ rbff2.startplugin          = function()
 					dir_name = dir_name .. "/" .. p.char_data.names2
 					ut.mkdir(dir_name)
 					if p.sliding then sub_name = "_SLIDE_" elseif p.in_bs then sub_name = "_BS_" end
-					name = string.format("%s%s%04x_%s_%03d", p.char_data.names2, sub_name, p.act_data.id_1st or 0, name, p.atk_count)
+					name = string.format("%s%s%04x_%s_%03d", p.char_data.names2, sub_name, p.act_data.id_1st or 0, name, p.move_count)
 					dir_name = dir_name .. string.format("/%04x", p.act_data.id_1st or 0)
 					ut.mkdir(dir_name)
 
@@ -3993,7 +3979,7 @@ rbff2.startplugin          = function()
 						else
 							local kagenui_names = { "-", "weak", "strong" }
 							table.insert(label, string.format("Pow. %2s/%2s/%2s Rev.%2s Abs.%2s",
-								p.pow_up_direct == 0 and p.pow_up or p.pow_up_direct or 0, p.pow_up_hit or 0, p.pow_up_gd or 0, p.pow_revenge or 0, p.pow_absorb or 0))
+								p.pow_up_direct == 0 and p.pow_up or p.pow_up_direct or 0, p.pow_up_hit or 0, p.pow_up_block or 0, p.pow_revenge or 0, p.pow_absorb or 0))
 							table.insert(label, string.format("Inv.%2s  BS-Pow.%2s BS-Inv.%2s", xp.sp_invincible or 0, xp.bs_pow or 0, xp.bs_invincible or 0))
 							table.insert(label, string.format("%s/%s Hit  Esaka %s %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.esaka or 0, p.esaka_type or ""))
 							table.insert(label, string.format("Kagenui %s", kagenui_names[p.kagenui_type]))
