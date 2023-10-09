@@ -3182,16 +3182,8 @@ rbff2.startplugin          = function()
 			p.old.act_data = p.act_data or { name = "", type = db.act_types.startup | db.act_types.free, }
 			if p.flag_c4 == 0 and p.flag_c8 == 0 then
 				local name = nil
-				if ut.tstb(p.flag_cc, db.flag_cc._18, true) then
-					name = ut.tstb(p.flag_c0, db.flag_c0._30, true) and "ダウン" or "やられ"
-				elseif ut.tstb(p.flag_cc, db.flag_cc._16 | db.flag_cc._17 | db.flag_cc._19 | db.flag_cc._21 | db.flag_cc._22 | db.flag_cc._23 | db.flag_cc._28, true) then
-					name = "やられ"
-				elseif ut.tstb(p.flag_cc, db.flag_cc._24 | db.flag_cc._25 | db.flag_cc._26, true) then
-					name = "ガード"
-				elseif ut.tstb(p.flag_cc, db.flag_cc._13 | db.flag_cc._14, true) then
-					name = "気絶"
-				elseif ut.tstb(p.flag_cc, db.flag_cc._23, true) then
-					name = "起き上がり"
+				if p.flag_cc > 0 then
+					name = db.get_flag_name(p.flag_cc, db.flag_names_cc)
 				else
 					name = db.get_flag_name(p.flag_c0, db.flag_names_c0)
 				end

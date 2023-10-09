@@ -19,15 +19,15 @@
 --LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 --OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 --SOFTWARE.
-local ut          = require("rbff2training/util")
-local db          = {}
+local ut         = require("rbff2training/util")
+local db         = {}
 
 --------------------------------------------------------------------------------------
 -- キャラの基本データ
 -- 配列のインデックス=キャラID
 --------------------------------------------------------------------------------------
 
-local chars       = {
+local chars      = {
 	{ id = 0x1, min_y = 9, min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x2E, easy_bs_addr = 0x2E, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "テリー・ボガード", },
 	{ id = 0x2, min_y = 10, min_sy = 4, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "アンディ・ボガード", },
 	{ id = 0x3, min_y = 8, min_sy = 3, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x3A, easy_bs_addr = 0x3A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "東丈", },
@@ -53,26 +53,26 @@ local chars       = {
 	{ id = 0x17, min_y = 10, min_sy = 4, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x0, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = { { name = "フ", f = 13 }, }, name = "アルフレッド", },
 	{ id = 0x18, min_y = 0, min_sy = 0, init_stuns = 0, wakeup_frms = 0, sway_act_counts = 0x0, bs_addr = 0x0, easy_bs_addr = 0x0, acts = {}, act1sts = {}, fireballs = {}, fb1sts = {}, faint_cancel = {}, name = "common", },
 }
-db.chars          = chars
+db.chars         = chars
 
-chars[0x5].pow    = {
+chars[0x5].pow   = {
 	[0x82] = { pow_revenge = 6 }, -- 当身投げ
 	[0x7C] = { pow_revenge = 6 },
 	[0x88] = { pow_revenge = 6 },
 }
-chars[0xB].pow    = {
+chars[0xB].pow   = {
 	[0x82] = { pow_revenge = 6 },               -- サドマゾ
 	[0x8E] = { pow_revenge = 7, pow_absorb = 20 }, -- 倍返し
 	[0xA0] = { pow_up_hit = 7 },                -- トドメ
 }
-chars[0x8].pow    = {
+chars[0x8].pow   = {
 	[0x94] = { pow_revenge = 6 }, -- 逆襲脚
 }
-chars[0x14].pow   = {
+chars[0x14].pow  = {
 	[0x82] = { pow_revenge = 6 }, -- フェニックススルー
 }
 
-local char_names  = {}
+local char_names = {}
 for _, char_data in ipairs(chars) do
 	if char_data.name ~= "common" then
 		table.insert(char_names, char_data.name)
@@ -119,10 +119,10 @@ local block_types                 = {
 	sway_pass = 2 ^ 6, -- スウェー無敵
 }
 block_types.high_tung             = block_types.high | block_types.tung
-block_types.sway_high             = block_types.sway | block_types.high -- スウェー上で上ガード
+block_types.sway_high             = block_types.sway | block_types.high      -- スウェー上で上ガード
 block_types.sway_high_tung        = block_types.sway | block_types.high_tung -- スウェー上でタンのみ上ガードできる位置
-block_types.sway_high_low         = block_types.sway | block_types.high_low -- スウェー上で上ガードだけど上ガードできない位置
-block_types.sway_low              = block_types.sway | block_types.low -- スウェー上で下ガード
+block_types.sway_high_low         = block_types.sway | block_types.high_low  -- スウェー上で上ガードだけど上ガードできない位置
+block_types.sway_low              = block_types.sway | block_types.low       -- スウェー上で下ガード
 db.block_types                    = block_types
 
 --- メインライン上の下段ガードが必要（中段ガードの範囲外）になる高さ
@@ -2409,72 +2409,140 @@ db.esaka_type_names                  = {
 	[0x8000] = "Anti-Air",
 }
 local flag_c0                        = {
-	_00 = 0x1,     -- ジャンプ振向
-	_01 = 0x2,     -- ダウン
-	_02 = 0x4,     -- 屈途中
-	_03 = 0x8,     -- 奥後退
-	_04 = 0x10,    -- 奥前進
-	_05 = 0x20,    -- 奥振向
-	_06 = 0x40,    -- 屈振向
-	_07 = 0x80,    -- 立振向
-	_08 = 0x100,   -- スウェーライン上飛び退き～戻り
-	_09 = 0x200,   -- スウェーライン上ダッシュ～戻り
-	_10 = 0x400,   -- スウェーライン→メイン
-	_11 = 0x800,   -- スウェーライン上立
-	_12 = 0x1000,  -- メインライン→スウェーライン移動中
-	_13 = 0x2000,  -- スウェーライン上維持
-	_14 = 0x4000,  -- 未確認
-	_15 = 0x8000,  -- 未確認
-	_16 = 0x10000, -- 着地
-	_17 = 0x20000, -- ジャンプ移行
-	_18 = 0x40000, -- 後方小ジャンプ
-	_19 = 0x80000, -- 前方小ジャンプ
-	_20 = 0x100000, -- 垂直小ジャンプ
-	_21 = 0x200000, -- 後方ジャンプ
-	_22 = 0x400000, -- 前方ジャンプ
-	_23 = 0x800000, -- 垂直ジャンプ
-	_24 = 0x1000000, -- ダッシュ
-	_25 = 0x2000000, -- 飛び退き
-	_26 = 0x4000000, -- 屈前進
-	_27 = 0x8000000, -- 立途中
-	_28 = 0x10000000, -- 屈
-	_29 = 0x20000000, -- 後退
-	_30 = 0x40000000, -- 前進
-	_31 = 0x80000000, -- 立
+	_00 = 2 ^ 0, -- ジャンプ振向
+	_01 = 2 ^ 1, -- ダウン
+	_02 = 2 ^ 2, -- 屈途中
+	_03 = 2 ^ 3, -- 奥後退
+	_04 = 2 ^ 4, -- 奥前進
+	_05 = 2 ^ 5, -- 奥振向
+	_06 = 2 ^ 6, -- 屈振向
+	_07 = 2 ^ 7, -- 立振向
+	_08 = 2 ^ 8, -- スウェーライン上飛び退き～戻り
+	_09 = 2 ^ 9, -- スウェーライン上ダッシュ～戻り
+	_10 = 2 ^ 10, -- スウェーライン→メイン
+	_11 = 2 ^ 11, -- スウェーライン上立
+	_12 = 2 ^ 12, -- メインライン→スウェーライン移動中
+	_13 = 2 ^ 13, -- スウェーライン上維持
+	_14 = 2 ^ 14, -- 17
+	_15 = 2 ^ 15, -- 16
+	_16 = 2 ^ 16, -- 着地
+	_17 = 2 ^ 17, -- ジャンプ移行
+	_18 = 2 ^ 18, -- 後方小ジャンプ
+	_19 = 2 ^ 19, -- 前方小ジャンプ
+	_20 = 2 ^ 20, -- 垂直小ジャンプ
+	_21 = 2 ^ 21, -- 後方ジャンプ
+	_22 = 2 ^ 22, -- 前方ジャンプ
+	_23 = 2 ^ 23, -- 垂直ジャンプ
+	_24 = 2 ^ 24, -- ダッシュ
+	_25 = 2 ^ 25, -- 飛び退き
+	_26 = 2 ^ 26, -- 屈前進
+	_27 = 2 ^ 27, -- 立途中
+	_28 = 2 ^ 28, -- 屈
+	_29 = 2 ^ 29, -- 後退
+	_30 = 2 ^ 30, -- 前進
+	_31 = 2 ^ 31, -- 立
 }
 local flag_c4                        = {
-	_00 = 0x1,     -- 避け攻撃
-	_01 = 0x2,     -- 対スウェーライン下段攻撃
-	_02 = 0x4,     -- 対スウェーライン上段攻撃
-	_03 = 0x8,     -- 対メインライン威力大攻撃
-	_04 = 0x10,    -- 対メインラインB攻撃
-	_05 = 0x20,    -- 対メインラインA攻撃
-	_06 = 0x40,    -- 後方小ジャンプC, -- 27 7FC0000
-	_07 = 0x80,    -- 後方小ジャンプB
-	_08 = 0x100,   -- 後方小ジャンプA
-	_09 = 0x200,   -- 前方小ジャンプC
-	_10 = 0x400,   -- 前方小ジャンプB
-	_11 = 0x800,   -- 前方小ジャンプA
-	_12 = 0x1000,  -- 垂直小ジャンプC
-	_13 = 0x2000,  -- 垂直小ジャンプB
-	_14 = 0x4000,  -- 垂直小ジャンプA, -- 19
-	_15 = 0x8000,  -- 後方ジャンプC, -- 18 1FF00
-	_16 = 0x10000, -- 後方ジャンプB
-	_17 = 0x20000, -- 後方ジャンプA
-	_18 = 0x40000, -- 前方ジャンプC
-	_19 = 0x80000, -- 前方ジャンプB
-	_20 = 0x100000, -- 前方ジャンプA
-	_21 = 0x200000, -- 垂直ジャンプC
-	_22 = 0x400000, -- 垂直ジャンプB
-	_23 = 0x800000, -- 垂直ジャンプA, --9
-	_24 = 0x1000000, -- C4 24
-	_25 = 0x2000000, -- C4 25
-	_26 = 0x4000000, -- 屈C
-	_27 = 0x8000000, -- 屈B
-	_28 = 0x10000000, -- 屈A
-	_29 = 0x20000000, -- 立C
-	_30 = 0x40000000, -- 立B
-	_31 = 0x80000000, -- 立A
+	_00 = 2 ^ 0, -- 避け攻撃
+	_01 = 2 ^ 1, -- 対スウェーライン下段攻撃
+	_02 = 2 ^ 2, -- 対スウェーライン上段攻撃
+	_03 = 2 ^ 3, -- 対メインライン威力大攻撃
+	_04 = 2 ^ 4, -- 対メインラインB攻撃
+	_05 = 2 ^ 5, -- 対メインラインA攻撃
+	_06 = 2 ^ 6, -- 後方小ジャンプC
+	_07 = 2 ^ 7, -- 後方小ジャンプB
+	_08 = 2 ^ 8, -- 後方小ジャンプA
+	_09 = 2 ^ 9, -- 前方小ジャンプC
+	_10 = 2 ^ 10, -- 前方小ジャンプB
+	_11 = 2 ^ 11, -- 前方小ジャンプA
+	_12 = 2 ^ 12, -- 垂直小ジャンプC
+	_13 = 2 ^ 13, -- 垂直小ジャンプB
+	_14 = 2 ^ 14, -- 垂直小ジャンプA
+	_15 = 2 ^ 15, -- 後方ジャンプC
+	_16 = 2 ^ 16, -- 後方ジャンプB
+	_17 = 2 ^ 17, -- 後方ジャンプA
+	_18 = 2 ^ 18, -- 前方ジャンプC
+	_19 = 2 ^ 19, -- 前方ジャンプB
+	_20 = 2 ^ 20, -- 前方ジャンプA
+	_21 = 2 ^ 21, -- 垂直ジャンプC
+	_22 = 2 ^ 22, -- 垂直ジャンプB
+	_23 = 2 ^ 23, -- 垂直ジャンプA
+	_24 = 2 ^ 24, -- C4 24
+	_25 = 2 ^ 25, -- C4 25
+	_26 = 2 ^ 26, -- 屈C
+	_27 = 2 ^ 27, -- 屈B
+	_28 = 2 ^ 28, -- 屈A
+	_29 = 2 ^ 29, -- 立C
+	_30 = 2 ^ 30, -- 立B
+	_31 = 2 ^ 31, -- 立A
+}
+local flag_c8                        = {
+	_00 = 2 ^ 0, --
+	_01 = 2 ^ 1, --
+	_02 = 2 ^ 2, --
+	_03 = 2 ^ 3, --
+	_04 = 2 ^ 4, --
+	_05 = 2 ^ 5, --
+	_06 = 2 ^ 6, --
+	_07 = 2 ^ 7, --
+	_08 = 2 ^ 8, -- 特殊技
+	_09 = 2 ^ 9, --
+	_10 = 2 ^ 10, --
+	_11 = 2 ^ 11, -- 特殊技
+	_12 = 2 ^ 12, -- 特殊技
+	_13 = 2 ^ 13, -- 特殊技
+	_14 = 2 ^ 14, -- 特殊技
+	_15 = 2 ^ 15, -- 特殊技
+	_16 = 2 ^ 16, -- 潜在能力
+	_17 = 2 ^ 17, -- 潜在能力
+	_18 = 2 ^ 18, -- 超必殺技
+	_19 = 2 ^ 19, -- 超必殺技
+	_20 = 2 ^ 20, -- 必殺技
+	_21 = 2 ^ 21, -- 必殺技
+	_22 = 2 ^ 22, -- 必殺技
+	_23 = 2 ^ 23, -- 必殺技
+	_24 = 2 ^ 24, -- 必殺技
+	_25 = 2 ^ 25, -- 必殺技
+	_26 = 2 ^ 26, -- 必殺技
+	_27 = 2 ^ 27, -- 必殺技
+	_28 = 2 ^ 28, -- 必殺技
+	_29 = 2 ^ 29, -- 必殺技
+	_30 = 2 ^ 30, -- 必殺技
+	_31 = 2 ^ 31, -- 必殺技
+}
+local flag_cc                        = {
+	_00 = 2 ^ 0, -- CA
+	_01 = 2 ^ 1, -- AかB攻撃
+	_02 = 2 ^ 2, -- 滑り
+	_03 = 2 ^ 3, -- 必殺投げやられ
+	_04 = 2 ^ 4, --
+	_05 = 2 ^ 5, -- 空中ガード
+	_06 = 2 ^ 6, -- 屈ガード
+	_07 = 2 ^ 7, -- 立ガード
+	_08 = 2 ^ 8, -- 投げ派生やられ
+	_09 = 2 ^ 9, -- つかみ投げやられ
+	_10 = 2 ^ 10, -- 投げられ
+	_11 = 2 ^ 11, --
+	_12 = 2 ^ 12, -- ライン送りやられ
+	_13 = 2 ^ 13, -- ダウン
+	_14 = 2 ^ 14, -- 空中やられ
+	_15 = 2 ^ 15, -- 地上やられ
+	_16 = 2 ^ 16, --
+	_17 = 2 ^ 17, -- 気絶
+	_18 = 2 ^ 18, -- 気絶起き上がり
+	_19 = 2 ^ 19, -- 挑発
+	_20 = 2 ^ 20, -- ブレイクショット
+	_21 = 2 ^ 21, -- 必殺技中
+	_22 = 2 ^ 22, --
+	_23 = 2 ^ 23, -- 起き上がり
+	_24 = 2 ^ 24, -- フェイント
+	_25 = 2 ^ 25, -- つかみ技
+	_26 = 2 ^ 26, --
+	_27 = 2 ^ 27, -- 投げ追撃
+	_28 = 2 ^ 28, --
+	_29 = 2 ^ 29, --
+	_30 = 2 ^ 30, -- 空中投げ
+	_31 = 2 ^ 31, -- 投げ
 }
 -- 小ジャンプ
 flag_c4.hop                          = flag_c4._06 |
@@ -2496,92 +2564,24 @@ flag_c4.jump                         = flag_c4._15 |
 	flag_c4._21 |
 	flag_c4._22 |
 	flag_c4._23
-local flag_c8                        = {
-	_00 = 0x1,     --
-	_01 = 0x2,     --
-	_02 = 0x4,     --
-	_03 = 0x8,     --
-	_04 = 0x10,    --
-	_05 = 0x20,    --
-	_06 = 0x40,    --
-	_07 = 0x80,    --
-	_08 = 0x100,   -- 特殊技
-	_09 = 0x200,   --
-	_10 = 0x400,   --
-	_11 = 0x800,   -- 特殊技
-	_12 = 0x1000,  -- 特殊技
-	_13 = 0x2000,  -- 特殊技
-	_14 = 0x4000,  -- 特殊技
-	_15 = 0x8000,  -- 特殊技
-	_16 = 0x10000, -- 潜在能力
-	_17 = 0x20000, -- 潜在能力
-	_18 = 0x40000, -- 超必殺技
-	_19 = 0x80000, -- 超必殺技
-	_20 = 0x100000, -- 必殺技
-	_21 = 0x200000, -- 必殺技
-	_22 = 0x400000, -- 必殺技
-	_23 = 0x800000, -- 必殺技
-	_24 = 0x1000000, -- 必殺技
-	_25 = 0x2000000, -- 必殺技
-	_26 = 0x4000000, -- 必殺技
-	_27 = 0x8000000, -- 必殺技
-	_28 = 0x10000000, -- 必殺技
-	_29 = 0x20000000, -- 必殺技
-	_30 = 0x40000000, -- 必殺技
-	_31 = 0x80000000, -- 必殺技
-}
-local flag_cc                        = {
-	_00 = 0x1,     -- CA
-	_01 = 0x2,     -- AかB攻撃
-	_02 = 0x4,     -- 滑り
-	_03 = 0x8,     -- 必殺投げやられ
-	_04 = 0x10,    --
-	_05 = 0x20,    -- 空中ガード
-	_06 = 0x40,    -- 屈ガード
-	_07 = 0x80,    -- 立ガード
-	_08 = 0x100,   -- 投げ派生やられ
-	_09 = 0x200,   -- つかみ投げやられ
-	_10 = 0x400,   -- 投げられ
-	_11 = 0x800,   --
-	_12 = 0x1000,  -- ライン送りやられ
-	_13 = 0x2000,  -- ダウン
-	_14 = 0x4000,  -- 空中やられ
-	_15 = 0x8000,  -- 地上やられ
-	_16 = 0x10000, --
-	_17 = 0x20000, -- 気絶
-	_18 = 0x40000, -- 気絶起き上がり
-	_19 = 0x80000, -- 挑発
-	_20 = 0x100000, -- ブレイクショット
-	_21 = 0x200000, -- 必殺技中
-	_22 = 0x400000, --
-	_23 = 0x800000, -- 起き上がり
-	_24 = 0x1000000, -- フェイント
-	_25 = 0x2000000, -- つかみ技
-	_26 = 0x4000000, --
-	_27 = 0x8000000, -- 投げ追撃
-	_28 = 0x10000000, --
-	_29 = 0x20000000, --
-	_30 = 0x40000000, -- 空中投げ
-	_31 = 0x80000000, -- 投げ
-}
 local flag_d0                        = {
-	_00 = 0x1,                                        --
-	_01 = 0x2,                                        --
-	_02 = 0x4,                                        --
-	_03 = 0x8,                                        -- ギガティック投げられ
-	_04 = 0x10,                                       --
-	_05 = 0x20,                                       -- 追撃投げ中
-	_06 = 0x40,                                       -- ガード中、やられ中
-	_07 = 0x80,                                       -- 攻撃ヒット
+	_00 = 0x1, --
+	_01 = 0x2, --
+	_02 = 0x4, --
+	_03 = 0x8, -- ギガティック投げられ
+	_04 = 0x10, --
+	_05 = 0x20, -- 追撃投げ中
+	_06 = 0x40, -- ガード中、やられ中
+	_07 = 0x80, -- 攻撃ヒット
 }
 local flag_7e                        = {
 	_00 = 0x1,                                        -- 制止中
-	_01 = 0x2,                                        -- 
-	_02 = 0x4,                                        -- 動作切替直前 
+	_01 = 0x2,                                        --
+	_02 = 0x4,                                        -- 動作切替直前
 	_03 = 0x8,                                        --
-	_04 = 0x10,                                        -- ガードさせ中
+	_04 = 0x10,                                       -- ガードさせ中
 	_05 = 0x20,                                       -- ヒットさせ中
-	_06 = 0x40,                                       -- 
+	_06 = 0x40,                                       --
 	_07 = 0x80                                        -- 近距離
 }
 flag_cc.hitstun                      = flag_cc._03 |  -- 必殺投げやられ
@@ -2627,40 +2627,6 @@ db.flag_cc                           = flag_cc
 db.flag_d0                           = flag_d0
 db.flag_7e                           = flag_7e
 db.flag_names_c0                     = {
-	"避け攻撃", -- 0
-	"対スウェーライン下段攻撃", -- 1
-	"対スウェーライン上段攻撃", -- 2
-	"対メインライン威力大攻撃", -- 3
-	"対メインラインB攻撃", -- 4
-	"対メインラインA攻撃", -- 5
-	"後方小ジャンプC", -- 6
-	"後方小ジャンプB", -- 7
-	"後方小ジャンプA", -- 8
-	"前方小ジャンプC", -- 9
-	"前方小ジャンプB", -- 10
-	"前方小ジャンプA", -- 11
-	"垂直小ジャンプC", -- 12
-	"垂直小ジャンプB", -- 13
-	"垂直小ジャンプA", -- 14
-	"後方ジャンプC", -- 15
-	"後方ジャンプB", -- 16
-	"後方ジャンプA", -- 17
-	"前方ジャンプC", -- 18
-	"前方ジャンプB", -- 19
-	"前方ジャンプA", -- 20
-	"垂直ジャンプC", -- 21
-	"垂直ジャンプB", -- 22
-	"垂直ジャンプA", -- 23
-	"C4 24", -- 24
-	"C4 25", -- 25
-	"屈C", -- 26
-	"屈B", -- 27
-	"屈A", -- 28
-	"立C", -- 29
-	"立B", -- 30
-	"立A", -- 31
-}
-db.flag_names_c4                     = {
 	"ジャンプ振向", -- 0
 	"ダウン", -- 1
 	"屈途中", -- 2
@@ -2693,6 +2659,40 @@ db.flag_names_c4                     = {
 	"後退", -- 29
 	"前進", -- 30
 	"立", -- 31
+}
+db.flag_names_c4                     = {
+	"避け攻撃", -- 0
+	"対スウェーライン下段攻撃", -- 1
+	"対スウェーライン上段攻撃", -- 2
+	"対メインライン威力大攻撃", -- 3
+	"対メインラインB攻撃", -- 4
+	"対メインラインA攻撃", -- 5
+	"後方小ジャンプC", -- 6
+	"後方小ジャンプB", -- 7
+	"後方小ジャンプA", -- 8
+	"前方小ジャンプC", -- 9
+	"前方小ジャンプB", -- 10
+	"前方小ジャンプA", -- 11
+	"垂直小ジャンプC", -- 12
+	"垂直小ジャンプB", -- 13
+	"垂直小ジャンプA", -- 14
+	"後方ジャンプC", -- 15
+	"後方ジャンプB", -- 16
+	"後方ジャンプA", -- 17
+	"前方ジャンプC", -- 18
+	"前方ジャンプB", -- 19
+	"前方ジャンプA", -- 20
+	"垂直ジャンプC", -- 21
+	"垂直ジャンプB", -- 22
+	"垂直ジャンプA", -- 23
+	"C4 24", -- 24
+	"C4 25", -- 25
+	"屈C", -- 26
+	"屈B", -- 27
+	"屈A", -- 28
+	"立C", -- 29
+	"立B", -- 30
+	"立A", -- 31
 }
 db.flag_names_c8                     = {
 	"", -- 0
@@ -3930,10 +3930,10 @@ for p, ks in ipairs(joy_k) do
 	end
 end
 
-local cmd_funcs         = {}
+local cmd_funcs       = {}
 --cmd_funcs._f            = _f
 --cmd_funcs._start        = _start
-cmd_funcs.make          = function(joykp, ...)
+cmd_funcs.make        = function(joykp, ...)
 	local joy = ut.deepcopy(joy_neutrala)
 	if ... then
 		for _, k in ipairs({ ... }) do
@@ -3942,7 +3942,7 @@ cmd_funcs.make          = function(joykp, ...)
 	end
 	return joy
 end
-cmd_funcs.extract       = function(joyk, cmd_ary)
+cmd_funcs.extract     = function(joyk, cmd_ary)
 	if not cmd_ary then
 		return {}
 	end
@@ -3960,7 +3960,7 @@ cmd_funcs.extract       = function(joyk, cmd_ary)
 	end
 	return ret
 end
-cmd_funcs.merge         = function(cmd_ary1, cmd_ary2)
+cmd_funcs.merge       = function(cmd_ary1, cmd_ary2)
 	local keys1, keys2 = cmd_funcs.extract(joy_k[1], cmd_ary1), cmd_funcs.extract(joy_k[2], cmd_ary2)
 	local ret, max = {}, math.max(#keys1, #keys2)
 	for i = 1, max do
@@ -3976,7 +3976,7 @@ cmd_funcs.merge         = function(cmd_ary1, cmd_ary2)
 	end
 	return ret
 end
-local cmd_base          = {
+local cmd_base        = {
 	_1     = function(joykp) return cmd_funcs.make(joykp, "lt", "dn") end,
 	_1a    = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "a") end,
 	_1b    = function(joykp) return cmd_funcs.make(joykp, "lt", "dn", "b") end,
@@ -4137,7 +4137,7 @@ local cmd_base          = {
 	_9bcd  = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "b", "c", "d") end,
 	_9abcd = function(joykp) return cmd_funcs.make(joykp, "rt", "up", "a", "b", "c", "d") end,
 }
-local research_cmd      = function()
+local research_cmd    = function()
 	local ret = ut.new_filled_table(8, {})
 	-- TODO: 変数設定
 	--[[
@@ -4248,25 +4248,25 @@ local research_cmd      = function()
 	return ret
 end
 
-db.joy_k                = joy_k
-db.rev_joy              = rev_joy
-db.joy_frontback        = joy_frontback
-db.joy_pside            = joy_pside
-db.joy_neutrala         = joy_neutrala
-db.joy_neutralp         = joy_neutralp
-db.kprops               = kprops
-db.cmd_funcs            = cmd_funcs
-db.cmd_base             = cmd_base
-db.research_cmd         = research_cmd()
+db.joy_k              = joy_k
+db.rev_joy            = rev_joy
+db.joy_frontback      = joy_frontback
+db.joy_pside          = joy_pside
+db.joy_neutrala       = joy_neutrala
+db.joy_neutralp       = joy_neutralp
+db.kprops             = kprops
+db.cmd_funcs          = cmd_funcs
+db.cmd_base           = cmd_base
+db.research_cmd       = research_cmd()
 
 -- 削りダメージ補正
-local chip_types        = {
+local chip_types      = {
 	zero = { name = "0", calc = function(pure_dmg) return 0 end },
 	rshift4 = { name = "1/16", calc = function(pure_dmg) return math.max(1, 0xFFFF & (pure_dmg >> 4)) end },
 	rshift5 = { name = "1/32", calc = function(pure_dmg) return math.max(1, 0xFFFF & (pure_dmg >> 5)) end },
 }
 -- 削りダメージ計算種別 補正処理の分岐先の種類分用意する
-local chip_type_table   = {
+local chip_type_table = {
 	chip_types.zero, --  0 ダメージ無し
 	chip_types.zero, --  1 ダメージ無し
 	chip_types.rshift4, --  2 1/16
@@ -4285,17 +4285,17 @@ local chip_type_table   = {
 	chip_types.rshift4, -- 15 1/16
 	chip_types.zero, -- 16 ダメージ無し
 }
-db.chip_types           = chip_types
-db.chip_type_table      = chip_type_table
-db.calc_chip            = function(addr, damage)
-	local chip_type     = db.chip_type_table[addr]
+db.chip_types         = chip_types
+db.chip_type_table    = chip_type_table
+db.calc_chip          = function(addr, damage)
+	local chip_type = db.chip_type_table[addr]
 	return chip_type.calc(damage)
 end
 
 --------------------------------------------------------------------------------------
 -- 描画用データ
 --------------------------------------------------------------------------------------
-local obj_names         = {
+local obj_names       = {
 	[0x20204c4556455220] = "  LEVER ",
 	[0x2020502053414e20] = "  P SAN ",
 	[0x20425554544f4e20] = " BUTTON ",
@@ -4420,7 +4420,7 @@ local obj_names         = {
 	[0x59455320204e4f20] = "YES  NO ",
 	[0x00c0042600c00426] = "", -- how to playのダッシュ中キャラ
 }
-local p_chan            = {
+local p_chan          = {
 	[0x2020502053414e20] = "  P SAN ",
 	[0x2050204348414e20] = " P CHAN ",
 }
