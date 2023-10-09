@@ -1680,7 +1680,10 @@ rbff2.startplugin          = function()
 		p.wp8 = {
 			[0x16] = function(data) p.knockback1 = data end, -- のけぞり確認用2(裏雲隠し)
 			[0x69] = function(data) p.knockback2 = data end, -- のけぞり確認用1(色々)
-			[0x7E] = function(data) p.knockback3 = data end, -- のけぞり確認用3(フェニックススルー)
+			[0x7E] = function(data)
+				p.flag_7e = data -- のけぞり確認用3(フェニックススルー)
+				--if ut.tstb(data, db.flag_7e._03) then  p.on_update_act = now() + 1 end
+			end,
 			[{ addr = 0x82, filter = { 0x2668C, 0x2AD24, 0x2AD2C } }] = function(data, ret)
 				local pc = mem.pc()
 				if pc == 0x2668C then p.input1, p.flag_fin = data, false end
@@ -3175,21 +3178,21 @@ rbff2.startplugin          = function()
 			p.repeatable = false
 			if p.attack and p.attack < 0x70 then
 				if (p.cancelable_data + p.cancelable_data) > 0xFF then
-					p.cancelable = ut.tstb(p.knockback3, 2 ^ 5, true)
+					p.cancelable = ut.tstb(p.flag_7e, 2 ^ 5, true)
 				elseif (p.cancelable_data << 2) > 0xFF then
-					p.cancelable = ut.tstb(p.knockback3, 2 ^ 4, true)
+					p.cancelable = ut.tstb(p.flag_7e, 2 ^ 4, true)
 				end
 				p.repeatable = p.cancelable_data & 0xD0 == 0xD0
 			end
 
 			-- ガード持続の種類 家庭用0271FCからの処理 0:攻撃無し 1:ガード継続小 2:ガード継続大
 			if p.firing then
-				p.kagenui_type = 1
+				p.kagenui_type = 2
 			elseif p.attack and p.attack ~= 0 then
 				local b2 = 0x80 == (0x80 & pgm:read_u8(pgm:read_u32(0x8C9E2 + p.char4) + p.attack))
-				p.kagenui_type = b2 and 2 or 1
+				p.kagenui_type = b2 and 3 or 2
 			else
-				p.kagenui_type = 0
+				p.kagenui_type = 1
 			end
 
 			-- ライン送らない状態のデータ書き込み
@@ -3764,7 +3767,7 @@ rbff2.startplugin          = function()
 				end -- ガード状態が解除されたらリバサ解除
 
 				-- TODO: ライン送られのリバーサルを修正する。猶予1F
-				-- print(p.state, p.knockback2, p.knockback1, p.knockback3, p.hitstop_remain, rvs_types.in_knock_back, p.last_blockstun, string.format("%x", p.act), p.act_count, p.act_frame)
+				-- print(p.state, p.knockback2, p.knockback1, p.flag_7e, p.hitstop_remain, rvs_types.in_knock_back, p.last_blockstun, string.format("%x", p.act), p.act_count, p.act_frame)
 				-- ヒットストップ中は無視
 				if not p.skip_frame then
 					-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
@@ -3790,7 +3793,7 @@ rbff2.startplugin          = function()
 						if (p.state == 1 or (p.state == 2 and p.gd_rvs_enabled)) and p.hitstop_remain == 0 then
 							-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する
 							-- 奥ラインへ送った場合だけ無視する（p.act ~= 0x14A）
-							if p.knockback3 == 0x80 and p.knockback2 == 0 and p.act ~= 0x14A then
+							if p.flag_7e == 0x80 and p.knockback2 == 0 and p.act ~= 0x14A then
 								-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する1
 								input_rvs(rvs_types.in_knock_back, p, "[Reversal] blockstun 2")
 							elseif p.old.knockback2 > 0 and p.knockback2 == 0 then
@@ -3798,7 +3801,7 @@ rbff2.startplugin          = function()
 								input_rvs(rvs_types.in_knock_back, p, "[Reversal] blockstun 3")
 							end
 							-- デンジャラススルー用
-							if p.knockback3 == 0x0 and p.hitstop_remain < 3 and p.base == 0x34538 then
+							if p.flag_7e == 0x0 and p.hitstop_remain < 3 and p.base == 0x34538 then
 								input_rvs(rvs_types.dangerous_through, p, "[Reversal] blockstun 4")
 							end
 						elseif p.state == 3 and p.hitstop_remain == 0 and p.knockback1 <= 1 then
@@ -4001,11 +4004,12 @@ rbff2.startplugin          = function()
 						if xp.is_fireball then
 							table.insert(label, string.format("%s/%s Hit  Fireball-Lv. %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.fireball_rank or 0))
 						else
+							local kagenui_names = { "-", "weak", "strong" }
 							table.insert(label, string.format("Pow. %2s/%2s/%2s Rev.%2s Abs.%2s",
 								p.pow_up_direct == 0 and p.pow_up or p.pow_up_direct or 0, p.pow_up_hit or 0, p.pow_up_gd or 0, p.pow_revenge or 0, p.pow_absorb or 0))
 							table.insert(label, string.format("Inv.%2s  BS-Pow.%2s BS-Inv.%2s", xp.sp_invincible or 0, xp.bs_pow or 0, xp.bs_invincible or 0))
 							table.insert(label, string.format("%s/%s Hit  Esaka %s %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.esaka or 0, p.esaka_type or ""))
-							table.insert(label, string.format("Kagenui %s", p.kagenui_type))
+							table.insert(label, string.format("Kagenui %s", kagenui_names[p.kagenui_type]))
 							table.insert(label, string.format("Cancel %-2s/%-2s Teching %s", xp.repeatable and "Ch" or "", xp.cancelable and "Sp" or "",
 								xp.forced_down or xp.in_bs and "Can't" or "Can"))
 							table.insert(label, string.format(" %-8s/%-8s", p.sliding and "Slide" or "", p.inertial and "Inertial" or ""))
@@ -4082,13 +4086,15 @@ rbff2.startplugin          = function()
 					scr:draw_text(p1 and 4 or 278, 0, table.concat(label1, "\n"))
 					local c0, c4 = string.format("%08X", p.flag_c0 or 0), string.format("%08X", p.flag_c4 or 0)
 					local c8, cc = string.format("%08X", p.flag_c8 or 0), string.format("%08X", p.flag_cc or 0)
-					local d0 = string.format("%02X", p.flag_d0 or 0)
+					local d0, _7e = string.format("%02X", p.flag_d0 or 0), string.format("%02X", p.flag_7e or 0)
 					table.insert(label2, string.format("C0 %-32s %s %-s", ut.hextobitstr(c0, " "), c0, db.get_flag_name(p.flag_c0, db.flag_names_c0)))
 					table.insert(label2, string.format("C4 %-32s %s %-s", ut.hextobitstr(c4, " "), c4, db.get_flag_name(p.flag_c4, db.flag_names_c4)))
 					table.insert(label2, string.format("C8 %-32s %s %-s", ut.hextobitstr(c8, " "), c8, db.get_flag_name(p.flag_c8, db.flag_names_c8)))
 					table.insert(label2, string.format("CC %-32s %s %-s", ut.hextobitstr(cc, " "), cc, db.get_flag_name(p.flag_cc, db.flag_names_cc)))
-					table.insert(label2, string.format("D0 %-32s %s %-s", ut.hextobitstr(d0, " "), d0, db.get_flag_name(p.flag_d0, db.flag_names_d0)))
-					scr:draw_text(40, 60 + get_line_height(p1 and 0 or 5), table.concat(label2, "\n"))
+					table.insert(label2, string.format("D0 %-8s %s %-s", ut.hextobitstr(d0, " "), d0, db.get_flag_name(p.flag_d0, db.flag_names_d0)))
+					table.insert(label2, string.format("7E %-8s %s %-s", ut.hextobitstr(_7e, " "), _7e, db.get_flag_name(p.flag_7e, db.flag_names_7e)))
+					table.insert(label2, string.format("%3s %3s", p.knockback1, p.knockback2))
+					scr:draw_text(40, 60 + get_line_height(p1 and 0 or (#label2 + 0.5)), table.concat(label2, "\n"))
 				end
 
 				-- コマンド入力状態表示
