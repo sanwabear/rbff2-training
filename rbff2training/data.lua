@@ -2584,42 +2584,42 @@ local flag_7e                        = {
 	_06 = 0x40,                                       --
 	_07 = 0x80                                        -- 近距離
 }
-flag_cc.hitstun                      = flag_cc._03 |  -- 必殺投げやられ
-	flag_cc._08 |                                     -- 投げ派生やられ
-	flag_cc._09 |                                     -- つかみ投げやられ
-	flag_cc._10 |                                     -- 投げられ
-	flag_cc._12 |                                     -- ライン送りやられ
-	flag_cc._13 |                                     -- ダウン
-	flag_cc._14 |                                     -- 空中やられ
-	flag_cc._15 |                                     -- 地上やられ
-	flag_cc._17 |                                     -- 気絶
-	flag_cc._18 |                                     -- 気絶起き上がり
-	flag_cc._23                                       -- 起き上がり
-flag_cc.blocking                     = flag_cc._00  | -- CA
-	flag_cc._01 |                                     -- AかB攻撃
-	flag_cc._02 |                                     -- 滑り
-	flag_cc._03 |                                     -- 必殺投げやられ
-	flag_cc._04 |                                     --
-	flag_cc._05 |                                     -- 空中ガード
-	flag_cc._06 |                                     -- 屈ガード
-	flag_cc._07                                       -- 立ガード
-flag_cc.attacking                    = flag_cc._00 |  -- CA
-	flag_cc._01 |                                     -- AかB攻撃
-	flag_cc._20 |                                     -- ブレイクショット
-	flag_cc._21 |                                     -- 必殺技中
-	flag_cc._25 |                                     -- つかみ技
-	flag_cc._27 |                                     -- 投げ追撃
-	flag_cc._30 |                                     -- 空中投げ
-	flag_cc._31                                       -- 投げ
-flag_cc.grabbing                     = flag_cc._25 |  -- つかみ技
-	flag_cc._27                                       -- 投げ追撃
-flag_cc.thrown                       = flag_cc._03 |  -- 必殺投げやられ
-	flag_cc._08 |                                     -- 投げ派生やられ
-	flag_cc._09 |                                     -- つかみ投げやられ
-	flag_cc._10                                       -- 投げられ
-flag_d0.hurt                         = flag_d0._03 |  -- ギガティック投げられ
-	flag_d0._06 |                                     -- ガード中、やられ中
-	flag_d0._07                                       -- 攻撃ヒット
+flag_cc.hitstun                      =
+	flag_cc._03 |                                    -- 必殺投げやられ
+	flag_cc._08 |                                    -- 投げ派生やられ
+	flag_cc._09 |                                    -- つかみ投げやられ
+	flag_cc._10 |                                    -- 投げられ
+	flag_cc._12 |                                    -- ライン送りやられ
+	flag_cc._13 |                                    -- ダウン
+	flag_cc._14 |                                    -- 空中やられ
+	flag_cc._15 |                                    -- 地上やられ
+	flag_cc._17 |                                    -- 気絶
+	flag_cc._18 |                                    -- 気絶起き上がり
+	flag_cc._23                                      -- 起き上がり
+flag_cc.blocking                     =
+	flag_cc._05 |                                    -- 空中ガード
+	flag_cc._06 |                                    -- 屈ガード
+	flag_cc._07                                      -- 立ガード
+flag_cc.attacking                    =
+	flag_cc._00 |                                    -- CA
+	flag_cc._01 |                                    -- AかB攻撃
+	flag_cc._20 |                                    -- ブレイクショット
+	flag_cc._21 |                                    -- 必殺技中
+	flag_cc._25 |                                    -- つかみ技
+	flag_cc._27 |                                    -- 投げ追撃
+	flag_cc._30 |                                    -- 空中投げ
+	flag_cc._31                                      -- 投げ
+flag_cc.grabbing                     =
+	flag_cc._25 |                                    -- つかみ技
+	flag_cc._27                                      -- 投げ追撃
+flag_cc.thrown                       =
+	flag_cc._03 |                                    -- 必殺投げやられ
+	flag_cc._08 |                                    -- 投げ派生やられ
+	flag_cc._09 |                                    -- つかみ投げやられ
+	flag_cc._10                                      -- 投げられ
+flag_d0.hurt                         = flag_d0._03 | -- ギガティック投げられ
+	flag_d0._06 |                                    -- ガード中、やられ中
+	flag_d0._07                                      -- 攻撃ヒット
 db.flag_c0                           = flag_c0
 db.flag_c4                           = flag_c4
 db.flag_c8                           = flag_c8

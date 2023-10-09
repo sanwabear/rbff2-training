@@ -3182,7 +3182,9 @@ rbff2.startplugin          = function()
 			p.old.act_data = p.act_data or { name = "", type = db.act_types.startup | db.act_types.free, }
 			if p.flag_c4 == 0 and p.flag_c8 == 0 then
 				local name = nil
-				if p.flag_cc > 0 then
+				if ut.tstb(p.flag_cc, db.flag_cc.blocking) then
+					name = "ガード"
+				elseif p.flag_cc > 0 then
 					name = db.get_flag_name(p.flag_cc, db.flag_names_cc)
 				else
 					name = db.get_flag_name(p.flag_c0, db.flag_names_c0)
@@ -3228,6 +3230,9 @@ rbff2.startplugin          = function()
 			end
 
 			p.update_act = (p.spid > 0 and p.on_update_spid == global.frame_number) or (p.spid == 0 and p.on_update_act == global.frame_number)
+			if p.update_act and ut.tstb(p.old.flag_cc, db.flag_cc.blocking) and ut.tstb(p.flag_cc, db.flag_cc.blocking) then
+				p.update_act = false
+			end
 			p.move_count = p.update_act and 1 or (p.move_count + 1)
 		end
 
