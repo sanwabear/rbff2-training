@@ -1713,7 +1713,7 @@ rbff2.startplugin          = function()
 			[0x90] = function(data) p.throw_timer = data end,                                     -- 投げ可能かどうかのフレーム経過
 			[{ addr = 0xA9, filter = { 0x23284, 0x232B0 } }] = function(data) p.on_vulnerable = now() end, -- 判定無敵でない, 判定無敵+無敵タイマーONでない
 			-- [0x92] = function(data) end, -- 弾ヒット?
-			[0xA2] = function(data) p.firing = data == 0 end,                                     -- 弾発射時に値が入る ガード判断用
+			[0xA2] = function(data) p.firing = data ~= 0 end,                                     -- 弾発射時に値が入る ガード判断用
 			[0xA3] = function(data)                                                               -- A3:成立した必殺技コマンドID A4:必殺技コマンドの持続残F
 				if data == 0 then
 					p.on_sp_clear = now()
@@ -1944,7 +1944,7 @@ rbff2.startplugin          = function()
 				[0xB5] = function(data) p.fireball_rank = data end,
 				[0xE7] = function(data) p.attackbits.fullhit = data ~= 0 end,
 				[0x8A] = function(data) p.grabbable1 = 0x2 >= data end,
-				[0xA3] = function(data) p.firing = data == 0 end, -- 攻撃中に値が入る ガード判断用
+				[0xA3] = function(data) p.firing = data ~= 0 end, -- 攻撃中に値が入る ガード判断用
 			}
 			p.wp16 = {
 				[0x64] = function(data) p.actb = data end,
@@ -3182,6 +3182,16 @@ rbff2.startplugin          = function()
 				p.repeatable = p.cancelable_data & 0xD0 == 0xD0
 			end
 
+			-- ガード持続の種類 家庭用0271FCからの処理 0:攻撃無し 1:ガード継続小 2:ガード継続大
+			if p.firing then
+				p.kagenui_type = 1
+			elseif p.attack and p.attack ~= 0 then
+				local b2 = 0x80 == (0x80 & pgm:read_u8(pgm:read_u32(0x8C9E2 + p.char4) + p.attack))
+				p.kagenui_type = b2 and 2 or 1
+			else
+				p.kagenui_type = 0
+			end
+
 			-- ライン送らない状態のデータ書き込み
 			if p.dis_plain_shift then
 				mem.w8(p.addr.hurt_state, p.hurt_state | 0x40)
@@ -3995,8 +4005,9 @@ rbff2.startplugin          = function()
 								p.pow_up_direct == 0 and p.pow_up or p.pow_up_direct or 0, p.pow_up_hit or 0, p.pow_up_gd or 0, p.pow_revenge or 0, p.pow_absorb or 0))
 							table.insert(label, string.format("Inv.%2s  BS-Pow.%2s BS-Inv.%2s", xp.sp_invincible or 0, xp.bs_pow or 0, xp.bs_invincible or 0))
 							table.insert(label, string.format("%s/%s Hit  Esaka %s %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.esaka or 0, p.esaka_type or ""))
+							table.insert(label, string.format("Kagenui %s", p.kagenui_type))
 							table.insert(label, string.format("Cancel %-2s/%-2s Teching %s", xp.repeatable and "Ch" or "", xp.cancelable and "Sp" or "",
-								xp.forced_down or xp.in_bs and "No" or "Yes"))
+								xp.forced_down or xp.in_bs and "Can't" or "Can"))
 							table.insert(label, string.format(" %-8s/%-8s", p.sliding and "Slide" or "", p.inertial and "Inertial" or ""))
 						end
 						if p.hurt then
