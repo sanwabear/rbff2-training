@@ -1999,7 +1999,7 @@ rbff2.startplugin          = function()
 				p.max_hit_dn = 0
 			end
 			p.clear_frame_data = function()
-				p.frame_gap        = 0
+				p.frame_gap        = p.frame_gap or 0
 				p.act_frames       = {}
 				p.frame_groups     = {}
 				p.act_frames_total = 0
@@ -2966,19 +2966,22 @@ rbff2.startplugin          = function()
 			end
 		end
 
-		-- TODO 3 "ON:判定の形毎", 4 "ON:攻撃判定の形毎", 5 "ON:くらい判定の形毎",
+		-- フレーム数表示 
 		local attackbit_mask = 0
-		attackbit_mask = attackbit_mask | frame_attack_types.mask_act_count
-		attackbit_mask = attackbit_mask | frame_attack_types.mask_fb_effect
-		attackbit_mask = attackbit_mask | frame_attack_types.mask_attack
-		attackbit_mask = attackbit_mask | frame_attack_types.mask_act
-		attackbit_mask = attackbit_mask | frame_attack_types.mask_hitbox
-		attackbit_mask = ut.hex_clear(0xFFFFFFFFFFFFFFFF, attackbit_mask)
-		attackbit      = attackbit & attackbit_mask
-		if p.disp_frm == 3 then
-		elseif p.disp_frm == 4 then
-		elseif p.disp_frm == 5 then
+		if p.disp_frm == 2 then -- 2:ON
+			attackbit_mask = attackbit_mask | frame_attack_types.mask_multihit
+			attackbit_mask = attackbit_mask | frame_attack_types.mask_attack
+			attackbit_mask = attackbit_mask | frame_attack_types.mask_act
+			attackbit_mask = attackbit_mask | frame_attack_types.mask_hitbox
+		elseif p.disp_frm == 3 then -- 3:ON:判定の形毎
+		elseif p.disp_frm == 4 then -- 4:ON:攻撃判定の形毎
+			attackbit_mask = attackbit_mask | frame_attack_types.mask_attack
+			attackbit_mask = attackbit_mask | frame_attack_types.mask_act
+		elseif p.disp_frm == 5 then -- 5:ON:くらい判定の形毎
+			attackbit_mask = attackbit_mask | frame_attack_types.mask_multihit
+			attackbit_mask = attackbit_mask | frame_attack_types.mask_hitbox
 		end
+		attackbit      = attackbit & ut.hex_clear(0xFFFFFFFFFFFFFFFF, attackbit_mask)
 		--ut.printf("%x %x %x | %s", p.num, attackbit_mask, attackbit, ut.tobitstr(attackbit, " "))
 
 		local frame    = p.act_frames[#p.act_frames]
@@ -3191,10 +3194,19 @@ rbff2.startplugin          = function()
 			p.act_data.name = p.sliding and p.act_data.slide_name or p.in_bs and p.act_data.bs_name or p.act_data.normal_name
 			-- ガード移行可否
 			p.act_normal = true
-			if p.state == 2 or (p.attack_data | p.flag_c4 | p.flag_c8) ~= 0 or
-				ut.tstb(p.flag_cc, 0xFFFFFF3F) or ut.tstb(p.flag_c0, 0x03FFD723) or
+			if ut.tstb(p.flag_c0, 0x3FFD723) or (p.attack_data | p.flag_c4 | p.flag_c8) ~= 0 or ut.tstb(p.flag_cc, 0xFFFFFF3F) or
 				not ut.tstb(p.act_data.type, db.act_types.free | db.act_types.block) then
-				p.act_normal, global.all_act_normal = false, false
+				global.all_act_normal, p.act_normal = false, false
+			end
+			if i == 2 then
+				local p1, p2 = p.op, p
+				if p1.act_normal == p2.act_normal then
+					p1.frame_gap, p2.frame_gap = 0, 0
+				elseif not p1.act_normal then
+					p1.frame_gap, p2.frame_gap = p1.frame_gap - 1, p2.frame_gap + 1
+				else --if not p2.act_normal then
+					p1.frame_gap, p2.frame_gap = p1.frame_gap + 1, p2.frame_gap - 1
+				end
 			end
 
 			-- 飛び道具の状態読取
@@ -3448,19 +3460,6 @@ rbff2.startplugin          = function()
 		table.sort(hitboxies, hitboxies_order)
 		table.sort(ranges, ranges_order)
 
-		for _, p in ipairs(players) do -- フレーム差
-			if p.act_normal == p.op.act_normal then
-				if p.act_normal ~= p.op.act_normal then p.old.frame_gap = 0 end
-				p.frame_gap = 0
-			elseif p.act_normal then
-				if not p.old.act_normal then p.frame_gap = 0 end
-				p.frame_gap, p.old.frame_gap = p.frame_gap + 1, p.frame_gap
-			else
-				if not p.op.old.act_normal then p.frame_gap = 0 end
-				p.frame_gap, p.old.frame_gap = p.frame_gap - 1, p.frame_gap
-			end
-		end
-
 		--[[
 		-- フレーム表示などの前処理1
 		for _, p in ipairs(players) do
@@ -3524,19 +3523,11 @@ rbff2.startplugin          = function()
 		end
 		]]
 
-		for base, p in pairs(all_objects) do
+		for _, p in pairs(all_objects) do
 			-- キャラ、弾ともに通常動作状態ならリセットする
 			if not global.all_act_normal and global.old_all_act_normal then p.clear_frame_data() end
-
-			--[[
-			ut.printf("%X %s %s %s %s %s %s %s", p.addr.base, #p.act_frames, #p.frame_groups, #p.muteki.act_frames, #p.muteki.frame_groups,
-			#p.gap_frames.act_frames, #p.gap_frames.frame_groups)
-			]]
-
 			-- 全キャラ特別な動作でない場合はフレーム記録しない
-			if global.disp_normal_frms == 1 or (global.disp_normal_frms == 2 and global.all_act_normal == false) then
-				if not p.is_fireball then proc_act_frame(p) end
-			end
+			if (global.disp_normal_frms == 1 or not global.all_act_normal) and not p.is_fireball then proc_act_frame(p) end
 		end
 		fix_max_framecount() --1Pと2Pともにフレーム数が多すぎる場合は加算をやめる
 
@@ -4136,15 +4127,13 @@ rbff2.startplugin          = function()
 				if global.disp_frmgap > 1 or p.disp_frm > 1 then
 					if global.disp_frmgap == 2 then
 						draw_frame_groups(p.frame_groups, p.act_frames_total, 30, p1 and 64 or 70, get_line_height(), true)
-						--draw_frame_groups(p.muteki.frame_groups, p.act_frames_total, 30, p1 and 68 or 76, 3, true)
-						--draw_frame_groups(p.gap_frames.frame_groups, p.act_frames_total, 30, p1 and 65 or 73, 3, true)
 					end
 					draw_frames(p.frame_groups, p1 and 160 or 285, p1 and 40 or 165, 63, get_line_height(), 0.2)
 				end
 				--フレーム差と確定反撃の表示
 				if global.disp_frmgap > 1 then
-					draw_text_with_shadow(p1 and 140 or 165, 40, string.format("%4s", string.format(p.old.frame_gap > 0 and "+%d" or "%d", p.old.frame_gap)),
-						p.old.frame_gap == 0 and 0xFFFFFFFF or p.old.frame_gap > 0 and 0xFF0088FF or 0xFFFF0088)
+					draw_text_with_shadow(p1 and 140 or 165, 40, string.format("%4s", string.format(p.frame_gap > 0 and "+%d" or "%d", p.frame_gap)),
+						p.frame_gap == 0 and 0xFFFFFFFF or p.frame_gap > 0 and 0xFF0088FF or 0xFFFF0088)
 					draw_text_with_shadow(p1 and 112 or 184, 40, "PUNISH", p.on_punish <= global.frame_number and 0xFF808080 or 0xFF00FFFF)
 				end
 			end

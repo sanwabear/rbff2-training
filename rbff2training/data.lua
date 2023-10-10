@@ -175,8 +175,7 @@ local frame_attack_types          = {
 	attack        = 39,  -- attack
 	act           = 47,  -- act
 }
-frame_attack_types.mask_act_count = 0xFF << frame_attack_types.act_count
-frame_attack_types.mask_fb_effect = 0xFF << frame_attack_types.fb_effect
+frame_attack_types.mask_multihit  = (0xFF << frame_attack_types.act_count) | (0xFF << frame_attack_types.fb_effect)
 frame_attack_types.mask_attack    = 0xFF << frame_attack_types.attack
 frame_attack_types.mask_act       = 0xFFFF << frame_attack_types.act
 frame_attack_types.mask_fake      = frame_attack_types.fake
