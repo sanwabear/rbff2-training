@@ -2809,19 +2809,21 @@ rbff2.startplugin          = function()
 			end
 
 			if ((frame.col or 0) + (frame.line or 0)) > 0 then
-				local evx, deco1, deco2, dodge = math.min(x1, x2), nil, nil, ""
+				local evx, deco1, deco2, deco3, dodge = math.min(x1, x2), nil, nil, nil, ""
 				if ut.tstb(frame.attackbit, frame_attack_types.off_fireball) then deco1 = "○" end
-				if ut.tstb(frame.attackbit, frame_attack_types.post_fireball) then deco1 = "◇" end
-				if ut.tstb(frame.attackbit, frame_attack_types.pre_fireball) then deco1 = "◆" end
+				if ut.tstb(frame.attackbit, frame_attack_types.post_fireball) then deco2 = "◇" end
+				if ut.tstb(frame.attackbit, frame_attack_types.pre_fireball) then deco2 = "◆" end
 				if ut.tstb(frame.attackbit, frame_attack_types.on_fireball) then deco1 = "●" end
-				if ut.tstb(frame.attackbit, frame_attack_types.on_air) then deco2 = "▴" end
-				if ut.tstb(frame.attackbit, frame_attack_types.on_ground) then deco2 = "▾" end
-				if deco1 then
-					scr:draw_text(evx - get_string_width(deco1) * 0.5, txty + y - 6, deco1)
-					scr:draw_line(x2, y, x2, y + height)
-				end
+				if ut.tstb(frame.attackbit, frame_attack_types.on_air) then deco3 = "▴" end
+				if ut.tstb(frame.attackbit, frame_attack_types.on_ground) then deco3 = "▾" end
 				if deco2 then
-					scr:draw_text(evx - get_string_width(deco2) * 0.5, txty + y - 4.5, deco2)
+					scr:draw_text(evx - get_string_width(deco2) * 0.35, txty + y - 6, deco2)
+					scr:draw_line(x2, y, x2, y + height)
+				elseif deco1 then
+					scr:draw_text(evx - get_string_width(deco1) * 0.4, txty + y - 6, deco1)
+					scr:draw_line(x2, y, x2, y + height)
+				elseif deco3 then
+					scr:draw_text(evx - get_string_width(deco3) * 0.5, txty + y - 4.5, deco3)
 					scr:draw_line(x2, y, x2, y + height)
 				end
 				scr:draw_box(x1, y, x2, y + height, frame.line, frame.col)
@@ -2842,9 +2844,10 @@ rbff2.startplugin          = function()
 				local font_col = frame.font_col or 0xFFFFFFFF
 				if font_col > 0 then draw_text_with_shadow(txtx, txty + y, count_txt, font_col) end
 
-				-- TODO
+				--[[ TODO きれいなテキスト化
 				dodge = ""
 				table.insert(frame_txts, 1, string.format("%s%s%s", deco1 or deco2 or "", count_txt, dodge))
+				]]
 			end
 			if x2 <= xmin then break end
 			x1 = x2
