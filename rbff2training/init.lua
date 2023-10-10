@@ -2920,7 +2920,7 @@ rbff2.startplugin          = function()
 	for i = -1, -256, -1 do table.insert(force_y_pos, i) end
 
 	local proc_act_frame = function(p)
-		local col, font_col, line, xline, attackbit, dodge, gap = 0xAAF0E68C, 0xFFFFFFFF, 0xDDF0E68C, 0, 0, 0, 0
+		local col, font_col, line, xline, attackbit = 0xAAF0E68C, 0xFFFFFFFF, 0xDDF0E68C, 0, 0
 		for _, xp in ipairs(p.objects) do
 			if p.skip_frame then
 			elseif p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number then
@@ -2952,26 +2952,17 @@ rbff2.startplugin          = function()
 				if p.skip_frame or p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number or p.jumping then
 					-- 無視
 				elseif ut.tstb(p.hurt.dodge, frame_attack_types.full, true) then
-					xline, dodge = 0xFF00FFFF, frame_attack_types.full  -- 全身無敵
+					attackbit, xline = attackbit | frame_attack_types.full, 0xFF00FFFF -- 全身無敵
 				elseif ut.tstb(p.hurt.dodge, frame_attack_types.frame_dodges) then
-					xline, dodge = 0xFF00BBDD, dodge & frame_attack_types.frame_dodges -- 部分無敵
+					attackbit, xline = attackbit | frame_attack_types.frame_dodges, 0xFF00BBDD -- 部分無敵
 				end
-				attackbit = attackbit | dodge
 
 				-- フレーム差
-				if p.act_normal == p.op.act_normal then
-					if p.act_normal ~= p.op.act_normal then p.old.frame_gap = 0 end
-					p.frame_gap, gap = 0, 0
-				elseif p.act_normal then
-					if not p.old.act_normal then p.frame_gap = 0 end
-					p.frame_gap, p.old.frame_gap, gap = p.frame_gap + 1, p.frame_gap, frame_attack_types.frame_plus
-					font_col = 0xFF0088FF
-				else
-					if not p.op.old.act_normal then p.frame_gap = 0 end
-					p.frame_gap, p.old.frame_gap, gap = p.frame_gap - 1, p.frame_gap, frame_attack_types.frame_minus
-					font_col = 0xFFFF0088
+				if p.frame_gap > 0 then
+					attackbit, font_col = attackbit | frame_attack_types.frame_plus, 0xFF0088FF
+				elseif p.frame_gap < 0 then
+					attackbit, font_col = attackbit | frame_attack_types.frame_minus, 0xFFFF0088
 				end
-				attackbit = attackbit | gap
 			end
 		end
 
@@ -3019,8 +3010,9 @@ rbff2.startplugin          = function()
 		p.act_frames_total = not p.act_frames_total and 0 or (332 < p.act_frames_total) and 332 or (p.act_frames_total + 1)
 
 		local last_frame = frame
+		local key_mask = frame_attack_types.frame_plus | frame_attack_types.frame_minus
 		frame = p.gap_frames.act_frames[#p.gap_frames.act_frames]
-		if p.update_act or not frame or upd_group or frame.key ~= gap then
+		if p.update_act or not frame or upd_group or frame.key ~= (attackbit & key_mask) then
 			frame = ut.table_add(p.gap_frames.act_frames, {
 				act = p.act,
 				count = 1,
@@ -3029,7 +3021,7 @@ rbff2.startplugin          = function()
 				col = 0x22FFFFFF & font_col,
 				line = 0xCCFFFFFF & font_col,
 				update  = p.update_act,
-				key = gap,  
+				key = key_mask & attackbit,
 			}, 180)
 		else
 			frame.count = frame.count + 1
@@ -3455,6 +3447,19 @@ rbff2.startplugin          = function()
 		end
 		table.sort(hitboxies, hitboxies_order)
 		table.sort(ranges, ranges_order)
+
+		for _, p in ipairs(players) do -- フレーム差
+			if p.act_normal == p.op.act_normal then
+				if p.act_normal ~= p.op.act_normal then p.old.frame_gap = 0 end
+				p.frame_gap = 0
+			elseif p.act_normal then
+				if not p.old.act_normal then p.frame_gap = 0 end
+				p.frame_gap, p.old.frame_gap = p.frame_gap + 1, p.frame_gap
+			else
+				if not p.op.old.act_normal then p.frame_gap = 0 end
+				p.frame_gap, p.old.frame_gap = p.frame_gap - 1, p.frame_gap
+			end
+		end
 
 		--[[
 		-- フレーム表示などの前処理1
