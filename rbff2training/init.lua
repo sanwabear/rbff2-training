@@ -1572,7 +1572,7 @@ rbff2.startplugin          = function()
 			hide_phantasm     = false, -- 残像を画面表示しないときtrue
 			disp_dmg          = true, -- ダメージ表示するときtrue
 			disp_cmd          = 2, -- 入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
-			disp_frm          = 4, -- フレーム数表示する
+			disp_frm          = 2, -- フレーム数表示する
 			disp_fbfrm        = true, -- 弾のフレーム数表示するときtrue
 			disp_stun         = true, -- 気絶表示
 			disp_sts          = 3, -- 状態表示 "OFF", "ON", "ON:小表示", "ON:大表示"
@@ -2003,6 +2003,7 @@ rbff2.startplugin          = function()
 				p.act_frames       = {}
 				p.frame_groups     = {}
 				p.act_frames_total = 0
+				p.fb_frames        = { act_frames = {}, frame_groups = {}, }
 				p.gap_frames       = { act_frames = {}, frame_groups = {}, }
 			end
 			p.clear_frame_data()
@@ -2165,7 +2166,7 @@ rbff2.startplugin          = function()
 			end,
 			[0x67] = function(data) p.act_boxtype = 0xFFFF & (data & 0xC0 * 4) end, -- 現在の行動の判定種類
 			[0x6A] = function(data)
-				p.repeatable = (data & 0x4) == 0x4                         -- 連打キャンセル判定
+				p.repeatable = p.flag_c8 == 0 and (data & 0x4) == 0x4      -- 連打キャンセル判定
 				p.flip_x1 = ((data & 0x80) == 0) and 0 or 1                -- 判定の反転
 				local fake, fake_pc = ((data & 0xFB) == 0 or ut.tstb(data, 0x8) == false), mem.pc() == fix_addr(0x011DFE)
 				p.attackbits.fake = fake_pc and fake
@@ -2750,6 +2751,9 @@ rbff2.startplugin          = function()
 			local frame1 = p.act_frames[#p.act_frames]
 			if frame1 and frame1.count > 332 then min_count = math.min(min_count, frame1.count) end
 
+			frame1 = p.fb_frames.act_frames[#p.fb_frames.act_frames]
+			if frame1 and frame1.count > 332 then min_count = math.min(min_count, frame1.count) end
+
 			frame1 = p.gap_frames.act_frames[#p.gap_frames.act_frames]
 			if frame1 and frame1.count > 332 then min_count = math.min(min_count, frame1.count) end
 		end
@@ -2757,6 +2761,9 @@ rbff2.startplugin          = function()
 		local fix = min_count - 332
 		for _, p in ipairs(players) do
 			local frame1 = p.act_frames[#p.act_frames]
+			if frame1 then frame1.count = frame1.count - fix end
+
+			frame1 = p.fb_frames.act_frames[#p.fb_frames.act_frames]
 			if frame1 then frame1.count = frame1.count - fix end
 
 			frame1 = p.gap_frames.act_frames[#p.gap_frames.act_frames]
@@ -2791,6 +2798,7 @@ rbff2.startplugin          = function()
 		if main_frame and (frame_group[1].col + frame_group[1].line) > 0 then
 			draw_text_with_shadow(xmin + 12, txty + y, frame_group[1].name, 0xFFC0C0C0) -- 名称を描画
 		end
+		local frame_txts = {}
 		for k = #frame_group, 1, -1 do
 			local frame = frame_group[k]
 			local x2 = x1 - frame.count
@@ -2800,32 +2808,48 @@ rbff2.startplugin          = function()
 				x2 = xmin
 			end
 
-			if (frame.col + frame.line) > 0 then
-				local evx, deco1, deco2 = math.min(x1, x2), nil, nil
+			if ((frame.col or 0) + (frame.line or 0)) > 0 then
+				local evx, deco1, deco2, dodge = math.min(x1, x2), nil, nil, ""
 				if ut.tstb(frame.attackbit, frame_attack_types.off_fireball) then deco1 = "○" end
 				if ut.tstb(frame.attackbit, frame_attack_types.post_fireball) then deco1 = "◇" end
 				if ut.tstb(frame.attackbit, frame_attack_types.pre_fireball) then deco1 = "◆" end
 				if ut.tstb(frame.attackbit, frame_attack_types.on_fireball) then deco1 = "●" end
 				if ut.tstb(frame.attackbit, frame_attack_types.on_air) then deco2 = "▴" end
 				if ut.tstb(frame.attackbit, frame_attack_types.on_ground) then deco2 = "▾" end
-				if deco1 then scr:draw_text(evx - get_string_width(deco1) * 0.5, txty + y - 6, deco1) end
-				if deco2 then scr:draw_text(evx - get_string_width(deco2) * 0.5, txty + y - 4.5, deco2) end
+				if deco1 then
+					scr:draw_text(evx - get_string_width(deco1) * 0.5, txty + y - 6, deco1)
+					scr:draw_line(x2, y, x2, y + height)
+				end
+				if deco2 then
+					scr:draw_text(evx - get_string_width(deco2) * 0.5, txty + y - 4.5, deco2)
+					scr:draw_line(x2, y, x2, y + height)
+				end
 				scr:draw_box(x1, y, x2, y + height, frame.line, frame.col)
 				if frame.xline and frame.xline > 0 then
 					if ut.tstb(frame.attackbit, frame_attack_types.full) then
 						for i = 0.5, height, 1.5 do scr:draw_box(x1, y + i, x2, math.min(y + height, y + i + 0.5), 0, frame.xline) end
-					else
+						dodge = "Full"
+					elseif ut.tstb(frame.attackbit, frame_attack_types.high) then
 						for i = 1.5, height, 3 do scr:draw_box(x1, y + i, x2, math.min(y + height, y + i + 1), 0, frame.xline) end
+						dodge = "High"
+					else -- if ut.tstb(frame.attackbit, frame_attack_types.low) then
+						for i = 1.5, height, 3 do scr:draw_box(x1, y + i, x2, math.min(y + height, y + i + 1), 0, frame.xline) end
+						dodge = "Low"
 					end
 				end
 				local txtx = (frame.count > 5) and (x2 + 1) or (3 > frame.count) and (x2 - 1) or x2
 				local count_txt = 300 < frame.count and "LOT" or ("" .. frame.count)
 				local font_col = frame.font_col or 0xFFFFFFFF
-				draw_text_with_shadow(txtx, txty + y, count_txt, font_col)
+				if font_col > 0 then draw_text_with_shadow(txtx, txty + y, count_txt, font_col) end
+
+				-- TODO
+				dodge = ""
+				table.insert(frame_txts, 1, string.format("%s%s%s", deco1 or deco2 or "", count_txt, dodge))
 			end
 			if x2 <= xmin then break end
 			x1 = x2
 		end
+		scr:draw_text(xmax - 40, txty + y, table.concat(frame_txts, "/"))
 	end
 	local draw_frames = function(frame_groups, xmax, x, y, height, span_ratio)
 		if frame_groups == nil or #frame_groups == 0 then return end
@@ -2835,6 +2859,9 @@ rbff2.startplugin          = function()
 		for j = #frame_groups - math.min(#frame_groups - 1, 6), #frame_groups do
 			dodraw(y, 0, frame_groups[j], true, height, x, xmax)
 			for _, frame in ipairs(frame_groups[j]) do
+				for _, sub_group in ipairs(frame.fb_frames or {}) do
+					dodraw(y, 0, sub_group, false, height, x, xmax)
+				end
 				for _, sub_group in ipairs(frame.gap_frames or {}) do
 					dodraw(y + get_line_height(), -0.5, sub_group, false, height - 1, x, xmax)
 				end
@@ -2919,7 +2946,7 @@ rbff2.startplugin          = function()
 	for i = 1, 256 do table.insert(force_y_pos, i) end
 	for i = -1, -256, -1 do table.insert(force_y_pos, i) end
 
-	local proc_act_frame = function(p)
+	local proc_frame = function(p)
 		local col, font_col, line, xline, attackbit = 0xAAF0E68C, 0xFFFFFFFF, 0xDDF0E68C, 0, 0
 		for _, xp in ipairs(p.objects) do
 			if p.skip_frame then
@@ -2966,22 +2993,24 @@ rbff2.startplugin          = function()
 			end
 		end
 
-		-- フレーム数表示 
-		local attackbit_mask = 0
+		-- フレーム数表示
+		local attackbit_mask = frame_attack_types.simple_mask
 		if p.disp_frm == 2 then -- 2:ON
-			attackbit_mask = attackbit_mask | frame_attack_types.mask_multihit
-			attackbit_mask = attackbit_mask | frame_attack_types.mask_attack
-			attackbit_mask = attackbit_mask | frame_attack_types.mask_act
-			attackbit_mask = attackbit_mask | frame_attack_types.mask_hitbox
+			if p.max_hit_dn and p.max_hit_dn > 0 and p.attackbits.attacking and not p.attackbits.fake then
+				attackbit_mask = 0xFFFFFFFFFFFFFFFF
+			end
 		elseif p.disp_frm == 3 then -- 3:ON:判定の形毎
+			attackbit_mask = 0xFFFFFFFFFFFFFFFF
 		elseif p.disp_frm == 4 then -- 4:ON:攻撃判定の形毎
-			attackbit_mask = attackbit_mask | frame_attack_types.mask_attack
-			attackbit_mask = attackbit_mask | frame_attack_types.mask_act
+			if p.attackbits.attacking and not p.attackbits.fake then
+				attackbit_mask = 0xFFFFFFFFFFFFFFFF
+			end
 		elseif p.disp_frm == 5 then -- 5:ON:くらい判定の形毎
-			attackbit_mask = attackbit_mask | frame_attack_types.mask_multihit
-			attackbit_mask = attackbit_mask | frame_attack_types.mask_hitbox
+			if not p.attackbits.attacking or p.attackbits.fake then
+				attackbit_mask = 0xFFFFFFFFFFFFFFFF
+			end
 		end
-		attackbit      = attackbit & ut.hex_clear(0xFFFFFFFFFFFFFFFF, attackbit_mask)
+		attackbit      = attackbit & attackbit_mask
 		--ut.printf("%x %x %x | %s", p.num, attackbit_mask, attackbit, ut.tobitstr(attackbit, " "))
 
 		local frame    = p.act_frames[#p.act_frames]
@@ -3003,6 +3032,7 @@ rbff2.startplugin          = function()
 				update     = p.update_act,
 				attackbit  = attackbit,
 				key        = key_mask & attackbit,
+				fb_frames  = {},
 				gap_frames = {},
 			}, 180)
 		elseif frame then
@@ -3012,11 +3042,36 @@ rbff2.startplugin          = function()
 		-- 表示可能範囲（最大で横画面幅）以上は加算しない
 		p.act_frames_total = not p.act_frames_total and 0 or (332 < p.act_frames_total) and 332 or (p.act_frames_total + 1)
 
-		local last_frame = frame
-		local key_mask = frame_attack_types.frame_plus | frame_attack_types.frame_minus
-		frame = p.gap_frames.act_frames[#p.gap_frames.act_frames]
-		if p.update_act or not frame or upd_group or frame.key ~= (attackbit & key_mask) then
-			frame = ut.table_add(p.gap_frames.act_frames, {
+		local last_frame, key = frame, nil
+		local parent, frames, groups = nil, nil, nil
+
+		-- 弾処理
+		---@diagnostic disable-next-line: unbalanced-assignments
+		parent, frames, groups = last_frame and last_frame.fb_frames or nil, p.fb_frames.act_frames, p.fb_frames.frame_groups
+		key, frame = p.attackbit, frames[#frames]
+		if p.update_act or not frame or upd_group or frame.key ~= key then
+			frame = ut.table_add(frames, {
+				act = p.act,
+				count = 1,
+				font_col = 0,
+				name = last_frame.name,
+				col = 0x00FFFFFF,
+				line = 0x00FFFFFF,
+				update  = p.update_act,
+				attackbit  = p.attackbit,
+				key = key,
+			}, 180)
+		else
+			frame.count = frame.count + 1
+		end
+		if update_frame_groups(frame, groups) and parent and groups then ut.table_add(parent, groups[#groups], 180) end
+
+		-- フレーム差
+		---@diagnostic disable-next-line: unbalanced-assignments
+		parent, frames, groups = last_frame and last_frame.gap_frames or nil, p.gap_frames.act_frames, p.gap_frames.frame_groups
+		key, frame = attackbit & frame_attack_types.mask_frame_advance, frames[#frames]
+		if p.update_act or not frame or upd_group or frame.key ~= key then
+			frame = ut.table_add(frames, {
 				act = p.act,
 				count = 1,
 				font_col = font_col,
@@ -3024,14 +3079,12 @@ rbff2.startplugin          = function()
 				col = 0x22FFFFFF & font_col,
 				line = 0xCCFFFFFF & font_col,
 				update  = p.update_act,
-				key = key_mask & attackbit,
+				key = key,
 			}, 180)
 		else
 			frame.count = frame.count + 1
 		end
-		local upd_group = update_frame_groups(frame, p.gap_frames.frame_groups or {})
-		if upd_group and last_frame then ut.table_add(last_frame.gap_frames, p.gap_frames.frame_groups[#p.gap_frames.frame_groups], 180) end
-		return last_frame, upd_group
+		if update_frame_groups(frame, groups) and parent and groups then ut.table_add(parent, groups[#groups], 180) end
 	end
 
 	local input_rvs = function(rvs_type, p, logtxt)
@@ -3527,7 +3580,7 @@ rbff2.startplugin          = function()
 			-- キャラ、弾ともに通常動作状態ならリセットする
 			if not global.all_act_normal and global.old_all_act_normal then p.clear_frame_data() end
 			-- 全キャラ特別な動作でない場合はフレーム記録しない
-			if (global.disp_normal_frms == 1 or not global.all_act_normal) and not p.is_fireball then proc_act_frame(p) end
+			if (global.disp_normal_frms == 1 or not global.all_act_normal) and not p.is_fireball then proc_frame(p) end
 		end
 		fix_max_framecount() --1Pと2Pともにフレーム数が多すぎる場合は加算をやめる
 
@@ -5028,8 +5081,8 @@ rbff2.startplugin          = function()
 				1, -- コマンド入力状態表示   12
 				2, -- 通常動作フレーム非表示 13
 				3, -- フレーム差表示         14
-				4, -- 1P フレーム数表示      15
-				4, -- 2P フレーム数表示      16
+				2, -- 1P フレーム数表示      15
+				2, -- 2P フレーム数表示      16
 				2, -- 1P 弾フレーム数表示    17
 				2, -- 1P 弾フレーム数表示    18
 				1, -- 1P 状態表示            19
