@@ -3126,7 +3126,7 @@ rbff2.startplugin          = function()
 			name = ut.tstb(p.flag_cc, db.flag_cc.blocking) and "ガード" or p.flag_cc > 0 and
 				db.get_flag_name(p.flag_cc, db.flag_names_cc) or db.get_flag_name(p.flag_c0, db.flag_names_c0)
 		elseif p.flag_c4 > 0 and p.flag_c8 == 0 and not ut.tstb(p.flag_cc, db.flag_cc._00) then
-			local slide = ut.tstb(p.flag_c0, db.flag_cc._02) and db.get_flag_name(p.flag_c0, db.flag_names_c0) or ""
+			local slide = ut.tstb(p.flag_cc, db.flag_cc._02) and db.get_flag_name(db.flag_cc._02, db.flag_names_cc) or ""
 			local close
 			if ut.tstb(p.flag_c4, db.flag_c4._01 | db.flag_c4._02) then
 				close = p.main_d_close and "近" or "遠"
@@ -3135,7 +3135,7 @@ rbff2.startplugin          = function()
 			elseif ut.tstb(p.flag_c4, db.flag_c4._29 | db.flag_c4._30 | db.flag_c4._31) then
 				close = p.stand_close and "近" or "遠"
 			end
-			name = string.format("%s%s%s", close or "", slide, db.get_flag_name(p.flag_c4, db.flag_names_c4))
+			name = string.format("%s%s%s", slide, close or "", db.get_flag_name(p.flag_c4, db.flag_names_c4))
 		else
 			return nil
 		end
