@@ -105,7 +105,7 @@ local act_types                       = {
 	parallel = 2 ^ 15,   -- 本体と並列動作する弾
 }
 act_types.low_attack                  = act_types.attack | act_types.low_attack
-act_types.overhead                    = act_types.attack |act_types.overhead
+act_types.overhead                    = act_types.attack | act_types.overhead
 act_types.unblockable                 = act_types.low_attack | act_types.overhead
 db.act_types                          = act_types
 

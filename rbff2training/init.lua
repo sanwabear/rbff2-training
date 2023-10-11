@@ -1378,7 +1378,7 @@ end
 -- 遠近間合い取得
 local load_close_far       = function()
 	if db.chars[1].close_far then return end
-	-- 地上通常技の近距離間合い 家庭用02DD02からの処理
+	-- 地上通常技の近距離間合い 家庭用 02DD02 からの処理
 	for org_char = 1, #db.chars - 1 do
 		local char                   = org_char - 1
 		local abc_offset             = mem.close_far_offset + (char * 4)
@@ -1756,6 +1756,7 @@ rbff2.startplugin          = function()
 					p.pow_absorb = p.char_data.pow[data].pow_absorb or p.pow_absorb
 					p.pow_up_hit = p.char_data.pow[data].pow_up_hit or p.pow_up_hit
 				end
+				p.stand_close = mem.pc() == 0x2AE02 -- 0x2AE02は近距離版動作へのデータ補正の処理アドレス
 				-- ut.printf("%x dmg %x %s %s %s %s %s", p.addr.base, data, p.damage, p.stun, p.stun_timer, p.pow_up_hit, p.pow_up_block)
 			end,
 			-- [0xB7] = function(data) p.corner = data end, -- 画面端状態 0:端以外 1:画面端 3:端押し付け
@@ -1767,6 +1768,7 @@ rbff2.startplugin          = function()
 				if data ~= 0 and mem.pc() == 0x58948 then p.on_bs_established, p.last_bs = now(), data end -- BSフラグ設定
 			end,
 			[0xD0] = function(data) p.flag_d0 = data end,                                      -- フラグ群
+			[0xE2] = function(data) p.sway_close = data == 0 end,
 			[0xE4] = function(data) p.hurt_state = data end,                                   -- やられ状態
 			[0xE8] = function(data, ret)
 				if data < 0x10 and p.dummy_gd == dummy_gd_type.force then ret.value = 0x10 end -- 0x10以上でガード
@@ -1778,9 +1780,7 @@ rbff2.startplugin          = function()
 			[{ addr = 0xFB, filter = { 0x49418, 0x49428 } }] = function(data)
 				p.kaiserwave = p.kaiserwave or {} -- カイザーウェイブのレベルアップ
 				local pc = mem.pc()
-				if (p.kaiserwave[pc] == nil) or p.kaiserwave[pc] + 1 < global.frame_number then
-					p.on_update_spid = now()
-				end
+				if (p.kaiserwave[pc] == nil) or p.kaiserwave[pc] + 1 < global.frame_number then p.on_update_spid = now() end
 				p.kaiserwave[pc] = now()
 			end,
 			[p1 and 0x10B4E1 or 0x10B4E0] = p.update_tmp_combo,
@@ -1890,6 +1890,10 @@ rbff2.startplugin          = function()
 			if p.no_hit_limit > 0 and p.last_combo >= p.no_hit_limit then ret.value = 0x311C end --  0x0001311Cの後半を返す
 		end
 		p.rp16 = {
+			[{ addr = 0x20, filter = 0x2DD16 }] = function(data)
+				if not in_match then return end
+				p.main_d_close = mem.rg("D2", 0xFFFF) >= math.abs(p.pos - p.op.pos) -- 対スウェーライン攻撃の遠近判断
+			end,
 			[0x13124 + 0x2] = nohit, -- 0x13124の後半読み出しハック
 			[0x13128 + 0x2] = nohit, -- 0x13128の後半読み出しハック 0x1311Cを返す
 			[0x1312C + 0x2] = nohit, -- 0x1312Cの後半読み出しハック 0x1311Cを返す
@@ -3115,6 +3119,35 @@ rbff2.startplugin          = function()
 		end
 	end
 
+	-- フラグから技データを返す
+	local gen_act_data = function(p)
+		local name
+		if p.flag_c4 == 0 and p.flag_c8 == 0 then
+			name = ut.tstb(p.flag_cc, db.flag_cc.blocking) and "ガード" or p.flag_cc > 0 and
+				db.get_flag_name(p.flag_cc, db.flag_names_cc) or db.get_flag_name(p.flag_c0, db.flag_names_c0)
+		elseif p.flag_c4 > 0 and p.flag_c8 == 0 and not ut.tstb(p.flag_cc, db.flag_cc._00) then
+			local slide = ut.tstb(p.flag_c0, db.flag_cc._02) and db.get_flag_name(p.flag_c0, db.flag_names_c0) or ""
+			local close
+			if ut.tstb(p.flag_c4, db.flag_c4._01 | db.flag_c4._02) then
+				close = p.main_d_close and "近" or "遠"
+			elseif ut.tstb(p.flag_c4, db.flag_c4._03 | db.flag_c4._04 | db.flag_c4._05) then
+				close = p.sway_close and "近" or "遠"
+			elseif ut.tstb(p.flag_c4, db.flag_c4._29 | db.flag_c4._30 | db.flag_c4._31) then
+				close = p.stand_close and "近" or "遠"
+			end
+			name = string.format("%s%s%s", close or "", slide, db.get_flag_name(p.flag_c4, db.flag_names_c4))
+		else
+			return nil
+		end
+		p.act_data_cache = p.act_data_cache or {}
+		local act_data = p.act_data_cache[name]
+		if not act_data then
+			act_data = { bs_name = name, name = name, normal_name = name, slide_name = name, type = db.act_types.free | db.act_types.startup, count = 1 }
+			p.act_data_cache[name] = act_data
+		end
+		return act_data
+	end
+
 	-- トレモのメイン処理
 	menu.tra_main.proc = function()
 		if not in_match or mem._0x10E043 ~= 0 then return end -- ポーズ中は状態を更新しない
@@ -3232,24 +3265,17 @@ rbff2.startplugin          = function()
 			--フレーム用
 			p.skip_frame   = global.skip_frame1 or global.skip_frame2 or p.skip_frame
 			p.old.act_data = p.act_data or { name = "", type = db.act_types.startup | db.act_types.free, }
-			if p.flag_c4 == 0 and p.flag_c8 == 0 then
-				local name = ut.tstb(p.flag_cc, db.flag_cc.blocking) and "ガード" or p.flag_cc > 0 and
-					db.get_flag_name(p.flag_cc, db.flag_names_cc) or db.get_flag_name(p.flag_c0, db.flag_names_c0)
-				if name then
-					p.act_data_cache = p.act_data_cache or {}
-					p.act_data = p.act_data_cache[name]
-					if not p.act_data then
-						p.act_data = { bs_name = name, name = name, normal_name = name, slide_name = name, type = db.act_types.free | db.act_types.startup, count = 1 }
-						p.act_data_cache[name] = p.act_data
-					end
+			p.act_data = gen_act_data(p)
+			if not p.act_data then
+				if p.char_data.acts and p.char_data.acts[p.act] then
+					p.act_data = p.char_data.acts[p.act]
+				else
+					p.act_data.name = string.format("%X", p.act)
 				end
-			elseif p.char_data.acts and p.char_data.acts[p.act] then
-				p.act_data = p.char_data.acts[p.act]
-			else
-				p.act_data.name = string.format("%X", p.act)
+				-- 技動作は滑りかBSかを付与する
+				p.act_data.name = p.sliding and p.act_data.slide_name or p.in_bs and p.act_data.bs_name or p.act_data.normal_name
 			end
-			-- 技動作は滑りかBSかを付与する
-			p.act_data.name = p.sliding and p.act_data.slide_name or p.in_bs and p.act_data.bs_name or p.act_data.normal_name
+
 			-- ガード移行可否
 			p.act_normal = true
 			if ut.tstb(p.flag_c0, 0x3FFD723) or (p.attack_data | p.flag_c4 | p.flag_c8) ~= 0 or ut.tstb(p.flag_cc, 0xFFFFFF3F) or
@@ -4111,7 +4137,7 @@ rbff2.startplugin          = function()
 					table.insert(label2, string.format("D0 %-8s %s %-s", ut.hextobitstr(d0, " "), d0, db.get_flag_name(p.flag_d0, db.flag_names_d0)))
 					table.insert(label2, string.format("7E %-8s %s %-s", ut.hextobitstr(_7e, " "), _7e, db.get_flag_name(p.flag_7e, db.flag_names_7e)))
 					table.insert(label2, string.format("%3s %3s", p.knockback1, p.knockback2))
-					scr:draw_text(40, 60 + get_line_height(p1 and 0 or (#label2 + 0.5)), table.concat(label2, "\n"))
+					scr:draw_text(40, 50 + get_line_height(p1 and 0 or (#label2 + 0.5)), table.concat(label2, "\n"))
 				end
 
 				-- コマンド入力状態表示
