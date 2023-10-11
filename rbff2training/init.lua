@@ -1728,6 +1728,7 @@ rbff2.startplugin          = function()
 				end
 				-- ut.printf("attack %x", data)
 				p.attack            = data
+				p.on_update_attack  = now()
 				p.attackbits.attack = data
 				local base_addr     = p.char_data.proc_base
 				p.forced_down       = 2 <= mem.r8(data + base_addr.forced_down) -- テクニカルライズ可否 家庭用 05A9BA からの処理
@@ -2238,6 +2239,7 @@ rbff2.startplugin          = function()
 			end,
 			[0xAA] = function(data)
 				p.attackbits.fullhit = data ~= 0
+				--ut.printf("full %X %s %X", p.act or 0, now(), data)
 				if p.is_fireball and data == 0xFF then p.on_fireball = now() * -1 end
 			end,
 			[0xAB] = function(data) p.max_hit_nm = data end, -- 同一技行動での最大ヒット数 分子
@@ -2960,8 +2962,8 @@ rbff2.startplugin          = function()
 				if xp.hitbox_types[1].sort < 3 and xp.repeatable then
 					col, line = 0xAAD2691E, 0xDDD2691E                         -- やられ判定より連キャン状態を優先表示する
 				else
-					col = xp.hitbox_types[1].color
-					col, line = ut.hex_set(col, 0xAA000000), ut.hex_set(col, 0xDD000000)
+					col, line = xp.hitbox_types[1].fill, xp.hitbox_types[1].outline
+					col = col > 0xFFFFFF and ut.hex_set(col, 0xAA000000) or 0
 				end
 			end
 			if not xp.is_fireball then
@@ -3282,7 +3284,7 @@ rbff2.startplugin          = function()
 				end
 			end
 
-			p.update_act = (p.spid > 0 and p.on_update_spid == global.frame_number) or (p.spid == 0 and p.on_update_act == global.frame_number)
+			p.update_act = (p.spid > 0 and p.on_update_spid == global.frame_number) or (p.spid == 0 and p.on_update_act == global.frame_number and (p.attack == 0 or p.on_update_attack == global.frame_number))
 			if p.update_act and ut.tstb(p.old.flag_cc, db.flag_cc.blocking) and ut.tstb(p.flag_cc, db.flag_cc.blocking) then
 				p.update_act = false
 			end
@@ -3415,7 +3417,7 @@ rbff2.startplugin          = function()
 			-- 当たりとやられ判定判定
 			for _, _, box in ifind_all(p.boxies, function(box)
 				local type = fix_box_type(p, box) -- 属性はヒット状況などで変わるので都度解決する
-				--if type.kind == db.box_kinds.attack then ut.printf("%s %s", now(), type.name_en) end
+				if type.kind == db.box_kinds.attack then ut.printf("%s %s", now(), type.name_en) end
 				if not (db.hurt_boxies[type] and p.vulnerable) then
 					box = fix_box_scale(p, box)
 					box.type = type
@@ -3769,7 +3771,7 @@ rbff2.startplugin          = function()
 				end
 
 				--挑発中は前進
-				if p.fwd_prov and ut.tstb(p.op.act_data.type, db.act_types.provoke) then p.add_cmd_hook(db.cmd_types.front) end
+				if p.fwd_prov and ut.tstb(p.op.flag_cc, db.flag_cc._19) then p.add_cmd_hook(db.cmd_types.front) end
 
 				-- ガードリバーサル
 				if global.dummy_rvs_cnt == 1 then
