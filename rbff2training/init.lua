@@ -1779,7 +1779,7 @@ rbff2.startplugin          = function()
 				p.kaiserwave = p.kaiserwave or {} -- カイザーウェイブのレベルアップ
 				local pc = mem.pc()
 				if (p.kaiserwave[pc] == nil) or p.kaiserwave[pc] + 1 < global.frame_number then
-					p.on_update_act = now()
+					p.on_update_spid = now()
 				end
 				p.kaiserwave[pc] = now()
 			end,
@@ -2963,7 +2963,7 @@ rbff2.startplugin          = function()
 					col, line = 0xAAD2691E, 0xDDD2691E                         -- やられ判定より連キャン状態を優先表示する
 				else
 					col, line = xp.hitbox_types[1].fill, xp.hitbox_types[1].outline
-					col = col > 0xFFFFFF and ut.hex_set(col, 0xAA000000) or 0
+					col = col > 0xFFFFFF and (col | 0x22111111) or 0
 				end
 			end
 			if not xp.is_fireball then
