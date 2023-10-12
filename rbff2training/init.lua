@@ -2171,6 +2171,8 @@ rbff2.startplugin          = function()
 			end,
 			[0x67] = function(data) p.act_boxtype = 0xFFFF & (data & 0xC0 * 4) end, -- 現在の行動の判定種類
 			[0x6A] = function(data)
+				p.flag_6a = data
+				--ut.printf("%X %X | %s", base, data, ut.tobitstr(data))
 				p.repeatable = p.flag_c8 == 0 and (data & 0x4) == 0x4      -- 連打キャンセル判定
 				p.flip_x1 = ((data & 0x80) == 0) and 0 or 1                -- 判定の反転
 				local fake, fake_pc = ((data & 0xFB) == 0 or ut.tstb(data, 0x8) == false), mem.pc() == fix_addr(0x011DFE)
@@ -3722,9 +3724,27 @@ rbff2.startplugin          = function()
 					end
 				end
 
+				-- 自動ガード用
 				local act_type = p.op.act_data.type
 				for _, fb in pairs(p.op.fireballs) do
 					if fb.proc_active and fb.act_data then act_type = act_type | fb.act_data.type end
+				end
+				if not p.op.attackbits.harmless and p.op.attack and p.op.attack > 0 then
+					-- CPU自動ガードの処理の一部より。家庭用 056140 から
+					local cpu_block, cpu_block_next = mem.r8(0x56226 + p.op.attack), true
+					while cpu_block_next do
+						if cpu_block == 0 then
+							act_type, cpu_block_next = act_type | db.act_types.attack, false
+						elseif cpu_block == 1 then
+							act_type, cpu_block_next = act_type | db.act_types.low_attack, false
+						elseif cpu_block == 2 then
+							cpu_block = mem.r8(((p.char - 1) << 3) + p.op.attack - 0x27 + 0x562FE)
+						elseif cpu_block == 3 then
+							cpu_block = mem.r8(((p.char - 1) << 5) + p.op.attack - 0x30 + 0x563B6)
+						else
+							cpu_block_next = false
+						end
+					end
 				end
 				-- リプレイ中は自動ガードしない
 				if p.dummy_gd ~= dummy_gd_type.none and ut.tstb(act_type, db.act_types.attack) and in_rec_replay then
