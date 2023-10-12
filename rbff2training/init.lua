@@ -1293,7 +1293,6 @@ end
 
 local draw_hitbox           = function(box)
 	--ut.printf("%s  %s", box.type.kind, box.type.enabled)
-	if box.type.enabled ~= true then return end
 	-- 背景なしの場合は判定の塗りつぶしをやめる
 	local outline, fill = box.type.outline, global.disp_bg and box.type.fill or 0
 	local x1, x2 = sort_ab(box.left, box.right)
@@ -1362,6 +1361,10 @@ local box_with_bit_types   = ut.table_sort({
 	{ box_type = db.box_types.attack,             attackbit = frame_attack_types.attacking },
 }, function(t1, t2) return t1.box_type.sort < t2.box_type.sort end)
 
+for i, item in ipairs(box_with_bit_types) do
+	ut.printf("%s %s", i, item.box_type.name_en)
+end
+
 local fix_box_type         = function(p, box)
 	local type = p.in_sway_line and box.sway_type or box.type
 	if type ~= db.box_types.attack then return type end
@@ -1372,8 +1375,9 @@ local fix_box_type         = function(p, box)
 	-- TODO つかみ技はダメージ加算タイミングがわかるようにする
 	if ut.tstb(p.flag_cc, db.flag_cc.grabbing) and p.op.last_damage_scaled ~= 0xFF then
 	end
+	local attackbit = frame_attack_types.hitbox_type_mask & p.attackbit
 	for _, item in ipairs(box_with_bit_types) do
-		if ut.tstb(p.attackbit, item.attackbit, true) then
+		if ut.tstb(attackbit, item.attackbit, true) then
 			--ut.printf("%x %s", p.addr.base, item.box_type.name_en)
 			return item.box_type
 		end
@@ -2966,7 +2970,7 @@ rbff2.startplugin          = function()
 		for _, xp in ipairs(p.objects) do
 			if p.skip_frame then
 			elseif p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number then
-			elseif xp.proc_active and xp.hitbox_types and #xp.hitbox_types > 0 then
+			elseif xp.proc_active and xp.hitbox_types and #xp.hitbox_types > 0 and xp.hitbox_types then
 				attackbit = attackbit | p.attackbit
 				table.sort(xp.hitbox_types, function(t1, t2) return t1.sort > t2.sort end) -- ソート
 				if xp.hitbox_types[1].sort < 3 and xp.repeatable then
@@ -3449,7 +3453,6 @@ rbff2.startplugin          = function()
 			-- 当たりとやられ判定判定
 			for _, _, box in ifind_all(p.boxies, function(box)
 				local type = fix_box_type(p, box) -- 属性はヒット状況などで変わるので都度解決する
-				if type.kind == db.box_kinds.attack then ut.printf("%s %s", now(), type.name_en) end
 				if not (db.hurt_boxies[type] and p.vulnerable) then
 					box = fix_box_scale(p, box)
 					box.type = type
@@ -3470,7 +3473,7 @@ rbff2.startplugin          = function()
 					p.hurt.min_bottom = math.min(p.hurt.min_bottom or 0xFFFF, box.real_bottom)
 					p.hurt.dodge = get_dodge(p, box, p.hurt.max_top, p.hurt.min_bottom)
 				end
-				if p.body.disp_hitbox then
+				if p.body.disp_hitbox and box.type.enabled then
 					table.insert(p.hitboxies, box)
 					table.insert(hitboxies, box)
 					table.insert(p.hitbox_types, box.type)
