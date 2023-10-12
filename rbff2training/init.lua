@@ -850,24 +850,29 @@ local input_1f                  = function(btn, joy_val, prev_joy)
 	return false
 end
 local accept_input              = function(btn, joy_val, state_past)
+	joy_val = joy_val or get_joy()
+	state_past = state_past or (scr:frame_number() - global.input_accepted)
 	if 12 < state_past then
 		local p1, p2 = joy_k[1][btn], joy_k[2][btn]
 		if btn == "Up" or btn == "Down" or btn == "Right" or btn == "Left" then
-			if (0 < joy_val[p1]) or (0 < joy_val[p2]) then
+			local on1 = (0 < joy_val[p1])
+			local on2 = (0 < joy_val[p2])
+			if on1 or on2 then
 				play_cursor_sound()
-				return true
+				return true, on1, on2
 			end
 		else
-			if (0 < joy_val[p1] and state_past >= joy_val[p1]) or
-				(0 < joy_val[p2] and state_past >= joy_val[p2]) then
+			local on1 = (0 < joy_val[p1] and state_past >= joy_val[p1])
+			local on2 = (0 < joy_val[p2] and state_past >= joy_val[p2])
+			if on1 or on2 then
 				if global.disp_replay then
 					play_cursor_sound()
 				end
-				return true
+				return true, on1, on2
 			end
 		end
 	end
-	return false
+	return false, false, false
 end
 local is_start_a                = function(joy_val, state_past)
 	if 12 < state_past then
@@ -2287,7 +2292,7 @@ rbff2.startplugin          = function()
 
 	-- 場面変更
 	local apply_1p2p_active = function()
-		if in_match then
+		if in_match and mem.r8(0x1041D3) == 0 then
 			mem.w8(0x100024, 0x03)
 			mem.w8(0x100027, 0x03)
 		end
@@ -2295,11 +2300,18 @@ rbff2.startplugin          = function()
 
 	local goto_player_select = function()
 		mod.fast_select()
-		mem.w8(0x1041D3, 1)     -- 乱入フラグON
+		mem.w8(0x1041D3, 0x01)     -- 乱入フラグON
 		mem.w8(0x107BB5, 0x01)
 		mem.w32(0x107BA6, 0x00010001) -- CPU戦の進行数をリセット
-		mem.w32(0x100024, 0x00000000)
-		mem.w16(0x10FDB6, 0x0101)
+		local _, _, on2 = accept_input("a")
+		if on2 then
+			mem.w32(0x100024, 0x02020002)
+			mem.w16(0x10FDB6, 0x0202)
+		else
+			mem.w32(0x100024, 0x01010001)
+			mem.w16(0x10FDB6, 0x0101)
+		end
+		mem.w16(0x1041D6, 0x0003) -- 対戦モード3
 	end
 
 	local restart_fight = function(param)
@@ -2308,8 +2320,8 @@ rbff2.startplugin          = function()
 		local p1, p2       = param.next_p1 or 1, param.next_p2 or 21
 		local p1col, p2col = param.next_p1col or 0x00, param.next_p2col or 0x01
 		mod.fast_restart()
-		mem.w8(0x1041D3, 1)     -- 乱入フラグON
-		mem.w8(0x107C1F, 0)     -- キャラデータの読み込み無視フラグをOFF
+		mem.w8(0x1041D3, 0x01)     -- 乱入フラグON
+		mem.w8(0x107C1F, 0x00)     -- キャラデータの読み込み無視フラグをOFF
 		mem.w32(0x107BA6, 0x00010001) -- CPU戦の進行数をリセット
 		mem.w8(0x100024, 0x03)
 		mem.w8(0x100027, 0x03)
@@ -2502,7 +2514,6 @@ rbff2.startplugin          = function()
 		local force_start_play = global.rec_force_start_play
 		global.rec_force_start_play = false -- 初期化
 		local ec = scr:frame_number()
-		local state_past = ec - global.input_accepted
 
 		local tmp_slots = {}
 		for j, slot in ipairs(recording.slot) do
@@ -2537,8 +2548,7 @@ rbff2.startplugin          = function()
 			recording.active_slot = { store = {}, name = "EMPTY" }
 		end
 
-		local joy_val = get_joy()
-		if #recording.active_slot.store > 0 and (accept_input("st", joy_val, state_past) or force_start_play == true) then
+		if #recording.active_slot.store > 0 and (accept_input("st") or force_start_play == true) then
 			recording.force_start_play = false
 			-- 状態変更
 			recording.play_count = 1
@@ -2649,11 +2659,8 @@ rbff2.startplugin          = function()
 	-- リプレイ中
 	rec_play = function(to_joy)
 		local ec = scr:frame_number()
-		local state_past = ec - global.input_accepted
 
-		local joy_val = get_joy()
-
-		if accept_input("st", joy_val, state_past) then
+		if accept_input("st") then
 			-- 状態変更
 			global.rec_main = rec_await_play
 			global.input_accepted = ec
@@ -2716,11 +2723,8 @@ rbff2.startplugin          = function()
 	-- リプレイまでの待ち時間
 	rec_play_interval = function(to_joy)
 		local ec = scr:frame_number()
-		local state_past = ec - global.input_accepted
 
-		local joy_val = get_joy()
-
-		if accept_input("st", joy_val, state_past) then
+		if accept_input("st") then
 			-- 状態変更
 			global.rec_main = rec_await_play
 			global.input_accepted = ec
@@ -5400,41 +5404,39 @@ rbff2.startplugin          = function()
 	end
 	menu.draw = function()
 		local ec = scr:frame_number()
-		local state_past = ec - global.input_accepted
 		local width = scr.width * scr.xscale
 		local height = scr.height * scr.yscale
 		if not in_match or in_player_select then return end
 		if menu.prev_state ~= menu and menu.state == menu then menu.update_pos() end -- 初回のメニュー表示時は状態更新
 		menu.prev_state = menu.state                                           -- 前フレームのメニューを更新
 
-		local joy_val = get_joy()
-		if accept_input("st", joy_val, state_past) then
+		if accept_input("st") then
 			-- Menu ON/OFF
 			global.input_accepted = ec
-		elseif accept_input("a", joy_val, state_past) then
+		elseif accept_input("a") then
 			-- サブメニューへの遷移（あれば）
 			menu.current.on_a[menu.current.pos.row]()
 			global.input_accepted = ec
-		elseif accept_input("b", joy_val, state_past) then
+		elseif accept_input("b") then
 			-- メニューから戻る
 			menu.current.on_b[menu.current.pos.row]()
 			global.input_accepted = ec
-		elseif accept_input("up", joy_val, state_past) then
+		elseif accept_input("up") then
 			-- カーソル上移動
 			menu_cur_updown(-1)
-		elseif accept_input("dn", joy_val, state_past) then
+		elseif accept_input("dn") then
 			-- カーソル下移動
 			menu_cur_updown(1)
-		elseif accept_input("lt", joy_val, state_past) then
+		elseif accept_input("lt") then
 			-- カーソル左移動
 			menu_cur_lr(-1, true)
-		elseif accept_input("rt", joy_val, state_past) then
+		elseif accept_input("rt") then
 			-- カーソル右移動
 			menu_cur_lr(1, true)
-		elseif accept_input("c", joy_val, state_past) then
+		elseif accept_input("c") then
 			-- カーソル左10移動
 			menu_cur_lr(-10, false)
-		elseif accept_input("d", joy_val, state_past) then
+		elseif accept_input("d") then
 			-- カーソル右10移動
 			menu_cur_lr(10, false)
 		end
