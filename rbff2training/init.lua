@@ -2302,13 +2302,12 @@ rbff2.startplugin          = function()
 		end
 	end
 
-	local goto_player_select = function()
+	local goto_player_select = function(p_no)
 		mod.fast_select()
 		mem.w8(0x1041D3, 0x01)     -- 乱入フラグON
 		mem.w8(0x107BB5, 0x01)
 		mem.w32(0x107BA6, 0x00010001) -- CPU戦の進行数をリセット
-		local _, _, on2 = accept_input("a")
-		if on2 then
+		if p_no == 2 then
 			mem.w32(0x100024, 0x02020002)
 			mem.w16(0x10FDB6, 0x0202)
 		else
@@ -4774,10 +4773,10 @@ rbff2.startplugin          = function()
 		cls_joy()
 		cls_ps()
 	end
-	local menu_player_select       = function()
+	local menu_player_select       = function(p_no)
 		--main_menu.pos.row = 1
 		cls_ps()
-		goto_player_select()
+		goto_player_select(p_no)
 		--cls_joy()
 		--cls_ps()
 		-- 初期化
@@ -5413,12 +5412,14 @@ rbff2.startplugin          = function()
 		if menu.prev_state ~= menu and menu.state == menu then menu.update_pos() end -- 初回のメニュー表示時は状態更新
 		menu.prev_state = menu.state                                           -- 前フレームのメニューを更新
 
+		local ona, ona1, _ = accept_input("a")
 		if accept_input("st") then
 			-- Menu ON/OFF
 			global.input_accepted = ec
-		elseif accept_input("a") then
+		elseif ona then
 			-- サブメニューへの遷移（あれば）
-			menu.current.on_a[menu.current.pos.row]()
+			---@diagnostic disable-next-line: redundant-parameter
+			menu.current.on_a[menu.current.pos.row](ona1 and 1 or 2)
 			global.input_accepted = ec
 		elseif accept_input("b") then
 			-- メニューから戻る
