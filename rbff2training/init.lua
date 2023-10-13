@@ -220,7 +220,7 @@ local menu               = {
 	labels = {
 		fix_scr_tops = { "OFF" },
 		chars        = {},
-		stage_list         = {},
+		stage_list   = {},
 		bgms         = {},
 		off_on       = { "OFF", "ON" }
 	},
@@ -483,83 +483,79 @@ local hide_options              = {
 	p2_char = 2 ^ 11, -- 1Pキャラ
 }
 local global                    = {
-	frame_number        = 0,
-	lag_frame           = false,
-	all_act_normal      = false,
-	old_all_act_normal  = false,
-	skip_frame          = false,
-	fix_scr_top         = 1,
+	frame_number       = 0,
+	lag_frame          = false,
+	all_act_normal     = false,
+	old_all_act_normal = false,
+	skip_frame         = false,
+	fix_scr_top        = 1,
 
 	-- 当たり判定用
-	axis_color          = 0xFF797979,
-	axis_air_color      = 0xFFCC00CC,
-	axis_internal_color = 0xFF00FFFF,
-	axis_size           = 12,
-	axis_size2          = 5,
-	no_alpha            = true, --fill = 0x00, outline = 0xFF for all box types
-	throwbox_height     = 200, --default for ground throws
-	disp_bg             = true,
-	fix_pos             = false,
-	no_bars             = false,
-	sync_pos_x          = 1,  -- 1: OFF, 2:1Pと同期, 3:2Pと同期
+	axis_size          = 12,
+	axis_size2         = 5,
+	throwbox_height    = 200, --default for ground throws
+	disp_bg            = true,
+	fix_pos            = false,
+	no_bars            = false,
+	sync_pos_x         = 1,  -- 1: OFF, 2:1Pと同期, 3:2Pと同期
 
-	disp_pos            = true, -- 1P 2P 距離表示
-	hide                = hide_options.none,
-	disp_frmgap         = 3,  -- フレーム差表示
-	disp_input_sts      = 1,  -- コマンド入力状態表示 1:OFF 2:1P 3:2P
-	disp_normal_frms    = 2,  -- 通常動作フレーム非表示 1:OFF 2:ON
-	pause_hit           = 1,  -- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
-	pause_hitbox        = 1,  -- 判定発生時にポーズ
-	pause               = false,
-	replay_stop_on_dmg  = false, -- ダメージでリプレイ中段
+	disp_pos           = true, -- 1P 2P 距離表示
+	hide               = hide_options.none,
+	disp_framegap      = 3,  -- フレーム差表示
+	disp_input         = 1,  -- コマンド入力状態表示 1:OFF 2:1P 3:2P
+	disp_normal_frames = 2,  -- 通常動作フレーム非表示 1:OFF 2:ON
+	pause_hit          = 1,  -- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
+	pause_hitbox       = 1,  -- 判定発生時にポーズ
+	pause              = false,
+	replay_stop_on_dmg = false, -- ダメージでリプレイ中段
 
-	next_stg3           = 0,
+	next_stg3          = 0,
 
 	-- リバーサルとブレイクショットの設定
-	dummy_bs_cnt        = 1, -- ブレイクショットのカウンタ
-	dummy_rvs_cnt       = 1, -- リバーサルのカウンタ
+	dummy_bs_cnt       = 1, -- ブレイクショットのカウンタ
+	dummy_rvs_cnt      = 1, -- リバーサルのカウンタ
 
-	auto_input          = {
-		otg_thw       = false, -- ダウン投げ              2
-		otg_atk       = false, -- ダウン攻撃              3
-		thw_otg       = false, -- 通常投げの派生技        4
-		rave          = 1, -- デッドリーレイブ        5
-		desire        = 1, -- アンリミテッドデザイア  6
-		drill         = 5, -- ドリル                  7
-		pairon        = 1, -- 超白龍                  8
-		real_counter  = 1, -- M.リアルカウンター      9
+	auto_input         = {
+		otg_throw     = false, -- ダウン投げ              2
+		otg_attack    = false, -- ダウン攻撃              3
+		combo_throw   = false, -- 通常投げの派生技        4
+		rave          = 1,   -- デッドリーレイブ        5
+		desire        = 1,   -- アンリミテッドデザイア  6
+		drill         = 5,   -- ドリル                  7
+		pairon        = 1,   -- 超白龍                  8
+		real_counter  = 1,   -- M.リアルカウンター      9
 		auto_3ecst    = false, -- M.トリプルエクスタシー 10
-		auto_taneuma  = false, -- 炎の種馬               11
-		auto_katsu    = false, -- 喝CA                   12
-		auto_sikkyaku = false, -- 飛燕失脚CA             13
+		taneuma       = false, -- 炎の種馬               11
+		katsu_ca      = false, -- 喝CA                   12
+		sikkyaku_ca   = false, -- 飛燕失脚CA             13
 		-- 入力設定                                     14
 		esaka_check   = false, -- 詠酒距離チェック       15
 		fast_kadenzer = false, -- 必勝！逆襲拳           16
 		kara_ca       = false, -- 空振りCA               17
 	},
 
-	frzc                = 1,
-	frz                 = { 0x1, 0x0 }, -- DIPによる停止操作用の値とカウンタ
+	frzc               = 1,
+	frz                = { 0x1, 0x0 }, -- DIPによる停止操作用の値とカウンタ
 
-	dummy_mode          = 1,
-	old_dummy_mode      = 1,
-	rec_main            = nil,
+	dummy_mode         = 1,
+	old_dummy_mode     = 1,
+	rec_main           = nil,
 
-	input_accepted      = 0,
+	input_accepted     = 0,
 
-	next_block_grace    = 0, -- 1ガードでの持続フレーム数
-	pow_mode            = 2, -- POWモード　1:自動回復 2:固定 3:通常動作
-	disp_meters         = true,
-	repeat_interval     = 0,
-	await_neutral       = false,
-	replay_fix_pos      = 1,  -- 開始間合い固定 1:OFF 2:位置記憶 3:1Pと2P 4:1P 5:2P
-	replay_reset        = 2,  -- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
-	mame_debug_wnd      = false, -- MAMEデバッグウィンドウ表示のときtrue
-	debug_stop          = 0,  -- カウンタ
-	damaged_move        = 1,
-	all_bs              = false,
-	disp_replay         = true, -- レコードリプレイガイド表示
-	save_snapshot       = 1, -- 技画像保存 1:OFF 2:新規 3:上書き
+	next_block_grace   = 0, -- 1ガードでの持続フレーム数
+	pow_mode           = 2, -- POWモード　1:自動回復 2:固定 3:通常動作
+	disp_meters        = true,
+	repeat_interval    = 0,
+	await_neutral      = false,
+	replay_fix_pos     = 1,  -- 開始間合い固定 1:OFF 2:位置記憶 3:1Pと2P 4:1P 5:2P
+	replay_reset       = 2,  -- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
+	mame_debug_wnd     = false, -- MAMEデバッグウィンドウ表示のときtrue
+	debug_stop         = 0,  -- カウンタ
+	damaged_move       = 1,
+	all_bs             = false,
+	disp_replay        = true, -- レコードリプレイガイド表示
+	save_snapshot      = 1, -- 技画像保存 1:OFF 2:新規 3:上書き
 }
 mem.rg                          = function(id, mask) return (mask == nil) and cpu.state[id].value or (cpu.state[id].value & mask) end
 mem.pc                          = function() return cpu.state["CURPC"].value end
@@ -1371,7 +1367,7 @@ for i, item in ipairs(box_with_bit_types) do
 	ut.printf("%s %s", i, item.box_type.name_en)
 end
 
-local fix_box_type         = function(p, box)
+local fix_box_type       = function(p, box)
 	local type = p.in_sway_line and box.sway_type or box.type
 	if type ~= db.box_types.attack then return type end
 	-- TODO 多段技の状態
@@ -1391,7 +1387,7 @@ local fix_box_type         = function(p, box)
 	return box_with_bit_types[#box_with_bit_types].box_type
 end
 -- 遠近間合い取得
-local load_close_far       = function()
+local load_close_far     = function()
 	if db.chars[1].close_far then return end
 	-- 地上通常技の近距離間合い 家庭用 02DD02 からの処理
 	for org_char = 1, #db.chars - 1 do
@@ -1444,7 +1440,7 @@ local load_close_far       = function()
 	print("load_close_far done")
 end
 
-local reset_memory_tap     = function(label, enabled)
+local reset_memory_tap   = function(label, enabled)
 	if not global.holder then return end
 	local sub = global.holder.sub[label]
 	if not sub then return end
@@ -1459,7 +1455,7 @@ local reset_memory_tap     = function(label, enabled)
 	end
 end
 
-local load_memory_tap      = function(label, wps) -- tapの仕込み
+local load_memory_tap    = function(label, wps) -- tapの仕込み
 	if global.holder and global.holder.sub[label] then
 		reset_memory_tap(label, true)
 		return
@@ -1490,7 +1486,7 @@ local load_memory_tap      = function(label, wps) -- tapの仕込み
 	print("load_memory_tap [" .. label .. "] done")
 end
 
-local apply_attack_infos   = function(p, id, base_addr)
+local apply_attack_infos = function(p, id, base_addr)
 	-- 削りダメージ計算種別取得 05B2A4 からの処理
 	p.chip      = db.calc_chip((0xF & mem.r8(base_addr.chip + id)) + 1, p.damage)
 	-- 硬直時間取得 05AF7C(家庭用版)からの処理
@@ -1499,7 +1495,7 @@ local apply_attack_infos   = function(p, id, base_addr)
 	p.blockstun = mem.r8(base_addr.blockstun + d2) + 1 + 2 -- ガード硬直
 end
 
-local dummy_gd_type        = {
+local dummy_gd_type      = {
 	none   = 1, -- なし
 	auto   = 2, -- オート
 	bs     = 3, -- ブレイクショット
@@ -1509,15 +1505,15 @@ local dummy_gd_type        = {
 	random = 7, -- ランダム
 	force  = 8, -- 強制
 }
-local wakeup_type          = {
+local wakeup_type        = {
 	none = 1, -- なし
 	rvs  = 2, -- リバーサル
 	tech = 3, -- テクニカルライズ
 	sway = 4, -- グランドスウェー
 	atk  = 5, -- 起き上がり攻撃
 }
-local rvs_wake_types       = ut.new_set(wakeup_type.tech, wakeup_type.sway, wakeup_type.rvs)
-rbff2.startplugin          = function()
+local rvs_wake_types     = ut.new_set(wakeup_type.tech, wakeup_type.sway, wakeup_type.rvs)
+rbff2.startplugin        = function()
 	local players, all_wps, all_objects, hitboxies, ranges = {}, {}, {}, {}, {}
 	local hitboxies_order = function(b1, b2) return (b1.id < b2.id) end
 	local ranges_order = function(r1, r2) return (r1.within and 1 or -1) < (r2.within and 1 or -1) end
@@ -1567,39 +1563,39 @@ rbff2.startplugin          = function()
 			dummy_act         = 1,         -- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
 			dummy_gd          = dummy_gd_type.none, -- なし, オート, ブレイクショット, 1ヒットガード, 1ガード, 常時, ランダム, 強制
 			dummy_wakeup      = wakeup_type.none, -- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
-			dummy_bs          = nil, -- ランダムで選択されたブレイクショット
-			dummy_bs_list     = {}, -- ブレイクショットのコマンドテーブル上の技ID
-			dummy_bs_chr      = 0, -- ブレイクショットの設定をした時のキャラID
-			bs_count          = -1, -- ブレイクショットの実施カウント
-			dummy_rvs         = nil, -- ランダムで選択されたリバーサル
-			dummy_rvs_list    = {}, -- リバーサルのコマンドテーブル上の技ID
-			dummy_rvs_chr     = 0, -- リバーサルの設定をした時のキャラID
-			rvs_count         = -1, -- リバーサルの実施カウント
-			gd_rvs_enabled    = false, -- ガードリバーサルの実行可否
+			dummy_bs          = nil,       -- ランダムで選択されたブレイクショット
+			dummy_bs_list     = {},        -- ブレイクショットのコマンドテーブル上の技ID
+			dummy_bs_chr      = 0,         -- ブレイクショットの設定をした時のキャラID
+			bs_count          = -1,        -- ブレイクショットの実施カウント
+			dummy_rvs         = nil,       -- ランダムで選択されたリバーサル
+			dummy_rvs_list    = {},        -- リバーサルのコマンドテーブル上の技ID
+			dummy_rvs_chr     = 0,         -- リバーサルの設定をした時のキャラID
+			rvs_count         = -1,        -- リバーサルの実施カウント
+			gd_rvs_enabled    = false,     -- ガードリバーサルの実行可否
 
-			life_rec          = true, -- 自動で体力回復させるときtrue
-			red               = 2, -- 体力設定     	--"最大", "赤", "ゼロ" ...
-			max               = 1, -- パワー設定       --"最大", "半分", "ゼロ" ...
-			disp_hitbox       = true, -- 判定表示
-			disp_range        = true, -- 間合い表示
-			disp_base         = 1, -- 処理のアドレスを表示するとき "OFF", "本体", "弾1", "弾2", "弾3"
-			hide_char         = false, -- キャラを画面表示しないときtrue
-			hide_phantasm     = false, -- 残像を画面表示しないときtrue
-			disp_dmg          = true, -- ダメージ表示するときtrue
-			disp_cmd          = 2, -- 入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
-			disp_frm          = 2, -- フレーム数表示する
-			disp_fbfrm        = true, -- 弾のフレーム数表示するときtrue
-			disp_stun         = true, -- 気絶表示
-			disp_sts          = 3, -- 状態表示 "OFF", "ON", "ON:小表示", "ON:大表示"
-			dis_plain_shift   = false, -- ライン送らない現象
-			no_hit            = 0, -- Nヒット目に空ぶるカウントのカウンタ
-			no_hit_limit      = 0, -- Nヒット目に空ぶるカウントの上限
-			force_y_pos       = 1, -- Y座標強制
+			life_rec          = true,      -- 自動で体力回復させるときtrue
+			red               = 2,         -- 体力設定     	--"最大", "赤", "ゼロ" ...
+			max               = 1,         -- パワー設定       --"最大", "半分", "ゼロ" ...
+			disp_hitbox       = true,      -- 判定表示
+			disp_range        = true,      -- 間合い表示
+			disp_base         = 1,         -- 処理のアドレスを表示するとき "OFF", "本体", "弾1", "弾2", "弾3"
+			hide_char         = false,     -- キャラを画面表示しないときtrue
+			hide_phantasm     = false,     -- 残像を画面表示しないときtrue
+			disp_damage       = true,      -- ダメージ表示するときtrue
+			disp_command      = 2,         -- 入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
+			disp_frame        = 2,         -- フレーム数表示する
+			disp_fbfrm        = true,      -- 弾のフレーム数表示するときtrue
+			disp_stun         = true,      -- 気絶表示
+			disp_state        = 3,         -- 状態表示 "OFF", "ON", "ON:小表示", "ON:大表示"
+			dis_plain_shift   = false,     -- ライン送らない現象
+			no_hit            = 0,         -- Nヒット目に空ぶるカウントのカウンタ
+			no_hit_limit      = 0,         -- Nヒット目に空ぶるカウントの上限
+			force_y_pos       = 1,         -- Y座標強制
 			update_act        = false,
-			move_count        = 0, -- スクショ用の動作カウント
+			move_count        = 0,         -- スクショ用の動作カウント
 			on_punish         = 0,
-			key_now           = {}, -- 個別キー入力フレーム
-			key_pre           = {}, -- 前フレームまでの個別キー入力フレーム
+			key_now           = {},        -- 個別キー入力フレーム
+			key_pre           = {},        -- 前フレームまでの個別キー入力フレーム
 			key_hist          = ut.new_filled_table(16, ""),
 			key_frames        = ut.new_filled_table(16, 0),
 			ggkey_hist        = {},
@@ -1607,15 +1603,15 @@ rbff2.startplugin          = function()
 			fireballs         = {},
 			random_boolean    = math.random(255) % 2 == 0,
 			addr              = {
-				base        = base, -- キャラ状態とかのベースのアドレス
-				control     = base + 0x12, -- Human 1 or 2, CPU 3
-				pos         = base + 0x20, -- X座標
-				pos_y       = base + 0x28, -- Y座標
-				cmd_side    = base + 0x86, -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
-				sway_status = base + 0x89, -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
-				life        = base + 0x8B, -- 体力
-				pow         = base + 0xBC, -- パワーアドレス
-				hurt_state  = base + 0xE4, -- やられ状態 ライン送らない状態用
+				base        = base,            -- キャラ状態とかのベースのアドレス
+				control     = base + 0x12,     -- Human 1 or 2, CPU 3
+				pos         = base + 0x20,     -- X座標
+				pos_y       = base + 0x28,     -- Y座標
+				cmd_side    = base + 0x86,     -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
+				sway_status = base + 0x89,     -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
+				life        = base + 0x8B,     -- 体力
+				pow         = base + 0xBC,     -- パワーアドレス
+				hurt_state  = base + 0xE4,     -- やられ状態 ライン送らない状態用
 				stun_limit  = p1 and 0x10B84E or 0x10B856, -- 最大気絶値
 				char        = p1 and 0x107BA5 or 0x107BA7, -- キャラID
 				color       = p1 and 0x107BAC or 0x107BAD, -- カラー A=0x00 D=0x01
@@ -1763,7 +1759,7 @@ rbff2.startplugin          = function()
 					else
 						p.pow_up_hit = mem.r8(base_addr.pow_up + data)     -- ビリー、チョンシュ、その他の通常技
 					end
-					p.pow_up_block = 0xFF & (p.pow_up_hit >> 1)               -- ガード時増加量 d0の右1ビットシフト=1/2
+					p.pow_up_block = 0xFF & (p.pow_up_hit >> 1)            -- ガード時増加量 d0の右1ビットシフト=1/2
 				end
 				apply_attack_infos(p, data, base_addr)
 				if p.char_data.pow and p.char_data.pow[data] then
@@ -1909,10 +1905,10 @@ rbff2.startplugin          = function()
 				if not in_match then return end
 				p.main_d_close = mem.rg("D2", 0xFFFF) >= math.abs(p.pos - p.op.pos) -- 対スウェーライン攻撃の遠近判断
 			end,
-			[0x13124 + 0x2] = nohit, -- 0x13124の後半読み出しハック
-			[0x13128 + 0x2] = nohit, -- 0x13128の後半読み出しハック 0x1311Cを返す
-			[0x1312C + 0x2] = nohit, -- 0x1312Cの後半読み出しハック 0x1311Cを返す
-			[0x13130 + 0x2] = nohit, -- 0x13130の後半読み出しハック 0x1311Cを返す
+			[0x13124 + 0x2] = nohit,                                    -- 0x13124の後半読み出しハック
+			[0x13128 + 0x2] = nohit,                                    -- 0x13128の後半読み出しハック 0x1311Cを返す
+			[0x1312C + 0x2] = nohit,                                    -- 0x1312Cの後半読み出しハック 0x1311Cを返す
+			[0x13130 + 0x2] = nohit,                                    -- 0x13130の後半読み出しハック 0x1311Cを返す
 		}
 		p.wp32 = {
 			[0x00] = function(data, ret)
@@ -1987,10 +1983,10 @@ rbff2.startplugin          = function()
 			body.fireballs[base], all_objects[base] = p, p
 		end
 		for _, p in pairs(all_objects) do -- 初期化
-			p.attackbits    = {}
-			p.boxies        = {}
-			p.bases         = ut.new_filled_table(16, { count = 0, addr = 0x0, act_data = nil, name = "", pos1 = 0, pos2 = 0, xmov = 0, })
-			p.clear_damages = function()
+			p.attackbits       = {}
+			p.boxies           = {}
+			p.bases            = ut.new_filled_table(16, { count = 0, addr = 0x0, act_data = nil, name = "", pos1 = 0, pos2 = 0, xmov = 0, })
+			p.clear_damages    = function()
 				if not p.is_fireball then
 					p.cancelable      = false
 					p.cancelable_data = 0
@@ -2188,8 +2184,8 @@ rbff2.startplugin          = function()
 			[0x6A] = function(data)
 				p.flag_6a = data
 				--ut.printf("%X %X | %s", base, data, ut.tobitstr(data))
-				p.repeatable = p.flag_c8 == 0 and (data & 0x4) == 0x4      -- 連打キャンセル判定
-				p.flip_x1 = ((data & 0x80) == 0) and 0 or 1                -- 判定の反転
+				p.repeatable = p.flag_c8 == 0 and (data & 0x4) == 0x4 -- 連打キャンセル判定
+				p.flip_x1 = ((data & 0x80) == 0) and 0 or 1 -- 判定の反転
 				local fake, fake_pc = ((data & 0xFB) == 0 or ut.tstb(data, 0x8) == false), mem.pc() == fix_addr(0x011DFE)
 				p.attackbits.fake = fake_pc and fake
 				p.attackbits.obsolute = (not fake_pc) and fake
@@ -2310,7 +2306,7 @@ rbff2.startplugin          = function()
 
 	local goto_player_select = function(p_no)
 		mod.fast_select()
-		mem.w8(0x1041D3, 0x01)     -- 乱入フラグON
+		mem.w8(0x1041D3, 0x01)  -- 乱入フラグON
 		mem.w8(0x107BB5, 0x01)
 		mem.w32(0x107BA6, 0x00010001) -- CPU戦の進行数をリセット
 		if p_no == 2 then
@@ -2329,8 +2325,8 @@ rbff2.startplugin          = function()
 		local p1, p2       = param.next_p1 or 1, param.next_p2 or 21
 		local p1col, p2col = param.next_p1col or 0x00, param.next_p2col or 0x01
 		mod.fast_restart()
-		mem.w8(0x1041D3, 0x01)     -- 乱入フラグON
-		mem.w8(0x107C1F, 0x00)     -- キャラデータの読み込み無視フラグをOFF
+		mem.w8(0x1041D3, 0x01)  -- 乱入フラグON
+		mem.w8(0x107C1F, 0x00)  -- キャラデータの読み込み無視フラグをOFF
 		mem.w32(0x107BA6, 0x00010001) -- CPU戦の進行数をリセット
 		mem.w8(0x100024, 0x03)
 		mem.w8(0x100027, 0x03)
@@ -2797,7 +2793,7 @@ rbff2.startplugin          = function()
 		local last_group = frame_groups[#frame_groups]
 		local last_frame = last_group and last_group[#last_group] or nil
 		if not last_frame or last_frame.name ~= frame.name or     -- 名前違いでブレイク
-			(frame.update and frame.count == 1)                  -- カウンタでブレイク
+			(frame.update and frame.count == 1)                   -- カウンタでブレイク
 		then
 			table.insert(frame_groups, { frame })                 -- ブレイクしたので新規にグループ作成
 			while 180 < #frame_groups do table.remove(frame_groups, 1) end --バッファ長調整
@@ -3019,17 +3015,17 @@ rbff2.startplugin          = function()
 
 		-- フレーム数表示
 		local attackbit_mask = frame_attack_types.simple_mask
-		if p.disp_frm == 2 then -- 2:ON
+		if p.disp_frame == 2 then -- 2:ON
 			if p.max_hit_dn and p.max_hit_dn > 0 and p.attackbits.attacking and not p.attackbits.fake then
 				attackbit_mask = 0xFFFFFFFFFFFFFFFF
 			end
-		elseif p.disp_frm == 3 then -- 3:ON:判定の形毎
+		elseif p.disp_frame == 3 then -- 3:ON:判定の形毎
 			attackbit_mask = 0xFFFFFFFFFFFFFFFF
-		elseif p.disp_frm == 4 then -- 4:ON:攻撃判定の形毎
+		elseif p.disp_frame == 4 then -- 4:ON:攻撃判定の形毎
 			if p.attackbits.attacking and not p.attackbits.fake then
 				attackbit_mask = 0xFFFFFFFFFFFFFFFF
 			end
-		elseif p.disp_frm == 5 then -- 5:ON:くらい判定の形毎
+		elseif p.disp_frame == 5 then -- 5:ON:くらい判定の形毎
 			if not p.attackbits.attacking or p.attackbits.fake then
 				attackbit_mask = 0xFFFFFFFFFFFFFFFF
 			end
@@ -3075,15 +3071,15 @@ rbff2.startplugin          = function()
 		key, frame = p.attackbit, frames[#frames]
 		if p.update_act or not frame or upd_group or frame.key ~= key then
 			frame = ut.table_add(frames, {
-				act = p.act,
-				count = 1,
-				font_col = 0,
-				name = last_frame.name,
-				col = 0x00FFFFFF,
-				line = 0x00FFFFFF,
-				update  = p.update_act,
-				attackbit  = p.attackbit,
-				key = key,
+				act       = p.act,
+				count     = 1,
+				font_col  = 0,
+				name      = last_frame.name,
+				col       = 0x00FFFFFF,
+				line      = 0x00FFFFFF,
+				update    = p.update_act,
+				attackbit = p.attackbit,
+				key       = key,
 			}, 180)
 		else
 			frame.count = frame.count + 1
@@ -3096,14 +3092,14 @@ rbff2.startplugin          = function()
 		key, frame = attackbit & frame_attack_types.mask_frame_advance, frames[#frames]
 		if p.update_act or not frame or upd_group or frame.key ~= key then
 			frame = ut.table_add(frames, {
-				act = p.act,
-				count = 1,
+				act      = p.act,
+				count    = 1,
 				font_col = font_col,
-				name = last_frame.name,
-				col = 0x22FFFFFF & font_col,
-				line = 0xCCFFFFFF & font_col,
-				update  = p.update_act,
-				key = key,
+				name     = last_frame.name,
+				col      = 0x22FFFFFF & font_col,
+				line     = 0xCCFFFFFF & font_col,
+				update   = p.update_act,
+				key      = key,
 			}, 180)
 		else
 			frame.count = frame.count + 1
@@ -3280,7 +3276,7 @@ rbff2.startplugin          = function()
 			--フレーム用
 			p.skip_frame   = global.skip_frame1 or global.skip_frame2 or p.skip_frame
 			p.old.act_data = p.act_data or { name = "", type = db.act_types.startup | db.act_types.free, }
-			p.act_data = gen_act_data(p)
+			p.act_data     = gen_act_data(p)
 			if not p.act_data then
 				if p.char_data.acts and p.char_data.acts[p.act] then
 					p.act_data = p.char_data.acts[p.act]
@@ -3625,7 +3621,7 @@ rbff2.startplugin          = function()
 			-- キャラ、弾ともに通常動作状態ならリセットする
 			if not global.all_act_normal and global.old_all_act_normal then p.clear_frame_data() end
 			-- 全キャラ特別な動作でない場合はフレーム記録しない
-			if (global.disp_normal_frms == 1 or not global.all_act_normal) and not p.is_fireball then proc_frame(p) end
+			if (global.disp_normal_frames == 1 or not global.all_act_normal) and not p.is_fireball then proc_frame(p) end
 		end
 		fix_max_framecount() --1Pと2Pともにフレーム数が多すぎる場合は加算をやめる
 
@@ -3907,16 +3903,16 @@ rbff2.startplugin          = function()
 
 				-- 自動ダウン追撃
 				if p.op.act == 0x190 or p.op.act == 0x192 or p.op.act == 0x18E or p.op.act == 0x13B then
-					if global.auto_input.otg_thw and p.char_data.otg_throw then
+					if global.auto_input.otg_throw and p.char_data.otg_throw then
 						p.reset_sp_hook(p.char_data.otg_throw) -- 自動ダウン投げ
 					end
-					if global.auto_input.otg_atk and p.char_data.otg_stomp then
+					if global.auto_input.otg_attack and p.char_data.otg_stomp then
 						p.reset_sp_hook(p.char_data.otg_stomp) -- 自動ダウン攻撃
 					end
 				end
 
 				-- 自動投げ追撃
-				if global.auto_input.thw_otg then
+				if global.auto_input.combo_throw then
 					if p.char == 3 and p.act == 0x70 then
 						p.reset_cmd_hook(db.cmd_types._2c) -- ジョー
 					elseif p.act == 0x6D and p.char_data.add_throw then
@@ -4052,7 +4048,7 @@ rbff2.startplugin          = function()
 			-- コマンド入力表示
 			for i, p in ipairs(players) do
 				-- コマンド入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
-				if p.disp_cmd == 2 or p.disp_cmd == 3 then
+				if p.disp_command == 2 or p.disp_command == 3 then
 					for k = 1, #p.key_hist do draw_cmd(i, k, p.key_frames[k], p.key_hist[k]) end
 					draw_cmd(i, #p.key_hist + 1, 0, "")
 				end
@@ -4125,7 +4121,7 @@ rbff2.startplugin          = function()
 				table.insert(col3, string.format("%3d", op.max_combo_stun or 0))
 				table.insert(col3, string.format("%3d", op.max_combo_stun_timer or 0))
 				table.insert(col3, string.format("%3d", op.max_combo_pow or 0))
-				if p.disp_dmg then
+				if p.disp_damage then
 					ut.table_add_all(col1, { -- コンボ表示
 						"Scaling",
 						"Damage",
@@ -4135,19 +4131,19 @@ rbff2.startplugin          = function()
 						"Power",
 					})
 				end
-				if p.disp_sts == 2 or p.disp_sts == 4 then ut.table_add_all(col1, label) end
+				if p.disp_state == 2 or p.disp_state == 4 then ut.table_add_all(col1, label) end
 				if #col1 > 0 then
 					local box_bottom = get_line_height(#col1)
 					scr:draw_box(p1 and 224 or 0, 40, p1 and 320 or 96, 40 + box_bottom, 0x80404040, 0x80404040) -- 四角枠
 					scr:draw_text(p1 and 224 + 4 or 4, 40, table.concat(col1, "\n"))
-					if p.disp_dmg then
+					if p.disp_damage then
 						scr:draw_text(p1 and 224 + 36 or 36, 40, table.concat(col2, "\n"))
 						scr:draw_text(p1 and 224 + 68 or 68, 40, table.concat(col3, "\n"))
 					end
 				end
 
 				-- 状態 小表示
-				if p.disp_sts == 2 or p.disp_sts == 3 then
+				if p.disp_state == 2 or p.disp_state == 3 then
 					local label1, label2 = {}, {}
 					table.insert(label1, string.format("%s %02d %03d %03d",
 						p.state, p.throwing and p.throwing.threshold or 0, p.throwing and p.throwing.timer or 0, p.throw_timer or 0))
@@ -4173,7 +4169,7 @@ rbff2.startplugin          = function()
 				end
 
 				-- コマンド入力状態表示
-				if global.disp_input_sts - 1 == i then
+				if global.disp_input - 1 == i then
 					for ti, input_state in ipairs(p.input_states) do
 						local x, y = 147, 25 + ti * 5
 						local x1, x2, y2, cmdx, cmdy = x + 15, x - 8, y + 4, x - 50, y - 2
@@ -4240,14 +4236,14 @@ rbff2.startplugin          = function()
 				local p1 = i == 1
 
 				--行動IDとフレーム数表示
-				if global.disp_frmgap > 1 or p.disp_frm > 1 then
-					if global.disp_frmgap == 2 then
+				if global.disp_framegap > 1 or p.disp_frame > 1 then
+					if global.disp_framegap == 2 then
 						draw_frame_groups(p.frame_groups, p.act_frames_total, 30, p1 and 64 or 70, get_line_height(), true)
 					end
 					draw_frames(p.frame_groups, p1 and 160 or 285, p1 and 40 or 165, 63, get_line_height(), 0.2)
 				end
 				--フレーム差と確定反撃の表示
-				if global.disp_frmgap > 1 then
+				if global.disp_framegap > 1 then
 					draw_text_with_shadow(p1 and 140 or 165, 40, string.format("%4s", string.format(p.frame_gap > 0 and "+%d" or "%d", p.frame_gap)),
 						p.frame_gap == 0 and 0xFFFFFFFF or p.frame_gap > 0 and 0xFF0088FF or 0xFFFF0088)
 					draw_text_with_shadow(p1 and 112 or 184, 40, "PUNISH", p.on_punish <= global.frame_number and 0xFF808080 or 0xFF00FFFF)
@@ -4278,7 +4274,7 @@ rbff2.startplugin          = function()
 			-- GG風コマンド入力表示
 			for i, p in ipairs(players) do
 				-- コマンド入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
-				if p.disp_cmd == 2 or p.disp_cmd == 4 then
+				if p.disp_command == 2 or p.disp_command == 4 then
 					local xoffset, yoffset = ggkey_set[i].xoffset, ggkey_set[i].yoffset
 					local oct_vt, key_xy = ggkey_set[i].oct_vt, ggkey_set[i].key_xy
 					local tracks, max_track = {}, 6 -- 軌跡をつくる 軌跡は6個まで
@@ -4399,28 +4395,26 @@ rbff2.startplugin          = function()
 		end
 	end
 	local menu_to_main = function(cancel, do_init)
-		local col               = menu.training.pos.col
-		local row               = menu.training.pos.row
-		local p                 = players
+		local col, row, p, g = menu.training.pos.col, menu.training.pos.row, players, global
 
-		global.dummy_mode       = col[1] -- ダミーモード
+		g.dummy_mode         = col[1] -- ダミーモード
 		-- レコード・リプレイ設定
-		p[1].dummy_act          = col[3] -- 1P アクション
-		p[2].dummy_act          = col[4] -- 2P アクション
-		p[1].dummy_gd           = col[5] -- 1P ガード
-		p[2].dummy_gd           = col[6] -- 2P ガード
-		global.next_block_grace = col[7] - 1 -- 1ガード持続フレーム数
-		global.dummy_bs_cnt     = col[8] -- ブレイクショット設定
-		p[1].dummy_wakeup       = col[9] -- 1P やられ時行動
-		p[2].dummy_wakeup       = col[10] -- 2P やられ時行動
-		global.dummy_rvs_cnt    = col[11] -- ガードリバーサル設定
-		p[2].no_hit_limit       = col[12] - 1 -- 1P 強制空振り
-		p[1].no_hit_limit       = col[13] - 1 -- 2P 強制空振り
-		p[1].fwd_prov           = col[14] == 2 -- 1P 挑発で前進
-		p[2].fwd_prov           = col[15] == 2 -- 2P 挑発で前進
-		p[1].force_y_pos        = col[16] -- 1P Y座標強制
-		p[2].force_y_pos        = col[17] -- 2P Y座標強制
-		global.sync_pos_x       = col[18] -- X座標同期
+		p[1].dummy_act       = col[3] -- 1P アクション
+		p[2].dummy_act       = col[4] -- 2P アクション
+		p[1].dummy_gd        = col[5] -- 1P ガード
+		p[2].dummy_gd        = col[6] -- 2P ガード
+		g.next_block_grace   = col[7] - 1 -- 1ガード持続フレーム数
+		g.dummy_bs_cnt       = col[8] -- ブレイクショット設定
+		p[1].dummy_wakeup    = col[9] -- 1P やられ時行動
+		p[2].dummy_wakeup    = col[10] -- 2P やられ時行動
+		g.dummy_rvs_cnt      = col[11] -- ガードリバーサル設定
+		p[2].no_hit_limit    = col[12] - 1 -- 1P 強制空振り
+		p[1].no_hit_limit    = col[13] - 1 -- 2P 強制空振り
+		p[1].fwd_prov        = col[14] == 2 -- 1P 挑発で前進
+		p[2].fwd_prov        = col[15] == 2 -- 2P 挑発で前進
+		p[1].force_y_pos     = col[16] -- 1P Y座標強制
+		p[2].force_y_pos     = col[17] -- 2P Y座標強制
+		g.sync_pos_x         = col[18] -- X座標同期
 		for _, p in ipairs(players) do
 			if p.dummy_gd == dummy_gd_type.hit1 then
 				p.next_block, p.next_block_ec = false, 75 -- カウンター初期化 false
@@ -4432,27 +4426,27 @@ rbff2.startplugin          = function()
 			p.bs_count, p.dummy_bs_chr, p.dummy_bs = -1, p.char, get_next_bs(p) -- BSガードカウンター初期化、キャラとBSセット
 		end
 
-		global.old_dummy_mode = global.dummy_mode
+		g.old_dummy_mode = g.dummy_mode
 
-		if global.dummy_mode == 5 then
+		if g.dummy_mode == 5 then
 			-- レコード
 			-- 設定でレコーディングに入らずに抜けたとき用にモードを1に戻しておく
-			global.dummy_mode = 1
+			g.dummy_mode = 1
 			if not cancel and row == 1 then
 				menu.current = menu.recording
 				return
 			end
-		elseif global.dummy_mode == 6 then
+		elseif g.dummy_mode == 6 then
 			-- リプレイ
 			-- 設定でリプレイに入らずに抜けたとき用にモードを1に戻しておく
-			global.dummy_mode = 1
+			g.dummy_mode = 1
 			menu.replay.pos.col[11] = recording.do_repeat and 2 or 1 -- 繰り返し
 			menu.replay.pos.col[12] = recording.repeat_interval + 1 -- 繰り返し間隔
-			menu.replay.pos.col[13] = global.await_neutral and 2 or 1 -- 繰り返し開始条件
-			menu.replay.pos.col[14] = global.replay_fix_pos       -- 開始間合い固定
-			menu.replay.pos.col[15] = global.replay_reset         -- 状態リセット
-			menu.replay.pos.col[16] = global.disp_replay and 2 or 1 -- ガイド表示
-			menu.replay.pos.col[17] = global.replay_stop_on_dmg and 2 or 1 -- ダメージでリプレイ中止
+			menu.replay.pos.col[13] = g.await_neutral and 2 or 1 -- 繰り返し開始条件
+			menu.replay.pos.col[14] = g.replay_fix_pos       -- 開始間合い固定
+			menu.replay.pos.col[15] = g.replay_reset         -- 状態リセット
+			menu.replay.pos.col[16] = g.disp_replay and 2 or 1 -- ガイド表示
+			menu.replay.pos.col[17] = g.replay_stop_on_dmg and 2 or 1 -- ダメージでリプレイ中止
 			if not cancel and row == 1 then
 				menu.current = menu.replay
 				return
@@ -4482,108 +4476,102 @@ rbff2.startplugin          = function()
 	for i = 1, 0xC0 do table.insert(life_range, i) end
 	for i = 1, 0x3C do table.insert(pow_range, i) end
 	local bar_menu_to_main         = function()
-		local col                = menu.bar.pos.col
-		local p                  = players
+		local col, p, g          = menu.bar.pos.col, players, global
 		--  タイトルラベル
 		p[1].red                 = col[2] -- 1P 体力ゲージ量
 		p[2].red                 = col[3] -- 2P 体力ゲージ量
 		p[1].max                 = col[4] -- 1P POWゲージ量
 		p[2].max                 = col[5] -- 2P POWゲージ量
 		dip_config.infinity_life = col[6] == 2 -- 体力ゲージモード
-		global.pow_mode          = col[7] -- POWゲージモード
-
+		g.pow_mode               = col[7] -- POWゲージモード
 		menu.current             = menu.main
 	end
 	local disp_menu_to_main        = function()
-		local col               = menu.disp.pos.col
-		local p                 = players
+		local col, p, g      = menu.disp.pos.col, players, global
 		--  タイトルラベル
-		p[1].disp_hitbox        = col[2] == 2                                               -- 1P 判定表示
-		p[2].disp_hitbox        = col[3] == 2                                               -- 2P 判定表示
-		p[1].disp_range         = col[4] == 2                                               -- 1P 間合い表示
-		p[2].disp_range         = col[5] == 2                                               -- 2P 間合い表示
-		p[1].disp_stun          = col[6] == 2                                               -- 1P 気絶ゲージ表示
-		p[2].disp_stun          = col[7] == 2                                               -- 2P 気絶ゲージ表示
-		p[1].disp_dmg           = col[8] == 2                                               -- 1P ダメージ表示
-		p[2].disp_dmg           = col[9] == 2                                               -- 2P ダメージ表示
-		p[1].disp_cmd           = col[10]                                                   -- 1P 入力表示
-		p[2].disp_cmd           = col[11]                                                   -- 2P 入力表示
-		global.disp_input_sts   = col[12]                                                   -- コマンド入力状態表示
-		global.disp_normal_frms = col[13]                                                   -- 通常動作フレーム非表示
-		global.disp_frmgap      = col[14]                                                   -- フレーム差表示
-		p[1].disp_frm           = col[15]                                                   -- 1P フレーム数表示
-		p[2].disp_frm           = col[16]                                                   -- 2P フレーム数表示
-		p[1].disp_fbfrm         = col[17] == 2                                              -- 1P 弾フレーム数表示
-		p[2].disp_fbfrm         = col[18] == 2                                              -- 2P 弾フレーム数表示
-		p[1].disp_sts           = col[19]                                                   -- 1P 状態表示
-		p[2].disp_sts           = col[20]                                                   -- 2P 状態表示
-		p[1].disp_base          = col[21]                                                   -- 1P 処理アドレス表示
-		p[2].disp_base          = col[22]                                                   -- 2P 処理アドレス表示
-		global.disp_pos         = col[23]                                                   -- 1P 2P 距離表示
-		global.hide             = ut.hex_set(global.hide, hide_options.p1_char, col[24] ~= 1) -- 1P キャラ表示
-		global.hide             = ut.hex_set(global.hide, hide_options.p2_char, col[25] ~= 1) -- 2P キャラ表示
-		global.hide             = ut.hex_set(global.hide, hide_options.p1_phantasm, col[26] ~= 1) -- 1P 残像表示
-		global.hide             = ut.hex_set(global.hide, hide_options.p2_phantasm, col[27] ~= 1) -- 2P 残像表示
-		global.hide             = ut.hex_set(global.hide, hide_options.p1_effect, col[28] ~= 1) -- 1P エフェクト表示
-		global.hide             = ut.hex_set(global.hide, hide_options.p2_effect, col[29] ~= 1) -- 2P エフェクト表示
-		global.hide             = ut.hex_set(global.hide, hide_options.p_chan, col[30] ~= 1) -- Pちゃん表示
-		global.hide             = ut.hex_set(global.hide, hide_options.effect, col[31] ~= 1) -- エフェクト表示
-		menu.current            = menu.main
+		p[1].disp_hitbox     = col[2] == 2                                          -- 1P 判定表示
+		p[2].disp_hitbox     = col[3] == 2                                          -- 2P 判定表示
+		p[1].disp_range      = col[4] == 2                                          -- 1P 間合い表示
+		p[2].disp_range      = col[5] == 2                                          -- 2P 間合い表示
+		p[1].disp_stun       = col[6] == 2                                          -- 1P 気絶ゲージ表示
+		p[2].disp_stun       = col[7] == 2                                          -- 2P 気絶ゲージ表示
+		p[1].disp_damage     = col[8] == 2                                          -- 1P ダメージ表示
+		p[2].disp_damage     = col[9] == 2                                          -- 2P ダメージ表示
+		p[1].disp_command    = col[10]                                              -- 1P 入力表示
+		p[2].disp_command    = col[11]                                              -- 2P 入力表示
+		g.disp_input         = col[12]                                              -- コマンド入力状態表示
+		g.disp_normal_frames = col[13]                                              -- 通常動作フレーム非表示
+		g.disp_framegap      = col[14]                                              -- フレーム差表示
+		p[1].disp_frame      = col[15]                                              -- 1P フレーム数表示
+		p[2].disp_frame      = col[16]                                              -- 2P フレーム数表示
+		p[1].disp_fbfrm      = col[17] == 2                                         -- 1P 弾フレーム数表示
+		p[2].disp_fbfrm      = col[18] == 2                                         -- 2P 弾フレーム数表示
+		p[1].disp_state      = col[19]                                              -- 1P 状態表示
+		p[2].disp_state      = col[20]                                              -- 2P 状態表示
+		p[1].disp_base       = col[21]                                              -- 1P 処理アドレス表示
+		p[2].disp_base       = col[22]                                              -- 2P 処理アドレス表示
+		g.disp_pos           = col[23]                                              -- 1P 2P 距離表示
+		g.hide               = ut.hex_set(g.hide, hide_options.p1_char, col[24] ~= 1) -- 1P キャラ表示
+		g.hide               = ut.hex_set(g.hide, hide_options.p2_char, col[25] ~= 1) -- 2P キャラ表示
+		g.hide               = ut.hex_set(g.hide, hide_options.p1_phantasm, col[26] ~= 1) -- 1P 残像表示
+		g.hide               = ut.hex_set(g.hide, hide_options.p2_phantasm, col[27] ~= 1) -- 2P 残像表示
+		g.hide               = ut.hex_set(g.hide, hide_options.p1_effect, col[28] ~= 1) -- 1P エフェクト表示
+		g.hide               = ut.hex_set(g.hide, hide_options.p2_effect, col[29] ~= 1) -- 2P エフェクト表示
+		g.hide               = ut.hex_set(g.hide, hide_options.p_chan, col[30] ~= 1) -- Pちゃん表示
+		g.hide               = ut.hex_set(g.hide, hide_options.effect, col[31] ~= 1) -- エフェクト表示
+		menu.current         = menu.main
 	end
 	local ex_menu_to_main          = function()
-		local col             = menu.extra.pos.col
-		local p               = players
+		local col, p, g       = menu.extra.pos.col, players, global
 		-- タイトルラベル
 		dip_config.easy_super = col[2] == 2          -- 簡易超必
 		dip_config.semiauto_p = col[3] == 2          -- 半自動潜在能力
 		p[1].dis_plain_shift  = col[4] == 2 or col[4] == 3 -- ライン送らない現象
 		p[2].dis_plain_shift  = col[4] == 2 or col[4] == 4 -- ライン送らない現象
-		global.pause_hit      = col[5]               -- ヒット時にポーズ
-		global.pause_hitbox   = col[6]               -- 判定発生時にポーズ
-		global.save_snapshot  = col[7]               -- 技画像保存
-		global.mame_debug_wnd = col[8] == 2          -- MAMEデバッグウィンドウ
-		global.damaged_move   = col[9]               -- ヒット効果確認用
-		global.all_bs         = col[10] == 2         -- 全必殺技BS
-
-		mod.all_bs(global.all_bs)
-
+		g.pause_hit           = col[5]               -- ヒット時にポーズ
+		g.pause_hitbox        = col[6]               -- 判定発生時にポーズ
+		g.save_snapshot       = col[7]               -- 技画像保存
+		g.mame_debug_wnd      = col[8] == 2          -- MAMEデバッグウィンドウ
+		g.damaged_move        = col[9]               -- ヒット効果確認用
+		g.all_bs              = col[10] == 2         -- 全必殺技BS
+		mod.all_bs(g.all_bs)
 		menu.current = menu.main
 	end
 	local auto_menu_to_main        = function()
-		local col                       = menu.auto.pos.col
+		local col, g               = menu.auto.pos.col, global
 		-- 自動入力設定
-		global.auto_input.otg_thw       = col[2] == 2 -- ダウン投げ
-		global.auto_input.otg_atk       = col[3] == 2 -- ダウン攻撃
-		global.auto_input.thw_otg       = col[4] == 2 -- 通常投げの派生技
-		global.auto_input.rave          = col[5] -- デッドリーレイブ
-		global.auto_input.desire        = col[6] -- アンリミテッドデザイア
-		global.auto_input.drill         = col[7] -- ドリル
-		global.auto_input.pairon        = col[8] -- 超白龍
-		global.auto_input.real_counter  = col[9] -- M.リアルカウンター
-		global.auto_input.auto_3ecst    = col[10] == 2 -- M.トリプルエクスタシー
-		global.auto_input.auto_taneuma  = col[11] == 2 -- 炎の種馬
-		global.auto_input.auto_katsu    = col[12] == 2 -- 喝CA
-		global.auto_input.auto_sikkyaku = col[13] == 2 -- 飛燕失脚CA
+		g.auto_input.otg_throw     = col[2] == 2 -- ダウン投げ
+		g.auto_input.otg_attack    = col[3] == 2 -- ダウン攻撃
+		g.auto_input.combo_throw   = col[4] == 2 -- 通常投げの派生技
+		g.auto_input.rave          = col[5]    -- デッドリーレイブ
+		g.auto_input.desire        = col[6]    -- アンリミテッドデザイア
+		g.auto_input.drill         = col[7]    -- ドリル
+		g.auto_input.pairon        = col[8]    -- 超白龍
+		g.auto_input.real_counter  = col[9]    -- M.リアルカウンター
+		g.auto_input.auto_3ecst    = col[10] == 2 -- M.トリプルエクスタシー
+		g.auto_input.taneuma       = col[11] == 2 -- 炎の種馬
+		g.auto_input.katsu_ca      = col[12] == 2 -- 喝CA
+		g.auto_input.sikkyaku_ca   = col[13] == 2 -- 飛燕失脚CA
 		-- 入力設定
-		global.auto_input.esaka_check   = col[15] -- 詠酒チェック
-		global.auto_input.fast_kadenzer = col[16] == 2 -- 必勝！逆襲拳
-		global.auto_input.kara_ca       = col[17] == 2 -- 空振りCA
+		g.auto_input.esaka_check   = col[15]   -- 詠酒チェック
+		g.auto_input.fast_kadenzer = col[16] == 2 -- 必勝！逆襲拳
+		g.auto_input.kara_ca       = col[17] == 2 -- 空振りCA
 		--"ジャーマン", "フェイスロック", "投げっぱなしジャーマン"
-		mod.easy_move.real_counter(global.auto_input.real_counter)
+		mod.easy_move.real_counter(g.auto_input.real_counter)
 		-- 詠酒の条件チェックを飛ばす
-		mod.easy_move.esaka_check(global.auto_input.esaka_check)
+		mod.easy_move.esaka_check(g.auto_input.esaka_check)
 		-- 自動 炎の種馬
-		mod.easy_move.taneuma_finish(global.auto_input.auto_taneuma)
+		mod.easy_move.taneuma_finish(g.auto_input.taneuma)
 		-- 必勝！逆襲拳1発キャッチカデンツァ
-		mod.easy_move.fast_kadenzer(global.auto_input.fast_kadenzer)
+		mod.easy_move.fast_kadenzer(g.auto_input.fast_kadenzer)
 		-- 自動喝CA
-		mod.easy_move.katsu_ca(global.auto_input.auto_katsu)
+		mod.easy_move.katsu_ca(g.auto_input.katsu_ca)
 		-- 自動飛燕失脚CA
-		mod.easy_move.shikkyaku_ca(global.auto_input.auto_sikkyaku)
+		mod.easy_move.shikkyaku_ca(g.auto_input.sikkyaku_ca)
 		-- 空振りCAできる
-		mod.easy_move.kara_ca(global.auto_input.kara_ca)
+		mod.easy_move.kara_ca(g.auto_input.kara_ca)
 		-- 自動マリートリプルエクスタシー
-		mod.easy_move.triple_ecstasy(global.auto_input.auto_3ecst)
+		mod.easy_move.triple_ecstasy(g.auto_input.auto_3ecst)
 		menu.current = menu.main
 	end
 	local col_menu_to_main         = function()
@@ -4594,10 +4582,10 @@ rbff2.startplugin          = function()
 	end
 	local menu_rec_to_tra          = function() menu.current = menu.training end
 	local exit_menu_to_rec         = function(slot_no)
-		local ec              = scr:frame_number()
-		global.dummy_mode     = 5
-		global.rec_main       = rec_await_no_input
-		global.input_accepted = ec
+		local ec, g           = scr:frame_number(), global
+		g.dummy_mode          = 5
+		g.rec_main            = rec_await_no_input
+		g.input_accepted      = ec
 		-- 選択したプレイヤー側の反対側の操作をいじる
 		recording.temp_player = (mem.r8(players[1].addr.reg_pcnt) ~= 0xFF) and 2 or 1
 		recording.last_slot   = slot_no
@@ -4606,25 +4594,25 @@ rbff2.startplugin          = function()
 		menu.exit()
 	end
 	local exit_menu_to_play_common = function()
-		local col = menu.replay.pos.col
+		local col, g = menu.replay.pos.col, global
 		recording.live_slots = recording.live_slots or {}
 		for i = 1, #recording.slot do
 			recording.live_slots[i] = (col[i + 1] == 2)
 		end
 		recording.do_repeat       = col[11] == 2 -- 繰り返し
 		recording.repeat_interval = col[12] - 1 -- 繰り返し間隔
-		global.await_neutral      = col[13] == 2 -- 繰り返し開始条件
-		global.replay_fix_pos     = col[14] -- 開始間合い固定
-		global.replay_reset       = col[15] -- 状態リセット
-		global.disp_replay        = col[16] == 2 -- ガイド表示
-		global.replay_stop_on_dmg = col[17] == 2 -- ダメージでリプレイ中止
-		global.repeat_interval    = recording.repeat_interval
+		g.await_neutral           = col[13] == 2 -- 繰り返し開始条件
+		g.replay_fix_pos          = col[14] -- 開始間合い固定
+		g.replay_reset            = col[15] -- 状態リセット
+		g.disp_replay             = col[16] == 2 -- ガイド表示
+		g.replay_stop_on_dmg      = col[17] == 2 -- ダメージでリプレイ中止
+		g.repeat_interval         = recording.repeat_interval
 	end
 	local exit_menu_to_rec_pos     = function()
-		local ec = scr:frame_number()
-		global.dummy_mode = 5 -- レコードモードにする
-		global.rec_main = rec_fixpos
-		global.input_accepted = ec
+		local ec, g = scr:frame_number(), global
+		g.dummy_mode = 5 -- レコードモードにする
+		g.rec_main = rec_fixpos
+		g.input_accepted = ec
 		-- 選択したプレイヤー側の反対側の操作をいじる
 		recording.temp_player = (mem.r8(players[1].addr.reg_pcnt) ~= 0xFF) and 2 or 1
 		exit_menu_to_play_common()
@@ -4632,33 +4620,28 @@ rbff2.startplugin          = function()
 		menu.exit()
 	end
 	local exit_menu_to_play        = function()
-		local col = menu.replay.pos.col
-
+		local col, ec, g = menu.replay.pos.col, scr:frame_number(), global
 		if menu.replay.pos.row == 14 and col[14] == 2 then -- 開始間合い固定 / 記憶
 			exit_menu_to_rec_pos()
 			return
 		end
-
-		local ec = scr:frame_number()
-		global.dummy_mode = 6 -- リプレイモードにする
-		global.rec_main = rec_await_play
-		global.input_accepted = ec
+		g.dummy_mode = 6 -- リプレイモードにする
+		g.rec_main = rec_await_play
+		g.input_accepted = ec
 		exit_menu_to_play_common()
 		menu.current = menu.main
 		menu.exit()
 	end
 	local exit_menu_to_play_cancel = function()
-		local ec = scr:frame_number()
-		global.dummy_mode = 6 -- リプレイモードにする
-		global.rec_main = rec_await_play
-		global.input_accepted = ec
+		local ec, g = scr:frame_number(), global
+		g.dummy_mode = 6 -- リプレイモードにする
+		g.rec_main = rec_await_play
+		g.input_accepted = ec
 		exit_menu_to_play_common()
 		menu_to_tra()
 	end
 	local init_menu_config         = function()
-		local col = menu.training.pos.col
-		local p = players
-		local g = global
+		local col, p, g = menu.training.pos.col, players, global
 		col[1] = g.dummy_mode        -- ダミーモード
 		-- -- レコード・リプレイ設定
 		col[3] = p[1].dummy_act      -- 1P アクション
@@ -4679,9 +4662,7 @@ rbff2.startplugin          = function()
 		g.sync_pos_x = col[18]       -- X座標同期
 	end
 	local init_bar_menu_config     = function()
-		local col = menu.bar.pos.col
-		local p = players
-		local g = global
+		local col, p, g = menu.bar.pos.col, players, global
 		--   1                                                        1
 		col[2] = p[1].red                      -- 1P 体力ゲージ量
 		col[3] = p[2].red                      -- 2P 体力ゲージ量
@@ -4691,9 +4672,7 @@ rbff2.startplugin          = function()
 		col[7] = g.pow_mode                    -- POWゲージモード
 	end
 	local init_disp_menu_config    = function()
-		local col = menu.disp.pos.col
-		local p = players
-		local g = global
+		local col, p, g = menu.disp.pos.col, players, global
 		-- タイトルラベル
 		col[2] = p[1].disp_hitbox and 2 or 1                          -- 判定表示
 		col[3] = p[2].disp_hitbox and 2 or 1                          -- 判定表示
@@ -4701,19 +4680,19 @@ rbff2.startplugin          = function()
 		col[5] = p[2].disp_range and 2 or 1                           -- 間合い表示
 		col[6] = p[1].disp_stun and 2 or 1                            -- 1P 気絶ゲージ表示
 		col[7] = p[2].disp_stun and 2 or 1                            -- 2P 気絶ゲージ表示
-		col[8] = p[1].disp_dmg and 2 or 1                             -- 1P ダメージ表示
-		col[9] = p[2].disp_dmg and 2 or 1                             -- 2P ダメージ表示
-		col[10] = p[1].disp_cmd                                       -- 1P 入力表示
-		col[11] = p[2].disp_cmd                                       -- 2P 入力表示
-		col[12] = g.disp_input_sts                                    -- コマンド入力状態表示
-		col[13] = g.disp_normal_frms                                  -- 通常動作フレーム非表示
-		col[14] = g.disp_frmgap                                       -- フレーム差表示
-		col[15] = p[1].disp_frm                                       -- 1P フレーム数表示
-		col[16] = p[2].disp_frm                                       -- 2P フレーム数表示
+		col[8] = p[1].disp_damage and 2 or 1                          -- 1P ダメージ表示
+		col[9] = p[2].disp_damage and 2 or 1                          -- 2P ダメージ表示
+		col[10] = p[1].disp_command                                   -- 1P 入力表示
+		col[11] = p[2].disp_command                                   -- 2P 入力表示
+		col[12] = g.disp_input                                        -- コマンド入力状態表示
+		col[13] = g.disp_normal_frames                                -- 通常動作フレーム非表示
+		col[14] = g.disp_framegap                                     -- フレーム差表示
+		col[15] = p[1].disp_frame                                     -- 1P フレーム数表示
+		col[16] = p[2].disp_frame                                     -- 2P フレーム数表示
 		col[17] = p[1].disp_fbfrm and 2 or 1                          -- 1P 弾フレーム数表示
 		col[18] = p[2].disp_fbfrm and 2 or 1                          -- 2P 弾フレーム数表示
-		col[19] = p[1].disp_sts                                       -- 1P 状態表示
-		col[20] = p[2].disp_sts                                       -- 2P 状態表示
+		col[19] = p[1].disp_state                                     -- 1P 状態表示
+		col[20] = p[2].disp_state                                     -- 2P 状態表示
 		col[21] = p[1].disp_base                                      -- 1P 処理アドレス表示
 		col[22] = p[2].disp_base                                      -- 2P 処理アドレス表示
 		col[23] = g.disp_pos and 2 or 1                               -- 1P 2P 距離表示
@@ -4727,9 +4706,7 @@ rbff2.startplugin          = function()
 		col[31] = ut.tstb(global.hide, hide_options.effect) and 1 or 2 -- エフェクト表示
 	end
 	local init_ex_menu_config      = function()
-		local col = menu.extra.pos.col
-		local p = players
-		local g = global
+		local col, p, g = menu.extra.pos.col, players, global
 		-- タイトルラベル
 		col[2] = dip_config.easy_super and 2 or 1 -- 簡易超必
 		col[3] = dip_config.semiauto_p and 2 or 1 -- 半自動潜在能力
@@ -4749,21 +4726,20 @@ rbff2.startplugin          = function()
 		col[10] = g.all_bs and 2 or 1  -- 全必殺技BS
 	end
 	local init_auto_menu_config    = function()
-		local col = menu.auto.pos.col
-		local g = global
+		local col, g = menu.auto.pos.col, global
 		-- -- 自動入力設定
-		col[2] = g.auto_input.otg_thw and 2 or 1       -- ダウン投げ
-		col[3] = g.auto_input.otg_atk and 2 or 1       -- ダウン攻撃
-		col[4] = g.auto_input.thw_otg and 2 or 1       -- 通常投げの派生技
+		col[2] = g.auto_input.otg_throw and 2 or 1     -- ダウン投げ
+		col[3] = g.auto_input.otg_attack and 2 or 1    -- ダウン攻撃
+		col[4] = g.auto_input.combo_throw and 2 or 1   -- 通常投げの派生技
 		col[5] = g.auto_input.rave                     -- デッドリーレイブ
 		col[6] = g.auto_input.desire                   -- アンリミテッドデザイア
 		col[7] = g.auto_input.drill                    -- ドリル
 		col[8] = g.auto_input.pairon                   -- 超白龍
 		col[9] = g.auto_input.real_counter             -- M.リアルカウンター
 		col[10] = g.auto_input.auto_3ecst and 2 or 1   -- M.トリプルエクスタシー
-		col[11] = global.auto_input.auto_taneuma and 2 or 1 -- 炎の種馬
-		col[12] = global.auto_input.auto_katsu and 2 or 1 -- 喝CA
-		col[13] = global.auto_input.auto_sikkyaku and 2 or 1 -- 飛燕失脚CA
+		col[11] = global.auto_input.taneuma and 2 or 1 -- 炎の種馬
+		col[12] = global.auto_input.katsu_ca and 2 or 1 -- 喝CA
+		col[13] = global.auto_input.sikkyaku_ca and 2 or 1 -- 飛燕失脚CA
 		-- -- 入力設定
 		col[15] = global.auto_input.esaka_check        -- 詠酒距離チェック
 		col[16] = global.auto_input.fast_kadenzer and 2 or 1 -- 必勝！逆襲拳
