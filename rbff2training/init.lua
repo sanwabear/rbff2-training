@@ -405,6 +405,11 @@ local mod                       = {
 			mem.wd8(0x3F94C, enabled and 0x60 or 0x67)       -- 入力チェックを飛ばす
 			mem.wd16(0x3F986, enabled and 0x4E71 or 0x6628)  -- 入力チェックをNOPに
 		end,
+		shikkyaku_ca = function(enabled)                     -- 自動飛燕失脚CA
+			mem.wd16(0x3DE48, enabled and 0x4E71 or 0x660E)  -- レバーN入力チェックをNOPに
+			mem.wd16(0x3DE4E, enabled and 0x4E71 or 0x6708)  -- C入力チェックをNOPに
+			mem.wd16(0x3DEA6, enabled and 0x4E71 or 0x6612)  -- 一回転+C入力チェックをNOPに
+		end,
 		kara_ca = function(enabled)                          -- 空振りCAできる
 			mem.wd8(0x2FA5E, enabled and 0x60 or 0x67)       -- テーブルチェックを飛ばす
 			--[[ 未適用
@@ -526,10 +531,11 @@ local global                    = {
 		auto_3ecst    = false, -- M.トリプルエクスタシー 10
 		auto_taneuma  = false, -- 炎の種馬               11
 		auto_katsu    = false, -- 喝CA                   12
-		-- 入力設定                                     13
-		esaka_check   = false, -- 詠酒距離チェック       14
-		fast_kadenzer = false, -- 必勝！逆襲拳           15
-		kara_ca       = false, -- 空振りCA               16
+		auto_sikkyaku = false, -- 飛燕失脚CA             13
+		-- 入力設定                                     14
+		esaka_check   = false, -- 詠酒距離チェック       15
+		fast_kadenzer = false, -- 必勝！逆襲拳           16
+		kara_ca       = false, -- 空振りCA               17
 	},
 
 	frzc                = 1,
@@ -4557,10 +4563,11 @@ rbff2.startplugin          = function()
 		global.auto_input.auto_3ecst    = col[10] == 2 -- M.トリプルエクスタシー
 		global.auto_input.auto_taneuma  = col[11] == 2 -- 炎の種馬
 		global.auto_input.auto_katsu    = col[12] == 2 -- 喝CA
+		global.auto_input.auto_sikkyaku = col[13] == 2 -- 飛燕失脚CA
 		-- 入力設定
-		global.auto_input.esaka_check   = col[14] -- 詠酒チェック
-		global.auto_input.fast_kadenzer = col[15] == 2 -- 必勝！逆襲拳
-		global.auto_input.kara_ca       = col[16] == 2 -- 空振りCA
+		global.auto_input.esaka_check   = col[15] -- 詠酒チェック
+		global.auto_input.fast_kadenzer = col[16] == 2 -- 必勝！逆襲拳
+		global.auto_input.kara_ca       = col[17] == 2 -- 空振りCA
 		--"ジャーマン", "フェイスロック", "投げっぱなしジャーマン"
 		mod.easy_move.real_counter(global.auto_input.real_counter)
 		-- 詠酒の条件チェックを飛ばす
@@ -4571,6 +4578,8 @@ rbff2.startplugin          = function()
 		mod.easy_move.fast_kadenzer(global.auto_input.fast_kadenzer)
 		-- 自動喝CA
 		mod.easy_move.katsu_ca(global.auto_input.auto_katsu)
+		-- 自動飛燕失脚CA
+		mod.easy_move.shikkyaku_ca(global.auto_input.auto_sikkyaku)
 		-- 空振りCAできる
 		mod.easy_move.kara_ca(global.auto_input.kara_ca)
 		-- 自動マリートリプルエクスタシー
@@ -4754,10 +4763,11 @@ rbff2.startplugin          = function()
 		col[10] = g.auto_input.auto_3ecst and 2 or 1   -- M.トリプルエクスタシー
 		col[11] = global.auto_input.auto_taneuma and 2 or 1 -- 炎の種馬
 		col[12] = global.auto_input.auto_katsu and 2 or 1 -- 喝CA
+		col[13] = global.auto_input.auto_sikkyaku and 2 or 1 -- 飛燕失脚CA
 		-- -- 入力設定
-		col[14] = global.auto_input.esaka_check        -- 詠酒距離チェック
-		col[15] = global.auto_input.fast_kadenzer and 2 or 1 -- 必勝！逆襲拳
-		col[16] = global.auto_input.kara_ca and 2 or 1 -- 空振りCA
+		col[15] = global.auto_input.esaka_check        -- 詠酒距離チェック
+		col[16] = global.auto_input.fast_kadenzer and 2 or 1 -- 必勝！逆襲拳
+		col[17] = global.auto_input.kara_ca and 2 or 1 -- 空振りCA
 	end
 	local init_restart_fight       = function()
 	end
@@ -5208,6 +5218,7 @@ rbff2.startplugin          = function()
 			{ "M.トリプルエクスタシー", menu.labels.off_on, },
 			{ "炎の種馬", menu.labels.off_on, },
 			{ "喝CA", menu.labels.off_on, },
+			{ "飛燕失脚CA", menu.labels.off_on, },
 			{ "                          入力設定" },
 			{ "詠酒チェック", { "OFF", "詠酒距離チェックなし", "いつでも詠酒" }, },
 			{ "必勝！逆襲拳", menu.labels.off_on, },
@@ -5230,14 +5241,15 @@ rbff2.startplugin          = function()
 				1, -- M.トリプルエクスタシー 10
 				1, -- 炎の種馬               11
 				1, -- 喝CA                   12
-				0, -- 入力設定               13
-				1, -- 詠酒距離チェック       14
-				1, -- 必勝！逆襲拳           15
-				1, -- 空振りCA               16
+				1, -- 飛燕失脚CA             13
+				0, -- 入力設定               14
+				1, -- 詠酒距離チェック       15
+				1, -- 必勝！逆襲拳           16
+				1, -- 空振りCA               17
 			},
 		},
-		on_a = ut.new_filled_table(16, auto_menu_to_main),
-		on_b = ut.new_filled_table(16, auto_menu_to_main),
+		on_a = ut.new_filled_table(17, auto_menu_to_main),
+		on_b = ut.new_filled_table(17, auto_menu_to_main),
 	}
 
 	menu.color = {
