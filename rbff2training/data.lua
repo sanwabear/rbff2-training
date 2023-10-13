@@ -56,9 +56,9 @@ local chars      = {
 db.chars         = chars
 
 chars[0x5].pow   = {
+	[0x7C] = { pow_revenge = 6 }, -- 当身投げ
 	[0x82] = { pow_revenge = 6 }, -- 当身投げ
-	[0x7C] = { pow_revenge = 6 },
-	[0x88] = { pow_revenge = 6 },
+	[0x88] = { pow_revenge = 6 }, -- 当身投げ
 }
 chars[0xB].pow   = {
 	[0x82] = { pow_revenge = 6 },               -- サドマゾ
@@ -74,9 +74,7 @@ chars[0x14].pow  = {
 
 local char_names = {}
 for _, char_data in ipairs(chars) do
-	if char_data.name ~= "common" then
-		table.insert(char_names, char_data.name)
-	end
+	if char_data.name ~= "common" then table.insert(char_names, char_data.name) end
 end
 db.char_names = char_names
 
@@ -250,60 +248,74 @@ local hurt_dodge_types                = {
 	{ top = 40,  bottom = nil, act_type = frame_attack_types.high | frame_attack_types.waving_blow, }, -- 上半身無敵 40 ウェービングブロー,龍転身,ダブルローリング
 	{ top = 32,  bottom = nil, act_type = frame_attack_types.high | frame_attack_types.away, },       --上半身無敵 32 避け
 }
+local hurt_dodge_names                = {
+	[frame_attack_types.away] = "Away",
+	[frame_attack_types.crounch60] = "c.Andy",
+	[frame_attack_types.crounch64] = "c.Terry",
+	[frame_attack_types.crounch68] = "c.Laurence",
+	[frame_attack_types.crounch76] = "c.Franco",
+	[frame_attack_types.crounch80] = "c.Krauser",
+	[frame_attack_types.full] = "Full",
+	[frame_attack_types.laurence_away] = "Lau.Away",
+	[frame_attack_types.levitate24] = "c.B",
+	[frame_attack_types.levitate32] = "c.Geese-C",
+	[frame_attack_types.levitate40] = "c.Andy-C",
+	[frame_attack_types.main] = "Main",
+	[frame_attack_types.main_high] = "Sway High",
+	[frame_attack_types.main_low] = "Sway Low",
+	[frame_attack_types.sway_high] = "High",
+	[frame_attack_types.sway_low] = "Low",
+	[frame_attack_types.waving_blow] = "W.Blow",
+}
 db.get_punish_name                    = function(type)
-	if ut.tstb(type, frame_attack_types.away, true) then
-		return "Away"
-	elseif ut.tstb(type, frame_attack_types.waving_blow, true) then
-		return "W.Blow"
-	elseif ut.tstb(type, frame_attack_types.laurence_away, true) then
-		return "Lau.Away"
-	elseif ut.tstb(type, frame_attack_types.crounch60, true) then
-		return "c.Andy"
-	elseif ut.tstb(type, frame_attack_types.crounch64, true) then
-		return "c.Terry"
-	elseif ut.tstb(type, frame_attack_types.crounch68, true) then
-		return "c.Laurence"
-	elseif ut.tstb(type, frame_attack_types.crounch76, true) then
-		return "c.Franco"
-	elseif ut.tstb(type, frame_attack_types.crounch80, true) then
-		return "c.Krauser"
-	end
+	for _, atype in ipairs({
+		frame_attack_types.away,
+		frame_attack_types.waving_blow,
+		frame_attack_types.laurence_away,
+		frame_attack_types.crounch60,
+		frame_attack_types.crounch64,
+		frame_attack_types.crounch68,
+		frame_attack_types.crounch76,
+		frame_attack_types.crounch80,
+	}) do if ut.tstb(type, atype, true) then  return hurt_dodge_names[atype] end end
 	return ""
 end
 db.get_low_dodge_name                 = function(type)
-	if ut.tstb(type, frame_attack_types.levitate40, true) then
-		return "c.Andy-C"
-	elseif ut.tstb(type, frame_attack_types.levitate32, true) then
-		return "c.Geese-C"
-	elseif ut.tstb(type, frame_attack_types.levitate24, true) then
-		return "c.B"
-	end
+	for _, atype in ipairs({
+		frame_attack_types.levitate40,
+		frame_attack_types.levitate32,
+		frame_attack_types.levitate24,
+	}) do if ut.tstb(type, atype, true) then  return hurt_dodge_names[atype] end end
 	return ""
 end
 db.get_dodge_name                     = function(type)
-	if ut.tstb(type, frame_attack_types.main_high, true) then return "Sway High" end        -- 食らい(対ライン上攻撃) 対メイン上段無敵
-	if ut.tstb(type, frame_attack_types.main_low, true) then return "Sway Low" end          -- 食らい(対ライン下攻撃) 対メイン下段無敵
-	if ut.tstb(type, frame_attack_types.sway_high, true) then return "High" end             -- 食らい1(スウェー中) 対スウェー上段無敵
-	if ut.tstb(type, frame_attack_types.sway_low, true) then return "Low" end               -- 食らい2(スウェー中) 対スウェー下段無敵
-	if ut.tstb(type, frame_attack_types.main, true) then return "Main" end                  -- メイン無敵
-	if ut.tstb(type, frame_attack_types.full, true) then return "Full" end                  -- 全身無敵
+	for _, atype in ipairs({
+		frame_attack_types.main_high,
+		frame_attack_types.main_low,
+		frame_attack_types.sway_high,
+		frame_attack_types.sway_low,
+		frame_attack_types.main,
+		frame_attack_types.full,
+	}) do if ut.tstb(type, atype, true) then  return hurt_dodge_names[atype] end end
 	return string.format("%-10s/%-10s", db.get_punish_name(type), db.get_low_dodge_name(type)) -- 部分無敵
 end
 db.hurt_dodge_types                   = hurt_dodge_types
 db.top_types                          = top_types
 db.top_sway_types                     = top_sway_types
+local hit_top_names = {
+	[act_types.attack] = "High",
+	[act_types.low_attack] = "Low",
+	[act_types.overhead] = "Mid",
+	[act_types.unblockable] = "Unbl.",
+}
 db.top_type_name                      = function(type)
-	if ut.tstb(type, act_types.unblockable, true) then
-		return "Unbl."
-	elseif ut.tstb(type, act_types.overhead, true) then -- 中段
-		return "Mid"
-	elseif ut.tstb(type, act_types.low_attack, true) then -- 下段
-		return "Low"
-	elseif ut.tstb(type, act_types.attack, true) then  -- 上段
-		return "High"
-	else
-		return "-"
-	end
+	for _, atype in ipairs({
+		act_types.unblockable,
+		act_types.overhead,
+		act_types.low_attack,
+		act_types.attack,
+	}) do if ut.tstb(type, atype, true) then  return hit_top_names[atype] end end
+	return "-"
 end
 -- !!注意!!後隙が配列の後ろに来るように定義すること
 local char_acts_base                  = {
