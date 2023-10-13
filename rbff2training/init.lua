@@ -78,10 +78,6 @@ end
 
 local rbff2              = exports
 
--- ヒット効果
-local hit_effect_addrs   = { 0 }
-local hit_effect_menus   = { "OFF" }
-
 -- ヒット時のシステム内での中間処理による停止アドレス
 local hit_system_stops   = {}
 
@@ -181,11 +177,7 @@ local hitbox_grab_types  = {
 }
 
 -- コマンド入力状態
-local input_state_types  = db.input_state_types
-local input_states       = db.input_states
-local input_state_col    = db.input_state_col
-
-local chip_types         = db.chip_types
+local input_state        = db.input_state
 
 -- メニュー用変数
 local menu               = {
@@ -1109,13 +1101,14 @@ local load_rom_patch            = function()
 end
 
 -- ヒット効果アドレステーブルの取得
-for i, _ in ipairs(db.hit_effects) do
-	table.insert(hit_effect_menus, string.format("%02d %s", i, table.concat(db.hit_effects[i], " ")))
+db.hit_effects.menus, db.hit_effects.addrs = { "OFF" }, { 0 }
+for i, hit_effect in ipairs(db.hit_effects.list) do
+	table.insert(db.hit_effects.menus, string.format("%02d %s", i, table.concat(hit_effect, " ")))
 end
 local load_hit_effects      = function()
-	if #hit_effect_addrs > 1 then return end
-	for i, _ in ipairs(db.hit_effects) do
-		table.insert(hit_effect_addrs, mem.r32(0x579DA + (i - 1) * 4))
+	if #db.hit_effects.addrs > 1 then return end
+	for i, _ in ipairs(db.hit_effects.list) do
+		table.insert(db.hit_effects.addrs, mem.r32(0x579DA + (i - 1) * 4))
 	end
 	print("load_hit_effects")
 end
@@ -1915,7 +1908,7 @@ rbff2.startplugin        = function()
 				p.base   = data
 				local pc = mem.pc()
 				if (pc == 0x58268 or pc == 0x582AA) and global.damaged_move > 1 then
-					ret.value = hit_effect_addrs[global.damaged_move]
+					ret.value = db.hit_effects.addrs[global.damaged_move]
 				end
 			end,
 			-- [0x0C] = function(data) p.reserve_proc = data end,               -- 予約中の処理アドレス
@@ -3333,7 +3326,7 @@ rbff2.startplugin        = function()
 			p.old.input_states = p.input_states or {}
 			p.input_states     = {}
 			local debug        = false -- 調査時のみtrue
-			local states       = dip_config.easy_super and input_states.easy or input_states.normal
+			local states       = dip_config.easy_super and input_state.states.easy or input_state.states.normal
 			states             = debug and states[#states] or states[p.char]
 			for ti, tbl in ipairs(states) do
 				local old, addr = p.old.input_states[ti], tbl.addr + p.input_offset
@@ -3344,19 +3337,19 @@ rbff2.startplugin        = function()
 				local charging, reset, force_reset = false, false, false
 
 				-- コマンド種類ごとの表示用の補正
-				if tbl.type == input_state_types.drill5 then
+				if tbl.type == input_state.types.drill5 then
 					force_reset = on > 1 or chg_remain > 0 or max > 0
 					chg_remain, on, max = 0, 0, 0
-				elseif tbl.type == input_state_types.step then
+				elseif tbl.type == input_state.types.step then
 					on = math.max(on - 2, 0)
 					if old then reset = old.on == 2 and old.chg_remain > 0 end
-				elseif tbl.type == input_state_types.faint then
+				elseif tbl.type == input_state.types.faint then
 					on = math.max(on - 2, 0)
 					if old then
 						reset = old.on == 1 and old.chg_remain > 0
 						if on == 0 and chg_remain > 0 then force_reset = true end
 					end
-				elseif tbl.type == input_state_types.charge then
+				elseif tbl.type == input_state.types.charge then
 					if on == 1 and chg_remain == 0 then
 						on = 3
 					elseif on > 1 then
@@ -3364,27 +3357,27 @@ rbff2.startplugin        = function()
 					end
 					charging = on == 1
 					if old then reset = old.on == #tbl.cmds and old.chg_remain > 0 end
-				elseif tbl.type == input_state_types.followup then
+				elseif tbl.type == input_state.types.followup then
 					on = math.max(on - 1, 0)
 					on = (on == 1) and 0 or on
 					if old then
 						reset = old.on == #tbl.cmds and old.chg_remain > 0
 						if on == 0 and chg_remain > 0 then force_reset = true end
 					end
-				elseif tbl.type == input_state_types.shinsoku then
+				elseif tbl.type == input_state.types.shinsoku then
 					on = (on <= 2) and 0 or (on - 1)
 					if old then
 						reset = old.on == #tbl.cmds and old.chg_remain > 0
 						if on == 0 and chg_remain > 0 then force_reset = true end
 					end
-				elseif tbl.type == input_state_types.todome then
+				elseif tbl.type == input_state.types.todome then
 					on = math.max(on - 1, 0)
 					on = (on <= 1) and 0 or (on - 1)
 					if old then
 						reset = old.on > 0 and old.chg_remain > 0
 						if on == 0 and chg_remain > 0 then force_reset = true end
 					end
-				elseif tbl.type == input_state_types.unknown then
+				elseif tbl.type == input_state.types.unknown then
 					if old then reset = old.on > 0 and old.chg_remain > 0 end
 				else
 					if old then reset = old.on == #tbl.cmds and old.chg_remain > 0 end
@@ -4068,7 +4061,7 @@ rbff2.startplugin        = function()
 					if xp.proc_active then
 						table.insert(label, string.format("Damage %3s/%1s  Stun %2s/%2s Fra.", xp.damage or 0, xp.chip or 0, xp.stun or 0, xp.stun_timer or 0))
 						table.insert(label, string.format("HitStop %2s/%2s HitStun %2s/%2s", xp.hitstop or 0, xp.blockstop or 0, xp.hitstun or 0, xp.blockstun or 0))
-						table.insert(label, string.format("%2s", db.hit_effect_name(xp.effect)))
+						table.insert(label, string.format("%2s", db.hit_effects.name(xp.effect)))
 						local grabl = ""
 						for _, t in ipairs(hitbox_grab_types) do grabl = grabl .. (ut.tstb(xp.grabbable, t.value, true) and t.label or "- ") end
 						table.insert(label, string.format("Grab %-s", grabl))
@@ -4170,32 +4163,32 @@ rbff2.startplugin        = function()
 
 				-- コマンド入力状態表示
 				if global.disp_input - 1 == i then
-					for ti, input_state in ipairs(p.input_states) do
+					for ti, state in ipairs(p.input_states) do
 						local x, y = 147, 25 + ti * 5
 						local x1, x2, y2, cmdx, cmdy = x + 15, x - 8, y + 4, x - 50, y - 2
-						draw_text_with_shadow(x1, cmdy, input_state.tbl.name,
-							input_state.input_estab == true and input_state_col.orange2 or input_state_col.white)
-						if input_state.on > 0 and input_state.chg_remain > 0 then
-							local col, col2 = input_state_col.yellow, input_state_col.yellow2
-							if input_state.charging == true then col, col2 = input_state_col.green, input_state_col.green2 end
-							scr:draw_box(x2 + input_state.max * 2, y, x2, y2, col2, 0)
-							scr:draw_box(x2 + input_state.chg_remain * 2, y, x2, y2, 0, col)
+						draw_text_with_shadow(x1, cmdy, state.tbl.name,
+							state.input_estab == true and input_state.col.orange2 or input_state.col.white)
+						if state.on > 0 and state.chg_remain > 0 then
+							local col, col2 = input_state.col.yellow, input_state.col.yellow2
+							if state.charging == true then col, col2 = input_state.col.green, input_state.col.green2 end
+							scr:draw_box(x2 + state.max * 2, y, x2, y2, col2, 0)
+							scr:draw_box(x2 + state.chg_remain * 2, y, x2, y2, 0, col)
 						end
-						for ci, c in ipairs(input_state.tbl.lr_cmds[p.cmd_side]) do
+						for ci, c in ipairs(state.tbl.lr_cmds[p.cmd_side]) do
 							if c ~= "" then
 								cmdx = cmdx + math.max(5.5,
 									draw_text_with_shadow(cmdx, cmdy, c,
-										input_state.input_estab == true and input_state_col.orange or
-										input_state.on > ci and input_state_col.red or
-										(ci == 1 and input_state.on >= ci) and input_state_col.red or nil))
+										state.input_estab == true and input_state.col.orange or
+										state.on > ci and input_state.col.red or
+										(ci == 1 and state.on >= ci) and input_state.col.red or nil))
 							end
 						end
-						draw_rtext_with_shadow(x + 1, y, input_state.chg_remain)
+						draw_rtext_with_shadow(x + 1, y, state.chg_remain)
 						draw_text_with_shadow(x + 4, y, "/")
-						draw_text_with_shadow(x + 7, y, input_state.max)
-						if input_state.debug then
-							draw_rtext_with_shadow(x + 25, y, input_state.on)
-							draw_rtext_with_shadow(x + 40, y, input_state.on_prev)
+						draw_text_with_shadow(x + 7, y, state.max)
+						if state.debug then
+							draw_rtext_with_shadow(x + 25, y, state.on)
+							draw_rtext_with_shadow(x + 40, y, state.on_prev)
 						end
 					end
 				end
@@ -5151,7 +5144,7 @@ rbff2.startplugin        = function()
 			{ "判定発生時にポーズ", { "OFF", "投げ", "攻撃", "変化時", }, },
 			{ "技画像保存", { "OFF", "ON:新規", "ON:上書き", }, },
 			{ "MAMEデバッグウィンドウ", menu.labels.off_on, },
-			{ "ヒット効果確認用", hit_effect_menus, },
+			{ "ヒット効果確認用", db.hit_effects.menus, },
 			{ "全必殺技BS", menu.labels.off_on, }
 		},
 		pos = {

@@ -2468,6 +2468,7 @@ db.get_flag_name                     = function(flags, flag_names)
 	return flgtxt
 end
 
+
 --------------------------------------------------------------------------------------
 -- ヒット効果
 --------------------------------------------------------------------------------------
@@ -2490,129 +2491,128 @@ local hit_effect_types               = {
 	plane_shift_down = "送ダ", -- スウェーライン送りダウン
 	standup = "立", -- 強制立のけぞり
 }
-local hit_effect_en_types            = {
-	[hit_effect_types.down] = "Down",                      -- ダウン
-	[hit_effect_types.extra] = "Ex.",                      -- 特殊なやられ
-	[hit_effect_types.extra_launch] = "Ex.Launch",         -- 特殊な空中追撃可能ダウン
-	[hit_effect_types.force_stun] = "Stun",                -- 強制気絶
-	[hit_effect_types.fukitobi] = "Blow off",              -- 吹き飛び
-	[hit_effect_types.hikikomi] = "Rev.Knockback",         -- 後ろ向きのけぞり
-	[hit_effect_types.hikikomi_launch] = "Launch",         -- 後ろ向き浮き
-	[hit_effect_types.launch] = "Launch",                  -- 空中とダウン追撃可能ダウン
-	[hit_effect_types.launch2] = "Ex.Launch",              -- 浮のけぞり～ダウン
-	[hit_effect_types.launch_nokezori] = "Launch",         -- 浮のけぞり
-	[hit_effect_types.nokezori] = "Knockback",             -- のけぞり
-	[hit_effect_types.nokezori2] = "Knockback/*Down",      -- のけぞり 対スウェー時はダウン追撃可能ダウン
-	[hit_effect_types.otg_down] = "*Down",                 -- ダウン追撃可能ダウン
-	[hit_effect_types.plane_shift] = "Plane shift",        -- スウェーライン送り
-	[hit_effect_types.plane_shift_down] = "Plane shift down", -- スウェーライン送りダウン
-	[hit_effect_types.standup] = "Standup",                -- 強制立のけぞり
-}
-local hit_effect_nokezoris           = ut.new_set(
-	hit_effect_types.nokezori,
-	hit_effect_types.nokezori2,
-	hit_effect_types.standup,
-	hit_effect_types.hikikomi,
-	hit_effect_types.plane_shift)
-
 local hit_effects                    = {
-	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
-	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
-	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
-	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.standup,          hit_effect_types.fukitobi },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
-	{ hit_effect_types.nokezori2,        hit_effect_types.fukitobi },
-	{ hit_effect_types.plane_shift,      hit_effect_types.plane_shift_down },
-	{ hit_effect_types.plane_shift_down, hit_effect_types.plane_shift_down, hit_effect_types.otg_down },
-	{ hit_effect_types.fukitobi,         hit_effect_types.fukitobi },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.fukitobi,         hit_effect_types.fukitobi },
-	{ hit_effect_types.down,             hit_effect_types.down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down },
-	{ hit_effect_types.down,             hit_effect_types.down },
-	{ hit_effect_types.down,             hit_effect_types.down },
-	{ hit_effect_types.hikikomi,         hit_effect_types.fukitobi },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.standup,          hit_effect_types.standup },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.extra,            hit_effect_types.extra },
-	{ hit_effect_types.extra_launch,     hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
-	{ hit_effect_types.force_stun,       hit_effect_types.force_stun,       hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.extra,            hit_effect_types.extra },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.nokezori,         hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.launch_nokezori,  hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.hikikomi_launch,  hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.extra,            hit_effect_types.extra },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.launch2,          hit_effect_types.launch2,          hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down },
-	{ hit_effect_types.launch,           hit_effect_types.launch },
-	{ hit_effect_types.extra,            hit_effect_types.extra },
-	{ hit_effect_types.launch,           hit_effect_types.launch },
-	{ hit_effect_types.extra,            hit_effect_types.extra },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
-	{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
-	{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+	types     = hit_effect_types,
+	en_types  = {
+		[hit_effect_types.down] = "Down",                   -- ダウン
+		[hit_effect_types.extra] = "Ex.",                   -- 特殊なやられ
+		[hit_effect_types.extra_launch] = "Ex.Launch",      -- 特殊な空中追撃可能ダウン
+		[hit_effect_types.force_stun] = "Stun",             -- 強制気絶
+		[hit_effect_types.fukitobi] = "Blow off",           -- 吹き飛び
+		[hit_effect_types.hikikomi] = "Rev.Knockback",      -- 後ろ向きのけぞり
+		[hit_effect_types.hikikomi_launch] = "Launch",      -- 後ろ向き浮き
+		[hit_effect_types.launch] = "Launch",               -- 空中とダウン追撃可能ダウン
+		[hit_effect_types.launch2] = "Ex.Launch",           -- 浮のけぞり～ダウン
+		[hit_effect_types.launch_nokezori] = "Launch",      -- 浮のけぞり
+		[hit_effect_types.nokezori] = "Knockback",          -- のけぞり
+		[hit_effect_types.nokezori2] = "Knockback/*Down",   -- のけぞり 対スウェー時はダウン追撃可能ダウン
+		[hit_effect_types.otg_down] = "*Down",              -- ダウン追撃可能ダウン
+		[hit_effect_types.plane_shift] = "Plane shift",     -- スウェーライン送り
+		[hit_effect_types.plane_shift_down] = "Plane shift down", -- スウェーライン送りダウン
+		[hit_effect_types.standup] = "Standup",             -- 強制立のけぞり
+	},
+	nokezoris = ut.new_set(
+		hit_effect_types.nokezori,
+		hit_effect_types.nokezori2,
+		hit_effect_types.standup,
+		hit_effect_types.hikikomi,
+		hit_effect_types.plane_shift),
+	list      = {
+		{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
+		{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
+		{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
+		{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
+		{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.standup,          hit_effect_types.fukitobi },
+		{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
+		{ hit_effect_types.nokezori2,        hit_effect_types.fukitobi },
+		{ hit_effect_types.plane_shift,      hit_effect_types.plane_shift_down },
+		{ hit_effect_types.plane_shift_down, hit_effect_types.plane_shift_down, hit_effect_types.otg_down },
+		{ hit_effect_types.fukitobi,         hit_effect_types.fukitobi },
+		{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.fukitobi,         hit_effect_types.fukitobi },
+		{ hit_effect_types.down,             hit_effect_types.down },
+		{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.down,             hit_effect_types.down },
+		{ hit_effect_types.down,             hit_effect_types.down },
+		{ hit_effect_types.down,             hit_effect_types.down },
+		{ hit_effect_types.hikikomi,         hit_effect_types.fukitobi },
+		{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+		{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.nokezori,         hit_effect_types.down },
+		{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+		{ hit_effect_types.nokezori,         hit_effect_types.down },
+		{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+		{ hit_effect_types.standup,          hit_effect_types.standup },
+		{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+		{ hit_effect_types.extra,            hit_effect_types.extra },
+		{ hit_effect_types.extra_launch,     hit_effect_types.launch,           hit_effect_types.otg_down },
+		{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+		{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
+		{ hit_effect_types.force_stun,       hit_effect_types.force_stun,       hit_effect_types.otg_down },
+		{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
+		{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.extra,            hit_effect_types.extra },
+		{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+		{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+		{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+		{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.nokezori,         hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+		{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+		{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+		{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+		{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+		{ hit_effect_types.nokezori,         hit_effect_types.fukitobi },
+		{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+		{ hit_effect_types.nokezori,         hit_effect_types.launch,           hit_effect_types.otg_down },
+		{ hit_effect_types.launch_nokezori,  hit_effect_types.launch,           hit_effect_types.otg_down },
+		{ hit_effect_types.hikikomi_launch,  hit_effect_types.launch,           hit_effect_types.otg_down },
+		{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+		{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.extra,            hit_effect_types.extra },
+		{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.launch2,          hit_effect_types.launch2,          hit_effect_types.otg_down },
+		{ hit_effect_types.down,             hit_effect_types.down },
+		{ hit_effect_types.launch,           hit_effect_types.launch },
+		{ hit_effect_types.extra,            hit_effect_types.extra },
+		{ hit_effect_types.launch,           hit_effect_types.launch },
+		{ hit_effect_types.extra,            hit_effect_types.extra },
+		{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+		{ hit_effect_types.down,             hit_effect_types.down },
+		{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+		{ hit_effect_types.down,             hit_effect_types.down,             hit_effect_types.otg_down },
+		{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
+	},
 }
-
-db.hit_effect_types                  = hit_effect_types
-db.hit_effect_en_types               = hit_effect_en_types
-db.hit_effect_nokezoris              = hit_effect_nokezoris
-db.hit_effects                       = hit_effects
-db.hit_effect_name                   = function(effect)
+hit_effects.name                   = function(effect)
 	local e = effect and hit_effects[effect + 1] or nil --luaの配列は1からになるので+1する
 	if e then
-		return string.format("%-16s/%-16s", (db.hit_effect_en_types[e[1]] or ""), (db.hit_effect_en_types[e[2]] or ""))
+		return string.format("%-16s/%-16s", (hit_effects.en_types[e[1]] or ""), (hit_effects.en_types[e[2]] or ""))
 	else
 		return string.format("%s", effect)
 	end
 end
+db.hit_effects                       = hit_effects
+
 
 --------------------------------------------------------------------------------------
 -- コマンド入力状態
@@ -3365,19 +3365,22 @@ local create_input_states            = function()
 	end
 	return { normal = input_convert(input_states), easy = input_convert(input_easy_states) }
 end
-
-db.input_state_types                 = input_state_types
-db.input_states                      = create_input_states()
-db.input_state_col                   = {
-	orange = 0xFFFF8800,
-	ol_orange2 = 0xC0FF8800,
-	red = 0xFFFF0000,
-	green = 0xC07FFF00,
-	green2 = 0xFF7FFF00,
-	yellow = 0xC0FFFF00,
-	yellow2 = 0xFFFFFF00,
-	white = 0xC0FFFFFF,
+local input_state                    = {
+	types  = input_state_types,
+	states = create_input_states(),
+	col    = {
+		orange = 0xFFFF8800,
+		ol_orange2 = 0xC0FF8800,
+		red = 0xFFFF0000,
+		green = 0xC07FFF00,
+		green2 = 0xFF7FFF00,
+		yellow = 0xC0FFFF00,
+		yellow2 = 0xFFFFFF00,
+		white = 0xC0FFFFFF,
+	},
 }
+db.input_state                       = input_state
+
 
 --------------------------------------------------------------------------------------
 -- 判定の種類
@@ -3441,51 +3444,6 @@ for _, boxtype in pairs(box_types) do
 	boxtype.fill    = (0xFFFFFFFF & (boxtype.fill << 24)) | boxtype.color
 	boxtype.outline = (0xFFFFFFFF & (boxtype.outline << 24)) | boxtype.color
 end
-local attack_boxies     = ut.new_set(
-	box_types.attack,          -- 攻撃
-	box_types.harmless_attack, -- 攻撃(無効)
-	box_types.juggle,          -- 攻撃(空中追撃可)
-	box_types.harmless_juggle, -- 攻撃(無効、空中追撃可)
-	box_types.fireball,        -- 飛び道具
-	box_types.harmless_fireball, -- 飛び道具(無効)
-	box_types.juggle_fireball, -- 飛び道具(空中追撃可)
-	box_types.harmless_juggle_fb, -- 飛び道具(無効、空中追撃可)
-	box_types.normal_throw,    -- 通常投げ
-	box_types.special_throw,   -- 空中投げ
-	box_types.air_throw,       -- 必殺技投げ
-	box_types.phoenix_throw)   -- フェニックススルー
-local juggle_boxies     = ut.new_set(
-	box_types.juggle,          -- 攻撃(空中追撃可)
-	box_types.fake_juggle,     -- 攻撃(嘘、空中追撃可)
-	box_types.juggle_fireball, -- 飛び道具(空中追撃可)
-	box_types.fake_juggle_fb)  -- 飛び道具(嘘、空中追撃可)
-local fake_boxies       = ut.new_set(
-	box_types.fake_attack,     -- 攻撃(嘘)
-	box_types.fake_juggle,     -- 攻撃(嘘、空中追撃可)
-	box_types.fake_fireball,   -- 飛び道具(嘘)
-	box_types.fake_juggle_fb)  -- 飛び道具(嘘、空中追撃可)
-local all_attack_boxies = ut.new_set(ut.table_add_all(ut.table_add_all({}, attack_boxies), fake_boxies))
-local hitstun_boxies    = ut.new_set(
-	box_types.hurt1,        -- 食らい1
-	box_types.hurt2,        -- 食らい2
-	box_types.down_otg,     -- 食らい(ダウン追撃のみ可)
-	box_types.launch,       -- 食らい(空中追撃のみ可)
-	box_types.hurt3,        -- 食らい(対ライン上攻撃)
-	box_types.hurt4,        -- 食らい(対ライン下攻撃)
-	box_types.sway_hurt1,   -- 食らい1(スウェー中)
-	box_types.sway_hurt2)   -- 食らい2(スウェー中)
-local block_boxies      = ut.new_set(
-	box_types.block_overhead, -- 立ガード
-	box_types.block_low,    -- 屈ガード
-	box_types.block_air)    -- 空中ガード
-local parry_boxies      = ut.new_set(
-	box_types.joudan_atemi, -- 上段当身投げ
-	box_types.urakumo_kakushi, -- 裏雲隠し
-	box_types.gedan_atemiuchi, -- 下段当身打ち
-	box_types.gyakusyuken,  -- 必勝逆襲拳
-	box_types.sadomazo,     -- サドマゾ
-	box_types.baigaeshi,    -- 倍返し
-	box_types.phoenix_throw) -- フェニックススルー
 local hurt_boxies       = ut.new_set(
 	box_types.hurt1,        -- 食らい1
 	box_types.hurt2,        -- 食らい2
@@ -3497,19 +3455,11 @@ local hurt_boxies       = ut.new_set(
 local box_type_list     = {}
 for _, box_type in pairs(box_types) do table.insert(box_type_list, box_type) end
 table.sort(box_type_list, function(a, b) return a.no < b.no end)
-
 db.box_kinds = box_kinds
 db.box_types = box_types
 db.main_box_types = main_box_types
 db.sway_box_types = sway_box_types
-db.attack_boxies = attack_boxies
-db.juggle_boxies = juggle_boxies
-db.fake_boxies = fake_boxies
-db.hitstun_boxies = hitstun_boxies
-db.block_boxies = block_boxies
-db.parry_boxies = parry_boxies
 db.hurt_boxies = hurt_boxies
-db.all_attack_boxies = all_attack_boxies
 db.box_type_list = box_type_list
 
 
@@ -3958,7 +3908,6 @@ local chip_type_table = {
 	chip_types.rshift4, -- 15 1/16
 	chip_types.zero, -- 16 ダメージ無し
 }
-db.chip_types         = chip_types
 db.chip_type_table    = chip_type_table
 db.calc_chip          = function(addr, damage)
 	local chip_type = db.chip_type_table[addr]
