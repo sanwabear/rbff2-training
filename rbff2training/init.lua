@@ -214,20 +214,20 @@ local menu               = {
 	update_pos = nil,
 	reset_pos = nil,
 
-	stgs = db.stage_list,
+	stage_list = db.stage_list,
 	bgms = db.bgm_list,
 
 	labels = {
 		fix_scr_tops = { "OFF" },
 		chars        = {},
-		stgs         = {},
+		stage_list         = {},
 		bgms         = {},
 		off_on       = { "OFF", "ON" }
 	},
 }
 menu.labels.chars        = db.char_names
 for i = -20, 0xF0 do table.insert(menu.labels.fix_scr_tops, "" .. i) end
-for _, stg in ipairs(menu.stgs) do table.insert(menu.labels.stgs, stg.name) end
+for _, stg in ipairs(menu.stage_list) do table.insert(menu.labels.stage_list, stg.name) end
 for _, bgm in ipairs(menu.bgms) do
 	local exists = false
 	for _, name in pairs(menu.labels.bgms) do
@@ -4815,7 +4815,7 @@ rbff2.startplugin          = function()
 			next_p2    = menu.main.pos.col[10],                                              -- 2P セレクト
 			next_p1col = menu.main.pos.col[11] - 1,                                          -- 1P カラー
 			next_p2col = menu.main.pos.col[12] - 1,                                          -- 2P カラー
-			next_stage = menu.stgs[menu.main.pos.col[13]],                                   -- ステージセレクト
+			next_stage = menu.stage_list[menu.main.pos.col[13]],                             -- ステージセレクト
 			next_bgm   = menu.bgms[menu.main.pos.col[14]].id,                                -- BGMセレクト
 		})
 		global.fix_scr_top = menu.main.pos.col[18]
@@ -4853,7 +4853,7 @@ rbff2.startplugin          = function()
 			{ "2P セレクト", menu.labels.chars },
 			{ "1P カラー", { "A", "D" } },
 			{ "2P カラー", { "A", "D" } },
-			{ "ステージセレクト", menu.labels.stgs },
+			{ "ステージセレクト", menu.labels.stage_list },
 			{ "BGMセレクト", menu.labels.bgms },
 			{ "体力,POWゲージ表示", menu.labels.off_on, },
 			{ "背景表示", menu.labels.off_on, },
@@ -4920,15 +4920,10 @@ rbff2.startplugin          = function()
 
 		menu.reset_pos = false
 
-		local stg1 = mem.r8(0x107BB1)
-		local stg2 = mem.r8(0x107BB7)
-		local stg3 = mem.r8(0x107BB8)
-		menu.main.pos.col[13] = 1
-		for i, data in ipairs(menu.stgs) do
-			if data.stg1 == stg1 and data.stg2 == stg2 and data.stg3 == stg3 and global.disp_bg == data.disp_bg then
-				menu.main.pos.col[13] = i
-				break
-			end
+		local stg1, stg2, stg3 = mem.r8(0x107BB1), mem.r8(0x107BB7), mem.r16(0x107BB8)
+		for i, stage in ipairs(menu.stage_list) do
+			menu.main.pos.col[13] = i
+			if stage.stg1 == stg1 and stage.stg2 == stg2 and stage.stg3 == stg3 then break end
 		end
 
 		local bgmid, found = mem.r8(0x10A8D5), false
