@@ -477,8 +477,8 @@ local hide_options              = {
 local global                    = {
 	frame_number       = 0,
 	lag_frame          = false,
-	all_act_normal     = false,
-	old_all_act_normal = false,
+	both_act_neutral     = false,
+	old_both_act_neutral = false,
 	skip_frame         = false,
 	fix_scr_top        = 1,
 
@@ -1688,7 +1688,7 @@ rbff2.startplugin        = function()
 				local changed = p.state ~= data
 				p.on_block = data == 2 and now() or p.on_block                          -- ガードへの遷移フレームを記録
 				p.on_hit = data == 1 or data == 3 and now() or p.on_hit                 -- ヒットへの遷移フレームを記録
-				if p.state == 0 and p.on_hit and not p.act_normal then p.on_punish = now() + 10 end -- 確定反撃
+				if p.state == 0 and p.on_hit and not p.act_data.neutral then p.on_punish = now() + 10 end -- 確定反撃
 				p.random_boolean = changed and (math.random(255) % 2 == 0) or p.random_boolean
 				p.state, p.change_state = data, changed and now() or p.change_state     -- 今の状態と状態更新フレームを記録
 				if data == 2 then
@@ -1724,6 +1724,7 @@ rbff2.startplugin        = function()
 				-- 攻撃中のみ変化、判定チェック用2 0のときは何もしていない、 詠酒の間合いチェック用など
 				p.attackbits.harmless = data == 0
 				p.attack_data = data
+				p.on_update_attack  = now()
 				if data == 0 then return end
 				if p.attack ~= data then
 					p.clear_damages()
@@ -2639,12 +2640,12 @@ rbff2.startplugin        = function()
 		-- 繰り返し前の行動が完了するまで待つ
 		local p, op, p_ok = players[3 - recording.player], players[recording.player], true
 		if global.await_neutral == true then
-			p_ok = p.act_normal or (not p.act_normal and p.on_update_act == global.frame_number and recording.last_act ~= p.act)
+			p_ok = p.act_data.neutral or (not p.act_data.neutral and p.on_update_act == global.frame_number and recording.last_act ~= p.act)
 		end
 		if p_ok then
 			if recording.last_pos_y == 0 or (recording.last_pos_y > 0 and p.pos_y == 0) then
 				-- リプレイ側が通常状態まで待つ
-				if op.act_normal and op.state == 0 then
+				if op.act_data.neutral and op.state == 0 then
 					-- 状態変更
 					global.rec_main = rec_await_play
 					global.rec_force_start_play = true -- 一時的な強制初期化フラグをON
@@ -3124,11 +3125,21 @@ rbff2.startplugin        = function()
 	end
 
 	-- 技データのIDかフラグから技データを返す
+	local act_data_cache = {}
+	local resolve_act_neutral = function(p, act_data_type)
+		if ut.tstb(p.flag_c0, 0x3FFD723) or (p.attack_data | p.flag_c4 | p.flag_c8) ~= 0 or ut.tstb(p.flag_cc, 0xFFFFFF3F) or ut.tstb(p.flag_d0, db.flag_d0.hurt) then
+			return false
+		end
+		return true
+	end
 	local get_act_data = function(p)
 		if db.chars[p.char] and db.chars[p.char].acts[p.act] then
 			local act_data = db.chars[p.char].acts[p.act]
 			-- 技動作は滑りかBSかを付与する
 			act_data.name = p.sliding and act_data.slide_name or p.in_bs and act_data.bs_name or act_data.normal_name
+			if act_data.neutral == nil then
+				act_data.neutral = resolve_act_neutral(p) or ut.tstb(act_data.type, db.act_types.free | db.act_types.block)
+			end
 			return act_data
 		end
 		local name
@@ -3151,11 +3162,14 @@ rbff2.startplugin        = function()
 		else
 			name = string.format("%s %s %s", db.get_flag_name(p.flag_c0, db.flag_names_c0), p.act)
 		end
-		p.act_data_cache = p.act_data_cache or {}
-		local act_data = p.act_data_cache[name]
+		local p_cache = act_data_cache[p.char] or { n = {}, a = {} }
+		if not act_data_cache[p.char] then act_data_cache[p.char] = p_cache end
+		local act_data = p_cache.a[p.act] or p_cache.n[name]
 		if not act_data then
-			act_data = { bs_name = name, name = name, normal_name = name, slide_name = name, type = db.act_types.free, count = 1 }
-			p.act_data_cache[name] = act_data
+			act_data         = { bs_name = name, name = name, normal_name = name, slide_name = name, type = db.act_types.free, count = 1 }
+			act_data.neutral = resolve_act_neutral(p)
+			p_cache.n[name]  = act_data
+			p_cache.a[p.act] = act_data
 		end
 		return act_data
 	end
@@ -3190,7 +3204,7 @@ rbff2.startplugin        = function()
 
 		if global.lag_frame == true then return end -- ラグ発生時は処理をしないで戻る
 
-		global.old_all_act_normal, global.all_act_normal = global.all_act_normal, true
+		global.old_both_act_neutral, global.both_act_neutral = global.both_act_neutral, true
 		for _, p in pairs(all_objects) do p.old_copy() end
 
 		-- 1Pと2Pの状態読取
@@ -3280,18 +3294,14 @@ rbff2.startplugin        = function()
 			p.act_data     = get_act_data(p)
 
 			-- ガード移行可否
-			p.act_normal = true
-			if ut.tstb(p.flag_c0, 0x3FFD723) or (p.attack_data | p.flag_c4 | p.flag_c8) ~= 0 or ut.tstb(p.flag_cc, 0xFFFFFF3F) or
-				not ut.tstb(p.act_data.type, db.act_types.free | db.act_types.block) then
-				global.all_act_normal, p.act_normal = false, false
-			end
+			global.both_act_neutral = p.act_data.neutral and global.both_act_neutral
 			if i == 2 then
 				local p1, p2 = p.op, p
-				if p1.act_normal == p2.act_normal then
+				if p1.act_data.neutral == p2.act_data.neutral then
 					p1.frame_gap, p2.frame_gap = 0, 0
-				elseif not p1.act_normal then
+				elseif not p1.act_data.neutral then
 					p1.frame_gap, p2.frame_gap = p1.frame_gap - 1, p2.frame_gap + 1
-				else --if not p2.act_normal then
+				elseif not p2.act_data.neutral then
 					p1.frame_gap, p2.frame_gap = p1.frame_gap + 1, p2.frame_gap - 1
 				end
 			end
@@ -3303,7 +3313,7 @@ rbff2.startplugin        = function()
 			p.attackbits.off_fireball = false
 			for _, fb in pairs(p.fireballs) do
 				if fb.proc_active then
-					global.all_act_normal = false
+					global.both_act_neutral = false
 					fb.skip_frame = p.skip_frame -- 親オブジェクトの停止フレームを反映
 					p.attackbits.pre_fireball = p.attackbits.pre_fireball or fb.on_prefb == global.frame_number
 					p.attackbits.on_fireball = p.attackbits.on_fireball or fb.on_fireball == global.frame_number
@@ -3313,10 +3323,15 @@ rbff2.startplugin        = function()
 				end
 			end
 
-			p.update_act = (p.spid > 0 and p.on_update_spid == global.frame_number) or (p.spid == 0 and p.on_update_act == global.frame_number and (p.attack == 0 or p.on_update_attack == global.frame_number))
-			if p.update_act and ut.tstb(p.old.flag_cc, db.flag_cc.blocking) and ut.tstb(p.flag_cc, db.flag_cc.blocking) then
-				p.update_act = false
+			p.update_act = false
+			if p.spid > 0 and p.on_update_spid == global.frame_number then
+				p.update_act = true
+			elseif p.spid == 0 and p.on_update_act == global.frame_number then
+				if p.attack_data == 0 then p.update_act = true elseif p.on_update_attack == global.frame_number then p.update_act = true end
+			elseif p.act_data.neutral ~= p.old.act_data.neutral and p.on_update_act == global.frame_number then
+				p.update_act = true
 			end
+			if p.update_act and ut.tstb(p.old.flag_cc, db.flag_cc.blocking) and ut.tstb(p.flag_cc, db.flag_cc.blocking) then p.update_act = false end
 			p.move_count = p.update_act and 1 or (p.move_count + 1)
 		end
 
@@ -3546,6 +3561,100 @@ rbff2.startplugin        = function()
 		table.sort(hitboxies, hitboxies_order)
 		table.sort(ranges, ranges_order)
 
+		for i, p in ipairs(players) do
+			local p1, op, col1, col2, col3, label = i == 1, p.op, {}, {}, {}, {}
+			for _, xp in ipairs(p.objects) do
+				if xp.proc_active then
+					table.insert(label, string.format("Damage %3s/%1s  Stun %2s/%2s Fra.", xp.damage or 0, xp.chip or 0, xp.stun or 0, xp.stun_timer or 0))
+					table.insert(label, string.format("HitStop %2s/%2s HitStun %2s/%2s", xp.hitstop or 0, xp.blockstop or 0, xp.hitstun or 0, xp.blockstun or 0))
+					table.insert(label, string.format("%2s", db.hit_effects.name(xp.effect)))
+					local grabl = ""
+					for _, t in ipairs(hitbox_grab_types) do grabl = grabl .. (ut.tstb(xp.grabbable, t.value, true) and t.label or "- ") end
+					table.insert(label, string.format("Grab %-s", grabl))
+					if xp.is_fireball then
+						table.insert(label, string.format("%s/%s Hit  Fireball-Lv. %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.fireball_rank or 0))
+					else
+						local kagenui_names = { "-", "Weak", "Strong" }
+						table.insert(label, string.format("Pow. %2s/%2s/%2s Rev.%2s Abs.%2s",
+							p.pow_up_direct == 0 and p.pow_up or p.pow_up_direct or 0, p.pow_up_hit or 0, p.pow_up_block or 0, p.pow_revenge or 0, p.pow_absorb or 0))
+						table.insert(label, string.format("Inv.%2s  BS-Pow.%2s BS-Inv.%2s", xp.sp_invincible or 0, xp.bs_pow or 0, xp.bs_invincible or 0))
+						table.insert(label, string.format("%s/%s Hit  Esaka %s %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.esaka or 0, p.esaka_type or ""))
+						table.insert(label, string.format("Kagenui %s", kagenui_names[p.kagenui_type]))
+						table.insert(label, string.format("Cancel %-2s/%-2s Teching %s", xp.repeatable and "Ch" or "", xp.cancelable and "Sp" or "",
+							xp.forced_down or xp.in_bs and "Can't" or "Can"))
+						table.insert(label, string.format(" %-8s/%-8s", p.sliding and "Slide" or "", p.inertial and "Inertial" or ""))
+					end
+					if p.hurt then
+						table.insert(label, string.format("Hurt Top %3s Bottom %3s", p.hurt.max_top, p.hurt.min_bottom))
+						table.insert(label, string.format(" Dodge %-s", db.get_dodge_name(p.hurt.dodge)))
+					end
+					for _, box, blockables in ifind_all(xp.hitboxies, function(box) return box.blockables end) do
+						table.insert(label, string.format("Hit Top %3s Bottom %3s", box.real_top, box.real_bottom))
+						table.insert(label, string.format(" Main %-5s  Sway %-5s", db.top_type_name(blockables.main), db.top_type_name(blockables.sway)))
+						table.insert(label, string.format(" Punish %-9s", db.get_punish_name(blockables.punish)))
+					end
+				end
+			end
+			local last_damage_scaling = 100.00
+			if op.last_damage_scaling1 and op.last_damage_scaling2 then
+				last_damage_scaling = (op.last_damage_scaling1 * op.last_damage_scaling2) * 100
+			end
+			if op.combo_update == global.frame_number then
+				local stun, timer                       = math.max(op.stun - op.combo_start_stun), math.max(op.stun_timer - op.combo_start_stun_timer, 0)
+				op.combo_stun, op.last_stun             = stun, math.max(stun - op.combo_stun, 0)
+				op.combo_stun_timer, op.last_stun_timer = timer, math.max(timer - op.combo_stun_timer, 0)
+				op.max_combo                            = math.max(op.max_combo or 0, op.last_combo)
+				op.max_combo_pow                        = math.max(op.max_combo_pow or 0, op.combo_pow)
+				op.max_combo_stun                       = math.max(op.max_combo_stun or 0, op.combo_stun)
+				op.max_combo_stun_timer                 = math.max(op.max_combo_stun_timer or 0, op.combo_stun_timer)
+			end
+			table.insert(col2, string.format("%3d>%3d(%.3f%%)", op.last_damage, op.last_damage_scaled, last_damage_scaling))
+			table.insert(col2, string.format("%3d(%4s)", op.combo_damage or 0, string.format("+%d", op.last_damage_scaled)))
+			table.insert(col2, string.format("%3d", op.last_combo))
+			table.insert(col2, string.format("%3d(%4s)", op.combo_stun or 0, string.format("+%d", op.last_stun or 0)))
+			table.insert(col2, string.format("%3d(%4s)", op.combo_stun_timer or 0, string.format("+%d", op.last_stun_timer or 0)))
+			table.insert(col2, string.format("%3d(%4s)", op.combo_pow or 0, string.format("+%d", p.last_pow_up or 0)))
+			table.insert(col3, "")
+			table.insert(col3, string.format("%3d", op.max_combo_damage or 0))
+			table.insert(col3, string.format("%3d", op.max_combo or 0))
+			table.insert(col3, string.format("%3d", op.max_combo_stun or 0))
+			table.insert(col3, string.format("%3d", op.max_combo_stun_timer or 0))
+			table.insert(col3, string.format("%3d", op.max_combo_pow or 0))
+			if p.disp_damage then
+				ut.table_add_all(col1, { -- コンボ表示
+					"Scaling",
+					"Damage",
+					"Combo",
+					"Stun",
+					"Timer",
+					"Power",
+				})
+			end
+			p.state_line1, p.combo_col1, p.combo_col2, p.combo_col3 = label, col1, col2, col3
+		end
+
+		for _, p in ipairs(players) do
+			local label1, label2 = {}, {}
+			table.insert(label1, string.format("%s %02d %03d %03d",
+				p.state, p.throwing and p.throwing.threshold or 0, p.throwing and p.throwing.timer or 0, p.throw_timer or 0))
+			local diff_pos_y = p.pos_y + p.pos_frc_y - (p.old.pos_y and (p.old.pos_y + p.old.pos_frc_y) or 0)
+			table.insert(label1, string.format("%0.03f %0.03f", diff_pos_y, p.pos_y + p.pos_frc_y))
+			table.insert(label1, string.format("%02x %02x %02x", p.spid or 0, p.attack or 0, p.attack_id or 0))
+			table.insert(label1, string.format("%03x %02x %02x %s %s", p.act, p.act_count, p.act_frame, p.update_act and "U" or "K", p.act_data.neutral and "N" or "A"))
+			table.insert(label1, string.format("%02x %02x %02x", p.hurt_state, p.sway_status, p.additional))
+			local c0, c4 = string.format("%08X", p.flag_c0 or 0), string.format("%08X", p.flag_c4 or 0)
+			local c8, cc = string.format("%08X", p.flag_c8 or 0), string.format("%08X", p.flag_cc or 0)
+			local d0, _7e = string.format("%02X", p.flag_d0 or 0), string.format("%02X", p.flag_7e or 0)
+			table.insert(label2, string.format("C0 %-32s %s %-s", ut.hextobitstr(c0, " "), c0, db.get_flag_name(p.flag_c0, db.flag_names_c0)))
+			table.insert(label2, string.format("C4 %-32s %s %-s", ut.hextobitstr(c4, " "), c4, db.get_flag_name(p.flag_c4, db.flag_names_c4)))
+			table.insert(label2, string.format("C8 %-32s %s %-s", ut.hextobitstr(c8, " "), c8, db.get_flag_name(p.flag_c8, db.flag_names_c8)))
+			table.insert(label2, string.format("CC %-32s %s %-s", ut.hextobitstr(cc, " "), cc, db.get_flag_name(p.flag_cc, db.flag_names_cc)))
+			table.insert(label2, string.format("D0 %-8s %s %-s", ut.hextobitstr(d0, " "), d0, db.get_flag_name(p.flag_d0, db.flag_names_d0)))
+			table.insert(label2, string.format("7E %-8s %s %-s", ut.hextobitstr(_7e, " "), _7e, db.get_flag_name(p.flag_7e, db.flag_names_7e)))
+			table.insert(label2, string.format("%3s %3s", p.knockback1, p.knockback2))
+			p.state_line2, p.state_line3 = label1, label2
+		end
+
 		--[[
 		-- フレーム表示などの前処理1
 		for _, p in ipairs(players) do
@@ -3611,9 +3720,9 @@ rbff2.startplugin        = function()
 
 		for _, p in pairs(all_objects) do
 			-- キャラ、弾ともに通常動作状態ならリセットする
-			if not global.all_act_normal and global.old_all_act_normal then p.clear_frame_data() end
+			if not global.both_act_neutral and global.old_both_act_neutral then p.clear_frame_data() end
 			-- 全キャラ特別な動作でない場合はフレーム記録しない
-			if (global.disp_normal_frames == 1 or not global.all_act_normal) and not p.is_fireball then proc_frame(p) end
+			if (global.disp_normal_frames == 1 or not global.both_act_neutral) and not p.is_fireball then proc_frame(p) end
 		end
 		fix_max_framecount() --1Pと2Pともにフレーム数が多すぎる場合は加算をやめる
 
@@ -3992,9 +4101,9 @@ rbff2.startplugin        = function()
 			for _, box in ipairs(hitboxies) do draw_hitbox(box) end -- 各種判定
 
 			-- スクショ保存
-			for _, p in ipairs(players) do
+			for _, p in ifind_all(players, function(p) return p.act_data end) do
 				local chg_y = p.attackbits.on_air or p.attackbits.on_ground
-				local chg_act = p.old.act_normal ~= p.act_normal
+				local chg_act = p.old.act_data.neutral ~= p.act_data.neutral
 				local chg_hit = p.chg_hitbox_frm == global.frame_number
 				local chg_hurt = p.chg_hurtbox_frm == global.frame_number
 				local chg_sway = p.on_sway_line == global.frame_number or p.on_main_line == global.frame_number
@@ -4002,7 +4111,7 @@ rbff2.startplugin        = function()
 					if fb.chg_hitbox_frm == global.frame_number then chg_hit = true end
 					if fb.chg_hurtbox_frm == global.frame_number then chg_hurt = true end
 				end
-				local chg_hitbox = p.act_normal ~= true and (p.update_act or chg_act or chg_y or chg_hit or chg_hurt or chg_sway)
+				local chg_hitbox = p.act_data.neutral ~= true and (p.update_act or chg_act or chg_y or chg_hit or chg_hurt or chg_sway)
 
 				-- 判定が変わったらポーズさせる
 				if chg_hitbox and global.pause_hitbox == 4 then global.pause = true end
@@ -4055,108 +4164,23 @@ rbff2.startplugin        = function()
 
 			-- ダメージとコンボ表示
 			for i, p in ipairs(players) do
-				local p1, op, col1, col2, col3, label = i == 1, p.op, {}, {}, {}, {}
-				for _, xp in ipairs(p.objects) do
-					if xp.proc_active then
-						table.insert(label, string.format("Damage %3s/%1s  Stun %2s/%2s Fra.", xp.damage or 0, xp.chip or 0, xp.stun or 0, xp.stun_timer or 0))
-						table.insert(label, string.format("HitStop %2s/%2s HitStun %2s/%2s", xp.hitstop or 0, xp.blockstop or 0, xp.hitstun or 0, xp.blockstun or 0))
-						table.insert(label, string.format("%2s", db.hit_effects.name(xp.effect)))
-						local grabl = ""
-						for _, t in ipairs(hitbox_grab_types) do grabl = grabl .. (ut.tstb(xp.grabbable, t.value, true) and t.label or "- ") end
-						table.insert(label, string.format("Grab %-s", grabl))
-						if xp.is_fireball then
-							table.insert(label, string.format("%s/%s Hit  Fireball-Lv. %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.fireball_rank or 0))
-						else
-							local kagenui_names = { "-", "Weak", "Strong" }
-							table.insert(label, string.format("Pow. %2s/%2s/%2s Rev.%2s Abs.%2s",
-								p.pow_up_direct == 0 and p.pow_up or p.pow_up_direct or 0, p.pow_up_hit or 0, p.pow_up_block or 0, p.pow_revenge or 0, p.pow_absorb or 0))
-							table.insert(label, string.format("Inv.%2s  BS-Pow.%2s BS-Inv.%2s", xp.sp_invincible or 0, xp.bs_pow or 0, xp.bs_invincible or 0))
-							table.insert(label, string.format("%s/%s Hit  Esaka %s %s", xp.max_hit_nm or 0, xp.max_hit_dn or 0, xp.esaka or 0, p.esaka_type or ""))
-							table.insert(label, string.format("Kagenui %s", kagenui_names[p.kagenui_type]))
-							table.insert(label, string.format("Cancel %-2s/%-2s Teching %s", xp.repeatable and "Ch" or "", xp.cancelable and "Sp" or "",
-								xp.forced_down or xp.in_bs and "Can't" or "Can"))
-							table.insert(label, string.format(" %-8s/%-8s", p.sliding and "Slide" or "", p.inertial and "Inertial" or ""))
-						end
-						if p.hurt then
-							table.insert(label, string.format("Hurt Top %3s Bottom %3s", p.hurt.max_top, p.hurt.min_bottom))
-							table.insert(label, string.format(" Dodge %-s", db.get_dodge_name(p.hurt.dodge)))
-						end
-						for _, box, blockables in ifind_all(xp.hitboxies, function(box) return box.blockables end) do
-							table.insert(label, string.format("Hit Top %3s Bottom %3s", box.real_top, box.real_bottom))
-							table.insert(label, string.format(" Main %-5s  Sway %-5s", db.top_type_name(blockables.main), db.top_type_name(blockables.sway)))
-							table.insert(label, string.format(" Punish %-9s", db.get_punish_name(blockables.punish)))
-						end
-					end
-				end
-				local last_damage_scaling = 100.00
-				if op.last_damage_scaling1 and op.last_damage_scaling2 then
-					last_damage_scaling = (op.last_damage_scaling1 * op.last_damage_scaling2) * 100
-				end
-				if op.combo_update == global.frame_number then
-					local stun, timer                       = math.max(op.stun - op.combo_start_stun), math.max(op.stun_timer - op.combo_start_stun_timer, 0)
-					op.combo_stun, op.last_stun             = stun, math.max(stun - op.combo_stun, 0)
-					op.combo_stun_timer, op.last_stun_timer = timer, math.max(timer - op.combo_stun_timer, 0)
-					op.max_combo                            = math.max(op.max_combo or 0, op.last_combo)
-					op.max_combo_pow                        = math.max(op.max_combo_pow or 0, op.combo_pow)
-					op.max_combo_stun                       = math.max(op.max_combo_stun or 0, op.combo_stun)
-					op.max_combo_stun_timer                 = math.max(op.max_combo_stun_timer or 0, op.combo_stun_timer)
-				end
-				table.insert(col2, string.format("%3d>%3d(%.3f%%)", op.last_damage, op.last_damage_scaled, last_damage_scaling))
-				table.insert(col2, string.format("%3d(%4s)", op.combo_damage or 0, string.format("+%d", op.last_damage_scaled)))
-				table.insert(col2, string.format("%3d", op.last_combo))
-				table.insert(col2, string.format("%3d(%4s)", op.combo_stun or 0, string.format("+%d", op.last_stun or 0)))
-				table.insert(col2, string.format("%3d(%4s)", op.combo_stun_timer or 0, string.format("+%d", op.last_stun_timer or 0)))
-				table.insert(col2, string.format("%3d(%4s)", op.combo_pow or 0, string.format("+%d", p.last_pow_up or 0)))
-				table.insert(col3, "")
-				table.insert(col3, string.format("%3d", op.max_combo_damage or 0))
-				table.insert(col3, string.format("%3d", op.max_combo or 0))
-				table.insert(col3, string.format("%3d", op.max_combo_stun or 0))
-				table.insert(col3, string.format("%3d", op.max_combo_stun_timer or 0))
-				table.insert(col3, string.format("%3d", op.max_combo_pow or 0))
-				if p.disp_damage then
-					ut.table_add_all(col1, { -- コンボ表示
-						"Scaling",
-						"Damage",
-						"Combo",
-						"Stun",
-						"Timer",
-						"Power",
-					})
-				end
-				if p.disp_state == 2 or p.disp_state == 4 then ut.table_add_all(col1, label) end
+				local p1, col1 = i == 1, p.combo_col1 or {}
+				if p.disp_state == 2 or p.disp_state == 4 then ut.table_add_all(col1, p.state_line1) end
 				if #col1 > 0 then
 					local box_bottom = get_line_height(#col1)
 					scr:draw_box(p1 and 224 or 0, 40, p1 and 320 or 96, 40 + box_bottom, 0x80404040, 0x80404040) -- 四角枠
 					scr:draw_text(p1 and 224 + 4 or 4, 40, table.concat(col1, "\n"))
 					if p.disp_damage then
-						scr:draw_text(p1 and 224 + 36 or 36, 40, table.concat(col2, "\n"))
-						scr:draw_text(p1 and 224 + 68 or 68, 40, table.concat(col3, "\n"))
+						scr:draw_text(p1 and 224 + 36 or 36, 40, table.concat(p.combo_col2, "\n"))
+						scr:draw_text(p1 and 224 + 68 or 68, 40, table.concat(p.combo_col3, "\n"))
 					end
 				end
 
 				-- 状態 小表示
 				if p.disp_state == 2 or p.disp_state == 3 then
-					local label1, label2 = {}, {}
-					table.insert(label1, string.format("%s %02d %03d %03d",
-						p.state, p.throwing and p.throwing.threshold or 0, p.throwing and p.throwing.timer or 0, p.throw_timer or 0))
-					local diff_pos_y = p.pos_y + p.pos_frc_y - (p.old.pos_y and (p.old.pos_y + p.old.pos_frc_y) or 0)
-					table.insert(label1, string.format("%0.03f %0.03f", diff_pos_y, p.pos_y + p.pos_frc_y))
-					table.insert(label1, string.format("%02x %02x %02x", p.spid or 0, p.attack or 0, p.attack_id or 0))
-					table.insert(label1, string.format("%03x %02x %02x", p.act, p.act_count, p.act_frame))
-					table.insert(label1, string.format("%02x %02x %02x", p.hurt_state, p.sway_status, p.additional))
-					local box_bottom = get_line_height(#label1)
-					scr:draw_box(p1 and 0 or 277, 0, p1 and 40 or 316, box_bottom, 0x80404040, 0x80404040)
+					local label1, label2 = p.state_line2 or {}, p.state_line3 or {}
+					scr:draw_box(p1 and 0 or 277, 0, p1 and 40 or 316, get_line_height(#label1), 0x80404040, 0x80404040)
 					scr:draw_text(p1 and 4 or 278, 0, table.concat(label1, "\n"))
-					local c0, c4 = string.format("%08X", p.flag_c0 or 0), string.format("%08X", p.flag_c4 or 0)
-					local c8, cc = string.format("%08X", p.flag_c8 or 0), string.format("%08X", p.flag_cc or 0)
-					local d0, _7e = string.format("%02X", p.flag_d0 or 0), string.format("%02X", p.flag_7e or 0)
-					table.insert(label2, string.format("C0 %-32s %s %-s", ut.hextobitstr(c0, " "), c0, db.get_flag_name(p.flag_c0, db.flag_names_c0)))
-					table.insert(label2, string.format("C4 %-32s %s %-s", ut.hextobitstr(c4, " "), c4, db.get_flag_name(p.flag_c4, db.flag_names_c4)))
-					table.insert(label2, string.format("C8 %-32s %s %-s", ut.hextobitstr(c8, " "), c8, db.get_flag_name(p.flag_c8, db.flag_names_c8)))
-					table.insert(label2, string.format("CC %-32s %s %-s", ut.hextobitstr(cc, " "), cc, db.get_flag_name(p.flag_cc, db.flag_names_cc)))
-					table.insert(label2, string.format("D0 %-8s %s %-s", ut.hextobitstr(d0, " "), d0, db.get_flag_name(p.flag_d0, db.flag_names_d0)))
-					table.insert(label2, string.format("7E %-8s %s %-s", ut.hextobitstr(_7e, " "), _7e, db.get_flag_name(p.flag_7e, db.flag_names_7e)))
-					table.insert(label2, string.format("%3s %3s", p.knockback1, p.knockback2))
 					scr:draw_text(40, 50 + get_line_height(p1 and 0 or (#label2 + 0.5)), table.concat(label2, "\n"))
 				end
 

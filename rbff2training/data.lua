@@ -201,7 +201,8 @@ frame_attack_types.simple_mask        = ut.hex_clear(0xFFFFFFFFFFFFFFFF,
 	frame_attack_types.mask_attack |
 	frame_attack_types.mask_act |
 	frame_attack_types.mask_hitbox |
-	frame_attack_types.mask_fireball)
+	frame_attack_types.mask_fireball |
+	frame_attack_types.mask_frame_advance)
 frame_attack_types.hitbox_type_mask        =
 	frame_attack_types.attacking |
 	frame_attack_types.fake |
