@@ -2817,7 +2817,7 @@ rbff2.startplugin        = function()
 		if main_frame and (frame_group[1].col + frame_group[1].line) > 0 then
 			draw_text_with_shadow(xmin + 12, txty + y, frame_group[1].name, 0xFFC0C0C0) -- 名称を描画
 		end
-		local frame_txts = {}
+		local frame_txts, dodge = {}, ""
 		for k = #frame_group, 1, -1 do
 			local frame = frame_group[k]
 			local x2 = x1 - frame.count
@@ -2827,9 +2827,10 @@ rbff2.startplugin        = function()
 				x2 = xmin
 			end
 			if ((frame.col or 0) + (frame.line or 0)) > 0 then
-				local evx = math.min(x1, x2)
+				local evx, deco_txt = math.min(x1, x2), ""
 				for _, deco in ifind(decos, function(deco) return ut.tstb(frame.attackbit, deco.type) and deco or nil end) do
-					scr:draw_text(evx + get_string_width(deco.txt) * deco.fix, txty + y - 6, deco.txt)
+					deco_txt = deco.txt
+					scr:draw_text(evx + get_string_width(deco_txt) * deco.fix, txty + y - 6, deco_txt)
 					scr:draw_line(x2, y, x2, y + height)
 				end
 				scr:draw_box(x1, y, x2, y + height, frame.line, frame.col)
@@ -2850,10 +2851,8 @@ rbff2.startplugin        = function()
 				local font_col = frame.font_col or 0xFFFFFFFF
 				if font_col > 0 then draw_text_with_shadow(txtx, txty + y, count_txt, font_col) end
 
-				--[[ TODO きれいなテキスト化
-				dodge = ""
-				table.insert(frame_txts, 1, string.format("%s%s%s", deco1 or deco2 or "", count_txt, dodge))
-				]]
+				-- TODO きれいなテキスト化
+				--table.insert(frame_txts, 1, string.format("%s%s%s", deco_txt, count_txt, dodge))
 			end
 			if x2 <= xmin then break end
 			x1 = x2
@@ -3642,25 +3641,27 @@ rbff2.startplugin        = function()
 		end
 
 		for _, p in ipairs(players) do
-			local label1, label2 = {}, {}
-			table.insert(label1, string.format("%s %02d %03d %03d",
-				p.state, p.throwing and p.throwing.threshold or 0, p.throwing and p.throwing.timer or 0, p.throw_timer or 0))
-			local diff_pos_y = p.pos_y + p.pos_frc_y - (p.old.pos_y and (p.old.pos_y + p.old.pos_frc_y) or 0)
-			table.insert(label1, string.format("%0.03f %0.03f", diff_pos_y, p.pos_y + p.pos_frc_y))
-			table.insert(label1, string.format("%02x %02x %02x", p.spid or 0, p.attack or 0, p.attack_id or 0))
-			table.insert(label1, string.format("%03x %02x %02x %s %s", p.act, p.act_count, p.act_frame, p.update_act and "U" or "K", p.act_data.neutral and "N" or "A"))
-			table.insert(label1, string.format("%02x %02x %02x", p.hurt_state, p.sway_status, p.additional))
-			local c0, c4 = string.format("%08X", p.flag_c0 or 0), string.format("%08X", p.flag_c4 or 0)
-			local c8, cc = string.format("%08X", p.flag_c8 or 0), string.format("%08X", p.flag_cc or 0)
-			local d0, _7e = string.format("%02X", p.flag_d0 or 0), string.format("%02X", p.flag_7e or 0)
-			table.insert(label2, string.format("C0 %-32s %s %-s", ut.hextobitstr(c0, " "), c0, db.get_flag_name(p.flag_c0, db.flag_names_c0)))
-			table.insert(label2, string.format("C4 %-32s %s %-s", ut.hextobitstr(c4, " "), c4, db.get_flag_name(p.flag_c4, db.flag_names_c4)))
-			table.insert(label2, string.format("C8 %-32s %s %-s", ut.hextobitstr(c8, " "), c8, db.get_flag_name(p.flag_c8, db.flag_names_c8)))
-			table.insert(label2, string.format("CC %-32s %s %-s", ut.hextobitstr(cc, " "), cc, db.get_flag_name(p.flag_cc, db.flag_names_cc)))
-			table.insert(label2, string.format("D0 %-8s %s %-s", ut.hextobitstr(d0, " "), d0, db.get_flag_name(p.flag_d0, db.flag_names_d0)))
-			table.insert(label2, string.format("7E %-8s %s %-s", ut.hextobitstr(_7e, " "), _7e, db.get_flag_name(p.flag_7e, db.flag_names_7e)))
-			table.insert(label2, string.format("%3s %3s", p.knockback1, p.knockback2))
-			p.state_line2, p.state_line3 = label1, label2
+			if p.disp_state == 2 or p.disp_state == 5 then
+				local label1, label2 = {}, {}
+				table.insert(label1, string.format("%s %02d %03d %03d",
+					p.state, p.throwing and p.throwing.threshold or 0, p.throwing and p.throwing.timer or 0, p.throw_timer or 0))
+				local diff_pos_y = p.pos_y + p.pos_frc_y - (p.old.pos_y and (p.old.pos_y + p.old.pos_frc_y) or 0)
+				table.insert(label1, string.format("%0.03f %0.03f", diff_pos_y, p.pos_y + p.pos_frc_y))
+				table.insert(label1, string.format("%02x %02x %02x", p.spid or 0, p.attack or 0, p.attack_id or 0))
+				table.insert(label1, string.format("%03x %02x %02x %s %s", p.act, p.act_count, p.act_frame, p.update_act and "U" or "K", p.act_data.neutral and "N" or "A"))
+				table.insert(label1, string.format("%02x %02x %02x", p.hurt_state, p.sway_status, p.additional))
+				local c0, c4 = string.format("%08X", p.flag_c0 or 0), string.format("%08X", p.flag_c4 or 0)
+				local c8, cc = string.format("%08X", p.flag_c8 or 0), string.format("%08X", p.flag_cc or 0)
+				local d0, _7e = string.format("%02X", p.flag_d0 or 0), string.format("%02X", p.flag_7e or 0)
+				table.insert(label2, string.format("C0 %-32s %s %-s", ut.hextobitstr(c0, " "), c0, db.get_flag_name(p.flag_c0, db.flag_names_c0)))
+				table.insert(label2, string.format("C4 %-32s %s %-s", ut.hextobitstr(c4, " "), c4, db.get_flag_name(p.flag_c4, db.flag_names_c4)))
+				table.insert(label2, string.format("C8 %-32s %s %-s", ut.hextobitstr(c8, " "), c8, db.get_flag_name(p.flag_c8, db.flag_names_c8)))
+				table.insert(label2, string.format("CC %-32s %s %-s", ut.hextobitstr(cc, " "), cc, db.get_flag_name(p.flag_cc, db.flag_names_cc)))
+				table.insert(label2, string.format("D0 %-8s %s %-s", ut.hextobitstr(d0, " "), d0, db.get_flag_name(p.flag_d0, db.flag_names_d0)))
+				table.insert(label2, string.format("7E %-8s %s %-s", ut.hextobitstr(_7e, " "), _7e, db.get_flag_name(p.flag_7e, db.flag_names_7e)))
+				table.insert(label2, string.format("%3s %3s", p.knockback1, p.knockback2))
+				p.state_line2, p.state_line3 = label1, label2
+			end
 		end
 
 		--[[
@@ -5114,8 +5115,8 @@ rbff2.startplugin        = function()
 			{ "2P フレーム数表示", { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
 			{ "1P 弾フレーム数表示", menu.labels.off_on, },
 			{ "2P 弾フレーム数表示", menu.labels.off_on, },
-			{ "1P 状態表示", { "OFF", "ON", "ON:小表示", "ON:大表示" }, },
-			{ "2P 状態表示", { "OFF", "ON", "ON:小表示", "ON:大表示" }, },
+			{ "1P 状態表示", { "OFF", "ON", "ON:小表示", "ON:大表示", "ON:フラグ表示" }, },
+			{ "2P 状態表示", { "OFF", "ON", "ON:小表示", "ON:大表示", "ON:フラグ表示" }, },
 			{ "1P 処理アドレス表示", { "OFF", "本体", "弾1", "弾2", "弾3", }, },
 			{ "2P 処理アドレス表示", { "OFF", "本体", "弾1", "弾2", "弾3", }, },
 			{ "1P 2P 距離表示", menu.labels.off_on, },
