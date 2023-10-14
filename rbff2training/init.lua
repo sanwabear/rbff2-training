@@ -3289,7 +3289,7 @@ rbff2.startplugin        = function()
 			p.old.act_data = p.act_data or get_act_data(p.old)
 			p.act_data     = get_act_data(p)
 
-			-- ガード移行可否
+			-- ガード移行可否と有利不利フレームの加減
 			global.both_act_neutral = p.act_data.neutral and global.both_act_neutral
 			if i == 2 then
 				local p1, p2, last = p.op, p, false
@@ -3324,15 +3324,17 @@ rbff2.startplugin        = function()
 				end
 			end
 
+			-- フレーム表示の切替良否
 			p.update_act = false
-			if p.spid > 0 and p.on_update_spid == global.frame_number then
-				p.update_act = true
-			elseif p.spid == 0 and p.on_update_act == global.frame_number then
-				if p.attack_data == 0 then p.update_act = true elseif p.on_update_attack == global.frame_number then p.update_act = true end
-			elseif p.act_data.neutral ~= p.old.act_data.neutral and p.on_update_act == global.frame_number then
-				p.update_act = true
+			if not ut.tstb(p.old.flag_cc, db.flag_cc.blocking | db.flag_cc.hitstun) then
+				if p.spid > 0 and p.on_update_spid == global.frame_number then
+					p.update_act = true
+				elseif p.spid == 0 and p.on_update_act == global.frame_number then
+					if p.attack_data == 0 then p.update_act = true elseif p.on_update_attack == global.frame_number then p.update_act = true end
+				elseif p.act_data.neutral ~= p.old.act_data.neutral and p.on_update_act == global.frame_number then
+					p.update_act = true
+				end
 			end
-			if p.update_act and ut.tstb(p.old.flag_cc, db.flag_cc.blocking) and ut.tstb(p.flag_cc, db.flag_cc.blocking) then p.update_act = false end
 			p.move_count = p.update_act and 1 or (p.move_count + 1)
 		end
 
