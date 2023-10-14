@@ -2802,6 +2802,14 @@ rbff2.startplugin        = function()
 	end
 
 	-- グラフでフレームデータを末尾から描画
+	local decos = {
+		{ type = frame_attack_types.post_fireball, txt = "◇", fix = -0.4 },
+		{ type = frame_attack_types.pre_fireball, txt = "◆", fix = -0.4 },
+		{ type = frame_attack_types.off_fireball, txt = "○", fix = -0.35 },
+		{ type = frame_attack_types.on_fireball, txt = "●", fix = -0.35 },
+		{ type = frame_attack_types.on_air, txt = "▴", fix = -0.5 },
+		{ type = frame_attack_types.on_ground, txt = "▾", fix = -0.5 },
+	}
 	local dodraw = function(y, txty, frame_group, main_frame, height, xmin, xmax)
 		if #frame_group == 0 then return end
 		local x1 = frame_group[#frame_group].last_total + frame_group[#frame_group].count + xmin
@@ -2818,23 +2826,10 @@ rbff2.startplugin        = function()
 			elseif x2 < xmin then
 				x2 = xmin
 			end
-
 			if ((frame.col or 0) + (frame.line or 0)) > 0 then
-				local evx, deco1, deco2, deco3, dodge = math.min(x1, x2), nil, nil, nil, ""
-				if ut.tstb(frame.attackbit, frame_attack_types.off_fireball) then deco1 = "○" end
-				if ut.tstb(frame.attackbit, frame_attack_types.post_fireball) then deco2 = "◇" end
-				if ut.tstb(frame.attackbit, frame_attack_types.pre_fireball) then deco2 = "◆" end
-				if ut.tstb(frame.attackbit, frame_attack_types.on_fireball) then deco1 = "●" end
-				if ut.tstb(frame.attackbit, frame_attack_types.on_air) then deco3 = "▴" end
-				if ut.tstb(frame.attackbit, frame_attack_types.on_ground) then deco3 = "▾" end
-				if deco2 then
-					scr:draw_text(evx - get_string_width(deco2) * 0.35, txty + y - 6, deco2)
-					scr:draw_line(x2, y, x2, y + height)
-				elseif deco1 then
-					scr:draw_text(evx - get_string_width(deco1) * 0.4, txty + y - 6, deco1)
-					scr:draw_line(x2, y, x2, y + height)
-				elseif deco3 then
-					scr:draw_text(evx - get_string_width(deco3) * 0.5, txty + y - 4.5, deco3)
+				local evx = math.min(x1, x2)
+				for _, deco in ifind(decos, function(deco) return ut.tstb(frame.attackbit, deco.type) and deco or nil end) do
+					scr:draw_text(evx + get_string_width(deco.txt) * deco.fix, txty + y - 6, deco.txt)
 					scr:draw_line(x2, y, x2, y + height)
 				end
 				scr:draw_box(x1, y, x2, y + height, frame.line, frame.col)
