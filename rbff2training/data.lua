@@ -172,6 +172,8 @@ local frame_attack_types              = {
 	fb_effect     = 31,  -- effect 弾の動作区切り用
 	attack        = 39,  -- attack
 	act           = 47,  -- act
+
+	op_cancelable = 2 ^ 1, -- 0x 2 0000 0010 やられ中で相手キャンセル可能
 }
 frame_attack_types.mask_multihit      = (0xFF << frame_attack_types.act_count) | (0xFF << frame_attack_types.fb_effect)
 frame_attack_types.mask_attack        = 0xFF << frame_attack_types.attack
@@ -201,8 +203,7 @@ frame_attack_types.simple_mask        = ut.hex_clear(0xFFFFFFFFFFFFFFFF,
 	frame_attack_types.mask_attack |
 	frame_attack_types.mask_act |
 	frame_attack_types.mask_hitbox |
-	frame_attack_types.mask_fireball |
-	frame_attack_types.mask_frame_advance)
+	frame_attack_types.mask_fireball)
 frame_attack_types.hitbox_type_mask        =
 	frame_attack_types.attacking |
 	frame_attack_types.fake |

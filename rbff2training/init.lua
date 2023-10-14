@@ -2962,7 +2962,7 @@ rbff2.startplugin        = function()
 
 	local proc_frame = function(p)
 		local col, font_col, line, xline, attackbit = 0xAAF0E68C, 0xFFFFFFFF, 0xDDF0E68C, 0, 0
-		for _, xp in ipairs(p.objects) do
+		for _, xp in ifind_all(p.objects, function(xp) return xp.proc_active end) do
 			if p.skip_frame then
 			elseif p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number then
 			elseif xp.proc_active and xp.hitbox_types and #xp.hitbox_types > 0 and xp.hitbox_types then
@@ -2979,6 +2979,7 @@ rbff2.startplugin        = function()
 				-- 本体状態
 				if xp.skip_frame then
 					col, line = 0xAA000000, 0xAA000000
+					print(p.num, "skip")
 				elseif xp.on_bs_established == global.frame_number then
 					col, line = 0xAA0022FF, 0xDD0022FF
 				elseif xp.on_bs_clear == global.frame_number then
@@ -3019,6 +3020,9 @@ rbff2.startplugin        = function()
 			if not p.attackbits.attacking or p.attackbits.fake then
 				attackbit_mask = 0xFFFFFFFFFFFFFFFF
 			end
+		end
+		if ut.tstb(p.flag_d0, db.flag_d0._06) then
+			attackbit_mask = attackbit_mask | frame_attack_types.op_cancelable
 		end
 		attackbit      = attackbit & attackbit_mask
 		--ut.printf("%x %x %x | %s", p.num, attackbit_mask, attackbit, ut.tobitstr(attackbit, " "))
@@ -3270,6 +3274,7 @@ rbff2.startplugin        = function()
 					p.cancelable = ut.tstb(p.flag_7e, db.flag_7e._04, true)
 				end
 			end
+			p.op.attackbits.op_cancelable = p.cancelable
 
 			-- ガード持続の種類 家庭用 0271FC からの処理 0:攻撃無し 1:ガード継続小 2:ガード継続大
 			if p.firing then
@@ -4075,6 +4080,7 @@ rbff2.startplugin        = function()
 		for _, p in ipairs(players) do
 			if p.force_y_pos > 1 then mem.w16i(p.addr.pos_y, force_y_pos[p.force_y_pos]) end
 		end
+
 		-- X座標同期とY座標をだいぶ下に
 		if global.sync_pos_x ~= 1 then
 			local from = global.sync_pos_x - 1
@@ -4083,9 +4089,11 @@ rbff2.startplugin        = function()
 			mem.w16i(players[to].addr.pos_y, players[from].pos_y - 124)
 		end
 
-		-- 強制ポーズ処理
 		for _, p in ipairs(players) do
+			p.skip_frame = false -- 初期化
+
 			-- ヒット時にポーズさせる
+			-- 強制ポーズ処理
 			if p.state ~= 0 and p.state ~= p.old.state and global.pause_hit > 0 then
 				-- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
 				if global.pause_hit == 2 or
