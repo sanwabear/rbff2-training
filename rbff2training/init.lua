@@ -2999,11 +2999,7 @@ rbff2.startplugin        = function()
 				end
 
 				-- フレーム差
-				if p.frame_gap > 0 then
-					attackbit, font_col = attackbit | frame_attack_types.frame_plus, 0xFF0088FF
-				elseif p.frame_gap < 0 then
-					attackbit, font_col = attackbit | frame_attack_types.frame_minus, 0xFFFF0088
-				end
+				if p.frame_gap > 0 then font_col = 0xFF0088FF elseif p.frame_gap < 0 then font_col = 0xFFFF0088 end
 			end
 		end
 
@@ -3083,7 +3079,7 @@ rbff2.startplugin        = function()
 		-- フレーム差
 		---@diagnostic disable-next-line: unbalanced-assignments
 		parent, frames, groups = last_frame and last_frame.gap_frames or nil, p.gap_frames.act_frames, p.gap_frames.frame_groups
-		key, frame = attackbit & frame_attack_types.mask_frame_advance, frames[#frames]
+		key, frame = p.attackbit & frame_attack_types.mask_frame_advance, frames[#frames]
 		if p.update_act or not frame or upd_group or frame.key ~= key then
 			frame = ut.table_add(frames, {
 				act      = p.act,
@@ -3296,13 +3292,18 @@ rbff2.startplugin        = function()
 			-- ガード移行可否
 			global.both_act_neutral = p.act_data.neutral and global.both_act_neutral
 			if i == 2 then
-				local p1, p2 = p.op, p
-				if p1.act_data.neutral == p2.act_data.neutral then
+				local p1, p2, last = p.op, p, false
+				if p1.act_data.neutral and p2.act_data.neutral then
 					p1.frame_gap, p2.frame_gap = 0, 0
+				elseif not p1.act_data.neutral and not p2.act_data.neutral then
+					p1.frame_gap, p2.frame_gap, last = 0, 0, true
 				elseif not p1.act_data.neutral then
-					p1.frame_gap, p2.frame_gap = p1.frame_gap - 1, p2.frame_gap + 1
+					p1.frame_gap, p2.frame_gap, last = p1.frame_gap - 1, p2.frame_gap + 1, true
 				elseif not p2.act_data.neutral then
-					p1.frame_gap, p2.frame_gap = p1.frame_gap + 1, p2.frame_gap - 1
+					p1.frame_gap, p2.frame_gap, last = p1.frame_gap + 1, p2.frame_gap - 1, true
+				end
+				if last then
+					p1.last_frame_gap, p2.last_frame_gap = p1.frame_gap, p2.frame_gap
 				end
 			end
 
@@ -3456,6 +3457,11 @@ rbff2.startplugin        = function()
 						p.attackbit = p.attackbit | type
 					end
 				end
+			end
+			if p.frame_gap > 0 then
+				p.attackbit = p.attackbit | frame_attack_types.frame_plus
+			elseif p.frame_gap < 0 then
+				p.attackbit = p.attackbit | frame_attack_types.frame_minus
 			end
 
 			-- 当たりとやられ判定判定
@@ -4260,8 +4266,9 @@ rbff2.startplugin        = function()
 				end
 				--フレーム差と確定反撃の表示
 				if global.disp_framegap > 1 then
-					draw_text_with_shadow(p1 and 140 or 165, 40, string.format("%4s", string.format(p.frame_gap > 0 and "+%d" or "%d", p.frame_gap)),
-						p.frame_gap == 0 and 0xFFFFFFFF or p.frame_gap > 0 and 0xFF0088FF or 0xFFFF0088)
+					local gap = p.last_frame_gap or 0
+					draw_text_with_shadow(p1 and 140 or 165, 40, string.format("%4s", string.format(gap > 0 and "+%d" or "%d", gap)),
+						gap == 0 and 0xFFFFFFFF or gap > 0 and 0xFF0088FF or 0xFFFF0088)
 					draw_text_with_shadow(p1 and 112 or 184, 40, "PUNISH", p.on_punish <= global.frame_number and 0xFF808080 or 0xFF00FFFF)
 				end
 			end
