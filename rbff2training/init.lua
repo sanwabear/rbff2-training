@@ -3123,8 +3123,14 @@ rbff2.startplugin        = function()
 		end
 	end
 
-	-- フラグから技データを返す
-	local gen_act_data = function(p)
+	-- 技データのIDかフラグから技データを返す
+	local get_act_data = function(p)
+		if db.chars[p.char] and db.chars[p.char].acts[p.act] then
+			local act_data = db.chars[p.char].acts[p.act]
+			-- 技動作は滑りかBSかを付与する
+			act_data.name = p.sliding and act_data.slide_name or p.in_bs and act_data.bs_name or act_data.normal_name
+			return act_data
+		end
 		local name
 		if p.flag_c4 == 0 and p.flag_c8 == 0 then
 			name = ut.tstb(p.flag_cc, db.flag_cc.blocking) and "ガード" or p.flag_cc > 0 and
@@ -3140,13 +3146,15 @@ rbff2.startplugin        = function()
 				close = p.stand_close and "近" or "遠"
 			end
 			name = string.format("%s%s%s", slide, close or "", db.get_flag_name(p.flag_c4, db.flag_names_c4))
+		elseif ut.tstb(p.flag_cc, db.flag_cc._00) then
+			name = string.format("%s %s %s", db.get_flag_name(p.flag_cc, db.flag_names_cc), db.get_flag_name(p.flag_c0, db.flag_names_c0), p.act)
 		else
-			return nil
+			name = string.format("%s %s %s", db.get_flag_name(p.flag_c0, db.flag_names_c0), p.act)
 		end
 		p.act_data_cache = p.act_data_cache or {}
 		local act_data = p.act_data_cache[name]
 		if not act_data then
-			act_data = { bs_name = name, name = name, normal_name = name, slide_name = name, type = db.act_types.free | db.act_types.startup, count = 1 }
+			act_data = { bs_name = name, name = name, normal_name = name, slide_name = name, type = db.act_types.free, count = 1 }
 			p.act_data_cache[name] = act_data
 		end
 		return act_data
@@ -3268,17 +3276,8 @@ rbff2.startplugin        = function()
 
 			--フレーム用
 			p.skip_frame   = global.skip_frame1 or global.skip_frame2 or p.skip_frame
-			p.old.act_data = p.act_data or { name = "", type = db.act_types.startup | db.act_types.free, }
-			p.act_data     = gen_act_data(p)
-			if not p.act_data then
-				if p.char_data.acts and p.char_data.acts[p.act] then
-					p.act_data = p.char_data.acts[p.act]
-				else
-					p.act_data.name = string.format("%X", p.act)
-				end
-				-- 技動作は滑りかBSかを付与する
-				p.act_data.name = p.sliding and p.act_data.slide_name or p.in_bs and p.act_data.bs_name or p.act_data.normal_name
-			end
+			p.old.act_data = p.act_data or get_act_data(p.old)
+			p.act_data     = get_act_data(p)
 
 			-- ガード移行可否
 			p.act_normal = true

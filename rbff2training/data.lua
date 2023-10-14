@@ -1112,6 +1112,7 @@ local char_acts_base                  = {
 		{ names = { "旋風剛拳" }, type = act_types.any, ids = { 0x101, 0x102 } },
 		{ names = { "大撃放" }, type = act_types.attack, ids = { 0x108, 0x109, 0x10A, 0x10B } },
 		{ names = { "大撃放" }, type = act_types.any, ids = { 0x10C } },
+		{ names = { "CA 立C" }, type = act_types.attack, ids = { 0x67 } },
 		{ names = { "CA 立C" }, type = act_types.overhead, ids = { 0x247, 0x248 } },
 		{ names = { "CA 立C" }, type = act_types.overhead, ids = { 0x249 } },
 		{ names = { "挑発2" }, type = act_types.provoke, ids = { 0x24A } },
