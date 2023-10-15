@@ -2815,34 +2815,36 @@ rbff2.startplugin        = function()
 		end
 
 		local xright = math.min(group[#group].last_total + group[#group].count + left, right)
-		local frame_txts, dodge = {}, ""
+		local frame_txts = {}
 		for k = #group, 1, -1 do
 			local frame = group[k]
 			local xleft = xright - frame.count
-			if xleft + xright < left and not disp_name then
-				break
-			elseif xleft < left then
-				xleft = left
-			end
+			if xleft + xright < left then break end
+			xleft = math.max(xleft, left)
+
 			if ((frame.col or 0) + (frame.line or 0)) > 0 then
-				local evx, deco_txt = math.min(xright, xleft), ""
-				for _, deco in ifind(decos, function(deco) return ut.tstb(frame.attackbit, deco.type) and deco or nil end) do
-					deco_txt = deco.txt -- 区切り記号の表示
-					scr:draw_text(evx + get_string_width(deco_txt) * deco.fix, txt_y + top - 6, deco_txt)
-					scr:draw_line(xleft, top, xleft, top + bottom)
-				end
-				scr:draw_box(xright, top, xleft, top + bottom, frame.line, frame.col)
+				scr:draw_box(xleft, top, xright, top + bottom, frame.line, frame.col)
+
+				local dodge_txt = ""
 				for _, stripe, col in ifind(dodges, function(stripe) return ut.tstb(frame.attackbit, stripe.type) and frame.xline or nil end) do
-					dodge = stripe.txt -- 無敵種類
+					dodge_txt = stripe.txt -- 無敵種類
 					for i = stripe.y, bottom, stripe.step do scr:draw_box(xright, top + i, xleft, math.min(top + bottom, top + i + stripe.border), 0, col) end
 				end
+
+				local deco_txt = ""
+				for _, deco in ifind(decos, function(deco) return ut.tstb(frame.attackbit, deco.type) and deco or nil end) do
+					deco_txt = deco.txt -- 区切り記号の表示
+					scr:draw_text(xleft + get_string_width(deco_txt) * deco.fix, txt_y + top - 6, deco_txt)
+					scr:draw_line(xleft, top, xleft, top + bottom)
+				end
+
 				local txtx = (frame.count > 5) and (xleft + 1) or (3 > frame.count) and (xleft - 1) or xleft
 				local count_txt = 300 < frame.count and "LOT" or ("" .. frame.count)
 				local font_col = frame.font_col or 0xFFFFFFFF
 				if font_col > 0 then draw_text_with_shadow(txtx, txt_y + top, count_txt, font_col) end
 
 				-- TODO きれいなテキスト化
-				--table.insert(frame_txts, 1, string.format("%s%s%s", deco_txt, count_txt, dodge))
+				--table.insert(frame_txts, 1, string.format("%s%s%s", deco_txt, count_txt, dodge_txt))
 			end
 			if xleft <= left then break end
 			xright = xleft
