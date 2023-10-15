@@ -542,7 +542,6 @@ local global                    = {
 	await_neutral      = false,
 	replay_fix_pos     = 1,  -- 開始間合い固定 1:OFF 2:位置記憶 3:1Pと2P 4:1P 5:2P
 	replay_reset       = 2,  -- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
-	mame_debug_wnd     = false, -- MAMEデバッグウィンドウ表示のときtrue
 	debug_stop         = 0,  -- カウンタ
 	damaged_move       = 1,
 	all_bs             = false,
@@ -2341,13 +2340,6 @@ rbff2.startplugin        = function()
 		players[1].char, players[2].char = p1, p2
 	end
 
-	-- ブレイクポイント発動時のデバッグ画面表示と停止をさせない
-	local auto_recovery_debug = function()
-		if not global.mame_debug_wnd and debugger and debugger.execution_state ~= "run" then
-			debugger.execution_state = "run"
-		end
-	end
-
 	-- レコード＆リプレイ
 	local recording = {
 		state           = 0, -- 0=レコーディング待ち, 1=レコーディング, 2=リプレイ待ち 3=リプレイ開始
@@ -2786,19 +2778,18 @@ rbff2.startplugin        = function()
 	local update_frame_groups = function(frame, frame_groups)
 		local last_group = frame_groups[#frame_groups]
 		local last_frame = last_group and last_group[#last_group] or nil
-		if not last_frame or last_frame.name ~= frame.name or     -- 名前違いでブレイク
-			(frame.update and frame.count == 1)                   -- カウンタでブレイク
-		then
-			table.insert(frame_groups, { frame })                 -- ブレイクしたので新規にグループ作成
-			while 180 < #frame_groups do table.remove(frame_groups, 1) end --バッファ長調整
-			frame.last_total = 0                                  -- グループの先頭はフレーム合計ゼロ開始
-			return true
-		elseif last_frame and last_frame ~= frame then
-			table.insert(last_group, frame)                   -- 同一グループに合計加算して保存
+		local ret = false
+		if not last_frame or last_frame.name ~= frame.name or (frame.update and frame.count == 1) then
+			table.insert(frame_groups, { frame }) -- ブレイクしたので新規にグループ作成
+			frame.last_total = 0         -- グループの先頭はフレーム合計ゼロ開始
+			last_group = frame_groups
+			ret = true
+		elseif last_frame ~= frame then
+			table.insert(last_group, frame) -- 同一グループに合計加算して保存
 			frame.last_total = last_frame.last_total + last_frame.count
-			while 180 < #last_group do table.remove(last_group, 1) end --バッファ長調整
 		end
-		return false
+		while 180 < #last_group do table.remove(last_group, 1) end --バッファ長調整
+		return ret
 	end
 
 	-- グラフでフレームデータを末尾から描画
@@ -2810,68 +2801,81 @@ rbff2.startplugin        = function()
 		{ type = frame_attack_types.on_air, txt = "▴", fix = -0.5 },
 		{ type = frame_attack_types.on_ground, txt = "▾", fix = -0.5 },
 	}
-	local dodraw = function(y, txty, frame_group, main_frame, height, xmin, xmax)
-		if #frame_group == 0 then return end
-		local x1 = frame_group[#frame_group].last_total + frame_group[#frame_group].count + xmin
-		x1 = xmax < x1 and xmax or x1
-		if main_frame and (frame_group[1].col + frame_group[1].line) > 0 then
-			draw_text_with_shadow(xmin + 12, txty + y, frame_group[1].name, 0xFFC0C0C0) -- 名称を描画
+	local dodraw = function(group, top, bottom, left, right, txt_y, disp_name)
+		if #group == 0 then return end
+		txt_y = txt_y or 0
+
+		if disp_name and (group[1].col + group[1].line) > 0 then
+			draw_text_with_shadow(left + 12, txt_y + top, group[1].name, 0xFFC0C0C0) -- 動作名を先に描画
 		end
+
+		local x1 = math.min(group[#group].last_total + group[#group].count + left, right)
 		local frame_txts, dodge = {}, ""
-		for k = #frame_group, 1, -1 do
-			local frame = frame_group[k]
+		for k = #group, 1, -1 do
+			local frame = group[k]
 			local x2 = x1 - frame.count
-			if x2 + x1 < xmin and not main_frame then
+			if x2 + x1 < left and not disp_name then
 				break
-			elseif x2 < xmin then
-				x2 = xmin
+			elseif x2 < left then
+				x2 = left
 			end
 			if ((frame.col or 0) + (frame.line or 0)) > 0 then
 				local evx, deco_txt = math.min(x1, x2), ""
 				for _, deco in ifind(decos, function(deco) return ut.tstb(frame.attackbit, deco.type) and deco or nil end) do
 					deco_txt = deco.txt
-					scr:draw_text(evx + get_string_width(deco_txt) * deco.fix, txty + y - 6, deco_txt)
-					scr:draw_line(x2, y, x2, y + height)
+					scr:draw_text(evx + get_string_width(deco_txt) * deco.fix, txt_y + top - 6, deco_txt)
+					scr:draw_line(x2, top, x2, top + bottom)
 				end
-				scr:draw_box(x1, y, x2, y + height, frame.line, frame.col)
+				scr:draw_box(x1, top, x2, top + bottom, frame.line, frame.col)
 				if frame.xline and frame.xline > 0 then
 					if ut.tstb(frame.attackbit, frame_attack_types.full) then
-						for i = 0.5, height, 1.5 do scr:draw_box(x1, y + i, x2, math.min(y + height, y + i + 0.5), 0, frame.xline) end
+						for i = 0.5, bottom, 1.5 do scr:draw_box(x1, top + i, x2, math.min(top + bottom, top + i + 0.5), 0, frame.xline) end
 						dodge = "Full"
 					elseif ut.tstb(frame.attackbit, frame_attack_types.high) then
-						for i = 1.5, height, 3 do scr:draw_box(x1, y + i, x2, math.min(y + height, y + i + 1), 0, frame.xline) end
+						for i = 1.5, bottom, 3 do scr:draw_box(x1, top + i, x2, math.min(top + bottom, top + i + 1), 0, frame.xline) end
 						dodge = "High"
 					else -- if ut.tstb(frame.attackbit, frame_attack_types.low) then
-						for i = 1.5, height, 3 do scr:draw_box(x1, y + i, x2, math.min(y + height, y + i + 1), 0, frame.xline) end
+						for i = 1.5, bottom, 3 do scr:draw_box(x1, top + i, x2, math.min(top + bottom, top + i + 1), 0, frame.xline) end
 						dodge = "Low"
 					end
 				end
 				local txtx = (frame.count > 5) and (x2 + 1) or (3 > frame.count) and (x2 - 1) or x2
 				local count_txt = 300 < frame.count and "LOT" or ("" .. frame.count)
 				local font_col = frame.font_col or 0xFFFFFFFF
-				if font_col > 0 then draw_text_with_shadow(txtx, txty + y, count_txt, font_col) end
+				if font_col > 0 then draw_text_with_shadow(txtx, txt_y + top, count_txt, font_col) end
 
 				-- TODO きれいなテキスト化
 				--table.insert(frame_txts, 1, string.format("%s%s%s", deco_txt, count_txt, dodge))
 			end
-			if x2 <= xmin then break end
+			if x2 <= left then break end
 			x1 = x2
 		end
-		scr:draw_text(xmax - 40, txty + y, table.concat(frame_txts, "/"))
+		scr:draw_text(right - 40, txt_y + top, table.concat(frame_txts, "/"))
 	end
-	local draw_frames = function(frame_groups, xmax, x, y, height, span_ratio)
-		if frame_groups == nil or #frame_groups == 0 then return end
+	local draw_frames = function(groups, xmax, x, y, height, span_ratio)
+		if groups == nil or #groups == 0 then return end
+		for j = #groups - math.min(#groups - 1, 6), #groups do
+			dodraw(groups[j], y, height, x, xmax, 0, true)
+			for _, frame in ipairs(groups[j]) do
+				for _, sub_group in ipairs(frame.fb_frames or {}) do
+					dodraw(sub_group, y, height, x, xmax, 0)
+				end
+			end
+		end
+	end
+	local draw_framesx = function(groups, xmax, x, y, height, span_ratio)
+		if groups == nil or #groups == 0 then return end
 		local span = (2 + span_ratio) * height
 		-- 縦に描画
-		if #frame_groups < 7 then y = y + (7 - #frame_groups) * span end
-		for j = #frame_groups - math.min(#frame_groups - 1, 6), #frame_groups do
-			dodraw(y, 0, frame_groups[j], true, height, x, xmax)
-			for _, frame in ipairs(frame_groups[j]) do
+		if #groups < 7 then y = y + (7 - #groups) * span end
+		for j = #groups - math.min(#groups - 1, 6), #groups do
+			dodraw(groups[j], y, height, x, xmax, 0, true)
+			for _, frame in ipairs(groups[j]) do
 				for _, sub_group in ipairs(frame.fb_frames or {}) do
-					dodraw(y, 0, sub_group, false, height, x, xmax)
+					dodraw(sub_group, y, height, x, xmax)
 				end
 				for _, sub_group in ipairs(frame.gap_frames or {}) do
-					dodraw(y + get_line_height(), -0.5, sub_group, false, height - 1, x, xmax)
+					dodraw(sub_group, y + get_line_height(), height - 1, x, xmax, -0.5)
 				end
 			end
 			y = y + span
@@ -4265,10 +4269,16 @@ rbff2.startplugin        = function()
 
 				--行動IDとフレーム数表示
 				if global.disp_framegap > 1 or p.disp_frame > 1 then
+					local height = get_line_height()
 					if global.disp_framegap == 2 then
-						draw_frame_groups(p.frame_groups, p.act_frames_total, 30, p1 and 64 or 70, get_line_height(), true)
+						draw_frame_groups(p.frame_groups, p.act_frames_total, 30, p1 and 64 or 70, height, true)
 					end
-					draw_frames(p.frame_groups, p1 and 160 or 285, p1 and 40 or 165, 63, get_line_height(), 0.2)
+					local draw = draw_framesx -- draw_frames
+					if p1 then
+						draw(p.frame_groups, 160, 40, 63, get_line_height(), 0.2)
+					else
+						draw(p.frame_groups, 285, 165, 63, get_line_height(), 0.2)
+					end
 				end
 				--フレーム差と確定反撃の表示
 				if global.disp_framegap > 1 then
@@ -4560,9 +4570,8 @@ rbff2.startplugin        = function()
 		g.pause_hit           = col[5]               -- ヒット時にポーズ
 		g.pause_hitbox        = col[6]               -- 判定発生時にポーズ
 		g.save_snapshot       = col[7]               -- 技画像保存
-		g.mame_debug_wnd      = col[8] == 2          -- MAMEデバッグウィンドウ
-		g.damaged_move        = col[9]               -- ヒット効果確認用
-		g.all_bs              = col[10] == 2         -- 全必殺技BS
+		g.damaged_move        = col[8]               -- ヒット効果確認用
+		g.all_bs              = col[9] == 2          -- 全必殺技BS
 		mod.all_bs(g.all_bs)
 		menu.current = menu.main
 	end
@@ -4750,9 +4759,8 @@ rbff2.startplugin        = function()
 		col[5] = g.pause_hit           -- ヒット時にポーズ
 		col[6] = g.pause_hitbox        -- 判定発生時にポーズ
 		col[7] = g.save_snapshot       -- 技画像保存
-		col[8] = g.mame_debug_wnd and 2 or 1 -- MAMEデバッグウィンドウ
-		col[9] = g.damaged_move        -- ヒット効果確認用
-		col[10] = g.all_bs and 2 or 1  -- 全必殺技BS
+		col[8] = g.damaged_move        -- ヒット効果確認用
+		col[9] = g.all_bs and 2 or 1   -- 全必殺技BS
 	end
 	local init_auto_menu_config    = function()
 		local col, g = menu.auto.pos.col, global
@@ -5179,7 +5187,6 @@ rbff2.startplugin        = function()
 			{ "ヒット時にポーズ", { "OFF", "ON", "ON:やられのみ", "ON:投げやられのみ", "ON:打撃やられのみ", "ON:ガードのみ", }, },
 			{ "判定発生時にポーズ", { "OFF", "投げ", "攻撃", "変化時", }, },
 			{ "技画像保存", { "OFF", "ON:新規", "ON:上書き", }, },
-			{ "MAMEデバッグウィンドウ", menu.labels.off_on, },
 			{ "ヒット効果確認用", db.hit_effects.menus, },
 			{ "全必殺技BS", menu.labels.off_on, }
 		},
@@ -5195,7 +5202,6 @@ rbff2.startplugin        = function()
 				1, -- ヒット時にポーズ        5
 				1, -- 判定発生時にポーズ      6
 				1, -- 技画像保存              7
-				1, -- MAMEデバッグウィンドウ  8
 				1, -- ヒット効果確認用        9
 				1, -- 全必殺技BS             10
 			},
@@ -5549,7 +5555,6 @@ rbff2.startplugin        = function()
 	end
 
 	emu.register_periodic(function()
-		auto_recovery_debug()
 		if not machine then return end
 		if machine.paused then return end
 		local ec = scr:frame_number() -- フレーム更新しているか
