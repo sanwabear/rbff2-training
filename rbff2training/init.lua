@@ -2801,6 +2801,11 @@ rbff2.startplugin        = function()
 		{ type = frame_attack_types.on_air, txt = "▴", fix = -0.5 },
 		{ type = frame_attack_types.on_ground, txt = "▾", fix = -0.5 },
 	}
+	local dodges = {
+		{ type = frame_attack_types.levitate40 | frame_attack_types.levitate32 | frame_attack_types.levitate24, y = 1.5, step = 3,   txt = "Low",  border = 1, },
+		{ type = frame_attack_types.away | frame_attack_types.waving_blow | frame_attack_types.laurence_away,   y = 1.5, step = 3,   txt = "High", border = 1, },
+		{ type = frame_attack_types.full,                                                                       y = 0.5, step = 1.5, txt = "Full", border = 0.5, },
+	}
 	local dodraw = function(group, top, bottom, left, right, txt_y, disp_name)
 		if #group == 0 then return end
 		txt_y = txt_y or 0
@@ -2809,37 +2814,29 @@ rbff2.startplugin        = function()
 			draw_text_with_shadow(left + 12, txt_y + top, group[1].name, 0xFFC0C0C0) -- 動作名を先に描画
 		end
 
-		local x1 = math.min(group[#group].last_total + group[#group].count + left, right)
+		local xright = math.min(group[#group].last_total + group[#group].count + left, right)
 		local frame_txts, dodge = {}, ""
 		for k = #group, 1, -1 do
 			local frame = group[k]
-			local x2 = x1 - frame.count
-			if x2 + x1 < left and not disp_name then
+			local xleft = xright - frame.count
+			if xleft + xright < left and not disp_name then
 				break
-			elseif x2 < left then
-				x2 = left
+			elseif xleft < left then
+				xleft = left
 			end
 			if ((frame.col or 0) + (frame.line or 0)) > 0 then
-				local evx, deco_txt = math.min(x1, x2), ""
+				local evx, deco_txt = math.min(xright, xleft), ""
 				for _, deco in ifind(decos, function(deco) return ut.tstb(frame.attackbit, deco.type) and deco or nil end) do
-					deco_txt = deco.txt
+					deco_txt = deco.txt -- 区切り記号の表示
 					scr:draw_text(evx + get_string_width(deco_txt) * deco.fix, txt_y + top - 6, deco_txt)
-					scr:draw_line(x2, top, x2, top + bottom)
+					scr:draw_line(xleft, top, xleft, top + bottom)
 				end
-				scr:draw_box(x1, top, x2, top + bottom, frame.line, frame.col)
-				if frame.xline and frame.xline > 0 then
-					if ut.tstb(frame.attackbit, frame_attack_types.full) then
-						for i = 0.5, bottom, 1.5 do scr:draw_box(x1, top + i, x2, math.min(top + bottom, top + i + 0.5), 0, frame.xline) end
-						dodge = "Full"
-					elseif ut.tstb(frame.attackbit, frame_attack_types.high) then
-						for i = 1.5, bottom, 3 do scr:draw_box(x1, top + i, x2, math.min(top + bottom, top + i + 1), 0, frame.xline) end
-						dodge = "High"
-					else -- if ut.tstb(frame.attackbit, frame_attack_types.low) then
-						for i = 1.5, bottom, 3 do scr:draw_box(x1, top + i, x2, math.min(top + bottom, top + i + 1), 0, frame.xline) end
-						dodge = "Low"
-					end
+				scr:draw_box(xright, top, xleft, top + bottom, frame.line, frame.col)
+				for _, stripe, col in ifind(dodges, function(stripe) return ut.tstb(frame.attackbit, stripe.type) and frame.xline or nil end) do
+					dodge = stripe.txt -- 無敵種類
+					for i = stripe.y, bottom, stripe.step do scr:draw_box(xright, top + i, xleft, math.min(top + bottom, top + i + stripe.border), 0, col) end
 				end
-				local txtx = (frame.count > 5) and (x2 + 1) or (3 > frame.count) and (x2 - 1) or x2
+				local txtx = (frame.count > 5) and (xleft + 1) or (3 > frame.count) and (xleft - 1) or xleft
 				local count_txt = 300 < frame.count and "LOT" or ("" .. frame.count)
 				local font_col = frame.font_col or 0xFFFFFFFF
 				if font_col > 0 then draw_text_with_shadow(txtx, txt_y + top, count_txt, font_col) end
@@ -2847,18 +2844,18 @@ rbff2.startplugin        = function()
 				-- TODO きれいなテキスト化
 				--table.insert(frame_txts, 1, string.format("%s%s%s", deco_txt, count_txt, dodge))
 			end
-			if x2 <= left then break end
-			x1 = x2
+			if xleft <= left then break end
+			xright = xleft
 		end
 		scr:draw_text(right - 40, txt_y + top, table.concat(frame_txts, "/"))
 	end
-	local draw_frames = function(groups, xmax, x, y, height, span_ratio)
+	local draw_frames = function(groups, xmax, x, y, height)
 		if groups == nil or #groups == 0 then return end
 		for j = #groups - math.min(#groups - 1, 6), #groups do
 			dodraw(groups[j], y, height, x, xmax, 0, true)
 			for _, frame in ipairs(groups[j]) do
 				for _, sub_group in ipairs(frame.fb_frames or {}) do
-					dodraw(sub_group, y, height, x, xmax, 0)
+					dodraw(sub_group, y, height, x, xmax)
 				end
 			end
 		end
@@ -4273,7 +4270,7 @@ rbff2.startplugin        = function()
 					if global.disp_framegap == 2 then
 						draw_frame_groups(p.frame_groups, p.act_frames_total, 30, p1 and 64 or 70, height, true)
 					end
-					local draw = draw_framesx -- draw_frames
+					local draw = draw_frames
 					if p1 then
 						draw(p.frame_groups, 160, 40, 63, get_line_height(), 0.2)
 					else
