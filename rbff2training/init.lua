@@ -2806,7 +2806,7 @@ rbff2.startplugin        = function()
 		{ type = frame_attack_types.away | frame_attack_types.waving_blow | frame_attack_types.laurence_away,   y = 1.5, step = 3,   txt = "High", border = 1, },
 		{ type = frame_attack_types.full,                                                                       y = 0.5, step = 1.5, txt = "Full", border = 0.5, },
 	}
-	local dodraw = function(group, top, bottom, left, right, txt_y, disp_name)
+	local dodraw = function(group, left, top, height, limit, txt_y, disp_name)
 		if #group == 0 then return end
 		txt_y = txt_y or 0
 
@@ -2814,6 +2814,7 @@ rbff2.startplugin        = function()
 			draw_text_with_shadow(left + 12, txt_y + top, group[1].name, 0xFFC0C0C0) -- 動作名を先に描画
 		end
 
+		local right = limit + left
 		local xright = math.min(group[#group].last_total + group[#group].count + left, right)
 		local frame_txts = {}
 		for k = #group, 1, -1 do
@@ -2823,19 +2824,19 @@ rbff2.startplugin        = function()
 			xleft = math.max(xleft, left)
 
 			if ((frame.col or 0) + (frame.line or 0)) > 0 then
-				scr:draw_box(xleft, top, xright, top + bottom, frame.line, frame.col)
+				scr:draw_box(xleft, top, xright, top + height, frame.line, frame.col)
 
 				local dodge_txt = ""
 				for _, stripe, col in ifind(dodges, function(stripe) return ut.tstb(frame.attackbit, stripe.type) and frame.xline or nil end) do
 					dodge_txt = stripe.txt -- 無敵種類
-					for i = stripe.y, bottom, stripe.step do scr:draw_box(xright, top + i, xleft, math.min(top + bottom, top + i + stripe.border), 0, col) end
+					for i = stripe.y, height, stripe.step do scr:draw_box(xright, top + i, xleft, math.min(top + height, top + i + stripe.border), 0, col) end
 				end
 
 				local deco_txt = ""
 				for _, deco in ifind(decos, function(deco) return ut.tstb(frame.attackbit, deco.type) and deco or nil end) do
 					deco_txt = deco.txt -- 区切り記号の表示
 					scr:draw_text(xleft + get_string_width(deco_txt) * deco.fix, txt_y + top - 6, deco_txt)
-					scr:draw_line(xleft, top, xleft, top + bottom)
+					scr:draw_line(xleft, top, xleft, top + height)
 				end
 
 				local txtx = (frame.count > 5) and (xleft + 1) or (3 > frame.count) and (xleft - 1) or xleft
@@ -2851,30 +2852,32 @@ rbff2.startplugin        = function()
 		end
 		scr:draw_text(right - 40, txt_y + top, table.concat(frame_txts, "/"))
 	end
-	local draw_frames = function(groups, xmax, x, y, height)
+	local draw_frames = function(groups, x, y, limit)
 		if groups == nil or #groups == 0 then return end
+		local height = get_line_height()
 		for j = #groups - math.min(#groups - 1, 6), #groups do
-			dodraw(groups[j], y, height, x, xmax, 0, true)
+			dodraw(groups[j], x, y, height, limit, 0, true)
 			for _, frame in ipairs(groups[j]) do
 				for _, sub_group in ipairs(frame.fb_frames or {}) do
-					dodraw(sub_group, y, height, x, xmax)
+					dodraw(sub_group, x, y, height, limit)
 				end
 			end
 		end
 	end
-	local draw_framesx = function(groups, xmax, x, y, height, span_ratio)
+	local draw_framesx = function(groups, x, y, limit)
 		if groups == nil or #groups == 0 then return end
+		local height, span_ratio = get_line_height(), 0.2
 		local span = (2 + span_ratio) * height
 		-- 縦に描画
 		if #groups < 7 then y = y + (7 - #groups) * span end
 		for j = #groups - math.min(#groups - 1, 6), #groups do
-			dodraw(groups[j], y, height, x, xmax, 0, true)
+			dodraw(groups[j], x, y, height, limit, 0, true)
 			for _, frame in ipairs(groups[j]) do
 				for _, sub_group in ipairs(frame.fb_frames or {}) do
-					dodraw(sub_group, y, height, x, xmax)
+					dodraw(sub_group, x, y, height, limit)
 				end
 				for _, sub_group in ipairs(frame.gap_frames or {}) do
-					dodraw(sub_group, y + get_line_height(), height - 1, x, xmax, -0.5)
+					dodraw(sub_group, x, y + height, height - 1, limit)
 				end
 			end
 			y = y + span
@@ -4272,11 +4275,11 @@ rbff2.startplugin        = function()
 					if global.disp_framegap == 2 then
 						draw_frame_groups(p.frame_groups, p.act_frames_total, 30, p1 and 64 or 70, height, true)
 					end
-					local draw = draw_frames
+					local draw = draw_framesx
 					if p1 then
-						draw(p.frame_groups, 160, 40, 63, get_line_height(), 0.2)
+						draw(p.frame_groups, 40, 63, 120)
 					else
-						draw(p.frame_groups, 285, 165, 63, get_line_height(), 0.2)
+						draw(p.frame_groups, 165, 63, 120)
 					end
 				end
 				--フレーム差と確定反撃の表示
