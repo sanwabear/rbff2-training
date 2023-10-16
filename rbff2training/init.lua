@@ -2975,22 +2975,19 @@ rbff2.startplugin        = function()
 					col = col > 0xFFFFFF and (col | 0x22111111) or 0
 				end
 			end
-			if not xp.is_fireball then
-				-- 本体状態
+			if not xp.is_fireball then-- 本体状態
 				if xp.skip_frame then
-					col, line = 0xAA000000, 0xAA000000
-					print(p.num, "skip")
+					col, line = 0xAA000000, 0xAA000000 -- 強制停止
 				elseif xp.on_bs_established == global.frame_number then
-					col, line = 0xAA0022FF, 0xDD0022FF
-				elseif xp.on_bs_clear == global.frame_number then
-					col, line = 0xAA00FF22, 0xDD00FF22
+					col, line = 0xAA0022FF, 0xDD0022FF -- BSコマンド確認タイミング
+				-- elseif xp.on_bs_clear == global.frame_number then
+				--	col, line = 0xAA00FF22, 0xDD00FF22
 				elseif xp.in_hitstop == global.frame_number or xp.on_hit_any == global.frame_number then
-					col, line = 0xAA444444, 0xDD444444
-				elseif xp.on_bs_check == global.frame_number then
-					col, line = 0xAAFF0022, 0xDDFF0022
+					col, line = 0xAA444444, 0xDD444444 -- ヒットストップ中
+				-- elseif xp.on_bs_check == global.frame_number then
+				--	col, line = 0xAAFF0022, 0xDDFF0022
 				end
 
-				-- 無敵
 				if p.skip_frame or p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number or p.jumping then
 					-- 無視
 				elseif ut.tstb(p.hurt.dodge, frame_attack_types.full, true) then
