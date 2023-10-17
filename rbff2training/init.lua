@@ -3024,7 +3024,7 @@ rbff2.startplugin        = function()
 			elseif ((remain == 0) or (remain + 4 < ix)) and (2 < frame.count) and (frames[ix + 1].count == 1) then -- 区切り
 				table.insert(ends, {
 					txt = { x2, y1, frame.count },
-					box = { x1, y1, x2, y2, frame.line | 0xFF333333, frame.line }
+					box = { x1, y1, x2, y2, frame.line | 0xFF333333, 0 }
 				})
 			end
 			scr:draw_box(x1, y1, x2, y2, 0, frame.line)                                        -- 四角の描画
