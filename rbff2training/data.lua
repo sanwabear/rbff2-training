@@ -233,7 +233,15 @@ frame_attack_types.frame_dodges       = --  部分無敵としてフレーム表
 	frame_attack_types.levitate40    | -- 足元無敵 対アンディ屈C
 	frame_attack_types.levitate32    | -- 足元無敵 対ギース屈C
 	frame_attack_types.levitate24   -- 足元無敵 対だいたいの屈B（キムとボブ以外）
-db.frame_attack_types                 = frame_attack_types
+frame_attack_types.high_dodges       = --  部分無敵としてフレーム表示に反映する部分無敵
+		frame_attack_types.away          | --上半身無敵 32 避け
+		frame_attack_types.waving_blow   | -- 上半身無敵 40 ウェービングブロー,龍転身,ダブルローリング
+		frame_attack_types.laurence_away   -- 上半身無敵 48 ローレンス避け
+frame_attack_types.low_dodges       = --  部分無敵としてフレーム表示に反映する部分無敵
+		frame_attack_types.levitate40    | -- 足元無敵 対アンディ屈C
+		frame_attack_types.levitate32    | -- 足元無敵 対ギース屈C
+		frame_attack_types.levitate24      -- 足元無敵 対だいたいの屈B（キムとボブ以外）
+	db.frame_attack_types                 = frame_attack_types
 
 -- モーションによる部分無敵
 local hurt_dodge_types                = {

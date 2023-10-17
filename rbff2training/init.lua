@@ -2802,9 +2802,9 @@ rbff2.startplugin        = function()
 		{ type = frame_attack_types.on_ground, txt = "▾", fix = -0.5 },
 	}
 	local dodges = {
-		{ type = frame_attack_types.levitate40 | frame_attack_types.levitate32 | frame_attack_types.levitate24, y = 1.5, step = 3,   txt = "Low",  border = 1, },
-		{ type = frame_attack_types.away | frame_attack_types.waving_blow | frame_attack_types.laurence_away,   y = 1.5, step = 3,   txt = "High", border = 1, },
-		{ type = frame_attack_types.full,                                                                       y = 0.5, step = 1.5, txt = "Full", border = 0.5, },
+		{ type = frame_attack_types.high_dodges, y = 1.5, step = 3,   txt = "Low",  border = 1,   xline = 0xFF00FFFF },
+		{ type = frame_attack_types.low_dodges,  y = 1.5, step = 3,   txt = "High", border = 1,   xline = 0xFF00BBDD },
+		{ type = frame_attack_types.full,        y = 0.5, step = 1.5, txt = "Full", border = 0.5, xline = 0xFF00BBDD },
 	}
 	local dodraw = function(group, left, top, height, limit, txt_y, disp_name)
 		if #group == 0 then return end
@@ -2999,7 +2999,8 @@ rbff2.startplugin        = function()
 	local draw_frames2 = function(num, y1)               -- フレームメーターの表示
 		if 2 < num then return end
 		local x0 = (scr.width - frame_cell * frame_limit) // 2 -- 表示開始位置
-		local y2 = y1 + get_line_height()                -- メーター行のY位置
+		local height = get_line_height()
+		local y2 = y1 + height                -- メーター行のY位置
 		local frames, max_x = {}, #p_frames[num]
 		while (0 < max_x) do
 			if not ut.tstb(p_frames[num][max_x].attackbit, frame_attack_types.frame_plus) then
@@ -3026,7 +3027,11 @@ rbff2.startplugin        = function()
 					box = { x1, y1, x2, y2, frame.line | 0xFF333333, frame.line }
 				})
 			end
-			scr:draw_box(x1, y1, x2, y2, 0xFF000000, frame.line) -- 四角の描画
+			scr:draw_box(x1, y1, x2, y2, 0, frame.line) -- 四角の描画
+			for _, s, col in ifind(dodges, function(s) return ut.tstb(frame.attackbit, s.type) and s.xline or nil end) do
+				for i = s.y, height, s.step do scr:draw_box(x1, y1 + i, x2, y1 + i + s.border, 0, col) end -- 無敵の描画
+			end
+			scr:draw_box(x1, y1, x2, y2,  0xFF000000, 0) -- 四角の描画
 		end
 		for i, args in ipairs(ends) do                  -- 区切り描画
 			if i == #ends then break end
