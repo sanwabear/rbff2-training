@@ -3020,9 +3020,9 @@ rbff2.startplugin        = function()
 					txt = { x2, y1, frame.count },
 					box = { x1, y1, x2, y2, 1, frame.line | 0xFF333333 }
 				})
-			elseif remain + 4 < ix and frames[ix + 1].count == 1 then -- 区切り(2行重ねるときは1行目の重複候補を除外する)
+			elseif ((remain == 0) or (remain + 4 < ix)) and (2 < frame.count) and (frames[ix + 1].count == 1) then -- 区切り
 				table.insert(ends, {
-					txt = { x2, y1, frame.count == 0 and "" or frame.count },
+					txt = { x2, y1, frame.count },
 					box = { x1, y1, x2, y2, frame.line | 0xFF333333, frame.line }
 				})
 			end
