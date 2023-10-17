@@ -2968,8 +2968,14 @@ rbff2.startplugin        = function()
 			p_frames[num] = {} -- バッファ初期化
 		end
 		if ut.tstb(frame.attackbit, frame_attack_types.frame_plus) then return end
-		local frames = p_frames[num]                         -- プレイヤーごとのバッファを取得
-		frame.count = #frames == 0 and 1 or frames[#frames].count + 1
+		local frames = p_frames[num] -- プレイヤーごとのバッファを取得
+		if #frames == 0 then
+			frame.count = 1
+		elseif frame.attackbit ~= frames[#frames].attackbit or frame.name ~= frames[#frames].name or frame.update ~= frames[#frames].update then
+			frame.count = 1
+		else
+			frame.count = frames[#frames].count + 1
+		end
 		table.insert(frames, frame)                          -- 末尾に追加
 		if #frames <= frame_buffer_limit then return end     -- バッファ長が2行以下なら抜ける
 		while frame_limit < #frames do table.remove(frames, 1) end -- 1行目のバッファを削除
@@ -2986,29 +2992,35 @@ rbff2.startplugin        = function()
 		local y2 = y1 + get_line_height()                -- メーター行のY位置
 		local frames = p_frames[num]
 		local remain = (frame_limit < #frames) and (#frames % frame_limit) or 0
-		local max_x, ends, count = #frames, {}, 0
+		local max_x, ends = #frames, {}
 		border_box(x0, y1, x0 + frame_limit * frame_cell, y2, 0.5, 0xFF000000) -- 外枠
 		for ix = remain + 1, max_x do
 			local frame = frames[ix]
 			local x1 = (((ix - 1) % frame_limit) * frame_cell) + x0
 			local x2 = x1 + frame_cell
 			if ix == max_x then -- 末尾のみ四方をBOX描画して太線で表示
-				table.insert(ends, { txt = { x2, y1, frame.count - count }, box = { x1, y1, x2, y2, 1, frame.col | 0xFF333333 } })
-				count = frame.count
-			elseif frame.attackbit ~= frames[ix + 1].attackbit then -- 区切り
-				table.insert(ends, { txt = { x2, y1, frame.count - count }, box = { x1, y1, x2, y2, frame.col | 0xFF333333, frame.line } })
-				count = frame.count
+				table.insert(ends, {
+					txt = { x2, y1, frame.count },
+					box = { x1, y1, x2, y2, 1, frame.line | 0xFF333333 }
+				})
+			elseif remain + 4 < ix and frames[ix + 1].count == 1 then -- 区切り(2行重ねるときは1行目の重複候補を除外する)
+				table.insert(ends, {
+					txt = { x2, y1, frame.count },
+					box = { x1, y1, x2, y2, frame.line | 0xFF333333, frame.line }
+				})
 			end
 			scr:draw_box(x1, y1, x2, y2, 0xFF000000, frame.line) -- 四角の描画
 		end
-		for i, args in ipairs(ends) do -- 区切り描画
+		for i, args in ipairs(ends) do                  -- 区切り描画
 			if i == #ends then break end
 			scr:draw_box(table.unpack(args.box))
 			draw_rtext_with_shadow(table.unpack(args.txt))
 		end
-		for ix = (max_x % frame_limit) + 1, frame_limit do              -- マスクの四角描画
-			local x1 = ((ix - 1) * frame_cell) + x0
-			scr:draw_box(x1, y1, x1 + frame_cell, y2, 0xFF000000, 0x88888888)
+		if frame_limit ~= max_x then
+			for ix = (max_x % frame_limit) + 1, frame_limit do              -- マスクの四角描画
+				local x1 = ((ix - 1) * frame_cell) + x0
+				scr:draw_box(x1, y1, x1 + frame_cell, y2, 0xFF000000, 0x88888888)
+			end
 		end
 		if 0 < #ends then -- 終端の描画
 			local args = ends[#ends]
@@ -3085,7 +3097,7 @@ rbff2.startplugin        = function()
 		local act_data = p.body.act_data
 		local name     = (frame and act_data.name_set and act_data.name_set[prev]) and prev or act_data.name
 
-		add_frame(p.num, { line = line, col = col, attackbit = attackbit })
+		add_frame(p.num, { line = line, col = col, attackbit = attackbit, name = name, update = p.update_act, })
 
 		if p.update_act or not frame or frame.col ~= col or frame.key ~= attackbit then
 			-- 弾とジャンプ状態はキーから省いて無駄な区切りを取り除く
