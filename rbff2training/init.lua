@@ -1578,7 +1578,7 @@ rbff2.startplugin        = function()
 			disp_frame        = 2,         -- フレーム数表示する
 			disp_fbfrm        = true,      -- 弾のフレーム数表示するときtrue
 			disp_stun         = true,      -- 気絶表示
-			disp_state        = 3,         -- 状態表示 "OFF", "ON", "ON:小表示", "ON:大表示"
+			disp_state        = 3,         -- 状態表示 1:OFF 2:ON 3:ON:小表示 4:ON:大表示 5:ON:フラグ表示
 			dis_plain_shift   = false,     -- ライン送らない現象
 			no_hit            = 0,         -- Nヒット目に空ぶるカウントのカウンタ
 			no_hit_limit      = 0,         -- Nヒット目に空ぶるカウントの上限
@@ -2802,9 +2802,9 @@ rbff2.startplugin        = function()
 		{ type = frame_attack_types.on_ground, txt = "▾", fix = -0.5 },
 	}
 	local dodges = {
-		{ type = frame_attack_types.high_dodges, y = 1.5, step = 3,   txt = "Low",  border = 1,   xline = 0xFF00FFFF },
-		{ type = frame_attack_types.low_dodges,  y = 1.5, step = 3,   txt = "High", border = 1,   xline = 0xFF00BBDD },
-		{ type = frame_attack_types.full,        y = 0.5, step = 1.5, txt = "Full", border = 0.5, xline = 0xFF00BBDD },
+		{ type = frame_attack_types.high_dodges, y = 1.6, step = 3,   txt = "Low",  border = 1,   xline = 0xFF00FFFF },
+		{ type = frame_attack_types.low_dodges,  y = 1.6, step = 3,   txt = "High", border = 1,   xline = 0xFF00BBDD },
+		{ type = frame_attack_types.full,        y = 1.0, step = 1.6, txt = "Full", border = 0.8, xline = 0xFF00BBDD },
 	}
 	local dodraw = function(group, left, top, height, limit, txt_y, disp_name)
 		if #group == 0 then return end
@@ -2827,9 +2827,9 @@ rbff2.startplugin        = function()
 				scr:draw_box(xleft, top, xright, top + height, frame.line, frame.col)
 
 				local dodge_txt = ""
-				for _, stripe, col in ifind(dodges, function(stripe) return ut.tstb(frame.attackbit, stripe.type) and frame.xline or nil end) do
-					dodge_txt = stripe.txt -- 無敵種類
-					for i = stripe.y, height, stripe.step do scr:draw_box(xright, top + i, xleft, math.min(top + height, top + i + stripe.border), 0, col) end
+				for _, s, col in ifind(dodges, function(s) return ut.tstb(frame.attackbit, s.type) and frame.xline or nil end) do
+					dodge_txt = s.txt -- 無敵種類
+					for i = s.y, height - s.y, s.step do scr:draw_box(xright, top + i, xleft, math.min(top + height, top + i + s.border), 0, col) end
 				end
 
 				local deco_txt = ""
@@ -3000,7 +3000,7 @@ rbff2.startplugin        = function()
 		if 2 < num then return end
 		local x0 = (scr.width - frame_cell * frame_limit) // 2 -- 表示開始位置
 		local height = get_line_height()
-		local y2 = y1 + height                -- メーター行のY位置
+		local y2 = y1 + height                           -- メーター行のY位置
 		local frames, max_x = {}, #p_frames[num]
 		while (0 < max_x) do
 			if not ut.tstb(p_frames[num][max_x].attackbit, frame_attack_types.frame_plus) then
@@ -3027,13 +3027,13 @@ rbff2.startplugin        = function()
 					box = { x1, y1, x2, y2, frame.line | 0xFF333333, frame.line }
 				})
 			end
-			scr:draw_box(x1, y1, x2, y2, 0, frame.line) -- 四角の描画
+			scr:draw_box(x1, y1, x2, y2, 0, frame.line)                                        -- 四角の描画
 			for _, s, col in ifind(dodges, function(s) return ut.tstb(frame.attackbit, s.type) and s.xline or nil end) do
-				for i = s.y, height, s.step do scr:draw_box(x1, y1 + i, x2, y1 + i + s.border, 0, col) end -- 無敵の描画
+				for i = s.y, height - s.y, s.step do scr:draw_box(x1, y1 + i, x2, y1 + i + s.border, 0, col) end -- 無敵の描画
 			end
-			scr:draw_box(x1, y1, x2, y2,  0xFF000000, 0) -- 四角の描画
+			scr:draw_box(x1, y1, x2, y2, 0xFF000000, 0)                                        -- 四角の描画
 		end
-		for i, args in ipairs(ends) do                  -- 区切り描画
+		for i, args in ipairs(ends) do                                                         -- 区切り描画
 			if i == #ends then break end
 			scr:draw_box(table.unpack(args.box))
 			draw_rtext_with_shadow(table.unpack(args.txt))
@@ -3222,8 +3222,12 @@ rbff2.startplugin        = function()
 		return true
 	end
 	local get_act_data = function(p)
-		if db.chars[p.char] and db.chars[p.char].acts[p.act] then
-			local act_data = db.chars[p.char].acts[p.act]
+		local act_data1 = db.chars[p.char] and db.chars[p.char].acts[p.act] or nil
+		if not act_data1 then
+			act_data1 = act_data_cache[p.char] and act_data_cache[p.char].a[p.act] or nil
+		end
+		if act_data1 then
+			local act_data = act_data1
 			-- 技動作は滑りかBSかを付与する
 			act_data.name = p.sliding and act_data.slide_name or p.in_bs and act_data.bs_name or act_data.normal_name
 			if act_data.neutral == nil then
@@ -3736,8 +3740,8 @@ rbff2.startplugin        = function()
 		end
 
 		for _, p in ipairs(players) do
-			if p.disp_state == 2 or p.disp_state == 5 then
-				local label1, label2 = {}, {}
+			if p.disp_state == 2 or p.disp_state == 3 then -- 1:OFF 2:ON 3:ON:小表示 4:ON:大表示 5:ON:フラグ表示
+				local label1 = {}
 				table.insert(label1, string.format("%s %02d %03d %03d",
 					p.state, p.throwing and p.throwing.threshold or 0, p.throwing and p.throwing.timer or 0, p.throw_timer or 0))
 				local diff_pos_y = p.pos_y + p.pos_frc_y - (p.old.pos_y and (p.old.pos_y + p.old.pos_frc_y) or 0)
@@ -3745,6 +3749,10 @@ rbff2.startplugin        = function()
 				table.insert(label1, string.format("%02x %02x %02x", p.spid or 0, p.attack or 0, p.attack_id or 0))
 				table.insert(label1, string.format("%03x %02x %02x %s %s", p.act, p.act_count, p.act_frame, p.update_act and "U" or "K", p.act_data.neutral and "N" or "A"))
 				table.insert(label1, string.format("%02x %02x %02x", p.hurt_state, p.sway_status, p.additional))
+				p.state_line2 = label1
+			end
+			if p.disp_state == 2 or p.disp_state == 5 then -- 1:OFF 2:ON 3:ON:小表示 4:ON:大表示 5:ON:フラグ表示
+				local label2 = {}
 				local c0, c4 = string.format("%08X", p.flag_c0 or 0), string.format("%08X", p.flag_c4 or 0)
 				local c8, cc = string.format("%08X", p.flag_c8 or 0), string.format("%08X", p.flag_cc or 0)
 				local d0, _7e = string.format("%02X", p.flag_d0 or 0), string.format("%02X", p.flag_7e or 0)
@@ -3755,7 +3763,7 @@ rbff2.startplugin        = function()
 				table.insert(label2, string.format("D0 %-8s %s %-s", ut.hextobitstr(d0, " "), d0, db.get_flag_name(p.flag_d0, db.flag_names_d0)))
 				table.insert(label2, string.format("7E %-8s %s %-s", ut.hextobitstr(_7e, " "), _7e, db.get_flag_name(p.flag_7e, db.flag_names_7e)))
 				table.insert(label2, string.format("%3s %3s", p.knockback1, p.knockback2))
-				p.state_line2, p.state_line3 = label1, label2
+				p.state_line3 = label2
 			end
 		end
 
@@ -4272,6 +4280,7 @@ rbff2.startplugin        = function()
 			-- ダメージとコンボ表示
 			for i, p in ipairs(players) do
 				local p1, col1 = i == 1, p.combo_col1 or {}
+				-- 状態 大表示 1:OFF 2:ON 3:ON:小表示 4:ON:大表示 5:ON:フラグ表示
 				if p.disp_state == 2 or p.disp_state == 4 then ut.table_add_all(col1, p.state_line1) end
 				if #col1 > 0 then
 					local box_bottom = get_line_height(#col1)
@@ -4283,7 +4292,7 @@ rbff2.startplugin        = function()
 					end
 				end
 
-				-- 状態 小表示
+				-- 状態 小表示 1:OFF 2:ON 3:ON:小表示 4:ON:大表示 5:ON:フラグ表示
 				if p.disp_state == 2 or p.disp_state == 3 then
 					local label1, label2 = p.state_line2 or {}, p.state_line3 or {}
 					scr:draw_box(p1 and 0 or 277, 0, p1 and 40 or 316, get_line_height(#label1), 0x80404040, 0x80404040)
