@@ -2967,6 +2967,7 @@ rbff2.startplugin        = function()
 		if not global.both_act_neutral and global.old_both_act_neutral then
 			p_frames[num] = {}                               -- バッファ初期化
 		end
+		if ut.tstb(frame.attackbit, frame_attack_types.frame_plus) then return end
 		local frames = p_frames[num]                         -- プレイヤーごとのバッファを取得
 		table.insert(frames, frame)                          -- 末尾に追加
 		if #frames <= frame_buffer_limit then return end     -- バッファ長が2行以下なら抜ける
@@ -2978,36 +2979,38 @@ rbff2.startplugin        = function()
 		scr:draw_box(x2, y1 - w, x2 + 1, y2 + w, fcol, fcol)
 		scr:draw_box(x1 - w, y2 + w, x2 + w, y2, fcol, fcol)
 	end
-	local draw_frames2 = function(num, y1)                   -- フレームメーターの表示
+	local draw_frames2 = function(num, y1)               -- フレームメーターの表示
 		if 2 < num then return end
 		local x0 = (scr.width - frame_cell * frame_limit) // 2 -- 表示開始位置
-		local y2 = y1 + get_line_height()                 -- メーター行のY位置
+		local y2 = y1 + get_line_height()                -- メーター行のY位置
 		local frames = p_frames[num]
 		local remain = (frame_limit < #frames) and (#frames % frame_limit) or 0
-		local max_x, last_box, last_col = 0, nil, 0
-		border_box(x0, y1, x0+ frame_limit * frame_cell, y2, 0.5, 0xFF000000) -- 外枠
-		for ix, frame in ipairs(frames) do
-			if remain < ix then
-				local x1 = (((ix - 1) % frame_limit) * frame_cell) + x0
-				local x2 = x1 + frame_cell
-				last_col = frame.col
-				scr:draw_box(x1, y1, x2, y2, 0xFF000000, frame.line) -- 四角の描画
+		local max_x, last_box = #frames, {}
+		border_box(x0, y1, x0 + frame_limit * frame_cell, y2, 0.5, 0xFF000000) -- 外枠
+		for ix = remain + 1, max_x do
+			local frame = frames[ix]
+			local x1 = (((ix - 1) % frame_limit) * frame_cell) + x0
+			local x2 = x1 + frame_cell
+			if ix == max_x then -- 末尾のみ四方をBOX描画して太線で表示
+				table.insert(last_box, { x1, y1, x2, y2, 1, frame.col | 0xFF333333 })
+			elseif frame.col ~= frames[ix + 1].col then
+				table.insert(last_box, { x1, y1, x2, y2, frame.col | 0xFF333333, frame.line })
 			end
+			scr:draw_box(x1, y1, x2, y2, 0xFF000000, frame.line) -- 四角の描画
 		end
-		max_x = #frames % frame_limit -- 最前面の末尾位置
-		for ix = 1, frame_limit do
+		max_x = max_x % frame_limit                     -- 最前面の末尾位置
+		for ix = max_x + 1, frame_limit do              -- マスクの四角描画
 			local x1 = ((ix - 1) * frame_cell) + x0
 			local x2 = x1 + frame_cell
-			if ix < max_x then -- 最前面の四角描画
-				--scr:draw_box(x1, y1, x2, y2, 0xFF000000, 0)
-			elseif ix > max_x then -- マスクの四角描画
-				scr:draw_box(x1, y1, x2, y2, 0xFF000000, 0x88888888)
-			end
-			if ix == max_x then -- 末尾のみ四方をBOX描画して太線で表示
-				last_box = function() border_box(x1, y1, x2, y2, 1, last_col | 0xFF333333) end
+			scr:draw_box(x1, y1, x2, y2, 0xFF000000, 0x88888888)
+		end
+		for i, args in ipairs(last_box) do
+			if i == #last_box then
+				border_box(table.unpack(args))
+			else
+				scr:draw_box(table.unpack(args))
 			end
 		end
-		if last_box then last_box() end
 	end
 
 	local proc_frame = function(p)
@@ -3079,7 +3082,7 @@ rbff2.startplugin        = function()
 		local act_data = p.body.act_data
 		local name     = (frame and act_data.name_set and act_data.name_set[prev]) and prev or act_data.name
 
-		add_frame(p.num, { line = line, col = col })
+		add_frame(p.num, { line = line, col = col, attackbit = attackbit })
 
 		if p.update_act or not frame or frame.col ~= col or frame.key ~= attackbit then
 			-- 弾とジャンプ状態はキーから省いて無駄な区切りを取り除く
