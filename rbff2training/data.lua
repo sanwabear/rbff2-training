@@ -184,7 +184,7 @@ frame_attack_types.mask_fireball      =
 	frame_attack_types.post_fireball |
 	frame_attack_types.on_fireball |
 	frame_attack_types.off_fireball
-frame_attack_types.mask_frame_advance =
+frame_attack_types.frame_advance =
 	frame_attack_types.frame_plus |
 	frame_attack_types.frame_minus
 frame_attack_types.mask_jump          =
@@ -204,6 +204,17 @@ frame_attack_types.simple_mask        = ut.hex_clear(0xFFFFFFFFFFFFFFFF,
 	frame_attack_types.mask_act |
 	frame_attack_types.mask_hitbox |
 	frame_attack_types.mask_fireball)
+frame_attack_types.dodge_mask         = ut.hex_clear(0xFFFFFFFFFFFFFFFF,
+	-- 過剰に部分無敵表示しない
+	frame_attack_types.main          | -- メインライン攻撃無敵
+	frame_attack_types.sway          | -- メインライン攻撃無敵
+	frame_attack_types.high          | -- 上段攻撃無敵
+	frame_attack_types.low           | -- 下段攻撃無敵
+	frame_attack_types.crounch60     | -- 頭部無敵 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
+	frame_attack_types.crounch64     | -- 頭部無敵 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
+	frame_attack_types.crounch68     | -- 頭部無敵 68 屈 ローレンス
+	frame_attack_types.crounch76     | -- 頭部無敵 76 屈 フランコ
+	frame_attack_types.crounch80)   -- 頭部無敵 80 屈 クラウザー
 frame_attack_types.hitbox_type_mask   =
 	frame_attack_types.attacking |
 	frame_attack_types.fake |
