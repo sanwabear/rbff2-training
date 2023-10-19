@@ -216,23 +216,6 @@ frame_attack_types.main_high          = frame_attack_types.main | frame_attack_t
 frame_attack_types.main_low           = frame_attack_types.main | frame_attack_types.low
 frame_attack_types.sway_high          = frame_attack_types.sway | frame_attack_types.high
 frame_attack_types.sway_low           = frame_attack_types.sway | frame_attack_types.low
-frame_attack_types.frame_dodges       = --  部分無敵としてフレーム表示に反映する部分無敵
---	frame_attack_types.full          | -- 全身無敵
---	frame_attack_types.main          | -- メインライン攻撃無敵
---	frame_attack_types.sway          | -- メインライン攻撃無敵
---	frame_attack_types.high          | -- 上段攻撃無敵
---	frame_attack_types.low           | -- 下段攻撃無敵
-	frame_attack_types.away          | --上半身無敵 32 避け
-	frame_attack_types.waving_blow   | -- 上半身無敵 40 ウェービングブロー,龍転身,ダブルローリング
-	frame_attack_types.laurence_away | -- 上半身無敵 48 ローレンス避け
-	--	frame_attack_types.crounch60     | -- 頭部無敵 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
-	--	frame_attack_types.crounch64     | -- 頭部無敵 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
-	--	frame_attack_types.crounch68     | -- 頭部無敵 68 屈 ローレンス
-	--	frame_attack_types.crounch76     | -- 頭部無敵 76 屈 フランコ
-	--	frame_attack_types.crounch80     | -- 頭部無敵 80 屈 クラウザー
-	frame_attack_types.levitate40    | -- 足元無敵 対アンディ屈C
-	frame_attack_types.levitate32    | -- 足元無敵 対ギース屈C
-	frame_attack_types.levitate24      -- 足元無敵 対だいたいの屈B（キムとボブ以外）
 frame_attack_types.high_dodges        = --  部分無敵としてフレーム表示に反映する部分無敵
 	frame_attack_types.away          | --上半身無敵 32 避け
 	frame_attack_types.waving_blow   | -- 上半身無敵 40 ウェービングブロー,龍転身,ダブルローリング

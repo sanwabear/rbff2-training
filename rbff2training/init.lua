@@ -3223,7 +3223,7 @@ rbff2.startplugin        = function()
 	end
 
 	-- 技データのIDかフラグから技データを返す
-	local resolve_act_neutral = function(p, act_data_type)
+	local resolve_act_neutral = function(p)
 		if ut.tstb(p.flag_c0, 0x3FFD723) or (p.attack_data | p.flag_c4 | p.flag_c8) ~= 0 or ut.tstb(p.flag_cc, 0xFFFFFF3F) or ut.tstb(p.flag_d0, db.flag_d0.hurt) then
 			return false
 		end
@@ -3596,6 +3596,7 @@ rbff2.startplugin        = function()
 					table.insert(p.hitbox_types, box.type)
 				end
 			end
+			p.attackbit = p.attackbit | p.hurt.dodge
 
 			if global.pause_hitbox == 2 and #p.body.throw_boxies then global.pause = true end -- 強制ポーズ
 
@@ -3671,7 +3672,7 @@ rbff2.startplugin        = function()
 		table.sort(ranges, ranges_order)
 
 		for i, p in ipairs(players) do
-			local p1, op, col1, col2, col3, label = i == 1, p.op, {}, {}, {}, {}
+			local op, col1, col2, col3, label = p.op, {}, {}, {}, {}
 			for _, xp in ipairs(p.objects) do
 				if xp.proc_active then
 					table.insert(label, string.format("Damage %3s/%1s  Stun %2s/%2s Fra.", xp.damage or 0, xp.chip or 0, xp.stun or 0, xp.stun_timer or 0))
