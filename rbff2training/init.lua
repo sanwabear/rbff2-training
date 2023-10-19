@@ -2967,16 +2967,16 @@ rbff2.startplugin        = function()
 		if not global.both_act_neutral and global.old_both_act_neutral then
 			p_frames[num] = {} -- バッファ初期化
 		end
-		local frames, reset = p_frames[num], false -- プレイヤーごとのバッファを取得
+		local frames, reset, first = p_frames[num], false, false -- プレイヤーごとのバッファを取得
 		if ut.tstb(frame.attackbit, frame_attack_types.frame_plus) then
 			table.insert(frames, { col = 0, line = 0, count = 0, attackbit = frame.attackbit })
 			return
 		end
 		if #frames == 0 then
+			first, reset = true, true
+		elseif frame.attackbit ~= frames[#frames].key then
 			reset = true
 		--[[
-		elseif frame.attackbit ~= frames[#frames].attackbit then
-			reset = true
 		elseif frame.name ~= frames[#frames].name then
 			reset = true
 		elseif frame.update ~= frames[#frames].update then
@@ -2986,6 +2986,14 @@ rbff2.startplugin        = function()
 			reset = true
 		end
 		frame.count = reset and 1 or frames[#frames].count + 1
+		frame.total = (first or not frames[#frames].total) and 1 or frames[#frames].total + 1
+		if frames[#frames] and frames[#frames].startup then
+			frame.startup = frames[#frames].startup
+		elseif not frame.startup and ut.tstb(frame.attackbit, frame_attack_types.attacking) then
+			if not ut.tstb(frame.attackbit, frame_attack_types.fake | frame_attack_types.obsolute | frame_attack_types.fullhit | frame_attack_types.harmless)  then
+			end
+			frame.startup = frame.total
+		end
 		table.insert(frames, frame)                          -- 末尾に追加
 		if #frames <= frame_buffer_limit then return end     -- バッファ長が2行以下なら抜ける
 		while frame_limit < #frames do table.remove(frames, 1) end -- 1行目のバッファを削除
@@ -3011,9 +3019,11 @@ rbff2.startplugin        = function()
 		end
 		local remain = (frame_limit < max_x) and (max_x % frame_limit) or 0
 		local ends = {}
+		local startup
 		border_box(x0, y1, x0 + frame_limit * frame_cell, y2, 0.5, 0xFF000000) -- 外枠
 		for ix = remain + 1, max_x do
 			local frame = frames[ix]
+			startup = frame.startup
 			local x1 = (((ix - 1) % frame_limit) * frame_cell) + x0
 			local x2 = x1 + frame_cell
 			if ix == max_x then -- 末尾のみ四方をBOX描画して太線で表示
@@ -3021,9 +3031,9 @@ rbff2.startplugin        = function()
 					txt = { x2, y1, frame.count },
 					box = { x1, y1, x2, y2, 1, frame.line | 0xFF333333 }
 				})
-			elseif ((remain == 0) or (remain + 4 < ix)) and (2 < frame.count) and (frames[ix + 1].count == 1) then -- 区切り
+			elseif ((remain == 0) or (remain + 4 < ix)) and (frames[ix + 1].count == 1) then -- 区切り
 				table.insert(ends, {
-					txt = { x2, y1, frame.count },
+					txt = { x2, y1, 0 < frame.count and frame.count or "" },
 					box = { x1, y1, x2, y2, frame.line | 0xFF333333, 0 }
 				})
 			end
@@ -3049,50 +3059,45 @@ rbff2.startplugin        = function()
 			border_box(table.unpack(args.box))
 			draw_rtext_with_shadow(table.unpack(args.txt))
 		end
+		local label
+		if startup then
+			label = string.format("Startup %2s / Total %3s / Recovery", startup, max_x)
+		else
+			label = string.format("Startup -- / Total  -- / Recovery", startup, max_x)
+		end
+		local ty = num == 1 and y1 - height or y1 + height
+		draw_text_with_shadow(x0, ty, label)
+		draw_text_with_shadow(x0 + get_string_width(label) - 4, ty, players[num].last_frame_gap_txt, players[num].last_frame_gap_col)
 	end
 	local proc_frame = function(p)
-		local col, font_col, line, xline, attackbit = 0xAAF0E68C, 0xFFFFFFFF, 0xDDF0E68C, 0, 0
-		for _, xp in ifind_all(p.objects, function(xp) return xp.proc_active end) do
-			if p.skip_frame then
-			elseif p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number then
-			elseif xp.proc_active and xp.hitbox_types and #xp.hitbox_types > 0 and xp.hitbox_types then
-				attackbit = attackbit | p.attackbit
-				table.sort(xp.hitbox_types, function(t1, t2) return t1.sort > t2.sort end) -- ソート
-				if xp.hitbox_types[1].sort < 3 and xp.repeatable then
-					col, line = 0xAAD2691E, 0xDDD2691E                         -- やられ判定より連キャン状態を優先表示する
-				else
-					col, line = xp.hitbox_types[1].fill, xp.hitbox_types[1].outline
-					col = col > 0xFFFFFF and (col | 0x22111111) or 0
-				end
+		local col, line, xline, attackbit = 0xAAF0E68C, 0xDDF0E68C, 0, 0
+		local attackbit_mask = frame_attack_types.simple_mask
+
+		if p.skip_frame then
+			col, line = 0xAA000000, 0xAA000000 -- 強制停止
+		elseif p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number then
+			col, line = 0xAA444444, 0xDD444444 -- ヒットストップ中
+		--elseif p.on_bs_established == global.frame_number then
+		--	col, line = 0xAA0022FF, 0xDD0022FF -- BSコマンド成立
+		else
+			for _, d in ifind(dodges, function(d) return ut.tstb(p.attackbit, d.type) end) do
+				attackbit = attackbit | d.type -- 部分無敵
 			end
-			if not xp.is_fireball then  -- 本体状態
-				if xp.skip_frame then
-					col, line = 0xAA000000, 0xAA000000 -- 強制停止
-				elseif xp.on_bs_established == global.frame_number then
-					col, line = 0xAA0022FF, 0xDD0022FF -- BSコマンド確認タイミング
-					-- elseif xp.on_bs_clear == global.frame_number then
-					--	col, line = 0xAA00FF22, 0xDD00FF22
-				elseif xp.in_hitstop == global.frame_number or xp.on_hit_any == global.frame_number then
-					col, line = 0xAA444444, 0xDD444444 -- ヒットストップ中
-					-- elseif xp.on_bs_check == global.frame_number then
-					--	col, line = 0xAAFF0022, 0xDDFF0022
+			for _, xp in ifind_all(p.objects, function(xp) return xp.proc_active end) do
+				if xp.hitbox_types and #xp.hitbox_types > 0 and xp.hitbox_types then
+					attackbit = attackbit | xp.attackbit
+					table.sort(xp.hitbox_types, function(t1, t2) return t1.sort > t2.sort end) -- ソート
+					if xp.hitbox_types[1].sort < 3 and xp.repeatable then
+						col, line = 0xAAD2691E, 0xDDD2691E                         -- やられ判定より連キャン状態を優先表示する
+					else
+						col, line = xp.hitbox_types[1].fill, xp.hitbox_types[1].outline
+						col = col > 0xFFFFFF and (col | 0x22111111) or 0
+					end
 				end
-
-				if p.skip_frame or p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number or p.jumping then
-					-- 無視
-				elseif ut.tstb(p.hurt.dodge, frame_attack_types.full, true) then
-					attackbit, xline = attackbit | frame_attack_types.full, 0xFF00FFFF -- 全身無敵
-				elseif ut.tstb(p.hurt.dodge, frame_attack_types.frame_dodges) then
-					attackbit, xline = attackbit | frame_attack_types.frame_dodges, 0xFF00BBDD -- 部分無敵
-				end
-
-				-- フレーム差
-				if p.frame_gap > 0 then font_col = 0xFF0088FF elseif p.frame_gap < 0 then font_col = 0xFFFF0088 end
 			end
 		end
 
-		-- フレーム数表示
-		local attackbit_mask = frame_attack_types.simple_mask
+		-- フレーム数表示設定ごとのマスク
 		if p.disp_frame == 2 then -- 2:ON
 			if p.max_hit_dn and p.max_hit_dn > 0 and p.attackbits.attacking and not p.attackbits.fake then
 				attackbit_mask = 0xFFFFFFFFFFFFFFFF
@@ -3118,12 +3123,15 @@ rbff2.startplugin        = function()
 		local prev     = frame and frame.name
 		local act_data = p.body.act_data
 		local name     = (frame and act_data.name_set and act_data.name_set[prev]) and prev or act_data.name
+		-- 弾とジャンプ状態はキーから省いて無駄な区切りを取り除く
+		local key_mask = ut.hex_clear(0xFFFFFFFFFFFFFFFF, frame_attack_types.mask_fireball | frame_attack_types.mask_jump)
+		local key      = key_mask & attackbit
 
-		add_frame(p.num, { line = line, col = col, attackbit = attackbit, name = name, update = p.update_act, })
+		print("atk3", ut.tstb(attackbit, frame_attack_types.attack),  ut.tstb(attackbit, frame_attack_types.attacking))
+
+		add_frame(p.num, { line = line, col = col, attackbit = attackbit, key = key, name = name, update = p.update_act, })
 
 		if p.update_act or not frame or frame.col ~= col or frame.key ~= attackbit then
-			-- 弾とジャンプ状態はキーから省いて無駄な区切りを取り除く
-			local key_mask = ut.hex_clear(0xFFFFFFFFFFFFFFFF, frame_attack_types.mask_fireball | frame_attack_types.mask_jump)
 			--行動IDの更新があった場合にフレーム情報追加
 			frame = ut.table_add(p.act_frames, {
 				act        = p.act,
@@ -3174,13 +3182,14 @@ rbff2.startplugin        = function()
 		parent, frames, groups = last_frame and last_frame.gap_frames or nil, p.gap_frames.act_frames, p.gap_frames.frame_groups
 		key, frame = p.attackbit & frame_attack_types.mask_frame_advance, frames[#frames]
 		if p.update_act or not frame or upd_group or frame.key ~= key then
+			local col = (p.frame_gap > 0) and 0xFF0088FF or (p.frame_gap < 0) and 0xFFFF0088 or 0xFFFFFFFF
 			frame = ut.table_add(frames, {
 				act      = p.act,
 				count    = 1,
-				font_col = font_col,
+				font_col = col,
 				name     = last_frame.name,
-				col      = 0x22FFFFFF & font_col,
-				line     = 0xCCFFFFFF & font_col,
+				col      = 0x22FFFFFF & col,
+				line     = 0xCCFFFFFF & col,
 				update   = p.update_act,
 				key      = key,
 			}, 180)
@@ -3214,7 +3223,6 @@ rbff2.startplugin        = function()
 	end
 
 	-- 技データのIDかフラグから技データを返す
-	local act_data_cache = {}
 	local resolve_act_neutral = function(p, act_data_type)
 		if ut.tstb(p.flag_c0, 0x3FFD723) or (p.attack_data | p.flag_c4 | p.flag_c8) ~= 0 or ut.tstb(p.flag_cc, 0xFFFFFF3F) or ut.tstb(p.flag_d0, db.flag_d0.hurt) then
 			return false
@@ -3223,9 +3231,6 @@ rbff2.startplugin        = function()
 	end
 	local get_act_data = function(p)
 		local act_data1 = db.chars[p.char] and db.chars[p.char].acts[p.act] or nil
-		if not act_data1 then
-			act_data1 = act_data_cache[p.char] and act_data_cache[p.char].a[p.act] or nil
-		end
 		if act_data1 then
 			local act_data = act_data1
 			-- 技動作は滑りかBSかを付与する
@@ -3255,14 +3260,13 @@ rbff2.startplugin        = function()
 		else
 			name = string.format("%s %s %s", db.get_flag_name(p.flag_c0, db.flag_names_c0), p.act)
 		end
-		local p_cache = act_data_cache[p.char] or { n = {}, a = {} }
-		if not act_data_cache[p.char] then act_data_cache[p.char] = p_cache end
-		local act_data = p_cache.a[p.act] or p_cache.n[name]
+		local p_cache = db.chars[p.char].acts
+		local act_data = p_cache[p.act] or p_cache[name]
 		if not act_data then
 			act_data         = { bs_name = name, name = name, normal_name = name, slide_name = name, type = db.act_types.free, count = 1 }
 			act_data.neutral = resolve_act_neutral(p)
-			p_cache.n[name]  = act_data
-			p_cache.a[p.act] = act_data
+			p_cache[name]    = act_data
+			p_cache[p.act]   = act_data
 		end
 		return act_data
 	end
@@ -3402,6 +3406,10 @@ rbff2.startplugin        = function()
 				end
 				if last then
 					p1.last_frame_gap, p2.last_frame_gap = p1.frame_gap, p2.frame_gap
+					p1.last_frame_gap_txt = string.format("%4s", string.format(p1.frame_gap > 0 and "+%d" or "%d", p1.frame_gap))
+					p1.last_frame_gap_col = p1.frame_gap == 0 and 0xFFFFFFFF or p1.frame_gap > 0 and 0xFF0088FF or 0xFFFF0088
+					p2.last_frame_gap_txt = string.format("%4s", string.format(p2.frame_gap > 0 and "+%d" or "%d", p2.frame_gap))
+					p2.last_frame_gap_col = p2.frame_gap == 0 and 0xFFFFFFFF or p2.frame_gap > 0 and 0xFF0088FF or 0xFFFF0088
 				end
 			end
 
@@ -4384,9 +4392,7 @@ rbff2.startplugin        = function()
 				end
 				--フレーム差と確定反撃の表示
 				if global.disp_framegap > 1 then
-					local gap = p.last_frame_gap or 0
-					draw_text_with_shadow(p1 and 140 or 165, 40, string.format("%4s", string.format(gap > 0 and "+%d" or "%d", gap)),
-						gap == 0 and 0xFFFFFFFF or gap > 0 and 0xFF0088FF or 0xFFFF0088)
+					draw_text_with_shadow(p1 and 140 or 165, 40, p.last_frame_gap_txt, p.last_frame_gap_col)
 					draw_text_with_shadow(p1 and 112 or 184, 40, "PUNISH", p.on_punish <= global.frame_number and 0xFF808080 or 0xFF00FFFF)
 				end
 			end

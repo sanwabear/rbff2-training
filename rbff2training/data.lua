@@ -204,7 +204,7 @@ frame_attack_types.simple_mask        = ut.hex_clear(0xFFFFFFFFFFFFFFFF,
 	frame_attack_types.mask_act |
 	frame_attack_types.mask_hitbox |
 	frame_attack_types.mask_fireball)
-frame_attack_types.hitbox_type_mask        =
+frame_attack_types.hitbox_type_mask   =
 	frame_attack_types.attacking |
 	frame_attack_types.fake |
 	frame_attack_types.fb |
@@ -232,16 +232,16 @@ frame_attack_types.frame_dodges       = --  部分無敵としてフレーム表
 	--	frame_attack_types.crounch80     | -- 頭部無敵 80 屈 クラウザー
 	frame_attack_types.levitate40    | -- 足元無敵 対アンディ屈C
 	frame_attack_types.levitate32    | -- 足元無敵 対ギース屈C
-	frame_attack_types.levitate24   -- 足元無敵 対だいたいの屈B（キムとボブ以外）
-frame_attack_types.high_dodges       = --  部分無敵としてフレーム表示に反映する部分無敵
-		frame_attack_types.away          | --上半身無敵 32 避け
-		frame_attack_types.waving_blow   | -- 上半身無敵 40 ウェービングブロー,龍転身,ダブルローリング
-		frame_attack_types.laurence_away   -- 上半身無敵 48 ローレンス避け
-frame_attack_types.low_dodges       = --  部分無敵としてフレーム表示に反映する部分無敵
-		frame_attack_types.levitate40    | -- 足元無敵 対アンディ屈C
-		frame_attack_types.levitate32    | -- 足元無敵 対ギース屈C
-		frame_attack_types.levitate24      -- 足元無敵 対だいたいの屈B（キムとボブ以外）
-	db.frame_attack_types                 = frame_attack_types
+	frame_attack_types.levitate24      -- 足元無敵 対だいたいの屈B（キムとボブ以外）
+frame_attack_types.high_dodges        = --  部分無敵としてフレーム表示に反映する部分無敵
+	frame_attack_types.away          | --上半身無敵 32 避け
+	frame_attack_types.waving_blow   | -- 上半身無敵 40 ウェービングブロー,龍転身,ダブルローリング
+	frame_attack_types.laurence_away   -- 上半身無敵 48 ローレンス避け
+frame_attack_types.low_dodges         = --  部分無敵としてフレーム表示に反映する部分無敵
+	frame_attack_types.levitate40    | -- 足元無敵 対アンディ屈C
+	frame_attack_types.levitate32    | -- 足元無敵 対ギース屈C
+	frame_attack_types.levitate24      -- 足元無敵 対だいたいの屈B（キムとボブ以外）
+db.frame_attack_types                 = frame_attack_types
 
 -- モーションによる部分無敵
 local hurt_dodge_types                = {
@@ -287,7 +287,7 @@ db.get_punish_name                    = function(type)
 		frame_attack_types.crounch68,
 		frame_attack_types.crounch76,
 		frame_attack_types.crounch80,
-	}) do if ut.tstb(type, atype, true) then  return hurt_dodge_names[atype] end end
+	}) do if ut.tstb(type, atype, true) then return hurt_dodge_names[atype] end end
 	return ""
 end
 db.get_low_dodge_name                 = function(type)
@@ -295,7 +295,7 @@ db.get_low_dodge_name                 = function(type)
 		frame_attack_types.levitate40,
 		frame_attack_types.levitate32,
 		frame_attack_types.levitate24,
-	}) do if ut.tstb(type, atype, true) then  return hurt_dodge_names[atype] end end
+	}) do if ut.tstb(type, atype, true) then return hurt_dodge_names[atype] end end
 	return ""
 end
 db.get_dodge_name                     = function(type)
@@ -306,13 +306,13 @@ db.get_dodge_name                     = function(type)
 		frame_attack_types.sway_low,
 		frame_attack_types.main,
 		frame_attack_types.full,
-	}) do if ut.tstb(type, atype, true) then  return hurt_dodge_names[atype] end end
+	}) do if ut.tstb(type, atype, true) then return hurt_dodge_names[atype] end end
 	return string.format("%-10s/%-10s", db.get_punish_name(type), db.get_low_dodge_name(type)) -- 部分無敵
 end
 db.hurt_dodge_types                   = hurt_dodge_types
 db.top_types                          = top_types
 db.top_sway_types                     = top_sway_types
-local hit_top_names = {
+local hit_top_names                   = {
 	[act_types.attack] = "High",
 	[act_types.low_attack] = "Low",
 	[act_types.overhead] = "Mid",
@@ -324,7 +324,7 @@ db.top_type_name                      = function(type)
 		act_types.overhead,
 		act_types.low_attack,
 		act_types.attack,
-	}) do if ut.tstb(type, atype, true) then  return hit_top_names[atype] end end
+	}) do if ut.tstb(type, atype, true) then return hit_top_names[atype] end end
 	return "-"
 end
 -- !!注意!!後隙が配列の後ろに来るように定義すること
@@ -2089,24 +2089,24 @@ for char, list in pairs(rvs_bs_list) do
 	chars[char].rvs, chars[char].bs = rvs_list, bs_list
 end
 
-db.hook_cmd_types                    = hook_cmd_types
-db.rvs_types                         = rvs_types
-db.cmd_masks                         = cmd_masks
-db.cmd_types                         = cmd_types
-db.char_rvs_list                     = char_rvs_list
-db.char_bs_list                      = char_bs_list
-db.rvs_bs_list                       = rvs_bs_list
+db.hook_cmd_types   = hook_cmd_types
+db.rvs_types        = rvs_types
+db.cmd_masks        = cmd_masks
+db.cmd_types        = cmd_types
+db.char_rvs_list    = char_rvs_list
+db.char_bs_list     = char_bs_list
+db.rvs_bs_list      = rvs_bs_list
 
 --------------------------------------------------------------------------------------
 -- 状態フラグ
 --------------------------------------------------------------------------------------
 
-db.esaka_type_names                  = {
+db.esaka_type_names = {
 	[0x2000] = "Low",
 	[0x4000] = "High",
 	[0x8000] = "Anti-Air",
 }
-local flag_c0                        = {
+local flag_c0       = {
 	_00 = 2 ^ 0, -- ジャンプ振向
 	_01 = 2 ^ 1, -- ダウン
 	_02 = 2 ^ 2, -- 屈途中
@@ -2140,7 +2140,7 @@ local flag_c0                        = {
 	_30 = 2 ^ 30, -- 前進
 	_31 = 2 ^ 31, -- 立
 }
-local flag_c4                        = {
+local flag_c4       = {
 	_00 = 2 ^ 0, -- 避け攻撃
 	_01 = 2 ^ 1, -- 対スウェーライン下段攻撃
 	_02 = 2 ^ 2, -- 対スウェーライン上段攻撃
@@ -2174,7 +2174,7 @@ local flag_c4                        = {
 	_30 = 2 ^ 30, -- 立B
 	_31 = 2 ^ 31, -- 立A
 }
-local flag_c8                        = {
+local flag_c8       = {
 	_00 = 2 ^ 0, --
 	_01 = 2 ^ 1, --
 	_02 = 2 ^ 2, --
@@ -2208,7 +2208,7 @@ local flag_c8                        = {
 	_30 = 2 ^ 30, -- 必殺技
 	_31 = 2 ^ 31, -- 必殺技
 }
-local flag_cc                        = {
+local flag_cc       = {
 	_00 = 2 ^ 0, -- CA
 	_01 = 2 ^ 1, -- AかB攻撃
 	_02 = 2 ^ 2, -- 滑り
@@ -2243,7 +2243,7 @@ local flag_cc                        = {
 	_31 = 2 ^ 31, -- 投げ
 }
 -- 小ジャンプ
-flag_c4.hop                          = flag_c4._06 |
+flag_c4.hop         = flag_c4._06 |
 	flag_c4._07 |
 	flag_c4._08 |
 	flag_c4._09 |
@@ -2253,7 +2253,7 @@ flag_c4.hop                          = flag_c4._06 |
 	flag_c4._13 |
 	flag_c4._14
 -- ジャンプ
-flag_c4.jump                         = flag_c4._15 |
+flag_c4.jump        = flag_c4._15 |
 	flag_c4._16 |
 	flag_c4._17 |
 	flag_c4._18 |
@@ -2262,7 +2262,7 @@ flag_c4.jump                         = flag_c4._15 |
 	flag_c4._21 |
 	flag_c4._22 |
 	flag_c4._23
-local flag_d0                        = {
+local flag_d0       = {
 	_00 = 0x1, --
 	_01 = 0x2, --
 	_02 = 0x4, --
@@ -2272,7 +2272,7 @@ local flag_d0                        = {
 	_06 = 0x40, -- ガード中、やられ中
 	_07 = 0x80, -- 攻撃ヒット
 }
-local flag_7e                        = {
+local flag_7e       = {
 	_00 = 0x1, -- 制止中
 	_01 = 0x2, --
 	_02 = 0x4, -- 動作切替
@@ -2282,7 +2282,7 @@ local flag_7e                        = {
 	_06 = 0x40, --
 	_07 = 0x80 -- 近距離
 }
-flag_cc.hitstun                      =
+flag_cc.hitstun     =
 	flag_cc._03 |                                    -- 必殺投げやられ
 	flag_cc._08 |                                    -- 投げ派生やられ
 	flag_cc._09 |                                    -- つかみ投げやられ
@@ -2294,11 +2294,11 @@ flag_cc.hitstun                      =
 	flag_cc._17 |                                    -- 気絶
 	flag_cc._18 |                                    -- 気絶起き上がり
 	flag_cc._23                                      -- 起き上がり
-flag_cc.blocking                     =
+flag_cc.blocking    =
 	flag_cc._05 |                                    -- 空中ガード
 	flag_cc._06 |                                    -- 屈ガード
 	flag_cc._07                                      -- 立ガード
-flag_cc.attacking                    =
+flag_cc.attacking   =
 	flag_cc._00 |                                    -- CA
 	flag_cc._01 |                                    -- AかB攻撃
 	flag_cc._20 |                                    -- ブレイクショット
@@ -2307,24 +2307,24 @@ flag_cc.attacking                    =
 	flag_cc._27 |                                    -- 投げ追撃
 	flag_cc._30 |                                    -- 空中投げ
 	flag_cc._31                                      -- 投げ
-flag_cc.grabbing                     =
+flag_cc.grabbing    =
 	flag_cc._25 |                                    -- つかみ技
 	flag_cc._27                                      -- 投げ追撃
-flag_cc.thrown                       =
+flag_cc.thrown      =
 	flag_cc._03 |                                    -- 必殺投げやられ
 	flag_cc._08 |                                    -- 投げ派生やられ
 	flag_cc._09 |                                    -- つかみ投げやられ
 	flag_cc._10                                      -- 投げられ
-flag_d0.hurt                         = flag_d0._03 | -- ギガティック投げられ
+flag_d0.hurt        = flag_d0._03 |                  -- ギガティック投げられ
 	flag_d0._06 |                                    -- ガード中、やられ中
 	flag_d0._07                                      -- 攻撃ヒット
-db.flag_c0                           = flag_c0
-db.flag_c4                           = flag_c4
-db.flag_c8                           = flag_c8
-db.flag_cc                           = flag_cc
-db.flag_d0                           = flag_d0
-db.flag_7e                           = flag_7e
-db.flag_names_c0                     = {
+db.flag_c0          = flag_c0
+db.flag_c4          = flag_c4
+db.flag_c8          = flag_c8
+db.flag_cc          = flag_cc
+db.flag_d0          = flag_d0
+db.flag_7e          = flag_7e
+db.flag_names_c0    = {
 	"ジャンプ振向", -- 0
 	"ダウン", -- 1
 	"屈途中", -- 2
@@ -2358,7 +2358,7 @@ db.flag_names_c0                     = {
 	"前進", -- 30
 	"立", -- 31
 }
-db.flag_names_c4                     = {
+db.flag_names_c4    = {
 	"避け攻撃", -- 0
 	"対スウェーライン下段攻撃", -- 1
 	"対スウェーライン上段攻撃", -- 2
@@ -2392,7 +2392,7 @@ db.flag_names_c4                     = {
 	"立B", -- 30
 	"立A", -- 31
 }
-db.flag_names_c8                     = {
+db.flag_names_c8    = {
 	"", -- 0
 	"", -- 1
 	"", -- 2
@@ -2426,7 +2426,7 @@ db.flag_names_c8                     = {
 	"必殺技", -- 30
 	"必殺技", -- 31
 }
-db.flag_names_cc                     = {
+db.flag_names_cc    = {
 	"CA", -- 0
 	"AかB攻撃", -- 1
 	"滑り", -- 2
@@ -2460,7 +2460,7 @@ db.flag_names_cc                     = {
 	"空中投げ", -- 30
 	"投げ", -- 31
 }
-db.flag_names_d0                     = {
+db.flag_names_d0    = {
 	"", -- 0
 	"", -- 1
 	"", -- 2
@@ -2470,7 +2470,7 @@ db.flag_names_d0                     = {
 	"ガード中、やられ中", -- 6
 	"攻撃ヒット", -- 7
 }
-db.flag_names_7e                     = {
+db.flag_names_7e    = {
 	"制止中", -- 0
 	"", -- 1
 	"動作切替", -- 2
@@ -2480,7 +2480,7 @@ db.flag_names_7e                     = {
 	"", -- 6
 	"近距離", -- 7
 }
-db.get_flag_name                     = function(flags, flag_names)
+db.get_flag_name    = function(flags, flag_names)
 	local flgtxt = ""
 	if flags == nil or flags <= 0 then return flgtxt end
 	for i, name in ipairs(flag_names) do
@@ -2496,7 +2496,7 @@ end
 -- ヒット効果
 --------------------------------------------------------------------------------------
 
-local hit_effect_types               = {
+local hit_effect_types = {
 	down = "ダ", -- ダウン
 	extra = "特", -- 特殊なやられ
 	extra_launch = "特浮", -- 特殊な空中追撃可能ダウン
@@ -2514,7 +2514,7 @@ local hit_effect_types               = {
 	plane_shift_down = "送ダ", -- スウェーライン送りダウン
 	standup = "立", -- 強制立のけぞり
 }
-local hit_effects                    = {
+local hit_effects      = {
 	types     = hit_effect_types,
 	en_types  = {
 		[hit_effect_types.down] = "Down",                   -- ダウン
@@ -2626,7 +2626,7 @@ local hit_effects                    = {
 		{ hit_effect_types.launch,           hit_effect_types.launch,           hit_effect_types.otg_down },
 	},
 }
-hit_effects.name                   = function(effect)
+hit_effects.name       = function(effect)
 	local e = effect and hit_effects[effect + 1] or nil --luaの配列は1からになるので+1する
 	if e then
 		return string.format("%-16s/%-16s", (hit_effects.en_types[e[1]] or ""), (hit_effects.en_types[e[2]] or ""))
@@ -2634,14 +2634,14 @@ hit_effects.name                   = function(effect)
 		return string.format("%s", effect)
 	end
 end
-db.hit_effects                       = hit_effects
+db.hit_effects         = hit_effects
 
 
 --------------------------------------------------------------------------------------
 -- コマンド入力状態
 --------------------------------------------------------------------------------------
 
-local input_state_types              = {
+local input_state_types   = {
 	step = 1,
 	faint = 2,
 	charge = 3,
@@ -2651,7 +2651,7 @@ local input_state_types              = {
 	todome = 7,
 	drill5 = 8,
 }
-local create_input_states            = function()
+local create_input_states = function()
 	local _1236b = "_1|_2|_3|_6|_B"
 	local _16a = "_1|_6|_A"
 	local _16b = "_1|_6|_B"
@@ -3388,7 +3388,7 @@ local create_input_states            = function()
 	end
 	return { normal = input_convert(input_states), easy = input_convert(input_easy_states) }
 end
-local input_state                    = {
+local input_state         = {
 	types  = input_state_types,
 	states = create_input_states(),
 	col    = {
@@ -3402,7 +3402,7 @@ local input_state                    = {
 		white = 0xC0FFFFFF,
 	},
 }
-db.input_state                       = input_state
+db.input_state            = input_state
 
 
 --------------------------------------------------------------------------------------
@@ -3467,15 +3467,15 @@ for _, boxtype in pairs(box_types) do
 	boxtype.fill    = (0xFFFFFFFF & (boxtype.fill << 24)) | boxtype.color
 	boxtype.outline = (0xFFFFFFFF & (boxtype.outline << 24)) | boxtype.color
 end
-local hurt_boxies       = ut.new_set(
-	box_types.hurt1,        -- 食らい1
-	box_types.hurt2,        -- 食らい2
-	box_types.down_otg,     -- 食らい(ダウン追撃のみ可)
-	box_types.launch,       -- 食らい(空中追撃のみ可)
-	box_types.unknown02,    -- 食らい5(未使用?)
-	box_types.hurt3,        -- 食らい(対ライン上攻撃)
-	box_types.hurt4)        -- 食らい(対ライン下攻撃)
-local box_type_list     = {}
+local hurt_boxies   = ut.new_set(
+	box_types.hurt1,  -- 食らい1
+	box_types.hurt2,  -- 食らい2
+	box_types.down_otg, -- 食らい(ダウン追撃のみ可)
+	box_types.launch, -- 食らい(空中追撃のみ可)
+	box_types.unknown02, -- 食らい5(未使用?)
+	box_types.hurt3,  -- 食らい(対ライン上攻撃)
+	box_types.hurt4)  -- 食らい(対ライン下攻撃)
+local box_type_list = {}
 for _, box_type in pairs(box_types) do table.insert(box_type_list, box_type) end
 table.sort(box_type_list, function(a, b) return a.no < b.no end)
 db.box_kinds = box_kinds
