@@ -2967,10 +2967,10 @@ rbff2.startplugin        = function()
 		if not global.both_act_neutral and global.old_both_act_neutral then
 			p_frames[num] = {} -- バッファ初期化
 		end
-		local frames, reset, first = p_frames[num], false, false -- プレイヤーごとのバッファを取得
+		local frames, reset, first, blank = p_frames[num], false, false, false -- プレイヤーごとのバッファを取得
 		if ut.tstb(frame.attackbit, frame_attack_types.frame_plus) then
-			table.insert(frames, { col = 0, line = 0, count = 0, attackbit = frame.attackbit })
-			return
+			-- 有利フレームは透明表示にする
+			frame = { col = 0, line = 0, count = 0, attackbit = frame.attackbit, key = frame.key }
 		end
 		if #frames == 0 then
 			first, reset = true, true
@@ -3127,7 +3127,7 @@ rbff2.startplugin        = function()
 		local key_mask = ut.hex_clear(0xFFFFFFFFFFFFFFFF, frame_attack_types.mask_fireball | frame_attack_types.mask_jump)
 		local key      = key_mask & attackbit
 
-		print("atk3", ut.tstb(attackbit, frame_attack_types.attack),  ut.tstb(attackbit, frame_attack_types.attacking))
+		--print("atk3", ut.tstb(attackbit, frame_attack_types.attack),  ut.tstb(attackbit, frame_attack_types.attacking))
 
 		add_frame(p.num, { line = line, col = col, attackbit = attackbit, key = key, name = name, update = p.update_act, })
 
@@ -3230,44 +3230,39 @@ rbff2.startplugin        = function()
 		return true
 	end
 	local get_act_data = function(p)
-		local act_data1 = db.chars[p.char] and db.chars[p.char].acts[p.act] or nil
-		if act_data1 then
-			local act_data = act_data1
-			-- 技動作は滑りかBSかを付与する
-			act_data.name = p.sliding and act_data.slide_name or p.in_bs and act_data.bs_name or act_data.normal_name
-			if act_data.neutral == nil then
-				act_data.neutral = resolve_act_neutral(p) or ut.tstb(act_data.type, db.act_types.free | db.act_types.block)
-			end
-			return act_data
-		end
-		local name
-		if p.flag_c4 == 0 and p.flag_c8 == 0 then
-			name = ut.tstb(p.flag_cc, db.flag_cc.blocking) and "ガード" or p.flag_cc > 0 and
-				db.get_flag_name(p.flag_cc, db.flag_names_cc) or db.get_flag_name(p.flag_c0, db.flag_names_c0)
-		elseif p.flag_c4 > 0 and p.flag_c8 == 0 and not ut.tstb(p.flag_cc, db.flag_cc._00) then
-			local slide = ut.tstb(p.flag_cc, db.flag_cc._02) and db.get_flag_name(db.flag_cc._02, db.flag_names_cc) or ""
-			local close
-			if ut.tstb(p.flag_c4, db.flag_c4._01 | db.flag_c4._02) then
-				close = p.main_d_close and "近" or "遠"
-			elseif ut.tstb(p.flag_c4, db.flag_c4._03 | db.flag_c4._04 | db.flag_c4._05) then
-				close = p.sway_close and "近" or "遠"
-			elseif ut.tstb(p.flag_c4, db.flag_c4._29 | db.flag_c4._30 | db.flag_c4._31) then
-				close = p.stand_close and "近" or "遠"
-			end
-			name = string.format("%s%s%s", slide, close or "", db.get_flag_name(p.flag_c4, db.flag_names_c4))
-		elseif ut.tstb(p.flag_cc, db.flag_cc._00) then
-			name = string.format("%s %s %s", db.get_flag_name(p.flag_cc, db.flag_names_cc), db.get_flag_name(p.flag_c0, db.flag_names_c0), p.act)
-		else
-			name = string.format("%s %s %s", db.get_flag_name(p.flag_c0, db.flag_names_c0), p.act)
-		end
-		local p_cache = db.chars[p.char].acts
-		local act_data = p_cache[p.act] or p_cache[name]
+		local cache = db.chars[p.char] and db.chars[p.char].acts or {}
+		local act_data = cache[p.act]
 		if not act_data then
-			act_data         = { bs_name = name, name = name, normal_name = name, slide_name = name, type = db.act_types.free, count = 1 }
-			act_data.neutral = resolve_act_neutral(p)
-			p_cache[name]    = act_data
-			p_cache[p.act]   = act_data
+			local name
+			if p.flag_c4 == 0 and p.flag_c8 == 0 then
+				name = ut.tstb(p.flag_cc, db.flag_cc.blocking) and "ガード" or p.flag_cc > 0 and
+					db.get_flag_name(p.flag_cc, db.flag_names_cc) or db.get_flag_name(p.flag_c0, db.flag_names_c0)
+			elseif p.flag_c4 > 0 and p.flag_c8 == 0 and not ut.tstb(p.flag_cc, db.flag_cc._00) then
+				local slide = ut.tstb(p.flag_cc, db.flag_cc._02) and db.get_flag_name(db.flag_cc._02, db.flag_names_cc) or ""
+				local close
+				if ut.tstb(p.flag_c4, db.flag_c4._01 | db.flag_c4._02) then
+					close = p.main_d_close and "近" or "遠"
+				elseif ut.tstb(p.flag_c4, db.flag_c4._03 | db.flag_c4._04 | db.flag_c4._05) then
+					close = p.sway_close and "近" or "遠"
+				elseif ut.tstb(p.flag_c4, db.flag_c4._29 | db.flag_c4._30 | db.flag_c4._31) then
+					close = p.stand_close and "近" or "遠"
+				end
+				name = string.format("%s%s%s", slide, close or "", db.get_flag_name(p.flag_c4, db.flag_names_c4))
+			elseif ut.tstb(p.flag_cc, db.flag_cc._00) then
+				name = string.format("%s %s %s", db.get_flag_name(p.flag_cc, db.flag_names_cc), db.get_flag_name(p.flag_c0, db.flag_names_c0), p.act)
+			else
+				name = string.format("%s %s %s", db.get_flag_name(p.flag_c0, db.flag_names_c0), p.act)
+			end
+			act_data = cache[name] or { bs_name = name, name = name, normal_name = name, slide_name = name, count = 1 }
+			if not cache[p.act] then cache[p.act] = act_data end
+			if not cache[name] then cache[name] = act_data end
+			act_data.neutral = act_data.neutral or resolve_act_neutral(p)
+			act_data.type = act_data.type or (act_data.neutral and db.act_types.any or db.act_types.free)
+		elseif act_data.neutral == nil then
+			act_data.neutral = resolve_act_neutral(p) or ut.tstb(act_data.type, db.act_types.free | db.act_types.block)
 		end
+		-- 技動作は滑りかBSかを付与する
+		act_data.name = p.sliding and act_data.slide_name or p.in_bs and act_data.bs_name or act_data.normal_name
 		return act_data
 	end
 
