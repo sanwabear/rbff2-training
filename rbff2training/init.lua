@@ -2808,6 +2808,8 @@ rbff2.startplugin        = function()
 		{ type = frame_attack_types.high_dodges, y = 1.6, step = 3,   txt = "Low",  border = 1,   xline = 0xFF00FFFF },
 		{ type = frame_attack_types.low_dodges,  y = 1.6, step = 3,   txt = "High", border = 1,   xline = 0xFF00BBDD },
 		{ type = frame_attack_types.full,        y = 1.0, step = 1.6, txt = "Full", border = 0.8, xline = 0xFF00BBDD },
+		{ type = frame_attack_types.main,        y = 1.6, step = 3,   txt = "Main", border = 1,   xline = 0xFF000000 },
+		{ type = frame_attack_types.sway,        y = 1.6, step = 3,   txt = "Sway", border = 1,   xline = 0xFF000000 },
 	}
 	local dodraw = function(group, left, top, height, limit, txt_y, disp_name)
 		if #group == 0 then return end
@@ -3077,6 +3079,9 @@ rbff2.startplugin        = function()
 	local proc_frame = function(p)
 		local col, line, xline, attackbit = 0xAAF0E68C, 0xDDF0E68C, 0, p.attackbit
 		-- フレーム数表示設定ごとのマスク
+		local key_mask = ut.hex_clear(0xFFFFFFFFFFFFFFFF,
+			frame_attack_types.mask_fireball       | -- 弾とジャンプ状態はキーから省いて無駄な区切りを取り除く
+			frame_attack_types.mask_jump)
 		local attackbit_mask = ut.hex_clear(0xFFFFFFFFFFFFFFFF,
 			frame_attack_types.fb                  | -- 0x 1 0000 0001 弾
 			frame_attack_types.attacking           | -- 0x 2 0000 0010 攻撃動作中
@@ -3113,7 +3118,7 @@ rbff2.startplugin        = function()
 			(0xFF << frame_attack_types.fb_effect) | -- effect 弾の動作区切り用
 			(0xFF << frame_attack_types.attack)    | -- attack
 			(0xFFFF << frame_attack_types.act)     | -- act
-			frame_attack_types.op_cancelable) -- 0x 2 0000 0010 やられ中で相手キャンセル可能
+			frame_attack_types.op_cancelable) -- 自身がやられ中で相手キャンセル可能
 		if p.skip_frame then
 			col, line = 0xAA000000, 0xAA000000 -- 強制停止
 		elseif p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number then
@@ -3138,10 +3143,13 @@ rbff2.startplugin        = function()
 			attackbit_mask = attackbit_mask | frame_attack_types.high_dodges
 			attackbit_mask = attackbit_mask | frame_attack_types.low_dodges
 			attackbit_mask = attackbit_mask | frame_attack_types.frame_plus
+			attackbit_mask = attackbit_mask | frame_attack_types.full
+			attackbit_mask = attackbit_mask | frame_attack_types.main
+			attackbit_mask = attackbit_mask | frame_attack_types.sway
 			if p.hit.box_count > 0 and p.max_hit_dn and p.max_hit_dn > 0 and p.attackbits.attacking and not p.attackbits.fake then
 				attackbit_mask = attackbit_mask | frame_attack_types.mask_multihit
 			end
-			if ut.tstb(p.flag_d0, db.flag_d0._06) then
+			if ut.tstb(p.flag_d0, db.flag_d0._06) then -- 自身がやられ中で相手キャンセル可能
 				attackbit_mask = attackbit_mask | frame_attack_types.op_cancelable
 			end
 
@@ -3169,11 +3177,7 @@ rbff2.startplugin        = function()
 		local prev     = frame and frame.name
 		local act_data = p.body.act_data
 		local name     = (frame and act_data.name_set and act_data.name_set[prev]) and prev or act_data.name
-		-- 弾とジャンプ状態はキーから省いて無駄な区切りを取り除く
-		local key_mask = ut.hex_clear(0xFFFFFFFFFFFFFFFF, frame_attack_types.mask_fireball | frame_attack_types.mask_jump)
 		local key      = key_mask & attackbit
-
-		--print("atk3", ut.tstb(attackbit, frame_attack_types.attack),  ut.tstb(attackbit, frame_attack_types.attacking))
 
 		add_frame(p.num, { line = line, col = col, attackbit = attackbit, key = key, name = name, update = p.update_act, })
 
