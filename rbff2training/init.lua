@@ -3002,12 +3002,11 @@ rbff2.startplugin        = function()
 		if frames[#frames] and frames[#frames].startup then
 			frame.startup = frames[#frames].startup
 		elseif not frame.startup and ut.tstb(frame.attackbit, frame_attack_types.attacking) then
-			--[[
-			if ut.tstb(frame.attackbit, frame_attack_types.fake | frame_attack_types.obsolute | frame_attack_types.fullhit | frame_attack_types.harmless)  then
+			if ut.tstb(frame.attackbit, frame_attack_types.fake)  then --  | frame_attack_types.obsolute | frame_attack_types.fullhit | frame_attack_types.harmless
 				print("fake")
-			else print("hit") end
-			]]
-			frame.startup = frame.total
+			else 
+				frame.startup = frame.total
+			print("hit") end
 		end
 		table.insert(frames, frame)                          -- 末尾に追加
 		if #frames <= frame_buffer_limit then return end     -- バッファ長が2行以下なら抜ける
@@ -3154,8 +3153,12 @@ rbff2.startplugin        = function()
 			attackbit_mask = attackbit_mask | frame_attack_types.full
 			attackbit_mask = attackbit_mask | frame_attack_types.main
 			attackbit_mask = attackbit_mask | frame_attack_types.sway
-			if p.hit.box_count > 0 and p.max_hit_dn > 0 and p.attackbits.attacking and not p.attackbits.fake then
-				attackbit_mask = attackbit_mask | frame_attack_types.mask_multihit
+			if p.attackbits.attacking and not p.attackbits.fake then
+				attackbit_mask = attackbit_mask | frame_attack_types.attacking
+				--attackbit_mask = attackbit_mask | frame_attack_types.fake -- fakeの表現がTODO
+				if p.hit.box_count > 0 and p.max_hit_dn > 0 then
+					attackbit_mask = attackbit_mask | frame_attack_types.mask_multihit
+				end
 			end
 			if ut.tstb(p.flag_d0, db.flag_d0._06) then -- 自身がやられ中で相手キャンセル可能
 				attackbit_mask = attackbit_mask | frame_attack_types.op_cancelable
