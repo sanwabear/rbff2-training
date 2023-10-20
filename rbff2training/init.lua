@@ -2166,14 +2166,13 @@ rbff2.startplugin        = function()
 			[0x58] = function(data) p.block_side = ut.int8(data) < 0 and -1 or 1 end, -- 向き 00:左側 80:右側
 			[0x66] = function(data)
 				p.act_count = data                                           -- 現在の行動のカウンタ
-				if p.is_fireball ~= true then
-					local hits, shifts = p.max_hit_dn or 0, frame_attack_types.act_count
-					if hits > 1 or hits == 0 or (p.char == 0x4 and p.attack == 0x16) then
-						-- 連続ヒットできるものはカウントで区別できるようにする
-						p.attackbits.act_count = data
-					elseif ut.tstb(p.flag_cc, db.flag_cc.grabbing) and p.op.last_damage_scaled ~= 0xFF then
-						p.attackbits.act_count = p.op.last_damage_scaled
-					end
+				if p.is_fireball then return end
+				local hits = p.max_hit_dn or 0
+				if hits > 1 or hits == 0 or (p.char == 0x4 and p.attack == 0x16) then
+					-- 連続ヒットできるものはカウントで区別できるようにする
+					p.attackbits.act_count = data
+				elseif ut.tstb(p.flag_cc, db.flag_cc.grabbing) and p.op.last_damage_scaled ~= 0xFF then
+					p.attackbits.act_count = p.op.last_damage_scaled
 				end
 			end,
 			[0x67] = function(data) p.act_boxtype = 0xFFFF & (data & 0xC0 * 4) end, -- 現在の行動の判定種類
