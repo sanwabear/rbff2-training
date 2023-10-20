@@ -1332,28 +1332,33 @@ local get_hitbox_possibles = function(id)
 	return possibles
 end
 
-local box_with_bit_types   = ut.table_sort({
-	{ box_type = db.box_types.fake_juggle_fb,     attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fake | frame_attack_types.juggle },
-	{ box_type = db.box_types.fake_fireball,      attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fake },
-	{ box_type = db.box_types.fake_juggle,        attackbit = frame_attack_types.attacking | frame_attack_types.fake | frame_attack_types.juggle },
-	{ box_type = db.box_types.fake_attack,        attackbit = frame_attack_types.attacking | frame_attack_types.fake },
-	{ box_type = db.box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fullhit | frame_attack_types.juggle },
-	{ box_type = db.box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.obsolute | frame_attack_types.juggle },
-	{ box_type = db.box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.harmless | frame_attack_types.juggle },
-	{ box_type = db.box_types.juggle_fireball,    attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.juggle },
-	{ box_type = db.box_types.harmless_fireball,  attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fullhit },
-	{ box_type = db.box_types.harmless_fireball,  attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.obsolute },
-	{ box_type = db.box_types.harmless_fireball,  attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.harmless },
-	{ box_type = db.box_types.fireball,           attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.attacking },
-	{ box_type = db.box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.fullhit | frame_attack_types.juggle },
-	{ box_type = db.box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.harmless | frame_attack_types.juggle },
-	{ box_type = db.box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.obsolute | frame_attack_types.juggle },
-	{ box_type = db.box_types.juggle,             attackbit = frame_attack_types.attacking | frame_attack_types.juggle },
-	{ box_type = db.box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.fullhit },
-	{ box_type = db.box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.obsolute },
-	{ box_type = db.box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.harmless },
-	{ box_type = db.box_types.attack,             attackbit = frame_attack_types.attacking },
-}, function(t1, t2) return t1.box_type.sort < t2.box_type.sort end)
+local box_with_bit_types   = {
+	body = ut.table_sort({
+		{ box_type = db.box_types.fake_juggle,        attackbit = frame_attack_types.attacking | frame_attack_types.fake | frame_attack_types.juggle },
+		{ box_type = db.box_types.fake_attack,        attackbit = frame_attack_types.attacking | frame_attack_types.fake },
+		{ box_type = db.box_types.fireball,           attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.attacking },
+		{ box_type = db.box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.fullhit | frame_attack_types.juggle },
+		{ box_type = db.box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.harmless | frame_attack_types.juggle },
+		{ box_type = db.box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.obsolute | frame_attack_types.juggle },
+		{ box_type = db.box_types.juggle,             attackbit = frame_attack_types.attacking | frame_attack_types.juggle },
+		{ box_type = db.box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.fullhit },
+		{ box_type = db.box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.obsolute },
+		{ box_type = db.box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.harmless },
+		{ box_type = db.box_types.attack,             attackbit = frame_attack_types.attacking },
+	}, function(t1, t2) return t1.box_type.sort < t2.box_type.sort end),
+	fireball = ut.table_sort({
+		{ box_type = db.box_types.fake_juggle_fb,     attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fake | frame_attack_types.juggle },
+		{ box_type = db.box_types.fake_fireball,      attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fake },
+		{ box_type = db.box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fullhit | frame_attack_types.juggle },
+		{ box_type = db.box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.obsolute | frame_attack_types.juggle },
+		{ box_type = db.box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.harmless | frame_attack_types.juggle },
+		{ box_type = db.box_types.juggle_fireball,    attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.juggle },
+		{ box_type = db.box_types.harmless_fireball,  attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fullhit },
+		{ box_type = db.box_types.harmless_fireball,  attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.obsolute },
+		{ box_type = db.box_types.harmless_fireball,  attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.harmless },
+		{ box_type = db.box_types.fireball,           attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.attacking },
+	}, function(t1, t2) return t1.box_type.sort < t2.box_type.sort end),
+}
 
 for i, item in ipairs(box_with_bit_types) do
 	ut.printf("%s %s", i, item.box_type.name_en)
@@ -1370,13 +1375,14 @@ local fix_box_type       = function(p, box)
 	if ut.tstb(p.flag_cc, db.flag_cc.grabbing) and p.op.last_damage_scaled ~= 0xFF then
 	end
 	local attackbit = frame_attack_types.hitbox_type_mask & p.attackbit
-	for _, item in ipairs(box_with_bit_types) do
+	local types = p.is_fireball and box_with_bit_types.fireball or box_with_bit_types.body
+	for _, item in ipairs(types) do
 		if ut.tstb(attackbit, item.attackbit, true) then
 			--ut.printf("%x %s", p.addr.base, item.box_type.name_en)
 			return item.box_type
 		end
 	end
-	return box_with_bit_types[#box_with_bit_types].box_type
+	return types[#types].box_type
 end
 -- 遠近間合い取得
 local load_close_far     = function()
@@ -2996,8 +3002,11 @@ rbff2.startplugin        = function()
 		if frames[#frames] and frames[#frames].startup then
 			frame.startup = frames[#frames].startup
 		elseif not frame.startup and ut.tstb(frame.attackbit, frame_attack_types.attacking) then
-			if not ut.tstb(frame.attackbit, frame_attack_types.fake | frame_attack_types.obsolute | frame_attack_types.fullhit | frame_attack_types.harmless)  then
-			end
+			--[[
+			if ut.tstb(frame.attackbit, frame_attack_types.fake | frame_attack_types.obsolute | frame_attack_types.fullhit | frame_attack_types.harmless)  then
+				print("fake")
+			else print("hit") end
+			]]
 			frame.startup = frame.total
 		end
 		table.insert(frames, frame)                          -- 末尾に追加
@@ -3145,7 +3154,7 @@ rbff2.startplugin        = function()
 			attackbit_mask = attackbit_mask | frame_attack_types.full
 			attackbit_mask = attackbit_mask | frame_attack_types.main
 			attackbit_mask = attackbit_mask | frame_attack_types.sway
-			if p.hit.box_count > 0 and p.max_hit_dn and p.max_hit_dn > 0 and p.attackbits.attacking and not p.attackbits.fake then
+			if p.hit.box_count > 0 and p.max_hit_dn > 0 and p.attackbits.attacking and not p.attackbits.fake then
 				attackbit_mask = attackbit_mask | frame_attack_types.mask_multihit
 			end
 			if ut.tstb(p.flag_d0, db.flag_d0._06) then -- 自身がやられ中で相手キャンセル可能

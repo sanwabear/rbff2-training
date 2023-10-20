@@ -190,7 +190,7 @@ frame_attack_types.frame_advance =
 frame_attack_types.mask_jump          =
 	frame_attack_types.on_air |
 	frame_attack_types.on_ground
-frame_attack_types.mask_hitbox        =
+frame_attack_types.hits        =
 	frame_attack_types.attacking |
 	frame_attack_types.fake |
 	frame_attack_types.fb |
@@ -202,7 +202,7 @@ frame_attack_types.simple_mask        = ut.hex_clear(0xFFFFFFFFFFFFFFFF,
 	frame_attack_types.mask_multihit |
 	frame_attack_types.mask_attack |
 	frame_attack_types.mask_act |
-	frame_attack_types.mask_hitbox |
+	frame_attack_types.hits |
 	frame_attack_types.mask_fireball)
 frame_attack_types.dodge_mask         = ut.hex_clear(0xFFFFFFFFFFFFFFFF,
 	-- 過剰に部分無敵表示しない
