@@ -1360,10 +1360,6 @@ local box_with_bit_types   = {
 	}, function(t1, t2) return t1.box_type.sort < t2.box_type.sort end),
 }
 
-for i, item in ipairs(box_with_bit_types) do
-	ut.printf("%s %s", i, item.box_type.name_en)
-end
-
 local fix_box_type       = function(p, box)
 	local type = p.in_sway_line and box.sway_type or box.type
 	if type ~= db.box_types.attack then return type end
@@ -1373,6 +1369,7 @@ local fix_box_type       = function(p, box)
 	end
 	-- TODO つかみ技はダメージ加算タイミングがわかるようにする
 	if ut.tstb(p.flag_cc, db.flag_cc.grabbing) and p.op.last_damage_scaled ~= 0xFF then
+		--return db.box_types.attack
 	end
 	local attackbit = frame_attack_types.hitbox_type_mask & p.attackbit
 	local types = p.is_fireball and box_with_bit_types.fireball or box_with_bit_types.body
@@ -2969,9 +2966,9 @@ rbff2.startplugin        = function()
 	local force_y_pos = { "OFF", 0 }
 	for i = 1, 256 do table.insert(force_y_pos, i) end
 	for i = -1, -256, -1 do table.insert(force_y_pos, i) end
-
 	local p_frames, frame_limit, frame_cell = { {}, {} }, 70, 3.5
 	local frame_buffer_limit = frame_limit * 2 -- バッファ長=2行まで許容
+
 	local add_frame = function(num, frame)  -- フレームデータの追加
 		if 2 < num then return end
 		if not global.both_act_neutral and global.old_both_act_neutral then
@@ -3010,14 +3007,16 @@ rbff2.startplugin        = function()
 		end
 		table.insert(frames, frame)                          -- 末尾に追加
 		if #frames <= frame_buffer_limit then return end     -- バッファ長が2行以下なら抜ける
-		while frame_limit < #frames do table.remove(frames, 1) end -- 1行目のバッファを削除
+		while frame_limit + 1 ~= #frames do table.remove(frames, 1) end -- 1行目のバッファを削除
 	end
+
 	local border_box = function(x1, y1, x2, y2, w, fcol)
 		scr:draw_box(x1 - w, y1 - w, x2 + w, y1, fcol, fcol)
 		scr:draw_box(x1 - w, y1 - w, x1, y2 + w, fcol, fcol)
 		scr:draw_box(x2, y1 - w, x2 + 1, y2 + w, fcol, fcol)
 		scr:draw_box(x1 - w, y2 + w, x2 + w, y2, fcol, fcol)
 	end
+
 	local draw_frames2 = function(num, y1)               -- フレームメーターの表示
 		if 2 < num then return end
 		local x0 = (scr.width - frame_cell * frame_limit) // 2 -- 表示開始位置
@@ -3032,11 +3031,13 @@ rbff2.startplugin        = function()
 			max_x = max_x - 1
 		end
 		local remain = (frame_limit < max_x) and (max_x % frame_limit) or 0
+		local quotient = max_x // frame_limit
 		local ends = {}
 		local startup
 		border_box(x0, y1, x0 + frame_limit * frame_cell, y2, 0.5, 0xFF000000) -- 外枠
 		for ix = remain + 1, max_x do
 			local frame = frames[ix]
+			local top_layer = (ix // frame_limit) == quotient
 			startup = frame.startup
 			local x1 = (((ix - 1) % frame_limit) * frame_cell) + x0
 			local x2 = x1 + frame_cell
@@ -3045,7 +3046,7 @@ rbff2.startplugin        = function()
 					txt = { x2, y1, frame.count },
 					box = { x1, y1, x2, y2, 1, frame.line | 0xFF333333 }
 				})
-			elseif ((remain == 0) or (remain + 4 < ix)) and (frames[ix + 1].count == 1) then -- 区切り
+			elseif ((remain == 0) or (not top_layer and (remain + 4 < ix))) and (frames[ix + 1].count == 1) then -- 区切り
 				table.insert(ends, {
 					txt = { x2, y1, 0 < frame.count and frame.count or "" },
 					box = { x1, y1, x2, y2, frame.line | 0xFF333333, 0 }
@@ -3083,6 +3084,7 @@ rbff2.startplugin        = function()
 		draw_text_with_shadow(x0, ty, label)
 		draw_text_with_shadow(x0 + get_string_width(label) - 4, ty, players[num].last_frame_gap_txt, players[num].last_frame_gap_col)
 	end
+
 	local proc_frame = function(p)
 		local col, line, xline, attackbit = 0xAAF0E68C, 0xDDF0E68C, 0, p.attackbit
 		-- フレーム数表示設定ごとのマスク
