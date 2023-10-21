@@ -377,5 +377,44 @@ end
 	end
 ]]
 
+ut.ifind = function(sources, resolver) -- sourcesの要素をresolverを通して得た結果で最初の非nilの値を返す
+	sources = sources or {}
+	local i, ii, p, a = 1, nil, nil, nil
+	return function()
+		while i <= #sources and p == nil do
+			i, ii, p, a = i + 1, i, resolver(sources[i]), sources[i]
+			if p == false then p = nil end
+			if p then return ii, a, p end -- インデックス, sources要素, convert結果
+		end
+	end
+end
+
+ut.ifind_all = function(sources, resolver) -- sourcesの要素をresolverを通して得た結果で非nilの値を返す
+	sources = sources or {}
+	local i, ii, p, a = 1, nil, nil, nil
+	return function()
+		while i <= #sources do
+			i, ii, p, a = i + 1, i, resolver(sources[i]), sources[i]
+			if p == false then p = nil end
+			if p then return ii, a, p end -- インデックス, sources要素, convert結果
+		end
+	end
+end
+
+ut.find_all = function(sources, resolver) -- sourcesの要素をresolverを通して得た結果で非nilの値を返す
+	local i, col, ret = 1, {}, nil
+	for k, v in pairs(sources) do
+		local v2 = resolver(k, v)
+		if v2 == false then v2 = nil end
+		if v2 then table.insert(col, { k, v, v2 }) end
+	end
+	return function()
+		while i <= #col do
+			i, ret = i + 1, col[i]
+			return ret[1], ret[2], ret[3]
+		end
+	end
+end
+
 print("util loaded")
 return ut

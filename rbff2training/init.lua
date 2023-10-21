@@ -1332,51 +1332,23 @@ local get_hitbox_possibles = function(id)
 	return possibles
 end
 
-local box_with_bit_types   = {
-	body = ut.table_sort({
-		{ box_type = db.box_types.fake_juggle,        attackbit = frame_attack_types.attacking | frame_attack_types.fake | frame_attack_types.juggle },
-		{ box_type = db.box_types.fake_attack,        attackbit = frame_attack_types.attacking | frame_attack_types.fake },
-		{ box_type = db.box_types.fireball,           attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.attacking },
-		{ box_type = db.box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.fullhit | frame_attack_types.juggle },
-		{ box_type = db.box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.harmless | frame_attack_types.juggle },
-		{ box_type = db.box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.obsolute | frame_attack_types.juggle },
-		{ box_type = db.box_types.juggle,             attackbit = frame_attack_types.attacking | frame_attack_types.juggle },
-		{ box_type = db.box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.fullhit },
-		{ box_type = db.box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.obsolute },
-		{ box_type = db.box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.harmless },
-		{ box_type = db.box_types.attack,             attackbit = frame_attack_types.attacking },
-	}, function(t1, t2) return t1.box_type.sort < t2.box_type.sort end),
-	fireball = ut.table_sort({
-		{ box_type = db.box_types.fake_juggle_fb,     attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fake | frame_attack_types.juggle },
-		{ box_type = db.box_types.fake_fireball,      attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fake },
-		{ box_type = db.box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fullhit | frame_attack_types.juggle },
-		{ box_type = db.box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.obsolute | frame_attack_types.juggle },
-		{ box_type = db.box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.harmless | frame_attack_types.juggle },
-		{ box_type = db.box_types.juggle_fireball,    attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.juggle },
-		{ box_type = db.box_types.harmless_fireball,  attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fullhit },
-		{ box_type = db.box_types.harmless_fireball,  attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.obsolute },
-		{ box_type = db.box_types.harmless_fireball,  attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.harmless },
-		{ box_type = db.box_types.fireball,           attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.attacking },
-	}, function(t1, t2) return t1.box_type.sort < t2.box_type.sort end),
-}
-
-local fix_box_type       = function(p, box)
+local fix_box_type       = function(p, attackbit, box)
+	attackbit = db.box_with_bit_types.mask & attackbit
 	local type = p.in_sway_line and box.sway_type or box.type
 	if type ~= db.box_types.attack then return type end
 	-- TODO 多段技の状態
 	p.max_hit_dn = p.max_hit_dn or 0
 	if p.max_hit_dn > 1 or p.max_hit_dn == 0 or (p.char == 0x4 and p.attack == 0x16) then
 	end
-	local attackbit = frame_attack_types.hitbox_type_mask & p.attackbit
-	local types = p.is_fireball and box_with_bit_types.fireball or box_with_bit_types.body
-	for _, item in ipairs(types) do
-		if ut.tstb(attackbit, item.attackbit, true) then
-			--ut.printf("%x %s", p.addr.base, item.box_type.name_en)
-			return item.box_type
-		end
-	end
-	return types[#types].box_type
+	local types = p.is_fireball and db.box_with_bit_types.fireballkv or db.box_with_bit_types.bodykv
+	type = types[attackbit]
+	if type then return type.box_type end
+	types = p.is_fireball and db.box_with_bit_types.fireball or db.box_with_bit_types.body
+	for _, t in ipairs(types) do if ut.tstb(attackbit, t.attackbit, true) then  return t.box_type end end
+	ut.printf("fallback %s", ut.tobitstr(attackbit))
+	return types[#types].box_type -- fallback
 end
+
 -- 遠近間合い取得
 local load_close_far     = function()
 	if db.chars[1].close_far then return end
@@ -1508,42 +1480,6 @@ rbff2.startplugin        = function()
 	local players, all_wps, all_objects, hitboxies, ranges = {}, {}, {}, {}, {}
 	local hitboxies_order = function(b1, b2) return (b1.id < b2.id) end
 	local ranges_order = function(r1, r2) return (r1.within and 1 or -1) < (r2.within and 1 or -1) end
-	local ifind = function(sources, resolver) -- sourcesの要素をresolverを通して得た結果で最初の非nilの値を返す
-		sources = sources or {}
-		local i, ii, p, a = 1, nil, nil, nil
-		return function()
-			while i <= #sources and p == nil do
-				i, ii, p, a = i + 1, i, resolver(sources[i]), sources[i]
-				if p == false then p = nil end
-				if p then return ii, a, p end -- インデックス, sources要素, convert結果
-			end
-		end
-	end
-	local ifind_all = function(sources, resolver) -- sourcesの要素をresolverを通して得た結果で非nilの値を返す
-		sources = sources or {}
-		local i, ii, p, a = 1, nil, nil, nil
-		return function()
-			while i <= #sources do
-				i, ii, p, a = i + 1, i, resolver(sources[i]), sources[i]
-				if p == false then p = nil end
-				if p then return ii, a, p end -- インデックス, sources要素, convert結果
-			end
-		end
-	end
-	local find_all = function(sources, resolver) -- sourcesの要素をresolverを通して得た結果で非nilの値を返す
-		local i, col, ret = 1, {}, nil
-		for k, v in pairs(sources) do
-			local v2 = resolver(k, v)
-			if v2 == false then v2 = nil end
-			if v2 then table.insert(col, { k, v, v2 }) end
-		end
-		return function()
-			while i <= #col do
-				i, ret = i + 1, col[i]
-				return ret[1], ret[2], ret[3]
-			end
-		end
-	end
 	local get_object_by_addr = function(addr, default) return all_objects[addr] or default end             -- ベースアドレスからオブジェクト解決
 	local get_object_by_reg = function(reg, default) return all_objects[mem.rg(reg, 0xFFFFFF)] or default end -- レジストリからオブジェクト解決
 	local now = function() return global.frame_number + 1 end
@@ -2115,7 +2051,7 @@ rbff2.startplugin        = function()
 				local e = (mem.r32(a + 0x18) << 32) + mem.r32(a + 0x1C)
 				local p_bases = { a, b, c, d, } -- ベースアドレス候補
 				if db.p_chan[e] then ret.value = 0 end
-				for i, addr, p in ifind(p_bases, get_object_by_addr) do
+				for i, addr, p in ut.ifind(p_bases, get_object_by_addr) do
 					--ut.printf("%s %s %6x", global.frame_number, i, addr)
 					if i == 1 and ut.tstb(global.hide, hide_options["p" .. p.num .. "_char"], true) then
 						ret.value = 4
@@ -2830,13 +2766,13 @@ rbff2.startplugin        = function()
 				scr:draw_box(xleft, top, xright, top + height, frame.line, frame.col)
 
 				local dodge_txt = ""
-				for _, s, col in ifind(dodges, function(s) return ut.tstb(frame.attackbit, s.type) and frame.xline or nil end) do
+				for _, s, col in ut.ifind(dodges, function(s) return ut.tstb(frame.attackbit, s.type) and frame.xline or nil end) do
 					dodge_txt = s.txt -- 無敵種類
 					for i = s.y, height - s.y, s.step do scr:draw_box(xright, top + i, xleft, math.min(top + height, top + i + s.border), 0, col) end
 				end
 
 				local deco_txt = ""
-				for _, deco in ifind(decos, function(deco) return ut.tstb(frame.attackbit, deco.type) and deco or nil end) do
+				for _, deco in ut.ifind(decos, function(deco) return ut.tstb(frame.attackbit, deco.type) and deco or nil end) do
 					deco_txt = deco.txt -- 区切り記号の表示
 					scr:draw_text(xleft + get_string_width(deco_txt) * deco.fix, txt_y + top - 6, deco_txt)
 					scr:draw_line(xleft, top, xleft, top + height)
@@ -3049,7 +2985,7 @@ rbff2.startplugin        = function()
 				})
 			end
 			scr:draw_box(x1, y1, x2, y2, 0, frame.line)                                        -- 四角の描画
-			for _, s, col in ifind(dodges, function(s) return ut.tstb(frame.attackbit, s.type) and s.xline or nil end) do
+			for _, s, col in ut.ifind(dodges, function(s) return ut.tstb(frame.attackbit, s.type) and s.xline or nil end) do
 				for i = s.y, height - s.y, s.step do scr:draw_box(x1, y1 + i, x2, y1 + i + s.border, 0, col) end -- 無敵の描画
 			end
 			scr:draw_box(x1, y1, x2, y2, 0xFF000000, 0)                                        -- 四角の描画
@@ -3165,10 +3101,10 @@ rbff2.startplugin        = function()
 				attackbit_mask = attackbit_mask | frame_attack_types.op_cancelable
 			end
 
-			for _, d in ifind(dodges, function(d) return ut.tstb(attackbit, d.type) end) do
+			for _, d in ut.ifind(dodges, function(d) return ut.tstb(attackbit, d.type) end) do
 				attackbit = attackbit | d.type -- 部分無敵
 			end
-			for _, xp in ifind_all(p.objects, function(xp) return xp.proc_active end) do
+			for _, xp in ut.ifind_all(p.objects, function(xp) return xp.proc_active end) do
 				if xp.hitbox_types and #xp.hitbox_types > 0 and xp.hitbox_types then
 					attackbit = attackbit | xp.attackbit
 					table.sort(xp.hitbox_types, function(t1, t2) return t1.sort > t2.sort end) -- ソート
@@ -3605,7 +3541,7 @@ rbff2.startplugin        = function()
 		-- キャラと飛び道具への当たり判定の反映
 		hitboxies, ranges = {}, {} -- ソート前の判定のバッファ
 
-		for _, p in find_all(all_objects, function(_, p) return p.proc_active end) do
+		for _, p in ut.find_all(all_objects, function(_, p) return p.proc_active end) do
 			-- 判定表示前の座標補正
 			p.x, p.y, p.flip_x = p.pos - screen.left, screen.top - p.pos_y - p.pos_z, (p.flip_x1 ~ p.flip_x2) > 0 and 1 or -1
 			p.vulnerable = (p.invincible and p.invincible > 0) or p.hurt_invincible or p.on_vulnerable ~= global.frame_number
@@ -3614,14 +3550,12 @@ rbff2.startplugin        = function()
 			p.hurt = { max_top = -0xFFFF, min_bottom = 0xFFFF, dodge = p.vulnerable and frame_attack_types.full or 0, }
 			p.hit = { box_count = 0 }
 			p.attackbit = 0
-			for k, v in pairs(p.attackbits) do
-				local type = frame_attack_types[k]
-				if type then
-					if k == "act_count" or k == "fb_effect" or k == "attack" or k == "act" then
-						p.attackbit = p.attackbit | (v << type)
-					elseif v == 1 or v == true then
-						p.attackbit = p.attackbit | type
-					end
+
+			for k, v, type in ut.find_all(p.attackbits, function(k) return frame_attack_types[k] end) do
+				if k == "act_count" or k == "fb_effect" or k == "attack" or k == "act" then
+					p.attackbit = p.attackbit | (v << type)
+				elseif v == 1 or v == true then
+					p.attackbit = p.attackbit | type
 				end
 			end
 			if p.frame_gap > 0 then
@@ -3629,10 +3563,11 @@ rbff2.startplugin        = function()
 			elseif p.frame_gap < 0 then
 				p.attackbit = p.attackbit | frame_attack_types.frame_minus
 			end
+			if not p.is_fireball then p.attackbit = p.attackbit | p.hurt.dodge end -- 本体の部分無敵を設定
 
 			-- 当たりとやられ判定判定
-			for _, _, box in ifind_all(p.boxies, function(box)
-				local type = fix_box_type(p, box) -- 属性はヒット状況などで変わるので都度解決する
+			for _, _, box in ut.ifind_all(p.boxies, function(box)
+				local type = fix_box_type(p, p.attackbit, box) -- 属性はヒット状況などで変わるので都度解決する
 				if not (db.hurt_boxies[type] and p.vulnerable) then
 					box = fix_box_scale(p, box)
 					box.type = type
@@ -3641,7 +3576,7 @@ rbff2.startplugin        = function()
 			end) do
 				if box.type.kind == db.box_kinds.attack or box.type.kind == db.box_kinds.parry then
 					global.pause = global.pause_hitbox == 3 -- 強制ポーズ
-					p.hit.box_count = p.hit.box_count + 1 -- 当たり判定の数
+					p.hit.box_count = p.hit.box_count + 1 -- 攻撃判定の数
 				end
 				if box.type.kind == db.box_kinds.attack then -- 攻撃位置から解決した属性を付与する
 					box.blockables = {
@@ -3660,7 +3595,9 @@ rbff2.startplugin        = function()
 					table.insert(p.hitbox_types, box.type)
 				end
 			end
-			if not p.is_fireball then p.attackbit = p.attackbit | p.hurt.dodge end -- 本体の部分無敵を設定
+
+			-- 攻撃判定がない場合は関連するフラグを無効化する
+			if p.hit.box_count == 0 then p.attackbit = ut.hex_clear(p.attackbit, db.box_with_bit_types.mask) end
 
 			if global.pause_hitbox == 2 and #p.body.throw_boxies then global.pause = true end -- 強制ポーズ
 
@@ -4184,7 +4121,7 @@ rbff2.startplugin        = function()
 						table.insert(label, string.format("Hurt Top %3s Bottom %3s", p.hurt.max_top, p.hurt.min_bottom))
 						table.insert(label, string.format(" Dodge %-s", db.get_dodge_name(p.hurt.dodge)))
 					end
-					for _, box, blockables in ifind_all(xp.hitboxies, function(box) return box.blockables end) do
+					for _, box, blockables in ut.ifind_all(xp.hitboxies, function(box) return box.blockables end) do
 						table.insert(label, string.format("Hit Top %3s Bottom %3s", box.real_top, box.real_bottom))
 						table.insert(label, string.format(" Main %-5s  Sway %-5s", db.top_type_name(blockables.main), db.top_type_name(blockables.sway)))
 						table.insert(label, string.format(" Punish %-9s", db.get_punish_name(blockables.punish)))
@@ -4281,7 +4218,7 @@ rbff2.startplugin        = function()
 			for _, box in ipairs(hitboxies) do draw_hitbox(box) end -- 各種判定
 
 			-- スクショ保存
-			for _, p in ifind_all(players, function(p) return p.act_data end) do
+			for _, p in ut.ifind_all(players, function(p) return p.act_data end) do
 				local chg_y = p.attackbits.on_air or p.attackbits.on_ground
 				local chg_act = p.old.act_data.neutral ~= p.act_data.neutral
 				local chg_hit = p.chg_hitbox_frm == global.frame_number

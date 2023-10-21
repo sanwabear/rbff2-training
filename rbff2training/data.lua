@@ -215,14 +215,6 @@ frame_attack_types.dodge_mask         = ut.hex_clear(0xFFFFFFFFFFFFFFFF,
 	frame_attack_types.crounch68     | -- 頭部無敵 68 屈 ローレンス
 	frame_attack_types.crounch76     | -- 頭部無敵 76 屈 フランコ
 	frame_attack_types.crounch80)   -- 頭部無敵 80 屈 クラウザー
-frame_attack_types.hitbox_type_mask   =
-	frame_attack_types.attacking |
-	frame_attack_types.fake |
-	frame_attack_types.fb |
-	frame_attack_types.fullhit |
-	frame_attack_types.harmless |
-	frame_attack_types.juggle |
-	frame_attack_types.obsolute
 frame_attack_types.main_high          = frame_attack_types.main | frame_attack_types.high
 frame_attack_types.main_low           = frame_attack_types.main | frame_attack_types.low
 frame_attack_types.sway_high          = frame_attack_types.sway | frame_attack_types.high
@@ -3479,6 +3471,40 @@ db.sway_box_types = sway_box_types
 db.hurt_boxies = hurt_boxies
 db.box_type_list = box_type_list
 
+local box_with_bit_types   = {
+	body = ut.table_sort({
+		{ box_type = box_types.fake_juggle,        attackbit = frame_attack_types.attacking | frame_attack_types.fake | frame_attack_types.juggle },
+		{ box_type = box_types.fake_attack,        attackbit = frame_attack_types.attacking | frame_attack_types.fake },
+		{ box_type = box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.fullhit | frame_attack_types.juggle },
+		{ box_type = box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.harmless | frame_attack_types.juggle },
+		{ box_type = box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.obsolute | frame_attack_types.juggle },
+		{ box_type = box_types.juggle,             attackbit = frame_attack_types.attacking | frame_attack_types.juggle },
+		{ box_type = box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.fullhit },
+		{ box_type = box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.obsolute },
+		{ box_type = box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.harmless },
+		{ box_type = box_types.attack,             attackbit = frame_attack_types.attacking },
+	}, function(t1, t2) return t1.box_type.sort < t2.box_type.sort end),
+	fireball = ut.table_sort({
+		{ box_type = box_types.fake_juggle_fb,     attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fake | frame_attack_types.juggle },
+		{ box_type = box_types.fake_fireball,      attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fake },
+		{ box_type = box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fullhit | frame_attack_types.juggle },
+		{ box_type = box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.obsolute | frame_attack_types.juggle },
+		{ box_type = box_types.harmless_juggle_fb, attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.harmless | frame_attack_types.juggle },
+		{ box_type = box_types.juggle_fireball,    attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.juggle },
+		{ box_type = box_types.harmless_fireball,  attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fullhit },
+		{ box_type = box_types.harmless_fireball,  attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.obsolute },
+		{ box_type = box_types.harmless_fireball,  attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.harmless },
+		{ box_type = box_types.fireball,           attackbit = frame_attack_types.attacking | frame_attack_types.fb },
+	}, function(t1, t2) return t1.box_type.sort < t2.box_type.sort end),
+	bodykv = {},
+	fireballkv = {},
+	mask = 0,
+}
+for _, type in ipairs(box_with_bit_types.body) do box_with_bit_types.bodykv[type.attackbit] = type end
+for _, type in ipairs(box_with_bit_types.fireball) do box_with_bit_types.fireballkv[type.attackbit] = type end
+for k, _ in pairs(box_with_bit_types.bodykv) do box_with_bit_types.mask = k | box_with_bit_types.mask end
+for k, _ in pairs(box_with_bit_types.fireballkv) do box_with_bit_types.mask = k | box_with_bit_types.mask end
+db.box_with_bit_types = box_with_bit_types
 
 --------------------------------------------------------------------------------------
 -- ステージデータ
