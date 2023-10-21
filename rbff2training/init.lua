@@ -1367,10 +1367,6 @@ local fix_box_type       = function(p, box)
 	p.max_hit_dn = p.max_hit_dn or 0
 	if p.max_hit_dn > 1 or p.max_hit_dn == 0 or (p.char == 0x4 and p.attack == 0x16) then
 	end
-	-- TODO つかみ技はダメージ加算タイミングがわかるようにする
-	if ut.tstb(p.flag_cc, db.flag_cc.grabbing) and p.op.last_damage_scaled ~= 0xFF then
-		--return db.box_types.attack
-	end
 	local attackbit = frame_attack_types.hitbox_type_mask & p.attackbit
 	local types = p.is_fireball and box_with_bit_types.fireball or box_with_bit_types.body
 	for _, item in ipairs(types) do
@@ -3037,7 +3033,7 @@ rbff2.startplugin        = function()
 		border_box(x0, y1, x0 + frame_limit * frame_cell, y2, 0.5, 0xFF000000) -- 外枠
 		for ix = remain + 1, max_x do
 			local frame = frames[ix]
-			local top_layer = (ix // frame_limit) == quotient
+			local under_layer = (ix // frame_limit) < quotient
 			startup = frame.startup
 			local x1 = (((ix - 1) % frame_limit) * frame_cell) + x0
 			local x2 = x1 + frame_cell
@@ -3046,7 +3042,7 @@ rbff2.startplugin        = function()
 					txt = { x2, y1, frame.count },
 					box = { x1, y1, x2, y2, 1, frame.line | 0xFF333333 }
 				})
-			elseif ((remain == 0) or (not top_layer and (remain + 4 < ix))) and (frames[ix + 1].count == 1) then -- 区切り
+			elseif ((remain == 0) or (remain + 4 < ix)) and (frame.count >= frames[ix + 1].count) then -- 区切り
 				table.insert(ends, {
 					txt = { x2, y1, 0 < frame.count and frame.count or "" },
 					box = { x1, y1, x2, y2, frame.line | 0xFF333333, 0 }
@@ -3132,6 +3128,9 @@ rbff2.startplugin        = function()
 			col, line = 0xAA000000, 0xAA000000 -- 強制停止
 		elseif p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number then
 			col, line = 0xAA444444, 0xDD444444 -- ヒットストップ中
+		elseif ut.tstb(p.flag_cc, db.flag_cc.grabbing) and p.op.on_damage == global.frame_number then
+			attackbit = attackbit | frame_attack_types.attacking
+			col, line = db.box_types.attack.fill, db.box_types.attack.outline -- つかみ技はダメージ加算タイミングがわかるようにする
 		--elseif p.on_bs_established == global.frame_number then
 		--	col, line = 0xAA0022FF, 0xDD0022FF -- BSコマンド成立
 		else
