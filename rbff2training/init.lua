@@ -3062,11 +3062,11 @@ rbff2.startplugin        = function()
 			frame_attack_types.op_cancelable) -- 自身がやられ中で相手キャンセル可能
 		if p.skip_frame then
 			col, line = 0xAA000000, 0xAA000000 -- 強制停止
+		elseif ut.tstb(p.op.flag_cc, db.flag_cc.thrown) and p.op.on_damage == global.frame_number then
+			attackbit = attackbit | frame_attack_types.attacking
+			col, line = db.box_types.attack.fill, db.box_types.attack.outline -- 投げダメージ加算タイミング
 		elseif p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number then
 			col, line = 0xAA444444, 0xDD444444 -- ヒットストップ中
-		elseif ut.tstb(p.flag_cc, db.flag_cc.grabbing) and p.op.on_damage == global.frame_number then
-			attackbit = attackbit | frame_attack_types.attacking
-			col, line = db.box_types.attack.fill, db.box_types.attack.outline -- つかみ技はダメージ加算タイミングがわかるようにする
 		--elseif p.on_bs_established == global.frame_number then
 		--	col, line = 0xAA0022FF, 0xDD0022FF -- BSコマンド成立
 		else
@@ -3090,7 +3090,7 @@ rbff2.startplugin        = function()
 			attackbit_mask = attackbit_mask | frame_attack_types.full
 			attackbit_mask = attackbit_mask | frame_attack_types.main
 			attackbit_mask = attackbit_mask | frame_attack_types.sway
-			if p.attackbits.attacking and not p.attackbits.fake then
+			if ut.tstb(p.attackbit, frame_attack_types.attacking) and not ut.tstb(p.attackbit, frame_attack_types.fake) then
 				attackbit_mask = attackbit_mask | frame_attack_types.attacking
 				--attackbit_mask = attackbit_mask | frame_attack_types.fake -- fakeの表現がTODO
 				if p.hit.box_count > 0 and p.max_hit_dn > 0 then
@@ -3671,6 +3671,9 @@ rbff2.startplugin        = function()
 		end
 		table.sort(hitboxies, hitboxies_order)
 		table.sort(ranges, ranges_order)
+		for _, p in ut.find_all(all_objects, function(_, p) return p.proc_active end) do
+			p.body.attackbit = p.body.attackbit | p.attackbit
+		end
 
 		--[[
 		-- フレーム表示などの前処理1
