@@ -2901,29 +2901,44 @@ rbff2.startplugin        = function()
 			p_frames[num] = {} -- バッファ初期化
 		end
 		local frames, reset, first, blank = p_frames[num], false, false, false -- プレイヤーごとのバッファを取得
+		local last = frames[#frames]
 		blank = ut.tstb(frame.attackbit, frame_attack_types.frame_plus)
 		if blank then
+			if last and last.blank then
+				last.blank = last.blank + 1
+				last.attackbit = frame.attackbit
+				last.key = frame.key
+				last.total = last.total + 1
+				return
+			end
 			-- 有利フレームは透明表示にする
-			frame = { col = 0, line = 0, count = 0, attackbit = frame.attackbit, key = frame.key }
+			frame = { col = 0, line = 0, count = 0, attackbit = frame.attackbit, key = frame.key, blank = 1 }
+		elseif last and last.blank then
+			local cmp = last -- 動作再開時の補完
+			for i = last.count + 1, last.blank do
+				cmp = ut.deepcopy(cmp)
+				cmp.count = cmp.count + 1
+				table.insert(frames, cmp)
+			end
 		end
 
 		if #frames == 0 then
 			first, reset = true, true
-		elseif frame.attackbit ~= frames[#frames].key then
+		elseif frame.attackbit ~= last.key then
 			reset = true
 		--[[
-		elseif frame.name ~= frames[#frames].name then
+		elseif frame.name ~= last.name then
 			reset = true
-		elseif frame.update ~= frames[#frames].update then
+		elseif frame.update ~= last.update then
 			reset = true
 		]]
-		elseif frame.col ~= frames[#frames].col then
+		elseif frame.col ~= last.col then
 			reset = true
 		end
-		frame.count = reset and 1 or frames[#frames].count + 1
-		frame.total = (first or not frames[#frames].total) and 1 or frames[#frames].total + 1
-		if frames[#frames] and frames[#frames].startup then
-			frame.startup = frames[#frames].startup
+		frame.count = reset and 1 or last.count + 1
+		frame.total = (first or not last.total) and 1 or last.total + 1
+		if last and last.startup then
+			frame.startup = last.startup
 		elseif not frame.startup and ut.tstb(frame.attackbit, frame_attack_types.attacking) and
 			not ut.tstb(frame.attackbit, frame_attack_types.fake) then --  | frame_attack_types.obsolute | frame_attack_types.fullhit | frame_attack_types.harmless
 			frame.startup = frame.total
