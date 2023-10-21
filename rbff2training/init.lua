@@ -2909,7 +2909,7 @@ rbff2.startplugin        = function()
 				last.attackbit = frame.attackbit
 				last.key = frame.key
 				last.total = last.total + 1
-				return
+				return -- 無駄なバッファ消費を避けるためカウントアップだけして抜ける
 			end
 			-- 有利フレームは透明表示にする
 			frame = { col = 0, line = 0, count = 0, attackbit = frame.attackbit, key = frame.key, blank = 1 }
@@ -2945,7 +2945,8 @@ rbff2.startplugin        = function()
 		end
 		table.insert(frames, frame)                               -- 末尾に追加
 		if #frames <= frame_buffer_limit then return end          -- バッファ長が2行以下なら抜ける
-		while frame_limit + 1 ~= #frames do table.remove(frames, 1) end -- 1行目のバッファを削除
+		local frame_limit = frame_limit + (blank and 2 or 1)      -- ブランクぶん追加でバッファする
+		while frame_limit ~= #frames do table.remove(frames, 1) end -- 1行目のバッファを削除
 	end
 
 	local border_box = function(x1, y1, x2, y2, w, fcol)
@@ -3001,7 +3002,7 @@ rbff2.startplugin        = function()
 			scr:draw_box(table.unpack(args.box))
 			draw_rtext_with_shadow(table.unpack(args.txt))
 		end
-		if frame_limit ~= max_x then
+		if frame_limit ~= max_x or max_x == 0 then
 			for ix = (max_x % frame_limit) + 1, frame_limit do -- マスクの四角描画
 				local x1 = ((ix - 1) * frame_cell) + x0
 				scr:draw_box(x1, y1, x1 + frame_cell, y2, 0xFF000000, 0xCC888888)
