@@ -1681,6 +1681,7 @@ rbff2.startplugin        = function()
 				p.stun              = mem.r8(data + base_addr.stun) -- 気絶値 05C1CA からの処理
 				p.stun_timer        = mem.r8(data + base_addr.stun_timer) -- 気絶タイマー 05C1CA からの処理
 				p.max_hit_dn        = data > 0 and mem.r8(data + base_addr.max_hit) or 0
+				p.multi_hit         = p.max_hit_dn > 1 or p.max_hit_dn == 0 or p.char == 0x4 and p.attack == 0x16
 				if 0x58 > data then
 					-- 詠酒距離 家庭用 0236F0 からの処理
 					local esaka = mem.r16(base_addr.esaka + ((data + data) & 0xFFFF))
@@ -1891,6 +1892,7 @@ rbff2.startplugin        = function()
 					p.stun          = mem.r8(data + base_addr.stun)                   -- 気絶値 家庭用 05C1B0 からの処理
 					p.stun_timer    = mem.r8(data + base_addr.stun_timer)             -- 気絶タイマー 家庭用 05C1B0 からの処理
 					p.max_hit_dn    = mem.r8(data + base_addr.max_hit)                -- 最大ヒット数 家庭用 061356 からの処理 OK
+					p.multi_hit     = p.max_hit_dn > 1 or p.max_hit_dn == 0
 					p.grabbable2    = mem.r8((0xFFFF & (data + data)) + base_addr.baigaeshi) == 0x01 -- 倍返し可否
 					apply_attack_infos(p, data, base_addr)
 					-- ut.printf("%x %s %s  hitstun %s %s", data, p.hitstop, p.blockstop, p.hitstun, p.blockstun)
@@ -1944,6 +1946,7 @@ rbff2.startplugin        = function()
 				p.effect = 0
 				p.forced_down = false
 				p.max_hit_dn = 0
+				p.multi_hit = false
 			end
 			p.clear_frame_data = function()
 				p.frame_gap        = p.frame_gap or 0
@@ -2102,8 +2105,7 @@ rbff2.startplugin        = function()
 			[0x66] = function(data)
 				p.act_count = data                                           -- 現在の行動のカウンタ
 				if p.is_fireball then return end
-				local hits = p.max_hit_dn or 0
-				if hits > 1 or hits == 0 or (p.char == 0x4 and p.attack == 0x16) then
+				if p.multi_hit then
 					-- 連続ヒットできるものはカウントで区別できるようにする
 					p.attackbits.act_count = data
 				elseif ut.tstb(p.flag_cc, db.flag_cc.grabbing) and p.op.last_damage_scaled ~= 0xFF then
@@ -2119,15 +2121,12 @@ rbff2.startplugin        = function()
 				local fake, fake_pc = ((data & 0xFB) == 0 or ut.tstb(data, 0x8) == false), mem.pc() == fix_addr(0x011DFE)
 				p.attackbits.fake = fake_pc and fake
 				p.attackbits.obsolute = (not fake_pc) and fake
-				--if base == 0x100600 then ut.printf("W %s %X %X %X %s %s", now(), mem.pc(), base, data, (fake or fake2), ut.tobitstr(data)) end
 			end,
 			[0x6F] = function(data) p.act_frame = data end, -- 動作パターンの残フレーム
 			[0x71] = function(data) p.flip_x2 = (data & 1) end, -- 判定の反転
 			[0x73] = function(data) p.box_scale = data + 1 end, -- 判定の拡大率
 			--[0x76] = function(data) ut.printf("%X %X %X", base + 0x76, mem.pc(), data) end,
 			[0x7A] = function(data)                    -- 攻撃判定とやられ判定
-				--if base == 0x100600 then ut.printf("W %s box %X %X %X %X %s data", now(), mem.pc(), base, mem.r8(base + 0x6A), data, p.attackbits.fake) end
-				--p.attackbits.pre = p.attackbits.pre_fake
 				--ut.printf("box %x %x %x", p.addr.base, mem.pc(), data)
 				p.boxies, p.grabbable = {}, 0
 				if data <= 0 then return end
@@ -2188,21 +2187,16 @@ rbff2.startplugin        = function()
 				p.attackbits.fullhit = data ~= 0
 				--ut.printf("full %X %s %X", p.act or 0, now(), data)
 				if p.is_fireball and data == 0xFF then p.on_fireball = now() * -1 end
+				if data == 0xFF and p.is_fireball and p.body.char == 0x10 and p.act == 0x266 then
+					-- 三節棍中段打ちの攻撃無効化、判定表示の邪魔なのでここで判定を削除する
+					p.proc_active = false
+				end
 			end,
 			[0xAB] = function(data) p.max_hit_nm = data end, -- 同一技行動での最大ヒット数 分子
 			[0xB1] = function(data) p.hurt_invincible = data > 0 end, -- やられ判定無視の全身無敵
 			[0xE9] = function(data) p.dmg_id = data end,     -- 最後にヒット/ガードした技ID
 			[0xEB] = function(data) p.hurt_attack = data end, -- やられ中のみ変化
 		})
-		--[[
-		p.rp8 = ut.hash_add_all(p.rp8, {
-			[0x6A] = function(data)
-				if base == 0x100600 then
-					ut.printf("R %s %X %X %X %s %s", now(), mem.pc(), base, data, "", ut.tobitstr(data))
-				end
-			end,
-		})
-		]]
 		p.wp16 = ut.hash_add_all(p.wp16, {
 			[0x20] = function(data) p.pos, p.max_pos, p.min_pos = data, math.max(p.max_pos or 0, data), math.min(p.min_pos or 1000, data) end,
 			[0x22] = function(data) p.pos_frc = ut.int16tofloat(data) end,                                                         -- X座標(小数部)
@@ -2930,15 +2924,12 @@ rbff2.startplugin        = function()
 		frame.total = (first or not frames[#frames].total) and 1 or frames[#frames].total + 1
 		if frames[#frames] and frames[#frames].startup then
 			frame.startup = frames[#frames].startup
-		elseif not frame.startup and ut.tstb(frame.attackbit, frame_attack_types.attacking) then
-			if ut.tstb(frame.attackbit, frame_attack_types.fake)  then --  | frame_attack_types.obsolute | frame_attack_types.fullhit | frame_attack_types.harmless
-				print("fake")
-			else 
-				frame.startup = frame.total
-			print("hit") end
+		elseif not frame.startup and ut.tstb(frame.attackbit, frame_attack_types.attacking) and
+			not ut.tstb(frame.attackbit, frame_attack_types.fake) then --  | frame_attack_types.obsolute | frame_attack_types.fullhit | frame_attack_types.harmless
+			frame.startup = frame.total
 		end
-		table.insert(frames, frame)                          -- 末尾に追加
-		if #frames <= frame_buffer_limit then return end     -- バッファ長が2行以下なら抜ける
+		table.insert(frames, frame)                               -- 末尾に追加
+		if #frames <= frame_buffer_limit then return end          -- バッファ長が2行以下なら抜ける
 		while frame_limit + 1 ~= #frames do table.remove(frames, 1) end -- 1行目のバッファを削除
 	end
 
@@ -3022,7 +3013,12 @@ rbff2.startplugin        = function()
 		-- フレーム数表示設定ごとのマスク
 		local key_mask = ut.hex_clear(0xFFFFFFFFFFFFFFFF,
 			frame_attack_types.mask_fireball       | -- 弾とジャンプ状態はキーから省いて無駄な区切りを取り除く
-			frame_attack_types.mask_jump)
+			frame_attack_types.pre_fireball        |
+			frame_attack_types.post_fireball       |
+			frame_attack_types.on_fireball         |
+			frame_attack_types.off_fireball        |
+			frame_attack_types.on_air              |
+			frame_attack_types.on_ground)
 		local attackbit_mask = ut.hex_clear(0xFFFFFFFFFFFFFFFF,
 			frame_attack_types.fb                  | -- 0x 1 0000 0001 弾
 			frame_attack_types.attacking           | -- 0x 2 0000 0010 攻撃動作中
@@ -3085,21 +3081,25 @@ rbff2.startplugin        = function()
 				end
 			end
 			]]
-			attackbit_mask = attackbit_mask | frame_attack_types.high_dodges
-			attackbit_mask = attackbit_mask | frame_attack_types.low_dodges
-			attackbit_mask = attackbit_mask | frame_attack_types.frame_plus
-			attackbit_mask = attackbit_mask | frame_attack_types.full
-			attackbit_mask = attackbit_mask | frame_attack_types.main
-			attackbit_mask = attackbit_mask | frame_attack_types.sway
+			attackbit_mask = attackbit_mask    |
+				frame_attack_types.high_dodges |
+				frame_attack_types.low_dodges  |
+				frame_attack_types.frame_plus  |
+				frame_attack_types.full        |
+				frame_attack_types.main        |
+				frame_attack_types.sway
 			if ut.tstb(p.attackbit, frame_attack_types.attacking) and not ut.tstb(p.attackbit, frame_attack_types.fake) then
 				attackbit_mask = attackbit_mask | frame_attack_types.attacking
 				--attackbit_mask = attackbit_mask | frame_attack_types.fake -- fakeの表現がTODO
 				if p.hit.box_count > 0 and p.max_hit_dn > 0 then
-					attackbit_mask = attackbit_mask | frame_attack_types.mask_multihit
+					attackbit_mask = attackbit_mask |
+						(0xFF << frame_attack_types.act_count) |
+						(0xFF << frame_attack_types.fb_effect)
 				end
 			end
 			if ut.tstb(p.flag_d0, db.flag_d0._06) then -- 自身がやられ中で相手キャンセル可能
-				attackbit_mask = attackbit_mask | frame_attack_types.op_cancelable
+				attackbit_mask = attackbit_mask |
+					frame_attack_types.op_cancelable
 			end
 
 			for _, d in ut.ifind(dodges, function(d) return ut.tstb(attackbit, d.type) end) do
@@ -3120,7 +3120,6 @@ rbff2.startplugin        = function()
 		end
 
 		attackbit      = attackbit & attackbit_mask
-		--ut.printf("%x %x %x | %s", p.num, attackbit_mask, attackbit, ut.tobitstr(attackbit, " "))
 
 		local frame    = p.act_frames[#p.act_frames]
 		local prev     = frame and frame.name
