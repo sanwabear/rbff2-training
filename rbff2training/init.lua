@@ -3065,7 +3065,8 @@ rbff2.startplugin        = function()
 		elseif ut.tstb(p.op.flag_cc, db.flag_cc.thrown) and p.op.on_damage == global.frame_number then
 			attackbit = attackbit | frame_attack_types.attacking
 			col, line = db.box_types.attack.fill, db.box_types.attack.outline -- 投げダメージ加算タイミング
-		elseif p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number then
+		elseif not ut.tstb(p.flag_cc | p.op.flag_cc, db.flag_cc.thrown) and
+			p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number then
 			col, line = 0xAA444444, 0xDD444444 -- ヒットストップ中
 		--elseif p.on_bs_established == global.frame_number then
 		--	col, line = 0xAA0022FF, 0xDD0022FF -- BSコマンド成立
