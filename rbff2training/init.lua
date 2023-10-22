@@ -1514,11 +1514,11 @@ rbff2.startplugin        = function()
 			hide_char         = false,     -- キャラを画面表示しないときtrue
 			hide_phantasm     = false,     -- 残像を画面表示しないときtrue
 			disp_damage       = true,      -- ダメージ表示するときtrue
-			disp_command      = 2,         -- 入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
+			disp_command      = 3,         -- 入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
 			disp_frame        = 1,         -- フレーム数表示する
 			disp_fbfrm        = true,      -- 弾のフレーム数表示するときtrue
 			disp_stun         = true,      -- 気絶表示
-			disp_state        = 3,         -- 状態表示 1:OFF 2:ON 3:ON:小表示 4:ON:大表示 5:ON:フラグ表示
+			disp_state        = 1,         -- 状態表示 1:OFF 2:ON 3:ON:小表示 4:ON:大表示 5:ON:フラグ表示
 			dis_plain_shift   = false,     -- ライン送らない現象
 			no_hit            = 0,         -- Nヒット目に空ぶるカウントのカウンタ
 			no_hit_limit      = 0,         -- Nヒット目に空ぶるカウントの上限
@@ -1596,8 +1596,8 @@ rbff2.startplugin        = function()
 				p.last_st_timer          = 0
 				p.combo_update           = global.frame_number + 1
 				p.combo_damage           = 0
-				p.combo_start_stun       = p.stun
-				p.combo_start_stun_timer = p.stun_timer
+				p.combo_start_stun       = p.hit_stun
+				p.combo_start_stun_timer = p.hit_stun_timer
 				p.combo_stun             = 0
 				p.combo_stun_timer       = 0
 				p.combo_pow              = p.hurt_attack == p.op.attack and p.op.pow_up or 0
@@ -1733,7 +1733,7 @@ rbff2.startplugin        = function()
 			[p1 and 0x10B4E7 or 0x10B4E8] = function(data) p.konck_back4 = data end, -- 1ならやられ中
 			--[p1 and 0x10B4F0 or 0x10B4EF] = function(data) p.max_combo = data end, -- 最大コンボ数
 			[p1 and 0x10B84E or 0x10B856] = function(data) p.stun_limit = data end, -- 最大気絶値
-			[p1 and 0x10B850 or 0x10B858] = function(data) p.stun = data end, -- 現在気絶値
+			[p1 and 0x10B850 or 0x10B858] = function(data) p.hit_stun = data end, -- 現在気絶値
 			[p1 and 0x1041B0 or 0x1041B4] = function(data, ret)
 				if p.bs_hook and p.bs_hook.cmd_type then
 					--ut.printf("%s bs_hook cmd %x", p.num, p.bs_hook.cmd_type)
@@ -1829,7 +1829,7 @@ rbff2.startplugin        = function()
 			[0xDA] = function(data) p.inertia = data end,
 			[0xDC] = function(data) p.inertia_frc = ut.int16tofloat(data) end,
 			[0xE6] = function(data) p.on_hit_any = now() + 1 end,          -- 0xE6か0xE7 打撃か当身でフラグが立つ
-			[p1 and 0x10B854 or 0x10B85C] = function(data) p.stun_timer = data end, -- 気絶値ゼロ化までの残フレーム数
+			[p1 and 0x10B854 or 0x10B85C] = function(data) p.hit_stun_timer = data end, -- 気絶値ゼロ化までの残フレーム数
 		}
 		local nohit = function(data, ret)
 			if p.no_hit_limit > 0 and p.last_combo >= p.no_hit_limit then ret.value = 0x311C end --  0x0001311Cの後半を返す
@@ -4107,7 +4107,7 @@ rbff2.startplugin        = function()
 				last_damage_scaling = (op.last_damage_scaling1 * op.last_damage_scaling2) * 100
 			end
 			if op.combo_update == global.frame_number then
-				local stun, timer                       = math.max(op.stun - op.combo_start_stun), math.max(op.stun_timer - op.combo_start_stun_timer, 0)
+				local stun, timer                       = math.max(op.hit_stun - op.combo_start_stun), math.max(op.hit_stun_timer - op.combo_start_stun_timer, 0)
 				op.combo_stun, op.last_stun             = stun, math.max(stun - op.combo_stun, 0)
 				op.combo_stun_timer, op.last_stun_timer = timer, math.max(timer - op.combo_stun_timer, 0)
 				op.max_combo                            = math.max(op.max_combo or 0, op.last_combo)
@@ -4342,12 +4342,12 @@ rbff2.startplugin        = function()
 					draw_text_with_shadow(p1 and 112 or 184, 19.7, string.format("%3s/%3s", p.life, 0xC0))
 					scr:draw_box(p1 and (138 - p.stun_limit) or 180, 29, p1 and 140 or (182 + p.stun_limit), 34, 0, 0xDDC0C0C0) -- 枠
 					scr:draw_box(p1 and (139 - p.stun_limit) or 181, 30, p1 and 139 or (181 + p.stun_limit), 33, 0, 0xDD000000) -- 黒背景
-					scr:draw_box(p1 and (139 - p.stun) or 181, 30, p1 and 139 or (181 + p.stun), 33, 0, 0xDDFF0000) -- 気絶値
-					draw_text_with_shadow(p1 and 112 or 184, 28, string.format("%3s/%3s", p.stun, p.stun_limit))
+					scr:draw_box(p1 and (139 - p.hit_stun) or 181, 30, p1 and 139 or (181 + p.hit_stun), 33, 0, 0xDDFF0000) -- 気絶値
+					draw_text_with_shadow(p1 and 112 or 184, 28, string.format("%3s/%3s", p.hit_stun, p.stun_limit))
 					scr:draw_box(p1 and (138 - 90) or 180, 35, p1 and 140 or (182 + 90), 40, 0, 0xDDC0C0C0)      -- 枠
 					scr:draw_box(p1 and (139 - 90) or 181, 36, p1 and 139 or (181 + 90), 39, 0, 0xDD000000)      -- 黒背景
-					scr:draw_box(p1 and (139 - p.stun_timer) or 181, 36, p1 and 139 or (181 + p.stun_timer), 39, 0, 0xDDFFFF00) -- 気絶値
-					draw_text_with_shadow(p1 and 112 or 184, 34, string.format("%3s", p.stun_timer))
+					scr:draw_box(p1 and (139 - p.hit_stun_timer) or 181, 36, p1 and 139 or (181 + p.hit_stun_timer), 39, 0, 0xDDFFFF00) -- 気絶値
+					draw_text_with_shadow(p1 and 112 or 184, 34, string.format("%3s", p.hit_stun_timer))
 				end
 			end
 
