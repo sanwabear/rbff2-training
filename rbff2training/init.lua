@@ -493,7 +493,7 @@ local global                               = {
 
 	disp_pos             = true, -- 1P 2P 距離表示
 	hide                 = hide_options.none,
-	disp_framegap        = 3, -- フレーム差表示
+	disp_framegap        = 3, -- フレーム差表示 1:OFF 2:フレームメーター 3:数値のみ
 	disp_input           = 1, -- コマンド入力状態表示 1:OFF 2:1P 3:2P
 	disp_normal_frames   = 2, -- 通常動作フレーム非表示 1:OFF 2:ON
 	pause_hit            = 1, -- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
@@ -2785,19 +2785,8 @@ rbff2.startplugin        = function()
 		end
 		scr:draw_text(right - 40, txt_y + top, table.concat(frame_txts, "/"))
 	end
+
 	local draw_frames = function(groups, x, y, limit)
-		if groups == nil or #groups == 0 then return end
-		local height = get_line_height()
-		for j = #groups - math.min(#groups - 1, 6), #groups do
-			dodraw(groups[j], x, y, height, limit, 0, true)
-			for _, frame in ipairs(groups[j]) do
-				for _, sub_group in ipairs(frame.fb_frames or {}) do
-					dodraw(sub_group, x, y, height, limit)
-				end
-			end
-		end
-	end
-	local draw_framesx = function(groups, x, y, limit)
 		if groups == nil or #groups == 0 then return end
 		local height, span_ratio = get_line_height(), 0.2
 		local span = (2 + span_ratio) * height
@@ -2814,42 +2803,6 @@ rbff2.startplugin        = function()
 				end
 			end
 			y = y + span
-		end
-	end
-	local draw_frame_groups = function(frame_groups, act_frames_total, x, y, height, show_count)
-		if #frame_groups == 0 then return end
-
-		-- 横に描画
-		local xmin = x                                              --30
-		local xa, xb, xmax = 325 - xmin, act_frames_total + xmin, 0
-		xmax = xa < xb and xa or (act_frames_total + xmin) % (325 - xmin) -- 左寄せで開始
-		-- xmax = math.min(325 - xmin, act_frames_total + xmin) -- 右寄せで開始
-		local x1, loopend = xmax, false
-		for j = #frame_groups, 1, -1 do
-			local frame_group, first = frame_groups[j], true
-			for k = #frame_group, 1, -1 do
-				local frame = frame_group[k]
-				local x2 = math.max(xmin, x1 - frame.count)
-				loopend = x2 <= xmin
-				if (frame.col + frame.line) > 0 then -- 速度かせぎのためカラー無しはスキップする
-					scr:draw_box(x1, y, x2, y + height, frame.line, frame.col)
-					if show_count == true and first == true then
-						first = false
-						local txty = math.max(-2, height - 8)
-						local count_txt = 300 < frame.count and "LOT" or ("" .. frame.count)
-						if frame.count > 5 then
-							draw_text_with_shadow(x2 + 1, txty + y, count_txt)
-						elseif 3 > frame.count then
-							draw_text_with_shadow(x2 - 1, txty + y, count_txt)
-						else
-							draw_text_with_shadow(x2, txty + y, count_txt)
-						end
-					end
-				end
-				if loopend then break end
-				x1 = x2
-			end
-			if loopend then break end
 		end
 	end
 
@@ -3125,7 +3078,7 @@ rbff2.startplugin        = function()
 				if xp.hitbox_types and #xp.hitbox_types > 0 and xp.hitbox_types then
 					attackbit = attackbit | xp.attackbit
 					table.sort(xp.hitbox_types, function(t1, t2) return t1.sort > t2.sort end) -- ソート
-					if xp.hitbox_types[1].sort < 3 and xp.repeatable then
+					if xp.hitbox_types[1].kind ~= db.box_kinds.attack and xp.repeatable then
 						col, line = 0xAAD2691E, 0xDDD2691E                         -- やられ判定より連キャン状態を優先表示する
 					else
 						col, line = xp.hitbox_types[1].fill, xp.hitbox_types[1].outline
@@ -4384,28 +4337,20 @@ rbff2.startplugin        = function()
 				end
 			end
 
-			-- コマンド入力とダメージとコンボ表示
+			-- フレーム表示
 			for i, p in ipairs(players) do
 				local p1 = i == 1
-
-				--行動IDとフレーム数表示
-				if global.disp_framegap > 1 or p.disp_frame > 1 then
-					local height = get_line_height()
-					if global.disp_framegap == 2 then
-						draw_frame_groups(p.frame_groups, p.act_frames_total, 30, p1 and 64 or 70, height, true)
-					end
-					local draw = draw_framesx
-					if p1 then
-						--	draw(p.frame_groups, 40, 63, 120)
-						draw_frames2(1, 150)
-					else
-						--	draw(p.frame_groups, 165, 63, 120)
-						draw_frames2(2, 150 + get_line_height(2))
-					end
+				--行動IDとフレーム数表示(フレームメーター表示時は見せない)
+				if global.disp_framegap ~= 2 or p.disp_frame > 1 then
+					draw_frames(p.frame_groups, p1 and 40 or 165, 63, 120)
 				end
-				--フレーム差と確定反撃の表示
-				if global.disp_framegap > 1 then
+				-- フレーム数表示 1:OFF 2:フレームメーター 3:数値のみ
+				if global.disp_framegap == 2 then
+					draw_frames2(i, 150 + get_line_height(p1 and 0 or 1.5))
+				elseif global.disp_framegap == 3 then
 					draw_text_with_shadow(p1 and 140 or 165, 40, p.last_frame_gap_txt, p.last_frame_gap_col)
+				end
+				if global.disp_framegap > 1 or p.disp_frame > 1 then -- 確定反撃の表示
 					draw_text_with_shadow(p1 and 112 or 184, 40, "PUNISH", p.on_punish <= global.frame_number and 0xFF808080 or 0xFF00FFFF)
 				end
 			end
@@ -5239,7 +5184,7 @@ rbff2.startplugin        = function()
 			{ "2P 入力表示", { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
 			{ "コマンド入力状態表示", { "OFF", "1P", "2P", }, },
 			{ "通常動作フレーム非表示", menu.labels.off_on, },
-			{ "フレーム差表示", { "OFF", "数値とグラフ", "数値" }, },
+			{ "フレーム差表示", { "OFF", "フレームメーター", "数値のみ" }, },
 			{ "1P フレーム数表示", { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
 			{ "2P フレーム数表示", { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
 			{ "1P 弾フレーム数表示", menu.labels.off_on, },
