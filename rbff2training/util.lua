@@ -416,5 +416,15 @@ ut.find_all = function(sources, resolver) -- sourcesの要素をresolverを通�
 	end
 end
 
+ut.sort_ab                              = function(v1, v2)
+	if v1 <= v2 then return v2, v1 end
+	return v1, v2
+end
+
+ut.sort_ba                              = function(v1, v2)
+	if v1 <= v2 then return v1, v2 end
+	return v2, v1
+end
+
 print("util loaded")
 return ut

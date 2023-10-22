@@ -493,7 +493,7 @@ local global                               = {
 
 	disp_pos             = true, -- 1P 2P 距離表示
 	hide                 = hide_options.none,
-	disp_framegap        = 3, -- フレーム差表示 1:OFF 2:フレームメーター 3:数値のみ
+	disp_frame        = 2, -- フレーム差表示 1:OFF 2:フレームメーター 3:数値のみ
 	disp_input           = 1, -- コマンド入力状態表示 1:OFF 2:1P 3:2P
 	disp_normal_frames   = 2, -- 通常動作フレーム非表示 1:OFF 2:ON
 	pause_hit            = 1, -- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
@@ -547,6 +547,7 @@ local global                               = {
 	all_bs               = false,
 	disp_replay          = true, -- レコードリプレイガイド表示
 	save_snapshot        = 1, -- 技画像保存 1:OFF 2:新規 3:上書き
+	key_hists            = 25,
 }
 mem.rg                                     = function(id, mask) return (mask == nil) and cpu.state[id].value or (cpu.state[id].value & mask) end
 mem.pc                                     = function() return cpu.state["CURPC"].value end
@@ -1000,9 +1001,10 @@ local draw_cmd_text_with_shadow            = function(x, y, str, fgcol, bgcol)
 		xx = xx + 5 -- フォントの大きさ問わず5pxずつ表示する
 	end
 end
+
 -- コマンド入力表示
 local draw_cmd                             = function(p, line, frame, str)
-	local xx, yy = p == 1 and 12 or 294, get_line_height(line + 9)
+	local xx, yy = p == 1 and 12 or 294, get_line_height(line + 3)
 	if 0 < frame then
 		local cframe = 999 < frame and "LOT" or string.format("%03d", frame)
 		draw_text_with_shadow(p == 1 and 1 or 283, yy, cframe, text_col)
@@ -1513,7 +1515,7 @@ rbff2.startplugin        = function()
 			hide_phantasm     = false,     -- 残像を画面表示しないときtrue
 			disp_damage       = true,      -- ダメージ表示するときtrue
 			disp_command      = 2,         -- 入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
-			disp_frame        = 2,         -- フレーム数表示する
+			disp_frame        = 1,         -- フレーム数表示する
 			disp_fbfrm        = true,      -- 弾のフレーム数表示するときtrue
 			disp_stun         = true,      -- 気絶表示
 			disp_state        = 3,         -- 状態表示 1:OFF 2:ON 3:ON:小表示 4:ON:大表示 5:ON:フラグ表示
@@ -1526,8 +1528,8 @@ rbff2.startplugin        = function()
 			on_punish         = 0,
 			key_now           = {},        -- 個別キー入力フレーム
 			key_pre           = {},        -- 前フレームまでの個別キー入力フレーム
-			key_hist          = ut.new_filled_table(16, ""),
-			key_frames        = ut.new_filled_table(16, 0),
+			key_hist          = ut.new_filled_table(global.key_hists, ""),
+			key_frames        = ut.new_filled_table(global.key_hists, 0),
 			ggkey_hist        = {},
 			throw_boxies      = {},
 			fireballs         = {},
@@ -2909,7 +2911,7 @@ rbff2.startplugin        = function()
 		scr:draw_box(x1 - w, y2 + w, x2 + w, y2, fcol, fcol)
 	end
 
-	local draw_frames2 = function(num, y1)               -- フレームメーターの表示
+	local draw_frame_meter = function(num, y1)               -- フレームメーターの表示
 		if 2 < num then return end
 		local x0 = (scr.width - frame_cell * frame_limit) // 2 -- 表示開始位置
 		local height = get_line_height()
@@ -3776,7 +3778,7 @@ rbff2.startplugin        = function()
 				for k = 2, #p.key_hist do
 					p.key_hist[k - 1], p.key_frames[k - 1] = p.key_hist[k], p.key_frames[k]
 				end
-				if 16 ~= #p.key_hist then
+				if global.key_hists ~= #p.key_hist then
 					p.key_hist[#p.key_hist + 1], p.key_frames[#p.key_frames + 1] = lever, 1
 				else
 					p.key_hist[#p.key_hist], p.key_frames[#p.key_frames] = lever, 1
@@ -4251,21 +4253,33 @@ rbff2.startplugin        = function()
 				end
 			end
 
-			-- ダメージとコンボ表示
 			for i, p in ipairs(players) do
-				local p1, col1 = i == 1, p.combo_col1 or {}
-				-- 状態 大表示 1:OFF 2:ON 3:ON:小表示 4:ON:大表示 5:ON:フラグ表示
-				if p.disp_state == 2 or p.disp_state == 4 then ut.table_add_all(col1, p.state_line1) end
-				if #col1 > 0 then
-					local box_bottom = get_line_height(#col1)
-					scr:draw_box(p1 and 224 or 0, 40, p1 and 320 or 96, 40 + box_bottom, 0x80404040, 0x80404040) -- 四角枠
-					scr:draw_text(p1 and 224 + 4 or 4, 40, table.concat(col1, "\n"))
-					if p.disp_damage then
-						scr:draw_text(p1 and 224 + 36 or 36, 40, table.concat(p.combo_col2, "\n"))
-						scr:draw_text(p1 and 224 + 68 or 68, 40, table.concat(p.combo_col3, "\n"))
+				local p1 = i == 1
+				-- ダメージとコンボ表示
+				if p.combo_col1 and #p.combo_col1 > 0 and p.disp_damage then
+					if p1 then
+						local col = 0x0C404040 -- to 9C
+						for wi = 20, 15, -0.4 do
+							local w = get_string_width("9") * wi
+							col = col | 0x0C000000
+							scr:draw_box(scr.width // 2 - w, 40, scr.width // 2 + w, 40 + get_line_height(#p.combo_col1), col, col) -- 四角枠
+						end
+						scr:draw_text("center", 40, table.concat(p.combo_col1, "\n"))
 					end
+					scr:draw_text(scr.width // 2 + get_string_width("9") * (p1 and -18 or  4), 40, table.concat(p.combo_col2, "\n"))
+					scr:draw_text(scr.width // 2 + get_string_width("9") * (p1 and  -9 or 13), 40, table.concat(p.combo_col3, "\n"))
 				end
-
+				-- 状態 大表示 1:OFF 2:ON 3:ON:小表示 4:ON:大表示 5:ON:フラグ表示
+				if p.state_line1 and #p.state_line1 > 0 and p.disp_state == 2 or p.disp_state == 4 then
+					local col = 0x9C404040
+					local w1 = get_string_width("9") * (p1 and 42 or -44 + 25)
+					local w2 = w1 - get_string_width("9") * 23
+					scr:draw_box(scr.width // 2 - w1, 40, scr.width // 2 - w2, 40 + get_line_height(#p.state_line1), col, col) -- 四角枠
+					scr:draw_text(scr.width // 2 - w1, 40, table.concat(p.state_line1, "\n"))
+				end
+			end
+			for i, p in ipairs(players) do
+				local p1 = i == 1
 				-- 状態 小表示 1:OFF 2:ON 3:ON:小表示 4:ON:大表示 5:ON:フラグ表示
 				if p.disp_state == 2 or p.disp_state == 3 then
 					local label1, label2 = p.state_line2 or {}, p.state_line3 or {}
@@ -4341,17 +4355,17 @@ rbff2.startplugin        = function()
 			for i, p in ipairs(players) do
 				local p1 = i == 1
 				--行動IDとフレーム数表示(フレームメーター表示時は見せない)
-				if global.disp_framegap ~= 2 or p.disp_frame > 1 then
+				if global.disp_frame ~= 2 or p.disp_frame > 1 then
 					draw_frames(p.frame_groups, p1 and 40 or 165, 63, 120)
 				end
 				-- フレーム数表示 1:OFF 2:フレームメーター 3:数値のみ
-				if global.disp_framegap == 2 then
-					draw_frames2(i, 150 + get_line_height(p1 and 0 or 1.5))
-				elseif global.disp_framegap == 3 then
+				if global.disp_frame == 2 then
+					draw_frame_meter(i, 160 + get_line_height(p1 and 0 or 1.5))
+				elseif global.disp_frame == 3 then
 					draw_text_with_shadow(p1 and 140 or 165, 40, p.last_frame_gap_txt, p.last_frame_gap_col)
 				end
-				if global.disp_framegap > 1 or p.disp_frame > 1 then -- 確定反撃の表示
-					draw_text_with_shadow(p1 and 112 or 184, 40, "PUNISH", p.on_punish <= global.frame_number and 0xFF808080 or 0xFF00FFFF)
+				if global.disp_frame > 1 or p.disp_frame > 1 then -- 確定反撃の表示
+					draw_text_with_shadow(p1 and 112 or 184, get_line_height(1.3), "PUNISH", p.on_punish <= global.frame_number and 0xFF808080 or 0xFF00FFFF)
 				end
 			end
 
@@ -4606,7 +4620,7 @@ rbff2.startplugin        = function()
 		p[2].disp_command    = col[11]                                              -- 2P 入力表示
 		g.disp_input         = col[12]                                              -- コマンド入力状態表示
 		g.disp_normal_frames = col[13]                                              -- 通常動作フレーム非表示
-		g.disp_framegap      = col[14]                                              -- フレーム差表示
+		g.disp_frame      = col[14]                                              -- フレーム差表示
 		p[1].disp_frame      = col[15]                                              -- 1P フレーム数表示
 		p[2].disp_frame      = col[16]                                              -- 2P フレーム数表示
 		p[1].disp_fbfrm      = col[17] == 2                                         -- 1P 弾フレーム数表示
@@ -4790,7 +4804,7 @@ rbff2.startplugin        = function()
 		col[11] = p[2].disp_command                                   -- 2P 入力表示
 		col[12] = g.disp_input                                        -- コマンド入力状態表示
 		col[13] = g.disp_normal_frames                                -- 通常動作フレーム非表示
-		col[14] = g.disp_framegap                                     -- フレーム差表示
+		col[14] = g.disp_frame                                     -- フレーム差表示
 		col[15] = p[1].disp_frame                                     -- 1P フレーム数表示
 		col[16] = p[2].disp_frame                                     -- 2P フレーム数表示
 		col[17] = p[1].disp_fbfrm and 2 or 1                          -- 1P 弾フレーム数表示
