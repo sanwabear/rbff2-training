@@ -108,7 +108,7 @@ local get_bottom_type    = function(bottom, types)
 	return type
 end
 local get_dodge          = function(p, box, top, bottom)
-	local dodge = 0
+	local dodge, type = 0, box.type
 	if p.sway_status == 0 then                                     -- メインライン
 		dodge = get_top_type(top, db.hurt_dodge_types) | get_bottom_type(bottom, db.hurt_dodge_types)
 		if type == db.box_types.hurt1 or type == db.box_types.hurt2 then -- 食らい1 食らい2
@@ -2735,12 +2735,19 @@ rbff2.startplugin        = function()
 		{ type = frame_attack_types.on_ground, txt = "▾", fix = -0.5 },
 	}
 	local dodges = {
+		{ type = frame_attack_types.full,        y = 1.0, step = 1.6, txt = "Full", border = 0.8, xline = 0xFF00BBDD },
 		{ type = frame_attack_types.high_dodges, y = 1.6, step = 3,   txt = "Low",  border = 1,   xline = 0xFF00FFFF },
 		{ type = frame_attack_types.low_dodges,  y = 1.6, step = 3,   txt = "High", border = 1,   xline = 0xFF00BBDD },
-		{ type = frame_attack_types.full,        y = 1.0, step = 1.6, txt = "Full", border = 0.8, xline = 0xFF00BBDD },
-		{ type = frame_attack_types.main,        y = 1.6, step = 3,   txt = "Main", border = 1,   xline = 0xFF000000 },
-		{ type = frame_attack_types.sway,        y = 1.6, step = 3,   txt = "Sway", border = 1,   xline = 0xFF000000 },
+		{ type = frame_attack_types.main,        y = 1.6, step = 3,   txt = "Main", border = 1,   xline = 0xFFFF6E00 },
+		{ type = frame_attack_types.sway,        y = 1.6, step = 3,   txt = "Sway", border = 1,   xline = 0xFFFF6E00 },
 	}
+	local exclude_dodge = function(attackbit)
+		return ut.tstb(attackbit, frame_attack_types.crounch60 |
+			frame_attack_types.crounch64 |
+			frame_attack_types.crounch68 |
+			frame_attack_types.crounch76 |
+			frame_attack_types.crounch80)
+	end
 	local dodraw = function(group, left, top, height, limit, txt_y, disp_name)
 		if #group == 0 then return end
 		txt_y = txt_y or 0
@@ -2762,9 +2769,11 @@ rbff2.startplugin        = function()
 				scr:draw_box(xleft, top, xright, top + height, frame.line, frame.col)
 
 				local dodge_txt = ""
-				for _, s, col in ut.ifind(dodges, function(s) return ut.tstb(frame.attackbit, s.type) and frame.xline or nil end) do
-					dodge_txt = s.txt -- 無敵種類
-					for i = s.y, height - s.y, s.step do scr:draw_box(xright, top + i, xleft, math.min(top + height, top + i + s.border), 0, col) end
+				if not exclude_dodge(frame.attackbit) then
+					for _, s, col in ut.ifind(dodges, function(s) return ut.tstb(frame.attackbit, s.type) and frame.xline or nil end) do
+						dodge_txt = s.txt -- 無敵種類
+						for i = s.y, height - s.y, s.step do scr:draw_box(xright, top + i, xleft, math.min(top + height, top + i + s.border), 0, col) end
+					end
 				end
 
 				local deco_txt = ""
@@ -2947,8 +2956,10 @@ rbff2.startplugin        = function()
 				})
 			end
 			scr:draw_box(x1, y1, x2, y2, 0, frame.line)                                        -- 四角の描画
-			for _, s, col in ut.ifind(dodges, function(s) return ut.tstb(frame.attackbit, s.type) and s.xline or nil end) do
-				for i = s.y, height - s.y, s.step do scr:draw_box(x1, y1 + i, x2, y1 + i + s.border, 0, col) end -- 無敵の描画
+			if not exclude_dodge(frame.attackbit) then
+				for _, s, col in ut.ifind(dodges, function(s) return ut.tstb(frame.attackbit, s.type) and s.xline or nil end) do
+					for i = s.y, height - s.y, s.step do scr:draw_box(x1, y1 + i, x2, y1 + i + s.border, 0, col) end -- 無敵の描画
+				end
 			end
 			scr:draw_box(x1, y1, x2, y2, 0xFF000000, 0)                                        -- 四角の描画
 		end
@@ -3534,9 +3545,9 @@ rbff2.startplugin        = function()
 			elseif p.frame_gap < 0 then
 				p.attackbit = p.attackbit | frame_attack_types.frame_minus
 			end
-			if not p.is_fireball then p.attackbit = p.attackbit | p.hurt.dodge end -- 本体の部分無敵を設定
 
 			-- 当たりとやられ判定判定
+			p.hurt.dodge = frame_attack_types.full -- くらい判定なし＝全身無敵をデフォルトにする
 			for _, _, box in ut.ifind_all(p.boxies, function(box)
 				local type = fix_box_type(p, p.attackbit, box) -- 属性はヒット状況などで変わるので都度解決する
 				if not (db.hurt_boxies[type] and p.vulnerable) then
@@ -3566,6 +3577,7 @@ rbff2.startplugin        = function()
 					table.insert(p.hitbox_types, box.type)
 				end
 			end
+			if not p.is_fireball then p.attackbit = p.attackbit | p.hurt.dodge end -- 本体の部分無敵フラグを設定
 
 			-- 攻撃判定がない場合は関連するフラグを無効化する
 			if p.hit.box_count == 0 then p.attackbit = ut.hex_clear(p.attackbit, db.box_with_bit_types.mask) end
