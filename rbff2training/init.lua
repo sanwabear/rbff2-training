@@ -2727,8 +2727,8 @@ rbff2.startplugin        = function()
 
 	-- グラフでフレームデータを末尾から描画
 	local decos = {
-		{ type = frame_attack_types.post_fireball, txt = "◇", fix = -0.4 },
-		{ type = frame_attack_types.pre_fireball, txt = "◆", fix = -0.4 },
+		{ type = frame_attack_types.post_fireball, txt = "▫", fix = -0.4 },
+		{ type = frame_attack_types.pre_fireball, txt = "▪", fix = -0.4 },
 		{ type = frame_attack_types.off_fireball, txt = "○", fix = -0.35 },
 		{ type = frame_attack_types.on_fireball, txt = "●", fix = -0.35 },
 		{ type = frame_attack_types.on_air, txt = "▴", fix = -0.5 },
@@ -2901,6 +2901,14 @@ rbff2.startplugin        = function()
 			not ut.tstb(frame.attackbit, frame_attack_types.fake) then
 			frame.startup = frame.total
 		end
+		for _, deco in ut.ifind(decos, function(deco) return ut.tstb(frame.decobit, deco.type) end) do
+			frame.deco = deco.txt
+		end
+		if not exclude_dodge(frame.attackbit) then
+			for _, s in ut.ifind(dodges, function(s) return ut.tstb(frame.attackbit, s.type) end) do
+				frame.dodge = s
+			end
+		end
 		table.insert(frames, frame)                               -- 末尾に追加
 		if #frames <= frame_buffer_limit then return end          -- バッファ長が2行以下なら抜ける
 		local frame_limit = frame_limit + (blank and 2 or 1)      -- ブランクぶん追加でバッファする
@@ -2935,6 +2943,11 @@ rbff2.startplugin        = function()
 			local frame = frames[ix]
 			local x1 = (((ix - 1) % frame_limit) * frame_cell) + x0
 			local x2 = x1 + frame_cell
+			if frame.deco then
+				table.insert(separators, { -- 記号
+					txt = { x2, y1, frame.deco },
+				})
+			end
 			if ix == max_x then -- 末尾のみ四方をBOX描画して太線で表示
 				table.insert(separators, { -- フレーム終端
 					txt = { x2, y1, frame.count },
@@ -2946,16 +2959,10 @@ rbff2.startplugin        = function()
 					box = { x1, y1, x2, y2, frame.line | 0xFF333333, 0 }
 				})
 			end
-			for _, deco in ut.ifind(decos, function(deco) return ut.tstb(frame.attackbit, deco.type) end) do
-				table.insert(separators, { -- 区切り記号
-					txt = { x2, y1, deco.txt },
-				})
-			end
 			scr:draw_box(x1, y1, x2, y2, 0, frame.line) -- 四角の描画
-			if not exclude_dodge(frame.attackbit) then
-				for _, s, col in ut.ifind(dodges, function(s) return ut.tstb(frame.attackbit, s.type) and s.xline or nil end) do
-					for i = s.y, height - s.y, s.step do scr:draw_box(x1, y1 + i, x2, y1 + i + s.border, 0, col) end -- 無敵の描画
-				end
+			if frame.dodge then -- 無敵の描画
+				local s, col = frame.dodge, frame.dodge.xline
+				for i = s.y, height - s.y, s.step do scr:draw_box(x1, y1 + i, x2, y1 + i + s.border, 0, col) end
 			end
 			scr:draw_box(x1, y1, x2, y2, 0xFF000000, 0) -- 四角の描画
 		end
@@ -3070,10 +3077,6 @@ rbff2.startplugin        = function()
 				frame_attack_types.full          |
 				frame_attack_types.main          |
 				frame_attack_types.sway          |
-				frame_attack_types.post_fireball |
-				frame_attack_types.pre_fireball  |
-				frame_attack_types.off_fireball  |
-				frame_attack_types.on_fireball   |
 				frame_attack_types.on_air        |
 				frame_attack_types.on_ground
 			if ut.tstb(p.attackbit, frame_attack_types.attacking) and not ut.tstb(p.attackbit, frame_attack_types.fake) then
@@ -3107,6 +3110,7 @@ rbff2.startplugin        = function()
 			end
 		end
 
+		local decobit  = attackbit
 		attackbit      = attackbit & attackbit_mask
 
 		local frame    = p.act_frames[#p.act_frames]
@@ -3115,7 +3119,7 @@ rbff2.startplugin        = function()
 		local name     = (frame and act_data.name_set and act_data.name_set[prev]) and prev or act_data.name
 		local key      = key_mask & attackbit
 
-		add_frame_meter(p.num, { line = line, col = col, attackbit = attackbit, key = key, name = name, update = p.update_act, })
+		add_frame_meter(p.num, { line = line, col = col, attackbit = attackbit, key = key, decobit = decobit, name = name, update = p.update_act, })
 
 		if p.update_act or not frame or frame.col ~= col or frame.key ~= attackbit then
 			--行動IDの更新があった場合にフレーム情報追加
@@ -3128,7 +3132,7 @@ rbff2.startplugin        = function()
 				xline      = xline,
 				update     = p.update_act,
 				attackbit  = attackbit,
-				key        = key_mask & attackbit,
+				key        = key,
 				fb_frames  = {},
 				gap_frames = {},
 			}, 180)
