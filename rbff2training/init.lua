@@ -2859,7 +2859,7 @@ rbff2.startplugin        = function()
 	local p_frames, frame_limit, frame_cell = { {}, {} }, 70, 3.5
 	local frame_buffer_limit = frame_limit * 2 -- バッファ長=2行まで許容
 
-	local add_frame = function(num, frame)  -- フレームデータの追加
+	local add_frame_meter = function(num, frame)  -- フレームデータの追加
 		if 2 < num then return end
 		if not global.both_act_neutral and global.old_both_act_neutral then
 			p_frames[num] = {} -- バッファ初期化
@@ -2904,7 +2904,7 @@ rbff2.startplugin        = function()
 		if last and last.startup then
 			frame.startup = last.startup
 		elseif not frame.startup and ut.tstb(frame.attackbit, frame_attack_types.attacking) and
-			not ut.tstb(frame.attackbit, frame_attack_types.fake) then --  | frame_attack_types.obsolute | frame_attack_types.fullhit | frame_attack_types.harmless
+			not ut.tstb(frame.attackbit, frame_attack_types.fake) then
 			frame.startup = frame.total
 		end
 		table.insert(frames, frame)                               -- 末尾に追加
@@ -2946,11 +2946,13 @@ rbff2.startplugin        = function()
 			local x2 = x1 + frame_cell
 			if ix == max_x then -- 末尾のみ四方をBOX描画して太線で表示
 				table.insert(ends, {
+					count = frame.count,
 					txt = { x2, y1, frame.count },
 					box = { x1, y1, x2, y2, 1, frame.line | 0xFF333333 }
 				})
 			elseif ((remain == 0) or (remain + 4 < ix)) and (frame.count >= frames[ix + 1].count) then -- 区切り
 				table.insert(ends, {
+					count = frame.count,
 					txt = { x2, y1, 0 < frame.count and frame.count or "" },
 					box = { x1, y1, x2, y2, frame.line | 0xFF333333, 0 }
 				})
@@ -2974,8 +2976,10 @@ rbff2.startplugin        = function()
 				scr:draw_box(x1, y1, x1 + frame_cell, y2, 0xFF000000, 0xCC888888)
 			end
 		end
+		local recovery = 0
 		if 0 < #ends then -- 終端の描画
 			local args = ends[#ends]
+			recovery = args.count
 			border_box(table.unpack(args.box))
 			draw_rtext_with_shadow(table.unpack(args.txt))
 		end
@@ -3109,7 +3113,7 @@ rbff2.startplugin        = function()
 		local name     = (frame and act_data.name_set and act_data.name_set[prev]) and prev or act_data.name
 		local key      = key_mask & attackbit
 
-		add_frame(p.num, { line = line, col = col, attackbit = attackbit, key = key, name = name, update = p.update_act, })
+		add_frame_meter(p.num, { line = line, col = col, attackbit = attackbit, key = key, name = name, update = p.update_act, })
 
 		if p.update_act or not frame or frame.col ~= col or frame.key ~= attackbit then
 			--行動IDの更新があった場合にフレーム情報追加
