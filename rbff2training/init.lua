@@ -2886,19 +2886,13 @@ rbff2.startplugin        = function()
 			end
 		end
 
-		if #frames == 0 then
-			first, reset = true, true
-		elseif frame.attackbit ~= last.key then
-			reset = true
-		--[[
-		elseif frame.name ~= last.name then
-			reset = true
-		elseif frame.update ~= last.update then
-			reset = true
-		]]
-		elseif frame.col ~= last.col then
-			reset = true
-		end
+		first = #frames == 0
+		reset = reset or first
+		reset = reset or frame.attackbit ~= last.key
+		reset = reset or frame.col ~= last.col
+		--reset = reset or frame.name ~= last.name
+		--reset = reset or frame.update ~= last.update
+
 		frame.count = reset and 1 or last.count + 1
 		frame.total = (first or not last.total) and 1 or last.total + 1
 		if last and last.startup then
@@ -2920,7 +2914,7 @@ rbff2.startplugin        = function()
 		scr:draw_box(x1 - w, y2 + w, x2 + w, y2, fcol, fcol)
 	end
 
-	local draw_frame_meter = function(num, y1)               -- フレームメーターの表示
+	local draw_frame_meter = function(num, y1)           -- フレームメーターの表示
 		if 2 < num then return end
 		local x0 = (scr.width - frame_cell * frame_limit) // 2 -- 表示開始位置
 		local height = get_line_height()
@@ -2934,55 +2928,57 @@ rbff2.startplugin        = function()
 			max_x = max_x - 1
 		end
 		local remain = (frame_limit < max_x) and (max_x % frame_limit) or 0
-		local quotient = max_x // frame_limit
-		local ends = {}
-		local startup
+		local separators = {}
+		local startup = 0 < max_x and frames[max_x] and frames[max_x].startup or 0
 		border_box(x0, y1, x0 + frame_limit * frame_cell, y2, 0.5, 0xFF000000) -- 外枠
 		for ix = remain + 1, max_x do
 			local frame = frames[ix]
-			local under_layer = (ix // frame_limit) < quotient
-			startup = frame.startup
 			local x1 = (((ix - 1) % frame_limit) * frame_cell) + x0
 			local x2 = x1 + frame_cell
 			if ix == max_x then -- 末尾のみ四方をBOX描画して太線で表示
-				table.insert(ends, {
-					count = frame.count,
+				table.insert(separators, { -- フレーム終端
 					txt = { x2, y1, frame.count },
 					box = { x1, y1, x2, y2, 1, frame.line | 0xFF333333 }
 				})
-			elseif ((remain == 0) or (remain + 4 < ix)) and (frame.count >= frames[ix + 1].count) then -- 区切り
-				table.insert(ends, {
-					count = frame.count,
+			elseif ((remain == 0) or (remain + 4 < ix)) and (frame.count >= frames[ix + 1].count) then
+				table.insert(separators, { -- フレーム区切り
 					txt = { x2, y1, 0 < frame.count and frame.count or "" },
 					box = { x1, y1, x2, y2, frame.line | 0xFF333333, 0 }
 				})
 			end
-			scr:draw_box(x1, y1, x2, y2, 0, frame.line)                                        -- 四角の描画
+			for _, deco in ut.ifind(decos, function(deco) return ut.tstb(frame.attackbit, deco.type) end) do
+				table.insert(separators, { -- 区切り記号
+					txt = { x2, y1, deco.txt },
+				})
+			end
+			scr:draw_box(x1, y1, x2, y2, 0, frame.line) -- 四角の描画
 			if not exclude_dodge(frame.attackbit) then
 				for _, s, col in ut.ifind(dodges, function(s) return ut.tstb(frame.attackbit, s.type) and s.xline or nil end) do
 					for i = s.y, height - s.y, s.step do scr:draw_box(x1, y1 + i, x2, y1 + i + s.border, 0, col) end -- 無敵の描画
 				end
 			end
-			scr:draw_box(x1, y1, x2, y2, 0xFF000000, 0)                                        -- 四角の描画
+			scr:draw_box(x1, y1, x2, y2, 0xFF000000, 0) -- 四角の描画
 		end
-		for i, args in ipairs(ends) do                                                         -- 区切り描画
-			if i == #ends then break end
-			scr:draw_box(table.unpack(args.box))
-			draw_rtext_with_shadow(table.unpack(args.txt))
+		-- 区切り描画
+		for i, args in ipairs(separators) do
+			if i == #separators then break end
+			if args.box then scr:draw_box(table.unpack(args.box)) end
+			if args.txt then draw_rtext_with_shadow(table.unpack(args.txt)) end
 		end
+		-- マスクの四角描画
 		if frame_limit ~= max_x or max_x == 0 then
-			for ix = (max_x % frame_limit) + 1, frame_limit do -- マスクの四角描画
+			for ix = (max_x % frame_limit) + 1, frame_limit do
 				local x1 = ((ix - 1) * frame_cell) + x0
 				scr:draw_box(x1, y1, x1 + frame_cell, y2, 0xFF000000, 0xCC888888)
 			end
 		end
-		local recovery = 0
-		if 0 < #ends then -- 終端の描画
-			local args = ends[#ends]
-			recovery = args.count
-			border_box(table.unpack(args.box))
-			draw_rtext_with_shadow(table.unpack(args.txt))
+		-- 終端の描画
+		if 0 < #separators then
+			local args = separators[#separators]
+			if args.box then border_box(table.unpack(args.box)) end
+			if args.txt then draw_rtext_with_shadow(table.unpack(args.txt)) end
 		end
+		-- フレーム概要の描画
 		local label
 		if startup then
 			label = string.format("Startup %2s / Total %3s / Recovery", startup, max_x)
@@ -3067,13 +3063,19 @@ rbff2.startplugin        = function()
 				end
 			end
 			]]
-			attackbit_mask = attackbit_mask    |
-				frame_attack_types.high_dodges |
-				frame_attack_types.low_dodges  |
-				frame_attack_types.frame_plus  |
-				frame_attack_types.full        |
-				frame_attack_types.main        |
-				frame_attack_types.sway
+			attackbit_mask = attackbit_mask      |
+				frame_attack_types.high_dodges   |
+				frame_attack_types.low_dodges    |
+				frame_attack_types.frame_plus    |
+				frame_attack_types.full          |
+				frame_attack_types.main          |
+				frame_attack_types.sway          |
+				frame_attack_types.post_fireball |
+				frame_attack_types.pre_fireball  |
+				frame_attack_types.off_fireball  |
+				frame_attack_types.on_fireball   |
+				frame_attack_types.on_air        |
+				frame_attack_types.on_ground
 			if ut.tstb(p.attackbit, frame_attack_types.attacking) and not ut.tstb(p.attackbit, frame_attack_types.fake) then
 				attackbit_mask = attackbit_mask | frame_attack_types.attacking
 				--attackbit_mask = attackbit_mask | frame_attack_types.fake -- fakeの表現がTODO
