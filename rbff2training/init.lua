@@ -1728,9 +1728,18 @@ rbff2.startplugin        = function()
 				if (p.kaiserwave[pc] == nil) or p.kaiserwave[pc] + 1 < global.frame_number then p.on_update_spid = now() end
 				p.kaiserwave[pc] = now()
 			end,
-			[p1 and 0x10B4E1 or 0x10B4E0] = p.update_tmp_combo,
+			[p1 and 0x10B4E1 or 0x10B4E0] = function(data)
+				p.tmp_combo1 = data  -- 一時的なコンボ数
+				if p.no_hit_limit > 0 and p.tmp_combo1 >= p.no_hit_limit - 1 then
+					p.no_hit = true
+				elseif p.op.flag_c4 == 0 and p.op.flag_c8 == 0 then
+					p.no_hit = false -- 非攻撃状態でヒット無効化状態のリセット
+				end
+				p.update_tmp_combo(data)
+			end,
 			[p1 and 0x10B4E5 or 0x10B4E4] = function(data) p.last_combo = data end, -- 最近のコンボ数
 			[p1 and 0x10B4E7 or 0x10B4E8] = function(data) p.konck_back4 = data end, -- 1ならやられ中
+			[p1 and 0x10B4EA or 0x10B4E9] = function(data) p.tmp_combo2 = data end,  -- 一時的なコンボ数-1
 			--[p1 and 0x10B4F0 or 0x10B4EF] = function(data) p.max_combo = data end, -- 最大コンボ数
 			[p1 and 0x10B84E or 0x10B856] = function(data) p.stun_limit = data end, -- 最大気絶値
 			[p1 and 0x10B850 or 0x10B858] = function(data) p.hit_stun = data end, -- 現在気絶値
@@ -1831,9 +1840,7 @@ rbff2.startplugin        = function()
 			[0xE6] = function(data) p.on_hit_any = now() + 1 end,          -- 0xE6か0xE7 打撃か当身でフラグが立つ
 			[p1 and 0x10B854 or 0x10B85C] = function(data) p.hit_stun_timer = data end, -- 気絶値ゼロ化までの残フレーム数
 		}
-		local nohit = function(data, ret)
-			if p.no_hit_limit > 0 and p.last_combo >= p.no_hit_limit then ret.value = 0x311C end --  0x0001311Cの後半を返す
-		end
+		local nohit = function(data, ret) if get_object_by_reg("A4", {}).no_hit then ret.value = 0x311C end end -- 0x0001311Cの後半を返す
 		p.rp16 = {
 			[{ addr = 0x20, filter = 0x2DD16 }] = function(data)
 				if not in_match then return end
