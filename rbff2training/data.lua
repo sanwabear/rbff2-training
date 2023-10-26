@@ -1568,10 +1568,14 @@ local cmd_bytes = {
 	back = "back",
 }
 local cmd_rev_masks = {
-	{ cmd = 0x01, mask = 0x0D }, -- 1101
-	{ cmd = 0x02, mask = 0x0E }, -- 1110
-	{ cmd = 0x04, mask = 0x07 }, -- 0111
-	{ cmd = 0x08, mask = 0x0B }, -- 1011
+	{ cmd = 0x01, mask = 0xFD }, -- 1111 1101
+	{ cmd = 0x02, mask = 0xFE }, -- 1111 1110
+	{ cmd = 0x04, mask = 0xF7 }, -- 1111 0111
+	{ cmd = 0x08, mask = 0xFB }, -- 1111 1011
+	{ cmd = 0x10, mask = 0xDF }, -- 1110 1111
+	{ cmd = 0x20, mask = 0xEF }, -- 1101 1111
+	{ cmd = 0x40, mask = 0x7F }, -- 1011 1111
+	{ cmd = 0x80, mask = 0xBF }, -- 0111 1111
 }
 local cmd_masks = {
 	[cmd_bytes._1] = 0xFF ~ cmd_bytes._9,

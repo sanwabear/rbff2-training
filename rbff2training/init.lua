@@ -1737,18 +1737,16 @@ rbff2.startplugin        = function()
 			[p1 and 0x10B84E or 0x10B856] = function(data) p.stun_limit = data end, -- 最大気絶値
 			[p1 and 0x10B850 or 0x10B858] = function(data) p.hit_stun = data end, -- 現在気絶値
 			[p1 and 0x1041B0 or 0x1041B4] = function(data, ret)
-				if p.bs_hook and p.bs_hook.cmd_type then
-					--ut.printf("%s bs_hook cmd %x", p.num, p.bs_hook.cmd_type)
-					-- フックの処理量軽減のためまとめてキー入力を記録する
-					local a1, a2, mask = p1 and 0x1041AE or 0x1041B2, p1 and 0x1041AF or 0x1041B3, 0xFF
-					for _, m in ut.ifind(db.cmd_rev_masks, function(m) return ut.tstb(p.bs_hook.cmd_type, m.cmd) end) do
-						mask = m.mask
-						print(mask)
-					end
-					mem.w8(a1, (mem.r8(a1) & mask) | p.bs_hook.cmd_type) -- 押しっぱずっと有効
-					mem.w8(a2, (mem.r8(a2) & mask) | p.bs_hook.cmd_type) -- 押しっぱ有効が5Fのみ
-					ret.value = p.bs_hook.cmd_type -- 押しっぱ有効が1Fのみ
+				if not p.bs_hook or not p.bs_hook.cmd_type then return end
+				--ut.printf("%s bs_hook cmd %x", p.num, p.bs_hook.cmd_type)
+				-- フックの処理量軽減のためまとめてキー入力を記録する
+				local a1, a2, mask = p1 and 0x1041AE or 0x1041B2, p1 and 0x1041AF or 0x1041B3, 0xFF
+				for _, m in ut.ifind_all(db.cmd_rev_masks, function(m) return ut.tstb(p.bs_hook.cmd_type, m.cmd) end) do
+					mask = mask & m.mask
 				end
+				mem.w8(a1, (mem.r8(a1) & mask) | p.bs_hook.cmd_type) -- 押しっぱずっと有効
+				mem.w8(a2, (mem.r8(a2) & mask) | p.bs_hook.cmd_type) -- 押しっぱ有効が5Fのみ
+				ret.value = p.bs_hook.cmd_type -- 押しっぱ有効が1Fのみ
 			end,
 		}
 		local special_throws = {
