@@ -1573,12 +1573,6 @@ rbff2.startplugin        = function()
 				input = type(input) == "table" and input[p.cmd_side] or input
 				p.bs_hook = { cmd_type = input }
 			end,
-			is_block_cmd_hook = function()
-				local p = players[i]
-				return p.bs_hook and p.bs_hook.cmd_type and
-					ut.tstb(p.bs_hook.cmd_type, db.cmd_types.back[p.cmd_side]) and
-					ut.tstb(p.bs_hook.cmd_type, db.cmd_types._2) ~= true
-			end,
 			reset_sp_hook     = function(hook) players[i].bs_hook = hook end,
 		}
 		local p       = players[i]
@@ -1845,10 +1839,10 @@ rbff2.startplugin        = function()
 				if not in_match then return end
 				p.main_d_close = mem.rg("D2", 0xFFFF) >= math.abs(p.pos - p.op.pos) -- 対スウェーライン攻撃の遠近判断
 			end,
-			[0x13124 + 0x2] = nohit,                                    -- 0x13124の後半読み出しハック
-			[0x13128 + 0x2] = nohit,                                    -- 0x13128の後半読み出しハック 0x1311Cを返す
-			[0x1312C + 0x2] = nohit,                                    -- 0x1312Cの後半読み出しハック 0x1311Cを返す
-			[0x13130 + 0x2] = nohit,                                    -- 0x13130の後半読み出しハック 0x1311Cを返す
+			[0x13124 + 0x2] = nohit,                                    -- 0x13124の読み出しハック
+			[0x13128 + 0x2] = nohit,                                    -- 0x13128の読み出しハック
+			[0x1312C + 0x2] = nohit,                                    -- 0x1312Cの読み出しハック
+			[0x13130 + 0x2] = nohit,                                    -- 0x13130の読み出しハック
 		}
 		p.wp32 = {
 			[0x00] = function(data, ret)
@@ -2943,7 +2937,8 @@ rbff2.startplugin        = function()
 		end
 		local remain = (frame_limit < max_x) and (max_x % frame_limit) or 0
 		local separators = {}
-		local startup = 0 < max_x and frames[max_x] and frames[max_x].startup or 0
+		local startup = 0 < max_x and frames[max_x] and frames[max_x].startup or "--"
+		local total =  0 < max_x and frames[max_x] and frames[max_x].total or "---"
 		border_box(x0, y1, x0 + frame_limit * frame_cell, y2, 0.5, 0xFF000000) -- 外枠
 		for ix = remain + 1, max_x do
 			local frame = frames[ix]
@@ -2992,15 +2987,14 @@ rbff2.startplugin        = function()
 			if args.txt then draw_rtext_with_shadow(table.unpack(args.txt)) end
 		end
 		-- フレーム概要の描画
-		local label
-		if startup then
-			label = string.format("Startup %2s / Total %3s / Recovery", startup, max_x)
-		else
-			label = string.format("Startup -- / Total  -- / Recovery", startup, max_x)
-		end
+		local label = string.format("Startup %2s / Total %3s / Recovery", startup, total)
 		local ty = num == 1 and y1 - height or y1 + height
 		draw_text_with_shadow(x0, ty, label)
-		draw_text_with_shadow(x0 + get_string_width(label) - 4, ty, players[num].last_frame_gap_txt, players[num].last_frame_gap_col)
+		local gap_txt, cap_col = players[num].last_frame_gap_txt, players[num].last_frame_gap_col
+		if not global.both_act_neutral then
+			gap_txt, cap_col = "---", 0xFFFFFFFF
+		end
+		draw_text_with_shadow(x0 + get_string_width(label) - 4, ty, gap_txt, cap_col)
 	end
 
 	local proc_frame = function(p)
@@ -3631,13 +3625,15 @@ rbff2.startplugin        = function()
 				end
 
 				-- 座標
-				table.insert(ranges, {
-					label = string.format("%sP", p.num),
-					x = p.x,
-					y = p.y,
-					flip_x = p.cmd_side,
-					within = false,
-				})
+				if p.in_air then
+					table.insert(ranges, {
+						label = string.format("%sP", p.num),
+						x = p.x,
+						y = p.y,
+						flip_x = p.cmd_side,
+						within = false,
+					})
+				end
 			end
 
 			if p.body.disp_range and p.is_fireball ~= true then
@@ -3899,12 +3895,9 @@ rbff2.startplugin        = function()
 							p.add_cmd_hook(db.cmd_types.back)
 						end
 					end
-					p.backstep_killer = p.is_block_cmd_hook()
-				elseif p.backstep_killer then
 					-- コマンド入力状態を無効にしてバクステ暴発を防ぐ
 					local bs_addr = dip_config.easy_super and p.char_data.easy_bs_addr or p.char_data.bs_addr
 					mem.w8(p.input_offset + bs_addr, 0x00)
-					p.backstep_killer = false
 				end
 
 				-- 次のガード要否を判断する
