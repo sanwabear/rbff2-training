@@ -1488,7 +1488,7 @@ rbff2.startplugin        = function()
 	for i = 1, 2 do                                                                                        -- プレイヤーの状態など
 		local p1      = (i == 1)
 		local base    = p1 and 0x100400 or 0x100500
-		players[i]    = {
+		local p       = {
 			num               = i,
 			is_fireball       = false,
 			base              = 0x0,
@@ -1575,8 +1575,8 @@ rbff2.startplugin        = function()
 			end,
 			reset_sp_hook     = function(hook) players[i].bs_hook = hook end,
 		}
-		local p       = players[i]
-		p.body        = players[i] -- プレイヤーデータ自身、fireballとの互換用
+		table.insert(players, p)
+		p.body        = p -- プレイヤーデータ自身、fireballとの互換用
 		p.update_char = function(data)
 			p.char, p.char4, p.char8 = data, (data << 2), (data << 3)
 			p.char_data = p.is_fireball and db.chars[#db.chars] or db.chars[data] -- 弾はダミーを設定する
@@ -1951,6 +1951,7 @@ rbff2.startplugin        = function()
 				p.multi_hit = false
 			end
 			p.clear_frame_data = function()
+				p.frames           = {}
 				p.frame_gap        = p.frame_gap or 0
 				p.act_frames       = {}
 				p.frame_groups     = {}
@@ -2329,9 +2330,7 @@ rbff2.startplugin        = function()
 			local op = p.op
 			p.input_states = {}
 			p.char_data = db.chars[p.char]
-
 			do_recover(p, true)
-
 			p.combo_update = 0
 			p.combo_damage = 0
 			p.combo_start_stun = 0
@@ -2350,6 +2349,7 @@ rbff2.startplugin        = function()
 			p.max_combo_stun = 0
 			p.max_combo_stun_timer = 0
 			p.max_combo_pow = 0
+			p.clear_frame_data()
 		end
 	end
 
@@ -2856,15 +2856,17 @@ rbff2.startplugin        = function()
 	local force_y_pos = { "OFF", 0 }
 	for i = 1, 256 do table.insert(force_y_pos, i) end
 	for i = -1, -256, -1 do table.insert(force_y_pos, i) end
-	local p_frames, frame_limit, frame_cell = { {}, {} }, 70, 3.5
-	local frame_buffer_limit = frame_limit * 2 -- バッファ長=2行まで許容
 
-	local add_frame_meter = function(num, frame)  -- フレームデータの追加
-		if 2 < num then return end
+	local frame_meter = {}
+	frame_meter.limit, frame_meter.cell = 70, 3.5
+	frame_meter.buffer_limit = frame_meter.limit * 2 -- バッファ長=2行まで許容
+
+	local add_frame_meter = function(p, frame)  -- フレームデータの追加
+		if p.is_fireball then return end
 		if not global.both_act_neutral and global.old_both_act_neutral then
-			p_frames[num] = {} -- バッファ初期化
+			p.frames = {} -- バッファ初期化
 		end
-		local frames, reset, first, blank = p_frames[num], false, false, false -- プレイヤーごとのバッファを取得
+		local frames, reset, first, blank = p.frames, false, false, false -- プレイヤーごとのバッファを取得
 		local last = frames[#frames]
 		blank = ut.tstb(frame.attackbit, frame_attack_types.frame_plus)
 		if blank then
@@ -2910,8 +2912,8 @@ rbff2.startplugin        = function()
 			end
 		end
 		table.insert(frames, frame)                               -- 末尾に追加
-		if #frames <= frame_buffer_limit then return end          -- バッファ長が2行以下なら抜ける
-		local frame_limit = frame_limit + (blank and 2 or 1)      -- ブランクぶん追加でバッファする
+		if #frames <= frame_meter.buffer_limit then return end          -- バッファ長が2行以下なら抜ける
+		local frame_limit = frame_meter.limit + (blank and 2 or 1)      -- ブランクぶん追加でバッファする
 		while frame_limit ~= #frames do table.remove(frames, 1) end -- 1行目のバッファを削除
 	end
 
@@ -2922,28 +2924,28 @@ rbff2.startplugin        = function()
 		scr:draw_box(x1 - w, y2 + w, x2 + w, y2, fcol, fcol)
 	end
 
-	local draw_frame_meter = function(num, y1)           -- フレームメーターの表示
-		if 2 < num then return end
-		local x0 = (scr.width - frame_cell * frame_limit) // 2 -- 表示開始位置
+	local draw_frame_meter = function(p, y1)           -- フレームメーターの表示
+		if p.is_fireball then return end
+		local x0 = (scr.width - frame_meter.cell * frame_meter.limit) // 2 -- 表示開始位置
 		local height = get_line_height()
 		local y2 = y1 + height                           -- メーター行のY位置
-		local frames, max_x = {}, #p_frames[num]
+		local frames, max_x = {}, #p.frames
 		while (0 < max_x) do
-			if not ut.tstb(p_frames[num][max_x].attackbit, frame_attack_types.frame_plus) then
-				for i = 1, max_x do table.insert(frames, p_frames[num][i]) end
+			if not ut.tstb(p.frames[max_x].attackbit, frame_attack_types.frame_plus) then
+				for i = 1, max_x do table.insert(frames, p.frames[i]) end
 				break
 			end
 			max_x = max_x - 1
 		end
-		local remain = (frame_limit < max_x) and (max_x % frame_limit) or 0
+		local remain = (frame_meter.limit < max_x) and (max_x % frame_meter.limit) or 0
 		local separators = {}
 		local startup = 0 < max_x and frames[max_x] and frames[max_x].startup or "--"
 		local total =  0 < max_x and frames[max_x] and frames[max_x].total or "---"
-		border_box(x0, y1, x0 + frame_limit * frame_cell, y2, 0.5, 0xFF000000) -- 外枠
+		border_box(x0, y1, x0 + frame_meter.limit * frame_meter.cell, y2, 0.5, 0xFF000000) -- 外枠
 		for ix = remain + 1, max_x do
 			local frame = frames[ix]
-			local x1 = (((ix - 1) % frame_limit) * frame_cell) + x0
-			local x2 = x1 + frame_cell
+			local x1 = (((ix - 1) % frame_meter.limit) * frame_meter.cell) + x0
+			local x2 = x1 + frame_meter.cell
 			if frame.deco then
 				table.insert(separators, { -- 記号
 					txt = { x2, y1, frame.deco },
@@ -2974,10 +2976,10 @@ rbff2.startplugin        = function()
 			if args.txt then draw_rtext_with_shadow(table.unpack(args.txt)) end
 		end
 		-- マスクの四角描画
-		if frame_limit ~= max_x or max_x == 0 then
-			for ix = (max_x % frame_limit) + 1, frame_limit do
-				local x1 = ((ix - 1) * frame_cell) + x0
-				scr:draw_box(x1, y1, x1 + frame_cell, y2, 0xFF000000, 0xCC888888)
+		if frame_meter.limit ~= max_x or max_x == 0 then
+			for ix = (max_x % frame_meter.limit) + 1, frame_meter.limit do
+				local x1 = ((ix - 1) * frame_meter.cell) + x0
+				scr:draw_box(x1, y1, x1 + frame_meter.cell, y2, 0xFF000000, 0xCC888888)
 			end
 		end
 		-- 終端の描画
@@ -2988,12 +2990,10 @@ rbff2.startplugin        = function()
 		end
 		-- フレーム概要の描画
 		local label = string.format("Startup %2s / Total %3s / Recovery", startup, total)
-		local ty = num == 1 and y1 - height or y1 + height
+		local ty = p.num == 1 and y1 - height or y1 + height
 		draw_text_with_shadow(x0, ty, label)
-		local gap_txt, cap_col = players[num].last_frame_gap_txt, players[num].last_frame_gap_col
-		if not global.both_act_neutral then
-			gap_txt, cap_col = "---", 0xFFFFFFFF
-		end
+		local gap_txt, cap_col = p.last_frame_gap_txt, p.last_frame_gap_col
+		if not global.both_act_neutral then gap_txt, cap_col = "---", 0xFFFFFFFF end
 		draw_text_with_shadow(x0 + get_string_width(label) - 4, ty, gap_txt, cap_col)
 	end
 
@@ -3119,7 +3119,7 @@ rbff2.startplugin        = function()
 		local name     = (frame and act_data.name_set and act_data.name_set[prev]) and prev or act_data.name
 		local key      = key_mask & attackbit
 
-		add_frame_meter(p.num, { line = line, col = col, attackbit = attackbit, key = key, decobit = decobit, name = name, update = p.update_act, })
+		add_frame_meter(p, { line = line, col = col, attackbit = attackbit, key = key, decobit = decobit, name = name, update = p.update_act, })
 
 		if p.update_act or not frame or frame.col ~= col or frame.key ~= attackbit then
 			--行動IDの更新があった場合にフレーム情報追加
@@ -4381,7 +4381,7 @@ rbff2.startplugin        = function()
 				end
 				-- フレーム数表示 1:OFF 2:フレームメーター 3:数値のみ
 				if global.disp_frame == 2 then
-					draw_frame_meter(i, 160 + get_line_height(p1 and 0 or 1.5))
+					draw_frame_meter(p, 160 + get_line_height(p1 and 0 or 1.5))
 				elseif global.disp_frame == 3 then
 					draw_text_with_shadow(p1 and 140 or 165, 40, p.last_frame_gap_txt, p.last_frame_gap_col)
 				end
