@@ -3625,7 +3625,7 @@ rbff2.startplugin        = function()
 				end
 
 				-- 座標
-				if p.in_air then
+				if not p.in_air then
 					table.insert(ranges, {
 						label = string.format("%sP", p.num),
 						x = p.x,
