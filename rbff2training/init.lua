@@ -1740,9 +1740,14 @@ rbff2.startplugin        = function()
 				if p.bs_hook and p.bs_hook.cmd_type then
 					--ut.printf("%s bs_hook cmd %x", p.num, p.bs_hook.cmd_type)
 					-- フックの処理量軽減のためまとめてキー入力を記録する
-					mem.w8(p1 and 0x1041AE or 0x1041B2, p.bs_hook.cmd_type) -- 押しっぱずっと有効
-					mem.w8(p1 and 0x1041AF or 0x1041B3, p.bs_hook.cmd_type) -- 押しっぱ有効が5Fのみ
-					ret.value = p.bs_hook.cmd_type           -- 押しっぱ有効が1Fのみ
+					local a1, a2, mask = p1 and 0x1041AE or 0x1041B2, p1 and 0x1041AF or 0x1041B3, 0xFF
+					for _, m in ut.ifind(db.cmd_rev_masks, function(m) return ut.tstb(p.bs_hook.cmd_type, m.cmd) end) do
+						mask = m.mask
+						print(mask)
+					end
+					mem.w8(a1, (mem.r8(a1) & mask) | p.bs_hook.cmd_type) -- 押しっぱずっと有効
+					mem.w8(a2, (mem.r8(a2) & mask) | p.bs_hook.cmd_type) -- 押しっぱ有効が5Fのみ
+					ret.value = p.bs_hook.cmd_type -- 押しっぱ有効が1Fのみ
 				end
 			end,
 		}

@@ -1547,6 +1547,9 @@ local rvs_types = {
 --レバー 7=05 8=01 9=09  ボタン A=10 B=20 C=40 D=80
 --       4=04 5=00 6=08
 --       1=06 2=02 3=0A
+--レバー 7=0101 8=0001 9=1001  ボタン A=00010000 B=00100000 C=01000000 D=10000000
+--       4=0100 5=0000 6=1000
+--       1=0110 2=0010 3=1010
 local cmd_bytes = {
 	_1 = 0x6,
 	_2 = 0x2,
@@ -1563,6 +1566,12 @@ local cmd_bytes = {
 	_d = 0x80,
 	front = "front",
 	back = "back",
+}
+local cmd_rev_masks = {
+	{ cmd = 0x01, mask = 0x0D }, -- 1101
+	{ cmd = 0x02, mask = 0x0E }, -- 1110
+	{ cmd = 0x04, mask = 0x07 }, -- 0111
+	{ cmd = 0x08, mask = 0x0B }, -- 1011
 }
 local cmd_masks = {
 	[cmd_bytes._1] = 0xFF ~ cmd_bytes._9,
@@ -2077,6 +2086,7 @@ end
 
 db.hook_cmd_types   = hook_cmd_types
 db.rvs_types        = rvs_types
+db.cmd_rev_masks    = cmd_rev_masks
 db.cmd_masks        = cmd_masks
 db.cmd_types        = cmd_types
 db.char_rvs_list    = char_rvs_list
