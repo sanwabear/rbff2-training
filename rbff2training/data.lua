@@ -1567,6 +1567,16 @@ local cmd_bytes = {
 	front = "front",
 	back = "back",
 }
+local cmd_status_b = {
+	{
+		_st = 2 ^ 0, -- Start P1
+		_sl = 2 ^ 2, -- Select P1
+	},
+	{
+		_st = 2 ^ 1, -- Start P2
+		_sl = 2 ^ 3, -- Select P2
+	},
+}
 local cmd_rev_masks = {
 	{ cmd = 0x01, mask = 0xFD }, -- 1111 1101
 	{ cmd = 0x02, mask = 0xFE }, -- 1111 1110
@@ -2088,6 +2098,8 @@ for char, list in pairs(rvs_bs_list) do
 	chars[char].rvs, chars[char].bs = rvs_list, bs_list
 end
 
+db.cmd_bytes        = cmd_bytes
+db.cmd_status_b     = cmd_status_b
 db.hook_cmd_types   = hook_cmd_types
 db.rvs_types        = rvs_types
 db.cmd_rev_masks    = cmd_rev_masks

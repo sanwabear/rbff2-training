@@ -772,10 +772,7 @@ local rev_joy                              = db.rev_joy
 local joy_frontback                        = db.joy_frontback
 local joy_pside                            = db.joy_pside
 local joy_neutrala                         = db.joy_neutrala
-local joy_neutralp                         = db.joy_neutralp
-local joy_ezmap                            = db.joy_ezmap
 local kprops                               = db.kprops
-local cmd_funcs                            = db.cmd_funcs
 
 local rvs_types                            = db.rvs_types
 local hook_cmd_types                       = db.hook_cmd_types
@@ -843,31 +840,7 @@ local input_1f                             = function(btn, joy_val, prev_joy)
 	end
 	return false
 end
-local accept_input                         = function(btn, joy_val, state_past)
-	joy_val = joy_val or get_joy()
-	state_past = state_past or (scr:frame_number() - global.input_accepted)
-	if 12 < state_past then
-		local p1, p2 = joy_k[1][btn], joy_k[2][btn]
-		if btn == "Up" or btn == "Down" or btn == "Right" or btn == "Left" then
-			local on1 = (0 < joy_val[p1])
-			local on2 = (0 < joy_val[p2])
-			if on1 or on2 then
-				play_cursor_sound()
-				return true, on1, on2
-			end
-		else
-			local on1 = (0 < joy_val[p1] and state_past >= joy_val[p1])
-			local on2 = (0 < joy_val[p2] and state_past >= joy_val[p2])
-			if on1 or on2 then
-				if global.disp_replay then
-					play_cursor_sound()
-				end
-				return true, on1, on2
-			end
-		end
-	end
-	return false, false, false
-end
+
 local is_start_a                           = function(joy_val, state_past)
 	if 12 < state_past then
 		for i = 1, 2 do
@@ -1534,6 +1507,8 @@ rbff2.startplugin        = function()
 			throw_boxies      = {},
 			fireballs         = {},
 			random_boolean    = math.random(255) % 2 == 0,
+			joy               = {},
+
 			addr              = {
 				base        = base,            -- キャラ状態とかのベースのアドレス
 				control     = base + 0x12,     -- Human 1 or 2, CPU 3
@@ -1860,7 +1835,7 @@ rbff2.startplugin        = function()
 			[0xC4] = function(data) p.flag_c4 = data end,                    -- フラグ群
 			[0xC8] = function(data) p.flag_c8 = data end,                    -- フラグ群
 			[0xCC] = function(data) p.flag_cc = data end,                    -- フラグ群
-			[p1 and 0x0394C4 or 0x0394C8] = function(data) p.input_offset = data end, -- コマンド入力状態のオフセットアドレス
+			[p1 and 0x394C4 or 0x394C8] = function(data) p.input_offset = data end, -- コマンド入力状態のオフセットアドレス
 		}
 		all_objects[p.addr.base] = p
 	end
@@ -2224,6 +2199,44 @@ rbff2.startplugin        = function()
 			[0x62] = function(data) p.acta = data end, -- 行動ID デバッグディップステータス表示のAと同じ
 		})
 		table.insert(all_wps, p)
+	end
+	local read_input                         = function()
+		-- 1Pと2Pの入力読取
+		for i, p in ipairs(players) do
+			local status_b, cnt = mem.r8(p.addr.reg_st_b) ~ 0xFF, mem.r8(p.addr.reg_pcnt) ~ 0xFF
+			local cnt_r, cnt_b, tmp_joy = 0xF & cnt, 0xF0 & cnt, {}
+			p.joy = p.joy or {}
+			for k, v in pairs(db.cmd_status_b[i]) do tmp_joy[k] = ut.tstb(status_b, v) end
+			for k, v in ut.find_all(db.cmd_bytes, function(_, v) return type(v) == "number" end) do
+				tmp_joy[k] = (0x10 > v and v == cnt_r) or ut.tstb(cnt_b, v)
+			end
+			for k, v in pairs(tmp_joy) do
+				if v then
+					p.joy[k] = (not p.joy[k] or p.joy[k] < 0) and 1 or p.joy[k] + 1
+				else
+					p.joy[k] = (not p.joy[k] or p.joy[k] > 0) and -1 or p.joy[k] - 1
+				end
+			end
+		end
+	end
+	local accept_input                         = function(btn, joy_val, state_past)
+		state_past = state_past or (scr:frame_number() - global.input_accepted)
+		local key, on = "_" .. btn, { false, false }
+		for i, p in ipairs(players) do
+			local joy = p.joy[key]
+			if 12 < state_past and joy and on[i] == false then
+				if btn == "8" or btn == "2" or btn == "4" or btn == "6" then
+					on[i] = 0 < joy
+				else
+					on[i] = 0 < joy and joy <= state_past
+				end
+			end
+		end
+		if on[1] or on[2] then
+			play_cursor_sound()
+			return true, on[1], on[2]
+		end
+		return false, false, false
 	end
 
 	-- 場面変更
@@ -5536,35 +5549,26 @@ rbff2.startplugin        = function()
 
 		local ona, ona1, _ = accept_input("a")
 		if accept_input("st") then
-			-- Menu ON/OFF
-			global.input_accepted = ec
+			global.input_accepted = ec -- Menu ON/OFF
 		elseif ona then
-			-- サブメニューへの遷移（あれば）
 			---@diagnostic disable-next-line: redundant-parameter
-			menu.current.on_a[menu.current.pos.row](ona1 and 1 or 2)
+			menu.current.on_a[menu.current.pos.row](ona1 and 1 or 2) -- サブメニューへの遷移（あれば）
 			global.input_accepted = ec
 		elseif accept_input("b") then
-			-- メニューから戻る
-			menu.current.on_b[menu.current.pos.row]()
+			menu.current.on_b[menu.current.pos.row]() -- メニューから戻る
 			global.input_accepted = ec
-		elseif accept_input("up") then
-			-- カーソル上移動
-			menu_cur_updown(-1)
-		elseif accept_input("dn") then
-			-- カーソル下移動
-			menu_cur_updown(1)
-		elseif accept_input("lt") then
-			-- カーソル左移動
-			menu_cur_lr(-1, true)
-		elseif accept_input("rt") then
-			-- カーソル右移動
-			menu_cur_lr(1, true)
+		elseif accept_input("8") then
+			menu_cur_updown(-1) -- カーソル上移動
+		elseif accept_input("2") then
+			menu_cur_updown(1) -- カーソル下移動
+		elseif accept_input("4") then
+			menu_cur_lr(-1, true) -- カーソル左移動
+		elseif accept_input("6") then
+			menu_cur_lr(1, true) -- カーソル右移動
 		elseif accept_input("c") then
-			-- カーソル左10移動
-			menu_cur_lr(-10, false)
+			menu_cur_lr(-10, false) -- カーソル左10移動
 		elseif accept_input("d") then
-			-- カーソル右10移動
-			menu_cur_lr(10, false)
+			menu_cur_lr(10, false) -- カーソル右10移動
 		end
 
 		-- メニュー表示本体
@@ -5704,6 +5708,7 @@ rbff2.startplugin        = function()
 			else
 				reset_memory_tap("select_wps")
 			end
+			read_input()
 			menu.state.proc() -- メニュー初期化前に処理されないようにする
 		end
 	end)
