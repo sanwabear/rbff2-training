@@ -497,7 +497,7 @@ local global                               = {
 	disp_input           = 1, -- コマンド入力状態表示 1:OFF 2:1P 3:2P
 	disp_normal_frames   = 2, -- 通常動作フレーム非表示 1:OFF 2:ON
 	pause_hit            = 1, -- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
-	pause_hitbox         = 1, -- 判定発生時にポーズ
+	pause_hitbox         = 1, -- 判定発生時にポーズ 1:OFF, 2:投げ, 3:攻撃, 4:変化時
 	pause                = false,
 	replay_stop_on_dmg   = false, -- ダメージでリプレイ中段
 
@@ -831,14 +831,6 @@ end
 local play_cursor_sound                    = function()
 	mem.w32(0x10D612, 0x600004)
 	mem.w8(0x10D713, 0x1)
-end
-local input_1f                             = function(btn, joy_val, prev_joy)
-	local k1, k2 = joy_k[1][btn], joy_k[2][btn]
-	local j1, j2, p1, p2 = joy_val[k1], joy_val[k2], prev_joy[k1], prev_joy[k2]
-	if (p1 < 0 and 0 < j1) or (p2 < 0 and 0 < j2) then
-		return true
-	end
-	return false
 end
 
 local is_start_a                           = function(joy_val, state_past)
@@ -2238,6 +2230,13 @@ rbff2.startplugin        = function()
 		end
 		return false, false, false
 	end
+	local input_1f                             = function(btn, joy_val, prev_joy)
+		local key = "_" .. btn
+		for i, p in ipairs(players) do
+			if p.joy[key] == 1 then return true end
+		end
+		return false
+	end
 
 	-- 場面変更
 	local apply_1p2p_active = function()
@@ -3583,7 +3582,7 @@ rbff2.startplugin        = function()
 				end
 			end) do
 				if box.type.kind == db.box_kinds.attack or box.type.kind == db.box_kinds.parry then
-					global.pause = global.pause_hitbox == 3 -- 強制ポーズ
+					global.pause = global.pause_hitbox == 3 -- 強制ポーズ 1:OFF, 2:投げ, 3:攻撃, 4:変化時
 					p.hit.box_count = p.hit.box_count + 1 -- 攻撃判定の数
 				end
 				if box.type.kind == db.box_kinds.attack then -- 攻撃位置から解決した属性を付与する
@@ -3608,7 +3607,7 @@ rbff2.startplugin        = function()
 			-- 攻撃判定がない場合は関連するフラグを無効化する
 			if p.hit.box_count == 0 then p.attackbit = ut.hex_clear(p.attackbit, db.box_with_bit_types.mask) end
 
-			if global.pause_hitbox == 2 and #p.body.throw_boxies then global.pause = true end -- 強制ポーズ
+			if global.pause_hitbox == 2 and #p.body.throw_boxies then global.pause = true end -- 強制ポーズ  1:OFF, 2:投げ, 3:攻撃, 4:変化時
 
 			if p.body.disp_hitbox and p.is_fireball ~= true then
 				-- 押し合い判定（本体のみ）
@@ -4241,7 +4240,7 @@ rbff2.startplugin        = function()
 				end
 				local chg_hitbox = p.act_data.neutral ~= true and (p.update_act or chg_act or chg_y or chg_hit or chg_hurt or chg_sway)
 
-				-- 判定が変わったらポーズさせる
+				-- 判定が変わったらポーズさせる  1:OFF, 2:投げ, 3:攻撃, 4:変化時
 				if chg_hitbox and global.pause_hitbox == 4 then global.pause = true end
 
 				-- 画像保存 1:OFF 2:1P動作 3:2P動作
