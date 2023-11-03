@@ -2200,40 +2200,42 @@ rbff2.startplugin        = function()
 			end
 		end
 	end
-	local accept_input                         = function(btn, state_past)
-		state_past = state_past or (scr:frame_number() - global.input_accepted)
-		local key, on = "_" .. btn, { false, false }
-		for i, p in ipairs(players) do
-			local joy = p.joy[key]
-			if 12 < state_past and joy and on[i] == false then
-				if btn == "8" or btn == "2" or btn == "4" or btn == "6" then
-					on[i] = 0 < joy
-				else
-					on[i] = 0 < joy and joy <= state_past
+	local input = {
+		accept                         = function(btn, state_past)
+			state_past = state_past or (scr:frame_number() - global.input_accepted)
+			local key, on = "_" .. btn, { false, false }
+			for i, p in ipairs(players) do
+				local joy = p.joy[key]
+				if 12 < state_past and joy and on[i] == false then
+					if btn == "8" or btn == "2" or btn == "4" or btn == "6" then
+						on[i] = 0 < joy
+					else
+						on[i] = 0 < joy and joy <= state_past
+					end
 				end
 			end
-		end
-		if on[1] or on[2] then
-			play_cursor_sound()
-			return true, on[1], on[2]
-		end
-		return false, false, false
-	end
-	local input_1f                             = function(btn)
-		for _, p in ipairs(players) do if p.joy["_" .. btn] == 1 then return true end end
-		return false
-	end
-	local is_start_a                           = function(state_past)
-		if 12 < state_past then
-			for _, p in ipairs(players) do
-				if 35 < p.joy._st then
-					play_cursor_sound()
-					return true
+			if on[1] or on[2] then
+				play_cursor_sound()
+				return true, on[1], on[2]
+			end
+			return false, false, false
+		end,
+		_1f                             = function(btn)
+			for _, p in ipairs(players) do if p.joy["_" .. btn] == 1 then return true end end
+			return false
+		end,
+		long_start                           = function(state_past)
+			if 12 < state_past then
+				for _, p in ipairs(players) do
+					if 35 < p.joy._st then
+						play_cursor_sound()
+						return true
+					end
 				end
 			end
+			return false
 		end
-		return false
-	end
+	}
 
 	-- 場面変更
 	local apply_1p2p_active = function()
@@ -2484,7 +2486,7 @@ rbff2.startplugin        = function()
 			recording.active_slot = { store = {}, name = "EMPTY" }
 		end
 
-		if #recording.active_slot.store > 0 and (accept_input("st") or force_start_play == true) then
+		if #recording.active_slot.store > 0 and (input.accept("st") or force_start_play == true) then
 			recording.force_start_play = false
 			-- 状態変更
 			recording.play_count = 1
@@ -2596,7 +2598,7 @@ rbff2.startplugin        = function()
 	rec_play = function(to_joy)
 		local ec = scr:frame_number()
 
-		if accept_input("st") then
+		if input.accept("st") then
 			-- 状態変更
 			global.rec_main = rec_await_play
 			global.input_accepted = ec
@@ -2660,7 +2662,7 @@ rbff2.startplugin        = function()
 	rec_play_interval = function(to_joy)
 		local ec = scr:frame_number()
 
-		if accept_input("st") then
+		if input.accept("st") then
 			-- 状態変更
 			global.rec_main = rec_await_play
 			global.input_accepted = ec
@@ -3272,7 +3274,7 @@ rbff2.startplugin        = function()
 	menu.tra_main.proc = function()
 		if not in_match or mem._0x10E043 ~= 0 then return end -- ポーズ中は状態を更新しない
 		if global.pause then                            -- ポーズ解除判定
-			if input_1f("a") or input_1f("b") or input_1f("c") or input_1f("d") then
+			if input._1f("a") or input._1f("b") or input._1f("c") or input._1f("d") then
 				global.pause = false
 				set_freeze(true)
 				for _, joy in ipairs(use_joy) do ioports[joy.port].fields[joy.field]:set_value(0) end
@@ -3284,11 +3286,11 @@ rbff2.startplugin        = function()
 		global.frame_number = global.frame_number + 1
 		set_freeze((not in_match) or true) -- ポーズ解除状態
 
-		local next_joy, joy_val, state_past = new_next_joy(), get_joy(), scr:frame_number() - global.input_accepted
+		local next_joy, state_past = new_next_joy(), scr:frame_number() - global.input_accepted
 
 		-- スタートボタン（リプレイモード中のみスタートボタンおしっぱでメニュー表示へ切り替え
-		if (global.dummy_mode == 6 and is_start_a(state_past)) or
-			(global.dummy_mode ~= 6 and accept_input("st", state_past)) then
+		if (global.dummy_mode == 6 and input.long_start(state_past)) or
+			(global.dummy_mode ~= 6 and input.accept("st", state_past)) then
 			-- メニュー表示状態へ切り替え
 			global.input_accepted, menu.state = global.frame_number, menu
 			cls_joy()
@@ -5542,27 +5544,27 @@ rbff2.startplugin        = function()
 		if menu.prev_state ~= menu and menu.state == menu then menu.update_pos() end -- 初回のメニュー表示時は状態更新
 		menu.prev_state = menu.state                                           -- 前フレームのメニューを更新
 
-		local ona, ona1, _ = accept_input("a")
-		if accept_input("st") then
+		local ona, ona1, _ = input.accept("a")
+		if input.accept("st") then
 			global.input_accepted = ec -- Menu ON/OFF
 		elseif ona then
 			---@diagnostic disable-next-line: redundant-parameter
 			menu.current.on_a[menu.current.pos.row](ona1 and 1 or 2) -- サブメニューへの遷移（あれば）
 			global.input_accepted = ec
-		elseif accept_input("b") then
+		elseif input.accept("b") then
 			menu.current.on_b[menu.current.pos.row]() -- メニューから戻る
 			global.input_accepted = ec
-		elseif accept_input("8") then
+		elseif input.accept("8") then
 			menu_cur_updown(-1) -- カーソル上移動
-		elseif accept_input("2") then
+		elseif input.accept("2") then
 			menu_cur_updown(1) -- カーソル下移動
-		elseif accept_input("4") then
+		elseif input.accept("4") then
 			menu_cur_lr(-1, true) -- カーソル左移動
-		elseif accept_input("6") then
+		elseif input.accept("6") then
 			menu_cur_lr(1, true) -- カーソル右移動
-		elseif accept_input("c") then
+		elseif input.accept("c") then
 			menu_cur_lr(-10, false) -- カーソル左10移動
-		elseif accept_input("d") then
+		elseif input.accept("d") then
 			menu_cur_lr(10, false) -- カーソル右10移動
 		end
 
