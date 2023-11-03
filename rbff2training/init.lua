@@ -2179,26 +2179,26 @@ rbff2.startplugin          = function()
 		})
 		table.insert(all_wps, p)
 	end
-	local read_input         = function()
-		-- 1Pと2Pの入力読取
-		for i, p in ipairs(players) do
-			local status_b, cnt = mem.r8(p.addr.reg_st_b) ~ 0xFF, mem.r8(p.addr.reg_pcnt) ~ 0xFF
-			local cnt_r, cnt_b, tmp_joy = 0xF & cnt, 0xF0 & cnt, {}
-			p.joy = p.joy or {}
-			for k, v in pairs(db.cmd_status_b[i]) do tmp_joy[k] = ut.tstb(status_b, v) end
-			for k, v in ut.find_all(db.cmd_bytes, function(_, v) return type(v) == "number" end) do
-				tmp_joy[k] = (0x10 > v and v == cnt_r) or ut.tstb(cnt_b, v)
-			end
-			for k, v in pairs(tmp_joy) do
-				if v then
-					p.joy[k] = (not p.joy[k] or p.joy[k] < 0) and 1 or p.joy[k] + 1
-				else
-					p.joy[k] = (not p.joy[k] or p.joy[k] > 0) and -1 or p.joy[k] - 1
+	local input              = {
+		read       = function()
+			-- 1Pと2Pの入力読取
+			for i, p in ipairs(players) do
+				p.status_b, p.reg_pcnt = mem.r8(p.addr.reg_st_b) ~ 0xFF, mem.r8(p.addr.reg_pcnt) ~ 0xFF
+				local cnt_r, cnt_b, tmp_joy = 0xF & p.reg_pcnt, 0xF0 & p.reg_pcnt, {}
+				p.joy = p.joy or {}
+				for k, v in pairs(db.cmd_status_b[i]) do tmp_joy[k] = ut.tstb(p.status_b, v) end
+				for k, v in ut.find_all(db.cmd_bytes, function(_, v) return type(v) == "number" end) do
+					tmp_joy[k] = (0x10 > v and v == cnt_r) or ut.tstb(cnt_b, v)
+				end
+				for k, v in pairs(tmp_joy) do
+					if v then
+						p.joy[k] = (not p.joy[k] or p.joy[k] < 0) and 1 or p.joy[k] + 1
+					else
+						p.joy[k] = (not p.joy[k] or p.joy[k] > 0) and -1 or p.joy[k] - 1
+					end
 				end
 			end
-		end
-	end
-	local input              = {
+		end,
 		accept     = function(btn, state_past)
 			state_past = state_past or (scr:frame_number() - global.input_accepted)
 			local key, on = "_" .. btn, { false, false }
@@ -2385,68 +2385,46 @@ rbff2.startplugin          = function()
 	end
 	-- 初回入力まち
 	-- 未入力状態を待ちける→入力開始まで待ち受ける
-	rec_await_no_input = function(to_joy)
-		local joy_val = get_joy()
-
+	rec_await_no_input = function(_)
 		local no_input = true
-		for k, f in pairs(joy_val) do
-			if f > 0 then
-				no_input = false
-				break
+		for _, p in ipairs(players) do
+			for _, v in pairs(p.joy) do
+				if 0 < v then
+					no_input = false
+					break
+				end
 			end
 		end
-		if no_input then
-			-- 状態変更
+		if no_input then -- 状態変更
 			global.rec_main = rec_await_1st_input
 			print(global.frame_number .. " rec_await_no_input -> rec_await_1st_input")
 		end
 	end
-	rec_await_1st_input = function(to_joy)
-		local joy_val = get_joy(recording.temp_player)
-
-		local next_val = nil
-		local pos = { players[1].cmd_side, players[2].cmd_side }
-		for k, f in pairs(joy_val) do
-			if k ~= joy_k[1].st and k ~= joy_k[2].st and f > 0 then
-				if not next_val then
-					next_val = new_next_joy()
-					recording.player = recording.temp_player
-					recording.active_slot.cleanup = false
-					recording.active_slot.side = joy_pside[rev_joy[k]] -- レコーディング対象のプレイヤー番号 1=1P, 2=2P
-					recording.active_slot.store = {}    -- 入力保存先
-					table.insert(recording.active_slot.store, { joy = next_val, pos = pos })
-					table.insert(recording.active_slot.store, { joy = new_next_joy(), pos = pos })
-
-					-- 状態変更
-					-- 初回のみ開始記憶
-					if recording.fixpos == nil then rec_fixpos() end
-					global.rec_main = rec_input
-					print(global.frame_number .. " rec_await_1st_input -> rec_input")
-				end
-				-- レコード中は1Pと2P入力が入れ替わっているので反転させて記憶する
-				next_val[rev_joy[k]] = f > 0
-			end
+	rec_await_1st_input = function(_)
+		local p = players[recording.temp_player]
+		if p.reg_pcnt > 0 then
+			local pos = { players[1].cmd_side, players[2].cmd_side }
+			recording.player = recording.temp_player
+			recording.active_slot.cleanup = false
+			recording.active_slot.side = joy_pside[rev_joy[k]] -- レコーディング対象のプレイヤー番号 1=1P, 2=2P
+			recording.active_slot.store = {}    -- 入力保存先
+			table.insert(recording.active_slot.store, { joy = p.reg_pcnt, pos = pos })
+			table.insert(recording.active_slot.store, { joy = 0, pos = pos })
+			-- 状態変更
+			-- 初回のみ開始記憶
+			if recording.fixpos == nil then rec_fixpos() end
+			global.rec_main = rec_input
+			print(global.frame_number .. " rec_await_1st_input -> rec_input")
 		end
 	end
-	-- 入力中
-	rec_input = function(to_joy)
-		local joy_val = get_joy(recording.player)
-
-		-- 入力保存
-		local next_val = new_next_joy()
+	rec_input = function(_) -- 入力中+入力保存
+		local p = players[recording.temp_player]
 		local pos = { players[1].cmd_side, players[2].cmd_side }
-		for k, f in pairs(joy_val) do
-			if k ~= joy_k[1].st and k ~= joy_k[2].st and recording.active_slot.side == joy_pside[rev_joy[k]] then
-				-- レコード中は1Pと2P入力が入れ替わっているので反転させて記憶する
-				next_val[rev_joy[k]] = f > 0
-			end
-		end
 		table.remove(recording.active_slot.store)
-		table.insert(recording.active_slot.store, { joy = next_val, pos = pos })
-		table.insert(recording.active_slot.store, { joy = new_next_joy(), pos = pos })
+		table.insert(recording.active_slot.store, { joy = p.reg_pcnt, pos = pos })
+		table.insert(recording.active_slot.store, { joy = 0, pos = pos })
 	end
-	-- リプレイまち
-	rec_await_play = function(to_joy)
+	rec_await_play = function(to_joy) -- リプレイまち
 		local force_start_play = global.rec_force_start_play
 		global.rec_force_start_play = false -- 初期化
 		local ec = scr:frame_number()
@@ -2456,14 +2434,7 @@ rbff2.startplugin          = function()
 			-- 冗長な未入力を省く
 			if not slot.cleanup then
 				for i = #slot.store, 1, -1 do
-					local empty = true
-					for k, v in pairs(slot.store[i].joy) do
-						if v then
-							empty = false
-							break
-						end
-					end
-					if empty then
+					if slot.store[i].joy == 0 then
 						slot.store[i] = nil
 					else
 						break
@@ -2494,49 +2465,15 @@ rbff2.startplugin          = function()
 			-- メインラインでニュートラル状態にする
 			for i, p in ipairs(players) do
 				local op = p.op
-
 				-- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
 				if global.replay_reset == 2 or (global.replay_reset == 3 and i == 3) or (global.replay_reset == 4 and i == 4) then
-					local resets = {
-						[mem.w16i] = {
-							[0x28] = 0x00,
-							[0x24] = 0x18,
-						},
-						[mem.w16] = {
-							[0x60] = 0x01,
-							[0x64] = 0xFFFF,
-							[0x6E] = 0x00,
-						},
-						[mem.w32] = {
-							[p.addr.base] = 0x58D5A, -- やられからの復帰処理  0x261A0: 素立ち処理
-							[0x28] = 0x00,
-							[0x34] = 0x00,
-							[0x38] = 0x00,
-							[0x3C] = 0x00,
-							[0x44] = 0x00,
-							[0x48] = 0x00,
-							[0x4C] = 0x00,
-							[0x50] = 0x00,
-							[0xDA] = 0x00,
-							[0xDE] = 0x00,
-						},
-						[mem.w8] = {
-							[0x61] = 0x01,
-							[0x63] = 0x02,
-							[0x65] = 0x02,
-							[0x66] = 0x00,
-							[0x6A] = 0x00,
-							[0x7E] = 0x00,
-							[0xB0] = 0x00,
-							[0xB1] = 0x00,
-							[0xC0] = 0x80,
-							[0xC2] = 0x00,
-							[0xFC] = 0x00,
-							[0xFD] = 0x00,
-							[0x89] = 0x00,
-						},
-					}
-					for fnc, tbl in pairs(resets) do for addr, value in pairs(tbl) do fnc(addr, value) end end
+					for fnc, tbl in pairs({
+						[mem.w16i] = { [0x28] = 0, [0x24] = 0x18, },
+						[mem.w16] = { [0x60] = 0x1, [0x64] = 0xFFFF, [0x6E] = 0, },
+						-- 0x58D5A = やられからの復帰処理  0x261A0: 素立ち処理
+						[mem.w32] = { [p.addr.base] = 0x58D5A, [0x28] = 0, [0x34] = 0, [0x38] = 0, [0x3C] = 0, [0x44] = 0, [0x48] = 0, [0x4C] = 0, [0x50] = 0, [0xDA] = 0, [0xDE] = 0, },
+						[mem.w8] = { [0x61] = 0x1, [0x63] = 0x2, [0x65] = 0x2, [0x66] = 0, [0x6A] = 0, [0x7E] = 0, [0xB0] = 0, [0xB1] = 0, [0xC0] = 0x80, [0xC2] = 0, [0xFC] = 0, [0xFD] = 0, [0x89] = 0, },
+					}) do for addr, value in pairs(tbl) do fnc(addr, value) end end
 					do_recover(p, true)
 					p.old.frame_gap = 0
 				end
@@ -2566,14 +2503,12 @@ rbff2.startplugin          = function()
 
 			-- 入力リセット
 			local next_joy      = new_next_joy()
-			for _, joy in ipairs(use_joy) do
-				to_joy[joy.field] = next_joy[joy.field] or false
-			end
+			for _, joy in ipairs(use_joy) do to_joy[joy.field] = next_joy[joy.field] or false end
 			return
 		end
 	end
 	-- 繰り返しリプレイ待ち
-	rec_repeat_play = function(to_joy)
+	rec_repeat_play = function(_)
 		-- 繰り返し前の行動が完了するまで待つ
 		local p, op, p_ok = players[3 - recording.player], players[recording.player], true
 		if global.await_neutral == true then
@@ -2606,39 +2541,23 @@ rbff2.startplugin          = function()
 
 		local stop = false
 		local store = recording.active_slot.store[recording.play_count]
+		local p = players[recording.player]
 		if store == nil then
 			stop = true
-		elseif players[recording.player].state == 1 then
-			if global.replay_stop_on_dmg then
-				stop = true
-			end
+		elseif p.state == 1 then
+			if global.replay_stop_on_dmg then stop = true end
 		end
 		if not stop and store then
 			-- 入力再生
 			local pos = { players[1].cmd_side, players[2].cmd_side }
-			for _, joy in ipairs(use_joy) do
-				local k = joy.field
-				-- 入力時と向きが変わっている場合は左右反転させて反映する
-				local opside = 3 - recording.active_slot.side
-				if recording.active_slot.side == joy_pside[k] then
-					if joy_frontback[k] and joy_pside[k] then
-						local now_side = pos[joy_pside[k]]
-						local next_side = store.pos[joy_pside[k]]
-						if now_side ~= next_side then
-							k = joy_frontback[k]
-						end
-					end
-				elseif opside == joy_pside[k] then
-					if joy_frontback[k] and joy_pside[k] then
-						local now_side = pos[joy_pside[k]]
-						local next_side = store.pos[joy_pside[k]]
-						if now_side ~= next_side then
-							k = joy_frontback[k]
-						end
-					end
+			-- 入力時と向きが変わっている場合は左右反転させて反映する
+			local opside = 3 - recording.active_slot.side
+			if recording.active_slot.side == p.cmd_side then -- elseif opside == p.op.cmd_side then
+				if pos[p.cmd_side] ~= store.pos[p.cmd_side] then
+					-- TODO 反転
 				end
-				to_joy[k] = store.joy[joy.field] or to_joy[k]
 			end
+			p.bs_hook = { cmd_type = store.joy }
 			recording.play_count = recording.play_count + 1
 
 			-- 繰り返し判定
@@ -5703,7 +5622,7 @@ rbff2.startplugin          = function()
 			else
 				reset_memory_tap("select_wps")
 			end
-			read_input()
+			input.read()
 			menu.state.proc() -- メニュー初期化前に処理されないようにする
 		end
 	end)
