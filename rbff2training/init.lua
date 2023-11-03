@@ -846,43 +846,6 @@ local nega_or_mi1                          = function(v) return 0 >= v and v - 1
 -- ポーズ
 local set_freeze                           = function(freeze) mem.w8(0x1041D2, freeze and 0x00 or 0xFF) end
 
-local new_ggkey_set                        = function(p1)
-	local xoffset, yoffset = p1 and 50 or 245, 200
-	local pt0, pt2, ptS, ptP, ptP1, ptP2, ptP3, ptP4 = 0, 1, math.sin(1), 9, 8.4, 8.7, 9.3, 9.6
-	local oct_vt = {
-		{ x = pt0,  y = pt2,  no = 1, op = 5, dg1 = 4, dg2 = 6, }, -- 1:レバー2
-		{ x = ptS,  y = ptS,  no = 2, op = 6, dg1 = 5, dg2 = 7, }, -- 2:レバー3
-		{ x = pt2,  y = pt0,  no = 3, op = 7, dg1 = 6, dg2 = 8, }, -- 3:レバー6
-		{ x = ptS,  y = -ptS, no = 4, op = 8, dg1 = 1, dg2 = 7, }, -- 4:レバー9
-		{ x = pt0,  y = -pt2, no = 5, op = 1, dg1 = 2, dg2 = 8, }, -- 5:レバー8
-		{ x = -ptS, y = -ptS, no = 6, op = 2, dg1 = 1, dg2 = 3, }, -- 6:レバー7
-		{ x = -pt2, y = pt0,  no = 7, op = 3, dg1 = 2, dg2 = 4, }, -- 7:レバー4
-		{ x = -ptS, y = ptS,  no = 8, op = 4, dg1 = 3, dg2 = 5, }, -- 8:レバー1
-		{ x = pt0,  y = pt0,  no = 9, op = 9, dg1 = 9, dg2 = 9, }, -- 9:レバー5
-	}
-	for _, xy in ipairs(oct_vt) do
-		xy.x1, xy.y1 = xy.x * ptP1 + xoffset, xy.y * ptP1 + yoffset
-		xy.x2, xy.y2 = xy.x * ptP2 + xoffset, xy.y * ptP2 + yoffset
-		xy.x3, xy.y3 = xy.x * ptP3 + xoffset, xy.y * ptP3 + yoffset
-		xy.x4, xy.y4 = xy.x * ptP3 + xoffset, xy.y * ptP4 + yoffset
-		xy.x, xy.y   = xy.x * ptP + xoffset, xy.y * ptP + yoffset -- 座標の中心
-		xy.xt, xy.yt = xy.x - 2.5, xy.y - 3                 -- レバーの丸表示用
-	end
-	local key_xy = {
-		oct_vt[8], -- 8:レバー1
-		oct_vt[1], -- 1:レバー2
-		oct_vt[2], -- 2:レバー3
-		oct_vt[7], -- 7:レバー4
-		oct_vt[9], -- 9:レバー5
-		oct_vt[3], -- 3:レバー6
-		oct_vt[6], -- 6:レバー7
-		oct_vt[5], -- 5:レバー8
-		oct_vt[4], -- 4:レバー9
-	}
-	return { xoffset = xoffset, yoffset = yoffset, oct_vt = oct_vt, key_xy = key_xy, }
-end
-local ggkey_set                            = { new_ggkey_set(true), new_ggkey_set(false) }
-
 -- ボタンの色テーブル
 local btn_col                              = { [ut.convert("_A")] = 0xFFCC0000, [ut.convert("_B")] = 0xFFCC8800, [ut.convert("_C")] = 0xFF3333CC, [ut.convert("_D")] = 0xFF336600, }
 local text_col, shadow_col                 = 0xFFFFFFFF, 0xFF000000
@@ -1432,65 +1395,100 @@ local wakeup_type        = {
 	atk  = 5, -- 起き上がり攻撃
 }
 local rvs_wake_types     = ut.new_set(wakeup_type.tech, wakeup_type.sway, wakeup_type.rvs)
-rbff2.startplugin        = function()
+rbff2.startplugin          = function()
 	local players, all_wps, all_objects, hitboxies, ranges = {}, {}, {}, {}, {}
 	local hitboxies_order = function(b1, b2) return (b1.id < b2.id) end
 	local ranges_order = function(r1, r2) return (r1.within and 1 or -1) < (r2.within and 1 or -1) end
 	local get_object_by_addr = function(addr, default) return all_objects[addr] or default end             -- ベースアドレスからオブジェクト解決
 	local get_object_by_reg = function(reg, default) return all_objects[mem.rg(reg, 0xFFFFFF)] or default end -- レジストリからオブジェクト解決
 	local now = function() return global.frame_number + 1 end
-	for i = 1, 2 do                                                                                        -- プレイヤーの状態など
-		local p1      = (i == 1)
-		local base    = p1 and 0x100400 or 0x100500
-		local p       = {
-			num               = i,
-			is_fireball       = false,
-			base              = 0x0,
-			dummy_act         = 1,         -- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
-			dummy_gd          = dummy_gd_type.none, -- なし, オート, ブレイクショット, 1ヒットガード, 1ガード, 常時, ランダム, 強制
-			dummy_wakeup      = wakeup_type.none, -- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
-			dummy_bs          = nil,       -- ランダムで選択されたブレイクショット
-			dummy_bs_list     = {},        -- ブレイクショットのコマンドテーブル上の技ID
-			dummy_bs_chr      = 0,         -- ブレイクショットの設定をした時のキャラID
-			bs_count          = -1,        -- ブレイクショットの実施カウント
-			dummy_rvs         = nil,       -- ランダムで選択されたリバーサル
-			dummy_rvs_list    = {},        -- リバーサルのコマンドテーブル上の技ID
-			dummy_rvs_chr     = 0,         -- リバーサルの設定をした時のキャラID
-			rvs_count         = -1,        -- リバーサルの実施カウント
-			gd_rvs_enabled    = false,     -- ガードリバーサルの実行可否
+	local ggkey_create = function(p1)
+		local xoffset, yoffset = p1 and 50 or 245, 200
+		local pt0, pt2, ptS, ptP, ptP1, ptP2, ptP3, ptP4 = 0, 1, math.sin(1), 9, 8.4, 8.7, 9.3, 9.6
+		local oct_vt = {
+			{ x = pt0,  y = pt2,  no = 1, op = 5, dg1 = 4, dg2 = 6, }, -- 1:レバー2
+			{ x = ptS,  y = ptS,  no = 2, op = 6, dg1 = 5, dg2 = 7, }, -- 2:レバー3
+			{ x = pt2,  y = pt0,  no = 3, op = 7, dg1 = 6, dg2 = 8, }, -- 3:レバー6
+			{ x = ptS,  y = -ptS, no = 4, op = 8, dg1 = 1, dg2 = 7, }, -- 4:レバー9
+			{ x = pt0,  y = -pt2, no = 5, op = 1, dg1 = 2, dg2 = 8, }, -- 5:レバー8
+			{ x = -ptS, y = -ptS, no = 6, op = 2, dg1 = 1, dg2 = 3, }, -- 6:レバー7
+			{ x = -pt2, y = pt0,  no = 7, op = 3, dg1 = 2, dg2 = 4, }, -- 7:レバー4
+			{ x = -ptS, y = ptS,  no = 8, op = 4, dg1 = 3, dg2 = 5, }, -- 8:レバー1
+			{ x = pt0,  y = pt0,  no = 9, op = 9, dg1 = 9, dg2 = 9, }, -- 9:レバー5
+		}
+		for _, xy in ipairs(oct_vt) do
+			xy.x1, xy.y1 = xy.x * ptP1 + xoffset, xy.y * ptP1 + yoffset
+			xy.x2, xy.y2 = xy.x * ptP2 + xoffset, xy.y * ptP2 + yoffset
+			xy.x3, xy.y3 = xy.x * ptP3 + xoffset, xy.y * ptP3 + yoffset
+			xy.x4, xy.y4 = xy.x * ptP3 + xoffset, xy.y * ptP4 + yoffset
+			xy.x, xy.y   = xy.x * ptP + xoffset, xy.y * ptP + yoffset -- 座標の中心
+			xy.xt, xy.yt = xy.x - 2.5, xy.y - 3              -- レバーの丸表示用
+		end
+		local key_xy = {
+			oct_vt[8], -- 8:レバー1
+			oct_vt[1], -- 1:レバー2
+			oct_vt[2], -- 2:レバー3
+			oct_vt[7], -- 7:レバー4
+			oct_vt[9], -- 9:レバー5
+			oct_vt[3], -- 3:レバー6
+			oct_vt[6], -- 6:レバー7
+			oct_vt[5], -- 5:レバー8
+			oct_vt[4], -- 4:レバー9
+		}
+		return { xoffset = xoffset, yoffset = yoffset, oct_vt = oct_vt, key_xy = key_xy, hist = {} }
+	end
+	for i = 1, 2 do -- プレイヤーの状態など
+		local p1     = (i == 1)
+		local base   = p1 and 0x100400 or 0x100500
+		local p      = {
+			num             = i,
+			is_fireball     = false,
+			base            = 0x0,
+			dummy_act       = 1,           -- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
+			dummy_gd        = dummy_gd_type.none, -- なし, オート, ブレイクショット, 1ヒットガード, 1ガード, 常時, ランダム, 強制
+			dummy_wakeup    = wakeup_type.none, -- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
+			dummy_bs        = nil,         -- ランダムで選択されたブレイクショット
+			dummy_bs_list   = {},          -- ブレイクショットのコマンドテーブル上の技ID
+			dummy_bs_chr    = 0,           -- ブレイクショットの設定をした時のキャラID
+			bs_count        = -1,          -- ブレイクショットの実施カウント
+			dummy_rvs       = nil,         -- ランダムで選択されたリバーサル
+			dummy_rvs_list  = {},          -- リバーサルのコマンドテーブル上の技ID
+			dummy_rvs_chr   = 0,           -- リバーサルの設定をした時のキャラID
+			rvs_count       = -1,          -- リバーサルの実施カウント
+			gd_rvs_enabled  = false,       -- ガードリバーサルの実行可否
 
-			life_rec          = true,      -- 自動で体力回復させるときtrue
-			red               = 2,         -- 体力設定     	--"最大", "赤", "ゼロ" ...
-			max               = 1,         -- パワー設定       --"最大", "半分", "ゼロ" ...
-			disp_hitbox       = true,      -- 判定表示
-			disp_range        = true,      -- 間合い表示
-			disp_base         = 1,         -- 処理のアドレスを表示するとき "OFF", "本体", "弾1", "弾2", "弾3"
-			hide_char         = false,     -- キャラを画面表示しないときtrue
-			hide_phantasm     = false,     -- 残像を画面表示しないときtrue
-			disp_damage       = true,      -- ダメージ表示するときtrue
-			disp_command      = 3,         -- 入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
-			disp_frame        = 1,         -- フレーム数表示する
-			disp_fbfrm        = true,      -- 弾のフレーム数表示するときtrue
-			disp_stun         = true,      -- 気絶表示
-			disp_state        = 1,         -- 状態表示 1:OFF 2:ON 3:ON:小表示 4:ON:大表示 5:ON:フラグ表示
-			dis_plain_shift   = false,     -- ライン送らない現象
-			no_hit            = 0,         -- Nヒット目に空ぶるカウントのカウンタ
-			no_hit_limit      = 0,         -- Nヒット目に空ぶるカウントの上限
-			force_y_pos       = 1,         -- Y座標強制
-			update_act        = false,
-			move_count        = 0,         -- スクショ用の動作カウント
-			on_punish         = 0,
-			key_now           = {},        -- 個別キー入力フレーム
-			key_pre           = {},        -- 前フレームまでの個別キー入力フレーム
-			key_hist          = ut.new_filled_table(global.key_hists, ""),
-			key_frames        = ut.new_filled_table(global.key_hists, 0),
-			ggkey_hist        = {},
-			throw_boxies      = {},
-			fireballs         = {},
-			random_boolean    = math.random(255) % 2 == 0,
-			joy               = {},
+			life_rec        = true,        -- 自動で体力回復させるときtrue
+			red             = 2,           -- 体力設定     	--"最大", "赤", "ゼロ" ...
+			max             = 1,           -- パワー設定       --"最大", "半分", "ゼロ" ...
+			disp_hitbox     = true,        -- 判定表示
+			disp_range      = true,        -- 間合い表示
+			disp_base       = 1,           -- 処理のアドレスを表示するとき "OFF", "本体", "弾1", "弾2", "弾3"
+			hide_char       = false,       -- キャラを画面表示しないときtrue
+			hide_phantasm   = false,       -- 残像を画面表示しないときtrue
+			disp_damage     = true,        -- ダメージ表示するときtrue
+			disp_command    = 3,           -- 入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
+			disp_frame      = 1,           -- フレーム数表示する
+			disp_fbfrm      = true,        -- 弾のフレーム数表示するときtrue
+			disp_stun       = true,        -- 気絶表示
+			disp_state      = 1,           -- 状態表示 1:OFF 2:ON 3:ON:小表示 4:ON:大表示 5:ON:フラグ表示
+			dis_plain_shift = false,       -- ライン送らない現象
+			no_hit          = 0,           -- Nヒット目に空ぶるカウントのカウンタ
+			no_hit_limit    = 0,           -- Nヒット目に空ぶるカウントの上限
+			force_y_pos     = 1,           -- Y座標強制
+			update_act      = false,
+			move_count      = 0,           -- スクショ用の動作カウント
+			on_punish       = 0,
+			key_now         = {},          -- 個別キー入力フレーム
+			key_pre         = {},          -- 前フレームまでの個別キー入力フレーム
+			key_hist        = ut.new_filled_table(global.key_hists, ""),
+			key_frames      = ut.new_filled_table(global.key_hists, 0),
+			ggkey           = ggkey_create(i == 1),
+			throw_boxies    = {},
+			fireballs       = {},
+			random_boolean  = math.random(255) % 2 == 0,
+			joy             = {},
 
-			addr              = {
+			addr            = {
 				base        = base,            -- キャラ状態とかのベースのアドレス
 				control     = base + 0x12,     -- Human 1 or 2, CPU 3
 				pos         = base + 0x20,     -- X座標
@@ -1509,27 +1507,27 @@ rbff2.startplugin        = function()
 				reg_st_b    = 0x380000,        -- キー入力 REG_STATUS_B アドレス
 			},
 
-			add_cmd_hook      = function(input)
+			add_cmd_hook    = function(input)
 				local p = players[i]
 				p.bs_hook = (p.bs_hook and p.bs_hook.cmd_type) and p.bs_hook or { cmd_type = db.cmd_types._5 }
 				input = type(input) == "table" and input[p.cmd_side] or input
 				p.bs_hook.cmd_type = p.bs_hook.cmd_type & db.cmd_masks[input]
 				p.bs_hook.cmd_type = p.bs_hook.cmd_type | input
 			end,
-			clear_cmd_hook    = function(mask)
+			clear_cmd_hook  = function(mask)
 				local p = players[i]
 				p.bs_hook = (p.bs_hook and p.bs_hook.cmd_type) and p.bs_hook or { cmd_type = db.cmd_types._5 }
 				mask = type(mask) == "table" and mask[p.cmd_side] or mask
 				mask = 0xFF ~ mask
 				p.bs_hook.cmd_type = p.bs_hook.cmd_type & mask
 			end,
-			reset_cmd_hook    = function(input)
+			reset_cmd_hook  = function(input)
 				local p = players[i]
 				p.bs_hook = (p.bs_hook and p.bs_hook.cmd_type) and p.bs_hook or { cmd_type = db.cmd_types._5 }
 				input = type(input) == "table" and input[p.cmd_side] or input
 				p.bs_hook = { cmd_type = input }
 			end,
-			reset_sp_hook     = function(hook) players[i].bs_hook = hook end,
+			reset_sp_hook   = function(hook) players[i].bs_hook = hook end,
 		}
 		table.insert(players, p)
 		p.body        = p -- プレイヤーデータ自身、fireballとの互換用
@@ -1702,7 +1700,7 @@ rbff2.startplugin        = function()
 				end
 				mem.w8(a1, (mem.r8(a1) & mask) | p.bs_hook.cmd_type) -- 押しっぱずっと有効
 				mem.w8(a2, (mem.r8(a2) & mask) | p.bs_hook.cmd_type) -- 押しっぱ有効が5Fのみ
-				ret.value = p.bs_hook.cmd_type -- 押しっぱ有効が1Fのみ
+				ret.value = p.bs_hook.cmd_type           -- 押しっぱ有効が1Fのみ
 			end,
 		}
 		local special_throws = {
@@ -1789,8 +1787,8 @@ rbff2.startplugin        = function()
 			--[0x9E] = function(data) p.ophit = all_objects[data] end, -- ヒットさせた相手側のベースアドレス
 			[0xDA] = function(data) p.inertia = data end,
 			[0xDC] = function(data) p.inertia_frc = ut.int16tofloat(data) end,
-			[0xE6] = function(data) p.on_hit_any = now() + 1 end,          -- 0xE6か0xE7 打撃か当身でフラグが立つ
-			[p1 and 0x10B854 or 0x10B85C] = function(data) p.hit_stun_timer = data end, -- 気絶値ゼロ化までの残フレーム数
+			[0xE6] = function(data) p.on_hit_any = now() + 1 end,                                         -- 0xE6か0xE7 打撃か当身でフラグが立つ
+			[p1 and 0x10B854 or 0x10B85C] = function(data) p.hit_stun_timer = data end,                   -- 気絶値ゼロ化までの残フレーム数
 		}
 		local nohit = function(data, ret) if get_object_by_reg("A4", {}).no_hit then ret.value = 0x311C end end -- 0x0001311Cの後半を返す
 		p.rp16 = {
@@ -1812,10 +1810,10 @@ rbff2.startplugin        = function()
 				end
 			end,
 			-- [0x0C] = function(data) p.reserve_proc = data end,               -- 予約中の処理アドレス
-			[0xC0] = function(data) p.flag_c0 = data end,                    -- フラグ群
-			[0xC4] = function(data) p.flag_c4 = data end,                    -- フラグ群
-			[0xC8] = function(data) p.flag_c8 = data end,                    -- フラグ群
-			[0xCC] = function(data) p.flag_cc = data end,                    -- フラグ群
+			[0xC0] = function(data) p.flag_c0 = data end,                  -- フラグ群
+			[0xC4] = function(data) p.flag_c4 = data end,                  -- フラグ群
+			[0xC8] = function(data) p.flag_c8 = data end,                  -- フラグ群
+			[0xCC] = function(data) p.flag_cc = data end,                  -- フラグ群
 			[p1 and 0x394C4 or 0x394C8] = function(data) p.input_offset = data end, -- コマンド入力状態のオフセットアドレス
 		}
 		all_objects[p.addr.base] = p
@@ -2181,7 +2179,7 @@ rbff2.startplugin        = function()
 		})
 		table.insert(all_wps, p)
 	end
-	local read_input                         = function()
+	local read_input         = function()
 		-- 1Pと2Pの入力読取
 		for i, p in ipairs(players) do
 			local status_b, cnt = mem.r8(p.addr.reg_st_b) ~ 0xFF, mem.r8(p.addr.reg_pcnt) ~ 0xFF
@@ -2200,8 +2198,8 @@ rbff2.startplugin        = function()
 			end
 		end
 	end
-	local input = {
-		accept                         = function(btn, state_past)
+	local input              = {
+		accept     = function(btn, state_past)
 			state_past = state_past or (scr:frame_number() - global.input_accepted)
 			local key, on = "_" .. btn, { false, false }
 			for i, p in ipairs(players) do
@@ -2220,11 +2218,11 @@ rbff2.startplugin        = function()
 			end
 			return false, false, false
 		end,
-		_1f                             = function(btn)
+		_1f        = function(btn)
 			for _, p in ipairs(players) do if p.joy["_" .. btn] == 1 then return true end end
 			return false
 		end,
-		long_start                           = function(state_past)
+		long_start = function(state_past)
 			if 12 < state_past then
 				for _, p in ipairs(players) do
 					if 35 < p.joy._st then
@@ -2238,7 +2236,7 @@ rbff2.startplugin        = function()
 	}
 
 	-- 場面変更
-	local apply_1p2p_active = function()
+	local apply_1p2p_active  = function()
 		if in_match and mem.r8(0x1041D3) == 0 then
 			mem.w8(0x100024, 0x03)
 			mem.w8(0x100027, 0x03)
@@ -2260,7 +2258,7 @@ rbff2.startplugin        = function()
 		mem.w16(0x1041D6, 0x0003) -- 対戦モード3
 	end
 
-	local restart_fight = function(param)
+	local restart_fight      = function(param)
 		param              = param or {}
 		global.next_stg3   = param.next_stage.stg3 or mem.r16(0x107BB8)
 		local p1, p2       = param.next_p1 or 1, param.next_p2 or 21
@@ -2289,7 +2287,7 @@ rbff2.startplugin        = function()
 	end
 
 	-- レコード＆リプレイ
-	local recording = {
+	local recording          = {
 		state           = 0, -- 0=レコーディング待ち, 1=レコーディング, 2=リプレイ待ち 3=リプレイ開始
 		cleanup         = false,
 		player          = nil,
@@ -2875,10 +2873,10 @@ rbff2.startplugin        = function()
 	frame_meter.limit, frame_meter.cell = 70, 3.5
 	frame_meter.buffer_limit = frame_meter.limit * 2 -- バッファ長=2行まで許容
 
-	local add_frame_meter = function(p, frame)  -- フレームデータの追加
+	local add_frame_meter = function(p, frame)    -- フレームデータの追加
 		if p.is_fireball then return end
 		if not global.both_act_neutral and global.old_both_act_neutral then
-			p.frames = {} -- バッファ初期化
+			p.frames = {}                                           -- バッファ初期化
 		end
 		local frames, reset, first, blank = p.frames, false, false, false -- プレイヤーごとのバッファを取得
 		local last = frames[#frames]
@@ -2925,9 +2923,9 @@ rbff2.startplugin        = function()
 				frame.dodge = s
 			end
 		end
-		table.insert(frames, frame)                               -- 末尾に追加
-		if #frames <= frame_meter.buffer_limit then return end          -- バッファ長が2行以下なら抜ける
-		local frame_limit = frame_meter.limit + (blank and 2 or 1)      -- ブランクぶん追加でバッファする
+		table.insert(frames, frame)                           -- 末尾に追加
+		if #frames <= frame_meter.buffer_limit then return end -- バッファ長が2行以下なら抜ける
+		local frame_limit = frame_meter.limit + (blank and 2 or 1) -- ブランクぶん追加でバッファする
 		while frame_limit ~= #frames do table.remove(frames, 1) end -- 1行目のバッファを削除
 	end
 
@@ -2938,11 +2936,11 @@ rbff2.startplugin        = function()
 		scr:draw_box(x1 - w, y2 + w, x2 + w, y2, fcol, fcol)
 	end
 
-	local draw_frame_meter = function(p, y1)           -- フレームメーターの表示
+	local draw_frame_meter = function(p, y1)                         -- フレームメーターの表示
 		if p.is_fireball then return end
 		local x0 = (scr.width - frame_meter.cell * frame_meter.limit) // 2 -- 表示開始位置
 		local height = get_line_height()
-		local y2 = y1 + height                           -- メーター行のY位置
+		local y2 = y1 + height                                       -- メーター行のY位置
 		local frames, max_x = {}, #p.frames
 		while (0 < max_x) do
 			if not ut.tstb(p.frames[max_x].attackbit, frame_attack_types.frame_plus) then
@@ -2954,7 +2952,7 @@ rbff2.startplugin        = function()
 		local remain = (frame_meter.limit < max_x) and (max_x % frame_meter.limit) or 0
 		local separators = {}
 		local startup = 0 < max_x and frames[max_x] and frames[max_x].startup or "--"
-		local total =  0 < max_x and frames[max_x] and frames[max_x].total or "---"
+		local total = 0 < max_x and frames[max_x] and frames[max_x].total or "---"
 		border_box(x0, y1, x0 + frame_meter.limit * frame_meter.cell, y2, 0.5, 0xFF000000) -- 外枠
 		for ix = remain + 1, max_x do
 			local frame = frames[ix]
@@ -2977,7 +2975,7 @@ rbff2.startplugin        = function()
 				})
 			end
 			scr:draw_box(x1, y1, x2, y2, 0, frame.line) -- 四角の描画
-			if frame.dodge then -- 無敵の描画
+			if frame.dodge then                -- 無敵の描画
 				local s, col = frame.dodge, frame.dodge.xline
 				for i = s.y, height - s.y, s.step do scr:draw_box(x1, y1 + i, x2, y1 + i + s.border, 0, col) end
 			end
@@ -3067,8 +3065,8 @@ rbff2.startplugin        = function()
 		elseif not ut.tstb(p.flag_cc | p.op.flag_cc, db.flag_cc.thrown) and
 			p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number then
 			col, line = 0xAA444444, 0xDD444444 -- ヒットストップ中
-		--elseif p.on_bs_established == global.frame_number then
-		--	col, line = 0xAA0022FF, 0xDD0022FF -- BSコマンド成立
+			--elseif p.on_bs_established == global.frame_number then
+			--	col, line = 0xAA0022FF, 0xDD0022FF -- BSコマンド成立
 		else
 			--[[
 			if p.disp_frame == 2 then -- 2:ON
@@ -3115,7 +3113,7 @@ rbff2.startplugin        = function()
 					attackbit = attackbit | xp.attackbit
 					table.sort(xp.hitbox_types, function(t1, t2) return t1.sort > t2.sort end) -- ソート
 					if xp.hitbox_types[1].kind ~= db.box_kinds.attack and xp.repeatable then
-						col, line = 0xAAD2691E, 0xDDD2691E                         -- やられ判定より連キャン状態を優先表示する
+						col, line = 0xAAD2691E, 0xDDD2691E                      -- やられ判定より連キャン状態を優先表示する
 					else
 						col, line = xp.hitbox_types[1].fill, xp.hitbox_types[1].outline
 						col = col > 0xFFFFFF and (col | 0x22111111) or 0
@@ -3794,20 +3792,20 @@ rbff2.startplugin        = function()
 			for iv, k in ipairs({ "up", "dn", "lt", "rt", "a", "b", "c", "d", }) do
 				key_now[k] = (p.reg_pcnt & (2 ^ (iv - 1))) == 0 and posi_or_pl1(key_now[k]) or nega_or_mi1(key_now[k])
 			end
-			key_now.sl  = (p.reg_st_b & (p1 and 0x02 or 0x08)) == 0x00 and posi_or_pl1(key_now.sl) or nega_or_mi1(key_now.sl)
-			key_now.st  = (p.reg_st_b & (p1 and 0x01 or 0x04)) == 0x00 and posi_or_pl1(key_now.st) or nega_or_mi1(key_now.st)
+			key_now.sl     = (p.reg_st_b & (p1 and 0x02 or 0x08)) == 0x00 and posi_or_pl1(key_now.sl) or nega_or_mi1(key_now.sl)
+			key_now.st     = (p.reg_st_b & (p1 and 0x01 or 0x04)) == 0x00 and posi_or_pl1(key_now.st) or nega_or_mi1(key_now.st)
 
-			local lever = "_N"
-			local ggkey = { l = 5, a = false, b = false, c = false, d = false, }
+			local lever    = "_N"
+			local ggbutton = { l = 5, a = false, b = false, c = false, d = false, }
 
 			-- GG風キーディスの更新
 			for l, mask in ipairs({ 0x06, 0x02, 0x0A, 0x04, 0xFF, 0x08, 0x05, 0x01, 0x09, }) do
-				if (p.reg_pcnt & 0xF) + mask == 0xF then lever, ggkey.l = "_" .. l, l end
+				if (p.reg_pcnt & 0xF) + mask == 0xF then lever, ggbutton.l = "_" .. l, l end
 			end
 			for iv, btn in ipairs({ "a", "b", "c", "d" }) do
-				if (p.reg_pcnt & ((2 ^ (iv - 1)) * 0x10)) == 0 then lever, ggkey[btn] = lever .. "_" .. btn, true end
+				if (p.reg_pcnt & ((2 ^ (iv - 1)) * 0x10)) == 0 then lever, ggbutton[btn] = lever .. "_" .. btn, true end
 			end
-			ut.table_add(p.ggkey_hist, ggkey, 60)
+			ut.table_add(p.ggkey.hist, ggbutton, 60)
 
 			-- キーログの更新
 			lever = string.upper(lever)
@@ -4300,8 +4298,8 @@ rbff2.startplugin        = function()
 						end
 						scr:draw_text("center", 40, table.concat(p.combo_col1, "\n"))
 					end
-					scr:draw_text(scr.width // 2 + get_string_width("9") * (p1 and -18 or  4), 40, table.concat(p.combo_col2, "\n"))
-					scr:draw_text(scr.width // 2 + get_string_width("9") * (p1 and  -9 or 13), 40, table.concat(p.combo_col3, "\n"))
+					scr:draw_text(scr.width // 2 + get_string_width("9") * (p1 and -18 or 4), 40, table.concat(p.combo_col2, "\n"))
+					scr:draw_text(scr.width // 2 + get_string_width("9") * (p1 and -9 or 13), 40, table.concat(p.combo_col3, "\n"))
 				end
 				-- 状態 大表示 1:OFF 2:ON 3:ON:小表示 4:ON:大表示 5:ON:フラグ表示
 				if p.state_line1 and #p.state_line1 > 0 and p.disp_state == 2 or p.disp_state == 4 then
@@ -4378,8 +4376,8 @@ rbff2.startplugin        = function()
 					scr:draw_box(p1 and (139 - p.stun_limit) or 181, 30, p1 and 139 or (181 + p.stun_limit), 33, 0, 0xDD000000) -- 黒背景
 					scr:draw_box(p1 and (139 - p.hit_stun) or 181, 30, p1 and 139 or (181 + p.hit_stun), 33, 0, 0xDDFF0000) -- 気絶値
 					draw_text_with_shadow(p1 and 112 or 184, 28, string.format("%3s/%3s", p.hit_stun, p.stun_limit))
-					scr:draw_box(p1 and (138 - 90) or 180, 35, p1 and 140 or (182 + 90), 40, 0, 0xDDC0C0C0)      -- 枠
-					scr:draw_box(p1 and (139 - 90) or 181, 36, p1 and 139 or (181 + 90), 39, 0, 0xDD000000)      -- 黒背景
+					scr:draw_box(p1 and (138 - 90) or 180, 35, p1 and 140 or (182 + 90), 40, 0, 0xDDC0C0C0)              -- 枠
+					scr:draw_box(p1 and (139 - 90) or 181, 36, p1 and 139 or (181 + 90), 39, 0, 0xDD000000)              -- 黒背景
 					scr:draw_box(p1 and (139 - p.hit_stun_timer) or 181, 36, p1 and 139 or (181 + p.hit_stun_timer), 39, 0, 0xDDFFFF00) -- 気絶値
 					draw_text_with_shadow(p1 and 112 or 184, 34, string.format("%3s", p.hit_stun_timer))
 				end
@@ -4428,8 +4426,8 @@ rbff2.startplugin        = function()
 			for i, p in ipairs(players) do
 				-- コマンド入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
 				if p.disp_command == 2 or p.disp_command == 4 then
-					local xoffset, yoffset = ggkey_set[i].xoffset, ggkey_set[i].yoffset
-					local oct_vt, key_xy = ggkey_set[i].oct_vt, ggkey_set[i].key_xy
+					local xoffset, yoffset = p.ggkey.xoffset, p.ggkey.yoffset
+					local oct_vt, key_xy = p.ggkey.oct_vt, p.ggkey.key_xy
 					local tracks, max_track = {}, 6 -- 軌跡をつくる 軌跡は6個まで
 					scr:draw_box(xoffset - 13, yoffset - 13, xoffset + 35, yoffset + 13, 0x80404040, 0x80404040)
 					for ni = 1, 8 do -- 八角形描画
@@ -4441,9 +4439,9 @@ rbff2.startplugin        = function()
 						scr:draw_line(xy1.x3, xy1.y3, xy2.x3, xy2.y3, 0xDDCCCCCC)
 						scr:draw_line(xy1.x4, xy1.y4, xy2.x4, xy2.y4, 0xDDCCCCCC)
 					end
-					for j = #p.ggkey_hist, 2, -1 do -- 軌跡採取
+					for j = #p.ggkey.hist, 2, -1 do -- 軌跡採取
 						local k = j - 1
-						local xy1, xy2 = key_xy[p.ggkey_hist[j].l], key_xy[p.ggkey_hist[k].l]
+						local xy1, xy2 = key_xy[p.ggkey.hist[j].l], key_xy[p.ggkey.hist[k].l]
 						if xy1.x ~= xy2.x or xy1.y ~= xy2.y then
 							table.insert(tracks, 1, { xy1 = xy1, xy2 = xy2, })
 							if #tracks >= max_track then break end
@@ -4467,16 +4465,16 @@ rbff2.startplugin        = function()
 							scr:draw_line(xy1.x4, xy1.y4, xy2.x4, xy2.y4, col)
 						end
 					end
-					local ggkey = p.ggkey_hist[#p.ggkey_hist]
-					if ggkey then -- ボタン描画
+					local ggbutton = p.ggkey.hist[#p.ggkey.hist]
+					if ggbutton then -- ボタン描画
 						for _, ctl in ipairs({
-							{ key = "",  btn = "_)", x = key_xy[ggkey.l].xt, y = key_xy[ggkey.l].yt, col = 0xFFCC0000 },
-							{ key = "a", btn = "_A", x = key_xy[5].x + 11,   y = key_xy[5].y + 0,    col = 0xFFFFFFFF },
-							{ key = "b", btn = "_B", x = key_xy[5].x + 16,   y = key_xy[5].y - 3,    col = 0xFFFFFFFF },
-							{ key = "c", btn = "_C", x = key_xy[5].x + 21,   y = key_xy[5].y - 3,    col = 0xFFFFFFFF },
-							{ key = "d", btn = "_D", x = key_xy[5].x + 26,   y = key_xy[5].y - 2,    col = 0xFFFFFFFF },
+							{ key = "",  btn = "_)", x = key_xy[ggbutton.l].xt, y = key_xy[ggbutton.l].yt, col = 0xFFCC0000 },
+							{ key = "a", btn = "_A", x = key_xy[5].x + 11,      y = key_xy[5].y + 0,       col = 0xFFFFFFFF },
+							{ key = "b", btn = "_B", x = key_xy[5].x + 16,      y = key_xy[5].y - 3,       col = 0xFFFFFFFF },
+							{ key = "c", btn = "_C", x = key_xy[5].x + 21,      y = key_xy[5].y - 3,       col = 0xFFFFFFFF },
+							{ key = "d", btn = "_D", x = key_xy[5].x + 26,      y = key_xy[5].y - 2,       col = 0xFFFFFFFF },
 						}) do
-							local xx, yy, btn, on = ctl.x, ctl.y, ut.convert(ctl.btn), ctl.key == "" or ggkey[ctl.key]
+							local xx, yy, btn, on = ctl.x, ctl.y, ut.convert(ctl.btn), ctl.key == "" or ggbutton[ctl.key]
 							scr:draw_text(xx, yy, ut.convert("_("), on and ctl.col or 0xDDCCCCCC)
 							scr:draw_text(xx, yy, btn, on and btn_col[btn] or 0xDD444444)
 						end
@@ -4654,7 +4652,7 @@ rbff2.startplugin        = function()
 		p[2].disp_command    = col[11]                                              -- 2P 入力表示
 		g.disp_input         = col[12]                                              -- コマンド入力状態表示
 		g.disp_normal_frames = col[13]                                              -- 通常動作フレーム非表示
-		g.disp_frame      = col[14]                                              -- フレーム差表示
+		g.disp_frame         = col[14]                                              -- フレーム差表示
 		p[1].disp_frame      = col[15]                                              -- 1P フレーム数表示
 		p[2].disp_frame      = col[16]                                              -- 2P フレーム数表示
 		p[1].disp_fbfrm      = col[17] == 2                                         -- 1P 弾フレーム数表示
@@ -4838,7 +4836,7 @@ rbff2.startplugin        = function()
 		col[11] = p[2].disp_command                                   -- 2P 入力表示
 		col[12] = g.disp_input                                        -- コマンド入力状態表示
 		col[13] = g.disp_normal_frames                                -- 通常動作フレーム非表示
-		col[14] = g.disp_frame                                     -- フレーム差表示
+		col[14] = g.disp_frame                                        -- フレーム差表示
 		col[15] = p[1].disp_frame                                     -- 1P フレーム数表示
 		col[16] = p[2].disp_frame                                     -- 2P フレーム数表示
 		col[17] = p[1].disp_fbfrm and 2 or 1                          -- 1P 弾フレーム数表示
