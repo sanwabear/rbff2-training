@@ -2400,8 +2400,8 @@ rbff2.startplugin          = function()
 			local pos = { players[1].cmd_side, players[2].cmd_side }
 			recording.player = recording.temp_player
 			recording.active_slot.cleanup = false
-			recording.active_slot.side = joy_pside[rev_joy[k]] -- レコーディング対象のプレイヤー番号 1=1P, 2=2P
-			recording.active_slot.store = {}    -- 入力保存先
+			recording.active_slot.side = p.cmd_side
+			recording.active_slot.store = {}
 			table.insert(recording.active_slot.store, { joy = p.reg_pcnt, pos = pos })
 			table.insert(recording.active_slot.store, { joy = 0, pos = pos })
 			-- 状態変更
@@ -2456,7 +2456,6 @@ rbff2.startplugin          = function()
 
 			-- メインラインでニュートラル状態にする
 			for i, p in ipairs(players) do
-				local op = p.op
 				-- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
 				if global.replay_reset == 2 or (global.replay_reset == 3 and i == 3) or (global.replay_reset == 4 and i == 4) then
 					for fnc, tbl in pairs({
@@ -2520,7 +2519,7 @@ rbff2.startplugin          = function()
 		end
 	end
 	-- リプレイ中
-	rec_play = function(to_joy)
+	rec_play = function(_)
 		if input.accept("st") then
 			-- 状態変更
 			global.rec_main = rec_await_play
@@ -3688,25 +3687,17 @@ rbff2.startplugin          = function()
 		apply_1p2p_active()
 
 		-- キーディス用の処理
-		for i, p in ipairs(players) do
-			local p1, key_now = i == 1, p.key_now
-
-			-- 入力表示用の情報構築
-			for iv, k in ipairs({ "up", "dn", "lt", "rt", "a", "b", "c", "d", }) do
-				key_now[k] = (p.reg_pcnt & (2 ^ (iv - 1))) == 0 and posi_or_pl1(key_now[k]) or nega_or_mi1(key_now[k])
-			end
-			key_now.sl     = (p.reg_st_b & (p1 and 0x02 or 0x08)) == 0x00 and posi_or_pl1(key_now.sl) or nega_or_mi1(key_now.sl)
-			key_now.st     = (p.reg_st_b & (p1 and 0x01 or 0x04)) == 0x00 and posi_or_pl1(key_now.st) or nega_or_mi1(key_now.st)
-
-			local lever    = "_N"
+		for _, p in ipairs(players) do
+			local lever    = ""
 			local ggbutton = { l = 5, a = false, b = false, c = false, d = false, }
 
 			-- GG風キーディスの更新
-			for l, mask in ipairs({ 0x06, 0x02, 0x0A, 0x04, 0xFF, 0x08, 0x05, 0x01, 0x09, }) do
-				if (p.reg_pcnt & 0xF) + mask == 0xF then lever, ggbutton.l = "_" .. l, l end
-			end
-			for iv, btn in ipairs({ "a", "b", "c", "d" }) do
-				if (p.reg_pcnt & ((2 ^ (iv - 1)) * 0x10)) == 0 then lever, ggbutton[btn] = lever .. "_" .. btn, true end
+			for k, v, kk in ut.find_all(p.joy, function(k, v) return string.gsub(k, "_", "") end) do
+				if tonumber(kk) then
+					if 0 < v then lever, ggbutton.l = (k == "_5" and "_N" or k) .. lever, tonumber(kk) end
+				else
+					if 0 < v then lever, ggbutton[kk] = lever .. k, true end
+				end
 			end
 			ut.table_add(p.ggkey.hist, ggbutton, 60)
 
@@ -3729,7 +3720,7 @@ rbff2.startplugin          = function()
 		end
 
 		-- プレイヤー操作
-		for i, p in ipairs(players) do
+		for _, p in ipairs(players) do
 			p.bs_hook = nil
 			if p.control == 1 or p.control == 2 then
 				--前進とガード方向
