@@ -2165,6 +2165,7 @@ rbff2.startplugin          = function()
 			[0x2A] = function(data) p.pos_frc_y = ut.int16tofloat(data) end,                                                       -- Y座標(小数部)
 			[{ addr = 0x5E, filter = 0x011E10 }] = function(data) p.box_addr = mem.rg("A0", 0xFFFFFFFF) - 0x2 end,                 -- 判定のアドレス
 			[0x60] = function(data)
+				if p.act ~= data and (data == 0x193 or data == 0x13B) then p.on_wakeup = now() end
 				p.act, p.on_update_act = data, now()                                                                               -- 行動ID デバッグディップステータス表示のPと同じ
 				p.attackbits.act = data
 				if p.is_fireball then
@@ -2177,60 +2178,57 @@ rbff2.startplugin          = function()
 		})
 		table.insert(all_wps, p)
 	end
-	local input              = {
-		accepted   = 0,
-		read       = function()
-			-- 1Pと2Pの入力読取
-			for i, p in ipairs(players) do
-				p.status_b, p.reg_pcnt = mem.r8(p.addr.reg_st_b) ~ 0xFF, mem.r8(p.addr.reg_pcnt) ~ 0xFF
-				local cnt_r, cnt_b, tmp_joy = 0xF & p.reg_pcnt, 0xF0 & p.reg_pcnt, {}
-				p.joy = p.joy or {}
-				for k, v in pairs(db.cmd_status_b[i]) do tmp_joy[k] = ut.tstb(p.status_b, v) end
-				for k, v in ut.find_all(db.cmd_bytes, function(_, v) return type(v) == "number" end) do
-					tmp_joy[k] = (0x10 > v and v == cnt_r) or ut.tstb(cnt_b, v)
-				end
-				for k, v in pairs(tmp_joy) do
-					if v then
-						p.joy[k] = (not p.joy[k] or p.joy[k] < 0) and 1 or p.joy[k] + 1
-					else
-						p.joy[k] = (not p.joy[k] or p.joy[k] > 0) and -1 or p.joy[k] - 1
-					end
+	local input              = { accepted = 0 }
+	input.read               = function()
+		-- 1Pと2Pの入力読取
+		for i, p in ipairs(players) do
+			p.status_b, p.reg_pcnt = mem.r8(p.addr.reg_st_b) ~ 0xFF, mem.r8(p.addr.reg_pcnt) ~ 0xFF
+			local cnt_r, cnt_b, tmp_joy = 0xF & p.reg_pcnt, 0xF0 & p.reg_pcnt, {}
+			p.joy = p.joy or {}
+			for k, v in pairs(db.cmd_status_b[i]) do tmp_joy[k] = ut.tstb(p.status_b, v) end
+			for k, v in ut.find_all(db.cmd_bytes, function(_, v) return type(v) == "number" end) do
+				tmp_joy[k] = (0x10 > v and v == cnt_r) or ut.tstb(cnt_b, v)
+			end
+			for k, v in pairs(tmp_joy) do
+				if v then
+					p.joy[k] = (not p.joy[k] or p.joy[k] < 0) and 1 or p.joy[k] + 1
+				else
+					p.joy[k] = (not p.joy[k] or p.joy[k] > 0) and -1 or p.joy[k] - 1
 				end
 			end
-		end,
-		accept     = function(btn, state_past)
-			---@diagnostic disable-next-line: undefined-global
-			state_past = state_past or (scr:frame_number() - input.accepted)
-			if state_past <= 12 then return false, false, false end
-			local on = { false, false }
-			for i, _, joy in ut.ifind_all(players, function(p) return p.joy["_" .. btn] end) do
-				on[i] = 0 < joy and (type(btn) == "number" or joy <= state_past)
-				if on[i] then
-					play_cursor_sound()
-					---@diagnostic disable-next-line: undefined-global
-					input.accepted        = scr:frame_number()
-					return true, on[1], on[2]
-				end
-			end
-			return false, false, false
-		end,
-		_1f        = function(btn)
-			for _, p in ipairs(players) do if p.joy["_" .. btn] == 1 then return true end end
-			return false
-		end,
-		long_start = function(state_past)
-			if 12 < state_past then
-				for _, p in ipairs(players) do
-					if 35 < p.joy._st then
-						play_cursor_sound()
-						return true
-					end
-				end
-			end
-			return false
 		end
-	}
-
+	end
+	input.accept             = function(btn, state_past)
+		---@diagnostic disable-next-line: undefined-global
+		state_past = state_past or (scr:frame_number() - input.accepted)
+		if state_past <= 12 then return false, false, false end
+		local on = { false, false }
+		for i, _, joy in ut.ifind_all(players, function(p) return p.joy["_" .. btn] end) do
+			on[i] = 0 < joy and (type(btn) == "number" or joy <= state_past)
+			if on[i] then
+				play_cursor_sound()
+				---@diagnostic disable-next-line: undefined-global
+				input.accepted = scr:frame_number()
+				return true, on[1], on[2]
+			end
+		end
+		return false, false, false
+	end
+	input._1f                = function(btn)
+		for _, p in ipairs(players) do if p.joy["_" .. btn] == 1 then return true end end
+		return false
+	end
+	input.long_start         = function(state_past)
+		if 12 < state_past then
+			for _, p in ipairs(players) do
+				if 35 < p.joy._st then
+					play_cursor_sound()
+					return true
+				end
+			end
+		end
+		return false
+	end
 	-- 場面変更
 	local apply_1p2p_active  = function()
 		if in_match and mem.r8(0x1041D3) == 0 then
@@ -4450,27 +4448,28 @@ rbff2.startplugin          = function()
 			p.rvs_count      = -1
 		end
 	end
-	local menu_to_main = function(cancel, do_init)
-		local col, row, p, g = menu.training.pos.col, menu.training.pos.row, players, global
+	local menu_to_main = function(on_a1, cancel, do_init)
+		local col, row, g  = menu.training.pos.col, menu.training.pos.row, global
+		local p1, p2       = players[1], players[2]
 
-		g.dummy_mode         = col[1] -- ダミーモード
+		g.dummy_mode       = col[1] -- ダミーモード
 		-- ダミー設定
-		p[1].dummy_act       = col[3] -- 1P アクション
-		p[2].dummy_act       = col[4] -- 2P アクション
-		p[1].dummy_gd        = col[5] -- 1P ガード
-		p[2].dummy_gd        = col[6] -- 2P ガード
-		g.next_block_grace   = col[7] - 1 -- 1ガード持続フレーム数
-		g.dummy_bs_cnt       = col[8] -- ブレイクショット設定
-		p[1].dummy_wakeup    = col[9] -- 1P やられ時行動
-		p[2].dummy_wakeup    = col[10] -- 2P やられ時行動
-		g.dummy_rvs_cnt      = col[11] -- ガードリバーサル設定
-		p[2].no_hit_limit    = col[12] - 1 -- 1P 強制空振り
-		p[1].no_hit_limit    = col[13] - 1 -- 2P 強制空振り
-		p[1].fwd_prov        = col[14] == 2 -- 1P 挑発で前進
-		p[2].fwd_prov        = col[15] == 2 -- 2P 挑発で前進
-		p[1].force_y_pos     = col[16] -- 1P Y座標強制
-		p[2].force_y_pos     = col[17] -- 2P Y座標強制
-		g.sync_pos_x         = col[18] -- X座標同期
+		p1.dummy_act       = col[3] -- 1P アクション
+		p2.dummy_act       = col[4] -- 2P アクション
+		p1.dummy_gd        = col[5] -- 1P ガード
+		p2.dummy_gd        = col[6] -- 2P ガード
+		g.next_block_grace = col[7] - 1 -- 1ガード持続フレーム数
+		g.dummy_bs_cnt     = col[8] -- ブレイクショット設定
+		p1.dummy_wakeup    = col[9] -- 1P やられ時行動
+		p2.dummy_wakeup    = col[10] -- 2P やられ時行動
+		g.dummy_rvs_cnt    = col[11] -- ガードリバーサル設定
+		p2.no_hit_limit    = col[12] - 1 -- 1P 強制空振り
+		p1.no_hit_limit    = col[13] - 1 -- 2P 強制空振り
+		p1.fwd_prov        = col[14] == 2 -- 1P 挑発で前進
+		p2.fwd_prov        = col[15] == 2 -- 2P 挑発で前進
+		p1.force_y_pos     = col[16] -- 1P Y座標強制
+		p2.force_y_pos     = col[17] -- 2P Y座標強制
+		g.sync_pos_x       = col[18] -- X座標同期
 		for _, p in ipairs(players) do
 			if p.dummy_gd == dummy_gd_type.hit1 then
 				p.next_block, p.next_block_ec = false, 75 -- カウンター初期化 false
@@ -4490,8 +4489,8 @@ rbff2.startplugin          = function()
 				menu.current = menu.recording
 				return
 			end
-		elseif g.dummy_mode == 6 then -- リプレイ
-			g.dummy_mode = 1 -- 設定でリプレイに入らずに抜けたとき用にモードを1に戻しておく
+		elseif g.dummy_mode == 6 then                        -- リプレイ
+			g.dummy_mode = 1                                 -- 設定でリプレイに入らずに抜けたとき用にモードを1に戻しておく
 			menu.replay.pos.col[11] = recording.do_repeat and 2 or 1 -- 繰り返し
 			menu.replay.pos.col[12] = recording.repeat_interval + 1 -- 繰り返し間隔
 			menu.replay.pos.col[13] = g.await_neutral and 2 or 1 -- 繰り返し開始条件
@@ -4523,7 +4522,7 @@ rbff2.startplugin          = function()
 
 		menu.current = menu.main
 	end
-	local menu_to_main_cancel = function() menu_to_main(true, false) end
+	local menu_to_main_cancel = function() menu_to_main(nil, true, false) end
 	local life_range, pow_range = { "最大", "赤", "ゼロ", }, { "最大", "半分", "ゼロ", }
 	for i = 1, 0xC0 do table.insert(life_range, i) end
 	for i = 1, 0x3C do table.insert(pow_range, i) end
@@ -4816,7 +4815,7 @@ rbff2.startplugin          = function()
 		--cls_joy()
 		--cls_ps()
 		-- 初期化
-		menu_to_main(false, true)
+		menu_to_main(nil, false, true)
 		-- メニューを抜ける
 		menu.state = menu.tra_main
 		menu.prev_state = nil
@@ -4850,7 +4849,7 @@ rbff2.startplugin          = function()
 		cls_joy()
 		cls_ps()
 		-- 初期化
-		menu_to_main(false, true)
+		menu_to_main(nil, false, true)
 		-- メニューを抜ける
 		menu.state = menu.tra_main
 		menu.reset_pos = true
@@ -5390,7 +5389,7 @@ rbff2.startplugin          = function()
 	init_bar_menu_config()
 	init_menu_config()
 	init_restart_fight()
-	menu_to_main(true)
+	menu_to_main(nil, true)
 
 	menu.proc = function() set_freeze(false) end -- メニュー表示中はDIPかポーズでフリーズさせる
 	local menu_cur_updown = function(add_val)
@@ -5442,11 +5441,11 @@ rbff2.startplugin          = function()
 		if menu.prev_state ~= menu and menu.state == menu then menu.update_pos() end -- 初回のメニュー表示時は状態更新
 		menu.prev_state = menu.state                                           -- 前フレームのメニューを更新
 
-		local ona, ona1, _ = input.accept("a")
+		local on_a, on_a1, _ = input.accept("a")
 		if input.accept("st") then -- Menu ON/OFF
-		elseif ona then
+		elseif on_a then
 			---@diagnostic disable-next-line: redundant-parameter
-			menu.current.on_a[menu.current.pos.row](ona1 and 1 or 2) -- サブメニューへの遷移（あれば）
+			menu.current.on_a[menu.current.pos.row](on_a1 and 1 or 2) -- サブメニューへの遷移
 		elseif input.accept("b") then
 			menu.current.on_b[menu.current.pos.row]() -- メニューから戻る
 		elseif input.accept("8") then
