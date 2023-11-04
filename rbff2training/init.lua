@@ -533,8 +533,6 @@ local global                               = {
 	old_dummy_mode       = 1,
 	rec_main             = nil,
 
-	input_accepted       = 0,
-
 	next_block_grace     = 0, -- 1ガードでの持続フレーム数
 	pow_mode             = 2, -- POWモード　1:自動回復 2:固定 3:通常動作
 	disp_meters          = true,
@@ -2180,6 +2178,7 @@ rbff2.startplugin          = function()
 		table.insert(all_wps, p)
 	end
 	local input              = {
+		accepted   = 0,
 		read       = function()
 			-- 1Pと2Pの入力読取
 			for i, p in ipairs(players) do
@@ -2200,21 +2199,18 @@ rbff2.startplugin          = function()
 			end
 		end,
 		accept     = function(btn, state_past)
-			state_past = state_past or (scr:frame_number() - global.input_accepted)
-			local key, on = "_" .. btn, { false, false }
-			for i, p in ipairs(players) do
-				local joy = p.joy[key]
-				if 12 < state_past and joy and on[i] == false then
-					if btn == "8" or btn == "2" or btn == "4" or btn == "6" then
-						on[i] = 0 < joy
-					else
-						on[i] = 0 < joy and joy <= state_past
-					end
+			---@diagnostic disable-next-line: undefined-global
+			state_past = state_past or (scr:frame_number() - input.accepted)
+			if state_past <= 12 then return false, false, false end
+			local on = { false, false }
+			for i, _, joy in ut.ifind_all(players, function(p) return p.joy["_" .. btn] end) do
+				on[i] = 0 < joy and (type(btn) == "number" or joy <= state_past)
+				if on[i] then
+					play_cursor_sound()
+					---@diagnostic disable-next-line: undefined-global
+					input.accepted        = scr:frame_number()
+					return true, on[1], on[2]
 				end
-			end
-			if on[1] or on[2] then
-				play_cursor_sound()
-				return true, on[1], on[2]
 			end
 			return false, false, false
 		end,
@@ -2427,7 +2423,6 @@ rbff2.startplugin          = function()
 	rec_await_play = function(to_joy) -- リプレイまち
 		local force_start_play = global.rec_force_start_play
 		global.rec_force_start_play = false -- 初期化
-		local ec = scr:frame_number()
 
 		local tmp_slots = {}
 		for j, slot in ipairs(recording.slot) do
@@ -2460,7 +2455,6 @@ rbff2.startplugin          = function()
 			-- 状態変更
 			recording.play_count = 1
 			global.rec_main = rec_play
-			global.input_accepted = ec
 
 			-- メインラインでニュートラル状態にする
 			for i, p in ipairs(players) do
@@ -2529,12 +2523,9 @@ rbff2.startplugin          = function()
 	end
 	-- リプレイ中
 	rec_play = function(to_joy)
-		local ec = scr:frame_number()
-
 		if input.accept("st") then
 			-- 状態変更
 			global.rec_main = rec_await_play
-			global.input_accepted = ec
 			print(global.frame_number .. " rec_play -> rec_await_play")
 			return
 		end
@@ -2573,16 +2564,12 @@ rbff2.startplugin          = function()
 			print(global.frame_number .. " rec_play -> rec_play_interval")
 		end
 	end
-	--
 
 	-- リプレイまでの待ち時間
-	rec_play_interval = function(to_joy)
-		local ec = scr:frame_number()
-
+	rec_play_interval = function(_)
 		if input.accept("st") then
 			-- 状態変更
 			global.rec_main = rec_await_play
-			global.input_accepted = ec
 			print(global.frame_number .. " rec_play_interval -> rec_await_play")
 			return
 		end
@@ -3203,13 +3190,12 @@ rbff2.startplugin          = function()
 		global.frame_number = global.frame_number + 1
 		set_freeze((not in_match) or true) -- ポーズ解除状態
 
-		local next_joy, state_past = new_next_joy(), scr:frame_number() - global.input_accepted
+		local next_joy, state_past = new_next_joy(), scr:frame_number() - input.accepted
 
 		-- スタートボタン（リプレイモード中のみスタートボタンおしっぱでメニュー表示へ切り替え
 		if (global.dummy_mode == 6 and input.long_start(state_past)) or
 			(global.dummy_mode ~= 6 and input.accept("st", state_past)) then
-			-- メニュー表示状態へ切り替え
-			global.input_accepted, menu.state = global.frame_number, menu
+			menu.state = menu -- メニュー表示状態へ切り替え
 			cls_joy()
 			return
 		end
@@ -4468,7 +4454,7 @@ rbff2.startplugin          = function()
 		local col, row, p, g = menu.training.pos.col, menu.training.pos.row, players, global
 
 		g.dummy_mode         = col[1] -- ダミーモード
-		-- レコード・リプレイ設定
+		-- ダミー設定
 		p[1].dummy_act       = col[3] -- 1P アクション
 		p[2].dummy_act       = col[4] -- 2P アクション
 		p[1].dummy_gd        = col[5] -- 1P ガード
@@ -4498,18 +4484,14 @@ rbff2.startplugin          = function()
 
 		g.old_dummy_mode = g.dummy_mode
 
-		if g.dummy_mode == 5 then
-			-- レコード
-			-- 設定でレコーディングに入らずに抜けたとき用にモードを1に戻しておく
-			g.dummy_mode = 1
+		if g.dummy_mode == 5 then -- レコード
+			g.dummy_mode = 1 -- 設定でレコーディングに入らずに抜けたとき用にモードを1に戻しておく
 			if not cancel and row == 1 then
 				menu.current = menu.recording
 				return
 			end
-		elseif g.dummy_mode == 6 then
-			-- リプレイ
-			-- 設定でリプレイに入らずに抜けたとき用にモードを1に戻しておく
-			g.dummy_mode = 1
+		elseif g.dummy_mode == 6 then -- リプレイ
+			g.dummy_mode = 1 -- 設定でリプレイに入らずに抜けたとき用にモードを1に戻しておく
 			menu.replay.pos.col[11] = recording.do_repeat and 2 or 1 -- 繰り返し
 			menu.replay.pos.col[12] = recording.repeat_interval + 1 -- 繰り返し間隔
 			menu.replay.pos.col[13] = g.await_neutral and 2 or 1 -- 繰り返し開始条件
@@ -4651,10 +4633,10 @@ rbff2.startplugin          = function()
 	end
 	local menu_rec_to_tra          = function() menu.current = menu.training end
 	local exit_menu_to_rec         = function(slot_no)
-		local ec, g           = scr:frame_number(), global
+		local g           = global
 		g.dummy_mode          = 5
 		g.rec_main            = rec_await_no_input
-		g.input_accepted      = ec
+		input.accepted        = scr:frame_number()
 		-- 選択したプレイヤー側の反対側の操作をいじる
 		recording.temp_player = (mem.r8(players[1].addr.reg_pcnt) ~= 0xFF) and 2 or 1
 		recording.last_slot   = slot_no
@@ -4678,10 +4660,10 @@ rbff2.startplugin          = function()
 		g.repeat_interval         = recording.repeat_interval
 	end
 	local exit_menu_to_rec_pos     = function()
-		local ec, g = scr:frame_number(), global
+		local g = global
 		g.dummy_mode = 5 -- レコードモードにする
 		g.rec_main = rec_fixpos
-		g.input_accepted = ec
+		input.accepted = scr:frame_number()
 		-- 選択したプレイヤー側の反対側の操作をいじる
 		recording.temp_player = (mem.r8(players[1].addr.reg_pcnt) ~= 0xFF) and 2 or 1
 		exit_menu_to_play_common()
@@ -4689,23 +4671,23 @@ rbff2.startplugin          = function()
 		menu.exit()
 	end
 	local exit_menu_to_play        = function()
-		local col, ec, g = menu.replay.pos.col, scr:frame_number(), global
+		local col, g = menu.replay.pos.col, global
 		if menu.replay.pos.row == 14 and col[14] == 2 then -- 開始間合い固定 / 記憶
 			exit_menu_to_rec_pos()
 			return
 		end
 		g.dummy_mode = 6 -- リプレイモードにする
 		g.rec_main = rec_await_play
-		g.input_accepted = ec
+		input.accepted = scr:frame_number()
 		exit_menu_to_play_common()
 		menu.current = menu.main
 		menu.exit()
 	end
 	local exit_menu_to_play_cancel = function()
-		local ec, g = scr:frame_number(), global
+		local g = global
 		g.dummy_mode = 6 -- リプレイモードにする
 		g.rec_main = rec_await_play
-		g.input_accepted = ec
+		input.accepted = scr:frame_number()
 		exit_menu_to_play_common()
 		menu_to_tra()
 	end
@@ -5430,7 +5412,7 @@ rbff2.startplugin          = function()
 		if not (menu.current.pos.offset < menu.current.pos.row and menu.current.pos.row < menu.current.pos.offset + menu_max_row) then
 			menu.current.pos.offset = math.max(1, menu.current.pos.row - menu_max_row)
 		end
-		global.input_accepted = scr:frame_number()
+		input.accepted = scr:frame_number()
 	end
 	local menu_cur_lr = function(add_val, loop)
 		-- カーソル右移動
@@ -5451,10 +5433,9 @@ rbff2.startplugin          = function()
 			col_pos[menu.current.pos.row] = temp_col
 			-- printf("row %s/%s", temp_col, #cols)
 		end
-		global.input_accepted = scr:frame_number()
+		input.accepted = scr:frame_number()
 	end
 	menu.draw = function()
-		local ec = scr:frame_number()
 		local width = scr.width * scr.xscale
 		local height = scr.height * scr.yscale
 		if not in_match or in_player_select then return end
@@ -5462,15 +5443,12 @@ rbff2.startplugin          = function()
 		menu.prev_state = menu.state                                           -- 前フレームのメニューを更新
 
 		local ona, ona1, _ = input.accept("a")
-		if input.accept("st") then
-			global.input_accepted = ec -- Menu ON/OFF
+		if input.accept("st") then -- Menu ON/OFF
 		elseif ona then
 			---@diagnostic disable-next-line: redundant-parameter
 			menu.current.on_a[menu.current.pos.row](ona1 and 1 or 2) -- サブメニューへの遷移（あれば）
-			global.input_accepted = ec
 		elseif input.accept("b") then
 			menu.current.on_b[menu.current.pos.row]() -- メニューから戻る
-			global.input_accepted = ec
 		elseif input.accept("8") then
 			menu_cur_updown(-1) -- カーソル上移動
 		elseif input.accept("2") then
