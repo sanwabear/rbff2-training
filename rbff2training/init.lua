@@ -4460,15 +4460,16 @@ rbff2.startplugin          = function()
 				menu.current = menu.recording
 				return
 			end
-		elseif g.dummy_mode == 6 then                        -- リプレイ
-			g.dummy_mode = 1                                 -- 設定でリプレイに入らずに抜けたとき用にモードを1に戻しておく
-			menu.replay.pos.col[11] = recording.do_repeat and 2 or 1 -- 繰り返し
-			menu.replay.pos.col[12] = recording.repeat_interval + 1 -- 繰り返し間隔
-			menu.replay.pos.col[13] = g.await_neutral and 2 or 1 -- 繰り返し開始条件
-			menu.replay.pos.col[14] = g.replay_fix_pos       -- 開始間合い固定
-			menu.replay.pos.col[15] = g.replay_reset         -- 状態リセット
-			menu.replay.pos.col[16] = g.disp_replay and 2 or 1 -- ガイド表示
-			menu.replay.pos.col[17] = g.replay_stop_on_dmg and 2 or 1 -- ダメージでリプレイ中止
+		elseif g.dummy_mode == 6 then         -- リプレイ
+			local rcol = menu.replay.pos.col
+			g.dummy_mode = 1                  -- 設定でリプレイに入らずに抜けたとき用にモードを1に戻しておく
+			rcol[11] = recording.do_repeat and 2 or 1 -- 繰り返し
+			rcol[12] = recording.repeat_interval + 1 -- 繰り返し間隔
+			rcol[13] = g.await_neutral and 2 or 1 -- 繰り返し開始条件
+			rcol[14] = g.replay_fix_pos       -- 開始間合い固定
+			rcol[15] = g.replay_reset         -- 状態リセット
+			rcol[16] = g.disp_replay and 2 or 1 -- ガイド表示
+			rcol[17] = g.replay_stop_on_dmg and 2 or 1 -- ダメージでリプレイ中止
 			if not cancel and row == 1 then
 				menu.current = menu.replay
 				return
@@ -4509,38 +4510,38 @@ rbff2.startplugin          = function()
 		menu.current             = menu.main
 	end
 	local disp_menu_to_main        = function()
-		local col, p, g      = menu.disp.pos.col, players, global
+		local col, p, g, o   = menu.disp.pos.col, players, global, hide_options
 		--  タイトルラベル
-		p[1].disp_hitbox     = col[2] == 2                                          -- 1P 判定表示
-		p[2].disp_hitbox     = col[3] == 2                                          -- 2P 判定表示
-		p[1].disp_range      = col[4] == 2                                          -- 1P 間合い表示
-		p[2].disp_range      = col[5] == 2                                          -- 2P 間合い表示
-		p[1].disp_stun       = col[6] == 2                                          -- 1P 気絶ゲージ表示
-		p[2].disp_stun       = col[7] == 2                                          -- 2P 気絶ゲージ表示
-		p[1].disp_damage     = col[8] == 2                                          -- 1P ダメージ表示
-		p[2].disp_damage     = col[9] == 2                                          -- 2P ダメージ表示
-		p[1].disp_command    = col[10]                                              -- 1P 入力表示
-		p[2].disp_command    = col[11]                                              -- 2P 入力表示
-		g.disp_input         = col[12]                                              -- コマンド入力状態表示
-		g.disp_normal_frames = col[13]                                              -- 通常動作フレーム非表示
-		g.disp_frame         = col[14]                                              -- フレーム差表示
-		p[1].disp_frame      = col[15]                                              -- 1P フレーム数表示
-		p[2].disp_frame      = col[16]                                              -- 2P フレーム数表示
-		p[1].disp_fbfrm      = col[17] == 2                                         -- 1P 弾フレーム数表示
-		p[2].disp_fbfrm      = col[18] == 2                                         -- 2P 弾フレーム数表示
-		p[1].disp_state      = col[19]                                              -- 1P 状態表示
-		p[2].disp_state      = col[20]                                              -- 2P 状態表示
-		p[1].disp_base       = col[21]                                              -- 1P 処理アドレス表示
-		p[2].disp_base       = col[22]                                              -- 2P 処理アドレス表示
-		g.disp_pos           = col[23]                                              -- 1P 2P 距離表示
-		g.hide               = ut.hex_set(g.hide, hide_options.p1_char, col[24] ~= 1) -- 1P キャラ表示
-		g.hide               = ut.hex_set(g.hide, hide_options.p2_char, col[25] ~= 1) -- 2P キャラ表示
-		g.hide               = ut.hex_set(g.hide, hide_options.p1_phantasm, col[26] ~= 1) -- 1P 残像表示
-		g.hide               = ut.hex_set(g.hide, hide_options.p2_phantasm, col[27] ~= 1) -- 2P 残像表示
-		g.hide               = ut.hex_set(g.hide, hide_options.p1_effect, col[28] ~= 1) -- 1P エフェクト表示
-		g.hide               = ut.hex_set(g.hide, hide_options.p2_effect, col[29] ~= 1) -- 2P エフェクト表示
-		g.hide               = ut.hex_set(g.hide, hide_options.p_chan, col[30] ~= 1) -- Pちゃん表示
-		g.hide               = ut.hex_set(g.hide, hide_options.effect, col[31] ~= 1) -- エフェクト表示
+		p[1].disp_hitbox     = col[2] == 2                               -- 1P 判定表示
+		p[2].disp_hitbox     = col[3] == 2                               -- 2P 判定表示
+		p[1].disp_range      = col[4] == 2                               -- 1P 間合い表示
+		p[2].disp_range      = col[5] == 2                               -- 2P 間合い表示
+		p[1].disp_stun       = col[6] == 2                               -- 1P 気絶ゲージ表示
+		p[2].disp_stun       = col[7] == 2                               -- 2P 気絶ゲージ表示
+		p[1].disp_damage     = col[8] == 2                               -- 1P ダメージ表示
+		p[2].disp_damage     = col[9] == 2                               -- 2P ダメージ表示
+		p[1].disp_command    = col[10]                                   -- 1P 入力表示
+		p[2].disp_command    = col[11]                                   -- 2P 入力表示
+		g.disp_input         = col[12]                                   -- コマンド入力状態表示
+		g.disp_normal_frames = col[13]                                   -- 通常動作フレーム非表示
+		g.disp_frame         = col[14]                                   -- フレーム差表示
+		p[1].disp_frame      = col[15]                                   -- 1P フレーム数表示
+		p[2].disp_frame      = col[16]                                   -- 2P フレーム数表示
+		p[1].disp_fbfrm      = col[17] == 2                              -- 1P 弾フレーム数表示
+		p[2].disp_fbfrm      = col[18] == 2                              -- 2P 弾フレーム数表示
+		p[1].disp_state      = col[19]                                   -- 1P 状態表示
+		p[2].disp_state      = col[20]                                   -- 2P 状態表示
+		p[1].disp_base       = col[21]                                   -- 1P 処理アドレス表示
+		p[2].disp_base       = col[22]                                   -- 2P 処理アドレス表示
+		g.disp_pos           = col[23]                                   -- 1P 2P 距離表示
+		g.hide               = ut.hex_set(g.hide, o.p1_char, col[24] ~= 1) -- 1P キャラ表示
+		g.hide               = ut.hex_set(g.hide, o.p2_char, col[25] ~= 1) -- 2P キャラ表示
+		g.hide               = ut.hex_set(g.hide, o.p1_phantasm, col[26] ~= 1) -- 1P 残像表示
+		g.hide               = ut.hex_set(g.hide, o.p2_phantasm, col[27] ~= 1) -- 2P 残像表示
+		g.hide               = ut.hex_set(g.hide, o.p1_effect, col[28] ~= 1) -- 1P エフェクト表示
+		g.hide               = ut.hex_set(g.hide, o.p2_effect, col[29] ~= 1) -- 2P エフェクト表示
+		g.hide               = ut.hex_set(g.hide, o.p_chan, col[30] ~= 1) -- Pちゃん表示
+		g.hide               = ut.hex_set(g.hide, o.effect, col[31] ~= 1) -- エフェクト表示
 		menu.current         = menu.main
 	end
 	local ex_menu_to_main          = function()
@@ -4559,33 +4560,33 @@ rbff2.startplugin          = function()
 		menu.current = menu.main
 	end
 	local auto_menu_to_main        = function()
-		local col, g               = menu.auto.pos.col, global
+		local col, g, ez           = menu.auto.pos.col, global, mod.easy_move
 		-- 自動入力設定
-		g.auto_input.otg_throw     = col[2] == 2          -- ダウン投げ
-		g.auto_input.otg_attack    = col[3] == 2          -- ダウン攻撃
-		g.auto_input.combo_throw   = col[4] == 2          -- 通常投げの派生技
-		g.auto_input.rave          = col[5]               -- デッドリーレイブ
-		g.auto_input.desire        = col[6]               -- アンリミテッドデザイア
-		g.auto_input.drill         = col[7]               -- ドリル
-		g.auto_input.pairon        = col[8]               -- 超白龍
-		g.auto_input.real_counter  = col[9]               -- M.リアルカウンター
-		g.auto_input.auto_3ecst    = col[10] == 2         -- M.トリプルエクスタシー
-		g.auto_input.taneuma       = col[11] == 2         -- 炎の種馬
-		g.auto_input.katsu_ca      = col[12] == 2         -- 喝CA
-		g.auto_input.sikkyaku_ca   = col[13] == 2         -- 飛燕失脚CA
+		g.auto_input.otg_throw     = col[2] == 2     -- ダウン投げ
+		g.auto_input.otg_attack    = col[3] == 2     -- ダウン攻撃
+		g.auto_input.combo_throw   = col[4] == 2     -- 通常投げの派生技
+		g.auto_input.rave          = col[5]          -- デッドリーレイブ
+		g.auto_input.desire        = col[6]          -- アンリミテッドデザイア
+		g.auto_input.drill         = col[7]          -- ドリル
+		g.auto_input.pairon        = col[8]          -- 超白龍
+		g.auto_input.real_counter  = col[9]          -- M.リアルカウンター
+		g.auto_input.auto_3ecst    = col[10] == 2    -- M.トリプルエクスタシー
+		g.auto_input.taneuma       = col[11] == 2    -- 炎の種馬
+		g.auto_input.katsu_ca      = col[12] == 2    -- 喝CA
+		g.auto_input.sikkyaku_ca   = col[13] == 2    -- 飛燕失脚CA
 		-- 入力設定
-		g.auto_input.esaka_check   = col[15]              -- 詠酒チェック
-		g.auto_input.fast_kadenzer = col[16] == 2         -- 必勝！逆襲拳
-		g.auto_input.kara_ca       = col[17] == 2         -- 空振りCA
+		g.auto_input.esaka_check   = col[15]         -- 詠酒チェック
+		g.auto_input.fast_kadenzer = col[16] == 2    -- 必勝！逆襲拳
+		g.auto_input.kara_ca       = col[17] == 2    -- 空振りCA
 		-- 簡易入力のROMハックを反映する
-		mod.easy_move.real_counter(g.auto_input.real_counter)   -- ジャーマン, フェイスロック, 投げっぱなしジャーマン
-		mod.easy_move.esaka_check(g.auto_input.esaka_check)     -- 詠酒の条件チェックを飛ばす
-		mod.easy_move.taneuma_finish(g.auto_input.taneuma)      -- 自動 炎の種馬
-		mod.easy_move.fast_kadenzer(g.auto_input.fast_kadenzer) -- 必勝！逆襲拳1発キャッチカデンツァ
-		mod.easy_move.katsu_ca(g.auto_input.katsu_ca)           -- 自動喝CA
-		mod.easy_move.shikkyaku_ca(g.auto_input.sikkyaku_ca)    -- 自動飛燕失脚CA
-		mod.easy_move.kara_ca(g.auto_input.kara_ca)             -- 空振りCAできる
-		mod.easy_move.triple_ecstasy(g.auto_input.auto_3ecst)   -- 自動マリートリプルエクスタシー
+		ez.real_counter(g.auto_input.real_counter)   -- ジャーマン, フェイスロック, 投げっぱなしジャーマン
+		ez.esaka_check(g.auto_input.esaka_check)     -- 詠酒の条件チェックを飛ばす
+		ez.taneuma_finish(g.auto_input.taneuma)      -- 自動 炎の種馬
+		ez.fast_kadenzer(g.auto_input.fast_kadenzer) -- 必勝！逆襲拳1発キャッチカデンツァ
+		ez.katsu_ca(g.auto_input.katsu_ca)           -- 自動喝CA
+		ez.shikkyaku_ca(g.auto_input.sikkyaku_ca)    -- 自動飛燕失脚CA
+		ez.kara_ca(g.auto_input.kara_ca)             -- 空振りCAできる
+		ez.triple_ecstasy(g.auto_input.auto_3ecst)   -- 自動マリートリプルエクスタシー
 		menu.current = menu.main
 	end
 	local col_menu_to_main         = function()
@@ -4685,38 +4686,38 @@ rbff2.startplugin          = function()
 		col[7] = g.pow_mode                    -- POWゲージモード
 	end
 	local init_disp_menu_config    = function()
-		local col, p, g = menu.disp.pos.col, players, global
+		local col, p, g, o = menu.disp.pos.col, players, global, hide_options
 		-- タイトルラベル
-		col[2] = p[1].disp_hitbox and 2 or 1                          -- 判定表示
-		col[3] = p[2].disp_hitbox and 2 or 1                          -- 判定表示
-		col[4] = p[1].disp_range and 2 or 1                           -- 間合い表示
-		col[5] = p[2].disp_range and 2 or 1                           -- 間合い表示
-		col[6] = p[1].disp_stun and 2 or 1                            -- 1P 気絶ゲージ表示
-		col[7] = p[2].disp_stun and 2 or 1                            -- 2P 気絶ゲージ表示
-		col[8] = p[1].disp_damage and 2 or 1                          -- 1P ダメージ表示
-		col[9] = p[2].disp_damage and 2 or 1                          -- 2P ダメージ表示
-		col[10] = p[1].disp_command                                   -- 1P 入力表示
-		col[11] = p[2].disp_command                                   -- 2P 入力表示
-		col[12] = g.disp_input                                        -- コマンド入力状態表示
-		col[13] = g.disp_normal_frames                                -- 通常動作フレーム非表示
-		col[14] = g.disp_frame                                        -- フレーム差表示
-		col[15] = p[1].disp_frame                                     -- 1P フレーム数表示
-		col[16] = p[2].disp_frame                                     -- 2P フレーム数表示
-		col[17] = p[1].disp_fbfrm and 2 or 1                          -- 1P 弾フレーム数表示
-		col[18] = p[2].disp_fbfrm and 2 or 1                          -- 2P 弾フレーム数表示
-		col[19] = p[1].disp_state                                     -- 1P 状態表示
-		col[20] = p[2].disp_state                                     -- 2P 状態表示
-		col[21] = p[1].disp_base                                      -- 1P 処理アドレス表示
-		col[22] = p[2].disp_base                                      -- 2P 処理アドレス表示
-		col[23] = g.disp_pos and 2 or 1                               -- 1P 2P 距離表示
-		col[24] = ut.tstb(global.hide, hide_options.p1_char) and 1 or 2 -- 1P キャラ表示
-		col[25] = ut.tstb(global.hide, hide_options.p2_char) and 1 or 2 -- 2P キャラ表示
-		col[26] = ut.tstb(global.hide, hide_options.p1_phantasm) and 1 or 2 -- 1P 残像表示
-		col[27] = ut.tstb(global.hide, hide_options.p2_phantasm) and 1 or 2 -- 2P 残像表示
-		col[28] = ut.tstb(global.hide, hide_options.p1_effect) and 1 or 2 -- 1P エフェクト表示
-		col[29] = ut.tstb(global.hide, hide_options.p2_effect) and 1 or 2 -- 2P エフェクト表示
-		col[30] = ut.tstb(global.hide, hide_options.p_chan) and 1 or 2 -- Pちゃん表示
-		col[31] = ut.tstb(global.hide, hide_options.effect) and 1 or 2 -- エフェクト表示
+		col[2] = p[1].disp_hitbox and 2 or 1          -- 判定表示
+		col[3] = p[2].disp_hitbox and 2 or 1          -- 判定表示
+		col[4] = p[1].disp_range and 2 or 1           -- 間合い表示
+		col[5] = p[2].disp_range and 2 or 1           -- 間合い表示
+		col[6] = p[1].disp_stun and 2 or 1            -- 1P 気絶ゲージ表示
+		col[7] = p[2].disp_stun and 2 or 1            -- 2P 気絶ゲージ表示
+		col[8] = p[1].disp_damage and 2 or 1          -- 1P ダメージ表示
+		col[9] = p[2].disp_damage and 2 or 1          -- 2P ダメージ表示
+		col[10] = p[1].disp_command                   -- 1P 入力表示
+		col[11] = p[2].disp_command                   -- 2P 入力表示
+		col[12] = g.disp_input                        -- コマンド入力状態表示
+		col[13] = g.disp_normal_frames                -- 通常動作フレーム非表示
+		col[14] = g.disp_frame                        -- フレーム差表示
+		col[15] = p[1].disp_frame                     -- 1P フレーム数表示
+		col[16] = p[2].disp_frame                     -- 2P フレーム数表示
+		col[17] = p[1].disp_fbfrm and 2 or 1          -- 1P 弾フレーム数表示
+		col[18] = p[2].disp_fbfrm and 2 or 1          -- 2P 弾フレーム数表示
+		col[19] = p[1].disp_state                     -- 1P 状態表示
+		col[20] = p[2].disp_state                     -- 2P 状態表示
+		col[21] = p[1].disp_base                      -- 1P 処理アドレス表示
+		col[22] = p[2].disp_base                      -- 2P 処理アドレス表示
+		col[23] = g.disp_pos and 2 or 1               -- 1P 2P 距離表示
+		col[24] = ut.tstb(g.hide, o.p1_char) and 1 or 2 -- 1P キャラ表示
+		col[25] = ut.tstb(g.hide, o.p2_char) and 1 or 2 -- 2P キャラ表示
+		col[26] = ut.tstb(g.hide, o.p1_phantasm) and 1 or 2 -- 1P 残像表示
+		col[27] = ut.tstb(g.hide, o.p2_phantasm) and 1 or 2 -- 2P 残像表示
+		col[28] = ut.tstb(g.hide, o.p1_effect) and 1 or 2 -- 1P エフェクト表示
+		col[29] = ut.tstb(g.hide, o.p2_effect) and 1 or 2 -- 2P エフェクト表示
+		col[30] = ut.tstb(g.hide, o.p_chan) and 1 or 2 -- Pちゃん表示
+		col[31] = ut.tstb(g.hide, o.effect) and 1 or 2 -- エフェクト表示
 	end
 	local init_ex_menu_config      = function()
 		local col, p, g = menu.extra.pos.col, players, global
@@ -4740,22 +4741,22 @@ rbff2.startplugin          = function()
 	local init_auto_menu_config    = function()
 		local col, g = menu.auto.pos.col, global
 		-- -- 自動入力設定
-		col[2] = g.auto_input.otg_throw and 2 or 1     -- ダウン投げ
-		col[3] = g.auto_input.otg_attack and 2 or 1    -- ダウン攻撃
-		col[4] = g.auto_input.combo_throw and 2 or 1   -- 通常投げの派生技
-		col[5] = g.auto_input.rave                     -- デッドリーレイブ
-		col[6] = g.auto_input.desire                   -- アンリミテッドデザイア
-		col[7] = g.auto_input.drill                    -- ドリル
-		col[8] = g.auto_input.pairon                   -- 超白龍
-		col[9] = g.auto_input.real_counter             -- M.リアルカウンター
-		col[10] = g.auto_input.auto_3ecst and 2 or 1   -- M.トリプルエクスタシー
-		col[11] = global.auto_input.taneuma and 2 or 1 -- 炎の種馬
-		col[12] = global.auto_input.katsu_ca and 2 or 1 -- 喝CA
-		col[13] = global.auto_input.sikkyaku_ca and 2 or 1 -- 飛燕失脚CA
+		col[2] = g.auto_input.otg_throw and 2 or 1 -- ダウン投げ
+		col[3] = g.auto_input.otg_attack and 2 or 1 -- ダウン攻撃
+		col[4] = g.auto_input.combo_throw and 2 or 1 -- 通常投げの派生技
+		col[5] = g.auto_input.rave                -- デッドリーレイブ
+		col[6] = g.auto_input.desire              -- アンリミテッドデザイア
+		col[7] = g.auto_input.drill               -- ドリル
+		col[8] = g.auto_input.pairon              -- 超白龍
+		col[9] = g.auto_input.real_counter        -- M.リアルカウンター
+		col[10] = g.auto_input.auto_3ecst and 2 or 1 -- M.トリプルエクスタシー
+		col[11] = g.auto_input.taneuma and 2 or 1 -- 炎の種馬
+		col[12] = g.auto_input.katsu_ca and 2 or 1 -- 喝CA
+		col[13] = g.auto_input.sikkyaku_ca and 2 or 1 -- 飛燕失脚CA
 		-- -- 入力設定
-		col[15] = global.auto_input.esaka_check        -- 詠酒距離チェック
-		col[16] = global.auto_input.fast_kadenzer and 2 or 1 -- 必勝！逆襲拳
-		col[17] = global.auto_input.kara_ca and 2 or 1 -- 空振りCA
+		col[15] = g.auto_input.esaka_check        -- 詠酒距離チェック
+		col[16] = g.auto_input.fast_kadenzer and 2 or 1 -- 必勝！逆襲拳
+		col[17] = g.auto_input.kara_ca and 2 or 1 -- 空振りCA
 	end
 	local init_restart_fight       = function()
 	end
@@ -4793,36 +4794,32 @@ rbff2.startplugin          = function()
 		end
 	end
 	local menu_restart_fight       = function()
+		local col, g, o = menu.main.pos.col, global, hide_options
 		--main_menu.pos.row = 1
-		global.hide = ut.hex_set(global.hide, hide_options.meters, menu.main.pos.col[15] == 2) -- 体力,POWゲージ表示
-		global.hide = ut.hex_set(global.hide, hide_options.background, menu.main.pos.col[16] == 2) -- 背景表示
-		global.hide = ut.hex_set(global.hide, hide_options.shadow1, menu.main.pos.col[17] ~= 2) -- 影表示
-		global.hide = ut.hex_set(global.hide, hide_options.shadow2, menu.main.pos.col[17] ~= 3) -- 影表示
+		g.hide          = ut.hex_set(g.hide, o.meters, col[15] == 2) -- 体力,POWゲージ表示
+		g.hide          = ut.hex_set(g.hide, o.background, col[16] == 2) -- 背景表示
+		g.hide          = ut.hex_set(g.hide, o.shadow1, col[17] ~= 2) -- 影表示
+		g.hide          = ut.hex_set(g.hide, o.shadow2, col[17] ~= 3) -- 影表示
 		restart_fight({
-			next_p1    = menu.main.pos.col[9],                                               -- 1P セレクト
-			next_p2    = menu.main.pos.col[10],                                              -- 2P セレクト
-			next_p1col = menu.main.pos.col[11] - 1,                                          -- 1P カラー
-			next_p2col = menu.main.pos.col[12] - 1,                                          -- 2P カラー
-			next_stage = menu.stage_list[menu.main.pos.col[13]],                             -- ステージセレクト
-			next_bgm   = menu.bgms[menu.main.pos.col[14]].id,                                -- BGMセレクト
+			next_p1    = col[9],                                   -- 1P セレクト
+			next_p2    = col[10],                                  -- 2P セレクト
+			next_p1col = col[11] - 1,                              -- 1P カラー
+			next_p2col = col[12] - 1,                              -- 2P カラー
+			next_stage = menu.stage_list[col[13]],                 -- ステージセレクト
+			next_bgm   = menu.bgms[col[14]].id,                    -- BGMセレクト
 		})
-		global.fix_scr_top = menu.main.pos.col[18]
+		g.fix_scr_top = col[18]
 		mod.camerawork(global.fix_scr_top == 1)
 
 		cls_joy()
 		cls_ps()
-		-- 初期化
-		menu_to_main(nil, false, true)
-		-- メニューを抜ける
-		menu.state = menu.tra_main
+		menu_to_main(nil, false, true) -- 初期化
+		menu.state = menu.tra_main -- メニューを抜ける
 		menu.reset_pos = true
-		-- レコード＆リプレイ用の初期化
-		if global.old_dummy_mode == 5 then
-			-- レコード
-			exit_menu_to_rec(recording.last_slot or 1)
-		elseif global.old_dummy_mode == 6 then
-			-- リプレイ
-			exit_menu_to_play()
+		if g.old_dummy_mode == 5 then
+			exit_menu_to_rec(recording.last_slot or 1) -- レコード＆リプレイ用の初期化 レコード
+		elseif g.old_dummy_mode == 6 then
+			exit_menu_to_play()               -- レコード＆リプレイ用の初期化 リプレイ
 		end
 	end
 	-- 半角スペースで始まっているメニューはラベル行とみなす
