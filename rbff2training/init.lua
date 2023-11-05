@@ -3669,9 +3669,6 @@ rbff2.startplugin          = function()
 
 		-- プレイヤー操作事前設定（それぞれCPUか人力か入れ替えか）
 		-- キー入力の取得（1P、2Pの操作を入れ替えていたりする場合もあるのでモード判定と一緒に処理する）
-		local reg_p1cnt     = mem.r8(players[1].addr.reg_pcnt)
-		local reg_p2cnt     = mem.r8(players[2].addr.reg_pcnt)
-		local reg_st_b      = mem.r8(players[1].addr.reg_st_b)
 		for i, p in ipairs(players) do
 			-- プレイヤー vs プレイヤー, プレイヤー vs CPU, CPU vs プレイヤー, 1P&2P入れ替え, レコード, 同じ位置でリプレイ, その場でリプレイ
 			if global.dummy_mode == 2 then
@@ -3684,15 +3681,6 @@ rbff2.startplugin          = function()
 				p.control = i
 			end
 			mem.w16(p.addr.control, 0x0101 * p.control) -- Human 1 or 2, CPU 3
-
-			-- キー入力
-			if p.control == 1 then
-				p.reg_pcnt, p.reg_st_b = reg_p1cnt, reg_st_b
-			elseif p.control == 2 then
-				p.reg_pcnt, p.reg_st_b = reg_p2cnt, reg_st_b
-			else
-				p.reg_pcnt, p.reg_st_b = 0xFF, 0xFF
-			end
 		end
 		apply_1p2p_active()
 
@@ -4386,15 +4374,13 @@ rbff2.startplugin          = function()
 			end
 
 			-- レコーディング状態表示
-			if global.disp_replay and (global.dummy_mode == 5 or global.dummy_mode == 6) then
-				scr:draw_box(235, 200, 315, 224, 0xBB404040, 0xBB404040)
+			if global.disp_replay and recording.info and (global.dummy_mode == 5 or global.dummy_mode == 6) then
 				local info = recording.info
-				if info then
-					local label1 = string.format(info.label1, #recording.active_slot.name)
-					local label2 = string.format(info.label2, frame_to_time(3601 - #recording.active_slot.store))
-					scr:draw_text(239, 204, label1, info.col1)
-					scr:draw_text(239, 204 + get_line_height(), label2, info.col2)
-				end
+				local label1 = string.format(info.label1, #recording.active_slot.name)
+				local label2 = string.format(info.label2, frame_to_time(3601 - #recording.active_slot.store))
+				scr:draw_box(235, 200, 315, 224, 0xBB404040, 0xBB404040)
+				scr:draw_text(239, 204, label1, info.col1)
+				scr:draw_text(239, 204 + get_line_height(), label2, info.col2)
 			end
 		end
 	end
@@ -4575,38 +4561,31 @@ rbff2.startplugin          = function()
 	local auto_menu_to_main        = function()
 		local col, g               = menu.auto.pos.col, global
 		-- 自動入力設定
-		g.auto_input.otg_throw     = col[2] == 2 -- ダウン投げ
-		g.auto_input.otg_attack    = col[3] == 2 -- ダウン攻撃
-		g.auto_input.combo_throw   = col[4] == 2 -- 通常投げの派生技
-		g.auto_input.rave          = col[5] -- デッドリーレイブ
-		g.auto_input.desire        = col[6] -- アンリミテッドデザイア
-		g.auto_input.drill         = col[7] -- ドリル
-		g.auto_input.pairon        = col[8] -- 超白龍
-		g.auto_input.real_counter  = col[9] -- M.リアルカウンター
-		g.auto_input.auto_3ecst    = col[10] == 2 -- M.トリプルエクスタシー
-		g.auto_input.taneuma       = col[11] == 2 -- 炎の種馬
-		g.auto_input.katsu_ca      = col[12] == 2 -- 喝CA
-		g.auto_input.sikkyaku_ca   = col[13] == 2 -- 飛燕失脚CA
+		g.auto_input.otg_throw     = col[2] == 2          -- ダウン投げ
+		g.auto_input.otg_attack    = col[3] == 2          -- ダウン攻撃
+		g.auto_input.combo_throw   = col[4] == 2          -- 通常投げの派生技
+		g.auto_input.rave          = col[5]               -- デッドリーレイブ
+		g.auto_input.desire        = col[6]               -- アンリミテッドデザイア
+		g.auto_input.drill         = col[7]               -- ドリル
+		g.auto_input.pairon        = col[8]               -- 超白龍
+		g.auto_input.real_counter  = col[9]               -- M.リアルカウンター
+		g.auto_input.auto_3ecst    = col[10] == 2         -- M.トリプルエクスタシー
+		g.auto_input.taneuma       = col[11] == 2         -- 炎の種馬
+		g.auto_input.katsu_ca      = col[12] == 2         -- 喝CA
+		g.auto_input.sikkyaku_ca   = col[13] == 2         -- 飛燕失脚CA
 		-- 入力設定
-		g.auto_input.esaka_check   = col[15] -- 詠酒チェック
-		g.auto_input.fast_kadenzer = col[16] == 2 -- 必勝！逆襲拳
-		g.auto_input.kara_ca       = col[17] == 2 -- 空振りCA
-		--"ジャーマン", "フェイスロック", "投げっぱなしジャーマン"
-		mod.easy_move.real_counter(g.auto_input.real_counter)
-		-- 詠酒の条件チェックを飛ばす
-		mod.easy_move.esaka_check(g.auto_input.esaka_check)
-		-- 自動 炎の種馬
-		mod.easy_move.taneuma_finish(g.auto_input.taneuma)
-		-- 必勝！逆襲拳1発キャッチカデンツァ
-		mod.easy_move.fast_kadenzer(g.auto_input.fast_kadenzer)
-		-- 自動喝CA
-		mod.easy_move.katsu_ca(g.auto_input.katsu_ca)
-		-- 自動飛燕失脚CA
-		mod.easy_move.shikkyaku_ca(g.auto_input.sikkyaku_ca)
-		-- 空振りCAできる
-		mod.easy_move.kara_ca(g.auto_input.kara_ca)
-		-- 自動マリートリプルエクスタシー
-		mod.easy_move.triple_ecstasy(g.auto_input.auto_3ecst)
+		g.auto_input.esaka_check   = col[15]              -- 詠酒チェック
+		g.auto_input.fast_kadenzer = col[16] == 2         -- 必勝！逆襲拳
+		g.auto_input.kara_ca       = col[17] == 2         -- 空振りCA
+		-- 簡易入力のROMハックを反映する
+		mod.easy_move.real_counter(g.auto_input.real_counter)   -- ジャーマン, フェイスロック, 投げっぱなしジャーマン
+		mod.easy_move.esaka_check(g.auto_input.esaka_check)     -- 詠酒の条件チェックを飛ばす
+		mod.easy_move.taneuma_finish(g.auto_input.taneuma)      -- 自動 炎の種馬
+		mod.easy_move.fast_kadenzer(g.auto_input.fast_kadenzer) -- 必勝！逆襲拳1発キャッチカデンツァ
+		mod.easy_move.katsu_ca(g.auto_input.katsu_ca)           -- 自動喝CA
+		mod.easy_move.shikkyaku_ca(g.auto_input.sikkyaku_ca)    -- 自動飛燕失脚CA
+		mod.easy_move.kara_ca(g.auto_input.kara_ca)             -- 空振りCAできる
+		mod.easy_move.triple_ecstasy(g.auto_input.auto_3ecst)   -- 自動マリートリプルエクスタシー
 		menu.current = menu.main
 	end
 	local col_menu_to_main         = function()
@@ -4621,7 +4600,7 @@ rbff2.startplugin          = function()
 		g.rec_main            = rec_await_no_input
 		input.accepted        = scr:frame_number()
 		-- 選択したプレイヤー側の反対側の操作をいじる
-		recording.temp_player = (mem.r8(players[1].addr.reg_pcnt) ~= 0xFF) and 2 or 1
+		recording.temp_player = players[1].reg_pcnt ~= 0 and 2 or 1
 		recording.last_slot   = slot_no
 		recording.active_slot = recording.slot[slot_no]
 		menu.current          = menu.main
