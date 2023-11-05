@@ -2296,6 +2296,12 @@ rbff2.startplugin          = function()
 		fixpos          = nil,
 		do_repeat       = false,
 		repeat_interval = 0,
+
+		info            = { label1 = "", col1 = 0, label2 = "", col2 = 0 },
+		info1           = { label1 = "● REC %s", col1 = 0xFFFF1133, label2 = "%s", col2 = 0xFFFF1133 },
+		info2           = { label1 = "■ リプレイ中", col1 = 0xFFFFFFFF, label2 = "スタートおしっぱでメニュー", col2 = 0xFFFFFFFF },
+		info3           = { label1 = "■ スタートでリプレイ", col1 = 0xFFFFFFFF, label2 = "スタートおしっぱでメニュー", col2 = 0xFFFFFFFF },
+		info4           = { label1 = "● 位置REC %s", col1 = 0xFFFF1133, label2 = "スタートでメニュー", col2 = 0xFFFF1133 },
 	}
 	for i = 1, 8 do
 		recording.slot[i] = {
@@ -2367,6 +2373,7 @@ rbff2.startplugin          = function()
 	end
 	-- リプレイ開始位置記憶
 	rec_fixpos = function()
+		recording.info   = recording.info4
 		local pos        = { players[1].cmd_side, players[2].cmd_side }
 		local fixpos     = { mem.r16i(players[1].addr.pos), mem.r16i(players[2].addr.pos) }
 		local fixsway    = { mem.r8(players[1].addr.sway_status), mem.r8(players[2].addr.sway_status) }
@@ -2395,6 +2402,7 @@ rbff2.startplugin          = function()
 		end
 	end
 	rec_await_1st_input = function(_)
+		recording.info = recording.info1
 		local p = players[recording.temp_player]
 		if p.reg_pcnt > 0 then
 			local pos = { players[1].cmd_side, players[2].cmd_side }
@@ -2419,6 +2427,7 @@ rbff2.startplugin          = function()
 		table.insert(recording.active_slot.store, { joy = 0, pos = pos })
 	end
 	rec_await_play = function(to_joy) -- リプレイまち
+		recording.info = recording.info3
 		local force_start_play = global.rec_force_start_play
 		global.rec_force_start_play = false -- 初期化
 
@@ -2500,6 +2509,7 @@ rbff2.startplugin          = function()
 	end
 	-- 繰り返しリプレイ待ち
 	rec_repeat_play = function(_)
+		recording.info = recording.info2
 		-- 繰り返し前の行動が完了するまで待つ
 		local p, op, p_ok = players[3 - recording.player], players[recording.player], true
 		if global.await_neutral == true then
@@ -3688,7 +3698,7 @@ rbff2.startplugin          = function()
 
 		-- キーディス用の処理
 		for _, p in ipairs(players) do
-			local key_hist    = "" -- _1~_9 _A_B_C_D
+			local key_hist = "" -- _1~_9 _A_B_C_D
 			local ggbutton = { lever = 5, A = false, B = false, C = false, D = false, }
 
 			-- GG風キーディスの更新
@@ -4377,28 +4387,13 @@ rbff2.startplugin          = function()
 
 			-- レコーディング状態表示
 			if global.disp_replay and (global.dummy_mode == 5 or global.dummy_mode == 6) then
-				scr:draw_box(260 - 25, 208 - 8, 320 - 5, 224, 0xBB404040, 0xBB404040)
-				if global.rec_main == rec_await_1st_input then -- 初回入力まち
-					scr:draw_text(265, 204, "● REC " .. #recording.active_slot.name, 0xFFFF1133)
-					scr:draw_text(290, 212, frame_to_time(3600), 0xFFFF1133)
-				elseif global.rec_main == rec_await_1st_input then
-					scr:draw_text(265, 204, "● REC " .. #recording.active_slot.name, 0xFFFF1133)
-					scr:draw_text(290, 212, frame_to_time(3600), 0xFFFF1133)
-				elseif global.rec_main == rec_input then -- 入力中
-					scr:draw_text(265, 204, "● REC " .. #recording.active_slot.name .. "\n" ..
-						frame_to_time(3601 - #recording.active_slot.store), 0xFFFF1133)
-				elseif global.rec_main == rec_repeat_play then -- 自動リプレイまち
-					scr:draw_text(265 - 15, 204, "■ リプレイ中\n" .. "スタートおしっぱでメニュー", 0xFFFFFFFF)
-				elseif global.rec_main == rec_play then -- リプレイ中
-					scr:draw_text(265 - 15, 204, "■ リプレイ中\n" .. "スタートおしっぱでメニュー", 0xFFFFFFFF)
-				elseif global.rec_main == rec_play_interval then -- リプレイまち
-					scr:draw_text(265 - 15, 204, "■ リプレイ中\n" .. "スタートおしっぱでメニュー", 0xFFFFFFFF)
-				elseif global.rec_main == rec_await_play then -- リプレイまち
-					scr:draw_text(265 - 15, 204, "■ スタートでリプレイ\n" .. "スタートおしっぱでメニュー", 0xFFFFFFFF)
-				elseif global.rec_main == rec_fixpos then -- 開始位置記憶中
-					scr:draw_text(265, 204, "● 位置REC " .. #recording.active_slot.name, 0xFFFF1133)
-					scr:draw_text(265 - 15, 212, "スタートでメニュー", 0xFFFF1133)
-				elseif global.rec_main == rec_await_1st_input then
+				scr:draw_box(235, 200, 315, 224, 0xBB404040, 0xBB404040)
+				local info = recording.info
+				if info then
+					local label1 = string.format(info.label1, #recording.active_slot.name)
+					local label2 = string.format(info.label2, frame_to_time(3601 - #recording.active_slot.store))
+					scr:draw_text(239, 204, label1, info.col1)
+					scr:draw_text(239, 204 + get_line_height(), label2, info.col2)
 				end
 			end
 		end
