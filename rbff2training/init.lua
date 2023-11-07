@@ -2201,10 +2201,10 @@ rbff2.startplugin          = function()
 	input.accept             = function(btn, state_past)
 		---@diagnostic disable-next-line: undefined-global
 		state_past = state_past or (scr:frame_number() - input.accepted)
-		if state_past <= 12 then return false, false, false end
 		local on = { false, false }
 		for i, _, joy in ut.ifind_all(players, function(p) return p.joy["_" .. btn] end) do
-			on[i] = 0 < joy and (type(btn) == "number" or joy <= state_past)
+			on[i] = 12 < state_past and 0 < joy and (type(btn) == "number" or joy <= state_past)
+			on[i] = on[i] or (60 < joy and joy % 10 == 0)
 			if on[i] then
 				play_cursor_sound()
 				---@diagnostic disable-next-line: undefined-global
