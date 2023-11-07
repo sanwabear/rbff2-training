@@ -2279,9 +2279,9 @@ rbff2.startplugin          = function()
 		repeat_interval = 0,
 
 		info            = { label1 = "", col1 = 0, label2 = "", col2 = 0 },
-		info1           = { label1 = "● REC ", col1 = 0xFFFF1133, label2 = "%s", col2 = 0xFFFF1133 },
-		info2           = { label1 = "■ REPLAY", col1 = 0xFFFFFFFF, label2 = "HOLD START to MEMU", col2 = 0xFFFFFFFF },
-		info3           = { label1 = "■ PRESS START to REPLAY", col1 = 0xFFFFFFFF, label2 = "HOLD START to MEMU", col2 = 0xFFFFFFFF },
+		info1           = { label1 = "● RECORDING ", col1 = 0xFFFF1133, label2 = "%s", col2 = 0xFFFF1133 },
+		info2           = { label1 = "‣ REPLAY", col1 = 0xFFFFFFFF, label2 = "HOLD START to MEMU", col2 = 0xFFFFFFFF },
+		info3           = { label1 = "▪ PRESS START to REPLAY", col1 = 0xFFFFFFFF, label2 = "HOLD START to MEMU", col2 = 0xFFFFFFFF },
 		info4           = { label1 = "● POSITION REC", col1 = 0xFFFF1133, label2 = "PRESS START to MENU", col2 = 0xFFFF1133 },
 	}
 	for i = 1, 8 do
@@ -2502,6 +2502,7 @@ rbff2.startplugin          = function()
 	end
 	-- リプレイ中
 	rec_play = function(_)
+		recording.info = recording.info2
 		if input.accept("st") then
 			-- 状態変更
 			global.rec_main = rec_await_play
@@ -3674,6 +3675,7 @@ rbff2.startplugin          = function()
 			for k, v, kk in ut.find_all(p.key.state, function(k, v) return string.gsub(k, "_", "") end) do
 				if tonumber(kk) then
 					if 0 < v then key, ggbutton.lever = (k == "_5" and "_N" or k) .. key, tonumber(kk) end
+				elseif kk == "st" or kk == "sl" then
 				else
 					if 0 < v then key, ggbutton[kk] = key .. k, true end
 				end
