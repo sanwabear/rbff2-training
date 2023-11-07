@@ -1476,15 +1476,14 @@ rbff2.startplugin          = function()
 			update_act      = false,
 			move_count      = 0,         -- スクショ用の動作カウント
 			on_punish       = 0,
-			key_now         = {},        -- 個別キー入力フレーム
-			key_pre         = {},        -- 前フレームまでの個別キー入力フレーム
-			key_hist        = ut.new_filled_table(global.key_hists, ""),
-			key_frames      = ut.new_filled_table(global.key_hists, 0),
-			ggkey           = ggkey_create(i == 1),
+			key             = {
+				log = ut.new_filled_table(global.key_hists, { key = "", frame = 0 }),
+				gg = ggkey_create(i == 1),
+				input = {},
+			},
 			throw_boxies    = {},
 			fireballs       = {},
 			random_boolean  = math.random(255) % 2 == 0,
-			joy             = {},
 
 			addr            = {
 				base        = base,            -- キャラ状態とかのベースのアドレス
@@ -1534,7 +1533,6 @@ rbff2.startplugin          = function()
 			p.char_data = p.is_fireball and db.chars[#db.chars] or db.chars[data] -- 弾はダミーを設定する
 			if not p.is_fireball then p.proc_active = true end
 		end
-		for k = 1, #kprops do p.key_now[kprops[k]], p.key_pre[kprops[k]] = 0, 0 end
 		p.update_tmp_combo = function(data)
 			if data == 1 then    -- 一次的なコンボ数が1リセットしたタイミングでコンボ用の情報もリセットする
 				p.last_combo             = 1 -- 2以上でのみ0x10B4E4か0x10B4E5が更新されるのでここで1リセットする
@@ -2182,29 +2180,31 @@ rbff2.startplugin          = function()
 	input.read               = function()
 		-- 1Pと2Pの入力読取
 		for i, p in ipairs(players) do
-			p.status_b, p.reg_pcnt = mem.r8(p.addr.reg_st_b) ~ 0xFF, mem.r8(p.addr.reg_pcnt) ~ 0xFF
-			local cnt_r, cnt_b, tmp_joy = 0xF & p.reg_pcnt, 0xF0 & p.reg_pcnt, {}
-			p.joy = p.joy or {}
-			for k, v in pairs(db.cmd_status_b[i]) do tmp_joy[k] = ut.tstb(p.status_b, v) end
+			if not p.key then return end
+			p.status_b, p.reg_pcnt = mem.r8(p.addr.reg_st_b) ~ 0xFF, mem.r8(p.addr.reg_pcnt) ~ 0xFF, {}
+			local cnt_r, cnt_b, tmp = 0xF & p.reg_pcnt, 0xF0 & p.reg_pcnt, {}
+			for k, v in pairs(db.cmd_status_b[i]) do tmp[k] = ut.tstb(p.status_b, v) end
 			for k, v in ut.find_all(db.cmd_bytes, function(_, v) return type(v) == "number" end) do
-				tmp_joy[k] = (0x10 > v and v == cnt_r) or ut.tstb(cnt_b, v)
+				tmp[k] = (0x10 > v and v == cnt_r) or ut.tstb(cnt_b, v)
 			end
-			for k, v in pairs(tmp_joy) do
+			local state = p.key.state or {}
+			for k, v in pairs(tmp) do
 				if v then
-					p.joy[k] = (not p.joy[k] or p.joy[k] < 0) and 1 or p.joy[k] + 1
+					state[k] = (not state[k] or state[k] < 0) and 1 or state[k] + 1
 				else
-					p.joy[k] = (not p.joy[k] or p.joy[k] > 0) and -1 or p.joy[k] - 1
+					state[k] = (not state[k] or state[k] > 0) and -1 or state[k] - 1
 				end
 			end
+			p.key.state = state
 		end
 	end
 	input.accept             = function(btn, state_past)
 		---@diagnostic disable-next-line: undefined-global
 		state_past = state_past or (scr:frame_number() - input.accepted)
 		local on = { false, false }
-		for i, _, joy in ut.ifind_all(players, function(p) return p.joy["_" .. btn] end) do
-			on[i] = 12 < state_past and 0 < joy and (type(btn) == "number" or joy <= state_past)
-			on[i] = on[i] or (60 < joy and joy % 10 == 0)
+		for i, _, state in ut.ifind_all(players, function(p) return p.key.state["_" .. btn] end) do
+			on[i] = 12 < state_past and 0 < state and (type(btn) == "number" or state <= state_past)
+			on[i] = on[i] or (60 < state and state % 10 == 0)
 			if on[i] then
 				play_cursor_sound()
 				---@diagnostic disable-next-line: undefined-global
@@ -2215,13 +2215,13 @@ rbff2.startplugin          = function()
 		return false, false, false
 	end
 	input._1f                = function(btn)
-		for _, p in ipairs(players) do if p.joy["_" .. btn] == 1 then return true end end
+		for _, p in ipairs(players) do if p.key.state["_" .. btn] == 1 then return true end end
 		return false
 	end
 	input.long_start         = function(state_past)
 		if 12 < state_past then
 			for _, p in ipairs(players) do
-				if 35 < p.joy._st then
+				if 35 < p.key.state._st then
 					play_cursor_sound()
 					return true
 				end
@@ -2375,8 +2375,8 @@ rbff2.startplugin          = function()
 	rec_fixpos = function()
 		recording.info   = recording.info4
 		local pos        = { players[1].cmd_side, players[2].cmd_side }
-		local fixpos     = { mem.r16i(players[1].addr.pos), mem.r16i(players[2].addr.pos) }
-		local fixsway    = { mem.r8(players[1].addr.sway_status), mem.r8(players[2].addr.sway_status) }
+		local fixpos     = { players[1].pos, players[2].pos }
+		local fixsway    = { players[1].sway_status, players[2].sway_status }
 		local fixscr     = {
 			x = mem.r16(mem.stage_base_addr + screen.offset_x),
 			y = mem.r16(mem.stage_base_addr + screen.offset_y),
@@ -2387,24 +2387,15 @@ rbff2.startplugin          = function()
 	-- 初回入力まち
 	-- 未入力状態を待ちける→入力開始まで待ち受ける
 	rec_await_no_input = function(_)
-		local no_input = true
-		for _, p in ipairs(players) do
-			for _, v in pairs(p.joy) do
-				if 0 < v then
-					no_input = false
-					break
-				end
-			end
-		end
-		if no_input then -- 状態変更
+		if players[recording.temp_player].reg_pcnt == 0 then -- 状態変更
 			global.rec_main = rec_await_1st_input
-			print(global.frame_number .. " rec_await_no_input -> rec_await_1st_input")
+			print(global.frame_number .. " rec_await_no_input -> rec_await_1st_input ", recording.temp_player)
 		end
 	end
 	rec_await_1st_input = function(_)
 		recording.info = recording.info1
 		local p = players[recording.temp_player]
-		if p.reg_pcnt > 0 then
+		if p.reg_pcnt ~= 0 then
 			local pos = { players[1].cmd_side, players[2].cmd_side }
 			recording.player = recording.temp_player
 			recording.active_slot.cleanup = false
@@ -2420,6 +2411,7 @@ rbff2.startplugin          = function()
 		end
 	end
 	rec_input = function(_) -- 入力中+入力保存
+		recording.info = recording.info1
 		local p = players[recording.temp_player]
 		local pos = { players[1].cmd_side, players[2].cmd_side }
 		table.remove(recording.active_slot.store)
@@ -3686,31 +3678,26 @@ rbff2.startplugin          = function()
 
 		-- キーディス用の処理
 		for _, p in ipairs(players) do
-			local key_hist = "" -- _1~_9 _A_B_C_D
+			local key = "" -- _1~_9 _A_B_C_D
 			local ggbutton = { lever = 5, A = false, B = false, C = false, D = false, }
 
 			-- GG風キーディスの更新
-			for k, v, kk in ut.find_all(p.joy, function(k, v) return string.gsub(k, "_", "") end) do
+			for k, v, kk in ut.find_all(p.key.state, function(k, v) return string.gsub(k, "_", "") end) do
 				if tonumber(kk) then
-					if 0 < v then key_hist, ggbutton.lever = (k == "_5" and "_N" or k) .. key_hist, tonumber(kk) end
+					if 0 < v then key, ggbutton.lever = (k == "_5" and "_N" or k) .. key, tonumber(kk) end
 				else
-					if 0 < v then key_hist, ggbutton[kk] = key_hist .. k, true end
+					if 0 < v then key, ggbutton[kk] = key .. k, true end
 				end
 			end
-			ut.table_add(p.ggkey.hist, ggbutton, 60)
+			ut.table_add(p.key.gg.hist, ggbutton, 60)
 
 			-- キーログの更新
-			if p.key_hist[#p.key_hist] ~= key_hist then
-				for k = 2, #p.key_hist do
-					p.key_hist[k - 1], p.key_frames[k - 1] = p.key_hist[k], p.key_frames[k]
-				end
-				if global.key_hists ~= #p.key_hist then
-					p.key_hist[#p.key_hist + 1], p.key_frames[#p.key_frames + 1] = key_hist, 1
-				else
-					p.key_hist[#p.key_hist], p.key_frames[#p.key_frames] = key_hist, 1
-				end
-			elseif p.key_frames[#p.key_frames] < 999 then
-				p.key_frames[#p.key_frames] = p.key_frames[#p.key_frames] + 1 --999が上限
+			local prev = p.key.log[#p.key.log]
+			if prev and prev.key == key then
+				prev.frame = prev.frame < 999 and prev.frame + 1 or prev.frame
+			else
+				table.insert(p.key.log, { key = key, frame = 1 })
+				while global.key_hists < #p.key.log do table.remove(p.key.log, 1) end
 			end
 
 			do_recover(p)
@@ -4164,8 +4151,7 @@ rbff2.startplugin          = function()
 			for i, p in ipairs(players) do
 				-- コマンド入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
 				if p.disp_command == 2 or p.disp_command == 3 then
-					for k = 1, #p.key_hist do draw_cmd(i, k, p.key_frames[k], p.key_hist[k]) end
-					draw_cmd(i, #p.key_hist + 1, 0, "")
+					for k, log in ipairs(p.key.log) do draw_cmd(i, k, log.frame, log.key) end
 				end
 			end
 
@@ -4317,8 +4303,8 @@ rbff2.startplugin          = function()
 			for _, p in ipairs(players) do
 				-- コマンド入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
 				if p.disp_command == 2 or p.disp_command == 4 then
-					local xoffset, yoffset = p.ggkey.xoffset, p.ggkey.yoffset
-					local oct_vt, key_xy = p.ggkey.oct_vt, p.ggkey.key_xy
+					local xoffset, yoffset = p.key.gg.xoffset, p.key.gg.yoffset
+					local oct_vt, key_xy = p.key.gg.oct_vt, p.key.gg.key_xy
 					local tracks, max_track = {}, 6 -- 軌跡をつくる 軌跡は6個まで
 					scr:draw_box(xoffset - 13, yoffset - 13, xoffset + 35, yoffset + 13, 0x80404040, 0x80404040)
 					for ni = 1, 8 do -- 八角形描画
@@ -4330,9 +4316,9 @@ rbff2.startplugin          = function()
 						scr:draw_line(xy1.x3, xy1.y3, xy2.x3, xy2.y3, 0xDDCCCCCC)
 						scr:draw_line(xy1.x4, xy1.y4, xy2.x4, xy2.y4, 0xDDCCCCCC)
 					end
-					for j = #p.ggkey.hist, 2, -1 do -- 軌跡採取
+					for j = #p.key.gg.hist, 2, -1 do -- 軌跡採取
 						local k = j - 1
-						local xy1, xy2 = key_xy[p.ggkey.hist[j].lever], key_xy[p.ggkey.hist[k].lever]
+						local xy1, xy2 = key_xy[p.key.gg.hist[j].lever], key_xy[p.key.gg.hist[k].lever]
 						if xy1.x ~= xy2.x or xy1.y ~= xy2.y then
 							table.insert(tracks, 1, { xy1 = xy1, xy2 = xy2, })
 							if #tracks >= max_track then break end
@@ -4356,7 +4342,7 @@ rbff2.startplugin          = function()
 							scr:draw_line(xy1.x4, xy1.y4, xy2.x4, xy2.y4, col)
 						end
 					end
-					local ggbutton = p.ggkey.hist[#p.ggkey.hist]
+					local ggbutton = p.key.gg.hist[#p.key.gg.hist]
 					if ggbutton then -- ボタン描画
 						for _, ctl in ipairs({
 							{ key = "",  btn = "_)", x = key_xy[ggbutton.lever].xt, y = key_xy[ggbutton.lever].yt, col = 0xFFCC0000 },
@@ -4601,7 +4587,7 @@ rbff2.startplugin          = function()
 		g.rec_main            = rec_await_no_input
 		input.accepted        = scr:frame_number()
 		-- 選択したプレイヤー側の反対側の操作をいじる
-		recording.temp_player = players[1].reg_pcnt ~= 0 and 2 or 1
+		recording.temp_player = players[1].reg_pcnt ~= 0 and 1 or 2
 		recording.last_slot   = slot_no
 		recording.active_slot = recording.slot[slot_no]
 		menu.current          = menu.main
