@@ -2279,8 +2279,8 @@ rbff2.startplugin          = function()
 		repeat_interval = 0,
 
 		info            = { label1 = "", col1 = 0, label2 = "", col2 = 0 },
-		info1           = { label1 = "● RECORDING ", col1 = 0xFFFF1133, label2 = "%s", col2 = 0xFFFF1133 },
-		info2           = { label1 = "‣ REPLAY", col1 = 0xFFFFFFFF, label2 = "HOLD START to MEMU", col2 = 0xFFFFFFFF },
+		info1           = { label1 = "● RECORDING %s", col1 = 0xFFFF1133, label2 = "", col2 = 0xFFFF1133 },
+		info2           = { label1 = "‣ REPLAYING %s", col1 = 0xFFFFFFFF, label2 = "HOLD START to MEMU", col2 = 0xFFFFFFFF },
 		info3           = { label1 = "▪ PRESS START to REPLAY", col1 = 0xFFFFFFFF, label2 = "HOLD START to MEMU", col2 = 0xFFFFFFFF },
 		info4           = { label1 = "● POSITION REC", col1 = 0xFFFF1133, label2 = "PRESS START to MENU", col2 = 0xFFFF1133 },
 	}
@@ -4353,8 +4353,9 @@ rbff2.startplugin          = function()
 			-- レコーディング状態表示
 			if global.disp_replay and recording.info and (global.dummy_mode == 5 or global.dummy_mode == 6) then
 				local info = recording.info
-				local label1 = string.format(info.label1)
-				local label2 = string.format(info.label2, frame_to_time(3601 - #recording.active_slot.store))
+				local time = global.rec_main == rec_play and frame_to_time(#recording.active_slot.store - recording.play_count) or frame_to_time(3600 - #recording.active_slot.store)
+				local label1 = string.format(info.label1, time)
+				local label2 = string.format(info.label2, time)
 				scr:draw_box(235, 200, 315, 224, 0xBB404040, 0xBB404040)
 				scr:draw_text(239, 204, label1, info.col1)
 				scr:draw_text(239, 204 + get_line_height(), label2, info.col2)
