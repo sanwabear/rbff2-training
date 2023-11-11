@@ -4974,351 +4974,163 @@ rbff2.startplugin          = function()
 	for i = 1, 61 do table.insert(gd_frms, string.format("%sF後にガード解除", (i - 1))) end
 	local no_hit_row = { "OFF", }
 	for i = 1, 99 do table.insert(no_hit_row, string.format("%s段目で空振り", i)) end
-	menu.training = {
-		list = {
-			{ "ダミーモード", { "プレイヤー vs プレイヤー", "プレイヤー vs CPU", "CPU vs プレイヤー", "1P&2P入れ替え", "レコード", "リプレイ" }, },
-			{ "                         ダミー設定" },
-			{ "1P アクション", { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
-			{ "2P アクション", { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
-			{ "1P ガード", { "なし", "オート", "ブレイクショット（Aで選択画面へ）", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
-			{ "2P ガード", { "なし", "オート", "ブレイクショット（Aで選択画面へ）", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
-			{ "1ガード持続フレーム数", gd_frms, },
-			{ "ブレイクショット設定", bs_blocks },
-			{ "1P やられ時行動", { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ（Aで選択画面へ）", "グランドスウェー（Aで選択画面へ）", "起き上がり攻撃", }, },
-			{ "2P やられ時行動", { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ（Aで選択画面へ）", "グランドスウェー（Aで選択画面へ）", "起き上がり攻撃", }, },
-			{ "ガードリバーサル設定", bs_blocks },
-			{ "1P 強制空振り", no_hit_row, },
-			{ "2P 強制空振り", no_hit_row, },
-			{ "1P 挑発で前進", menu.labels.off_on, },
-			{ "2P 挑発で前進", menu.labels.off_on, },
-			{ "1P Y座標強制", force_y_pos, },
-			{ "2P Y座標強制", force_y_pos, },
-			{ "画面下に移動", { "OFF", "2Pを下に移動", "1Pを下に移動", }, },
-		},
-		pos = { -- メニュー内の選択位置
-			offset = 1,
-			row = 1,
-			col = {
-				1, -- ダミーモード            1
-				0, -- レコード・リプレイ設定  2
-				1, -- 1P アクション           3
-				1, -- 2P アクション           4
-				1, -- 1P ガード               5
-				1, -- 2P ガード               6
-				1, -- 1ガード持続フレーム数   7
-				1, -- ブレイクショット設定    8
-				1, -- 1P やられ時行動         9
-				1, -- 2P やられ時行動        10
-				1, -- ガードリバーサル設定   11
-				1, -- 1P 強制空振り          12
-				1, -- 2P 強制空振り          13
-				1, -- 1P 挑発で前進          14
-				1, -- 2P 挑発で前進          15
-				1, -- 1P Y座標強制           16
-				1, -- 2P Y座標強制           17
-				1, -- X座標同期              18
-			},
-		},
-		on_a = ut.new_filled_table(18, menu_to_main),
-		on_b = ut.new_filled_table(18, menu_to_main_cancel),
-	}
 
-	menu.bar = {
-		list = {
-			{ "                         ゲージ設定" },
-			{ "1P 体力ゲージ量", life_range, }, -- "最大", "赤", "ゼロ" ...
-			{ "2P 体力ゲージ量", life_range, }, -- "最大", "赤", "ゼロ" ...
-			{ "1P POWゲージ量", pow_range, }, -- "最大", "半分", "ゼロ" ...
-			{ "2P POWゲージ量", pow_range, }, -- "最大", "半分", "ゼロ" ...
-			{ "体力ゲージモード", { "自動回復", "固定" }, },
-			{ "POWゲージモード", { "自動回復", "固定", "通常動作" }, },
-		},
-		pos = {
-			-- メニュー内の選択位置
-			offset = 1,
-			row = 2,
-			col = {
-				0, -- －ゲージ設定－          1
-				2, -- 1P 体力ゲージ量         2
-				2, -- 2P 体力ゲージ量         3
-				2, -- 1P POWゲージ量          4
-				2, -- 2P POWゲージ量          5
-				2, -- 体力ゲージモード        6
-				2, -- POWゲージモード         7
-			},
-		},
-		on_a = ut.new_filled_table(7, bar_menu_to_main),
-		on_b = ut.new_filled_table(7, bar_menu_to_main),
-	}
 
-	menu.disp = {
-		list = {
-			{ "                          表示設定" },
-			{ "1P 判定表示", { "OFF", "ON", }, },
-			{ "2P 判定表示", { "OFF", "ON", }, },
-			{ "1P 間合い表示", { "OFF", "ON", }, },
-			{ "2P 間合い表示", { "OFF", "ON", }, },
-			{ "1P 気絶ゲージ表示", menu.labels.off_on, },
-			{ "2P 気絶ゲージ表示", menu.labels.off_on, },
-			{ "1P ダメージ表示", menu.labels.off_on, },
-			{ "2P ダメージ表示", menu.labels.off_on, },
-			{ "1P 入力表示", { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
-			{ "2P 入力表示", { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
-			{ "コマンド入力状態表示", { "OFF", "1P", "2P", }, },
-			{ "通常動作フレーム非表示", menu.labels.off_on, },
-			{ "フレーム差表示", { "OFF", "フレームメーター", "数値のみ" }, },
-			{ "1P フレーム数表示", { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
-			{ "2P フレーム数表示", { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
-			{ "1P 弾フレーム数表示", menu.labels.off_on, },
-			{ "2P 弾フレーム数表示", menu.labels.off_on, },
-			{ "1P 状態表示", { "OFF", "ON", "ON:小表示", "ON:大表示", "ON:フラグ表示" }, },
-			{ "2P 状態表示", { "OFF", "ON", "ON:小表示", "ON:大表示", "ON:フラグ表示" }, },
-			{ "1P 処理アドレス表示", { "OFF", "本体", "弾1", "弾2", "弾3", }, },
-			{ "2P 処理アドレス表示", { "OFF", "本体", "弾1", "弾2", "弾3", }, },
-			{ "1P 2P 距離表示", menu.labels.off_on, },
-			{ "1P キャラ表示", menu.labels.off_on, },
-			{ "2P キャラ表示", menu.labels.off_on, },
-			{ "1P 残像表示", menu.labels.off_on, },
-			{ "2P 残像表示", menu.labels.off_on, },
-			{ "1P エフェクト表示", menu.labels.off_on, },
-			{ "2P エフェクト表示", menu.labels.off_on, },
-			{ "Pちゃん表示", menu.labels.off_on, },
-			{ "エフェクト表示", menu.labels.off_on, },
-		},
-		pos = {
-			-- メニュー内の選択位置
-			offset = 1,
-			row = 2,
-			col = {
-				0, -- －表示設定－            1
-				2, -- 1P 判定表示             2
-				2, -- 2P 判定表示             3
-				2, -- 1P 間合い表示           4
-				2, -- 2P 間合い表示           5
-				2, -- 1P 気絶ゲージ表示       6
-				2, -- 2P 気絶ゲージ表示       7
-				1, -- 1P ダメージ表示         8
-				1, -- 2P ダメージ表示         9
-				1, -- 1P 入力表示            10
-				1, -- 2P 入力表示            11
-				1, -- コマンド入力状態表示   12
-				2, -- 通常動作フレーム非表示 13
-				3, -- フレーム差表示         14
-				2, -- 1P フレーム数表示      15
-				2, -- 2P フレーム数表示      16
-				2, -- 1P 弾フレーム数表示    17
-				2, -- 1P 弾フレーム数表示    18
-				1, -- 1P 状態表示            19
-				1, -- 2P 状態表示            20
-				1, -- 1P 処理アドレス表示    21
-				1, -- 2P 処理アドレス表示    22
-				1, -- 1P 2P 距離表示         23
-				2, -- 1P キャラ表示          24
-				2, -- 2P キャラ表示          25
-				2, -- 1P 残像表示            26
-				2, -- 2P 残像表示            27
-				2, -- 1P エフェクト表示      28
-				2, -- 2P エフェクト表示      29
-				2, -- Pちゃん表示            30
-				2, -- エフェクト表示         31
-			},
-		},
-		on_a = ut.new_filled_table(31, disp_menu_to_main),
-		on_b = ut.new_filled_table(31, disp_menu_to_main),
-	}
-	menu.extra = {
-		list = {
-			{ "                          特殊設定" },
-			{ "簡易超必", menu.labels.off_on, },
-			{ "半自動潜在能力", menu.labels.off_on, },
-			{ "ライン送らない現象", { "OFF", "ON", "ON:1Pのみ", "ON:2Pのみ" }, },
-			{ "ヒット時にポーズ", { "OFF", "ON", "ON:やられのみ", "ON:投げやられのみ", "ON:打撃やられのみ", "ON:ガードのみ", }, },
-			{ "判定発生時にポーズ", { "OFF", "投げ", "攻撃", "変化時", }, },
-			{ "技画像保存", { "OFF", "ON:新規", "ON:上書き", }, },
-			{ "ヒット効果確認用", db.hit_effects.menus, },
-			{ "全必殺技BS", menu.labels.off_on, }
-		},
-		pos = {
-			-- メニュー内の選択位置
-			offset = 1,
-			row = 2,
-			col = {
-				0, -- －特殊設定－            1
-				1, -- 簡易超必                2
-				1, -- 半自動潜在能力          3
-				1, -- ライン送らない現象      4
-				1, -- ヒット時にポーズ        5
-				1, -- 判定発生時にポーズ      6
-				1, -- 技画像保存              7
-				1, -- ヒット効果確認用        9
-				1, -- 全必殺技BS             10
-			},
-		},
-		on_a = ut.new_filled_table(10, ex_menu_to_main),
-		on_b = ut.new_filled_table(10, ex_menu_to_main),
-	}
-
-	menu.auto = {
-		list = {
-			{ "                        自動入力設定" },
-			{ "ダウン投げ", menu.labels.off_on, },
-			{ "ダウン攻撃", menu.labels.off_on, },
-			{ "通常投げの派生技", menu.labels.off_on, },
-			{ "デッドリーレイブ", { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, },
-			{ "アンリミテッドデザイア", { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "ギガティックサイクロン" }, },
-			{ "ドリル", { 1, 2, 3, 4, 5 }, },
-			{ "超白龍", { "OFF", "C攻撃-判定発生前", "C攻撃-判定発生後" }, },
-			{ "M.リアルカウンター", { "OFF", "ジャーマン", "フェイスロック", "投げっぱなしジャーマン", }, },
-			{ "M.トリプルエクスタシー", menu.labels.off_on, },
-			{ "炎の種馬", menu.labels.off_on, },
-			{ "喝CA", menu.labels.off_on, },
-			{ "飛燕失脚CA", menu.labels.off_on, },
-			{ "                          入力設定" },
-			{ "詠酒チェック", { "OFF", "詠酒距離チェックなし", "いつでも詠酒" }, },
-			{ "必勝！逆襲拳", menu.labels.off_on, },
-			{ "空振りCA", menu.labels.off_on, },
-		},
-		pos = {
-			-- メニュー内の選択位置
-			offset = 1,
-			row = 2,
-			col = {
-				0, -- 自動入力設定            1
-				1, -- ダウン投げ              2
-				1, -- ダウン攻撃              3
-				1, -- 通常投げの派生技        4
-				1, -- デッドリーレイブ        5
-				1, -- アンリミテッドデザイア  6
-				1, -- ドリル                  7
-				1, -- 超白龍                  8
-				1, -- M.リアルカウンター      9
-				1, -- M.トリプルエクスタシー 10
-				1, -- 炎の種馬               11
-				1, -- 喝CA                   12
-				1, -- 飛燕失脚CA             13
-				0, -- 入力設定               14
-				1, -- 詠酒距離チェック       15
-				1, -- 必勝！逆襲拳           16
-				1, -- 空振りCA               17
-			},
-		},
-		on_a = ut.new_filled_table(17, auto_menu_to_main),
-		on_b = ut.new_filled_table(17, auto_menu_to_main),
-	}
-
-	menu.color = {
-		list = {},
-		pos = {
-			-- メニュー内の選択位置
-			offset = 1,
-			row = 2,
-			col = {},
-		},
-		on_a = {},
-		on_b = {},
-	}
-	table.insert(menu.color.list, { "                          判定個別設定" })
-	table.insert(menu.color.pos.col, 0)
-	table.insert(menu.color.on_a, col_menu_to_main)
-	table.insert(menu.color.on_b, col_menu_to_main)
-	for _, box in pairs(db.box_type_list) do -- TODO 修正する
-		table.insert(menu.color.list, { box.name, menu.labels.off_on, { fill = box.fill, outline = box.outline } })
-		table.insert(menu.color.pos.col, box.enabled and 2 or 1)
-		table.insert(menu.color.on_a, col_menu_to_main)
-		table.insert(menu.color.on_b, col_menu_to_main)
+	local create_menu = function(list, on_a, on_b)
+		local row, col = nil, {}
+		for i, obj in ipairs(list) do
+			if #obj > 1 then row = i end
+			table.insert(col, #obj == 1 and 0 or 1)
+		end
+		return { list = list, pos = { offset = 1, row = row or 1, col = col }, on_a = on_a, on_b = on_b or on_a }
 	end
 
-	menu.recording = {
-		list = {
-			{ "            選択したスロットに記憶されます。" },
-			{ "スロット1", { "Aでレコード開始", }, },
-			{ "スロット2", { "Aでレコード開始", }, },
-			{ "スロット3", { "Aでレコード開始", }, },
-			{ "スロット4", { "Aでレコード開始", }, },
-			{ "スロット5", { "Aでレコード開始", }, },
-			{ "スロット6", { "Aでレコード開始", }, },
-			{ "スロット7", { "Aでレコード開始", }, },
-			{ "スロット8", { "Aでレコード開始", }, },
-		},
-		pos = {
-			-- メニュー内の選択位置
-			offset = 1,
-			row = 2,
-			col = {
-				0, -- 説明               1
-				1, -- スロット1          2
-				1, -- スロット2          3
-				1, -- スロット3          4
-				1, -- スロット4          5
-				1, -- スロット5          6
-				1, -- スロット6          7
-				1, -- スロット7          8
-				1, -- スロット8          9
-			},
-		},
-		on_a = {
-			menu_rec_to_tra,           -- 説明
-			function() exit_menu_to_rec(1) end, -- スロット1
-			function() exit_menu_to_rec(2) end, -- スロット2
-			function() exit_menu_to_rec(3) end, -- スロット3
-			function() exit_menu_to_rec(4) end, -- スロット4
-			function() exit_menu_to_rec(5) end, -- スロット5
-			function() exit_menu_to_rec(6) end, -- スロット6
-			function() exit_menu_to_rec(7) end, -- スロット7
-			function() exit_menu_to_rec(8) end, -- スロット8
-		},
-		on_b = ut.new_filled_table(1, menu_rec_to_tra, 8, menu_to_tra),
-	}
+	menu.training = create_menu({
+		{ "ダミーモード", { "プレイヤー vs プレイヤー", "プレイヤー vs CPU", "CPU vs プレイヤー", "1P&2P入れ替え", "レコード", "リプレイ" }, },
+		{ "                         ダミー設定" },
+		{ "1P アクション", { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
+		{ "2P アクション", { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
+		{ "1P ガード", { "なし", "オート", "ブレイクショット（Aで選択画面へ）", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
+		{ "2P ガード", { "なし", "オート", "ブレイクショット（Aで選択画面へ）", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
+		{ "1ガード持続フレーム数", gd_frms, },
+		{ "ブレイクショット設定", bs_blocks },
+		{ "1P やられ時行動", { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ（Aで選択画面へ）", "グランドスウェー（Aで選択画面へ）", "起き上がり攻撃", }, },
+		{ "2P やられ時行動", { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ（Aで選択画面へ）", "グランドスウェー（Aで選択画面へ）", "起き上がり攻撃", }, },
+		{ "ガードリバーサル設定", bs_blocks },
+		{ "1P 強制空振り", no_hit_row, },
+		{ "2P 強制空振り", no_hit_row, },
+		{ "1P 挑発で前進", menu.labels.off_on, },
+		{ "2P 挑発で前進", menu.labels.off_on, },
+		{ "1P Y座標強制", force_y_pos, },
+		{ "2P Y座標強制", force_y_pos, },
+		{ "画面下に移動", { "OFF", "2Pを下に移動", "1Pを下に移動", }, },
+	}, ut.new_filled_table(18, menu_to_main), ut.new_filled_table(18, menu_to_main_cancel))
+
+	menu.bar = create_menu({
+		{ "                         ゲージ設定" },
+		{ "1P 体力ゲージ量", life_range, }, -- "最大", "赤", "ゼロ" ...
+		{ "2P 体力ゲージ量", life_range, }, -- "最大", "赤", "ゼロ" ...
+		{ "1P POWゲージ量", pow_range, }, -- "最大", "半分", "ゼロ" ...
+		{ "2P POWゲージ量", pow_range, }, -- "最大", "半分", "ゼロ" ...
+		{ "体力ゲージモード", { "自動回復", "固定" }, },
+		{ "POWゲージモード", { "自動回復", "固定", "通常動作" }, },
+	}, ut.new_filled_table(7, bar_menu_to_main))
+
+	menu.disp = create_menu({
+		{ "                          表示設定" },
+		{ "1P 判定表示", { "OFF", "ON", }, },
+		{ "2P 判定表示", { "OFF", "ON", }, },
+		{ "1P 間合い表示", { "OFF", "ON", }, },
+		{ "2P 間合い表示", { "OFF", "ON", }, },
+		{ "1P 気絶ゲージ表示", menu.labels.off_on, },
+		{ "2P 気絶ゲージ表示", menu.labels.off_on, },
+		{ "1P ダメージ表示", menu.labels.off_on, },
+		{ "2P ダメージ表示", menu.labels.off_on, },
+		{ "1P 入力表示", { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
+		{ "2P 入力表示", { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
+		{ "コマンド入力状態表示", { "OFF", "1P", "2P", }, },
+		{ "通常動作フレーム非表示", menu.labels.off_on, },
+		{ "フレーム差表示", { "OFF", "フレームメーター", "数値のみ" }, },
+		{ "1P フレーム数表示", { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
+		{ "2P フレーム数表示", { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
+		{ "1P 弾フレーム数表示", menu.labels.off_on, },
+		{ "2P 弾フレーム数表示", menu.labels.off_on, },
+		{ "1P 状態表示", { "OFF", "ON", "ON:小表示", "ON:大表示", "ON:フラグ表示" }, },
+		{ "2P 状態表示", { "OFF", "ON", "ON:小表示", "ON:大表示", "ON:フラグ表示" }, },
+		{ "1P 処理アドレス表示", { "OFF", "本体", "弾1", "弾2", "弾3", }, },
+		{ "2P 処理アドレス表示", { "OFF", "本体", "弾1", "弾2", "弾3", }, },
+		{ "1P 2P 距離表示", menu.labels.off_on, },
+		{ "1P キャラ表示", menu.labels.off_on, },
+		{ "2P キャラ表示", menu.labels.off_on, },
+		{ "1P 残像表示", menu.labels.off_on, },
+		{ "2P 残像表示", menu.labels.off_on, },
+		{ "1P エフェクト表示", menu.labels.off_on, },
+		{ "2P エフェクト表示", menu.labels.off_on, },
+		{ "Pちゃん表示", menu.labels.off_on, },
+		{ "エフェクト表示", menu.labels.off_on, },
+	}, ut.new_filled_table(31, disp_menu_to_main))
+
+	menu.extra = create_menu({
+		{ "                          特殊設定" },
+		{ "簡易超必", menu.labels.off_on, },
+		{ "半自動潜在能力", menu.labels.off_on, },
+		{ "ライン送らない現象", { "OFF", "ON", "ON:1Pのみ", "ON:2Pのみ" }, },
+		{ "ヒット時にポーズ", { "OFF", "ON", "ON:やられのみ", "ON:投げやられのみ", "ON:打撃やられのみ", "ON:ガードのみ", }, },
+		{ "判定発生時にポーズ", { "OFF", "投げ", "攻撃", "変化時", }, },
+		{ "技画像保存", { "OFF", "ON:新規", "ON:上書き", }, },
+		{ "ヒット効果確認用", db.hit_effects.menus, },
+		{ "全必殺技BS", menu.labels.off_on, }
+	}, ut.new_filled_table(10, ex_menu_to_main))
+
+	menu.auto = create_menu({
+		{ "                        自動入力設定" },
+		{ "ダウン投げ", menu.labels.off_on, },
+		{ "ダウン攻撃", menu.labels.off_on, },
+		{ "通常投げの派生技", menu.labels.off_on, },
+		{ "デッドリーレイブ", { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, },
+		{ "アンリミテッドデザイア", { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "ギガティックサイクロン" }, },
+		{ "ドリル", { 1, 2, 3, 4, 5 }, },
+		{ "超白龍", { "OFF", "C攻撃-判定発生前", "C攻撃-判定発生後" }, },
+		{ "M.リアルカウンター", { "OFF", "ジャーマン", "フェイスロック", "投げっぱなしジャーマン", }, },
+		{ "M.トリプルエクスタシー", menu.labels.off_on, },
+		{ "炎の種馬", menu.labels.off_on, },
+		{ "喝CA", menu.labels.off_on, },
+		{ "飛燕失脚CA", menu.labels.off_on, },
+		{ "                          入力設定" },
+		{ "詠酒チェック", { "OFF", "詠酒距離チェックなし", "いつでも詠酒" }, },
+		{ "必勝！逆襲拳", menu.labels.off_on, },
+		{ "空振りCA", menu.labels.off_on, },
+	}, ut.new_filled_table(17, auto_menu_to_main))
+
+	menu.color = create_menu(ut.table_add_conv_all({
+		{ "                          判定個別設定" }
+	}, db.box_type_list, function(b) return { b.name, menu.labels.off_on, { fill = b.fill, outline = b.outline } } end
+	), ut.new_filled_table(#db.box_type_list + 1, col_menu_to_main))
+
+	menu.recording = create_menu({
+		{ "            選択したスロットに記憶されます。" },
+		{ "スロット1", { "Aでレコード開始", }, },
+		{ "スロット2", { "Aでレコード開始", }, },
+		{ "スロット3", { "Aでレコード開始", }, },
+		{ "スロット4", { "Aでレコード開始", }, },
+		{ "スロット5", { "Aでレコード開始", }, },
+		{ "スロット6", { "Aでレコード開始", }, },
+		{ "スロット7", { "Aでレコード開始", }, },
+		{ "スロット8", { "Aでレコード開始", }, },
+	}, {
+		menu_rec_to_tra,               -- 説明
+		function() exit_menu_to_rec(1) end, -- スロット1
+		function() exit_menu_to_rec(2) end, -- スロット2
+		function() exit_menu_to_rec(3) end, -- スロット3
+		function() exit_menu_to_rec(4) end, -- スロット4
+		function() exit_menu_to_rec(5) end, -- スロット5
+		function() exit_menu_to_rec(6) end, -- スロット6
+		function() exit_menu_to_rec(7) end, -- スロット7
+		function() exit_menu_to_rec(8) end, -- スロット8
+	}, ut.new_filled_table(1, menu_rec_to_tra, 8, menu_to_tra))
+
 	local play_interval = {}
 	for i = 1, 301 do table.insert(play_interval, i - 1) end
-	menu.replay = {
-		list = {
-			{ "     ONにしたスロットからランダムでリプレイされます。" },
-			{ "スロット1", menu.labels.off_on, },
-			{ "スロット2", menu.labels.off_on, },
-			{ "スロット3", menu.labels.off_on, },
-			{ "スロット4", menu.labels.off_on, },
-			{ "スロット5", menu.labels.off_on, },
-			{ "スロット6", menu.labels.off_on, },
-			{ "スロット7", menu.labels.off_on, },
-			{ "スロット8", menu.labels.off_on, },
-			{ "                        リプレイ設定" },
-			{ "繰り返し", menu.labels.off_on, },
-			{ "繰り返し間隔", play_interval, },
-			{ "繰り返し開始条件", { "なし", "両キャラがニュートラル", }, },
-			{ "開始間合い固定", { "OFF", "Aでレコード開始", "1Pと2P", "1P", "2P", }, },
-			{ "状態リセット", { "OFF", "1Pと2P", "1P", "2P", }, },
-			{ "ガイド表示", menu.labels.off_on, },
-			{ "ダメージでリプレイ中止", menu.labels.off_on, },
-		},
-		pos = {
-			-- メニュー内の選択位置
-			offset = 1,
-			row = 2,
-			col = {
-				0,         -- 説明               1
-				2,         -- スロット1          2
-				2,         -- スロット2          3
-				2,         -- スロット3          4
-				2,         -- スロット4          5
-				2,         -- スロット5          6
-				2,         -- スロット6          7
-				2,         -- スロット7          8
-				2,         -- スロット8          9
-				0,         -- リプレイ設定      10
-				1,         -- 繰り返し          11
-				1,         -- 繰り返し間隔      12
-				1,         -- 繰り返し開始条件  13
-				global.replay_fix_pos, -- 開始間合い固定    14
-				global.replay_reset, -- 状態リセット      15
-				2,         -- ガイド表示        16
-				2,         -- ダメージでリプレイ中止 17
-			},
-		},
-		on_a = ut.new_filled_table(17, exit_menu_to_play),
-		-- TODO キャンセル時にも間合い固定の設定とかが変わるように
-		on_b = ut.new_filled_table(17, exit_menu_to_play_cancel),
-	}
+	menu.replay = create_menu({
+		{ "     ONにしたスロットからランダムでリプレイされます。" },
+		{ "スロット1", menu.labels.off_on, },
+		{ "スロット2", menu.labels.off_on, },
+		{ "スロット3", menu.labels.off_on, },
+		{ "スロット4", menu.labels.off_on, },
+		{ "スロット5", menu.labels.off_on, },
+		{ "スロット6", menu.labels.off_on, },
+		{ "スロット7", menu.labels.off_on, },
+		{ "スロット8", menu.labels.off_on, },
+		{ "                        リプレイ設定" },
+		{ "繰り返し", menu.labels.off_on, },
+		{ "繰り返し間隔", play_interval, },
+		{ "繰り返し開始条件", { "なし", "両キャラがニュートラル", }, },
+		{ "開始間合い固定", { "OFF", "Aでレコード開始", "1Pと2P", "1P", "2P", }, },
+		{ "状態リセット", { "OFF", "1Pと2P", "1P", "2P", }, },
+		{ "ガイド表示", menu.labels.off_on, },
+		{ "ダメージでリプレイ中止", menu.labels.off_on, },
+	}, ut.new_filled_table(17, exit_menu_to_play), ut.new_filled_table(17, exit_menu_to_play_cancel))
+
 	init_auto_menu_config()
 	init_disp_menu_config()
 	init_ex_menu_config()
@@ -5443,18 +5255,12 @@ rbff2.startplugin          = function()
 					end
 				end
 				if row[3] and row[3].outline then
-					scr:draw_box(200, y + 2, 218, y + 7, row[3].outline, row[3].outline)
+					scr:draw_box(200, y + 2, 218, y + 7, 0xAA000000, row[3].outline)
 				end
 			end
-
 			row_num = row_num + 1
 		end
-
-		local p1, p2 = players[1], players[2]
-		p1.max_pos = 0
-		p1.min_pos = 1000
-		p2.max_pos = 0
-		p2.min_pos = 1000
+		players[1].max_pos, players[1].min_pos, players[2].max_pos, players[2].min_pos = 0, 1000, 0, 1000
 	end
 
 	local active_mem_0x100701 = {}

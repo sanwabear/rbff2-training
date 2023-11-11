@@ -197,6 +197,14 @@ ut.table_add_all    = function(t1, t2, pre_add)
 	return t1
 end
 
+ut.table_add_conv_all    = function(t1, t2, conv)
+	t1 = t1 or {}
+	for _, r in ipairs(t2 or {}) do
+		table.insert(t1, conv(r))
+	end
+	return t1
+end
+
 ut.hash_add_all     = function(t1, t2, pre_add)
 	t1 = t1 or {}
 	for k, v in pairs(t2 or {}) do
