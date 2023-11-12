@@ -1547,6 +1547,41 @@ rbff2.startplugin          = function()
 				p.combo_update = global.frame_number + 1
 			end
 		end
+		p.do_recover = function(force)
+			-- 体力と気絶値とMAX気絶値回復
+			local life = { 0xC0, 0x60, 0x00 }
+			local max_life = life[p.red] or (p.red - #life) -- 赤体力にするかどうか
+			local init_stuns = p.char_data and p.char_data.init_stuns or 0
+			if dip_config.infinity_life then
+				mem.w8(p.addr.life, max_life)
+				mem.w8(p.addr.stun_limit, init_stuns) -- 最大気絶値
+				mem.w8(p.addr.init_stun, init_stuns) -- 最大気絶値
+			elseif p.life_rec then
+				if force or (p.addr.life ~= max_life and 180 < math.min(p.throw_timer, p.op.throw_timer)) then
+					mem.w8(p.addr.life, max_life) -- やられ状態から戻ったときに回復させる
+					mem.w8(p.addr.stun, 0)    -- 気絶値
+					mem.w8(p.addr.stun_limit, init_stuns) -- 最大気絶値
+					mem.w8(p.addr.init_stun, init_stuns) -- 最大気絶値
+					mem.w16(p.addr.stun_timer, 0) -- 気絶値タイマー
+				elseif max_life < p.life then
+					mem.w8(p.addr.life, max_life) -- 最大値の方が少ない場合は強制で減らす
+				end
+			end
+
+			-- パワーゲージ回復
+			-- 0x3C, 0x1E, 0x00
+			local pow     = { 0x3C, 0x1E, 0x00 }
+			local max_pow = pow[p.max] or (p.max - #pow) -- パワーMAXにするかどうか
+			-- POWモード　1:自動回復 2:固定 3:通常動作
+			if global.pow_mode == 2 then
+				mem.w8(p.addr.pow, max_pow)
+			elseif global.pow_mode == 1 and p.pow == 0 then
+				mem.w8(p.addr.pow, max_pow)
+			elseif global.pow_mode ~= 3 and max_pow < p.pow then
+				-- 最大値の方が少ない場合は強制で減らす
+				mem.w8(p.addr.pow, max_pow)
+			end
+		end
 		p.wp8                      = {
 			[0x16] = function(data) p.knockback1 = data end, -- のけぞり確認用2(裏雲隠し)
 			[0x69] = function(data) p.knockback2 = data end, -- のけぞり確認用1(色々)
@@ -2298,19 +2333,24 @@ rbff2.startplugin          = function()
 		do_repeat       = false,
 		repeat_interval = 0,
 
-		info            = { label1 = "", col1 = 0, label2 = "", col2 = 0 },
-		info1           = { label1 = "● RECORDING %s", col1 = 0xFFFF1133, label2 = "", col2 = 0xFFFF1133 },
-		info2           = { label1 = "‣ REPLAYING %s", col1 = 0xFFFFFFFF, label2 = "HOLD START to MEMU", col2 = 0xFFFFFFFF },
-		info3           = { label1 = "▪ PRESS START to REPLAY", col1 = 0xFFFFFFFF, label2 = "HOLD START to MEMU", col2 = 0xFFFFFFFF },
-		info4           = { label1 = "● POSITION REC", col1 = 0xFFFF1133, label2 = "PRESS START to MENU", col2 = 0xFFFF1133 },
+		info            = { { label = "", col = 0 }, { label = "", col = 0 } },
+		info1           = { { label = "● RECORDING %s", col = 0xFFFF1133 }, { label = "", col = 0xFFFF1133 } },
+		info2           = { { label = "‣ REPLAYING %s", col = 0xFFFFFFFF }, { label = "HOLD START to MEMU", col = 0xFFFFFFFF } },
+		info3           = { { label = "▪ PRESS START to REPLAY", col = 0xFFFFFFFF }, { label = "HOLD START to MEMU", col = 0xFFFFFFFF } },
+		info4           = { { label = "● POSITION REC", col = 0xFFFF1133 }, { label = "PRESS START to MENU", col = 0xFFFF1133 } },
+
+		procs           = {
+			await_no_input = nil,
+			await_1st_input = nil,
+			await_play = nil,
+			input = nil,
+			play = nil,
+			repeat_play = nil,
+			play_interval = nil,
+			fixpos = nil,
+		},
 	}
-	for i = 1, 8 do
-		recording.slot[i] = {
-			side  = 1, -- レコーディング対象のプレイヤー番号 1=1P, 2=2P
-			store = {}, -- 入力保存先
-			name  = "スロット" .. i,
-		}
-	end
+	for i = 1, 8 do table.insert(recording.slot, { side  = 1, store = {}, name  = string.format("スロット%s", i) }) end
 
 	-- 調査用自動再生スロットの準備
 	for i, preset_cmd in ipairs(db.research_cmd) do
@@ -2320,24 +2360,13 @@ rbff2.startplugin          = function()
 	recording.active_slot = recording.slot[1]
 	recording.active_slot.side = 1
 
-	-- メニュー用変数
-	local rec_await_no_input
-	local rec_await_1st_input
-	local rec_await_play
-	local rec_input
-	local rec_play
-	local rec_repeat_play
-	local rec_play_interval
-	local rec_fixpos
-	local do_recover
-
 	-- 状態クリア
 	local cls_ps = function()
 		for _, p in ipairs(players) do
 			local op = p.op
 			p.input_states = {}
 			p.char_data = db.chars[p.char]
-			do_recover(p, true)
+			p.do_recover(true)
 			p.combo_update = 0
 			p.combo_damage = 0
 			p.combo_start_stun = 0
@@ -2367,7 +2396,7 @@ rbff2.startplugin          = function()
 		return string.format("%02d:%02d:%02d", min, sec, frame)
 	end
 	-- リプレイ開始位置記憶
-	rec_fixpos = function()
+	recording.procs.fixpos = function()
 		recording.info   = recording.info4
 		local pos        = { players[1].cmd_side, players[2].cmd_side }
 		local fixpos     = { players[1].pos, players[2].pos }
@@ -2381,13 +2410,13 @@ rbff2.startplugin          = function()
 	end
 	-- 初回入力まち
 	-- 未入力状態を待ちける→入力開始まで待ち受ける
-	rec_await_no_input = function(_)
+	recording.procs.await_no_input = function(_)
 		if players[recording.temp_player].reg_pcnt == 0 then -- 状態変更
-			global.rec_main = rec_await_1st_input
-			print(global.frame_number .. " rec_await_no_input -> rec_await_1st_input ", recording.temp_player)
+			global.rec_main = recording.procs.await_1st_input
+			print(global.frame_number .. " await_no_input -> await_1st_input ", recording.temp_player)
 		end
 	end
-	rec_await_1st_input = function(_)
+	recording.procs.await_1st_input = function(_)
 		recording.info = recording.info1
 		local p = players[recording.temp_player]
 		if p.reg_pcnt ~= 0 then
@@ -2405,12 +2434,12 @@ rbff2.startplugin          = function()
 			table.insert(recording.active_slot.store, { reg_pcnt = 0, pos = pos })
 			-- 状態変更
 			-- 初回のみ開始記憶
-			if recording.fixpos == nil then rec_fixpos() end
-			global.rec_main = rec_input
-			print(global.frame_number .. " rec_await_1st_input -> rec_input")
+			if recording.fixpos == nil then recording.procs.fixpos() end
+			global.rec_main = recording.procs.input
+			print(global.frame_number .. " await_1st_input -> input")
 		end
 	end
-	rec_input = function(_) -- 入力中+入力保存
+	recording.procs.input = function(_) -- 入力中+入力保存
 		recording.info = recording.info1
 		local p = players[recording.temp_player]
 		local pos = { players[1].cmd_side, players[2].cmd_side }
@@ -2424,7 +2453,7 @@ rbff2.startplugin          = function()
 		})
 		table.insert(recording.active_slot.store, { reg_pcnt = 0, pos = pos })
 	end
-	rec_await_play = function(to_joy) -- リプレイまち
+	recording.procs.await_play = function(to_joy) -- リプレイまち
 		recording.info = recording.info3
 		local force_start_play = global.rec_force_start_play
 		global.rec_force_start_play = false -- 初期化
@@ -2447,7 +2476,7 @@ rbff2.startplugin          = function()
 			recording.force_start_play = false
 			-- 状態変更
 			recording.play_count = 1
-			global.rec_main = rec_play
+			global.rec_main = recording.procs.play
 
 			-- メインラインでニュートラル状態にする
 			for i, p in ipairs(players) do
@@ -2460,7 +2489,7 @@ rbff2.startplugin          = function()
 						[mem.w32] = { [p.addr.base] = 0x58D5A, [0x28] = 0, [0x34] = 0, [0x38] = 0, [0x3C] = 0, [0x44] = 0, [0x48] = 0, [0x4C] = 0, [0x50] = 0, [0xDA] = 0, [0xDE] = 0, },
 						[mem.w8] = { [0x61] = 0x1, [0x63] = 0x2, [0x65] = 0x2, [0x66] = 0, [0x6A] = 0, [0x7E] = 0, [0xB0] = 0, [0xB1] = 0, [0xC0] = 0x80, [0xC2] = 0, [0xFC] = 0, [0xFD] = 0, [0x89] = 0, },
 					}) do for addr, value in pairs(tbl) do fnc(addr, value) end end
-					do_recover(p, true)
+					p.do_recover(true)
 					p.old.frame_gap = 0
 				end
 			end
@@ -2494,7 +2523,7 @@ rbff2.startplugin          = function()
 		end
 	end
 	-- 繰り返しリプレイ待ち
-	rec_repeat_play = function(_)
+	recording.procs.repeat_play = function(_)
 		recording.info = recording.info2
 		-- 繰り返し前の行動が完了するまで待つ
 		local p, op, p_ok = players[recording.player], players[3 - recording.player], true
@@ -2506,21 +2535,21 @@ rbff2.startplugin          = function()
 				-- リプレイ側が通常状態まで待つ
 				if op.act_data.neutral and op.state == 0 then
 					-- 状態変更
-					global.rec_main = rec_await_play
+					global.rec_main = recording.procs.await_play
 					global.rec_force_start_play = true -- 一時的な強制初期化フラグをON
-					print(global.frame_number .. " rec_repeat_play -> rec_await_play(force)")
+					print(global.frame_number .. " repeat_play -> await_play(force)")
 					return
 				end
 			end
 		end
 	end
 	-- リプレイ中
-	rec_play = function(_)
+	recording.procs.play = function(_)
 		recording.info = recording.info2
 		if input.accept("st") then
 			-- 状態変更
-			global.rec_main = rec_await_play
-			print(global.frame_number .. " rec_play -> rec_await_play")
+			global.rec_main = recording.procs.await_play
+			print(global.frame_number .. " play -> await_play")
 			return
 		end
 
@@ -2563,17 +2592,17 @@ rbff2.startplugin          = function()
 		if stop then
 			global.repeat_interval = recording.repeat_interval
 			-- 状態変更
-			global.rec_main = rec_play_interval
-			print(global.frame_number .. " rec_play -> rec_play_interval")
+			global.rec_main = recording.procs.play_interval
+			print(global.frame_number .. " play -> play_interval")
 		end
 	end
 
 	-- リプレイまでの待ち時間
-	rec_play_interval = function(_)
+	recording.procs.play_interval = function(_)
 		if input.accept("st") then
 			-- 状態変更
-			global.rec_main = rec_await_play
-			print(global.frame_number .. " rec_play_interval -> rec_await_play")
+			global.rec_main = recording.procs.await_play
+			print(global.frame_number .. " play_interval -> await_play")
 			return
 		end
 
@@ -2587,13 +2616,13 @@ rbff2.startplugin          = function()
 				-- 繰り返し前の行動を覚えておいて、行動が完了するまで待機できるようにする
 				recording.last_act = players[3 - recording.player].act
 				recording.last_pos_y = players[3 - recording.player].pos_y
-				global.rec_main = rec_repeat_play
-				print(global.frame_number .. " rec_play_interval -> rec_repeat_play")
+				global.rec_main = recording.procs.repeat_play
+				print(global.frame_number .. " play_interval -> repeat_play")
 				return
 			else
 				-- 状態変更
-				global.rec_main = rec_await_play
-				print(global.frame_number .. " rec_play_interval -> rec_await_play")
+				global.rec_main = recording.procs.await_play
+				print(global.frame_number .. " play_interval -> await_play")
 				return
 			end
 		end
@@ -2735,42 +2764,6 @@ rbff2.startplugin          = function()
 				end
 			end
 			y = y + span
-		end
-	end
-
-	do_recover = function(p, force)
-		-- 体力と気絶値とMAX気絶値回復
-		local life = { 0xC0, 0x60, 0x00 }
-		local max_life = life[p.red] or (p.red - #life) -- 赤体力にするかどうか
-		local init_stuns = p.char_data and p.char_data.init_stuns or 0
-		if dip_config.infinity_life then
-			mem.w8(p.addr.life, max_life)
-			mem.w8(p.addr.stun_limit, init_stuns) -- 最大気絶値
-			mem.w8(p.addr.init_stun, init_stuns) -- 最大気絶値
-		elseif p.life_rec then
-			if force or (p.addr.life ~= max_life and 180 < math.min(p.throw_timer, p.op.throw_timer)) then
-				mem.w8(p.addr.life, max_life) -- やられ状態から戻ったときに回復させる
-				mem.w8(p.addr.stun, 0)    -- 気絶値
-				mem.w8(p.addr.stun_limit, init_stuns) -- 最大気絶値
-				mem.w8(p.addr.init_stun, init_stuns) -- 最大気絶値
-				mem.w16(p.addr.stun_timer, 0) -- 気絶値タイマー
-			elseif max_life < p.life then
-				mem.w8(p.addr.life, max_life) -- 最大値の方が少ない場合は強制で減らす
-			end
-		end
-
-		-- パワーゲージ回復
-		-- 0x3C, 0x1E, 0x00
-		local pow     = { 0x3C, 0x1E, 0x00 }
-		local max_pow = pow[p.max] or (p.max - #pow) -- パワーMAXにするかどうか
-		-- POWモード　1:自動回復 2:固定 3:通常動作
-		if global.pow_mode == 2 then
-			mem.w8(p.addr.pow, max_pow)
-		elseif global.pow_mode == 1 and p.pow == 0 then
-			mem.w8(p.addr.pow, max_pow)
-		elseif global.pow_mode ~= 3 and max_pow < p.pow then
-			-- 最大値の方が少ない場合は強制で減らす
-			mem.w8(p.addr.pow, max_pow)
 		end
 	end
 
@@ -3705,7 +3698,7 @@ rbff2.startplugin          = function()
 				while global.key_hists < #p.key.log do table.remove(p.key.log, 1) end
 			end
 
-			do_recover(p)
+			p.do_recover()
 		end
 
 		-- プレイヤー操作
@@ -3719,7 +3712,7 @@ rbff2.startplugin          = function()
 				local in_rec_replay = true
 				if global.dummy_mode == 5 then
 					in_rec_replay = false
-				elseif global.dummy_mode == 6 and global.rec_main == rec_play and recording.player == p.control then
+				elseif global.dummy_mode == 6 and global.rec_main == recording.procs.play and recording.player == p.control then
 					in_rec_replay = false
 				end
 
@@ -4366,13 +4359,11 @@ rbff2.startplugin          = function()
 
 			-- レコーディング状態表示
 			if global.disp_replay and recording.info and (global.dummy_mode == 5 or global.dummy_mode == 6) then
-				local info = recording.info
-				local time = global.rec_main == rec_play and frame_to_time(#recording.active_slot.store - recording.play_count) or frame_to_time(3600 - #recording.active_slot.store)
-				local label1 = string.format(info.label1, time)
-				local label2 = string.format(info.label2, time)
+				local time = global.rec_main == recording.procs.play and frame_to_time(#recording.active_slot.store - recording.play_count) or frame_to_time(3600 - #recording.active_slot.store)
 				scr:draw_box(235, 200, 315, 224, 0xBB404040, 0xBB404040)
-				scr:draw_text(239, 204, label1, info.col1)
-				scr:draw_text(239, 204 + get_line_height(), label2, info.col2)
+				for i, info in ipairs(recording.info) do
+					scr:draw_text(239, 204 + get_line_height(i -1), string.format(info.label, time), info.col)
+				end
 			end
 		end
 	end
@@ -4493,7 +4484,7 @@ rbff2.startplugin          = function()
 	menu.exit_and_rec         = function(slot_no)
 		local g               = global
 		g.dummy_mode          = 5
-		g.rec_main            = rec_await_no_input
+		g.rec_main            = recording.procs.await_no_input
 		input.accepted        = scr:frame_number()
 		recording.temp_player = players[1].reg_pcnt ~= 0 and 1 or 2
 		recording.last_slot   = slot_no
@@ -4519,7 +4510,7 @@ rbff2.startplugin          = function()
 	menu.exit_and_rec_pos     = function()
 		local g = global
 		g.dummy_mode = 5 -- レコードモードにする
-		g.rec_main = rec_fixpos
+		g.rec_main = recording.procs.fixpos
 		input.accepted = scr:frame_number()
 		recording.temp_player = players[1].reg_pcnt ~= 0 and 1 or 2
 		menu.exit_and_play_common()
@@ -4533,7 +4524,7 @@ rbff2.startplugin          = function()
 			return
 		end
 		g.dummy_mode = 6 -- リプレイモードにする
-		g.rec_main = rec_await_play
+		g.rec_main = recording.procs.await_play
 		input.accepted = scr:frame_number()
 		menu.exit_and_play_common()
 		menu.current = menu.main
@@ -4542,7 +4533,7 @@ rbff2.startplugin          = function()
 	menu.exit_and_play_cancel = function()
 		local g = global
 		g.dummy_mode = 6 -- リプレイモードにする
-		g.rec_main = rec_await_play
+		g.rec_main = recording.procs.await_play
 		input.accepted = scr:frame_number()
 		menu.exit_and_play_common()
 		menu.to_tra()
