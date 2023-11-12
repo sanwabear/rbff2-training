@@ -128,6 +128,13 @@ ut.tobitstr      = function(value, delim)
 end
 print(string.format("%.2X", 0x23506A))
 
+ut.frame_to_time = function(frame_number)
+	local min = math.floor(frame_number / 3600)
+	local sec = math.floor((frame_number % 3600) / 60)
+	local frame = math.floor((frame_number % 3600) % 60)
+	return string.format("%02d:%02d:%02d", min, sec, frame)
+end
+
 ut.get_digit        = function(num) return string.len(tostring(num)) end
 
 -- 16ビット値を0.999上限の数値に変える

@@ -220,6 +220,7 @@ local menu               = {
 		pow_range       = { "最大", "半分", "ゼロ", },
 		block_frames    = {},
 		attack_harmless = { "OFF" },
+		play_interval   = {},
 	},
 
 	create = function(list, on_a, on_b)
@@ -239,6 +240,7 @@ local menu               = {
 	to_auto = nil,
 }
 for i = -20, 0xF0 do table.insert(menu.labels.fix_scr_tops, "" .. i) end
+for i = 1, 301 do table.insert(menu.labels.play_interval, i - 1) end
 for _, stg in ipairs(menu.stage_list) do table.insert(menu.labels.stage_list, stg.name) end
 for _, bgm in ipairs(menu.bgms) do
 	local exists = false
@@ -1547,41 +1549,6 @@ rbff2.startplugin          = function()
 				p.combo_update = global.frame_number + 1
 			end
 		end
-		p.do_recover = function(force)
-			-- 体力と気絶値とMAX気絶値回復
-			local life = { 0xC0, 0x60, 0x00 }
-			local max_life = life[p.red] or (p.red - #life) -- 赤体力にするかどうか
-			local init_stuns = p.char_data and p.char_data.init_stuns or 0
-			if dip_config.infinity_life then
-				mem.w8(p.addr.life, max_life)
-				mem.w8(p.addr.stun_limit, init_stuns) -- 最大気絶値
-				mem.w8(p.addr.init_stun, init_stuns) -- 最大気絶値
-			elseif p.life_rec then
-				if force or (p.addr.life ~= max_life and 180 < math.min(p.throw_timer, p.op.throw_timer)) then
-					mem.w8(p.addr.life, max_life) -- やられ状態から戻ったときに回復させる
-					mem.w8(p.addr.stun, 0)    -- 気絶値
-					mem.w8(p.addr.stun_limit, init_stuns) -- 最大気絶値
-					mem.w8(p.addr.init_stun, init_stuns) -- 最大気絶値
-					mem.w16(p.addr.stun_timer, 0) -- 気絶値タイマー
-				elseif max_life < p.life then
-					mem.w8(p.addr.life, max_life) -- 最大値の方が少ない場合は強制で減らす
-				end
-			end
-
-			-- パワーゲージ回復
-			-- 0x3C, 0x1E, 0x00
-			local pow     = { 0x3C, 0x1E, 0x00 }
-			local max_pow = pow[p.max] or (p.max - #pow) -- パワーMAXにするかどうか
-			-- POWモード　1:自動回復 2:固定 3:通常動作
-			if global.pow_mode == 2 then
-				mem.w8(p.addr.pow, max_pow)
-			elseif global.pow_mode == 1 and p.pow == 0 then
-				mem.w8(p.addr.pow, max_pow)
-			elseif global.pow_mode ~= 3 and max_pow < p.pow then
-				-- 最大値の方が少ない場合は強制で減らす
-				mem.w8(p.addr.pow, max_pow)
-			end
-		end
 		p.wp8                      = {
 			[0x16] = function(data) p.knockback1 = data end, -- のけぞり確認用2(裏雲隠し)
 			[0x69] = function(data) p.knockback2 = data end, -- のけぞり確認用1(色々)
@@ -1947,6 +1914,65 @@ rbff2.startplugin          = function()
 				p.act_frames_total = 0
 				p.fb_frames        = { act_frames = {}, frame_groups = {}, }
 				p.gap_frames       = { act_frames = {}, frame_groups = {}, }
+			end
+			p.do_recover = function(force)
+				-- 体力と気絶値とMAX気絶値回復
+				local life = { 0xC0, 0x60, 0x00 }
+				local max_life = life[p.red] or (p.red - #life) -- 赤体力にするかどうか
+				local init_stuns = p.char_data and p.char_data.init_stuns or 0
+				if dip_config.infinity_life then
+					mem.w8(p.addr.life, max_life)
+					mem.w8(p.addr.stun_limit, init_stuns) -- 最大気絶値
+					mem.w8(p.addr.init_stun, init_stuns) -- 最大気絶値
+				elseif p.life_rec then
+					if force or (p.addr.life ~= max_life and 180 < math.min(p.throw_timer, p.op.throw_timer)) then
+						mem.w8(p.addr.life, max_life) -- やられ状態から戻ったときに回復させる
+						mem.w8(p.addr.stun, 0)    -- 気絶値
+						mem.w8(p.addr.stun_limit, init_stuns) -- 最大気絶値
+						mem.w8(p.addr.init_stun, init_stuns) -- 最大気絶値
+						mem.w16(p.addr.stun_timer, 0) -- 気絶値タイマー
+					elseif max_life < p.life then
+						mem.w8(p.addr.life, max_life) -- 最大値の方が少ない場合は強制で減らす
+					end
+				end
+	
+				-- パワーゲージ回復
+				-- 0x3C, 0x1E, 0x00
+				local pow     = { 0x3C, 0x1E, 0x00 }
+				local max_pow = pow[p.max] or (p.max - #pow) -- パワーMAXにするかどうか
+				-- POWモード　1:自動回復 2:固定 3:通常動作
+				if global.pow_mode == 2 then
+					mem.w8(p.addr.pow, max_pow)
+				elseif global.pow_mode == 1 and p.pow == 0 then
+					mem.w8(p.addr.pow, max_pow)
+				elseif global.pow_mode ~= 3 and max_pow < p.pow then
+					-- 最大値の方が少ない場合は強制で減らす
+					mem.w8(p.addr.pow, max_pow)
+				end
+			end
+			p.init_state = function()
+				p.input_states = {}
+				p.char_data = db.chars[p.char]
+				p.do_recover(true)
+				p.combo_update = 0
+				p.combo_damage = 0
+				p.combo_start_stun = 0
+				p.combo_start_stun_timer = 0
+				p.combo_stun = 0
+				p.combo_stun_timer = 0
+				p.combo_pow = 0
+				p.last_damage = 0
+				p.last_damage_scaled = 0
+				p.last_combo = 0
+				p.last_stun = 0
+				p.last_stun_timer = 0
+				p.last_pow_up = 0
+				p.max_combo_damage = 0
+				p.max_combo = 0
+				p.max_combo_stun = 0
+				p.max_combo_stun_timer = 0
+				p.max_combo_pow = 0
+				p.clear_frame_data()
 			end
 			p.clear_frame_data()
 			local old_copy = function(src)
@@ -2361,40 +2387,8 @@ rbff2.startplugin          = function()
 	recording.active_slot.side = 1
 
 	-- 状態クリア
-	local cls_ps = function()
-		for _, p in ipairs(players) do
-			local op = p.op
-			p.input_states = {}
-			p.char_data = db.chars[p.char]
-			p.do_recover(true)
-			p.combo_update = 0
-			p.combo_damage = 0
-			p.combo_start_stun = 0
-			p.combo_start_stun_timer = 0
-			p.combo_stun = 0
-			p.combo_stun_timer = 0
-			p.combo_pow = 0
-			p.last_damage = 0
-			p.last_damage_scaled = 0
-			p.last_combo = 0
-			p.last_stun = 0
-			p.last_stun_timer = 0
-			p.last_pow_up = 0
-			p.max_combo_damage = 0
-			p.max_combo = 0
-			p.max_combo_stun = 0
-			p.max_combo_stun_timer = 0
-			p.max_combo_pow = 0
-			p.clear_frame_data()
-		end
-	end
+	local cls_ps = function() for _, p in ipairs(players) do p.init_state() end end
 
-	local frame_to_time = function(frame_number)
-		local min = math.floor(frame_number / 3600)
-		local sec = math.floor((frame_number % 3600) / 60)
-		local frame = math.floor((frame_number % 3600) % 60)
-		return string.format("%02d:%02d:%02d", min, sec, frame)
-	end
 	-- リプレイ開始位置記憶
 	recording.procs.fixpos = function()
 		recording.info   = recording.info4
@@ -4359,7 +4353,8 @@ rbff2.startplugin          = function()
 
 			-- レコーディング状態表示
 			if global.disp_replay and recording.info and (global.dummy_mode == 5 or global.dummy_mode == 6) then
-				local time = global.rec_main == recording.procs.play and frame_to_time(#recording.active_slot.store - recording.play_count) or frame_to_time(3600 - #recording.active_slot.store)
+				local time = global.rec_main == recording.procs.play and
+					ut.frame_to_time(#recording.active_slot.store - recording.play_count) or ut.frame_to_time(3600 - #recording.active_slot.store)
 				scr:draw_box(235, 200, 315, 224, 0xBB404040, 0xBB404040)
 				for i, info in ipairs(recording.info) do
 					scr:draw_text(239, 204 + get_line_height(i -1), string.format(info.label, time), info.col)
@@ -5070,8 +5065,6 @@ rbff2.startplugin          = function()
 		function() menu.exit_and_rec(8) end, -- スロット8
 	}, ut.new_filled_table(1, menu.rec_to_tra, 8, menu.to_tra))
 
-	local play_interval = {}
-	for i = 1, 301 do table.insert(play_interval, i - 1) end
 	menu.replay = menu.create({
 		{ title = true, "ONにしたスロットからランダムでリプレイされます。" },
 		{ "スロット1", menu.labels.off_on, },
@@ -5084,7 +5077,7 @@ rbff2.startplugin          = function()
 		{ "スロット8", menu.labels.off_on, },
 		{ title = true, "リプレイ設定" },
 		{ "繰り返し", menu.labels.off_on, },
-		{ "繰り返し間隔", play_interval, },
+		{ "繰り返し間隔", menu.labels.play_interval, },
 		{ "繰り返し開始条件", { "なし", "両キャラがニュートラル", }, },
 		{ "開始間合い固定", { "OFF", "Aでレコード開始", "1Pと2P", "1P", "2P", }, },
 		{ "状態リセット", { "OFF", "1Pと2P", "1P", "2P", }, },
@@ -5100,7 +5093,7 @@ rbff2.startplugin          = function()
 	menu.to_main(nil, true)
 
 	menu.proc = function() set_freeze(false) end -- メニュー表示中はDIPかポーズでフリーズさせる
-	menu.cur_updown = function(add_val)
+	menu.cursor_ud = function(add_val)
 		local temp_row = menu.current.pos.row
 		while true do
 			temp_row = (temp_row + add_val) % #menu.current.list
@@ -5121,7 +5114,7 @@ rbff2.startplugin          = function()
 		end
 		input.accepted = scr:frame_number()
 	end
-	menu.cur_lr = function(add_val, loop)
+	menu.cursor_lr = function(add_val, loop)
 		-- カーソル右移動
 		local cols = menu.current.list[menu.current.pos.row][2]
 		if cols then
@@ -5157,17 +5150,17 @@ rbff2.startplugin          = function()
 		elseif input.accept("B") then
 			menu.current.on_b[menu.current.pos.row]()        -- メニューから戻る
 		elseif input.accept("8") then
-			menu.cur_updown(-1)                              -- カーソル上移動
+			menu.cursor_ud(-1)                              -- カーソル上移動
 		elseif input.accept("2") then
-			menu.cur_updown(1)                               -- カーソル下移動
+			menu.cursor_ud(1)                               -- カーソル下移動
 		elseif input.accept("4") then
-			menu.cur_lr(-1, true)                            -- カーソル左移動
+			menu.cursor_lr(-1, true)                            -- カーソル左移動
 		elseif input.accept("6") then
-			menu.cur_lr(1, true)                             -- カーソル右移動
+			menu.cursor_lr(1, true)                             -- カーソル右移動
 		elseif input.accept("C") then
-			menu.cur_lr(-10, false)                          -- カーソル左10移動
+			menu.cursor_lr(-10, false)                          -- カーソル左10移動
 		elseif input.accept("D") then
-			menu.cur_lr(10, false)                           -- カーソル右10移動
+			menu.cursor_lr(10, false)                           -- カーソル右10移動
 		end
 
 		-- メニュー表示本体
