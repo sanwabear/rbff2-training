@@ -181,6 +181,7 @@ local input_state        = db.input_state
 
 -- メニュー用変数
 local menu               = {
+	max_row = 13,
 	proc = nil,
 	draw = nil,
 
@@ -210,14 +211,33 @@ local menu               = {
 	bgms = db.bgm_list,
 
 	labels = {
-		fix_scr_tops = { "OFF" },
-		chars        = {},
-		stage_list   = {},
-		bgms         = {},
-		off_on       = { "OFF", "ON" }
+		fix_scr_tops    = { "OFF" },
+		chars           = db.char_names,
+		stage_list      = {},
+		bgms            = {},
+		off_on          = { "OFF", "ON" },
+		life_range      = { "最大", "赤", "ゼロ", },
+		pow_range       = { "最大", "半分", "ゼロ", },
+		block_frames    = {},
+		attack_harmless = { "OFF" },
 	},
+
+	create = function(list, on_a, on_b)
+		local row, col = nil, {}
+		for i, obj in ipairs(list) do
+			if not row and not obj.title then row = i end
+			table.insert(col, #obj == 1 and 0 or 1)
+		end
+		return { list = list, pos = { offset = 1, row = row or 1, col = col }, on_a = on_a, on_b = on_b or on_a }
+	end,
+
+	to_tra = nil,
+	to_bar = nil,
+	to_disp = nil,
+	to_ex = nil,
+	to_col = nil,
+	to_auto = nil,
 }
-menu.labels.chars        = db.char_names
 for i = -20, 0xF0 do table.insert(menu.labels.fix_scr_tops, "" .. i) end
 for _, stg in ipairs(menu.stage_list) do table.insert(menu.labels.stage_list, stg.name) end
 for _, bgm in ipairs(menu.bgms) do
@@ -2310,12 +2330,6 @@ rbff2.startplugin          = function()
 	local rec_play_interval
 	local rec_fixpos
 	local do_recover
-	local menu_to_tra
-	local menu_to_bar
-	local menu_to_disp
-	local menu_to_ex
-	local menu_to_col
-	local menu_to_auto
 
 	-- 状態クリア
 	local cls_ps = function()
@@ -4373,10 +4387,9 @@ rbff2.startplugin          = function()
 	emu.register_menu(function(index, event) return false end, {}, "RB2 Training")
 
 	emu.register_frame(function() end)
+
 	-- メニュー表示
-	local menu_max_row = 13
-	local menu_nop = function() end
-	local setup_char_manu = function()
+	menu.setup_char = function()
 		-- キャラにあわせたメニュー設定
 		for _, p in ipairs(players) do
 			local tmp_chr = mem.r8(p.addr.char)
@@ -4397,7 +4410,7 @@ rbff2.startplugin          = function()
 			p.rvs_count      = -1
 		end
 	end
-	local menu_to_main = function(on_a1, cancel, do_init)
+	menu.to_main = function(on_a1, cancel, do_init)
 		local col, row, g  = menu.training.pos.col, menu.training.pos.row, global
 		local p1, p2       = players[1], players[2]
 
@@ -4472,108 +4485,12 @@ rbff2.startplugin          = function()
 
 		menu.current = menu.main
 	end
-	local menu_to_main_cancel = function() menu_to_main(nil, true, false) end
-	local life_range, pow_range = { "最大", "赤", "ゼロ", }, { "最大", "半分", "ゼロ", }
-	for i = 1, 0xC0 do table.insert(life_range, i) end
-	for i = 1, 0x3C do table.insert(pow_range, i) end
-	local bar_menu_to_main         = function()
-		local col, p, g          = menu.bar.pos.col, players, global
-		--  タイトルラベル
-		p[1].red                 = col[2] -- 1P 体力ゲージ量
-		p[2].red                 = col[3] -- 2P 体力ゲージ量
-		p[1].max                 = col[4] -- 1P POWゲージ量
-		p[2].max                 = col[5] -- 2P POWゲージ量
-		dip_config.infinity_life = col[6] == 2 -- 体力ゲージモード
-		g.pow_mode               = col[7] -- POWゲージモード
-		menu.current             = menu.main
-	end
-	local disp_menu_to_main        = function()
-		local col, p, g, o   = menu.disp.pos.col, players, global, hide_options
-		--  タイトルラベル
-		p[1].disp_hitbox     = col[2] == 2                               -- 1P 判定表示
-		p[2].disp_hitbox     = col[3] == 2                               -- 2P 判定表示
-		p[1].disp_range      = col[4] == 2                               -- 1P 間合い表示
-		p[2].disp_range      = col[5] == 2                               -- 2P 間合い表示
-		p[1].disp_stun       = col[6] == 2                               -- 1P 気絶ゲージ表示
-		p[2].disp_stun       = col[7] == 2                               -- 2P 気絶ゲージ表示
-		p[1].disp_damage     = col[8] == 2                               -- 1P ダメージ表示
-		p[2].disp_damage     = col[9] == 2                               -- 2P ダメージ表示
-		p[1].disp_command    = col[10]                                   -- 1P 入力表示
-		p[2].disp_command    = col[11]                                   -- 2P 入力表示
-		g.disp_input         = col[12]                                   -- コマンド入力状態表示
-		g.disp_normal_frames = col[13]                                   -- 通常動作フレーム非表示
-		g.disp_frame         = col[14]                                   -- フレーム差表示
-		p[1].disp_frame      = col[15]                                   -- 1P フレーム数表示
-		p[2].disp_frame      = col[16]                                   -- 2P フレーム数表示
-		p[1].disp_fbfrm      = col[17] == 2                              -- 1P 弾フレーム数表示
-		p[2].disp_fbfrm      = col[18] == 2                              -- 2P 弾フレーム数表示
-		p[1].disp_state      = col[19]                                   -- 1P 状態表示
-		p[2].disp_state      = col[20]                                   -- 2P 状態表示
-		p[1].disp_base       = col[21]                                   -- 1P 処理アドレス表示
-		p[2].disp_base       = col[22]                                   -- 2P 処理アドレス表示
-		g.disp_pos           = col[23]                                   -- 1P 2P 距離表示
-		g.hide               = ut.hex_set(g.hide, o.p1_char, col[24] ~= 1) -- 1P キャラ表示
-		g.hide               = ut.hex_set(g.hide, o.p2_char, col[25] ~= 1) -- 2P キャラ表示
-		g.hide               = ut.hex_set(g.hide, o.p1_phantasm, col[26] ~= 1) -- 1P 残像表示
-		g.hide               = ut.hex_set(g.hide, o.p2_phantasm, col[27] ~= 1) -- 2P 残像表示
-		g.hide               = ut.hex_set(g.hide, o.p1_effect, col[28] ~= 1) -- 1P エフェクト表示
-		g.hide               = ut.hex_set(g.hide, o.p2_effect, col[29] ~= 1) -- 2P エフェクト表示
-		g.hide               = ut.hex_set(g.hide, o.p_chan, col[30] ~= 1) -- Pちゃん表示
-		g.hide               = ut.hex_set(g.hide, o.effect, col[31] ~= 1) -- エフェクト表示
-		menu.current         = menu.main
-	end
-	local ex_menu_to_main          = function()
-		local col, p, g       = menu.extra.pos.col, players, global
-		-- タイトルラベル
-		dip_config.easy_super = col[2] == 2          -- 簡易超必
-		dip_config.semiauto_p = col[3] == 2          -- 半自動潜在能力
-		p[1].dis_plain_shift  = col[4] == 2 or col[4] == 3 -- ライン送らない現象
-		p[2].dis_plain_shift  = col[4] == 2 or col[4] == 4 -- ライン送らない現象
-		g.pause_hit           = col[5]               -- ヒット時にポーズ
-		g.pause_hitbox        = col[6]               -- 判定発生時にポーズ
-		g.save_snapshot       = col[7]               -- 技画像保存
-		g.damaged_move        = col[8]               -- ヒット効果確認用
-		g.all_bs              = col[9] == 2          -- 全必殺技BS
-		mod.all_bs(g.all_bs)
-		menu.current = menu.main
-	end
-	local auto_menu_to_main        = function()
-		local col, g, ez           = menu.auto.pos.col, global, mod.easy_move
-		-- 自動入力設定
-		g.auto_input.otg_throw     = col[2] == 2 -- ダウン投げ
-		g.auto_input.otg_attack    = col[3] == 2 -- ダウン攻撃
-		g.auto_input.combo_throw   = col[4] == 2 -- 通常投げの派生技
-		g.auto_input.rave          = col[5]    -- デッドリーレイブ
-		g.auto_input.desire        = col[6]    -- アンリミテッドデザイア
-		g.auto_input.drill         = col[7]    -- ドリル
-		g.auto_input.pairon        = col[8]    -- 超白龍
-		g.auto_input.real_counter  = col[9]    -- M.リアルカウンター
-		g.auto_input.auto_3ecst    = col[10] == 2 -- M.トリプルエクスタシー
-		g.auto_input.taneuma       = col[11] == 2 -- 炎の種馬
-		g.auto_input.katsu_ca      = col[12] == 2 -- 喝CA
-		g.auto_input.sikkyaku_ca   = col[13] == 2 -- 飛燕失脚CA
-		-- 入力設定
-		g.auto_input.esaka_check   = col[15]   -- 詠酒チェック
-		g.auto_input.fast_kadenzer = col[16] == 2 -- 必勝！逆襲拳
-		g.auto_input.kara_ca       = col[17] == 2 -- 空振りCA
-		-- 簡易入力のROMハックを反映する
-		ez.real_counter(g.auto_input.real_counter) -- ジャーマン, フェイスロック, 投げっぱなしジャーマン
-		ez.esaka_check(g.auto_input.esaka_check) -- 詠酒の条件チェックを飛ばす
-		ez.taneuma_finish(g.auto_input.taneuma) -- 自動 炎の種馬
-		ez.fast_kadenzer(g.auto_input.fast_kadenzer) -- 必勝！逆襲拳1発キャッチカデンツァ
-		ez.katsu_ca(g.auto_input.katsu_ca)     -- 自動喝CA
-		ez.shikkyaku_ca(g.auto_input.sikkyaku_ca) -- 自動飛燕失脚CA
-		ez.kara_ca(g.auto_input.kara_ca)       -- 空振りCAできる
-		ez.triple_ecstasy(g.auto_input.auto_3ecst) -- 自動マリートリプルエクスタシー
-		menu.current = menu.main
-	end
-	local col_menu_to_main         = function()
-		local col = menu.color.pos.col
-		for i = 2, #col do db.box_type_list[i - 1].enabled = col[i] == 2 end
-		menu.current = menu.main
-	end
-	local menu_rec_to_tra          = function() menu.current = menu.training end
-	local exit_menu_to_rec         = function(slot_no)
+	menu.to_main_cancel = function() menu.to_main(nil, true, false) end
+	for i = 1, 0xC0 do table.insert(menu.labels.life_range, i) end
+	for i = 1, 0x3C do table.insert(menu.labels.pow_range, i) end
+
+	menu.rec_to_tra          = function() menu.current = menu.training end
+	menu.exit_and_rec         = function(slot_no)
 		local g               = global
 		g.dummy_mode          = 5
 		g.rec_main            = rec_await_no_input
@@ -4584,7 +4501,7 @@ rbff2.startplugin          = function()
 		menu.current          = menu.main
 		menu.exit()
 	end
-	local exit_menu_to_play_common = function()
+	menu.exit_and_play_common = function()
 		local col, g = menu.replay.pos.col, global
 		recording.live_slots = recording.live_slots or {}
 		for i = 1, #recording.slot do
@@ -4599,38 +4516,39 @@ rbff2.startplugin          = function()
 		g.replay_stop_on_dmg      = col[17] == 2 -- ダメージでリプレイ中止
 		g.repeat_interval         = recording.repeat_interval
 	end
-	local exit_menu_to_rec_pos     = function()
+	menu.exit_and_rec_pos     = function()
 		local g = global
 		g.dummy_mode = 5 -- レコードモードにする
 		g.rec_main = rec_fixpos
 		input.accepted = scr:frame_number()
 		recording.temp_player = players[1].reg_pcnt ~= 0 and 1 or 2
-		exit_menu_to_play_common()
+		menu.exit_and_play_common()
 		menu.current = menu.main
 		menu.exit()
 	end
-	local exit_menu_to_play        = function()
+	menu.exit_and_play        = function()
 		local col, g = menu.replay.pos.col, global
 		if menu.replay.pos.row == 14 and col[14] == 2 then -- 開始間合い固定 / 記憶
-			exit_menu_to_rec_pos()
+			menu.exit_and_rec_pos()
 			return
 		end
 		g.dummy_mode = 6 -- リプレイモードにする
 		g.rec_main = rec_await_play
 		input.accepted = scr:frame_number()
-		exit_menu_to_play_common()
+		menu.exit_and_play_common()
 		menu.current = menu.main
 		menu.exit()
 	end
-	local exit_menu_to_play_cancel = function()
+	menu.exit_and_play_cancel = function()
 		local g = global
 		g.dummy_mode = 6 -- リプレイモードにする
 		g.rec_main = rec_await_play
 		input.accepted = scr:frame_number()
-		exit_menu_to_play_common()
-		menu_to_tra()
+		menu.exit_and_play_common()
+		menu.to_tra()
 	end
-	local init_menu_config         = function()
+	menu.init_config         = function()
+		---@diagnostic disable-next-line: undefined-field
 		local col, p, g = menu.training.pos.col, players, global
 		col[1] = g.dummy_mode        -- ダミーモード
 		-- -- レコード・リプレイ設定
@@ -4651,7 +4569,8 @@ rbff2.startplugin          = function()
 		col[17] = p[2].force_y_pos   -- 2P Y座標強制
 		g.sync_pos_x = col[18]       -- X座標同期
 	end
-	local init_bar_menu_config     = function()
+	menu.init_bar_config     = function()
+		---@diagnostic disable-next-line: undefined-field
 		local col, p, g = menu.bar.pos.col, players, global
 		--   1                                                        1
 		col[2] = p[1].red                      -- 1P 体力ゲージ量
@@ -4661,7 +4580,8 @@ rbff2.startplugin          = function()
 		col[6] = dip_config.infinity_life and 2 or 1 -- 体力ゲージモード
 		col[7] = g.pow_mode                    -- POWゲージモード
 	end
-	local init_disp_menu_config    = function()
+	menu.init_disp_config    = function()
+		---@diagnostic disable-next-line: undefined-field
 		local col, p, g, o = menu.disp.pos.col, players, global, hide_options
 		-- タイトルラベル
 		col[2] = p[1].disp_hitbox and 2 or 1          -- 判定表示
@@ -4695,7 +4615,8 @@ rbff2.startplugin          = function()
 		col[30] = ut.tstb(g.hide, o.p_chan) and 1 or 2 -- Pちゃん表示
 		col[31] = ut.tstb(g.hide, o.effect) and 1 or 2 -- エフェクト表示
 	end
-	local init_ex_menu_config      = function()
+	menu.init_ex_config      = function()
+		---@diagnostic disable-next-line: undefined-field
 		local col, p, g = menu.extra.pos.col, players, global
 		-- タイトルラベル
 		col[2] = dip_config.easy_super and 2 or 1 -- 簡易超必
@@ -4714,7 +4635,7 @@ rbff2.startplugin          = function()
 		col[8] = g.damaged_move -- ヒット効果確認用
 		col[9] = g.all_bs and 2 or 1 -- 全必殺技BS
 	end
-	local init_auto_menu_config    = function()
+	menu.init_auto_config    = function()
 		local col, g = menu.auto.pos.col, global
 		-- -- 自動入力設定
 		col[2] = g.auto_input.otg_throw and 2 or 1 -- ダウン投げ
@@ -4734,28 +4655,26 @@ rbff2.startplugin          = function()
 		col[16] = g.auto_input.fast_kadenzer and 2 or 1 -- 必勝！逆襲拳
 		col[17] = g.auto_input.kara_ca and 2 or 1 -- 空振りCA
 	end
-	local init_restart_fight       = function()
-	end
-	menu_to_tra                    = function() menu.current = menu.training end
-	menu_to_bar                    = function() menu.current = menu.bar end
-	menu_to_disp                   = function() menu.current = menu.disp end
-	menu_to_ex                     = function() menu.current = menu.extra end
-	menu_to_auto                   = function() menu.current = menu.auto end
-	menu_to_col                    = function() menu.current = menu.color end
+	menu.to_tra                    = function() menu.current = menu.training end
+	menu.to_bar                    = function() menu.current = menu.bar end
+	menu.to_disp                   = function() menu.current = menu.disp end
+	menu.to_ex                     = function() menu.current = menu.extra end
+	menu.to_auto                   = function() menu.current = menu.auto end
+	menu.to_col                    = function() menu.current = menu.color end
 	menu.exit                      = function()
 		-- Bボタンでトレーニングモードへ切り替え
 		menu.state = menu.tra_main
 		cls_joy()
 		cls_ps()
 	end
-	local menu_player_select       = function(p_no)
+	menu.on_player_select       = function(p_no)
 		--main_menu.pos.row = 1
 		cls_ps()
 		goto_player_select(p_no)
 		--cls_joy()
 		--cls_ps()
 		-- 初期化
-		menu_to_main(nil, false, true)
+		menu.to_main(nil, false, true)
 		-- メニューを抜ける
 		menu.state = menu.tra_main
 		menu.prev_state = nil
@@ -4763,15 +4682,15 @@ rbff2.startplugin          = function()
 		-- レコード＆リプレイ用の初期化
 		if global.old_dummy_mode == 5 then
 			-- レコード
-			exit_menu_to_rec(recording.last_slot or 1)
+			menu.exit_and_rec(recording.last_slot or 1)
 		elseif global.old_dummy_mode == 6 then
 			-- リプレイ
-			exit_menu_to_play()
+			menu.exit_and_play()
 		end
 	end
-	local menu_restart_fight       = function()
+	menu.on_restart_fight       = function()
+		---@diagnostic disable-next-line: undefined-field
 		local col, g, o = menu.main.pos.col, global, hide_options
-		--main_menu.pos.row = 1
 		g.hide          = ut.hex_set(g.hide, o.meters, col[15] == 2) -- 体力,POWゲージ表示
 		g.hide          = ut.hex_set(g.hide, o.background, col[16] == 2) -- 背景表示
 		g.hide          = ut.hex_set(g.hide, o.shadow1, col[17] ~= 2) -- 影表示
@@ -4789,122 +4708,94 @@ rbff2.startplugin          = function()
 
 		cls_joy()
 		cls_ps()
-		menu_to_main(nil, false, true) -- 初期化
+		menu.to_main(nil, false, true) -- 初期化
 		menu.state = menu.tra_main -- メニューを抜ける
 		menu.reset_pos = true
 		if g.old_dummy_mode == 5 then
-			exit_menu_to_rec(recording.last_slot or 1) -- レコード＆リプレイ用の初期化 レコード
+			menu.exit_and_rec(recording.last_slot or 1) -- レコード＆リプレイ用の初期化 レコード
 		elseif g.old_dummy_mode == 6 then
-			exit_menu_to_play()               -- レコード＆リプレイ用の初期化 リプレイ
+			menu.exit_and_play()               -- レコード＆リプレイ用の初期化 リプレイ
 		end
 	end
-	-- 半角スペースで始まっているメニューはラベル行とみなす
-	local is_label_line            = function(str) return str:find('^' .. "  +") ~= nil end
-	menu.main                      = {
-		list = {
-			{ "ダミー設定" },
-			{ "ゲージ設定" },
-			{ "表示設定" },
-			{ "特殊設定" },
-			{ "自動入力設定" },
-			{ "判定個別設定" },
-			{ "プレイヤーセレクト画面" },
-			{ "                          クイックセレクト" },
-			{ "1P セレクト", menu.labels.chars },
-			{ "2P セレクト", menu.labels.chars },
-			{ "1P カラー", { "A", "D" } },
-			{ "2P カラー", { "A", "D" } },
-			{ "ステージセレクト", menu.labels.stage_list },
-			{ "BGMセレクト", menu.labels.bgms },
-			{ "体力,POWゲージ表示", menu.labels.off_on, },
-			{ "背景表示", menu.labels.off_on, },
-			{ "影表示", { "ON", "OFF", "ON:反射→影", } },
-			{ "位置補正", menu.labels.fix_scr_tops, },
-			{ "リスタート" },
-		},
-		pos = {
-			-- メニュー内の選択位置
-			offset = 1,
-			row = 1,
-			col = {
-				0, -- ダミー設定              1
-				0, -- ゲージ設定              2
-				0, -- 表示設定                3
-				0, -- 特殊設定                4
-				0, -- 自動入力設定            5
-				0, -- 判定個別設定            6
-				0, -- プレイヤーセレクト画面  7
-				0, -- クイックセレクト        8
-				1, -- 1P セレクト             9
-				1, -- 2P セレクト            10
-				1, -- 1P カラー              11
-				1, -- 2P カラー              12
-				1, -- ステージセレクト       13
-				1, -- BGMセレクト            14
-				1, -- 体力,POWゲージ表示     15
-				2, -- 背景表示               16
-				2, -- 影表示                 17
-				1, -- 背景なし時位置補正     18
-				0, -- リスタート             19
-			},
-		},
-		on_a = {
-			menu_to_tra, -- ダミー設定
-			menu_to_bar, -- ゲージ設定
-			menu_to_disp, -- 表示設定
-			menu_to_ex, -- 特殊設定
-			menu_to_auto, -- 自動入力設定
-			menu_to_col, -- 判定個別設定
-			menu_player_select, -- プレイヤーセレクト画面
-			menu_nop,  -- クイックセレクト
-			menu_restart_fight, -- 1P セレクト
-			menu_restart_fight, -- 2P セレクト
-			menu_restart_fight, -- 1P カラー
-			menu_restart_fight, -- 2P カラー
-			menu_restart_fight, -- ステージセレクト
-			menu_restart_fight, -- BGMセレクト
-			menu_restart_fight, -- 体力,POWゲージ表示
-			menu_restart_fight, -- 背景表示
-			menu_restart_fight, -- 影表示
-			menu_restart_fight, -- 背景なし時位置補正
-			menu_restart_fight, -- リスタート
-		},
-		on_b = ut.new_filled_table(19, menu.exit),
-	}
+	menu.main                      = menu.create({
+		{ "ダミー設定" },
+		{ "ゲージ設定" },
+		{ "表示設定" },
+		{ "特殊設定" },
+		{ "自動入力設定" },
+		{ "判定個別設定" },
+		{ "プレイヤーセレクト画面" },
+		{ title = true, "クイックセレクト" },
+		{ "1P セレクト", menu.labels.chars },
+		{ "2P セレクト", menu.labels.chars },
+		{ "1P カラー", { "A", "D" } },
+		{ "2P カラー", { "A", "D" } },
+		{ "ステージセレクト", menu.labels.stage_list },
+		{ "BGMセレクト", menu.labels.bgms },
+		{ "体力,POWゲージ表示", menu.labels.off_on, },
+		{ "背景表示", menu.labels.off_on, },
+		{ "影表示", { "ON", "OFF", "ON:反射→影", } },
+		{ "位置補正", menu.labels.fix_scr_tops, },
+		{ "リスタート" },
+	}, {
+		menu.to_tra,   -- ダミー設定
+		menu.to_bar,   -- ゲージ設定
+		menu.to_disp,  -- 表示設定
+		menu.to_ex,    -- 特殊設定
+		menu.to_auto,  -- 自動入力設定
+		menu.to_col,   -- 判定個別設定
+		menu.on_player_select, -- プレイヤーセレクト画面
+		function() end,      -- クイックセレクト
+		menu.on_restart_fight, -- 1P セレクト
+		menu.on_restart_fight, -- 2P セレクト
+		menu.on_restart_fight, -- 1P カラー
+		menu.on_restart_fight, -- 2P カラー
+		menu.on_restart_fight, -- ステージセレクト
+		menu.on_restart_fight, -- BGMセレクト
+		menu.on_restart_fight, -- 体力,POWゲージ表示
+		menu.on_restart_fight, -- 背景表示
+		menu.on_restart_fight, -- 影表示
+		menu.on_restart_fight, -- 背景なし時位置補正
+		menu.on_restart_fight, -- リスタート
+	}, ut.new_filled_table(19, menu.exit))
+
 	menu.current                   = menu.main -- デフォルト設定
 	menu.update_pos                = function()
+		---@diagnostic disable-next-line: undefined-field
+		local col = menu.main.pos.col
+
 		-- メニューの更新
-		menu.main.pos.col[9] = math.min(math.max(mem.r8(0x107BA5), 1), #menu.labels.chars)
-		menu.main.pos.col[10] = math.min(math.max(mem.r8(0x107BA7), 1), #menu.labels.chars)
-		menu.main.pos.col[11] = math.min(math.max(mem.r8(0x107BAC) + 1, 1), 2)
-		menu.main.pos.col[12] = math.min(math.max(mem.r8(0x107BAD) + 1, 1), 2)
+		col[9] = math.min(math.max(mem.r8(0x107BA5), 1), #menu.labels.chars)
+		col[10] = math.min(math.max(mem.r8(0x107BA7), 1), #menu.labels.chars)
+		col[11] = math.min(math.max(mem.r8(0x107BAC) + 1, 1), 2)
+		col[12] = math.min(math.max(mem.r8(0x107BAD) + 1, 1), 2)
 
 		menu.reset_pos = false
 
 		local stg1, stg2, stg3 = mem.r8(0x107BB1), mem.r8(0x107BB7), mem.r16(0x107BB8)
 		for i, stage in ipairs(menu.stage_list) do
-			menu.main.pos.col[13] = i
+			col[13] = i
 			if stage.stg1 == stg1 and stage.stg2 == stg2 and stage.stg3 == stg3 then break end
 		end
 
 		local bgmid, found = mem.r8(0x10A8D5), false
 		for _, bgm in ipairs(menu.bgms) do
 			if bgmid == bgm.id then
-				menu.main.pos.col[14] = bgm.name_idx
+				col[14] = bgm.name_idx
 				found = true
 				break
 			end
 		end
 		if not found then
-			menu.main.pos.col[14] = 1
+			col[14] = 1
 		end
-		menu.main.pos.col[15] = ut.tstb(global.hide, hide_options.meters, true) and 1 or 2 -- 体力,POWゲージ表示
-		menu.main.pos.col[16] = ut.tstb(global.hide, hide_options.background, true) and 1 or 2 -- 背景表示
-		menu.main.pos.col[17] = ut.tstb(global.hide, hide_options.shadow1, true) and 2 or
+		col[15] = ut.tstb(global.hide, hide_options.meters, true) and 1 or 2 -- 体力,POWゲージ表示
+		col[16] = ut.tstb(global.hide, hide_options.background, true) and 1 or 2 -- 背景表示
+		col[17] = ut.tstb(global.hide, hide_options.shadow1, true) and 2 or
 			ut.tstb(global.hide, hide_options.shadow2, true) and 3 or 1                  -- 影表示
-		menu.main.pos.col[18] = global.fix_scr_top
+		col[18] = global.fix_scr_top
 
-		setup_char_manu()
+		menu.setup_char()
 	end
 	-- ブレイクショットメニュー
 	menu.bs_menus, menu.rvs_menus  = {}, {}
@@ -4913,8 +4804,8 @@ rbff2.startplugin          = function()
 		table.insert(bs_blocks, string.format("%s回ガード後に発動", i))
 		table.insert(rvs_blocks, string.format("%s回ガード後に発動", i))
 	end
-	local menu_bs_to_tra_menu = function() menu_to_tra() end
-	local menu_rvs_to_tra_menu = function()
+
+	menu.rvs_to_tra = function()
 		local cur_prvs = nil
 		for i, prvs in ipairs(menu.rvs_menus) do
 			for _, a_bs_menu in ipairs(prvs) do
@@ -4937,7 +4828,7 @@ rbff2.startplugin          = function()
 				end
 			end
 		end
-		menu_to_tra()
+		menu.to_tra()
 	end
 	for i = 1, 2 do
 		local pbs, prvs = {}, {}
@@ -4945,79 +4836,77 @@ rbff2.startplugin          = function()
 		table.insert(menu.rvs_menus, prvs)
 		for _, bs_list in pairs(db.char_bs_list) do
 			local list, on_ab, col = {}, {}, {}
-			table.insert(list, { "     ONにしたスロットからランダムで発動されます。" })
-			table.insert(on_ab, menu_bs_to_tra_menu)
+			table.insert(list, { title = true, "ONにしたスロットからランダムで発動されます。" })
+			table.insert(on_ab, menu.to_tra)
 			table.insert(col, 0)
 			for _, bs in pairs(bs_list) do
 				local name = bs.name
 				if ut.tstb(bs.hook_type, hook_cmd_types.ex_breakshot, true) then bs.name = "*" .. bs.name end
 				table.insert(list, { name, menu.labels.off_on, common = bs.common == true, row = #list, })
-				table.insert(on_ab, menu_bs_to_tra_menu)
+				table.insert(on_ab, menu.to_tra)
 				table.insert(col, 1)
 			end
 			table.insert(pbs, { list = list, pos = { offset = 1, row = 2, col = col, }, on_a = on_ab, on_b = on_ab, })
 		end
 		for _, rvs_list in pairs(db.char_rvs_list) do
 			local list, on_ab, col = {}, {}, {}
-			table.insert(list, { "     ONにしたスロットからランダムで発動されます。" })
-			table.insert(on_ab, menu_rvs_to_tra_menu)
+			table.insert(list, { title = true, "ONにしたスロットからランダムで発動されます。" })
+			table.insert(on_ab, menu.rvs_to_tra)
 			table.insert(col, 0)
 			for _, bs in pairs(rvs_list) do
 				table.insert(list, { bs.name, menu.labels.off_on, common = bs.common == true, row = #list, })
-				table.insert(on_ab, menu_rvs_to_tra_menu)
+				table.insert(on_ab, menu.rvs_to_tra)
 				table.insert(col, 1)
 			end
 			table.insert(prvs, { list = list, pos = { offset = 1, row = 2, col = col, }, on_a = on_ab, on_b = on_ab, })
 		end
 	end
-	local gd_frms = {}
-	for i = 1, 61 do table.insert(gd_frms, string.format("%sF後にガード解除", (i - 1))) end
-	local no_hit_row = { "OFF", }
-	for i = 1, 99 do table.insert(no_hit_row, string.format("%s段目で空振り", i)) end
+	for i = 1, 61 do table.insert(menu.labels.block_frames, string.format("%sF後にガード解除", (i - 1))) end
+	for i = 1, 99 do table.insert(menu.labels.attack_harmless, string.format("%s段目で空振り", i)) end
 
-
-	local create_menu = function(list, on_a, on_b)
-		local row, col = nil, {}
-		for i, obj in ipairs(list) do
-			if #obj > 1 then row = i end
-			table.insert(col, #obj == 1 and 0 or 1)
-		end
-		return { list = list, pos = { offset = 1, row = row or 1, col = col }, on_a = on_a, on_b = on_b or on_a }
-	end
-
-	menu.training = create_menu({
+	menu.training = menu.create({
 		{ "ダミーモード", { "プレイヤー vs プレイヤー", "プレイヤー vs CPU", "CPU vs プレイヤー", "1P&2P入れ替え", "レコード", "リプレイ" }, },
-		{ "                         ダミー設定" },
+		{ title = true, "ダミー設定" },
 		{ "1P アクション", { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
 		{ "2P アクション", { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
 		{ "1P ガード", { "なし", "オート", "ブレイクショット（Aで選択画面へ）", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
 		{ "2P ガード", { "なし", "オート", "ブレイクショット（Aで選択画面へ）", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
-		{ "1ガード持続フレーム数", gd_frms, },
+		{ "1ガード持続フレーム数", menu.labels.block_frames, },
 		{ "ブレイクショット設定", bs_blocks },
 		{ "1P やられ時行動", { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ（Aで選択画面へ）", "グランドスウェー（Aで選択画面へ）", "起き上がり攻撃", }, },
 		{ "2P やられ時行動", { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ（Aで選択画面へ）", "グランドスウェー（Aで選択画面へ）", "起き上がり攻撃", }, },
 		{ "ガードリバーサル設定", bs_blocks },
-		{ "1P 強制空振り", no_hit_row, },
-		{ "2P 強制空振り", no_hit_row, },
+		{ "1P 強制空振り", menu.labels.attack_harmless, },
+		{ "2P 強制空振り", menu.labels.attack_harmless, },
 		{ "1P 挑発で前進", menu.labels.off_on, },
 		{ "2P 挑発で前進", menu.labels.off_on, },
 		{ "1P Y座標強制", force_y_pos, },
 		{ "2P Y座標強制", force_y_pos, },
 		{ "画面下に移動", { "OFF", "2Pを下に移動", "1Pを下に移動", }, },
-	}, ut.new_filled_table(18, menu_to_main), ut.new_filled_table(18, menu_to_main_cancel))
+	}, ut.new_filled_table(18, menu.to_main), ut.new_filled_table(18, menu.to_main_cancel))
 
-	menu.bar = create_menu({
-		{ "                         ゲージ設定" },
-		{ "1P 体力ゲージ量", life_range, }, -- "最大", "赤", "ゼロ" ...
-		{ "2P 体力ゲージ量", life_range, }, -- "最大", "赤", "ゼロ" ...
-		{ "1P POWゲージ量", pow_range, }, -- "最大", "半分", "ゼロ" ...
-		{ "2P POWゲージ量", pow_range, }, -- "最大", "半分", "ゼロ" ...
+	menu.bar = menu.create({
+		{ title = true, "ゲージ設定" },
+		{ "1P 体力ゲージ量", menu.labels.life_range, }, -- "最大", "赤", "ゼロ" ...
+		{ "2P 体力ゲージ量", menu.labels.life_range, }, -- "最大", "赤", "ゼロ" ...
+		{ "1P POWゲージ量", menu.labels.pow_range, }, -- "最大", "半分", "ゼロ" ...
+		{ "2P POWゲージ量", menu.labels.pow_range, }, -- "最大", "半分", "ゼロ" ...
 		{ "体力ゲージモード", { "自動回復", "固定" }, },
 		{ "POWゲージモード", { "自動回復", "固定", "通常動作" }, },
-	}, ut.new_filled_table(7, bar_menu_to_main))
+	}, ut.new_filled_table(7, function()
+		local col, p, g          = menu.bar.pos.col, players, global
+		--  タイトルラベル
+		p[1].red                 = col[2] -- 1P 体力ゲージ量
+		p[2].red                 = col[3] -- 2P 体力ゲージ量
+		p[1].max                 = col[4] -- 1P POWゲージ量
+		p[2].max                 = col[5] -- 2P POWゲージ量
+		dip_config.infinity_life = col[6] == 2 -- 体力ゲージモード
+		g.pow_mode               = col[7] -- POWゲージモード
+		menu.current             = menu.main
+	end))
 
-	menu.disp = create_menu({
-		{ "                          表示設定" },
+	menu.disp = menu.create({
+		{ title = true, "表示設定" },
 		{ "1P 判定表示", { "OFF", "ON", }, },
 		{ "2P 判定表示", { "OFF", "ON", }, },
 		{ "1P 間合い表示", { "OFF", "ON", }, },
@@ -5048,10 +4937,44 @@ rbff2.startplugin          = function()
 		{ "2P エフェクト表示", menu.labels.off_on, },
 		{ "Pちゃん表示", menu.labels.off_on, },
 		{ "エフェクト表示", menu.labels.off_on, },
-	}, ut.new_filled_table(31, disp_menu_to_main))
+	}, ut.new_filled_table(31, function()
+		local col, p, g, o   = menu.disp.pos.col, players, global, hide_options
+		--  タイトルラベル
+		p[1].disp_hitbox     = col[2] == 2                               -- 1P 判定表示
+		p[2].disp_hitbox     = col[3] == 2                               -- 2P 判定表示
+		p[1].disp_range      = col[4] == 2                               -- 1P 間合い表示
+		p[2].disp_range      = col[5] == 2                               -- 2P 間合い表示
+		p[1].disp_stun       = col[6] == 2                               -- 1P 気絶ゲージ表示
+		p[2].disp_stun       = col[7] == 2                               -- 2P 気絶ゲージ表示
+		p[1].disp_damage     = col[8] == 2                               -- 1P ダメージ表示
+		p[2].disp_damage     = col[9] == 2                               -- 2P ダメージ表示
+		p[1].disp_command    = col[10]                                   -- 1P 入力表示
+		p[2].disp_command    = col[11]                                   -- 2P 入力表示
+		g.disp_input         = col[12]                                   -- コマンド入力状態表示
+		g.disp_normal_frames = col[13]                                   -- 通常動作フレーム非表示
+		g.disp_frame         = col[14]                                   -- フレーム差表示
+		p[1].disp_frame      = col[15]                                   -- 1P フレーム数表示
+		p[2].disp_frame      = col[16]                                   -- 2P フレーム数表示
+		p[1].disp_fbfrm      = col[17] == 2                              -- 1P 弾フレーム数表示
+		p[2].disp_fbfrm      = col[18] == 2                              -- 2P 弾フレーム数表示
+		p[1].disp_state      = col[19]                                   -- 1P 状態表示
+		p[2].disp_state      = col[20]                                   -- 2P 状態表示
+		p[1].disp_base       = col[21]                                   -- 1P 処理アドレス表示
+		p[2].disp_base       = col[22]                                   -- 2P 処理アドレス表示
+		g.disp_pos           = col[23]                                   -- 1P 2P 距離表示
+		g.hide               = ut.hex_set(g.hide, o.p1_char, col[24] ~= 1) -- 1P キャラ表示
+		g.hide               = ut.hex_set(g.hide, o.p2_char, col[25] ~= 1) -- 2P キャラ表示
+		g.hide               = ut.hex_set(g.hide, o.p1_phantasm, col[26] ~= 1) -- 1P 残像表示
+		g.hide               = ut.hex_set(g.hide, o.p2_phantasm, col[27] ~= 1) -- 2P 残像表示
+		g.hide               = ut.hex_set(g.hide, o.p1_effect, col[28] ~= 1) -- 1P エフェクト表示
+		g.hide               = ut.hex_set(g.hide, o.p2_effect, col[29] ~= 1) -- 2P エフェクト表示
+		g.hide               = ut.hex_set(g.hide, o.p_chan, col[30] ~= 1) -- Pちゃん表示
+		g.hide               = ut.hex_set(g.hide, o.effect, col[31] ~= 1) -- エフェクト表示
+		menu.current         = menu.main
+	end))
 
-	menu.extra = create_menu({
-		{ "                          特殊設定" },
+	menu.extra = menu.create({
+		{ title = true, "特殊設定" },
 		{ "簡易超必", menu.labels.off_on, },
 		{ "半自動潜在能力", menu.labels.off_on, },
 		{ "ライン送らない現象", { "OFF", "ON", "ON:1Pのみ", "ON:2Pのみ" }, },
@@ -5060,10 +4983,24 @@ rbff2.startplugin          = function()
 		{ "技画像保存", { "OFF", "ON:新規", "ON:上書き", }, },
 		{ "ヒット効果確認用", db.hit_effects.menus, },
 		{ "全必殺技BS", menu.labels.off_on, }
-	}, ut.new_filled_table(10, ex_menu_to_main))
+	}, ut.new_filled_table(10, function()
+		local col, p, g       = menu.extra.pos.col, players, global
+		-- タイトルラベル
+		dip_config.easy_super = col[2] == 2          -- 簡易超必
+		dip_config.semiauto_p = col[3] == 2          -- 半自動潜在能力
+		p[1].dis_plain_shift  = col[4] == 2 or col[4] == 3 -- ライン送らない現象
+		p[2].dis_plain_shift  = col[4] == 2 or col[4] == 4 -- ライン送らない現象
+		g.pause_hit           = col[5]               -- ヒット時にポーズ
+		g.pause_hitbox        = col[6]               -- 判定発生時にポーズ
+		g.save_snapshot       = col[7]               -- 技画像保存
+		g.damaged_move        = col[8]               -- ヒット効果確認用
+		g.all_bs              = col[9] == 2          -- 全必殺技BS
+		mod.all_bs(g.all_bs)
+		menu.current = menu.main
+	end))
 
-	menu.auto = create_menu({
-		{ "                        自動入力設定" },
+	menu.auto = menu.create({
+		{ title = true, "自動入力設定" },
 		{ "ダウン投げ", menu.labels.off_on, },
 		{ "ダウン攻撃", menu.labels.off_on, },
 		{ "通常投げの派生技", menu.labels.off_on, },
@@ -5076,19 +5013,52 @@ rbff2.startplugin          = function()
 		{ "炎の種馬", menu.labels.off_on, },
 		{ "喝CA", menu.labels.off_on, },
 		{ "飛燕失脚CA", menu.labels.off_on, },
-		{ "                          入力設定" },
+		{ title = true, "入力設定" },
 		{ "詠酒チェック", { "OFF", "詠酒距離チェックなし", "いつでも詠酒" }, },
 		{ "必勝！逆襲拳", menu.labels.off_on, },
 		{ "空振りCA", menu.labels.off_on, },
-	}, ut.new_filled_table(17, auto_menu_to_main))
+	}, ut.new_filled_table(17, function()
+		local col, g, ez           = menu.auto.pos.col, global, mod.easy_move
+		-- 自動入力設定
+		g.auto_input.otg_throw     = col[2] == 2 -- ダウン投げ
+		g.auto_input.otg_attack    = col[3] == 2 -- ダウン攻撃
+		g.auto_input.combo_throw   = col[4] == 2 -- 通常投げの派生技
+		g.auto_input.rave          = col[5]    -- デッドリーレイブ
+		g.auto_input.desire        = col[6]    -- アンリミテッドデザイア
+		g.auto_input.drill         = col[7]    -- ドリル
+		g.auto_input.pairon        = col[8]    -- 超白龍
+		g.auto_input.real_counter  = col[9]    -- M.リアルカウンター
+		g.auto_input.auto_3ecst    = col[10] == 2 -- M.トリプルエクスタシー
+		g.auto_input.taneuma       = col[11] == 2 -- 炎の種馬
+		g.auto_input.katsu_ca      = col[12] == 2 -- 喝CA
+		g.auto_input.sikkyaku_ca   = col[13] == 2 -- 飛燕失脚CA
+		-- 入力設定
+		g.auto_input.esaka_check   = col[15]   -- 詠酒チェック
+		g.auto_input.fast_kadenzer = col[16] == 2 -- 必勝！逆襲拳
+		g.auto_input.kara_ca       = col[17] == 2 -- 空振りCA
+		-- 簡易入力のROMハックを反映する
+		ez.real_counter(g.auto_input.real_counter) -- ジャーマン, フェイスロック, 投げっぱなしジャーマン
+		ez.esaka_check(g.auto_input.esaka_check) -- 詠酒の条件チェックを飛ばす
+		ez.taneuma_finish(g.auto_input.taneuma) -- 自動 炎の種馬
+		ez.fast_kadenzer(g.auto_input.fast_kadenzer) -- 必勝！逆襲拳1発キャッチカデンツァ
+		ez.katsu_ca(g.auto_input.katsu_ca)     -- 自動喝CA
+		ez.shikkyaku_ca(g.auto_input.sikkyaku_ca) -- 自動飛燕失脚CA
+		ez.kara_ca(g.auto_input.kara_ca)       -- 空振りCAできる
+		ez.triple_ecstasy(g.auto_input.auto_3ecst) -- 自動マリートリプルエクスタシー
+		menu.current = menu.main
+	end))
 
-	menu.color = create_menu(ut.table_add_conv_all({
-		{ "                          判定個別設定" }
+	menu.color = menu.create(ut.table_add_conv_all({
+		{ title = true, "判定個別設定" }
 	}, db.box_type_list, function(b) return { b.name, menu.labels.off_on, { fill = b.fill, outline = b.outline } } end
-	), ut.new_filled_table(#db.box_type_list + 1, col_menu_to_main))
+	), ut.new_filled_table(#db.box_type_list + 1, function()
+		local col = menu.color.pos.col
+		for i = 2, #col do db.box_type_list[i - 1].enabled = col[i] == 2 end
+		menu.current = menu.main
+	end))
 
-	menu.recording = create_menu({
-		{ "            選択したスロットに記憶されます。" },
+	menu.recording = menu.create({
+		{ title = true, "選択したスロットに記憶されます。" },
 		{ "スロット1", { "Aでレコード開始", }, },
 		{ "スロット2", { "Aでレコード開始", }, },
 		{ "スロット3", { "Aでレコード開始", }, },
@@ -5098,21 +5068,21 @@ rbff2.startplugin          = function()
 		{ "スロット7", { "Aでレコード開始", }, },
 		{ "スロット8", { "Aでレコード開始", }, },
 	}, {
-		menu_rec_to_tra,               -- 説明
-		function() exit_menu_to_rec(1) end, -- スロット1
-		function() exit_menu_to_rec(2) end, -- スロット2
-		function() exit_menu_to_rec(3) end, -- スロット3
-		function() exit_menu_to_rec(4) end, -- スロット4
-		function() exit_menu_to_rec(5) end, -- スロット5
-		function() exit_menu_to_rec(6) end, -- スロット6
-		function() exit_menu_to_rec(7) end, -- スロット7
-		function() exit_menu_to_rec(8) end, -- スロット8
-	}, ut.new_filled_table(1, menu_rec_to_tra, 8, menu_to_tra))
+		menu.rec_to_tra,               -- 説明
+		function() menu.exit_and_rec(1) end, -- スロット1
+		function() menu.exit_and_rec(2) end, -- スロット2
+		function() menu.exit_and_rec(3) end, -- スロット3
+		function() menu.exit_and_rec(4) end, -- スロット4
+		function() menu.exit_and_rec(5) end, -- スロット5
+		function() menu.exit_and_rec(6) end, -- スロット6
+		function() menu.exit_and_rec(7) end, -- スロット7
+		function() menu.exit_and_rec(8) end, -- スロット8
+	}, ut.new_filled_table(1, menu.rec_to_tra, 8, menu.to_tra))
 
 	local play_interval = {}
 	for i = 1, 301 do table.insert(play_interval, i - 1) end
-	menu.replay = create_menu({
-		{ "     ONにしたスロットからランダムでリプレイされます。" },
+	menu.replay = menu.create({
+		{ title = true, "ONにしたスロットからランダムでリプレイされます。" },
 		{ "スロット1", menu.labels.off_on, },
 		{ "スロット2", menu.labels.off_on, },
 		{ "スロット3", menu.labels.off_on, },
@@ -5121,7 +5091,7 @@ rbff2.startplugin          = function()
 		{ "スロット6", menu.labels.off_on, },
 		{ "スロット7", menu.labels.off_on, },
 		{ "スロット8", menu.labels.off_on, },
-		{ "                        リプレイ設定" },
+		{ title = true, "リプレイ設定" },
 		{ "繰り返し", menu.labels.off_on, },
 		{ "繰り返し間隔", play_interval, },
 		{ "繰り返し開始条件", { "なし", "両キャラがニュートラル", }, },
@@ -5129,18 +5099,17 @@ rbff2.startplugin          = function()
 		{ "状態リセット", { "OFF", "1Pと2P", "1P", "2P", }, },
 		{ "ガイド表示", menu.labels.off_on, },
 		{ "ダメージでリプレイ中止", menu.labels.off_on, },
-	}, ut.new_filled_table(17, exit_menu_to_play), ut.new_filled_table(17, exit_menu_to_play_cancel))
+	}, ut.new_filled_table(17, menu.exit_and_play), ut.new_filled_table(17, menu.exit_and_play_cancel))
 
-	init_auto_menu_config()
-	init_disp_menu_config()
-	init_ex_menu_config()
-	init_bar_menu_config()
-	init_menu_config()
-	init_restart_fight()
-	menu_to_main(nil, true)
+	menu.init_auto_config()
+	menu.init_disp_config()
+	menu.init_ex_config()
+	menu.init_bar_config()
+	menu.init_config()
+	menu.to_main(nil, true)
 
 	menu.proc = function() set_freeze(false) end -- メニュー表示中はDIPかポーズでフリーズさせる
-	local menu_cur_updown = function(add_val)
+	menu.cur_updown = function(add_val)
 		local temp_row = menu.current.pos.row
 		while true do
 			temp_row = (temp_row + add_val) % #menu.current.list
@@ -5151,17 +5120,17 @@ rbff2.startplugin          = function()
 			end
 			-- printf("row %s/%s", temp_row, #menu_cur.list)
 			-- ラベルだけ行の場合はスキップ
-			if not is_label_line(menu.current.list[temp_row][1]) then
+			if not menu.current.list[temp_row].title then
 				menu.current.pos.row = temp_row
 				break
 			end
 		end
-		if not (menu.current.pos.offset < menu.current.pos.row and menu.current.pos.row < menu.current.pos.offset + menu_max_row) then
-			menu.current.pos.offset = math.max(1, menu.current.pos.row - menu_max_row)
+		if not (menu.current.pos.offset < menu.current.pos.row and menu.current.pos.row < menu.current.pos.offset + menu.max_row) then
+			menu.current.pos.offset = math.max(1, menu.current.pos.row - menu.max_row)
 		end
 		input.accepted = scr:frame_number()
 	end
-	local menu_cur_lr = function(add_val, loop)
+	menu.cur_lr = function(add_val, loop)
 		-- カーソル右移動
 		local cols = menu.current.list[menu.current.pos.row][2]
 		if cols then
@@ -5197,22 +5166,22 @@ rbff2.startplugin          = function()
 		elseif input.accept("B") then
 			menu.current.on_b[menu.current.pos.row]()        -- メニューから戻る
 		elseif input.accept("8") then
-			menu_cur_updown(-1)                              -- カーソル上移動
+			menu.cur_updown(-1)                              -- カーソル上移動
 		elseif input.accept("2") then
-			menu_cur_updown(1)                               -- カーソル下移動
+			menu.cur_updown(1)                               -- カーソル下移動
 		elseif input.accept("4") then
-			menu_cur_lr(-1, true)                            -- カーソル左移動
+			menu.cur_lr(-1, true)                            -- カーソル左移動
 		elseif input.accept("6") then
-			menu_cur_lr(1, true)                             -- カーソル右移動
+			menu.cur_lr(1, true)                             -- カーソル右移動
 		elseif input.accept("C") then
-			menu_cur_lr(-10, false)                          -- カーソル左10移動
+			menu.cur_lr(-10, false)                          -- カーソル左10移動
 		elseif input.accept("D") then
-			menu_cur_lr(10, false)                           -- カーソル右10移動
+			menu.cur_lr(10, false)                           -- カーソル右10移動
 		end
 
 		-- メニュー表示本体
 		scr:draw_box(0, 0, width, height, 0xC0000000, 0xC0000000)
-		local row_num, menu_max = 1, math.min(menu.current.pos.offset + menu_max_row, #menu.current.list)
+		local row_num, menu_max = 1, math.min(menu.current.pos.offset + menu.max_row, #menu.current.list)
 		for i = menu.current.pos.offset, menu_max do
 			local row = menu.current.list[i]
 			local y = 48 + 10 * row_num
@@ -5226,9 +5195,9 @@ rbff2.startplugin          = function()
 			else
 				c1, c2, c3, c4, c5 = 0xFFC0C0C0, 0xFFB0B0B0, 0xFF000000, 0x00000000, 0xFF000000
 			end
-			if is_label_line(row[1]) then
+			if row.title then
 				-- ラベルだけ行
-				scr:draw_text(96, y + 1, row[1], 0xFFFFFFFF)
+				scr:draw_text("center", y + 1, row[1], 0xFFFFFFFF)
 			else
 				-- 通常行 ラベル部分
 				scr:draw_box(90, y + 0.5, 230, y + 8.5, c2, c1)
