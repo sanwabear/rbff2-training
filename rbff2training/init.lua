@@ -221,6 +221,7 @@ local menu               = {
 		block_frames    = {},
 		attack_harmless = { "OFF" },
 		play_interval   = {},
+		force_y_pos     = { "OFF", 0 },
 	},
 
 	create = function(list, on_a, on_b)
@@ -241,6 +242,8 @@ local menu               = {
 }
 for i = -20, 0xF0 do table.insert(menu.labels.fix_scr_tops, "" .. i) end
 for i = 1, 301 do table.insert(menu.labels.play_interval, i - 1) end
+for i = 1, 256 do table.insert(menu.labels.force_y_pos, i) end
+for i = -1, -256, -1 do table.insert(menu.labels.force_y_pos, i) end
 for _, stg in ipairs(menu.stage_list) do table.insert(menu.labels.stage_list, stg.name) end
 for _, bgm in ipairs(menu.bgms) do
 	local exists = false
@@ -788,11 +791,7 @@ end
 
 -- キー入力
 local joy_k                                = db.joy_k
-local rev_joy                              = db.rev_joy
-local joy_frontback                        = db.joy_frontback
-local joy_pside                            = db.joy_pside
 local joy_neutrala                         = db.joy_neutrala
-local kprops                               = db.kprops
 
 local rvs_types                            = db.rvs_types
 local hook_cmd_types                       = db.hook_cmd_types
@@ -845,70 +844,93 @@ local set_freeze                           = function(freeze) mem.w8(0x1041D2, f
 local btn_col                              = { [ut.convert("_A")] = 0xFFCC0000, [ut.convert("_B")] = 0xFFCC8800, [ut.convert("_C")] = 0xFF3333CC, [ut.convert("_D")] = 0xFF336600, }
 local text_col, shadow_col                 = 0xFFFFFFFF, 0xFF000000
 
+local get_word_len                         = function(str)
+	if not str then return 0 end
+	str = type(str) ~= "string" and string.format("%s", str) or str
+	local len = 0
+	for _, c in utf8.codes(str) do len = len + (c < 0x80 and 1 or 2) end
+	return len
+end
+
 local get_string_width                     = function(str)
-	return man.ui:get_string_width(str) * scr.width
+	if not str then return 0 end
+	return man.ui:get_string_width("9") * get_word_len(str) * scr.width
 end
 
 local get_line_height                      = function(lines)
 	return man.ui.line_height * scr.height * (lines or 1)
 end
 
-local draw_rtext                           = function(x, y, str, fgcol, bgcol)
-	if not str then
+local draw_text                            = function(x, y, str, fgcol, bgcol)
+	scr:draw_text(x, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
+	--[[
+	if not str then return end
+	str = type(str) ~= "string" and string.format("%s", str) or str
+	if type(x) == "string" then
+		scr:draw_text(x, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
 		return
 	end
-	if type(str) ~= "string" then
-		str = string.format("%s", str)
+	local len, fix, w1, w2, s = 0, 0, man.ui:get_string_width("9"), man.ui:get_string_width("9") / 2, nil
+	for _, c in utf8.codes(str) do
+		if c == utf8.codepoint("\n") then
+			y, len = y + get_line_height(), 0
+		else
+			s = utf8.char(c)
+			fix = x + ((w1 * len) + w2 - man.ui:get_string_width(s) / 2) * scr.width
+			scr:draw_text(fix, y, s, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
+			len = len + (c < 0x80 and 1 or 2)
+		end
 	end
+	]]
+end
+
+local draw_rtext                           = function(x, y, str, fgcol, bgcol)
+	if not str then return end
+	str = type(str) ~= "string" and string.format("%s", str) or str
 	local w = get_string_width(str)
-	scr:draw_text(x - w, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
-	return w
+	draw_text(x - w, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
 end
 
 local draw_ctext                           = function(x, y, str, fgcol, bgcol)
-	if not str then
-		return
-	end
-	if type(str) ~= "string" then
-		str = string.format("%s", str)
-	end
+	if not str then return end
+	str = type(str) ~= "string" and string.format("%s", str) or str
 	local w = get_string_width(str) / 2
-	scr:draw_text(x - w, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
-	return w
+	draw_text(x - w, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
 end
 
 local draw_text_with_shadow                = function(x, y, str, fgcol, bgcol)
-	if type(str) ~= "string" then
-		str = string.format("%s", str)
-	end
-	scr:draw_text(x + 0.5, y + 0.5, str, shadow_col, bgcol or 0x00000000)
-	scr:draw_text(x, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
-	return get_string_width(str)
+	if not str then return end
+	str = type(str) ~= "string" and string.format("%s", str) or str
+	draw_text(x + 0.5, y + 0.5, str, shadow_col, bgcol or 0x00000000)
+	draw_text(x, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
 end
 
 local draw_rtext_with_shadow               = function(x, y, str, fgcol, bgcol)
+	if not str then return end
 	draw_rtext(x + 0.5, y + 0.5, str, shadow_col, bgcol)
-	return draw_rtext(x, y, str, fgcol, bgcol)
+	draw_rtext(x, y, str, fgcol, bgcol)
 end
 
 local draw_ctext_with_shadow               = function(x, y, str, fgcol, bgcol)
+	if not str then return end
 	draw_ctext(x + 0.5, y + 0.5, str, shadow_col, bgcol)
-	return draw_ctext(x, y, str, fgcol, bgcol)
+	draw_ctext(x, y, str, fgcol, bgcol)
 end
 
 -- コマンド文字列表示
 local draw_cmd_text_with_shadow            = function(x, y, str, fgcol, bgcol)
+	if not str then return end
 	-- 変換しつつUnicodeの文字配列に落とし込む
 	local cstr, xx = ut.convert(str), x
 	for c in string.gmatch(cstr, "([%z\1-\127\194-\244][\128-\191]*)") do
 		-- 文字の影
-		scr:draw_text(xx + 0.5, y + 0.5, c, 0xFF000000)
+		draw_text(xx + 0.5, y + 0.5, c, 0xFF000000)
 		if btn_col[c] then
 			-- ABCDボタンの場合は黒の●を表示した後ABCDを書いて文字の部分を黒く見えるようにする
-			scr:draw_text(xx, y, ut.convert("_("), text_col)
-			scr:draw_text(xx, y, c, fgcol or btn_col[c])
+			draw_text(xx, y, ut.convert("_("), text_col)
+			draw_text(xx, y, c, fgcol or btn_col[c])
 		else
-			scr:draw_text(xx, y, c, fgcol or text_col)
+			draw_text(xx, y, c, fgcol or text_col)
 		end
 		xx = xx + 5 -- フォントの大きさ問わず5pxずつ表示する
 	end
@@ -916,6 +938,7 @@ end
 
 -- コマンド入力表示
 local draw_cmd                             = function(p, line, frame, str)
+	if not str then return end
 	local xx, yy = p == 1 and 12 or 294, get_line_height(line + 3)
 	if 0 < frame then
 		local cframe = 999 < frame and "LOT" or string.format("%03d", frame)
@@ -946,8 +969,8 @@ local draw_base                            = function(p, bases)
 		table.insert(lines, string.format("%3s %05X %8s %-s", cframe, addr, smov, act_name))
 	end
 	local xx, txt = p == 1 and 60 or 195, table.concat(lines, "\n") -- 1Pと2Pで左右に表示し分ける
-	scr:draw_text(xx + 0.5, 80.5, txt, 0xFF000000)               -- 文字の影
-	scr:draw_text(xx, 80, txt, text_col)
+	draw_text(xx + 0.5, 80.5, txt, 0xFF000000)               -- 文字の影
+	draw_text(xx, 80, txt, text_col)
 end
 -- 投げ無敵
 local throw_inv_type                       = {
@@ -1221,6 +1244,12 @@ local draw_range            = function(range)
 	draw_ctext_with_shadow(x, y, label or "", col)
 end
 
+local border_box = function(x1, y1, x2, y2, w, fcol)
+	scr:draw_box(x1 - w, y1 - w, x2 + w, y1, fcol, fcol)
+	scr:draw_box(x1 - w, y1 - w, x1, y2 + w, fcol, fcol)
+	scr:draw_box(x2, y1 - w, x2 + 1, y2 + w, fcol, fcol)
+	scr:draw_box(x1 - w, y2 + w, x2 + w, y2, fcol, fcol)
+end
 
 -- 判定枠のチェック処理種類
 local hitbox_possible_map  = {
@@ -2723,7 +2752,7 @@ rbff2.startplugin          = function()
 				local deco_txt = ""
 				for _, deco in ut.ifind(decos, function(deco) return ut.tstb(frame.attackbit, deco.type) and deco or nil end) do
 					deco_txt = deco.txt -- 区切り記号の表示
-					scr:draw_text(xleft + get_string_width(deco_txt) * deco.fix, txt_y + top - 6, deco_txt)
+					draw_text(xleft + get_string_width(deco_txt) * deco.fix, txt_y + top - 6, deco_txt)
 					scr:draw_line(xleft, top, xleft, top + height)
 				end
 
@@ -2738,7 +2767,7 @@ rbff2.startplugin          = function()
 			if xleft <= left then break end
 			xright = xleft
 		end
-		scr:draw_text(right - 40, txt_y + top, table.concat(frame_txts, "/"))
+		draw_text(right - 40, txt_y + top, table.concat(frame_txts, "/"))
 	end
 
 	local draw_frames = function(groups, x, y, limit)
@@ -2761,15 +2790,9 @@ rbff2.startplugin          = function()
 		end
 	end
 
-	local force_y_pos = { "OFF", 0 }
-	for i = 1, 256 do table.insert(force_y_pos, i) end
-	for i = -1, -256, -1 do table.insert(force_y_pos, i) end
-
-	local frame_meter = {}
-	frame_meter.limit, frame_meter.cell = 70, 3.5
+	local frame_meter = { limit = 70, cell = 3.5 }
 	frame_meter.buffer_limit = frame_meter.limit * 2 -- バッファ長=2行まで許容
-
-	local add_frame_meter = function(p, frame)    -- フレームデータの追加
+	frame_meter.add = function(p, frame)          -- フレームデータの追加
 		if p.is_fireball then return end
 		if not global.both_act_neutral and global.old_both_act_neutral then
 			p.frames = {}                                           -- バッファ初期化
@@ -2819,20 +2842,12 @@ rbff2.startplugin          = function()
 				frame.dodge = s
 			end
 		end
-		table.insert(frames, frame)                           -- 末尾に追加
-		if #frames <= frame_meter.buffer_limit then return end -- バッファ長が2行以下なら抜ける
-		local frame_limit = frame_meter.limit + (blank and 2 or 1) -- ブランクぶん追加でバッファする
-		while frame_limit ~= #frames do table.remove(frames, 1) end -- 1行目のバッファを削除
+		table.insert(frames, frame)                                  -- 末尾に追加
+		if #frames <= frame_meter.buffer_limit then return end       -- バッファ長が2行以下なら抜ける
+		local frame_limit = frame_meter.limit + (blank and 2 or 1)   -- ブランクぶん追加でバッファする
+		while frame_limit ~= #frames do table.remove(frames, 1) end  -- 1行目のバッファを削除
 	end
-
-	local border_box = function(x1, y1, x2, y2, w, fcol)
-		scr:draw_box(x1 - w, y1 - w, x2 + w, y1, fcol, fcol)
-		scr:draw_box(x1 - w, y1 - w, x1, y2 + w, fcol, fcol)
-		scr:draw_box(x2, y1 - w, x2 + 1, y2 + w, fcol, fcol)
-		scr:draw_box(x1 - w, y2 + w, x2 + w, y2, fcol, fcol)
-	end
-
-	local draw_frame_meter = function(p, y1)                         -- フレームメーターの表示
+	frame_meter.draw = function(p, y1)                               -- フレームメーターの表示
 		if p.is_fireball then return end
 		local x0 = (scr.width - frame_meter.cell * frame_meter.limit) // 2 -- 表示開始位置
 		local height = get_line_height()
@@ -3027,7 +3042,7 @@ rbff2.startplugin          = function()
 		local name     = (frame and act_data.name_set and act_data.name_set[prev]) and prev or act_data.name
 		local key      = key_mask & attackbit
 
-		add_frame_meter(p, { line = line, col = col, attackbit = attackbit, key = key, decobit = decobit, name = name, update = p.update_act, })
+		frame_meter.add(p, { line = line, col = col, attackbit = attackbit, key = key, decobit = decobit, name = name, update = p.update_act, })
 
 		if p.update_act or not frame or frame.col ~= col or frame.key ~= attackbit then
 			--行動IDの更新があった場合にフレーム情報追加
@@ -3958,7 +3973,7 @@ rbff2.startplugin          = function()
 
 		-- Y座標強制
 		for _, p in ipairs(players) do
-			if p.force_y_pos > 1 then mem.w16i(p.addr.pos_y, force_y_pos[p.force_y_pos]) end
+			if p.force_y_pos > 1 then mem.w16i(p.addr.pos_y, menu.labels.force_y_pos[p.force_y_pos]) end
 		end
 
 		-- X座標同期とY座標をだいぶ下に
@@ -4165,10 +4180,10 @@ rbff2.startplugin          = function()
 							col = col | 0x0C000000
 							scr:draw_box(scr.width // 2 - w, 40, scr.width // 2 + w, 40 + get_line_height(#p.combo_col1), col, col) -- 四角枠
 						end
-						scr:draw_text("center", 40, table.concat(p.combo_col1, "\n"))
+						draw_text("center", 40, table.concat(p.combo_col1, "\n"))
 					end
-					scr:draw_text(scr.width // 2 + get_string_width("9") * (p1 and -18 or 4), 40, table.concat(p.combo_col2, "\n"))
-					scr:draw_text(scr.width // 2 + get_string_width("9") * (p1 and -9 or 13), 40, table.concat(p.combo_col3, "\n"))
+					draw_text(scr.width // 2 + get_string_width("9") * (p1 and -18 or 4), 40, table.concat(p.combo_col2, "\n"))
+					draw_text(scr.width // 2 + get_string_width("9") * (p1 and -9 or 13), 40, table.concat(p.combo_col3, "\n"))
 				end
 				-- 状態 大表示 1:OFF 2:ON 3:ON:小表示 4:ON:大表示 5:ON:フラグ表示
 				if p.state_line1 and #p.state_line1 > 0 and p.disp_state == 2 or p.disp_state == 4 then
@@ -4176,7 +4191,7 @@ rbff2.startplugin          = function()
 					local w1 = get_string_width("9") * (p1 and 42 or -44 + 25)
 					local w2 = w1 - get_string_width("9") * 23
 					scr:draw_box(scr.width // 2 - w1, 40, scr.width // 2 - w2, 40 + get_line_height(#p.state_line1), col, col) -- 四角枠
-					scr:draw_text(scr.width // 2 - w1, 40, table.concat(p.state_line1, "\n"))
+					draw_text(scr.width // 2 - w1, 40, table.concat(p.state_line1, "\n"))
 				end
 			end
 			for i, p in ipairs(players) do
@@ -4185,8 +4200,8 @@ rbff2.startplugin          = function()
 				if p.disp_state == 2 or p.disp_state == 3 then
 					local label1, label2 = p.state_line2 or {}, p.state_line3 or {}
 					scr:draw_box(p1 and 0 or 277, 0, p1 and 40 or 316, get_line_height(#label1), 0x80404040, 0x80404040)
-					scr:draw_text(p1 and 4 or 278, 0, table.concat(label1, "\n"))
-					scr:draw_text(40, 50 + get_line_height(p1 and 0 or (#label2 + 0.5)), table.concat(label2, "\n"))
+					draw_text(p1 and 4 or 278, 0, table.concat(label1, "\n"))
+					draw_text(40, 50 + get_line_height(p1 and 0 or (#label2 + 0.5)), table.concat(label2, "\n"))
 				end
 
 				-- コマンド入力状態表示
@@ -4234,7 +4249,7 @@ rbff2.startplugin          = function()
 					end
 					if #bs_label > 0 then
 						scr:draw_box(p1 and 110 or 173, 40, p1 and 150 or 213, 40 + get_line_height(#bs_label), 0x80404040, 0x80404040)
-						scr:draw_text(p1 and 110 or 173, 40, table.concat(bs_label, "\n"))
+						draw_text(p1 and 110 or 173, 40, table.concat(bs_label, "\n"))
 					end
 				end
 
@@ -4261,7 +4276,7 @@ rbff2.startplugin          = function()
 				end
 				-- フレーム数表示 1:OFF 2:フレームメーター 3:数値のみ
 				if global.disp_frame == 2 then
-					draw_frame_meter(p, 160 + get_line_height(p1 and 0 or 1.5))
+					frame_meter.draw(p, 160 + get_line_height(p1 and 0 or 1.5))
 				elseif global.disp_frame == 3 then
 					draw_text_with_shadow(p1 and 140 or 165, 40, p.last_frame_gap_txt, p.last_frame_gap_col)
 				end
@@ -4278,17 +4293,25 @@ rbff2.startplugin          = function()
 					local flip   = p.flip_x == 1 and ">" or "<" -- 見た目と判定の向き
 					local side   = p.block_side == 1 and ">" or "<" -- ガード方向や内部の向き 1:右向き -1:左向き
 					local i_side = p.cmd_side == 1 and ">" or "<" -- コマンド入力の向き
-					if p.old.pos_y ~= p.pos_y or p.last_posy_txt == nil then
-						p.last_posy_txt = string.format("Y %3s>%3s", p.old.pos_y or 0, p.pos_y)
+					local y1, y2 =  p.old.pos_y and (p.old.pos_y + p.old.pos_frc_y)or 0, p.pos_y + p.pos_frc_y
+					local x1, x2 =  p.old.pos and (p.old.pos + p.old.pos_frc) or 0, p.pos + p.pos_frc
+					if y1 ~= y2 or not p.last_posy_txt then
+						p.last_posy_txt = string.format("Y%03.03f>%03.03f", y1, y2)
+					end
+					if x1 ~= x2 or not p.last_posx_txt then
+						p.last_posx_txt = string.format("X%03.03f>%03.03f", x1, x2)
 					end
 					if i == 1 then
-						table.insert(foot_label, string.format("%s  Disp.%s Block.%s Input.%s", p.last_posy_txt, flip, side, i_side))
+						draw_text("left", 216, string.format("%s %s Disp.%s Block.%s Inp.%s", p.last_posx_txt, p.last_posy_txt, flip, side, i_side))
+						--table.insert(foot_label, string.format("%s  Disp.%s Block.%s Inp.%s", p.last_posy_txt, flip, side, i_side))
 					else
-						table.insert(foot_label, string.format("Input.%s Block.%s Disp.%s  %s", i_side, side, flip, p.last_posy_txt))
+						draw_text("right", 216, string.format("Inp.%s Block.%s Disp.%s %s %s", i_side, side, flip, p.last_posy_txt, p.last_posx_txt))
+						--table.insert(foot_label, string.format("Inp.%s Block.%s Disp.%s  %s", i_side, side, flip, p.last_posy_txt))
 					end
 				end
-				table.insert(foot_label, 2, string.format("%3d", abs_space))
-				draw_ctext_with_shadow(scr.width / 2, 216, table.concat(foot_label, " "))
+				draw_text("center", 216, string.format("%3d", abs_space))
+				--table.insert(foot_label, 2, string.format("%3d", abs_space))
+				--draw_ctext_with_shadow(scr.width / 2, 216, table.concat(foot_label, " "))
 			end
 
 			-- GG風コマンド入力表示
@@ -4344,8 +4367,8 @@ rbff2.startplugin          = function()
 							{ key = "D", btn = "_D", x = key_xy[5].x + 26,          y = key_xy[5].y - 2,           col = 0xFFFFFFFF },
 						}) do
 							local xx, yy, btn, on = ctl.x, ctl.y, ut.convert(ctl.btn), ctl.key == "" or ggbutton[ctl.key]
-							scr:draw_text(xx, yy, ut.convert("_("), on and ctl.col or 0xDDCCCCCC)
-							scr:draw_text(xx, yy, btn, on and btn_col[btn] or 0xDD444444)
+							draw_text(xx, yy, ut.convert("_("), on and ctl.col or 0xDDCCCCCC)
+							draw_text(xx, yy, btn, on and btn_col[btn] or 0xDD444444)
 						end
 					end
 				end
@@ -4357,7 +4380,7 @@ rbff2.startplugin          = function()
 					ut.frame_to_time(#recording.active_slot.store - recording.play_count) or ut.frame_to_time(3600 - #recording.active_slot.store)
 				scr:draw_box(235, 200, 315, 224, 0xBB404040, 0xBB404040)
 				for i, info in ipairs(recording.info) do
-					scr:draw_text(239, 204 + get_line_height(i -1), string.format(info.label, time), info.col)
+					draw_text(239, 204 + get_line_height(i -1), string.format(info.label, time), info.col)
 				end
 			end
 		end
@@ -4866,8 +4889,8 @@ rbff2.startplugin          = function()
 		{ "2P 強制空振り", menu.labels.attack_harmless, },
 		{ "1P 挑発で前進", menu.labels.off_on, },
 		{ "2P 挑発で前進", menu.labels.off_on, },
-		{ "1P Y座標強制", force_y_pos, },
-		{ "2P Y座標強制", force_y_pos, },
+		{ "1P Y座標強制", menu.labels.force_y_pos, },
+		{ "2P Y座標強制", menu.labels.force_y_pos, },
 		{ "画面下に移動", { "OFF", "2Pを下に移動", "1Pを下に移動", }, },
 	}, ut.new_filled_table(18, menu.to_main), ut.new_filled_table(18, menu.to_main_cancel))
 
@@ -5181,7 +5204,7 @@ rbff2.startplugin          = function()
 			end
 			if row.title then
 				-- ラベルだけ行
-				scr:draw_text("center", y + 1, row[1], 0xFFFFFFFF)
+				draw_text("center", y + 1, row[1], 0xFFFFFFFF)
 			else
 				-- 通常行 ラベル部分
 				scr:draw_box(90, y + 0.5, 230, y + 8.5, c2, c1)
@@ -5192,18 +5215,18 @@ rbff2.startplugin          = function()
 					scr:draw_box(90, y + 7.0, 230, y + 8.5, 0xFFB8B8B8, 0xFFB8B8B8)
 					scr:draw_box(90, y + 8.0, 230, y + 8.5, 0xFFA8A8A8, 0xFFA8A8A8)
 				end
-				scr:draw_text(96.5, y + 1.5, row[1], c4)
-				scr:draw_text(96, y + 1, row[1], c3)
+				draw_text(96.5, y + 1.5, row[1], c4)
+				draw_text(96, y + 1, row[1], c3)
 				if row[2] then
 					-- 通常行 オプション部分
 					local col_pos_num = menu.current.pos.col[i] or 1
 					if col_pos_num > 0 then
-						scr:draw_text(165.5, y + 1.5, string.format("%s", row[2][col_pos_num]), c4)
-						scr:draw_text(165, y + 1, string.format("%s", row[2][col_pos_num]), c3)
+						draw_text(165.5, y + 1.5, string.format("%s", row[2][col_pos_num]), c4)
+						draw_text(165, y + 1, string.format("%s", row[2][col_pos_num]), c3)
 						-- オプション部分の左右移動可否の表示
 						if i == menu.current.pos.row then
-							scr:draw_text(160, y + 1, "◀", col_pos_num == 1 and c5 or c3)
-							scr:draw_text(223, y + 1, "▶", col_pos_num == #row[2] and c5 or c3)
+							draw_text(160, y + 1, "◀", col_pos_num == 1 and c5 or c3)
+							draw_text(223, y + 1, "▶", col_pos_num == #row[2] and c5 or c3)
 						end
 					end
 				end

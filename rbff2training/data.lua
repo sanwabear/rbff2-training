@@ -3607,25 +3607,15 @@ local joy_k                      = {
 	{ dn = _f(1, "Down"), lt = _f(1, "Left"), rt = _f(1, "Right"), up = _f(1, "Up"), a = _f(1, "A"), b = _f(1, "B"), c = _f(1, "C"), d = _f(1, "D"), st = _start(1), },
 	{ dn = _f(2, "Down"), lt = _f(2, "Left"), rt = _f(2, "Right"), up = _f(2, "Up"), a = _f(2, "A"), b = _f(2, "B"), c = _f(2, "C"), d = _f(2, "D"), st = _start(2), },
 }
-local kprops                     = { "d", "c", "b", "a", "rt", "lt", "dn", "up", "sl", "st", }
--- 入力の1P、2P反転用のテーブル
-local rev_joy                    = { joy_k[2], joy_k[1] }
-rev_joy[1].st, rev_joy[2].st     = joy_k[1].st, joy_k[2].st
--- 入力の左右反転用のテーブル
-local joy_frontback              = { [joy_k[1].lt] = joy_k[1].rt, [joy_k[2].lt] = joy_k[2].rt, [joy_k[1].rt] = joy_k[1].lt, [joy_k[2].rt] = joy_k[2].lt, }
--- 入力から1P、2Pを判定するテーブル
-local joy_pside                  = {}
 -- ニュートラル入力
 local joy_neutrala, joy_neutralp = {}, { {}, {} }
 for p, ks in ipairs(joy_k) do
 	for _, k in pairs(ks) do
-		joy_pside[k], joy_neutrala[k], joy_neutralp[p][k] = p, false, false
+		joy_neutrala[k], joy_neutralp[p][k] = false, false
 	end
 end
 
 local cmd_funcs       = {}
---cmd_funcs._f            = _f
---cmd_funcs._start        = _start
 cmd_funcs.make        = function(joykp, ...)
 	local joy = ut.deepcopy(joy_neutrala)
 	if ... then
@@ -3942,12 +3932,8 @@ local research_cmd    = function()
 end
 
 db.joy_k              = joy_k
-db.rev_joy            = rev_joy
-db.joy_frontback      = joy_frontback
-db.joy_pside          = joy_pside
 db.joy_neutrala       = joy_neutrala
 db.joy_neutralp       = joy_neutralp
-db.kprops             = kprops
 db.cmd_funcs          = cmd_funcs
 db.cmd_base           = cmd_base
 db.research_cmd       = research_cmd()
