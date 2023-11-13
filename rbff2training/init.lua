@@ -936,6 +936,8 @@ local draw_cmd_text_with_shadow            = function(x, y, str, fgcol, bgcol)
 	end
 end
 
+local format_num = function(num) return string.sub(string.format("00%0.03f", num), -7) end
+
 -- コマンド入力表示
 local draw_cmd                             = function(p, line, frame, str)
 	if not str then return end
@@ -2700,12 +2702,12 @@ rbff2.startplugin          = function()
 
 	-- グラフでフレームデータを末尾から描画
 	local decos = {
-		{ type = frame_attack_types.post_fireball, txt = "▫", fix = -0.4 },
-		{ type = frame_attack_types.pre_fireball, txt = "▪", fix = -0.4 },
-		{ type = frame_attack_types.off_fireball, txt = "○", fix = -0.35 },
-		{ type = frame_attack_types.on_fireball, txt = "●", fix = -0.35 },
-		{ type = frame_attack_types.on_air, txt = "▴", fix = -0.5 },
-		{ type = frame_attack_types.on_ground, txt = "▾", fix = -0.5 },
+		{ type = frame_attack_types.post_fireball, txt = "]", fix = -0.4 },
+		{ type = frame_attack_types.pre_fireball, txt = "[", fix = -0.4 },
+		{ type = frame_attack_types.off_fireball, txt = "@", fix = -0.35 },
+		{ type = frame_attack_types.on_fireball, txt = "o", fix = -0.35 },
+		{ type = frame_attack_types.on_air, txt = "^", fix = -0.5 },
+		{ type = frame_attack_types.on_ground, txt = "v", fix = -0.5 },
 	}
 	local dodges = {
 		{ type = frame_attack_types.full,        y = 1.0, step = 1.6, txt = "Full", border = 0.8, xline = 0xFF00BBDD },
@@ -4288,30 +4290,25 @@ rbff2.startplugin          = function()
 			-- キャラの向きとキャラ間の距離表示
 			local abs_space = math.abs(p_space)
 			if global.disp_pos then
-				local foot_label = {}
 				for i, p in ipairs(players) do
 					local flip   = p.flip_x == 1 and ">" or "<" -- 見た目と判定の向き
 					local side   = p.block_side == 1 and ">" or "<" -- ガード方向や内部の向き 1:右向き -1:左向き
 					local i_side = p.cmd_side == 1 and ">" or "<" -- コマンド入力の向き
 					local y1, y2 =  p.old.pos_y and (p.old.pos_y + p.old.pos_frc_y)or 0, p.pos_y + p.pos_frc_y
 					local x1, x2 =  p.old.pos and (p.old.pos + p.old.pos_frc) or 0, p.pos + p.pos_frc
-					if y1 ~= y2 or not p.last_posy_txt then
-						p.last_posy_txt = string.format("Y%03.03f>%03.03f", y1, y2)
+					if p.old.pos_y ~= p.pos_frc_y or not p.last_posy_txt then
+						p.last_posy_txt = string.format("Y%s>%s", format_num(y1), format_num(y2))
 					end
 					if x1 ~= x2 or not p.last_posx_txt then
-						p.last_posx_txt = string.format("X%03.03f>%03.03f", x1, x2)
+						p.last_posx_txt = string.format("X%s>%s", format_num(x1), format_num(x2))
 					end
 					if i == 1 then
-						draw_text("left", 216, string.format("%s %s Disp.%s Block.%s Inp.%s", p.last_posx_txt, p.last_posy_txt, flip, side, i_side))
-						--table.insert(foot_label, string.format("%s  Disp.%s Block.%s Inp.%s", p.last_posy_txt, flip, side, i_side))
+						draw_text("left", 216, string.format("%s %s Disp.%s Block.%s In.%s", p.last_posx_txt, p.last_posy_txt, flip, side, i_side))
 					else
-						draw_text("right", 216, string.format("Inp.%s Block.%s Disp.%s %s %s", i_side, side, flip, p.last_posy_txt, p.last_posx_txt))
-						--table.insert(foot_label, string.format("Inp.%s Block.%s Disp.%s  %s", i_side, side, flip, p.last_posy_txt))
+						draw_text("right", 216, string.format("In.%s Block.%s Disp.%s %s %s", i_side, side, flip, p.last_posy_txt, p.last_posx_txt))
 					end
 				end
 				draw_text("center", 216, string.format("%3d", abs_space))
-				--table.insert(foot_label, 2, string.format("%3d", abs_space))
-				--draw_ctext_with_shadow(scr.width / 2, 216, table.concat(foot_label, " "))
 			end
 
 			-- GG風コマンド入力表示
@@ -5225,8 +5222,8 @@ rbff2.startplugin          = function()
 						draw_text(165, y + 1, string.format("%s", row[2][col_pos_num]), c3)
 						-- オプション部分の左右移動可否の表示
 						if i == menu.current.pos.row then
-							draw_text(160, y + 1, "◀", col_pos_num == 1 and c5 or c3)
-							draw_text(223, y + 1, "▶", col_pos_num == #row[2] and c5 or c3)
+							draw_text(160, y + 1, "<", col_pos_num == 1 and c5 or c3)
+							draw_text(223, y + 1, ">", col_pos_num == #row[2] and c5 or c3)
 						end
 					end
 				end
