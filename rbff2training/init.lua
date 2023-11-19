@@ -936,7 +936,7 @@ local draw_cmd_text_with_shadow            = function(x, y, str, fgcol, bgcol)
 	end
 end
 
-local format_num = function(num) return string.sub(string.format("00%0.03f", num), -7) end
+local format_num                           = function(num) return string.sub(string.format("00%0.03f", num), -7) end
 
 -- コマンド入力表示
 local draw_cmd                             = function(p, line, frame, str)
@@ -971,7 +971,7 @@ local draw_base                            = function(p, bases)
 		table.insert(lines, string.format("%3s %05X %8s %-s", cframe, addr, smov, act_name))
 	end
 	local xx, txt = p == 1 and 60 or 195, table.concat(lines, "\n") -- 1Pと2Pで左右に表示し分ける
-	draw_text(xx + 0.5, 80.5, txt, 0xFF000000)               -- 文字の影
+	draw_text(xx + 0.5, 80.5, txt, 0xFF000000)                   -- 文字の影
 	draw_text(xx, 80, txt, text_col)
 end
 -- 投げ無敵
@@ -1246,22 +1246,28 @@ local draw_range            = function(range)
 	draw_ctext_with_shadow(x, y, label or "", col)
 end
 
-local border_box = function(x1, y1, x2, y2, w, fcol)
+local border_box            = function(x1, y1, x2, y2, w, fcol)
 	scr:draw_box(x1 - w, y1 - w, x2 + w, y1, fcol, fcol)
 	scr:draw_box(x1 - w, y1 - w, x1, y2 + w, fcol, fcol)
 	scr:draw_box(x2, y1 - w, x2 + 1, y2 + w, fcol, fcol)
 	scr:draw_box(x1 - w, y2 + w, x2 + w, y2, fcol, fcol)
 end
 
+local border_waku            = function(x1, y1, x2, y2, w, fcol)
+	scr:draw_box(x1, y1, x2, y2, fcol, 0)
+	scr:draw_box(x1, y1 - w, x2, y1, fcol, fcol)
+	scr:draw_box(x1, y2 + w, x2, y2, fcol, fcol)
+end
+
 -- 判定枠のチェック処理種類
-local hitbox_possible_map  = {
+local hitbox_possible_map   = {
 	[0x01311C] = possible_types.none,   -- 常に判定しない
 	[0x012FF0] = possible_types.same_line, -- → 013038 同一ライン同士なら判定する
 	[0x012FFE] = possible_types.both_line, -- → 013054 異なるライン同士でも判定する
 	[0x01300A] = possible_types.unknown, -- → 013018 不明
 	[0x012FE2] = possible_types.air_onry, -- → 012ff0 → 013038 相手が空中にいれば判定する
 }
-local get_hitbox_possibles = function(id)
+local get_hitbox_possibles  = function(id)
 	local possibles = {}
 	for k, addr_or_func in pairs(hitbox_possibles) do
 		local ret = possible_types.none
@@ -1277,7 +1283,7 @@ local get_hitbox_possibles = function(id)
 	return possibles
 end
 
-local fix_box_type         = function(p, attackbit, box)
+local fix_box_type          = function(p, attackbit, box)
 	attackbit = db.box_with_bit_types.mask & attackbit
 	local type = p.in_sway_line and box.sway_type or box.type
 	if type ~= db.box_types.attack then return type end
@@ -1295,7 +1301,7 @@ local fix_box_type         = function(p, attackbit, box)
 end
 
 -- 遠近間合い取得
-local load_close_far       = function()
+local load_close_far        = function()
 	if db.chars[1].close_far then return end
 	-- 地上通常技の近距離間合い 家庭用 02DD02 からの処理
 	for org_char = 1, #db.chars - 1 do
@@ -1348,7 +1354,7 @@ local load_close_far       = function()
 	print("load_close_far done")
 end
 
-local reset_memory_tap     = function(label, enabled)
+local reset_memory_tap      = function(label, enabled)
 	if not global.holder then return end
 	local sub = global.holder.sub[label]
 	if not sub then return end
@@ -1363,7 +1369,7 @@ local reset_memory_tap     = function(label, enabled)
 	end
 end
 
-local load_memory_tap      = function(label, wps) -- tapの仕込み
+local load_memory_tap       = function(label, wps) -- tapの仕込み
 	if global.holder and global.holder.sub[label] then
 		reset_memory_tap(label, true)
 		return
@@ -1394,7 +1400,7 @@ local load_memory_tap      = function(label, wps) -- tapの仕込み
 	print("load_memory_tap [" .. label .. "] done")
 end
 
-local apply_attack_infos   = function(p, id, base_addr)
+local apply_attack_infos    = function(p, id, base_addr)
 	-- 削りダメージ計算種別取得 05B2A4 からの処理
 	p.chip      = db.calc_chip((0xF & mem.r8(base_addr.chip + id)) + 1, p.damage)
 	-- 硬直時間取得 05AF7C(家庭用版)からの処理
@@ -1403,7 +1409,7 @@ local apply_attack_infos   = function(p, id, base_addr)
 	p.blockstun = mem.r8(base_addr.blockstun + d2) + 1 + 2 -- ガード硬直
 end
 
-local dummy_gd_type        = {
+local dummy_gd_type         = {
 	none   = 1, -- なし
 	auto   = 2, -- オート
 	bs     = 3, -- ブレイクショット
@@ -1413,22 +1419,22 @@ local dummy_gd_type        = {
 	random = 7, -- ランダム
 	force  = 8, -- 強制
 }
-local wakeup_type          = {
+local wakeup_type           = {
 	none = 1, -- なし
 	rvs  = 2, -- リバーサル
 	tech = 3, -- テクニカルライズ
 	sway = 4, -- グランドスウェー
 	atk  = 5, -- 起き上がり攻撃
 }
-local rvs_wake_types       = ut.new_set(wakeup_type.tech, wakeup_type.sway, wakeup_type.rvs)
-rbff2.startplugin          = function()
+local rvs_wake_types        = ut.new_set(wakeup_type.tech, wakeup_type.sway, wakeup_type.rvs)
+rbff2.startplugin           = function()
 	local players, all_wps, all_objects, hitboxies, ranges = {}, {}, {}, {}, {}
-	local hitboxies_order = function(b1, b2) return (b1.id < b2.id) end
-	local ranges_order = function(r1, r2) return (r1.within and 1 or -1) < (r2.within and 1 or -1) end
-	local get_object_by_addr = function(addr, default) return all_objects[addr] or default end             -- ベースアドレスからオブジェクト解決
-	local get_object_by_reg = function(reg, default) return all_objects[mem.rg(reg, 0xFFFFFF)] or default end -- レジストリからオブジェクト解決
-	local now = function() return global.frame_number + 1 end
-	local ggkey_create = function(p1)
+	local hitboxies_order                                  = function(b1, b2) return (b1.id < b2.id) end
+	local ranges_order                                     = function(r1, r2) return (r1.within and 1 or -1) < (r2.within and 1 or -1) end
+	local get_object_by_addr                               = function(addr, default) return all_objects[addr] or default end -- ベースアドレスからオブジェクト解決
+	local get_object_by_reg                                = function(reg, default) return all_objects[mem.rg(reg, 0xFFFFFF)] or default end -- レジストリからオブジェクト解決
+	local now                                              = function() return global.frame_number + 1 end
+	local ggkey_create                                     = function(p1)
 		local xoffset, yoffset = p1 and 50 or 245, 200
 		local pt0, pt2, ptS, ptP, ptP1, ptP2, ptP3, ptP4 = 0, 1, math.sin(1), 9, 8.4, 8.7, 9.3, 9.6
 		local oct_vt = {
@@ -1462,6 +1468,72 @@ rbff2.startplugin          = function()
 			oct_vt[4], -- 4:レバー9
 		}
 		return { xoffset = xoffset, yoffset = yoffset, oct_vt = oct_vt, key_xy = key_xy, hist = {} }
+	end
+	local input                                            = { accepted = 0 }
+	input.merge                                            = function(cmd1, cmd2)
+		local mask = 0xFF
+		for _, m in ut.ifind_all(db.cmd_rev_masks, function(m) return ut.tstb(cmd2, m.cmd) end) do
+			mask = mask & m.mask
+		end
+		return (cmd1 & mask) | cmd2
+	end
+	input.read                                             = function()
+		-- 1Pと2Pの入力読取
+		for i, p in ipairs(players) do
+			if not p.key then return end
+			local status_b, reg_pcnt = mem.r8(p.addr.reg_st_b) ~ 0xFF, mem.r8(p.addr.reg_pcnt) ~ 0xFF
+			local on1f, on5f, hold = mem.r8(p.addr.on1f), mem.r8(p.addr.on5f), mem.r8(p.addr.hold)
+			local cnt_r, cnt_b, tmp = 0xF & reg_pcnt, 0xF0 & reg_pcnt, {}
+			for k, v in pairs(db.cmd_status_b[i]) do tmp[k] = ut.tstb(status_b, v) end
+			for k, v in ut.find_all(db.cmd_bytes, function(_, v) return type(v) == "number" end) do
+				tmp[k] = (0x10 > v and v == cnt_r) or ut.tstb(cnt_b, v)
+			end
+			local state, resume = p.key.state or {}, false
+			for k, v in pairs(tmp) do
+				if v then
+					state[k] = (not state[k] or state[k] < 0) and 1 or state[k] + 1
+				else
+					state[k] = (not state[k] or state[k] > 0) and -1 or state[k] - 1
+				end
+				if (k == "_A" or  k == "_B" or  k == "_C" or  k == "_D") and state[k] == 1 then
+					resume = true
+				end
+			end
+			p.key.status_b = status_b
+			p.key.reg_pcnt = reg_pcnt
+			p.key.on1f = on1f
+			p.key.on5f = on5f
+			p.key.hold = hold
+			p.key.state = state
+			p.key.resume = resume
+		end
+	end
+	input.accept                                           = function(btn, state_past)
+		---@diagnostic disable-next-line: undefined-global
+		state_past = state_past or (scr:frame_number() - input.accepted)
+		local on = { false, false }
+		for i, _, state in ut.ifind_all(players, function(p) return p.key.state["_" .. btn] end) do
+			on[i] = 12 < state_past and 0 < state and (type(btn) == "number" or state <= state_past)
+			on[i] = on[i] or (60 < state and state % 10 == 0)
+			if on[i] then
+				play_cursor_sound()
+				---@diagnostic disable-next-line: undefined-global
+				input.accepted = scr:frame_number()
+				return true, on[1], on[2]
+			end
+		end
+		return false, false, false
+	end
+	input.long_start                                       = function(state_past)
+		if 12 < state_past then
+			for _, p in ipairs(players) do
+				if 35 < p.key.state._st then
+					play_cursor_sound()
+					return true
+				end
+			end
+		end
+		return false
 	end
 	for i = 1, 2 do -- プレイヤーの状態など
 		local p1   = (i == 1)
@@ -1718,19 +1790,13 @@ rbff2.startplugin          = function()
 			[p1 and 0x10B84E or 0x10B856] = function(data) p.stun_limit = data end, -- 最大気絶値
 			[p1 and 0x10B850 or 0x10B858] = function(data) p.hit_stun = data end, -- 現在気絶値
 			[p.addr.on1f] = function(data, ret)
-				if not p.bs_hook or not p.bs_hook.cmd then return end
-				--ut.printf("%s bs_hook cmd %x", p.num, p.bs_hook.cmd)
-				-- フックの処理量軽減のためまとめてキー入力を記録する
-				local merge = function(cmd1, cmd2)
-					local mask = 0xFF
-					for _, m in ut.ifind_all(db.cmd_rev_masks, function(m) return ut.tstb(cmd2, m.cmd) end) do
-						mask = mask & m.mask
-					end
-					return (cmd1 & mask) | cmd2
-				end
-				mem.w8(p.addr.on5f, merge(mem.r8(p.addr.on5f), p.bs_hook.on5f or p.bs_hook.cmd)) -- 押しっぱずっと有効
-				mem.w8(p.addr.hold, merge(mem.r8(p.addr.hold), p.bs_hook.hold or p.bs_hook.cmd)) -- 押しっぱ有効が5Fのみ
-				ret.value = merge(data, p.bs_hook.on1f or p.bs_hook.cmd)             -- 押しっぱ有効が1Fのみ
+				local hook = p.bs_hook
+				if not hook or not hook.cmd then return end
+				--ut.printf("%s bs_hook cmd %x", p.num, hook.cmd)
+				-- フックの処理量軽減のため1F,5F,おしっぱのキー入力をまとめて記録する
+				mem.w8(p.addr.on5f, input.merge(mem.r8(p.addr.on5f), hook.on5f or hook.cmd)) -- 押しっぱずっと有効
+				mem.w8(p.addr.hold, input.merge(mem.r8(p.addr.hold), hook.hold or hook.cmd)) -- 押しっぱ有効が5Fのみ
+				ret.value = input.merge(data, hook.on1f or hook.cmd)             -- 押しっぱ有効が1Fのみ
 			end,
 		}
 		local special_throws       = {
@@ -1817,8 +1883,8 @@ rbff2.startplugin          = function()
 			--[0x9E] = function(data) p.ophit = all_objects[data] end, -- ヒットさせた相手側のベースアドレス
 			[0xDA] = function(data) p.inertia = data end,
 			[0xDC] = function(data) p.inertia_frc = ut.int16tofloat(data) end,
-			[0xE6] = function(data) p.on_hit_any = now() + 1 end,                                         -- 0xE6か0xE7 打撃か当身でフラグが立つ
-			[p1 and 0x10B854 or 0x10B85C] = function(data) p.hit_stun_timer = data end,                   -- 気絶値ゼロ化までの残フレーム数
+			[0xE6] = function(data) p.on_hit_any = now() + 1 end,                                                        -- 0xE6か0xE7 打撃か当身でフラグが立つ
+			[p1 and 0x10B854 or 0x10B85C] = function(data) p.hit_stun_timer = data end,                                  -- 気絶値ゼロ化までの残フレーム数
 		}
 		local nohit                = function(data, ret) if get_object_by_reg("A4", {}).no_hit then ret.value = 0x311C end end -- 0x0001311Cの後半を返す
 		p.rp16                     = {
@@ -1946,7 +2012,7 @@ rbff2.startplugin          = function()
 				p.fb_frames        = { act_frames = {}, frame_groups = {}, }
 				p.gap_frames       = { act_frames = {}, frame_groups = {}, }
 			end
-			p.do_recover = function(force)
+			p.do_recover       = function(force)
 				-- 体力と気絶値とMAX気絶値回復
 				local life = { 0xC0, 0x60, 0x00 }
 				local max_life = life[p.red] or (p.red - #life) -- 赤体力にするかどうか
@@ -1958,7 +2024,7 @@ rbff2.startplugin          = function()
 				elseif p.life_rec then
 					if force or (p.addr.life ~= max_life and 180 < math.min(p.throw_timer, p.op.throw_timer)) then
 						mem.w8(p.addr.life, max_life) -- やられ状態から戻ったときに回復させる
-						mem.w8(p.addr.stun, 0)    -- 気絶値
+						mem.w8(p.addr.stun, 0) -- 気絶値
 						mem.w8(p.addr.stun_limit, init_stuns) -- 最大気絶値
 						mem.w8(p.addr.init_stun, init_stuns) -- 最大気絶値
 						mem.w16(p.addr.stun_timer, 0) -- 気絶値タイマー
@@ -1966,7 +2032,7 @@ rbff2.startplugin          = function()
 						mem.w8(p.addr.life, max_life) -- 最大値の方が少ない場合は強制で減らす
 					end
 				end
-	
+
 				-- パワーゲージ回復
 				-- 0x3C, 0x1E, 0x00
 				local pow     = { 0x3C, 0x1E, 0x00 }
@@ -1981,7 +2047,7 @@ rbff2.startplugin          = function()
 					mem.w8(p.addr.pow, max_pow)
 				end
 			end
-			p.init_state = function()
+			p.init_state       = function()
 				p.input_states = {}
 				p.char_data = db.chars[p.char]
 				p.do_recover(true)
@@ -2269,60 +2335,6 @@ rbff2.startplugin          = function()
 		})
 		table.insert(all_wps, p)
 	end
-	local input              = { accepted = 0 }
-	input.read               = function()
-		-- 1Pと2Pの入力読取
-		for i, p in ipairs(players) do
-			if not p.key then return end
-			p.status_b, p.reg_pcnt = mem.r8(p.addr.reg_st_b) ~ 0xFF, mem.r8(p.addr.reg_pcnt) ~ 0xFF
-			p.key.on1f, p.key.on5f, p.key.hold = mem.r8(p.addr.on1f), mem.r8(p.addr.on5f), mem.r8(p.addr.hold)
-			local cnt_r, cnt_b, tmp = 0xF & p.reg_pcnt, 0xF0 & p.reg_pcnt, {}
-			for k, v in pairs(db.cmd_status_b[i]) do tmp[k] = ut.tstb(p.status_b, v) end
-			for k, v in ut.find_all(db.cmd_bytes, function(_, v) return type(v) == "number" end) do
-				tmp[k] = (0x10 > v and v == cnt_r) or ut.tstb(cnt_b, v)
-			end
-			local state = p.key.state or {}
-			for k, v in pairs(tmp) do
-				if v then
-					state[k] = (not state[k] or state[k] < 0) and 1 or state[k] + 1
-				else
-					state[k] = (not state[k] or state[k] > 0) and -1 or state[k] - 1
-				end
-			end
-			p.key.state = state
-		end
-	end
-	input.accept             = function(btn, state_past)
-		---@diagnostic disable-next-line: undefined-global
-		state_past = state_past or (scr:frame_number() - input.accepted)
-		local on = { false, false }
-		for i, _, state in ut.ifind_all(players, function(p) return p.key.state["_" .. btn] end) do
-			on[i] = 12 < state_past and 0 < state and (type(btn) == "number" or state <= state_past)
-			on[i] = on[i] or (60 < state and state % 10 == 0)
-			if on[i] then
-				play_cursor_sound()
-				---@diagnostic disable-next-line: undefined-global
-				input.accepted = scr:frame_number()
-				return true, on[1], on[2]
-			end
-		end
-		return false, false, false
-	end
-	input._1f                = function(btn)
-		for _, p in ipairs(players) do if p.key.state["_" .. btn] == 1 then return true end end
-		return false
-	end
-	input.long_start         = function(state_past)
-		if 12 < state_past then
-			for _, p in ipairs(players) do
-				if 35 < p.key.state._st then
-					play_cursor_sound()
-					return true
-				end
-			end
-		end
-		return false
-	end
 	-- 場面変更
 	local apply_1p2p_active  = function()
 		if in_match and mem.r8(0x1041D3) == 0 then
@@ -2407,7 +2419,7 @@ rbff2.startplugin          = function()
 			fixpos = nil,
 		},
 	}
-	for i = 1, 8 do table.insert(recording.slot, { side  = 1, store = {}, name  = string.format("スロット%s", i) }) end
+	for i = 1, 8 do table.insert(recording.slot, { side = 1, store = {}, name = string.format("スロット%s", i) }) end
 
 	-- 調査用自動再生スロットの準備
 	for i, preset_cmd in ipairs(db.research_cmd) do
@@ -2444,13 +2456,13 @@ rbff2.startplugin          = function()
 	recording.procs.await_1st_input = function(_)
 		recording.info = recording.info1
 		local p = players[recording.temp_player]
-		if p.reg_pcnt ~= 0 then
+		if p.key.reg_pcnt ~= 0 then
 			local pos = { players[1].cmd_side, players[2].cmd_side }
 			recording.player = recording.temp_player
 			recording.active_slot.side = p.cmd_side
 			recording.active_slot.store = {}
 			table.insert(recording.active_slot.store, {
-				reg_pcnt = p.reg_pcnt,
+				reg_pcnt = p.key.reg_pcnt,
 				on1f = p.key.on1f,
 				on5f = p.key.on5f,
 				hold = p.key.hold,
@@ -2470,7 +2482,7 @@ rbff2.startplugin          = function()
 		local pos = { players[1].cmd_side, players[2].cmd_side }
 		table.remove(recording.active_slot.store)
 		table.insert(recording.active_slot.store, {
-			reg_pcnt = p.reg_pcnt,
+			reg_pcnt = p.key.reg_pcnt,
 			on1f = p.key.on1f,
 			on5f = p.key.on5f,
 			hold = p.key.hold,
@@ -2702,12 +2714,12 @@ rbff2.startplugin          = function()
 
 	-- グラフでフレームデータを末尾から描画
 	local decos = {
-		{ type = frame_attack_types.post_fireball, txt = "]", fix = -0.4 },
-		{ type = frame_attack_types.pre_fireball, txt = "[", fix = -0.4 },
-		{ type = frame_attack_types.off_fireball, txt = "@", fix = -0.35 },
-		{ type = frame_attack_types.on_fireball, txt = "o", fix = -0.35 },
-		{ type = frame_attack_types.on_air, txt = "^", fix = -0.5 },
-		{ type = frame_attack_types.on_ground, txt = "v", fix = -0.5 },
+		{ type = frame_attack_types.post_fireball, txt = "▪", fix = -0.4 },
+		{ type = frame_attack_types.pre_fireball,  txt = "▫", fix = -0.4 },
+		{ type = frame_attack_types.off_fireball,  txt = "◦", fix = -0.35 },
+		{ type = frame_attack_types.on_fireball,   txt = "•", fix = -0.35 },
+		{ type = frame_attack_types.on_air,        txt = "▴", fix = -0.5 },
+		{ type = frame_attack_types.on_ground,     txt = "▾", fix = -0.5 },
 	}
 	local dodges = {
 		{ type = frame_attack_types.full,        y = 1.0, step = 1.6, txt = "Full", border = 0.8, xline = 0xFF00BBDD },
@@ -2879,12 +2891,12 @@ rbff2.startplugin          = function()
 			if ix == max_x then -- 末尾のみ四方をBOX描画して太線で表示
 				table.insert(separators, { -- フレーム終端
 					txt = { x2, y1, frame.count },
-					box = { x1, y1, x2, y2, 1, frame.line | 0xFF333333 }
+					box = { x1, y1, x2, y2, 1, frame.line }
 				})
 			elseif ((remain == 0) or (remain + 4 < ix)) and (frame.count >= frames[ix + 1].count) then
 				table.insert(separators, { -- フレーム区切り
 					txt = { x2, y1, 0 < frame.count and frame.count or "" },
-					box = { x1, y1, x2, y2, frame.line | 0xFF333333, 0 }
+					box = { x1, y1, x2, y2, frame.line, 0 }
 				})
 			end
 			scr:draw_box(x1, y1, x2, y2, 0, frame.line) -- 四角の描画
@@ -2910,7 +2922,7 @@ rbff2.startplugin          = function()
 		-- 終端の描画
 		if 0 < #separators then
 			local args = separators[#separators]
-			if args.box then border_box(table.unpack(args.box)) end
+			if args.box then border_waku(table.unpack(args.box)) end
 			if args.txt then draw_rtext_with_shadow(table.unpack(args.txt)) end
 		end
 		-- フレーム概要の描画
@@ -3185,7 +3197,7 @@ rbff2.startplugin          = function()
 	menu.tra_main.proc = function()
 		if not in_match or mem._0x10E043 ~= 0 then return end -- ポーズ中は状態を更新しない
 		if global.pause then                            -- ポーズ解除判定
-			if input._1f("A") or input._1f("B") or input._1f("C") or input._1f("D") then
+			if players[1].key.resume or players[2].key.resume then
 				global.pause = false
 				set_freeze(true)
 				for _, joy in ipairs(use_joy) do ioports[joy.port].fields[joy.field]:set_value(0) end
@@ -3912,6 +3924,7 @@ rbff2.startplugin          = function()
 					end
 				end
 
+				--[[
 				-- 自動ダウン追撃
 				if p.op.act == 0x190 or p.op.act == 0x192 or p.op.act == 0x18E or p.op.act == 0x13B then
 					if global.auto_input.otg_throw and p.char_data.otg_throw then
@@ -3932,6 +3945,7 @@ rbff2.startplugin          = function()
 						p.reset_sp_hook(p.char_data.add_throw) -- 閃里肘皇・心砕把
 					end
 				end
+				]]
 
 				-- 自動超白龍
 				if 1 < global.auto_input.pairon and p.char == 22 then
@@ -4294,8 +4308,8 @@ rbff2.startplugin          = function()
 					local flip   = p.flip_x == 1 and ">" or "<" -- 見た目と判定の向き
 					local side   = p.block_side == 1 and ">" or "<" -- ガード方向や内部の向き 1:右向き -1:左向き
 					local i_side = p.cmd_side == 1 and ">" or "<" -- コマンド入力の向き
-					local y1, y2 =  p.old.pos_y and (p.old.pos_y + p.old.pos_frc_y)or 0, p.pos_y + p.pos_frc_y
-					local x1, x2 =  p.old.pos and (p.old.pos + p.old.pos_frc) or 0, p.pos + p.pos_frc
+					local y1, y2 = p.old.pos_y and (p.old.pos_y + p.old.pos_frc_y) or 0, p.pos_y + p.pos_frc_y
+					local x1, x2 = p.old.pos and (p.old.pos + p.old.pos_frc) or 0, p.pos + p.pos_frc
 					if p.old.pos_y ~= p.pos_frc_y or not p.last_posy_txt then
 						p.last_posy_txt = string.format("Y%s>%s", format_num(y1), format_num(y2))
 					end
@@ -4377,7 +4391,7 @@ rbff2.startplugin          = function()
 					ut.frame_to_time(#recording.active_slot.store - recording.play_count) or ut.frame_to_time(3600 - #recording.active_slot.store)
 				scr:draw_box(235, 200, 315, 224, 0xBB404040, 0xBB404040)
 				for i, info in ipairs(recording.info) do
-					draw_text(239, 204 + get_line_height(i -1), string.format(info.label, time), info.col)
+					draw_text(239, 204 + get_line_height(i - 1), string.format(info.label, time), info.col)
 				end
 			end
 		end
@@ -4495,8 +4509,8 @@ rbff2.startplugin          = function()
 	for i = 1, 0xC0 do table.insert(menu.labels.life_range, i) end
 	for i = 1, 0x3C do table.insert(menu.labels.pow_range, i) end
 
-	menu.rec_to_tra          = function() menu.current = menu.training end
-	menu.exit_and_rec         = function(slot_no)
+	menu.rec_to_tra               = function() menu.current = menu.training end
+	menu.exit_and_rec             = function(slot_no)
 		local g               = global
 		g.dummy_mode          = 5
 		g.rec_main            = recording.procs.await_no_input
@@ -4507,7 +4521,7 @@ rbff2.startplugin          = function()
 		menu.current          = menu.main
 		menu.exit()
 	end
-	menu.exit_and_play_common = function()
+	menu.exit_and_play_common     = function()
 		local col, g = menu.replay.pos.col, global
 		recording.live_slots = recording.live_slots or {}
 		for i = 1, #recording.slot do
@@ -4522,7 +4536,7 @@ rbff2.startplugin          = function()
 		g.replay_stop_on_dmg      = col[17] == 2 -- ダメージでリプレイ中止
 		g.repeat_interval         = recording.repeat_interval
 	end
-	menu.exit_and_rec_pos     = function()
+	menu.exit_and_rec_pos         = function()
 		local g = global
 		g.dummy_mode = 5 -- レコードモードにする
 		g.rec_main = recording.procs.fixpos
@@ -4532,7 +4546,7 @@ rbff2.startplugin          = function()
 		menu.current = menu.main
 		menu.exit()
 	end
-	menu.exit_and_play        = function()
+	menu.exit_and_play            = function()
 		local col, g = menu.replay.pos.col, global
 		if menu.replay.pos.row == 14 and col[14] == 2 then -- 開始間合い固定 / 記憶
 			menu.exit_and_rec_pos()
@@ -4545,7 +4559,7 @@ rbff2.startplugin          = function()
 		menu.current = menu.main
 		menu.exit()
 	end
-	menu.exit_and_play_cancel = function()
+	menu.exit_and_play_cancel     = function()
 		local g = global
 		g.dummy_mode = 6 -- リプレイモードにする
 		g.rec_main = recording.procs.await_play
@@ -4553,7 +4567,7 @@ rbff2.startplugin          = function()
 		menu.exit_and_play_common()
 		menu.to_tra()
 	end
-	menu.init_config         = function()
+	menu.init_config              = function()
 		---@diagnostic disable-next-line: undefined-field
 		local col, p, g = menu.training.pos.col, players, global
 		col[1] = g.dummy_mode        -- ダミーモード
@@ -4575,7 +4589,7 @@ rbff2.startplugin          = function()
 		col[17] = p[2].force_y_pos   -- 2P Y座標強制
 		g.sync_pos_x = col[18]       -- X座標同期
 	end
-	menu.init_bar_config     = function()
+	menu.init_bar_config          = function()
 		---@diagnostic disable-next-line: undefined-field
 		local col, p, g = menu.bar.pos.col, players, global
 		--   1                                                        1
@@ -4586,7 +4600,7 @@ rbff2.startplugin          = function()
 		col[6] = dip_config.infinity_life and 2 or 1 -- 体力ゲージモード
 		col[7] = g.pow_mode                    -- POWゲージモード
 	end
-	menu.init_disp_config    = function()
+	menu.init_disp_config         = function()
 		---@diagnostic disable-next-line: undefined-field
 		local col, p, g, o = menu.disp.pos.col, players, global, hide_options
 		-- タイトルラベル
@@ -4621,7 +4635,7 @@ rbff2.startplugin          = function()
 		col[30] = ut.tstb(g.hide, o.p_chan) and 1 or 2 -- Pちゃん表示
 		col[31] = ut.tstb(g.hide, o.effect) and 1 or 2 -- エフェクト表示
 	end
-	menu.init_ex_config      = function()
+	menu.init_ex_config           = function()
 		---@diagnostic disable-next-line: undefined-field
 		local col, p, g = menu.extra.pos.col, players, global
 		-- タイトルラベル
@@ -4641,7 +4655,7 @@ rbff2.startplugin          = function()
 		col[8] = g.damaged_move -- ヒット効果確認用
 		col[9] = g.all_bs and 2 or 1 -- 全必殺技BS
 	end
-	menu.init_auto_config    = function()
+	menu.init_auto_config         = function()
 		local col, g = menu.auto.pos.col, global
 		-- -- 自動入力設定
 		col[2] = g.auto_input.otg_throw and 2 or 1 -- ダウン投げ
@@ -4661,19 +4675,19 @@ rbff2.startplugin          = function()
 		col[16] = g.auto_input.fast_kadenzer and 2 or 1 -- 必勝！逆襲拳
 		col[17] = g.auto_input.kara_ca and 2 or 1 -- 空振りCA
 	end
-	menu.to_tra                    = function() menu.current = menu.training end
-	menu.to_bar                    = function() menu.current = menu.bar end
-	menu.to_disp                   = function() menu.current = menu.disp end
-	menu.to_ex                     = function() menu.current = menu.extra end
-	menu.to_auto                   = function() menu.current = menu.auto end
-	menu.to_col                    = function() menu.current = menu.color end
-	menu.exit                      = function()
+	menu.to_tra                   = function() menu.current = menu.training end
+	menu.to_bar                   = function() menu.current = menu.bar end
+	menu.to_disp                  = function() menu.current = menu.disp end
+	menu.to_ex                    = function() menu.current = menu.extra end
+	menu.to_auto                  = function() menu.current = menu.auto end
+	menu.to_col                   = function() menu.current = menu.color end
+	menu.exit                     = function()
 		-- Bボタンでトレーニングモードへ切り替え
 		menu.state = menu.tra_main
 		cls_joy()
 		cls_ps()
 	end
-	menu.on_player_select       = function(p_no)
+	menu.on_player_select         = function(p_no)
 		--main_menu.pos.row = 1
 		cls_ps()
 		goto_player_select(p_no)
@@ -4694,7 +4708,7 @@ rbff2.startplugin          = function()
 			menu.exit_and_play()
 		end
 	end
-	menu.on_restart_fight       = function()
+	menu.on_restart_fight         = function()
 		---@diagnostic disable-next-line: undefined-field
 		local col, g, o = menu.main.pos.col, global, hide_options
 		g.hide          = ut.hex_set(g.hide, o.meters, col[15] == 2) -- 体力,POWゲージ表示
@@ -4723,7 +4737,7 @@ rbff2.startplugin          = function()
 			menu.exit_and_play()               -- レコード＆リプレイ用の初期化 リプレイ
 		end
 	end
-	menu.main                      = menu.create({
+	menu.main                     = menu.create({
 		{ "ダミー設定" },
 		{ "ゲージ設定" },
 		{ "表示設定" },
@@ -4744,14 +4758,14 @@ rbff2.startplugin          = function()
 		{ "位置補正", menu.labels.fix_scr_tops, },
 		{ "リスタート" },
 	}, {
-		menu.to_tra,   -- ダミー設定
-		menu.to_bar,   -- ゲージ設定
-		menu.to_disp,  -- 表示設定
-		menu.to_ex,    -- 特殊設定
-		menu.to_auto,  -- 自動入力設定
-		menu.to_col,   -- 判定個別設定
+		menu.to_tra,     -- ダミー設定
+		menu.to_bar,     -- ゲージ設定
+		menu.to_disp,    -- 表示設定
+		menu.to_ex,      -- 特殊設定
+		menu.to_auto,    -- 自動入力設定
+		menu.to_col,     -- 判定個別設定
 		menu.on_player_select, -- プレイヤーセレクト画面
-		function() end,      -- クイックセレクト
+		function() end,  -- クイックセレクト
 		menu.on_restart_fight, -- 1P セレクト
 		menu.on_restart_fight, -- 2P セレクト
 		menu.on_restart_fight, -- 1P カラー
@@ -4765,8 +4779,8 @@ rbff2.startplugin          = function()
 		menu.on_restart_fight, -- リスタート
 	}, ut.new_filled_table(19, menu.exit))
 
-	menu.current                   = menu.main -- デフォルト設定
-	menu.update_pos                = function()
+	menu.current                  = menu.main -- デフォルト設定
+	menu.update_pos               = function()
 		---@diagnostic disable-next-line: undefined-field
 		local col = menu.main.pos.col
 
@@ -4798,14 +4812,14 @@ rbff2.startplugin          = function()
 		col[15] = ut.tstb(global.hide, hide_options.meters, true) and 1 or 2 -- 体力,POWゲージ表示
 		col[16] = ut.tstb(global.hide, hide_options.background, true) and 1 or 2 -- 背景表示
 		col[17] = ut.tstb(global.hide, hide_options.shadow1, true) and 2 or
-			ut.tstb(global.hide, hide_options.shadow2, true) and 3 or 1                  -- 影表示
+			ut.tstb(global.hide, hide_options.shadow2, true) and 3 or 1    -- 影表示
 		col[18] = global.fix_scr_top
 
 		menu.setup_char()
 	end
 	-- ブレイクショットメニュー
-	menu.bs_menus, menu.rvs_menus  = {}, {}
-	local bs_blocks, rvs_blocks    = {}, {}
+	menu.bs_menus, menu.rvs_menus = {}, {}
+	local bs_blocks, rvs_blocks   = {}, {}
 	for i = 1, 60 do
 		table.insert(bs_blocks, string.format("%s回ガード後に発動", i))
 		table.insert(rvs_blocks, string.format("%s回ガード後に発動", i))
@@ -5170,17 +5184,17 @@ rbff2.startplugin          = function()
 		elseif input.accept("B") then
 			menu.current.on_b[menu.current.pos.row]()        -- メニューから戻る
 		elseif input.accept("8") then
-			menu.cursor_ud(-1)                              -- カーソル上移動
+			menu.cursor_ud(-1)                               -- カーソル上移動
 		elseif input.accept("2") then
-			menu.cursor_ud(1)                               -- カーソル下移動
+			menu.cursor_ud(1)                                -- カーソル下移動
 		elseif input.accept("4") then
-			menu.cursor_lr(-1, true)                            -- カーソル左移動
+			menu.cursor_lr(-1, true)                         -- カーソル左移動
 		elseif input.accept("6") then
-			menu.cursor_lr(1, true)                             -- カーソル右移動
+			menu.cursor_lr(1, true)                          -- カーソル右移動
 		elseif input.accept("C") then
-			menu.cursor_lr(-10, false)                          -- カーソル左10移動
+			menu.cursor_lr(-10, false)                       -- カーソル左10移動
 		elseif input.accept("D") then
-			menu.cursor_lr(10, false)                           -- カーソル右10移動
+			menu.cursor_lr(10, false)                        -- カーソル右10移動
 		end
 
 		-- メニュー表示本体
