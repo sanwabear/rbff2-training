@@ -1246,14 +1246,14 @@ local draw_range            = function(range)
 	draw_ctext_with_shadow(x, y, label or "", col)
 end
 
-local border_box            = function(x1, y1, x2, y2, w, fcol)
+local border_box            = function(x1, y1, x2, y2, fcol, _, w)
 	scr:draw_box(x1 - w, y1 - w, x2 + w, y1, fcol, fcol)
 	scr:draw_box(x1 - w, y1 - w, x1, y2 + w, fcol, fcol)
 	scr:draw_box(x2, y1 - w, x2 + 1, y2 + w, fcol, fcol)
 	scr:draw_box(x1 - w, y2 + w, x2 + w, y2, fcol, fcol)
 end
 
-local border_waku            = function(x1, y1, x2, y2, w, fcol)
+local border_waku            = function(x1, y1, x2, y2, fcol, _, w)
 	scr:draw_box(x1, y1, x2, y2, fcol, 0)
 	scr:draw_box(x1, y1 - w, x2, y1, fcol, fcol)
 	scr:draw_box(x1, y2 + w, x2, y2, fcol, fcol)
@@ -2878,7 +2878,7 @@ rbff2.startplugin           = function()
 		local separators = {}
 		local startup = 0 < max_x and frames[max_x] and frames[max_x].startup or "--"
 		local total = 0 < max_x and frames[max_x] and frames[max_x].total or "---"
-		border_box(x0, y1, x0 + frame_meter.limit * frame_meter.cell, y2, 0.5, 0xFF000000) -- 外枠
+		border_box(x0, y1, x0 + frame_meter.limit * frame_meter.cell, y2, 0xFF000000, 0, 0.5) -- 外枠
 		for ix = remain + 1, max_x do
 			local frame = frames[ix]
 			local x1 = (((ix - 1) % frame_meter.limit) * frame_meter.cell) + x0
@@ -2891,12 +2891,12 @@ rbff2.startplugin           = function()
 			if ix == max_x then -- 末尾のみ四方をBOX描画して太線で表示
 				table.insert(separators, { -- フレーム終端
 					txt = { x2, y1, frame.count },
-					box = { x1, y1, x2, y2, 1, frame.line }
+					box = { x1, y1, x2, y2, frame.line, 0, 1 }
 				})
 			elseif ((remain == 0) or (remain + 4 < ix)) and (frame.count >= frames[ix + 1].count) then
 				table.insert(separators, { -- フレーム区切り
 					txt = { x2, y1, 0 < frame.count and frame.count or "" },
-					box = { x1, y1, x2, y2, frame.line, 0 }
+					box = { x1, y1, x2, y2, frame.line, 0, 0 }
 				})
 			end
 			scr:draw_box(x1, y1, x2, y2, 0, frame.line) -- 四角の描画
