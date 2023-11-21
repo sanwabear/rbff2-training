@@ -3605,69 +3605,6 @@ rbff2.startplugin           = function()
 			p.body.attackbit = p.body.attackbit | p.attackbit
 		end
 
-		--[[
-		-- フレーム表示などの前処理1
-		for _, p in ipairs(players) do
-			local op         = p.op
-
-			--フレーム数
-			p.frame_gap      = p.frame_gap or 0
-			p.old.frame_gap = p.old.frame_gap or 0
-			if mem._0x10B862 ~= 0 then
-				local hitstun, blockstun = 0, 0
-				if p.ophit and p.ophit.hitboxies then
-					for _, box in pairs(p.ophit.hitboxies) do
-						if box.type.kind == db.box_kinds.attack then
-							hitstun, blockstun = box.hitstun, box.blockstun
-							break
-						end
-					end
-				end
-				local on_hit = p.on_hit == global.frame_number
-				local on_block = p.on_block == global.frame_number
-				if p.ophit and (on_block or on_hit) then
-					-- ガード時硬直, ヒット時硬直
-					p.last_blockstun = on_block and blockstun or hitstun
-				end
-			elseif op.char == 20 and op.act == 0x00AF and op.act_count == 0x00 and op.act_frame == 0x09 then
-				-- デンジャラススルー専用
-				p.last_blockstun = p.hitstop_remain + 2
-			elseif op.char == 5 and op.act == 0x00A7 and op.act_count == 0x00 and op.act_frame == 0x06 then
-				-- 裏雲隠し専用
-				p.last_blockstun = p.knockback1 + 3
-			end
-		end
-
-		-- フレーム表示などの前処理2
-		for _, p in ipairs(players) do
-			-- ヒットフレームの判断
-			if p.state ~= 1 and p.state ~= 3 then
-				p.hit1 = 0
-			elseif p.on_hit == global.frame_number then
-				p.hit1 = 1 -- 1ヒット確定
-			end
-			-- 停止時間なしのヒットガードのためelseifで繋げない
-			if (p.hit1 == 1 and p.skip_frame == false) or
-				((p.state == 1 or p.state == 3) and p.old.skip_frame == true and p.skip_frame == false) then
-				p.hit1 = 2 -- ヒット後のヒットストップ解除フレームの記録
-				p.on_hit1 = global.frame_number
-			end
-
-			if p.state ~= 2 then
-				p.block1 = 0 -- ガードフレームの判断
-			elseif p.on_block == global.frame_number then
-				p.block1 = 1 -- 1ガード確定
-			end
-
-			-- 停止時間なしのヒットガードのためelseifで繋げない
-			if (p.block1 == 1 and p.skip_frame == false) or
-				(p.state == 2 and p.old.skip_frame == true and p.skip_frame == false) then
-				p.block1 = 2 -- ガード後のヒットストップ解除フレームの記録
-				p.on_block1 = global.frame_number
-			end
-		end
-		]]
-
 		for _, p in pairs(all_objects) do
 			-- キャラ、弾ともに通常動作状態ならリセットする
 			if not global.both_act_neutral and global.old_both_act_neutral then p.clear_frame_data() end
@@ -3924,7 +3861,6 @@ rbff2.startplugin           = function()
 					end
 				end
 
-				--[[
 				-- 自動ダウン追撃
 				if p.op.act == 0x190 or p.op.act == 0x192 or p.op.act == 0x18E or p.op.act == 0x13B then
 					if global.auto_input.otg_throw and p.char_data.otg_throw then
@@ -3945,7 +3881,6 @@ rbff2.startplugin           = function()
 						p.reset_sp_hook(p.char_data.add_throw) -- 閃里肘皇・心砕把
 					end
 				end
-				]]
 
 				-- 自動超白龍
 				if 1 < global.auto_input.pairon and p.char == 22 then
