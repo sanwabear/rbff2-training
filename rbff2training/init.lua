@@ -2111,15 +2111,16 @@ rbff2.startplugin           = function()
 		rp8 = {
 			[{ addr = 0x107C1F, filter = 0x39456 }] = function(data)
 				local p = get_object_by_reg("A4", {})
-				if p.bs_hook then
-					if p.bs_hook.ver then
-						--ut.printf("bs_hook1 %x %x", p.bs_hook.id, p.bs_hook.ver)
-						mem.w8(p.addr.base + 0xA3, p.bs_hook.id)
-						mem.w16(p.addr.base + 0xA4, p.bs_hook.ver)
+				local sp = p.bs_hook
+				if sp then
+					if sp.ver then
+						--ut.printf("bs_hook1 %x %x", sp.id, sp.ver)
+						mem.w8(p.addr.base + 0xA3, sp.id)
+						mem.w16(p.addr.base + 0xA4, sp.ver)
 					else
-						--ut.printf("bs_hook2 %x %x", p.bs_hook.id, p.bs_hook.f)
-						mem.w8(p.addr.base + 0xD6, p.bs_hook.id)
-						mem.w8(p.addr.base + 0xD7, p.bs_hook.f)
+						--ut.printf("bs_hook2 %x %x", sp.id, sp.f)
+						mem.w8(p.addr.base + 0xD6, sp.id)
+						mem.w8(p.addr.base + 0xD7, sp.f)
 					end
 				end
 			end,
@@ -3186,7 +3187,8 @@ rbff2.startplugin           = function()
 			act_data.neutral = act_data.neutral or resolve_act_neutral(p)
 			act_data.type = act_data.type or (act_data.neutral and db.act_types.any or db.act_types.free)
 		elseif act_data.neutral == nil then
-			act_data.neutral = resolve_act_neutral(p) or ut.tstb(act_data.type, db.act_types.free | db.act_types.block)
+			-- フラグ状態と技データの両方でニュートラル扱いかどうかを判断する
+			act_data.neutral = resolve_act_neutral(p) and ut.tstb(act_data.type, db.act_types.free | db.act_types.block)
 		end
 		-- 技動作は滑りかBSかを付与する
 		act_data.name = p.sliding and act_data.slide_name or p.in_bs and act_data.bs_name or act_data.normal_name
@@ -4149,9 +4151,12 @@ rbff2.startplugin           = function()
 				local p1 = i == 1
 				-- 状態 小表示 1:OFF 2:ON 3:ON:小表示 4:ON:大表示 5:ON:フラグ表示
 				if p.disp_state == 2 or p.disp_state == 3 then
-					local label1, label2 = p.state_line2 or {}, p.state_line3 or {}
+					local label1 = p.state_line2 or {}
 					scr:draw_box(p1 and 0 or 277, 0, p1 and 40 or 316, get_line_height(#label1), 0x80404040, 0x80404040)
 					draw_text(p1 and 4 or 278, 0, table.concat(label1, "\n"))
+				end
+				if p.disp_state == 2 or p.disp_state == 5 then
+					local label2 = p.state_line3 or {}
 					draw_text(40, 50 + get_line_height(p1 and 0 or (#label2 + 0.5)), table.concat(label2, "\n"))
 				end
 
