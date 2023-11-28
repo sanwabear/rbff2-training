@@ -3765,25 +3765,20 @@ rbff2.startplugin           = function()
 						if p.next_block_ec == 0 then p.next_block = false end
 					end
 				elseif p.dummy_gd == dummy_gd_type.block1 then
-					if p.block1 == 0 and p.next_block_ec == 75 then
+					if global.frame_number == p.on_block then
+						p.next_unblock = p.on_block + global.next_block_grace
+					elseif global.frame_number == p.on_hit then
 						p.next_block = true
-					elseif p.block1 == 1 then
-						p.next_block, p.next_block_ec = true, 75 -- カウンター初期化
-					elseif p.block1 == 2 and global.frame_number <= (p.on_block1 + global.next_block_grace) then
-						p.next_block = true
-					else
+						p.next_unblock = 0
+					end
+					if global.frame_number == p.next_unblock then
+						p.next_block = false -- ヒット時はガードに切り替え
+						p.next_block_ec = 75 -- カウンター初期化
+					end
+					if p.next_block == false then
 						-- カウンター消費しきったらガードするように切り替える
 						p.next_block_ec = p.next_block_ec and (p.next_block_ec - 1) or 0
-						if p.next_block_ec == 0 then
-							p.next_block, p.next_block_ec, p.block1 = true, 75, 0 -- カウンター初期化
-						elseif global.frame_number == p.on_block then
-							p.next_block_ec, p.next_block = 75, false -- カウンター初期化
-						else
-							p.next_block = false
-						end
-					end
-					if global.frame_number == p.on_hit then -- ヒット時はガードに切り替え
-						p.next_block, p.next_block_ec, p.block1 = true, 75, 0 -- カウンター初期化
+						if p.next_block_ec == 0 then p.next_block = true end
 					end
 				end
 
@@ -4640,7 +4635,10 @@ rbff2.startplugin           = function()
 	menu.to_disp                  = function() menu.current = menu.disp end
 	menu.to_ex                    = function() menu.current = menu.extra end
 	menu.to_auto                  = function() menu.current = menu.auto end
-	menu.to_col                   = function() menu.current = menu.color end
+	menu.to_col                   = function()
+		for i = 2, #menu.color.pos.col do menu.color.pos.col[i] = db.box_type_list[i - 1].enabled and 2 or 1 end
+		menu.current = menu.color
+	end
 	menu.exit                     = function()
 		-- Bボタンでトレーニングモードへ切り替え
 		menu.state = menu.tra_main
