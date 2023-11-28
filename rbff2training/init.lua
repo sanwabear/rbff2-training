@@ -571,6 +571,8 @@ local global                               = {
 	disp_replay          = true, -- レコードリプレイガイド表示
 	save_snapshot        = 1, -- 技画像保存 1:OFF 2:新規 3:上書き
 	key_hists            = 25,
+
+	rvslog               = true,
 }
 mem.rg                                     = function(id, mask) return (mask == nil) and cpu.state[id].value or (cpu.state[id].value & mask) end
 mem.pc                                     = function() return cpu.state["CURPC"].value end
@@ -3144,14 +3146,10 @@ rbff2.startplugin           = function()
 				return -- 連続通常ジャンプを繰り返さない
 			end
 		end
-		p.bs_hook = p.dummy_rvs.id and p.dummy_rvs or nil
-		if p.dummy_rvs.cmd then
-			if rvs_types.knock_back_recovery ~= rvs_type then
-				if (((p.flag_c0 | p.old.flag_c0) & 0x2 == 0x2) or db.pre_down_acts[p.act]) and p.dummy_rvs.cmd == db.cmd_types._2D then
-					-- no act
-				else
-					p.bs_hook = p.dummy_rvs
-				end
+		p.reset_sp_hook(p.dummy_rvs)
+		if p.dummy_rvs.cmd and rvs_types.knock_back_recovery ~= rvs_type then
+			if (((p.flag_c0 | p.old.flag_c0) & 0x2 == 0x2) or db.pre_down_acts[p.act]) and p.dummy_rvs.cmd == db.cmd_types._2D then
+				p.reset_sp_hook() -- no act
 			end
 		end
 	end
