@@ -4261,13 +4261,16 @@ rbff2.startplugin           = function()
 					local flip   = p.flip_x == 1 and ">" or "<" -- 見た目と判定の向き
 					local side   = p.block_side == 1 and ">" or "<" -- ガード方向や内部の向き 1:右向き -1:左向き
 					local i_side = p.cmd_side == 1 and ">" or "<" -- コマンド入力の向き
-					local y1, y2 = p.old.pos_y and (p.old.pos_y + p.old.pos_frc_y) or 0, p.pos_y + p.pos_frc_y
-					local x1, x2 = p.old.pos and (p.old.pos + p.old.pos_frc) or 0, p.pos + p.pos_frc
-					if p.old.pos_y ~= p.pos_frc_y or not p.last_posy_txt then
-						p.last_posy_txt = string.format("Y%s>%s", format_num(y1), format_num(y2))
+					p.pos_hist = p.pos_hist or ut.new_filled_table(2, { x = format_num(0), y = format_num(0) })
+					table.insert(p.pos_hist, { x = format_num(p.pos + p.pos_frc), y = format_num(p.pos_y + p.pos_frc_y) })
+					while 3 < #p.pos_hist do table.remove(p.pos_hist, 1) end
+					local y1, y2, y3 = p.pos_hist[1].y, p.pos_hist[2].y, p.pos_hist[3].y
+					local x1, x2, x3 = p.pos_hist[1].x, p.pos_hist[2].x, p.pos_hist[3].x
+					if y3 ~= y2 or not p.last_posy_txt then
+						p.last_posy_txt = string.format("Y%s>%s>%s", y1, y2, y3)
 					end
-					if x1 ~= x2 or not p.last_posx_txt then
-						p.last_posx_txt = string.format("X%s>%s", format_num(x1), format_num(x2))
+					if x3 ~= x2 or not p.last_posx_txt then
+						p.last_posx_txt = string.format("X%s>%s>%s", x1, x2, x3)
 					end
 					if i == 1 then
 						draw_text("left", 216 - get_line_height(), string.format("%s", p.last_posx_txt))
