@@ -3527,7 +3527,8 @@ rbff2.startplugin           = function()
 					table.insert(p.hitboxies, box)
 					table.insert(hitboxies, box)
 					table.insert(p.hitbox_types, box.type)
-					table.insert(box.type.kind == db.box_kinds.attack and boxkeys.hit or boxkeys.hurt, box.keytxt)
+					local hit = box.type.kind == db.box_kinds.attack or box.type.kind == db.box_kinds.parry
+					table.insert(hit and boxkeys.hit or boxkeys.hurt, box.keytxt)
 				end
 			end
 			if not p.is_fireball then p.attackbit = p.attackbit | p.hurt.dodge end -- 本体の部分無敵フラグを設定
