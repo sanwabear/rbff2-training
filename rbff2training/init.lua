@@ -1675,7 +1675,7 @@ rbff2.startplugin           = function()
 			[0x8E] = function(data)
 				local changed = p.state ~= data
 				p.on_block = data == 2 and now() or p.on_block                                -- ガードへの遷移フレームを記録
-				p.on_hit = data == 1 or data == 3 and now() or p.on_hit                       -- ヒットへの遷移フレームを記録
+				p.on_hit = (data == 1 or data == 3) and now() or p.on_hit                       -- ヒットへの遷移フレームを記録
 				if p.state == 0 and p.on_hit and not p.act_data.neutral then p.on_punish = now() + 10 end -- 確定反撃
 				p.random_boolean = changed and (math.random(255) % 2 == 0) or p.random_boolean
 				p.state, p.change_state = data, changed and now() or p.change_state           -- 今の状態と状態更新フレームを記録
@@ -3505,7 +3505,7 @@ rbff2.startplugin           = function()
 				end
 			end) do
 				if box.type.kind == db.box_kinds.attack or box.type.kind == db.box_kinds.parry then
-					global.pause = global.pause_hitbox == 3 -- 強制ポーズ 1:OFF, 2:投げ, 3:攻撃, 4:変化時
+					if global.pause_hitbox == 3 then global.pause = true end -- 強制ポーズ 1:OFF, 2:投げ, 3:攻撃, 4:変化時
 					p.hit.box_count = p.hit.box_count + 1 -- 攻撃判定の数
 				end
 				if box.type.kind == db.box_kinds.attack then -- 攻撃位置から解決した属性を付与する
@@ -3530,8 +3530,6 @@ rbff2.startplugin           = function()
 			-- 攻撃判定がない場合は関連するフラグを無効化する
 			if p.hit.box_count == 0 then p.attackbit = ut.hex_clear(p.attackbit, db.box_with_bit_types.mask) end
 
-			if global.pause_hitbox == 2 and #p.body.throw_boxies then global.pause = true end -- 強制ポーズ  1:OFF, 2:投げ, 3:攻撃, 4:変化時
-
 			if p.body.disp_hitbox and p.is_fireball ~= true then
 				-- 押し合い判定（本体のみ）
 				if p.push_invincible and p.push_invincible == 0 and mem._0x10B862 == 0 then
@@ -3544,6 +3542,7 @@ rbff2.startplugin           = function()
 				-- 投げ判定
 				local last_throw_ids = {}
 				for _, box in pairs(p.throw_boxies) do
+					if global.pause_hitbox == 2 then global.pause = true end -- 強制ポーズ  1:OFF, 2:投げ, 3:攻撃, 4:変化時
 					table.insert(p.hitboxies, box)
 					table.insert(hitboxies, box)
 					table.insert(p.hitbox_types, box.type)
@@ -4046,12 +4045,13 @@ rbff2.startplugin           = function()
 		for _, p in ipairs(players) do
 			p.skip_frame = false -- 初期化
 			-- ヒット時にポーズさせる 強制ポーズ処理
-			if p.state ~= 0 and p.state ~= p.old.state and global.pause_hit > 0 then
-				-- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
-				if global.pause_hit == 2 or (global.pause_hit == 6 and p.state == 2) or (global.pause_hit == 5 and p.state == 1) or
-					(global.pause_hit == 4 and p.state == 3) or (global.pause_hit == 3 and p.state ~= 2) then
-					global.pause = true
-				end
+			-- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
+			if (global.pause_hit == 2 and (p.on_hit == global.frame_number or p.on_block == global.frame_number))or
+				(global.pause_hit == 3 and p.on_hit == global.frame_number) or
+				(global.pause_hit == 4 and p.on_hit == global.frame_number and p.state == 3) or
+				(global.pause_hit == 5 and p.on_hit == global.frame_number and p.state == 1) or
+				(global.pause_hit == 6 and p.on_block == global.frame_number) then
+				global.pause = true
 			end
 		end
 		set_freeze(not global.pause)
