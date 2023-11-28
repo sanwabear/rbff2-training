@@ -572,7 +572,7 @@ local global                               = {
 	save_snapshot        = 1, -- 技画像保存 1:OFF 2:新規 3:上書き
 	key_hists            = 25,
 
-	rvslog               = true,
+	rvslog               = false,
 }
 mem.rg                                     = function(id, mask) return (mask == nil) and cpu.state[id].value or (cpu.state[id].value & mask) end
 mem.pc                                     = function() return cpu.state["CURPC"].value end
@@ -2452,7 +2452,7 @@ rbff2.startplugin           = function()
 	-- 初回入力まち
 	-- 未入力状態を待ちける→入力開始まで待ち受ける
 	recording.procs.await_no_input = function(_)
-		if players[recording.temp_player].reg_pcnt == 0 then -- 状態変更
+		if players[recording.temp_player].key.reg_pcnt == 0 then -- 状態変更
 			global.rec_main = recording.procs.await_1st_input
 			print(global.frame_number .. " await_no_input -> await_1st_input ", recording.temp_player)
 		end
@@ -5077,6 +5077,7 @@ rbff2.startplugin           = function()
 		{ "ガイド表示", menu.labels.off_on, },
 		{ "ダメージでリプレイ中止", menu.labels.off_on, },
 	}, ut.new_filled_table(17, menu.exit_and_play), ut.new_filled_table(17, menu.exit_and_play_cancel))
+	for i = 2, 2 + 8 do menu.replay.pos.col[i] = 2 end -- スロット1-スロット8
 
 	menu.init_auto_config()
 	menu.init_disp_config()
