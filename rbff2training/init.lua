@@ -796,14 +796,15 @@ local joy_neutrala                         = db.joy_neutrala
 local rvs_types                            = db.rvs_types
 local hook_cmd_types                       = db.hook_cmd_types
 
-local get_next_xs                          = function(p, list, cur_menu)
+local get_next_xs                          = function(p, list, cur_menu, top_label_count)
+	-- top_label_countはメニュー上部のラベル行数
 	local sub_menu, ons = cur_menu[p.num][p.char], {}
 	if sub_menu == nil or list == nil then return nil end
-	for j, s in pairs(list) do if sub_menu.pos.col[j + 1] == 2 then table.insert(ons, s) end end
+	for j, s in pairs(list) do if sub_menu.pos.col[j + top_label_count] == 2 then table.insert(ons, s) end end
 	return #ons > 0 and ons[math.random(#ons)] or nil
 end
-local get_next_rvs                         = function(p) return get_next_xs(p, p.char_data and p.char_data.rvs or nil, menu.rvs_menus) end
-local get_next_bs                          = function(p) return get_next_xs(p, p.char_data and p.char_data.bs or nil, menu.bs_menus) end
+local get_next_rvs                         = function(p) return get_next_xs(p, p.char_data and p.char_data.rvs or nil, menu.rvs_menus, 1) end
+local get_next_bs                          = function(p) return get_next_xs(p, p.char_data and p.char_data.bs or nil, menu.bs_menus, 2) end
 
 local use_joy                              = {
 	{ port = ":edge:joy:JOY1",  field = joy_k[1].a,  frame = 0, prev = 0, player = 1, get = 0, },
@@ -4818,14 +4819,17 @@ rbff2.startplugin           = function()
 			table.insert(list, { title = true, "ONにしたスロットからランダムで発動されます。" })
 			table.insert(on_ab, menu.to_tra)
 			table.insert(col, 0)
+			table.insert(list, { title = true, "*がついたものは「全必殺技でBS可能」がON時のみ有効です。" })
+			table.insert(on_ab, menu.to_tra)
+			table.insert(col, 0)
 			for _, bs in pairs(bs_list) do
 				local name = bs.name
-				if ut.tstb(bs.hook_type, hook_cmd_types.ex_breakshot, true) then bs.name = "*" .. bs.name end
+				if ut.tstb(bs.hook_type, hook_cmd_types.ex_breakshot, true) then name = "*" .. name end
 				table.insert(list, { name, menu.labels.off_on, common = bs.common == true, row = #list, })
 				table.insert(on_ab, menu.to_tra)
 				table.insert(col, 1)
 			end
-			table.insert(pbs, { list = list, pos = { offset = 1, row = 2, col = col, }, on_a = on_ab, on_b = on_ab, })
+			table.insert(pbs, { list = list, pos = { offset = 1, row = 3, col = col, }, on_a = on_ab, on_b = on_ab, })
 		end
 		for _, rvs_list in pairs(db.char_rvs_list) do
 			local list, on_ab, col = {}, {}, {}
