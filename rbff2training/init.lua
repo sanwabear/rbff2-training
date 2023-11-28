@@ -3476,7 +3476,7 @@ rbff2.startplugin           = function()
 			p.vulnerable = (p.invincible and p.invincible > 0) or p.hurt_invincible or p.on_vulnerable ~= global.frame_number
 			p.grabbable = p.grabbable | (p.grabbable1 and p.grabbable2 and hitbox_grab_bits.baigaeshi or 0)
 			p.hitboxies, p.hitbox_types, p.hurt = {}, {}, {} -- 座標補正後データ格納のためバッファのクリア
-			local boxkeys = {}
+			local boxkeys = { hit = {}, hurt = {} }
 			p.hurt = { max_top = -0xFFFF, min_bottom = 0xFFFF, dodge = p.vulnerable and frame_attack_types.full or 0, }
 			p.hit = { box_count = 0 }
 			p.attackbit = 0
@@ -3496,7 +3496,7 @@ rbff2.startplugin           = function()
 
 			-- 当たりとやられ判定判定
 			-- 判定が変わったらポーズさせる  1:OFF, 2:投げ, 3:攻撃, 4:変化時
-			if not p.act_data.neutral and p.chg_hitbox and global.pause_hitbox == 4 then global.pause = true end
+			if not p.act_data.neutral and (p.chg_hitbox or p.chg_hurtbox) and global.pause_hitbox == 4 then global.pause = true end
 			p.hurt.dodge = frame_attack_types.full -- くらい判定なし＝全身無敵をデフォルトにする
 			for _, _, box in ut.ifind_all(p.boxies, function(box)
 				local type = fix_box_type(p, p.attackbit, box) -- 属性はヒット状況などで変わるので都度解決する
@@ -3527,7 +3527,7 @@ rbff2.startplugin           = function()
 					table.insert(p.hitboxies, box)
 					table.insert(hitboxies, box)
 					table.insert(p.hitbox_types, box.type)
-					table.insert(boxkeys, box.keytxt)
+					table.insert(box.type.kind == db.box_kinds.attack and boxkeys.hit or boxkeys.hurt, box.keytxt)
 				end
 			end
 			if not p.is_fireball then p.attackbit = p.attackbit | p.hurt.dodge end -- 本体の部分無敵フラグを設定
@@ -3543,7 +3543,7 @@ rbff2.startplugin           = function()
 					box.keytxt = string.format("p%2x%2x%2x%2x%2x", box.type.no, src.top, src.bottom, src.left, src.right)
 					table.insert(p.hitboxies, box)
 					table.insert(hitboxies, box)
-					table.insert(boxkeys, box.keytxt)
+					table.insert(boxkeys.hurt, box.keytxt)
 					table.insert(p.hitbox_types, box.type)
 				end
 
@@ -3554,7 +3554,7 @@ rbff2.startplugin           = function()
 					box.keytxt = string.format("t%2x%2x", box.type.no, box.id)
 					table.insert(p.hitboxies, box)
 					table.insert(hitboxies, box)
-					table.insert(boxkeys, box.keytxt)
+					table.insert(boxkeys.hit, box.keytxt)
 					table.insert(p.hitbox_types, box.type)
 					table.insert(last_throw_ids, { char = p.char, id = box.id })
 				end
@@ -3611,9 +3611,12 @@ rbff2.startplugin           = function()
 				end
 			end
 
-			table.sort(boxkeys)
-			p.old.hitboxkey, p.hitboxkey = p.hitboxkey, table.concat(boxkeys, "|")
+			table.sort(boxkeys.hit)
+			table.sort(boxkeys.hurt)
+			p.old.hitboxkey, p.hitboxkey = p.hitboxkey, table.concat(boxkeys.hit, "|")
+			p.old.hurtboxkey, p.hurtboxkey = p.hurtboxkey, table.concat(boxkeys.hurt, "|")
 			p.chg_hitbox = p.old.hitboxkey ~= p.hitboxkey
+			p.chg_hurtbox = p.old.hurtboxkey ~= p.hurtboxkey
 		end
 		table.sort(hitboxies, hitboxies_order)
 		table.sort(ranges, ranges_order)
@@ -4075,7 +4078,7 @@ rbff2.startplugin           = function()
 
 			-- スクショ保存
 			for _, p in ut.ifind_all(players, function(p) return p.act_data end) do
-				local chg_hitbox = not p.act_data.neutral and p.chg_hitbox
+				local chg_hitbox = not p.act_data.neutral and (p.chg_hitbox or p.chg_hurtbox)
 
 				-- 画像保存 1:OFF 2:1P動作 3:2P動作
 				if (chg_hitbox or p.state ~= 0) and global.save_snapshot > 1 then
