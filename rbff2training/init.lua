@@ -3476,6 +3476,7 @@ rbff2.startplugin           = function()
 			p.vulnerable = (p.invincible and p.invincible > 0) or p.hurt_invincible or p.on_vulnerable ~= global.frame_number
 			p.grabbable = p.grabbable | (p.grabbable1 and p.grabbable2 and hitbox_grab_bits.baigaeshi or 0)
 			p.hitboxies, p.hitbox_types, p.hurt = {}, {}, {} -- 座標補正後データ格納のためバッファのクリア
+			local boxkeys = {}
 			p.hurt = { max_top = -0xFFFF, min_bottom = 0xFFFF, dodge = p.vulnerable and frame_attack_types.full or 0, }
 			p.hit = { box_count = 0 }
 			p.attackbit = 0
@@ -3494,12 +3495,16 @@ rbff2.startplugin           = function()
 			end
 
 			-- 当たりとやられ判定判定
+			-- 判定が変わったらポーズさせる  1:OFF, 2:投げ, 3:攻撃, 4:変化時
+			if not p.act_data.neutral and p.chg_hitbox and global.pause_hitbox == 4 then global.pause = true end
 			p.hurt.dodge = frame_attack_types.full -- くらい判定なし＝全身無敵をデフォルトにする
 			for _, _, box in ut.ifind_all(p.boxies, function(box)
 				local type = fix_box_type(p, p.attackbit, box) -- 属性はヒット状況などで変わるので都度解決する
 				if not (db.hurt_boxies[type] and p.vulnerable) then
-					box = fix_box_scale(p, box)
+					local src = box
+					box = fix_box_scale(p, src)
 					box.type = type
+					box.keytxt = string.format("b%2x%2x%2x%2x%2x", box.type.no, src.top, src.bottom, src.left, src.right)
 					return box
 				end
 			end) do
@@ -3522,6 +3527,7 @@ rbff2.startplugin           = function()
 					table.insert(p.hitboxies, box)
 					table.insert(hitboxies, box)
 					table.insert(p.hitbox_types, box.type)
+					table.insert(boxkeys, box.keytxt)
 				end
 			end
 			if not p.is_fireball then p.attackbit = p.attackbit | p.hurt.dodge end -- 本体の部分無敵フラグを設定
@@ -3532,9 +3538,12 @@ rbff2.startplugin           = function()
 			if p.body.disp_hitbox and p.is_fireball ~= true then
 				-- 押し合い判定（本体のみ）
 				if p.push_invincible and p.push_invincible == 0 and mem._0x10B862 == 0 then
-					local box = fix_box_scale(p, get_push_box(p))
+					local src = get_push_box(p)
+					local box = fix_box_scale(p, src)
+					box.keytxt = string.format("p%2x%2x%2x%2x%2x", box.type.no, src.top, src.bottom, src.left, src.right)
 					table.insert(p.hitboxies, box)
 					table.insert(hitboxies, box)
+					table.insert(boxkeys, box.keytxt)
 					table.insert(p.hitbox_types, box.type)
 				end
 
@@ -3542,8 +3551,10 @@ rbff2.startplugin           = function()
 				local last_throw_ids = {}
 				for _, box in pairs(p.throw_boxies) do
 					if global.pause_hitbox == 2 then global.pause = true end -- 強制ポーズ  1:OFF, 2:投げ, 3:攻撃, 4:変化時
+					box.keytxt = string.format("t%2x%2x", box.type.no, box.id)
 					table.insert(p.hitboxies, box)
 					table.insert(hitboxies, box)
+					table.insert(boxkeys, box.keytxt)
 					table.insert(p.hitbox_types, box.type)
 					table.insert(last_throw_ids, { char = p.char, id = box.id })
 				end
@@ -3599,6 +3610,10 @@ rbff2.startplugin           = function()
 					end
 				end
 			end
+
+			table.sort(boxkeys)
+			p.old.hitboxkey, p.hitboxkey = p.hitboxkey, table.concat(boxkeys, "|")
+			p.chg_hitbox = p.old.hitboxkey ~= p.hitboxkey
 		end
 		table.sort(hitboxies, hitboxies_order)
 		table.sort(ranges, ranges_order)
@@ -4060,19 +4075,7 @@ rbff2.startplugin           = function()
 
 			-- スクショ保存
 			for _, p in ut.ifind_all(players, function(p) return p.act_data end) do
-				local chg_y = p.attackbits.on_air or p.attackbits.on_ground
-				local chg_act = p.old.act_data.neutral ~= p.act_data.neutral
-				local chg_hit = p.chg_hitbox_frm == global.frame_number
-				local chg_hurt = p.chg_hurtbox_frm == global.frame_number
-				local chg_sway = p.on_sway_line == global.frame_number or p.on_main_line == global.frame_number
-				for _, fb in pairs(p.fireballs) do
-					if fb.chg_hitbox_frm == global.frame_number then chg_hit = true end
-					if fb.chg_hurtbox_frm == global.frame_number then chg_hurt = true end
-				end
-				local chg_hitbox = p.act_data.neutral ~= true and (p.update_act or chg_act or chg_y or chg_hit or chg_hurt or chg_sway)
-
-				-- 判定が変わったらポーズさせる  1:OFF, 2:投げ, 3:攻撃, 4:変化時
-				if chg_hitbox and global.pause_hitbox == 4 then global.pause = true end
+				local chg_hitbox = not p.act_data.neutral and p.chg_hitbox
 
 				-- 画像保存 1:OFF 2:1P動作 3:2P動作
 				if (chg_hitbox or p.state ~= 0) and global.save_snapshot > 1 then
