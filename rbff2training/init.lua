@@ -518,7 +518,7 @@ local global                               = {
 
 	disp_pos             = true, -- 1P 2P 距離表示
 	hide                 = hide_options.none,
-	disp_frame           = 2,  -- フレーム差表示 1:OFF 2:フレームメーター 3:数値のみ
+	disp_frame           = true,  -- フレームメーター表示 1:OFF 2:ON
 	disp_input           = 1,  -- コマンド入力状態表示 1:OFF 2:1P 3:2P
 	disp_normal_frames   = 2,  -- 通常動作フレーム非表示 1:OFF 2:ON
 	pause_hit            = 1,  -- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
@@ -538,7 +538,7 @@ local global                               = {
 		combo_throw   = false, -- 通常投げの派生技        4
 		rave          = 1, -- デッドリーレイブ        5
 		desire        = 1, -- アンリミテッドデザイア  6
-		drill         = 5, -- ドリル                  7
+		drill         = 1, -- ドリル                  7
 		pairon        = 1, -- 超白龍                  8
 		real_counter  = 1, -- M.リアルカウンター      9
 		auto_3ecst    = false, -- M.トリプルエクスタシー 10
@@ -1554,6 +1554,7 @@ rbff2.startplugin           = function()
 			dummy_rvs_chr   = 0,         -- リバーサルの設定をした時のキャラID
 			rvs_count       = -1,        -- リバーサルの実施カウント
 			gd_rvs_enabled  = false,     -- ガードリバーサルの実行可否
+			gd_bs_enabled   = false,     -- BSの実行可否
 
 			life_rec        = true,      -- 自動で体力回復させるときtrue
 			red             = 2,         -- 体力設定     	--"最大", "赤", "ゼロ" ...
@@ -1576,6 +1577,7 @@ rbff2.startplugin           = function()
 			update_act      = false,
 			move_count      = 0,         -- スクショ用の動作カウント
 			on_punish       = 0,
+			on_block        = 0,
 			key             = {
 				log = ut.new_filled_table(global.key_hists, { key = "", frame = 0 }),
 				gg = ggkey_create(i == 1),
@@ -1844,7 +1846,7 @@ rbff2.startplugin           = function()
 				p.op.throwing = { timer = timer, threshold = threshold, established = threshold < timer, }
 			end,
 			[{ addr = 0x94, filter = 0x42BFE }] = function(data, ret)
-				if global.auto_input.drill > 0 then ret.value = drill_counts[global.auto_input.drill] end -- 自動ドリル
+				if global.auto_input.drill > 1 then ret.value = drill_counts[global.auto_input.drill] end -- 自動ドリル
 			end,
 			[{ addr = 0xA5, filter = { 0x3DBE6, 0x49988, 0x42C26 } }] = function(data, ret)
 				if p.char == 0x5 and global.auto_input.rave == 10 then ret.value = 0xFF end     -- 自動デッドリー
@@ -2033,18 +2035,16 @@ rbff2.startplugin           = function()
 					end
 				end
 
-				-- パワーゲージ回復
-				-- 0x3C, 0x1E, 0x00
-				local pow     = { 0x3C, 0x1E, 0x00 }
-				local max_pow = pow[p.max] or (p.max - #pow) -- パワーMAXにするかどうか
-				-- POWモード　1:自動回復 2:固定 3:通常動作
+				-- パワーゲージ回復  POWモード　1:自動回復 2:固定 3:通常動作
+				local fix_pow     = { 0x3C, 0x1E, 0x00 } -- 回復上限の固定値
+				local max_pow = fix_pow[p.max] or (p.max - #fix_pow) -- 回復上限
+				local cur_pow = mem.r8(p.addr.pow) -- 現在のパワー値
 				if global.pow_mode == 2 then
-					mem.w8(p.addr.pow, max_pow)
-				elseif global.pow_mode == 1 and p.pow == 0 then
-					mem.w8(p.addr.pow, max_pow)
-				elseif global.pow_mode ~= 3 and max_pow < p.pow then
-					-- 最大値の方が少ない場合は強制で減らす
-					mem.w8(p.addr.pow, max_pow)
+					mem.w8(p.addr.pow, max_pow) -- 固定時は常にパワー回復
+				elseif global.pow_mode == 1 and 180 < math.min(p.throw_timer, p.op.throw_timer) then
+					mem.w8(p.addr.pow, max_pow) -- 投げ無敵タイマーでパワー回復
+				elseif global.pow_mode ~= 3 and max_pow < cur_pow then
+					mem.w8(p.addr.pow, max_pow) -- 最大値の方が少ない場合は強制で減らす
 				end
 			end
 			p.init_state       = function()
@@ -2927,12 +2927,17 @@ rbff2.startplugin           = function()
 			if args.txt then draw_rtext_with_shadow(table.unpack(args.txt)) end
 		end
 		-- フレーム概要の描画
-		local label = string.format("Startup %2s / Total %3s / Recovery", startup, total)
-		local ty = p.num == 1 and y1 - height or y1 + height
-		draw_text_with_shadow(x0, ty, label)
-		local gap_txt, cap_col = p.last_frame_gap_txt, p.last_frame_gap_col
-		if not global.both_act_neutral then gap_txt, cap_col = "---", 0xFFFFFFFF end
-		draw_text_with_shadow(x0 + get_string_width(label) - 4, ty, gap_txt, cap_col)
+		local total_num = type(total) == "number" and total or 0
+		return startup, total_num, function(op_total) -- 後処理での描画用に関数で返す
+			local gap = op_total - total_num
+			local gap_txt = string.format("%4s", string.format(gap > 0 and "+%d" or "%d", gap))
+			local gap_col = gap == 0 and 0xFFFFFFFF or gap > 0 and 0xFF0088FF or 0xFFFF0088
+			local label = string.format("Startup %2s / Total %3s / Recovery", startup, total)
+			local ty = p.num == 1 and y1 - height or y1 + height
+			draw_text_with_shadow(x0, ty, label)
+			if not global.both_act_neutral then gap_txt, gap_col = "---", 0xFFFFFFFF end
+			draw_text_with_shadow(x0 + get_string_width(label) - 4, ty, gap_txt, gap_col)
+		end
 	end
 
 	local proc_frame = function(p)
@@ -3316,7 +3321,7 @@ rbff2.startplugin           = function()
 			-- ガード移行可否と有利不利フレームの加減
 			global.both_act_neutral = p.act_data.neutral and global.both_act_neutral
 			if i == 2 then
-				local p1, p2, last = p.op, p, false
+				local p1, p2, last = p.op, p, false -- global.both_act_neutral and not global.old_both_act_neutral
 				if p1.act_data.neutral and p2.act_data.neutral then
 					p1.frame_gap, p2.frame_gap = 0, 0
 				elseif not p1.act_data.neutral and not p2.act_data.neutral then
@@ -3328,10 +3333,6 @@ rbff2.startplugin           = function()
 				end
 				if last then
 					p1.last_frame_gap, p2.last_frame_gap = p1.frame_gap, p2.frame_gap
-					p1.last_frame_gap_txt = string.format("%4s", string.format(p1.frame_gap > 0 and "+%d" or "%d", p1.frame_gap))
-					p1.last_frame_gap_col = p1.frame_gap == 0 and 0xFFFFFFFF or p1.frame_gap > 0 and 0xFF0088FF or 0xFFFF0088
-					p2.last_frame_gap_txt = string.format("%4s", string.format(p2.frame_gap > 0 and "+%d" or "%d", p2.frame_gap))
-					p2.last_frame_gap_col = p2.frame_gap == 0 and 0xFFFFFFFF or p2.frame_gap > 0 and 0xFF0088FF or 0xFFFF0088
 				end
 			end
 
@@ -3790,14 +3791,22 @@ rbff2.startplugin           = function()
 				if p.fwd_prov and ut.tstb(p.op.flag_cc, db.flag_cc._19) then p.add_cmd_hook(db.cmd_types.front) end
 
 				-- ガードリバーサル
-				if global.dummy_rvs_cnt == 1 then
-					p.gd_rvs_enabled = true
-				elseif p.gd_rvs_enabled ~= true and p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs and p.on_block == global.frame_number then
+				if p.gd_rvs_enabled ~= true and p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs and p.on_block == global.frame_number then
 					p.rvs_count = (p.rvs_count < 1) and 1 or p.rvs_count + 1
 					if global.dummy_rvs_cnt <= p.rvs_count and p.dummy_rvs then p.gd_rvs_enabled, p.rvs_count = true, -1 end
+					-- ut.printf("%s rvs %s %s", p.num, p.rvs_count, p.gd_rvs_enabled)
 				elseif p.gd_rvs_enabled and p.state ~= 2 then
 					p.gd_rvs_enabled = false
 				end -- ガード状態が解除されたらリバサ解除
+
+				-- BS
+				if p.gd_bs_enabled ~= true and p.dummy_gd == dummy_gd_type.bs and p.dummy_bs and p.on_block == global.frame_number then
+					p.bs_count = (p.bs_count < 1) and 1 or p.bs_count + 1
+					if global.dummy_bs_cnt <= p.bs_count and p.dummy_bs then p.gd_bs_enabled, p.bs_count = true, -1 end
+					-- ut.printf("%s bs %s %s", p.num, p.bs_count, p.gd_bs_enabled)
+				elseif p.gd_bs_enabled and p.state ~= 2 then
+					p.gd_bs_enabled = false
+				end -- ガード状態が解除されたらBS解除
 
 				-- TODO: ライン送られのリバーサルを修正する。猶予1F
 				-- print(p.state, p.knockback2, p.knockback1, p.flag_7e, p.hitstop_remain, rvs_types.in_knock_back, p.last_blockstun, string.format("%x", p.act), p.act_count, p.act_frame)
@@ -3899,13 +3908,7 @@ rbff2.startplugin           = function()
 				end
 
 				-- ブレイクショット
-				if p.dummy_gd == dummy_gd_type.bs and p.on_block == global.frame_number then
-					p.bs_count = (p.bs_count < 1) and 1 or p.bs_count + 1
-					if global.dummy_bs_cnt <= p.bs_count and p.dummy_bs then
-						p.reset_sp_hook(p.dummy_bs)
-						p.bs_count = -1
-					end
-				end
+				if p.gd_bs_enabled then p.reset_sp_hook(p.dummy_bs) end
 			end
 		end
 
@@ -4122,16 +4125,30 @@ rbff2.startplugin           = function()
 				end
 			end
 
+			local disp_damage = 0
+			if players[1].disp_damage and players[2].disp_damage then -- 両方表示
+				disp_damage = 3
+			elseif players[1].disp_damage then -- 1Pだけ表示
+				disp_damage = 1
+			elseif players[2].disp_damage then -- 2Pだけ表示
+				disp_damage = 2
+			end
 			for i, p in ipairs(players) do
 				local p1 = i == 1
 				-- ダメージとコンボ表示
-				if p.combo_col1 and #p.combo_col1 > 0 and p.disp_damage then
-					if p1 then
+				if p.combo_col1 and #p.combo_col1 > 0 and disp_damage ~= 0 then
+					if disp_damage == 2 or (p1 and disp_damage ~= 2) then
 						local col = 0x0C404040 -- to 9C
 						for wi = 20, 15, -0.4 do
 							local w = get_string_width("9") * wi
 							col = col | 0x0C000000
-							scr:draw_box(scr.width // 2 - w, 40, scr.width // 2 + w, 40 + get_line_height(#p.combo_col1), col, col) -- 四角枠
+							local x1, x2 = scr.width // 2 - w, scr.width // 2 + w
+							if disp_damage == 1 then
+								x2 = scr.width // 2 + get_string_width("9") * 5
+							elseif disp_damage == 2 then
+								x1 = scr.width // 2 - get_string_width("9") * 5
+							end
+							scr:draw_box(x1, 40, x2, 40 + get_line_height(#p.combo_col1), col, col) -- 四角枠
 						end
 						draw_text("center", 40, table.concat(p.combo_col1, "\n"))
 					end
@@ -4197,15 +4214,15 @@ rbff2.startplugin           = function()
 				if global.disp_bg then
 					local bs_label = {}
 					if p.dummy_gd == dummy_gd_type.bs and global.dummy_bs_cnt > 1 then
-						table.insert(bs_label, string.format("%02d回ガードでBS", global.dummy_bs_cnt - math.max(p.bs_count, 0)))
+						table.insert(bs_label, string.format("%02d回ガードでBS", 
+							p.gd_bs_enabled and global.dummy_bs_cnt > 1 and 0 or (global.dummy_bs_cnt - math.max(p.bs_count, 0))))
 					end
 					if p.dummy_wakeup == wakeup_type.rvs and global.dummy_rvs_cnt > 1 then
 						table.insert(bs_label, string.format("%02d回ガードでRev.",
 							p.gd_rvs_enabled and global.dummy_rvs_cnt > 1 and 0 or (global.dummy_rvs_cnt - math.max(p.rvs_count, 0))))
 					end
 					if #bs_label > 0 then
-						scr:draw_box(p1 and 110 or 173, 40, p1 and 150 or 213, 40 + get_line_height(#bs_label), 0x80404040, 0x80404040)
-						draw_text(p1 and 110 or 173, 40, table.concat(bs_label, "\n"))
+						draw_text_with_shadow(p1 and 48 or 230, 40, table.concat(bs_label, "\n"), p.on_block <= global.frame_number and 0xFFFFFFFF or 0xFF00FFFF)
 					end
 				end
 
@@ -4224,25 +4241,24 @@ rbff2.startplugin           = function()
 			end
 
 			-- フレーム表示
+			local draw_frame_labels = {}
 			for i, p in ipairs(players) do
 				local p1 = i == 1
-				--行動IDとフレーム数表示(フレームメーター表示時は見せない)
-				if global.disp_frame ~= 2 or p.disp_frame > 1 then
+				if p.disp_frame > 1 then -- フレームメーター 1:OFF 2:ON
 					draw_frames(p.frame_groups, p1 and 40 or 165, 63, 120)
 				end
-				-- フレーム数表示 1:OFF 2:フレームメーター 3:数値のみ
-				if global.disp_frame == 2 then
-					frame_meter.draw(p, 160 + get_line_height(p1 and 0 or 1.5))
-				elseif global.disp_frame == 3 then
-					draw_text_with_shadow(p1 and 140 or 165, 40, p.last_frame_gap_txt, p.last_frame_gap_col)
-				end
-				if global.disp_frame > 1 or p.disp_frame > 1 then -- 確定反撃の表示
+				if global.disp_frame then -- スト6風フレームメーター 1:OFF 2:ON
+					local startup, total, draw_label = frame_meter.draw(p, 160 + get_line_height(p1 and 0 or 1.5))
+					table.insert(draw_frame_labels, { total = total, func = draw_label })
+					-- 確定反撃の表示
 					draw_text_with_shadow(p1 and 112 or 184, get_line_height(1.3), "PUNISH", p.on_punish <= global.frame_number and 0xFF808080 or 0xFF00FFFF)
+				end
+				if i == 2 then
+					for j, draw in ipairs(draw_frame_labels) do draw.func(draw_frame_labels[3 - j].total) end
 				end
 			end
 
 			-- キャラの向きとキャラ間の距離表示
-			local abs_space = math.abs(p_space)
 			if global.disp_pos then
 				for i, p in ipairs(players) do
 					local flip   = p.flip_x == 1 and ">" or "<" -- 見た目と判定の向き
@@ -4257,12 +4273,14 @@ rbff2.startplugin           = function()
 						p.last_posx_txt = string.format("X%s>%s", format_num(x1), format_num(x2))
 					end
 					if i == 1 then
-						draw_text("left", 216, string.format("%s %s Disp.%s Block.%s In.%s", p.last_posx_txt, p.last_posy_txt, flip, side, i_side))
+						draw_text("left", 216 - get_line_height(), string.format("%s", p.last_posx_txt))
+						draw_text("left", 216, string.format("%s Disp.%s Block.%s Input.%s", p.last_posy_txt, flip, side, i_side))
 					else
-						draw_text("right", 216, string.format("In.%s Block.%s Disp.%s %s %s", i_side, side, flip, p.last_posy_txt, p.last_posx_txt))
+						draw_text("right", 216 - get_line_height(), string.format("%s", p.last_posx_txt))
+						draw_text("right", 216, string.format("Input.%s Block.%s Disp.%s %s", i_side, side, flip, p.last_posy_txt))
 					end
 				end
-				draw_text("center", 216, string.format("%3d", abs_space))
+				draw_text("center", 216, string.format("%3d", math.abs(p_space)))
 			end
 
 			-- GG風コマンド入力表示
@@ -4367,6 +4385,7 @@ rbff2.startplugin           = function()
 			end
 
 			p.gd_rvs_enabled = false
+			p.gd_bs_enabled = false
 			p.rvs_count      = -1
 		end
 	end
@@ -4556,16 +4575,16 @@ rbff2.startplugin           = function()
 		col[11] = p[2].disp_command                   -- 2P 入力表示
 		col[12] = g.disp_input                        -- コマンド入力状態表示
 		col[13] = g.disp_normal_frames                -- 通常動作フレーム非表示
-		col[14] = g.disp_frame                        -- フレーム差表示
-		col[15] = p[1].disp_frame                     -- 1P フレーム数表示
-		col[16] = p[2].disp_frame                     -- 2P フレーム数表示
+		col[14] = g.disp_frame and 2 or 1             -- フレームメーター表示
+		col[15] = p[1].disp_frame                     -- 1P フレームメーター表示
+		col[16] = p[2].disp_frame                     -- 2P フレームメーター表示
 		col[17] = p[1].disp_fbfrm and 2 or 1          -- 1P 弾フレーム数表示
 		col[18] = p[2].disp_fbfrm and 2 or 1          -- 2P 弾フレーム数表示
 		col[19] = p[1].disp_state                     -- 1P 状態表示
 		col[20] = p[2].disp_state                     -- 2P 状態表示
 		col[21] = p[1].disp_base                      -- 1P 処理アドレス表示
 		col[22] = p[2].disp_base                      -- 2P 処理アドレス表示
-		col[23] = g.disp_pos and 2 or 1               -- 1P 2P 距離表示
+		col[23] = g.disp_pos and 2 or 1               -- 向き・距離・位置表示
 		col[24] = ut.tstb(g.hide, o.p1_char) and 1 or 2 -- 1P キャラ表示
 		col[25] = ut.tstb(g.hide, o.p2_char) and 1 or 2 -- 2P キャラ表示
 		col[26] = ut.tstb(g.hide, o.p1_phantasm) and 1 or 2 -- 1P 残像表示
@@ -4879,16 +4898,16 @@ rbff2.startplugin           = function()
 		{ "2P 入力表示", { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
 		{ "コマンド入力状態表示", { "OFF", "1P", "2P", }, },
 		{ "通常動作フレーム非表示", menu.labels.off_on, },
-		{ "フレーム差表示", { "OFF", "フレームメーター", "数値のみ" }, },
-		{ "1P フレーム数表示", { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
-		{ "2P フレーム数表示", { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
+		{ "フレームメーター表示", menu.labels.off_on, },
+		{ "1P フレームメーター表示", { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
+		{ "2P フレームメーター表示", { "OFF", "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
 		{ "1P 弾フレーム数表示", menu.labels.off_on, },
 		{ "2P 弾フレーム数表示", menu.labels.off_on, },
 		{ "1P 状態表示", { "OFF", "ON", "ON:小表示", "ON:大表示", "ON:フラグ表示" }, },
 		{ "2P 状態表示", { "OFF", "ON", "ON:小表示", "ON:大表示", "ON:フラグ表示" }, },
 		{ "1P 処理アドレス表示", { "OFF", "本体", "弾1", "弾2", "弾3", }, },
 		{ "2P 処理アドレス表示", { "OFF", "本体", "弾1", "弾2", "弾3", }, },
-		{ "1P 2P 距離表示", menu.labels.off_on, },
+		{ "向き・距離・位置表示", menu.labels.off_on, },
 		{ "1P キャラ表示", menu.labels.off_on, },
 		{ "2P キャラ表示", menu.labels.off_on, },
 		{ "1P 残像表示", menu.labels.off_on, },
@@ -4912,16 +4931,16 @@ rbff2.startplugin           = function()
 		p[2].disp_command    = col[11]                                   -- 2P 入力表示
 		g.disp_input         = col[12]                                   -- コマンド入力状態表示
 		g.disp_normal_frames = col[13]                                   -- 通常動作フレーム非表示
-		g.disp_frame         = col[14]                                   -- フレーム差表示
-		p[1].disp_frame      = col[15]                                   -- 1P フレーム数表示
-		p[2].disp_frame      = col[16]                                   -- 2P フレーム数表示
+		g.disp_frame         = col[14] == 2                              -- フレームメーター表示
+		p[1].disp_frame      = col[15]                                   -- 1P フレームメーター表示
+		p[2].disp_frame      = col[16]                                   -- 2P フレームメーター表示
 		p[1].disp_fbfrm      = col[17] == 2                              -- 1P 弾フレーム数表示
 		p[2].disp_fbfrm      = col[18] == 2                              -- 2P 弾フレーム数表示
 		p[1].disp_state      = col[19]                                   -- 1P 状態表示
 		p[2].disp_state      = col[20]                                   -- 2P 状態表示
 		p[1].disp_base       = col[21]                                   -- 1P 処理アドレス表示
 		p[2].disp_base       = col[22]                                   -- 2P 処理アドレス表示
-		g.disp_pos           = col[23]                                   -- 1P 2P 距離表示
+		g.disp_pos           = col[23] == 2                              -- 向き・距離・位置表示
 		g.hide               = ut.hex_set(g.hide, o.p1_char, col[24] ~= 1) -- 1P キャラ表示
 		g.hide               = ut.hex_set(g.hide, o.p2_char, col[25] ~= 1) -- 2P キャラ表示
 		g.hide               = ut.hex_set(g.hide, o.p1_phantasm, col[26] ~= 1) -- 1P 残像表示
@@ -4942,7 +4961,7 @@ rbff2.startplugin           = function()
 		{ "判定発生時にポーズ", { "OFF", "投げ", "攻撃", "変化時", }, },
 		{ "技画像保存", { "OFF", "ON:新規", "ON:上書き", }, },
 		{ "ヒット効果確認用", db.hit_effects.menus, },
-		{ "全必殺技BS", menu.labels.off_on, }
+		{ "全必殺技でBS可能", menu.labels.off_on, }
 	}, ut.new_filled_table(10, function()
 		local col, p, g       = menu.extra.pos.col, players, global
 		-- タイトルラベル
@@ -4964,9 +4983,9 @@ rbff2.startplugin           = function()
 		{ "ダウン投げ", menu.labels.off_on, },
 		{ "ダウン攻撃", menu.labels.off_on, },
 		{ "通常投げの派生技", menu.labels.off_on, },
-		{ "デッドリーレイブ", { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, },
-		{ "アンリミテッドデザイア", { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "ギガティックサイクロン" }, },
-		{ "ドリル", { 1, 2, 3, 4, 5 }, },
+		{ "デッドリーレイブ", { "通常動作", 2, 3, 4, 5, 6, 7, 8, 9, 10 }, },
+		{ "アンリミテッドデザイア", { "通常動作", 2, 3, 4, 5, 6, 7, 8, 9, 10, "ギガティックサイクロン" }, },
+		{ "ドリル", { "通常動作", 2, 3, 4, 5 }, },
 		{ "超白龍", { "OFF", "C攻撃-判定発生前", "C攻撃-判定発生後" }, },
 		{ "M.リアルカウンター", { "OFF", "ジャーマン", "フェイスロック", "投げっぱなしジャーマン", }, },
 		{ "M.トリプルエクスタシー", menu.labels.off_on, },
@@ -4974,8 +4993,8 @@ rbff2.startplugin           = function()
 		{ "喝CA", menu.labels.off_on, },
 		{ "飛燕失脚CA", menu.labels.off_on, },
 		{ title = true, "入力設定" },
-		{ "詠酒チェック", { "OFF", "詠酒距離チェックなし", "いつでも詠酒" }, },
-		{ "必勝！逆襲拳", menu.labels.off_on, },
+		{ "詠酒チェック", { "OFF", "距離チェックなし", "いつでも詠酒" }, },
+		{ "必勝！逆襲拳", { "OFF", "すぐ発動" }, },
 		{ "空振りCA", menu.labels.off_on, },
 	}, ut.new_filled_table(17, function()
 		local col, g, ez           = menu.auto.pos.col, global, mod.easy_move
