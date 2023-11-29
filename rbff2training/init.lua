@@ -30,16 +30,10 @@ local ut                 = require("rbff2training/util")
 local db                 = require("rbff2training/data")
 local UTF8toSJIS         = require("rbff2training/UTF8toSJIS")
 
-local save_file          = function(path, score)
-	local file, err = io.open(UTF8toSJIS:UTF8_to_SJIS_str_cnv(path), 'w') -- windows向け
-	if file then
-		file:write(tostring(score))
-		file:close()
-	else
-		print("error:", err)
-	end
+local to_sjis            = function(s)
+	local sjis, len = UTF8toSJIS:UTF8_to_SJIS_str_cnv(s)
+	return sjis
 end
---save_file(ut.cur_dir() .. "/plugins/rbff2training/テスト.txt", "")
 
 -- MAMEのLuaオブジェクトの変数と初期化処理
 local man
@@ -3065,9 +3059,10 @@ rbff2.startplugin           = function()
 		attackbit      = attackbit & attackbit_mask
 
 		local frame    = p.act_frames[#p.act_frames]
-		local prev     = frame and frame.name
+		local prev     = frame and frame.name_plain
 		local act_data = p.body.act_data
-		local name     = (frame and act_data.name_set and act_data.name_set[prev]) and prev or act_data.name
+		local plain    = (frame and act_data.name_set and act_data.name_set[prev]) and prev or act_data.name_plain
+		local name     = ut.convert(plain)
 		local key      = key_mask & attackbit
 		local matchkey = attackbit
 
@@ -3079,6 +3074,7 @@ rbff2.startplugin           = function()
 				act        = p.act,
 				count      = 1,
 				name       = name,
+				name_plain = plain,
 				col        = col,
 				line       = line,
 				xline      = xline,
@@ -3109,6 +3105,7 @@ rbff2.startplugin           = function()
 				count     = 1,
 				font_col  = 0,
 				name      = last_frame.name,
+				name_plain = last_frame.name_plain,
 				col       = 0x00FFFFFF,
 				line      = 0x00FFFFFF,
 				update    = p.update_act,
@@ -3132,6 +3129,7 @@ rbff2.startplugin           = function()
 				count    = 1,
 				font_col = col,
 				name     = last_frame.name,
+				name_plain = last_frame.name_plain,
 				col      = 0x22FFFFFF & col,
 				line     = 0xCCFFFFFF & col,
 				update   = p.update_act,
@@ -3204,7 +3202,8 @@ rbff2.startplugin           = function()
 			act_data.neutral = resolve_act_neutral(p) and ut.tstb(act_data.type, db.act_types.free | db.act_types.block)
 		end
 		-- 技動作は滑りかBSかを付与する
-		act_data.name = p.sliding and act_data.slide_name or p.in_bs and act_data.bs_name or act_data.normal_name
+		act_data.name_plain = p.sliding and act_data.slide_name or p.in_bs and act_data.bs_name or act_data.normal_name
+		act_data.name = ut.convert(act_data.name_org)
 		return act_data
 	end
 
@@ -4083,37 +4082,43 @@ rbff2.startplugin           = function()
 			for _, range in ipairs(ranges) do draw_range(range) end -- 座標と範囲
 			for _, box in ipairs(hitboxies) do draw_hitbox(box) end -- 各種判定
 
-			-- スクショ保存
-			for _, p in ut.ifind_all(players, function(p) return p.act_data end) do
-				local chg_hitbox = not p.act_data.neutral and (p.chg_hitbox or p.chg_hurtbox)
+			-- 技画像保存 1:OFF 2:ON:新規 3:ON:上書き
+			local save = global.save_snapshot > 1
+			for _, p in ut.ifind_all(players, function(p)
+				if save and p.act_data and not p.act_data.neutral and (p.chg_hitbox or p.chg_hurtbox) then
+					return p.act_data
+				end
+				return nil
+			end) do
+				-- 画像保存先のディレクトリ作成
+				local frame_group = p.frame_groups[#p.frame_groups]
+				local last_frame = frame_group[#frame_group]
+				local act = last_frame.act
+				local char_name = p.char_data.name_en
+				local name, sub_name = last_frame.name_plain, "_"
+				local dir_name = base_path() .. "/capture"
+				ut.mkdir(to_sjis(dir_name))
+				dir_name = dir_name .. "/" .. char_name
+				ut.mkdir(to_sjis(dir_name))
+				if p.sliding then sub_name = "_SLIDE_" elseif p.in_bs then sub_name = "_BS_" end
+				name = string.format("%s%s%04x_%s_%03d", char_name, sub_name, act, name, p.move_count)
+				dir_name = dir_name .. string.format("/%04x", act)
+				ut.mkdir(to_sjis(dir_name))
 
-				-- 画像保存 1:OFF 2:1P動作 3:2P動作
-				if (chg_hitbox or p.state ~= 0) and global.save_snapshot > 1 then
-					-- 画像保存先のディレクトリ作成
-					local frame_group = p.frame_groups[#p.frame_groups]
-					local name, sub_name, dir_name = frame_group[#frame_group].name, "_", base_path() .. "/capture"
-					ut.mkdir(dir_name)
-					dir_name = dir_name .. "/" .. p.char_data.names2
-					ut.mkdir(dir_name)
-					if p.sliding then sub_name = "_SLIDE_" elseif p.in_bs then sub_name = "_BS_" end
-					name = string.format("%s%s%04x_%s_%03d", p.char_data.names2, sub_name, p.act_data.id_1st or 0, name, p.move_count)
-					dir_name = dir_name .. string.format("/%04x", p.act_data.id_1st or 0)
-					ut.mkdir(dir_name)
+				-- ファイル名を設定してMAMEのスクショ機能で画像保存
+				local filename, dowrite = dir_name .. "/" .. name .. ".png", false
 
-					-- ファイル名を設定してMAMEのスクショ機能で画像保存
-					local filename, dowrite = dir_name .. "/" .. name .. ".png", false
-					if ut.is_file(filename) then
-						if global.save_snapshot == 3 then
-							dowrite = true
-							os.remove(filename)
-						end
-					else
+				if ut.is_file(filename) then
+					if global.save_snapshot == 3 then
 						dowrite = true
+						os.remove(filename)
 					end
-					if dowrite then
-						scr:snapshot(filename)
-						print("save " .. filename)
-					end
+				else
+					dowrite = true
+				end
+				if dowrite then
+					scr:snapshot(filename)
+					print(to_sjis("save " .. filename))
 				end
 			end
 
@@ -4135,9 +4140,9 @@ rbff2.startplugin           = function()
 			local disp_damage = 0
 			if players[1].disp_damage and players[2].disp_damage then -- 両方表示
 				disp_damage = 3
-			elseif players[1].disp_damage then -- 1Pだけ表示
+			elseif players[1].disp_damage then               -- 1Pだけ表示
 				disp_damage = 1
-			elseif players[2].disp_damage then -- 2Pだけ表示
+			elseif players[2].disp_damage then               -- 2Pだけ表示
 				disp_damage = 2
 			end
 			for i, p in ipairs(players) do
@@ -4221,7 +4226,7 @@ rbff2.startplugin           = function()
 				if global.disp_bg then
 					local bs_label = {}
 					if p.dummy_gd == dummy_gd_type.bs and global.dummy_bs_cnt > 1 then
-						table.insert(bs_label, string.format("%02d回ガードでBS", 
+						table.insert(bs_label, string.format("%02d回ガードでBS",
 							p.gd_bs_enabled and global.dummy_bs_cnt > 1 and 0 or (global.dummy_bs_cnt - math.max(p.bs_count, 0))))
 					end
 					if p.dummy_wakeup == wakeup_type.rvs and global.dummy_rvs_cnt > 1 then
@@ -4271,7 +4276,7 @@ rbff2.startplugin           = function()
 					local flip   = p.flip_x == 1 and ">" or "<" -- 見た目と判定の向き
 					local side   = p.block_side == 1 and ">" or "<" -- ガード方向や内部の向き 1:右向き -1:左向き
 					local i_side = p.cmd_side == 1 and ">" or "<" -- コマンド入力の向き
-					p.pos_hist = p.pos_hist or ut.new_filled_table(2, { x = format_num(0), y = format_num(0) })
+					p.pos_hist   = p.pos_hist or ut.new_filled_table(2, { x = format_num(0), y = format_num(0) })
 					table.insert(p.pos_hist, { x = format_num(p.pos + p.pos_frc), y = format_num(p.pos_y + p.pos_frc_y) })
 					while 3 < #p.pos_hist do table.remove(p.pos_hist, 1) end
 					local y1, y2, y3 = p.pos_hist[1].y, p.pos_hist[2].y, p.pos_hist[3].y

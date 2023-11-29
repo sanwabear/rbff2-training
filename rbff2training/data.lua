@@ -28,29 +28,29 @@ local db         = {}
 --------------------------------------------------------------------------------------
 
 local chars      = {
-	{ id = 0x1, min_y = 9, min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x2E, easy_bs_addr = 0x2E, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "テリー・ボガード", },
-	{ id = 0x2, min_y = 10, min_sy = 4, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "アンディ・ボガード", },
-	{ id = 0x3, min_y = 8, min_sy = 3, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x3A, easy_bs_addr = 0x3A, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "東丈", },
-	{ id = 0x4, min_y = 10, min_sy = 3, init_stuns = 29, wakeup_frms = 17, sway_act_counts = 0x3, bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "不知火舞", },
-	{ id = 0x5, min_y = 8, min_sy = 1, init_stuns = 33, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x66, easy_bs_addr = 0x4A, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 19 }, }, name = "ギース・ハワード", },
-	{ id = 0x6, min_y = 2, min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x46, easy_bs_addr = 0x46, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "望月双角", },
-	{ id = 0x7, min_y = 9, min_sy = 6, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 19 }, }, name = "ボブ・ウィルソン", },
-	{ id = 0x8, min_y = 10, min_sy = 3, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x32, easy_bs_addr = 0x32, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 16 }, }, name = "ホンフゥ", },
-	{ id = 0x9, min_y = 9, min_sy = 7, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x3E, easy_bs_addr = 0x3E, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 41 }, }, name = "ブルー・マリー", },
-	{ id = 0xA, min_y = 9, min_sy = 4, init_stuns = 35, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 15 }, }, name = "フランコ・バッシュ", },
-	{ id = 0xB, min_y = 9, min_sy = 4, init_stuns = 38, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x56, easy_bs_addr = 0x3A, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 18 }, { name = "中蛇", f = 9, } }, name = "山崎竜二", },
-	{ id = 0xC, min_y = 11, min_sy = 1, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC, bs_addr = 0x3A, easy_bs_addr = 0x3A, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 57 }, { name = "真眼", f = 47, } }, name = "秦崇秀", },
-	{ id = 0xD, min_y = 11, min_sy = 4, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC, bs_addr = 0x36, easy_bs_addr = 0x36, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 27 }, { name = "龍転", f = 25, } }, name = "秦崇雷", },
-	{ id = 0xE, min_y = 9, min_sy = 6, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x7A, easy_bs_addr = 0x5E, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 47 }, }, name = "ダック・キング", },
-	{ id = 0xF, min_y = 9, min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x36, easy_bs_addr = 0x36, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 19 }, { name = "覇気", f = 28, } }, name = "キム・カッファン", },
-	{ id = 0x10, min_y = 4, min_sy = 3, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 42 }, }, name = "ビリー・カーン", },
-	{ id = 0x11, min_y = 9, min_sy = 6, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2E, easy_bs_addr = 0x2E, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 23 }, { name = "軟体", f = 20, } }, name = "チン・シンザン", },
-	{ id = 0x12, min_y = 11, min_sy = 0, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 19 }, }, name = "タン・フー・ルー", },
-	{ id = 0x13, min_y = 7, min_sy = 4, init_stuns = 35, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, fireballs = {}, faint_cancel = {}, name = "ローレンス・ブラッド", },
-	{ id = 0x14, min_y = 7, min_sy = 2, init_stuns = 35, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x52, easy_bs_addr = 0x36, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 17 }, }, name = "ヴォルフガング・クラウザー", },
-	{ id = 0x15, min_y = 9, min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x7, bs_addr = 0x26, easy_bs_addr = 0x26, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "リック・ストラウド", },
-	{ id = 0x16, min_y = 9, min_sy = 5, init_stuns = 29, wakeup_frms = 14, sway_act_counts = 0x3, bs_addr = 0x52, easy_bs_addr = 0x32, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 22 }, }, name = "李香緋", },
-	{ id = 0x17, min_y = 10, min_sy = 4, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x0, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 13 }, }, name = "アルフレッド", },
+	{ id = 0x1, min_y = 9, min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x2E, easy_bs_addr = 0x2E, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "テリー・ボガード", name_en = "Terry" },
+	{ id = 0x2, min_y = 10, min_sy = 4, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "アンディ・ボガード", name_en = "Andy" },
+	{ id = 0x3, min_y = 8, min_sy = 3, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x3A, easy_bs_addr = 0x3A, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "東丈", name_en = "Joe" },
+	{ id = 0x4, min_y = 10, min_sy = 3, init_stuns = 29, wakeup_frms = 17, sway_act_counts = 0x3, bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "不知火舞", name_en = "Mai" },
+	{ id = 0x5, min_y = 8, min_sy = 1, init_stuns = 33, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x66, easy_bs_addr = 0x4A, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 19 }, }, name = "ギース・ハワード", name_en = "Geese" },
+	{ id = 0x6, min_y = 2, min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x46, easy_bs_addr = 0x46, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "望月双角", name_en = "Sokaku" },
+	{ id = 0x7, min_y = 9, min_sy = 6, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 19 }, }, name = "ボブ・ウィルソン", name_en = "Bob" },
+	{ id = 0x8, min_y = 10, min_sy = 3, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x32, easy_bs_addr = 0x32, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 16 }, }, name = "ホンフゥ", name_en = "Hon-Fu" },
+	{ id = 0x9, min_y = 9, min_sy = 7, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x3E, easy_bs_addr = 0x3E, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 41 }, }, name = "ブルー・マリー", name_en = "Marry" },
+	{ id = 0xA, min_y = 9, min_sy = 4, init_stuns = 35, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 15 }, }, name = "フランコ・バッシュ", name_en = "Franco" },
+	{ id = 0xB, min_y = 9, min_sy = 4, init_stuns = 38, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x56, easy_bs_addr = 0x3A, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 18 }, { name = "中蛇", f = 9, } }, name = "山崎竜二", name_en = "Yamazaki" },
+	{ id = 0xC, min_y = 11, min_sy = 1, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC, bs_addr = 0x3A, easy_bs_addr = 0x3A, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 57 }, { name = "真眼", f = 47, } }, name = "秦崇秀", name_en = "Chonshu" },
+	{ id = 0xD, min_y = 11, min_sy = 4, init_stuns = 29, wakeup_frms = 20, sway_act_counts = 0xC, bs_addr = 0x36, easy_bs_addr = 0x36, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 27 }, { name = "龍転", f = 25, } }, name = "秦崇雷", name_en = "Chonrei" },
+	{ id = 0xE, min_y = 9, min_sy = 6, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x7A, easy_bs_addr = 0x5E, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 47 }, }, name = "ダック・キング", name_en = "Duck" },
+	{ id = 0xF, min_y = 9, min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x36, easy_bs_addr = 0x36, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 19 }, { name = "覇気", f = 28, } }, name = "キム・カッファン", name_en = "Kim" },
+	{ id = 0x10, min_y = 4, min_sy = 3, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 42 }, }, name = "ビリー・カーン", name_en = "Billy" },
+	{ id = 0x11, min_y = 9, min_sy = 6, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x2, bs_addr = 0x2E, easy_bs_addr = 0x2E, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 23 }, { name = "軟体", f = 20, } }, name = "チン・シンザン", name_en = "Chin" },
+	{ id = 0x12, min_y = 11, min_sy = 0, init_stuns = 31, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 19 }, }, name = "タン・フー・ルー", name_en = "Tung" },
+	{ id = 0x13, min_y = 7, min_sy = 4, init_stuns = 35, wakeup_frms = 20, sway_act_counts = 0x4, bs_addr = 0x22, easy_bs_addr = 0x22, acts = {}, fireballs = {}, faint_cancel = {}, name = "ローレンス・ブラッド", name_en = "Laurence" },
+	{ id = 0x14, min_y = 7, min_sy = 2, init_stuns = 35, wakeup_frms = 20, sway_act_counts = 0x3, bs_addr = 0x52, easy_bs_addr = 0x36, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 17 }, }, name = "ヴォルフガング・クラウザー", name_en = "Krauser" },
+	{ id = 0x15, min_y = 9, min_sy = 5, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x7, bs_addr = 0x26, easy_bs_addr = 0x26, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 18 }, }, name = "リック・ストラウド", name_en = "Rick" },
+	{ id = 0x16, min_y = 9, min_sy = 5, init_stuns = 29, wakeup_frms = 14, sway_act_counts = 0x3, bs_addr = 0x52, easy_bs_addr = 0x32, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 22 }, }, name = "李香緋", name_en = "Xiangfei" },
+	{ id = 0x17, min_y = 10, min_sy = 4, init_stuns = 32, wakeup_frms = 20, sway_act_counts = 0x0, bs_addr = 0x2A, easy_bs_addr = 0x2A, acts = {}, fireballs = {}, faint_cancel = { { name = "フ", f = 13 }, }, name = "アルフレッド", name_en = "Alfred" },
 	{ id = 0x18, min_y = 0, min_sy = 0, init_stuns = 0, wakeup_frms = 0, sway_act_counts = 0x0, bs_addr = 0x0, easy_bs_addr = 0x0, acts = {}, fireballs = {}, faint_cancel = {}, name = "common", },
 }
 db.chars         = chars
@@ -1482,7 +1482,7 @@ local char_fireball_base              = {
 	},
 }
 local extend_act_names                = function(acts)
-	for i = 1, #acts.names do acts.names[i] = ut.convert(acts.names[i]) end
+	for i = 1, #acts.names do acts.names[i] = acts.names[i] end
 	acts.name_set = ut.table_to_set(acts.names)
 	acts.name = acts.names[1]
 	acts.normal_name = acts.name

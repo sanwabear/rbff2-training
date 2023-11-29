@@ -95,7 +95,7 @@ function UTF8toSJIS:UTF8_to_SJIS_str_cnv(strUTF8, f2) -- return strSJIS, sj_leng
 			sj_cnt = sj_cnt + 1
 			fnt_cnt = fnt_cnt + 1
 		end
-		print(string.char(sjis_byte[#sjis_byte]))
+		--print(string.char(sjis_byte[#sjis_byte]))
 		--sleep(0)
 	end
 	return string.char(table.unpack(sjis_byte)), sj_cnt - 1
