@@ -2945,6 +2945,7 @@ rbff2.startplugin           = function()
 
 	local proc_frame = function(p)
 		local col, line, xline, attackbit = 0xAAF0E68C, 0xDDF0E68C, 0, p.attackbit
+		local boxkey, fbkey = "", "" -- 判定の形ごとの排他につかうキー
 		-- フレーム数表示設定ごとのマスク
 		local key_mask = ut.hex_clear(0xFFFFFFFFFFFFFFFF,
 			frame_attack_types.mask_fireball       | -- 弾とジャンプ状態はキーから省いて無駄な区切りを取り除く
@@ -3002,20 +3003,18 @@ rbff2.startplugin           = function()
 			--elseif p.on_bs_established == global.frame_number then
 			--	col, line = 0xAA0022FF, 0xDD0022FF -- BSコマンド成立
 		else
-			--[[
+			--  1:OFF 2:ON 3:ON:判定の形毎 4:ON:攻撃判定の形毎 5:ON:くらい判定の形毎
 			if p.disp_frame == 2 then -- 2:ON
 			elseif p.disp_frame == 3 then -- 3:ON:判定の形毎
-				attackbit_mask = 0xFFFFFFFFFFFFFFFF
+				boxkey = p.hitboxkey .. "|" .. p.hurtboxkey
+				for _, fb in pairs(p.fireballs) do if fb.proc_active then fbkey = fbkey .. "|" .. fb.hitboxkey .. "|" .. fb.hurtboxkey end end
 			elseif p.disp_frame == 4 then -- 4:ON:攻撃判定の形毎
-				if p.attackbits.attacking and not p.attackbits.fake then
-					attackbit_mask = 0xFFFFFFFFFFFFFFFF
-				end
+				boxkey = p.hitboxkey
+				for _, fb in pairs(p.fireballs) do if fb.proc_active then fbkey = fbkey .. "|" .. fb.hitboxkey end end
 			elseif p.disp_frame == 5 then -- 5:ON:くらい判定の形毎
-				if not p.attackbits.attacking or p.attackbits.fake then
-					attackbit_mask = 0xFFFFFFFFFFFFFFFF
-				end
+				boxkey = p.hurtboxkey
+				for _, fb in pairs(p.fireballs) do if fb.proc_active then fbkey = fbkey .. "|" .. fb.hurtboxkey end end
 			end
-			]]
 			attackbit_mask = attackbit_mask      |
 				frame_attack_types.high_dodges   |
 				frame_attack_types.low_dodges    |
@@ -3064,10 +3063,11 @@ rbff2.startplugin           = function()
 		local act_data = p.body.act_data
 		local name     = (frame and act_data.name_set and act_data.name_set[prev]) and prev or act_data.name
 		local key      = key_mask & attackbit
+		local matchkey = attackbit
 
-		frame_meter.add(p, { line = line, col = col, attackbit = attackbit, key = key, decobit = decobit, name = name, update = p.update_act, })
+		frame_meter.add(p, { line = line, col = col, attackbit = attackbit, key = key, boxkey = boxkey, decobit = decobit, name = name, update = p.update_act, })
 
-		if p.update_act or not frame or frame.col ~= col or frame.key ~= attackbit then
+		if p.update_act or not frame or frame.col ~= col or frame.key ~= matchkey or frame.boxkey ~= boxkey then
 			--行動IDの更新があった場合にフレーム情報追加
 			frame = ut.table_add(p.act_frames, {
 				act        = p.act,
@@ -3079,6 +3079,7 @@ rbff2.startplugin           = function()
 				update     = p.update_act,
 				attackbit  = attackbit,
 				key        = key,
+				boxkey     = boxkey,
 				fb_frames  = {},
 				gap_frames = {},
 			}, 180)
@@ -3095,8 +3096,8 @@ rbff2.startplugin           = function()
 		-- 弾処理
 		---@diagnostic disable-next-line: unbalanced-assignments
 		parent, frames, groups = last_frame and last_frame.fb_frames or nil, p.fb_frames.act_frames, p.fb_frames.frame_groups
-		key, frame = p.attackbit, frames[#frames]
-		if p.update_act or not frame or upd_group or frame.key ~= key then
+		key, boxkey, frame = p.attackbit, fbkey, frames[#frames]
+		if p.update_act or not frame or upd_group or frame.key ~= key or frame.boxkey ~= boxkey then
 			frame = ut.table_add(frames, {
 				act       = p.act,
 				count     = 1,
@@ -3107,6 +3108,7 @@ rbff2.startplugin           = function()
 				update    = p.update_act,
 				attackbit = p.attackbit,
 				key       = key,
+				boxkey   = boxkey,
 			}, 180)
 		else
 			frame.count = frame.count + 1
@@ -3116,8 +3118,8 @@ rbff2.startplugin           = function()
 		-- フレーム差
 		---@diagnostic disable-next-line: unbalanced-assignments
 		parent, frames, groups = last_frame and last_frame.gap_frames or nil, p.gap_frames.act_frames, p.gap_frames.frame_groups
-		key, frame = p.attackbit & frame_attack_types.frame_advance, frames[#frames]
-		if p.update_act or not frame or upd_group or frame.key ~= key then
+		key, boxkey, frame = p.attackbit & frame_attack_types.frame_advance, "", frames[#frames]
+		if p.update_act or not frame or upd_group or frame.key ~= key or frame.boxkey ~= boxkey then
 			local col = (p.frame_gap > 0) and 0xFF0088FF or (p.frame_gap < 0) and 0xFFFF0088 or 0xFFFFFFFF
 			frame = ut.table_add(frames, {
 				act      = p.act,
@@ -3128,6 +3130,7 @@ rbff2.startplugin           = function()
 				line     = 0xCCFFFFFF & col,
 				update   = p.update_act,
 				key      = key,
+				boxkey   = boxkey,
 			}, 180)
 		else
 			frame.count = frame.count + 1
