@@ -2944,6 +2944,12 @@ rbff2.startplugin           = function()
 	end
 
 	local proc_frame = function(p)
+		-- 弾フレーム数表示の設定を反映する
+		local fireballs = p.disp_fbfrm and p.fireballs or {}
+		local objects   = p.disp_fbfrm and p.objects or { p }
+		-- 弾の情報をマージする
+		for _, fb in pairs(fireballs) do if fb.proc_active then p.attackbit = p.attackbit | fb.attackbit end end
+
 		local col, line, xline, attackbit = 0xAAF0E68C, 0xDDF0E68C, 0, p.attackbit
 		local boxkey, fbkey = "", "" -- 判定の形ごとの排他につかうキー
 		-- フレーム数表示設定ごとのマスク
@@ -3006,14 +3012,14 @@ rbff2.startplugin           = function()
 			--  1:OFF 2:ON 3:ON:判定の形毎 4:ON:攻撃判定の形毎 5:ON:くらい判定の形毎
 			if p.disp_frame == 2 then -- 2:ON
 			elseif p.disp_frame == 3 then -- 3:ON:判定の形毎
-				boxkey = p.hitboxkey .. "|" .. p.hurtboxkey
-				for _, fb in pairs(p.fireballs) do if fb.proc_active then fbkey = fbkey .. "|" .. fb.hitboxkey .. "|" .. fb.hurtboxkey end end
+				for _, fb in pairs(fireballs) do if fb.proc_active then fbkey = fbkey .. "|" .. fb.hitboxkey .. "|" .. fb.hurtboxkey end end
+				boxkey = p.hitboxkey .. "|" .. p.hurtboxkey .. "|" .. fbkey
 			elseif p.disp_frame == 4 then -- 4:ON:攻撃判定の形毎
-				boxkey = p.hitboxkey
-				for _, fb in pairs(p.fireballs) do if fb.proc_active then fbkey = fbkey .. "|" .. fb.hitboxkey end end
+				for _, fb in pairs(fireballs) do if fb.proc_active then fbkey = fbkey .. "|" .. fb.hitboxkey end end
+				boxkey = p.hitboxkey .. "|" .. fbkey
 			elseif p.disp_frame == 5 then -- 5:ON:くらい判定の形毎
-				boxkey = p.hurtboxkey
-				for _, fb in pairs(p.fireballs) do if fb.proc_active then fbkey = fbkey .. "|" .. fb.hurtboxkey end end
+				for _, fb in pairs(fireballs) do if fb.proc_active then fbkey = fbkey .. "|" .. fb.hurtboxkey end end
+				boxkey = p.hurtboxkey .. "|" .. fbkey
 			end
 			attackbit_mask = attackbit_mask      |
 				frame_attack_types.high_dodges   |
@@ -3041,7 +3047,7 @@ rbff2.startplugin           = function()
 			for _, d in ut.ifind(dodges, function(d) return ut.tstb(attackbit, d.type) end) do
 				attackbit = attackbit | d.type -- 部分無敵
 			end
-			for _, xp in ut.ifind_all(p.objects, function(xp) return xp.proc_active end) do
+			for _, xp in ut.ifind_all(objects, function(xp) return xp.proc_active end) do
 				if xp.hitbox_types and #xp.hitbox_types > 0 and xp.hitbox_types then
 					attackbit = attackbit | xp.attackbit
 					table.sort(xp.hitbox_types, function(t1, t2) return t1.sort > t2.sort end) -- ソート
@@ -3108,7 +3114,7 @@ rbff2.startplugin           = function()
 				update    = p.update_act,
 				attackbit = p.attackbit,
 				key       = key,
-				boxkey   = boxkey,
+				boxkey    = boxkey,
 			}, 180)
 		else
 			frame.count = frame.count + 1
@@ -3624,9 +3630,6 @@ rbff2.startplugin           = function()
 		end
 		table.sort(hitboxies, hitboxies_order)
 		table.sort(ranges, ranges_order)
-		for _, p in ut.find_all(all_objects, function(_, p) return p.proc_active end) do
-			p.body.attackbit = p.body.attackbit | p.attackbit
-		end
 
 		for _, p in pairs(all_objects) do
 			-- キャラ、弾ともに通常動作状態ならリセットする
