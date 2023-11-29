@@ -4075,297 +4075,297 @@ rbff2.startplugin           = function()
 		set_freeze(not global.pause)
 	end
 
+	-- メイン処理
 	menu.tra_main.draw = function()
-		-- メイン処理
-		if in_match then
-			-- 順番に判定表示（キャラ、飛び道具）
-			for _, range in ipairs(ranges) do draw_range(range) end -- 座標と範囲
-			for _, box in ipairs(hitboxies) do draw_hitbox(box) end -- 各種判定
+		if not in_match then return end
 
-			-- 技画像保存 1:OFF 2:ON:新規 3:ON:上書き
-			local save = global.save_snapshot > 1
-			for _, p in ut.ifind_all(players, function(p)
-				if save and p.act_data and not p.act_data.neutral and (p.chg_hitbox or p.chg_hurtbox) then
-					return p.act_data
-				end
-				return nil
-			end) do
-				-- 画像保存先のディレクトリ作成
-				local frame_group = p.frame_groups[#p.frame_groups]
-				local last_frame = frame_group[#frame_group]
-				local act = last_frame.act
-				local char_name = p.char_data.name_en
-				local name, sub_name = last_frame.name_plain, "_"
-				local dir_name = base_path() .. "/capture"
-				ut.mkdir(to_sjis(dir_name))
-				dir_name = dir_name .. "/" .. char_name
-				ut.mkdir(to_sjis(dir_name))
-				if p.sliding then sub_name = "_SLIDE_" elseif p.in_bs then sub_name = "_BS_" end
-				name = string.format("%s%s%04x_%s_%03d", char_name, sub_name, act, name, p.move_count)
-				dir_name = dir_name .. string.format("/%04x", act)
-				ut.mkdir(to_sjis(dir_name))
+		-- 順番に判定表示（キャラ、飛び道具）
+		for _, range in ipairs(ranges) do draw_range(range) end -- 座標と範囲
+		for _, box in ipairs(hitboxies) do draw_hitbox(box) end -- 各種判定
 
-				-- ファイル名を設定してMAMEのスクショ機能で画像保存
-				local filename, dowrite = dir_name .. "/" .. name .. ".png", false
+		-- 技画像保存 1:OFF 2:ON:新規 3:ON:上書き
+		local save = global.save_snapshot > 1
+		for _, p in ut.ifind_all(players, function(p)
+			if save and p.act_data and not p.act_data.neutral and (p.chg_hitbox or p.chg_hurtbox) then
+				return p.act_data
+			end
+			return nil
+		end) do
+			-- 画像保存先のディレクトリ作成
+			local frame_group = p.frame_groups[#p.frame_groups]
+			local last_frame = frame_group[#frame_group]
+			local act = last_frame.act
+			local char_name = p.char_data.name_en
+			local name, sub_name = last_frame.name_plain, "_"
+			local dir_name = base_path() .. "/capture"
+			ut.mkdir(to_sjis(dir_name))
+			dir_name = dir_name .. "/" .. char_name
+			ut.mkdir(to_sjis(dir_name))
+			if p.sliding then sub_name = "_SLIDE_" elseif p.in_bs then sub_name = "_BS_" end
+			name = string.format("%s%s%04x_%s_%03d", char_name, sub_name, act, name, p.move_count)
+			dir_name = dir_name .. string.format("/%04x", act)
+			ut.mkdir(to_sjis(dir_name))
 
-				if ut.is_file(filename) then
-					if global.save_snapshot == 3 then
-						dowrite = true
-						os.remove(filename)
-					end
-				else
+			-- ファイル名を設定してMAMEのスクショ機能で画像保存
+			local filename, dowrite = dir_name .. "/" .. name .. ".png", false
+
+			if ut.is_file(filename) then
+				if global.save_snapshot == 3 then
 					dowrite = true
+					os.remove(filename)
 				end
-				if dowrite then
-					scr:snapshot(filename)
-					print(to_sjis("save " .. filename))
-				end
+			else
+				dowrite = true
 			end
+			if dowrite then
+				scr:snapshot(filename)
+				print(to_sjis("save " .. filename))
+			end
+		end
 
-			-- コマンド入力表示
-			for i, p in ipairs(players) do
-				-- コマンド入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
-				if p.disp_command == 2 or p.disp_command == 3 then
-					for k, log in ipairs(p.key.log) do draw_cmd(i, k, log.frame, log.key) end
-				end
+		-- コマンド入力表示
+		for i, p in ipairs(players) do
+			-- コマンド入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
+			if p.disp_command == 2 or p.disp_command == 3 then
+				for k, log in ipairs(p.key.log) do draw_cmd(i, k, log.frame, log.key) end
 			end
+		end
 
-			-- ベースアドレス表示 --"OFF", "本体", "弾1", "弾2", "弾3"
-			for base, p in pairs(all_objects) do
-				if (p.body.disp_base - 2) * 0x200 + p.body.addr.base == base then
-					draw_base(p.body.num, p.bases)
-				end
+		-- ベースアドレス表示 --"OFF", "本体", "弾1", "弾2", "弾3"
+		for base, p in pairs(all_objects) do
+			if (p.body.disp_base - 2) * 0x200 + p.body.addr.base == base then
+				draw_base(p.body.num, p.bases)
 			end
+		end
 
-			local disp_damage = 0
-			if players[1].disp_damage and players[2].disp_damage then -- 両方表示
-				disp_damage = 3
-			elseif players[1].disp_damage then               -- 1Pだけ表示
-				disp_damage = 1
-			elseif players[2].disp_damage then               -- 2Pだけ表示
-				disp_damage = 2
-			end
-			for i, p in ipairs(players) do
-				local p1 = i == 1
-				-- ダメージとコンボ表示
-				if p.combo_col1 and #p.combo_col1 > 0 and disp_damage ~= 0 then
-					if disp_damage == 2 or (p1 and disp_damage ~= 2) then
-						local col = 0x0C404040 -- to 9C
-						for wi = 20, 15, -0.4 do
-							local w = get_string_width("9") * wi
-							col = col | 0x0C000000
-							local x1, x2 = scr.width // 2 - w, scr.width // 2 + w
-							if disp_damage == 1 then
-								x2 = scr.width // 2 + get_string_width("9") * 5
-							elseif disp_damage == 2 then
-								x1 = scr.width // 2 - get_string_width("9") * 5
-							end
-							scr:draw_box(x1, 40, x2, 40 + get_line_height(#p.combo_col1), col, col) -- 四角枠
+		local disp_damage = 0
+		if players[1].disp_damage and players[2].disp_damage then -- 両方表示
+			disp_damage = 3
+		elseif players[1].disp_damage then               -- 1Pだけ表示
+			disp_damage = 1
+		elseif players[2].disp_damage then               -- 2Pだけ表示
+			disp_damage = 2
+		end
+		for i, p in ipairs(players) do
+			local p1 = i == 1
+			-- ダメージとコンボ表示
+			if p.combo_col1 and #p.combo_col1 > 0 and disp_damage ~= 0 then
+				if disp_damage == 2 or (p1 and disp_damage ~= 2) then
+					local col = 0x0C404040 -- to 9C
+					for wi = 20, 15, -0.4 do
+						local w = get_string_width("9") * wi
+						col = col | 0x0C000000
+						local x1, x2 = scr.width // 2 - w, scr.width // 2 + w
+						if disp_damage == 1 then
+							x2 = scr.width // 2 + get_string_width("9") * 5
+						elseif disp_damage == 2 then
+							x1 = scr.width // 2 - get_string_width("9") * 5
 						end
-						draw_text("center", 40, table.concat(p.combo_col1, "\n"))
+						scr:draw_box(x1, 40, x2, 40 + get_line_height(#p.combo_col1), col, col) -- 四角枠
 					end
-					draw_text(scr.width // 2 + get_string_width("9") * (p1 and -18 or 4), 40, table.concat(p.combo_col2, "\n"))
-					draw_text(scr.width // 2 + get_string_width("9") * (p1 and -9 or 13), 40, table.concat(p.combo_col3, "\n"))
+					draw_text("center", 40, table.concat(p.combo_col1, "\n"))
 				end
-				-- 状態 大表示 1:OFF 2:ON 3:ON:小表示 4:ON:大表示 5:ON:フラグ表示
-				if p.state_line1 and #p.state_line1 > 0 and p.disp_state == 2 or p.disp_state == 4 then
-					local col = 0x9C404040
-					local w1 = get_string_width("9") * (p1 and 42 or -44 + 25)
-					local w2 = w1 - get_string_width("9") * 23
-					scr:draw_box(scr.width // 2 - w1, 40, scr.width // 2 - w2, 40 + get_line_height(#p.state_line1), col, col) -- 四角枠
-					draw_text(scr.width // 2 - w1, 40, table.concat(p.state_line1, "\n"))
-				end
+				draw_text(scr.width // 2 + get_string_width("9") * (p1 and -18 or 4), 40, table.concat(p.combo_col2, "\n"))
+				draw_text(scr.width // 2 + get_string_width("9") * (p1 and -9 or 13), 40, table.concat(p.combo_col3, "\n"))
 			end
-			for i, p in ipairs(players) do
-				local p1 = i == 1
-				-- 状態 小表示 1:OFF 2:ON 3:ON:小表示 4:ON:大表示 5:ON:フラグ表示
-				if p.disp_state == 2 or p.disp_state == 3 then
-					local label1 = p.state_line2 or {}
-					scr:draw_box(p1 and 0 or 277, 0, p1 and 40 or 316, get_line_height(#label1), 0x80404040, 0x80404040)
-					draw_text(p1 and 4 or 278, 0, table.concat(label1, "\n"))
-				end
-				if p.disp_state == 2 or p.disp_state == 5 then
-					local label2 = p.state_line3 or {}
-					draw_text(40, 50 + get_line_height(p1 and 0 or (#label2 + 0.5)), table.concat(label2, "\n"))
-				end
+			-- 状態 大表示 1:OFF 2:ON 3:ON:小表示 4:ON:大表示 5:ON:フラグ表示
+			if p.state_line1 and #p.state_line1 > 0 and p.disp_state == 2 or p.disp_state == 4 then
+				local col = 0x9C404040
+				local w1 = get_string_width("9") * (p1 and 42 or -44 + 25)
+				local w2 = w1 - get_string_width("9") * 23
+				scr:draw_box(scr.width // 2 - w1, 40, scr.width // 2 - w2, 40 + get_line_height(#p.state_line1), col, col) -- 四角枠
+				draw_text(scr.width // 2 - w1, 40, table.concat(p.state_line1, "\n"))
+			end
+		end
+		for i, p in ipairs(players) do
+			local p1 = i == 1
+			-- 状態 小表示 1:OFF 2:ON 3:ON:小表示 4:ON:大表示 5:ON:フラグ表示
+			if p.disp_state == 2 or p.disp_state == 3 then
+				local label1 = p.state_line2 or {}
+				scr:draw_box(p1 and 0 or 277, 0, p1 and 40 or 316, get_line_height(#label1), 0x80404040, 0x80404040)
+				draw_text(p1 and 4 or 278, 0, table.concat(label1, "\n"))
+			end
+			if p.disp_state == 2 or p.disp_state == 5 then
+				local label2 = p.state_line3 or {}
+				draw_text(40, 50 + get_line_height(p1 and 0 or (#label2 + 0.5)), table.concat(label2, "\n"))
+			end
 
-				-- コマンド入力状態表示
-				if global.disp_input - 1 == i then
-					for ti, state in ipairs(p.input_states) do
-						local x, y = 147, 25 + ti * 5
-						local x1, x2, y2, cmdx, cmdy = x + 15, x - 8, y + 4, x - 50, y - 2
-						draw_text_with_shadow(x1, cmdy, state.tbl.name,
-							state.input_estab == true and input_state.col.orange2 or input_state.col.white)
-						if state.on > 0 and state.chg_remain > 0 then
-							local col, col2 = input_state.col.yellow, input_state.col.yellow2
-							if state.charging == true then col, col2 = input_state.col.green, input_state.col.green2 end
-							scr:draw_box(x2 + state.max * 2, y, x2, y2, col2, 0)
-							scr:draw_box(x2 + state.chg_remain * 2, y, x2, y2, 0, col)
-						end
-						for ci, c in ipairs(state.tbl.lr_cmds[p.cmd_side]) do
-							if c ~= "" then
-								cmdx = cmdx + math.max(5.5,
-									draw_text_with_shadow(cmdx, cmdy, c,
-										state.input_estab == true and input_state.col.orange or
-										state.on > ci and input_state.col.red or
-										(ci == 1 and state.on >= ci) and input_state.col.red or nil))
-							end
-						end
-						draw_rtext_with_shadow(x + 1, y, state.chg_remain)
-						draw_text_with_shadow(x + 4, y, "/")
-						draw_text_with_shadow(x + 7, y, state.max)
-						if state.debug then
-							draw_rtext_with_shadow(x + 25, y, state.on)
-							draw_rtext_with_shadow(x + 40, y, state.on_prev)
+			-- コマンド入力状態表示
+			if global.disp_input - 1 == i then
+				for ti, state in ipairs(p.input_states) do
+					local x, y = 147, 25 + ti * 5
+					local x1, x2, y2, cmdx, cmdy = x + 15, x - 8, y + 4, x - 50, y - 2
+					draw_text_with_shadow(x1, cmdy, state.tbl.name,
+						state.input_estab == true and input_state.col.orange2 or input_state.col.white)
+					if state.on > 0 and state.chg_remain > 0 then
+						local col, col2 = input_state.col.yellow, input_state.col.yellow2
+						if state.charging == true then col, col2 = input_state.col.green, input_state.col.green2 end
+						scr:draw_box(x2 + state.max * 2, y, x2, y2, col2, 0)
+						scr:draw_box(x2 + state.chg_remain * 2, y, x2, y2, 0, col)
+					end
+					for ci, c in ipairs(state.tbl.lr_cmds[p.cmd_side]) do
+						if c ~= "" then
+							cmdx = cmdx + math.max(5.5,
+								draw_text_with_shadow(cmdx, cmdy, c,
+									state.input_estab == true and input_state.col.orange or
+									state.on > ci and input_state.col.red or
+									(ci == 1 and state.on >= ci) and input_state.col.red or nil))
 						end
 					end
-				end
-
-				-- BS状態表示
-				-- ガードリバーサル状態表示
-				if global.disp_bg then
-					local bs_label = {}
-					if p.dummy_gd == dummy_gd_type.bs and global.dummy_bs_cnt > 1 then
-						table.insert(bs_label, string.format("%02d回ガードでBS",
-							p.gd_bs_enabled and global.dummy_bs_cnt > 1 and 0 or (global.dummy_bs_cnt - math.max(p.bs_count, 0))))
+					draw_rtext_with_shadow(x + 1, y, state.chg_remain)
+					draw_text_with_shadow(x + 4, y, "/")
+					draw_text_with_shadow(x + 7, y, state.max)
+					if state.debug then
+						draw_rtext_with_shadow(x + 25, y, state.on)
+						draw_rtext_with_shadow(x + 40, y, state.on_prev)
 					end
-					if p.dummy_wakeup == wakeup_type.rvs and global.dummy_rvs_cnt > 1 then
-						table.insert(bs_label, string.format("%02d回ガードでRev.",
-							p.gd_rvs_enabled and global.dummy_rvs_cnt > 1 and 0 or (global.dummy_rvs_cnt - math.max(p.rvs_count, 0))))
-					end
-					if #bs_label > 0 then
-						draw_text_with_shadow(p1 and 48 or 230, 40, table.concat(bs_label, "\n"), p.on_block <= global.frame_number and 0xFFFFFFFF or 0xFF00FFFF)
-					end
-				end
-
-				-- 気絶表示
-				if p.disp_stun then
-					draw_text_with_shadow(p1 and 112 or 184, 19.7, string.format("%3s/%3s", p.life, 0xC0))
-					scr:draw_box(p1 and (138 - p.stun_limit) or 180, 29, p1 and 140 or (182 + p.stun_limit), 34, 0, 0xDDC0C0C0) -- 枠
-					scr:draw_box(p1 and (139 - p.stun_limit) or 181, 30, p1 and 139 or (181 + p.stun_limit), 33, 0, 0xDD000000) -- 黒背景
-					scr:draw_box(p1 and (139 - p.hit_stun) or 181, 30, p1 and 139 or (181 + p.hit_stun), 33, 0, 0xDDFF0000) -- 気絶値
-					draw_text_with_shadow(p1 and 112 or 184, 28, string.format("%3s/%3s", p.hit_stun, p.stun_limit))
-					scr:draw_box(p1 and (138 - 90) or 180, 35, p1 and 140 or (182 + 90), 40, 0, 0xDDC0C0C0)              -- 枠
-					scr:draw_box(p1 and (139 - 90) or 181, 36, p1 and 139 or (181 + 90), 39, 0, 0xDD000000)              -- 黒背景
-					scr:draw_box(p1 and (139 - p.hit_stun_timer) or 181, 36, p1 and 139 or (181 + p.hit_stun_timer), 39, 0, 0xDDFFFF00) -- 気絶値
-					draw_text_with_shadow(p1 and 112 or 184, 34, string.format("%3s", p.hit_stun_timer))
 				end
 			end
 
-			-- フレーム表示
-			local draw_frame_labels = {}
+			-- BS状態表示
+			-- ガードリバーサル状態表示
+			if global.disp_bg then
+				local bs_label = {}
+				if p.dummy_gd == dummy_gd_type.bs and global.dummy_bs_cnt > 1 then
+					table.insert(bs_label, string.format("%02d回ガードでBS",
+						p.gd_bs_enabled and global.dummy_bs_cnt > 1 and 0 or (global.dummy_bs_cnt - math.max(p.bs_count, 0))))
+				end
+				if p.dummy_wakeup == wakeup_type.rvs and global.dummy_rvs_cnt > 1 then
+					table.insert(bs_label, string.format("%02d回ガードでRev.",
+						p.gd_rvs_enabled and global.dummy_rvs_cnt > 1 and 0 or (global.dummy_rvs_cnt - math.max(p.rvs_count, 0))))
+				end
+				if #bs_label > 0 then
+					draw_text_with_shadow(p1 and 48 or 230, 40, table.concat(bs_label, "\n"), p.on_block <= global.frame_number and 0xFFFFFFFF or 0xFF00FFFF)
+				end
+			end
+
+			-- 気絶表示
+			if p.disp_stun then
+				draw_text_with_shadow(p1 and 112 or 184, 19.7, string.format("%3s/%3s", p.life, 0xC0))
+				scr:draw_box(p1 and (138 - p.stun_limit) or 180, 29, p1 and 140 or (182 + p.stun_limit), 34, 0, 0xDDC0C0C0) -- 枠
+				scr:draw_box(p1 and (139 - p.stun_limit) or 181, 30, p1 and 139 or (181 + p.stun_limit), 33, 0, 0xDD000000) -- 黒背景
+				scr:draw_box(p1 and (139 - p.hit_stun) or 181, 30, p1 and 139 or (181 + p.hit_stun), 33, 0, 0xDDFF0000) -- 気絶値
+				draw_text_with_shadow(p1 and 112 or 184, 28, string.format("%3s/%3s", p.hit_stun, p.stun_limit))
+				scr:draw_box(p1 and (138 - 90) or 180, 35, p1 and 140 or (182 + 90), 40, 0, 0xDDC0C0C0)              -- 枠
+				scr:draw_box(p1 and (139 - 90) or 181, 36, p1 and 139 or (181 + 90), 39, 0, 0xDD000000)              -- 黒背景
+				scr:draw_box(p1 and (139 - p.hit_stun_timer) or 181, 36, p1 and 139 or (181 + p.hit_stun_timer), 39, 0, 0xDDFFFF00) -- 気絶値
+				draw_text_with_shadow(p1 and 112 or 184, 34, string.format("%3s", p.hit_stun_timer))
+			end
+		end
+
+		-- フレーム表示
+		local draw_frame_labels = {}
+		for i, p in ipairs(players) do
+			local p1 = i == 1
+			if p.disp_frame > 1 then -- フレームメーター 1:OFF 2:ON
+				draw_frames(p.frame_groups, p1 and 40 or 165, 63, 120)
+			end
+			if global.disp_frame then -- スト6風フレームメーター 1:OFF 2:ON
+				local startup, total, draw_label = frame_meter.draw(p, 160 + get_line_height(p1 and 0 or 1.5))
+				table.insert(draw_frame_labels, { total = total, func = draw_label })
+				-- 確定反撃の表示
+				draw_text_with_shadow(p1 and 112 or 184, get_line_height(1.3), "PUNISH", p.on_punish <= global.frame_number and 0xFF808080 or 0xFF00FFFF)
+			end
+			if i == 2 then
+				for j, draw in ipairs(draw_frame_labels) do draw.func(draw_frame_labels[3 - j].total) end
+			end
+		end
+
+		-- キャラの向きとキャラ間の距離表示
+		if global.disp_pos then
 			for i, p in ipairs(players) do
-				local p1 = i == 1
-				if p.disp_frame > 1 then -- フレームメーター 1:OFF 2:ON
-					draw_frames(p.frame_groups, p1 and 40 or 165, 63, 120)
+				local flip   = p.flip_x == 1 and ">" or "<" -- 見た目と判定の向き
+				local side   = p.block_side == 1 and ">" or "<" -- ガード方向や内部の向き 1:右向き -1:左向き
+				local i_side = p.cmd_side == 1 and ">" or "<" -- コマンド入力の向き
+				p.pos_hist   = p.pos_hist or ut.new_filled_table(2, { x = format_num(0), y = format_num(0) })
+				table.insert(p.pos_hist, { x = format_num(p.pos + p.pos_frc), y = format_num(p.pos_y + p.pos_frc_y) })
+				while 3 < #p.pos_hist do table.remove(p.pos_hist, 1) end
+				local y1, y2, y3 = p.pos_hist[1].y, p.pos_hist[2].y, p.pos_hist[3].y
+				local x1, x2, x3 = p.pos_hist[1].x, p.pos_hist[2].x, p.pos_hist[3].x
+				if y3 ~= y2 or not p.last_posy_txt then
+					p.last_posy_txt = string.format("Y%s>%s>%s", y1, y2, y3)
 				end
-				if global.disp_frame then -- スト6風フレームメーター 1:OFF 2:ON
-					local startup, total, draw_label = frame_meter.draw(p, 160 + get_line_height(p1 and 0 or 1.5))
-					table.insert(draw_frame_labels, { total = total, func = draw_label })
-					-- 確定反撃の表示
-					draw_text_with_shadow(p1 and 112 or 184, get_line_height(1.3), "PUNISH", p.on_punish <= global.frame_number and 0xFF808080 or 0xFF00FFFF)
+				if x3 ~= x2 or not p.last_posx_txt then
+					p.last_posx_txt = string.format("X%s>%s>%s", x1, x2, x3)
 				end
-				if i == 2 then
-					for j, draw in ipairs(draw_frame_labels) do draw.func(draw_frame_labels[3 - j].total) end
+				if i == 1 then
+					draw_text("left", 216 - get_line_height(), string.format("%s", p.last_posx_txt))
+					draw_text("left", 216, string.format("%s Disp.%s Block.%s Input.%s", p.last_posy_txt, flip, side, i_side))
+				else
+					draw_text("right", 216 - get_line_height(), string.format("%s", p.last_posx_txt))
+					draw_text("right", 216, string.format("Input.%s Block.%s Disp.%s %s", i_side, side, flip, p.last_posy_txt))
 				end
 			end
+			draw_text("center", 216, string.format("%3d", math.abs(p_space)))
+		end
 
-			-- キャラの向きとキャラ間の距離表示
-			if global.disp_pos then
-				for i, p in ipairs(players) do
-					local flip   = p.flip_x == 1 and ">" or "<" -- 見た目と判定の向き
-					local side   = p.block_side == 1 and ">" or "<" -- ガード方向や内部の向き 1:右向き -1:左向き
-					local i_side = p.cmd_side == 1 and ">" or "<" -- コマンド入力の向き
-					p.pos_hist   = p.pos_hist or ut.new_filled_table(2, { x = format_num(0), y = format_num(0) })
-					table.insert(p.pos_hist, { x = format_num(p.pos + p.pos_frc), y = format_num(p.pos_y + p.pos_frc_y) })
-					while 3 < #p.pos_hist do table.remove(p.pos_hist, 1) end
-					local y1, y2, y3 = p.pos_hist[1].y, p.pos_hist[2].y, p.pos_hist[3].y
-					local x1, x2, x3 = p.pos_hist[1].x, p.pos_hist[2].x, p.pos_hist[3].x
-					if y3 ~= y2 or not p.last_posy_txt then
-						p.last_posy_txt = string.format("Y%s>%s>%s", y1, y2, y3)
+		-- GG風コマンド入力表示
+		for _, p in ipairs(players) do
+			-- コマンド入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
+			if p.disp_command == 2 or p.disp_command == 4 then
+				local xoffset, yoffset = p.key.gg.xoffset, p.key.gg.yoffset
+				local oct_vt, key_xy = p.key.gg.oct_vt, p.key.gg.key_xy
+				local tracks, max_track = {}, 6 -- 軌跡をつくる 軌跡は6個まで
+				scr:draw_box(xoffset - 13, yoffset - 13, xoffset + 35, yoffset + 13, 0x80404040, 0x80404040)
+				for ni = 1, 8 do -- 八角形描画
+					local prev = ni > 1 and ni - 1 or 8
+					local xy1, xy2 = oct_vt[ni], oct_vt[prev]
+					scr:draw_line(xy1.x, xy1.y, xy2.x, xy2.y, 0xDDCCCCCC)
+					scr:draw_line(xy1.x1, xy1.y1, xy2.x1, xy2.y1, 0xDDCCCCCC)
+					scr:draw_line(xy1.x2, xy1.y2, xy2.x2, xy2.y2, 0xDDCCCCCC)
+					scr:draw_line(xy1.x3, xy1.y3, xy2.x3, xy2.y3, 0xDDCCCCCC)
+					scr:draw_line(xy1.x4, xy1.y4, xy2.x4, xy2.y4, 0xDDCCCCCC)
+				end
+				for j = #p.key.gg.hist, 2, -1 do -- 軌跡採取
+					local k = j - 1
+					local xy1, xy2 = key_xy[p.key.gg.hist[j].lever], key_xy[p.key.gg.hist[k].lever]
+					if xy1.x ~= xy2.x or xy1.y ~= xy2.y then
+						table.insert(tracks, 1, { xy1 = xy1, xy2 = xy2, })
+						if #tracks >= max_track then break end
 					end
-					if x3 ~= x2 or not p.last_posx_txt then
-						p.last_posx_txt = string.format("X%s>%s>%s", x1, x2, x3)
-					end
-					if i == 1 then
-						draw_text("left", 216 - get_line_height(), string.format("%s", p.last_posx_txt))
-						draw_text("left", 216, string.format("%s Disp.%s Block.%s Input.%s", p.last_posy_txt, flip, side, i_side))
+				end
+				local fixj = max_track - #tracks -- 軌跡の上限補正用
+				for j, track in ipairs(tracks) do
+					-- 青→ピンクのグラデーション
+					local col, xy1, xy2 = 0xFF0000FF + 0x002A0000 * (fixj + j), track.xy1, track.xy2
+					if xy1.x == xy2.x then
+						scr:draw_box(xy1.x - 0.6, xy1.y, xy2.x + 0.6, xy2.y, col, col)
+					elseif xy1.y == xy2.y then
+						scr:draw_box(xy1.x, xy1.y - 0.6, xy2.x, xy2.y + 0.6, col, col)
+					elseif xy1.op == xy2.no or xy1.dg1 == xy2.no or xy1.dg2 == xy2.no or xy1.no == 9 or xy2.no == 9 then
+						for k = -0.6, 0.6, 0.3 do scr:draw_line(xy1.x + k, xy1.y + k, xy2.x + k, xy2.y + k, col) end
 					else
-						draw_text("right", 216 - get_line_height(), string.format("%s", p.last_posx_txt))
-						draw_text("right", 216, string.format("Input.%s Block.%s Disp.%s %s", i_side, side, flip, p.last_posy_txt))
+						scr:draw_line(xy1.x, xy1.y, xy2.x, xy2.y, col)
+						scr:draw_line(xy1.x1, xy1.y1, xy2.x1, xy2.y1, col)
+						scr:draw_line(xy1.x2, xy1.y2, xy2.x2, xy2.y2, col)
+						scr:draw_line(xy1.x3, xy1.y3, xy2.x3, xy2.y3, col)
+						scr:draw_line(xy1.x4, xy1.y4, xy2.x4, xy2.y4, col)
 					end
 				end
-				draw_text("center", 216, string.format("%3d", math.abs(p_space)))
-			end
-
-			-- GG風コマンド入力表示
-			for _, p in ipairs(players) do
-				-- コマンド入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
-				if p.disp_command == 2 or p.disp_command == 4 then
-					local xoffset, yoffset = p.key.gg.xoffset, p.key.gg.yoffset
-					local oct_vt, key_xy = p.key.gg.oct_vt, p.key.gg.key_xy
-					local tracks, max_track = {}, 6 -- 軌跡をつくる 軌跡は6個まで
-					scr:draw_box(xoffset - 13, yoffset - 13, xoffset + 35, yoffset + 13, 0x80404040, 0x80404040)
-					for ni = 1, 8 do -- 八角形描画
-						local prev = ni > 1 and ni - 1 or 8
-						local xy1, xy2 = oct_vt[ni], oct_vt[prev]
-						scr:draw_line(xy1.x, xy1.y, xy2.x, xy2.y, 0xDDCCCCCC)
-						scr:draw_line(xy1.x1, xy1.y1, xy2.x1, xy2.y1, 0xDDCCCCCC)
-						scr:draw_line(xy1.x2, xy1.y2, xy2.x2, xy2.y2, 0xDDCCCCCC)
-						scr:draw_line(xy1.x3, xy1.y3, xy2.x3, xy2.y3, 0xDDCCCCCC)
-						scr:draw_line(xy1.x4, xy1.y4, xy2.x4, xy2.y4, 0xDDCCCCCC)
-					end
-					for j = #p.key.gg.hist, 2, -1 do -- 軌跡採取
-						local k = j - 1
-						local xy1, xy2 = key_xy[p.key.gg.hist[j].lever], key_xy[p.key.gg.hist[k].lever]
-						if xy1.x ~= xy2.x or xy1.y ~= xy2.y then
-							table.insert(tracks, 1, { xy1 = xy1, xy2 = xy2, })
-							if #tracks >= max_track then break end
-						end
-					end
-					local fixj = max_track - #tracks -- 軌跡の上限補正用
-					for j, track in ipairs(tracks) do
-						-- 青→ピンクのグラデーション
-						local col, xy1, xy2 = 0xFF0000FF + 0x002A0000 * (fixj + j), track.xy1, track.xy2
-						if xy1.x == xy2.x then
-							scr:draw_box(xy1.x - 0.6, xy1.y, xy2.x + 0.6, xy2.y, col, col)
-						elseif xy1.y == xy2.y then
-							scr:draw_box(xy1.x, xy1.y - 0.6, xy2.x, xy2.y + 0.6, col, col)
-						elseif xy1.op == xy2.no or xy1.dg1 == xy2.no or xy1.dg2 == xy2.no or xy1.no == 9 or xy2.no == 9 then
-							for k = -0.6, 0.6, 0.3 do scr:draw_line(xy1.x + k, xy1.y + k, xy2.x + k, xy2.y + k, col) end
-						else
-							scr:draw_line(xy1.x, xy1.y, xy2.x, xy2.y, col)
-							scr:draw_line(xy1.x1, xy1.y1, xy2.x1, xy2.y1, col)
-							scr:draw_line(xy1.x2, xy1.y2, xy2.x2, xy2.y2, col)
-							scr:draw_line(xy1.x3, xy1.y3, xy2.x3, xy2.y3, col)
-							scr:draw_line(xy1.x4, xy1.y4, xy2.x4, xy2.y4, col)
-						end
-					end
-					local ggbutton = p.key.gg.hist[#p.key.gg.hist]
-					if ggbutton then -- ボタン描画
-						for _, ctl in ipairs({
-							{ key = "",  btn = "_)", x = key_xy[ggbutton.lever].xt, y = key_xy[ggbutton.lever].yt, col = 0xFFCC0000 },
-							{ key = "A", btn = "_A", x = key_xy[5].x + 11,          y = key_xy[5].y + 0,           col = 0xFFFFFFFF },
-							{ key = "B", btn = "_B", x = key_xy[5].x + 16,          y = key_xy[5].y - 3,           col = 0xFFFFFFFF },
-							{ key = "C", btn = "_C", x = key_xy[5].x + 21,          y = key_xy[5].y - 3,           col = 0xFFFFFFFF },
-							{ key = "D", btn = "_D", x = key_xy[5].x + 26,          y = key_xy[5].y - 2,           col = 0xFFFFFFFF },
-						}) do
-							local xx, yy, btn, on = ctl.x, ctl.y, ut.convert(ctl.btn), ctl.key == "" or ggbutton[ctl.key]
-							draw_text(xx, yy, ut.convert("_("), on and ctl.col or 0xDDCCCCCC)
-							draw_text(xx, yy, btn, on and btn_col[btn] or 0xDD444444)
-						end
+				local ggbutton = p.key.gg.hist[#p.key.gg.hist]
+				if ggbutton then -- ボタン描画
+					for _, ctl in ipairs({
+						{ key = "",  btn = "_)", x = key_xy[ggbutton.lever].xt, y = key_xy[ggbutton.lever].yt, col = 0xFFCC0000 },
+						{ key = "A", btn = "_A", x = key_xy[5].x + 11,          y = key_xy[5].y + 0,           col = 0xFFFFFFFF },
+						{ key = "B", btn = "_B", x = key_xy[5].x + 16,          y = key_xy[5].y - 3,           col = 0xFFFFFFFF },
+						{ key = "C", btn = "_C", x = key_xy[5].x + 21,          y = key_xy[5].y - 3,           col = 0xFFFFFFFF },
+						{ key = "D", btn = "_D", x = key_xy[5].x + 26,          y = key_xy[5].y - 2,           col = 0xFFFFFFFF },
+					}) do
+						local xx, yy, btn, on = ctl.x, ctl.y, ut.convert(ctl.btn), ctl.key == "" or ggbutton[ctl.key]
+						draw_text(xx, yy, ut.convert("_("), on and ctl.col or 0xDDCCCCCC)
+						draw_text(xx, yy, btn, on and btn_col[btn] or 0xDD444444)
 					end
 				end
 			end
+		end
 
-			-- レコーディング状態表示
-			if global.disp_replay and recording.info and (global.dummy_mode == 5 or global.dummy_mode == 6) then
-				local time = global.rec_main == recording.procs.play and
-					ut.frame_to_time(#recording.active_slot.store - recording.play_count) or ut.frame_to_time(3600 - #recording.active_slot.store)
-				scr:draw_box(235, 200, 315, 224, 0xBB404040, 0xBB404040)
-				for i, info in ipairs(recording.info) do
-					draw_text(239, 204 + get_line_height(i - 1), string.format(info.label, time), info.col)
-				end
+		-- レコーディング状態表示
+		if global.disp_replay and recording.info and (global.dummy_mode == 5 or global.dummy_mode == 6) then
+			local time = global.rec_main == recording.procs.play and
+				ut.frame_to_time(#recording.active_slot.store - recording.play_count) or ut.frame_to_time(3600 - #recording.active_slot.store)
+			scr:draw_box(235, 200, 315, 224, 0xBB404040, 0xBB404040)
+			for i, info in ipairs(recording.info) do
+				draw_text(239, 204 + get_line_height(i - 1), string.format(info.label, time), info.col)
 			end
 		end
 	end
