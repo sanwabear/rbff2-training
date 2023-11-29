@@ -3502,9 +3502,10 @@ rbff2.startplugin           = function()
 				p.attackbit = p.attackbit | frame_attack_types.frame_minus
 			end
 
-			-- 当たりとやられ判定判定
 			-- 判定が変わったらポーズさせる  1:OFF, 2:投げ, 3:攻撃, 4:変化時
-			if not p.act_data.neutral and (p.chg_hitbox or p.chg_hurtbox) and global.pause_hitbox == 4 then global.pause = true end
+			if global.pause_hitbox == 4 and p.act_data and not p.act_data.neutral and (p.chg_hitbox or p.chg_hurtbox) then global.pause = true end
+
+			-- 当たりとやられ判定判定
 			p.hurt.dodge = frame_attack_types.full -- くらい判定なし＝全身無敵をデフォルトにする
 			for _, _, box in ut.ifind_all(p.boxies, function(box)
 				local type = fix_box_type(p, p.attackbit, box) -- 属性はヒット状況などで変わるので都度解決する
@@ -4283,10 +4284,10 @@ rbff2.startplugin           = function()
 				local y1, y2, y3 = p.pos_hist[1].y, p.pos_hist[2].y, p.pos_hist[3].y
 				local x1, x2, x3 = p.pos_hist[1].x, p.pos_hist[2].x, p.pos_hist[3].x
 				if y3 ~= y2 or not p.last_posy_txt then
-					p.last_posy_txt = string.format("Y%s>%s>%s", y1, y2, y3)
+					p.last_posy_txt = string.format("Y:%s>%s>%s", y1, y2, y3)
 				end
 				if x3 ~= x2 or not p.last_posx_txt then
-					p.last_posx_txt = string.format("X%s>%s>%s", x1, x2, x3)
+					p.last_posx_txt = string.format("X:%s>%s>%s", x1, x2, x3)
 				end
 				if i == 1 then
 					draw_text("left", 216 - get_line_height(), string.format("%s", p.last_posx_txt))
