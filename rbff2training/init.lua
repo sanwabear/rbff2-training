@@ -26,6 +26,8 @@ exports.description      = "RBFF2 Training"
 exports.license          = "MIT License"
 exports.author           = { name = "Sanwabear" }
 
+local subscription = { reset = nil, stop  = nil, frame = nil, pause = nil, resume = nil, }
+
 local ut                 = require("rbff2training/util")
 local db                 = require("rbff2training/data")
 local UTF8toSJIS         = require("rbff2training/UTF8toSJIS")
@@ -4386,16 +4388,16 @@ rbff2.startplugin           = function()
 		end
 	end
 
-	emu.register_start(function()
+	local emu_start = function()
 		setup_emu()
 		math.randomseed(os.time())
-	end)
+	end
 
-	emu.register_stop(function() end)
+	local emu_stop = function() end
 
-	emu.register_menu(function(index, event) return false end, {}, "RB2 Training")
+	local emu_menu = function(index, event) return false end
 
-	emu.register_frame(function() end)
+	local emu_frame = function() end
 
 	-- メニュー表示
 	menu.setup_char = function()
@@ -5252,20 +5254,20 @@ rbff2.startplugin           = function()
 
 	menu.state = menu.tra_main -- menu or tra_main
 
-	emu.register_pause(function()
+	local emu_pause = function()
 		menu.state.draw()
 		--print(collectgarbage("count"))
 		--for addr, cnt in pairs(mem.wp_cnt) do ut.printf("wp %x %s" ,addr,cnt) end
 		--for addr, cnt in pairs(mem.rp_cnt) do ut.printf("rp %x %s" ,addr,cnt) end
-	end)
+	end
 
-	emu.register_resume(function() end)
+	local emu_resume = function() end
 
-	emu.register_frame_done(function()
+	local emu_frame_done = function()
 		if not machine then return end
 		if machine.paused == false then menu.state.draw() end
 		collectgarbage("collect")
-	end)
+	end
 
 	local bios_test = function()
 		local ram_value1, ram_value2 = mem.r16(players[1].addr.base), mem.r16(players[2].addr.base)
@@ -5279,7 +5281,7 @@ rbff2.startplugin           = function()
 		return false
 	end
 
-	emu.register_periodic(function()
+	local emu_periodic = function()
 		if not machine then return end
 		if machine.paused then return end
 		local ec = scr:frame_number() -- フレーム更新しているか
@@ -5328,7 +5330,17 @@ rbff2.startplugin           = function()
 			input.read()
 			menu.state.proc() -- メニュー初期化前に処理されないようにする
 		end
-	end)
+	end
+
+	subscription.reset = emu.add_machine_reset_notifier(emu_start)
+	subscription.stop = emu.add_machine_stop_notifier(emu_stop)
+	subscription.frame = emu.add_machine_frame_notifier(emu_frame)
+	subscription.pause = emu.add_machine_pause_notifier(emu_pause)
+	subscription.resume = emu.add_machine_resume_notifier(emu_resume)
+	emu.register_frame_done(emu_frame_done)
+	emu.register_periodic(emu_periodic)
+	emu.register_menu(emu_menu, {}, "RB2 Training")
+
 end
 
 return exports
