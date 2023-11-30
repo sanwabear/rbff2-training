@@ -5258,7 +5258,15 @@ rbff2.startplugin           = function()
 		math.randomseed(os.time())
 	end
 
-	rbff2.emu_stop = function() end
+	rbff2.emu_stop = function()
+		--[[
+			TODO 停止処理
+			フック外し
+			パッチ戻し
+			デバッグ設定戻し
+			リセット
+		]]
+	end
 
 	rbff2.emu_menu = function(index, event) return false end
 
@@ -5338,32 +5346,38 @@ rbff2training.startplugin = function()
 		return emu.romname() == "rbff2h"
 	end
 
-	local core_control = function()
-		if core == rbff2 and not is_target() then
+	local core_to_dummy = function()
+		if core == rbff2 and is_target() then
 			print("Disable Training-Core")
+			core.emu_stop()
 			core = dummy
 		end
 	end
 
-	core = {
-		emu_frame = core_control,
-		emu_pause = core_control,
-		emu_resume = core_control,
-		emu_frame_done = core_control,
-		emu_periodic = core_control,
-		emu_menu = core_control,
-		emu_stop = core_control,
-	}
-	dummy = core
-
-	subscription.reset = emu.add_machine_reset_notifier(function()
+	local core_to_rbff2 = function()
 		if core ~= rbff2 and is_target() then
 			print("Enable Training-Core")
 			core = rbff2
 			core.startplugin()
 			core.emu_start()
 		end
-	end)
+	end
+
+	local null_function = function() end
+
+	core = {
+		emu_frame = null_function,
+		emu_pause = null_function,
+		emu_resume = null_function,
+		emu_frame_done = null_function,
+		emu_periodic = null_function,
+		emu_menu = null_function,
+		emu_start = null_function,
+		emu_stop = null_function,
+	}
+	dummy = core
+
+	subscription.reset = emu.add_machine_reset_notifier(function() core.emu_start() end)
 	subscription.stop = emu.add_machine_stop_notifier(function() core.emu_stop() end)
 	subscription.frame = emu.add_machine_frame_notifier(function() core.emu_frame() end)
 	subscription.pause = emu.add_machine_pause_notifier(function() core.emu_pause() end)
@@ -5371,17 +5385,26 @@ rbff2training.startplugin = function()
 	emu.register_frame_done(function() core.emu_frame_done() end)
 	emu.register_periodic(function() core.emu_periodic() end)
 
+	local mode = 1
+
 	local menu_callback = function(index, event)
-		if event == "select" then return true end
-		--print(index, event)
+		if (event == "left") or (event == "right") then
+			mode = (mode ~= 0) and 0 or 1
+			return true
+		elseif (event == "select") then
+			if mode == 0 then
+				core_to_dummy()
+			else
+				core_to_rbff2()
+			end
+			return true
+		end
 		return false
 	end
 
 	local menu_populate = function()
 		local result = {}
-		--table.insert(result, { exports.description, "", "" })
-		--table.insert(result, { "---", "", "" })
-		--table.insert(result, { "Training", "ON", "OFF" })
+		table.insert(result, { exports.description, (mode > 0) and "ON" or "OFF", (mode > 0) and "l" or "r" })
 		return result
 	end
 
