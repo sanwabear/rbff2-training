@@ -936,24 +936,20 @@ end
 local format_num                           = function(num) return string.sub(string.format("00%0.03f", num), -7) end
 
 -- コマンド入力表示
-local draw_cmd                             = function(p, line, frame, str)
+local draw_cmd                             = function(p, line, frame, str, spid)
 	if not str then return end
 	local xx, yy = p == 1 and 12 or 294, get_line_height(line + 3)
+	local col, spcol = 0xFAFFFFFF, 0x66DD00FF
+	local x1, x2, step
+	if p == 1 then x1, x2, step = 1, 50, 1 else x1, x2, step = 320, 270, -1 end
+	if spid then scr:draw_box(x1, yy + get_line_height(), x2, yy, 0, spcol) end
+	for i = x1, x2, step do
+		scr:draw_line(i, yy, i + 1, yy, col)
+		col = col - 0x05000000
+	end
 	if 0 < frame then
 		local cframe = 999 < frame and "LOT" or string.format("%03d", frame)
 		draw_text_with_shadow(p == 1 and 1 or 283, yy, cframe, text_col)
-	end
-	local col = 0xFAFFFFFF
-	if p == 1 then
-		for i = 1, 50 do
-			scr:draw_line(i, yy, i + 1, yy, col)
-			col = col - 0x05000000
-		end
-	else
-		for i = 320, 270, -1 do
-			scr:draw_line(i, yy, i - 1, yy, col)
-			col = col - 0x05000000
-		end
 	end
 	draw_cmd_text_with_shadow(xx, yy, str)
 end
@@ -1753,6 +1749,9 @@ rbff2.startplugin           = function()
 			-- [0xB7] = function(data) p.corner = data end, -- 画面端状態 0:端以外 1:画面端 3:端押し付け
 			[0xB8] = function(data)
 				p.spid, p.sp_flag, p.on_update_spid = data, mem.r32(0x3AAAC + (data << 2)), now() -- 技コマンド成立時の技のID, 0xC8へ設定するデータ(03AA8Aからの処理)
+				p.spid_hist = p.spid_hist or {}
+				table.insert(p.spid_hist, { spid = data, established = now() })
+				while 5 < #p.spid_hist do table.remove(p.spid_hist, 1) end --バッファ長調整
 			end,
 			[{ addr = 0xB9, filter = { 0x58930, 0x58948 } }] = function(data)
 				if data == 0 and mem.pc() == 0x58930 then p.on_bs_clear = now() end            -- BSフラグのクリア
@@ -3676,8 +3675,21 @@ rbff2.startplugin           = function()
 			ut.table_add(p.key.gg.hist, ggbutton, 60)
 
 			-- キーログの更新
+			-- 必殺技コマンド成立を直前のキーログに反映する
+			if p.on_sp_established == global.frame_number then
+				local prev = p.key.log[#p.key.log]
+				if not prev.on_sp_established then
+					if prev.frame == 1 then
+						prev.spid, prev.on_sp_established = p.last_sp, p.on_sp_established
+					else
+						prev.frame = prev.frame - 1
+						table.insert(p.key.log, { key = prev.key, frame = 1, spid = p.last_sp, on_sp_established = p.on_sp_established })
+					end
+				end
+			end
+			-- 最新のキーログを追加する
 			local prev = p.key.log[#p.key.log]
-			if prev and prev.key == key then
+			if prev and prev.key == key and not prev.on_sp_established then
 				prev.frame = prev.frame < 999 and prev.frame + 1 or prev.frame
 			else
 				table.insert(p.key.log, { key = key, frame = 1 })
@@ -4128,7 +4140,7 @@ rbff2.startplugin           = function()
 		for i, p in ipairs(players) do
 			-- コマンド入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
 			if p.disp_command == 2 or p.disp_command == 3 then
-				for k, log in ipairs(p.key.log) do draw_cmd(i, k, log.frame, log.key) end
+				for k, log in ipairs(p.key.log) do draw_cmd(i, k, log.frame, log.key, log.spid) end
 			end
 		end
 
