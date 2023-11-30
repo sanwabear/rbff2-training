@@ -19,1410 +19,1408 @@
 --LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 --OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 --SOFTWARE.
-local exports            = {}
-exports.name             = "rbff2training"
-exports.version          = "0.0.1"
-exports.description      = "RBFF2 Training"
-exports.license          = "MIT License"
-exports.author           = { name = "Sanwabear" }
+local exports       = {}
+exports.name        = "rbff2training"
+exports.version     = "0.0.1"
+exports.description = "RBFF2 Training"
+exports.license     = "MIT License"
+exports.author      = { name = "Sanwabear" }
+local rbff2         = {}
+local rbff2training = exports
+local subscription  = { reset = nil, stop = nil, frame = nil, pause = nil, resume = nil, }
 
-local subscription = { reset = nil, stop  = nil, frame = nil, pause = nil, resume = nil, }
+rbff2.startplugin           = function()
+	local ut                 = require("rbff2training/util")
+	local db                 = require("rbff2training/data")
+	local UTF8toSJIS         = require("rbff2training/UTF8toSJIS")
 
-local ut                 = require("rbff2training/util")
-local db                 = require("rbff2training/data")
-local UTF8toSJIS         = require("rbff2training/UTF8toSJIS")
-
-local to_sjis            = function(s)
-	local sjis, len = UTF8toSJIS:UTF8_to_SJIS_str_cnv(s)
-	return sjis
-end
-
--- MAMEのLuaオブジェクトの変数と初期化処理
-local man
-local machine
-local cpu
-local pgm
-local scr
-local ioports
-local debugger
-local base_path
-local setup_emu          = function()
-	man = manager
-	machine = man.machine
-	cpu = machine.devices[":maincpu"]
-	-- for k, v in pairs(cpu.state) do ut.printf("%s %s", k ,v ) end
-	pgm = cpu.spaces["program"]
-	scr = machine.screens:at(1)
-	ioports = man.machine.ioport.ports
-	--[[
-	for pname, port in pairs(ioports) do
-		for fname, field in pairs(port.fields) do ut.printf("%s %s", pname, fname) end
+	local to_sjis            = function(s)
+		local sjis, len = UTF8toSJIS:UTF8_to_SJIS_str_cnv(s)
+		return sjis
 	end
-	for p, pk in ipairs(data.joy_k) do
-		for _, name in pairs(pk) do
-			ut.printf("%s %s %s", ":edge:joy:JOY" .. p, name, ioports[":edge:joy:JOY" .. p].fields[name])
+
+	-- MAMEのLuaオブジェクトの変数と初期化処理
+	local man
+	local machine
+	local cpu
+	local pgm
+	local scr
+	local ioports
+	local base_path
+	local setup_emu          = function()
+		man = manager
+		machine = man.machine
+		cpu = machine.devices[":maincpu"]
+		-- for k, v in pairs(cpu.state) do ut.printf("%s %s", k ,v ) end
+		pgm = cpu.spaces["program"]
+		scr = machine.screens:at(1)
+		ioports = man.machine.ioport.ports
+		--[[
+		for pname, port in pairs(ioports) do
+			for fname, field in pairs(port.fields) do ut.printf("%s %s", pname, fname) end
+		end
+		for p, pk in ipairs(data.joy_k) do
+			for _, name in pairs(pk) do
+				ut.printf("%s %s %s", ":edge:joy:JOY" .. p, name, ioports[":edge:joy:JOY" .. p].fields[name])
+			end
+		end
+		]]
+		base_path = function()
+			local base = emu.subst_env(man.options.entries.homepath:value():match('([^;]+)')) .. '/plugins/' .. exports.name
+			local dir = ut.cur_dir()
+			return dir .. "/" .. base
 		end
 	end
-	]]
-	debugger = machine.debugger
-	base_path = function()
-		local base = emu.subst_env(man.options.entries.homepath:value():match('([^;]+)')) .. '/plugins/' .. exports.name
-		local dir = ut.cur_dir()
-		return dir .. "/" .. base
-	end
-end
 
-local rbff2              = exports
+	-- ヒット時のシステム内での中間処理による停止アドレス
+	local hit_system_stops   = {}
 
--- ヒット時のシステム内での中間処理による停止アドレス
-local hit_system_stops   = {}
-
--- 判定種類
-local frame_attack_types = db.frame_attack_types
--- ヒット処理の飛び先 家庭用版 0x13120 からのデータテーブル 5種類
-local possible_types     = {
-	none      = 0,  -- 常に判定しない
-	same_line = 2 ^ 0, -- 同一ライン同士なら判定する
-	diff_line = 2 ^ 1, -- 異なるライン同士で判定する
-	air_onry  = 2 ^ 2, -- 相手が空中にいれば判定する
-	unknown   = 2 ^ 3, -- 不明
-}
--- 同一ライン、異なるラインの両方で判定する
-possible_types.both_line = possible_types.same_line | possible_types.diff_line
-local get_top_type       = function(top, types)
-	local type = 0
-	for _, t in ipairs(types) do
-		if t.top and top <= t.top then type = type | t.act_type end
-	end
-	return type
-end
-local get_bottom_type    = function(bottom, types)
-	local type = 0
-	for _, t in ipairs(types) do
-		if t.bottom and bottom >= t.bottom then type = type | t.act_type end
-	end
-	return type
-end
-local get_dodge          = function(p, box, top, bottom)
-	local dodge, type = 0, box.type
-	if p.sway_status == 0 then                                     -- メインライン
-		dodge = get_top_type(top, db.hurt_dodge_types) | get_bottom_type(bottom, db.hurt_dodge_types)
-		if type == db.box_types.hurt1 or type == db.box_types.hurt2 then -- 食らい1 食らい2
-		elseif type == db.box_types.down_otg then                  -- 食らい(ダウン追撃のみ可)
-		elseif type == db.box_types.launch then                    -- 食らい(空中追撃のみ可)
-		elseif type == db.box_types.hurt3 then                     -- 食らい(対ライン上攻撃) 対メイン上段無敵
-			dodge = dodge | (p.sway_status == 0 and frame_attack_types.main_high or 0)
-		elseif type == db.box_types.hurt4 then                     -- 食らい(対ライン下攻撃) 対メイン下段無敵
-			dodge = dodge | (p.sway_status == 0 and frame_attack_types.main_low or 0)
+	-- 判定種類
+	local frame_attack_types = db.frame_attack_types
+	-- ヒット処理の飛び先 家庭用版 0x13120 からのデータテーブル 5種類
+	local possible_types     = {
+		none      = 0,  -- 常に判定しない
+		same_line = 2 ^ 0, -- 同一ライン同士なら判定する
+		diff_line = 2 ^ 1, -- 異なるライン同士で判定する
+		air_onry  = 2 ^ 2, -- 相手が空中にいれば判定する
+		unknown   = 2 ^ 3, -- 不明
+	}
+	-- 同一ライン、異なるラインの両方で判定する
+	possible_types.both_line = possible_types.same_line | possible_types.diff_line
+	local get_top_type       = function(top, types)
+		local type = 0
+		for _, t in ipairs(types) do
+			if t.top and top <= t.top then type = type | t.act_type end
 		end
-	elseif type == db.box_types.sway_hurt1 or type == db.box_types.sway_hurt2 then
-		dodge = dodge | frame_attack_types.main                                -- 食らい(スウェー中) メイン無敵
-		dodge = dodge | (box.real_top <= 32 and frame_attack_types.sway_high or 0) -- 上半身無敵
-		dodge = dodge | (box.real_bottom <= 60 and frame_attack_types.sway_low or 0) -- 下半身無敵
+		return type
 	end
-	return dodge
-end
+	local get_bottom_type    = function(bottom, types)
+		local type = 0
+		for _, t in ipairs(types) do
+			if t.bottom and bottom >= t.bottom then type = type | t.act_type end
+		end
+		return type
+	end
+	local get_dodge          = function(p, box, top, bottom)
+		local dodge, type = 0, box.type
+		if p.sway_status == 0 then                                     -- メインライン
+			dodge = get_top_type(top, db.hurt_dodge_types) | get_bottom_type(bottom, db.hurt_dodge_types)
+			if type == db.box_types.hurt1 or type == db.box_types.hurt2 then -- 食らい1 食らい2
+			elseif type == db.box_types.down_otg then                  -- 食らい(ダウン追撃のみ可)
+			elseif type == db.box_types.launch then                    -- 食らい(空中追撃のみ可)
+			elseif type == db.box_types.hurt3 then                     -- 食らい(対ライン上攻撃) 対メイン上段無敵
+				dodge = dodge | (p.sway_status == 0 and frame_attack_types.main_high or 0)
+			elseif type == db.box_types.hurt4 then                     -- 食らい(対ライン下攻撃) 対メイン下段無敵
+				dodge = dodge | (p.sway_status == 0 and frame_attack_types.main_low or 0)
+			end
+		elseif type == db.box_types.sway_hurt1 or type == db.box_types.sway_hurt2 then
+			dodge = dodge | frame_attack_types.main                                -- 食らい(スウェー中) メイン無敵
+			dodge = dodge | (box.real_top <= 32 and frame_attack_types.sway_high or 0) -- 上半身無敵
+			dodge = dodge | (box.real_bottom <= 60 and frame_attack_types.sway_low or 0) -- 下半身無敵
+		end
+		return dodge
+	end
 
-local hitbox_possibles   = {
-	normal          = 0x94D2C,  -- 012DBC: 012DC8: 通常状態へのヒット判定処理
-	down            = 0x94E0C,  -- 012DE4: 012DF0: ダウン状態へのヒット判定処理
-	juggle          = 0x94EEC,  -- 012E0E: 012E1A: 空中追撃可能状態へのヒット判定処理
-	standing_block  = 0x950AC,  -- 012EAC: 012EB8: 上段ガード判定処理
-	crouching_block = 0x9518C,  -- 012ED8: 012EE4: 屈ガード判定処理
-	air_block       = 0x9526C,  -- 012F04: 012F16: 空中ガード判定処理
-	sway_standing   = 0x95A4C,  -- 012E60: 012E6C: 対ライン上段の処理
-	sway_crouching  = 0x95B2C,  -- 012F3A: 012E90: 対ライン下段の処理
-	joudan_atemi    = 0x9534C,  -- 012F30: 012F82: 上段当身投げの処理
-	urakumo         = 0x9542C,  -- 012F30: 012F82: 裏雲隠しの処理
-	gedan_atemi     = 0x9550C,  -- 012F44: 012F82: 下段当身打ちの処理
-	gyakushu        = 0x955EC,  -- 012F4E: 012F82: 必勝逆襲拳の処理
-	sadomazo        = 0x956CC,  -- 012F58: 012F82: サドマゾの処理
-	phoenix_throw   = 0x9588C,  -- 012F6C: 012F82: フェニックススルーの処理
-	baigaeshi       = 0x957AC,  -- 012F62: 012F82: 倍返しの処理
-	unknown1        = 0x94FCC,  -- 012E38: 012E44: 不明処理、未使用？
-	katsu           = 0x9596C,  -- : 012FB2: 喝消し
-	nullify         = function(id) -- : 012F9A: 弾消し
-		return (0x20 <= id) and possible_types.same_line or possible_types.none
-	end,
-}
-local hitbox_grab_bits   = {
-	none          = 0,
-	joudan_atemi  = 2 ^ 0,
-	urakumo       = 2 ^ 1,
-	gedan_atemi   = 2 ^ 2,
-	gyakushu      = 2 ^ 3,
-	sadomazo      = 2 ^ 4,
-	phoenix_throw = 2 ^ 5,
-	baigaeshi     = 2 ^ 6,
-	katsu         = 2 ^ 7,
-	nullify       = 2 ^ 8,
-	unknown1      = 2 ^ 8,
-}
-local hitbox_grab_types  = {
-	{ name = "none",          label = "",  value = hitbox_grab_bits.none },
-	{ name = "joudan_atemi",  label = "J", value = hitbox_grab_bits.joudan_atemi }, -- 上段当身投げ
-	{ name = "urakumo",       label = "U", value = hitbox_grab_bits.urakumo },    -- 裏雲隠し
-	{ name = "gedan_atemi",   label = "G", value = hitbox_grab_bits.gedan_atemi }, -- 下段当身打ち
-	{ name = "gyakushu",      label = "H", value = hitbox_grab_bits.gyakushu },   -- 必勝逆襲拳
-	{ name = "sadomazo",      label = "S", value = hitbox_grab_bits.sadomazo },   -- サドマゾ
-	{ name = "phoenix_throw", label = "P", value = hitbox_grab_bits.phoenix_throw }, -- フェニックススルー
-	{ name = "baigaeshi",     label = "B", value = hitbox_grab_bits.baigaeshi },  -- 倍返し
-	{ name = "katsu",         label = "K", value = hitbox_grab_bits.katsu },      -- 喝消し
-	{ name = "nullify",       label = "N", value = hitbox_grab_bits.nullify },    -- 弾消し
-	{ name = "unknown1",      label = "?", value = hitbox_grab_bits.unknown1 },   -- 喝消し
-}
+	local hitbox_possibles   = {
+		normal          = 0x94D2C,  -- 012DBC: 012DC8: 通常状態へのヒット判定処理
+		down            = 0x94E0C,  -- 012DE4: 012DF0: ダウン状態へのヒット判定処理
+		juggle          = 0x94EEC,  -- 012E0E: 012E1A: 空中追撃可能状態へのヒット判定処理
+		standing_block  = 0x950AC,  -- 012EAC: 012EB8: 上段ガード判定処理
+		crouching_block = 0x9518C,  -- 012ED8: 012EE4: 屈ガード判定処理
+		air_block       = 0x9526C,  -- 012F04: 012F16: 空中ガード判定処理
+		sway_standing   = 0x95A4C,  -- 012E60: 012E6C: 対ライン上段の処理
+		sway_crouching  = 0x95B2C,  -- 012F3A: 012E90: 対ライン下段の処理
+		joudan_atemi    = 0x9534C,  -- 012F30: 012F82: 上段当身投げの処理
+		urakumo         = 0x9542C,  -- 012F30: 012F82: 裏雲隠しの処理
+		gedan_atemi     = 0x9550C,  -- 012F44: 012F82: 下段当身打ちの処理
+		gyakushu        = 0x955EC,  -- 012F4E: 012F82: 必勝逆襲拳の処理
+		sadomazo        = 0x956CC,  -- 012F58: 012F82: サドマゾの処理
+		phoenix_throw   = 0x9588C,  -- 012F6C: 012F82: フェニックススルーの処理
+		baigaeshi       = 0x957AC,  -- 012F62: 012F82: 倍返しの処理
+		unknown1        = 0x94FCC,  -- 012E38: 012E44: 不明処理、未使用？
+		katsu           = 0x9596C,  -- : 012FB2: 喝消し
+		nullify         = function(id) -- : 012F9A: 弾消し
+			return (0x20 <= id) and possible_types.same_line or possible_types.none
+		end,
+	}
+	local hitbox_grab_bits   = {
+		none          = 0,
+		joudan_atemi  = 2 ^ 0,
+		urakumo       = 2 ^ 1,
+		gedan_atemi   = 2 ^ 2,
+		gyakushu      = 2 ^ 3,
+		sadomazo      = 2 ^ 4,
+		phoenix_throw = 2 ^ 5,
+		baigaeshi     = 2 ^ 6,
+		katsu         = 2 ^ 7,
+		nullify       = 2 ^ 8,
+		unknown1      = 2 ^ 8,
+	}
+	local hitbox_grab_types  = {
+		{ name = "none",          label = "",  value = hitbox_grab_bits.none },
+		{ name = "joudan_atemi",  label = "J", value = hitbox_grab_bits.joudan_atemi }, -- 上段当身投げ
+		{ name = "urakumo",       label = "U", value = hitbox_grab_bits.urakumo },    -- 裏雲隠し
+		{ name = "gedan_atemi",   label = "G", value = hitbox_grab_bits.gedan_atemi }, -- 下段当身打ち
+		{ name = "gyakushu",      label = "H", value = hitbox_grab_bits.gyakushu },   -- 必勝逆襲拳
+		{ name = "sadomazo",      label = "S", value = hitbox_grab_bits.sadomazo },   -- サドマゾ
+		{ name = "phoenix_throw", label = "P", value = hitbox_grab_bits.phoenix_throw }, -- フェニックススルー
+		{ name = "baigaeshi",     label = "B", value = hitbox_grab_bits.baigaeshi },  -- 倍返し
+		{ name = "katsu",         label = "K", value = hitbox_grab_bits.katsu },      -- 喝消し
+		{ name = "nullify",       label = "N", value = hitbox_grab_bits.nullify },    -- 弾消し
+		{ name = "unknown1",      label = "?", value = hitbox_grab_bits.unknown1 },   -- 喝消し
+	}
 
--- コマンド入力状態
-local input_state        = db.input_state
+	-- コマンド入力状態
+	local input_state        = db.input_state
 
--- メニュー用変数
-local menu               = {
-	max_row = 13,
-	proc = nil,
-	draw = nil,
-
-	state = nil,
-	prev_state = nil,
-	current = nil,
-	main = nil,
-	training = nil,
-	recording = nil,
-	replay = nil,
-	tra_main = {
+	-- メニュー用変数
+	local menu               = {
+		max_row = 13,
 		proc = nil,
 		draw = nil,
-	},
-	exit = nil,
-	bs_menus = nil,
-	rvs_menus = nil,
-	bar = nil,
-	disp = nil,
-	extra = nil,
-	color = nil,
-	auto = nil,
-	update_pos = nil,
-	reset_pos = nil,
 
-	stage_list = db.stage_list,
-	bgms = db.bgm_list,
+		state = nil,
+		prev_state = nil,
+		current = nil,
+		main = nil,
+		training = nil,
+		recording = nil,
+		replay = nil,
+		tra_main = {
+			proc = nil,
+			draw = nil,
+		},
+		exit = nil,
+		bs_menus = nil,
+		rvs_menus = nil,
+		bar = nil,
+		disp = nil,
+		extra = nil,
+		color = nil,
+		auto = nil,
+		update_pos = nil,
+		reset_pos = nil,
 
-	labels = {
-		fix_scr_tops    = { "OFF" },
-		chars           = db.char_names,
-		stage_list      = {},
-		bgms            = {},
-		off_on          = { "OFF", "ON" },
-		life_range      = { "最大", "赤", "ゼロ", },
-		pow_range       = { "最大", "半分", "ゼロ", },
-		block_frames    = {},
-		attack_harmless = { "OFF" },
-		play_interval   = {},
-		force_y_pos     = { "OFF", 0 },
-	},
+		stage_list = db.stage_list,
+		bgms = db.bgm_list,
 
-	create = function(list, on_a, on_b)
-		local row, col = nil, {}
-		for i, obj in ipairs(list) do
-			if not row and not obj.title then row = i end
-			table.insert(col, #obj == 1 and 0 or 1)
+		labels = {
+			fix_scr_tops    = { "OFF" },
+			chars           = db.char_names,
+			stage_list      = {},
+			bgms            = {},
+			off_on          = { "OFF", "ON" },
+			life_range      = { "最大", "赤", "ゼロ", },
+			pow_range       = { "最大", "半分", "ゼロ", },
+			block_frames    = {},
+			attack_harmless = { "OFF" },
+			play_interval   = {},
+			force_y_pos     = { "OFF", 0 },
+		},
+
+		create = function(list, on_a, on_b)
+			local row, col = nil, {}
+			for i, obj in ipairs(list) do
+				if not row and not obj.title then row = i end
+				table.insert(col, #obj == 1 and 0 or 1)
+			end
+			return { list = list, pos = { offset = 1, row = row or 1, col = col }, on_a = on_a, on_b = on_b or on_a }
+		end,
+
+		to_tra = nil,
+		to_bar = nil,
+		to_disp = nil,
+		to_ex = nil,
+		to_col = nil,
+		to_auto = nil,
+	}
+	for i = -20, 0xF0 do table.insert(menu.labels.fix_scr_tops, "" .. i) end
+	for i = 1, 301 do table.insert(menu.labels.play_interval, i - 1) end
+	for i = 1, 256 do table.insert(menu.labels.force_y_pos, i) end
+	for i = -1, -256, -1 do table.insert(menu.labels.force_y_pos, i) end
+	for _, stg in ipairs(menu.stage_list) do table.insert(menu.labels.stage_list, stg.name) end
+	for _, bgm in ipairs(menu.bgms) do
+		local exists = false
+		for _, name in pairs(menu.labels.bgms) do
+			if name == bgm.name then
+				exists, bgm.name_idx = true, #menu.labels.bgms
+				break
+			end
 		end
-		return { list = list, pos = { offset = 1, row = row or 1, col = col }, on_a = on_a, on_b = on_b or on_a }
-	end,
-
-	to_tra = nil,
-	to_bar = nil,
-	to_disp = nil,
-	to_ex = nil,
-	to_col = nil,
-	to_auto = nil,
-}
-for i = -20, 0xF0 do table.insert(menu.labels.fix_scr_tops, "" .. i) end
-for i = 1, 301 do table.insert(menu.labels.play_interval, i - 1) end
-for i = 1, 256 do table.insert(menu.labels.force_y_pos, i) end
-for i = -1, -256, -1 do table.insert(menu.labels.force_y_pos, i) end
-for _, stg in ipairs(menu.stage_list) do table.insert(menu.labels.stage_list, stg.name) end
-for _, bgm in ipairs(menu.bgms) do
-	local exists = false
-	for _, name in pairs(menu.labels.bgms) do
-		if name == bgm.name then
-			exists, bgm.name_idx = true, #menu.labels.bgms
-			break
+		if not exists then
+			table.insert(menu.labels.bgms, bgm.name)
+			bgm.name_idx = #menu.labels.bgms
 		end
 	end
-	if not exists then
-		table.insert(menu.labels.bgms, bgm.name)
-		bgm.name_idx = #menu.labels.bgms
+	local addr_offset                          = {
+		[0x012C42] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 },
+		[0x012C88] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 },
+		[0x012D4C] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 }, --p1 push
+		[0x012D92] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 }, --p2 push
+		[0x039F2A] = { ["rbff2k"] = 0x0C, ["rbff2h"] = 0x20 }, --special throws
+		[0x017300] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 }, --solid shadows
+	}
+	local addr_clone                           = { ["rbff2k"] = -0x104, ["rbff2h"] = 0x20 }
+	local fix_addr                             = function(addr)
+		local fix1 = addr_clone[emu.romname()] or 0
+		local fix2 = addr_offset[addr] and (addr_offset[addr][emu.romname()] or fix1) or fix1
+		return addr + fix2
 	end
-end
-local addr_offset                          = {
-	[0x012C42] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 },
-	[0x012C88] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 },
-	[0x012D4C] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 }, --p1 push
-	[0x012D92] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 }, --p2 push
-	[0x039F2A] = { ["rbff2k"] = 0x0C, ["rbff2h"] = 0x20 }, --special throws
-	[0x017300] = { ["rbff2k"] = 0x28, ["rbff2h"] = 0x00 }, --solid shadows
-}
-local addr_clone                           = { ["rbff2k"] = -0x104, ["rbff2h"] = 0x20 }
-local fix_addr                             = function(addr)
-	local fix1 = addr_clone[emu.romname()] or 0
-	local fix2 = addr_offset[addr] and (addr_offset[addr][emu.romname()] or fix1) or fix1
-	return addr + fix2
-end
-local mem                                  = {
-	last_time          = 0,     -- 最終読込フレーム(キャッシュ用)
-	_0x10E043          = 0,     -- 手動でポーズしたときに00以外になる
-	stage_base_addr    = 0x100E00,
-	close_far_offset   = 0x02AE08, -- 近距離技と遠距離技判断用のデータの開始位置
-	close_far_offset_d = 0x02DDAA, -- 対ラインの近距離技と遠距離技判断用のデータの開始位置
-	pached             = false, -- Fireflower形式のパッチファイルの読込とメモリへの書込
-	w8                 = function(addr, value) pgm:write_u8(addr, value) end,
-	wd8                = function(addr, value) pgm:write_direct_u8(addr, value) end,
-	w16                = function(addr, value) pgm:write_u16(addr, value) end,
-	wd16               = function(addr, value) pgm:write_direct_u16(addr, value) end,
-	w32                = function(addr, value) pgm:write_u32(addr, value) end,
-	wd32               = function(addr, value) pgm:write_direct_u32(addr, value) end,
-	w8i                = function(addr, value) pgm:write_i8(addr, value) end,
-	w16i               = function(addr, value) pgm:write_i16(addr, value) end,
-	w32i               = function(addr, value) pgm:write_i32(addr, value) end,
-	r8                 = function(addr, value) return pgm:read_u8(addr, value) end,
-	r16                = function(addr, value) return pgm:read_u16(addr, value) end,
-	r32                = function(addr, value) return pgm:read_u32(addr, value) end,
-	r8i                = function(addr, value) return pgm:read_i8(addr, value) end,
-	r16i               = function(addr, value) return pgm:read_i16(addr, value) end,
-	r32i               = function(addr, value) return pgm:read_i32(addr, value) end,
-}
--- プログラム改変
-local mod                                  = {
-	p1_patch     = function()
-		local base = base_path() .. '/patch/rom/'
-		local filename = "char1-p1.pat"
-		local patch = base .. emu.romname() .. '/' .. filename
-		if not ut.is_file(patch) then ut.printf("%s NOT found", patch) end
-		return ut.apply_patch_file(pgm, patch, true)
-	end,
-	aes          = function()
-		mem.wd16(0x10FE32, 0x0000) -- 強制的に家庭用モードに変更
-	end,
-	bugfix       = function()
-		-- H POWERの表示バグを修正する 無駄な3段表示から2段表示へ
-		mem.wd8(0x25DB3, 0x1)
-		-- 簡易超必ONのときにダックのブレイクスパイラルブラザー（BRも）が出るようにする
-		mem.wd16(0x0CACC8, 0xC37C)
-		-- デバッグDIPによる自動アンリミのバグ修正
-		mem.wd8(fix_addr(0x049951), 0x2)
-		mem.wd8(fix_addr(0x049947), 0x9)
-		-- 逆襲拳、サドマゾの初段で相手の状態変更しない（相手が投げられなくなる事象が解消する）
-		-- mem.wd8(0x57F43, 0x00)
-	end,
-	training     = function()
-		mem.wd16(0x1F3BC, 0x4E75) -- 1Pのスコア表示をすぐ抜ける
-		mem.wd16(0x1F550, 0x4E75) -- 2Pのスコア表示をすぐ抜ける
-		mem.wd32(0xD238, 0x4E714E71) -- 家庭用モードでのクレジット消費をNOPにする
-		mem.wd8(0x62E9D, 0x00)  -- 乱入されても常にキャラ選択できる
-		-- 対CPU1体目でボスキャラも選択できるようにする サンキューヒマニトさん
-		mem.wd8(0x633EE, 0x60)  -- CPUのキャラテーブルをプレイヤーと同じにする
-		mem.wd8(0x63440, 0x60)  -- CPUの座標テーブルをプレイヤーと同じにする
-		mem.wd32(0x62FF4, 0x4E714E71) -- PLのカーソル座標修正をNOPにする
-		mem.wd32(0x62FF8, 0x4E714E71) -- PLのカーソル座標修正をNOPにする
-		mem.wd8(0x62EA6, 0x60)  -- CPU選択時にアイコンを減らすのを無効化
-		mem.wd32(0x63004, 0x4E714E71) -- PLのカーソル座標修正をNOPにする
-		-- キャラ選択の時間減らす処理をNOPにする
-		mem.wd16(0x63336, 0x4E71)
-		mem.wd16(0x63338, 0x4E71)
-		--時間の値にアイコン用のオフセット値を改変して空表示にする
-		-- 0632D0: 004B -- キャラ選択の時間の内部タイマー初期値1 デフォは4B=75フレーム
-		-- 063332: 004B -- キャラ選択の時間の内部タイマー初期値2 デフォは4B=75フレーム
-		mem.wd16(0x632DC, 0x0DD7)
-		-- 常にCPUレベルMAX
-		--[[ RAM改変によるCPUレベル MAX（ロムハックのほうが楽）
-		mem.w16(0x10E792, 0x0007) -- maincpu.pw@10E792=0007
-		mem.w16(0x10E796, 0x0007) -- maincpu.pw@10E796=0008
-		]]
-		mem.wd32(fix_addr(0x0500E8), 0x303C0007)
-		mem.wd32(fix_addr(0x050118), 0x3E3C0007)
-		mem.wd32(fix_addr(0x050150), 0x303C0007)
-		mem.wd32(fix_addr(0x0501A8), 0x303C0007)
-		mem.wd32(fix_addr(0x0501CE), 0x303C0007)
-		-- 対戦の双角ステージをビリーステージに変更する（MVSと家庭用共通）
-		mem.wd16(0xF290, 0x0004)
-		-- クレジット消費をNOPにする
-		mem.wd32(0x00D238, 0x4E714E71)
-		mem.wd32(0x00D270, 0x4E714E71)
-		-- 家庭用の初期クレジット9
-		mem.wd16(0x00DD54, 0x0009)
-		mem.wd16(0x00DD5A, 0x0009)
-		mem.wd16(0x00DF70, 0x0009)
-		mem.wd16(0x00DF76, 0x0009)
-		-- 家庭用のクレジット表示をスキップ bp 00C734,1,{PC=c7c8;g}
-		-- CREDITをCREDITSにする判定をスキップ bp C742,1,{PC=C748;g}
-		-- CREDIT表示のルーチンを即RTS
-		mem.wd16(0x00C700, 0x4E75)
-		--[[ 未適用ハック よそで見つけたチート
-		-- https://www.neo-geo.com/forums/index.php?threads/universe-bios-released-good-news-for-mvs-owners.41967/page-7
-		mem.wd8 (10E003, 0x0C)       -- Auto SDM combo (RB2) 0x56D98A
-		mem.wd32(1004D5, 0x46A70500) -- 1P Crazy Yamazaki Return (now he can throw projectile "anytime" with some other bug) 0x55FE5C
-		mem.wd16(1004BF, 0x3CC1)     -- 1P Level 2 Blue Mary 0x55FE46
-		]]
-	end,
-	fast_select  = function()
-		--[[
-		010668: 0C6C FFEF 0022           cmpi.w  #-$11, ($22,A4)                     ; THE CHALLENGER表示のチェック。
-		01066E: 6704                     beq     $10674                              ; braにしてチェックを飛ばすとすぐにキャラ選択にいく
-		010670: 4E75                     rts                                         ; bp 01066E,1,{PC=00F05E;g} にすると乱入の割り込みからラウンド開始前へ
-		010672: 4E71                     nop                                         ; 4EF9 0000 F05E
-		]]
-		mem.wd32(0x10668, 0xC6CFFEF) -- 元の乱入処理
-		mem.wd32(0x1066C, 0x226704) -- 元の乱入処理
-		mem.wd8(0x1066E, 0x60) -- 乱入時にTHE CHALLENGER表示をさせない
-	end,
-	fast_restart = function()
-		mem.wd32(0x10668, 0x4EF90000) -- FIGHT表示から対戦開始(F05E)へ飛ばす
-		mem.wd32(0x1066C, 0xF33A4E71) -- FIGHT表示から対戦開始
-	end,
-	all_bs       = function(enabled)
-		if enabled then
-			-- 全必殺技BS可能
-			for addr = 0x85980, 0x85CE8, 2 do mem.wd16(addr, 0x007F|0x8000) end -- 0パワー消費 無敵7Fフレーム
-			mem.wd32(0x39F24, 0x4E714E71)                              -- 6600 0014 nop化
-		else
-			local addr = 0x85980
-			for _, b16 in ipairs(db.bs_data) do
-				mem.wd16(addr, b16)
-				addr = addr + 2
-			end
-			mem.wd32(0x39F24, 0x66000014)
-		end
-	end,
-	easy_move    = {
-		real_counter = function(mode) -- 1:OFF 2:ジャーマン 3:フェイスロック 4:投げっぱなしジャーマン"
-			if mode > 1 then
-				mem.wd16(0x413EE, 0x1C3C) -- ボタン読み込みをボタンデータ設定に変更
-				mem.wd16(0x413F0, 0x10 * (2 ^ (mode - 2)))
-				mem.wd16(0x413F2, 0x4E71)
-			else
-				mem.wd32(0x413EE, 0x4EB90002)
-				mem.wd16(0x413F2, 0x6396)
-			end
+	local mem                                  = {
+		last_time          = 0,     -- 最終読込フレーム(キャッシュ用)
+		_0x10E043          = 0,     -- 手動でポーズしたときに00以外になる
+		stage_base_addr    = 0x100E00,
+		close_far_offset   = 0x02AE08, -- 近距離技と遠距離技判断用のデータの開始位置
+		close_far_offset_d = 0x02DDAA, -- 対ラインの近距離技と遠距離技判断用のデータの開始位置
+		pached             = false, -- Fireflower形式のパッチファイルの読込とメモリへの書込
+		w8                 = function(addr, value) pgm:write_u8(addr, value) end,
+		wd8                = function(addr, value) pgm:write_direct_u8(addr, value) end,
+		w16                = function(addr, value) pgm:write_u16(addr, value) end,
+		wd16               = function(addr, value) pgm:write_direct_u16(addr, value) end,
+		w32                = function(addr, value) pgm:write_u32(addr, value) end,
+		wd32               = function(addr, value) pgm:write_direct_u32(addr, value) end,
+		w8i                = function(addr, value) pgm:write_i8(addr, value) end,
+		w16i               = function(addr, value) pgm:write_i16(addr, value) end,
+		w32i               = function(addr, value) pgm:write_i32(addr, value) end,
+		r8                 = function(addr, value) return pgm:read_u8(addr, value) end,
+		r16                = function(addr, value) return pgm:read_u16(addr, value) end,
+		r32                = function(addr, value) return pgm:read_u32(addr, value) end,
+		r8i                = function(addr, value) return pgm:read_i8(addr, value) end,
+		r16i               = function(addr, value) return pgm:read_i16(addr, value) end,
+		r32i               = function(addr, value) return pgm:read_i32(addr, value) end,
+	}
+	-- プログラム改変
+	local mod                                  = {
+		p1_patch     = function()
+			local base = base_path() .. '/patch/rom/'
+			local filename = "char1-p1.pat"
+			local patch = base .. emu.romname() .. '/' .. filename
+			if not ut.is_file(patch) then ut.printf("%s NOT found", patch) end
+			return ut.apply_patch_file(pgm, patch, true)
 		end,
-		esaka_check = function(mode)                         -- 詠酒の条件チェックを飛ばす 1:OFF
-			mem.wd32(0x23748, mode == 2 and 0x4E714E71 or 0x6E00FC6A) -- 2:技種類と距離チェック飛ばす
-			mem.wd32(0x236FC, mode == 3 and 0x604E4E71 or 0x6400FCB6) -- 3:距離チェックNOP
+		aes          = function()
+			mem.wd16(0x10FE32, 0x0000) -- 強制的に家庭用モードに変更
 		end,
-		taneuma_finish = function(enabled)                   -- 自動 炎の種馬
-			mem.wd16(0x4094A, enabled and 0x6018 or 0x6704)  -- 連打チェックを飛ばす
+		bugfix       = function()
+			-- H POWERの表示バグを修正する 無駄な3段表示から2段表示へ
+			mem.wd8(0x25DB3, 0x1)
+			-- 簡易超必ONのときにダックのブレイクスパイラルブラザー（BRも）が出るようにする
+			mem.wd16(0x0CACC8, 0xC37C)
+			-- デバッグDIPによる自動アンリミのバグ修正
+			mem.wd8(fix_addr(0x049951), 0x2)
+			mem.wd8(fix_addr(0x049947), 0x9)
+			-- 逆襲拳、サドマゾの初段で相手の状態変更しない（相手が投げられなくなる事象が解消する）
+			-- mem.wd8(0x57F43, 0x00)
 		end,
-		fast_kadenzer = function(enabled)                    -- 必勝！逆襲拳1発キャッチカデンツァ
-			mem.wd16(0x4098C, enabled and 0x7003 or 0x5210)  -- カウンターに3を直接設定する
-		end,
-		katsu_ca = function(enabled)                         -- 自動喝CA
-			mem.wd8(0x3F94C, enabled and 0x60 or 0x67)       -- 入力チェックを飛ばす
-			mem.wd16(0x3F986, enabled and 0x4E71 or 0x6628)  -- 入力チェックをNOPに
-		end,
-		shikkyaku_ca = function(enabled)                     -- 自動飛燕失脚CA
-			mem.wd16(0x3DE48, enabled and 0x4E71 or 0x660E)  -- レバーN入力チェックをNOPに
-			mem.wd16(0x3DE4E, enabled and 0x4E71 or 0x6708)  -- C入力チェックをNOPに
-			mem.wd16(0x3DEA6, enabled and 0x4E71 or 0x6612)  -- 一回転+C入力チェックをNOPに
-		end,
-		kara_ca = function(enabled)                          -- 空振りCAできる
-			mem.wd8(0x2FA5E, enabled and 0x60 or 0x67)       -- テーブルチェックを飛ばす
-			--[[ 未適用
-			-- 逆にFFにしても個別にCA派生を判定している処理があるため単純に全不可にはできない。
-			-- オリジナル（家庭用）
-			-- maincpu.rd@02FA72=00000000
-			-- maincpu.rd@02FA76=00000000
-			-- maincpu.rd@02FA7A=FFFFFFFF
-			-- maincpu.rd@02FA7E=00FFFF00
-			-- maincpu.rw@02FA82=FFFF
-			パッチ（00をFFにするとヒット時限定になる）
-			for i = 0x02FA72, 0x02FA82 do mem.wd8(i, 0x00) end
+		training     = function()
+			mem.wd16(0x1F3BC, 0x4E75) -- 1Pのスコア表示をすぐ抜ける
+			mem.wd16(0x1F550, 0x4E75) -- 2Pのスコア表示をすぐ抜ける
+			mem.wd32(0xD238, 0x4E714E71) -- 家庭用モードでのクレジット消費をNOPにする
+			mem.wd8(0x62E9D, 0x00)  -- 乱入されても常にキャラ選択できる
+			-- 対CPU1体目でボスキャラも選択できるようにする サンキューヒマニトさん
+			mem.wd8(0x633EE, 0x60)  -- CPUのキャラテーブルをプレイヤーと同じにする
+			mem.wd8(0x63440, 0x60)  -- CPUの座標テーブルをプレイヤーと同じにする
+			mem.wd32(0x62FF4, 0x4E714E71) -- PLのカーソル座標修正をNOPにする
+			mem.wd32(0x62FF8, 0x4E714E71) -- PLのカーソル座標修正をNOPにする
+			mem.wd8(0x62EA6, 0x60)  -- CPU選択時にアイコンを減らすのを無効化
+			mem.wd32(0x63004, 0x4E714E71) -- PLのカーソル座標修正をNOPにする
+			-- キャラ選択の時間減らす処理をNOPにする
+			mem.wd16(0x63336, 0x4E71)
+			mem.wd16(0x63338, 0x4E71)
+			--時間の値にアイコン用のオフセット値を改変して空表示にする
+			-- 0632D0: 004B -- キャラ選択の時間の内部タイマー初期値1 デフォは4B=75フレーム
+			-- 063332: 004B -- キャラ選択の時間の内部タイマー初期値2 デフォは4B=75フレーム
+			mem.wd16(0x632DC, 0x0DD7)
+			-- 常にCPUレベルMAX
+			--[[ RAM改変によるCPUレベル MAX（ロムハックのほうが楽）
+			mem.w16(0x10E792, 0x0007) -- maincpu.pw@10E792=0007
+			mem.w16(0x10E796, 0x0007) -- maincpu.pw@10E796=0008
+			]]
+			mem.wd32(fix_addr(0x0500E8), 0x303C0007)
+			mem.wd32(fix_addr(0x050118), 0x3E3C0007)
+			mem.wd32(fix_addr(0x050150), 0x303C0007)
+			mem.wd32(fix_addr(0x0501A8), 0x303C0007)
+			mem.wd32(fix_addr(0x0501CE), 0x303C0007)
+			-- 対戦の双角ステージをビリーステージに変更する（MVSと家庭用共通）
+			mem.wd16(0xF290, 0x0004)
+			-- クレジット消費をNOPにする
+			mem.wd32(0x00D238, 0x4E714E71)
+			mem.wd32(0x00D270, 0x4E714E71)
+			-- 家庭用の初期クレジット9
+			mem.wd16(0x00DD54, 0x0009)
+			mem.wd16(0x00DD5A, 0x0009)
+			mem.wd16(0x00DF70, 0x0009)
+			mem.wd16(0x00DF76, 0x0009)
+			-- 家庭用のクレジット表示をスキップ bp 00C734,1,{PC=c7c8;g}
+			-- CREDITをCREDITSにする判定をスキップ bp C742,1,{PC=C748;g}
+			-- CREDIT表示のルーチンを即RTS
+			mem.wd16(0x00C700, 0x4E75)
+			--[[ 未適用ハック よそで見つけたチート
+			-- https://www.neo-geo.com/forums/index.php?threads/universe-bios-released-good-news-for-mvs-owners.41967/page-7
+			mem.wd8 (10E003, 0x0C)       -- Auto SDM combo (RB2) 0x56D98A
+			mem.wd32(1004D5, 0x46A70500) -- 1P Crazy Yamazaki Return (now he can throw projectile "anytime" with some other bug) 0x55FE5C
+			mem.wd16(1004BF, 0x3CC1)     -- 1P Level 2 Blue Mary 0x55FE46
 			]]
 		end,
-		rapid = function(mode)
-			-- 連キャン、必キャン可否テーブルに連キャンデータを設定する。C0が必、D0で連。
-			for i = 0x085138, 0x08591F do mem.wd8(i, 0xD0) end
+		fast_select  = function()
+			--[[
+			010668: 0C6C FFEF 0022           cmpi.w  #-$11, ($22,A4)                     ; THE CHALLENGER表示のチェック。
+			01066E: 6704                     beq     $10674                              ; braにしてチェックを飛ばすとすぐにキャラ選択にいく
+			010670: 4E75                     rts                                         ; bp 01066E,1,{PC=00F05E;g} にすると乱入の割り込みからラウンド開始前へ
+			010672: 4E71                     nop                                         ; 4EF9 0000 F05E
+			]]
+			mem.wd32(0x10668, 0xC6CFFEF) -- 元の乱入処理
+			mem.wd32(0x1066C, 0x226704) -- 元の乱入処理
+			mem.wd8(0x1066E, 0x60) -- 乱入時にTHE CHALLENGER表示をさせない
 		end,
-		triple_ecstasy = function(enabled)    -- 自動マリートリプルエクスタシー
-			mem.wd8(0x41D00, enabled and 0x60 or 0x66) -- デバッグDIPチェックを飛ばす
+		fast_restart = function()
+			mem.wd32(0x10668, 0x4EF90000) -- FIGHT表示から対戦開始(F05E)へ飛ばす
+			mem.wd32(0x1066C, 0xF33A4E71) -- FIGHT表示から対戦開始
 		end,
-	},
-	camerawork   = function(enabled)
-		if enabled then
-			-- 演出のためのカメラワークテーブルを戻す
-			for addr = 0x13C60, 0x13CBF, 4 do mem.wd32(addr, 0x00000000) end
-			mem.wd32(0x13C6C, 0x00030000)
-			mem.wd32(0x13C70, 0x000A0000)
-			mem.wd32(0x13C7C, 0x000A0000)
-			mem.wd32(0x13C80, 0x000A0000)
-			mem.wd32(0x13C84, 0x00010000)
-			mem.wd32(0x13C88, 0x00020000)
-			mem.wd32(0x13C98, 0x00300000)
-			mem.wd32(0x13C9C, 0x00020000)
-			mem.wd32(0x13CA0, 0x00040000)
-			mem.wd32(0x13CBC, 0x00020000)
+		all_bs       = function(enabled)
+			if enabled then
+				-- 全必殺技BS可能
+				for addr = 0x85980, 0x85CE8, 2 do mem.wd16(addr, 0x007F|0x8000) end -- 0パワー消費 無敵7Fフレーム
+				mem.wd32(0x39F24, 0x4E714E71)                              -- 6600 0014 nop化
+			else
+				local addr = 0x85980
+				for _, b16 in ipairs(db.bs_data) do
+					mem.wd16(addr, b16)
+					addr = addr + 2
+				end
+				mem.wd32(0x39F24, 0x66000014)
+			end
+		end,
+		easy_move    = {
+			real_counter = function(mode) -- 1:OFF 2:ジャーマン 3:フェイスロック 4:投げっぱなしジャーマン"
+				if mode > 1 then
+					mem.wd16(0x413EE, 0x1C3C) -- ボタン読み込みをボタンデータ設定に変更
+					mem.wd16(0x413F0, 0x10 * (2 ^ (mode - 2)))
+					mem.wd16(0x413F2, 0x4E71)
+				else
+					mem.wd32(0x413EE, 0x4EB90002)
+					mem.wd16(0x413F2, 0x6396)
+				end
+			end,
+			esaka_check = function(mode)                         -- 詠酒の条件チェックを飛ばす 1:OFF
+				mem.wd32(0x23748, mode == 2 and 0x4E714E71 or 0x6E00FC6A) -- 2:技種類と距離チェック飛ばす
+				mem.wd32(0x236FC, mode == 3 and 0x604E4E71 or 0x6400FCB6) -- 3:距離チェックNOP
+			end,
+			taneuma_finish = function(enabled)                   -- 自動 炎の種馬
+				mem.wd16(0x4094A, enabled and 0x6018 or 0x6704)  -- 連打チェックを飛ばす
+			end,
+			fast_kadenzer = function(enabled)                    -- 必勝！逆襲拳1発キャッチカデンツァ
+				mem.wd16(0x4098C, enabled and 0x7003 or 0x5210)  -- カウンターに3を直接設定する
+			end,
+			katsu_ca = function(enabled)                         -- 自動喝CA
+				mem.wd8(0x3F94C, enabled and 0x60 or 0x67)       -- 入力チェックを飛ばす
+				mem.wd16(0x3F986, enabled and 0x4E71 or 0x6628)  -- 入力チェックをNOPに
+			end,
+			shikkyaku_ca = function(enabled)                     -- 自動飛燕失脚CA
+				mem.wd16(0x3DE48, enabled and 0x4E71 or 0x660E)  -- レバーN入力チェックをNOPに
+				mem.wd16(0x3DE4E, enabled and 0x4E71 or 0x6708)  -- C入力チェックをNOPに
+				mem.wd16(0x3DEA6, enabled and 0x4E71 or 0x6612)  -- 一回転+C入力チェックをNOPに
+			end,
+			kara_ca = function(enabled)                          -- 空振りCAできる
+				mem.wd8(0x2FA5E, enabled and 0x60 or 0x67)       -- テーブルチェックを飛ばす
+				--[[ 未適用
+				-- 逆にFFにしても個別にCA派生を判定している処理があるため単純に全不可にはできない。
+				-- オリジナル（家庭用）
+				-- maincpu.rd@02FA72=00000000
+				-- maincpu.rd@02FA76=00000000
+				-- maincpu.rd@02FA7A=FFFFFFFF
+				-- maincpu.rd@02FA7E=00FFFF00
+				-- maincpu.rw@02FA82=FFFF
+				パッチ（00をFFにするとヒット時限定になる）
+				for i = 0x02FA72, 0x02FA82 do mem.wd8(i, 0x00) end
+				]]
+			end,
+			rapid = function(mode)
+				-- 連キャン、必キャン可否テーブルに連キャンデータを設定する。C0が必、D0で連。
+				for i = 0x085138, 0x08591F do mem.wd8(i, 0xD0) end
+			end,
+			triple_ecstasy = function(enabled)    -- 自動マリートリプルエクスタシー
+				mem.wd8(0x41D00, enabled and 0x60 or 0x66) -- デバッグDIPチェックを飛ばす
+			end,
+		},
+		camerawork   = function(enabled)
+			if enabled then
+				-- 演出のためのカメラワークテーブルを戻す
+				for addr = 0x13C60, 0x13CBF, 4 do mem.wd32(addr, 0x00000000) end
+				mem.wd32(0x13C6C, 0x00030000)
+				mem.wd32(0x13C70, 0x000A0000)
+				mem.wd32(0x13C7C, 0x000A0000)
+				mem.wd32(0x13C80, 0x000A0000)
+				mem.wd32(0x13C84, 0x00010000)
+				mem.wd32(0x13C88, 0x00020000)
+				mem.wd32(0x13C98, 0x00300000)
+				mem.wd32(0x13C9C, 0x00020000)
+				mem.wd32(0x13CA0, 0x00040000)
+				mem.wd32(0x13CBC, 0x00020000)
+			else
+				-- 演出のためのカメラワークテーブルをすべてFにしてキャラを追従可能にする
+				for addr = 0x13C60, 0x13CBF, 4 do mem.wd32(addr, 0xFFFFFFFF) end
+			end
+			-- 画面の上限設定を飛ばす
+			mem.wd8(0x13AF0, enabled and 0x67 or 0x60) -- 013AF0: 6700 0036 beq $13b28
+			mem.wd8(0x13B9A, enabled and 0x6A or 0x60) -- 013B9A: 6A04      bpl $13ba0
+		end,
+	}
+	local in_match                             = false -- 対戦画面のときtrue
+	local in_player_select                     = false -- プレイヤー選択画面のときtrue
+	local p_space                              = 0     -- 1Pと2Pの間隔
+	local prev_space                           = 0     -- 1Pと2Pの間隔(前フレーム)
+
+	local screen                               = {
+		offset_x = 0x20,
+		offset_z = 0x24,
+		offset_y = 0x28,
+		left     = 0,
+		top      = 0,
+	}
+	local hide_options                         = {
+		none = 0,
+		effect = 2 ^ 0,   -- ヒットマークなど
+		shadow1 = 2 ^ 1,  -- 影
+		shadow2 = 2 ^ 2,  -- 双角ステージの反射→影
+		meters = 2 ^ 3,   -- ゲージ
+		background = 2 ^ 4, -- 背景
+		p_chan = 2 ^ 5,   -- Pちゃん
+		p1_phantasm = 2 ^ 6, -- 1P残像
+		p1_effect = 2 ^ 7, -- 1Pエフェクト
+		p1_char = 2 ^ 8,  -- 1Pキャラ
+		p2_phantasm = 2 ^ 9, -- 2P残像
+		p2_effect = 2 ^ 10, -- 2Pエフェクト
+		p2_char = 2 ^ 11, -- 1Pキャラ
+	}
+	local global                               = {
+		frame_number         = 0,
+		lag_frame            = false,
+		both_act_neutral     = false,
+		old_both_act_neutral = false,
+		skip_frame           = false,
+		fix_scr_top          = 1,
+
+		-- 当たり判定用
+		axis_size            = 12,
+		axis_size2           = 5,
+		throwbox_height      = 200, --default for ground throws
+		disp_bg              = true,
+		fix_pos              = false,
+		no_bars              = false,
+		sync_pos_x           = 1,  -- 1: OFF, 2:1Pと同期, 3:2Pと同期
+
+		disp_pos             = true, -- 1P 2P 距離表示
+		hide                 = hide_options.none,
+		disp_frame           = true, -- フレームメーター表示 1:OFF 2:ON
+		disp_input           = 1,  -- コマンド入力状態表示 1:OFF 2:1P 3:2P
+		disp_normal_frames   = 2,  -- 通常動作フレーム非表示 1:OFF 2:ON
+		pause_hit            = 1,  -- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
+		pause_hitbox         = 1,  -- 判定発生時にポーズ 1:OFF, 2:投げ, 3:攻撃, 4:変化時
+		pause                = false,
+		replay_stop_on_dmg   = false, -- ダメージでリプレイ中段
+
+		next_stg3            = 0,
+
+		-- リバーサルとブレイクショットの設定
+		dummy_bs_cnt         = 1, -- ブレイクショットのカウンタ
+		dummy_rvs_cnt        = 1, -- リバーサルのカウンタ
+
+		auto_input           = {
+			otg_throw     = false, -- ダウン投げ              2
+			otg_attack    = false, -- ダウン攻撃              3
+			combo_throw   = false, -- 通常投げの派生技        4
+			rave          = 1, -- デッドリーレイブ        5
+			desire        = 1, -- アンリミテッドデザイア  6
+			drill         = 1, -- ドリル                  7
+			pairon        = 1, -- 超白龍                  8
+			real_counter  = 1, -- M.リアルカウンター      9
+			auto_3ecst    = false, -- M.トリプルエクスタシー 10
+			taneuma       = false, -- 炎の種馬               11
+			katsu_ca      = false, -- 喝CA                   12
+			sikkyaku_ca   = false, -- 飛燕失脚CA             13
+			-- 入力設定                                     14
+			esaka_check   = false, -- 詠酒距離チェック       15
+			fast_kadenzer = false, -- 必勝！逆襲拳           16
+			kara_ca       = false, -- 空振りCA               17
+		},
+
+		frzc                 = 1,
+		frz                  = { 0x1, 0x0 }, -- DIPによる停止操作用の値とカウンタ
+
+		dummy_mode           = 1,
+		old_dummy_mode       = 1,
+		rec_main             = nil,
+
+		next_block_grace     = 0, -- 1ガードでの持続フレーム数
+		pow_mode             = 2, -- POWモード　1:自動回復 2:固定 3:通常動作
+		disp_meters          = true,
+		repeat_interval      = 0,
+		await_neutral        = false,
+		replay_fix_pos       = 1, -- 開始間合い固定 1:OFF 2:位置記憶 3:1Pと2P 4:1P 5:2P
+		replay_reset         = 2, -- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
+		debug_stop           = 0, -- カウンタ
+		damaged_move         = 1,
+		all_bs               = false,
+		disp_replay          = true, -- レコードリプレイガイド表示
+		save_snapshot        = 1, -- 技画像保存 1:OFF 2:新規 3:上書き
+		key_hists            = 25,
+
+		rvslog               = false,
+	}
+	mem.rg                                     = function(id, mask) return (mask == nil) and cpu.state[id].value or (cpu.state[id].value & mask) end
+	mem.pc                                     = function() return cpu.state["CURPC"].value end
+	mem.wp_cnt, mem.rp_cnt                     = {}, {} -- 負荷確認のための呼び出す回数カウンター
+	mem.wp                                     = function(addr1, addr2, name, cb) return pgm:install_write_tap(addr1, addr2, name, cb) end
+	mem.rp                                     = function(addr1, addr2, name, cb) return pgm:install_read_tap(addr1, addr2, name, cb) end
+	mem.wp8                                    = function(addr, cb, filter)
+		local num = global.holder.countup()
+		local name = string.format("wp8_%x_%s", addr, num)
+		if addr % 2 == 0 then
+			global.holder.taps[name] = mem.wp(addr, addr + 1, name,
+				function(offset, data, mask)
+					mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
+					if filter and filter[mem.pc()] ~= true then return data end
+					local ret = {}
+					if mask > 0xFF then
+						cb((data & mask) >> 8, ret)
+						if ret.value then
+							--ut.printf("1 %x %x %x %x", data, mask, ret.value, (ret.value << 8) & mask)
+							return (ret.value << 8) & mask
+						end
+					elseif offset == (addr + 1) then
+						cb(data & mask, ret)
+						if ret.value then
+							--ut.printf("2 %x %x %x %x", data, mask, ret.value, ret.value & mask)
+							return ret.value & mask
+						end
+					end
+					return data
+				end)
 		else
-			-- 演出のためのカメラワークテーブルをすべてFにしてキャラを追従可能にする
-			for addr = 0x13C60, 0x13CBF, 4 do mem.wd32(addr, 0xFFFFFFFF) end
+			global.holder.taps[name] = mem.wp(addr - 1, addr, name,
+				function(offset, data, mask)
+					mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
+					if filter and filter[mem.pc()] ~= true then return data end
+					local ret = {}
+					if mask == 0xFF or mask == 0xFFFF then
+						cb(0xFF & data, ret)
+						if ret.value then
+							if mask == 0xFFFF then
+								--ut.printf("3 %x %x %x %x", data, mask, ret.value, (ret.value & 0xFF) | (0xFF00 & data))
+								return (ret.value & 0xFF) | (0xFF00 & data)
+							else
+								--ut.printf("4 %x %x %x %x", data, mask, ret.value, (ret.value & 0xFF) | (0xFF00 & data))
+								return (ret.value & 0xFF) | (0xFF00 & data)
+							end
+						end
+					end
+					return data
+				end)
 		end
-		-- 画面の上限設定を飛ばす
-		mem.wd8(0x13AF0, enabled and 0x67 or 0x60) -- 013AF0: 6700 0036 beq $13b28
-		mem.wd8(0x13B9A, enabled and 0x6A or 0x60) -- 013B9A: 6A04      bpl $13ba0
-	end,
-}
-local in_match                             = false -- 対戦画面のときtrue
-local in_player_select                     = false -- プレイヤー選択画面のときtrue
-local p_space                              = 0     -- 1Pと2Pの間隔
-local prev_space                           = 0     -- 1Pと2Pの間隔(前フレーム)
-
-local screen                               = {
-	offset_x = 0x20,
-	offset_z = 0x24,
-	offset_y = 0x28,
-	left     = 0,
-	top      = 0,
-}
-local hide_options                         = {
-	none = 0,
-	effect = 2 ^ 0,   -- ヒットマークなど
-	shadow1 = 2 ^ 1,  -- 影
-	shadow2 = 2 ^ 2,  -- 双角ステージの反射→影
-	meters = 2 ^ 3,   -- ゲージ
-	background = 2 ^ 4, -- 背景
-	p_chan = 2 ^ 5,   -- Pちゃん
-	p1_phantasm = 2 ^ 6, -- 1P残像
-	p1_effect = 2 ^ 7, -- 1Pエフェクト
-	p1_char = 2 ^ 8,  -- 1Pキャラ
-	p2_phantasm = 2 ^ 9, -- 2P残像
-	p2_effect = 2 ^ 10, -- 2Pエフェクト
-	p2_char = 2 ^ 11, -- 1Pキャラ
-}
-local global                               = {
-	frame_number         = 0,
-	lag_frame            = false,
-	both_act_neutral     = false,
-	old_both_act_neutral = false,
-	skip_frame           = false,
-	fix_scr_top          = 1,
-
-	-- 当たり判定用
-	axis_size            = 12,
-	axis_size2           = 5,
-	throwbox_height      = 200, --default for ground throws
-	disp_bg              = true,
-	fix_pos              = false,
-	no_bars              = false,
-	sync_pos_x           = 1,  -- 1: OFF, 2:1Pと同期, 3:2Pと同期
-
-	disp_pos             = true, -- 1P 2P 距離表示
-	hide                 = hide_options.none,
-	disp_frame           = true, -- フレームメーター表示 1:OFF 2:ON
-	disp_input           = 1,  -- コマンド入力状態表示 1:OFF 2:1P 3:2P
-	disp_normal_frames   = 2,  -- 通常動作フレーム非表示 1:OFF 2:ON
-	pause_hit            = 1,  -- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
-	pause_hitbox         = 1,  -- 判定発生時にポーズ 1:OFF, 2:投げ, 3:攻撃, 4:変化時
-	pause                = false,
-	replay_stop_on_dmg   = false, -- ダメージでリプレイ中段
-
-	next_stg3            = 0,
-
-	-- リバーサルとブレイクショットの設定
-	dummy_bs_cnt         = 1, -- ブレイクショットのカウンタ
-	dummy_rvs_cnt        = 1, -- リバーサルのカウンタ
-
-	auto_input           = {
-		otg_throw     = false, -- ダウン投げ              2
-		otg_attack    = false, -- ダウン攻撃              3
-		combo_throw   = false, -- 通常投げの派生技        4
-		rave          = 1, -- デッドリーレイブ        5
-		desire        = 1, -- アンリミテッドデザイア  6
-		drill         = 1, -- ドリル                  7
-		pairon        = 1, -- 超白龍                  8
-		real_counter  = 1, -- M.リアルカウンター      9
-		auto_3ecst    = false, -- M.トリプルエクスタシー 10
-		taneuma       = false, -- 炎の種馬               11
-		katsu_ca      = false, -- 喝CA                   12
-		sikkyaku_ca   = false, -- 飛燕失脚CA             13
-		-- 入力設定                                     14
-		esaka_check   = false, -- 詠酒距離チェック       15
-		fast_kadenzer = false, -- 必勝！逆襲拳           16
-		kara_ca       = false, -- 空振りCA               17
-	},
-
-	frzc                 = 1,
-	frz                  = { 0x1, 0x0 }, -- DIPによる停止操作用の値とカウンタ
-
-	dummy_mode           = 1,
-	old_dummy_mode       = 1,
-	rec_main             = nil,
-
-	next_block_grace     = 0, -- 1ガードでの持続フレーム数
-	pow_mode             = 2, -- POWモード　1:自動回復 2:固定 3:通常動作
-	disp_meters          = true,
-	repeat_interval      = 0,
-	await_neutral        = false,
-	replay_fix_pos       = 1, -- 開始間合い固定 1:OFF 2:位置記憶 3:1Pと2P 4:1P 5:2P
-	replay_reset         = 2, -- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
-	debug_stop           = 0, -- カウンタ
-	damaged_move         = 1,
-	all_bs               = false,
-	disp_replay          = true, -- レコードリプレイガイド表示
-	save_snapshot        = 1, -- 技画像保存 1:OFF 2:新規 3:上書き
-	key_hists            = 25,
-
-	rvslog               = false,
-}
-mem.rg                                     = function(id, mask) return (mask == nil) and cpu.state[id].value or (cpu.state[id].value & mask) end
-mem.pc                                     = function() return cpu.state["CURPC"].value end
-mem.wp_cnt, mem.rp_cnt                     = {}, {} -- 負荷確認のための呼び出す回数カウンター
-mem.wp                                     = function(addr1, addr2, name, cb) return pgm:install_write_tap(addr1, addr2, name, cb) end
-mem.rp                                     = function(addr1, addr2, name, cb) return pgm:install_read_tap(addr1, addr2, name, cb) end
-mem.wp8                                    = function(addr, cb, filter)
-	local num = global.holder.countup()
-	local name = string.format("wp8_%x_%s", addr, num)
-	if addr % 2 == 0 then
+		cb(mem.r8(addr), {})
+		return global.holder.taps[name]
+	end
+	mem.wp16                                   = function(addr, cb, filter)
+		local num = global.holder.countup()
+		local name = string.format("wp16_%x_%s", addr, num)
 		global.holder.taps[name] = mem.wp(addr, addr + 1, name,
 			function(offset, data, mask)
+				local ret = {}
 				mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
 				if filter and filter[mem.pc()] ~= true then return data end
-				local ret = {}
-				if mask > 0xFF then
-					cb((data & mask) >> 8, ret)
-					if ret.value then
-						--ut.printf("1 %x %x %x %x", data, mask, ret.value, (ret.value << 8) & mask)
-						return (ret.value << 8) & mask
-					end
-				elseif offset == (addr + 1) then
+				if mask == 0xFFFF then
 					cb(data & mask, ret)
-					if ret.value then
-						--ut.printf("2 %x %x %x %x", data, mask, ret.value, ret.value & mask)
-						return ret.value & mask
-					end
+					--ut.printf("wp16 %x %x %x %x",addr, data, mask, ret.value or 0)
+					return ret.value or data
 				end
-				return data
-			end)
-	else
-		global.holder.taps[name] = mem.wp(addr - 1, addr, name,
-			function(offset, data, mask)
-				mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
-				if filter and filter[mem.pc()] ~= true then return data end
-				local ret = {}
-				if mask == 0xFF or mask == 0xFFFF then
-					cb(0xFF & data, ret)
-					if ret.value then
-						if mask == 0xFFFF then
-							--ut.printf("3 %x %x %x %x", data, mask, ret.value, (ret.value & 0xFF) | (0xFF00 & data))
-							return (ret.value & 0xFF) | (0xFF00 & data)
-						else
-							--ut.printf("4 %x %x %x %x", data, mask, ret.value, (ret.value & 0xFF) | (0xFF00 & data))
-							return (ret.value & 0xFF) | (0xFF00 & data)
-						end
-					end
-				end
-				return data
-			end)
-	end
-	cb(mem.r8(addr), {})
-	return global.holder.taps[name]
-end
-mem.wp16                                   = function(addr, cb, filter)
-	local num = global.holder.countup()
-	local name = string.format("wp16_%x_%s", addr, num)
-	global.holder.taps[name] = mem.wp(addr, addr + 1, name,
-		function(offset, data, mask)
-			local ret = {}
-			mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
-			if filter and filter[mem.pc()] ~= true then return data end
-			if mask == 0xFFFF then
-				cb(data & mask, ret)
+				local data2, mask2, mask3, data3
+				local prev = mem.r32(addr)
+				if mask == 0xFF00 or mask == 0xFF then mask2 = mask << 16 end
+				mask3 = 0xFFFF ~ mask2
+				data2 = data & mask
+				data3 = (prev & mask3) | data2
+				cb(data3, ret)
 				--ut.printf("wp16 %x %x %x %x",addr, data, mask, ret.value or 0)
 				return ret.value or data
-			end
-			local data2, mask2, mask3, data3
-			local prev = mem.r32(addr)
-			if mask == 0xFF00 or mask == 0xFF then mask2 = mask << 16 end
-			mask3 = 0xFFFF ~ mask2
-			data2 = data & mask
-			data3 = (prev & mask3) | data2
-			cb(data3, ret)
-			--ut.printf("wp16 %x %x %x %x",addr, data, mask, ret.value or 0)
-			return ret.value or data
-		end)
-	cb(mem.r16(addr), {})
-	--printf("register wp %s %x", name, addr)
-	return global.holder.taps[name]
-end
-mem.wp32                                   = function(addr, cb, filter)
-	local num = global.holder.countup()
-	local name = string.format("wp32_%x_%s", addr, num)
-	global.holder.taps[name] = mem.wp(addr, addr + 3, name,
-		function(offset, data, mask)
-			mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
-			if filter and filter[mem.pc()] ~= true then return data end
-			local ret = {}
-			--ut.printf("wp32-1 %x %x %x %x %x", addr, offset, data, data, mask, ret.value or 0)
-			local prev = mem.r32(addr)
-			local data2, mask2, mask3, data3
-			if offset == addr then
-				mask2 = mask << 16
-				data2 = (data << 16) & mask2
-			else
-				mask2 = 0x0000FFFF & mask
-				data2 = data & mask2
-			end
-			mask3 = 0xFFFFFFFF ~ mask2
-			data3 = (prev & mask3) | data2
-			cb(data3, ret)
-			if ret.value then ret.value = addr == offset and (ret.value >> 0x10) or (ret.value & 0xFFFF) end
-			--ut.printf("wp32-3 %x %x %x %x %x %x", addr, offset, data, data3, mask, ret.value or 0)
-			return ret.value or data
-		end)
-	cb(mem.r32(addr), {})
-	return global.holder.taps[name]
-end
-mem.rp8                                    = function(addr, cb, filter)
-	local num = global.holder.countup()
-	local name = string.format("rp8_%x_%s", addr, num)
-	if addr % 2 == 0 then
-		global.holder.taps[name] = mem.rp(addr, addr + 1, name,
-			function(offset, data, mask)
-				mem.rp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
-				if filter and filter[mem.pc()] ~= true then return data end
-				local ret = {}
-				if mask > 0xFF then
-					cb((data & mask) >> 8, ret)
-					if ret.value then
-						--ut.printf("1 %x %x %x %x", data, mask, ret.value, (ret.value << 8) & mask)
-						return (ret.value << 8) & mask
-					end
-				elseif offset == (addr + 1) then
-					cb(data & mask, ret)
-					if ret.value then
-						--ut.printf("2 %x %x %x %x", data, mask, ret.value, ret.value & mask)
-						return ret.value & mask
-					end
-				end
-				return data
 			end)
-	else
-		global.holder.taps[name] = mem.rp(addr - 1, addr, name,
+		cb(mem.r16(addr), {})
+		--printf("register wp %s %x", name, addr)
+		return global.holder.taps[name]
+	end
+	mem.wp32                                   = function(addr, cb, filter)
+		local num = global.holder.countup()
+		local name = string.format("wp32_%x_%s", addr, num)
+		global.holder.taps[name] = mem.wp(addr, addr + 3, name,
 			function(offset, data, mask)
-				mem.rp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
+				mem.wp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
 				if filter and filter[mem.pc()] ~= true then return data end
 				local ret = {}
-				if mask == 0xFF or mask == 0xFFFF then
-					cb(0xFF & data, ret)
-					if ret.value then
-						if mask == 0xFFFF then
-							--ut.printf("3 %x %x %x %x", data, mask, ret.value, (ret.value & 0xFF) | (0xFF00 & data))
-							return (ret.value & 0xFF) | (0xFF00 & data)
-						else
-							--ut.printf("4 %x %x %x %x", data, mask, ret.value, (ret.value & 0xFF) | (0xFF00 & data))
-							return (ret.value & 0xFF) | (0xFF00 & data)
+				--ut.printf("wp32-1 %x %x %x %x %x", addr, offset, data, data, mask, ret.value or 0)
+				local prev = mem.r32(addr)
+				local data2, mask2, mask3, data3
+				if offset == addr then
+					mask2 = mask << 16
+					data2 = (data << 16) & mask2
+				else
+					mask2 = 0x0000FFFF & mask
+					data2 = data & mask2
+				end
+				mask3 = 0xFFFFFFFF ~ mask2
+				data3 = (prev & mask3) | data2
+				cb(data3, ret)
+				if ret.value then ret.value = addr == offset and (ret.value >> 0x10) or (ret.value & 0xFFFF) end
+				--ut.printf("wp32-3 %x %x %x %x %x %x", addr, offset, data, data3, mask, ret.value or 0)
+				return ret.value or data
+			end)
+		cb(mem.r32(addr), {})
+		return global.holder.taps[name]
+	end
+	mem.rp8                                    = function(addr, cb, filter)
+		local num = global.holder.countup()
+		local name = string.format("rp8_%x_%s", addr, num)
+		if addr % 2 == 0 then
+			global.holder.taps[name] = mem.rp(addr, addr + 1, name,
+				function(offset, data, mask)
+					mem.rp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
+					if filter and filter[mem.pc()] ~= true then return data end
+					local ret = {}
+					if mask > 0xFF then
+						cb((data & mask) >> 8, ret)
+						if ret.value then
+							--ut.printf("1 %x %x %x %x", data, mask, ret.value, (ret.value << 8) & mask)
+							return (ret.value << 8) & mask
+						end
+					elseif offset == (addr + 1) then
+						cb(data & mask, ret)
+						if ret.value then
+							--ut.printf("2 %x %x %x %x", data, mask, ret.value, ret.value & mask)
+							return ret.value & mask
 						end
 					end
-				end
+					return data
+				end)
+		else
+			global.holder.taps[name] = mem.rp(addr - 1, addr, name,
+				function(offset, data, mask)
+					mem.rp_cnt[addr] = (mem.wp_cnt[addr] or 0) + 1
+					if filter and filter[mem.pc()] ~= true then return data end
+					local ret = {}
+					if mask == 0xFF or mask == 0xFFFF then
+						cb(0xFF & data, ret)
+						if ret.value then
+							if mask == 0xFFFF then
+								--ut.printf("3 %x %x %x %x", data, mask, ret.value, (ret.value & 0xFF) | (0xFF00 & data))
+								return (ret.value & 0xFF) | (0xFF00 & data)
+							else
+								--ut.printf("4 %x %x %x %x", data, mask, ret.value, (ret.value & 0xFF) | (0xFF00 & data))
+								return (ret.value & 0xFF) | (0xFF00 & data)
+							end
+						end
+					end
+					return data
+				end)
+		end
+		cb(mem.r8(addr), {})
+		return global.holder.taps[name]
+	end
+	mem.rp16                                   = function(addr, cb, filter)
+		local num = global.holder.countup()
+		local name = string.format("rp16_%x_%s", addr, num)
+		global.holder.taps[name] = mem.rp(addr, addr + 1, name,
+			function(offset, data, mask)
+				mem.rp_cnt[addr] = (mem.rp_cnt[addr] or 0) + 1
+				if filter and filter[mem.pc()] ~= true then return data end
+				local ret = {}
+				if offset == addr then cb(data, ret) end
+				return ret.value or data
+			end)
+		cb(mem.r16(addr), {})
+		return global.holder.taps[name]
+	end
+	mem.rp32                                   = function(addr, cb, filter)
+		local num = global.holder.countup()
+		local name = string.format("rp32_%x_%s", addr, num)
+		global.holder.taps[name] = mem.rp(addr, addr + 3, name,
+			function(offset, data, mask)
+				mem.rp_cnt[addr] = (mem.rp_cnt[addr] or 0) + 1
+				if filter and filter[mem.pc()] ~= true then return data end
+				if offset == addr then cb(mem.r32(addr)) end
 				return data
 			end)
+		cb(mem.r32(addr))
+		return global.holder.taps[name]
 	end
-	cb(mem.r8(addr), {})
-	return global.holder.taps[name]
-end
-mem.rp16                                   = function(addr, cb, filter)
-	local num = global.holder.countup()
-	local name = string.format("rp16_%x_%s", addr, num)
-	global.holder.taps[name] = mem.rp(addr, addr + 1, name,
-		function(offset, data, mask)
-			mem.rp_cnt[addr] = (mem.rp_cnt[addr] or 0) + 1
-			if filter and filter[mem.pc()] ~= true then return data end
-			local ret = {}
-			if offset == addr then cb(data, ret) end
-			return ret.value or data
-		end)
-	cb(mem.r16(addr), {})
-	return global.holder.taps[name]
-end
-mem.rp32                                   = function(addr, cb, filter)
-	local num = global.holder.countup()
-	local name = string.format("rp32_%x_%s", addr, num)
-	global.holder.taps[name] = mem.rp(addr, addr + 3, name,
-		function(offset, data, mask)
-			mem.rp_cnt[addr] = (mem.rp_cnt[addr] or 0) + 1
-			if filter and filter[mem.pc()] ~= true then return data end
-			if offset == addr then cb(mem.r32(addr)) end
-			return data
-		end)
-	cb(mem.r32(addr))
-	return global.holder.taps[name]
-end
--- DIPスイッチ
-local dip_config                           = {
-	show_range    = false,
-	show_hitbox   = false,
-	infinity_life = false,
-	easy_super    = false,
-	semiauto_p    = false,
-	infinity_time = true,
-	fix_time      = 0x99,
-	stage_select  = false,
-	alfred        = false,
-	watch_states  = false,
-	cpu_cant_move = false,
-	other_speed   = false,
-}
--- デバッグDIPのセット
-local set_dip_config                       = function()
-	local dip1, dip2, dip3, dip4 = 0x00, 0x00, 0x00, 0x00                   -- デバッグDIP
-	dip1 = dip1 | (in_match and dip_config.show_range and 0x40 or 0)        --cheat "DIP= 1-7 色々な判定表示"
-	dip1 = dip1 | (in_match and dip_config.show_hitbox and 0x80 or 0)       --cheat "DIP= 1-8 当たり判定表示"
-	dip1 = dip1 | (in_match and dip_config.infinity_life and 0x02 or 0)     --cheat "DIP= 1-2 Infinite Energy"
-	dip2 = dip2 | (in_match and dip_config.easy_super and 0x01 or 0)        --Cheat "DIP 2-1 Eeasy Super"
-	dip4 = dip4 | (in_match and dip_config.semiauto_p and 0x08 or 0)        -- DIP4-4
-	dip2 = dip2 | (dip_config.infinity_time and 0x18 or 0)                  -- 2-4 PAUSEを消す + cheat "DIP= 2-5 Disable Time Over"
-	mem.w8(0x10E024, dip_config.infinity_time and 0x03 or 0x02)             -- 家庭用オプション 1:45 2:60 3:90 4:infinity
-	mem.w8(0x107C28, dip_config.infinity_time and 0xAA or dip_config.fix_time) --cheat "Infinite Time"
-	dip1 = dip1 | (dip_config.stage_select and 0x04 or 0)                   --cheat "DIP= 1-3 Stage Select Mode"
-	dip2 = dip2 | (in_player_select and dip_config.alfred and 0x80 or 0)    --cheat "DIP= 2-8 Alfred Code (B+C >A)"
-	dip2 = dip2 | (in_match and dip_config.watch_states and 0x20 or 0)      --cheat "DIP= 2-6 Watch States"
-	dip3 = dip3 | (in_match and dip_config.cpu_cant_move and 0x01 or 0)     --cheat "DIP= 3-1 CPU Can't Move"
-	dip3 = dip3 | (in_match and dip_config.other_speed and 0x10 or 0)       --cheat "DIP= 3-5 移動速度変更"
-	for i, dip in ipairs({ dip1, dip2, dip3, dip4 }) do mem.w8(0x10E000 + i - 1, dip) end
-end
-
--- キー入力
-local joy_k                                = db.joy_k
-local joy_neutrala                         = db.joy_neutrala
-
-local rvs_types                            = db.rvs_types
-local hook_cmd_types                       = db.hook_cmd_types
-
-local get_next_xs                          = function(p, list, cur_menu, top_label_count)
-	-- top_label_countはメニュー上部のラベル行数
-	local sub_menu, ons = cur_menu[p.num][p.char], {}
-	if sub_menu == nil or list == nil then return nil end
-	for j, s in pairs(list) do if sub_menu.pos.col[j + top_label_count] == 2 then table.insert(ons, s) end end
-	return #ons > 0 and ons[math.random(#ons)] or nil
-end
-local get_next_rvs                         = function(p) return get_next_xs(p, p.char_data and p.char_data.rvs or nil, menu.rvs_menus, 1) end
-local get_next_bs                          = function(p) return get_next_xs(p, p.char_data and p.char_data.bs or nil, menu.bs_menus, 2) end
-
-local use_joy                              = {
-	{ port = ":edge:joy:JOY1",  field = joy_k[1].a,  frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1",  field = joy_k[1].b,  frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1",  field = joy_k[1].c,  frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1",  field = joy_k[1].d,  frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1",  field = joy_k[1].dn, frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1",  field = joy_k[1].lt, frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1",  field = joy_k[1].rt, frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY1",  field = joy_k[1].up, frame = 0, prev = 0, player = 1, get = 0, },
-	{ port = ":edge:joy:JOY2",  field = joy_k[2].a,  frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2",  field = joy_k[2].b,  frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2",  field = joy_k[2].c,  frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2",  field = joy_k[2].d,  frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2",  field = joy_k[2].dn, frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2",  field = joy_k[2].lt, frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2",  field = joy_k[2].rt, frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:JOY2",  field = joy_k[2].up, frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:START", field = joy_k[2].st, frame = 0, prev = 0, player = 2, get = 0, },
-	{ port = ":edge:joy:START", field = joy_k[1].st, frame = 0, prev = 0, player = 1, get = 0, },
-}
-
-local play_cursor_sound                    = function()
-	mem.w32(0x10D612, 0x600004)
-	mem.w8(0x10D713, 0x1)
-end
-
-local new_next_joy                         = function() return ut.deepcopy(joy_neutrala) end
--- MAMEへの入力の無効化
-local cls_joy                              = function()
-	for _, joy in ipairs(use_joy) do ioports[joy.port].fields[joy.field]:set_value(0) end
-end
-
--- ポーズ
-local set_freeze                           = function(freeze) mem.w8(0x1041D2, freeze and 0x00 or 0xFF) end
-
--- ボタンの色テーブル
-local btn_col                              = { [ut.convert("_A")] = 0xFFCC0000, [ut.convert("_B")] = 0xFFCC8800, [ut.convert("_C")] = 0xFF3333CC, [ut.convert("_D")] = 0xFF336600, }
-local text_col, shadow_col                 = 0xFFFFFFFF, 0xFF000000
-
-local get_word_len                         = function(str)
-	if not str then return 0 end
-	str = type(str) ~= "string" and string.format("%s", str) or str
-	local len = 0
-	for _, c in utf8.codes(str) do len = len + (c < 0x80 and 1 or 2) end
-	return len
-end
-
-local get_string_width                     = function(str)
-	if not str then return 0 end
-	return man.ui:get_string_width("9") * get_word_len(str) * scr.width
-end
-
-local get_line_height                      = function(lines)
-	return man.ui.line_height * scr.height * (lines or 1)
-end
-
-local draw_text                            = function(x, y, str, fgcol, bgcol)
-	scr:draw_text(x, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
-	--[[
-	if not str then return end
-	str = type(str) ~= "string" and string.format("%s", str) or str
-	if type(x) == "string" then
-		scr:draw_text(x, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
-		return
-	end
-	local len, fix, w1, w2, s = 0, 0, man.ui:get_string_width("9"), man.ui:get_string_width("9") / 2, nil
-	for _, c in utf8.codes(str) do
-		if c == utf8.codepoint("\n") then
-			y, len = y + get_line_height(), 0
-		else
-			s = utf8.char(c)
-			fix = x + ((w1 * len) + w2 - man.ui:get_string_width(s) / 2) * scr.width
-			scr:draw_text(fix, y, s, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
-			len = len + (c < 0x80 and 1 or 2)
-		end
-	end
-	]]
-end
-
-local draw_rtext                           = function(x, y, str, fgcol, bgcol)
-	if not str then return end
-	str = type(str) ~= "string" and string.format("%s", str) or str
-	local w = get_string_width(str)
-	draw_text(x - w, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
-end
-
-local draw_ctext                           = function(x, y, str, fgcol, bgcol)
-	if not str then return end
-	str = type(str) ~= "string" and string.format("%s", str) or str
-	local w = get_string_width(str) / 2
-	draw_text(x - w, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
-end
-
-local draw_text_with_shadow                = function(x, y, str, fgcol, bgcol)
-	if not str then return end
-	str = type(str) ~= "string" and string.format("%s", str) or str
-	draw_text(x + 0.5, y + 0.5, str, shadow_col, bgcol or 0x00000000)
-	draw_text(x, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
-end
-
-local draw_rtext_with_shadow               = function(x, y, str, fgcol, bgcol)
-	if not str then return end
-	draw_rtext(x + 0.5, y + 0.5, str, shadow_col, bgcol)
-	draw_rtext(x, y, str, fgcol, bgcol)
-end
-
-local draw_ctext_with_shadow               = function(x, y, str, fgcol, bgcol)
-	if not str then return end
-	draw_ctext(x + 0.5, y + 0.5, str, shadow_col, bgcol)
-	draw_ctext(x, y, str, fgcol, bgcol)
-end
-
--- コマンド文字列表示
-local draw_cmd_text_with_shadow            = function(x, y, str, fgcol, bgcol)
-	if not str then return end
-	-- 変換しつつUnicodeの文字配列に落とし込む
-	local cstr, xx = ut.convert(str), x
-	for c in string.gmatch(cstr, "([%z\1-\127\194-\244][\128-\191]*)") do
-		-- 文字の影
-		draw_text(xx + 0.5, y + 0.5, c, 0xFF000000)
-		if btn_col[c] then
-			-- ABCDボタンの場合は黒の●を表示した後ABCDを書いて文字の部分を黒く見えるようにする
-			draw_text(xx, y, ut.convert("_("), text_col)
-			draw_text(xx, y, c, fgcol or btn_col[c])
-		else
-			draw_text(xx, y, c, fgcol or text_col)
-		end
-		xx = xx + 5 -- フォントの大きさ問わず5pxずつ表示する
-	end
-end
-
-local format_num                           = function(num) return string.sub(string.format("00%0.03f", num), -7) end
-
--- コマンド入力表示
-local draw_cmd                             = function(p, line, frame, str, spid)
-	if not str then return end
-	local xx, yy = p == 1 and 12 or 294, get_line_height(line + 3)
-	local col, spcol = 0xFAFFFFFF, 0x66DD00FF
-	local x1, x2, step
-	if p == 1 then x1, x2, step = 1, 50, 1 else x1, x2, step = 320, 270, -1 end
-	if spid then scr:draw_box(x1, yy + get_line_height(), x2, yy, 0, spcol) end
-	for i = x1, x2, step do
-		scr:draw_line(i, yy, i + 1, yy, col)
-		col = col - 0x05000000
-	end
-	if 0 < frame then
-		local cframe = 999 < frame and "LOT" or string.format("%03d", frame)
-		draw_text_with_shadow(p == 1 and 1 or 283, yy, cframe, text_col)
-	end
-	draw_cmd_text_with_shadow(xx, yy, str)
-end
-
--- 処理アドレス表示
-local draw_base                            = function(p, bases)
-	local lines = {}
-	for _, base in ipairs(bases) do
-		local addr, act_name, xmov, cframe = base.addr, base.name, base.xmov, string.format("%03d", base.count)
-		if 999 < base.count then cframe = "LOT" end
-		local smov = (xmov < 0 and "-" or "+") .. string.format("%03d", math.abs(math.floor(xmov))) .. string.sub(string.format("%0.03f", xmov), -4)
-		table.insert(lines, string.format("%3s %05X %8s %-s", cframe, addr, smov, act_name))
-	end
-	local xx, txt = p == 1 and 60 or 195, table.concat(lines, "\n") -- 1Pと2Pで左右に表示し分ける
-	draw_text(xx + 0.5, 80.5, txt, 0xFF000000)                   -- 文字の影
-	draw_text(xx, 80, txt, text_col)
-end
--- 投げ無敵
-local throw_inv_type                       = {
-	time24 = { value = 24, disp_label = "タイマー24", name = "通常投げ" },
-	time20 = { value = 20, disp_label = "タイマー20", name = "M.リアルカウンター投げ" },
-	time10 = { value = 10, disp_label = "タイマー10", name = "真空投げ 羅生門 鬼門陣 M.タイフーン M.スパイダー 爆弾パチキ ドリル ブレスパ ブレスパBR リフトアップブロー デンジャラススルー ギガティックサイクロン マジンガ STOL" },
-	sway   = { value = 256, disp_label = "スウェー", name = "スウェー" },
-	flag1  = { value = 256, disp_label = "フラグ1", name = "無敵フラグ" },
-	flag2  = { value = 256, disp_label = "フラグ2", name = "通常投げ無敵フラグ" },
-	state  = { value = 256, disp_label = "やられ状態", name = "相互のやられ状態が非通常値" },
-	no_gnd = { value = 256, disp_label = "高度", name = "接地状態ではない（地面へのめり込みも投げ不可）" },
-}
-throw_inv_type.values                      = {
-	throw_inv_type.time24, throw_inv_type.time20, throw_inv_type.time10, throw_inv_type.sway, throw_inv_type.flag1, throw_inv_type.flag2,
-	throw_inv_type.state, throw_inv_type.no_gnd
-}
-throw_inv_type.get                         = function(p)
-	if p.is_fireball then return {} end
-	local ret = nil
-	for _, type in ipairs(throw_inv_type.values) do if p.throw_timer >= type.value then ret = type end end
-	ret = ret == nil and {} or { ret }
-	if p.state ~= 0 or p.op.state ~= 0 then table.insert(ret, throw_inv_type.state) end
-	if p.pos_y ~= 0 then table.insert(ret, throw_inv_type.no_gnd) end
-	if p.sway_status ~= 0x00 then table.insert(ret, throw_inv_type.sway) end
-	if p.invincible ~= 0 then table.insert(ret, throw_inv_type.flag1) end
-	if p.tw_muteki2 ~= 0 then table.insert(ret, throw_inv_type.flag2) end
-	return ret
-end
-
-local sort_ab                              = function(v1, v2)
-	if v1 <= v2 then return v2, v1 end
-	return v1, v2
-end
-
-local sort_ba                              = function(v1, v2)
-	if v1 <= v2 then return v1, v2 end
-	return v2, v1
-end
-
-local fix_box_scale                        = function(p, src, dest)
-	--local prev = string.format("%x id=%02x top=%s bottom=%s left=%s right=%s", p.addr.base, src.id, src.top, src.bottom, src.left, src.right)
-	dest = dest or ut.deepcopy(src) -- 計算元のboxを汚さないようにディープコピーしてから処理する
-	-- 全座標について p.box_scale / 0x1000 の整数値に計算しなおす
-	dest.top, dest.bottom = ut.int16((src.top * p.box_scale) >> 6), ut.int16((src.bottom * p.box_scale) >> 6)
-	dest.left, dest.right = ut.int16((src.left * p.box_scale) >> 6), ut.int16((src.right * p.box_scale) >> 6)
-	--ut.printf("%s ->a top=%s bottom=%s left=%s right=%s", prev, dest.top, dest.bottom, dest.left, dest.right)
-	-- キャラの座標と合算して画面上への表示位置に座標を変換する
-	local real_top = math.tointeger(math.max(dest.top, dest.bottom) + screen.top - p.pos_z - p.y)
-	local real_bottom = math.tointeger(math.min(dest.top, dest.bottom) + screen.top - p.pos_z - p.y) + 1
-	dest.real_top, dest.real_bottom = real_top, real_bottom
-	dest.left, dest.right = p.x - dest.left * p.flip_x, p.x - dest.right * p.flip_x
-	dest.bottom, dest.top = p.y - dest.bottom, p.y - dest.top
-	--ut.printf("%s ->b x=%s y=%s top=%s bottom=%s left=%s right=%s", prev, p.x, p.y, dest.top, dest.bottom, dest.left, dest.right)
-	return dest
-end
-
--- ROM部分のメモリエリアへパッチあて
-local load_rom_patch                       = function()
-	if mem.pached then return end
-	mem.pached = mem.pached or mod.p1_patch()
-	mod.bugfix()
-	mod.training()
-	print("load_rom_patch done")
-end
-
--- ヒット効果アドレステーブルの取得
-db.hit_effects.menus, db.hit_effects.addrs = { "OFF" }, { 0 }
-for i, hit_effect in ipairs(db.hit_effects.list) do
-	table.insert(db.hit_effects.menus, string.format("%02d %s", i, table.concat(hit_effect, " ")))
-end
-local load_hit_effects      = function()
-	if #db.hit_effects.addrs > 1 then return end
-	for i, _ in ipairs(db.hit_effects.list) do
-		table.insert(db.hit_effects.addrs, mem.r32(0x579DA + (i - 1) * 4))
-	end
-	print("load_hit_effects")
-end
-
-local load_hit_system_stops = function()
-	if hit_system_stops.loaded then return end
-	for addr = 0x57C54, 0x57CC0, 4 do hit_system_stops[mem.r32(addr)] = true end
-	hit_system_stops.loaded = true
-	print("load_hit_system_stops")
-end
-
--- キャラの基本アドレスの取得
-local load_proc_base        = function()
-	if db.chars[1].proc_base then return end
-	for char = 1, #db.chars - 1 do
-		local char4 = char << 2
-		db.chars[char].proc_base = {
-			cancelable    = mem.r32(char4 + 0x850D8),
-			forced_down   = 0x88A12,
-			hitstop       = mem.r32(char4 + fix_addr(0x83C38)),
-			damege        = mem.r32(char4 + fix_addr(0x813F0)),
-			stun          = mem.r32(char4 + fix_addr(0x85CCA)),
-			stun_timer    = mem.r32(char4 + fix_addr(0x85D2A)),
-			max_hit       = mem.r32(char4 + fix_addr(0x827B8)),
-			esaka         = mem.r32(char4 + 0x23750),
-			pow_up        = ((0xC == char) and 0x8C274 or (0x10 == char) and 0x8C29C or 0x8C24C),
-			pow_up_ext    = mem.r32(0x8C18C + char4),
-			chip          = fix_addr(0x95CCC),
-			hitstun1      = fix_addr(0x95CCC),
-			hitstun2      = 0x16 + 0x2 + fix_addr(0x5AF7C),
-			blockstun     = 0x1A + 0x2 + fix_addr(0x5AF88),
-			bs_pow        = mem.r32(char4 + 0x85920),
-			bs_invincible = mem.r32(char4 + 0x85920) + 0x1,
-			sp_invincible = mem.r32(char4 + 0x8DE62),
-		}
-	end
-	db.chars[#db.chars].proc_base = { -- 共通枠に弾のベースアドレスを入れておく
-		forced_down = 0x8E2C0,
-		hitstop     = fix_addr(0x884F2),
-		damege      = fix_addr(0x88472),
-		stun        = fix_addr(0x886F2),
-		stun_timer  = fix_addr(0x88772),
-		max_hit     = fix_addr(0x885F2),
-		baigaeshi   = 0x8E940,
-		effect      = fix_addr(0x95BEC) - 0x20, -- 家庭用58232からの処理
-		chip        = fix_addr(0x95CCC),
-		hitstun1    = fix_addr(0x95CCC),
-		hitstun2    = 0x16 + 0x2 + fix_addr(0x5AF7C),
-		blockstun   = 0x1A + 0x2 + fix_addr(0x5AF88),
+	-- DIPスイッチ
+	local dip_config                           = {
+		show_range    = false,
+		show_hitbox   = false,
+		infinity_life = false,
+		easy_super    = false,
+		semiauto_p    = false,
+		infinity_time = true,
+		fix_time      = 0x99,
+		stage_select  = false,
+		alfred        = false,
+		watch_states  = false,
+		cpu_cant_move = false,
+		other_speed   = false,
 	}
-	print("load_proc_base done")
-end
-
--- 接触判定の取得
-local load_push_box         = function()
-	if db.chars[1].push_box then return end
-	-- キャラデータの押し合い判定を作成
-	-- キャラごとの4種類の判定データをロードする
-	for char = 1, #db.chars - 1 do
-		db.chars[char].push_box_mask = mem.r32(0x5C728 + (char << 2))
-		db.chars[char].push_box = {}
-		for _, addr in ipairs({ 0x5C9BC, 0x5CA7C, 0x5CB3C, 0x5CBFC }) do
-			local a2 = addr + (char << 3)
-			local y1, y2, x1, x2 = mem.r8i(a2 + 0x1), mem.r8i(a2 + 0x2), mem.r8i(a2 + 0x3), mem.r8i(a2 + 0x4)
-			db.chars[char].push_box[addr] = {
-				addr = addr,
-				id = 0,
-				type = db.box_types.push,
-				front = x1,
-				back = x2,
-				left = math.min(x1, x2),
-				right = math.max(x1, x2),
-				top = math.min(y1, y2),
-				bottom = math.max(y1, y2),
-			}
-			-- printf("char=%s addr=%x type=000 x1=%s x2=%s y1=%s y2=%s", char, a2, x1, x2, y1, y2)
-		end
+	-- デバッグDIPのセット
+	local set_dip_config                       = function()
+		local dip1, dip2, dip3, dip4 = 0x00, 0x00, 0x00, 0x00                   -- デバッグDIP
+		dip1 = dip1 | (in_match and dip_config.show_range and 0x40 or 0)        --cheat "DIP= 1-7 色々な判定表示"
+		dip1 = dip1 | (in_match and dip_config.show_hitbox and 0x80 or 0)       --cheat "DIP= 1-8 当たり判定表示"
+		dip1 = dip1 | (in_match and dip_config.infinity_life and 0x02 or 0)     --cheat "DIP= 1-2 Infinite Energy"
+		dip2 = dip2 | (in_match and dip_config.easy_super and 0x01 or 0)        --Cheat "DIP 2-1 Eeasy Super"
+		dip4 = dip4 | (in_match and dip_config.semiauto_p and 0x08 or 0)        -- DIP4-4
+		dip2 = dip2 | (dip_config.infinity_time and 0x18 or 0)                  -- 2-4 PAUSEを消す + cheat "DIP= 2-5 Disable Time Over"
+		mem.w8(0x10E024, dip_config.infinity_time and 0x03 or 0x02)             -- 家庭用オプション 1:45 2:60 3:90 4:infinity
+		mem.w8(0x107C28, dip_config.infinity_time and 0xAA or dip_config.fix_time) --cheat "Infinite Time"
+		dip1 = dip1 | (dip_config.stage_select and 0x04 or 0)                   --cheat "DIP= 1-3 Stage Select Mode"
+		dip2 = dip2 | (in_player_select and dip_config.alfred and 0x80 or 0)    --cheat "DIP= 2-8 Alfred Code (B+C >A)"
+		dip2 = dip2 | (in_match and dip_config.watch_states and 0x20 or 0)      --cheat "DIP= 2-6 Watch States"
+		dip3 = dip3 | (in_match and dip_config.cpu_cant_move and 0x01 or 0)     --cheat "DIP= 3-1 CPU Can't Move"
+		dip3 = dip3 | (in_match and dip_config.other_speed and 0x10 or 0)       --cheat "DIP= 3-5 移動速度変更"
+		for i, dip in ipairs({ dip1, dip2, dip3, dip4 }) do mem.w8(0x10E000 + i - 1, dip) end
 	end
-	print("load_push_box done")
-end
 
-local get_push_box          = function(p)
-	-- 家庭用 05C6D0 からの処理
-	local push_box = db.chars[p.char].push_box
-	if p.char == 0x5 and ut.tstb(p.flag_c8, db.flag_c8._15) then
-		return push_box[0x5C9BC]
-	else
-		if ut.tstb(p.flag_c0, db.flag_c0._01) ~= true and p.pos_y ~= 0 then
-			if (p.flag_c8 & p.char_data.push_box_mask) ~= 0 then
-				return push_box[0x5CB3C]
-			elseif p.flag_c8 & 0xFFFF0000 == 0 then
-				return push_box[0x5CB3C]
+	-- キー入力
+	local joy_k                                = db.joy_k
+	local joy_neutrala                         = db.joy_neutrala
+
+	local rvs_types                            = db.rvs_types
+	local hook_cmd_types                       = db.hook_cmd_types
+
+	local get_next_xs                          = function(p, list, cur_menu, top_label_count)
+		-- top_label_countはメニュー上部のラベル行数
+		local sub_menu, ons = cur_menu[p.num][p.char], {}
+		if sub_menu == nil or list == nil then return nil end
+		for j, s in pairs(list) do if sub_menu.pos.col[j + top_label_count] == 2 then table.insert(ons, s) end end
+		return #ons > 0 and ons[math.random(#ons)] or nil
+	end
+	local get_next_rvs                         = function(p) return get_next_xs(p, p.char_data and p.char_data.rvs or nil, menu.rvs_menus, 1) end
+	local get_next_bs                          = function(p) return get_next_xs(p, p.char_data and p.char_data.bs or nil, menu.bs_menus, 2) end
+
+	local use_joy                              = {
+		{ port = ":edge:joy:JOY1",  field = joy_k[1].a,  frame = 0, prev = 0, player = 1, get = 0, },
+		{ port = ":edge:joy:JOY1",  field = joy_k[1].b,  frame = 0, prev = 0, player = 1, get = 0, },
+		{ port = ":edge:joy:JOY1",  field = joy_k[1].c,  frame = 0, prev = 0, player = 1, get = 0, },
+		{ port = ":edge:joy:JOY1",  field = joy_k[1].d,  frame = 0, prev = 0, player = 1, get = 0, },
+		{ port = ":edge:joy:JOY1",  field = joy_k[1].dn, frame = 0, prev = 0, player = 1, get = 0, },
+		{ port = ":edge:joy:JOY1",  field = joy_k[1].lt, frame = 0, prev = 0, player = 1, get = 0, },
+		{ port = ":edge:joy:JOY1",  field = joy_k[1].rt, frame = 0, prev = 0, player = 1, get = 0, },
+		{ port = ":edge:joy:JOY1",  field = joy_k[1].up, frame = 0, prev = 0, player = 1, get = 0, },
+		{ port = ":edge:joy:JOY2",  field = joy_k[2].a,  frame = 0, prev = 0, player = 2, get = 0, },
+		{ port = ":edge:joy:JOY2",  field = joy_k[2].b,  frame = 0, prev = 0, player = 2, get = 0, },
+		{ port = ":edge:joy:JOY2",  field = joy_k[2].c,  frame = 0, prev = 0, player = 2, get = 0, },
+		{ port = ":edge:joy:JOY2",  field = joy_k[2].d,  frame = 0, prev = 0, player = 2, get = 0, },
+		{ port = ":edge:joy:JOY2",  field = joy_k[2].dn, frame = 0, prev = 0, player = 2, get = 0, },
+		{ port = ":edge:joy:JOY2",  field = joy_k[2].lt, frame = 0, prev = 0, player = 2, get = 0, },
+		{ port = ":edge:joy:JOY2",  field = joy_k[2].rt, frame = 0, prev = 0, player = 2, get = 0, },
+		{ port = ":edge:joy:JOY2",  field = joy_k[2].up, frame = 0, prev = 0, player = 2, get = 0, },
+		{ port = ":edge:joy:START", field = joy_k[2].st, frame = 0, prev = 0, player = 2, get = 0, },
+		{ port = ":edge:joy:START", field = joy_k[1].st, frame = 0, prev = 0, player = 1, get = 0, },
+	}
+
+	local play_cursor_sound                    = function()
+		mem.w32(0x10D612, 0x600004)
+		mem.w8(0x10D713, 0x1)
+	end
+
+	local new_next_joy                         = function() return ut.deepcopy(joy_neutrala) end
+	-- MAMEへの入力の無効化
+	local cls_joy                              = function()
+		for _, joy in ipairs(use_joy) do ioports[joy.port].fields[joy.field]:set_value(0) end
+	end
+
+	-- ポーズ
+	local set_freeze                           = function(freeze) mem.w8(0x1041D2, freeze and 0x00 or 0xFF) end
+
+	-- ボタンの色テーブル
+	local btn_col                              = { [ut.convert("_A")] = 0xFFCC0000, [ut.convert("_B")] = 0xFFCC8800, [ut.convert("_C")] = 0xFF3333CC, [ut.convert("_D")] = 0xFF336600, }
+	local text_col, shadow_col                 = 0xFFFFFFFF, 0xFF000000
+
+	local get_word_len                         = function(str)
+		if not str then return 0 end
+		str = type(str) ~= "string" and string.format("%s", str) or str
+		local len = 0
+		for _, c in utf8.codes(str) do len = len + (c < 0x80 and 1 or 2) end
+		return len
+	end
+
+	local get_string_width                     = function(str)
+		if not str then return 0 end
+		return man.ui:get_string_width("9") * get_word_len(str) * scr.width
+	end
+
+	local get_line_height                      = function(lines)
+		return man.ui.line_height * scr.height * (lines or 1)
+	end
+
+	local draw_text                            = function(x, y, str, fgcol, bgcol)
+		scr:draw_text(x, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
+		--[[
+		if not str then return end
+		str = type(str) ~= "string" and string.format("%s", str) or str
+		if type(x) == "string" then
+			scr:draw_text(x, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
+			return
+		end
+		local len, fix, w1, w2, s = 0, 0, man.ui:get_string_width("9"), man.ui:get_string_width("9") / 2, nil
+		for _, c in utf8.codes(str) do
+			if c == utf8.codepoint("\n") then
+				y, len = y + get_line_height(), 0
 			else
-				return push_box[0x5CBFC]
+				s = utf8.char(c)
+				fix = x + ((w1 * len) + w2 - man.ui:get_string_width(s) / 2) * scr.width
+				scr:draw_text(fix, y, s, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
+				len = len + (c < 0x80 and 1 or 2)
 			end
 		end
-		return push_box[(p.flag_c0 & 0x14000046 ~= 0) and 0x5CA7C or 0x5C9BC]
+		]]
 	end
-end
 
-local fix_throw_box_pos     = function(box)
-	box.left, box.right = box.x - box.left * box.flip_x, box.x - box.right * box.flip_x
-	box.bottom, box.top = box.y - box.bottom, box.y - box.top
-	return box
-end
-
--- 通常投げ間合い
--- 家庭用0x05D78Cからの処理
-local get_normal_throw_box  = function(p)
-	-- 相手が向き合いか背向けかで押し合い幅を解決して反映
-	local push_box, op_push_box = db.chars[p.char].push_box[0x5C9BC], db.chars[p.op.char].push_box[0x5C9BC]
-	local op_edge = (p.block_side == p.op.block_side) and op_push_box.back or op_push_box.front
-	local center = ut.int16(((push_box.front - math.abs(op_edge)) * p.box_scale) >> 6)
-	local range = mem.r8(fix_addr(0x5D854) + p.char4)
-	return fix_throw_box_pos({
-		id = 0x100, -- dummy
-		type = db.box_types.normal_throw,
-		left = center - range,
-		right = center + range,
-		top = -0x05, -- 地上投げの範囲をわかりやすくする
-		bottom = 0x05,
-		x = p.pos - screen.left,
-		y = screen.top - p.pos_y - p.pos_z,
-		threshold = mem.r8(0x3A66C), -- 投げのしきい値 039FA4からの処理
-		flip_x = p.block_side, -- 向き補正値
-	})
-end
-
--- 必殺投げ間合い
-local get_special_throw_box = function(p, id)
-	local a0 = 0x3A542 + (0xFFFF & (id << 3))
-	local top, bottom = mem.r16(a0 + 2), mem.r16(a0 + 4)
-	if id == 0xA then
-		top, bottom = 0x1FFF, 0x1FFF -- ダブルクラッチは上下無制限
-	elseif top + bottom == 0 then
-		top, bottom = 0x05, 0x05 -- 地上投げの範囲をわかりやすくする
+	local draw_rtext                           = function(x, y, str, fgcol, bgcol)
+		if not str then return end
+		str = type(str) ~= "string" and string.format("%s", str) or str
+		local w = get_string_width(str)
+		draw_text(x - w, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
 	end
-	return fix_throw_box_pos({
-		id = id,
-		type = db.box_types.special_throw,
-		left = -mem.r16(a0),
-		right = 0x0,
-		top = top,
-		bottom = -bottom,
-		x = p.pos - screen.left,
-		y = screen.top - p.pos_y - p.pos_z,
-		threshold = mem.r8(0x3A66C + (0xFF & id)), -- 投げのしきい値 039FA4からの処理
-		flip_x = p.block_side,               -- 向き補正値
-	})
-end
 
--- 空中投げ間合い
--- MEMO: 0x060566(家庭用)のデータを読まずにハードコードにしている
-local get_air_throw_box     = function(p)
-	return fix_throw_box_pos({
-		id = 0x200, -- dummy
-		type = db.box_types.air_throw,
-		left = -0x30,
-		right = 0x0,
-		top = -0x20,
-		bottom = 0x20,
-		x = p.pos - screen.left,
-		y = screen.top - p.pos_y - p.pos_z,
-		threshold = 0,   -- 投げのしきい値
-		flip_x = p.block_side, -- 向き補正値
-	})
-end
-
-local get_throwbox          = function(p, id)
-	if id == 0x100 then
-		return get_normal_throw_box(p)
-	elseif id == 0x200 then
-		return get_air_throw_box(p)
+	local draw_ctext                           = function(x, y, str, fgcol, bgcol)
+		if not str then return end
+		str = type(str) ~= "string" and string.format("%s", str) or str
+		local w = get_string_width(str) / 2
+		draw_text(x - w, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
 	end
-	return get_special_throw_box(p, id)
-end
 
-local draw_hitbox           = function(box)
-	--ut.printf("%s  %s", box.type.kind, box.type.enabled)
-	-- 背景なしの場合は判定の塗りつぶしをやめる
-	local outline, fill = box.type.outline, global.disp_bg and box.type.fill or 0
-	local x1, x2 = sort_ab(box.left, box.right)
-	local y1, y2 = sort_ab(box.top, box.bottom)
-	scr:draw_box(x1, y1, x1 - 1, y2, 0, outline)
-	scr:draw_box(x2, y1, x2 + 1, y2, 0, outline)
-	scr:draw_box(x1, y1, x2, y1 - 1, 0, outline)
-	scr:draw_box(x1, y2, x2, y2 + 1, outline, outline)
-	scr:draw_box(x1, y1, x2, y2, outline, fill)
-	--ut.printf("%s  x1=%s x2=%s y1=%s y2=%s",  box.type.kind, x1, x2, y1, y2)
-end
+	local draw_text_with_shadow                = function(x, y, str, fgcol, bgcol)
+		if not str then return end
+		str = type(str) ~= "string" and string.format("%s", str) or str
+		draw_text(x + 0.5, y + 0.5, str, shadow_col, bgcol or 0x00000000)
+		draw_text(x, y, str, fgcol or 0xFFFFFFFF, bgcol or 0x00000000)
+	end
 
-local draw_range            = function(range)
-	local label, flip_x, x, y, col = range.label, range.flip_x, range.x, range.y, range.within and 0xFFFFFF00 or 0xFFBBBBBB
-	local size = range.within == nil and global.axis_size or global.axis_size2 -- 範囲判定がないものは単純な座標とみなす
-	scr:draw_box(x, y - size, x + flip_x, y + size, 0, col)
-	scr:draw_box(x - size + flip_x, y, x + size + flip_x, y - 1, 0, col)
-	draw_ctext_with_shadow(x, y, label or "", col)
-end
+	local draw_rtext_with_shadow               = function(x, y, str, fgcol, bgcol)
+		if not str then return end
+		draw_rtext(x + 0.5, y + 0.5, str, shadow_col, bgcol)
+		draw_rtext(x, y, str, fgcol, bgcol)
+	end
 
-local border_box            = function(x1, y1, x2, y2, fcol, _, w)
-	scr:draw_box(x1 - w, y1 - w, x2 + w, y1, fcol, fcol)
-	scr:draw_box(x1 - w, y1 - w, x1, y2 + w, fcol, fcol)
-	scr:draw_box(x2, y1 - w, x2 + 1, y2 + w, fcol, fcol)
-	scr:draw_box(x1 - w, y2 + w, x2 + w, y2, fcol, fcol)
-end
+	local draw_ctext_with_shadow               = function(x, y, str, fgcol, bgcol)
+		if not str then return end
+		draw_ctext(x + 0.5, y + 0.5, str, shadow_col, bgcol)
+		draw_ctext(x, y, str, fgcol, bgcol)
+	end
 
-local border_waku           = function(x1, y1, x2, y2, fcol, _, w)
-	scr:draw_box(x1, y1, x2, y2, fcol, 0)
-	scr:draw_box(x1, y1 - w, x2, y1, fcol, fcol)
-	scr:draw_box(x1, y2 + w, x2, y2, fcol, fcol)
-end
-
--- 判定枠のチェック処理種類
-local hitbox_possible_map   = {
-	[0x01311C] = possible_types.none,   -- 常に判定しない
-	[0x012FF0] = possible_types.same_line, -- → 013038 同一ライン同士なら判定する
-	[0x012FFE] = possible_types.both_line, -- → 013054 異なるライン同士でも判定する
-	[0x01300A] = possible_types.unknown, -- → 013018 不明
-	[0x012FE2] = possible_types.air_onry, -- → 012ff0 → 013038 相手が空中にいれば判定する
-}
-local get_hitbox_possibles  = function(id)
-	local possibles = {}
-	for k, addr_or_func in pairs(hitbox_possibles) do
-		local ret = possible_types.none
-		if type(addr_or_func) == "number" then
-			-- 家庭用版 012DBC~012F04,012F30~012F96のデータ取得処理をベースに判定＆属性チェック
-			local d2 = 0xFF & (id - 0x20)
-			if d2 >= 0 then ret = hitbox_possible_map[mem.r32(0x13120 + (mem.r8(addr_or_func + d2) << 2))] end
-		else
-			ret = addr_or_func(id)
+	-- コマンド文字列表示
+	local draw_cmd_text_with_shadow            = function(x, y, str, fgcol, bgcol)
+		if not str then return end
+		-- 変換しつつUnicodeの文字配列に落とし込む
+		local cstr, xx = ut.convert(str), x
+		for c in string.gmatch(cstr, "([%z\1-\127\194-\244][\128-\191]*)") do
+			-- 文字の影
+			draw_text(xx + 0.5, y + 0.5, c, 0xFF000000)
+			if btn_col[c] then
+				-- ABCDボタンの場合は黒の●を表示した後ABCDを書いて文字の部分を黒く見えるようにする
+				draw_text(xx, y, ut.convert("_("), text_col)
+				draw_text(xx, y, c, fgcol or btn_col[c])
+			else
+				draw_text(xx, y, c, fgcol or text_col)
+			end
+			xx = xx + 5 -- フォントの大きさ問わず5pxずつ表示する
 		end
-		if possible_types.none ~= ret then possibles[k] = ret end
-	end
-	return possibles
-end
-
-local fix_box_type          = function(p, attackbit, box)
-	attackbit = db.box_with_bit_types.mask & attackbit
-	local type = p.in_sway_line and box.sway_type or box.type
-	if type ~= db.box_types.attack then return type end
-	-- TODO 多段技の状態
-	p.max_hit_dn = p.max_hit_dn or 0
-	if p.max_hit_dn > 1 or p.max_hit_dn == 0 or (p.char == 0x4 and p.attack == 0x16) then
-	end
-	local types = p.is_fireball and db.box_with_bit_types.fireballkv or db.box_with_bit_types.bodykv
-	type = types[attackbit]
-	if type then return type.box_type end
-	types = p.is_fireball and db.box_with_bit_types.fireball or db.box_with_bit_types.body
-	for _, t in ipairs(types) do if ut.tstb(attackbit, t.attackbit, true) then return t.box_type end end
-	ut.printf("fallback %s", ut.tobitstr(attackbit))
-	return types[#types].box_type -- fallback
-end
-
--- 遠近間合い取得
-local load_close_far        = function()
-	if db.chars[1].close_far then return end
-	-- 地上通常技の近距離間合い 家庭用 02DD02 からの処理
-	for org_char = 1, #db.chars - 1 do
-		local char                   = org_char - 1
-		local abc_offset             = mem.close_far_offset + (char * 4)
-		local d_offset               = mem.close_far_offset_d + (char * 2)
-		-- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
-		db.chars[org_char].close_far = {
-			[0x00] = {
-				A = { x1 = 0, x2 = mem.r8(abc_offset) },
-				B = { x1 = 0, x2 = mem.r8(abc_offset + 1) },
-				C = { x1 = 0, x2 = mem.r8(abc_offset + 2) },
-				D = { x1 = 0, x2 = mem.r16(d_offset) },
-			},
-			[0x01] = {},
-			[0x82] = {},
-		}
 	end
 
-	-- 対スウェーライン攻撃の近距離間合い
-	local get_lmo_range_internal = function(ret, name, d0, d1, incl_last)
-		local decd1 = ut.int16tofloat(d1)
-		local intd1 = math.floor(decd1)
-		local x1, x2 = 0, 0
-		for d = 1, intd1 do
-			x2 = d * d0
-			ret[name .. d - 1] = { x1 = x1, x2 = x2 - 1 }
-			x1 = x2
+	local format_num                           = function(num) return string.sub(string.format("00%0.03f", num), -7) end
+
+	-- コマンド入力表示
+	local draw_cmd                             = function(p, line, frame, str, spid)
+		if not str then return end
+		local xx, yy = p == 1 and 12 or 294, get_line_height(line + 3)
+		local col, spcol = 0xFAFFFFFF, 0x66DD00FF
+		local x1, x2, step
+		if p == 1 then x1, x2, step = 1, 50, 1 else x1, x2, step = 320, 270, -1 end
+		if spid then scr:draw_box(x1, yy + get_line_height(), x2, yy, 0, spcol) end
+		for i = x1, x2, step do
+			scr:draw_line(i, yy, i + 1, yy, col)
+			col = col - 0x05000000
 		end
-		if incl_last then
-			ret[name .. intd1] = { x1 = x1, x2 = math.floor(d0 * decd1) } -- 1Fあたりの最大移動量になる距離
+		if 0 < frame then
+			local cframe = 999 < frame and "LOT" or string.format("%03d", frame)
+			draw_text_with_shadow(p == 1 and 1 or 283, yy, cframe, text_col)
 		end
+		draw_cmd_text_with_shadow(xx, yy, str)
+	end
+
+	-- 処理アドレス表示
+	local draw_base                            = function(p, bases)
+		local lines = {}
+		for _, base in ipairs(bases) do
+			local addr, act_name, xmov, cframe = base.addr, base.name, base.xmov, string.format("%03d", base.count)
+			if 999 < base.count then cframe = "LOT" end
+			local smov = (xmov < 0 and "-" or "+") .. string.format("%03d", math.abs(math.floor(xmov))) .. string.sub(string.format("%0.03f", xmov), -4)
+			table.insert(lines, string.format("%3s %05X %8s %-s", cframe, addr, smov, act_name))
+		end
+		local xx, txt = p == 1 and 60 or 195, table.concat(lines, "\n") -- 1Pと2Pで左右に表示し分ける
+		draw_text(xx + 0.5, 80.5, txt, 0xFF000000)                   -- 文字の影
+		draw_text(xx, 80, txt, text_col)
+	end
+	-- 投げ無敵
+	local throw_inv_type                       = {
+		time24 = { value = 24, disp_label = "タイマー24", name = "通常投げ" },
+		time20 = { value = 20, disp_label = "タイマー20", name = "M.リアルカウンター投げ" },
+		time10 = { value = 10, disp_label = "タイマー10", name = "真空投げ 羅生門 鬼門陣 M.タイフーン M.スパイダー 爆弾パチキ ドリル ブレスパ ブレスパBR リフトアップブロー デンジャラススルー ギガティックサイクロン マジンガ STOL" },
+		sway   = { value = 256, disp_label = "スウェー", name = "スウェー" },
+		flag1  = { value = 256, disp_label = "フラグ1", name = "無敵フラグ" },
+		flag2  = { value = 256, disp_label = "フラグ2", name = "通常投げ無敵フラグ" },
+		state  = { value = 256, disp_label = "やられ状態", name = "相互のやられ状態が非通常値" },
+		no_gnd = { value = 256, disp_label = "高度", name = "接地状態ではない（地面へのめり込みも投げ不可）" },
+	}
+	throw_inv_type.values                      = {
+		throw_inv_type.time24, throw_inv_type.time20, throw_inv_type.time10, throw_inv_type.sway, throw_inv_type.flag1, throw_inv_type.flag2,
+		throw_inv_type.state, throw_inv_type.no_gnd
+	}
+	throw_inv_type.get                         = function(p)
+		if p.is_fireball then return {} end
+		local ret = nil
+		for _, type in ipairs(throw_inv_type.values) do if p.throw_timer >= type.value then ret = type end end
+		ret = ret == nil and {} or { ret }
+		if p.state ~= 0 or p.op.state ~= 0 then table.insert(ret, throw_inv_type.state) end
+		if p.pos_y ~= 0 then table.insert(ret, throw_inv_type.no_gnd) end
+		if p.sway_status ~= 0x00 then table.insert(ret, throw_inv_type.sway) end
+		if p.invincible ~= 0 then table.insert(ret, throw_inv_type.flag1) end
+		if p.tw_muteki2 ~= 0 then table.insert(ret, throw_inv_type.flag2) end
 		return ret
 	end
-	-- 家庭用2EC72,2EDEE,2E1FEからの処理
-	for org_char = 1, #db.chars - 1 do
-		local ret = {}
-		-- データが近距離、遠距離の2種類しかないのと実質的に意味があるのが近距離のものなので最初のデータだけ返す
-		-- 0x0:近A 0x1:遠A 0x2:近B 0x3:遠B 0x4:近C 0x5:遠C
-		get_lmo_range_internal(ret, "", mem.r8(mem.r32(0x2EE06 + 0x0 * 4) + org_char * 6), 0x2A000, true)
-		ret["近"] = { x1 = 0, x2 = 72 } -- 近距離の対メインライン攻撃になる距離
-		if org_char == 6 then
-			get_lmo_range_internal(ret, "必", 24, 0x40000) -- 渦炎陣
-		elseif org_char == 14 then
-			get_lmo_range_internal(ret, "必", 24, 0x80000) -- クロスヘッドスピン
-		end
-		-- printf("%s %s %x %s %x %s", chars[char].name, act_name, d0, d0, d1, decd1)
-		db.chars[org_char].close_far[0x80] = ret
-	end
-	print("load_close_far done")
-end
 
-local reset_memory_tap      = function(label, enabled)
-	if not global.holder then return end
-	local sub = global.holder.sub[label]
-	if not sub then return end
-	if not enabled and sub.on == true then
-		sub.on = false
-		for name, tap in pairs(sub.taps) do tap:remove() end
-		--ut.printf("remove %s", label)
-	elseif enabled and sub.on ~= true then
-		sub.on = true
-		for name, tap in pairs(sub.taps) do tap:reinstall() end
-		--ut.printf("reinstall %s", label)
+	local sort_ab                              = function(v1, v2)
+		if v1 <= v2 then return v2, v1 end
+		return v1, v2
 	end
-end
 
-local load_memory_tap       = function(label, wps) -- tapの仕込み
-	if global.holder and global.holder.sub[label] then
-		reset_memory_tap(label, true)
-		return
+	local sort_ba                              = function(v1, v2)
+		if v1 <= v2 then return v1, v2 end
+		return v2, v1
 	end
-	if global.holder == nil then
-		global.holder = { on = true, taps = {}, sub = {}, cnt = 0, }
-		global.holder.countup = function(label)
-			global.holder.cnt = global.holder.cnt + 1
-			return global.holder.cnt
+
+	local fix_box_scale                        = function(p, src, dest)
+		--local prev = string.format("%x id=%02x top=%s bottom=%s left=%s right=%s", p.addr.base, src.id, src.top, src.bottom, src.left, src.right)
+		dest = dest or ut.deepcopy(src) -- 計算元のboxを汚さないようにディープコピーしてから処理する
+		-- 全座標について p.box_scale / 0x1000 の整数値に計算しなおす
+		dest.top, dest.bottom = ut.int16((src.top * p.box_scale) >> 6), ut.int16((src.bottom * p.box_scale) >> 6)
+		dest.left, dest.right = ut.int16((src.left * p.box_scale) >> 6), ut.int16((src.right * p.box_scale) >> 6)
+		--ut.printf("%s ->a top=%s bottom=%s left=%s right=%s", prev, dest.top, dest.bottom, dest.left, dest.right)
+		-- キャラの座標と合算して画面上への表示位置に座標を変換する
+		local real_top = math.tointeger(math.max(dest.top, dest.bottom) + screen.top - p.pos_z - p.y)
+		local real_bottom = math.tointeger(math.min(dest.top, dest.bottom) + screen.top - p.pos_z - p.y) + 1
+		dest.real_top, dest.real_bottom = real_top, real_bottom
+		dest.left, dest.right = p.x - dest.left * p.flip_x, p.x - dest.right * p.flip_x
+		dest.bottom, dest.top = p.y - dest.bottom, p.y - dest.top
+		--ut.printf("%s ->b x=%s y=%s top=%s bottom=%s left=%s right=%s", prev, p.x, p.y, dest.top, dest.bottom, dest.left, dest.right)
+		return dest
+	end
+
+	-- ROM部分のメモリエリアへパッチあて
+	local load_rom_patch                       = function()
+		if mem.pached then return end
+		mem.pached = mem.pached or mod.p1_patch()
+		mod.bugfix()
+		mod.training()
+		print("load_rom_patch done")
+	end
+
+	-- ヒット効果アドレステーブルの取得
+	db.hit_effects.menus, db.hit_effects.addrs = { "OFF" }, { 0 }
+	for i, hit_effect in ipairs(db.hit_effects.list) do
+		table.insert(db.hit_effects.menus, string.format("%02d %s", i, table.concat(hit_effect, " ")))
+	end
+	local load_hit_effects      = function()
+		if #db.hit_effects.addrs > 1 then return end
+		for i, _ in ipairs(db.hit_effects.list) do
+			table.insert(db.hit_effects.addrs, mem.r32(0x579DA + (i - 1) * 4))
 		end
+		print("load_hit_effects")
 	end
-	local sub = { on = true, taps = {} }
-	for _, p in ipairs(wps) do
-		for _, k in ipairs({ "wp8", "wp16", "wp32", "rp8", "rp16", "rp32", }) do
-			for any, cb in pairs(p[k] or {}) do
-				local addr = type(any) == "number" and any or any.addr
-				addr = addr > 0xFF and addr or ((p.addr and p.addr.base) + addr)
-				local filter = type(any) == "number" and {} or not any.filter and {} or
-					type(any.filter) == "table" and any.filter or type(any.filter) == "number" and { any.filter }
-				---@diagnostic disable-next-line: redundant-parameter
-				local wp = mem[k](addr, cb, filter and #filter > 0 and ut.table_to_set(filter) or nil)
-				---@diagnostic disable-next-line: need-check-nil
-				sub.taps[wp.name] = wp
+
+	local load_hit_system_stops = function()
+		if hit_system_stops.loaded then return end
+		for addr = 0x57C54, 0x57CC0, 4 do hit_system_stops[mem.r32(addr)] = true end
+		hit_system_stops.loaded = true
+		print("load_hit_system_stops")
+	end
+
+	-- キャラの基本アドレスの取得
+	local load_proc_base        = function()
+		if db.chars[1].proc_base then return end
+		for char = 1, #db.chars - 1 do
+			local char4 = char << 2
+			db.chars[char].proc_base = {
+				cancelable    = mem.r32(char4 + 0x850D8),
+				forced_down   = 0x88A12,
+				hitstop       = mem.r32(char4 + fix_addr(0x83C38)),
+				damege        = mem.r32(char4 + fix_addr(0x813F0)),
+				stun          = mem.r32(char4 + fix_addr(0x85CCA)),
+				stun_timer    = mem.r32(char4 + fix_addr(0x85D2A)),
+				max_hit       = mem.r32(char4 + fix_addr(0x827B8)),
+				esaka         = mem.r32(char4 + 0x23750),
+				pow_up        = ((0xC == char) and 0x8C274 or (0x10 == char) and 0x8C29C or 0x8C24C),
+				pow_up_ext    = mem.r32(0x8C18C + char4),
+				chip          = fix_addr(0x95CCC),
+				hitstun1      = fix_addr(0x95CCC),
+				hitstun2      = 0x16 + 0x2 + fix_addr(0x5AF7C),
+				blockstun     = 0x1A + 0x2 + fix_addr(0x5AF88),
+				bs_pow        = mem.r32(char4 + 0x85920),
+				bs_invincible = mem.r32(char4 + 0x85920) + 0x1,
+				sp_invincible = mem.r32(char4 + 0x8DE62),
+			}
+		end
+		db.chars[#db.chars].proc_base = { -- 共通枠に弾のベースアドレスを入れておく
+			forced_down = 0x8E2C0,
+			hitstop     = fix_addr(0x884F2),
+			damege      = fix_addr(0x88472),
+			stun        = fix_addr(0x886F2),
+			stun_timer  = fix_addr(0x88772),
+			max_hit     = fix_addr(0x885F2),
+			baigaeshi   = 0x8E940,
+			effect      = fix_addr(0x95BEC) - 0x20, -- 家庭用58232からの処理
+			chip        = fix_addr(0x95CCC),
+			hitstun1    = fix_addr(0x95CCC),
+			hitstun2    = 0x16 + 0x2 + fix_addr(0x5AF7C),
+			blockstun   = 0x1A + 0x2 + fix_addr(0x5AF88),
+		}
+		print("load_proc_base done")
+	end
+
+	-- 接触判定の取得
+	local load_push_box         = function()
+		if db.chars[1].push_box then return end
+		-- キャラデータの押し合い判定を作成
+		-- キャラごとの4種類の判定データをロードする
+		for char = 1, #db.chars - 1 do
+			db.chars[char].push_box_mask = mem.r32(0x5C728 + (char << 2))
+			db.chars[char].push_box = {}
+			for _, addr in ipairs({ 0x5C9BC, 0x5CA7C, 0x5CB3C, 0x5CBFC }) do
+				local a2 = addr + (char << 3)
+				local y1, y2, x1, x2 = mem.r8i(a2 + 0x1), mem.r8i(a2 + 0x2), mem.r8i(a2 + 0x3), mem.r8i(a2 + 0x4)
+				db.chars[char].push_box[addr] = {
+					addr = addr,
+					id = 0,
+					type = db.box_types.push,
+					front = x1,
+					back = x2,
+					left = math.min(x1, x2),
+					right = math.max(x1, x2),
+					top = math.min(y1, y2),
+					bottom = math.max(y1, y2),
+				}
+				-- printf("char=%s addr=%x type=000 x1=%s x2=%s y1=%s y2=%s", char, a2, x1, x2, y1, y2)
 			end
 		end
+		print("load_push_box done")
 	end
-	global.holder.sub[label] = sub
-	print("load_memory_tap [" .. label .. "] done")
-end
 
-local apply_attack_infos    = function(p, id, base_addr)
-	-- 削りダメージ計算種別取得 05B2A4 からの処理
-	p.chip      = db.calc_chip((0xF & mem.r8(base_addr.chip + id)) + 1, p.damage)
-	-- 硬直時間取得 05AF7C(家庭用版)からの処理
-	local d2    = 0xF & mem.r8(id + base_addr.hitstun1)
-	p.hitstun   = mem.r8(base_addr.hitstun2 + d2) + 1 + 3 -- ヒット硬直
-	p.blockstun = mem.r8(base_addr.blockstun + d2) + 1 + 2 -- ガード硬直
-end
+	local get_push_box          = function(p)
+		-- 家庭用 05C6D0 からの処理
+		local push_box = db.chars[p.char].push_box
+		if p.char == 0x5 and ut.tstb(p.flag_c8, db.flag_c8._15) then
+			return push_box[0x5C9BC]
+		else
+			if ut.tstb(p.flag_c0, db.flag_c0._01) ~= true and p.pos_y ~= 0 then
+				if (p.flag_c8 & p.char_data.push_box_mask) ~= 0 then
+					return push_box[0x5CB3C]
+				elseif p.flag_c8 & 0xFFFF0000 == 0 then
+					return push_box[0x5CB3C]
+				else
+					return push_box[0x5CBFC]
+				end
+			end
+			return push_box[(p.flag_c0 & 0x14000046 ~= 0) and 0x5CA7C or 0x5C9BC]
+		end
+	end
 
-local dummy_gd_type         = {
-	none   = 1, -- なし
-	auto   = 2, -- オート
-	bs     = 3, -- ブレイクショット
-	hit1   = 4, -- 1ヒットガード
-	block1 = 5, -- 1ガード
-	fixed  = 6, -- 常時
-	random = 7, -- ランダム
-	force  = 8, -- 強制
-}
-local wakeup_type           = {
-	none = 1, -- なし
-	rvs  = 2, -- リバーサル
-	tech = 3, -- テクニカルライズ
-	sway = 4, -- グランドスウェー
-	atk  = 5, -- 起き上がり攻撃
-}
-local rvs_wake_types        = ut.new_set(wakeup_type.tech, wakeup_type.sway, wakeup_type.rvs)
-rbff2.startplugin           = function()
+	local fix_throw_box_pos     = function(box)
+		box.left, box.right = box.x - box.left * box.flip_x, box.x - box.right * box.flip_x
+		box.bottom, box.top = box.y - box.bottom, box.y - box.top
+		return box
+	end
+
+	-- 通常投げ間合い
+	-- 家庭用0x05D78Cからの処理
+	local get_normal_throw_box  = function(p)
+		-- 相手が向き合いか背向けかで押し合い幅を解決して反映
+		local push_box, op_push_box = db.chars[p.char].push_box[0x5C9BC], db.chars[p.op.char].push_box[0x5C9BC]
+		local op_edge = (p.block_side == p.op.block_side) and op_push_box.back or op_push_box.front
+		local center = ut.int16(((push_box.front - math.abs(op_edge)) * p.box_scale) >> 6)
+		local range = mem.r8(fix_addr(0x5D854) + p.char4)
+		return fix_throw_box_pos({
+			id = 0x100, -- dummy
+			type = db.box_types.normal_throw,
+			left = center - range,
+			right = center + range,
+			top = -0x05, -- 地上投げの範囲をわかりやすくする
+			bottom = 0x05,
+			x = p.pos - screen.left,
+			y = screen.top - p.pos_y - p.pos_z,
+			threshold = mem.r8(0x3A66C), -- 投げのしきい値 039FA4からの処理
+			flip_x = p.block_side, -- 向き補正値
+		})
+	end
+
+	-- 必殺投げ間合い
+	local get_special_throw_box = function(p, id)
+		local a0 = 0x3A542 + (0xFFFF & (id << 3))
+		local top, bottom = mem.r16(a0 + 2), mem.r16(a0 + 4)
+		if id == 0xA then
+			top, bottom = 0x1FFF, 0x1FFF -- ダブルクラッチは上下無制限
+		elseif top + bottom == 0 then
+			top, bottom = 0x05, 0x05 -- 地上投げの範囲をわかりやすくする
+		end
+		return fix_throw_box_pos({
+			id = id,
+			type = db.box_types.special_throw,
+			left = -mem.r16(a0),
+			right = 0x0,
+			top = top,
+			bottom = -bottom,
+			x = p.pos - screen.left,
+			y = screen.top - p.pos_y - p.pos_z,
+			threshold = mem.r8(0x3A66C + (0xFF & id)), -- 投げのしきい値 039FA4からの処理
+			flip_x = p.block_side,               -- 向き補正値
+		})
+	end
+
+	-- 空中投げ間合い
+	-- MEMO: 0x060566(家庭用)のデータを読まずにハードコードにしている
+	local get_air_throw_box     = function(p)
+		return fix_throw_box_pos({
+			id = 0x200, -- dummy
+			type = db.box_types.air_throw,
+			left = -0x30,
+			right = 0x0,
+			top = -0x20,
+			bottom = 0x20,
+			x = p.pos - screen.left,
+			y = screen.top - p.pos_y - p.pos_z,
+			threshold = 0,   -- 投げのしきい値
+			flip_x = p.block_side, -- 向き補正値
+		})
+	end
+
+	local get_throwbox          = function(p, id)
+		if id == 0x100 then
+			return get_normal_throw_box(p)
+		elseif id == 0x200 then
+			return get_air_throw_box(p)
+		end
+		return get_special_throw_box(p, id)
+	end
+
+	local draw_hitbox           = function(box)
+		--ut.printf("%s  %s", box.type.kind, box.type.enabled)
+		-- 背景なしの場合は判定の塗りつぶしをやめる
+		local outline, fill = box.type.outline, global.disp_bg and box.type.fill or 0
+		local x1, x2 = sort_ab(box.left, box.right)
+		local y1, y2 = sort_ab(box.top, box.bottom)
+		scr:draw_box(x1, y1, x1 - 1, y2, 0, outline)
+		scr:draw_box(x2, y1, x2 + 1, y2, 0, outline)
+		scr:draw_box(x1, y1, x2, y1 - 1, 0, outline)
+		scr:draw_box(x1, y2, x2, y2 + 1, outline, outline)
+		scr:draw_box(x1, y1, x2, y2, outline, fill)
+		--ut.printf("%s  x1=%s x2=%s y1=%s y2=%s",  box.type.kind, x1, x2, y1, y2)
+	end
+
+	local draw_range            = function(range)
+		local label, flip_x, x, y, col = range.label, range.flip_x, range.x, range.y, range.within and 0xFFFFFF00 or 0xFFBBBBBB
+		local size = range.within == nil and global.axis_size or global.axis_size2 -- 範囲判定がないものは単純な座標とみなす
+		scr:draw_box(x, y - size, x + flip_x, y + size, 0, col)
+		scr:draw_box(x - size + flip_x, y, x + size + flip_x, y - 1, 0, col)
+		draw_ctext_with_shadow(x, y, label or "", col)
+	end
+
+	local border_box            = function(x1, y1, x2, y2, fcol, _, w)
+		scr:draw_box(x1 - w, y1 - w, x2 + w, y1, fcol, fcol)
+		scr:draw_box(x1 - w, y1 - w, x1, y2 + w, fcol, fcol)
+		scr:draw_box(x2, y1 - w, x2 + 1, y2 + w, fcol, fcol)
+		scr:draw_box(x1 - w, y2 + w, x2 + w, y2, fcol, fcol)
+	end
+
+	local border_waku           = function(x1, y1, x2, y2, fcol, _, w)
+		scr:draw_box(x1, y1, x2, y2, fcol, 0)
+		scr:draw_box(x1, y1 - w, x2, y1, fcol, fcol)
+		scr:draw_box(x1, y2 + w, x2, y2, fcol, fcol)
+	end
+
+	-- 判定枠のチェック処理種類
+	local hitbox_possible_map   = {
+		[0x01311C] = possible_types.none,   -- 常に判定しない
+		[0x012FF0] = possible_types.same_line, -- → 013038 同一ライン同士なら判定する
+		[0x012FFE] = possible_types.both_line, -- → 013054 異なるライン同士でも判定する
+		[0x01300A] = possible_types.unknown, -- → 013018 不明
+		[0x012FE2] = possible_types.air_onry, -- → 012ff0 → 013038 相手が空中にいれば判定する
+	}
+	local get_hitbox_possibles  = function(id)
+		local possibles = {}
+		for k, addr_or_func in pairs(hitbox_possibles) do
+			local ret = possible_types.none
+			if type(addr_or_func) == "number" then
+				-- 家庭用版 012DBC~012F04,012F30~012F96のデータ取得処理をベースに判定＆属性チェック
+				local d2 = 0xFF & (id - 0x20)
+				if d2 >= 0 then ret = hitbox_possible_map[mem.r32(0x13120 + (mem.r8(addr_or_func + d2) << 2))] end
+			else
+				ret = addr_or_func(id)
+			end
+			if possible_types.none ~= ret then possibles[k] = ret end
+		end
+		return possibles
+	end
+
+	local fix_box_type          = function(p, attackbit, box)
+		attackbit = db.box_with_bit_types.mask & attackbit
+		local type = p.in_sway_line and box.sway_type or box.type
+		if type ~= db.box_types.attack then return type end
+		-- TODO 多段技の状態
+		p.max_hit_dn = p.max_hit_dn or 0
+		if p.max_hit_dn > 1 or p.max_hit_dn == 0 or (p.char == 0x4 and p.attack == 0x16) then
+		end
+		local types = p.is_fireball and db.box_with_bit_types.fireballkv or db.box_with_bit_types.bodykv
+		type = types[attackbit]
+		if type then return type.box_type end
+		types = p.is_fireball and db.box_with_bit_types.fireball or db.box_with_bit_types.body
+		for _, t in ipairs(types) do if ut.tstb(attackbit, t.attackbit, true) then return t.box_type end end
+		ut.printf("fallback %s", ut.tobitstr(attackbit))
+		return types[#types].box_type -- fallback
+	end
+
+	-- 遠近間合い取得
+	local load_close_far        = function()
+		if db.chars[1].close_far then return end
+		-- 地上通常技の近距離間合い 家庭用 02DD02 からの処理
+		for org_char = 1, #db.chars - 1 do
+			local char                   = org_char - 1
+			local abc_offset             = mem.close_far_offset + (char * 4)
+			local d_offset               = mem.close_far_offset_d + (char * 2)
+			-- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
+			db.chars[org_char].close_far = {
+				[0x00] = {
+					A = { x1 = 0, x2 = mem.r8(abc_offset) },
+					B = { x1 = 0, x2 = mem.r8(abc_offset + 1) },
+					C = { x1 = 0, x2 = mem.r8(abc_offset + 2) },
+					D = { x1 = 0, x2 = mem.r16(d_offset) },
+				},
+				[0x01] = {},
+				[0x82] = {},
+			}
+		end
+
+		-- 対スウェーライン攻撃の近距離間合い
+		local get_lmo_range_internal = function(ret, name, d0, d1, incl_last)
+			local decd1 = ut.int16tofloat(d1)
+			local intd1 = math.floor(decd1)
+			local x1, x2 = 0, 0
+			for d = 1, intd1 do
+				x2 = d * d0
+				ret[name .. d - 1] = { x1 = x1, x2 = x2 - 1 }
+				x1 = x2
+			end
+			if incl_last then
+				ret[name .. intd1] = { x1 = x1, x2 = math.floor(d0 * decd1) } -- 1Fあたりの最大移動量になる距離
+			end
+			return ret
+		end
+		-- 家庭用2EC72,2EDEE,2E1FEからの処理
+		for org_char = 1, #db.chars - 1 do
+			local ret = {}
+			-- データが近距離、遠距離の2種類しかないのと実質的に意味があるのが近距離のものなので最初のデータだけ返す
+			-- 0x0:近A 0x1:遠A 0x2:近B 0x3:遠B 0x4:近C 0x5:遠C
+			get_lmo_range_internal(ret, "", mem.r8(mem.r32(0x2EE06 + 0x0 * 4) + org_char * 6), 0x2A000, true)
+			ret["近"] = { x1 = 0, x2 = 72 } -- 近距離の対メインライン攻撃になる距離
+			if org_char == 6 then
+				get_lmo_range_internal(ret, "必", 24, 0x40000) -- 渦炎陣
+			elseif org_char == 14 then
+				get_lmo_range_internal(ret, "必", 24, 0x80000) -- クロスヘッドスピン
+			end
+			-- printf("%s %s %x %s %x %s", chars[char].name, act_name, d0, d0, d1, decd1)
+			db.chars[org_char].close_far[0x80] = ret
+		end
+		print("load_close_far done")
+	end
+
+	local reset_memory_tap      = function(label, enabled)
+		if not global.holder then return end
+		local sub = global.holder.sub[label]
+		if not sub then return end
+		if not enabled and sub.on == true then
+			sub.on = false
+			for name, tap in pairs(sub.taps) do tap:remove() end
+			--ut.printf("remove %s", label)
+		elseif enabled and sub.on ~= true then
+			sub.on = true
+			for name, tap in pairs(sub.taps) do tap:reinstall() end
+			--ut.printf("reinstall %s", label)
+		end
+	end
+
+	local load_memory_tap       = function(label, wps) -- tapの仕込み
+		if global.holder and global.holder.sub[label] then
+			reset_memory_tap(label, true)
+			return
+		end
+		if global.holder == nil then
+			global.holder = { on = true, taps = {}, sub = {}, cnt = 0, }
+			global.holder.countup = function(label)
+				global.holder.cnt = global.holder.cnt + 1
+				return global.holder.cnt
+			end
+		end
+		local sub = { on = true, taps = {} }
+		for _, p in ipairs(wps) do
+			for _, k in ipairs({ "wp8", "wp16", "wp32", "rp8", "rp16", "rp32", }) do
+				for any, cb in pairs(p[k] or {}) do
+					local addr = type(any) == "number" and any or any.addr
+					addr = addr > 0xFF and addr or ((p.addr and p.addr.base) + addr)
+					local filter = type(any) == "number" and {} or not any.filter and {} or
+						type(any.filter) == "table" and any.filter or type(any.filter) == "number" and { any.filter }
+					---@diagnostic disable-next-line: redundant-parameter
+					local wp = mem[k](addr, cb, filter and #filter > 0 and ut.table_to_set(filter) or nil)
+					---@diagnostic disable-next-line: need-check-nil
+					sub.taps[wp.name] = wp
+				end
+			end
+		end
+		global.holder.sub[label] = sub
+		print("load_memory_tap [" .. label .. "] done")
+	end
+
+	local apply_attack_infos    = function(p, id, base_addr)
+		-- 削りダメージ計算種別取得 05B2A4 からの処理
+		p.chip      = db.calc_chip((0xF & mem.r8(base_addr.chip + id)) + 1, p.damage)
+		-- 硬直時間取得 05AF7C(家庭用版)からの処理
+		local d2    = 0xF & mem.r8(id + base_addr.hitstun1)
+		p.hitstun   = mem.r8(base_addr.hitstun2 + d2) + 1 + 3 -- ヒット硬直
+		p.blockstun = mem.r8(base_addr.blockstun + d2) + 1 + 2 -- ガード硬直
+	end
+
+	local dummy_gd_type         = {
+		none   = 1, -- なし
+		auto   = 2, -- オート
+		bs     = 3, -- ブレイクショット
+		hit1   = 4, -- 1ヒットガード
+		block1 = 5, -- 1ガード
+		fixed  = 6, -- 常時
+		random = 7, -- ランダム
+		force  = 8, -- 強制
+	}
+	local wakeup_type           = {
+		none = 1, -- なし
+		rvs  = 2, -- リバーサル
+		tech = 3, -- テクニカルライズ
+		sway = 4, -- グランドスウェー
+		atk  = 5, -- 起き上がり攻撃
+	}
+	local rvs_wake_types        = ut.new_set(wakeup_type.tech, wakeup_type.sway, wakeup_type.rvs)
+
 	local players, all_wps, all_objects, hitboxies, ranges = {}, {}, {}, {}, {}
 	local hitboxies_order                                  = function(b1, b2) return (b1.id < b2.id) end
 	local ranges_order                                     = function(r1, r2) return (r1.within and 1 or -1) < (r2.within and 1 or -1) end
@@ -4388,17 +4386,6 @@ rbff2.startplugin           = function()
 		end
 	end
 
-	local emu_start = function()
-		setup_emu()
-		math.randomseed(os.time())
-	end
-
-	local emu_stop = function() end
-
-	local emu_menu = function(index, event) return false end
-
-	local emu_frame = function() end
-
 	-- メニュー表示
 	menu.setup_char = function()
 		-- キャラにあわせたメニュー設定
@@ -5254,21 +5241,6 @@ rbff2.startplugin           = function()
 
 	menu.state = menu.tra_main -- menu or tra_main
 
-	local emu_pause = function()
-		menu.state.draw()
-		--print(collectgarbage("count"))
-		--for addr, cnt in pairs(mem.wp_cnt) do ut.printf("wp %x %s" ,addr,cnt) end
-		--for addr, cnt in pairs(mem.rp_cnt) do ut.printf("rp %x %s" ,addr,cnt) end
-	end
-
-	local emu_resume = function() end
-
-	local emu_frame_done = function()
-		if not machine then return end
-		if machine.paused == false then menu.state.draw() end
-		collectgarbage("collect")
-	end
-
 	local bios_test = function()
 		local ram_value1, ram_value2 = mem.r16(players[1].addr.base), mem.r16(players[2].addr.base)
 		for _, test_value in ipairs({ 0x5555, 0xAAAA, 0xFFFF & players[1].addr.base, 0xFFFF & players[2].addr.base }) do
@@ -5281,7 +5253,33 @@ rbff2.startplugin           = function()
 		return false
 	end
 
-	local emu_periodic = function()
+	rbff2.emu_start = function()
+		setup_emu()
+		math.randomseed(os.time())
+	end
+
+	rbff2.emu_stop = function() end
+
+	rbff2.emu_menu = function(index, event) return false end
+
+	rbff2.emu_frame = function() end
+
+	rbff2.emu_pause = function()
+		menu.state.draw()
+		--print(collectgarbage("count"))
+		--for addr, cnt in pairs(mem.wp_cnt) do ut.printf("wp %x %s" ,addr,cnt) end
+		--for addr, cnt in pairs(mem.rp_cnt) do ut.printf("rp %x %s" ,addr,cnt) end
+	end
+
+	rbff2.emu_resume = function() end
+
+	rbff2.emu_frame_done = function()
+		if not machine then return end
+		if machine.paused == false then menu.state.draw() end
+		collectgarbage("collect")
+	end
+
+	rbff2.emu_periodic = function()
 		if not machine then return end
 		if machine.paused then return end
 		local ec = scr:frame_number() -- フレーム更新しているか
@@ -5331,16 +5329,63 @@ rbff2.startplugin           = function()
 			menu.state.proc() -- メニュー初期化前に処理されないようにする
 		end
 	end
+end
 
-	subscription.reset = emu.add_machine_reset_notifier(emu_start)
-	subscription.stop = emu.add_machine_stop_notifier(emu_stop)
-	subscription.frame = emu.add_machine_frame_notifier(emu_frame)
-	subscription.pause = emu.add_machine_pause_notifier(emu_pause)
-	subscription.resume = emu.add_machine_resume_notifier(emu_resume)
-	emu.register_frame_done(emu_frame_done)
-	emu.register_periodic(emu_periodic)
-	emu.register_menu(emu_menu, {}, "RB2 Training")
+rbff2training.startplugin = function()
+	local dummy, core
 
+	local is_target = function()
+		return emu.romname() == "rbff2h"
+	end
+
+	local core_control = function()
+		if core == rbff2 and not is_target() then
+			print("Disable Training-Core")
+			core = dummy
+		end
+	end
+
+	core = {
+		emu_frame = core_control,
+		emu_pause = core_control,
+		emu_resume = core_control,
+		emu_frame_done = core_control,
+		emu_periodic = core_control,
+		emu_menu = core_control,
+		emu_stop = core_control,
+	}
+	dummy = core
+
+	subscription.reset = emu.add_machine_reset_notifier(function()
+		if core ~= rbff2 and is_target() then
+			print("Enable Training-Core")
+			core = rbff2
+			core.startplugin()
+			core.emu_start()
+		end
+	end)
+	subscription.stop = emu.add_machine_stop_notifier(function() core.emu_stop() end)
+	subscription.frame = emu.add_machine_frame_notifier(function() core.emu_frame() end)
+	subscription.pause = emu.add_machine_pause_notifier(function() core.emu_pause() end)
+	subscription.resume = emu.add_machine_resume_notifier(function() core.emu_resume() end)
+	emu.register_frame_done(function() core.emu_frame_done() end)
+	emu.register_periodic(function() core.emu_periodic() end)
+
+	local menu_callback = function(index, event)
+		if event == "select" then return true end
+		--print(index, event)
+		return false
+	end
+
+	local menu_populate = function()
+		local result = {}
+		--table.insert(result, { exports.description, "", "" })
+		--table.insert(result, { "---", "", "" })
+		--table.insert(result, { "Training", "ON", "OFF" })
+		return result
+	end
+
+	emu.register_menu(menu_callback, menu_populate, exports.description)
 end
 
 return exports
