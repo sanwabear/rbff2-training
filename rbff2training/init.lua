@@ -512,7 +512,7 @@ local global                               = {
 
 	disp_pos             = true, -- 1P 2P 距離表示
 	hide                 = hide_options.none,
-	disp_frame           = true,  -- フレームメーター表示 1:OFF 2:ON
+	disp_frame           = true, -- フレームメーター表示 1:OFF 2:ON
 	disp_input           = 1,  -- コマンド入力状態表示 1:OFF 2:1P 3:2P
 	disp_normal_frames   = 2,  -- 通常動作フレーム非表示 1:OFF 2:ON
 	pause_hit            = 1,  -- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
@@ -1246,7 +1246,7 @@ local border_box            = function(x1, y1, x2, y2, fcol, _, w)
 	scr:draw_box(x1 - w, y2 + w, x2 + w, y2, fcol, fcol)
 end
 
-local border_waku            = function(x1, y1, x2, y2, fcol, _, w)
+local border_waku           = function(x1, y1, x2, y2, fcol, _, w)
 	scr:draw_box(x1, y1, x2, y2, fcol, 0)
 	scr:draw_box(x1, y1 - w, x2, y1, fcol, fcol)
 	scr:draw_box(x1, y2 + w, x2, y2, fcol, fcol)
@@ -1424,7 +1424,7 @@ rbff2.startplugin           = function()
 	local players, all_wps, all_objects, hitboxies, ranges = {}, {}, {}, {}, {}
 	local hitboxies_order                                  = function(b1, b2) return (b1.id < b2.id) end
 	local ranges_order                                     = function(r1, r2) return (r1.within and 1 or -1) < (r2.within and 1 or -1) end
-	local get_object_by_addr                               = function(addr, default) return all_objects[addr] or default end -- ベースアドレスからオブジェクト解決
+	local get_object_by_addr                               = function(addr, default) return all_objects[addr] or default end              -- ベースアドレスからオブジェクト解決
 	local get_object_by_reg                                = function(reg, default) return all_objects[mem.rg(reg, 0xFFFFFF)] or default end -- レジストリからオブジェクト解決
 	local now                                              = function() return global.frame_number + 1 end
 	local ggkey_create                                     = function(p1)
@@ -1488,7 +1488,7 @@ rbff2.startplugin           = function()
 				else
 					state[k] = (not state[k] or state[k] > 0) and -1 or state[k] - 1
 				end
-				if (k == "_A" or  k == "_B" or  k == "_C" or  k == "_D") and state[k] == 1 then
+				if (k == "_A" or k == "_B" or k == "_C" or k == "_D") and state[k] == 1 then
 					resume = true
 				end
 			end
@@ -1668,7 +1668,7 @@ rbff2.startplugin           = function()
 			[0x8E] = function(data)
 				local changed = p.state ~= data
 				p.on_block = data == 2 and now() or p.on_block                                -- ガードへの遷移フレームを記録
-				p.on_hit = (data == 1 or data == 3) and now() or p.on_hit                       -- ヒットへの遷移フレームを記録
+				p.on_hit = (data == 1 or data == 3) and now() or p.on_hit                     -- ヒットへの遷移フレームを記録
 				if p.state == 0 and p.on_hit and not p.act_data.neutral then p.on_punish = now() + 10 end -- 確定反撃
 				p.random_boolean = changed and (math.random(255) % 2 == 0) or p.random_boolean
 				p.state, p.change_state = data, changed and now() or p.change_state           -- 今の状態と状態更新フレームを記録
@@ -1684,20 +1684,25 @@ rbff2.startplugin           = function()
 			[{ addr = 0xA9, filter = { 0x23284, 0x232B0 } }] = function(data) p.on_vulnerable = now() end, -- 判定無敵でない, 判定無敵+無敵タイマーONでない
 			-- [0x92] = function(data) end, -- 弾ヒット?
 			[0xA2] = function(data) p.firing = data ~= 0 end,                                     -- 弾発射時に値が入る ガード判断用
-			[0xA3] = function(data)                                                               -- A3:成立した必殺技コマンドID A4:必殺技コマンドの持続残F
+			[0xA3] = function(data)                                                               -- A3:成立した必殺技コマンドID
 				if data == 0 then
 					p.on_sp_clear = now()
 				elseif data ~= 0 then
-					p.on_sp_established, p.last_sp = now(), data
-					local sp2, proc_base           = (p.last_sp - 1) * 2, p.char_data.proc_base
-					p.bs_pow, p.bs_invincible      = mem.r8(proc_base.bs_pow + sp2) & 0x7F, mem.r8(proc_base.bs_invincible + sp2)
-					p.bs_invincible                = p.bs_invincible == 0xFF and 0 or p.bs_invincible
-					p.sp_invincible                = mem.r8(proc_base.sp_invincible + p.last_sp - 1)
-					p.bs_invincible                = math.max(p.bs_invincible - 1, 0) -- 発生時に即-1される
-					p.sp_invincible                = math.max(p.sp_invincible - 1, 0) -- 発生時に即-1される
+					if mem.pc() == 0x395B2 then p.on_sp_established = now() end
+					p.last_sp                 = data
+					local sp2, proc_base      = (p.last_sp - 1) * 2, p.char_data.proc_base
+					p.bs_pow, p.bs_invincible = mem.r8(proc_base.bs_pow + sp2) & 0x7F, mem.r8(proc_base.bs_invincible + sp2)
+					p.bs_invincible           = p.bs_invincible == 0xFF and 0 or p.bs_invincible
+					p.sp_invincible           = mem.r8(proc_base.sp_invincible + p.last_sp - 1)
+					p.bs_invincible           = math.max(p.bs_invincible - 1, 0) -- 発生時に即-1される
+					p.sp_invincible           = math.max(p.sp_invincible - 1, 0) -- 発生時に即-1される
 				end
 			end,
-			[0xA5] = function(data) p.additional = data end, -- 追加入力成立時のデータ
+			-- A4:必殺技コマンドの持続残F ?
+			[0xA5] = function(data)
+				if mem.pc() == 0x395BA then p.on_sp_established = now() end
+				p.additional = data
+			end,                                         -- 追加入力成立時のデータ
 			--[0xAD] = function(data)  end, -- ガード動作用
 			[0xAF] = function(data) p.cancelable_data = data end, -- キャンセル可否 00:不可 C0:可 D0:可 正確ではないかも
 			[0x68] = function(data) p.skip_frame = data ~= 0 end, -- 潜在能力強制停止
@@ -1751,19 +1756,19 @@ rbff2.startplugin           = function()
 				p.spid, p.sp_flag, p.on_update_spid = data, mem.r32(0x3AAAC + (data << 2)), now() -- 技コマンド成立時の技のID, 0xC8へ設定するデータ(03AA8Aからの処理)
 			end,
 			[{ addr = 0xB9, filter = { 0x58930, 0x58948 } }] = function(data)
-				if data == 0 and mem.pc() == 0x58930 then p.on_bs_clear = now() end            -- BSフラグのクリア
+				if data == 0 and mem.pc() == 0x58930 then p.on_bs_clear = now() end                       -- BSフラグのクリア
 				if data ~= 0 and mem.pc() == 0x58948 then p.on_bs_established, p.last_bs = now(), data end -- BSフラグ設定
 			end,
-			[0xD0] = function(data) p.flag_d0 = data end,                                      -- フラグ群
+			[0xD0] = function(data) p.flag_d0 = data end,                                                 -- フラグ群
 			[{ addr = 0xD6, filter = 0x395A6 }] = function(data) p.on_sp_established, p.last_sp = now(), data end, -- 技コマンド成立時の技のID
 			[0xE2] = function(data) p.sway_close = data == 0 end,
-			[0xE4] = function(data) p.hurt_state = data end,                                   -- やられ状態
+			[0xE4] = function(data) p.hurt_state = data end,                                              -- やられ状態
 			[0xE8] = function(data, ret)
-				if data < 0x10 and p.dummy_gd == dummy_gd_type.force then ret.value = 0x10 end -- 0x10以上でガード
+				if data < 0x10 and p.dummy_gd == dummy_gd_type.force then ret.value = 0x10 end            -- 0x10以上でガード
 			end,
-			[0xEC] = function(data) p.push_invincible = data end,                              -- 押し合い判定の透過状態
+			[0xEC] = function(data) p.push_invincible = data end,                                         -- 押し合い判定の透過状態
 			[0xEE] = function(data) p.in_hitstop_value, p.in_hitstun = data, ut.tstb(data, 0x80) end,
-			[0xF6] = function(data) p.invincible = data end,                                   -- 打撃と投げの無敵の残フレーム数
+			[0xF6] = function(data) p.invincible = data end,                                              -- 打撃と投げの無敵の残フレーム数
 			-- [0xF7] = function(data) end -- 技の内部の進行度
 			[{ addr = 0xFB, filter = { 0x49418, 0x49428 } }] = function(data)
 				p.kaiserwave = p.kaiserwave or {} -- カイザーウェイブのレベルアップ
@@ -2030,15 +2035,15 @@ rbff2.startplugin           = function()
 				end
 
 				-- パワーゲージ回復  POWモード　1:自動回復 2:固定 3:通常動作
-				local fix_pow     = { 0x3C, 0x1E, 0x00 } -- 回復上限の固定値
+				local fix_pow = { 0x3C, 0x1E, 0x00 }     -- 回復上限の固定値
 				local max_pow = fix_pow[p.max] or (p.max - #fix_pow) -- 回復上限
-				local cur_pow = mem.r8(p.addr.pow) -- 現在のパワー値
+				local cur_pow = mem.r8(p.addr.pow)       -- 現在のパワー値
 				if global.pow_mode == 2 then
-					mem.w8(p.addr.pow, max_pow) -- 固定時は常にパワー回復
+					mem.w8(p.addr.pow, max_pow)          -- 固定時は常にパワー回復
 				elseif global.pow_mode == 1 and 180 < math.min(p.throw_timer, p.op.throw_timer) then
-					mem.w8(p.addr.pow, max_pow) -- 投げ無敵タイマーでパワー回復
+					mem.w8(p.addr.pow, max_pow)          -- 投げ無敵タイマーでパワー回復
 				elseif global.pow_mode ~= 3 and max_pow < cur_pow then
-					mem.w8(p.addr.pow, max_pow) -- 最大値の方が少ない場合は強制で減らす
+					mem.w8(p.addr.pow, max_pow)          -- 最大値の方が少ない場合は強制で減らす
 				end
 			end
 			p.init_state       = function()
@@ -2710,11 +2715,11 @@ rbff2.startplugin           = function()
 	-- グラフでフレームデータを末尾から描画
 	local decos = {
 		{ type = frame_attack_types.post_fireball, txt = "▪", fix = -0.4 },
-		{ type = frame_attack_types.pre_fireball,  txt = "▫", fix = -0.4 },
-		{ type = frame_attack_types.off_fireball,  txt = "◦", fix = -0.35 },
-		{ type = frame_attack_types.on_fireball,   txt = "•", fix = -0.35 },
-		{ type = frame_attack_types.on_air,        txt = "▴", fix = -0.5 },
-		{ type = frame_attack_types.on_ground,     txt = "▾", fix = -0.5 },
+		{ type = frame_attack_types.pre_fireball, txt = "▫", fix = -0.4 },
+		{ type = frame_attack_types.off_fireball, txt = "◦", fix = -0.35 },
+		{ type = frame_attack_types.on_fireball, txt = "•", fix = -0.35 },
+		{ type = frame_attack_types.on_air, txt = "▴", fix = -0.5 },
+		{ type = frame_attack_types.on_ground, txt = "▾", fix = -0.5 },
 	}
 	local dodges = {
 		{ type = frame_attack_types.full,        y = 1.0, step = 1.6, txt = "Full", border = 0.8, xline = 0xFF00BBDD },
@@ -3098,17 +3103,17 @@ rbff2.startplugin           = function()
 		key, boxkey, frame = p.attackbit, fbkey, frames[#frames]
 		if p.update_act or not frame or upd_group or frame.key ~= key or frame.boxkey ~= boxkey then
 			frame = ut.table_add(frames, {
-				act       = p.act,
-				count     = 1,
-				font_col  = 0,
-				name      = last_frame.name,
+				act        = p.act,
+				count      = 1,
+				font_col   = 0,
+				name       = last_frame.name,
 				name_plain = last_frame.name_plain,
-				col       = 0x00FFFFFF,
-				line      = 0x00FFFFFF,
-				update    = p.update_act,
-				attackbit = p.attackbit,
-				key       = key,
-				boxkey    = boxkey,
+				col        = 0x00FFFFFF,
+				line       = 0x00FFFFFF,
+				update     = p.update_act,
+				attackbit  = p.attackbit,
+				key        = key,
+				boxkey     = boxkey,
 			}, 180)
 		else
 			frame.count = frame.count + 1
@@ -3122,16 +3127,16 @@ rbff2.startplugin           = function()
 		if p.update_act or not frame or upd_group or frame.key ~= key or frame.boxkey ~= boxkey then
 			local col = (p.frame_gap > 0) and 0xFF0088FF or (p.frame_gap < 0) and 0xFFFF0088 or 0xFFFFFFFF
 			frame = ut.table_add(frames, {
-				act      = p.act,
-				count    = 1,
-				font_col = col,
-				name     = last_frame.name,
+				act        = p.act,
+				count      = 1,
+				font_col   = col,
+				name       = last_frame.name,
 				name_plain = last_frame.name_plain,
-				col      = 0x22FFFFFF & col,
-				line     = 0xCCFFFFFF & col,
-				update   = p.update_act,
-				key      = key,
-				boxkey   = boxkey,
+				col        = 0x22FFFFFF & col,
+				line       = 0xCCFFFFFF & col,
+				update     = p.update_act,
+				key        = key,
+				boxkey     = boxkey,
 			}, 180)
 		else
 			frame.count = frame.count + 1
@@ -3516,9 +3521,9 @@ rbff2.startplugin           = function()
 			end) do
 				if box.type.kind == db.box_kinds.attack or box.type.kind == db.box_kinds.parry then
 					if global.pause_hitbox == 3 then global.pause = true end -- 強制ポーズ 1:OFF, 2:投げ, 3:攻撃, 4:変化時
-					p.hit.box_count = p.hit.box_count + 1 -- 攻撃判定の数
+					p.hit.box_count = p.hit.box_count + 1     -- 攻撃判定の数
 				end
-				if box.type.kind == db.box_kinds.attack then -- 攻撃位置から解決した属性を付与する
+				if box.type.kind == db.box_kinds.attack then  -- 攻撃位置から解決した属性を付与する
 					box.blockables = {
 						main = ut.tstb(box.possible, possible_types.same_line) and box.blockable | get_top_type(box.real_top, db.top_types) or 0,
 						sway = ut.tstb(box.possible, possible_types.diff_line) and box.blockable | get_top_type(box.real_top, db.top_sway_types) or 0,
@@ -3674,14 +3679,14 @@ rbff2.startplugin           = function()
 
 			-- キーログの更新
 			-- 必殺技コマンド成立を直前のキーログに反映する
-			if p.on_sp_established == global.frame_number then
+			if p.on_sp_established == global.frame_number then -- or 0 < p.sp_established_duration
 				local prev = p.key.log[#p.key.log]
 				if prev and not prev.on_sp_established then
 					if prev.frame == 1 then
-						prev.spid, prev.on_sp_established = p.last_sp, p.on_sp_established
+						prev.spid, prev.on_sp_established = p.last_sp, global.frame_number
 					else
 						prev.frame = prev.frame - 1
-						table.insert(p.key.log, { key = prev.key, frame = 1, spid = p.last_sp, on_sp_established = p.on_sp_established })
+						table.insert(p.key.log, { key = prev.key, frame = 1, spid = p.last_sp, on_sp_established = global.frame_number })
 					end
 				end
 			end
@@ -4075,7 +4080,7 @@ rbff2.startplugin           = function()
 			p.skip_frame = false -- 初期化
 			-- ヒット時にポーズさせる 強制ポーズ処理
 			-- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
-			if (global.pause_hit == 2 and (p.on_hit == global.frame_number or p.on_block == global.frame_number))or
+			if (global.pause_hit == 2 and (p.on_hit == global.frame_number or p.on_block == global.frame_number)) or
 				(global.pause_hit == 3 and p.on_hit == global.frame_number) or
 				(global.pause_hit == 4 and p.on_hit == global.frame_number and p.state == 3) or
 				(global.pause_hit == 5 and p.on_hit == global.frame_number and p.state == 1) or
@@ -4152,9 +4157,9 @@ rbff2.startplugin           = function()
 		local disp_damage = 0
 		if players[1].disp_damage and players[2].disp_damage then -- 両方表示
 			disp_damage = 3
-		elseif players[1].disp_damage then               -- 1Pだけ表示
+		elseif players[1].disp_damage then                  -- 1Pだけ表示
 			disp_damage = 1
-		elseif players[2].disp_damage then               -- 2Pだけ表示
+		elseif players[2].disp_damage then                  -- 2Pだけ表示
 			disp_damage = 2
 		end
 		for i, p in ipairs(players) do
@@ -4257,8 +4262,8 @@ rbff2.startplugin           = function()
 				scr:draw_box(p1 and (139 - p.stun_limit) or 181, 30, p1 and 139 or (181 + p.stun_limit), 33, 0, 0xDD000000) -- 黒背景
 				scr:draw_box(p1 and (139 - p.hit_stun) or 181, 30, p1 and 139 or (181 + p.hit_stun), 33, 0, 0xDDFF0000) -- 気絶値
 				draw_text_with_shadow(p1 and 112 or 184, 28, string.format("%3s/%3s", p.hit_stun, p.stun_limit))
-				scr:draw_box(p1 and (138 - 90) or 180, 35, p1 and 140 or (182 + 90), 40, 0, 0xDDC0C0C0)              -- 枠
-				scr:draw_box(p1 and (139 - 90) or 181, 36, p1 and 139 or (181 + 90), 39, 0, 0xDD000000)              -- 黒背景
+				scr:draw_box(p1 and (138 - 90) or 180, 35, p1 and 140 or (182 + 90), 40, 0, 0xDDC0C0C0)                 -- 枠
+				scr:draw_box(p1 and (139 - 90) or 181, 36, p1 and 139 or (181 + 90), 39, 0, 0xDD000000)                 -- 黒背景
 				scr:draw_box(p1 and (139 - p.hit_stun_timer) or 181, 36, p1 and 139 or (181 + p.hit_stun_timer), 39, 0, 0xDDFFFF00) -- 気絶値
 				draw_text_with_shadow(p1 and 112 or 184, 34, string.format("%3s", p.hit_stun_timer))
 			end
@@ -4318,7 +4323,7 @@ rbff2.startplugin           = function()
 				local oct_vt, key_xy = p.key.gg.oct_vt, p.key.gg.key_xy
 				local tracks, max_track = {}, 6 -- 軌跡をつくる 軌跡は6個まで
 				scr:draw_box(xoffset - 13, yoffset - 13, xoffset + 35, yoffset + 13, 0x80404040, 0x80404040)
-				for ni = 1, 8 do -- 八角形描画
+				for ni = 1, 8 do    -- 八角形描画
 					local prev = ni > 1 and ni - 1 or 8
 					local xy1, xy2 = oct_vt[ni], oct_vt[prev]
 					scr:draw_line(xy1.x, xy1.y, xy2.x, xy2.y, 0xDDCCCCCC)
@@ -4411,7 +4416,7 @@ rbff2.startplugin           = function()
 			end
 
 			p.gd_rvs_enabled = false
-			p.gd_bs_enabled = false
+			p.gd_bs_enabled  = false
 			p.rvs_count      = -1
 		end
 	end
