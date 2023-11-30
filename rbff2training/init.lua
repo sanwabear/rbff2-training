@@ -1749,15 +1749,13 @@ rbff2.startplugin           = function()
 			-- [0xB7] = function(data) p.corner = data end, -- 画面端状態 0:端以外 1:画面端 3:端押し付け
 			[0xB8] = function(data)
 				p.spid, p.sp_flag, p.on_update_spid = data, mem.r32(0x3AAAC + (data << 2)), now() -- 技コマンド成立時の技のID, 0xC8へ設定するデータ(03AA8Aからの処理)
-				p.spid_hist = p.spid_hist or {}
-				table.insert(p.spid_hist, { spid = data, established = now() })
-				while 5 < #p.spid_hist do table.remove(p.spid_hist, 1) end --バッファ長調整
 			end,
 			[{ addr = 0xB9, filter = { 0x58930, 0x58948 } }] = function(data)
 				if data == 0 and mem.pc() == 0x58930 then p.on_bs_clear = now() end            -- BSフラグのクリア
 				if data ~= 0 and mem.pc() == 0x58948 then p.on_bs_established, p.last_bs = now(), data end -- BSフラグ設定
 			end,
 			[0xD0] = function(data) p.flag_d0 = data end,                                      -- フラグ群
+			[{ addr = 0xD6, filter = 0x395A6 }] = function(data) p.on_sp_established, p.last_sp = now(), data end, -- 技コマンド成立時の技のID
 			[0xE2] = function(data) p.sway_close = data == 0 end,
 			[0xE4] = function(data) p.hurt_state = data end,                                   -- やられ状態
 			[0xE8] = function(data, ret)
@@ -3678,7 +3676,7 @@ rbff2.startplugin           = function()
 			-- 必殺技コマンド成立を直前のキーログに反映する
 			if p.on_sp_established == global.frame_number then
 				local prev = p.key.log[#p.key.log]
-				if not prev.on_sp_established then
+				if prev and not prev.on_sp_established then
 					if prev.frame == 1 then
 						prev.spid, prev.on_sp_established = p.last_sp, p.on_sp_established
 					else
