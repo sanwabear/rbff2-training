@@ -25,10 +25,10 @@ exports.version     = "0.0.1"
 exports.description = "RBFF2 Training"
 exports.license     = "MIT License"
 exports.author      = { name = "Sanwabear" }
-local rbff2         = {}
 local rbff2training = exports
 local subscription  = { reset = nil, stop = nil, frame = nil, pause = nil, resume = nil, }
 
+local rbff2         = {}
 rbff2.startplugin           = function()
 	local ut                 = require("rbff2training/util")
 	local db                 = require("rbff2training/data")
@@ -1023,8 +1023,9 @@ rbff2.startplugin           = function()
 	end
 
 	-- ROM部分のメモリエリアへパッチあて
-	local load_rom_patch                       = function()
+	local load_rom_patch                       = function(before)
 		if mem.pached then return end
+		if before then before() end
 		mem.pached = mem.pached or mod.p1_patch()
 		mod.bugfix()
 		mod.training()
@@ -1349,16 +1350,24 @@ rbff2.startplugin           = function()
 
 	local reset_memory_tap      = function(label, enabled)
 		if not global.holder then return end
-		local sub = global.holder.sub[label]
-		if not sub then return end
-		if not enabled and sub.on == true then
-			sub.on = false
-			for name, tap in pairs(sub.taps) do tap:remove() end
-			--ut.printf("remove %s", label)
-		elseif enabled and sub.on ~= true then
-			sub.on = true
-			for name, tap in pairs(sub.taps) do tap:reinstall() end
-			--ut.printf("reinstall %s", label)
+		local subs
+		if label then
+			local sub = global.holder.sub[label]
+			if not sub then return end
+			subs = {sub}
+		else
+			subs = global.holder.sub
+		end
+		for labels, sub in pairs(subs) do
+			if not enabled and sub.on == true then
+				sub.on = false
+				for _, tap in pairs(sub.taps) do tap:remove() end
+				ut.printf("Remove memory taps %s", labels)
+			elseif enabled and sub.on ~= true then
+				sub.on = true
+				for _, tap in pairs(sub.taps) do tap:reinstall() end
+				ut.printf("Reinstall memory taps %s", labels)
+			end
 		end
 	end
 
@@ -1685,6 +1694,7 @@ rbff2.startplugin           = function()
 			-- [0x92] = function(data) end, -- 弾ヒット?
 			[0xA2] = function(data) p.firing = data ~= 0 end,                                     -- 弾発射時に値が入る ガード判断用
 			[0xA3] = function(data)                                                               -- A3:成立した必殺技コマンドID
+				if not p.char_data then return end
 				if data == 0 then
 					p.on_sp_clear = now()
 				elseif data ~= 0 then
@@ -1707,6 +1717,7 @@ rbff2.startplugin           = function()
 			[0xAF] = function(data) p.cancelable_data = data end, -- キャンセル可否 00:不可 C0:可 D0:可 正確ではないかも
 			[0x68] = function(data) p.skip_frame = data ~= 0 end, -- 潜在能力強制停止
 			[0xB6] = function(data)
+				if not p.char_data then return end
 				-- 攻撃中のみ変化、判定チェック用2 0のときは何もしていない、 詠酒の間合いチェック用など
 				p.attackbits.harmless = data == 0
 				p.attack_data         = data
@@ -2264,7 +2275,7 @@ rbff2.startplugin           = function()
 						p.attackbits.juggle    = possibles.juggle and true or false
 						if p.is_fireball then
 							p.attackbits.fb_effect = p.effect
-							p.on_fireball = p.on_fireball < 0 and now() or p.on_fireball
+							p.on_fireball = (p.on_fireball or 0) < 0 and now() or p.on_fireball or 0
 						else
 							p.attackbits.fb_effect = 0
 						end
@@ -3165,7 +3176,7 @@ rbff2.startplugin           = function()
 
 	-- 技データのIDかフラグから技データを返す
 	local resolve_act_neutral = function(p)
-		if ut.tstb(p.flag_c0, 0x3FFD723) or (p.attack_data | p.flag_c4 | p.flag_c8) ~= 0 or ut.tstb(p.flag_cc, 0xFFFFFF3F) or ut.tstb(p.flag_d0, db.flag_d0.hurt) then
+		if ut.tstb(p.flag_c0, 0x3FFD723) or (p.attack_data or 0 | p.flag_c4 | p.flag_c8) ~= 0 or ut.tstb(p.flag_cc, 0xFFFFFF3F) or ut.tstb(p.flag_d0, db.flag_d0.hurt) then
 			return false
 		end
 		return true
@@ -5259,13 +5270,10 @@ rbff2.startplugin           = function()
 	end
 
 	rbff2.emu_stop = function()
-		--[[
-			TODO 停止処理
-			フック外し
-			パッチ戻し
-			デバッグ設定戻し
-			リセット
-		]]
+		if not machine then return end
+		reset_memory_tap() -- フック外し
+		for i = 1, 4 do mem.w8(0x10E000 + i - 1, 0) end -- デバッグ設定戻し
+		machine:soft_reset() -- リセット(パッチ戻しも兼ねる)
 	end
 
 	rbff2.emu_menu = function(index, event) return false end
@@ -5302,9 +5310,7 @@ rbff2.startplugin           = function()
 		mem._0x10E043   = mem.r8(0x10E043)
 		if bios_test() then
 			in_match, in_player_select, mem.pached = false, false, false -- 状態リセット
-			reset_memory_tap("all_wps")
-			reset_memory_tap("hide_wps")
-			reset_memory_tap("select_wps")
+			reset_memory_tap()
 		else
 			-- プレイヤーセレクト中かどうかの判定
 			in_player_select = _0x100701 == 0x10B and (_0x107C22 == 0 or _0x107C22 == 0x55) and _0x10FDAF == 2 and _0x10FDB6 ~= 0 and mem._0x10E043 == 0
@@ -5314,7 +5320,8 @@ rbff2.startplugin           = function()
 				mem.w16(0x10FDB6, 0x0101) -- 操作の設定
 				for i, p in ipairs(players) do mem.w16(p.addr.control, i * 0x0101) end
 			end
-			load_rom_patch()           -- ROM部分のメモリエリアへパッチあて
+			-- ROM部分のメモリエリアへパッチあて
+			load_rom_patch(reset_memory_tap)
 			mod.aes()
 			set_dip_config()           -- デバッグDIPのセット
 			load_hit_effects()         -- ヒット効果アドレステーブルの取得
@@ -5385,18 +5392,14 @@ rbff2training.startplugin = function()
 	emu.register_frame_done(function() core.emu_frame_done() end)
 	emu.register_periodic(function() core.emu_periodic() end)
 
-	local mode = 1
+	local mode = 0
 
 	local menu_callback = function(index, event)
 		if (event == "left") or (event == "right") then
 			mode = (mode ~= 0) and 0 or 1
 			return true
 		elseif (event == "select") then
-			if mode == 0 then
-				core_to_dummy()
-			else
-				core_to_rbff2()
-			end
+			if mode > 0 then core_to_rbff2() else core_to_dummy() end
 			return true
 		end
 		return false
