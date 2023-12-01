@@ -3434,7 +3434,7 @@ local box_kinds                      = {
 local box_types                      = {
 	attack             = { no = 1, id = 0x00, enabled = true, kind = box_kinds.attack, sort = 4, color = 0xFF00FF, fill = 0x40, outline = 0xFF, sway = false, name = "攻撃", name_en = "attack", },
 	fake_attack        = { no = 2, id = 0x00, enabled = false, kind = box_kinds.attack, sort = 1, color = 0x00FF00, fill = 0x00, outline = 0xFF, sway = false, name = "攻撃(嘘)", name_en = "fake_attack", },
-	harmless_attack    = { no = 3, id = 0x00, enabled = true, kind = box_kinds.attack, sort = 2, color = 0xFF00FF, fill = 0x00, outline = 0xFF, sway = false, name = "攻撃(無効)", name_en = "harmless_attack", },
+	harmless_attack    = { no = 3, id = 0x00, enabled = true, kind = box_kinds.attack, sort = 3, color = 0xFF00FF, fill = 0x00, outline = 0xFF, sway = false, name = "攻撃(無効)", name_en = "harmless_attack", },
 	juggle             = { no = 4, id = 0x00, enabled = true, kind = box_kinds.attack, sort = 4, color = 0xFF0033, fill = 0x40, outline = 0xFF, sway = false, name = "攻撃(空中追撃可)", name_en = "juggle", },
 	fake_juggle        = { no = 5, id = 0x00, enabled = false, kind = box_kinds.attack, sort = 1, color = 0x00FF33, fill = 0x00, outline = 0xFF, sway = false, name = "攻撃(嘘、空中追撃可)", name_en = "fake_juggle", },
 	harmless_juggle    = { no = 6, id = 0x00, enabled = true, kind = box_kinds.attack, sort = 2, color = 0xFF0033, fill = 0x00, outline = 0xFF, sway = false, name = "攻撃(無効、空中追撃可)", name_en = "harmless_juggle", },
@@ -3500,16 +3500,16 @@ db.box_type_list = box_type_list
 
 local box_with_bit_types   = {
 	body = ut.table_sort({
-		{ box_type = box_types.fake_juggle,        attackbit = frame_attack_types.attacking | frame_attack_types.fake | frame_attack_types.juggle },
-		{ box_type = box_types.fake_attack,        attackbit = frame_attack_types.attacking | frame_attack_types.fake },
-		{ box_type = box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.fullhit | frame_attack_types.juggle },
-		{ box_type = box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.harmless | frame_attack_types.juggle },
-		{ box_type = box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.obsolute | frame_attack_types.juggle },
-		{ box_type = box_types.juggle,             attackbit = frame_attack_types.attacking | frame_attack_types.juggle },
-		{ box_type = box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.fullhit },
-		{ box_type = box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.obsolute },
-		{ box_type = box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.harmless },
-		{ box_type = box_types.attack,             attackbit = frame_attack_types.attacking },
+		{ box_type = box_types.fake_juggle,        attackbit = frame_attack_types.attacking | frame_attack_types.fake | frame_attack_types.juggle },    -- 1
+		{ box_type = box_types.fake_attack,        attackbit = frame_attack_types.attacking | frame_attack_types.fake },                                -- 1
+		{ box_type = box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.fullhit | frame_attack_types.juggle }, -- 2
+		{ box_type = box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.harmless | frame_attack_types.juggle },-- 2
+		{ box_type = box_types.harmless_juggle,    attackbit = frame_attack_types.attacking | frame_attack_types.obsolute | frame_attack_types.juggle },-- 2
+		{ box_type = box_types.juggle,             attackbit = frame_attack_types.attacking | frame_attack_types.juggle },                              -- 4
+		{ box_type = box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.fullhit },                             -- 2
+		{ box_type = box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.obsolute },                            -- 2
+		{ box_type = box_types.harmless_attack,    attackbit = frame_attack_types.attacking | frame_attack_types.harmless },                            -- 2
+		{ box_type = box_types.attack,             attackbit = frame_attack_types.attacking },                                                          -- 4
 	}, function(t1, t2) return t1.box_type.sort < t2.box_type.sort end),
 	fireball = ut.table_sort({
 		{ box_type = box_types.fake_juggle_fb,     attackbit = frame_attack_types.attacking | frame_attack_types.fb | frame_attack_types.fake | frame_attack_types.juggle },

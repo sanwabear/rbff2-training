@@ -1295,7 +1295,12 @@ rbff2.startplugin           = function()
 		type = types[attackbit]
 		if type then return type.box_type end
 		types = p.is_fireball and db.box_with_bit_types.fireball or db.box_with_bit_types.body
-		for _, t in ipairs(types) do if ut.tstb(attackbit, t.attackbit, true) then return t.box_type end end
+		local hits = {}
+		for _, t in ipairs(types) do if ut.tstb(attackbit, t.attackbit, true) then
+			table.insert(hits, t.box_type)
+			--print("hit", #hits, t.box_type.name_en)
+		end end
+		if #hits > 0 then return hits[1] end
 		ut.printf("fallback %s", ut.tobitstr(attackbit))
 		return types[#types].box_type -- fallback
 	end
