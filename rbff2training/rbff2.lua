@@ -444,6 +444,32 @@ rbff2.startplugin           = function()
 			mem.wd8(0x13AF0, enabled and 0x67 or 0x60) -- 013AF0: 6700 0036 beq $13b28
 			mem.wd8(0x13B9A, enabled and 0x6A or 0x60) -- 013B9A: 6A04      bpl $13ba0
 		end,
+		mvs_billy    = function(enabled)
+			if enabled then
+				for addr = 0x2D442, 0x2D460, 2 do mem.wd32(addr, 0x4E714E71) end -- NOPで埋める
+			else
+				--[[
+				02D442: 0C6C 0010 0010           cmpi.w  #$10, ($10,A4)      ; キャラID = 0x10 ビリー
+				02D448: 6618                     bne     $2d462              ;  でなければ 0x2d462 へ(MVSと同じ流れへ戻る)
+				02D44A: 0C6C 006E 0062           cmpi.w  #$6e, ($62,A4)      ; 動作のID(0x100*62)が0x6E
+				02D450: 6604                     bne     $2d456              ; でなければ 0x2d456 へ
+				02D452: 4E75                     rts                         ; 抜ける。
+				02D454: 4E71                     nop                         ;
+				02D456: 0C6C 0070 0062           cmpi.w  #$70, ($62,A4)      ; 動作のID(0x100*62)が0x70
+				02D45C: 6604                     bne     $2d462              ; でなければ 0x2d462 へ(MVSと同じ流れへ戻る)
+				02D45E: 4E75                     rts                         ; 抜ける。
+				02D460: 4E71                     nop                         ;
+				]]
+				mem.wd32(0x2D442, 0x0C6C0010)
+				mem.wd32(0x2D446, 0x00106618)
+				mem.wd32(0x2D44A, 0x0C6C006E)
+				mem.wd32(0x2D44E, 0x00626604)
+				mem.wd32(0x2D452, 0x4E754E71)
+				mem.wd32(0x2D456, 0x0C6C0070)
+				mem.wd32(0x2D45A, 0x00626604)
+				mem.wd32(0x2D45E, 0x4E754E71)
+			end
+		end,
 	}
 	local in_match                             = false -- 対戦画面のときtrue
 	local in_player_select                     = false -- プレイヤー選択画面のときtrue
@@ -541,6 +567,7 @@ rbff2.startplugin           = function()
 		debug_stop           = 0, -- カウンタ
 		damaged_move         = 1,
 		all_bs               = false,
+		mvs_billy            = false,
 		disp_replay          = true, -- レコードリプレイガイド表示
 		save_snapshot        = 1, -- 技画像保存 1:OFF 2:新規 3:上書き
 		key_hists            = 25,
@@ -4618,11 +4645,12 @@ rbff2.startplugin           = function()
 		elseif p[2].dis_plain_shift then
 			col[4] = 4
 		end
-		col[5] = g.pause_hit   -- ヒット時にポーズ
-		col[6] = g.pause_hitbox -- 判定発生時にポーズ
-		col[7] = g.save_snapshot -- 技画像保存
-		col[8] = g.damaged_move -- ヒット効果確認用
+		col[5] = g.pause_hit       -- ヒット時にポーズ
+		col[6] = g.pause_hitbox    -- 判定発生時にポーズ
+		col[7] = g.save_snapshot   -- 技画像保存
+		col[8] = g.damaged_move    -- ヒット効果確認用
 		col[9] = g.all_bs and 2 or 1 -- 全必殺技BS
+		col[10] = g.mvs_billy and 2 or 1 -- ビリーMVS化
 	end
 	menu.init_auto_config         = function()
 		local col, g = menu.auto.pos.col, global
@@ -4977,7 +5005,8 @@ rbff2.startplugin           = function()
 		{ "判定発生時にポーズ", { "OFF", "投げ", "攻撃", "変化時", }, },
 		{ "技画像保存", { "OFF", "ON:新規", "ON:上書き", }, },
 		{ "ヒット効果確認用", db.hit_effects.menus, },
-		{ "全必殺技でBS可能", menu.labels.off_on, }
+		{ "全必殺技でBS可能", menu.labels.off_on, },
+		{ "ビリーMVS化", menu.labels.off_on, },
 	}, ut.new_filled_table(10, function()
 		local col, p, g       = menu.extra.pos.col, players, global
 		-- タイトルラベル
@@ -4990,7 +5019,9 @@ rbff2.startplugin           = function()
 		g.save_snapshot       = col[7]               -- 技画像保存
 		g.damaged_move        = col[8]               -- ヒット効果確認用
 		g.all_bs              = col[9] == 2          -- 全必殺技BS
+		g.mvs_billy           = col[10] == 2         -- ビリーMVS化
 		mod.all_bs(g.all_bs)
+		mod.mvs_billy(g.mvs_billy)
 		menu.current = menu.main
 	end))
 

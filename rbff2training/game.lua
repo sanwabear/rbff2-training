@@ -38,8 +38,9 @@ local addr_offset              = {
 
 local addr_clone               = { [ver.korea] = -0x104, [ver.aes] = 0x20 }
 
+-- rbff2からrbff2hとrbff2kへのアドレス変換
 gm.fix_addr                    = function(addr)
-    if addr < addr_min_eq or addr_max_eq < addr then return addr end
+    if (addr < addr_min_eq) or (addr_max_eq < addr) then return addr end
     local fix1 = addr_clone[emu.romname()] or 0
     local fix2 = addr_offset[addr] and (addr_offset[addr][emu.romname()] or fix1) or fix1
     return addr + fix2
@@ -47,9 +48,10 @@ end
 
 gm.fix                         = gm.fix_addr
 
+-- rbff2hからrbff2へのアドレス変換
 gm.fixh                        = function(addr)
-    if addr < addr_min_eq or addr_max_eq < addr then return addr end
-    if emu.romname() == "rbff2h" then return addr - 0x20 end
+    if emu.romname() == "rbff2h" or (addr < addr_min_eq) or (addr_max_eq < addr) then return addr end
+    if emu.romname() == "rbff2" then return addr - 0x20 end
     manager.machine:logerror(addr)
 end
 
