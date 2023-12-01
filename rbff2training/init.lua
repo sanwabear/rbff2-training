@@ -19,84 +19,94 @@
 --LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 --OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 --SOFTWARE.
-local exports       = {}
-exports.name        = "rbff2training"
-exports.version     = "0.0.1"
-exports.description = "RBFF2 Training"
-exports.license     = "MIT License"
-exports.author      = { name = "Sanwabear" }
-local rbff2training = exports
-local subscription  = { reset = nil, stop = nil, frame = nil, pause = nil, resume = nil, }
+local exports             = {}
+exports.name              = "rbff2training"
+exports.version           = "0.0.1"
+exports.description       = "RBFF2 Training"
+exports.license           = "MIT License"
+exports.author            = { name = "Sanwabear" }
+local rbff2training       = exports
+local subscription        = { reset = nil, stop = nil, frame = nil, pause = nil, resume = nil, }
 
 rbff2training.startplugin = function()
-	local dummy, core, rbff2
+    local mode = 1 -- 1:ON 0:OFF 自動有効化のためデフォルト値は1にする
+    local dummy, core, rbff2
 
-	local is_target_rom = function()
-		return emu.romname() == "rbff2h" -- TODO: rbff2, rbff2k
-	end
+    local is_target_rom = function()
+        return emu.romname() == "rbff2h" -- TODO: rbff2, rbff2k
+    end
 
-	local core_to_dummy = function()
-		if not core.is_dummy and is_target_rom() then
-			print("Disable Training-Core")
-			core.emu_stop()
-			core = dummy
+    local core_to_dummy = function()
+        if not core.is_dummy and is_target_rom() then
+            print("Disable Training-Core")
+            core.emu_stop()
+            core = dummy
             rbff2 = nil
-		end
-	end
+        end
+        mode = core.is_dummy and 0 or 1
+    end
 
-	local core_to_rbff2 = function()
-		if core.is_dummy and is_target_rom() then
-			print("Enable Training-Core")
+    local core_to_rbff2 = function()
+        if core.is_dummy and is_target_rom() then
+            print("Enable Training-Core")
             rbff2 = rbff2 or require("rbff2training/rbff2")
-			core = rbff2
-			core.startplugin()
-			core.emu_start()
-		end
-	end
+            core = rbff2
+            core.startplugin()
+            core.emu_start()
+        end
+        mode = core.is_dummy and 0 or 1
+    end
 
-	local null_function = function() end
+    local null_function = function() end
+    local auto_start = function() if is_target_rom() and mode == 1 then core_to_rbff2() else core_to_dummy() end end
 
-	core = {
+    core = {
         is_dummy = true,
-		emu_frame = null_function,
-		emu_pause = null_function,
-		emu_resume = null_function,
-		emu_frame_done = null_function,
-		emu_periodic = null_function,
-		emu_menu = null_function,
-		emu_start = null_function,
-		emu_stop = null_function,
-	}
-	dummy = core
+        emu_frame = null_function,
+        emu_pause = null_function,
+        emu_resume = null_function,
+        emu_frame_done = null_function,
+        emu_periodic = null_function,
+        emu_menu = null_function,
+        emu_start = auto_start,
+        emu_stop = null_function,
+    }
+    dummy = core
 
-	subscription.reset = emu.add_machine_reset_notifier(function() core.emu_start() end)
-	subscription.stop = emu.add_machine_stop_notifier(function() core.emu_stop() end)
-	subscription.frame = emu.add_machine_frame_notifier(function() core.emu_frame() end)
-	subscription.pause = emu.add_machine_pause_notifier(function() core.emu_pause() end)
-	subscription.resume = emu.add_machine_resume_notifier(function() core.emu_resume() end)
-	emu.register_frame_done(function() core.emu_frame_done() end)
-	emu.register_periodic(function() core.emu_periodic() end)
+    subscription.reset = emu.add_machine_reset_notifier(function() core.emu_start() end)
+    subscription.stop = emu.add_machine_stop_notifier(function() core.emu_stop() end)
+    subscription.frame = emu.add_machine_frame_notifier(function() core.emu_frame() end)
+    subscription.pause = emu.add_machine_pause_notifier(function() core.emu_pause() end)
+    subscription.resume = emu.add_machine_resume_notifier(function() core.emu_resume() end)
+    emu.register_frame_done(function() core.emu_frame_done() end)
+    emu.register_periodic(function() core.emu_periodic() end)
 
-	local mode = 0
+    local menu_callback = function(index, event)
+        if not is_target_rom() then
+            mode = 0
+            return false
+        end
+        if (event == "left") or (event == "right") then
+            mode = (mode ~= 0) and 0 or 1
+            return true
+        elseif (event == "select") then
+            if mode > 0 then core_to_rbff2() else core_to_dummy() end
+            return true
+        end
+        return false
+    end
 
-	local menu_callback = function(index, event)
-		if (event == "left") or (event == "right") then
-			mode = (mode ~= 0) and 0 or 1
-			return true
-		elseif (event == "select") then
-			if mode > 0 then core_to_rbff2() else core_to_dummy() end
-			return true
-		end
-		return false
-	end
+    local menu_populate = function()
+        local result = {}
+        if is_target_rom() then
+            table.insert(result, { exports.description, (mode > 0) and "ON" or "OFF", (mode > 0) and "l" or "r" })
+        else
+            table.insert(result, { exports.description, "---", "" })
+        end
+        return result
+    end
 
-	local menu_populate = function()
-		local result = {}
-		table.insert(result, { exports.description, (mode > 0) and "ON" or "OFF", (mode > 0) and "l" or "r" })
-		return result
-	end
-
-	emu.register_menu(menu_callback, menu_populate, exports.description)
+    emu.register_menu(menu_callback, menu_populate, exports.description)
 end
 
 return exports
