@@ -40,7 +40,7 @@ local addr_clone               = { [ver.korea] = -0x104, [ver.aes] = 0x20 }
 
 -- rbff2からrbff2hとrbff2kへのアドレス変換
 gm.fix_addr                    = function(addr)
-    if (addr < addr_min_eq) or (addr_max_eq < addr) then return addr end
+    --if (addr < addr_min_eq) or (addr_max_eq < addr) then return addr end
     local fix1 = addr_clone[emu.romname()] or 0
     local fix2 = addr_offset[addr] and (addr_offset[addr][emu.romname()] or fix1) or fix1
     return addr + fix2

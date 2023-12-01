@@ -446,7 +446,7 @@ rbff2.startplugin           = function()
 		end,
 		mvs_billy    = function(enabled)
 			if enabled then
-				for addr = 0x2D442, 0x2D460, 2 do mem.wd32(addr, 0x4E714E71) end -- NOPで埋める
+				for addr = 0x2D442, 0x2D45E, 2 do mem.wd32(addr, 0x4E714E71) end -- NOPで埋める
 			else
 				--[[
 				02D442: 0C6C 0010 0010           cmpi.w  #$10, ($10,A4)      ; キャラID = 0x10 ビリー
@@ -2247,12 +2247,16 @@ rbff2.startplugin           = function()
 			[0x67] = function(data) p.act_boxtype = 0xFFFF & (data & 0xC0 * 4) end, -- 現在の行動の判定種類
 			[0x6A] = function(data)
 				p.flag_6a = data
-				--ut.printf("%X %X | %s", base, data, ut.tobitstr(data))
 				p.repeatable = p.flag_c8 == 0 and (data & 0x4) == 0x4 -- 連打キャンセル判定
 				p.flip_x1 = ((data & 0x80) == 0) and 0 or 1 -- 判定の反転
-				local fake, fake_pc = ((data & 0xFB) == 0 or ut.tstb(data, 0x8) == false), mem.pc() == gm.fix(0x011DFE)
+				local fake = ((data & 0xFB) == 0 or ut.tstb(data, 0x8) == false)
+				local fake_pc = mem.pc() == 0x11E1E
 				p.attackbits.fake = fake_pc and fake
+				if mem.pc() == 0x2D462 and p.char == 0x10 and data == 0x8 then
+					p.attackbits.fake = true -- MVSビリーの判定なくなるバグの表現専用
+				end
 				p.attackbits.obsolute = (not fake_pc) and fake
+				--ut.printf("%X %X | %s | %X | %s %s | %s %s", base, data, ut.tobitstr(data), mem.pc(), fake_pc, fake, p.attackbits.fake, p.attackbits.obsolute)
 			end,
 			[0x6F] = function(data) p.act_frame = data end, -- 動作パターンの残フレーム
 			[0x71] = function(data) p.flip_x2 = (data & 1) end, -- 判定の反転
