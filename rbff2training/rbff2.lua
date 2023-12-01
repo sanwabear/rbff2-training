@@ -2280,7 +2280,7 @@ rbff2.startplugin           = function()
 					-- ut.printf("lazy clean box %X %X", mem.pc(), data)
 					return
 				end
-				if p.is_fireball then ut.printf("%s %s box %x %x %x", now(), p.on_hit, p.addr.base, mem.pc(), data) end
+				-- ut.printf("%s %s box %x %x %x", now(), p.on_hit, p.addr.base, mem.pc(), data)
 				p.boxies, p.grabbable = {}, 0
 				if data <= 0 then return end
 				p.attackbits.fb = p.is_fireball
@@ -3549,10 +3549,9 @@ rbff2.startplugin           = function()
 			if p.delayed_clearing == global.frame_number then p.boxies = {} end
 			if p.delayed_inactive == global.frame_number then
 				p.grabbable, p.attack_id, p.attackbits = 0, 0, {}
-				p.boxies, p.on_fireball, p.body.act_data = #p.boxies == 0 and p.boxies or {}, -1, nil
+				p.boxies, p.on_fireball = #p.boxies == 0 and p.boxies or {}, -1, nil
 				p.proc_active = false
 			end
-			if p.is_fireball then print(#p.boxies) end
 			p.hurt.dodge = frame_attack_types.full -- くらい判定なし＝全身無敵をデフォルトにする
 			for _, _, box in ut.ifind_all(p.boxies, function(box)
 				local type = fix_box_type(p, p.attackbit, box) -- 属性はヒット状況などで変わるので都度解決する
