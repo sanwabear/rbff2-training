@@ -1298,7 +1298,7 @@ rbff2.startplugin           = function()
 		local hits = {}
 		for _, t in ipairs(types) do if ut.tstb(attackbit, t.attackbit, true) then
 			table.insert(hits, t.box_type)
-			--print("hit", #hits, t.box_type.name_en)
+			-- print("hit", #hits, t.box_type.name_en)
 		end end
 		if #hits > 0 then return hits[1] end
 		ut.printf("fallback %s", ut.tobitstr(attackbit))
@@ -2262,13 +2262,13 @@ rbff2.startplugin           = function()
 				p.repeatable = p.flag_c8 == 0 and (data & 0x4) == 0x4 -- 連打キャンセル判定
 				p.flip_x1 = ((data & 0x80) == 0) and 0 or 1 -- 判定の反転
 				local fake = ((data & 0xFB) == 0 or ut.tstb(data, 0x8) == false)
-				local fake_pc = mem.pc() == 0x11E1E
+				local fake_pc = mem.pc() == 0x11E1E and now() ~= p.on_hit -- ヒット時のフラグセットは嘘判定とはしない
 				p.attackbits.fake = fake_pc and fake
 				if mem.pc() == 0x2D462 and p.char == 0x10 and data == 0x8 then
 					p.attackbits.fake = true -- MVSビリーの判定なくなるバグの表現専用
 				end
 				p.attackbits.obsolute = (not fake_pc) and fake
-				--ut.printf("%X %X | %s | %X | %s %s | %s %s", base, data, ut.tobitstr(data), mem.pc(), fake_pc, fake, p.attackbits.fake, p.attackbits.obsolute)
+				-- ut.printf("%s %s | %X %X | %s | %X | %s %s | %s %s", now(), p.on_hit, base, data, ut.tobitstr(data), mem.pc(), fake_pc, fake, p.attackbits.fake, p.attackbits.obsolute)
 			end,
 			[0x6F] = function(data) p.act_frame = data end, -- 動作パターンの残フレーム
 			[0x71] = function(data) p.flip_x2 = (data & 1) end, -- 判定の反転
