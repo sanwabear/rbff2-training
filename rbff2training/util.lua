@@ -126,7 +126,6 @@ ut.tobitstr      = function(value, delim)
 	local hex = string.format("%X", value) -- convert number to HEX
 	return ut.hextobitstr(hex, delim)
 end
-print(string.format("%.2X", 0x23506A))
 
 ut.frame_to_time = function(frame_number)
 	local min = math.floor(frame_number / 3600)
