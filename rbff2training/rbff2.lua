@@ -286,8 +286,8 @@ rbff2.startplugin           = function()
 			-- 簡易超必ONのときにダックのブレイクスパイラルブラザー（BRも）が出るようにする
 			mem.wd16(0x0CACC8, 0xC37C)
 			-- デバッグDIPによる自動アンリミのバグ修正
-			mem.wd8(gm.fix_addr(0x049951), 0x2)
-			mem.wd8(gm.fix_addr(0x049947), 0x9)
+			mem.wd8(gm.fix(0x049951), 0x2)
+			mem.wd8(gm.fix(0x049947), 0x9)
 			-- 逆襲拳、サドマゾの初段で相手の状態変更しない（相手が投げられなくなる事象が解消する）
 			-- mem.wd8(0x57F43, 0x00)
 		end,
@@ -315,11 +315,11 @@ rbff2.startplugin           = function()
 			mem.w16(0x10E792, 0x0007) -- maincpu.pw@10E792=0007
 			mem.w16(0x10E796, 0x0007) -- maincpu.pw@10E796=0008
 			]]
-			mem.wd32(gm.fix_addr(0x0500E8), 0x303C0007)
-			mem.wd32(gm.fix_addr(0x050118), 0x3E3C0007)
-			mem.wd32(gm.fix_addr(0x050150), 0x303C0007)
-			mem.wd32(gm.fix_addr(0x0501A8), 0x303C0007)
-			mem.wd32(gm.fix_addr(0x0501CE), 0x303C0007)
+			mem.wd32(gm.fix(0x500E8), 0x303C0007)
+			mem.wd32(gm.fix(0x50118), 0x3E3C0007)
+			mem.wd32(gm.fix(0x50150), 0x303C0007)
+			mem.wd32(gm.fix(0x501A8), 0x303C0007)
+			mem.wd32(gm.fix(0x501CE), 0x303C0007)
 			-- 対戦の双角ステージをビリーステージに変更する（MVSと家庭用共通）
 			mem.wd16(0xF290, 0x0004)
 			-- クレジット消費をNOPにする
@@ -1039,18 +1039,18 @@ rbff2.startplugin           = function()
 			db.chars[char].proc_base = {
 				cancelable    = mem.r32(char4 + 0x850D8),
 				forced_down   = 0x88A12,
-				hitstop       = mem.r32(char4 + gm.fix_addr(0x83C38)),
-				damege        = mem.r32(char4 + gm.fix_addr(0x813F0)),
-				stun          = mem.r32(char4 + gm.fix_addr(0x85CCA)),
-				stun_timer    = mem.r32(char4 + gm.fix_addr(0x85D2A)),
-				max_hit       = mem.r32(char4 + gm.fix_addr(0x827B8)),
+				hitstop       = mem.r32(char4 + gm.fix(0x83C38)),
+				damege        = mem.r32(char4 + gm.fix(0x813F0)),
+				stun          = mem.r32(char4 + gm.fix(0x85CCA)),
+				stun_timer    = mem.r32(char4 + gm.fix(0x85D2A)),
+				max_hit       = mem.r32(char4 + gm.fix(0x827B8)),
 				esaka         = mem.r32(char4 + 0x23750),
 				pow_up        = ((0xC == char) and 0x8C274 or (0x10 == char) and 0x8C29C or 0x8C24C),
 				pow_up_ext    = mem.r32(0x8C18C + char4),
-				chip          = gm.fix_addr(0x95CCC),
-				hitstun1      = gm.fix_addr(0x95CCC),
-				hitstun2      = 0x16 + 0x2 + gm.fix_addr(0x5AF7C),
-				blockstun     = 0x1A + 0x2 + gm.fix_addr(0x5AF88),
+				chip          = gm.fix(0x95CCC),
+				hitstun1      = gm.fix(0x95CCC),
+				hitstun2      = 0x16 + 0x2 + gm.fix(0x5AF7C),
+				blockstun     = 0x1A + 0x2 + gm.fix(0x5AF88),
 				bs_pow        = mem.r32(char4 + 0x85920),
 				bs_invincible = mem.r32(char4 + 0x85920) + 0x1,
 				sp_invincible = mem.r32(char4 + 0x8DE62),
@@ -1058,17 +1058,17 @@ rbff2.startplugin           = function()
 		end
 		db.chars[#db.chars].proc_base = { -- 共通枠に弾のベースアドレスを入れておく
 			forced_down = 0x8E2C0,
-			hitstop     = gm.fix_addr(0x884F2),
-			damege      = gm.fix_addr(0x88472),
-			stun        = gm.fix_addr(0x886F2),
-			stun_timer  = gm.fix_addr(0x88772),
-			max_hit     = gm.fix_addr(0x885F2),
+			hitstop     = gm.fix(0x884F2),
+			damege      = gm.fix(0x88472),
+			stun        = gm.fix(0x886F2),
+			stun_timer  = gm.fix(0x88772),
+			max_hit     = gm.fix(0x885F2),
 			baigaeshi   = 0x8E940,
-			effect      = gm.fix_addr(0x95BEC) - 0x20, -- 家庭用58232からの処理
-			chip        = gm.fix_addr(0x95CCC),
-			hitstun1    = gm.fix_addr(0x95CCC),
-			hitstun2    = 0x16 + 0x2 + gm.fix_addr(0x5AF7C),
-			blockstun   = 0x1A + 0x2 + gm.fix_addr(0x5AF88),
+			effect      = gm.fix(0x95BEC) - 0x20, -- 家庭用58232からの処理
+			chip        = gm.fix(0x95CCC),
+			hitstun1    = gm.fix(0x95CCC),
+			hitstun2    = 0x16 + 0x2 + gm.fix(0x5AF7C),
+			blockstun   = 0x1A + 0x2 + gm.fix(0x5AF88),
 		}
 		print("load_proc_base done")
 	end
@@ -1133,7 +1133,7 @@ rbff2.startplugin           = function()
 		local push_box, op_push_box = db.chars[p.char].push_box[0x5C9BC], db.chars[p.op.char].push_box[0x5C9BC]
 		local op_edge = (p.block_side == p.op.block_side) and op_push_box.back or op_push_box.front
 		local center = ut.int16(((push_box.front - math.abs(op_edge)) * p.box_scale) >> 6)
-		local range = mem.r8(gm.fix_addr(0x5D854) + p.char4)
+		local range = mem.r8(gm.fix(0x5D854) + p.char4)
 		return fix_throw_box_pos({
 			id = 0x100, -- dummy
 			type = db.box_types.normal_throw,
@@ -2223,7 +2223,7 @@ rbff2.startplugin           = function()
 				--ut.printf("%X %X | %s", base, data, ut.tobitstr(data))
 				p.repeatable = p.flag_c8 == 0 and (data & 0x4) == 0x4 -- 連打キャンセル判定
 				p.flip_x1 = ((data & 0x80) == 0) and 0 or 1 -- 判定の反転
-				local fake, fake_pc = ((data & 0xFB) == 0 or ut.tstb(data, 0x8) == false), mem.pc() == gm.fix_addr(0x011DFE)
+				local fake, fake_pc = ((data & 0xFB) == 0 or ut.tstb(data, 0x8) == false), mem.pc() == gm.fix(0x011DFE)
 				p.attackbits.fake = fake_pc and fake
 				p.attackbits.obsolute = (not fake_pc) and fake
 			end,

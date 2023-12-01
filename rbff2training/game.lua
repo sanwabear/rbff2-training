@@ -19,27 +19,38 @@
 --LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 --OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 --SOFTWARE.
-local gm          = {}
+local gm                       = {}
 
-local ver = {
+local ver                      = {
     mvs = "rbff2", aes = "rbff2h", korea = "rbff2k",
 }
 
-local addr_offset = {
+local addr_min_eq, addr_max_eq = 0x2D442, 0x7E535
+
+local addr_offset              = {
     [0x012C42] = { [ver.korea] = 0x28, [ver.aes] = 0x00 },
     [0x012C88] = { [ver.korea] = 0x28, [ver.aes] = 0x00 },
     [0x012D4C] = { [ver.korea] = 0x28, [ver.aes] = 0x00 }, --p1 push
     [0x012D92] = { [ver.korea] = 0x28, [ver.aes] = 0x00 }, --p2 push
-    [0x039F2A] = { [ver.korea] = 0x0C, [ver.aes] = 0x20 }, --special throws
     [0x017300] = { [ver.korea] = 0x28, [ver.aes] = 0x00 }, --solid shadows
+    [0x039F2A] = { [ver.korea] = 0x0C, [ver.aes] = 0x20 }, --special throws
 }
 
-local addr_clone  = { [ver.korea] = -0x104, [ver.aes] = 0x20 }
+local addr_clone               = { [ver.korea] = -0x104, [ver.aes] = 0x20 }
 
-gm.fix_addr       = function(addr)
+gm.fix_addr                    = function(addr)
+    if addr < addr_min_eq or addr_max_eq < addr then return addr end
     local fix1 = addr_clone[emu.romname()] or 0
     local fix2 = addr_offset[addr] and (addr_offset[addr][emu.romname()] or fix1) or fix1
     return addr + fix2
+end
+
+gm.fix                         = gm.fix_addr
+
+gm.fixh                        = function(addr)
+    if addr < addr_min_eq or addr_max_eq < addr then return addr end
+    if emu.romname() == "rbff2h" then return addr - 0x20 end
+    manager.machine:logerror(addr)
 end
 
 return gm
