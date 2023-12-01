@@ -1952,7 +1952,9 @@ rbff2.startplugin           = function()
 			}
 			p.wp8 = {
 				[0xB5] = function(data) p.fireball_rank = data end,
-				[0xE7] = function(data) p.attackbits.fullhit = data ~= 0 end,
+				[0xE7] = function(data) p.attackbits.fullhit = data ~= 0 
+					p.on_hit = now() end,
+				[0xE9] = function(data) p.on_hit = now() end,
 				[0x8A] = function(data) p.grabbable1 = 0x2 >= data end,
 				[0xA3] = function(data) p.firing = data ~= 0 end, -- 攻撃中に値が入る ガード判断用
 			}
@@ -1983,6 +1985,11 @@ rbff2.startplugin           = function()
 					local reset       = false
 					if p.proc_active and not proc_active then reset, p.on_prefb = true, now() * -1 end
 					if not p.proc_active and proc_active then reset, p.on_prefb = true, now() end
+					if p.is_fireball and p.on_hit == now() and reset and not proc_active then
+						p.delayed_inactive = now() + 1 -- ヒット処理後に判定と処理が終了されることの対応
+						-- ut.printf("lazy inactive box %X %X", mem.pc(), data)
+						return
+					end
 					if reset then
 						p.grabbable, p.attack_id, p.attackbits = 0, 0, {}
 						p.boxies, p.on_fireball, p.body.act_data = #p.boxies == 0 and p.boxies or {}, -1, nil
@@ -2268,7 +2275,12 @@ rbff2.startplugin           = function()
 			[0x73] = function(data) p.box_scale = data + 1 end, -- 判定の拡大率
 			--[0x76] = function(data) ut.printf("%X %X %X", base + 0x76, mem.pc(), data) end,
 			[0x7A] = function(data)                    -- 攻撃判定とやられ判定
-				--ut.printf("box %x %x %x", p.addr.base, mem.pc(), data)
+				if p.is_fireball and p.on_hit == now() and data == 0 then
+					p.delayed_clearing = now() + 1 -- ヒット処理後に判定が消去されることの対応
+					-- ut.printf("lazy clean box %X %X", mem.pc(), data)
+					return
+				end
+				if p.is_fireball then ut.printf("%s %s box %x %x %x", now(), p.on_hit, p.addr.base, mem.pc(), data) end
 				p.boxies, p.grabbable = {}, 0
 				if data <= 0 then return end
 				p.attackbits.fb = p.is_fireball
@@ -3534,6 +3546,13 @@ rbff2.startplugin           = function()
 			if global.pause_hitbox == 4 and p.act_data and not p.act_data.neutral and (p.chg_hitbox or p.chg_hurtbox) then global.pause = true end
 
 			-- 当たりとやられ判定判定
+			if p.delayed_clearing == global.frame_number then p.boxies = {} end
+			if p.delayed_inactive == global.frame_number then
+				p.grabbable, p.attack_id, p.attackbits = 0, 0, {}
+				p.boxies, p.on_fireball, p.body.act_data = #p.boxies == 0 and p.boxies or {}, -1, nil
+				p.proc_active = false
+			end
+			if p.is_fireball then print(#p.boxies) end
 			p.hurt.dodge = frame_attack_types.full -- くらい判定なし＝全身無敵をデフォルトにする
 			for _, _, box in ut.ifind_all(p.boxies, function(box)
 				local type = fix_box_type(p, p.attackbit, box) -- 属性はヒット状況などで変わるので都度解決する
