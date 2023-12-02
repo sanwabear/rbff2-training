@@ -1985,16 +1985,20 @@ rbff2.startplugin           = function()
 					local reset       = false
 					if p.proc_active and not proc_active then reset, p.on_prefb = true, now() * -1 end
 					if not p.proc_active and proc_active then reset, p.on_prefb = true, now() end
+					local inactive_func = function()
+						if reset then
+							p.grabbable, p.attack_id, p.attackbits = 0, 0, {}
+							p.boxies, p.on_fireball, p.body.act_data = #p.boxies == 0 and p.boxies or {}, -1, nil
+						end
+						p.proc_active = proc_active
+					end
 					if p.is_fireball and p.on_hit == now() and reset and not proc_active then
 						p.delayed_inactive = now() + 1 -- ヒット処理後に判定と処理が終了されることの対応
+						p.delayed_inactive_fnc = inactive_func
 						-- ut.printf("lazy inactive box %X %X", mem.pc(), data)
 						return
 					end
-					if reset then
-						p.grabbable, p.attack_id, p.attackbits = 0, 0, {}
-						p.boxies, p.on_fireball, p.body.act_data = #p.boxies == 0 and p.boxies or {}, -1, nil
-					end
-					p.proc_active = proc_active
+					inactive_func()
 				end,
 			}
 			table.insert(body.objects, p)
@@ -3105,10 +3109,11 @@ rbff2.startplugin           = function()
 		local name     = ut.convert(plain)
 		local key      = key_mask & attackbit
 		local matchkey = attackbit
+		local update   = p.update_base and p.update_act
 
-		frame_meter.add(p, { line = line, col = col, attackbit = attackbit, key = key, boxkey = boxkey, decobit = decobit, name = name, update = p.update_act, })
+		frame_meter.add(p, { line = line, col = col, attackbit = attackbit, key = key, boxkey = boxkey, decobit = decobit, name = name, update = update, })
 
-		if p.update_act or not frame or frame.col ~= col or frame.key ~= matchkey or frame.boxkey ~= boxkey then
+		if update or not frame or frame.col ~= col or frame.key ~= matchkey or frame.boxkey ~= boxkey then
 			--行動IDの更新があった場合にフレーム情報追加
 			frame = ut.table_add(p.act_frames, {
 				act        = p.act,
@@ -3118,7 +3123,7 @@ rbff2.startplugin           = function()
 				col        = col,
 				line       = line,
 				xline      = xline,
-				update     = p.update_act,
+				update     = update,
 				attackbit  = attackbit,
 				key        = key,
 				boxkey     = boxkey,
@@ -3139,7 +3144,7 @@ rbff2.startplugin           = function()
 		---@diagnostic disable-next-line: unbalanced-assignments
 		parent, frames, groups = last_frame and last_frame.fb_frames or nil, p.fb_frames.act_frames, p.fb_frames.frame_groups
 		key, boxkey, frame = p.attackbit, fbkey, frames[#frames]
-		if p.update_act or not frame or upd_group or frame.key ~= key or frame.boxkey ~= boxkey then
+		if update or not frame or upd_group or frame.key ~= key or frame.boxkey ~= boxkey then
 			frame = ut.table_add(frames, {
 				act        = p.act,
 				count      = 1,
@@ -3148,7 +3153,7 @@ rbff2.startplugin           = function()
 				name_plain = last_frame.name_plain,
 				col        = 0x00FFFFFF,
 				line       = 0x00FFFFFF,
-				update     = p.update_act,
+				update     = update,
 				attackbit  = p.attackbit,
 				key        = key,
 				boxkey     = boxkey,
@@ -3162,7 +3167,7 @@ rbff2.startplugin           = function()
 		---@diagnostic disable-next-line: unbalanced-assignments
 		parent, frames, groups = last_frame and last_frame.gap_frames or nil, p.gap_frames.act_frames, p.gap_frames.frame_groups
 		key, boxkey, frame = p.attackbit & frame_attack_types.frame_advance, "", frames[#frames]
-		if p.update_act or not frame or upd_group or frame.key ~= key or frame.boxkey ~= boxkey then
+		if update or not frame or upd_group or frame.key ~= key or frame.boxkey ~= boxkey then
 			local col = (p.frame_gap > 0) and 0xFF0088FF or (p.frame_gap < 0) and 0xFFFF0088 or 0xFFFFFFFF
 			frame = ut.table_add(frames, {
 				act        = p.act,
@@ -3172,7 +3177,7 @@ rbff2.startplugin           = function()
 				name_plain = last_frame.name_plain,
 				col        = 0x22FFFFFF & col,
 				line       = 0xCCFFFFFF & col,
-				update     = p.update_act,
+				update     = update,
 				key        = key,
 				boxkey     = boxkey,
 			}, 180)
@@ -3501,16 +3506,18 @@ rbff2.startplugin           = function()
 		for _, p in pairs(all_objects) do -- 処理アドレス保存
 			local base = p.bases[#p.bases]
 			if not base or base.addr ~= p.base then
+				p.update_base = true
 				ut.table_add(p.bases, {
 					addr     = p.base,
 					count    = 1,
 					act_data = p.body.act_data,
-					name     = p.proc_active and p.body.act_data.name or "NOP",
+					name     = p.proc_active and ut.convert(p.body.act_data.name_plain) or "NOP",
 					pos1     = p.body.pos_total,
 					pos2     = p.body.pos_total,
 					xmov     = 0,
 				}, 16)
 			else
+				p.update_base = false
 				base.count, base.pos2, base.xmov = base.count + 1, p.body.pos_total, base.pos2 - base.pos1
 			end
 		end
@@ -3550,7 +3557,7 @@ rbff2.startplugin           = function()
 			if p.delayed_inactive == global.frame_number then
 				p.grabbable, p.attack_id, p.attackbits = 0, 0, {}
 				p.boxies, p.on_fireball = #p.boxies == 0 and p.boxies or {}, -1, nil
-				p.proc_active = false
+				if p.is_fireball then p.proc_active = false end
 			end
 			p.hurt.dodge = frame_attack_types.full -- くらい判定なし＝全身無敵をデフォルトにする
 			for _, _, box in ut.ifind_all(p.boxies, function(box)
@@ -4099,7 +4106,7 @@ rbff2.startplugin           = function()
 				local diff_pos_y = p.pos_y + p.pos_frc_y - (p.old.pos_y and (p.old.pos_y + p.old.pos_frc_y) or 0)
 				table.insert(label1, string.format("%0.03f %0.03f", diff_pos_y, p.pos_y + p.pos_frc_y))
 				table.insert(label1, string.format("%02x %02x %02x", p.spid or 0, p.attack or 0, p.attack_id or 0))
-				table.insert(label1, string.format("%03x %02x %02x %s %s", p.act, p.act_count, p.act_frame, p.update_act and "U" or "K", p.act_data.neutral and "N" or "A"))
+				table.insert(label1, string.format("%03x %02x %02x %s%s%s", p.act, p.act_count, p.act_frame, p.update_base and "u" or "k", p.update_act and "U" or "K", p.act_data.neutral and "N" or "A"))
 				table.insert(label1, string.format("%02x %02x %02x", p.hurt_state, p.sway_status, p.additional))
 				p.state_line2 = label1
 			end
