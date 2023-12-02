@@ -2927,7 +2927,7 @@ rbff2.startplugin           = function()
 			local x2 = x1 + frame_meter.cell
 			if frame.deco then
 				table.insert(separators, { -- 記号
-					txt = { x2, y1, frame.deco },
+					deco = { x1, y1, frame.deco },
 				})
 			end
 			if ix == max_x then -- 末尾のみ四方をBOX描画して太線で表示
@@ -2953,6 +2953,7 @@ rbff2.startplugin           = function()
 			if i == #separators then break end
 			if args.box then scr:draw_box(table.unpack(args.box)) end
 			if args.txt then draw_rtext_with_shadow(table.unpack(args.txt)) end
+			if args.deco then draw_text_with_shadow(table.unpack(args.deco)) end
 		end
 		-- マスクの四角描画
 		if frame_meter.limit ~= max_x or max_x == 0 then
