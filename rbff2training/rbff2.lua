@@ -1679,6 +1679,7 @@ rbff2.startplugin           = function()
 			[0x83] = function(data) p.input2 = data end,                           -- キー入力 1F前の入力
 			[0x84] = function(data) p.cln_btn = data end,                          -- クリアリングされたボタン入力
 			[0x86] = function(data) p.cmd_side = ut.int8(data) < 0 and -1 or 1 end, -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
+			[0x87] = function(data) p.on_update_87 = now() end,
 			[0x88] = function(data) p.in_bs = data ~= 0 end,                       -- BS動作中
 			[0x89] = function(data) p.sway_status, p.in_sway_line = data, data ~= 0x00 end, -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
 			[0x8B] = function(data, ret)
@@ -3110,7 +3111,7 @@ rbff2.startplugin           = function()
 		local name     = ut.convert(plain)
 		local key      = key_mask & attackbit
 		local matchkey = attackbit
-		local update   = p.update_base and p.update_act
+		local update   = p.on_update_87 == global.frame_number and p.update_act
 
 		frame_meter.add(p, { line = line, col = col, attackbit = attackbit, key = key, boxkey = boxkey, decobit = decobit, name = name, update = update, })
 
