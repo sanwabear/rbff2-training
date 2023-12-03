@@ -5245,14 +5245,13 @@ rbff2.startplugin           = function()
 		local row_num, menu_max = 1, math.min(menu.current.pos.offset + menu.max_row, #menu.current.list)
 		for i = menu.current.pos.offset, menu_max do
 			local row = menu.current.list[i]
-			local y = 48 + 10 * row_num
+			local y = 38 + 10 * row_num
 			local c1, c2, c3, c4, c5
+			local deep = math.modf((scr:frame_number() / 5) % 20) + 1
 			-- 選択行とそうでない行の色分け判断
 			if i == menu.current.pos.row then
 				c1, c2, c3, c4, c5 = 0xFFDD2200, 0xFF662200, 0xFFFFFF00, 0xCC000000, 0xAAFFFFFF
-				-- アクティブメニュー項目のビカビカ処理
-				local deep = math.modf((scr:frame_number() / 5) % 20) + 1
-				c1 = c1 - (0x00110000 * math.abs(deep - 10))
+				c1 = c1 - (0x00110000 * math.abs(deep - 10)) -- アクティブメニュー項目のビカビカ処理
 			else
 				c1, c2, c3, c4, c5 = 0xFFC0C0C0, 0xFFB0B0B0, 0xFF000000, 0x00000000, 0xFF000000
 			end
@@ -5287,6 +5286,20 @@ rbff2.startplugin           = function()
 				if row[3] and row[3].outline then
 					scr:draw_box(200, y + 2, 218, y + 7, 0xAA000000, row[3].outline)
 				end
+			end
+			if i == menu.current.pos.offset then
+				local txt, c6 = "▲", 0xFF404040
+				if 1 < menu.current.pos.offset then
+					txt, c6 = "▲", 0xFFC0C0C0 - (0x00080808 * math.abs(deep - 10)) -- 残メニューマークのビカビカ処理
+				end
+				draw_text("center", y + 1 - 10, txt, c6) -- 上にメニューあり
+			end
+			if i == menu_max then
+				local txt, c6 = "▼", 0xFF404040
+				if menu.current.pos.offset + menu.max_row < #menu.current.list then
+					txt, c6 = "▼", 0xFFF0F0F0 - (0x00080808 * math.abs(deep - 10)) -- 残メニューマークのビカビカ処理
+				end
+				draw_text("center", y + 1 + 10, txt, c6) -- 下にメニューあり
 			end
 			row_num = row_num + 1
 		end

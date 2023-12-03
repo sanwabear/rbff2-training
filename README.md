@@ -12,11 +12,12 @@
 
 次の環境で動作確認しています。
 BIOSに関しては UNIVERSAL-BIOS 4.0 をご利用ください。
+本スクリプトはAES版での動作確認を行っています。
 
-1. Windows10
-2. MAME 0.243 64-bit
+1. Windows11
+2. MAME 0.260 64-bit
 3. UNIVERSAL-BIOS 4.0を含む neogeo.zip
-4. rbff2h.zip
+4. rbff2h.zip 
 
 
 ### 必要条件
@@ -29,9 +30,9 @@ BIOSに関しては UNIVERSAL-BIOS 4.0 をご利用ください。
 
 2.  リアルバウト餓狼伝説2ロムデータ
 	[GOG]、 [DMM] または [Humble Bundle]で販売されている、移植ソフトからデータを取り出すことができます。
-	ゲームを購入して、あなたの環境にインストールしたあと、インストールディレクトリのなかにロムデータである rbff2.zip を確認できるでしょう。
-	BIOSデータである neogeo.zip も同じ場所から取り出すことができるでしょう。
-	本スクリプトはAES版での動作確認を行っています。 rbff2.zip を rbff2h.zip にリネームして使用してください。
+	ゲームを購入して、あなたの環境にインストールしたあと、インストールディレクトリのなかある rbff2.zip がロムデータです。
+	BIOSである neogeo.zip も同じ場所から取り出すことができます。
+	rbff2.zip を rbff2h.zip にリネームして使用してください。
 
 3. ネオジオのBIOSデータ
 	前述のロムデータと同じく[GOG]、 [DMM] または [Humble Bundle]で販売されている、移植ソフトからデータを入手できます。
@@ -83,7 +84,7 @@ BIOSに関しては UNIVERSAL-BIOS 4.0 をご利用ください。
 	```BatchFile
 	cd /d %~dp0
 	chcp 65001
-	start mame64.exe -window -debug -pause_brightness 1 rbff2h -bios unibios40 -plugin data,rbff2training
+	start mame64.exe -window -pause_brightness 1 rbff2h -bios unibios40 -plugin data,rbff2training
 	```
 	- ↓ 保存
 	
@@ -92,6 +93,7 @@ BIOSに関しては UNIVERSAL-BIOS 4.0 をご利用ください。
 	![起動後](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/14_%E3%83%90%E3%83%83%E3%83%81%E5%AE%9F%E8%A1%8C%E3%81%A7%E8%B5%B7%E5%8B%95.png?raw=true "起動後")
 9. Enjoy!
 10. 必要に応じてコンフィグ等、実施してください。
+
 
 ## トレーニングモード
 
@@ -102,12 +104,60 @@ BIOSに関しては UNIVERSAL-BIOS 4.0 をご利用ください。
 5. スタートボタンで開くメニューからオプションを選択できます。
 
 
+## メインメニュー
+
+ * ダミー設定 ... サブメニューダミー設定へ移動する
+ * ゲージ設定 ... サブメニューゲージ設定へ移動する
+ * 表示設定 ... サブメニュー表示設定へ移動する
+ * 特殊設定 ... サブメニュー特殊設定へ移動する
+ * 自動入力設定 ... サブメニュー自動入力設定へ移動する
+ * 判定個別設定 ... サブメニュー判定個別設定へ移動する
+ * プレイヤーセレクト画面 ... プレイヤーセレクト画面へ戻る
+
+**[クイックセレクト]**
+
+ * 1P セレクト ... 1Pのキャラ変更をしてラウンド開始からやり直す
+ * 2P セレクト ... 2Pのキャラ変更をしてラウンド開始からやり直す
+ * 1P カラー   ... 1Pのカラー変更をしてラウンド開始からやり直す
+ * 2P カラー   ... 2Pのカラー変更をしてラウンド開始からやり直す
+ * ステージセレクト ... ステージを変更してラウンド開始からやり直す
+ * BGMセレクト ... BGMを変更してラウンド開始からやり直す
+ * 体力,POWゲージ表示 ... OFF時は対戦画面から体力ゲージとPOWゲージを消去してラウンド開始からやり直す
+ * 背景表示 ... OFF時は対戦画面から背景を消去してラウンド開始からやり直す
+ * 影表示 ... 影を変更してラウンド開始からやり直す
+ * 位置補正 ... 対戦画面のカメラ位置を変更してラウンド開始からやり直す
+ * リスタート ... ラウンド開始からやり直す
+
+
+## ダミー設定 サブメニュー
+
+## ゲージ設定 サブメニュー
+
+## 表示設定 サブメニュー
+
+## 特殊設定 サブメニュー
+
+## 自動入力設定 サブメニュー
+
+## 判定個別設定 サブメニュー
+
+
 ## 著者
 
- Jesuszilla が開発した mame-rr-scripts から次のスクリプトを複製、改造して取り込んでいます。
+ [Jesuszilla]様が開発した[mame-rr-scripts]から次のスクリプトを複製、改造して取り込んでいます。
  * fighting-OSD.lua
  * garou-hitboxes.lua
  * scrolling-input-display.lua
+
+ [AoiSaya]様が開発した[FlashAir_UTF8toSJIS]から次のスクリプトを複製、改造して取り込んでいます。
+ 同スクリプトどおり変換テーブルファイルは https://github.com/mgo-tec/UTF8_to_Shift_JIS を使用しています。
+ * UTF8toSJIS
+ * Utf8Sjis.tbl
+
+[Jesuszilla]:https://github.com/Jesuszilla
+[mame-rr-scripts]:https://github.com/Jesuszilla/mame-rr-scripts
+[AoiSaya]:https://github.com/AoiSaya
+[FlashAir_UTF8toSJIS]:https://github.com/AoiSaya/FlashAir_UTF8toSJIS
 
 その他のスクリプトは@ym2601 (https://github.com/sanwabear)が開発しました。
 
