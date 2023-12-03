@@ -64,6 +64,7 @@ BIOSに関しては UNIVERSAL-BIOS 4.0 をご利用ください。
 	- ↓ コピー
 	![ROMデータコピー後](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/6_%E3%83%AD%E3%83%A0%E3%82%B3%E3%83%94%E3%83%BC%E5%BE%8C.png?raw=true "ROMデータコピー後")
 	- この手順ではDMMのインストール先ディレクトリからコピーします。
+	- *コピー後にファイル名をrbff2h.zipに変更してください。*
 5. ダウンロードしたUNIVERSAL-BIOS 4.0のBIOSデータを`neogeo.zip`の中に含めます。
 	![UNIBIOSコピー](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/7_BIOS%E3%82%B3%E3%83%94%E3%83%BC.png?raw=true "UNIBIOSコピー")
 	- ↓ コピー
@@ -77,22 +78,10 @@ BIOSに関しては UNIVERSAL-BIOS 4.0 をご利用ください。
 	- ↓ コピー
 	
 	![スクリプトコピー後](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/11_%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%82%B3%E3%83%94%E3%83%BC%E5%BE%8C.png?raw=true "スクリプトコピー後")
-7. 起動バッチを作成してMAMEのディレクトリに保存します。
-	![起動バッチ](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/12_%E3%83%90%E3%83%83%E3%83%81%E4%BD%9C%E6%88%90.png?raw=true "起動バッチ")
-	- ↓ コピペ用
-	
-	```BatchFile
-	cd /d %~dp0
-	chcp 65001
-	start mame64.exe -window -pause_brightness 1 rbff2h -bios unibios40 -plugin data,rbff2training
-	```
-	- ↓ 保存
-	
-	![起動バッチ保存後](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/13_%E3%83%90%E3%83%83%E3%83%81%E4%BF%9D%E5%AD%98%E5%BE%8C.png?raw=true "起動バッチ保存後")
-8. バッチを起動します。
-	![起動後](https://github.com/sanwabear/rbff2training-doc/blob/master/how_to_pic/14_%E3%83%90%E3%83%83%E3%83%81%E5%AE%9F%E8%A1%8C%E3%81%A7%E8%B5%B7%E5%8B%95.png?raw=true "起動後")
-9. Enjoy!
-10. 必要に応じてコンフィグ等、実施してください。
+7. rbff2trainingディレクトリにある起動バッチからMAMEを起動します。
+    - rbff2h.bat ... トレーニングモードでの起動
+    - rbff2h_notr.bat ... 通常起動
+8. Enjoy!
 
 
 ## トレーニングモード

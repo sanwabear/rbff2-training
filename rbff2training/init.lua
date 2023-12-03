@@ -21,7 +21,7 @@
 --SOFTWARE.
 local exports             = {}
 exports.name              = "rbff2training"
-exports.version           = "0.0.1"
+exports.version           = "1.0.0"
 exports.description       = "RBFF2 Training"
 exports.license           = "MIT License"
 exports.author            = { name = "Sanwabear" }
@@ -50,9 +50,10 @@ rbff2training.startplugin = function()
         if core.is_dummy and is_target_rom() then
             print("Enable Training-Core")
             rbff2 = rbff2 or require("rbff2training/rbff2")
+            rbff2.self_disable = false
+            rbff2.startplugin()
+            rbff2.emu_start()
             core = rbff2
-            core.startplugin()
-            core.emu_start()
         end
         mode = core.is_dummy and 0 or 1
     end
@@ -62,9 +63,7 @@ rbff2training.startplugin = function()
 
     core = {
         is_dummy = true,
-        emu_frame = null_function,
         emu_pause = null_function,
-        emu_resume = null_function,
         emu_frame_done = null_function,
         emu_periodic = null_function,
         emu_menu = null_function,
@@ -75,11 +74,16 @@ rbff2training.startplugin = function()
 
     subscription.reset = emu.add_machine_reset_notifier(function() core.emu_start() end)
     subscription.stop = emu.add_machine_stop_notifier(function() core.emu_stop() end)
-    subscription.frame = emu.add_machine_frame_notifier(function() core.emu_frame() end)
     subscription.pause = emu.add_machine_pause_notifier(function() core.emu_pause() end)
-    subscription.resume = emu.add_machine_resume_notifier(function() core.emu_resume() end)
     emu.register_frame_done(function() core.emu_frame_done() end)
-    emu.register_periodic(function() core.emu_periodic() end)
+    emu.register_periodic(function()
+        if core.self_disable then
+            mode = 2
+            core_to_dummy()
+        else
+            core.emu_periodic()
+        end
+    end)
 
     local menu_callback = function(index, event)
         if not is_target_rom() then

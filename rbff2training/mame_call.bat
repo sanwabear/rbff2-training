@@ -1,0 +1,31 @@
+@rem 前提
+@rem ASIO4ALLのインストール
+@rem Noto Sans Mono CJK JP Boldフォントのインストール
+@echo off
+cd /d %~dp0
+
+if NOT exist mame.exe cd ..
+if NOT exist mame.exe cd ..
+if NOT exist mame.exe exit
+
+set common_opts=-rompath roms;Z:\SNK\neogeo\rom;Z:\CAPCOM\SF30th_extract\mame
+set common_opts=%common_opts% -bios unibios40 -confirm_quit -verbose -pause_brightness 1
+set common_opts=%common_opts% -samplerate 44100 -samples -volume -5 -compressor -sound portaudio -audio_latency 1 -pa_api "Windows WDM-KS" -pa_latency 0.001
+set common_opts=%common_opts% -sound auto
+set common_opts=%common_opts% -cheat -cheatpath plugins\rbff2training\cheat
+set common_opts=%common_opts% -fontpath plugins\rbff2training\fonts
+set common_opts=%common_opts% -uifont "Noto Sans Mono CJK JP Bold"
+set common_opts=%common_opts% -nofilter -frameskip 0 -noautoframeskip -throttle -lowlatency -refreshspeed -nosleep
+set common_opts=%common_opts% -switchres -resolution 0x0@60
+set common_opts=%common_opts% -language Japanese
+set common_opts=%common_opts% -skip_gameinfo
+set common_opts=%common_opts% %debug% %nvram_save%
+rem set common_opts=%common_opts% -prescale 4
+rem set common_opts=%common_opts% -video d3d
+rem set common_opts=%common_opts% -ramsize 1024K
+rem set common_opts=%common_opts% -resolution 1600x1120@144
+rem set common_opts=%common_opts%
+
+@echo on
+chcp 65001
+mame.exe %common_opts% %*
