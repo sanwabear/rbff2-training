@@ -219,19 +219,19 @@ rbff2.startplugin           = function()
 			disp_damage         = 2,                -- 07 ダメージ表示  1:OFF 2:ON 3:1P 4:2P
 			disp_frame          = 2,               -- 10 フレームメーター表示  1:OFF 2:大メーター 3:小メーター 4:1P 小メーターのみ 5:2P 小メーターのみ
 			split_frame         = 1,               -- 11 フレームメーター設定  1:ON 2:ON:判定の形毎 3:ON:攻撃判定の形毎 4:ON:くらい判定の形毎
-			disp_fb_frame       = 2,               -- 12 フレームメーター弾表示  1:OFF 2:ON
+			disp_fb_frame       = true,            -- 12 フレームメーター弾表示  1:OFF 2:ON
 			disp_char           = 2,               -- 21 キャラ表示 1:OFF 2:ON 3:1P 4:2P
 			disp_phantasm       = 2,               -- 22 残像表示 1:OFF 2:ON 3:1P 4:2P
 			disp_effect         = 2,               -- 23 エフェクト表示 1:OFF 2:ON 3:1P 4:2P
 		},
 
-		create = function(list, on_a, on_b)
+		create = function(name, list, on_a, on_b)
 			local row, col = nil, {}
 			for i, obj in ipairs(list) do
 				if not row and not obj.title then row = i end
 				table.insert(col, #obj == 1 and 0 or 1)
 			end
-			return { list = list, pos = { offset = 1, row = row or 1, col = col }, on_a = on_a, on_b = on_b or on_a }
+			return { name = name, list = list, pos = { offset = 1, row = row or 1, col = col }, on_a = on_a, on_b = on_b or on_a }
 		end,
 
 		to_tra = nil,
@@ -529,11 +529,11 @@ rbff2.startplugin           = function()
 		no_bars              = false,
 		sync_pos_x           = 1,  -- 1: OFF, 2:1Pと同期, 3:2Pと同期
 
-		disp_pos             = true, -- 1P 2P 距離表示
+		disp_pos             = 2, -- 向き・距離・位置表示 1;OFF 2:ON 3:向き・距離のみ 4:位置のみ
 		hide                 = hide_options.none,
 		disp_frame           = true, -- フレームメーター表示 1:OFF 2:ON
 		disp_input           = 1,  -- コマンド入力状態表示 1:OFF 2:1P 3:2P
-		disp_normal_frames   = 2,  -- 通常動作フレーム非表示 1:OFF 2:ON
+		disp_normal_frames   = false, -- 通常動作フレーム非表示 1:OFF 2:ON
 		pause_hit            = 1,  -- 1:OFF, 2:ON, 3:ON:やられのみ 4:ON:投げやられのみ 5:ON:打撃やられのみ 6:ON:ガードのみ
 		pause_hitbox         = 1,  -- 判定発生時にポーズ 1:OFF, 2:投げ, 3:攻撃, 4:変化時
 		pause                = false,
@@ -3572,7 +3572,7 @@ rbff2.startplugin           = function()
 			if p.delayed_clearing == global.frame_number then p.boxies = {} end
 			if p.delayed_inactive == global.frame_number then
 				p.grabbable, p.attack_id, p.attackbits = 0, 0, {}
-				p.boxies, p.on_fireball = #p.boxies == 0 and p.boxies or {}, -1, nil
+				p.boxies, p.on_fireball = #p.boxies == 0 and p.boxies or {}, -1
 				if p.is_fireball then p.proc_active = false end
 			end
 			p.hurt.dodge = frame_attack_types.full -- くらい判定なし＝全身無敵をデフォルトにする
@@ -3704,7 +3704,7 @@ rbff2.startplugin           = function()
 			-- キャラ、弾ともに通常動作状態ならリセットする
 			if not global.both_act_neutral and global.old_both_act_neutral then p.clear_frame_data() end
 			-- 全キャラ特別な動作でない場合はフレーム記録しない
-			if (global.disp_normal_frames == 1 or not global.both_act_neutral) and not p.is_fireball then proc_frame(p) end
+			if (not global.disp_normal_frames or not global.both_act_neutral) and not p.is_fireball then proc_frame(p) end
 		end
 		fix_max_framecount() --1Pと2Pともにフレーム数が多すぎる場合は加算をやめる
 
@@ -4355,7 +4355,8 @@ rbff2.startplugin           = function()
 		end
 
 		-- キャラの向きとキャラ間の距離表示
-		if global.disp_pos then
+		-- 向き・距離・位置表示 1;OFF 2:ON 3:向き・距離のみ 4:位置のみ
+		if global.disp_pos > 1 then
 			for i, p in ipairs(players) do
 				local flip   = p.flip_x == 1 and ">" or "<" -- 見た目と判定の向き
 				local side   = p.block_side == 1 and ">" or "<" -- ガード方向や内部の向き 1:右向き -1:左向き
@@ -4660,8 +4661,8 @@ rbff2.startplugin           = function()
 		col[9] = g.disp_input                    -- 09 コマンド入力状態表示  1:OFF 2:1P 3:2P
 		col[10] = c.disp_frame                   -- 10 フレームメーター表示  1:OFF 2:大メーター 3:小メーター 4:1P 小メーターのみ 5:2P 小メーターのみ
 		col[11] = c.split_frame                  -- 11 フレームメーター設定  1:ON 2:ON:判定の形毎 3:ON:攻撃判定の形毎 4:ON:くらい判定の形毎
-		col[12] = c.disp_fb_frame                -- 12 フレームメーター弾表示  1:OFF 2:ON
-		col[13] = g.disp_normal_frames           -- 13 通常動作フレーム非表示  1:OFF 2:ON
+		col[12] = c.disp_fb_frame and 1 or 2     -- 12 フレームメーター弾表示  1:OFF 2:ON
+		col[13] = g.disp_normal_frames and 1 or 2 -- 13 通常動作フレーム非表示  1:OFF 2:ON
 		-- 14 状態表示 label
 		col[15] = p[1].disp_state                -- 15 1P 状態表示  1:OFF 2: ON, ON:小表示, ON:大表示, ON:フラグ表示
 		col[16] = p[2].disp_state                -- 16 2P 状態表示  1:OFF 2:ON, ON:小表示, ON:大表示, ON:フラグ表示
@@ -4781,7 +4782,7 @@ rbff2.startplugin           = function()
 			menu.exit_and_play()               -- レコード＆リプレイ用の初期化 リプレイ
 		end
 	end
-	menu.main                     = menu.create({
+	menu.main                     = menu.create("main", {
 		{ "ダミー設定" },
 		{ "ゲージ設定" },
 		{ "表示設定" },
@@ -4931,7 +4932,7 @@ rbff2.startplugin           = function()
 	for i = 1, 61 do table.insert(menu.labels.block_frames, string.format("%sF後にガード解除", (i - 1))) end
 	for i = 1, 99 do table.insert(menu.labels.attack_harmless, string.format("%s段目で空振り", i)) end
 
-	menu.training = menu.create({
+	menu.training = menu.create("training", {
 		{ "ダミーモード", { "プレイヤー vs プレイヤー", "プレイヤー vs CPU", "CPU vs プレイヤー", "1P&2P入れ替え", "レコード", "リプレイ" }, },
 		{ title = true, "ダミー設定" },
 		{ "1P アクション", { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
@@ -4952,7 +4953,7 @@ rbff2.startplugin           = function()
 		{ "画面下に移動", { "OFF", "2Pを下に移動", "1Pを下に移動", }, },
 	}, ut.new_filled_table(18, menu.to_main), ut.new_filled_table(18, menu.to_main_cancel))
 
-	menu.bar = menu.create({
+	menu.bar = menu.create("bar", {
 		{ title = true, "ゲージ設定" },
 		{ "1P 体力ゲージ量", menu.labels.life_range, }, -- "最大", "赤", "ゼロ" ...
 		{ "2P 体力ゲージ量", menu.labels.life_range, }, -- "最大", "赤", "ゼロ" ...
@@ -4972,17 +4973,17 @@ rbff2.startplugin           = function()
 		menu.current             = menu.main
 	end))
 
-	menu.disp = menu.create({
+	menu.disp = menu.create("disp", {
 		{ title = true, "表示設定" },
 		{ "1P 判定・間合い表示", { "OFF", "ON", "ON:判定のみ", "ON:間合いのみ" }, },
 		{ "2P 判定・間合い表示", { "OFF", "ON", "ON:判定のみ", "ON:間合いのみ" }, },
-		{ "1P 入力表示", { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
-		{ "2P 入力表示", { "OFF", "ON", "ログのみ", "キーディスのみ", }, },
+		{ "1P 入力表示", { "OFF", "ON", "ON:ログのみ", "ON:キーディスのみ", }, },
+		{ "2P 入力表示", { "OFF", "ON", "ON:ログのみ", "ON:キーディスのみ", }, },
 		{ "気絶メーター表示", menu.labels.off_on_1p2p, },
 		{ "ダメージ表示", menu.labels.off_on_1p2p, },
 		{ title = true, "フレーム表示" },
-		{ "コマンド入力状態表示", { "OFF", "1P", "2P", }, },
-		{ "フレームメーター表示", { "OFF", "大メーター", "小メーター", "1P 小メーターのみ", "2P 小メーターのみ", }, },
+		{ "コマンド入力状態表示", { "OFF", "ON:1P", "ON:2P", }, },
+		{ "フレームメーター表示", { "OFF", "ON:大メーター", "ON:小メーター", "ON:1P 小メーターのみ", "ON:2P 小メーターのみ", }, },
 		{ "フレームメーター設定", { "ON", "ON:判定の形毎", "ON:攻撃判定の形毎", "ON:くらい判定の形毎", }, },
 		{ "フレームメーター弾表示", menu.labels.off_on, },
 		{ "通常動作フレーム非表示", menu.labels.off_on, },
@@ -4991,14 +4992,14 @@ rbff2.startplugin           = function()
 		{ "2P 状態表示", { "OFF", "ON", "ON:小表示", "ON:大表示", "ON:フラグ表示" }, },
 		{ "1P 処理アドレス表示", { "OFF", "本体", "弾1", "弾2", "弾3", }, },
 		{ "2P 処理アドレス表示", { "OFF", "本体", "弾1", "弾2", "弾3", }, },
-		{ "向き・距離・位置表示", { "OFF", "ON", "向き・距離のみ", "位置のみ" }, },
+		{ "向き・距離・位置表示", { "OFF", "ON", "ON:向き・距離のみ", "ON:位置のみ" }, },
 		{ title = true, "撮影用" },
 		{ "キャラ表示", menu.labels.off_on_1p2p, },
 		{ "残像表示", menu.labels.off_on_1p2p, },
 		{ "エフェクト表示", menu.labels.off_on_1p2p, },
 		{ "Pちゃん表示", menu.labels.off_on, },
 		{ "共通エフェクト表示", menu.labels.off_on, },
-	}, ut.new_filled_table(31, function()
+	}, ut.new_filled_table(25, function()
 		local col, p, g, o, c = menu.disp.pos.col, players, global, hide_options, menu.config
 		local set_hide        = function(bit, val) return ut.hex_set(g.hide, bit, val ~= 1) end
 		-- 01 表示設定 label
@@ -5012,8 +5013,8 @@ rbff2.startplugin           = function()
 		g.disp_input          = col[9]                -- 09 コマンド入力状態表示  1:OFF 2:1P 3:2P
 		c.disp_frame          = col[10]               -- 10 フレームメーター表示  1:OFF 2:大メーター 3:小メーター 4:1P 小メーターのみ 5:2P 小メーターのみ
 		c.split_frame         = col[11]               -- 11 フレームメーター設定  1:ON 2:ON:判定の形毎 3:ON:攻撃判定の形毎 4:ON:くらい判定の形毎
-		c.disp_fb_frame       = col[12]               -- 12 フレームメーター弾表示  1:OFF 2:ON
-		g.disp_normal_frames  = col[13]               -- 13 通常動作フレーム非表示  1:OFF 2:ON
+		c.disp_fb_frame       = col[12] == 2          -- 12 フレームメーター弾表示  1:OFF 2:ON
+		g.disp_normal_frames  = col[13] == 2          -- 13 通常動作フレーム非表示  1:OFF 2:ON
 		-- 14 状態表示 label
 		p[1].disp_state       = col[15]               -- 15 1P 状態表示  1:OFF 2: ON, ON:小表示, ON:大表示, ON:フラグ表示
 		p[2].disp_state       = col[16]               -- 16 2P 状態表示  1:OFF 2:ON, ON:小表示, ON:大表示, ON:フラグ表示
@@ -5081,25 +5082,10 @@ rbff2.startplugin           = function()
 		end
 		-- 11 フレームメーター設定  1:ON 2:ON:判定の形毎 3:ON:攻撃判定の形毎 4:ON:くらい判定の形毎
 		local set_split_frame = function(p, val) if 1 < p.disp_frame then p.disp_frame = val end end
-		if c.split_frame == 1 then
-			set_split_frame(p[1], 2)
-			set_split_frame(p[2], 2)
-		elseif c.split_frame == 2 then
-			set_split_frame(p[1], 3)
-			set_split_frame(p[2], 3)
-		elseif c.split_frame == 3 then
-			set_split_frame(p[1], 4)
-			set_split_frame(p[2], 4)
-		elseif c.split_frame == 4 then
-			set_split_frame(p[1], 5)
-			set_split_frame(p[2], 5)
-		end
+		set_split_frame(p[1], c.split_frame + 1)
+		set_split_frame(p[2], c.split_frame + 1)
 		 -- 12 フレームメーター弾表示  1:OFF 2:ON
-		if c.disp_fb_frame == 1 then
-			p[1].disp_fbfrm, p[2].disp_fbfrm = false, false
-		elseif c.disp_fb_frame == 2 then
-			p[1].disp_fbfrm, p[2].disp_fbfrm = true, true
-		end
+		p[1].disp_fbfrm, p[2].disp_fbfrm = c.disp_fb_frame, c.disp_fb_frame
 		-- 21 キャラ表示 1:OFF 2:ON 3:1P 4:2P
 		if c.disp_char == 1 then
 			g.hide               = set_hide(o.p1_char, 1) -- 1P キャラ表示
@@ -5115,37 +5101,15 @@ rbff2.startplugin           = function()
 			g.hide               = set_hide(o.p2_char, 2) -- 2P キャラ表示
 		end
 		-- 22 残像表示 1:OFF 2:ON 3:1P 4:2P
-		if c.disp_phantasm == 1 then
-			g.hide               = set_hide(o.p1_phantasm, 1) -- 1P 残像表示
-			g.hide               = set_hide(o.p2_phantasm, 1) -- 2P 残像表示
-		elseif c.disp_phantasm == 1 then
-			g.hide               = set_hide(o.p1_phantasm, 2) -- 1P 残像表示
-			g.hide               = set_hide(o.p2_phantasm, 2) -- 2P 残像表示
-		elseif c.disp_phantasm == 1 then
-			g.hide               = set_hide(o.p1_phantasm, 3) -- 1P 残像表示
-			g.hide               = set_hide(o.p2_phantasm, 3) -- 2P 残像表示
-		elseif c.disp_phantasm == 4 then
-			g.hide               = set_hide(o.p1_phantasm, 4) -- 1P 残像表示
-			g.hide               = set_hide(o.p2_phantasm, 4) -- 2P 残像表示
-		end
+		g.hide               = set_hide(o.p1_phantasm, c.disp_phantasm) -- 1P 残像表示
+		g.hide               = set_hide(o.p2_phantasm, c.disp_phantasm) -- 2P 残像表示
 		-- 23 エフェクト表示 1:OFF 2:ON 3:1P 4:2P
-		if c.disp_effect == 1 then
-			g.hide               = set_hide(o.p1_effect, 1) -- 1P エフェクト表示
-			g.hide               = set_hide(o.p2_effect, 1) -- 2P エフェクト表示
-		elseif c.disp_effect == 2 then
-			g.hide               = set_hide(o.p1_effect, 2) -- 1P エフェクト表示
-			g.hide               = set_hide(o.p2_effect, 2) -- 2P エフェクト表示
-		elseif c.disp_effect == 3 then
-			g.hide               = set_hide(o.p1_effect, 3) -- 1P エフェクト表示
-			g.hide               = set_hide(o.p2_effect, 3) -- 2P エフェクト表示
-		elseif c.disp_effect == 4 then
-			g.hide               = set_hide(o.p1_effect, 4) -- 1P エフェクト表示
-			g.hide               = set_hide(o.p2_effect, 4) -- 2P エフェクト表示
-		end
+		g.hide               = set_hide(o.p1_effect, c.disp_effect) -- 1P エフェクト表示
+		g.hide               = set_hide(o.p2_effect, c.disp_effect) -- 2P エフェクト表示
 		menu.current         = menu.main
 	end))
 
-	menu.extra = menu.create({
+	menu.extra = menu.create("extra", {
 		{ title = true, "特殊設定" },
 		{ "簡易超必", menu.labels.off_on, },
 		{ "半自動潜在能力", menu.labels.off_on, },
@@ -5174,7 +5138,7 @@ rbff2.startplugin           = function()
 		menu.current = menu.main
 	end))
 
-	menu.auto = menu.create({
+	menu.auto = menu.create("auto", {
 		{ title = true, "自動入力設定" },
 		{ "ダウン投げ", menu.labels.off_on, },
 		{ "ダウン攻撃", menu.labels.off_on, },
@@ -5223,7 +5187,7 @@ rbff2.startplugin           = function()
 		menu.current = menu.main
 	end))
 
-	menu.color = menu.create(ut.table_add_conv_all({
+	menu.color = menu.create("color", ut.table_add_conv_all({
 		{ title = true, "判定個別設定" }
 	}, db.box_type_list, function(b) return { b.name, menu.labels.off_on, { fill = b.fill, outline = b.outline } } end
 	), ut.new_filled_table(#db.box_type_list + 1, function()
@@ -5232,7 +5196,7 @@ rbff2.startplugin           = function()
 		menu.current = menu.main
 	end))
 
-	menu.recording = menu.create({
+	menu.recording = menu.create("recording", {
 		{ title = true, "選択したスロットに記憶されます。" },
 		{ "スロット1", { "Aでレコード開始", }, },
 		{ "スロット2", { "Aでレコード開始", }, },
@@ -5254,7 +5218,7 @@ rbff2.startplugin           = function()
 		function() menu.exit_and_rec(8) end, -- スロット8
 	}, ut.new_filled_table(1, menu.rec_to_tra, 8, menu.to_tra))
 
-	menu.replay = menu.create({
+	menu.replay = menu.create("replay", {
 		{ title = true, "ONにしたスロットからランダムでリプレイされます。" },
 		{ "スロット1", menu.labels.off_on, },
 		{ "スロット2", menu.labels.off_on, },
