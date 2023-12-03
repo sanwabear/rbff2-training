@@ -1,0 +1,7 @@
+{
+    "Lua.workspace.checkThirdParty": false,
+    "Lua.diagnostics.globals": [
+        "manager",
+        "emu"
+    ]
+}
