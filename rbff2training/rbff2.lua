@@ -3864,6 +3864,9 @@ rbff2.startplugin  = function()
 
 	-- 技データのIDかフラグから技データを返す
 	local resolve_act_neutral = function(p)
+		if p.act <= 6 then
+			return true
+		end
 		if ut.tstb(p.flag_c0, 0x3FFD723) or ((p.attack_data or 0) | p.flag_c4 | p.flag_c8) ~= 0 or ut.tstb(p.flag_cc, 0xFFFFFF3F) or ut.tstb(p.flag_d0, db.flag_d0.hurt) then
 			return false -- ガードできない動作中
 		end
@@ -3899,7 +3902,7 @@ rbff2.startplugin  = function()
 			act_data = cache[name] or { bs_name = name, name = name, normal_name = name, slide_name = name, count = 1 }
 			if not cache[p.act] then cache[p.act] = act_data end
 			if not cache[name] then cache[name] = act_data end
-			act_data.neutral = p.act <= 6 or act_data.neutral or resolve_act_neutral(p)
+			act_data.neutral = act_data.neutral or resolve_act_neutral(p)
 			act_data.type = act_data.type or (act_data.neutral and db.act_types.free or db.act_types.any)
 			--if act_data.neutral then print(global.frame_number, p.num, string.format("%X", p.act), "act neutral") end
 		elseif act_data then -- フラグ状態と技データの両方でニュートラル扱いかどうかを判断する

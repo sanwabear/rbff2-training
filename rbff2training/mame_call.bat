@@ -10,8 +10,10 @@ if NOT exist mame.exe exit
 
 set common_opts=-rompath roms;Z:\SNK\neogeo\rom;Z:\CAPCOM\SF30th_extract\mame
 set common_opts=%common_opts% -bios unibios40 -confirm_quit -verbose -pause_brightness 1
-set common_opts=%common_opts% -samplerate 44100 -samples -volume -5 -compressor -sound portaudio -audio_latency 1 -pa_api "Windows WDM-KS" -pa_latency 0.001
-set common_opts=%common_opts% -sound auto
+set common_opts=%common_opts% -samplerate 44100 -nocompressor -audio_latency 1
+rem set common_opts=%common_opts% -sound portaudio -pa_api "Windows WDM-KS" -pa_latency 0.001
+rem set common_opts=%common_opts% -volume -5 -samples
+rem set common_opts=%common_opts% -sound auto
 set common_opts=%common_opts% -cheat -cheatpath plugins\rbff2training\cheat
 set common_opts=%common_opts% -fontpath plugins\rbff2training\fonts
 set common_opts=%common_opts% -uifont "Noto Sans Mono CJK JP Bold"
