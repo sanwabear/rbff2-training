@@ -2479,11 +2479,12 @@ rbff2.startplugin  = function()
 				if db.p_chan[e] then ret.value = 0 end
 				for i, addr, p in ut.ifind(p_bases, get_object_by_addr2) do
 					--ut.printf("%s %s %6x", global.frame_number, i, addr)
-					if i == 1 and ut.tstb(global.hide, hide_options["p" .. p.num .. "_char"], true) then
+					local num = p.body.num
+					if i == 1 and ut.tstb(global.hide, hide_options["p" .. num .. "_char"], true) then
 						ret.value = 4
-					elseif i == 2 and ut.tstb(global.hide, hide_options["p" .. p.num .. "_phantasm"], true) then
+					elseif i == 2 and ut.tstb(global.hide, hide_options["p" .. num .. "_phantasm"], true) then
 						ret.value = 4
-					elseif i >= 3 and ut.tstb(global.hide, hide_options["p" .. p.num .. "_effect"], true) then
+					elseif i >= 3 and ut.tstb(global.hide, hide_options["p" .. num .. "_effect"], true) then
 						ret.value = 4
 					end
 					return
