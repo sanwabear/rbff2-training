@@ -1672,18 +1672,11 @@ rbff2.startplugin  = function()
 			input.accepted = scr:frame_number()
 			return true, on[1], on[2]
 		end
-	return false, false, false
+		return false, false, false
 	end
-	input.long_start                                   = function(state_past)
-		if 12 < state_past then
-			for _, p in ipairs(players) do
-				if 35 < p.key.state._st then
-					play_cursor_sound()
-					return true
-				end
-			end
-		end
-		return false
+	input.long_start                                   = function()
+		-- ut.printf("long start %s %s %s", players[1].key.state._st, players[2].key.state._st)
+		return 35 < math.max(players[1].key.state._st, players[2].key.state._st)
 	end
 	for i = 1, 2 do -- プレイヤーの状態など
 		local p1   = (i == 1)
