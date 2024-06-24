@@ -2901,7 +2901,7 @@ rbff2.startplugin  = function()
 			-- 状態変更
 			recording.play_count = 1
 			global.rec_main = recording.procs.await_fixpos
-			global.await_fixpos_frame = global.frame_number
+			recording.fixpos.await_fixpos_frame = global.frame_number
 			print(global.frame_number .. " await_play -> await_fixpos")
 
 			-- メインラインでニュートラル状態にする
@@ -2930,8 +2930,8 @@ rbff2.startplugin  = function()
 	recording.procs.await_fixpos = function(_)
 		-- 開始間合い固定 1:OFF 2:位置記憶 3:1Pと2P 4:1P 5:2P
 		local fixpos = recording.fixpos
-		local timeout = ((global.await_fixpos_frame + 20) <= global.frame_number)
 		if fixpos and global.replay_fix_pos and global.replay_fix_pos ~= 1 then
+			local timeout = ((fixpos.await_fixpos_frame + 8) <= global.frame_number)
 			local memrs = { w08 = mem.r08, w16 = mem.r16, w32 = mem.r32, }
 			local fixmem = function(obj)
 				local fixed = true
@@ -2942,7 +2942,7 @@ rbff2.startplugin  = function()
 						if currdata ~= data then
 							fixed = false
 							memw(addr, data)
-							ut.printf("fixdata %s %X %X -> %X", m, addr, currdata, data)
+							ut.printf("%s fixpos[%s] %s %X %X -> %X", global.frame_number, global.frame_number - fixpos.await_fixpos_frame, m, addr, currdata, data)
 						end
 					end
 				end
