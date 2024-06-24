@@ -2901,6 +2901,8 @@ rbff2.startplugin  = function()
 			-- 状態変更
 			recording.play_count = 1
 			global.rec_main = recording.procs.await_fixpos
+			global.await_fixpos_frame = global.frame_number
+			print(global.frame_number .. " await_play -> await_fixpos")
 
 			-- メインラインでニュートラル状態にする
 			for i, p in ipairs(players) do
@@ -2928,45 +2930,41 @@ rbff2.startplugin  = function()
 	recording.procs.await_fixpos = function(_)
 		-- 開始間合い固定 1:OFF 2:位置記憶 3:1Pと2P 4:1P 5:2P
 		local fixpos = recording.fixpos
+		local timeout = ((global.await_fixpos_frame + 20) <= global.frame_number)
 		if fixpos and global.replay_fix_pos and global.replay_fix_pos ~= 1 then
-			local memrs = {
-				w08 = mem.r08,
-				w16 = mem.r16,
-				w32 = mem.r32,
-			}
+			local memrs = { w08 = mem.r08, w16 = mem.r16, w32 = mem.r32, }
 			local fixmem = function(obj)
 				local fixed = true
 				for m, datas in pairs(obj) do
-					local memw = mem[m]
-					local memr = memrs[m]
+					local memw, memr = mem[m], memrs[m]
 					for addr, data in pairs(datas) do
-						if memr(addr) ~= data then
+						local currdata = memr(addr)
+						if currdata ~= data then
 							fixed = false
 							memw(addr, data)
+							ut.printf("fixdata %s %X %X -> %X", m, addr, currdata, data)
 						end
 					end
 				end
 				return fixed
 			end
-			-- 補正位置に戻りきるまでループさせる
-			local all_fixed = true
 			-- 2:位置記憶
-			all_fixed = fixmem(fixpos.fixpos2.stg) and all_fixed
+			local all_fixed = fixmem(fixpos.fixpos2.stg)
 			-- 3:1Pと2P 4:1P
-			if global.replay_fix_pos == 3 or global.replay_fix_pos == 4 then
-				all_fixed = fixmem(fixpos.fixpos2.p1) and all_fixed
-			end
+			if global.replay_fix_pos == 3 or global.replay_fix_pos == 4 then all_fixed = fixmem(fixpos.fixpos2.p1) and all_fixed end
 			-- 3:1Pと2P 5:2P
-			if global.replay_fix_pos == 3 or global.replay_fix_pos == 5 then
-				all_fixed = fixmem(fixpos.fixpos2.p2) and all_fixed
-			end
-			if all_fixed then
-				global.rec_main = recording.procs.await_play
+			if global.replay_fix_pos == 3 or global.replay_fix_pos == 5 then all_fixed = fixmem(fixpos.fixpos2.p2) and all_fixed end
+			if all_fixed or timeout then
+				global.rec_main = recording.procs.play
+				print(global.frame_number .. " await_fixpos -> play")
 			else
+				-- 補正位置に戻りきるまでループさせる
 				global.rec_main = recording.procs.await_fixpos
+				print(global.frame_number .. " await_fixpos -> await_fixpos")
 			end
 		else
-			global.rec_main = recording.procs.await_play
+			global.rec_main = recording.procs.play
+			print(global.frame_number .. " await_fixpos -> play")
 		end
 	end
 	-- 繰り返しリプレイ待ち
@@ -4003,8 +4001,9 @@ rbff2.startplugin  = function()
 		local next_joy, state_past = new_next_joy(), scr:frame_number() - input.accepted
 
 		-- スタートボタン（リプレイモード中のみスタートボタンおしっぱでメニュー表示へ切り替え
-		if (global.dummy_mode == 6 and input.long_start(state_past)) or
-			(global.dummy_mode ~= 6 and input.accept("st", state_past)) then
+		if (global.dummy_mode == 6 and input.long_start()) or
+			(global.dummy_mode ~= 6 and input.accept("st", state_past)) or
+			(global.rec_main == recording.procs.fixpos and input.accept("st", state_past)) then
 			menu.state = menu -- メニュー表示状態へ切り替え
 			cls_joy()
 			if global.dummy_mode == 5 then
