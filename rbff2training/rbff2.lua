@@ -663,7 +663,6 @@ rbff2.startplugin  = function()
 		await_neutral        = false,
 		replay_fix_pos       = 1, -- 開始間合い固定 1:OFF 2:位置記憶 3:1Pと2P 4:1P 5:2P
 		replay_reset         = 2, -- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
-		debug_stop           = 0, -- カウンタ
 		damaged_move         = 1,
 		all_bs               = false,
 		mvs_billy            = false,
@@ -2758,6 +2757,7 @@ rbff2.startplugin  = function()
 			await_no_input = nil,
 			await_1st_input = nil,
 			await_play = nil,
+			await_fixpos = nil,
 			input = nil,
 			play = nil,
 			repeat_play = nil,
@@ -2781,15 +2781,52 @@ rbff2.startplugin  = function()
 	-- リプレイ開始位置記憶
 	recording.procs.fixpos = function()
 		recording.info   = recording.info4
-		local pos        = { players[1].cmd_side, players[2].cmd_side }
-		local fixpos     = { players[1].pos, players[2].pos }
-		local fixsway    = { players[1].sway_status, players[2].sway_status }
-		local fixscr     = {
-			x = mem.r16(mem.stage_base_addr + screen.offset_x),
-			y = mem.r16(mem.stage_base_addr + screen.offset_y),
-			z = mem.r16(mem.stage_base_addr + screen.offset_z),
+		local fixpos2    = {
+			p1 = {
+				w08 = {
+					[0x100458] = mem.r08(0x100458), -- 1P 向き
+					[0x100486] = mem.r08(0x100486), -- 1P コマンド入力向き
+					[0x100489] = mem.r08(0x100489), -- 1P ライン状態
+				},
+				w16 ={},
+				w32 = {
+					[0x100420] = mem.r32(0x100420), -- 1P X
+					[0x100424] = mem.r32(0x100424), -- 1P Y
+					[0x100428] = mem.r32(0x100428), -- 1P Z
+				}
+			},
+			p2 = {
+				w08 = {
+					[0x100558] = mem.r08(0x100558), -- 2P 向き
+					[0x100586] = mem.r08(0x100586), -- 2P コマンド入力向き
+					[0x100589] = mem.r08(0x100589), -- 2P ライン状態
+				},
+				w16 ={},
+				w32 = {
+					[0x100520] = mem.r32(0x100520), -- 2P X
+					[0x100524] = mem.r32(0x100524), -- 2P X
+					[0x100528] = mem.r32(0x100528), -- 2P X
+				}
+			},
+			stg = {
+				w08 = {},
+				w16 = {
+					[0x100E20] = mem.r16(0x100E20), -- ステージ X
+					[0x100E24] = mem.r16(0x100E24), -- ステージ Y
+					[0x100E7C] = mem.r16(0x100E7C), -- ステージ
+				},
+				w32 = {
+					[0x100E28] = mem.r32(0x100E28), -- ステージ Z
+					[0x100E2C] = mem.r32(0x100E2C), -- ステージ
+					[0x100E30] = mem.r32(0x100E30), -- ステージ
+					[0x100E34] = mem.r32(0x100E34), -- ステージ
+					[0x100E38] = mem.r32(0x100E38), -- ステージ
+					[0x100E3C] = mem.r32(0x100E3C), -- ステージ
+					[0x10B1A4] = mem.r32(0x10B1A4),
+				}
+			},
 		}
-		recording.fixpos = { pos = pos, fixpos = fixpos, fixscr = fixscr, fixsway = fixsway, }
+		recording.fixpos = { fixpos2 = fixpos2, }
 	end
 	-- 初回入力まち
 	-- 未入力状態を待ちける→入力開始まで待ち受ける
@@ -2863,7 +2900,7 @@ rbff2.startplugin  = function()
 			recording.force_start_play = false
 			-- 状態変更
 			recording.play_count = 1
-			global.rec_main = recording.procs.play
+			global.rec_main = recording.procs.await_fixpos
 
 			-- メインラインでニュートラル状態にする
 			for i, p in ipairs(players) do
@@ -2881,32 +2918,55 @@ rbff2.startplugin  = function()
 				end
 			end
 
-			local fixpos = recording.fixpos
-			if fixpos then
-				-- 開始間合い固定 1:OFF 2:位置記憶 3:1Pと2P 4:1P 5:2P
-				if fixpos.fixpos then
-					for i, p in ipairs(players) do
-						if global.replay_fix_pos == 3 or (global.replay_fix_pos == 4 and i == 3) or (global.replay_fix_pos == 5 and i == 4) then
-							mem.w16i(p.addr.pos, fixpos.fixpos[i])
-						end
-					end
-				end
-				if fixpos.fixscr and global.replay_fix_pos and global.replay_fix_pos ~= 1 then
-					mem.w16(mem.stage_base_addr + screen.offset_x, fixpos.fixscr.x)
-					mem.w16(mem.stage_base_addr + screen.offset_x + 0x30, fixpos.fixscr.x)
-					mem.w16(mem.stage_base_addr + screen.offset_x + 0x2C, fixpos.fixscr.x)
-					mem.w16(mem.stage_base_addr + screen.offset_x + 0x34, fixpos.fixscr.x)
-					mem.w16(mem.stage_base_addr + screen.offset_y, fixpos.fixscr.y)
-					mem.w16(mem.stage_base_addr + screen.offset_z, fixpos.fixscr.z)
-				end
-			end
-			players[1].cmd_side = mem.r08(players[1].addr.cmd_side)
-			players[2].cmd_side = mem.r08(players[2].addr.cmd_side)
-
 			-- 入力リセット
 			local next_joy      = new_next_joy()
 			for _, joy in ipairs(use_joy) do to_joy[joy.field] = next_joy[joy.field] or false end
 			return
+		end
+	end
+	-- 開始位置調整
+	recording.procs.await_fixpos = function(_)
+		-- 開始間合い固定 1:OFF 2:位置記憶 3:1Pと2P 4:1P 5:2P
+		local fixpos = recording.fixpos
+		if fixpos and global.replay_fix_pos and global.replay_fix_pos ~= 1 then
+			local memrs = {
+				w08 = mem.r08,
+				w16 = mem.r16,
+				w32 = mem.r32,
+			}
+			local fixmem = function(obj)
+				local fixed = true
+				for m, datas in pairs(obj) do
+					local memw = mem[m]
+					local memr = memrs[m]
+					for addr, data in pairs(datas) do
+						if memr(addr) ~= data then
+							fixed = false
+							memw(addr, data)
+						end
+					end
+				end
+				return fixed
+			end
+			-- 補正位置に戻りきるまでループさせる
+			local all_fixed = true
+			-- 2:位置記憶
+			all_fixed = fixmem(fixpos.fixpos2.stg) and all_fixed
+			-- 3:1Pと2P 4:1P
+			if global.replay_fix_pos == 3 or global.replay_fix_pos == 4 then
+				all_fixed = fixmem(fixpos.fixpos2.p1) and all_fixed
+			end
+			-- 3:1Pと2P 5:2P
+			if global.replay_fix_pos == 3 or global.replay_fix_pos == 5 then
+				all_fixed = fixmem(fixpos.fixpos2.p2) and all_fixed
+			end
+			if all_fixed then
+				global.rec_main = recording.procs.await_play
+			else
+				global.rec_main = recording.procs.await_fixpos
+			end
+		else
+			global.rec_main = recording.procs.await_play
 		end
 	end
 	-- 繰り返しリプレイ待ち
@@ -5690,7 +5750,7 @@ rbff2.startplugin  = function()
 	end
 	menu.exit_and_rec_pos     = function()
 		local g = global
-		g.dummy_mode = 5 -- レコードモードにする
+		g.dummy_mode = 6 -- リプレイモードにする
 		g.rec_main = recording.procs.fixpos
 		input.accepted = scr:frame_number()
 		recording.temp_player = players[1].reg_pcnt ~= 0 and 1 or 2
