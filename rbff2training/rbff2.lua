@@ -2833,7 +2833,7 @@ rbff2.startplugin  = function()
 	recording.procs.await_no_input = function(_)
 		if players[recording.temp_player].key.reg_pcnt == 0 then -- 状態変更
 			global.rec_main = recording.procs.await_1st_input
-			print(global.frame_number .. " await_no_input -> await_1st_input ", recording.temp_player)
+			ut.printf("%s await_no_input -> await_1st_input %s", global.frame_number, recording.temp_player)
 		end
 	end
 	recording.procs.await_1st_input = function(_)
@@ -2856,7 +2856,7 @@ rbff2.startplugin  = function()
 			-- 初回のみ開始記憶
 			if recording.fixpos == nil then recording.procs.fixpos() end
 			global.rec_main = recording.procs.input
-			print(global.frame_number .. " await_1st_input -> input")
+			ut.printf("%s await_1st_input -> input", global.frame_number)
 		end
 	end
 	recording.procs.input = function(_)            -- 入力中+入力保存
@@ -2902,7 +2902,7 @@ rbff2.startplugin  = function()
 			recording.play_count = 1
 			global.rec_main = recording.procs.await_fixpos
 			recording.fixpos.await_fixpos_frame = global.frame_number
-			print(global.frame_number .. " await_play -> await_fixpos")
+			ut.printf("%s await_play -> await_fixpos", global.frame_number)
 
 			-- メインラインでニュートラル状態にする
 			for i, p in ipairs(players) do
@@ -2956,15 +2956,15 @@ rbff2.startplugin  = function()
 			if global.replay_fix_pos == 3 or global.replay_fix_pos == 5 then all_fixed = fixmem(fixpos.fixpos2.p2) and all_fixed end
 			if all_fixed or timeout then
 				global.rec_main = recording.procs.play
-				print(global.frame_number .. " await_fixpos -> play")
+				ut.printf("%s await_fixpos -> play", global.frame_number)
 			else
 				-- 補正位置に戻りきるまでループさせる
 				global.rec_main = recording.procs.await_fixpos
-				print(global.frame_number .. " await_fixpos -> await_fixpos")
+				ut.printf("%s await_fixpos -> await_fixpos", global.frame_number)
 			end
 		else
 			global.rec_main = recording.procs.play
-			print(global.frame_number .. " await_fixpos -> play")
+			ut.printf("%s await_fixpos -> play", global.frame_number)
 		end
 	end
 	-- 繰り返しリプレイ待ち
@@ -2982,7 +2982,7 @@ rbff2.startplugin  = function()
 					-- 状態変更
 					global.rec_main = recording.procs.await_play
 					global.rec_force_start_play = true -- 一時的な強制初期化フラグをON
-					print(global.frame_number .. " repeat_play -> await_play(force)")
+					ut.printf("%s repeat_play -> await_play(force)", global.frame_number)
 					return
 				end
 			end
@@ -2994,7 +2994,7 @@ rbff2.startplugin  = function()
 		if input.accept("st") then
 			-- 状態変更
 			global.rec_main = recording.procs.await_play
-			print(global.frame_number .. " play -> await_play")
+			ut.printf("%s play -> await_play", global.frame_number)
 			return
 		end
 
@@ -3038,7 +3038,7 @@ rbff2.startplugin  = function()
 			global.repeat_interval = recording.repeat_interval
 			-- 状態変更
 			global.rec_main = recording.procs.play_interval
-			print(global.frame_number .. " play -> play_interval")
+			ut.printf("%s play -> play_interval", global.frame_number)
 		end
 	end
 
@@ -3047,7 +3047,7 @@ rbff2.startplugin  = function()
 		if input.accept("st") then
 			-- 状態変更
 			global.rec_main = recording.procs.await_play
-			print(global.frame_number .. " play_interval -> await_play")
+			ut.printf("%s play_interval -> await_play", global.frame_number)
 			return
 		end
 
@@ -3062,12 +3062,12 @@ rbff2.startplugin  = function()
 				recording.last_act = players[3 - recording.player].act
 				recording.last_pos_y = players[3 - recording.player].pos_y
 				global.rec_main = recording.procs.repeat_play
-				print(global.frame_number .. " play_interval -> repeat_play")
+				ut.printf("%s play_interval -> repeat_play", global.frame_number)
 				return
 			else
 				-- 状態変更
 				global.rec_main = recording.procs.await_play
-				print(global.frame_number .. " play_interval -> await_play")
+				ut.printf("%s play_interval -> await_play", global.frame_number)
 				return
 			end
 		end
