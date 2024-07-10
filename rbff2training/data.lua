@@ -172,13 +172,17 @@ local frame_attack_types         = {
 	levitate24          = 2 ^ 26, -- 足元無敵 対だいたいの屈B（キムとボブ以外）
 	on_air              = 2 ^ 27, -- ジャンプ
 	on_ground           = 2 ^ 28, -- 着地
-	on_additional_read  = 2 ^ 29, -- 追加入力確認
-	on_additional_write = 2 ^ 30, -- 追加入力確認
-	on_main_line        = 2 ^ 31, -- フレームメーターの装飾用 メインラインへの遷移
-	on_main_to_sway     = 2 ^ 32, -- フレームメーターの装飾用 メインラインからの遷移
-	act_count           = 33,  -- act_count 本体の動作区切り用
-	attack              = 41,  -- attack
-	act                 = 49,  -- act
+	on_additional_r1    = 2 ^ 29, -- 追加入力確認
+	on_additional_r5    = 2 ^ 30, -- 追加入力確認
+	on_additional_rsp   = 2 ^ 30, -- 追加入力確認
+	on_additional_w1    = 2 ^ 31, -- 追加入力確認
+	on_additional_w5    = 2 ^ 32, -- 追加入力確認
+	on_additional_wsp   = 2 ^ 32, -- 追加入力確認
+	on_main_line        = 2 ^ 33, -- フレームメーターの装飾用 メインラインへの遷移
+	on_main_to_sway     = 2 ^ 34, -- フレームメーターの装飾用 メインラインからの遷移
+	act_count           = 35,  -- act_count 本体の動作区切り用
+	attack              = 43,  -- attack
+	act                 = 51,  -- act
 
 	op_cancelable       = 2 ^ 1, -- 0x 2 0000 0010 やられ中で相手キャンセル可能
 }

@@ -1887,7 +1887,7 @@ rbff2.startplugin  = function()
 			[0xA5] = function(data)
 				if mem.pc() == 0x395BA then
 					p.on_sp_established = now()
-					if data ~= 0 then p.on_additional_write = now() end
+					if data ~= 0 then p.on_additional_w1 = now() end
 				end
 				p.additional = data
 			end, -- 追加入力成立時のデータ
@@ -2073,21 +2073,22 @@ rbff2.startplugin  = function()
 			{ [0x2AA9A] = 0x0B --[[66A]], id = ut.new_set(0x0B) }, -- 李香緋
 			{}, -- アルフレッド
 		}
-		local check_add_button     = function(data)
-			-- ut.printf("1F %X %X %X %X", data, mem.pc(), p.base, mem.r16(p.addr.base + 0xFE))
+		local check_add_button     = function(data, btn_frame)
+			--ut.printf("%sF %X %X %X %X", btn_frame, data, mem.pc(), p.base, mem.r16(p.addr.base + 0xFE))
 			local simple = additional_buttons[p.base]
+			local wk, rk = string.format("on_additional_w%s", btn_frame), string.format("on_additional_r%s", btn_frame)
 			if simple then
-				if (simple & data) > 0 then p.on_additional_write = now() else p.on_additional_read = now() end
+				if (simple & data) > 0 then p[wk] = now() else p[rk] = now() end
 				return
 			end
 			if p.base == 0x03DE38 and mem.r16(p.addr.base + 0xFE) ~= 0 then -- 飛燕失脚CA C
-				if (0x40 & data) > 0 then p.on_additional_write = now() else p.on_additional_read = now() end
+				if (0x40 & data) > 0 then p[wk] = now() else p[rk] = now() end
 			end
 			if p.base == 0x04213C and (p.act == 0x87 or p.act == 0x91 or p.act == 0x9B) then -- 蛇だまし
-				if (0x80 & data) > 0 then p.on_additional_write = now() else p.on_additional_read = now() end
+				if (0x80 & data) > 0 then p[wk] = now() else p[rk] = now() end
 			end
 			if p.base == 0x049CD2 and p.act == 0x9C then -- フェイクブラスト
-				if (0x80 & data) > 0 then p.on_additional_write = now() else p.on_additional_read = now() end
+				if (0x80 & data) > 0 then p[wk] = now() else p[rk] = now() end
 			end
 		end
 		p.rp08                     = {
@@ -2126,7 +2127,7 @@ rbff2.startplugin  = function()
 			[0xA5] = function(data, ret)
 				local pc = mem.pc()
 				if not in_match or 0x100000 < pc or db.ignore_a5_pc[pc] then return end
-				p.on_additional_read = now()
+				p.on_additional_r5 = now()
 				if p.char == 0x5 and global.auto_input.rave == 10 then ret.value = 0xFF end -- 自動デッドリー
 				if p.char == 0x14 and global.auto_input.desire == 11 then ret.value = 0xFE end -- 自動アンリミ2
 				if p.char == 0xB and global.auto_input.drill == 5 then ret.value = 0xFE end -- 自動ドリルLv.5
@@ -2134,7 +2135,7 @@ rbff2.startplugin  = function()
 			[{ addr = 0xB8, filter = { --[[0x3A6A4,]] 0x3AA62 } }] = function(data) -- 必殺技IDチェック
 				local ac = additional_sps[p.char]
 				if not ac then return end
-				if ac[p.base] == data then p.on_additional_write = now() elseif ac[p.base] then p.on_additional_read = now() end
+				if ac[p.base] == data then p.on_additional_wsp = now() elseif ac[p.base] then p.on_additional_rsp = now() end
 			end,
 			[{ addr = 0xB9, filter = { 0x396B4, 0x39756 } }] = function(data) p.on_bs_check = now() end, -- BSの技IDチェック
 			[{ addr = 0xBF, filter = { 0x3BEF6, 0x3BF24, 0x5B346, 0x5B368 } }] = function(data)
@@ -2160,8 +2161,8 @@ rbff2.startplugin  = function()
 			[{ addr = 0xD6, filter = 0x5A7B4 }] = function(data, ret)
 				if p.dummy_wakeup == wakeup_type.atk and p.char_data.wakeup then ret.value = 0x23 end -- 成立コマンド値を返す
 			end,
-			[{ addr = p.addr.on1f, filter = { 0x0263AC } }] = check_add_button,
-			[{ addr = p.addr.on5f, filter = { 0x026390 } }] = check_add_button,
+			[{ addr = p.addr.on1f, filter = { 0x0263AC } }] = function(data) check_add_button(data, 1) end, -- D7 = 押しっぱ  D6 = 押し1F有効
+			[{ addr = p.addr.on5f, filter = { 0x026390 } }] = function(data) check_add_button(data, 5) end, -- D7 = 押しっぱ  D6 = 押し5F有効
 		}
 		p.wp16                     = {
 			[0x34] = function(data) p.thrust = data end,
@@ -3124,8 +3125,12 @@ rbff2.startplugin  = function()
 	-- グラフでフレームデータを末尾から描画
 	-- フレームメーターの追加情報
 	frame_meter.decos = {
-		{ type = frame_attack_types.on_additional_write, txt = "+", fix = -0.3, top = get_line_height(0.4) }, -- 成立した追加入力データの設定時
-		{ type = frame_attack_types.on_additional_read, txt = "-", fix = -0.4, top = get_line_height(0.4) }, -- 追加入力データの確認時
+		{ type = frame_attack_types.on_additional_w1, txt = "+", fix = -0.3, top = get_line_height(0.4), col = 0xFF00FF00  }, -- 成立した追加入力データの設定時
+		{ type = frame_attack_types.on_additional_r1, txt = "1", fix = -0.4, top = get_line_height(0.4), col = 0xFF00FF00 }, -- 追加入力データの確認時
+		{ type = frame_attack_types.on_additional_w5, txt = "+", fix = -0.3, top = get_line_height(0.4), col = 0xFF00FF00  }, -- 成立した追加入力データの設定時
+		{ type = frame_attack_types.on_additional_r5, txt = "5", fix = -0.4, top = get_line_height(0.4), col = 0xFF00FF00 }, -- 追加入力データの確認時
+		{ type = frame_attack_types.on_additional_wsp, txt = "+", fix = -0.3, top = get_line_height(0.4), col = 0xFF00FF00  }, -- 成立した追加入力データの設定時
+		{ type = frame_attack_types.on_additional_rsp, txt = "-", fix = -0.4, top = get_line_height(0.4), col = 0xFF00FF00 }, -- 追加入力データの確認時
 		{ type = frame_attack_types.post_fireball, txt = "◇", fix = -0.4, separator = true }, -- 弾処理の消失時
 		{ type = frame_attack_types.pre_fireball, txt = "◆", fix = -0.4, separator = true }, -- 弾処理の開始時(種類によっては発生保証)
 		{ type = frame_attack_types.off_fireball, txt = "○", fix = -0.35, separator = true }, -- 弾判定の消失時
@@ -3235,27 +3240,6 @@ rbff2.startplugin  = function()
 		end
 		local frames, reset = p.frames, false -- プレイヤーごとのバッファを取得
 		local last = frames[#frames]
-		local blank = ut.tstb(frame.attackbit, frame_attack_types.frame_plus) and not frame.either_throw_indiv
-		if blank then
-			if last and last.blank then
-				last.blank = last.blank + 1
-				last.attackbit = frame.attackbit
-				last.key = frame.key
-				last.total = last.total + 1
-				return -- 無駄なバッファ消費を避けるためカウントアップだけして抜ける
-			end
-			frame = ut.deepcopy(frame)
-			frame.count, frame.blank = 0, 1
-		elseif last and last.blank then
-			local cmp = last -- 動作再開時の補完
-			for i = last.count + 1, last.blank do
-				cmp = ut.deepcopy(cmp)
-				cmp.count = cmp.count + 1
-				table.insert(frames, cmp)
-			end
-			last = frames[#frames]
-		end
-
 		local first = #frames == 0
 		reset = reset or first
 		if last then
@@ -3294,7 +3278,7 @@ rbff2.startplugin  = function()
 		end
 		table.insert(frames, frame)                                  -- 末尾に追加
 		if #frames <= frame_meter.buffer_limit then return end       -- バッファ長が2行以下なら抜ける
-		local frame_limit = frame_meter.limit + (blank and 2 or 1)   -- ブランクぶん追加でバッファする
+		local frame_limit = frame_meter.limit
 		while frame_limit ~= #frames do table.remove(frames, 1) end  -- 1行目のバッファを削除
 	end
 	frame_meter.draw_sf6 = function(p, y1)                           -- フレームメーターの表示
@@ -3305,8 +3289,8 @@ rbff2.startplugin  = function()
 		local y2 = y1 + height                                       -- メーター行のY位置
 		local frames, max_x = {}, #p.frames
 		while (0 < max_x) do
-			if not ut.tstb(p.frames[max_x].attackbit, frame_attack_types.frame_plus) or
-				p.frames[max_x].either_throw_indiv then
+			local frame = p.frames[max_x]
+			if (not frame.both_act_neutral) or frame.either_throw_indiv then
 				for i = 1, max_x do table.insert(frames, p.frames[i]) end
 				break
 			end
@@ -3440,8 +3424,12 @@ rbff2.startplugin  = function()
 		frame_attack_types.levitate24          | -- 足元無敵 対だいたいの屈B（キムとボブ以外）
 		frame_attack_types.on_air              | -- ジャンプ
 		frame_attack_types.on_ground           | -- 着地
-		frame_attack_types.on_additional_read  | -- 追加入力
-		frame_attack_types.on_additional_write | -- 追加入力
+		frame_attack_types.on_additional_r1  | -- 追加入力
+		frame_attack_types.on_additional_r5  | -- 追加入力
+		frame_attack_types.on_additional_rsp  | -- 追加入力
+		frame_attack_types.on_additional_w1 | -- 追加入力
+		frame_attack_types.on_additional_w5 | -- 追加入力
+		frame_attack_types.on_additional_wsp | -- 追加入力
 		frame_attack_types.on_main_line        | -- フレームメーターの装飾用 メインラインへの遷移
 		frame_attack_types.on_main_to_sway     | -- フレームメーターの装飾用 メインラインからの遷移
 		(0xFF << frame_attack_types.act_count) | -- act_count 本体の動作区切り用
@@ -3463,8 +3451,12 @@ rbff2.startplugin  = function()
 		frame_attack_types.on_ground     |
 		frame_attack_types.on_main_line  |
 		frame_attack_types.on_main_to_sway |
-		frame_attack_types.on_additional_read |
-		frame_attack_types.on_additional_write
+		frame_attack_types.on_additional_r1 |
+		frame_attack_types.on_additional_r5 |
+		frame_attack_types.on_additional_rsp |
+		frame_attack_types.on_additional_w1 |
+		frame_attack_types.on_additional_w5 |
+		frame_attack_types.on_additional_wsp
 	frame_meter.key_mask_base =
 		frame_attack_types.mask_fireball      | -- 弾とジャンプ状態はキーから省いて無駄な区切りを取り除く
 		frame_attack_types.obsolute |     -- 0x F 0001 0000 攻撃能力なし(動作途中から)
@@ -3572,6 +3564,7 @@ rbff2.startplugin  = function()
 			attackbit = attackbit,
 			act_neutral = p.act_data.neutral,
 			either_throw_indiv = global.either_throw_indiv,
+			both_act_neutral = global.both_act_neutral,
 			line = mcol,
 			col = mcol,
 		})
@@ -4109,8 +4102,12 @@ rbff2.startplugin  = function()
 			--ut.printf("hit_cancelable %X %s %s", d0, ut.tobitstr(p.flag_7e), p.hit_cancelable)
 
 			-- 追加入力確認
-			p.attackbits.on_additional_read = p.on_additional_read == global.frame_number
-			p.attackbits.on_additional_write = p.on_additional_write == global.frame_number
+			p.attackbits.on_additional_r1 = p.on_additional_r1 == global.frame_number
+			p.attackbits.on_additional_r5 = p.on_additional_r5 == global.frame_number
+			p.attackbits.on_additional_rsp = p.on_additional_rsp == global.frame_number
+			p.attackbits.on_additional_w1 = p.on_additional_w1 == global.frame_number
+			p.attackbits.on_additional_w5 = p.on_additional_w5 == global.frame_number
+			p.attackbits.on_additional_wsp = p.on_additional_wsp == global.frame_number
 
 			-- ガード持続の種類 家庭用 0271FC からの処理 0:攻撃無し 1:ガード継続小 2:ガード継続大
 			if p.firing then
@@ -5090,11 +5087,12 @@ rbff2.startplugin  = function()
 		for _, p in ipairs(players) do
 			if p.disp_state == 2 or p.disp_state == 3 then -- 1:OFF 2:ON 3:ON:小表示 4:ON:フラグ表示 5:ON:ALL
 				local label1 = {}
-				table.insert(label1, string.format("%s %02d %03d %03d",
-					p.state, p.throwing and p.throwing.threshold or 0, p.throwing and p.throwing.timer or 0, p.throw_timer or 0))
+				local plus = ut.tstb(p.attackbit, frame_attack_types.frame_plus, true)
+				local minus = ut.tstb(p.attackbit, frame_attack_types.frame_minus, true)
+				table.insert(label1, string.format("%s %02d %03d %03d", p.state, p.throwing and p.throwing.threshold or 0, p.throwing and p.throwing.timer or 0, p.throw_timer or 0))
 				table.insert(label1, string.format("%03X %02X %02X %02X", p.acta or 0, p.spid or 0, p.attack_data or 0, p.attack_id or 0))
 				table.insert(label1, string.format("%03X %02X %02X %s%s%s", p.act, p.act_count, p.act_frame, p.update_base and "u" or "k", p.update_act and "U" or "K", p.act_data.neutral and "N" or "A"))
-				table.insert(label1, string.format("%02X %02X %02X %s", p.hurt_state, p.sway_status, p.additional, #p.boxies))
+				table.insert(label1, string.format("%02X %02X %02X %s %s", p.hurt_state, p.sway_status, p.additional, #p.boxies, plus and "+" or (minus and "-" or "")))
 				p.state_line2 = label1
 			end
 			if p.disp_state == 4 or p.disp_state == 5 then -- 1:OFF 2:ON 3:ON:小表示 4:ON:フラグ表示 5:ON:ALL
