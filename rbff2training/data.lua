@@ -159,7 +159,7 @@ local frame_attack_types         = {
 	sway                = 2 ^ 18, -- メインライン攻撃無敵
 	high                = 2 ^ 19, -- 上段攻撃無敵
 	low                 = 2 ^ 20, -- 下段攻撃無敵
-	away                = 2 ^ 21, --上半身無敵 32 避け
+	away                = 2 ^ 21, -- 上半身無敵 32 避け
 	waving_blow         = 2 ^ 22, -- 上半身無敵 40 ウェービングブロー,龍転身,ダブルローリング
 	laurence_away       = 2 ^ 23, -- 上半身無敵 48 ローレンス避け
 --	crounch60           = , -- 頭部無敵 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
@@ -231,11 +231,11 @@ frame_attack_types.main_high     = frame_attack_types.main | frame_attack_types.
 frame_attack_types.main_low      = frame_attack_types.main | frame_attack_types.low       -- 対メイン下段攻撃無敵
 frame_attack_types.sway_high     = frame_attack_types.sway | frame_attack_types.high      -- 上半身無敵 対スウェー上段攻撃無敵
 frame_attack_types.sway_low      = frame_attack_types.sway | frame_attack_types.low       -- 下半身無敵 対スウェー下段攻撃無敵
-frame_attack_types.high_dodges   =                                                        --  部分無敵としてフレーム表示に反映する部分無敵
-	frame_attack_types.away          |                                                    --上半身無敵 32 避け
+frame_attack_types.high_dodges   =                                                        -- 部分無敵としてフレーム表示に反映する部分無敵
+	frame_attack_types.away          |                                                    -- 上半身無敵 32 避け
 	frame_attack_types.waving_blow   |                                                    -- 上半身無敵 40 ウェービングブロー,龍転身,ダブルローリング
 	frame_attack_types.laurence_away                                                      -- 上半身無敵 48 ローレンス避け
-frame_attack_types.low_dodges    =                                                        --  部分無敵としてフレーム表示に反映する部分無敵
+frame_attack_types.low_dodges    =                                                        -- 部分無敵としてフレーム表示に反映する部分無敵
 	frame_attack_types.levitate40    |                                                    -- 足元無敵 対アンディ屈C
 	frame_attack_types.levitate32    |                                                    -- 足元無敵 対ギース屈C
 	frame_attack_types.levitate24                                                         -- 足元無敵 対だいたいの屈B（キムとボブ以外）

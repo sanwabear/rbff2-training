@@ -602,7 +602,6 @@ rbff2.startplugin  = function()
 		skip_frame           = false,
 		fix_scr_top          = 1,
 		shadow               = false,
-
 		-- 当たり判定用
 		axis_size            = 12,
 		axis_size2           = 5,
@@ -611,6 +610,7 @@ rbff2.startplugin  = function()
 		fix_pos              = false,
 		no_bars              = false,
 		sync_pos_x           = 1, -- 1: OFF, 2:1Pと同期, 3:2Pと同期
+		hitbox_bold          = 1,
 
 		disp_pos             = 2, -- 向き・距離・位置表示 1;OFF 2:ON 3:向き・距離のみ 4:位置のみ
 		hide                 = hide_options.none,
@@ -1363,10 +1363,11 @@ rbff2.startplugin  = function()
 		local outline, fill = box.type.outline, global.disp_bg and box.type.fill or 0
 		local x1, x2 = sort_ab(box.left, box.right)
 		local y1, y2 = sort_ab(box.top, box.bottom)
-		scr:draw_box(x1, y1, x1 - 1, y2, 0, outline)
-		scr:draw_box(x2, y1, x2 + 1, y2, 0, outline)
-		scr:draw_box(x1, y1, x2, y1 - 1, 0, outline)
-		scr:draw_box(x1, y2, x2, y2 + 1, outline, outline)
+		local b = global.hitbox_bold
+		scr:draw_box(x1, y1, x1 - b, y2, 0, outline)
+		scr:draw_box(x2, y1, x2 + b, y2, 0, outline)
+		scr:draw_box(x1, y1, x2, y1 - b, 0, outline)
+		scr:draw_box(x1, y2, x2, y2 + b, outline, outline)
 		scr:draw_box(x1, y1, x2, y2, outline, do_fill and fill or 0)
 		scr:draw_box(x1, y1, x2, y2, outline, do_fill and fill or 0)
 		draw_ctext(x1 + (x2 - x1) / 2, y1 + (y2 - y1 - screen.s_height) / 2, box.no, outline)
@@ -1377,8 +1378,9 @@ rbff2.startplugin  = function()
 		local _draw_text = draw_text                                         -- draw_text_with_shadow
 		local label, flip_x, x, y, col = range.label, range.flip_x, range.x, range.y, range.within and 0xFFFFFF00 or 0xFFBBBBBB
 		local size = range.within == nil and global.axis_size or global.axis_size2 -- 範囲判定がないものは単純な座標とみなす
+		local b = global.hitbox_bold
 		scr:draw_box(x, y - size, x + flip_x, y + size, 0, col)
-		scr:draw_box(x - size + flip_x, y, x + size + flip_x, y - 1, 0, col)
+		scr:draw_box(x - size + flip_x, y, x + size + flip_x, y - b, 0, col)
 		_draw_text(x, y, label or "", col)
 	end
 
@@ -3125,20 +3127,20 @@ rbff2.startplugin  = function()
 	-- グラフでフレームデータを末尾から描画
 	-- フレームメーターの追加情報
 	frame_meter.decos = {
-		{ type = frame_attack_types.on_additional_w1, txt = "+", fix = -0.3, top = get_line_height(0.4), col = 0xFF00FF00  }, -- 成立した追加入力データの設定時
-		{ type = frame_attack_types.on_additional_r1, txt = "1", fix = -0.4, top = get_line_height(0.4), col = 0xFF00FF00 }, -- 追加入力データの確認時
-		{ type = frame_attack_types.on_additional_w5, txt = "+", fix = -0.3, top = get_line_height(0.4), col = 0xFF00FF00  }, -- 成立した追加入力データの設定時
-		{ type = frame_attack_types.on_additional_r5, txt = "5", fix = -0.4, top = get_line_height(0.4), col = 0xFF00FF00 }, -- 追加入力データの確認時
-		{ type = frame_attack_types.on_additional_wsp, txt = "+", fix = -0.3, top = get_line_height(0.4), col = 0xFF00FF00  }, -- 成立した追加入力データの設定時
-		{ type = frame_attack_types.on_additional_rsp, txt = "-", fix = -0.4, top = get_line_height(0.4), col = 0xFF00FF00 }, -- 追加入力データの確認時
-		{ type = frame_attack_types.post_fireball, txt = "◇", fix = -0.4, separator = true }, -- 弾処理の消失時
-		{ type = frame_attack_types.pre_fireball, txt = "◆", fix = -0.4, separator = true }, -- 弾処理の開始時(種類によっては発生保証)
-		{ type = frame_attack_types.off_fireball, txt = "○", fix = -0.35, separator = true }, -- 弾判定の消失時
-		{ type = frame_attack_types.on_fireball, txt = "●", fix = -0.35, separator = true }, -- 弾判定の発生時
-		{ type = frame_attack_types.on_main_to_sway, txt = "△", fix = -0.5, separator = true }, -- スウェーラインへの遷移時
-		{ type = frame_attack_types.on_main_line, txt = "▽", fix = -0.5, separator = true }, -- メインラインへの遷移時
-		{ type = frame_attack_types.on_air, txt = "▲", fix = -0.5, separator = true }, -- 空中状態への遷移時
-		{ type = frame_attack_types.on_ground, txt = "▼", fix = -0.5, separator = true }, -- 地上状態への遷移時
+		{ type = frame_attack_types.on_additional_w1,  txt = "+",  fix = -0.3,  top = get_line_height(0.4), col = 0xFF00FF00 }, -- 成立した追加入力データの設定時 1F
+		{ type = frame_attack_types.on_additional_r1,  txt = "1",  fix = -0.4,  top = get_line_height(0.4), col = 0xFF00FF00 }, -- 追加入力データの確認時 1F
+		{ type = frame_attack_types.on_additional_w5,  txt = "+",  fix = -0.3,  top = get_line_height(0.4), col = 0xFF00FF00 }, -- 成立した追加入力データの設定時 5F
+		{ type = frame_attack_types.on_additional_r5,  txt = "5",  fix = -0.4,  top = get_line_height(0.4), col = 0xFF00FF00 }, -- 追加入力データの確認時 5F
+		{ type = frame_attack_types.on_additional_wsp, txt = "+",  fix = -0.3,  top = get_line_height(0.4), col = 0xFF00FF00 }, -- 成立した追加入力データの設定時 Flag
+		{ type = frame_attack_types.on_additional_rsp, txt = "-",  fix = -0.4,  top = get_line_height(0.4), col = 0xFF00FF00 }, -- 追加入力データの確認時 Flag
+		{ type = frame_attack_types.post_fireball,     txt = "◇", fix = -0.4,  separator = true }, -- 弾処理の消失時
+		{ type = frame_attack_types.pre_fireball,      txt = "◆", fix = -0.4,  separator = true }, -- 弾処理の開始時(種類によっては発生保証)
+		{ type = frame_attack_types.off_fireball,      txt = "○", fix = -0.35, separator = true }, -- 弾判定の消失時
+		{ type = frame_attack_types.on_fireball,       txt = "●", fix = -0.35, separator = true }, -- 弾判定の発生時
+		{ type = frame_attack_types.on_main_to_sway,   txt = "△", fix = -0.5,  separator = true }, -- スウェーラインへの遷移時
+		{ type = frame_attack_types.on_main_line,      txt = "▽", fix = -0.5,  separator = true }, -- メインラインへの遷移時
+		{ type = frame_attack_types.on_air,            txt = "▲", fix = -0.5,  separator = true }, -- 空中状態への遷移時
+		{ type = frame_attack_types.on_ground,         txt = "▼", fix = -0.5,  separator = true }, -- 地上状態への遷移時
 	}
 	for _, deco in ipairs(frame_meter.decos) do
 		deco.fix2 = deco.separator and (-get_string_width(deco.txt) / 2) or 1
@@ -4308,7 +4310,15 @@ rbff2.startplugin  = function()
 			p.parrieable = p.parrieable | (p.parrieable1 and p.parrieable2 and hitbox_parry_bits.baigaeshi or 0)
 			p.hitboxies, p.hitbox_types, p.hurt = {}, {}, {} -- 座標補正後データ格納のためバッファのクリア
 			local boxkeys = { hit = {}, hurt = {} }
-			p.hurt = { max_top = -0xFFFF, min_bottom = 0xFFFF, dodge = p.vulnerable and frame_attack_types.full or 0, }
+			p.hurt = {
+				max_top = -0xFFFF,
+				min_bottom = 0xFFFF,
+				dodge = p.vulnerable and frame_attack_types.full or 0,
+				main = 0, -- 通常のやられ判定の数
+				sway = 0, -- スウェイ上のやられ判定の数
+				launch = 0, -- 空中追撃可能なやられ判定の数
+				down_otg = 0, -- ダウン追撃可能なやられ判定の数
+			}
 			p.hit = { box_count = 0 }
 			p.attackbit = 0
 
@@ -4352,6 +4362,15 @@ rbff2.startplugin  = function()
 					return box
 				end
 			end) do
+				if box.type == db.box_types.hurt1 or box.type == db.box_types.hurt2 then
+					p.hurt.main = p.hurt.main + 1
+				elseif box.type == db.box_types.down_otg then
+					p.hurt.down_otg = p.hurt.down_otg + 1
+				elseif box.type == db.box_types.launch then
+					p.hurt.launch = p.hurt.launch + 1
+				elseif box.type == db.box_types.hurt3 or box.type == db.box_types.hurt4 then
+					p.hurt.sway = p.hurt.sway + 1
+				end
 				if box.type.kind == db.box_kinds.attack or box.type.kind == db.box_kinds.parry then
 					if global.pause_hitbox == 3 then global.pause = true end -- 強制ポーズ 1:OFF, 2:投げ, 3:攻撃, 4:変化時
 					p.hit.box_count = p.hit.box_count + 1     -- 攻撃判定の数
@@ -4378,10 +4397,14 @@ rbff2.startplugin  = function()
 					p.hit.blockbit.main = p.hit.blockbit.main | box.blockables.main
 					p.hit.blockbit.sway = p.hit.blockbit.sway | box.blockables.sway
 					p.hit.blockbit.punish = p.hit.blockbit.punish | box.blockables.punish
-					p.hit.blockbit.parrieable = p.hit.blockbit.parrieable  | box.parrieable
+					p.hit.blockbit.parrieable = p.hit.blockbit.parrieable | box.parrieable
 				elseif box.type.kind == db.box_kinds.hurt then -- くらいの無敵(部分無敵)の属性を付与する
-					p.hurt.max_top = math.max(p.hurt.max_top or 0, box.real_top)
-					p.hurt.min_bottom = math.min(p.hurt.min_bottom or 0xFFFF, box.real_bottom)
+					if (not ut.tstb(p.flag_c0, db.flag_c0._01)) and (box.type == db.box_types.down_otg) then
+						-- ignore
+					else
+						p.hurt.max_top = math.max(p.hurt.max_top or 0, box.real_top)
+						p.hurt.min_bottom = math.min(p.hurt.min_bottom or 0xFFFF, box.real_bottom)
+					end
 					if p.hurt.max_top ~= -0xFFFF and p.hurt.min_bottom ~= 0xFFFF then
 						p.hurt.dodge = get_dodge(p, box, p.hurt.max_top, p.hurt.min_bottom)
 					end
@@ -6095,8 +6118,8 @@ rbff2.startplugin  = function()
 			col[19]         = p[1].fwd_prov and 2 or 1     -- 19 1P 挑発で前進
 			col[20]         = p[2].fwd_prov and 2 or 1     -- 20 2P 挑発で前進
 		end,
-		ut.new_filled_table(18, menu.to_main),
-		ut.new_filled_table(18, menu.to_main_cancel))
+		ut.new_filled_table(20, menu.to_main),
+		ut.new_filled_table(20, menu.to_main_cancel))
 
 	menu.bar       = menu.create(
 		"ゲージ設定",
