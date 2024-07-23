@@ -4409,7 +4409,11 @@ rbff2.startplugin  = function()
 						p.hurt.dodge = get_dodge(p, box, p.hurt.max_top, p.hurt.min_bottom)
 					end
 				end
-				if p.body.disp_hitbox and box.type.enabled then
+				if p.body.disp_hitbox
+					and (
+						((box.type.enabled == 2) and box.type.in_range(p, box))
+						or (box.type.enabled == 3)
+					) then
 					table.insert(p.hitboxies, box)
 					table.insert(hitboxies, box)
 					table.insert(p.hitbox_types, box.type)
@@ -6511,11 +6515,18 @@ rbff2.startplugin  = function()
 		"判定個別設定",
 		"判定枠の表示を設定します。",
 		ut.table_add_conv_all({ { title = true, "判定個別設定" } }, db.box_type_list,
-			function(b) return { b.name, menu.labels.off_on, { fill = b.fill, outline = b.outline } } end),
+			function(b) -- b as box_type
+				local menu_off_on = menu.labels.off_on
+				if b == db.box_types.down_otg then
+					-- ダウン追撃用判定はトドメの範囲外なら表示しない＝ON、常に表示＝ALL
+					menu_off_on = { "OFF", "ON", "ON:ALL" }
+				end
+				return { b.name, menu_off_on, { fill = b.fill, outline = b.outline } }
+			end),
 		function() end,
 		ut.new_filled_table(#db.box_type_list + 1, function()
 			local col = menu.color.pos.col
-			for i = 2, #col do db.box_type_list[i - 1].enabled = col[i] == 2 end
+			for i = 2, #col do db.box_type_list[i - 1].enabled = col[i] end -- 1:OFF 2~3:ON or ON:ALL
 			menu.current = menu.main
 		end))
 
@@ -6731,7 +6742,8 @@ rbff2.startplugin  = function()
 						end
 					end
 				end
-				if row[3] and row[3].outline and menu.color.pos.col[i] == 2 then
+				-- 判定個別表示の判定色の表示枠
+				if row[3] and row[3].outline and menu.color.pos.col[i] > 1 then
 					scr:draw_box(mx2 - 60, y + 2, mx2 - 18, y + 7, 0xAA000000, row[3].outline)
 				end
 			end
