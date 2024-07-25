@@ -2101,6 +2101,10 @@ local rvs_bs_list = {
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント オーグメンターウィング", },
 	},
 }
+local calc_ver = function(rvs)
+	if rvs.id and rvs.id < 0x1E then rvs.ver = (rvs.f << 0x8) | rvs.a end
+	return rvs
+end
 local char_rvs_list, char_bs_list = {}, {}
 for char, list in ipairs(rvs_bs_list) do
 	local rvs_list, bs_list = {}, {}
@@ -2113,7 +2117,7 @@ for char, list in ipairs(rvs_bs_list) do
 			end
 			rvs.cmd = { [-1] = rev, [1] = cmd }
 		end
-		if rvs.id and rvs.id < 0x1E then rvs.ver = (rvs.f << 0x8) | rvs.a end
+		rvs = calc_ver(rvs)
 		local type = rvs.hook_type
 		if ut.tstb(type, hook_cmd_types.breakshot) then table.insert(bs_list, rvs) end
 		if ut.tstb(type, hook_cmd_types.reversal) then table.insert(rvs_list, rvs) end
@@ -2126,6 +2130,18 @@ for char, list in ipairs(rvs_bs_list) do
 	table.insert(char_bs_list, bs_list)
 	chars[char].rvs, chars[char].bs = rvs_list, bs_list
 end
+local sp_throws = {
+	[0x05] = calc_ver({ id = 0x07, f = 0x06, a = 0xFD, name = "真空投げ", }),
+	[0x06] = calc_ver({ id = 0x12, f = 0x06, a = 0x00, name = "羅生門", }),
+	[0x07] = calc_ver({ id = 0x04, f = 0x06, a = 0xFE, name = "鬼門陣", }),
+	[0x10] = calc_ver({ id = 0x08, f = 0x06, a = 0x00, name = "爆弾パチキ", }),
+	[0x11] = calc_ver({ id = 0x12, f = 0x06, a = 0x00, name = "ドリル", }),
+	[0x13] = calc_ver({ id = 0x10, f = 0x06, a = 0x00, name = "ブレイクスパイラル", }),
+	[0x14] = calc_ver({ id = 0x11, f = 0x06, a = 0xFA, name = "ブレイクスパイラルBR", }),
+	[0x15] = calc_ver({ id = 0x05, f = 0x06, a = 0x00, name = "デンジャラススルー", }),
+	[0x16] = calc_ver({ id = 0x07, f = 0x06, a = 0x00, name = "リフトアップブロー", }),
+	[0x17] = calc_ver({ id = 0x12, f = 0x06, a = 0x00, name = "ギガティックサイクロン", }),
+}
 
 db.cmd_bytes        = cmd_bytes
 db.cmd_status_b     = cmd_status_b
@@ -2137,6 +2153,7 @@ db.cmd_types        = cmd_types
 db.char_rvs_list    = char_rvs_list
 db.char_bs_list     = char_bs_list
 db.rvs_bs_list      = rvs_bs_list
+db.sp_throws        = sp_throws
 
 --------------------------------------------------------------------------------------
 -- 状態フラグ

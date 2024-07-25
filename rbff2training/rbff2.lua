@@ -4440,7 +4440,7 @@ rbff2.startplugin  = function()
 				end
 
 				-- 投げ判定
-				local new_throw_ids = {}
+				local new_throw_ids, new_sp_throw_ids = {}, {}
 				for _, box in pairs(p.throw_boxies) do
 					if global.pause_hitbox == 2 then global.pause = true end -- 強制ポーズ  1:OFF, 2:投げ, 3:攻撃, 4:変化時
 					box.keytxt = string.format("t%2x%2x", box.type.no, box.id)
@@ -4449,6 +4449,9 @@ rbff2.startplugin  = function()
 					table.insert(boxkeys.hit, box.keytxt)
 					table.insert(p.hitbox_types, box.type)
 					table.insert(new_throw_ids, { char = p.char, id = box.id })
+					if db.sp_throws[box.id] then
+						table.insert(new_sp_throw_ids, { char = p.char, id = box.id })
+					end
 				end
 				p.throw_boxies = {}
 				if 0 < #new_throw_ids then
@@ -4462,6 +4465,9 @@ rbff2.startplugin  = function()
 							table.insert(hitboxies, box)
 						end
 					end
+				end
+				if 0 < #new_sp_throw_ids then
+					p.last_sp_throw_ids = new_sp_throw_ids
 				end
 
 				-- 座標
@@ -4802,39 +4808,13 @@ rbff2.startplugin  = function()
 			end
 
 			-- 自動必殺投げ
-			if global.auto_input.sp_throw and p.last_throw_ids and #p.last_throw_ids > 0 then
-				table.sort(p.last_throw_ids, function(a, b) return a.id < b.id end)
-				local char = p.last_throw_ids[#p.last_throw_ids].char
-				local throw_id = p.last_throw_ids[#p.last_throw_ids].id
-				local sp_throw
-				if p.char == char then
-					-- ut.printf("%X %X %X", p.char, char, throw_id)
-					if throw_id == 0x05 then -- ギース・ハワード
-						sp_throw = { id = 0x07, f = 0x06, a = 0xFD, name = "真空投げ", }
-					elseif throw_id == 0x06 then -- ギース・ハワード
-						sp_throw = { id = 0x12, f = 0x06, a = 0x00, name = "羅生門", }
-					elseif throw_id == 0x07 then -- 望月双角
-						sp_throw = { id = 0x04, f = 0x06, a = 0xFE, name = "鬼門陣", }
-					elseif throw_id == 0x10 then -- 山崎竜二
-						sp_throw = { id = 0x08, f = 0x06, a = 0x00, name = "爆弾パチキ", }
-					elseif throw_id == 0x11 then -- 山崎竜二
-						sp_throw = { id = 0x12, f = 0x06, a = 0x00, name = "ドリル", }
-					elseif throw_id == 0x13 then -- ダック・キング
-						sp_throw = { id = 0x10, f = 0x06, a = 0x00, name = "ブレイクスパイラル", }
-					elseif throw_id == 0x14 then -- ダック・キング
-						sp_throw = { id = 0x11, f = 0x06, a = 0xFA, name = "ブレイクスパイラルBR", }
-					elseif throw_id == 0x15 then -- ヴォルフガング・クラウザー
-						sp_throw = { id = 0x05, f = 0x06, a = 0x00, name = "デンジャラススルー", }
-					elseif throw_id == 0x16 then -- ヴォルフガング・クラウザー
-						sp_throw = { id = 0x07, f = 0x06, a = 0x00, name = "リフトアップブロー", }
-					elseif throw_id == 0x17 then -- ヴォルフガング・クラウザー
-						sp_throw = { id = 0x12, f = 0x06, a = 0x00, name = "ギガティックサイクロン", }
-					end
-					if sp_throw then
-						if sp_throw.id and sp_throw.id < 0x1E then sp_throw.ver = (sp_throw.f << 0x8) | sp_throw.a end
-						-- ut.printf("reset_sp_hook %X %X %X %X %X", p.char, char, throw_id, sp_throw.id, sp_throw.f)
-						p.reset_sp_hook(sp_throw)
-					end -- 自動必殺投げ
+			if global.auto_input.sp_throw and p.last_sp_throw_ids and #p.last_sp_throw_ids > 0 then
+				table.sort(p.last_sp_throw_ids, function(a, b) return a.id < b.id end)
+				local tmp = p.last_sp_throw_ids[#p.last_sp_throw_ids]
+				local sp_throw = db.sp_throws[tmp.id]
+				if p.char == tmp.char and sp_throw then
+					-- ut.printf("reset_sp_hook %X %X %X", p.char, sp_throw.id, sp_throw.f)
+					p.reset_sp_hook(sp_throw)
 				end
 			end
 
