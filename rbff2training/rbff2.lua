@@ -630,23 +630,24 @@ rbff2.startplugin  = function()
 
 		auto_input           = {
 			otg_throw     = false, -- ダウン投げ              1
-			otg_attack    = false, -- ダウン攻撃              2
-			combo_throw   = false, -- 通常投げの派生技        3
-			rave          = 1, -- デッドリーレイブ        4
-			desire        = 1, -- アンリミテッドデザイア  5
-			drill         = 1, -- ドリル                  6
-			kanku         = false, -- 閃里肘皇・貫空          7
-			pairon        = 1, -- 超白龍                  8
-			real_counter  = 1, -- M.リアルカウンター      9
-			auto_3ecst    = false, -- M.トリプルエクスタシー 10
-			taneuma       = false, -- 炎の種馬               11
-			katsu_ca      = false, -- 喝CA                   12
-			sikkyaku_ca   = false, -- 飛燕失脚CA             13
+			sp_throw      = false, -- 必殺投げ                2
+			otg_attack    = false, -- ダウン攻撃              3
+			combo_throw   = false, -- 通常投げの派生技        4
+			rave          = 1, -- デッドリーレイブ        5
+			desire        = 1, -- アンリミテッドデザイア  6
+			drill         = 1, -- ドリル                  7
+			kanku         = false, -- 閃里肘皇・貫空          8
+			pairon        = 1, -- 超白龍                  9
+			real_counter  = 1, -- M.リアルカウンター      10
+			auto_3ecst    = false, -- M.トリプルエクスタシー 11
+			taneuma       = false, -- 炎の種馬               12
+			katsu_ca      = false, -- 喝CA                   13
+			sikkyaku_ca   = false, -- 飛燕失脚CA             14
 			esaka_check   = false, -- 詠酒距離チェック       15
 			fast_kadenzer = false, -- 必勝！逆襲拳           16
 			kara_ca       = false, -- 空振りCA               17
-			no_charge     = false, -- タメ時間なし
-			cancel        = false, -- 全通常技キャンセル可能
+			no_charge     = false, -- タメ時間なし           18
+			cancel        = false, -- 全通常技キャンセル可能 19
 		},
 
 		frzc                 = 1,
@@ -4800,6 +4801,43 @@ rbff2.startplugin  = function()
 				end
 			end
 
+			-- 自動必殺投げ
+			if global.auto_input.sp_throw and p.last_throw_ids and #p.last_throw_ids > 0 then
+				table.sort(p.last_throw_ids, function(a, b) return a.id < b.id end)
+				local char = p.last_throw_ids[#p.last_throw_ids].char
+				local throw_id = p.last_throw_ids[#p.last_throw_ids].id
+				local sp_throw
+				if p.char == char then
+					-- ut.printf("%X %X %X", p.char, char, throw_id)
+					if throw_id == 0x05 then -- ギース・ハワード
+						sp_throw = { id = 0x07, f = 0x06, a = 0xFD, name = "真空投げ", }
+					elseif throw_id == 0x06 then -- ギース・ハワード
+						sp_throw = { id = 0x12, f = 0x06, a = 0x00, name = "羅生門", }
+					elseif throw_id == 0x07 then -- 望月双角
+						sp_throw = { id = 0x04, f = 0x06, a = 0xFE, name = "鬼門陣", }
+					elseif throw_id == 0x10 then -- 山崎竜二
+						sp_throw = { id = 0x08, f = 0x06, a = 0x00, name = "爆弾パチキ", }
+					elseif throw_id == 0x11 then -- 山崎竜二
+						sp_throw = { id = 0x12, f = 0x06, a = 0x00, name = "ドリル", }
+					elseif throw_id == 0x13 then -- ダック・キング
+						sp_throw = { id = 0x10, f = 0x06, a = 0x00, name = "ブレイクスパイラル", }
+					elseif throw_id == 0x14 then -- ダック・キング
+						sp_throw = { id = 0x11, f = 0x06, a = 0xFA, name = "ブレイクスパイラルBR", }
+					elseif throw_id == 0x15 then -- ヴォルフガング・クラウザー
+						sp_throw = { id = 0x05, f = 0x06, a = 0x00, name = "デンジャラススルー", }
+					elseif throw_id == 0x16 then -- ヴォルフガング・クラウザー
+						sp_throw = { id = 0x07, f = 0x06, a = 0x00, name = "リフトアップブロー", }
+					elseif throw_id == 0x17 then -- ヴォルフガング・クラウザー
+						sp_throw = { id = 0x12, f = 0x06, a = 0x00, name = "ギガティックサイクロン", }
+					end
+					if sp_throw then
+						if sp_throw.id and sp_throw.id < 0x1E then sp_throw.ver = (sp_throw.f << 0x8) | sp_throw.a end
+						-- ut.printf("reset_sp_hook %X %X %X %X %X", p.char, char, throw_id, sp_throw.id, sp_throw.f)
+						p.reset_sp_hook(sp_throw)
+					end -- 自動必殺投げ
+				end
+			end
+
 			-- 自動投げ追撃
 			if global.auto_input.combo_throw then
 				if p.char == 3 and p.act == 0x70 then
@@ -6428,8 +6466,9 @@ rbff2.startplugin  = function()
 			{ "DEBUG2-1 簡易超必", menu.labels.off_on, },
 			{ "DEBUG4-4 半自動潜在能力", menu.labels.off_on, },
 			{ title = true, "自動追加動作" },
-			{ "ダウン投げ", menu.labels.off_on, },
-			{ "ダウン攻撃", menu.labels.off_on, },
+			{ "自動ダウン投げ", menu.labels.off_on, },
+			{ "自動必殺投げ", menu.labels.off_on, },
+			{ "自動ダウン攻撃", menu.labels.off_on, },
 			{ "通常投げの派生技", menu.labels.off_on, },
 			{ "デッドリーレイブ", { "通常動作", 2, 3, 4, 5, 6, 7, 8, 9, 10 }, },
 			{ "アンリミテッドデザイア", { "通常動作", 2, 3, 4, 5, 6, 7, 8, 9, 10, "ギガティックサイクロン" }, },
@@ -6454,49 +6493,51 @@ rbff2.startplugin  = function()
 			col[2] = dip_config.semiauto_p and 2 or 1 -- 半自動潜在能力
 			-- 3 自動追加動作
 			col[4] = g.auto_input.otg_throw and 2 or 1 -- ダウン投げ
-			col[5] = g.auto_input.otg_attack and 2 or 1 -- ダウン攻撃
-			col[6] = g.auto_input.combo_throw and 2 or 1 -- 通常投げの派生技
-			col[7] = g.auto_input.rave             -- デッドリーレイブ
-			col[8] = g.auto_input.desire           -- アンリミテッドデザイア
-			col[9] = g.auto_input.drill            -- ドリル
-			col[10] = g.auto_input.kanku and 2 or 1 -- 閃里肘皇・貫空
-			col[11] = g.auto_input.pairon          -- 超白龍
-			col[12] = g.auto_input.real_counter    -- M.リアルカウンター
-			col[13] = g.auto_input.auto_3ecst and 2 or 1 -- M.トリプルエクスタシー
-			col[14] = g.auto_input.taneuma and 2 or 1 -- 炎の種馬
-			col[15] = g.auto_input.katsu_ca and 2 or 1 -- 喝CA
-			col[16] = g.auto_input.sikkyaku_ca and 2 or 1 -- 飛燕失脚CA
-			-- 17 MOD
-			col[18] = g.auto_input.esaka_check     -- 詠酒距離チェック
-			col[19] = g.auto_input.fast_kadenzer and 2 or 1 -- 必勝！逆襲拳
-			col[20] = g.auto_input.kara_ca and 2 or 1 -- 空振りCA
-			col[21] = g.auto_input.no_charge and 2 or 1 -- タメ時間なし
-			col[22] = g.auto_input.cancel and 2 or 1 -- 全通常技キャンセル可能
+			col[5] = g.auto_input.sp_throw and 2 or 1 -- 必殺投げ
+			col[6] = g.auto_input.otg_attack and 2 or 1 -- ダウン攻撃
+			col[7] = g.auto_input.combo_throw and 2 or 1 -- 通常投げの派生技
+			col[8] = g.auto_input.rave             -- デッドリーレイブ
+			col[9] = g.auto_input.desire           -- アンリミテッドデザイア
+			col[10] = g.auto_input.drill            -- ドリル
+			col[11] = g.auto_input.kanku and 2 or 1 -- 閃里肘皇・貫空
+			col[12] = g.auto_input.pairon          -- 超白龍
+			col[13] = g.auto_input.real_counter    -- M.リアルカウンター
+			col[14] = g.auto_input.auto_3ecst and 2 or 1 -- M.トリプルエクスタシー
+			col[15] = g.auto_input.taneuma and 2 or 1 -- 炎の種馬
+			col[16] = g.auto_input.katsu_ca and 2 or 1 -- 喝CA
+			col[17] = g.auto_input.sikkyaku_ca and 2 or 1 -- 飛燕失脚CA
+			-- 18 MOD
+			col[19] = g.auto_input.esaka_check     -- 詠酒距離チェック
+			col[20] = g.auto_input.fast_kadenzer and 2 or 1 -- 必勝！逆襲拳
+			col[21] = g.auto_input.kara_ca and 2 or 1 -- 空振りCA
+			col[22] = g.auto_input.no_charge and 2 or 1 -- タメ時間なし
+			col[23] = g.auto_input.cancel and 2 or 1 -- 全通常技キャンセル可能
 		end,
-		ut.new_filled_table(22, function()
+		ut.new_filled_table(23, function()
 			local col, g, ez           = menu.auto.pos.col, global, mod.easy_move
 			dip_config.easy_super      = col[1] == 2 -- 簡易超必
 			dip_config.semiauto_p      = col[2] == 2 -- 半自動潜在能力
 			-- 3 自動追加動作
 			g.auto_input.otg_throw     = col[4] == 2 -- ダウン投げ
-			g.auto_input.otg_attack    = col[5] == 2 -- ダウン攻撃
-			g.auto_input.combo_throw   = col[6] == 2 -- 通常投げの派生技
-			g.auto_input.rave          = col[7] -- デッドリーレイブ
-			g.auto_input.desire        = col[8] -- アンリミテッドデザイア
-			g.auto_input.drill         = col[9] -- ドリル
-			g.auto_input.kanku         = col[10] == 2 -- 閃里肘皇・貫空
-			g.auto_input.pairon        = col[11] -- 超白龍
-			g.auto_input.real_counter  = col[12] -- M.リアルカウンター
-			g.auto_input.auto_3ecst    = col[13] == 2 -- M.トリプルエクスタシー
-			g.auto_input.taneuma       = col[14] == 2 -- 炎の種馬
-			g.auto_input.katsu_ca      = col[15] == 2 -- 喝CA
-			g.auto_input.sikkyaku_ca   = col[16] == 2 -- 飛燕失脚CA
-			-- 17 MOD
-			g.auto_input.esaka_check   = col[18] -- 詠酒チェック
-			g.auto_input.fast_kadenzer = col[19] == 2 -- 必勝！逆襲拳
-			g.auto_input.kara_ca       = col[20] == 2 -- 空振りCA
-			g.auto_input.no_charge     = col[21] == 2 -- タメ時間なし
-			g.auto_input.cancel        = col[22] == 2 -- 全通常技キャンセル可能
+			g.auto_input.sp_throw      = col[5] == 2 -- 必殺投げ
+			g.auto_input.otg_attack    = col[6] == 2 -- ダウン攻撃
+			g.auto_input.combo_throw   = col[7] == 2 -- 通常投げの派生技
+			g.auto_input.rave          = col[8] -- デッドリーレイブ
+			g.auto_input.desire        = col[9] -- アンリミテッドデザイア
+			g.auto_input.drill         = col[10] -- ドリル
+			g.auto_input.kanku         = col[11] == 2 -- 閃里肘皇・貫空
+			g.auto_input.pairon        = col[12] -- 超白龍
+			g.auto_input.real_counter  = col[13] -- M.リアルカウンター
+			g.auto_input.auto_3ecst    = col[14] == 2 -- M.トリプルエクスタシー
+			g.auto_input.taneuma       = col[15] == 2 -- 炎の種馬
+			g.auto_input.katsu_ca      = col[16] == 2 -- 喝CA
+			g.auto_input.sikkyaku_ca   = col[17] == 2 -- 飛燕失脚CA
+			-- 18 MOD
+			g.auto_input.esaka_check   = col[19] -- 詠酒チェック
+			g.auto_input.fast_kadenzer = col[20] == 2 -- 必勝！逆襲拳
+			g.auto_input.kara_ca       = col[21] == 2 -- 空振りCA
+			g.auto_input.no_charge     = col[22] == 2 -- タメ時間なし
+			g.auto_input.cancel        = col[23] == 2 -- 全通常技キャンセル可能
 			-- 簡易入力のROMハックを反映する
 			ez.real_counter(g.auto_input.real_counter) -- ジャーマン, フェイスロック, 投げっぱなしジャーマン
 			ez.esaka_check(g.auto_input.esaka_check) -- 詠酒の条件チェックを飛ばす
