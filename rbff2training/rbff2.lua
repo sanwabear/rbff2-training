@@ -1826,7 +1826,7 @@ rbff2.startplugin  = function()
 			if not exp or (0x10 <= last_sp and last_sp <= 0x13) then exp = 0 end
 			local states = dip_config.easy_super and input_state.states.easy or input_state.states.normal
 			states = states[p.char] or {}
-			local addr = count and (#states - count) * 0x4 + 0x2 or 0
+			local addr = count and ((#states - count) * 0x4 + 0x2) or 0
 			for _, tbl in ut.ifind_all(states, function(tbl)
 				if count then return addr == tbl.addr else return tbl.id == last_sp and tbl.estab == exp end
 			end) do
@@ -2417,11 +2417,14 @@ rbff2.startplugin  = function()
 				local sp = p.bs_hook
 				if not sp then return end
 				if sp ~= p.dummy_rvs and sp == p.dummy_bs and p.base ~= 0x5893A then return end
+				-- 自動必殺投げの場合は技成立データに別の必殺投げが含まれているならそれを優先させるために抜ける
 				if sp.ver then
+					if sp.auto_sp_throw and (sp.char == p.char) and db.sp_throws[mem.r08(p.addr.base + 0xA3)] then return end
 					--ut.printf("bs_hook1 %x %x", sp.id, sp.ver)
 					mem.w08(p.addr.base + 0xA3, sp.id)
 					mem.w16(p.addr.base + 0xA4, sp.ver)
 				else
+					if sp.auto_sp_throw and (sp.char == p.char) and db.sp_throws[mem.r08(p.addr.base + 0xD6)] then return end
 					--ut.printf("bs_hook2 %x %x", sp.id, sp.f)
 					mem.w08(p.addr.base + 0xD6, sp.id)
 					mem.w08(p.addr.base + 0xD7, sp.f)
@@ -4466,9 +4469,7 @@ rbff2.startplugin  = function()
 						end
 					end
 				end
-				if 0 < #new_sp_throw_ids then
-					p.last_sp_throw_ids = new_sp_throw_ids
-				end
+				p.last_sp_throw_ids = (0 < #new_sp_throw_ids) and new_sp_throw_ids or p.last_sp_throw_ids or {}
 
 				-- 座標
 				table.insert(ranges, {
