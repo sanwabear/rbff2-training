@@ -1825,13 +1825,16 @@ rbff2.startplugin  = function()
 		p.add_sp_establish_hist    = function(last_sp, exp, count)
 			if not exp or (0x10 <= last_sp and last_sp <= 0x13) then exp = 0 end
 			local states = dip_config.easy_super and input_state.states.easy or input_state.states.normal
+			--ut.printf("%s %s %s", dip_config.easy_super, states == input_state.states.easy, states == input_state.states.normal)
 			states = states[p.char] or {}
-			local addr = count and ((#states - count) * 0x4 + 0x2) or 0
+			local addr = count and (#states - count) * 0x4 + 0x2 or 0
 			for _, tbl in ut.ifind_all(states, function(tbl)
 				if count then return addr == tbl.addr else return tbl.id == last_sp and tbl.estab == exp end
 			end) do
 				-- ut.printf("%s %X %X | %s%s", now(), addr, tbl.addr, string.sub(string.format("00%X", last_sp), -2), string.sub(string.format("0000%X", exp), -4))
 				table.insert(p.key.cmd_hist, { txt = table.concat(tbl.lr_cmds[p.cmd_side]), time = now(60) })
+				p.last_spids = p.last_spids or {}
+				table.insert(p.last_spids, tbl.spid)
 			end
 			while 4 < #p.key.cmd_hist do table.remove(p.key.cmd_hist, 1) end --バッファ長調整
 		end
@@ -4199,6 +4202,7 @@ rbff2.startplugin  = function()
 			end
 			local debug  = false -- 調査時のみtrue
 			local states = dip_config.easy_super and input_state.states.easy or input_state.states.normal
+			--ut.printf("%s %s %s", dip_config.easy_super, states == input_state.states.easy, states == input_state.states.normal)
 			states       = debug and states[#states] or states[p.char]
 			for ti, tbl in ipairs(states) do
 				local old, addr = p.old.input_states[ti], tbl.addr + p.input_offset
@@ -4443,7 +4447,7 @@ rbff2.startplugin  = function()
 				end
 
 				-- 投げ判定
-				local new_throw_ids, new_sp_throw_ids = {}, {}
+				local new_throw_ids = {}
 				for _, box in pairs(p.throw_boxies) do
 					if global.pause_hitbox == 2 then global.pause = true end -- 強制ポーズ  1:OFF, 2:投げ, 3:攻撃, 4:変化時
 					box.keytxt = string.format("t%2x%2x", box.type.no, box.id)
@@ -4452,9 +4456,6 @@ rbff2.startplugin  = function()
 					table.insert(boxkeys.hit, box.keytxt)
 					table.insert(p.hitbox_types, box.type)
 					table.insert(new_throw_ids, { char = p.char, id = box.id })
-					if db.sp_throws[box.id] then
-						table.insert(new_sp_throw_ids, { char = p.char, id = box.id })
-					end
 				end
 				p.throw_boxies = {}
 				if 0 < #new_throw_ids then
@@ -4469,7 +4470,6 @@ rbff2.startplugin  = function()
 						end
 					end
 				end
-				p.last_sp_throw_ids = (0 < #new_sp_throw_ids) and new_sp_throw_ids or p.last_sp_throw_ids or {}
 
 				-- 座標
 				table.insert(ranges, {
@@ -4808,15 +4808,28 @@ rbff2.startplugin  = function()
 				end
 			end
 
-			-- 自動必殺投げ
-			if global.auto_input.sp_throw and p.last_sp_throw_ids and #p.last_sp_throw_ids > 0 then
-				table.sort(p.last_sp_throw_ids, function(a, b) return a.id < b.id end)
-				local tmp = p.last_sp_throw_ids[#p.last_sp_throw_ids]
-				local sp_throw = db.sp_throws[tmp.id]
-				if p.char == tmp.char and sp_throw then
-					-- ut.printf("reset_sp_hook %X %X %X", p.char, sp_throw.id, sp_throw.f)
-					p.reset_sp_hook(sp_throw)
+			-- 自動必殺投げの切り替え
+			local sp_throw_hook = nil
+			if p.last_spids then
+				-- 成立コマンドから切り替え
+				table.sort(p.last_spids)
+				for _, spid in ipairs(p.last_spids) do
+					--ut.printf("try switch %X %X", p.char, spid)
+					for throw_id, sp_throw in pairs(db.sp_throws) do
+						if sp_throw.char == p.char and sp_throw.id == spid then
+							--ut.printf("switch %X %X %X %X %s", p.char, throw_id, sp_throw.id, sp_throw.ver, to_sjis(sp_throw.name))
+							sp_throw_hook = sp_throw
+							break
+						end
+					end
+					if sp_throw_hook then break end
 				end
+			end
+			p.last_spids, p.sp_throw_hook = {}, sp_throw_hook and sp_throw_hook or p.sp_throw_hook
+			-- 自動必殺投げ
+			if global.auto_input.sp_throw and p.sp_throw_hook and (p.sp_throw_hook.char == p.char) then
+				--ut.printf("reset_sp_hook %X %X %X", p.char, p.sp_throw_hook.id, p.sp_throw_hook.f)
+				p.reset_sp_hook(p.sp_throw_hook)
 			end
 
 			-- 自動投げ追撃
