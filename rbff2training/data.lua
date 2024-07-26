@@ -3481,6 +3481,8 @@ local input_state         = {
 }
 db.input_state            = input_state
 db.input_state_types      = input_state_types
+db.input_state_normal     = input_state.states.normal
+db.input_state_easy       = input_state.states.easy
 
 
 --------------------------------------------------------------------------------------

@@ -1824,12 +1824,17 @@ rbff2.startplugin  = function()
 		end
 		p.add_sp_establish_hist    = function(last_sp, exp, count)
 			if not exp or (0x10 <= last_sp and last_sp <= 0x13) then exp = 0 end
-			local states = dip_config.easy_super and input_state.states.easy or input_state.states.normal
-			--ut.printf("%s %s %s", dip_config.easy_super, states == input_state.states.easy, states == input_state.states.normal)
+			local states = dip_config.easy_super and db.input_state_easy or db.input_state_normal
 			states = states[p.char] or {}
-			local addr = count and (#states - count) * 0x4 + 0x2 or 0
+			local states_count = mem.r16(mem.r32((dip_config.easy_super and 0xCA32E or 0xCA2CE) + p.char * 4))
+			local addr = count and (states_count - count) * 0x4 + 0x2 or nil
+			--ut.printf("%X %X %s %s %s %s %s", count or 0, addr or 0, dip_config.easy_super, count, #states[p.char], states == db.input_state_easy, states == db.input_state_normal)
 			for _, tbl in ut.ifind_all(states, function(tbl)
-				if count then return addr == tbl.addr else return tbl.id == last_sp and tbl.estab == exp end
+				if addr then
+					return addr == tbl.addr
+				else
+					return tbl.id == last_sp and tbl.estab == exp
+				end
 			end) do
 				-- ut.printf("%s %X %X | %s%s", now(), addr, tbl.addr, string.sub(string.format("00%X", last_sp), -2), string.sub(string.format("0000%X", exp), -4))
 				table.insert(p.key.cmd_hist, { txt = table.concat(tbl.lr_cmds[p.cmd_side]), time = now(60) })
@@ -4201,8 +4206,8 @@ rbff2.startplugin  = function()
 				p.chaging          = {}
 			end
 			local debug  = false -- 調査時のみtrue
-			local states = dip_config.easy_super and input_state.states.easy or input_state.states.normal
-			--ut.printf("%s %s %s", dip_config.easy_super, states == input_state.states.easy, states == input_state.states.normal)
+			local states = dip_config.easy_super and db.input_state_easy or db.input_state_normal
+			--ut.printf("%s %s %s", dip_config.easy_super, states == db.input_state_easy, states == db.input_state_normal)
 			states       = debug and states[#states] or states[p.char]
 			for ti, tbl in ipairs(states) do
 				local old, addr = p.old.input_states[ti], tbl.addr + p.input_offset
