@@ -1836,12 +1836,14 @@ rbff2.startplugin  = function()
 			local addr = count and (states_count - count) * 0x4 + 0x2 or nil
 			--ut.printf("%X %X %s %s %s %s %s", count or 0, addr or 0, dip_config.easy_super, count, #states[p.char], states == db.input_state_easy, states == db.input_state_normal)
 			for _, tbl in ut.ifind_all(states, function(tbl)
+				--[[
 				ut.printf("%s %X %X | %X %X | %X %X %X %X | %s%s | %s",
 				now(), states_count, count or 0,
 				addr or 0, tbl.addr,
 				tbl.id, tbl.estab or 0, last_sp or 0, exp or 0,
 				string.sub(string.format("00%X", last_sp), -2), string.sub(string.format("0000%X", exp), -4),
 				to_sjis(tbl.name))
+				]]
 				if addr then
 					return addr == tbl.addr
 				else
