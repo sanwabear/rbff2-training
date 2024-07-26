@@ -62,6 +62,12 @@ rbff2.startplugin  = function()
 	end
 	]]
 
+	for char, state in ipairs(db.input_state_easy) do
+		for _, tbl in ipairs(state) do
+			ut.printf("%s %X %s", char, tbl.addr, to_sjis(tbl.name))
+		end
+	end
+
 	-- ヒット時のシステム内での中間処理による停止アドレス
 	local hit_system_stops       = {}
 
@@ -1830,13 +1836,18 @@ rbff2.startplugin  = function()
 			local addr = count and (states_count - count) * 0x4 + 0x2 or nil
 			--ut.printf("%X %X %s %s %s %s %s", count or 0, addr or 0, dip_config.easy_super, count, #states[p.char], states == db.input_state_easy, states == db.input_state_normal)
 			for _, tbl in ut.ifind_all(states, function(tbl)
+				ut.printf("%s %X %X | %X %X | %X %X %X %X | %s%s | %s",
+				now(), states_count, count or 0,
+				addr or 0, tbl.addr,
+				tbl.id, tbl.estab or 0, last_sp or 0, exp or 0,
+				string.sub(string.format("00%X", last_sp), -2), string.sub(string.format("0000%X", exp), -4),
+				to_sjis(tbl.name))
 				if addr then
 					return addr == tbl.addr
 				else
 					return tbl.id == last_sp and tbl.estab == exp
 				end
 			end) do
-				-- ut.printf("%s %X %X | %s%s", now(), addr, tbl.addr, string.sub(string.format("00%X", last_sp), -2), string.sub(string.format("0000%X", exp), -4))
 				table.insert(p.key.cmd_hist, { txt = table.concat(tbl.lr_cmds[p.cmd_side]), time = now(60) })
 				p.last_spids = p.last_spids or {}
 				table.insert(p.last_spids, tbl.spid)
