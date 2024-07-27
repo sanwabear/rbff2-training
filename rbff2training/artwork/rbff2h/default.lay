@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+<mamelayout version="2">
+	<element name="black"><rect><color red="1" green="1" blue="1"/></rect></element>
+
+	<element name="char_inst" defstate="0x00">
+		<image file="rb2j1.png"      state="0x20"/>
+		<image file="rb2j2.png"      state="0x21"/>
+		<image file="rb2e1.png"      state="0x30"/>
+		<image file="rb2e2.png"      state="0x31"/>
+		<image file="terry.png"      state="0x01"/>
+		<image file="andy.png"       state="0x02"/>
+		<image file="joe.png"        state="0x03"/>
+		<image file="mai.png"        state="0x04"/>
+		<image file="geese.png"      state="0x05"/>
+		<image file="sokaku.png"     state="0x06"/>
+		<image file="bob.png"        state="0x07"/>
+		<image file="honfu.png"      state="0x08"/>
+		<image file="mary.png"       state="0x09"/>
+		<image file="franco.png"     state="0x0A"/>
+		<image file="yamazaki.png"   state="0x0B"/>
+		<image file="chonshu.png"    state="0x0C"/>
+		<image file="chonrei.png"    state="0x0D"/>
+		<image file="duck.png"       state="0x0E"/>
+		<image file="kim.png"        state="0x0F"/>
+		<image file="billy.png"      state="0x10"/>
+		<image file="chin.png"       state="0x11"/>
+		<image file="tung.png"       state="0x12"/>
+		<image file="lawrence.png"   state="0x13"/>
+		<image file="krauser.png"    state="0x14"/>
+		<image file="rick.png"       state="0x15"/>
+		<image file="xiangfei.png"   state="0x16"/>
+		<image file="alfred.png"     state="0x17"/>
+	</element>
+
+	<view name="inst">
+		<bounds left="0" top="0" right="470" bottom="240"/>
+		<screen index="0">
+			<bounds x="75" y="0" width="320" height="240"/>
+		</screen>
+		<element id="p1" ref="char_inst">
+			<bounds x="0" y="-1" width="75" height="242"/>
+		</element>
+		<element id="p2" ref="char_inst">
+			<bounds x="395" y="-1" width="75" height="242"/>
+		</element>
+	</view>
+
+	<script><![CDATA[
+	file:set_resolve_tags_callback(function()
+		local pgm = machine.devices[":maincpu"].spaces["program"]
+		local inst = file.views["inst"]
+		local p1_inst, p2_inst = inst.items["p1"], inst.items["p2"]
+		file.views["inst"]:set_prepare_items_callback(function ()
+			local p1, p2 = pgm:read_u8(0x107BA5), pgm:read_u8(0x107BA7)
+			p1 = (0 < p1 and p1 < 0x18) and p1 or 0x20
+			p2 = (0 < p2 and p2 < 0x18) and p2 or 0x21
+			if p1_inst.element_state ~= p1 then p1_inst:set_state(p1) end
+			if p2_inst.element_state ~= p2 then p2_inst:set_state(p2) end
+		end)
+	end)
+    ]]></script>
+</mamelayout>

@@ -54,6 +54,7 @@ rbff2training.startplugin = function()
             rbff2.startplugin()
             rbff2.emu_start()
             core = rbff2
+            manager.machine:soft_reset()
         end
         mode = core.is_dummy and 0 or 1
     end

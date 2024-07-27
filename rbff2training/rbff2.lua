@@ -61,12 +61,13 @@ rbff2.startplugin  = function()
 		end
 	end
 	]]
-
+	--[[
 	for char, state in ipairs(db.input_state_easy) do
 		for _, tbl in ipairs(state) do
-			ut.printf("%s %X %s", char, tbl.addr, to_sjis(tbl.name))
+			ut.printf("%s %X %s", char, tbl.addr, to_sjis(tbl.name_plain))
 		end
 	end
+	]]
 
 	-- ヒット時のシステム内での中間処理による停止アドレス
 	local hit_system_stops       = {}
@@ -677,7 +678,17 @@ rbff2.startplugin  = function()
 		snk_time             = 2, -- タイムSNK表示
 		disp_replay          = true, -- レコードリプレイガイド表示
 		save_snapshot        = 1, -- 技画像保存 1:OFF 2:新規 3:上書き
+
+		key_hists_newest_1st = true, -- 新しいもの順
 		key_hists            = 20,
+		key_hists_y_offset   = get_line_height(1), -- px
+
+		cmd_hist_limit       = 8,
+		estab_cmd_y_offset   = get_line_height(15), -- px
+
+		frame_meter_limit    = 100,
+		frame_meter_cell     = 3,
+		frame_meter_y_offset = get_line_height(23), -- px
 
 		rvslog               = false,
 		mini_frame_limit     = 332,
@@ -1076,14 +1087,18 @@ rbff2.startplugin  = function()
 
 	-- コマンド入力表示
 	local draw_cmd                             = function(p, line, frame, str, spid, max)
+		local first_line = line == 1
+		if global.key_hists_newest_1st then
+			line = global.key_hists - line + 1
+		end
 		if not str then return end
 		local _draw_text = draw_text -- draw_text_with_shadow
 		local _draw_cmd_text = draw_cmd_text_with_shadow
-		local xx, yy = p == 1 and 12 or 294, get_line_height(line + 3)
+		local xx, yy = p == 1 and 12 or 294, get_line_height(line) + global.key_hists_y_offset
 		local col, spcol = 0xAAFFFFFF, 0x66DD00FF
 		local x1, x2, step
 		if p == 1 then x1, x2, step = 0, 50, 8 else x1, x2, step = 320, 270, -8 end
-		if line == 1 then
+		if first_line then
 			for xi = x1, x2, step do
 				scr:draw_box(x1, yy, xi + 1, get_line_height(max + 4), 0, 0x20303030)
 			end
@@ -1850,7 +1865,7 @@ rbff2.startplugin  = function()
 				p.last_spids = p.last_spids or {}
 				table.insert(p.last_spids, tbl.spid)
 			end
-			while 4 < #p.key.cmd_hist do table.remove(p.key.cmd_hist, 1) end --バッファ長調整
+			while global.cmd_hist_limit < #p.key.cmd_hist do table.remove(p.key.cmd_hist, 1) end --バッファ長調整
 		end
 		p.wp08                     = {
 			[0x16] = function(data) p.knockback1 = data end, -- のけぞり確認用2(裏雲隠し)
@@ -3098,7 +3113,7 @@ rbff2.startplugin  = function()
 	end
 	--
 
-	local frame_meter = { limit = 70, cell = 3.5 }
+	local frame_meter = { limit = global.frame_meter_limit, cell = global.frame_meter_cell, y_offset = global.frame_meter_y_offset }
 	-- 1Pと2Pともにフレーム数が多すぎる場合は加算をやめる
 	-- グラフの描画最大範囲（画面の横幅）までにとどめる
 	frame_meter.adjust_buffer = function()
@@ -5265,7 +5280,7 @@ rbff2.startplugin  = function()
 							if global.frame_number <= hist.time then table.insert(disp, hist.txt) end
 						end
 						if #disp > 0 then -- 成立コマンドを表示
-							local y0, col1, col2 = 176, 0xFAC71585, 0x40303030
+							local y0, col1, col2 = global.estab_cmd_y_offset, 0xFAC71585, 0x40303030
 							local y1, y2 = y0 + get_line_height(), y0 + get_line_height(#disp + 1)
 							local x1, x2, step
 							if p1 then x1, x2, step = 0, 50, 8 else x1, x2, step = 320, 270, -8 end
@@ -5624,7 +5639,7 @@ rbff2.startplugin  = function()
 			for i, p in ipairs(players) do
 				local p1 = i == 1
 				if global.disp_frame > 1 then -- スト6風フレームメーター -- 1:OFF, 2:ON:大表示, 3:ON:大表示(+1P情報), 4:ON:大表示(+2P情報)
-					local startup, total, draw_label = frame_meter.draw_sf6(p, 160 + get_line_height(p1 and 0 or 1.5))
+					local startup, total, draw_label = frame_meter.draw_sf6(p, frame_meter.y_offset + get_line_height(p1 and 0 or 1.5))
 					table.insert(draw_frame_labels, { total = total, func = draw_label })
 					-- 確定反撃の表示
 					_draw_text(p1 and 112 or 184, get_line_height(1.3), "PUNISH", p.on_punish <= global.frame_number and 0xFF808080 or 0xFF00FFFF)
