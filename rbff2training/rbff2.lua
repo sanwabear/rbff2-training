@@ -1838,17 +1838,13 @@ rbff2.startplugin  = function()
 			for _, tbl in ut.ifind_all(states, function(tbl)
 				--[[
 				ut.printf("%s %X %X | %X %X | %X %X %X %X | %s%s | %s",
-				now(), states_count, count or 0,
-				addr or 0, tbl.addr,
-				tbl.id, tbl.estab or 0, last_sp or 0, exp or 0,
-				string.sub(string.format("00%X", last_sp), -2), string.sub(string.format("0000%X", exp), -4),
-				to_sjis(tbl.name))
+					now(), states_count, count or 0,
+					addr or 0, tbl.addr,
+					tbl.id, tbl.estab or 0, last_sp or 0, exp or 0,
+					string.sub(string.format("00%X", last_sp), -2), string.sub(string.format("0000%X", exp), -4),
+					to_sjis(tbl.name_plain))
 				]]
-				if addr then
-					return addr == tbl.addr
-				else
-					return tbl.id == last_sp and tbl.estab == exp
-				end
+				if addr then return addr == tbl.addr else return tbl.id == last_sp and tbl.estab == exp end
 			end) do
 				table.insert(p.key.cmd_hist, { txt = table.concat(tbl.lr_cmds[p.cmd_side]), time = now(60) })
 				p.last_spids = p.last_spids or {}
