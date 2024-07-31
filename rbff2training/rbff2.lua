@@ -492,11 +492,15 @@ rbff2.startplugin  = function()
 				-- キャンセル可否テーブルからデータ取得せずにFFを固定で設定する(C0が必、D0で連)
 				mem.wd32(0x02ADAE, enabled and 0x70FF4E71 or 0x10300000) -- 02ADAE: 1030 0000 move.b (A0,D0.w), D0
 				mem.wd32(0x02FAE4, enabled and 0x7EFF4E71 or 0x1E327000) -- 02FAE4: 1E32 7000 move.b (A2,D7.w), D7
-				mem.wd32(0x02FAE4, enabled and 0x7EFF4E71 or 0x103C0001) -- 02ADB8: 103C 0001 move.b  #$1, D0
+				mem.wd32(0x02FAE4, enabled and 0x7EFF4E71 or 0x103C0001) -- 02ADB8: 103C 0001 move.b #$1, D0
 				mem.wd32(0x076C1C, enabled and 0x70FF4E71 or 0x10300000) -- 076C1C: 1030 0000 move.b (A0,D0.w), D0
 			end,
 			triple_ecstasy = function(enabled)               -- 自動マリートリプルエクスタシー
 				mem.wd08(0x041D00, enabled and 0x60 or 0x66) -- デバッグDIPチェックを飛ばす
+			end,
+			fast_recover = function(enabled)                            -- 高速気絶回復
+				mem.wd32(0x02BD20, enabled and 0x1E3C0004 or 0x1E280001) -- 02BD20: 1E28 0001 move.b ($1,A0), D7
+				mem.wd32(0x02BD66, enabled and 0x1C3C00F0 or 0x1C280002) -- 02BD66: 1C28 0002 move.b ($2,A0), D6
 			end,
 		},
 		camerawork   = function(enabled)
@@ -636,25 +640,26 @@ rbff2.startplugin  = function()
 		dummy_rvs_cnt        = 1, -- リバーサルのカウンタ
 
 		auto_input           = {
-			otg_throw     = false, -- ダウン投げ              1
-			sp_throw      = false, -- 必殺投げ                2
-			otg_attack    = false, -- ダウン攻撃              3
-			combo_throw   = false, -- 通常投げの派生技        4
-			rave          = 1, -- デッドリーレイブ        5
-			desire        = 1, -- アンリミテッドデザイア  6
-			drill         = 1, -- ドリル                  7
-			kanku         = false, -- 閃里肘皇・貫空          8
-			pairon        = 1, -- 超白龍                  9
-			real_counter  = 1, -- M.リアルカウンター      10
-			auto_3ecst    = false, -- M.トリプルエクスタシー 11
-			taneuma       = false, -- 炎の種馬               12
-			katsu_ca      = false, -- 喝CA                   13
-			sikkyaku_ca   = false, -- 飛燕失脚CA             14
-			esaka_check   = false, -- 詠酒距離チェック       15
-			fast_kadenzer = false, -- 必勝！逆襲拳           16
-			kara_ca       = false, -- 空振りCA               17
-			no_charge     = false, -- タメ時間なし           18
-			cancel        = false, -- 全通常技キャンセル可能 19
+			otg_throw     = false, -- ダウン投げ
+			sp_throw      = false, -- 必殺投げ
+			otg_attack    = false, -- ダウン攻撃
+			combo_throw   = false, -- 通常投げの派生技
+			rave          = 1, -- デッドリーレイブ
+			desire        = 1, -- アンリミテッドデザイア
+			drill         = 1, -- ドリル
+			kanku         = false, -- 閃里肘皇・貫空
+			pairon        = 1, -- 超白龍
+			real_counter  = 1, -- M.リアルカウンター
+			auto_3ecst    = false, -- M.トリプルエクスタシー
+			taneuma       = false, -- 炎の種馬
+			katsu_ca      = false, -- 喝CA
+			sikkyaku_ca   = false, -- 飛燕失脚CA
+			esaka_check   = false, -- 詠酒距離チェック
+			fast_kadenzer = false, -- 必勝！逆襲拳
+			kara_ca       = false, -- 空振りCA
+			no_charge     = false, -- タメ時間なし
+			cancel        = false, -- 全通常技キャンセル可能
+			fast_recover  = false, -- 気絶回復
 		},
 
 		frzc                 = 1,
@@ -6509,6 +6514,7 @@ rbff2.startplugin  = function()
 			{ "空振りCA", menu.labels.off_on, },
 			{ "タメ時間なし", menu.labels.off_on, },
 			{ "(ほぼ)全通常技キャンセル可能", menu.labels.off_on, },
+			{ "高速気絶回復", menu.labels.off_on, },
 		},
 		function()
 			local col, g = menu.auto.pos.col, global
@@ -6535,8 +6541,9 @@ rbff2.startplugin  = function()
 			col[21] = g.auto_input.kara_ca and 2 or 1 -- 空振りCA
 			col[22] = g.auto_input.no_charge and 2 or 1 -- タメ時間なし
 			col[23] = g.auto_input.cancel and 2 or 1 -- 全通常技キャンセル可能
+			col[24] = g.auto_input.fast_recover and 2 or 1 -- 高速気絶回復
 		end,
-		ut.new_filled_table(23, function()
+		ut.new_filled_table(24, function()
 			local col, g, ez           = menu.auto.pos.col, global, mod.easy_move
 			dip_config.easy_super      = col[1] == 2 -- 簡易超必
 			dip_config.semiauto_p      = col[2] == 2 -- 半自動潜在能力
@@ -6561,6 +6568,7 @@ rbff2.startplugin  = function()
 			g.auto_input.kara_ca       = col[21] == 2 -- 空振りCA
 			g.auto_input.no_charge     = col[22] == 2 -- タメ時間なし
 			g.auto_input.cancel        = col[23] == 2 -- 全通常技キャンセル可能
+			g.auto_input.fast_recover  = col[24] == 2 -- 高速気絶回復
 			-- 簡易入力のROMハックを反映する
 			ez.real_counter(g.auto_input.real_counter) -- ジャーマン, フェイスロック, 投げっぱなしジャーマン
 			ez.esaka_check(g.auto_input.esaka_check) -- 詠酒の条件チェックを飛ばす
@@ -6572,6 +6580,7 @@ rbff2.startplugin  = function()
 			ez.triple_ecstasy(g.auto_input.auto_3ecst) -- 自動マリートリプルエクスタシー
 			ez.no_charge(g.auto_input.no_charge) -- タメ時間なし
 			ez.cancel(g.auto_input.cancel)      -- 全通常技キャンセル可能
+			ez.fast_recover(g.auto_input.fast_recover) -- 高速気絶回復
 			menu.current = menu.main
 		end))
 

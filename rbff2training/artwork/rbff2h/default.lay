@@ -3,10 +3,10 @@
 	<element name="black"><rect><color red="1" green="1" blue="1"/></rect></element>
 
 	<element name="char_inst" defstate="0x00">
-		<image file="rb2j1.png"      state="0x20"/>
-		<image file="rb2j2.png"      state="0x21"/>
-		<image file="rb2e1.png"      state="0x30"/>
-		<image file="rb2e2.png"      state="0x31"/>
+		<image file="rb2j1.png"      state="0x20"/><!-- JP Inst -->
+		<image file="rb2j2.png"      state="0x21"/><!-- JP Inst -->
+		<image file="rb2e1.png"      state="0x30"/><!-- EN Inst -->
+		<image file="rb2e2.png"      state="0x31"/><!-- EN Inst -->
 		<image file="terry.png"      state="0x01"/>
 		<image file="andy.png"       state="0x02"/>
 		<image file="joe.png"        state="0x03"/>
@@ -33,16 +33,10 @@
 	</element>
 
 	<view name="inst">
-		<bounds left="0" top="0" right="470" bottom="240"/>
-		<screen index="0">
-			<bounds x="75" y="0" width="320" height="240"/>
-		</screen>
-		<element id="p1" ref="char_inst">
-			<bounds x="0" y="-1" width="75" height="242"/>
-		</element>
-		<element id="p2" ref="char_inst">
-			<bounds x="395" y="-1" width="75" height="242"/>
-		</element>
+		<bounds left="0" top="0" right="400" bottom="240"/><!-- width:height 6:3 -->
+		<screen index="0"><bounds x="0" y="0" width="320" height="240"/></screen><!-- width:height 4:3 -->
+		<element id="p1" ref="char_inst"><bounds x="-80" y="-1" width="80" height="242"/></element><!-- width:height 1:3 -->
+		<element id="p2" ref="char_inst"><bounds x="320" y="-1" width="80" height="242"/></element><!-- width:height 1:3 -->
 	</view>
 
 	<script><![CDATA[
