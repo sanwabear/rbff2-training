@@ -1894,7 +1894,7 @@ local rvs_bs_list = {
 	-- 秦崇秀
 	{
 		{ cmd = cmd_types._6A, hook_type = hook_cmd_types.reversal, name = "光輪殺(_6_+_A)", },
-		{ id = 0x01, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "帝王神足拳", },
+		{ id = 0x01, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "帝王神足拳", },
 		{ id = 0x02, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "小 帝王天眼拳", },
 		{ id = 0x03, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "大 帝王天眼拳", },
 		{ id = 0x04, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "小 帝王天耳拳", },
@@ -2033,8 +2033,8 @@ local rvs_bs_list = {
 	-- ヴォルフガング・クラウザー
 	{
 		{ cmd = cmd_types._6A, hook_type = hook_cmd_types.reversal, name = "デスハンマー(_6_+_A)", },
-		{ id = 0x01, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "ブリッツボール・上段", },
-		{ id = 0x02, f = 0x06, a = 0xFF, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "ブリッツボール・下段", },
+		{ id = 0x01, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "ブリッツボール・上段", },
+		{ id = 0x02, f = 0x06, a = 0xFF, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "ブリッツボール・下段", },
 		{ id = 0x03, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "レッグトマホーク", },
 		{ id = 0x04, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.throw | hook_cmd_types.ex_breakshot, name = "フェニックススルー", },
 		{ id = 0x05, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.throw | hook_cmd_types.ex_breakshot, name = "デンジャラススルー", },
