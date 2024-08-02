@@ -1743,7 +1743,7 @@ rbff2.startplugin  = function()
 			disp_fb_frame   = true,      -- 弾のフレーム数表示するときtrue
 			disp_stun       = true,      -- 気絶表示
 			disp_state      = 1,         -- 状態表示 1:OFF 2:ON 3:ON:小表示 4:ON:フラグ表示 5:ON:ALL
-			dis_plain_shift = false,     -- ライン送らない現象
+			dis_plain_shift = false,     -- ラインずらさない現象
 			no_hit          = 0,         -- Nヒット目に空ぶるカウントのカウンタ
 			no_hit_limit    = 0,         -- Nヒット目に空ぶるカウントの上限
 			force_y_pos     = 1,         -- Y座標強制
@@ -1779,7 +1779,7 @@ rbff2.startplugin  = function()
 				sway_status = base + 0x89,     -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
 				life        = base + 0x8B,     -- 体力
 				pow         = base + 0xBC,     -- パワーアドレス
-				hurt_state  = base + 0xE4,     -- やられ状態 ライン送らない状態用
+				hurt_state  = base + 0xE4,     -- やられ状態 ラインずらさない状態用
 				stun_limit  = p1 and 0x10B84E or 0x10B856, -- 最大気絶値
 				char        = p1 and 0x107BA5 or 0x107BA7, -- キャラID
 				color       = p1 and 0x107BAC or 0x107BAD, -- カラー A=0x00 D=0x01
@@ -2024,11 +2024,15 @@ rbff2.startplugin  = function()
 			[0xEE] = function(data) p.in_hitstop_value, p.in_hitstun = data, ut.tstb(data, 0x80) end,
 			[0xF6] = function(data) p.invincible = data end,                       -- 打撃と投げの無敵の残フレーム数
 			-- [0xF7] = function(data) end -- 技の内部の進行度
-			[{ addr = 0xFB, filter = { 0x49418, 0x49428 } }] = function(data)
-				p.kaiserwave = p.kaiserwave or {} -- カイザーウェイブのレベルアップ
+			[{ addr = 0xFB, filter = { 0x49418, 0x49428, 0x42158 } }] = function(data)
+				-- 0x49418, 0x49428 -- カイザーウェイブのレベルアップ
+				-- 0x42158 蛇使いレベルアップ 5以上が大蛇
 				local pc = mem.pc()
-				if (p.kaiserwave[pc] == nil) or p.kaiserwave[pc] + 1 < global.frame_number then p.on_update_spid = now() end
-				p.kaiserwave[pc] = now()
+				if pc == 0x49418 or pc == 0x49428 or (0x42158 == pc and data == 5) then
+					p.kaiserwave = p.kaiserwave or {}
+					if (p.kaiserwave[pc] == nil) or p.kaiserwave[pc] + 1 < global.frame_number then p.on_update_spid = now() end
+					p.kaiserwave[pc] = now()
+				end
 			end,
 			[p1 and 0x10B4E1 or 0x10B4E0] = function(data) -- 一時的なコンボ数
 				if p.no_hit_limit > 0 and data >= p.no_hit_limit - 1 then
@@ -3594,7 +3598,15 @@ rbff2.startplugin  = function()
 		local plain   = p.body.act_data.last_plain
 		local name    = p.body.act_data.last_name
 		local key     = key_mask & attackbit
-		local update  = p.on_update_87 == global.frame_number and p.update_act
+		local update  = (p.on_update_87 == global.frame_number) and p.update_act
+		-- カイザーウェーブ、蛇使いレベルアップ
+		if p.kaiserwave and p.on_update_spid == global.frame_number then
+			if (p.kaiserwave[0x49418] == global.frame_number)
+			or (p.kaiserwave[0x49428] == global.frame_number)
+			or (p.kaiserwave[0x42158] == global.frame_number) then
+				update = true
+			end
+		end
 		local f_plus  = ut.tstb(p.attackbit, frame_attack_types.frame_plus)
 
 		local mcol    = f_plus and 0xA0303080 or (p.act_data.neutral and 0xA0808080 or line)
@@ -4162,7 +4174,7 @@ rbff2.startplugin  = function()
 				p.kagenui_type = 1
 			end
 
-			-- ライン送らない状態のデータ書き込み
+			-- ラインずらさない状態のデータ書き込み
 			if p.dis_plain_shift then mem.w08(p.addr.hurt_state, p.hurt_state | 0x40) end
 
 			--フレーム用
@@ -4780,7 +4792,7 @@ rbff2.startplugin  = function()
 				-- のけぞりのリバーサル入力
 				if (p.state == 1 or (p.state == 2 and p.gd_rvs_enabled)) and p.hitstop_remain == 0 then
 					-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する
-					-- 奥ラインへ送った場合だけ無視する（p.act ~= 0x14A）
+					-- 奥ラインへずらした場合だけ無視する（p.act ~= 0x14A）
 					if p.flag_7e == 0x80 and p.knockback2 == 0 and p.act ~= 0x14A then
 						-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する1
 						input_rvs(rvs_types.in_knock_back, p, "[Reversal] blockstun 2")
@@ -4796,7 +4808,7 @@ rbff2.startplugin  = function()
 					-- 当身うち空振りと裏雲隠し用
 					input_rvs(rvs_types.atemi, p, "[Reversal] blockstun 5")
 				end
-				-- 奥ラインへ送ったあとのリバサ
+				-- 奥ラインへずらしたあとのリバサ
 				if p.act == 0x14A and (p.act_count == 4 or p.act_count == 5) and p.old.act_frame == 0 and p.act_frame == 0 and p.throw_timer == 0 then
 					input_rvs(rvs_types.in_knock_back, p, string.format("[Reversal] plane shift %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer))
 				end
@@ -6442,7 +6454,7 @@ rbff2.startplugin  = function()
 		"特殊設定",
 		"調査や情報確認のための特殊な動作を設定します。",
 		{
-			{ "ライン送らない現象", { "OFF", "ON", "ON:1Pのみ", "ON:2Pのみ" }, },
+			{ "ラインずらさない現象", { "OFF", "ON", "ON:1Pのみ", "ON:2Pのみ" }, },
 			{ "ヒット時にポーズ", { "OFF", "ON", "ON:やられのみ", "ON:投げやられのみ", "ON:打撃やられのみ", "ON:ガードのみ", }, },
 			{ "判定発生時にポーズ", { "OFF", "投げ", "攻撃", "変化時", }, },
 			{ "技画像保存", { "OFF", "ON:新規", "ON:上書き", }, },
@@ -6454,7 +6466,7 @@ rbff2.startplugin  = function()
 		function()
 			---@diagnostic disable-next-line: undefined-field
 			local col, p, g = menu.extra.pos.col, players, global
-			col[1] = 1 -- ライン送らない現象
+			col[1] = 1 -- ラインずらさない現象
 			if p[1].dis_plain_shift and p[2].dis_plain_shift then
 				col[1] = 2
 			elseif p[1].dis_plain_shift then
@@ -6472,8 +6484,8 @@ rbff2.startplugin  = function()
 		end,
 		ut.new_filled_table(8, function()
 			local col, p, g      = menu.extra.pos.col, players, global
-			p[1].dis_plain_shift = col[1] == 2 or col[1] == 3 -- ライン送らない現象
-			p[2].dis_plain_shift = col[1] == 2 or col[1] == 4 -- ライン送らない現象
+			p[1].dis_plain_shift = col[1] == 2 or col[1] == 3 -- ラインずらさない現象
+			p[2].dis_plain_shift = col[1] == 2 or col[1] == 4 -- ラインずらさない現象
 			g.pause_hit          = col[2]            -- ヒット時にポーズ
 			g.pause_hitbox       = col[3]            -- 判定発生時にポーズ
 			g.save_snapshot      = col[4]            -- 技画像保存

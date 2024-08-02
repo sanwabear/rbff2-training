@@ -2287,7 +2287,7 @@ local flag_cc       = {
 	_09 = 2 ^ 9, -- つかみ投げやられ
 	_10 = 2 ^ 10, -- 投げられ
 	_11 = 2 ^ 11, --
-	_12 = 2 ^ 12, -- ライン送りやられ
+	_12 = 2 ^ 12, -- ラインずらしやられ
 	_13 = 2 ^ 13, -- ダウン
 	_14 = 2 ^ 14, -- 空中やられ
 	_15 = 2 ^ 15, -- 地上やられ
@@ -2353,7 +2353,7 @@ flag_cc.hitstun     =
 	flag_cc._08 | -- 投げ派生やられ
 	flag_cc._09 | -- つかみ投げやられ
 	flag_cc._10 | -- 投げられ
-	flag_cc._12 | -- ライン送りやられ
+	flag_cc._12 | -- ラインずらしやられ
 	flag_cc._13 | -- ダウン
 	flag_cc._14 | -- 空中やられ
 	flag_cc._15 | -- 地上やられ
@@ -2506,7 +2506,7 @@ db.flag_names_cc    = {
 	"つかみ投げやられ", -- 9
 	"投げられ", -- 10
 	"", -- 11
-	"ライン送りやられ", -- 12
+	"ラインずらしやられ", -- 12
 	"ダウン", -- 13
 	"空中やられ", -- 14
 	"地上やられ", -- 15
@@ -2577,8 +2577,8 @@ local hit_effect_types  = {
 	nokezori = "の", -- のけぞり
 	nokezori2 = "*の", -- のけぞり 対スウェー時はダウン追撃可能ダウン
 	otg_down = "*ダ", -- ダウン追撃可能ダウン
-	plane_shift = "送", -- スウェーライン送り
-	plane_shift_down = "送ダ", -- スウェーライン送りダウン
+	plane_shift = "ず", -- スウェーラインずらし
+	plane_shift_down = "ずダ", -- スウェーラインずらしダウン
 	standup = "立", -- 強制立のけぞり
 }
 local hit_effects       = {
@@ -2597,8 +2597,8 @@ local hit_effects       = {
 		[hit_effect_types.nokezori] = "Knockback",          -- のけぞり
 		[hit_effect_types.nokezori2] = "K.B./*Down",        -- のけぞり 対スウェー時はダウン追撃可能ダウン
 		[hit_effect_types.otg_down] = "*Down",              -- ダウン追撃可能ダウン
-		[hit_effect_types.plane_shift] = "Plane Shift",     -- スウェーライン送り
-		[hit_effect_types.plane_shift_down] = "Plane Shift Down", -- スウェーライン送りダウン
+		[hit_effect_types.plane_shift] = "Plane Shift",     -- スウェーラインずらし
+		[hit_effect_types.plane_shift_down] = "Plane Shift Down", -- スウェーラインずらしダウン
 		[hit_effect_types.standup] = "Standup",             -- 強制立のけぞり
 	},
 	nokezoris = ut.new_set(
