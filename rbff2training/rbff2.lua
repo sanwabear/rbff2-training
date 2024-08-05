@@ -2072,6 +2072,7 @@ rbff2.startplugin  = function()
 				if pc == 0x06042A then add_throw_box(p, get_air_throw_box(p)) end -- 空中投げ
 			end
 		end
+		-- ドリル回数 0x42C3Eからのデータと合わせrう
 		local drill_counts         = { 0x07, 0x09, 0x0B, 0x0C, 0x3C, } -- { 0x00, 0x01, 0x02, 0x03, 0x04, }
 		local additional_buttons   = {
 			--0x038FF8,
@@ -2680,6 +2681,7 @@ rbff2.startplugin  = function()
 			[0x8D] = function(data)
 				p.hitstop_remain, p.in_hitstop = data, (data > 0 or (p.hitstop_remain and p.hitstop_remain > 0)) and now() or p.in_hitstop -- 0になるタイミングも含める
 			end,
+			[{ addr = 0x94, filter = { 0x434C8, 0x434E0 } }] = function(data) p.drill_count = data end, -- ドリルのCカウント 0x434C8 Cカウント加算, 0x434E0 C以外押下でCカウントリセット
 			[0xAA] = function(data)
 				p.attackbits.fullhit = data ~= 0
 				-- ut.printf("full %X %s %s | %X %X | %s | %X %X %X | %s", mem.pc(), now(), p.on_hit, base, data, ut.tobitstr(data), p.act, p.act_count, p.act_frame, p.attackbits.fullhit)
@@ -2698,6 +2700,7 @@ rbff2.startplugin  = function()
 			[0xB1] = function(data) p.hurt_invincible = data > 0 end, -- やられ判定無視の全身無敵
 			[0xE9] = function(data) p.dmg_id = data end,     -- 最後にヒット/ガードした技ID
 			[0xEB] = function(data) p.hurt_attack = data end, -- やられ中のみ変化
+			[{ addr = 0xF1, filter = { 0x408D4, 0x40954 } }] = function(data) p.drill_count = data end,  -- 炎の種馬の追加連打の成立回数
 		})
 		p.wp16 = ut.hash_add_all(p.wp16, {
 			[0x20] = function(data) p.pos, p.max_pos, p.min_pos = data, math.max(p.max_pos or 0, data), math.min(p.min_pos or 1000, data) end,
@@ -3173,9 +3176,9 @@ rbff2.startplugin  = function()
 	-- フレームメーターの追加情報
 	frame_meter.decos = {
 		{ type = frame_attack_types.on_additional_w1,  txt = "+",  fix = -0.3,  top = get_line_height(0.4), col = 0xFF00FF00 }, -- 成立した追加入力データの設定時 1F
-		{ type = frame_attack_types.on_additional_r1,  txt = "1",  fix = -0.4,  top = get_line_height(0.4), col = 0xFF00FF00 }, -- 追加入力データの確認時 1F
+		{ type = frame_attack_types.on_additional_r1,  txt = "-",  fix = -0.4,  top = get_line_height(0.4), col = 0xFF00FF00 }, -- 追加入力データの確認時 1F
 		{ type = frame_attack_types.on_additional_w5,  txt = "+",  fix = -0.3,  top = get_line_height(0.4), col = 0xFF00FF00 }, -- 成立した追加入力データの設定時 5F
-		{ type = frame_attack_types.on_additional_r5,  txt = "5",  fix = -0.4,  top = get_line_height(0.4), col = 0xFF00FF00 }, -- 追加入力データの確認時 5F
+		{ type = frame_attack_types.on_additional_r5,  txt = "=",  fix = -0.4,  top = get_line_height(0.4), col = 0xFF00FF00 }, -- 追加入力データの確認時 5F
 		{ type = frame_attack_types.on_additional_wsp, txt = "+",  fix = -0.3,  top = get_line_height(0.4), col = 0xFF00FF00 }, -- 成立した追加入力データの設定時 Flag
 		{ type = frame_attack_types.on_additional_rsp, txt = "-",  fix = -0.4,  top = get_line_height(0.4), col = 0xFF00FF00 }, -- 追加入力データの確認時 Flag
 		{ type = frame_attack_types.post_fireball,     txt = "◇", fix = -0.4,  separator = true }, -- 弾処理の消失時
@@ -3423,7 +3426,8 @@ rbff2.startplugin  = function()
 			scr:draw_box(x0, ty, x0 + 96, ty + get_line_height(), 0, 0xA0303030)
 			_draw_text(x0 + 1, ty, label)
 			if not global.both_act_neutral then gap_txt, gap_col = " ---", 0xFFFFFFFF end
-			_draw_text(x0 + get_string_width(label) + 1, ty, gap_txt, gap_col)
+			local tx = x0 + get_string_width(label) + 1
+			_draw_text(tx, ty, gap_txt, gap_col)
 			-- スト6風フレームメーター -- 1:OFF, 2:ON:大表示, 3:ON:大表示(+1P情報), 4:ON:大表示(+2P情報)
 			if (global.disp_frame == 3 and p.num == 1) or (global.disp_frame == 4 and p.num == 2) then
 				local boxy = p.frame_info and (ty - get_line_height(#p.frame_info.latest)) or ty
@@ -3431,6 +3435,12 @@ rbff2.startplugin  = function()
 				for ri, info in ipairs(p.frame_info and p.frame_info.latest or {}) do
 					_draw_text(x0 + 1, get_line_height(ri) + (ty - get_line_height(#p.frame_info.latest + 1)), info)
 				end
+			end
+
+			if p.char == 0x0B and p.flag_c8 == 0x20000 then
+				_draw_text(tx + 20, ty, string.format("Drill %2s", p.drill_count))
+			elseif p.char == 0x08 and p.flag_c8 == 0x4000000 then
+				_draw_text(tx + 20, ty, string.format("Taneuma %2s", p.drill_count))
 			end
 		end
 	end
