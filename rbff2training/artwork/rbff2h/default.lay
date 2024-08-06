@@ -21,6 +21,7 @@
 		<image file="chonshu.png"    state="0x0C"/>
 		<image file="chonrei.png"    state="0x0D"/>
 		<image file="duck.png"       state="0x0E"/>
+		<image file="duckp.png"      state="0x1E"/>
 		<image file="kim.png"        state="0x0F"/>
 		<image file="billy.png"      state="0x10"/>
 		<image file="chin.png"       state="0x11"/>
@@ -48,6 +49,9 @@
 			local p1, p2 = pgm:read_u8(0x107BA5), pgm:read_u8(0x107BA7)
 			p1 = (0 < p1 and p1 < 0x18) and p1 or 0x20
 			p2 = (0 < p2 and p2 < 0x18) and p2 or 0x21
+			local p1_lv, p2_lv = pgm:read_u8(0x1004BF) & 0x7, pgm:read_u8(0x1005BF) & 0x7
+			if p1 == 0x0E and p1_lv > 0 then p1 = 0x1E end
+			if p2 == 0x0E and p2_lv > 0 then p2 = 0x1E end
 			if p1_inst.element_state ~= p1 then p1_inst:set_state(p1) end
 			if p2_inst.element_state ~= p2 then p2_inst:set_state(p2) end
 		end)
