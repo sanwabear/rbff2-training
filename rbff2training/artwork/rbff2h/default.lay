@@ -7,29 +7,29 @@
 		<image file="rb2j2.png"      state="0x21"/><!-- JP Inst -->
 		<image file="rb2e1.png"      state="0x30"/><!-- EN Inst -->
 		<image file="rb2e2.png"      state="0x31"/><!-- EN Inst -->
-		<image file="terry.png"      state="0x01"/>
-		<image file="andy.png"       state="0x02"/>
-		<image file="joe.png"        state="0x03"/>
-		<image file="mai.png"        state="0x04"/>
-		<image file="geese.png"      state="0x05"/>
-		<image file="sokaku.png"     state="0x06"/>
-		<image file="bob.png"        state="0x07"/>
-		<image file="honfu.png"      state="0x08"/>
-		<image file="mary.png"       state="0x09"/>
-		<image file="franco.png"     state="0x0A"/>
-		<image file="yamazaki.png"   state="0x0B"/>
-		<image file="chonshu.png"    state="0x0C"/>
-		<image file="chonrei.png"    state="0x0D"/>
-		<image file="duck.png"       state="0x0E"/>
-		<image file="kim.png"        state="0x0F"/>
-		<image file="billy.png"      state="0x10"/>
-		<image file="chin.png"       state="0x11"/>
-		<image file="tung.png"       state="0x12"/>
-		<image file="lawrence.png"   state="0x13"/>
-		<image file="krauser.png"    state="0x14"/>
-		<image file="rick.png"       state="0x15"/>
-		<image file="xiangfei.png"   state="0x16"/>
-		<image file="alfred.png"     state="0x17"/>
+		<image file="terry.svg"      state="0x01"/>
+		<image file="andy.svg"       state="0x02"/>
+		<image file="joe.svg"        state="0x03"/>
+		<image file="mai.svg"        state="0x04"/>
+		<image file="geese.svg"      state="0x05"/>
+		<image file="sokaku.svg"     state="0x06"/>
+		<image file="bob.svg"        state="0x07"/>
+		<image file="honfu.svg"      state="0x08"/>
+		<image file="mary.svg"       state="0x09"/>
+		<image file="franco.svg"     state="0x0A"/>
+		<image file="yamazaki.svg"   state="0x0B"/>
+		<image file="chonshu.svg"    state="0x0C"/>
+		<image file="chonrei.svg"    state="0x0D"/>
+		<image file="duck.svg"       state="0x0E"/>
+		<image file="kim.svg"        state="0x0F"/>
+		<image file="billy.svg"      state="0x10"/>
+		<image file="chin.svg"       state="0x11"/>
+		<image file="tung.svg"       state="0x12"/>
+		<image file="lawrence.svg"   state="0x13"/>
+		<image file="krauser.svg"    state="0x14"/>
+		<image file="rick.svg"       state="0x15"/>
+		<image file="xiangfei.svg"   state="0x16"/>
+		<image file="alfred.svg"     state="0x17"/>
 	</element>
 
 	<view name="inst">
