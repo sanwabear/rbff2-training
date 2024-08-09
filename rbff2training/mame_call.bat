@@ -1,16 +1,18 @@
-@rem 前提
-@rem ASIO4ALLのインストール
-@rem Noto Sans Mono CJK JP Boldフォントのインストール
 @echo off
 cd /d %~dp0
+
+@rem Noto Sans Mono CJK JP Boldフォントのインストール
+call fonts\FontInstall.bat
 
 if NOT exist mame.exe cd ..
 if NOT exist mame.exe cd ..
 if NOT exist mame.exe exit
 
-set common_opts=-rompath roms;Z:\SNK\neogeo\rom;Z:\CAPCOM\SF30th_extract\mame
+set common_opts=-rompath roms;C:\tools\roms\humblebundle_neogeo25th
 set common_opts=%common_opts% -bios unibios40 -confirm_quit -verbose -pause_brightness 1
-set common_opts=%common_opts% -samplerate 44100 -nocompressor -audio_latency 1
+@rem 前提
+@rem ASIO4ALLのインストール
+rem set common_opts=%common_opts% -samplerate 44100 -nocompressor -audio_latency 1
 rem set common_opts=%common_opts% -sound portaudio -pa_api "Windows WDM-KS" -pa_latency 0.001
 rem set common_opts=%common_opts% -volume -5 -samples
 rem set common_opts=%common_opts% -sound auto
