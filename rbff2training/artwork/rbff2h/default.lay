@@ -1,13 +1,36 @@
 <?xml version="1.0"?>
 <mamelayout version="2">
 	<element name="black"><rect><color red="1" green="1" blue="1"/></rect></element>
+	<element name="instj1" defstate="0x20">
+		<image file="rb2j1_1748x2480.png"      state="0x20"><!-- JP Inst -->
+			<bounds x="0" y="0" width="1748" height="2480"/>
+		</image>
+	</element>	
+	<element name="instj2" defstate="0x21">
+		<image file="rb2j2_1742x2480.png"      state="0x21"><!-- JP Inst -->
+			<bounds x="0" y="0" width="1742" height="2480"/>
+		</image>
+	</element>
+	<element name="inste1" defstate="0x30">
+		<image file="rb2e1_1331x1661.png"      state="0x30"><!-- EN Inst -->
+			<bounds x="0" y="0" width="1331" height="1661"/>
+		</image>
+	</element>	
+	<element name="inste2" defstate="0x31">
+		<image file="rb2e2_1744x2310.png"      state="0x31"><!-- EN Inst -->
+			<bounds x="0" y="0" width="1744" height="2310"/>
+		</image>
+	</element>	
+	<element name="background" defstate="0x00">
+		<rect state="0x00">
+			<color red="0" green="0" blue="0" alpha="0.0"/>
+		</rect>
+		<rect state="0x01">
+			<color red="0" green="1" blue="1" />
+		</rect>
+	</element>
 	<element name="char_inst" defstate="0x00">
-		<image file="mai.svg"        state="0x00"/>
-	
-		<image file="rb2j1.png"      state="0x20"/><!-- JP Inst -->
-		<image file="rb2j2.png"      state="0x21"/><!-- JP Inst -->
-		<image file="rb2e1.png"      state="0x30"/><!-- EN Inst -->
-		<image file="rb2e2.png"      state="0x31"/><!-- EN Inst -->
+		<image file="blank.svg"      state="0x00"/>
 		<image file="terry.svg"      state="0x01"/>
 		<image file="andy.svg"       state="0x02"/>
 		<image file="joe.svg"        state="0x03"/>
@@ -22,7 +45,7 @@
 		<image file="chonshu.svg"    state="0x0C"/>
 		<image file="chonrei.svg"    state="0x0D"/>
 		<image file="duck.svg"       state="0x0E"/>
-		<image file="duckp.svg"       state="0x1E"/>
+		<image file="duckp.svg"      state="0x1E"/>
 		<image file="kim.svg"        state="0x0F"/>
 		<image file="billy.svg"      state="0x10"/>
 		<image file="chin.svg"       state="0x11"/>
@@ -34,33 +57,48 @@
 		<image file="alfred.svg"     state="0x17"/>
 	</element>
 
-	<group name="leftbox">
+	<group name="leftbox1">
+		<element id="p1i" ref="instj1"><bounds x="0" y="0" width="7" height="10"/></element><!-- width:height 1:3 -->
+	</group>
+	<group name="rightbox1">
+		<element id="p2i" ref="instj2"><bounds x="0" y="0" width="7" height="10"/></element><!-- width:height 1:3 -->
+	</group>
+	<group name="leftbox2">
 		<element id="p1" ref="char_inst"><bounds x="0" y="0" width="9" height="27"/></element><!-- width:height 1:3 -->
 	</group>
-	<group name="rightbox">
+	<group name="rightbox2">
 		<element id="p2" ref="char_inst"><bounds x="0" y="0" width="9" height="27"/></element><!-- width:height 1:3 -->
+	</group>
+	<group name="mainscr">
+		<screen index="0"><bounds x="0" y="0" width="4" height="3"/></screen><!-- width:height 4:3 -->
 	</group>
 
 	<view name="inst">
-		<group ref="leftbox"><bounds x="-80" y="0" width="80" height="240" /></group>
-		<group ref="rightbox"><bounds x="320" y="0" width="80" height="240" /></group>
-
-		<bounds left="0" top="0" right="400" bottom="240"/><!-- width:height 6:3 -->
-		<screen index="0"><bounds x="0" y="0" width="320" height="240"/></screen><!-- width:height 4:3 -->
+		<group ref="leftbox1"><bounds x="-75" y="70" width="70" height="100" /></group>
+		<group ref="rightbox1"><bounds x="325" y="70" width="70" height="100" /></group>
+		<element ref="background" id="bg">
+			<bounds left="-80" top="0" right="400" bottom="240" />
+		</element>
+		<group ref="leftbox2"><bounds x="-80" y="0" width="80" height="240" /></group>
+		<group ref="rightbox2"><bounds x="320" y="0" width="80" height="240" /></group>
+		<group ref="mainscr"><bounds x="0" y="0" width="320" height="240" /></group>
 	</view>
 
 	<script><![CDATA[
 	file:set_resolve_tags_callback(function()
 		local pgm = machine.devices[":maincpu"].spaces["program"]
 		local inst = file.views["inst"]
+		local bg = inst.items["bg"]
 		local p1_inst, p2_inst = inst.items["p1"], inst.items["p2"]
+		local p1_mq, p2_mq = inst.items["p1i"], inst.items["p2i"]
 		file.views["inst"]:set_prepare_items_callback(function ()
 			local p1, p2 = pgm:read_u8(0x107BA5), pgm:read_u8(0x107BA7)
 			local p1p, p2p = pgm:read_u8(0x1004BF) & 0x7, pgm:read_u8(0x1005BF) & 0x7
-			p1 = (0 < p1 and p1 < 0x18) and p1 or 0x20
-			p2 = (0 < p2 and p2 < 0x18) and p2 or 0x21
+			p1 = (0 < p1 and p1 < 0x18) and p1 or 0x00
+			p2 = (0 < p2 and p2 < 0x18) and p2 or 0x00
 			if p1 == 0x0E and p1p > 0 then p1 = 0x1E end
 			if p2 == 0x0E and p2p > 0 then p1 = 0x1E end
+			bg:set_state((p1 == 0x00) and 0x00 or 0x01)
 			if p1_inst.element_state ~= p1 then p1_inst:set_state(p1) end
 			if p2_inst.element_state ~= p2 then p2_inst:set_state(p2) end
 		end)
