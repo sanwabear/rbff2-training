@@ -2449,7 +2449,6 @@ rbff2.startplugin  = function()
 				global.lag_frame, global.last_frame = global.last_frame == data, data
 				if data >= 0x176E then ret.value = 0 end -- 0x176Eで止まるのでリセットしてループさせる
 			end,
-			[0x107EBE] = function(data) global.skip_frame1 = data ~= 0 end, -- 潜在能力強制停止
 		},
 		wp32 = {
 		},
@@ -2483,6 +2482,7 @@ rbff2.startplugin  = function()
 			} }] = function(data, ret) ret.value = 1 end, -- 双角ステージの雨バリエーション時でも1ラウンド相当の前処理を行う
 			[mem.stage_base_addr + 0x46] = function(data, ret) if global.fix_scr_top > 1 then ret.value = data + global.fix_scr_top - 20 end end,
 			[mem.stage_base_addr + 0xA4] = function(data, ret) if global.fix_scr_top > 1 then ret.value = data + global.fix_scr_top - 20 end end,
+			[{ addr = 0x107EBE, filter = { 0x24C5E, 0x24CE2 } }] = function(data) global.skip_frame1 = data ~= 0 end, -- 潜在能力強制停止
 		},
 		rp32 = {
 			[{ addr = 0x5B1DE, filter = 0x5B1B6 }] = function(data) get_object_by_reg("A4", {}).last_damage_scaling1 = 1 end,
@@ -3423,7 +3423,7 @@ rbff2.startplugin  = function()
 			local gap_col = gap == 0 and 0xFFFFFFFF or gap > 0 and 0xFF0088FF or 0xFFFF0088
 			local label = string.format("Startup %2s / Total %3s / Recovery", startup, total)
 			local ty = p.num == 1 and y1 - height or y1 + height
-			scr:draw_box(x0, ty, x0 + 96, ty + get_line_height(), 0, 0xA0303030)
+			scr:draw_box(x0, ty, x0 + 166, ty + get_line_height(), 0, 0xA0303030)
 			_draw_text(x0 + 1, ty, label)
 			if not global.both_act_neutral then gap_txt, gap_col = " ---", 0xFFFFFFFF end
 			local tx = x0 + get_string_width(label) + 1
@@ -3442,6 +3442,8 @@ rbff2.startplugin  = function()
 			elseif p.char == 0x08 and p.flag_c8 == 0x4000000 then
 				_draw_text(tx + 20, ty, string.format("Taneuma %2s", p.drill_count))
 			end
+				_draw_text(tx + 20, ty, string.format("Skip %s", global.skip_frame1))
+			 
 		end
 	end
 
