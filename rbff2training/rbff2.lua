@@ -3442,8 +3442,7 @@ rbff2.startplugin  = function()
 			elseif p.char == 0x08 and p.flag_c8 == 0x4000000 then
 				_draw_text(tx + 20, ty, string.format("Taneuma %2s", p.drill_count))
 			end
-				_draw_text(tx + 20, ty, string.format("Skip %s", global.skip_frame1))
-			 
+			--draw_text(tx + 20, ty, string.format("Skip %s", global.skip_frame1))
 		end
 	end
 
