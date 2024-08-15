@@ -2437,7 +2437,6 @@ rbff2.startplugin  = function()
 	table.insert(wps.all, {                                                 -- プレイヤー別ではない共通のフック
 		wp08 = {
 			[0x10B862] = function(data) mem._0x10B862 = data end,           -- 押し合い判定で使用
-			--[0x107C1F] = function(data) global.skip_frame1 = data ~= 0 end, -- 潜在能力強制停止
 			[0x107EBF] = function(data) global.skip_frame2 = data ~= 0 end, -- 潜在能力強制停止
 		},
 		wp16 = {
@@ -2450,6 +2449,7 @@ rbff2.startplugin  = function()
 				global.lag_frame, global.last_frame = global.last_frame == data, data
 				if data >= 0x176E then ret.value = 0 end -- 0x176Eで止まるのでリセットしてループさせる
 			end,
+			[0x107EBE] = function(data) global.skip_frame1 = data ~= 0 end, -- 潜在能力強制停止
 		},
 		wp32 = {
 		},
@@ -3616,6 +3616,9 @@ rbff2.startplugin  = function()
 			or (p.kaiserwave[0x42158] == global.frame_number) then
 				update = true
 			end
+		end
+		if p.flag_cc ~= p.old.flag_cc and ut.tstb(p.flag_7e, db.flag_7e._02) then
+			update = true
 		end
 		local f_plus  = ut.tstb(p.attackbit, frame_attack_types.frame_plus)
 
