@@ -6504,7 +6504,7 @@ rbff2.startplugin  = function()
 			col[6] = g.mvs_billy and 2 or 1 -- ビリーMVS化
 			col[7] = g.sadomazo_fix and 2 or 1 -- サドマゾと必勝!逆襲拳空振り時の投げ無敵化修正
 			col[8] = g.snk_time       -- タイムをSNK表示
-			col[9] = g.fix_skip_frame -- 暗転フレームチェック処理修正
+			col[9] = g.fix_skip_frame and 2 or 1 -- 暗転フレームチェック処理修正
 		end,
 		ut.new_filled_table(9, function()
 			local col, p, g      = menu.extra.pos.col, players, global
