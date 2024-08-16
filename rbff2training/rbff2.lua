@@ -441,6 +441,12 @@ rbff2.startplugin  = function()
 				mem.wd32(0x39F24, 0x66000014)
 			end
 		end,
+		fix_skip_frame = function(enabled)
+			-- ガード解除モーションの進行処理
+			-- 002800: 4A2D FEBF tst.b   (-$141,A5) 107EBF 暗転停止フレーム  
+			--         4A6D FEBE tst.w   (-$142,A5) にすべき
+			mem.wd32(0x002800, enabled and 0x4A6DFEBE or 0x4A2DFEBF)
+		end,
 		easy_move    = {
 			real_counter = function(mode)        -- 1:OFF 2:ジャーマン 3:フェイスロック 4:投げっぱなしジャーマン"
 				if mode > 1 then
@@ -678,6 +684,7 @@ rbff2.startplugin  = function()
 		replay_reset         = 2, -- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
 		damaged_move         = 1,
 		all_bs               = false,
+		fix_skip_frame       = false,
 		mvs_billy            = false,
 		sadomazo_fix         = false,
 		snk_time             = 2, -- タイムSNK表示
@@ -2438,6 +2445,7 @@ rbff2.startplugin  = function()
 		wp08 = {
 			[0x10B862] = function(data) mem._0x10B862 = data end,           -- 押し合い判定で使用
 			[0x107EBF] = function(data) global.skip_frame2 = data ~= 0 end, -- 潜在能力強制停止
+			--[0x107C1F] = function(data) global.skip_frame3 = data ~= 0 end, -- 潜在能力強制停止
 		},
 		wp16 = {
 			[mem.stage_base_addr + screen.offset_x] = function(data) screen.left = data + (320 - scr.width * scr.xscale) / 2 end,
@@ -6476,6 +6484,7 @@ rbff2.startplugin  = function()
 			{ "ビリーMVS化", menu.labels.off_on, },
 			{ "サドマゾと逆襲拳のバグ修正", menu.labels.off_on, },
 			{ "タイム表示(リスタートで反映)", { "RB2(デフォルト)", "RB2", "SNK", }, },
+			{ "暗転フレームチェック処理修正", menu.labels.off_on, },
 		},
 		function()
 			---@diagnostic disable-next-line: undefined-field
@@ -6495,8 +6504,9 @@ rbff2.startplugin  = function()
 			col[6] = g.mvs_billy and 2 or 1 -- ビリーMVS化
 			col[7] = g.sadomazo_fix and 2 or 1 -- サドマゾと必勝!逆襲拳空振り時の投げ無敵化修正
 			col[8] = g.snk_time       -- タイムをSNK表示
+			col[9] = g.fix_skip_frame -- 暗転フレームチェック処理修正
 		end,
-		ut.new_filled_table(8, function()
+		ut.new_filled_table(9, function()
 			local col, p, g      = menu.extra.pos.col, players, global
 			p[1].dis_plain_shift = col[1] == 2 or col[1] == 3 -- ラインずらさない現象
 			p[2].dis_plain_shift = col[1] == 2 or col[1] == 4 -- ラインずらさない現象
@@ -6507,9 +6517,11 @@ rbff2.startplugin  = function()
 			g.mvs_billy          = col[6] == 2       -- ビリーMVS化
 			g.sadomazo_fix       = col[7] == 2       -- サドマゾと必勝!逆襲拳空振り時の投げ無敵化修正
 			g.snk_time           = col[8]            -- タイムSNK表示
+			g.fix_skip_frame     = col[9] == 2       -- 暗転フレームチェック処理修正
 			mod.mvs_billy(g.mvs_billy)
 			mod.sadomazo_fix(g.sadomazo_fix)
 			mod.snk_time(g.snk_time)
+			mod.fix_skip_frame(g.fix_skip_frame)
 			menu.current = menu.main
 		end))
 
