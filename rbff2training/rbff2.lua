@@ -4028,7 +4028,7 @@ rbff2.startplugin  = function()
 		if p.firing then
 			return false -- 飛び道具残存中にフレームメータの攻撃表示が持続するための措置
 		end
-		return true
+		return p.base == 0x261A0 or p.base == 0x2D79E
 	end
 	local get_act_data = function(p)
 		local cache = db.chars[p.char] and db.chars[p.char].acts or {}
@@ -4519,11 +4519,7 @@ rbff2.startplugin  = function()
 						p.hurt.dodge = get_dodge(p, box, p.hurt.max_top, p.hurt.min_bottom)
 					end
 				end
-				if p.body.disp_hitbox
-					and (
-						((box.type.enabled == 2) and box.type.in_range(p, box))
-						or (box.type.enabled == 3)
-					) then
+				if p.body.disp_hitbox and box.type.visible(p, box) then
 					table.insert(p.hitboxies, box)
 					table.insert(hitboxies, box)
 					table.insert(p.hitbox_types, box.type)
@@ -6664,6 +6660,9 @@ rbff2.startplugin  = function()
 				local menu_off_on = menu.labels.off_on
 				if b == db.box_types.down_otg then
 					-- ダウン追撃用判定はトドメの範囲外なら表示しない＝ON、常に表示＝ALL
+					menu_off_on = { "OFF", "ON", "ON:ALL" }
+				elseif b == db.box_types.launch then
+					-- 空中追撃用判定はメインラインでないなら表示しない＝ON、常に表示＝ALL
 					menu_off_on = { "OFF", "ON", "ON:ALL" }
 				end
 				return { b.name, menu_off_on, { fill = b.fill, outline = b.outline } }

@@ -3584,8 +3584,12 @@ for _, boxtype in pairs(box_types) do
 	boxtype.fill    = (0xFFFFFFFF & (boxtype.fill << 24)) | boxtype.color
 	boxtype.outline = (0xFFFFFFFF & (boxtype.outline << 24)) | boxtype.color
 	if boxtype == box_types.down_otg then
-		boxtype.in_range = function(p, box)
+		-- visible ... 1:OFF 2:ON(条件付き) or 3:ON:ALL
+		boxtype.visible = function(p, box)
+			if box.type.enabled == 1 then return false end
+			if box.type.enabled == 3 then return true end
 			-- トドメの範囲判定
+			-- 東の3B、シャンフェイの4B、アルフレッドのAは表示。フランコの5A5A5Cは非表示
 			if 0 < box.real_top and box.real_top < 13 then
 				return true
 			elseif 0 < box.real_bottom and box.real_bottom < 13 then
@@ -3593,8 +3597,16 @@ for _, boxtype in pairs(box_types) do
 			end
 			return false
 		end
+	elseif boxtype == box_types.launch then
+		boxtype.visible = function(p, box)
+			if box.type.enabled == 1 then return false end
+			if box.type.enabled == 3 then return true end
+			-- メインライン上だけ表示
+			-- 東の対メインCは非表示
+			return p.pos_z == 24
+		end
 	else
-		boxtype.in_range = function(p, box) return true end
+		boxtype.visible = function(p, box) return box.type.enabled > 1 end
 	end
 end
 local hurt_boxies   = ut.new_set(
