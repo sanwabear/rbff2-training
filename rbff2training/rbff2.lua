@@ -2194,6 +2194,7 @@ rbff2.startplugin  = function()
 			[{ addr = 0x94, filter = 0x42BFE }] = function(data, ret)
 				if global.auto_input.drill > 1 then ret.value = drill_counts[global.auto_input.drill] end -- 自動ドリル
 			end,
+			[{ addr = 0xA9, filter = { 0x5C2B4, 0x5C2CC }}] = function(data) if data ~= 0 then p.on_hitcheck = now() end end,
 			--[{ addr = 0xA5, filter = { 0x3DBE6, 0x49988, 0x42C26 } }] = function(data, ret)
 			[0xA5] = function(data, ret)
 				local pc = mem.pc()
@@ -4409,7 +4410,7 @@ rbff2.startplugin  = function()
 		for _, p in ut.find_all(all_objects, function(_, p) return p.proc_active end) do
 			-- 判定表示前の座標補正
 			p.x, p.y, p.flip_x = p.pos - screen.left, screen.top - p.pos_y - p.pos_z, (p.flip_x1 ~ p.flip_x2) > 0 and 1 or -1
-			p.vulnerable = (p.invincible and p.invincible > 0) or p.hurt_invincible or p.on_vulnerable ~= global.frame_number
+			p.vulnerable = (p.invincible and p.invincible > 0) or p.hurt_invincible or (p.on_hitcheck ~= global.frame_number and p.on_vulnerable ~= global.frame_number)
 			-- ut.printf("%x p.vulnerable %s %s %s %s %s %s", p.addr.base, p.vulnerable, p.invincible, p.hurt_invincible, p.on_vulnerable, global.frame_number, p.on_vulnerable ~= global.frame_number)
 			-- 判定位置を考慮しない属性を追加
 			p.parrieable = p.parrieable | (p.parrieable1 and p.parrieable2 and hitbox_parry_bits.baigaeshi or 0)
