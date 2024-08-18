@@ -4022,6 +4022,9 @@ rbff2.startplugin  = function()
 		if ut.tstb(p.flag_c0, 0x3FFD723) or ((p.attack_data or 0) | p.flag_c4 | p.flag_c8) ~= 0 or ut.tstb(p.flag_cc, 0xFFFFFF3F) or ut.tstb(p.flag_d0, db.flag_d0.hurt) then
 			return false -- ガードできない動作中
 		end
+		if p.act == 0x3B then
+			return false
+		end
 		if p.firing then
 			return false -- 飛び道具残存中にフレームメータの攻撃表示が持続するための措置
 		end
