@@ -2692,14 +2692,22 @@ rbff2.startplugin  = function()
 			[{ addr = 0x94, filter = { 0x434C8, 0x434E0 } }] = function(data) p.drill_count = data end, -- ドリルのCカウント 0x434C8 Cカウント加算, 0x434E0 C以外押下でCカウントリセット
 			[0xAA] = function(data)
 				p.attackbits.fullhit = data ~= 0
-				-- ut.printf("full %X %s %s | %X %X | %s | %X %X %X | %s", mem.pc(), now(), p.on_hit, base, data, ut.tobitstr(data), p.act, p.act_count, p.act_frame, p.attackbits.fullhit)
+				ut.printf("full %X %s %s | %X %X | %s | %X %X %X | %s", mem.pc(), now(), p.on_hit, base, data, ut.tobitstr(data), p.act, p.act_count, p.act_frame, p.attackbits.fullhit)
 				if p.is_fireball and data == 0xFF then p.on_fireball = now() * -1 end
-				if data == 0xFF and p.is_fireball and p.body.char == 0x10 and p.act == 0x266 then
+				if data == 0xFF and p.is_fireball and p.body.char == db.char_id.billy and p.act == 0x266 then
 					-- 三節棍中段打ちの攻撃無効化、判定表示の邪魔なのでここで判定を削除する
 					p.boxies = {}
 					p.attackbits.fake = true
-				elseif data == 0xFF and p.is_fireball and p.body.char == 0x06 and p.act == 0x274 then
+				elseif data == 0xFF and p.is_fireball and p.body.char == db.char_id.sokaku and p.act == 0x274 then
 					-- まきびしの攻撃無効化、判定表示の邪魔なのでここで判定を削除する
+					p.boxies = {}
+					p.attackbits.fake = true
+				elseif data == 0xFF and p.is_fireball and p.body.char == db.char_id.chonshu and (p.act == 0x26F or p.act == 0x26C) then
+					-- 帝王漏尽拳の攻撃無効化、判定表示の邪魔なのでここで判定を削除する
+					p.boxies = {}
+					p.attackbits.fake = true
+				elseif data == 0xFF and p.is_fireball and p.body.char == db.char_id.chonrei and p.act == 0x266 then
+					-- 帝王漏尽拳の攻撃無効化、判定表示の邪魔なのでここで判定を削除する
 					p.boxies = {}
 					p.attackbits.fake = true
 				end
@@ -3479,7 +3487,7 @@ rbff2.startplugin  = function()
 		frame_attack_types.low                 | -- 下段攻撃無敵
 		frame_attack_types.away                | --上半身無敵 32 避け
 		frame_attack_types.waving_blow         | -- 上半身無敵 40 ウェービングブロー,龍転身,ダブルローリング
-		frame_attack_types.laurence_away       | -- 上半身無敵 48 ローレンス避け
+		frame_attack_types.lawrence_away       | -- 上半身無敵 48 ローレンス避け
 		--frame_attack_types.crounch60           | -- 頭部無敵 60 屈 アンディ,東,舞,ホンフゥ,マリー,山崎,崇秀,崇雷,キム,ビリー,チン,タン
 		--frame_attack_types.crounch64           | -- 頭部無敵 64 屈 テリー,ギース,双角,ボブ,ダック,リック,シャンフェイ,アルフレッド
 		--frame_attack_types.crounch68           | -- 頭部無敵 68 屈 ローレンス
