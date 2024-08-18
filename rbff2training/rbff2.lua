@@ -2194,6 +2194,7 @@ rbff2.startplugin  = function()
 			[{ addr = 0x94, filter = 0x42BFE }] = function(data, ret)
 				if global.auto_input.drill > 1 then ret.value = drill_counts[global.auto_input.drill] end -- 自動ドリル
 			end,
+			-- 着地暗転ガー不では無敵フラグチェックまでの隙間にヒットチェックが入るのでヒットチェック時のフレームを記録する
 			[{ addr = 0xA9, filter = { 0x5C2B4, 0x5C2CC }}] = function(data) if data ~= 0 then p.on_hitcheck = now() end end,
 			--[{ addr = 0xA5, filter = { 0x3DBE6, 0x49988, 0x42C26 } }] = function(data, ret)
 			[0xA5] = function(data, ret)
