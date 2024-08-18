@@ -445,7 +445,26 @@ rbff2.startplugin  = function()
 			-- ガード解除モーションの進行処理
 			-- 002800: 4A2D FEBF tst.b   (-$141,A5) 107EBF 暗転停止フレーム  
 			--         4A6D FEBE tst.w   (-$142,A5) にすべき
-			mem.wd32(0x002800, enabled and 0x4A6DFEBE or 0x4A2DFEBF)
+			mem.wd32(0x002800, enabled and 0x4A6DFEBE or 0x4A2DFEBF) -- 暗転の瞬間も加味する
+
+			-- 着地ガー不が該当する無敵チェックの修正
+			-- 元の処理は暗転フレームを加味していない
+			--[[
+			02327A: 4A2C 00B1                tst.b   ($b1,A4)               ; 無敵中？
+			02327E: 6704                     beq     $23284                 ;
+			023280: 4E75                     rts                            ;
+			023282: 4E71                     nop                            ;
+			023284: 197C 0001 00A9           move.b  #$1, ($a9,A4)          ; 無敵終わりをセット、更新されない場合は無敵継続
+			02328A: 4E75                     rts                            ;
+            02328C: 4A2D FEBF                tst.b   (-$141,A5)             ; 107EBF 暗転チェック
+			]]
+			-- 元の処理をNOPにして無敵フレームチェック+消費を伴う処理に移譲する
+			mem.wd32(0x02327A, enabled and 0x44E714E71 or 0x4A2C00B1)
+			mem.wd16(0x02327E, enabled and 0x44E71 or 0x6704)
+			mem.wd16(0x023280, enabled and 0x44E71 or 0x4E75)
+			mem.wd32(0x023284, enabled and 0x44E714E71 or 0x197C0001)
+			mem.wd32(0x023288, enabled and 0x44E714E71 or 0x00A94E75)
+			mem.wd32(0x02328C, enabled and 0x4A6DFEBE or 0x4A2DFEBF) -- 暗転の瞬間も加味する
 		end,
 		easy_move    = {
 			real_counter = function(mode)        -- 1:OFF 2:ジャーマン 3:フェイスロック 4:投げっぱなしジャーマン"
@@ -2685,6 +2704,7 @@ rbff2.startplugin  = function()
 					})
 					-- ut.printf("p=%x %x %x %x %s addr=%x id=%02x l=%s r=%s t=%s b=%s", p.addr.base, data, base, p.box_addr, 0, a2, id, x1, x2, y1, y2)
 				end
+				-- ut.printf("%s %s box %x %x %x %s", now(), p.on_hit, p.addr.base, mem.pc(), data, #p.boxies)
 			end,
 			[0x8D] = function(data)
 				p.hitstop_remain, p.in_hitstop = data, (data > 0 or (p.hitstop_remain and p.hitstop_remain > 0)) and now() or p.in_hitstop -- 0になるタイミングも含める
@@ -4390,6 +4410,7 @@ rbff2.startplugin  = function()
 			-- 判定表示前の座標補正
 			p.x, p.y, p.flip_x = p.pos - screen.left, screen.top - p.pos_y - p.pos_z, (p.flip_x1 ~ p.flip_x2) > 0 and 1 or -1
 			p.vulnerable = (p.invincible and p.invincible > 0) or p.hurt_invincible or p.on_vulnerable ~= global.frame_number
+			-- ut.printf("%x p.vulnerable %s %s %s %s %s %s", p.addr.base, p.vulnerable, p.invincible, p.hurt_invincible, p.on_vulnerable, global.frame_number, p.on_vulnerable ~= global.frame_number)
 			-- 判定位置を考慮しない属性を追加
 			p.parrieable = p.parrieable | (p.parrieable1 and p.parrieable2 and hitbox_parry_bits.baigaeshi or 0)
 			p.hitboxies, p.hitbox_types, p.hurt = {}, {}, {} -- 座標補正後データ格納のためバッファのクリア
