@@ -1297,7 +1297,7 @@ rbff2.startplugin  = function()
 	local get_push_box                                 = function(p)
 		-- 家庭用 05C6D0 からの処理
 		local push_box = db.chars[p.char].push_box
-		if p.char == 0x5 and ut.tstb(p.flag_c8, db.flag_c8._15) then
+		if p.char == db.char_id.geese and ut.tstb(p.flag_c8, db.flag_c8._15) then
 			return push_box[0x5C9BC]
 		else
 			if ut.tstb(p.flag_c0, db.flag_c0._01) ~= true and p.pos_y ~= 0 then
@@ -1992,7 +1992,7 @@ rbff2.startplugin  = function()
 				p.stun              = mem.r08(data + base_addr.stun) -- 気絶値 05C1CA からの処理
 				p.stun_timer        = mem.r08(data + base_addr.stun_timer) -- 気絶タイマー 05C1CA からの処理
 				p.max_hit_dn        = data > 0 and mem.r08(data + base_addr.max_hit) or 0
-				p.multi_hit         = p.max_hit_dn > 1 or p.max_hit_dn == 0 or (p.char == 0x4 and p.attack == 0x16)
+				p.multi_hit         = p.max_hit_dn > 1 or p.max_hit_dn == 0 or (p.char == db.char_id.mai and p.attack == 0x16)
 				p.tw_muteki2        = data >= 0x70 and mem.r08(base_addr.tw_invincible + (0xFF & (data - 0x70))) or 0 -- 投げ無敵 家庭用 039FE4からの処理
 				p.esaka_target      = false
 				if 0x58 > data then
@@ -2165,8 +2165,8 @@ rbff2.startplugin  = function()
 		p.rp08                     = {
 			[{ addr = 0x12, filter = { 0x3DCF8, 0x49B2C } }] = function(data, ret)
 				local check_count = 0
-				if p.char == 0x5 then check_count = global.auto_input.rave == 10 and 9 or (global.auto_input.rave - 1) end
-				if p.char == 0x14 then check_count = global.auto_input.desire == 11 and 9 or (global.auto_input.desire - 1) end
+				if p.char == db.char_id.geese then check_count = global.auto_input.rave == 10 and 9 or (global.auto_input.rave - 1) end
+				if p.char == db.char_id.krauser then check_count = global.auto_input.desire == 11 and 9 or (global.auto_input.desire - 1) end
 				if mem.rg("D1", 0xFF) < check_count then ret.value = 0x3 end -- 自動デッドリー、自動アンリミ1
 			end,
 			[{ addr = 0x28, filter = ut.table_add_all(special_throw_addrs, { 0x6042A }) }] = extra_throw_callback,
@@ -2201,9 +2201,9 @@ rbff2.startplugin  = function()
 				local pc = mem.pc()
 				if not in_match or 0x100000 < pc or db.ignore_a5_pc[pc] then return end
 				p.on_additional_r5 = now()
-				if p.char == 0x5 and global.auto_input.rave == 10 then ret.value = 0xFF end -- 自動デッドリー
-				if p.char == 0x14 and global.auto_input.desire == 11 then ret.value = 0xFE end -- 自動アンリミ2
-				if p.char == 0xB and global.auto_input.drill == 5 then ret.value = 0xFE end -- 自動ドリルLv.5
+				if p.char == db.char_id.geese and global.auto_input.rave == 10 then ret.value = 0xFF end -- 自動デッドリー
+				if p.char == db.char_id.krauser and global.auto_input.desire == 11 then ret.value = 0xFE end -- 自動アンリミ2
+				if p.char == db.char_id.yamazaki and global.auto_input.drill == 5 then ret.value = 0xFE end -- 自動ドリルLv.5
 			end,
 			[{ addr = 0xB8, filter = { --[[0x3A6A4,]] 0x3AA62 } }] = function(data) -- 必殺技IDチェック
 				local ac = additional_sps[p.char]
@@ -2613,7 +2613,7 @@ rbff2.startplugin  = function()
 				local fake = ((data & 0xFB) == 0 or ut.tstb(data, 0x8) == false)
 				local fake_pc = mem.pc() == 0x11E1E and now() ~= p.on_hit                       -- ヒット時のフラグセットは嘘判定とはしない
 				p.attackbits.fake = fake_pc and fake
-				if mem.pc() == 0x2D462 and p.char == 0x10 and data == 0x8 then p.attackbits.fake = true end -- MVSビリーの判定なくなるバグの表現専用
+				if mem.pc() == 0x2D462 and p.char == db.char_id.billy and data == 0x8 then p.attackbits.fake = true end -- MVSビリーの判定なくなるバグの表現専用
 				p.attackbits.obsolute = (not fake_pc) and fake
 				if fake_pc and p.attackbits.harmless and p.on_update_act then p.attackbits.fake = true end
 				-- ut.printf("%X %s %s | %X %X | %s | %s %s | %X %X %X | %s %s", mem.pc(), now(), p.on_hit, base, data, ut.tobitstr(data), fake_pc, fake, p.act, p.act_count, p.act_frame, p.attackbits.fake, p.attackbits.obsolute)
@@ -3475,9 +3475,9 @@ rbff2.startplugin  = function()
 				end
 			end
 
-			if p.char == 0x0B and p.flag_c8 == 0x20000 then
+			if p.char == db.char_id.yamazaki and p.flag_c8 == 0x20000 then
 				_draw_text(tx + 20, ty, string.format("Drill %2s", p.drill_count))
-			elseif p.char == 0x08 and p.flag_c8 == 0x4000000 then
+			elseif p.char == db.char_id.honfu and p.flag_c8 == 0x4000000 then
 				_draw_text(tx + 20, ty, string.format("Taneuma %2s", p.drill_count))
 			end
 			--draw_text(tx + 20, ty, string.format("Skip %s", global.skip_frame1))
@@ -4932,24 +4932,26 @@ rbff2.startplugin  = function()
 
 			-- 自動投げ追撃
 			if global.auto_input.combo_throw then
-				if p.char == 3 and p.act == 0x70 then
+				if p.char == db.char_id.joe and p.act == 0x70 then
 					p.reset_cmd_hook(db.cmd_types._2C) -- ジョー
 				elseif p.act == 0x6D and p.char_data.add_throw then
 					p.reset_sp_hook(p.char_data.add_throw) -- ボブ、ギース、双角、マリー
-				elseif p.char == 22 and p.act == 0x9F and p.act_count == 2 and p.act_frame >= 0 and p.char_data.add_throw then
+				elseif p.char == db.char_id.xiangfei and p.act == 0x9F and p.act_count == 2 and p.act_frame >= 0 and p.char_data.add_throw then
 					p.reset_sp_hook(p.char_data.add_throw) -- 閃里肘皇・心砕把
+				elseif p.char == db.char_id.duck and (p.act == 0xAF or p.act == 0xB8 or p.act == 0xB9) then
+					p.reset_sp_hook(p.char_data.add_throw) -- ダック
 				end
 			end
 
 			-- 自動閃里肘皇・貫空
-			if global.auto_input.kanku and p.char == 22 then
+			if global.auto_input.kanku and p.char == db.char_id.xiangfei then
 				if p.act == 0xA1 and p.act_count == 6 and p.act_frame >= 0 then
 					p.reset_sp_hook(db.rvs_bs_list[p.char][21]) -- 閃里肘皇・貫空
 				end
 			end
 
 			-- 自動超白龍
-			if 1 < global.auto_input.pairon and p.char == 22 then
+			if 1 < global.auto_input.pairon and p.char == db.char_id.xiangfei then
 				if p.act == 0x43 and p.act_count >= 0 and p.act_count <= 3 and p.act_frame >= 0 and 2 == global.auto_input.pairon then
 					p.reset_sp_hook(db.rvs_bs_list[p.char][28]) -- 超白龍
 				elseif p.act == 0x43 and p.act_count == 3 and p.act_count <= 3 and p.act_frame >= 0 and 3 == global.auto_input.pairon then
@@ -6565,7 +6567,7 @@ rbff2.startplugin  = function()
 			{ "自動ダウン投げ", menu.labels.off_on, },
 			{ "自動必殺投げ", menu.labels.off_on, },
 			{ "自動ダウン攻撃", menu.labels.off_on, },
-			{ "通常投げの派生技", menu.labels.off_on, },
+			{ "自動投げ派生", menu.labels.off_on, },
 			{ "デッドリーレイブ", { "通常動作", 2, 3, 4, 5, 6, 7, 8, 9, 10 }, },
 			{ "アンリミテッドデザイア", { "通常動作", 2, 3, 4, 5, 6, 7, 8, 9, 10, "ギガティックサイクロン" }, },
 			{ "ドリル", { "通常動作", 2, 3, 4, 5 }, },
