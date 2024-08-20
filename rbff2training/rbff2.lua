@@ -2613,7 +2613,7 @@ rbff2.startplugin  = function()
 				local fake = ((data & 0xFB) == 0 or ut.tstb(data, 0x8) == false)
 				local fake_pc = mem.pc() == 0x11E1E and now() ~= p.on_hit                       -- ヒット時のフラグセットは嘘判定とはしない
 				p.attackbits.fake = fake_pc and fake
-				if mem.pc() == 0x2D462 and p.char == db.char_id.billy and data == 0x8 then p.attackbits.fake = true end -- MVSビリーの判定なくなるバグの表現専用
+				-- if mem.pc() == 0x2D462 and p.char == db.char_id.billy and data == 0x8 then p.attackbits.fake = true end -- MVSビリーの判定なくなるバグの表現専用
 				p.attackbits.obsolute = (not fake_pc) and fake
 				if fake_pc and p.attackbits.harmless and p.on_update_act then p.attackbits.fake = true end
 				-- ut.printf("%X %s %s | %X %X | %s | %s %s | %X %X %X | %s %s", mem.pc(), now(), p.on_hit, base, data, ut.tobitstr(data), fake_pc, fake, p.act, p.act_count, p.act_frame, p.attackbits.fake, p.attackbits.obsolute)
@@ -2704,7 +2704,13 @@ rbff2.startplugin  = function()
 						possible = possible or 0,
 						blockable = blockable or 0,
 					})
-					-- ut.printf("p=%x %x %x %x %s addr=%x id=%02x l=%s r=%s t=%s b=%s", p.addr.base, data, base, p.box_addr, 0, a2, id, x1, x2, y1, y2)
+					--[[
+					ut.printf("p=%x %x %x %x %s addr=%x id=%02x knd=%s l=%s r=%s t=%s b=%s ps=%s bl=%s",
+						p.addr.base, data, base, p.box_addr, 0, a2, id,
+						type.kind,
+						left, right, top, bottom,
+						possible, blockable)
+					]]
 				end
 				-- ut.printf("%s %s box %x %x %x %s", now(), p.on_hit, p.addr.base, mem.pc(), data, #p.boxies)
 			end,
@@ -2716,23 +2722,19 @@ rbff2.startplugin  = function()
 				p.attackbits.fullhit = data ~= 0
 				--ut.printf("full %X %s %s | %X %X | %s | %X %X %X | %s", mem.pc(), now(), p.on_hit, base, data, ut.tobitstr(data), p.act, p.act_count, p.act_frame, p.attackbits.fullhit)
 				if p.is_fireball and data == 0xFF then p.on_fireball = now() * -1 end
+				local fake = true
 				if data == 0xFF and p.is_fireball and p.body.char == db.char_id.billy and p.act == 0x266 then
 					-- 三節棍中段打ちの攻撃無効化、判定表示の邪魔なのでここで判定を削除する
-					p.boxies = {}
-					p.attackbits.fake = true
 				elseif data == 0xFF and p.is_fireball and p.body.char == db.char_id.sokaku and p.act == 0x274 then
 					-- まきびしの攻撃無効化、判定表示の邪魔なのでここで判定を削除する
-					p.boxies = {}
-					p.attackbits.fake = true
 				elseif data == 0xFF and p.is_fireball and p.body.char == db.char_id.chonshu and (p.act == 0x26F or p.act == 0x26C) then
 					-- 帝王漏尽拳の攻撃無効化、判定表示の邪魔なのでここで判定を削除する
-					p.boxies = {}
-					p.attackbits.fake = true
 				elseif data == 0xFF and p.is_fireball and p.body.char == db.char_id.chonrei and p.act == 0x266 then
 					-- 帝王漏尽拳の攻撃無効化、判定表示の邪魔なのでここで判定を削除する
-					p.boxies = {}
-					p.attackbits.fake = true
+				else
+					fake = false
 				end
+				if fake then p.boxies, p.attackbits.fake = {}, true end
 			end,
 			[0xAB] = function(data) p.max_hit_nm = data end, -- 同一技行動での最大ヒット数 分子
 			[0xB1] = function(data) p.hurt_invincible = data > 0 end, -- やられ判定無視の全身無敵
