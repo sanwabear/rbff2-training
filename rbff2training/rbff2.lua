@@ -4016,6 +4016,7 @@ rbff2.startplugin  = function()
 
 	-- 技データのIDかフラグから技データを返す
 	local resolve_act_neutral = function(p)
+		--[[
 		if p.act <= 6 then
 			return true
 		end
@@ -4025,6 +4026,7 @@ rbff2.startplugin  = function()
 		if p.act == 0x3B then
 			return false
 		end
+		]]
 		if p.firing then
 			return false -- 飛び道具残存中にフレームメータの攻撃表示が持続するための措置
 		end
@@ -4057,14 +4059,14 @@ rbff2.startplugin  = function()
 			act_data = cache[name] or { bs_name = name, name = name, normal_name = name, slide_name = name, count = 1 }
 			if not cache[p.act] then cache[p.act] = act_data end
 			if not cache[name] then cache[name] = act_data end
-			act_data.neutral = act_data.neutral or resolve_act_neutral(p)
+			act_data.neutral = --[[act_data.neutral or ]]resolve_act_neutral(p)
 			act_data.type = act_data.type or (act_data.neutral and db.act_types.free or db.act_types.any)
 			--if act_data.neutral then print(global.frame_number, p.num, string.format("%X", p.act), "act neutral") end
 		elseif act_data then -- フラグ状態と技データの両方でニュートラル扱いかどうかを判断する
-			local n1, n2 = resolve_act_neutral(p), ut.tstb(act_data.type, db.act_types.free | db.act_types.block)
+			local n1--[[, n2]] = resolve_act_neutral(p)--, ut.tstb(act_data.type, db.act_types.free | db.act_types.block)
 			--if n1 then print(global.frame_number, p.num, "flag neutral") end
 			--if n2 then print(global.frame_number, p.num, "act neutral") else print(global.frame_number, p.num, ut.tobitstr(act_data.type)) end
-			act_data.neutral = n1 and n2
+			act_data.neutral = n1-- and n2
 		end
 		-- 技動作は滑りかBSかを付与する
 		act_data.name_plain = p.sliding and act_data.slide_name or p.in_bs and act_data.bs_name or act_data.normal_name
