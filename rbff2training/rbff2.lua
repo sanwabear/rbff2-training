@@ -384,6 +384,9 @@ rbff2.startplugin  = function()
 			mem.wd32(0x050170, 0x303C0007)
 			mem.wd32(0x0501C8, 0x303C0007)
 			mem.wd32(0x0501EE, 0x303C0007)
+			-- 常に2ラインの対戦ステージにする
+			-- 00F0F8: 41FA 01DE lea ($1de,PC) ; ($f2d8), A0 ; A0 = F2D8 CPUステージテーブル
+			mem.wd32(0x00F0F8, 0x41FA017E)
 			-- 対戦の双角ステージをビリーステージに変更する（MVSと家庭用共通）
 			mem.wd16(0x00F290, 0x0004)
 			-- クレジット消費をNOPにする
