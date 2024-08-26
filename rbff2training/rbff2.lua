@@ -527,6 +527,9 @@ rbff2.startplugin  = function()
 				mem.wd32(0x02BD20, enabled and 0x1E3C0004 or 0x1E280001) -- 02BD20: 1E28 0001 move.b ($1,A0), D7
 				mem.wd32(0x02BD66, enabled and 0x1C3C00F0 or 0x1C280002) -- 02BD66: 1C28 0002 move.b ($2,A0), D6
 			end,
+			hebi_damashi = function(enabled)                 -- 最速蛇だまし
+				mem.wd16(0x042180, enabled and 0x6066 or 0x670E) -- 042180: 670E beq $42190
+			end,
 		},
 		camerawork   = function(enabled)
 			-- 演出のためのカメラワークテーブルを無視して常に追従可能にする
@@ -685,6 +688,7 @@ rbff2.startplugin  = function()
 			no_charge     = false, -- タメ時間なし
 			cancel        = false, -- 全通常技キャンセル可能
 			fast_recover  = false, -- 気絶回復
+			hebi_damashi  = false, -- 最速蛇だまし
 		},
 
 		frzc                 = 1,
@@ -1179,8 +1183,9 @@ rbff2.startplugin  = function()
 		dest.left, dest.right = ut.int16((src.left * p.box_scale) >> 6), ut.int16((src.right * p.box_scale) >> 6)
 		--ut.printf("%s ->a top=%s bottom=%s left=%s right=%s", prev, dest.top, dest.bottom, dest.left, dest.right)
 		-- キャラの座標と合算して画面上への表示位置に座標を変換する
-		dest.real_top = math.tointeger(math.max(dest.top, dest.bottom) + screen.top - p.pos_z - p.y)
-		dest.real_bottom = math.tointeger(math.min(dest.top, dest.bottom) + screen.top - p.pos_z - p.y + 1)
+		local pos_z = 24 - p.pos_z + 24
+		dest.real_top = math.tointeger(math.max(dest.top, dest.bottom) + screen.top - pos_z - p.y)
+		dest.real_bottom = math.tointeger(math.min(dest.top, dest.bottom) + screen.top - pos_z - p.y + 1)
 		dest.real_front = math.tointeger(math.max(dest.left * -1, dest.right * -1) + (p.x - p.body.x) * p.flip_x)
 		dest.real_back = math.tointeger(math.min(dest.left * -1, dest.right * -1) + (p.x - p.body.x) * p.flip_x)
 		dest.left, dest.right = p.x - dest.left * p.flip_x, p.x - dest.right * p.flip_x
@@ -6589,6 +6594,7 @@ rbff2.startplugin  = function()
 			{ "タメ時間なし", menu.labels.off_on, },
 			{ "(ほぼ)全通常技キャンセル可能", menu.labels.off_on, },
 			{ "高速気絶回復", menu.labels.off_on, },
+			{ "最速蛇だまし", menu.labels.off_on, },
 		},
 		function()
 			local col, g = menu.auto.pos.col, global
@@ -6616,8 +6622,9 @@ rbff2.startplugin  = function()
 			col[22] = g.auto_input.no_charge and 2 or 1 -- タメ時間なし
 			col[23] = g.auto_input.cancel and 2 or 1 -- 全通常技キャンセル可能
 			col[24] = g.auto_input.fast_recover and 2 or 1 -- 高速気絶回復
+			col[25] = g.auto_input.hebi_damashi and 2 or 1 -- 最速蛇だまし
 		end,
-		ut.new_filled_table(24, function()
+		ut.new_filled_table(25, function()
 			local col, g, ez           = menu.auto.pos.col, global, mod.easy_move
 			dip_config.easy_super      = col[1] == 2 -- 簡易超必
 			dip_config.semiauto_p      = col[2] == 2 -- 半自動潜在能力
@@ -6643,6 +6650,7 @@ rbff2.startplugin  = function()
 			g.auto_input.no_charge     = col[22] == 2 -- タメ時間なし
 			g.auto_input.cancel        = col[23] == 2 -- 全通常技キャンセル可能
 			g.auto_input.fast_recover  = col[24] == 2 -- 高速気絶回復
+			g.auto_input.hebi_damashi  = col[25] == 2 -- 最速蛇だまし
 			-- 簡易入力のROMハックを反映する
 			ez.real_counter(g.auto_input.real_counter) -- ジャーマン, フェイスロック, 投げっぱなしジャーマン
 			ez.esaka_check(g.auto_input.esaka_check) -- 詠酒の条件チェックを飛ばす
@@ -6655,6 +6663,7 @@ rbff2.startplugin  = function()
 			ez.no_charge(g.auto_input.no_charge) -- タメ時間なし
 			ez.cancel(g.auto_input.cancel)      -- 全通常技キャンセル可能
 			ez.fast_recover(g.auto_input.fast_recover) -- 高速気絶回復
+			ez.hebi_damashi(g.auto_input.hebi_damashi) -- 最速蛇だまし
 			menu.current = menu.main
 		end))
 
