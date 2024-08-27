@@ -3820,7 +3820,7 @@ rbff2.startplugin  = function()
 			for _, h in ipairs(st.hits) do
 				max_front = math.max(max_front or 0, h.real_front)
 			end
-			max_front = ((p.pos - frame_info.pos) * p.flip_x) + max_front
+			max_front = ((p.pos - frame_info.pos) * p.flip_x) + (max_front or 0)
 		end
 		if buf.max_front2 and max_front then buf.max_front2[#buf.max_front2] = max_front end
 		key = (key & mask) | dodge_key
