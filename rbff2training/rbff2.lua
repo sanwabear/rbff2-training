@@ -1882,7 +1882,7 @@ rbff2.startplugin  = function()
 				p.combo_update = global.frame_number + 1
 			end
 		end
-		p.add_sp_establish_hist    = function(last_sp, exp, count)
+		p.add_sp_establish_hist    = function(last_sp, exp, count, on_input_estab)
 			if not exp or (0x10 <= last_sp and last_sp <= 0x13) then exp = 0 end
 			local states = dip_config.easy_super and db.input_state_easy or db.input_state_normal
 			states = states[p.char] or {}
@@ -1900,6 +1900,7 @@ rbff2.startplugin  = function()
 				]]
 				if addr then return addr == tbl.addr else return tbl.id == last_sp and tbl.estab == exp end
 			end) do
+				tbl.on_input_estab = on_input_estab
 				table.insert(p.key.cmd_hist, { txt = table.concat(tbl.lr_cmds[p.cmd_side]), time = now(60) })
 				p.last_spids = p.last_spids or {}
 				table.insert(p.last_spids, tbl.spid)
@@ -1954,7 +1955,7 @@ rbff2.startplugin  = function()
 				if mem.pc() == 0x395B2 then
 					local count = mem.rg("D0", 0xFFFF) + 1
 					local exp = mem.r16(mem.rg("A6", 0xFFFFF) + 1) -- 追加データ
-					if data ~= 0 or exp ~= 0 then p.add_sp_establish_hist(data, exp, count) end
+					if data ~= 0 or exp ~= 0 then p.add_sp_establish_hist(data, exp, count, now()) end
 				end
 			end,
 			-- A4:必殺技コマンドの持続残F ?
@@ -2046,7 +2047,7 @@ rbff2.startplugin  = function()
 				p.on_sp_established, p.last_sp = now(), data                                   -- 技コマンド成立時の技のID
 				local count = mem.rg("D0", 0xFFFF) + 1
 				local exp = mem.r16(mem.rg("A6", 0xFFFFF) + 1)                                 -- 追加データ
-				if data ~= 0 or exp ~= 0 then p.add_sp_establish_hist(data, exp, count) end
+				if data ~= 0 or exp ~= 0 then p.add_sp_establish_hist(data, exp, count, now()) end
 			end,
 			[0xE2] = function(data) p.sway_close = data == 0 end,
 			--[0xE3] = function(data) p.on_last_frame = data == 0xFF and now(-1) or p.on_last_frame end,
@@ -4326,19 +4327,7 @@ rbff2.startplugin  = function()
 				local charging, reset, force_reset = false, false, false
 
 				-- コマンド種類ごとの表示用の補正
-				if tbl.type == input_state.types.drill5 then
-					force_reset = on > 1 or chg_remain > 0 or max > 0
-					chg_remain, on, max = 0, 0, 0
-				elseif tbl.type == input_state.types.step then
-					on = math.max(on - 2, 0)
-					if old then reset = old.on == 2 and old.chg_remain > 0 end
-				elseif tbl.type == input_state.types.faint then
-					on = math.max(on - 2, 0)
-					if old then
-						reset = old.on == 1 and old.chg_remain > 0
-						if on == 0 and chg_remain > 0 then force_reset = true end
-					end
-				elseif tbl.type == input_state.types.charge then
+				if tbl.type == input_state.types.charge then
 					if on == 1 and chg_remain == 0 then
 						on = 3
 					elseif on > 1 then
@@ -4353,37 +4342,15 @@ rbff2.startplugin  = function()
 						max = charging and max or (c_old and c_old.max or max),
 						tbl = tbl,
 					})
-				elseif tbl.type == input_state.types.followup then
-					on = math.max(on - 1, 0)
-					on = (on == 1) and 0 or on
-					if old then
-						reset = old.on == #tbl.cmds and old.chg_remain > 0
-						if on == 0 and chg_remain > 0 then force_reset = true end
-					end
-				elseif tbl.type == input_state.types.shinsoku then
-					on = (on <= 2) and 0 or (on - 1)
-					if old then
-						reset = old.on == #tbl.cmds and old.chg_remain > 0
-						if on == 0 and chg_remain > 0 then force_reset = true end
-					end
-				elseif tbl.type == input_state.types.todome then
-					on = math.max(on - 1, 0)
-					on = (on <= 1) and 0 or (on - 1)
-					if old then
-						reset = old.on > 0 and old.chg_remain > 0
-						if on == 0 and chg_remain > 0 then force_reset = true end
-					end
-				elseif tbl.type == input_state.types.unknown then
-					if old then reset = old.on > 0 and old.chg_remain > 0 end
 				else
 					if old then reset = old.on == #tbl.cmds and old.chg_remain > 0 end
 				end
 				if old then
 					if p.char ~= old.char or on == 1 then
 						input_estab = false
-					else
-						if 0 < tbl.id and tbl.id < 0x1E then reset = p.additional == tbl.exp_extab and p.spid == tbl.id or input_estab end
-						if chg_remain == 0 and on == 0 and reset then input_estab = true end
+						tbl.on_input_estab = nil
+					elseif tbl.on_input_estab then
+						input_estab = tbl.on_input_estab <= global.frame_number
 					end
 					if force_reset then input_estab = false end
 				end
