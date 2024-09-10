@@ -4712,6 +4712,16 @@ rbff2.startplugin  = function()
 			-- リプレイ中は自動ガードしない
 			if p.dummy_gd ~= dummy_gd_type.none and ut.tstb(act_type, db.act_types.attack) and in_rec_replay then
 				p.clear_cmd_hook(db.cmd_types._8) -- 上は無効化
+
+				-- 投げ無敵タイマーを使って256F経過後はガード状態を解除
+				if p.throw_timer >= 0xFF then
+					if p.dummy_gd == dummy_gd_type.block1 and p.next_block ~= true then
+						p.next_block = true
+					elseif p.dummy_gd == dummy_gd_type.hit1 and p.next_block == true then
+						p.next_block = false
+					end
+				end
+
 				if p.dummy_gd == dummy_gd_type.fixed then
 					-- 常時（ガード方向はダミーモードに従う）
 					p.add_cmd_hook(db.cmd_types.back)
