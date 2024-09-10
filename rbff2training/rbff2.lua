@@ -2245,6 +2245,9 @@ rbff2.startplugin  = function()
 			end,
 			[{ addr = p.addr.on1f, filter = { 0x0263AC } }] = function(data) check_add_button(data, 1) end, -- D7 = 押しっぱ  D6 = 押し1F有効
 			[{ addr = p.addr.on5f, filter = { 0x026390 } }] = function(data) check_add_button(data, 5) end, -- D7 = 押しっぱ  D6 = 押し5F有効
+			[{ addr = p.addr.hurt_state, filter = { 0x05A1A4, 0x05A43C, 0x05A48A } }] = function(data, ret) -- ラインずらさない状態
+				if p.dis_plain_shift then ret.value = data | 0x40 end
+			end,
 		}
 		p.wp16                     = {
 			[0x34] = function(data) p.thrust = data end,
@@ -4242,9 +4245,6 @@ rbff2.startplugin  = function()
 				p.kagenui_type = 1
 			end
 
-			-- ラインずらさない状態のデータ書き込み
-			if p.dis_plain_shift then mem.w08(p.addr.hurt_state, p.hurt_state | 0x40) end
-
 			--フレーム用
 			p.skip_frame            = global.skip_frame1 or global.skip_frame2 or p.skip_frame
 			p.old.act_data          = p.act_data or get_act_data(p.old)
@@ -4377,13 +4377,11 @@ rbff2.startplugin  = function()
 					count    = 1,
 					act_data = p.body.act_data,
 					name     = p.proc_active and ut.convert(p.body.act_data.name_plain) or "NOP",
-					pos1     = p.body.pos_total,
-					pos2     = p.body.pos_total,
-					xmov     = 0,
+					xmov     = p.body.diff_pos_total,
 				}, 16)
 			else
 				p.update_base = false
-				base.count, base.pos2, base.xmov = base.count + 1, p.body.pos_total, base.pos2 - base.pos1
+				base.count, base.xmov = base.count + 1, base.xmov + p.body.diff_pos_total
 			end
 		end
 
@@ -5921,10 +5919,7 @@ rbff2.startplugin  = function()
 	menu.to_disp                  = function() menu.current = menu.disp end
 	menu.to_ex                    = function() menu.current = menu.extra end
 	menu.to_auto                  = function() menu.current = menu.auto end
-	menu.to_col                   = function()
-		for i = 2, #menu.color.pos.col do menu.color.pos.col[i] = db.box_type_list[i - 1].enabled and 2 or 1 end
-		menu.current = menu.color
-	end
+	menu.to_col                   = function() menu.current = menu.color end
 	menu.exit                     = function()
 		-- Bボタンでトレーニングモードへ切り替え
 		menu.state = menu.tra_main
@@ -6519,8 +6514,8 @@ rbff2.startplugin  = function()
 		end,
 		ut.new_filled_table(9, function()
 			local col, p, g      = menu.extra.pos.col, players, global
-			p[1].dis_plain_shift = col[1] == 2 or col[1] == 3 -- ラインずらさない現象
-			p[2].dis_plain_shift = col[1] == 2 or col[1] == 4 -- ラインずらさない現象
+			--p[1].dis_plain_shift = col[1] == 2 or col[1] == 3 -- ラインずらさない現象
+			--p[2].dis_plain_shift = col[1] == 2 or col[1] == 4 -- ラインずらさない現象
 			g.pause_hit          = col[2]            -- ヒット時にポーズ
 			g.pause_hitbox       = col[3]            -- 判定発生時にポーズ
 			g.save_snapshot      = col[4]            -- 技画像保存
@@ -6650,9 +6645,12 @@ rbff2.startplugin  = function()
 					-- 空中追撃用判定はメインラインでないなら表示しない＝ON、常に表示＝ALL
 					menu_off_on = { "OFF", "ON", "ON:ALL" }
 				end
-				return { b.name, menu_off_on, { fill = b.fill, outline = b.outline } }
+				return { b.name, menu_off_on, { fill = b.fill, outline = b.outline } } -- rowオブジェクト
 			end),
-		function() end,
+		function()
+			local col = menu.color.pos.col
+			for i = 2, #col do col[i] = db.box_type_list[i - 1].enabled end -- 1:OFF 2~3:ON or ON:ALL
+		end,
 		ut.new_filled_table(#db.box_type_list + 1, function()
 			local col = menu.color.pos.col
 			for i = 2, #col do db.box_type_list[i - 1].enabled = col[i] end -- 1:OFF 2~3:ON or ON:ALL
@@ -6831,14 +6829,16 @@ rbff2.startplugin  = function()
 		for i = menu.current.pos.offset, menu_max do
 			local row = menu.current.list[i]
 			local y = menu_top_y + menu_row_height * row_num
-			local c1, c2, c3, c4, c5
+			local c1, c2, c3, c4, c5, c6
 			local deep = math.modf((scr:frame_number() / 5) % 20) + 1
 			-- 選択行とそうでない行の色分け判断
 			if i == menu.current.pos.row then
 				c1, c2, c3, c4, c5 = 0xFFDD2200, 0xFF662200, 0xFFFFFF00, 0xCC000000, 0xAAFFFFFF
 				c1 = c1 - (0x00110000 * math.abs(deep - 10)) -- アクティブメニュー項目のビカビカ処理
+				c6 = 0xFF00FFFF -- 非デフォルト設定の文字色
 			else
 				c1, c2, c3, c4, c5 = 0xFFC0C0C0, 0xFFB0B0B0, 0xFF000000, 0x00000000, 0xFF000000
+				c6 = 0xFF0000FF -- 非デフォルト設定の文字色
 			end
 			local mx1, my1, mx2, my2, tx1 = 70, y + 0.5, 250, y + 8.5, 150 -- 枠と文字の位置
 			if row.title then
@@ -6863,7 +6863,8 @@ rbff2.startplugin  = function()
 					if col_pos_num > 0 then
 						local opt_txt = string.format("%s", row[2][col_pos_num])
 						draw_text(tx1 + 5.5, y + 1.5, opt_txt, c4)
-						draw_text(tx1 + 5.0, y + 1.0, opt_txt, c3)
+						local opt_txt_col = col_pos_num == 1 and c3 or c6 -- TODO デフォルト設定の組み込み
+						draw_text(tx1 + 5.0, y + 1.0, opt_txt, opt_txt_col)
 						-- オプション部分の左右移動可否の表示
 						if i == menu.current.pos.row then
 							draw_text(tx1, y + 1, "<", col_pos_num == 1 and c5 or c3)
