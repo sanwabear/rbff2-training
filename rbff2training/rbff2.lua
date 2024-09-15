@@ -517,10 +517,10 @@ rbff2.startplugin  = function()
 				mem.wd08(0x039570, enabled and 0x60 or 0x65) -- チェックを飛ばす
 			end,
 			cancel = function(enabled)
-				-- キャンセル可否テーブルからデータ取得せずにFFを固定で設定する(C0が必、D0で連)
+				-- キャンセル可否テーブルからデータ取得せずにFFを固定で設定する(C0 1100 0000 が必、D0 1101 0000 で連)
 				mem.wd32(0x02ADAE, enabled and 0x70FF4E71 or 0x10300000) -- 02ADAE: 1030 0000 move.b (A0,D0.w), D0
 				mem.wd32(0x02FAE4, enabled and 0x7EFF4E71 or 0x1E327000) -- 02FAE4: 1E32 7000 move.b (A2,D7.w), D7
-				mem.wd32(0x02FAE4, enabled and 0x7EFF4E71 or 0x103C0001) -- 02ADB8: 103C 0001 move.b #$1, D0
+				mem.wd32(0x02ADB8, enabled and 0x7EFF4E71 or 0x103C0001) -- 02ADB8: 103C 0001 move.b #$1, D0
 				mem.wd32(0x076C1C, enabled and 0x70FF4E71 or 0x10300000) -- 076C1C: 1030 0000 move.b (A0,D0.w), D0
 			end,
 			triple_ecstasy = function(enabled)               -- 自動マリートリプルエクスタシー
