@@ -2726,14 +2726,22 @@ rbff2.startplugin  = function()
 							--ut.printf("box %s %X %X %X %X", ai.num, id, ai.hitstun, ai.blockstun, ai.flag_cc & 0xE0)
 						end
 						p.attack_id = ai.attack_id
-						p.blockstun = ai.blockstun
+						p.last_attack_id = ai.last_attack_id
 						p.chip = ai.chip
-						p.damage = ai.damage
 						p.effect = ai.effect
 						p.hitstun = ai.hitstun
-						p.last_attack_id = ai.last_attack_id
-						p.parrieable = ai.parrieable or 0
+						p.blockstun = ai.blockstun
+						p.parrieable = ai.parrieable
 						p.parrieable1 = ai.parrieable1
+						--[[
+						for k, v in pairs(ai) do
+							for _, xai in ipairs(p.attack_infos) do
+								if ai[k] ~= xai[k] then
+									ut.printf("mix attack key:%s id:%x value:%s | id:%x value:%s", k, id, v, xai["attack_id"], xai[k])
+								end
+							end
+						end
+						]]
 					end
 					counts[type.kind] = counts[type.kind] and (counts[type.kind] + 1) or 1
 					table.insert(p.boxies, {
