@@ -1431,7 +1431,7 @@ rbff2.startplugin  = function()
 		scr:draw_box(x1, y2, x2, y2 + b, outline, outline)
 		scr:draw_box(x1, y1, x2, y2, outline, do_fill and fill or 0)
 		scr:draw_box(x1, y1, x2, y2, outline, do_fill and fill or 0)
-		draw_ctext(x1 + (x2 - x1) / 2, y1 + (y2 - y1 - screen.s_height) / 2, box.no, outline)
+		draw_ctext(x1 + (x2 - x1) / 2, y1 + (y2 - y1 - screen.s_height) / 2, string.format("%s-%X", box.no or "0", box.id), outline)
 		--ut.printf("%s  x1=%s x2=%s y1=%s y2=%s",  box.type.kind, x1, x2, y1, y2)
 	end
 
@@ -2641,33 +2641,35 @@ rbff2.startplugin  = function()
 					return
 				end
 				-- ut.printf("%s %s box %x %x %x", now(), p.on_hit, p.addr.base, mem.pc(), data)
-				p.boxies, p.parrieable = {}, 0
+				p.boxies = {}
 				if data <= 0 then return end
 				p.attackbits.fb = p.is_fireball
 				p.attackbits.attacking = false
 				p.attackbits.juggle = false
 				p.attackbits.fb_effect = 0
-				p.attack_id_data = 0
+				p.attack_infos = {}
 				if not p.body.char_data then p.body.update_char() end
 				local base_addr = p.body.char_data.proc_base
 				local a2base = mem.r32(base + 0x7A)
-				local counts = {}
+				local ai, counts, ids = {}, {}, {}
 				for a2 = a2base, a2base + (data - 1) * 5, 5 do -- 家庭用 004A9E からの処理
 					local id = mem.r08(a2)
 					local top, bottom = sort_ba(mem.r08i(a2 + 0x1), mem.r08i(a2 + 0x2))
 					local left, right = sort_ba(mem.r08i(a2 + 0x3), mem.r08i(a2 + 0x4))
 					local type = db.main_box_types[id] or (id < 0x20) and db.box_types.unknown or db.box_types.attack
 					local blockable, possible, possibles
-					if type == db.box_types.attack then
-						p.attack_id            = id
-						p.attack_id_data       = id
-						p.last_attack_id       = p.attack_id
-						possibles              = get_hitbox_possibles(p.attack_id)
-						p.effect               = mem.r08(p.attack_id + db.chars[#db.chars].proc_base.effect) -- ヒット効果
+					if type == db.box_types.attack and ids[id] == nil then
+						ai = {}
+						ids[id] = ai
+						table.insert(p.attack_infos, ai)
+						ut.printf("%s %x %x %x", now(), p.addr.base, data, id)
+						ai.attack_id           = id
+						possibles              = get_hitbox_possibles(ai.attack_id)
+						ai.effect              = mem.r08(ai.attack_id + db.chars[#db.chars].proc_base.effect) -- ヒット効果
 						p.attackbits.attacking = true
 						p.attackbits.juggle    = possibles.juggle and true or false
 						if p.is_fireball then
-							p.attackbits.fb_effect = p.effect
+							p.attackbits.fb_effect = ai.effect
 							p.on_fireball = (p.on_fireball or 0) < 0 and now() or p.on_fireball or 0
 						else
 							p.attackbits.fb_effect = 0
@@ -2685,22 +2687,32 @@ rbff2.startplugin  = function()
 							blockable = blockable | db.act_types.jump_attack -- 空中ガード可能
 						end
 						-- 判定の場所を加味しない属性を保存する
-						for _, t in ipairs(hitbox_parry_types) do p.parrieable = p.parrieable | (possibles[t.name] and t.value or 0) end
+						ai.parrieable = 0
+						for _, t in ipairs(hitbox_parry_types) do ai.parrieable = ai.parrieable | (possibles[t.name] and t.value or 0) end
 						local d2 = 0xF & mem.r08(id + base_addr.hitstun1)
-						p.chip   = db.calc_chip(d2 + 1, p.damage) -- 削りダメージ計算種別取得 05B2A4 からの処理
-						if p.parrieable1 then
+						ai.chip  = db.calc_chip(d2 + 1, ai.damage) -- 削りダメージ計算種別取得 05B2A4 からの処理
+						if ai.parrieable1 then
 							-- 硬直時間取得 05AF54(家庭用版)からの処理
 							--local d = 0x7F & mem.r08(id + base_addr.hitstun_fb)
 							--local d7 = (d <= 0) and 0x18 or 0
-							--p.hitstun, p.blockstun = d7, d7
-							--ut.printf("fb %X %X %X %X %X", id, p.hitstun, p.blockstun, d, d7)
-							p.hitstun, p.blockstun = 0x18, 0x18
+							--ai.hitstun, ai.blockstun = d7, d7
+							--ut.printf("fb %X %X %X %X %X", id, ai.hitstun, ai.blockstun, d, d7)
+							ai.hitstun, ai.blockstun = 0x18, 0x18
 						elseif id then
 							-- 硬直時間取得 05AF7C(家庭用版)からの処理
-							p.hitstun   = mem.r08(base_addr.hitstun2 + d2) -- ヒット硬直
-							p.blockstun = mem.r08(base_addr.blockstun + d2) -- ガード硬直
-							--ut.printf("box %s %X %X %X %X", p.num, id, p.hitstun, p.blockstun, p.flag_cc & 0xE0)
+							ai.hitstun   = mem.r08(base_addr.hitstun2 + d2) -- ヒット硬直
+							ai.blockstun = mem.r08(base_addr.blockstun + d2) -- ガード硬直
+							--ut.printf("box %s %X %X %X %X", ai.num, id, ai.hitstun, ai.blockstun, ai.flag_cc & 0xE0)
 						end
+						p.attack_id = ai.attack_id
+						p.blockstun = ai.blockstun
+						p.chip = ai.chip
+						p.damage = ai.damage
+						p.effect = ai.effect
+						p.hitstun = ai.hitstun
+						p.last_attack_id = ai.last_attack_id
+						p.parrieable = ai.parrieable or 0
+						p.parrieable1 = ai.parrieable1
 					end
 					counts[type.kind] = counts[type.kind] and (counts[type.kind] + 1) or 1
 					table.insert(p.boxies, {
@@ -4394,7 +4406,7 @@ rbff2.startplugin  = function()
 			p.vulnerable = (p.invincible and p.invincible > 0) or p.hurt_invincible or (p.on_hitcheck ~= global.frame_number and p.on_vulnerable ~= global.frame_number)
 			-- ut.printf("%x p.vulnerable %s %s %s %s %s %s", p.addr.base, p.vulnerable, p.invincible, p.hurt_invincible, p.on_vulnerable, global.frame_number, p.on_vulnerable ~= global.frame_number)
 			-- 判定位置を考慮しない属性を追加
-			p.parrieable = p.parrieable | (p.parrieable1 and p.parrieable2 and hitbox_parry_bits.baigaeshi or 0)
+			p.parrieable = (p.parrieable or 0) | (p.parrieable1 and p.parrieable2 and hitbox_parry_bits.baigaeshi or 0)
 			p.hitboxies, p.hitbox_types, p.hurt = {}, {}, {} -- 座標補正後データ格納のためバッファのクリア
 			local boxkeys = { hit = {}, hurt = {} }
 			p.hurt = {
