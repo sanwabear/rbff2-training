@@ -253,6 +253,8 @@ frame_attack_types.dodge_mask    = ut.hex_clear(0xFFFFFFFFFFFFFFFF,
 --	frame_attack_types.crounch68     |                                                    -- 頭部無敵 68 屈 ローレンス
 --	frame_attack_types.crounch76     |                                                    -- 頭部無敵 76 屈 フランコ
 --	frame_attack_types.crounch80)                                                         -- 頭部無敵 80 屈 クラウザー
+frame_attack_types.juggle_mask   = ut.hex_clear(0xFFFFFFFFFFFFFFFF,
+	frame_attack_types.juggle)
 frame_attack_types.main_high     = frame_attack_types.main | frame_attack_types.high -- 対メイン上段攻撃無敵
 frame_attack_types.main_low      = frame_attack_types.main | frame_attack_types.low  -- 対メイン下段攻撃無敵
 frame_attack_types.sway_high     = frame_attack_types.sway | frame_attack_types.high -- 上半身無敵 対スウェー上段攻撃無敵

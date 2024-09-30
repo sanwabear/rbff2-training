@@ -1274,6 +1274,24 @@ rbff2.startplugin  = function()
 		print("load_proc_base done")
 	end
 
+	-- 属性情報を数値に変換する
+	local calc_attackbit = function(attackbits, p)
+		local attackbit = 0
+		for k, v, type in ut.find_all(attackbits, function(k) return frame_attack_types[k] end) do
+			if k == "act_count" or k == "fb_effect" or k == "attack" or k == "act" then
+				attackbit = attackbit | (v << type)
+			elseif v == 1 or v == true then
+				attackbit = attackbit | type
+			end
+		end
+		if p.frame_gap > 0 then
+			attackbit = attackbit | frame_attack_types.frame_plus
+		elseif p.frame_gap < 0 then
+			attackbit = attackbit | frame_attack_types.frame_minus
+		end
+		return attackbit
+	end
+
 	-- 接触判定の取得
 	local load_push_box                                = function()
 		if db.chars[1].push_box then return end
@@ -1487,6 +1505,8 @@ rbff2.startplugin  = function()
 
 	local fix_box_type                                 = function(p, attackbit, box)
 		attackbit = db.box_with_bit_types.mask & attackbit
+		attackbit = attackbit & frame_attack_types.juggle_mask
+		if box.attackbits then attackbit = attackbit | calc_attackbit(box.attackbits, p) end
 		local type = p.in_sway_line and box.sway_type or box.type
 		if type ~= db.box_types.attack then return type end
 		local types = p.is_fireball and db.box_with_bit_types.fireballkv or db.box_with_bit_types.bodykv
@@ -2659,15 +2679,16 @@ rbff2.startplugin  = function()
 					local type = db.main_box_types[id] or (id < 0x20) and db.box_types.unknown or db.box_types.attack
 					local blockable, possible, possibles
 					if type == db.box_types.attack and ids[id] == nil then
-						ai = {}
+						ai = { attackbits = {} }
 						ids[id] = ai
 						table.insert(p.attack_infos, ai)
-						ut.printf("%s %x %x %x", now(), p.addr.base, data, id)
+						-- ut.printf("%s %x %x %x", now(), p.addr.base, data, id)
 						ai.attack_id           = id
 						possibles              = get_hitbox_possibles(ai.attack_id)
 						ai.effect              = mem.r08(ai.attack_id + db.chars[#db.chars].proc_base.effect) -- ヒット効果
+						ai.attackbits.juggle   = possibles.juggle and true or false
 						p.attackbits.attacking = true
-						p.attackbits.juggle    = possibles.juggle and true or false
+						p.attackbits.juggle    = p.attackbits.juggle or ai.attackbits.juggle
 						if p.is_fireball then
 							p.attackbits.fb_effect = ai.effect
 							p.on_fireball = (p.on_fireball or 0) < 0 and now() or p.on_fireball or 0
@@ -2727,6 +2748,7 @@ rbff2.startplugin  = function()
 						possibles = possibles or {},
 						possible = possible or 0,
 						blockable = blockable or 0,
+						attackbits = ids and ids[id] and ids[id].attackbits or {},
 					})
 					--[[
 					ut.printf("p=%x %x %x %x %s addr=%x id=%02x knd=%s l=%s r=%s t=%s b=%s ps=%s bl=%s",
@@ -4419,20 +4441,7 @@ rbff2.startplugin  = function()
 				down_otg = 0, -- ダウン追撃可能なやられ判定の数
 			}
 			p.hit = { box_count = 0 }
-			p.attackbit = 0
-
-			for k, v, type in ut.find_all(p.attackbits, function(k) return frame_attack_types[k] end) do
-				if k == "act_count" or k == "fb_effect" or k == "attack" or k == "act" then
-					p.attackbit = p.attackbit | (v << type)
-				elseif v == 1 or v == true then
-					p.attackbit = p.attackbit | type
-				end
-			end
-			if p.frame_gap > 0 then
-				p.attackbit = p.attackbit | frame_attack_types.frame_plus
-			elseif p.frame_gap < 0 then
-				p.attackbit = p.attackbit | frame_attack_types.frame_minus
-			end
+			p.attackbit = calc_attackbit(p.attackbits, p)
 
 			-- 判定が変わったらポーズさせる  1:OFF, 2:投げ, 3:攻撃, 4:変化時
 			if global.pause_hitbox == 4 and p.act_data and not p.act_data.neutral and (p.chg_hitbox or p.chg_hurtbox) then global.pause = true end
