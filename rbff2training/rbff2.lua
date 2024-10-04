@@ -325,7 +325,7 @@ rbff2.startplugin  = function()
 		r16i               = function(addr, value) return pgm:read_i16(addr, value) end,
 		r32i               = function(addr, value) return pgm:read_i32(addr, value) end,
 	}
-	-- プログラム改変
+	-- プログラム改変 romhack
 	local mod                  = {
 		p1_patch     = function()
 			local base = base_path() .. '/patch/rom/'
@@ -348,28 +348,25 @@ rbff2.startplugin  = function()
 		end,
 		snk_time     = function(mode)
 			-- タイムのSNK表示
-			mem.wd16(0x01EB56, mode == 3 and 0x0001 or 0x0809)
-			mem.wd16(0x01EB58, mode == 3 and 0x0405 or 0x0C0D)
-			mem.wd16(0x01EBB6, mode == 3 and 0x0203 or 0x0A0B)
-			mem.wd16(0x01EBB8, mode == 3 and 0x0607 or 0x0E0F)
+			mem.wd32(0x01EB56, mode == 3 and 0x00010405 or 0x08090C0D)
+			mem.wd32(0x01EBB6, mode == 3 and 0x02030607 or 0x0A0B0E0F)
 			mem.wd32(0x01EBBC, mode ~= 1 and 0x20202020 or 0xB2B3B4B5)
 			mem.wd32(0x01EBC0, mode ~= 1 and 0x20202020 or 0xB6B7B8B9)
 			mem.wd32(0x01EBC4, mode ~= 1 and 0x20202020 or 0xBABBBCBD)
 		end,
 		training     = function()
-			mem.wd16(0x01F3BC, 0x4E75) -- 1Pのスコア表示をすぐ抜ける
-			mem.wd16(0x01F550, 0x4E75) -- 2Pのスコア表示をすぐ抜ける
-			mem.wd08(0x062E9D, 0x00) -- 乱入されても常にキャラ選択できる
+			mem.wd16(0x01F3BC, 0x4E75) -- 1Pのスコア表示をすぐ抜ける 082C
+			mem.wd16(0x01F550, 0x4E75) -- 2Pのスコア表示をすぐ抜ける 082C
+			mem.wd08(0x062E9D, 0x00) -- 乱入されても常にキャラ選択できる 01
 			-- 対CPU1体目でボスキャラも選択できるようにする サンキューヒマニトさん
-			mem.wd08(0x0633EE, 0x60) -- CPUのキャラテーブルをプレイヤーと同じにする
-			mem.wd08(0x063440, 0x60) -- CPUの座標テーブルをプレイヤーと同じにする
-			mem.wd32(0x062FF4, 0x4E714E71) -- PLのカーソル座標修正をNOPにする
-			mem.wd32(0x062FF8, 0x4E714E71) -- PLのカーソル座標修正をNOPにする
-			mem.wd08(0x062EA6, 0x60) -- CPU選択時にアイコンを減らすのを無効化
-			mem.wd32(0x063004, 0x4E714E71) -- PLのカーソル座標修正をNOPにする
+			mem.wd08(0x0633EE, 0x60) -- CPUのキャラテーブルをプレイヤーと同じにする 6A
+			mem.wd08(0x063440, 0x60) -- CPUの座標テーブルをプレイヤーと同じにする 6A
+			mem.wd32(0x062FF4, 0x4E714E71) -- PLのカーソル座標修正をNOPにする 3350 00A4
+			mem.wd32(0x062FF8, 0x4E714E71) -- PLのカーソル座標修正をNOPにする 5B69 00A4
+			mem.wd08(0x062EA6, 0x60) -- CPU選択時にアイコンを減らすのを無効化 66
+			mem.wd32(0x063004, 0x4E714E71) -- PLのカーソル座標修正をNOPにする 5569 00A4
 			-- キャラ選択の時間減らす処理をNOPにする
-			mem.wd16(0x063336, 0x4E71)
-			mem.wd16(0x063338, 0x4E71)
+			mem.wd32(0x063336, 0x4E714E71) -- 532C 00B2
 			-- キャラ選択の時間の値にアイコン用のオフセット値を改変して空表示にする
 			-- 0632D0: 004B -- キャラ選択の時間の内部タイマー初期値1 デフォは4B=75フレーム
 			-- 063332: 004B -- キャラ選択の時間の内部タイマー初期値2 デフォは4B=75フレーム
@@ -702,7 +699,9 @@ rbff2.startplugin  = function()
 		rec_main             = nil,
 
 		next_block_grace     = 0, -- 1ガードでの持続フレーム数
+		life_mode            = 1, -- 体力ゲージ 1:自動回復 2:固定 3:通常動作
 		pow_mode             = 2, -- POWモード　1:自動回復 2:固定 3:通常動作
+		time_mode            = 1, -- タイム設定 1:無限:RB2(デフォルト) 2:無限:RB2 3:無限:SNK 4:99 5:60 6:30
 		disp_meters          = true,
 		repeat_interval      = 0,
 		await_neutral        = false,
@@ -924,6 +923,7 @@ rbff2.startplugin  = function()
 		easy_super    = false,
 		semiauto_p    = false,
 		infinity_time = true,
+		aes_time      = 0x03, -- 残タイム家庭用オプション 0x0:45 0x1:60 0x2:90 0x3:infinity
 		fix_time      = 0x99,
 		stage_select  = false,
 		alfred        = false,
@@ -932,7 +932,7 @@ rbff2.startplugin  = function()
 		other_speed   = false,
 	}
 	-- デバッグDIPのセット
-	local set_dip_config       = function()
+	local set_dip_config       = function(on_menu)
 		local dip1, dip2, dip3, dip4 = 0x00, 0x00, 0x00, 0x00                 -- デバッグDIP
 		dip1 = dip1 | (in_match and dip_config.show_range and 0x40 or 0)      --cheat "DIP= 1-7 色々な判定表示"
 		dip1 = dip1 | (in_match and dip_config.show_hitbox and 0x80 or 0)     --cheat "DIP= 1-8 当たり判定表示"
@@ -940,8 +940,10 @@ rbff2.startplugin  = function()
 		dip2 = dip2 | (in_match and dip_config.easy_super and 0x01 or 0)      --Cheat "DIP 2-1 Eeasy Super"
 		dip4 = dip4 | (in_match and dip_config.semiauto_p and 0x08 or 0)      -- DIP4-4
 		dip2 = dip2 | (dip_config.infinity_time and 0x18 or 0)                -- 2-4 PAUSEを消す + cheat "DIP= 2-5 Disable Time Over"
-		mem.w08(0x10E024, dip_config.infinity_time and 0x03 or 0x02)          -- 家庭用オプション 1:45 2:60 3:90 4:infinity
-		mem.w08(0x107C28, dip_config.infinity_time and 0xAA or dip_config.fix_time) --cheat "Infinite Time"
+		mem.w08(0x10E024, dip_config.aes_time)                                -- 残タイム家庭用オプション 0x0:45 0x1:60 0x2:90 0x3:infinity
+		if on_menu or dip_config.infinity_time then
+			mem.w08(0x107C28, dip_config.infinity_time and 0xAA or dip_config.fix_time) --cheat "Infinite Time"
+		end
 		dip1 = dip1 | (dip_config.stage_select and 0x04 or 0)                 --cheat "DIP= 1-3 Stage Select Mode"
 		dip2 = dip2 | (in_player_select and dip_config.alfred and 0x80 or 0)  --cheat "DIP= 2-8 Alfred Code (B+C >A)"
 		dip2 = dip2 | (in_match and dip_config.watch_states and 0x20 or 0)    --cheat "DIP= 2-6 Watch States"
@@ -1943,8 +1945,8 @@ rbff2.startplugin  = function()
 			[0x88] = function(data) p.in_bs = data ~= 0 end,                       -- BS動作中
 			[0x89] = function(data) p.sway_status, p.in_sway_line = data, data ~= 0x00 end, -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
 			[0x8B] = function(data, ret)
-				-- 残体力がゼロだと次の削りガードが失敗するため常に1残すようにもする
-				p.life, p.on_damage, ret.value = data, now(), math.max(data, 1) -- 体力
+				p.life, p.on_damage = data, now()
+				if global.life_mode ~= 3 then ret.value = math.max(data, 1) end -- 残体力がゼロだと次の削りガードが失敗するため常に1残すようにもする
 			end,
 			[0x8E] = function(data)
 				local changed, n = p.state ~= data, now()
@@ -2212,7 +2214,8 @@ rbff2.startplugin  = function()
 			end,
 			[{ addr = 0x8F, filter = 0x5B41E }] = function(data, ret)
 				-- 残体力を攻撃力が上回ると気絶値が加算がされずにフックが失敗するので、残体力より大きい値を返さないようにもする
-				p.last_damage_scaled, ret.value = data, math.min(p.life, data)
+				if global.life_mode ~= 3 then ret.value = math.min(p.life, data) end
+				p.last_damage_scaled = data
 				p.combo_damage = (p.combo_damage or 0) + p.last_damage_scaled -- 確定した補正後の攻撃力をコンボダメージに加算
 				p.max_combo_damage = math.max(p.max_combo_damage or 0, p.combo_damage)
 			end,
@@ -2422,19 +2425,21 @@ rbff2.startplugin  = function()
 				local life = { 0xC0, 0x60 }
 				local max_life = life[p.red] or (p.red - #life) -- 赤体力にするかどうか
 				local init_stuns = p.char_data and p.char_data.init_stuns or 0
-				if dip_config.infinity_life then
-					mem.w08(p.addr.life, max_life)
-					mem.w08(p.addr.stun_limit, init_stuns) -- 最大気絶値
-					mem.w08(p.addr.init_stun, init_stuns) -- 最大気絶値
-				elseif p.life_rec then
-					if force or (p.addr.life ~= max_life and 180 < math.min(p.throw_timer, p.op.throw_timer)) then
-						mem.w08(p.addr.life, max_life) -- やられ状態から戻ったときに回復させる
-						mem.w08(p.addr.stun, 0) -- 気絶値
+				if global.life_mode ~= 3 then
+					if dip_config.infinity_life then
+						mem.w08(p.addr.life, max_life)
 						mem.w08(p.addr.stun_limit, init_stuns) -- 最大気絶値
 						mem.w08(p.addr.init_stun, init_stuns) -- 最大気絶値
-						mem.w16(p.addr.stun_timer, 0) -- 気絶値タイマー
-					elseif max_life < p.life then
-						mem.w08(p.addr.life, max_life) -- 最大値の方が少ない場合は強制で減らす
+					elseif p.life_rec then
+						if force or (p.addr.life ~= max_life and 180 < math.min(p.throw_timer, p.op.throw_timer)) then
+							mem.w08(p.addr.life, max_life) -- やられ状態から戻ったときに回復させる
+							mem.w08(p.addr.stun, 0) -- 気絶値
+							mem.w08(p.addr.stun_limit, init_stuns) -- 最大気絶値
+							mem.w08(p.addr.init_stun, init_stuns) -- 最大気絶値
+							mem.w16(p.addr.stun_timer, 0) -- 気絶値タイマー
+						elseif max_life < p.life then
+							mem.w08(p.addr.life, max_life) -- 最大値の方が少ない場合は強制で減らす
+						end
 					end
 				end
 
@@ -6278,7 +6283,7 @@ rbff2.startplugin  = function()
 			{ "2P 体力ゲージ量", menu.labels.life_range, }, -- "最大", "赤", "ゼロ" ...
 			{ "1P POWゲージ量", menu.labels.pow_range, }, -- "最大", "半分", "ゼロ" ...
 			{ "2P POWゲージ量", menu.labels.pow_range, }, -- "最大", "半分", "ゼロ" ...
-			{ "体力ゲージモード", { "自動回復", "固定" }, },
+			{ "体力ゲージモード", { "自動回復", "固定", "通常動作" }, },
 			{ "POWゲージモード", { "自動回復", "固定", "通常動作" }, },
 		},
 		function()
@@ -6288,7 +6293,7 @@ rbff2.startplugin  = function()
 			col[2] = p[2].red                   -- 2P 体力ゲージ量
 			col[3] = p[1].max                   -- 1P POWゲージ量
 			col[4] = p[2].max                   -- 2P POWゲージ量
-			col[5] = dip_config.infinity_life and 2 or 1 -- 体力ゲージモード
+			col[5] = g.life_mode                -- 体力ゲージモード
 			col[6] = g.pow_mode                 -- POWゲージモード
 		end,
 		ut.new_filled_table(6, function()
@@ -6297,8 +6302,10 @@ rbff2.startplugin  = function()
 			p[2].red                 = col[2] -- 2P 体力ゲージ量
 			p[1].max                 = col[3] -- 1P POWゲージ量
 			p[2].max                 = col[4] -- 2P POWゲージ量
-			dip_config.infinity_life = col[5] == 2 -- 体力ゲージモード
+			g.life_mode              = col[5] -- 体力ゲージモード
+			dip_config.infinity_life = g.life_mode == 2 -- 体力ゲージ 1:自動回復 2:固定 3:通常動作
 			g.pow_mode               = col[6] -- POWゲージモード
+			set_dip_config(true)
 			menu.current             = menu.main
 		end))
 
@@ -6528,7 +6535,7 @@ rbff2.startplugin  = function()
 			{ "ヒット効果確認用", db.hit_effects.menus, },
 			{ "ビリーMVS化", menu.labels.off_on, },
 			{ "サドマゾと逆襲拳のバグ修正", menu.labels.off_on, },
-			{ "タイム表示(リスタートで反映)", { "RB2(デフォルト)", "RB2", "SNK", }, },
+			{ "タイム設定(リスタートで反映)", { "無限:RB2(デフォルト)", "無限:RB2", "無限:SNK", "90", "60", "45", }, },
 			{ "暗転フレームチェック処理修正", menu.labels.off_on, },
 		},
 		function()
@@ -6548,28 +6555,47 @@ rbff2.startplugin  = function()
 			col[5] = g.damaged_move   -- ヒット効果確認用
 			col[6] = g.mvs_billy and 2 or 1 -- ビリーMVS化
 			col[7] = g.sadomazo_fix and 2 or 1 -- サドマゾと必勝!逆襲拳空振り時の投げ無敵化修正
-			col[8] = g.snk_time       -- タイムをSNK表示
+			col[8] = g.time_mode       -- タイム設定 1:無限:RB2(デフォルト) 2:無限:RB2 3:無限:SNK 4:99 5:60 6:30
 			col[9] = g.fix_skip_frame and 2 or 1 -- 暗転フレームチェック処理修正
 		end,
 		ut.new_filled_table(9, function()
-			local col, p, g      = menu.extra.pos.col, players, global
+			local col, p, g  = menu.extra.pos.col, players, global
 			--p[1].dis_plain_shift = col[1] == 2 or col[1] == 3 -- ラインずらさない現象
 			--p[2].dis_plain_shift = col[1] == 2 or col[1] == 4 -- ラインずらさない現象
-			g.pause_hit          = col[2]            -- ヒット時にポーズ
-			g.pause_hitbox       = col[3]            -- 判定発生時にポーズ
-			g.save_snapshot      = col[4]            -- 技画像保存
-			g.damaged_move       = col[5]            -- ヒット効果確認用
-			g.mvs_billy          = col[6] == 2       -- ビリーMVS化
-			g.sadomazo_fix       = col[7] == 2       -- サドマゾと必勝!逆襲拳空振り時の投げ無敵化修正
-			g.snk_time           = col[8]            -- タイムSNK表示
-			g.fix_skip_frame     = col[9] == 2       -- 暗転フレームチェック処理修正
+			g.pause_hit      = col[2] -- ヒット時にポーズ
+			g.pause_hitbox   = col[3] -- 判定発生時にポーズ
+			g.save_snapshot  = col[4] -- 技画像保存
+			g.damaged_move   = col[5] -- ヒット効果確認用
+			g.mvs_billy      = col[6] == 2 -- ビリーMVS化
+			g.sadomazo_fix   = col[7] == 2 -- サドマゾと必勝!逆襲拳空振り時の投げ無敵化修正
+			g.time_mode      = col[8] -- タイム設定 1:無限:RB2(デフォルト) 2:無限:RB2 3:無限:SNK 4:90 5:60 6:45
+			g.fix_skip_frame = col[9] == 2 -- 暗転フレームチェック処理修正
+			if g.time_mode <= 3 then
+				g.snk_time               = g.time_mode
+				dip_config.infinity_time = true
+				dip_config.fix_time      = 0x99
+				dip_config.aes_time      = 0x03 -- 残タイム家庭用オプション 0x0:45 0x1:60 0x2:90 0x3:infinity
+			else
+				if g.time_mode == 4 then
+					dip_config.fix_time = 0x90
+					dip_config.aes_time = 0x02 -- 残タイム家庭用オプション 0x0:45 0x1:60 0x2:90 0x3:infinity
+				elseif g.time_mode == 5 then
+					dip_config.fix_time = 0x60
+					dip_config.aes_time = 0x01 -- 残タイム家庭用オプション 0x0:45 0x1:60 0x2:90 0x3:infinity
+				else
+					dip_config.fix_time = 0x45
+					dip_config.aes_time = 0x00 -- 残タイム家庭用オプション 0x0:45 0x1:60 0x2:90 0x3:infinity
+				end
+				g.snk_time               = 1
+				dip_config.infinity_time = false
+			end
 			mod.mvs_billy(g.mvs_billy)
 			mod.sadomazo_fix(g.sadomazo_fix)
 			mod.snk_time(g.snk_time)
 			mod.fix_skip_frame(g.fix_skip_frame)
+			set_dip_config(true)
 			menu.current = menu.main
 		end))
-
 	menu.auto      = menu.create(
 		"追加動作・改造動作設定",
 		"技の発動についての動作を設定します。",
