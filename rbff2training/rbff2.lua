@@ -365,17 +365,17 @@ rbff2.startplugin  = function()
 			mem.wd32(0x01EBC0, mode ~= 1 and 0x20202020 or 0xB6B7B8B9)
 			mem.wd32(0x01EBC4, mode ~= 1 and 0x20202020 or 0xBABBBCBD)
 		end,
-		training     = function()
-			mem.wd16(0x01F3BC, 0x4E75) -- 1Pのスコア表示をすぐ抜ける 082C
-			mem.wd16(0x01F550, 0x4E75) -- 2Pのスコア表示をすぐ抜ける 082C
-			mem.wd08(0x062E9D, 0x00) -- 乱入されても常にキャラ選択できる 01
+		training     = function(tra)
+			mem.wd16(0x01F3BC, tra and 0x4E75 or 0x082C) -- 1Pのスコア表示をすぐ抜ける 082C
+			mem.wd16(0x01F550, tra and 0x4E75 or 0x082C) -- 2Pのスコア表示をすぐ抜ける 082C
+			mem.wd08(0x062E9D, tra and 0x00   or 0x01) -- 乱入されても常にキャラ選択できる 01
 			-- 対CPU1体目でボスキャラも選択できるようにする サンキューヒマニトさん
-			mem.wd08(0x0633EE, 0x60) -- CPUのキャラテーブルをプレイヤーと同じにする 6A
-			mem.wd08(0x063440, 0x60) -- CPUの座標テーブルをプレイヤーと同じにする 6A
-			mem.wd32(0x062FF4, 0x4E714E71) -- PLのカーソル座標修正をNOPにする 3350 00A4
-			mem.wd32(0x062FF8, 0x4E714E71) -- PLのカーソル座標修正をNOPにする 5B69 00A4
-			mem.wd08(0x062EA6, 0x60) -- CPU選択時にアイコンを減らすのを無効化 66
-			mem.wd32(0x063004, 0x4E714E71) -- PLのカーソル座標修正をNOPにする 5569 00A4
+			mem.wd08(0x0633EE, tra and 0x60   or 0x6A) -- CPUのキャラテーブルをプレイヤーと同じにする 6A
+			mem.wd08(0x063440, tra and 0x60   or 0x6A) -- CPUの座標テーブルをプレイヤーと同じにする 6A
+			mem.wd32(0x062FF4, tra and 0x4E714E71 or 0x335000A4) -- PLのカーソル座標修正をNOPにする 3350 00A4
+			mem.wd32(0x062FF8, tra and 0x4E714E71 or 0x5B6900A4) -- PLのカーソル座標修正をNOPにする 5B69 00A4
+			mem.wd08(0x062EA6, tra and 0x60   or 0x66) -- CPU選択時にアイコンを減らすのを無効化 66
+			mem.wd32(0x063004, tra and 0x4E714E71 or 0x556900A4) -- PLのカーソル座標修正をNOPにする 5569 00A4
 			-- キャラ選択の時間減らす処理をNOPにする
 			mem.wd32(0x063336, 0x4E714E71) -- 532C 00B2
 			-- キャラ選択の時間の値にアイコン用のオフセット値を改変して空表示にする
@@ -416,12 +416,12 @@ rbff2.startplugin  = function()
 			mem.wd16(0x1004BF, 0x3CC1)     -- 1P Level 2 Blue Mary 0x55FE46
 			]]
 			-- 1P,2P,COMの表記を空白にする
-			mem.wd16(0x01FF14, 0x07DE)
-			mem.wd16(0x01FF16, 0x07DE)
-			mem.wd16(0x01FF18, 0x07DE)
-			mem.wd16(0x01FF1A, 0x07DE)
-			mem.wd16(0x01FF1C, 0x07DE)
-			mem.wd16(0x01FF1E, 0x07DE)
+			mem.wd16(0x01FF14, tra and 0x07DE or 0x07DF) -- 0x07DF
+			mem.wd16(0x01FF16, tra and 0x07DE or 0x07FF) -- 0x07FF
+			mem.wd16(0x01FF18, tra and 0x07DE or 0x07CB) -- 0x07CB
+			mem.wd16(0x01FF1A, tra and 0x07DE or 0x07EB) -- 0x07EB
+			mem.wd16(0x01FF1C, tra and 0x07DE or 0x07FA) -- 0x07FA
+			mem.wd16(0x01FF1E, tra and 0x07DE or 0x07FB) -- 0x07FB
 		end,
 		fast_select  = function()
 			--[[
@@ -1218,7 +1218,7 @@ rbff2.startplugin  = function()
 		if before then before() end
 		mem.pached = mem.pached or mod.p1_patch()
 		mod.bugfix()
-		mod.training()
+		mod.training(true)
 		mod.snk_time(global.snk_time)
 		print("load_rom_patch done")
 	end
@@ -6073,7 +6073,7 @@ rbff2.startplugin  = function()
 			{ "ステージセレクト", menu.labels.stage_list },
 			{ "BGMセレクト", menu.labels.bgms },
 			{ title = true, "通常CPU戦へ切り替えします" },
-			{ "モード切替", { "Aでプレイヤーセレクト画面へ" } },
+			{ "モード切替", { "AでCPU戦モードへ切替&リセット" } },
 			{ title = true, "プラグイン終了後もMEMEメニューから再度有効化できます" },
 			{ "プラグイン終了", { "----", "Aでプラグイン終了&リセット" } },
 		},
@@ -6102,6 +6102,7 @@ rbff2.startplugin  = function()
 				g.pow_mode = 3         -- POWゲージモード 1:自動回復 2:固定 3:通常動作
 				set_dip_config(true)
 				menu.on_player_select(p_no)
+				mod.training(false)
 				machine:soft_reset()
 			end,
 			function() end, -- ラベル
