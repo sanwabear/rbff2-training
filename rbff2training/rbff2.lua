@@ -284,6 +284,17 @@ rbff2.startplugin  = function()
 		to_col = nil,
 		to_auto = nil,
 	}
+	menu.set_current = function(next_menu)
+		-- print("next", next_menu or "main")
+		if next_menu and (type(next_menu) == "string") then
+			next_menu = menu[next_menu]
+		end
+		next_menu = next_menu or menu.main
+		if next_menu ~= menu.main and menu.current ~= next_menu and next_menu.init ~= nil and type(next_menu.init) == "function" then
+			next_menu.init()
+		end
+		menu.current = next_menu
+	end
 	for i = -20, 0xF0 do table.insert(menu.labels.fix_scr_tops, "" .. i) end
 	for i = 1, 301 do table.insert(menu.labels.play_interval, i - 1) end
 	for i = 1, 256 do table.insert(menu.labels.force_y_pos, i) end
@@ -701,7 +712,7 @@ rbff2.startplugin  = function()
 		next_block_grace     = 0, -- 1ガードでの持続フレーム数
 		life_mode            = 1, -- 体力ゲージ 1:自動回復 2:固定 3:通常動作
 		pow_mode             = 2, -- POWモード　1:自動回復 2:固定 3:通常動作
-		time_mode            = 1, -- タイム設定 1:無限:RB2(デフォルト) 2:無限:RB2 3:無限:SNK 4:99 5:60 6:30
+		time_mode            = 1, -- タイム設定 1:無限:RB2(デフォルト) 2:無限:RB2 3:無限:SNK 4:90 5:60 6:30
 		disp_meters          = true,
 		repeat_interval      = 0,
 		await_neutral        = false,
@@ -710,6 +721,7 @@ rbff2.startplugin  = function()
 		damaged_move         = 1,
 		all_bs               = false,
 		fix_skip_frame       = false,
+		proceed_cpu          = false, -- CPU戦進行あり
 		mvs_billy            = false,
 		sadomazo_fix         = false,
 		snk_time             = 2, -- タイムSNK表示
@@ -922,9 +934,8 @@ rbff2.startplugin  = function()
 		infinity_life = false,
 		easy_super    = false,
 		semiauto_p    = false,
-		infinity_time = true,
 		aes_time      = 0x03, -- 残タイム家庭用オプション 0x0:45 0x1:60 0x2:90 0x3:infinity
-		fix_time      = 0x99,
+		fix_time      = 0xAA,
 		stage_select  = false,
 		alfred        = false,
 		watch_states  = false,
@@ -933,22 +944,23 @@ rbff2.startplugin  = function()
 	}
 	-- デバッグDIPのセット
 	local set_dip_config       = function(on_menu)
-		local dip1, dip2, dip3, dip4 = 0x00, 0x00, 0x00, 0x00                 -- デバッグDIP
-		dip1 = dip1 | (in_match and dip_config.show_range and 0x40 or 0)      --cheat "DIP= 1-7 色々な判定表示"
-		dip1 = dip1 | (in_match and dip_config.show_hitbox and 0x80 or 0)     --cheat "DIP= 1-8 当たり判定表示"
-		dip1 = dip1 | (in_match and dip_config.infinity_life and 0x02 or 0)   --cheat "DIP= 1-2 Infinite Energy"
-		dip2 = dip2 | (in_match and dip_config.easy_super and 0x01 or 0)      --Cheat "DIP 2-1 Eeasy Super"
-		dip4 = dip4 | (in_match and dip_config.semiauto_p and 0x08 or 0)      -- DIP4-4
-		dip2 = dip2 | (dip_config.infinity_time and 0x18 or 0)                -- 2-4 PAUSEを消す + cheat "DIP= 2-5 Disable Time Over"
-		mem.w08(0x10E024, dip_config.aes_time)                                -- 残タイム家庭用オプション 0x0:45 0x1:60 0x2:90 0x3:infinity
-		if on_menu or dip_config.infinity_time then
-			mem.w08(0x107C28, dip_config.infinity_time and 0xAA or dip_config.fix_time) --cheat "Infinite Time"
+		local dip1, dip2, dip3, dip4 = 0x00, 0x00, 0x00, 0x00          -- デバッグDIP
+		dip1 = dip1 | (in_match and dip_config.show_range and 0x40 or 0) --cheat "DIP= 1-7 色々な判定表示"
+		dip1 = dip1 | (in_match and dip_config.show_hitbox and 0x80 or 0) --cheat "DIP= 1-8 当たり判定表示"
+		dip1 = dip1 | (in_match and dip_config.infinity_life and 0x02 or 0) --cheat "DIP= 1-2 Infinite Energy"
+		dip2 = dip2 | (in_match and dip_config.easy_super and 0x01 or 0) --Cheat "DIP 2-1 Eeasy Super"
+		dip4 = dip4 | (in_match and dip_config.semiauto_p and 0x08 or 0) -- DIP4-4
+		dip2 = dip2 | ((dip_config.fix_time == 0xAA) and 0x18 or 0)         -- 2-4 PAUSEを消す + cheat "DIP= 2-5 Disable Time Over"
+		mem.w08(0x10E024, dip_config.aes_time)                         -- 残タイム家庭用オプション 0x0:45 0x1:60 0x2:90 0x3:infinity
+		if (dip_config.fix_time == 0xAA) or on_menu then
+			mem.w08(0x107C28, dip_config.fix_time)
+			-- print("aes_time", dip_config.aes_time, "fix_time", dip_config.fix_time)
 		end
-		dip1 = dip1 | (dip_config.stage_select and 0x04 or 0)                 --cheat "DIP= 1-3 Stage Select Mode"
-		dip2 = dip2 | (in_player_select and dip_config.alfred and 0x80 or 0)  --cheat "DIP= 2-8 Alfred Code (B+C >A)"
-		dip2 = dip2 | (in_match and dip_config.watch_states and 0x20 or 0)    --cheat "DIP= 2-6 Watch States"
-		dip3 = dip3 | (in_match and dip_config.cpu_cant_move and 0x01 or 0)   --cheat "DIP= 3-1 CPU Can't Move"
-		dip3 = dip3 | (in_match and dip_config.other_speed and 0x10 or 0)     --cheat "DIP= 3-5 移動速度変更"
+		dip1 = dip1 | (dip_config.stage_select and 0x04 or 0)          --cheat "DIP= 1-3 Stage Select Mode"
+		dip2 = dip2 | (in_player_select and dip_config.alfred and 0x80 or 0) --cheat "DIP= 2-8 Alfred Code (B+C >A)"
+		dip2 = dip2 | (in_match and dip_config.watch_states and 0x20 or 0) --cheat "DIP= 2-6 Watch States"
+		dip3 = dip3 | (in_match and dip_config.cpu_cant_move and 0x01 or 0) --cheat "DIP= 3-1 CPU Can't Move"
+		dip3 = dip3 | (in_match and dip_config.other_speed and 0x10 or 0) --cheat "DIP= 3-5 移動速度変更"
 		for i, dip in ipairs({ dip1, dip2, dip3, dip4 }) do mem.w08(0x10E000 + i - 1, dip) end
 	end
 
@@ -2830,6 +2842,8 @@ rbff2.startplugin  = function()
 	end
 	-- 場面変更
 	local apply_1p2p_active  = function()
+		if global.proceed_cpu then return end -- 通常CPU戦のため修正せず抜ける
+		for _, p in ipairs(players) do mem.w16(p.addr.control, 0x0101 * p.control) end -- Human 1 or 2, CPU 3
 		if in_match and mem.r08(0x1041D3) == 0 then
 			mem.w08(0x100024, 0x03)
 			mem.w08(0x100027, 0x03)
@@ -2848,7 +2862,13 @@ rbff2.startplugin  = function()
 			mem.w32(0x100024, 0x01010001)
 			mem.w16(0x10FDB6, 0x0101)
 		end
-		mem.w16(0x1041D6, 0x0003) -- 対戦モード3
+		if global.proceed_cpu then
+			--mem.w16(players[p_no].addr.control, 0x0101 * (players[p_no].control or 1)) -- Human 1 or 2, CPU 3
+			--mem.w16(players[3 - p_no].addr.control, 0x0101 * 3) -- Human 1 or 2, CPU 3
+			--mem.w16(0x1041D6, p_no) -- 対戦モード
+		else
+			mem.w16(0x1041D6, 0x0003) -- 対戦モード=対戦
+		end
 	end
 
 	local restart_fight      = function(param)
@@ -2857,14 +2877,17 @@ rbff2.startplugin  = function()
 		local p1, p2       = param.next_p1 or 1, param.next_p2 or 21
 		local p1col, p2col = param.next_p1col or 0x00, param.next_p2col or 0x01
 		mod.fast_restart()
-		mem.w08(0x1041D3, 0x01) -- 乱入フラグON
-		mem.w08(0x107C1F, 0x00) -- キャラデータの読み込み無視フラグをOFF
-		mem.w32(0x107BA6, 0x00010001) -- CPU戦の進行数をリセット
-		mem.w08(0x100024, 0x03)
-		mem.w08(0x100027, 0x03)
-		mem.w16(0x10FDB6, 0x0101)
+		if global.proceed_cpu ~= true then
+			-- 通常CPU戦回避のための設定
+			mem.w08(0x1041D3, 0x01) -- 乱入フラグON
+			mem.w08(0x107C1F, 0x00) -- キャラデータの読み込み無視フラグをOFF
+			mem.w32(0x107BA6, 0x00010001) -- CPU戦の進行数をリセット
+			mem.w08(0x100024, 0x03)
+			mem.w08(0x100027, 0x03)
+			mem.w16(0x10FDB6, 0x0101)
 
-		mem.w16(0x1041D6, 0x0003) -- 対戦モード3
+			mem.w16(0x1041D6, 0x0003) -- 対戦モード3
+		end
 		mem.w08(0x107BB1, param.next_stage.stg1 or mem.r08(0x107BB1))
 		mem.w08(0x107BB7, param.next_stage.stg2 or mem.r08(0x107BB7))
 		mem.w16(0x107BB8, global.next_stg3) -- ステージのバリエーション
@@ -3011,7 +3034,8 @@ rbff2.startplugin  = function()
 	end
 	recording.procs.input = function(_)            -- 入力中+入力保存
 		if recording.max_frames <= #recording.active_slot.store then
-			menu.state, menu.current = menu, menu.recording -- メニュー表示に強制遷移
+			menu.state = menu -- メニュー表示に強制遷移
+			menu.set_current("recording")
 			return
 		end
 		recording.info = recording.info1
@@ -4173,11 +4197,9 @@ rbff2.startplugin  = function()
 			menu.state = menu -- メニュー表示状態へ切り替え
 			cls_joy()
 			if global.dummy_mode == 5 then
-				menu.recording.init()
-				menu.current = menu.recording
+				menu.set_current("recording")
 			elseif global.dummy_mode == 6 then
-				menu.replay.init()
-				menu.current = menu.replay
+				menu.set_current("replay")
 			end
 			return
 		end
@@ -4684,7 +4706,6 @@ rbff2.startplugin  = function()
 			else
 				p.control = i
 			end
-			mem.w16(p.addr.control, 0x0101 * p.control) -- Human 1 or 2, CPU 3
 			p.bs_hook = nil                    -- フックを無効化
 		end
 		apply_1p2p_active()
@@ -5860,19 +5881,19 @@ rbff2.startplugin  = function()
 		local next_menu = nil
 
 		if p1.away_anti_air.enabled and not cancel and row == 14 then -- 1P 避け攻撃対空
-			next_menu = menu.away_anti_air1
+			next_menu = "away_anti_air1"
 		elseif p2.away_anti_air.enabled and not cancel and row == 15 then -- 2P 避け攻撃対空
-			next_menu = menu.away_anti_air2
+			next_menu = "away_anti_air2"
 		end
 
 		if g.dummy_mode == 5 then -- レコード
 			g.dummy_mode = 1 -- 設定でレコーディングに入らずに抜けたとき用にモードを1に戻しておく
 			menu.recording.init()
-			if not cancel and row == 1 then next_menu = menu.recording end
+			if not cancel and row == 1 then next_menu = "recording" end
 		elseif g.dummy_mode == 6 then -- リプレイ
 			g.dummy_mode = 1    -- 設定でリプレイに入らずに抜けたとき用にモードを1に戻しておく
 			menu.replay.init()
-			if not cancel and row == 1 then next_menu = menu.replay end
+			if not cancel and row == 1 then next_menu = "replay" end
 		end
 
 		-- プレイヤー選択しなおしなどで初期化したいときはサブメニュー遷移しない
@@ -5891,13 +5912,13 @@ rbff2.startplugin  = function()
 			if row == 13 and rvs_wake_types[p2.dummy_wakeup] then next_menu = menu.rvs_menus[2][p2.char] end
 		end
 
-		menu.current = next_menu or menu.main
+		menu.set_current(next_menu)
 	end
 	menu.to_main_cancel = function() menu.to_main(nil, true, false) end
 	for i = 1, 0xC0 - 1 do table.insert(menu.labels.life_range, i) end
 	for i = 1, 0x3C - 1 do table.insert(menu.labels.pow_range, i) end
 
-	menu.rec_to_tra           = function() menu.current = menu.training end
+	menu.rec_to_tra           = function() menu.set_current("training") end
 	menu.exit_and_rec         = function(slot_no, enabled)
 		if not enabled then return end
 		local g               = global
@@ -5907,7 +5928,7 @@ rbff2.startplugin  = function()
 		recording.temp_player = players[1].reg_pcnt ~= 0 and 1 or 2
 		recording.last_slot   = slot_no
 		recording.active_slot = recording.slot[slot_no]
-		menu.current          = menu.main
+		menu.set_current()
 		menu.exit()
 	end
 	menu.exit_and_play_common = function()
@@ -5932,7 +5953,7 @@ rbff2.startplugin  = function()
 		input.accepted = scr:frame_number()
 		recording.temp_player = players[1].reg_pcnt ~= 0 and 1 or 2
 		menu.exit_and_play_common()
-		menu.current = menu.main
+		menu.set_current()
 		menu.exit()
 	end
 	menu.exit_and_play        = function()
@@ -5945,7 +5966,7 @@ rbff2.startplugin  = function()
 		g.rec_main = recording.procs.await_play
 		input.accepted = scr:frame_number()
 		menu.exit_and_play_common()
-		menu.current = menu.main
+		menu.set_current()
 		menu.exit()
 	end
 	menu.exit_and_play_cancel = function()
@@ -5958,12 +5979,12 @@ rbff2.startplugin  = function()
 	end
 
 
-	menu.to_tra                   = function() menu.current = menu.training end
-	menu.to_bar                   = function() menu.current = menu.bar end
-	menu.to_disp                  = function() menu.current = menu.disp end
-	menu.to_ex                    = function() menu.current = menu.extra end
-	menu.to_auto                  = function() menu.current = menu.auto end
-	menu.to_col                   = function() menu.current = menu.color end
+	menu.to_tra                   = function() menu.set_current("training") end
+	menu.to_bar                   = function() menu.set_current("bar") end
+	menu.to_disp                  = function() menu.set_current("disp") end
+	menu.to_ex                    = function() menu.set_current("extra") end
+	menu.to_auto                  = function() menu.set_current("auto") end
+	menu.to_col                   = function() menu.set_current("color") end
 	menu.exit                     = function()
 		-- Bボタンでトレーニングモードへ切り替え
 		menu.state = menu.tra_main
@@ -6015,6 +6036,24 @@ rbff2.startplugin  = function()
 			menu.exit_and_play()               -- レコード＆リプレイ用の初期化 リプレイ
 		end
 	end
+	menu.organize_time_config     = function(time_mode, proceed_cpu)
+		local g, d                 = global, dip_config
+		g.time_mode, g.proceed_cpu = time_mode, proceed_cpu
+		if g.time_mode == 4 then
+			g.snk_time, d.fix_time, d.aes_time = 1, 0x90, 0x02  -- 残タイム家庭用オプション 0x0:45 0x1:60 0x2:90 0x3:infinity
+		elseif g.time_mode == 5 then
+			g.snk_time, d.fix_time, d.aes_time = 1, 0x60, 0x01  -- 残タイム家庭用オプション 0x0:45 0x1:60 0x2:90 0x3:infinity
+		elseif g.time_mode == 6 then
+			g.snk_time, d.fix_time, d.aes_time = 1, 0x45, 0x00  -- 残タイム家庭用オプション 0x0:45 0x1:60 0x2:90 0x3:infinity
+		else
+			g.snk_time, d.fix_time, d.aes_time = g.time_mode, 0xAA, 0x03 -- 残タイム家庭用オプション 0x0:45 0x1:60 0x2:90 0x3:infinity
+		end
+		mod.snk_time(g.snk_time)
+	end
+	menu.organize_life_config     = function(life_mode)
+		local g, d                   = global, dip_config
+		g.life_mode, d.infinity_life = life_mode, life_mode == 2 -- 体力ゲージモード 1:自動回復 2:固定 3:通常動作
+	end
 	menu.main                     = menu.create(
 		"トレーニングメニュー",
 		"",
@@ -6033,8 +6072,10 @@ rbff2.startplugin  = function()
 			{ "2P カラー", { "Aボタンカラー", "Dボタンカラー" } },
 			{ "ステージセレクト", menu.labels.stage_list },
 			{ "BGMセレクト", menu.labels.bgms },
+			{ title = true, "通常CPU戦へ切り替えします" },
+			{ "モード切替", { "Aでプレイヤーセレクト画面へ" } },
 			{ title = true, "プラグイン終了後もMEMEメニューから再度有効化できます" },
-			{ "プラグイン終了", { "----", "Aでプラグイン終了&リセット" } }
+			{ "プラグイン終了", { "----", "Aでプラグイン終了&リセット" } },
 		},
 		function() end,
 		{
@@ -6052,10 +6093,21 @@ rbff2.startplugin  = function()
 			menu.on_restart_fight_a, -- 2P カラー
 			menu.on_restart_fight_a, -- ステージセレクト
 			menu.on_restart_fight_a, -- BGMセレクト
-			function() end, -- クイックセレクト
-			function() rbff2.self_disable = menu.main.pos.col[16] == 2 end,
+			function() end, -- ラベル
+			function(p_no)
+				-- モード切替
+				local g = global
+				menu.organize_time_config(4, true) -- タイム設定=4:90
+				menu.organize_life_config(3) -- 体力ゲージモード=3:通常動作
+				g.pow_mode = 3         -- POWゲージモード 1:自動回復 2:固定 3:通常動作
+				set_dip_config(true)
+				menu.on_player_select(p_no)
+				machine:soft_reset()
+			end,
+			function() end, -- ラベル
+			function() rbff2.self_disable = menu.main.pos.col[18] == 2 end, -- プラグイン終了
 		},
-		ut.new_filled_table(16, menu.exit))
+		ut.new_filled_table(18, menu.exit))
 
 	menu.current                  = menu.main -- デフォルト設定
 	menu.update_pos               = function()
@@ -6085,7 +6137,7 @@ rbff2.startplugin  = function()
 		end
 		if not found then col[14] = 1 end
 
-		col[16] = 1 -- 表示時は常に1
+		col[18] = 1 -- プラグイン終了可否 表示時は常に1
 
 		-- キャラにあわせたメニュー設定
 		for _, p in ipairs(players) do
@@ -6219,7 +6271,7 @@ rbff2.startplugin  = function()
 				a.hop_limit1  = col[4] - 1 -- 小ジャンプ高度
 				a.hop_limit2  = col[5] - 1 -- 上り小ジャンプ攻撃高度
 				a.hop_limit3  = col[6] - 1 -- 下り小ジャンプ攻撃高度
-				menu.current  = menu.main
+				menu.set_current()
 			end))
 	end
 
@@ -6302,11 +6354,10 @@ rbff2.startplugin  = function()
 			p[2].red                 = col[2] -- 2P 体力ゲージ量
 			p[1].max                 = col[3] -- 1P POWゲージ量
 			p[2].max                 = col[4] -- 2P POWゲージ量
-			g.life_mode              = col[5] -- 体力ゲージモード
-			dip_config.infinity_life = g.life_mode == 2 -- 体力ゲージ 1:自動回復 2:固定 3:通常動作
-			g.pow_mode               = col[6] -- POWゲージモード
+			menu.organize_life_config(col[5]) -- 体力ゲージモード 1:自動回復 2:固定 3:通常動作
+			g.pow_mode               = col[6] -- POWゲージモード 1:自動回復 2:固定 3:通常動作
 			set_dip_config(true)
-			menu.current             = menu.main
+			menu.set_current()
 		end))
 
 	menu.on_disp   = function(cancel)
@@ -6433,7 +6484,7 @@ rbff2.startplugin  = function()
 		-- 22 エフェクト表示 1:OFF 2:ON 3:1P 4:2P
 		g.hide       = set_hide(o.p1_effect, c.disp_effect) -- 1P エフェクト表示
 		g.hide       = set_hide(o.p2_effect, c.disp_effect) -- 2P エフェクト表示
-		menu.current = menu.main
+		menu.set_current()
 
 		if not cancel and 26 <= menu.disp.pos.row and menu.disp.pos.row <= 29 then
 			menu.on_restart_fight_a()
@@ -6535,8 +6586,9 @@ rbff2.startplugin  = function()
 			{ "ヒット効果確認用", db.hit_effects.menus, },
 			{ "ビリーMVS化", menu.labels.off_on, },
 			{ "サドマゾと逆襲拳のバグ修正", menu.labels.off_on, },
-			{ "タイム設定(リスタートで反映)", { "無限:RB2(デフォルト)", "無限:RB2", "無限:SNK", "90", "60", "45", }, },
 			{ "暗転フレームチェック処理修正", menu.labels.off_on, },
+			{ "タイム設定(リスタートで反映)", { "無限:RB2(デフォルト)", "無限:RB2", "無限:SNK", "90", "60", "45", }, },
+			{ "CPU戦進行あり", menu.labels.off_on, },
 		},
 		function()
 			---@diagnostic disable-next-line: undefined-field
@@ -6555,11 +6607,12 @@ rbff2.startplugin  = function()
 			col[5] = g.damaged_move   -- ヒット効果確認用
 			col[6] = g.mvs_billy and 2 or 1 -- ビリーMVS化
 			col[7] = g.sadomazo_fix and 2 or 1 -- サドマゾと必勝!逆襲拳空振り時の投げ無敵化修正
-			col[8] = g.time_mode       -- タイム設定 1:無限:RB2(デフォルト) 2:無限:RB2 3:無限:SNK 4:99 5:60 6:30
-			col[9] = g.fix_skip_frame and 2 or 1 -- 暗転フレームチェック処理修正
+			col[8] = g.fix_skip_frame and 2 or 1 -- 暗転フレームチェック処理修正
+			col[9] = g.time_mode       -- タイム設定 1:無限:RB2(デフォルト) 2:無限:RB2 3:無限:SNK 4:90 5:60 6:30
+			col[10] = g.proceed_cpu and 2 or 1 -- CPU戦進行あり
 		end,
-		ut.new_filled_table(9, function()
-			local col, p, g  = menu.extra.pos.col, players, global
+		ut.new_filled_table(10, function()
+			local col, g  = menu.extra.pos.col, global
 			--p[1].dis_plain_shift = col[1] == 2 or col[1] == 3 -- ラインずらさない現象
 			--p[2].dis_plain_shift = col[1] == 2 or col[1] == 4 -- ラインずらさない現象
 			g.pause_hit      = col[2] -- ヒット時にポーズ
@@ -6568,33 +6621,15 @@ rbff2.startplugin  = function()
 			g.damaged_move   = col[5] -- ヒット効果確認用
 			g.mvs_billy      = col[6] == 2 -- ビリーMVS化
 			g.sadomazo_fix   = col[7] == 2 -- サドマゾと必勝!逆襲拳空振り時の投げ無敵化修正
-			g.time_mode      = col[8] -- タイム設定 1:無限:RB2(デフォルト) 2:無限:RB2 3:無限:SNK 4:90 5:60 6:45
-			g.fix_skip_frame = col[9] == 2 -- 暗転フレームチェック処理修正
-			if g.time_mode <= 3 then
-				g.snk_time               = g.time_mode
-				dip_config.infinity_time = true
-				dip_config.fix_time      = 0x99
-				dip_config.aes_time      = 0x03 -- 残タイム家庭用オプション 0x0:45 0x1:60 0x2:90 0x3:infinity
-			else
-				if g.time_mode == 4 then
-					dip_config.fix_time = 0x90
-					dip_config.aes_time = 0x02 -- 残タイム家庭用オプション 0x0:45 0x1:60 0x2:90 0x3:infinity
-				elseif g.time_mode == 5 then
-					dip_config.fix_time = 0x60
-					dip_config.aes_time = 0x01 -- 残タイム家庭用オプション 0x0:45 0x1:60 0x2:90 0x3:infinity
-				else
-					dip_config.fix_time = 0x45
-					dip_config.aes_time = 0x00 -- 残タイム家庭用オプション 0x0:45 0x1:60 0x2:90 0x3:infinity
-				end
-				g.snk_time               = 1
-				dip_config.infinity_time = false
-			end
+			g.fix_skip_frame = col[8] == 2 -- 暗転フレームチェック処理修正
+			-- タイム設定 1:無限:RB2(デフォルト) 2:無限:RB2 3:無限:SNK 4:90 5:60 6:45
+			-- CPU戦進行あり
+			menu.organize_time_config(col[9], col[10] == 2)
 			mod.mvs_billy(g.mvs_billy)
 			mod.sadomazo_fix(g.sadomazo_fix)
-			mod.snk_time(g.snk_time)
 			mod.fix_skip_frame(g.fix_skip_frame)
 			set_dip_config(true)
-			menu.current = menu.main
+			menu.set_current()
 		end))
 	menu.auto      = menu.create(
 		"追加動作・改造動作設定",
@@ -6694,7 +6729,7 @@ rbff2.startplugin  = function()
 			ez.cancel(g.auto_input.cancel)      -- 全通常技キャンセル可能
 			ez.fast_recover(g.auto_input.fast_recover) -- 高速気絶回復
 			ez.hebi_damashi(g.auto_input.hebi_damashi) -- 最速蛇だまし
-			menu.current = menu.main
+			menu.set_current()
 		end))
 
 	menu.color     = menu.create(
@@ -6719,7 +6754,7 @@ rbff2.startplugin  = function()
 		ut.new_filled_table(#db.box_type_list + 1, function()
 			local col = menu.color.pos.col
 			for i = 2, #col do db.box_type_list[i - 1].enabled = col[i] end -- 1:OFF 2~3:ON or ON:ALL
-			menu.current = menu.main
+			menu.set_current()
 		end))
 
 	menu.recording = menu.create(
@@ -7062,7 +7097,7 @@ rbff2.startplugin  = function()
 		end
 		-- プレイヤーセレクト中かどうかの判定, 対戦中かどうかの判定
 		in_match, in_player_select = get_game_state()
-		if in_match then
+		if in_match and (not global.proceed_cpu) then
 			mem.w16(0x10FDB6, 0x0101) -- 操作の設定
 			for i, p in ipairs(players) do mem.w16(p.addr.control, i * 0x0101) end
 		end
