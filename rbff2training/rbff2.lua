@@ -387,11 +387,11 @@ rbff2.startplugin  = function()
 			mem.w16(0x10E792, 0x0007) -- maincpu.pw@10E792=0007
 			mem.w16(0x10E796, 0x0007) -- maincpu.pw@10E796=0008
 			]]
-			mem.wd32(0x050108, 0x303C0007)
-			mem.wd32(0x050138, 0x3E3C0007)
-			mem.wd32(0x050170, 0x303C0007)
-			mem.wd32(0x0501C8, 0x303C0007)
-			mem.wd32(0x0501EE, 0x303C0007)
+			mem.wd32(0x050108, tra and 0x303C0007 or 0x302D6016)
+			mem.wd32(0x050138, tra and 0x3E3C0007 or 0x3E2D6792)
+			mem.wd32(0x050170, tra and 0x303C0007 or 0x302D6016)
+			mem.wd32(0x0501C8, tra and 0x303C0007 or 0x302D6794)
+			mem.wd32(0x0501EE, tra and 0x303C0007 or 0x302D6796)
 			-- 常に2ラインの対戦ステージにする
 			-- 00F0F8: 41FA 01DE lea ($1de,PC) ; ($f2d8), A0 ; A0 = F2D8 CPUステージテーブル
 			mem.wd32(0x00F0F8, 0x41FA017E)
@@ -423,13 +423,18 @@ rbff2.startplugin  = function()
 			mem.wd16(0x01FF1C, tra and 0x07DE or 0x07FA) -- 0x07FA
 			mem.wd16(0x01FF1E, tra and 0x07DE or 0x07FB) -- 0x07FB
 		end,
-		fast_select  = function()
+		init_select  = function()
 			--[[
 			010668: 0C6C FFEF 0022           cmpi.w  #-$11, ($22,A4)                     ; THE CHALLENGER表示のチェック。
 			01066E: 6704                     beq     $10674                              ; braにしてチェックを飛ばすとすぐにキャラ選択にいく
 			010670: 4E75                     rts                                         ; bp 01066E,1,{PC=00F05E;g} にすると乱入の割り込みからラウンド開始前へ
 			010672: 4E71                     nop                                         ; 4EF9 0000 F05E
 			]]
+			mem.wd32(0x10668, 0xC6CFFEF) -- 元の乱入処理
+			mem.wd32(0x1066C, 0x226704) -- 元の乱入処理
+			mem.wd08(0x1066E, 0x67) -- 元の乱入処理
+		end,
+		fast_select  = function()
 			mem.wd32(0x10668, 0xC6CFFEF) -- 元の乱入処理
 			mem.wd32(0x1066C, 0x226704) -- 元の乱入処理
 			mem.wd08(0x1066E, 0x60) -- 乱入時にTHE CHALLENGER表示をさせない
@@ -1607,11 +1612,11 @@ rbff2.startplugin  = function()
 			if (not enabled and sub.on == true) or force then
 				sub.on = false
 				for _, tap in pairs(sub.taps) do tap:remove() end
-				ut.printf("Remove memory taps %s", labels)
+				ut.printf("Remove memory taps %s %s", labels, label)
 			elseif enabled and sub.on ~= true then
 				sub.on = true
 				for _, tap in pairs(sub.taps) do tap:reinstall() end
-				ut.printf("Reinstall memory taps %s", labels)
+				ut.printf("Reinstall memory taps %s %s", labels, label)
 			end
 		end
 	end
@@ -2074,7 +2079,10 @@ rbff2.startplugin  = function()
 				if data == 0 and mem.pc() == 0x58930 then p.on_bs_clear = now() end            -- BSフラグのクリア
 				if data ~= 0 and mem.pc() == 0x58948 then p.on_bs_established, p.last_bs = now(), data end -- BSフラグ設定
 			end,
-			[0xBC] = function(data) p.pow = data end,                                          -- パワー
+			[0xBC] = function(data) p.pow = data 
+ut.printf("pow upd %X", mem.pc())
+			
+			end,                                          -- パワー
 			[0xCF] = function(data) p.on_update_ca = data == 0x01 and now() or p.on_update_ca end,
 			[0xD0] = function(data) p.flag_d0 = data end,                                      -- フラグ群
 			[{ addr = 0xD6, filter = 0x395A6 }] = function(data)
@@ -2461,10 +2469,13 @@ rbff2.startplugin  = function()
 				local cur_pow = mem.r08(p.addr.pow)      -- 現在のパワー値
 				if global.pow_mode == 2 then
 					mem.w08(p.addr.pow, max_pow)         -- 固定時は常にパワー回復
+					print("setpow2")
 				elseif global.pow_mode == 1 and 180 < math.min(p.throw_timer, p.op.throw_timer) then
 					mem.w08(p.addr.pow, max_pow)         -- 投げ無敵タイマーでパワー回復
+					print("setpow1")
 				elseif global.pow_mode ~= 3 and max_pow < cur_pow then
 					mem.w08(p.addr.pow, max_pow)         -- 最大値の方が少ない場合は強制で減らす
+					print("setpowx")
 				end
 			end
 			p.init_state       = function(call_recover)
@@ -2552,12 +2563,15 @@ rbff2.startplugin  = function()
 		},
 		rp16 = {
 			[{ addr = 0x107BB8, filter = {
-				0xF6AC,                          -- BGMロード鳴らしたいので  --[[ 0x1589Eと0x158BCは雨発動用にそのままとする ]]
-				0x17694,                         -- 必要な事前処理ぽいので
-				0x1E39A,                         -- FIXの表示をしたいので
-				0x22AD8,                         -- データロードぽいので
-				0x22D32,                         -- 必要な事前処理ぽいので
-			} }] = function(data, ret) ret.value = 1 end, -- 双角ステージの雨バリエーション時でも1ラウンド相当の前処理を行う
+				0xF6AC,                   -- BGMロード鳴らしたいので  --[[ 0x1589Eと0x158BCは雨発動用にそのままとする ]]
+				0x17694,                  -- 必要な事前処理ぽいので
+				0x1E39A,                  -- FIXの表示をしたいので
+				0x22AD8,                  -- データロードぽいので
+				0x22D32,                  -- 必要な事前処理ぽいので
+			} }] = function(data, ret)
+				if global.proceed_cpu then return end -- 通常CPU戦では無視する
+				ret.value = 1             -- 双角ステージの雨バリエーション時でも1ラウンド相当の前処理を行う
+			end,
 			[mem.stage_base_addr + 0x46] = function(data, ret) if global.fix_scr_top > 1 then ret.value = data + global.fix_scr_top - 20 end end,
 			[mem.stage_base_addr + 0xA4] = function(data, ret) if global.fix_scr_top > 1 then ret.value = data + global.fix_scr_top - 20 end end,
 			[{ addr = 0x107EBE, filter = { 0x24C5E, 0x24CE2 } }] = function(data) global.skip_frame1 = data ~= 0 end, -- 潜在能力強制停止
@@ -4842,7 +4856,9 @@ rbff2.startplugin  = function()
 			end
 
 			-- 相手がプレイヤーで挑発中は前進
-			if p.fwd_prov and p.op.control ~= 3 and ut.tstb(p.op.flag_cc, db.flag_cc._19) then p.add_cmd_hook(db.cmd_types.front) end
+			if not global.proceed_cpu then
+				if p.fwd_prov and (p.op.control ~= 3) and ut.tstb(p.op.flag_cc, db.flag_cc._19) then p.add_cmd_hook(db.cmd_types.front) end
+			end
 
 			-- ガードリバーサル
 			if not p.gd_rvs_enabled and p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs and p.on_block == global.frame_number then
@@ -6146,8 +6162,6 @@ rbff2.startplugin  = function()
 		local col, g, o, c, p = menu.main.pos.col, global, hide_options, menu.config, players
 		-- モード切替
 		if col[16] == 2 then
-			p[1].fwd_prov = false
-			p[2].fwd_prov = false
 			c.disp_frame = 1          -- フレームメーター表示=1:OFF
 			menu.organize_disp_config()
 			menu.organize_time_config(4, true) -- タイム設定=4:90
@@ -6155,11 +6169,10 @@ rbff2.startplugin  = function()
 			g.pow_mode = 3            -- POWゲージモード=3:通常動作
 			set_dip_config(true)
 			menu.on_player_select(p_no)
+			mod.init_select()
 			mod.training(false)
 			machine:soft_reset()
 		else
-			p[1].fwd_prov = true
-			p[2].fwd_prov = true
 			c.disp_frame = 2           -- フレームメーター表示=2:ON:大表示
 			menu.organize_disp_config()
 			menu.organize_time_config(1, false) -- タイム設定=1:RB2(デフォルト)
@@ -7047,12 +7060,27 @@ rbff2.startplugin  = function()
 
 	local get_game_state = function()
 		local _0x100701 = mem.r16(0x100701) -- 22e 22f 対戦中
-		local _0x107C22 = mem.r08(0x107C22) -- 対戦中44
+		local _0x107C22 = mem.r08(0x107C22) --[[
+			11 ラウンド開始前 白描画
+			22 ラウンド開始前 黒描画
+			28 ラウンド開始前 黒描画解除
+			29 ラウンド開始前 オブジェクト表示
+			33 ラウンド開始前 オブジェクト表示
+			38 ラウンド開始前 FIGHT表示
+			44 対戦中
+			77 KO
+			00 その他
+		]]
 		local _0x10FDAF = mem.r08(0x10FDAF)
 		local _0x10FDB6 = mem.r16(0x10FDB6)
 		local _0x10E043 = mem.r08(0x10E043)
+		local round_no  = mem.r16(0x107BB8)
+		local _0x1041D0 = mem.r16(0x1041D0)
+		local life_p1 = mem.r08(0x10048B)
+		local life_p2 = mem.r08(0x10058B)
 		-- プレイヤーセレクト中かどうかの判定
-		local in_player_select = _0x100701 == 0x10B and (_0x107C22 == 0 or _0x107C22 == 0x55) and _0x10FDAF == 2 and _0x10FDB6 ~= 0 and _0x10E043 == 0
+		local in_player_select = round_no == 0 and _0x1041D0 == 0xA and _0x100701 == 0x10B and (_0x107C22 == 0 or _0x107C22 == 0x55) and _0x10FDAF == 2 and _0x10FDB6 ~= 0 and _0x10E043 == 0
+		-- if in_player_select then ut.printf("%X %X %X %X %X %X %X %X %X", round_no, _0x1041D0, _0x100701, _0x107C22, _0x10FDAF, _0x10FDB6, _0x10E043, life_p1, life_p2) end
 		-- 対戦中かどうかの判定
 		local in_match = active_mem_0x100701[_0x100701] ~= nil and _0x107C22 == 0x44 and _0x10FDAF == 2 and _0x10FDB6 ~= 0
 		return in_match, in_player_select
