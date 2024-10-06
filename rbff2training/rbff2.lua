@@ -2079,10 +2079,7 @@ rbff2.startplugin  = function()
 				if data == 0 and mem.pc() == 0x58930 then p.on_bs_clear = now() end            -- BSフラグのクリア
 				if data ~= 0 and mem.pc() == 0x58948 then p.on_bs_established, p.last_bs = now(), data end -- BSフラグ設定
 			end,
-			[0xBC] = function(data) p.pow = data 
-ut.printf("pow upd %X", mem.pc())
-			
-			end,                                          -- パワー
+			[0xBC] = function(data) p.pow = data end,                                          -- パワー
 			[0xCF] = function(data) p.on_update_ca = data == 0x01 and now() or p.on_update_ca end,
 			[0xD0] = function(data) p.flag_d0 = data end,                                      -- フラグ群
 			[{ addr = 0xD6, filter = 0x395A6 }] = function(data)
