@@ -2466,13 +2466,10 @@ rbff2.startplugin  = function()
 				local cur_pow = mem.r08(p.addr.pow)      -- 現在のパワー値
 				if global.pow_mode == 2 then
 					mem.w08(p.addr.pow, max_pow)         -- 固定時は常にパワー回復
-					print("setpow2")
 				elseif global.pow_mode == 1 and 180 < math.min(p.throw_timer, p.op.throw_timer) then
 					mem.w08(p.addr.pow, max_pow)         -- 投げ無敵タイマーでパワー回復
-					print("setpow1")
 				elseif global.pow_mode ~= 3 and max_pow < cur_pow then
 					mem.w08(p.addr.pow, max_pow)         -- 最大値の方が少ない場合は強制で減らす
-					print("setpowx")
 				end
 			end
 			p.init_state       = function(call_recover)
