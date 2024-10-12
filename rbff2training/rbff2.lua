@@ -365,6 +365,27 @@ rbff2.startplugin  = function()
 			mem.wd32(0x01EBC0, mode ~= 1 and 0x20202020 or 0xB6B7B8B9)
 			mem.wd32(0x01EBC4, mode ~= 1 and 0x20202020 or 0xBABBBCBD)
 		end,
+		cpu_hardest  = function(enabled)
+			-- 常にCPUレベルMAX
+			--[[ RAM改変によるCPUレベル MAX（ロムハックのほうが楽）
+			mem.w16(0x10E792, 0x0007) -- maincpu.pw@10E792=0007
+			mem.w16(0x10E796, 0x0007) -- maincpu.pw@10E796=0008
+			]]
+			mem.wd32(0x050108, enabled and 0x303C0007 or 0x302D6016)
+			mem.wd32(0x050138, enabled and 0x3E3C0007 or 0x3E2D6792)
+			mem.wd32(0x050170, enabled and 0x303C0007 or 0x302D6016)
+			mem.wd32(0x0501C8, enabled and 0x303C0007 or 0x302D6794)
+			mem.wd32(0x0501EE, enabled and 0x303C0007 or 0x302D6796)
+		end,
+		cpu_stg      = function(change)
+			-- CPU戦のステージを常に2ラインの対戦ステージにする
+			-- 00F0F8: 41FA 01DE lea ($1de,PC) ; ($f2d8), A0 ; A0 = F2D8 CPUステージテーブル
+			mem.wd32(0x00F0F8, change and 0x41FA017E or 0x41FA01DE)
+		end,
+		sokaku_stg   = function(enabled)
+			-- 対戦の双角ステージをビリーステージに変更する（MVSと家庭用共通）
+			mem.wd16(0x00F290, enabled and 0x0004 or 0x0001)
+		end,
 		training     = function(tra)
 			mem.wd16(0x01F3BC, tra and 0x4E75 or 0x082C) -- 1Pのスコア表示をすぐ抜ける 082C
 			mem.wd16(0x01F550, tra and 0x4E75 or 0x082C) -- 2Pのスコア表示をすぐ抜ける 082C
@@ -382,21 +403,6 @@ rbff2.startplugin  = function()
 			-- 0632D0: 004B -- キャラ選択の時間の内部タイマー初期値1 デフォは4B=75フレーム
 			-- 063332: 004B -- キャラ選択の時間の内部タイマー初期値2 デフォは4B=75フレーム
 			mem.wd16(0x0632DC, 0x0DD7)
-			-- 常にCPUレベルMAX
-			--[[ RAM改変によるCPUレベル MAX（ロムハックのほうが楽）
-			mem.w16(0x10E792, 0x0007) -- maincpu.pw@10E792=0007
-			mem.w16(0x10E796, 0x0007) -- maincpu.pw@10E796=0008
-			]]
-			mem.wd32(0x050108, tra and 0x303C0007 or 0x302D6016)
-			mem.wd32(0x050138, tra and 0x3E3C0007 or 0x3E2D6792)
-			mem.wd32(0x050170, tra and 0x303C0007 or 0x302D6016)
-			mem.wd32(0x0501C8, tra and 0x303C0007 or 0x302D6794)
-			mem.wd32(0x0501EE, tra and 0x303C0007 or 0x302D6796)
-			-- 常に2ラインの対戦ステージにする
-			-- 00F0F8: 41FA 01DE lea ($1de,PC) ; ($f2d8), A0 ; A0 = F2D8 CPUステージテーブル
-			mem.wd32(0x00F0F8, 0x41FA017E)
-			-- 対戦の双角ステージをビリーステージに変更する（MVSと家庭用共通）
-			mem.wd16(0x00F290, 0x0004)
 			-- クレジット消費をNOPにする
 			mem.wd32(0x00D238, 0x4E714E71) -- 家庭用モードでのクレジット消費をNOPにする
 			mem.wd32(0x00D270, 0x4E714E71)
@@ -1224,6 +1230,9 @@ rbff2.startplugin  = function()
 		mem.pached = mem.pached or mod.p1_patch()
 		mod.bugfix()
 		mod.training(true)
+		mod.cpu_hardest(true)
+		mod.cpu_stg(true)
+		mod.sokaku_stg(true)
 		mod.snk_time(global.snk_time)
 		print("load_rom_patch done")
 	end
@@ -6161,6 +6170,7 @@ rbff2.startplugin  = function()
 			menu.organize_time_config(4, true) -- タイム設定=4:90
 			menu.organize_life_config(3) -- 体力ゲージモード=3:通常動作
 			g.pow_mode = 3            -- POWゲージモード=3:通常動作
+			g.sokaku_stg = false      -- 対戦双角ステージ
 			set_dip_config(true)
 			menu.on_player_select(p_no)
 			mod.init_select()
@@ -6172,6 +6182,7 @@ rbff2.startplugin  = function()
 			menu.organize_time_config(1, false) -- タイム設定=1:RB2(デフォルト)
 			menu.organize_life_config(1) -- 体力ゲージモード=1:自動回復
 			g.pow_mode = 2             -- POWゲージモード=2:固定
+			g.sokaku_stg = true        -- 対戦双角ステージ
 			set_dip_config(true)
 			menu.on_player_select(p_no)
 			mod.training(true)
@@ -6622,6 +6633,9 @@ rbff2.startplugin  = function()
 			{ "暗転フレームチェック処理修正", menu.labels.off_on, },
 			{ "タイム設定(リスタートで反映)", { "無限:RB2(デフォルト)", "無限:RB2", "無限:SNK", "90", "60", "45", }, },
 			{ "CPU戦進行あり", menu.labels.off_on, },
+			{ "CPU難度最高", menu.labels.off_on, },
+			{ "CPUステージ", { "通常", "対戦の2ラインステージ" }, },
+			{ "対戦双角ステージ", { "通常", "ビリーステージ" }, },
 		},
 		function()
 			---@diagnostic disable-next-line: undefined-field
@@ -6634,18 +6648,21 @@ rbff2.startplugin  = function()
 			elseif p[2].dis_plain_shift then
 				col[1] = 4
 			end
-			col[2] = g.pause_hit      -- ヒット時にポーズ
-			col[3] = g.pause_hitbox   -- 判定発生時にポーズ
-			col[4] = g.save_snapshot  -- 技画像保存
-			col[5] = g.damaged_move   -- ヒット効果確認用
+			col[2] = g.pause_hit        -- ヒット時にポーズ
+			col[3] = g.pause_hitbox     -- 判定発生時にポーズ
+			col[4] = g.save_snapshot    -- 技画像保存
+			col[5] = g.damaged_move     -- ヒット効果確認用
 			col[6] = g.mvs_billy and 2 or 1 -- ビリーMVS化
 			col[7] = g.sadomazo_fix and 2 or 1 -- サドマゾと必勝!逆襲拳空振り時の投げ無敵化修正
 			col[8] = g.fix_skip_frame and 2 or 1 -- 暗転フレームチェック処理修正
-			col[9] = g.time_mode       -- タイム設定 1:無限:RB2(デフォルト) 2:無限:RB2 3:無限:SNK 4:90 5:60 6:30
+			col[9] = g.time_mode        -- タイム設定 1:無限:RB2(デフォルト) 2:無限:RB2 3:無限:SNK 4:90 5:60 6:30
 			col[10] = g.proceed_cpu and 2 or 1 -- CPU戦進行あり
+			col[11] = g.cpu_hardest and 2 or 1 -- CPU難度最高
+			col[12] = g.cpu_stg and 2 or 1 -- CPUステージ
+			col[13] = g.sokaku_stg and 2 or 1 -- 対戦双角ステージ
 		end,
-		ut.new_filled_table(10, function()
-			local col, g  = menu.extra.pos.col, global
+		ut.new_filled_table(13, function()
+			local col, g     = menu.extra.pos.col, global
 			--p[1].dis_plain_shift = col[1] == 2 or col[1] == 3 -- ラインずらさない現象
 			--p[2].dis_plain_shift = col[1] == 2 or col[1] == 4 -- ラインずらさない現象
 			g.pause_hit      = col[2] -- ヒット時にポーズ
@@ -6658,11 +6675,17 @@ rbff2.startplugin  = function()
 			-- タイム設定 1:無限:RB2(デフォルト) 2:無限:RB2 3:無限:SNK 4:90 5:60 6:45
 			-- CPU戦進行あり
 			menu.organize_time_config(col[9], col[10] == 2)
+			g.cpu_hardest = col[11] == 2 -- CPU難度最高
+			g.cpu_stg     = col[12] == 2 -- CPUステージ
+			g.sokaku_stg  = col[13] == 2 -- 対戦双角ステージ
 			mod.mvs_billy(g.mvs_billy)
 			mod.sadomazo_fix(g.sadomazo_fix)
 			mod.fix_skip_frame(g.fix_skip_frame)
 			set_dip_config(true)
 			menu.set_current()
+			mod.cpu_hardest(g.cpu_hardest)
+			mod.cpu_stg(g.cpu_stg)
+			mod.sokaku_stg(g.sokaku_stg)
 		end))
 	menu.auto      = menu.create(
 		"追加動作・改造動作設定",
