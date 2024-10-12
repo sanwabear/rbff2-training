@@ -733,6 +733,9 @@ rbff2.startplugin  = function()
 		all_bs               = false,
 		fix_skip_frame       = false,
 		proceed_cpu          = false, -- CPU戦進行あり
+		cpu_hardest          = true,-- CPU難度最高
+		cpu_stg              = true,-- CPUステージ
+		sokaku_stg           = true,-- 対戦双角ステージ
 		mvs_billy            = false,
 		sadomazo_fix         = false,
 		snk_time             = 2, -- タイムSNK表示
@@ -1230,9 +1233,9 @@ rbff2.startplugin  = function()
 		mem.pached = mem.pached or mod.p1_patch()
 		mod.bugfix()
 		mod.training(true)
-		mod.cpu_hardest(true)
-		mod.cpu_stg(true)
-		mod.sokaku_stg(true)
+		mod.cpu_hardest(global.cpu_hardest)
+		mod.cpu_stg(global.cpu_stg)
+		mod.sokaku_stg(global.sokaku_stg)
 		mod.snk_time(global.snk_time)
 		print("load_rom_patch done")
 	end
@@ -6171,6 +6174,7 @@ rbff2.startplugin  = function()
 			menu.organize_life_config(3) -- 体力ゲージモード=3:通常動作
 			g.pow_mode = 3            -- POWゲージモード=3:通常動作
 			g.sokaku_stg = false      -- 対戦双角ステージ
+			mod.sokaku_stg(global.sokaku_stg)
 			set_dip_config(true)
 			menu.on_player_select(p_no)
 			mod.init_select()
@@ -6183,6 +6187,7 @@ rbff2.startplugin  = function()
 			menu.organize_life_config(1) -- 体力ゲージモード=1:自動回復
 			g.pow_mode = 2             -- POWゲージモード=2:固定
 			g.sokaku_stg = true        -- 対戦双角ステージ
+			mod.sokaku_stg(global.sokaku_stg)
 			set_dip_config(true)
 			menu.on_player_select(p_no)
 			mod.training(true)
