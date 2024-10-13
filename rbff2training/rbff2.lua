@@ -6181,38 +6181,22 @@ rbff2.startplugin  = function()
 	end
 	menu.on_mode_change           = function(p_no)
 		---@diagnostic disable-next-line: undefined-field
-		local col, g, o, c, p = menu.main.pos.col, global, hide_options, menu.config, players
-		-- モード切替
-		if col[16] == 2 then
-			c.disp_frame = 1          -- フレームメーター表示=1:OFF
-			menu.organize_disp_config()
-			menu.organize_time_config(4, true) -- タイム設定=4:90
-			menu.organize_life_config(3) -- 体力ゲージモード=3:通常動作
-			g.pow_mode = 3            -- POWゲージモード=3:通常動作
-			g.cpu_wait = 4            -- 1:100% 2:75% 3:50% 4:25% 5:0%
-			mod.cpu_wait(g.cpu_wait)
-			g.sokaku_stg = false      -- 対戦双角ステージ
-			mod.sokaku_stg(global.sokaku_stg)
-			set_dip_config(true)
-			menu.on_player_select(p_no)
-			mod.init_select()
-			mod.training(false)
-			machine:soft_reset()
-		else
-			c.disp_frame = 2           -- フレームメーター表示=2:ON:大表示
-			menu.organize_disp_config()
-			menu.organize_time_config(1, false) -- タイム設定=1:RB2(デフォルト)
-			menu.organize_life_config(1) -- 体力ゲージモード=1:自動回復
-			g.pow_mode = 2             -- POWゲージモード=2:固定
-			g.cpu_wait = 5             -- 1:100% 2:75% 3:50% 4:25% 5:0%
-			mod.cpu_wait(g.cpu_wait)
-			g.sokaku_stg = true        -- 対戦双角ステージ
-			mod.sokaku_stg(global.sokaku_stg)
-			set_dip_config(true)
-			menu.on_player_select(p_no)
-			mod.training(true)
-			machine:soft_reset()
-		end
+		local col, g, c = menu.main.pos.col, global, menu.config
+		local cpu = col[16] == 2
+		c.disp_frame = cpu and 1 or 2            -- フレームメーター表示 1:OFF 2:ON:大表示
+		menu.organize_disp_config()
+		menu.organize_time_config(cpu and 4 or 1, cpu) -- タイム設定 4:90 1:RB2(デフォルト)
+		menu.organize_life_config(cpu and 3 or 1) -- 体力ゲージモード 3:通常動作 1:自動回復
+		g.pow_mode = cpu and 3 or 2              -- POWゲージモード 3:通常動作 2:固定
+		g.cpu_wait = cpu and 4 or 5              -- CPU待ち時間 4:25% 5:0%
+		mod.cpu_wait(g.cpu_wait)
+		g.sokaku_stg = not cpu                   -- 対戦双角ステージ
+		mod.sokaku_stg(global.sokaku_stg)
+		set_dip_config(true)
+		menu.on_player_select(p_no)
+		if cpu then mod.init_select() end
+		mod.training(not cpu)
+		machine:soft_reset()
 	end
 	menu.main                     = menu.create(
 		"トレーニングメニュー",
