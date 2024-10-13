@@ -387,14 +387,15 @@ rbff2.startplugin  = function()
 			mem.wd16(0x00F290, enabled and 0x0004 or 0x0001)
 		end,
 		cpu_wait       = function(mode)
+			local pow = { 1, 0.75, 0.5, 0.25, 0 }
 			-- CPU動作間隔 052D94-052DD2
 			for i, time in ipairs({
 				0x0030, 0x0024, 0x001E, 0x0012, 0x002A, 0x001E, 0x0012, 0x000C, 0x0024, 0x0018, 0x000C,
 				0x0006, 0x0018, 0x0012, 0x000C, 0x0006, 0x0012, 0x000C, 0x0006, 0x0000, 0x000C, 0x0006,
 				0x0000, 0x0000, 0x0006, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 			}) do
-				-- mode 1:等倍 2:2分の1 3:3分の1 4:0
-				local addr, newtime = 0x052D94 + ((i - 1) * 2), (mode == 4) and 0 or math.floor(time >> (mode - 1))
+				-- mode 1:100% 2:75% 3:50% 4:25% 5:0%
+				local addr, newtime = 0x052D94 + ((i - 1) * 2), (mode == 4) and 0 or math.floor(time * pow[mode])
 				--ut.printf("%X: %s > %s", addr, time, newtime)
 				mem.w16(addr, newtime)
 			end
@@ -747,7 +748,7 @@ rbff2.startplugin  = function()
 		fix_skip_frame       = false,
 		proceed_cpu          = false, -- CPU戦進行あり
 		cpu_hardest          = true, -- CPU難度最高
-		cpu_wait             = 4, -- CPU待ち時間 1:等倍 2:2分の1 3:3分の1 4:0
+		cpu_wait             = 4, -- CPU待ち時間 1:100% 2:75% 3:50% 4:25% 5:0%
 		cpu_stg              = true, -- CPUステージ
 		sokaku_stg           = true, -- 対戦双角ステージ
 		mvs_billy            = false,
@@ -4182,7 +4183,7 @@ rbff2.startplugin  = function()
 			act_data.neutral = --[[act_data.neutral or ]] resolve_act_neutral(p)
 			act_data.type = act_data.type or (act_data.neutral and db.act_types.free or db.act_types.any)
 			--if act_data.neutral then print(global.frame_number, p.num, string.format("%X", p.act), "act neutral") end
-		elseif act_data then                   -- フラグ状態と技データの両方でニュートラル扱いかどうかを判断する
+		elseif act_data then                    -- フラグ状態と技データの両方でニュートラル扱いかどうかを判断する
 			local n1 --[[, n2]] = resolve_act_neutral(p) --, ut.tstb(act_data.type, db.act_types.free | db.act_types.block)
 			--if n1 then print(global.frame_number, p.num, "flag neutral") end
 			--if n2 then print(global.frame_number, p.num, "act neutral") else print(global.frame_number, p.num, ut.tobitstr(act_data.type)) end
@@ -6157,8 +6158,8 @@ rbff2.startplugin  = function()
 		g.hide = menu.set_hide(o.p1_phantasm, c.disp_phantasm) -- 1P 残像表示
 		g.hide = menu.set_hide(o.p2_phantasm, c.disp_phantasm) -- 2P 残像表示
 		-- 22 エフェクト表示 1:OFF 2:ON 3:1P 4:2P
-		g.hide = menu.set_hide(o.p1_effect, c.disp_effect)     -- 1P エフェクト表示
-		g.hide = menu.set_hide(o.p2_effect, c.disp_effect)     -- 2P エフェクト表示		
+		g.hide = menu.set_hide(o.p1_effect, c.disp_effect) -- 1P エフェクト表示
+		g.hide = menu.set_hide(o.p2_effect, c.disp_effect) -- 2P エフェクト表示		
 	end
 	menu.organize_time_config     = function(time_mode, proceed_cpu)
 		local g, d                 = global, dip_config
@@ -6188,9 +6189,9 @@ rbff2.startplugin  = function()
 			menu.organize_time_config(4, true) -- タイム設定=4:90
 			menu.organize_life_config(3) -- 体力ゲージモード=3:通常動作
 			g.pow_mode = 3            -- POWゲージモード=3:通常動作
-			g.cpu_wait = 3
+			g.cpu_wait = 4            -- 1:100% 2:75% 3:50% 4:25% 5:0%
 			mod.cpu_wait(g.cpu_wait)
-			g.sokaku_stg = false -- 対戦双角ステージ
+			g.sokaku_stg = false      -- 対戦双角ステージ
 			mod.sokaku_stg(global.sokaku_stg)
 			set_dip_config(true)
 			menu.on_player_select(p_no)
@@ -6203,9 +6204,9 @@ rbff2.startplugin  = function()
 			menu.organize_time_config(1, false) -- タイム設定=1:RB2(デフォルト)
 			menu.organize_life_config(1) -- 体力ゲージモード=1:自動回復
 			g.pow_mode = 2             -- POWゲージモード=2:固定
-			g.cpu_wait = 4
+			g.cpu_wait = 5             -- 1:100% 2:75% 3:50% 4:25% 5:0%
 			mod.cpu_wait(g.cpu_wait)
-			g.sokaku_stg = true -- 対戦双角ステージ
+			g.sokaku_stg = true        -- 対戦双角ステージ
 			mod.sokaku_stg(global.sokaku_stg)
 			set_dip_config(true)
 			menu.on_player_select(p_no)
@@ -6658,7 +6659,7 @@ rbff2.startplugin  = function()
 			{ "タイム設定(リスタートで反映)", { "無限:RB2(デフォルト)", "無限:RB2", "無限:SNK", "90", "60", "45", }, },
 			{ "CPU戦進行あり", menu.labels.off_on, },
 			{ "CPU難度最高", menu.labels.off_on, },
-			{ "CPU待ち時間", { "等倍", "2分の1", "4分の1", "0", }, },
+			{ "CPU待ち時間", { "等倍", "4分の3", "2分の1", "4分の1", "0", }, },
 			{ "CPUステージ", { "通常", "対戦の2ラインステージ" }, },
 			{ "対戦双角ステージ", { "通常", "ビリーステージ" }, },
 		},
@@ -6683,7 +6684,7 @@ rbff2.startplugin  = function()
 			col[9] = g.time_mode        -- タイム設定 1:無限:RB2(デフォルト) 2:無限:RB2 3:無限:SNK 4:90 5:60 6:30
 			col[10] = g.proceed_cpu and 2 or 1 -- CPU戦進行あり
 			col[11] = g.cpu_hardest and 2 or 1 -- CPU難度最高
-			col[12] = g.cpu_wait        -- CPU待ち時間
+			col[12] = g.cpu_wait        -- CPU待ち時間 1:100% 2:75% 3:50% 4:25% 5:0%
 			col[13] = g.cpu_stg and 2 or 1 -- CPUステージ
 			col[14] = g.sokaku_stg and 2 or 1 -- 対戦双角ステージ
 		end,
@@ -6702,7 +6703,7 @@ rbff2.startplugin  = function()
 			-- CPU戦進行あり
 			menu.organize_time_config(col[9], col[10] == 2)
 			g.cpu_hardest = col[11] == 2 -- CPU難度最高
-			g.cpu_wait    = col[12] -- CPU待ち時間
+			g.cpu_wait    = col[12] -- CPU待ち時間 1:100% 2:75% 3:50% 4:25% 5:0%
 			g.cpu_stg     = col[13] == 2 -- CPUステージ
 			g.sokaku_stg  = col[14] == 2 -- 対戦双角ステージ
 			mod.mvs_billy(g.mvs_billy)
