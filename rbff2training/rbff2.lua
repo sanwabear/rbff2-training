@@ -1999,7 +1999,7 @@ rbff2.startplugin  = function()
 				p.on_hit = (data == 1 or data == 3) and n or p.on_hit                          -- ヒットへの遷移フレームを記録
 				if p.state == 0 and p.on_hit == n and not p.act_data.neutral then p.on_punish = n + 10 end -- カウンターor確定反撃
 				p.state, p.change_state = data, changed and n or p.change_state                -- 今の状態と状態更新フレームを記録
-				if data == 2 then
+				if data == 2 or (data == 3 and p.old.state == 0) then
 					p.update_tmp_combo(changed and 1 or 2)                                     -- 連続ガード用のコンボ状態リセット
 					p.last_combo = changed and 1 or p.last_combo + 1
 				end
@@ -2708,7 +2708,7 @@ rbff2.startplugin  = function()
 			[0x73] = function(data) p.box_scale = data + 1 end, -- 判定の拡大率
 			--[0x76] = function(data) ut.printf("%X %X %X", base + 0x76, mem.pc(), data) end,
 			[0x7A] = function(data)                    -- 攻撃判定とやられ判定
-				if p.is_fireball and p.on_hit == now() and data == 0 then
+				if p.is_fireball and (p.on_hit == now()) and (data == 0) then
 					p.delayed_clearing = now() + 1     -- ヒット処理後に判定が消去されることの対応
 					-- ut.printf("lazy clean box %X %X", mem.pc(), data)
 					return
