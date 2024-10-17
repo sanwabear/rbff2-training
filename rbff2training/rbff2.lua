@@ -1181,7 +1181,7 @@ rbff2.startplugin  = function()
 		if p == 1 then x1, x2, step = 0, 50, 8 else x1, x2, step = 320, 270, -8 end
 		if first_line then
 			for xi = x1, x2, step do
-				scr:draw_box(x1, yy, xi + 1, get_line_height(max + 4), 0, 0x20303030)
+				scr:draw_box(x1, get_line_height(2), xi + 1, get_line_height(max + 2), 0, 0x20303030)
 			end
 		end
 		if spid then scr:draw_box(x1, yy + get_line_height(), x2, yy, 0, spcol) end
