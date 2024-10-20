@@ -2234,6 +2234,13 @@ flag_c0.startups    =
 	flag_c0._17 | -- ジャンプ移行
 	flag_c0._24 | -- ダッシュ
 	flag_c0._25 -- 飛び退き
+flag_c0.jump        =
+	flag_c0._18 | -- 後方小ジャンプ
+	flag_c0._19 | -- 前方小ジャンプ
+	flag_c0._20 | -- 垂直小ジャンプ
+	flag_c0._21 | -- 後方ジャンプ
+	flag_c0._22 | -- 前方ジャンプ
+	flag_c0._23 -- 垂直ジャンプ
 local flag_c4       = {
 	_00 = 2 ^ 0, -- 避け攻撃
 	_01 = 2 ^ 1, -- 対スウェーライン下段攻撃
@@ -2356,6 +2363,10 @@ flag_c4.jump        = flag_c4._15 |
 	flag_c4._21 |
 	flag_c4._22 |
 	flag_c4._23
+flag_c4.overhead    = flag_c4.hop |
+	flag_c4.jump |
+	flag_c4._02 | -- 対スウェーライン上段攻撃
+	flag_c4._05 -- 対メインラインA攻撃
 local flag_d0       = {
 	_00 = 0x1, --
 	_01 = 0x2, --
