@@ -769,7 +769,7 @@ rbff2.startplugin  = function()
 		frame_meter_cell     = 3,
 		frame_meter_y_offset = get_line_height(23), -- px
 
-		rvslog               = false,
+		rvslog               = true,
 		mini_frame_limit     = 332,
 
 		random_boolean       = function(true_ratio) return math.random() <= true_ratio end,
@@ -4137,7 +4137,7 @@ rbff2.startplugin  = function()
 	end
 
 	local input_rvs = function(rvs_type, p, logtxt)
-		if global.rvslog and logtxt then emu.print_info(logtxt) end
+		if global.rvslog and logtxt then emu.print_info(logtxt) else emu.print_info("nolog rvs")  end
 		if ut.tstb(p.dummy_rvs.hook_type, hook_cmd_types.throw) then
 			if p.act == 0x9 and p.act_frame > 1 then return end -- 着地硬直は投げでないのでスルー
 			if p.op.in_air then return end
@@ -4920,7 +4920,7 @@ rbff2.startplugin  = function()
 			end
 
 			-- ガードリバーサル
-			if not p.gd_rvs_enabled and p.dummy_wakeup == wakeup_type.rvs and p.dummy_rvs and p.on_block == global.frame_number then
+			if not p.gd_rvs_enabled and (p.dummy_wakeup == wakeup_type.rvs) and p.dummy_rvs and (p.on_block == global.frame_number) then
 				p.rvs_count = (p.rvs_count < 1) and 1 or p.rvs_count + 1
 				if global.dummy_rvs_cnt <= p.rvs_count and p.dummy_rvs then p.gd_rvs_enabled, p.rvs_count = true, -1 end
 				-- ut.printf("%s rvs %s %s", p.num, p.rvs_count, p.gd_rvs_enabled)
@@ -4962,7 +4962,7 @@ rbff2.startplugin  = function()
 				if (p.state == 1 or (p.state == 2 and p.gd_rvs_enabled)) and p.hitstop_remain == 0 then
 					-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する
 					-- 奥ラインへずらした場合だけ無視する（p.act ~= 0x14A）
-					if p.flag_7e == 0x80 and p.knockback2 == 0 and p.act ~= 0x14A then
+					if p.flag_7e == 0x80 and p.knockback2 == 0 and p.act ~= 0x14A and not ut.tstb(p.flag_7e, db.flag_7e._02) and not p.on_block then
 						-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する1
 						input_rvs(rvs_types.in_knock_back, p, "[Reversal] blockstun 2")
 					elseif p.old.knockback2 > 0 and p.knockback2 == 0 then
