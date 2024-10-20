@@ -762,6 +762,7 @@ rbff2.startplugin  = function()
 		key_hists_y_offset   = get_line_height(1), -- px
 
 		cmd_hist_limit       = 8,
+		key_pos_hist_limit   = 1,
 		estab_cmd_y_offset   = get_line_height(15), -- px
 
 		frame_meter_limit    = 100,
@@ -1682,12 +1683,13 @@ rbff2.startplugin  = function()
 
 	local dummy_gd_type                                = {
 		none   = 1, -- なし
-		auto   = 2, -- オート
-		hit1   = 3, -- 1ヒットガード
-		block1 = 4, -- 1ガード
-		fixed  = 5, -- 常時
-		random = 6, -- ランダム
-		force  = 7, -- 強制
+		auto1  = 2, -- オート
+		auto2  = 3, -- オート
+		hit1   = 4, -- 1ヒットガード
+		block1 = 5, -- 1ガード
+		fixed  = 6, -- 常時
+		random = 7, -- ランダム
+		force  = 8, -- 強制
 	}
 	local wakeup_type                                  = {
 		none = 1, -- なし
@@ -1785,6 +1787,22 @@ rbff2.startplugin  = function()
 			p.key.hold = hold
 			p.key.state = state
 			p.key.resume = resume
+
+			local btn = 0xF0 & on1f
+			if (btn ~= 0) and p.in_air and not ut.tstb(p.flag_d0, db.flag_d0._06) then
+				local keybuff = ""
+				for k, v in ut.find_all(db.cmd_bytes, function(_, v) return type(v) == "number" end) do
+					if ut.tstb(btn, v) then
+						keybuff = keybuff .. k
+					end
+				end
+				table.insert(p.key.pos_hist, {
+					on1f = on1f, label = keybuff, flip_x = p.flip_x,
+					x = p.x + screen.left,
+					y = p.y - screen.top,
+				}) -- ジャンプ中のキー入力位置を保存
+				while global.key_pos_hist_limit < #p.key.pos_hist do table.remove(p.key.pos_hist, 1) end --バッファ長調整
+			end
 		end
 	end
 	input.accept                                       = function(btn, state_past)
@@ -1815,7 +1833,7 @@ rbff2.startplugin  = function()
 			is_fireball     = false,
 			base            = 0x0,
 			dummy_act       = 1,         -- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
-			dummy_gd        = dummy_gd_type.none, -- なし, オート, 1ヒットガード, 1ガード, 常時, ランダム, 強制
+			dummy_gd        = dummy_gd_type.none, -- なし, オート1, オート2, 1ヒットガード, 1ガード, 常時, ランダム, 強制
 			bs              = false,     -- ブレイクショット
 			dummy_wakeup    = wakeup_type.none, -- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
 			dummy_bs        = nil,       -- ランダムで選択されたブレイクショット
@@ -1857,6 +1875,7 @@ rbff2.startplugin  = function()
 				gg = ggkey_create(i == 1),
 				input = {},
 				cmd_hist = {},
+				pos_hist = {}, -- ジャンプ中の入力位置
 			},
 			throw_boxies    = {},
 			fireballs       = {},
@@ -2003,6 +2022,7 @@ rbff2.startplugin  = function()
 					p.update_tmp_combo(changed and 1 or 2)                                     -- 連続ガード用のコンボ状態リセット
 					p.last_combo = changed and 1 or p.last_combo + 1
 				end
+				if p.on_hit or p.on_block then p.last_block_side = p.cmd_side end              -- ヒットorガード時の方向を記録
 			end,
 			[{ addr = 0x8F, filter = { 0x5B134, 0x5B154 } }] = function(data)
 				p.last_damage, p.last_damage_scaled = data, data                                  -- 補正前攻撃力
@@ -4646,6 +4666,16 @@ rbff2.startplugin  = function()
 					flip_x = p.cmd_side,
 					within = false,
 				})
+				-- 入力座標
+				for _, ph in ipairs(p.key.pos_hist) do
+					table.insert(ranges, {
+						label = string.format("%sP %s", p.num, ph.label),
+						x = ph.x - screen.left,
+						y = ph.y + screen.top,
+						flip_x = ph.flip_x,
+						within = false,
+					})
+				end
 			end
 
 			if p.body.disp_range and p.is_fireball ~= true then
@@ -4816,7 +4846,8 @@ rbff2.startplugin  = function()
 				if p.dummy_gd == dummy_gd_type.fixed then
 					-- 常時（ガード方向はダミーモードに従う）
 					p.add_cmd_hook(db.cmd_types.back)
-				elseif p.dummy_gd == dummy_gd_type.auto or  -- オート
+				elseif p.dummy_gd == dummy_gd_type.auto1 or  -- オート1
+					p.dummy_gd == dummy_gd_type.auto2 or  -- オート2
 					p.dummy_gd == dummy_gd_type.bs or       -- ブレイクショット
 					p.dummy_gd == dummy_gd_type.random or   -- ランダム
 					(p.dummy_gd == dummy_gd_type.hit1 and p.next_block) or -- 1ヒットガード
@@ -4825,7 +4856,11 @@ rbff2.startplugin  = function()
 					-- 中段から優先
 					if ut.tstb(act_type, db.act_types.overhead, true) then
 						p.clear_cmd_hook(db.cmd_types._2)
+					elseif ut.tstb(p.op.flag_c4, db.flag_c4.hop | db.flag_c4.jump) then
+						p.clear_cmd_hook(db.cmd_types._2)
 					elseif ut.tstb(act_type, db.act_types.low_attack, true) then
+						p.add_cmd_hook(db.cmd_types._2)
+					elseif p.dummy_gd == dummy_gd_type.auto2 then
 						p.add_cmd_hook(db.cmd_types._2)
 					end
 					if p.dummy_gd == dummy_gd_type.block1 and p.next_block ~= true then
@@ -5804,11 +5839,12 @@ rbff2.startplugin  = function()
 			-- 向き・距離・位置表示 1;OFF 2:ON 3:向き・距離のみ 4:位置のみ
 			if global.disp_pos > 1 then
 				local col, y4, y5, y6 = 0xA0303030, get_line_height(2.3), get_line_height(0.3), scr.height - get_line_height(1.5)
-				scr:draw_box(98, y6, scr.width - 98, y6 + get_line_height(), 0, col)
+				scr:draw_box(88, y6, scr.width - 88, y6 + get_line_height(), 0, col)
 				for i, p in ipairs(players) do
 					local flip       = p.flip_x == 1 and ">" or "<" -- 見た目と判定の向き
 					local side       = p.block_side == 1 and ">" or "<" -- ガード方向や内部の向き 1:右向き -1:左向き
 					local i_side     = p.cmd_side == 1 and ">" or "<" -- コマンド入力の向き
+					local b_side     = p.last_block_side and (p.last_block_side == 1 and ">" or "<") or "" -- ヒットorガード時の方向
 					local z1, z2, z3 = p.pos_hist[1].z, p.pos_hist[2].z, p.pos_hist[3].z
 					local y1, y2, y3 = p.pos_hist[1].y, p.pos_hist[2].y, p.pos_hist[3].y
 					local x1, x2, x3 = p.pos_hist[1].x, p.pos_hist[2].x, p.pos_hist[3].x
@@ -5830,12 +5866,12 @@ rbff2.startplugin  = function()
 						_draw_text(tx1 + 1, y5, { p.last_posx_txt, p.last_posy_txt })
 						_draw_text(tx2 + 1, y5, p.last_posz_txt)
 					end
-					local tx = i == 1 and 100 or 168 - screen.s_width
+					local tx = i == 1 and 90 or 170 - screen.s_width
 					if global.disp_pos == 2 or global.disp_pos == 3 then
 						if i == 1 then
-							_draw_text(tx, y6, string.format("Disp.%s Block.%s Input.%s", flip, side, i_side))
+							_draw_text(tx, y6, string.format("Disp.%s Block.%s(%s) Input.%s", flip, side, b_side, i_side))
 						else
-							_draw_text(tx, y6, string.format("Input.%s Block.%s Disp.%s", i_side, side, flip))
+							_draw_text(tx, y6, string.format("Input.%s Block.%s(%s) Disp.%s", i_side, side, b_side, flip))
 						end
 					end
 				end
@@ -6418,8 +6454,8 @@ rbff2.startplugin  = function()
 			{ "1P アクション", { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
 			{ "2P アクション", { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
 			{ title = true, "ガード・ブレイクショット設定" },
-			{ "1P ガード", { "なし", "オート", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
-			{ "2P ガード", { "なし", "オート", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
+			{ "1P ガード", { "なし", "オート1", "オート2", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
+			{ "2P ガード", { "なし", "オート1", "オート2", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
 			{ "1ガード持続フレーム数", menu.labels.block_frames, },
 			{ "1P ブレイクショット", { "OFF", "ON（Aで選択画面へ）", }, },
 			{ "2P ブレイクショット", { "OFF", "ON（Aで選択画面へ）", }, },
