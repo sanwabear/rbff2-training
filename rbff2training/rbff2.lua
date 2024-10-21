@@ -1508,8 +1508,8 @@ rbff2.startplugin  = function()
 		local size = range.within == nil and global.axis_size or global.axis_size2 -- 範囲判定がないものは単純な座標とみなす
 		local b = global.hitbox_bold
 		scr:draw_box(x, y - size, x + flip_x, y + size, 0, col)
-		scr:draw_box(x - size + flip_x, y, x + size + flip_x, y - b, 0, col)
-		_draw_text(x, y, label or "", col)
+		scr:draw_box(x - size + flip_x, y, x + size, y - b, 0, col)
+		_draw_text(x + ((flip_x > 0) and 2 or 1), y, label or "", col)
 	end
 
 	local border_box                                   = function(x1, y1, x2, y2, fcol, _, w)
