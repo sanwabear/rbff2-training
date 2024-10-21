@@ -735,6 +735,7 @@ rbff2.startplugin  = function()
 		rec_main             = nil,
 
 		next_block_grace     = 0, -- 1ガードでの持続フレーム数
+		crouch_block         = false, -- 可能な限りしゃがみガード
 		life_mode            = 1, -- 体力ゲージ 1:自動回復 2:固定 3:通常動作
 		pow_mode             = 2, -- POWモード　1:自動回復 2:固定 3:通常動作
 		time_mode            = 1, -- タイム設定 1:無限:RB2(デフォルト) 2:無限:RB2 3:無限:SNK 4:90 5:60 6:30
@@ -1683,13 +1684,12 @@ rbff2.startplugin  = function()
 
 	local dummy_gd_type                                = {
 		none   = 1, -- なし
-		auto1  = 2, -- オート
-		auto2  = 3, -- オート
-		hit1   = 4, -- 1ヒットガード
-		block1 = 5, -- 1ガード
-		fixed  = 6, -- 常時
-		random = 7, -- ランダム
-		force  = 8, -- 強制
+		auto   = 2, -- オート
+		hit1   = 3, -- 1ヒットガード
+		block1 = 4, -- 1ガード
+		fixed  = 5, -- 常時
+		random = 6, -- ランダム
+		force  = 7, -- 強制
 	}
 	local wakeup_type                                  = {
 		none = 1, -- なし
@@ -2022,7 +2022,6 @@ rbff2.startplugin  = function()
 					p.update_tmp_combo(changed and 1 or 2)                                     -- 連続ガード用のコンボ状態リセット
 					p.last_combo = changed and 1 or p.last_combo + 1
 				end
-				if p.on_hit or p.on_block then p.last_block_side = p.cmd_side end              -- ヒットorガード時の方向を記録
 			end,
 			[{ addr = 0x8F, filter = { 0x5B134, 0x5B154 } }] = function(data)
 				p.last_damage, p.last_damage_scaled = data, data                                  -- 補正前攻撃力
@@ -4323,6 +4322,7 @@ rbff2.startplugin  = function()
 			else
 				p.attackbits.on_air, p.attackbits.on_ground = false, false
 			end
+			if p.on_hit == global.frame_number or p.on_block == global.frame_number then p.last_block_side = p.block_side end
 			--p.attackbits.in_air, p.attackbits.in_ground = p.in_air, not p.in_air
 			-- 高さが0になった時点でジャンプ中状態を解除する
 			if p.attackbits.on_ground then p.jumping = false end
@@ -4846,8 +4846,7 @@ rbff2.startplugin  = function()
 				if p.dummy_gd == dummy_gd_type.fixed then
 					-- 常時（ガード方向はダミーモードに従う）
 					p.add_cmd_hook(db.cmd_types.back)
-				elseif p.dummy_gd == dummy_gd_type.auto1 or  -- オート1
-					p.dummy_gd == dummy_gd_type.auto2 or  -- オート2
+				elseif p.dummy_gd == dummy_gd_type.auto or  -- オート
 					p.dummy_gd == dummy_gd_type.bs or       -- ブレイクショット
 					p.dummy_gd == dummy_gd_type.random or   -- ランダム
 					(p.dummy_gd == dummy_gd_type.hit1 and p.next_block) or -- 1ヒットガード
@@ -4862,7 +4861,7 @@ rbff2.startplugin  = function()
 						p.clear_cmd_hook(db.cmd_types._2)
 					elseif ut.tstb(act_type, db.act_types.low_attack, true) then
 						p.add_cmd_hook(db.cmd_types._2)
-					elseif p.dummy_gd == dummy_gd_type.auto2 then
+					elseif global.crouch_block then
 						p.add_cmd_hook(db.cmd_types._2)
 					end
 					if p.dummy_gd == dummy_gd_type.block1 and p.next_block ~= true then
@@ -5846,7 +5845,7 @@ rbff2.startplugin  = function()
 					local flip       = p.flip_x == 1 and ">" or "<" -- 見た目と判定の向き
 					local side       = p.block_side == 1 and ">" or "<" -- ガード方向や内部の向き 1:右向き -1:左向き
 					local i_side     = p.cmd_side == 1 and ">" or "<" -- コマンド入力の向き
-					local b_side     = p.last_block_side and (p.last_block_side == 1 and ">" or "<") or "" -- ヒットorガード時の方向
+					local b_side     = p.last_block_side and (p.last_block_side == 1 and ">" or "<") or " " -- ヒットorガード時の方向
 					local z1, z2, z3 = p.pos_hist[1].z, p.pos_hist[2].z, p.pos_hist[3].z
 					local y1, y2, y3 = p.pos_hist[1].y, p.pos_hist[2].y, p.pos_hist[3].y
 					local x1, x2, x3 = p.pos_hist[1].x, p.pos_hist[2].x, p.pos_hist[3].x
@@ -5926,20 +5925,21 @@ rbff2.startplugin  = function()
 		-- 04 ガード・ブレイクショット設定
 		p1.dummy_gd              = col[5] -- 05 1P ガード
 		p2.dummy_gd              = col[6] -- 06 2P ガード
-		g.next_block_grace       = col[7] - 1 -- 07 1ガード持続フレーム数
-		p1.bs                    = col[8] == 2 -- 08 1P ブレイクショット
-		p2.bs                    = col[9] == 2 -- 09 2P ブレイクショット
-		g.dummy_bs_cnt           = col[10] -- 10 ブレイクショット設定
-		-- 11 やられ時行動・リバーサル設定
-		p1.dummy_wakeup          = col[12] -- 12 1P やられ時行動
-		p2.dummy_wakeup          = col[13] -- 13 2P やられ時行動
-		g.dummy_rvs_cnt          = col[14] -- 14 ガードリバーサル設定
-		-- 15 避け攻撃対空設定
-		p1.away_anti_air.enabled = col[16] == 2 -- 16 1P 避け攻撃対空
-		p2.away_anti_air.enabled = col[17] == 2 -- 17 2P 避け攻撃対空
-		-- 18 その他設定
-		p1.fwd_prov              = col[19] == 2 -- 19 1P 挑発で前進
-		p2.fwd_prov              = col[20] == 2 -- 20 2P 挑発で前進
+		g.crouch_block           = col[7] == 2 -- 07 可能な限りしゃがみガード
+		g.next_block_grace       = col[8] - 1 -- 08 1ガード持続フレーム数
+		p1.bs                    = col[9] == 2 -- 09 1P ブレイクショット
+		p2.bs                    = col[10] == 2 -- 10 2P ブレイクショット
+		g.dummy_bs_cnt           = col[11] -- 11 ブレイクショット設定
+		-- 12 やられ時行動・リバーサル設定
+		p1.dummy_wakeup          = col[13] -- 13 1P やられ時行動
+		p2.dummy_wakeup          = col[14] -- 14 2P やられ時行動
+		g.dummy_rvs_cnt          = col[15] -- 15 ガードリバーサル設定
+		-- 16 避け攻撃対空設定
+		p1.away_anti_air.enabled = col[17] == 2 -- 17 1P 避け攻撃対空
+		p2.away_anti_air.enabled = col[18] == 2 -- 18 2P 避け攻撃対空
+		-- 19 その他設定
+		p1.fwd_prov              = col[20] == 2 -- 20 1P 挑発で前進
+		p2.fwd_prov              = col[21] == 2 -- 21 2P 挑発で前進
 		for _, p in ipairs(players) do
 			p.update_char()
 			if p.dummy_gd == dummy_gd_type.hit1 then
@@ -5975,8 +5975,8 @@ rbff2.startplugin  = function()
 		-- プレイヤー選択しなおしなどで初期化したいときはサブメニュー遷移しない
 		if do_init ~= true and not cancel then
 			-- ブレイクショット ガードのメニュー設定
-			if row == 8 and p1.bs then next_menu = menu.bs_menus[1][p1.char] end
-			if row == 9 and p2.bs then next_menu = menu.bs_menus[2][p2.char] end
+			if row == 9 and p1.bs then next_menu = menu.bs_menus[1][p1.char] end
+			if row == 10 and p2.bs then next_menu = menu.bs_menus[2][p2.char] end
 			if row == 5 or row == 6 then -- 特殊設定の出張設定項目
 				local col1 = menu.bs_menus[1][p1.char].pos.col
 				local col2 = menu.bs_menus[2][p1.char].pos.col
@@ -5984,8 +5984,8 @@ rbff2.startplugin  = function()
 				col2[#col2] = g.all_bs and 2 or 1
 			end
 			-- リバーサル やられ時行動のメニュー設定
-			if row == 12 and rvs_wake_types[p1.dummy_wakeup] then next_menu = menu.rvs_menus[1][p1.char] end
-			if row == 13 and rvs_wake_types[p2.dummy_wakeup] then next_menu = menu.rvs_menus[2][p2.char] end
+			if row == 13 and rvs_wake_types[p1.dummy_wakeup] then next_menu = menu.rvs_menus[1][p1.char] end
+			if row == 14 and rvs_wake_types[p2.dummy_wakeup] then next_menu = menu.rvs_menus[2][p2.char] end
 		end
 
 		menu.set_current(next_menu)
@@ -6456,8 +6456,9 @@ rbff2.startplugin  = function()
 			{ "1P アクション", { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
 			{ "2P アクション", { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
 			{ title = true, "ガード・ブレイクショット設定" },
-			{ "1P ガード", { "なし", "オート1", "オート2", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
-			{ "2P ガード", { "なし", "オート1", "オート2", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
+			{ "1P ガード", { "なし", "オート", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
+			{ "2P ガード", { "なし", "オート", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
+			{ "可能な限りしゃがみガード", menu.labels.off_on, },
 			{ "1ガード持続フレーム数", menu.labels.block_frames, },
 			{ "1P ブレイクショット", { "OFF", "ON（Aで選択画面へ）", }, },
 			{ "2P ブレイクショット", { "OFF", "ON（Aで選択画面へ）", }, },
@@ -6482,23 +6483,24 @@ rbff2.startplugin  = function()
 			-- 04 ガード・ブレイクショット設定
 			col[5]          = p[1].dummy_gd                -- 05 1P ガード
 			col[6]          = p[2].dummy_gd                -- 06 2P ガード
-			col[7]          = g.next_block_grace + 1       -- 07 1ガード持続フレーム数
-			col[8]          = p[1].bs and 2 or 1           -- 08 1P ブレイクショット
-			col[9]          = p[2].bs and 2 or 1           -- 09 2P ブレイクショット
-			col[10]         = g.dummy_bs_cnt               -- 10 ブレイクショット設定
-			-- 11 やられ時行動・リバーサル設定
-			col[12]         = p[1].dummy_wakeup            -- 12 1P やられ時行動
-			col[13]         = p[2].dummy_wakeup            -- 13 2P やられ時行動
-			col[14]         = g.dummy_rvs_cnt              -- 14 ガードリバーサル設定
-			-- 15 避け攻撃対空設定
-			col[16]         = p[1].away_anti_air.enabled and 2 or 1 -- 16 1P 避け攻撃対空
-			col[17]         = p[2].away_anti_air.enabled and 2 or 1 -- 17 2P 避け攻撃対空
-			-- 18 その他設定
-			col[19]         = p[1].fwd_prov and 2 or 1     -- 19 1P 挑発で前進
-			col[20]         = p[2].fwd_prov and 2 or 1     -- 20 2P 挑発で前進
+			col[7]          = g.crouch_block and 2 or 1    -- 07 可能な限りしゃがみガード
+			col[8]          = g.next_block_grace + 1       -- 08 1ガード持続フレーム数
+			col[9]          = p[1].bs and 2 or 1           -- 08 1P ブレイクショット
+			col[10]          = p[2].bs and 2 or 1           -- 10 2P ブレイクショット
+			col[11]         = g.dummy_bs_cnt               -- 11 ブレイクショット設定
+			-- 12 やられ時行動・リバーサル設定
+			col[13]         = p[1].dummy_wakeup            -- 13 1P やられ時行動
+			col[14]         = p[2].dummy_wakeup            -- 14 2P やられ時行動
+			col[15]         = g.dummy_rvs_cnt              -- 15 ガードリバーサル設定
+			-- 16 避け攻撃対空設定
+			col[17]         = p[1].away_anti_air.enabled and 2 or 1 -- 17 1P 避け攻撃対空
+			col[18]         = p[2].away_anti_air.enabled and 2 or 1 -- 18 2P 避け攻撃対空
+			-- 19 その他設定
+			col[20]         = p[1].fwd_prov and 2 or 1     -- 20 1P 挑発で前進
+			col[21]         = p[2].fwd_prov and 2 or 1     -- 21 2P 挑発で前進
 		end,
-		ut.new_filled_table(20, menu.to_main),
-		ut.new_filled_table(20, menu.to_main_cancel))
+		ut.new_filled_table(21, menu.to_main),
+		ut.new_filled_table(21, menu.to_main_cancel))
 
 	menu.bar       = menu.create(
 		"ゲージ設定",
