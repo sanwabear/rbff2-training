@@ -2716,6 +2716,8 @@ rbff2.startplugin  = function()
 				p.flip_x1 = ((data & 0x80) == 0) and 0 or 1   -- 判定の反転
 				local fake = ((data & 0xFB) == 0 or ut.tstb(data, 0x8) == false)
 				local fake_pc = mem.pc() == 0x11E1E and now() ~= p.on_hit -- ヒット時のフラグセットは嘘判定とはしない
+				-- クラウザー6Aの攻撃判定なしの判定表示が邪魔なので嘘判定にする
+				if p.body.char == db.char_id.krauser and p.act == 0x68 and p.act_count == 5 then fake_pc, fake = true, true end
 				p.attackbits.fake = fake_pc and fake
 				-- if mem.pc() == 0x2D462 and p.char == db.char_id.billy and data == 0x8 then p.attackbits.fake = true end -- MVSビリーの判定なくなるバグの表現専用
 				p.attackbits.obsolute = (not fake_pc) and fake
