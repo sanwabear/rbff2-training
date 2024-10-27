@@ -4857,7 +4857,7 @@ rbff2.startplugin  = function()
 						p.clear_cmd_hook(db.cmd_types._2)
 					elseif ut.tstb(p.op.flag_c4, db.flag_c4.overhead) then
 						p.clear_cmd_hook(db.cmd_types._2)
-					elseif ut.tstb(p.op.flag_c0, db.flag_c0.jump) and (p.op.flag_c8 > 0) then
+					elseif ut.tstb(p.op.flag_c0, db.flag_c0.jump) and (p.op.flag_c4 > 0) then
 						p.clear_cmd_hook(db.cmd_types._2)
 					elseif ut.tstb(act_type, db.act_types.low_attack, true) then
 						p.add_cmd_hook(db.cmd_types._2)
