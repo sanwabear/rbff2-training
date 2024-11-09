@@ -1687,9 +1687,11 @@ rbff2.startplugin  = function()
 		auto   = 2, -- オート
 		hit1   = 3, -- 1ヒットガード
 		block1 = 4, -- 1ガード
-		fixed  = 5, -- 常時
-		random = 6, -- ランダム
-		force  = 7, -- 強制
+		high   = 5, -- 上段
+		low    = 6, -- 下段
+		action = 7, -- アクション
+		random = 8, -- ランダム
+		force  = 9, -- 強制
 	}
 	local wakeup_type                                  = {
 		none = 1, -- なし
@@ -1833,7 +1835,7 @@ rbff2.startplugin  = function()
 			is_fireball     = false,
 			base            = 0x0,
 			dummy_act       = 1,         -- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
-			dummy_gd        = dummy_gd_type.none, -- なし, オート1, オート2, 1ヒットガード, 1ガード, 常時, ランダム, 強制
+			dummy_gd        = dummy_gd_type.none, -- なし, オート1, オート2, 1ヒットガード, 1ガード, 上段, 下段, アクション, ランダム, 強制
 			bs              = false,     -- ブレイクショット
 			dummy_wakeup    = wakeup_type.none, -- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
 			dummy_bs        = nil,       -- ランダムで選択されたブレイクショット
@@ -4845,8 +4847,16 @@ rbff2.startplugin  = function()
 					end
 				end
 
-				if p.dummy_gd == dummy_gd_type.fixed then
-					-- 常時（ガード方向はダミーモードに従う）
+				if p.dummy_gd == dummy_gd_type.action then
+					-- アクション（ガード方向はダミーモードに従う）
+					p.add_cmd_hook(db.cmd_types.back)
+				elseif p.dummy_gd == dummy_gd_type.high then
+					-- 上段
+					p.clear_cmd_hook(db.cmd_types._2)
+					p.add_cmd_hook(db.cmd_types.back)
+				elseif p.dummy_gd == dummy_gd_type.low then
+					-- 下段
+					p.add_cmd_hook(db.cmd_types._2)
 					p.add_cmd_hook(db.cmd_types.back)
 				elseif p.dummy_gd == dummy_gd_type.auto or  -- オート
 					p.dummy_gd == dummy_gd_type.bs or       -- ブレイクショット
@@ -6458,8 +6468,8 @@ rbff2.startplugin  = function()
 			{ "1P アクション", { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
 			{ "2P アクション", { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
 			{ title = true, "ガード・ブレイクショット設定" },
-			{ "1P ガード", { "なし", "オート", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
-			{ "2P ガード", { "なし", "オート", "1ヒットガード", "1ガード", "常時", "ランダム", "強制" }, },
+			{ "1P ガード", { "なし", "オート", "1ヒットガード", "1ガード", "上段", "下段", "アクション", "ランダム", "強制" }, },
+			{ "2P ガード", { "なし", "オート", "1ヒットガード", "1ガード", "上段", "下段", "アクション", "ランダム", "強制" }, },
 			{ "可能な限りしゃがみガード", menu.labels.off_on, },
 			{ "1ガード持続フレーム数", menu.labels.block_frames, },
 			{ "1P ブレイクショット", { "OFF", "ON（Aで選択画面へ）", }, },
