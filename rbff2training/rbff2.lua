@@ -972,17 +972,18 @@ rbff2.startplugin  = function()
 		watch_states  = false,
 		cpu_cant_move = false,
 		other_speed   = false,
+		cpu_await     = false,
 	}
 	-- デバッグDIPのセット
 	local set_dip_config       = function(on_menu)
-		local dip1, dip2, dip3, dip4 = 0x00, 0x00, 0x00, 0x00         -- デバッグDIP
-		dip1 = dip1 | (in_match and dip_config.show_range and 0x40 or 0) --cheat "DIP= 1-7 色々な判定表示"
-		dip1 = dip1 | (in_match and dip_config.show_hitbox and 0x80 or 0) --cheat "DIP= 1-8 当たり判定表示"
-		dip1 = dip1 | (in_match and dip_config.infinity_life and 0x02 or 0) --cheat "DIP= 1-2 Infinite Energy"
-		dip2 = dip2 | (in_match and dip_config.easy_super and 0x01 or 0) --Cheat "DIP 2-1 Eeasy Super"
-		dip4 = dip4 | (in_match and dip_config.semiauto_p and 0x08 or 0) -- DIP4-4
-		dip2 = dip2 | ((dip_config.fix_time == 0xAA) and 0x18 or 0)   -- 2-4 PAUSEを消す + cheat "DIP= 2-5 Disable Time Over"
-		mem.w08(0x10E024, dip_config.aes_time)                        -- 残タイム家庭用オプション 0x0:45 0x1:60 0x2:90 0x3:infinity
+		local dip1, dip2, dip3, dip4, dip5, dip6 = 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 -- デバッグDIP
+		dip1 = dip1 | (in_match and dip_config.show_range and 0x40 or 0)        --cheat "DIP= 1-7 色々な判定表示"
+		dip1 = dip1 | (in_match and dip_config.show_hitbox and 0x80 or 0)       --cheat "DIP= 1-8 当たり判定表示"
+		dip1 = dip1 | (in_match and dip_config.infinity_life and 0x02 or 0)     --cheat "DIP= 1-2 Infinite Energy"
+		dip2 = dip2 | (in_match and dip_config.easy_super and 0x01 or 0)        --Cheat "DIP 2-1 Eeasy Super"
+		dip4 = dip4 | (in_match and dip_config.semiauto_p and 0x08 or 0)        -- DIP4-4
+		dip2 = dip2 | ((dip_config.fix_time == 0xAA) and 0x18 or 0)             -- 2-4 PAUSEを消す + cheat "DIP= 2-5 Disable Time Over"
+		mem.w08(0x10E024, dip_config.aes_time)                                  -- 残タイム家庭用オプション 0x0:45 0x1:60 0x2:90 0x3:infinity
 		if (dip_config.fix_time == 0xAA) or on_menu then
 			mem.w08(0x107C28, dip_config.fix_time)
 			-- print("aes_time", dip_config.aes_time, "fix_time", dip_config.fix_time)
@@ -992,7 +993,8 @@ rbff2.startplugin  = function()
 		dip2 = dip2 | (in_match and dip_config.watch_states and 0x20 or 0) --cheat "DIP= 2-6 Watch States"
 		dip3 = dip3 | (in_match and dip_config.cpu_cant_move and 0x01 or 0) --cheat "DIP= 3-1 CPU Can't Move"
 		dip3 = dip3 | (in_match and dip_config.other_speed and 0x10 or 0) --cheat "DIP= 3-5 移動速度変更"
-		for i, dip in ipairs({ dip1, dip2, dip3, dip4 }) do mem.w08(0x10E000 + i - 1, dip) end
+		dip6 = dip6 | (in_match and dip_config.cpu_await and 0x80 or 0) -- 6-8：技を出すまでCOMキャラ停止
+		for i, dip in ipairs({ dip1, dip2, dip3, dip4, dip5, dip6 }) do mem.w08(0x10E000 + i - 1, dip) end
 	end
 
 	-- キー入力
