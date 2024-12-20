@@ -6727,9 +6727,9 @@ rbff2.startplugin  = function()
 			col[14] = g.sokaku_stg and 2 or 1 -- 対戦双角ステージ
 		end,
 		ut.new_filled_table(13, function()
-			local col, g     = menu.extra.pos.col, global
-			--p[1].dis_plain_shift = col[1] == 2 or col[1] == 3 -- ラインずらさない現象
-			--p[2].dis_plain_shift = col[1] == 2 or col[1] == 4 -- ラインずらさない現象
+			local col, p, g = menu.extra.pos.col, players, global
+			p[1].dis_plain_shift = col[1] == 2 or col[1] == 3 -- ラインずらさない現象
+			p[2].dis_plain_shift = col[1] == 2 or col[1] == 4 -- ラインずらさない現象
 			g.pause_hit      = col[2] -- ヒット時にポーズ
 			g.pause_hitbox   = col[3] -- 判定発生時にポーズ
 			g.save_snapshot  = col[4] -- 技画像保存
