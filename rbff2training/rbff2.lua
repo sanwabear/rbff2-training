@@ -770,7 +770,7 @@ rbff2.startplugin  = function()
 		frame_meter_cell     = 3,
 		frame_meter_y_offset = get_line_height(23), -- px
 
-		rvslog               = true,
+		rvslog               = false,
 		mini_frame_limit     = 332,
 
 		random_boolean       = function(true_ratio) return math.random() <= true_ratio end,
@@ -4142,7 +4142,7 @@ rbff2.startplugin  = function()
 	end
 
 	local input_rvs = function(rvs_type, p, logtxt)
-		if global.rvslog and logtxt then emu.print_info(logtxt) else emu.print_info("nolog rvs")  end
+		if global.rvslog and logtxt then emu.print_info(logtxt) end -- else emu.print_info("nolog rvs") 
 		if ut.tstb(p.dummy_rvs.hook_type, hook_cmd_types.throw) then
 			if p.act == 0x9 and p.act_frame > 1 then return end -- 着地硬直は投げでないのでスルー
 			if p.op.in_air then return end
