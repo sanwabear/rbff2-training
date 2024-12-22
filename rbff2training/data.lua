@@ -626,7 +626,7 @@ local char_acts_base             = {
 		{ names = { "いかづち" }, type = act_types.any, ids = { 0x100, 0x101 } },
 		{ names = { "無惨弾" }, type = act_types.overhead, ids = { 0x108, 0x109, 0x10A } },
 		{ names = { "無惨弾" }, type = act_types.any, ids = { 0x10B, 0x10C } },
-		{ names = { "避け攻撃" }, type = act_types.attack, ids = { 0x67 } },
+		{ names = { "避け攻撃" }, type = act_types.low_attack, ids = { 0x67 } },
 		{ names = { "CA 立C" }, type = act_types.attack, ids = { 0x241 } },
 		{ names = { "CA 立C" }, type = act_types.attack, ids = { 0x240 } },
 		{ names = { "CA _6_+C" }, type = act_types.attack, ids = { 0x243 } },
