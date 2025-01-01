@@ -527,10 +527,13 @@ rbff2.startplugin  = function()
 				mem.wd08(0x03F94C, enabled and 0x60 or 0x67)   -- 入力チェックを飛ばす
 				mem.wd16(0x03F986, enabled and 0x4E71 or 0x6628) -- 入力チェックをNOPに
 			end,
-			shikkyaku_ca = function(enabled)                   -- 自動飛燕失脚CA
-				mem.wd16(0x03DE48, enabled and 0x4E71 or 0x660E) -- レバーN入力チェックをNOPに
-				mem.wd16(0x03DE4E, enabled and 0x4E71 or 0x6708) -- C入力チェックをNOPに
-				mem.wd16(0x03DEA6, enabled and 0x4E71 or 0x6612) -- 一回転+C入力チェックをNOPに
+			shikkyaku_ca = function(mode)                   -- 自動飛燕失脚CA
+				local nc, shinku = false, false
+				if mode == 2 or mode == 3 then nc = true end
+				if mode == 2 or mode == 4 then shinku = true end
+				mem.wd16(0x03DE48, nc and 0x4E71 or 0x660E) -- レバーN入力チェックをNOPに
+				mem.wd16(0x03DE4E, nc and 0x4E71 or 0x6708) -- C入力チェックをNOPに
+				mem.wd16(0x03DEA6, shinku and 0x4E71 or 0x6612) -- 一回転+C入力チェックをNOPに
 			end,
 			kara_ca = function(enabled)                        -- 空振りCAできる
 				mem.wd08(0x02FA5E, enabled and 0x60 or 0x67)   -- テーブルチェックを飛ばす
@@ -717,7 +720,7 @@ rbff2.startplugin  = function()
 			auto_3ecst    = false, -- M.トリプルエクスタシー
 			taneuma       = false, -- 炎の種馬
 			katsu_ca      = false, -- 喝CA
-			sikkyaku_ca   = false, -- 飛燕失脚CA
+			sikkyaku_ca   = 1, -- 飛燕失脚CA
 			esaka_check   = false, -- 詠酒距離チェック
 			fast_kadenzer = false, -- 必勝！逆襲拳
 			kara_ca       = false, -- 空振りCA
@@ -6726,7 +6729,7 @@ rbff2.startplugin  = function()
 			col[13] = g.cpu_stg and 2 or 1 -- CPUステージ
 			col[14] = g.sokaku_stg and 2 or 1 -- 対戦双角ステージ
 		end,
-		ut.new_filled_table(13, function()
+		ut.new_filled_table(14, function()
 			local col, p, g = menu.extra.pos.col, players, global
 			p[1].dis_plain_shift = col[1] == 2 or col[1] == 3 -- ラインずらさない現象
 			p[2].dis_plain_shift = col[1] == 2 or col[1] == 4 -- ラインずらさない現象
@@ -6774,7 +6777,7 @@ rbff2.startplugin  = function()
 			{ "M.トリプルエクスタシー", menu.labels.off_on, },
 			{ "炎の種馬", menu.labels.off_on, },
 			{ "喝CA", menu.labels.off_on, },
-			{ "飛燕失脚CA", menu.labels.off_on, },
+			{ "飛燕失脚CA", { "OFF", "ON", "N+Cのみ", "CA真空投げのみ"}, },
 			{ title = true, "改造動作" },
 			{ "詠酒", { "OFF", "距離チェックなし", "技&距離チェックなし" }, },
 			{ "必勝！逆襲拳", { "OFF", "1発で発動" }, },
@@ -6802,7 +6805,7 @@ rbff2.startplugin  = function()
 			col[14] = g.auto_input.auto_3ecst and 2 or 1 -- M.トリプルエクスタシー
 			col[15] = g.auto_input.taneuma and 2 or 1 -- 炎の種馬
 			col[16] = g.auto_input.katsu_ca and 2 or 1 -- 喝CA
-			col[17] = g.auto_input.sikkyaku_ca and 2 or 1 -- 飛燕失脚CA
+			col[17] = g.auto_input.sikkyaku_ca     -- 飛燕失脚CA
 			-- 18 MOD
 			col[19] = g.auto_input.esaka_check     -- 詠酒距離チェック
 			col[20] = g.auto_input.fast_kadenzer and 2 or 1 -- 必勝！逆襲拳
@@ -6830,7 +6833,7 @@ rbff2.startplugin  = function()
 			g.auto_input.auto_3ecst    = col[14] == 2 -- M.トリプルエクスタシー
 			g.auto_input.taneuma       = col[15] == 2 -- 炎の種馬
 			g.auto_input.katsu_ca      = col[16] == 2 -- 喝CA
-			g.auto_input.sikkyaku_ca   = col[17] == 2 -- 飛燕失脚CA
+			g.auto_input.sikkyaku_ca   = col[17] -- 飛燕失脚CA
 			-- 18 MOD
 			g.auto_input.esaka_check   = col[19] -- 詠酒チェック
 			g.auto_input.fast_kadenzer = col[20] == 2 -- 必勝！逆襲拳
