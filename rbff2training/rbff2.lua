@@ -2725,6 +2725,10 @@ rbff2.startplugin  = function()
 				local fake_pc = mem.pc() == 0x11E1E and now() ~= p.on_hit -- ヒット時のフラグセットは嘘判定とはしない
 				-- クラウザー6Aの攻撃判定なしの判定表示が邪魔なので嘘判定にする
 				if p.body.char == db.char_id.krauser and p.act == 0x68 and p.act_count == 5 then fake_pc, fake = true, true end
+				if p.body.char == db.char_id.mai then
+					-- 舞小JA,小JCの攻撃判定なしの判定表示が邪魔なので嘘判定にする
+					if ((p.act == 0x50 or p.act == 0x53) and p.act_count ~= 3) or ((p.act == 0x52 or p.act == 0x55) and p.act_count ~= 2) then fake_pc, fake = true, true end
+				end
 				p.attackbits.fake = fake_pc and fake
 				-- if mem.pc() == 0x2D462 and p.char == db.char_id.billy and data == 0x8 then p.attackbits.fake = true end -- MVSビリーの判定なくなるバグの表現専用
 				p.attackbits.obsolute = (not fake_pc) and fake
@@ -2855,7 +2859,7 @@ rbff2.startplugin  = function()
 			[{ addr = 0x94, filter = { 0x434C8, 0x434E0 } }] = function(data) p.drill_count = data end,                        -- ドリルのCカウント 0x434C8 Cカウント加算, 0x434E0 C以外押下でCカウントリセット
 			[0xAA] = function(data)
 				p.attackbits.fullhit = data ~= 0
-				--ut.printf("full %X %s %s | %X %X | %s | %X %X %X | %s", mem.pc(), now(), p.on_hit, base, data, ut.tobitstr(data), p.act, p.act_count, p.act_frame, p.attackbits.fullhit)
+				-- ut.printf("full %X %s %s | %X %X | %s | %X %X %X | %s", mem.pc(), now(), p.on_hit, base, data, ut.tobitstr(data), p.act, p.act_count, p.act_frame, p.attackbits.fullhit)
 				if p.is_fireball and data == 0xFF then p.on_fireball = now() * -1 end
 				local fake = true
 				if data == 0xFF and p.is_fireball and p.body.char == db.char_id.billy and p.act == 0x266 then
