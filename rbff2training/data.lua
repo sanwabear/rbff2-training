@@ -2432,6 +2432,13 @@ flag_cc.thrown      =
 	flag_cc._08 | -- 投げ派生やられ
 	flag_cc._09 | -- つかみ投げやられ
 	flag_cc._10 -- 投げられ
+flag_cc.hurt     =
+	flag_cc._03 | -- 必殺投げやられ
+	flag_cc._08 | -- 投げ派生やられ
+	flag_cc._09 | -- つかみ投げやられ
+	flag_cc._12 | -- ラインずらしやられ
+	flag_cc._14 | -- 空中やられ
+	flag_cc._15 -- 地上やられ
 flag_d0.hurt        =
 	flag_d0._03 | -- ギガティック投げられ
 	flag_d0._06 | -- ガード中、やられ中

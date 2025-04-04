@@ -1945,6 +1945,7 @@ rbff2.startplugin  = function()
 					p.bs_hook = (p.bs_hook and p.bs_hook.cmd) and p.bs_hook or { cmd = db.cmd_types._5 }
 					local cmd = hook.cmd
 					cmd = type(cmd) == "table" and cmd[p.cmd_side] or cmd
+					emu.print_info(global.frame_number .. ' cmd ')
 					p.bs_hook = { cmd = cmd }
 				else
 					players[i].bs_hook = hook
@@ -4159,6 +4160,7 @@ rbff2.startplugin  = function()
 				return -- 連続通常ジャンプを繰り返さない
 			end
 		end
+		emu.print_info("aa")
 		p.reset_sp_hook(p.dummy_rvs)
 		if p.dummy_rvs.cmd and rvs_types.knock_back_recovery ~= rvs_type then
 			if (((p.flag_c0 | p.old.flag_c0) & 0x2 == 0x2) or db.pre_down_acts[p.act]) and p.dummy_rvs.cmd == db.cmd_types._2D then
@@ -4975,7 +4977,9 @@ rbff2.startplugin  = function()
 					input_rvs(rvs_types.jump_landing, p, "[Reversal] jump landing")
 				end
 				-- リバーサルじゃない最速入力
-				if p.state == 0 and p.act_data.name ~= "やられ" and p.old.act_data.name == "やられ" and p.knockback2 == 0 then
+				-- ut.printf("aa" .. (p.act_data.name or "") .. " %X %s %X %s", p.flag_cc, ut.tstb(p.flag_cc, db.flag_cc.hurt), p.old.flag_cc, ut.tstb(p.old.flag_cc, db.flag_cc.hurt))
+				-- if p.state == 0 and p.act_data.name ~= "やられ" and p.old.act_data.name == "やられ" and p.knockback2 == 0 then
+				if p.state == 1 and ut.tstb(p.flag_cc, db.flag_cc.hurt) == true and p.knockback2 == 0 then
 					input_rvs(rvs_types.knock_back_recovery, p, "[Reversal] blockstun 1")
 				end
 				-- のけぞりのリバーサル入力
