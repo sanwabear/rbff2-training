@@ -744,6 +744,7 @@ local char_acts_base             = {
 		{ names = { "M.リアルカウンター" }, type = act_types.attack, ids = { 0xA4, 0xA5 } },
 		{ names = { "CAジャーマンスープレックス", "M.リアルカウンター" }, type = act_types.any, ids = { 0xA6 } },
 		{ names = { "M.リアルカウンター投げ移行" }, type = act_types.any, ids = { 0xAC } },
+		{ names = { "M.リアルカウンター投げすかり" }, type = act_types.attack, ids = { 0xAD } },
 		{ names = { "ジャーマンスープレックス", "CAジャーマンスープレックス" }, type = act_types.any, ids = { 0xA7, 0xA8, 0xA9, 0xAA, 0xAB } },
 		{ names = { "フェイスロック" }, type = act_types.any, ids = { 0xE0, 0xE1, 0xE2, 0xE3, 0xE4 } },
 		{ names = { "投げっぱなしジャーマンスープレックス" }, type = act_types.any, ids = { 0xE5, 0xE6, 0xE7 } },
