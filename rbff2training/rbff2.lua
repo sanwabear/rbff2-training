@@ -4352,6 +4352,7 @@ rbff2.startplugin  = function()
 			end
 			p.attackbits.on_main_line = p.on_main_line == global.frame_number
 			p.attackbits.on_main_to_sway = p.on_main_to_sway == global.frame_number
+			p.d6 = mem.r08(p.addr.base + 0xD6) -- 起き上がり攻撃用フラグ
 
 			-- リバーサルとBS動作の再抽選
 			p.dummy_rvs, p.dummy_bs = get_next_rvs(p), get_next_bs(p)
@@ -5392,7 +5393,7 @@ rbff2.startplugin  = function()
 				table.insert(label1, string.format("%s %02d %03d %03d", p.state, p.throwing and p.throwing.threshold or 0, p.throwing and p.throwing.timer or 0, p.throw_timer or 0))
 				table.insert(label1, string.format("%03X %02X %02X %02X", p.acta or 0, p.spid or 0, p.attack_data or 0, p.attack_id or 0))
 				table.insert(label1, string.format("%03X %02X %02X %s%s%s", p.act, p.act_count, p.act_frame, p.update_base and "u" or "k", p.update_act and "U" or "K", p.act_data.neutral and "N" or "A"))
-				table.insert(label1, string.format("%02X %02X %02X %s %s", p.hurt_state, p.sway_status, p.additional, #p.boxies, plus and "+" or (minus and "-" or "")))
+				table.insert(label1, string.format("%02X %02X %02X %02X %s %s", p.hurt_state, p.sway_status, p.additional, p.d6, #p.boxies, plus and "+" or (minus and "-" or "")))
 				p.state_line2 = label1
 			end
 			if p.disp_state == 4 or p.disp_state == 5 then -- 1:OFF 2:ON 3:ON:小表示 4:ON:フラグ表示 5:ON:ALL
