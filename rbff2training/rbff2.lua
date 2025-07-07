@@ -2143,6 +2143,8 @@ rbff2.startplugin  = function()
 				local exp = mem.r16(mem.rg("A6", 0xFFFFF) + 1)                                 -- 追加データ
 				if data ~= 0 or exp ~= 0 then p.add_sp_establish_hist(data, exp, count, now()) end
 			end,
+			[0xD6] = function(data) p.d6 = data end, -- 起き上がり攻撃用フラグ
+			[0xD7] = function(data) p.cmd_timer = data end, -- コマンド維持タイマー=起き上がり攻撃用クリアタイマー
 			[0xE2] = function(data) p.sway_close = data == 0 end,
 			--[0xE3] = function(data) p.on_last_frame = data == 0xFF and now(-1) or p.on_last_frame end,
 			[0xE4] = function(data) p.hurt_state = data end,                       -- やられ状態
@@ -5200,6 +5202,7 @@ rbff2.startplugin  = function()
 					st.chip = xp.chip or 0
 					st.stun = xp.stun or 0
 					st.stun_timer = xp.stun_timer or 0
+					st.cmd_timer = xp.cmd_timer or 0
 					st.effect, st.effect_name1, st.effect_name2 = db.hit_effects.get_name(xp.effect, "---")
 					st.nokezori = db.hit_effects.is_nokezori(xp.effect)
 					-- フレームデータがある場合は-1、システム固定処理による+2で補正する
@@ -5717,10 +5720,10 @@ rbff2.startplugin  = function()
 					scr:draw_box(mt.x1, mt.y1, mt.x2, mt.y2, 0, 0xFF000000) -- 気絶値
 					local stun_y = b1.y1 - 1
 
+					local timer = math.min(90, p.hit_stun_timer)
 					b1.x1, b1.y1, b1.x2, b1.y2 = 48, b1.y1 + 5, 140, b1.y2 + 5
 					b2.x1, b2.y1, b2.x2, b2.y2 = b1.x1 + 1, b1.y1 + 1, b1.x2 - 1, b1.y2 - 1
-					mt.x1, mt.y1, mt.x2, mt.y2 = b2.x1, b2.y1, b2.x1 + p.hit_stun_timer, b2.y2
-
+					mt.x1, mt.y1, mt.x2, mt.y2 = b2.x1, b2.y1, b2.x1 + timer, b2.y2
 					if not p1 then
 						b1.x1, b1.x2 = 320 - b1.x1, 320 - b1.x2
 						b2.x1, b2.x2 = 320 - b2.x1, 320 - b2.x2
@@ -5729,7 +5732,24 @@ rbff2.startplugin  = function()
 					scr:draw_box(b1.x1, b1.y1, b1.x2, b1.y2, 0, 0xFF676767) -- 枠
 					scr:draw_box(b2.x1, b2.y1, b2.x2, b2.y2, 0, 0xFF000000) -- 黒背景
 					scr:draw_box(mt.x1, mt.y1, mt.x2, mt.y2, 0, 0xFFFF8C00) -- 気絶タイマー
-					_draw_text(tx, b1.y1 - 1, string.format("%3s", p.hit_stun_timer), 0xFFDDDDFF)
+					local stun_timer_y = b1.y1 - 1
+
+					timer = math.min(90, p.cmd_timer)
+					b1.x1, b1.y1, b1.x2, b1.y2 = 48, b1.y1 + 5, 140, b1.y2 + 5
+					b2.x1, b2.y1, b2.x2, b2.y2 = b1.x1 + 1, b1.y1 + 1, b1.x2 - 1, b1.y2 - 1
+					mt.x1, mt.y1, mt.x2, mt.y2 = b2.x1, b2.y1, b2.x1 + timer, b2.y2
+					if not p1 then
+						b1.x1, b1.x2 = 320 - b1.x1, 320 - b1.x2
+						b2.x1, b2.x2 = 320 - b2.x1, 320 - b2.x2
+						mt.x1, mt.x2 = 320 - mt.x1, 320 - mt.x2
+					end
+					scr:draw_box(b1.x1, b1.y1, b1.x2, b1.y2, 0, 0xFF676767) -- 枠
+					scr:draw_box(b2.x1, b2.y1, b2.x2, b2.y2, 0, 0xFF000000) -- 黒背景
+					scr:draw_box(mt.x1, mt.y1, mt.x2, mt.y2, 0, 0xFF4682B4) -- コマンドタイマー
+					local cmd_timer_y = b1.y1 - 1
+
+					_draw_text(tx, cmd_timer_y, string.format("(%3x)%3s", p.d6, p.cmd_timer), 0xFFDDDDFF)
+					_draw_text(tx, stun_timer_y, string.format("%3s", p.hit_stun_timer), 0xFFDDDDFF)
 					_draw_text(tx - 6, stun_y, string.format("(%3s)%3s/%3s", math.max(0, p.stun_limit - p.hit_stun), p.hit_stun, p.stun_limit), 0xFFDDDDFF)
 					_draw_text(tx, 19.7, string.format("%3s/%3s", p.life, 0xC0), 0xFFDDDDFF)
 					_draw_text(tx, scr.height - get_line_height(2.2), string.format("%3s/%3s", p.pow, 0x3C), 0xFFDDDDFF)
