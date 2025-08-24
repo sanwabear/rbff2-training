@@ -1945,7 +1945,7 @@ rbff2.startplugin  = function()
 					p.bs_hook = (p.bs_hook and p.bs_hook.cmd) and p.bs_hook or { cmd = db.cmd_types._5 }
 					local cmd = hook.cmd
 					cmd = type(cmd) == "table" and cmd[p.cmd_side] or cmd
-					emu.print_info(global.frame_number .. ' cmd ')
+					-- emu.print_info(global.frame_number .. ' cmd ')
 					p.bs_hook = { cmd = cmd }
 				else
 					players[i].bs_hook = hook
@@ -4162,7 +4162,6 @@ rbff2.startplugin  = function()
 				return -- 連続通常ジャンプを繰り返さない
 			end
 		end
-		emu.print_info("aa")
 		p.reset_sp_hook(p.dummy_rvs)
 		if p.dummy_rvs.cmd and rvs_types.knock_back_recovery ~= rvs_type then
 			if (((p.flag_c0 | p.old.flag_c0) & 0x2 == 0x2) or db.pre_down_acts[p.act]) and p.dummy_rvs.cmd == db.cmd_types._2D then
