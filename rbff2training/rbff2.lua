@@ -6173,7 +6173,7 @@ rbff2.startplugin  = function()
 		-- 02 2P 判定・間合い表示  1:OFF 2:ON 3:ON:判定のみ 4:ON:間合いのみ
 		if c.disp_box_range2p == 1 then
 			p[2].disp_hitbox, p[2].disp_range = false, false
-		elseif c.disp_box_range2 == 2 then
+		elseif c.disp_box_range2p == 2 then
 			p[2].disp_hitbox, p[2].disp_range = true, true
 		elseif c.disp_box_range2p == 3 then
 			p[2].disp_hitbox, p[2].disp_range = true, false
