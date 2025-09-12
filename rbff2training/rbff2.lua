@@ -1491,6 +1491,8 @@ rbff2.startplugin  = function()
 	end
 
 	local draw_hitbox                                  = function(box, do_fill)
+		local p = box.p
+		if not p.body.disp_hitbox or not box.type.visible(p, box) then return end
 		--ut.printf("%s  %s", box.type.kind, box.type.enabled)
 		-- 背景なしの場合は判定の塗りつぶしをやめる
 		local outline, fill = box.type.outline, global.disp_bg and box.type.fill or 0
@@ -1508,6 +1510,8 @@ rbff2.startplugin  = function()
 	end
 
 	local draw_range                                   = function(range, do_fill)
+		local p = range.p
+		if not p.body.disp_range then return end
 		local _draw_text = draw_text                                         -- draw_text_with_shadow
 		local label, flip_x, x, y, col = range.label, range.flip_x, range.x, range.y, range.within and 0xFFFFFF00 or 0xFFBBBBBB
 		local size = range.within == nil and global.axis_size or global.axis_size2 -- 範囲判定がないものは単純な座標とみなす
@@ -4625,25 +4629,25 @@ rbff2.startplugin  = function()
 						p.hurt.dodge = get_dodge(p, box, p.hurt.max_top, p.hurt.min_bottom)
 					end
 				end
-				if p.body.disp_hitbox and box.type.visible(p, box) then
-					table.insert(p.hitboxies, box)
-					table.insert(hitboxies, box)
-					table.insert(p.hitbox_types, box.type)
-					local hit = box.type.kind == db.box_kinds.attack or box.type.kind == db.box_kinds.parry
-					table.insert(hit and boxkeys.hit or boxkeys.hurt, box.keytxt)
-				end
+				box.p = p
+				table.insert(p.hitboxies, box)
+				table.insert(hitboxies, box)
+				table.insert(p.hitbox_types, box.type)
+				local hit = box.type.kind == db.box_kinds.attack or box.type.kind == db.box_kinds.parry
+				table.insert(hit and boxkeys.hit or boxkeys.hurt, box.keytxt)
 			end
 			if not p.is_fireball then p.attackbit = p.attackbit | p.hurt.dodge end -- 本体の部分無敵フラグを設定
 
 			-- 攻撃判定がない場合は関連するフラグを無効化する
 			if p.hit.box_count == 0 then p.attackbit = ut.hex_clear(p.attackbit, db.box_with_bit_types.mask) end
 
-			if p.body.disp_hitbox and p.is_fireball ~= true then
+			if p.is_fireball ~= true then
 				-- 押し合い判定（本体のみ）
 				if p.push_invincible and p.push_invincible == 0 and mem._0x10B862 == 0 then
 					local src = get_push_box(p)
 					local box = fix_box_scale(p, src)
 					box.keytxt = string.format("p%2x%2x%2x%2x%2x", box.type.no, src.top, src.bottom, src.left, src.right)
+					box.p = p
 					table.insert(p.hitboxies, box)
 					table.insert(hitboxies, box)
 					table.insert(boxkeys.hurt, box.keytxt)
@@ -4655,6 +4659,7 @@ rbff2.startplugin  = function()
 				for _, box in pairs(p.throw_boxies) do
 					if global.pause_hitbox == 2 then global.pause = true end -- 強制ポーズ  1:OFF, 2:投げ, 3:攻撃, 4:変化時
 					box.keytxt = string.format("t%2x%2x", box.type.no, box.id)
+					box.p = p
 					table.insert(p.hitboxies, box)
 					table.insert(hitboxies, box)
 					table.insert(boxkeys.hit, box.keytxt)
@@ -4669,6 +4674,7 @@ rbff2.startplugin  = function()
 						if item.char == p.char then
 							local box = get_throwbox(p, item.id)
 							box.type = db.box_types.push
+							box.p = p
 							table.insert(p.hitboxies, box)
 							table.insert(hitboxies, box)
 						end
@@ -4682,6 +4688,7 @@ rbff2.startplugin  = function()
 					y = p.y,
 					flip_x = p.cmd_side,
 					within = false,
+					p = p,
 				})
 				-- 入力座標
 				for _, ph in ipairs(p.key.pos_hist) do
@@ -4691,11 +4698,12 @@ rbff2.startplugin  = function()
 						y = ph.y + screen.top,
 						flip_x = ph.flip_x,
 						within = false,
+						p = p,
 					})
 				end
 			end
 
-			if p.body.disp_range and p.is_fireball ~= true then
+			if p.is_fireball ~= true then
 				-- 詠酒を発動される範囲
 				if p.esaka and p.esaka > 0 then
 					p.esaka_range = p.calc_range_x(p.esaka) -- 位置を反映した座標を計算
@@ -4704,7 +4712,8 @@ rbff2.startplugin  = function()
 						x = p.esaka_range,
 						y = p.y,
 						flip_x = -p.flip_x, -- 内側に太線を引きたいのでflipを反転する
-						within = p.within(p.x, p.esaka_range)
+						within = p.within(p.x, p.esaka_range),
+						p = p,
 					})
 				end
 
@@ -4717,7 +4726,8 @@ rbff2.startplugin  = function()
 							x = x2,
 							y = p.y,
 							flip_x = -p.flip_x, -- 内側に太線を引きたいのでflipを反転する
-							within = p.within(x1, x2)
+							within = p.within(x1, x2),
+							p = p,
 						})
 					end
 				end
