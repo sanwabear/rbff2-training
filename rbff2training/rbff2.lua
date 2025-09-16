@@ -2736,6 +2736,10 @@ rbff2.startplugin  = function()
 					-- 舞小JA,小JCの攻撃判定なしの判定表示が邪魔なので嘘判定にする
 					if ((p.act == 0x50 or p.act == 0x53) and p.act_count ~= 3) or ((p.act == 0x52 or p.act == 0x55) and p.act_count ~= 2) then fake_pc, fake = true, true end
 				end
+				if p.is_fireball and p.body.char == db.char_id.chonrei and p.act == 0x268 and p.base ~= 0x4551e then
+					-- チョンレイ飛び道具の攻撃判定なしの判定表示が邪魔なので嘘判定にする
+					fake_pc, fake = true, true
+				end
 				p.attackbits.fake = fake_pc and fake
 				-- if mem.pc() == 0x2D462 and p.char == db.char_id.billy and data == 0x8 then p.attackbits.fake = true end -- MVSビリーの判定なくなるバグの表現専用
 				p.attackbits.obsolute = (not fake_pc) and fake
@@ -2866,7 +2870,7 @@ rbff2.startplugin  = function()
 			[{ addr = 0x94, filter = { 0x434C8, 0x434E0 } }] = function(data) p.drill_count = data end,                        -- ドリルのCカウント 0x434C8 Cカウント加算, 0x434E0 C以外押下でCカウントリセット
 			[0xAA] = function(data)
 				p.attackbits.fullhit = data ~= 0
-				-- ut.printf("full %X %s %s | %X %X | %s | %X %X %X | %s", mem.pc(), now(), p.on_hit, base, data, ut.tobitstr(data), p.act, p.act_count, p.act_frame, p.attackbits.fullhit)
+				--ut.printf("full %X %s %s | %X %X | %s | %X %X %X | %s", mem.pc(), now(), p.on_hit, base, data, ut.tobitstr(data), p.act, p.act_count, p.act_frame, p.attackbits.fullhit)
 				if p.is_fireball and data == 0xFF then p.on_fireball = now() * -1 end
 				local fake = true
 				if data == 0xFF and p.is_fireball and p.body.char == db.char_id.billy and p.act == 0x266 then
@@ -2877,6 +2881,16 @@ rbff2.startplugin  = function()
 					-- 帝王漏尽拳の攻撃無効化、判定表示の邪魔なのでここで判定を削除する
 				elseif data == 0xFF and p.is_fireball and p.body.char == db.char_id.chonrei and p.act == 0x266 then
 					-- 帝王漏尽拳の攻撃無効化、判定表示の邪魔なのでここで判定を削除する
+--[[
+				elseif data == 0xFF and p.is_fireball and p.body.char == db.char_id.chonrei and p.act == 0x268 then
+					fake = false
+					p.attackbits.fake = true
+					p.attackbits.fullhit = false
+					p.attackbits.obsolute = false
+					ut.printf("shukumyo---")
+]]
+				elseif data == 0x0 and p.is_fireball and p.act == 0x0 then
+					-- 帝王宿命拳の攻撃無効化、判定表示の邪魔なのでここで判定を削除する
 				else
 					fake = false
 				end
