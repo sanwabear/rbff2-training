@@ -537,6 +537,8 @@ local char_acts_base             = {
 		{ names = { "花嵐 上昇" }, type = act_types.any, ids = { 0x10D, 0x10E } },
 		{ names = { "CA 立B" }, type = act_types.attack, ids = { 0x42 } },
 		{ names = { "CA 立C" }, type = act_types.attack, ids = { 0x43 } },
+		{ names = { "CA 立D" }, type = act_types.overhead, ids = { 0x249 } },
+		{ names = { "CA 屈D" }, type = act_types.low_attack, ids = { 0x66 } },
 		{ names = { "CA 屈B" }, type = act_types.low_attack, ids = { 0x242 } },
 		{ names = { "CA 屈C" }, type = act_types.attack, ids = { 0x243 } },
 		{ names = { "CA _3_+C" }, type = act_types.attack, ids = { 0x244 } },
