@@ -740,7 +740,7 @@ rbff2.startplugin  = function()
 		next_block_grace     = 0, -- 1ガードでの持続フレーム数
 		crouch_block         = false, -- 可能な限りしゃがみガード
 		life_mode            = 1, -- 体力ゲージ 1:自動回復 2:固定 3:通常動作
-		pow_mode             = 2, -- POWモード　1:自動回復 2:固定 3:通常動作
+		pow_mode             = 2, -- POWモード　1:自動回復 2:固定 3:通常動作 4:自動減少
 		time_mode            = 1, -- タイム設定 1:無限:RB2(デフォルト) 2:無限:RB2 3:無限:SNK 4:90 5:60 6:30
 		disp_meters          = true,
 		repeat_interval      = 0,
@@ -2499,6 +2499,8 @@ rbff2.startplugin  = function()
 				p.gap_frames       = { act_frames = {}, frame_groups = {}, }
 			end
 			p.do_recover       = function(force)
+				-- init timer
+				local timeover = 180 < math.min(p.throw_timer, p.op.throw_timer)
 				-- 体力と気絶値とMAX気絶値回復
 				local life = { 0xC0, 0x60 }
 				local max_life = life[p.red] or (p.red - #life) -- 赤体力にするかどうか
@@ -2509,7 +2511,7 @@ rbff2.startplugin  = function()
 						mem.w08(p.addr.stun_limit, init_stuns) -- 最大気絶値
 						mem.w08(p.addr.init_stun, init_stuns) -- 最大気絶値
 					elseif p.life_rec then
-						if force or (p.addr.life ~= max_life and 180 < math.min(p.throw_timer, p.op.throw_timer)) then
+						if force or (p.addr.life ~= max_life and timeover) then
 							mem.w08(p.addr.life, max_life) -- やられ状態から戻ったときに回復させる
 							mem.w08(p.addr.stun, 0) -- 気絶値
 							mem.w08(p.addr.stun_limit, init_stuns) -- 最大気絶値
@@ -2521,15 +2523,17 @@ rbff2.startplugin  = function()
 					end
 				end
 
-				-- パワーゲージ回復  POWモード　1:自動回復 2:固定 3:通常動作
+				-- パワーゲージ回復  POWモード　1:自動回復 2:固定 3:通常動作 4:自動減少
 				local fix_pow = { 0x3C, 0x1E, 0x00 }     -- 回復上限の固定値
 				local max_pow = fix_pow[p.max] or (p.max - #fix_pow) -- 回復上限
 				local cur_pow = mem.r08(p.addr.pow)      -- 現在のパワー値
 				if global.pow_mode == 2 then
 					mem.w08(p.addr.pow, max_pow)         -- 固定時は常にパワー回復
-				elseif global.pow_mode == 1 and 180 < math.min(p.throw_timer, p.op.throw_timer) then
+				elseif global.pow_mode == 1 and (force or timeover) then
 					mem.w08(p.addr.pow, max_pow)         -- 投げ無敵タイマーでパワー回復
-				elseif global.pow_mode ~= 3 and max_pow < cur_pow then
+				elseif global.pow_mode == 4 and (force or timeover) then
+					mem.w08(p.addr.pow, 0)               -- 投げ無敵タイマーでパワーゼロ
+				elseif global.pow_mode ~= 3 and (force or (max_pow < cur_pow)) then
 					mem.w08(p.addr.pow, max_pow)         -- 最大値の方が少ない場合は強制で減らす
 				end
 			end
@@ -6580,7 +6584,7 @@ rbff2.startplugin  = function()
 			{ "1P POWゲージ量", menu.labels.pow_range, }, -- "最大", "半分", "ゼロ" ...
 			{ "2P POWゲージ量", menu.labels.pow_range, }, -- "最大", "半分", "ゼロ" ...
 			{ "体力ゲージモード", { "自動回復", "固定", "通常動作" }, },
-			{ "POWゲージモード", { "自動回復", "固定", "通常動作" }, },
+			{ "POWゲージモード", { "自動回復", "固定", "通常動作", "自動減少" }, },
 		},
 		function()
 			---@diagnostic disable-next-line: undefined-field
@@ -6599,7 +6603,7 @@ rbff2.startplugin  = function()
 			p[1].max        = col[3] -- 1P POWゲージ量
 			p[2].max        = col[4] -- 2P POWゲージ量
 			menu.organize_life_config(col[5]) -- 体力ゲージモード 1:自動回復 2:固定 3:通常動作
-			g.pow_mode = col[6]      -- POWゲージモード 1:自動回復 2:固定 3:通常動作
+			g.pow_mode = col[6]      -- POWゲージモード 1:自動回復 2:固定 3:通常動作 4:自動減少
 			set_dip_config(true)
 			menu.set_current()
 		end))
