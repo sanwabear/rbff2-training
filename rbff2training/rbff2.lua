@@ -777,6 +777,7 @@ rbff2.startplugin  = function()
 		mini_frame_limit     = 332,
 
 		random_boolean       = function(true_ratio) return math.random() <= true_ratio end,
+		on_pow_up            = 255,
 	}
 	local safe_cb              = function(cb)
 		return function(...)
@@ -2138,7 +2139,10 @@ rbff2.startplugin  = function()
 				if data == 0 and mem.pc() == 0x58930 then p.on_bs_clear = now() end            -- BSフラグのクリア
 				if data ~= 0 and mem.pc() == 0x58948 then p.on_bs_established, p.last_bs = now(), data end -- BSフラグ設定
 			end,
-			[0xBC] = function(data) p.pow = data end,                                          -- パワー
+			[0xBC] = function(data)                                                            -- パワー
+				global.on_pow_up = p.pow == data and global.on_pow_up or global.frame_number or 0
+				p.pow = data
+			end,
 			[0xCF] = function(data) p.on_update_ca = data == 0x01 and now() or p.on_update_ca end,
 			[0xD0] = function(data) p.flag_d0 = data end,                                      -- フラグ群
 			[{ addr = 0xD6, filter = 0x395A6 }] = function(data)
@@ -2500,7 +2504,8 @@ rbff2.startplugin  = function()
 			end
 			p.do_recover       = function(force)
 				-- init timer
-				local timeover = 180 < math.min(p.throw_timer, p.op.throw_timer)
+				local timeoverp = 180 < (global.frame_number - global.on_pow_up)
+				local timeover  = 180 < math.min(p.throw_timer, p.op.throw_timer)
 				-- 体力と気絶値とMAX気絶値回復
 				local life = { 0xC0, 0x60 }
 				local max_life = life[p.red] or (p.red - #life) -- 赤体力にするかどうか
@@ -2510,12 +2515,16 @@ rbff2.startplugin  = function()
 						mem.w08(p.addr.life, max_life)
 						mem.w08(p.addr.stun_limit, init_stuns) -- 最大気絶値
 						mem.w08(p.addr.init_stun, init_stuns) -- 最大気絶値
+						if force then
+							mem.w08(p.addr.stun, 0) -- 気絶値
+							mem.w16(p.addr.stun_timer, 0) -- 気絶値タイマー
+						end
 					elseif p.life_rec then
 						if force or (p.addr.life ~= max_life and timeover) then
 							mem.w08(p.addr.life, max_life) -- やられ状態から戻ったときに回復させる
-							mem.w08(p.addr.stun, 0) -- 気絶値
 							mem.w08(p.addr.stun_limit, init_stuns) -- 最大気絶値
 							mem.w08(p.addr.init_stun, init_stuns) -- 最大気絶値
+							mem.w08(p.addr.stun, 0) -- 気絶値
 							mem.w16(p.addr.stun_timer, 0) -- 気絶値タイマー
 						elseif max_life < p.life then
 							mem.w08(p.addr.life, max_life) -- 最大値の方が少ない場合は強制で減らす
@@ -2529,9 +2538,9 @@ rbff2.startplugin  = function()
 				local cur_pow = mem.r08(p.addr.pow)      -- 現在のパワー値
 				if global.pow_mode == 2 then
 					mem.w08(p.addr.pow, max_pow)         -- 固定時は常にパワー回復
-				elseif global.pow_mode == 1 and (force or timeover) then
+				elseif global.pow_mode == 1 and (force or timeoverp) then
 					mem.w08(p.addr.pow, max_pow)         -- 投げ無敵タイマーでパワー回復
-				elseif global.pow_mode == 4 and (force or timeover) then
+				elseif global.pow_mode == 4 and (force or timeoverp) then
 					mem.w08(p.addr.pow, 0)               -- 投げ無敵タイマーでパワーゼロ
 				elseif global.pow_mode ~= 3 and (force or (max_pow < cur_pow)) then
 					mem.w08(p.addr.pow, max_pow)         -- 最大値の方が少ない場合は強制で減らす
