@@ -1211,7 +1211,7 @@ local char_acts_base             = {
 		{ names = { "フェイント カイザーウェイブ" }, type = act_types.any, ids = { 0x113 } },
 		{ names = { "ニースマッシャー" }, type = act_types.any, ids = { 0x6D, 0x6E } },
 		{ names = { "デスハンマー" }, type = act_types.overhead, ids = { 0x68 } },
-		{ names = { "カイザーボディプレス" }, type = act_types.attack, ids = { 0x69 } },
+		{ names = { "カイザーボディプレス" }, type = act_types.overhead, ids = { 0x69 } },
 		{ names = { "着地", "ジャンプ着地(カイザーボディプレス)" }, type = act_types.any, ids = { 0x72 } },
 		{ names = { "ダイビングエルボー" }, type = act_types.any, ids = { 0x6A, 0x73, 0x74, 0x75 } },
 		{ names = { "ブリッツボール・上段" }, type = act_types.attack, ids = { 0x86, 0x87, 0x88 }, },
