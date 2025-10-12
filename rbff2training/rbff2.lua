@@ -1771,8 +1771,12 @@ rbff2.startplugin  = function()
 		-- 1Pと2Pの入力読取
 		for i, p in ut.ifind_all(players, function(p) return not target_p or target_p == p.num end) do
 			if not p.key then return end
-			local status_b, reg_pcnt = mem.r08(p.addr.reg_st_b) ~ 0xFF, mem.r08(p.addr.reg_pcnt) ~ 0xFF
-			local on1f, on5f, hold = mem.r08(p.addr.on1f), mem.r08(p.addr.on5f), mem.r08(p.addr.hold)
+			local addr = p.addr.key
+			if global.dummy_mode == 4 or global.dummy_mode == 5 then
+				addr = p.op.addr.key
+			end
+			local status_b, reg_pcnt = mem.r08(addr.reg_st_b) ~ 0xFF, mem.r08(addr.reg_pcnt) ~ 0xFF
+			local on1f, on5f, hold = mem.r08(addr.on1f), mem.r08(addr.on5f), mem.r08(addr.hold)
 			if merge_bs_hook and p.bs_hook and p.bs_hook.cmd then
 				reg_pcnt, on1f, on5f, hold = p.bs_hook.cmd, p.bs_hook.on1f, p.bs_hook.on5f, p.bs_hook.hold
 			end
@@ -1917,11 +1921,13 @@ rbff2.startplugin  = function()
 				color       = p1 and 0x107BAC or 0x107BAD, -- カラー A=0x00 D=0x01
 				stun        = p1 and 0x10B850 or 0x10B858, -- 現在気絶値
 				stun_timer  = p1 and 0x10B854 or 0x10B85C, -- 気絶値ゼロ化までの残フレーム数
+				key         = {
 				reg_pcnt    = p1 and 0x300000 or 0x340000, -- キー入力 REG_P1CNT or REG_P2CNT アドレス
 				reg_st_b    = 0x380000,        -- キー入力 REG_STATUS_B アドレス
 				hold        = p1 and 0x1041AE or 0x1041B2,
 				on5f        = p1 and 0x1041AF or 0x1041B3,
 				on1f        = p1 and 0x1041B0 or 0x1041B4,
+				},
 			},
 
 			add_cmd_hook    = function(cmd)
@@ -2187,13 +2193,13 @@ rbff2.startplugin  = function()
 			--[p1 and 0x10B4F0 or 0x10B4EF] = function(data) p.max_combo = data end, -- 最大コンボ数
 			[p1 and 0x10B84E or 0x10B856] = function(data) p.stun_limit = data end, -- 最大気絶値
 			[p1 and 0x10B850 or 0x10B858] = function(data) p.hit_stun = data end, -- 現在気絶値
-			[p.addr.on1f] = function(data, ret)
+			[p.addr.key.on1f] = function(data, ret)
 				local hook = p.bs_hook
 				if not hook or not hook.cmd then return end
 				--ut.printf("%s bs_hook cmd %x", p.num, hook.cmd)
 				-- フックの処理量軽減のため1F,5F,おしっぱのキー入力をまとめて記録する
-				mem.w08(p.addr.on5f, input.merge(mem.r08(p.addr.on5f), hook.on5f or hook.cmd)) -- 押しっぱずっと有効
-				mem.w08(p.addr.hold, input.merge(mem.r08(p.addr.hold), hook.hold or hook.cmd)) -- 押しっぱ有効が5Fのみ
+				mem.w08(p.addr.key.on5f, input.merge(mem.r08(p.addr.key.on5f), hook.on5f or hook.cmd)) -- 押しっぱずっと有効
+				mem.w08(p.addr.key.hold, input.merge(mem.r08(p.addr.key.hold), hook.hold or hook.cmd)) -- 押しっぱ有効が5Fのみ
 				ret.value = input.merge(data, hook.on1f or hook.cmd)               -- 押しっぱ有効が1Fのみ
 			end,
 		}
@@ -2348,8 +2354,8 @@ rbff2.startplugin  = function()
 			[{ addr = 0xD6, filter = 0x5A7B4 }] = function(data, ret)
 				if p.dummy_wakeup == wakeup_type.atk and p.char_data.wakeup then ret.value = 0x23 end -- 成立コマンド値を返す
 			end,
-			[{ addr = p.addr.on1f, filter = { 0x0263AC } }] = function(data) check_add_button(data, 1) end, -- D7 = 押しっぱ  D6 = 押し1F有効
-			[{ addr = p.addr.on5f, filter = { 0x026390 } }] = function(data) check_add_button(data, 5) end, -- D7 = 押しっぱ  D6 = 押し5F有効
+			[{ addr = p.addr.key.on1f, filter = { 0x0263AC } }] = function(data) check_add_button(data, 1) end, -- D7 = 押しっぱ  D6 = 押し1F有効
+			[{ addr = p.addr.key.on5f, filter = { 0x026390 } }] = function(data) check_add_button(data, 5) end, -- D7 = 押しっぱ  D6 = 押し5F有効
 			[{ addr = p.addr.hurt_state, filter = { 0x05A1A4, 0x05A43C, 0x05A48A } }] = function(data, ret) -- ラインずらさない状態
 				if p.dis_plain_shift then ret.value = data | 0x40 end
 			end,
