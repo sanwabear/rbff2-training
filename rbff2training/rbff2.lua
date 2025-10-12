@@ -1884,7 +1884,7 @@ rbff2.startplugin  = function()
 			force_y_pos     = 1,         -- Y座標強制
 			update_act      = false,
 			move_count      = 0,         -- スクショ用の動作カウント
-			on_punish       = 0,
+			on_punish       = -999,
 			on_block        = 0,
 			key             = {
 				log = ut.new_filled_table(global.key_hists, { key = "", frame = 0 }),
@@ -2035,7 +2035,7 @@ rbff2.startplugin  = function()
 				local changed, n = p.state ~= data, now()
 				p.on_block = data == 2 and n or p.on_block                                     -- ガードへの遷移フレームを記録
 				p.on_hit = (data == 1 or data == 3) and n or p.on_hit                          -- ヒットへの遷移フレームを記録
-				if p.state == 0 and p.on_hit == n and not p.act_data.neutral then p.on_punish = n + 10 end -- カウンターor確定反撃
+				if p.state == 0 and p.on_hit == n and not p.act_data.neutral then p.on_punish = n end -- カウンターor確定反撃
 				p.state, p.change_state = data, changed and n or p.change_state                -- 今の状態と状態更新フレームを記録
 				if data == 2 or (data == 3 and p.old.state == 0) then
 					p.update_tmp_combo(changed and 1 or 2)                                     -- 連続ガード用のコンボ状態リセット
@@ -5528,6 +5528,9 @@ rbff2.startplugin  = function()
 			-- コマンド入力表示
 			for i, p in ipairs(players) do
 				local p1 = i == 1
+				local y0, col1, col2 = global.estab_cmd_y_offset, 0xFAC71585, 0x40303030
+				local x1, x2, step
+				if p1 then x1, x2, step = 0, 50, 8 else x1, x2, step = 320, 270, -8 end
 				-- コマンド入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
 				if p.disp_command == 2 or p.disp_command == 3 then
 					for k, log in ipairs(p.key.log) do draw_cmd(i, k, log.frame, log.key, log.spid, #p.key.log) end
@@ -5538,10 +5541,7 @@ rbff2.startplugin  = function()
 							if global.frame_number <= hist.time then table.insert(disp, hist.txt) end
 						end
 						if #disp > 0 then -- 成立コマンドを表示
-							local y0, col1, col2 = global.estab_cmd_y_offset, 0xFAC71585, 0x40303030
 							local y1, y2 = y0 + get_line_height(), y0 + get_line_height(#disp + 1)
-							local x1, x2, step
-							if p1 then x1, x2, step = 0, 50, 8 else x1, x2, step = 320, 270, -8 end
 							local col = col1
 							for xi = x1, x2, step do
 								scr:draw_box(x1, y1 - 1, xi + 1, y2 + 1, 0, col1)
@@ -5558,6 +5558,10 @@ rbff2.startplugin  = function()
 							draw_text(p1 and x1 + 4 or x2 + 4, y0 + 0.5, "SUCCESS", col1)
 						end
 					end
+				end
+				-- 確定反撃の表示
+				if global.frame_number <= p.on_punish + 60 then
+					draw_text(p1 and x1 + 4 or x2 + 4, y0 + 0.5 - get_line_height(), "PUNISH", 0xFF00FFFF)
 				end
 			end
 		end,
@@ -5916,8 +5920,6 @@ rbff2.startplugin  = function()
 				if global.disp_frame > 1 then -- スト6風フレームメーター -- 1:OFF, 2:ON:大表示, 3:ON:大表示(+1P情報), 4:ON:大表示(+2P情報)
 					local startup, total, draw_label = frame_meter.draw_sf6(p, frame_meter.y_offset + get_line_height(p1 and 0 or 1.5))
 					table.insert(draw_frame_labels, { total = total, func = draw_label })
-					-- 確定反撃の表示
-					_draw_text(p1 and 112 or 184, get_line_height(1.3), "PUNISH", p.on_punish <= global.frame_number and 0xFF808080 or 0xFF00FFFF)
 				end
 				if i == 2 then for j, draw in ipairs(draw_frame_labels) do draw.func(draw_frame_labels[3 - j].total) end end
 			end
