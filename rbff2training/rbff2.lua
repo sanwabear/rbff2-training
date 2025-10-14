@@ -3253,7 +3253,7 @@ rbff2.startplugin  = function()
 	recording.procs.repeat_play = function(_)
 		recording.info = recording.info2
 		-- 繰り返し前の行動が完了するまで待つ
-		local p, op, p_ok = players[recording.player], players[3 - recording.player], true
+		local p, op, p_ok = players[3 - recording.player], players[recording.player], true
 		if global.await_neutral == true then
 			p_ok = p.act_data.neutral or (not p.act_data.neutral and p.on_update_act == global.frame_number and recording.last_act ~= p.act)
 		end
@@ -3282,7 +3282,7 @@ rbff2.startplugin  = function()
 
 		local stop = false
 		local store = recording.active_slot.store[recording.play_count]
-		local p = players[3 - recording.player]
+		local p = players[recording.player]
 		if store == nil then
 			stop = true
 		elseif p.state == 1 then
@@ -3341,8 +3341,8 @@ rbff2.startplugin  = function()
 			if recording.do_repeat then
 				-- 状態変更
 				-- 繰り返し前の行動を覚えておいて、行動が完了するまで待機できるようにする
-				recording.last_act = players[3 - recording.player].act
-				recording.last_pos_y = players[3 - recording.player].pos_y
+				recording.last_act = players[recording.player].act
+				recording.last_pos_y = players[recording.player].pos_y
 				global.rec_main = recording.procs.repeat_play
 				ut.printf("%s play_interval -> repeat_play", global.frame_number)
 				return
@@ -5183,7 +5183,7 @@ rbff2.startplugin  = function()
 				called[prev_rec_main or "NOT DEFINED"] = true
 				global.rec_main(next_joy)
 			until global.rec_main == prev_rec_main or called[global.rec_main] == true
-			input.read(3 - recording.player, global.rec_main == recording.procs.play)
+			input.read(recording.player, global.rec_main == recording.procs.play)
 		end
 
 		-- キーディス用の処理
@@ -6114,7 +6114,7 @@ rbff2.startplugin  = function()
 		g.dummy_mode          = 5
 		g.rec_main            = recording.procs.await_no_input
 		input.accepted        = scr:frame_number()
-		recording.temp_player = players[1].reg_pcnt ~= 0 and 1 or 2
+		recording.temp_player = players[1].reg_pcnt ~= 0 and 2 or 1
 		recording.last_slot   = slot_no
 		recording.active_slot = recording.slot[slot_no]
 		menu.set_current()
@@ -6140,7 +6140,7 @@ rbff2.startplugin  = function()
 		g.dummy_mode = 6 -- リプレイモードにする
 		g.rec_main = recording.procs.fixpos
 		input.accepted = scr:frame_number()
-		recording.temp_player = players[1].reg_pcnt ~= 0 and 1 or 2
+		recording.temp_player = players[1].reg_pcnt ~= 0 and 2 or 1
 		menu.exit_and_play_common()
 		menu.set_current()
 		menu.exit()
