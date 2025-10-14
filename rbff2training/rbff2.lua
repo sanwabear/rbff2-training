@@ -5077,27 +5077,27 @@ rbff2.startplugin  = function()
 					if attacking then
 						if hop then
 							if falling and aaa.hop_limit3 >= p.op.pos_y then -- 小ジャンプ下り攻撃
-								print("hop fall atk", aaa.hop_limit3, ">=", p.op.pos_y)
+								--print("hop fall atk", aaa.hop_limit3, ">=", p.op.pos_y)
 								ant_air = true
 							elseif rising and aaa.hop_limit2 <= p.op.pos_y then -- 小ジャンプ上り攻撃
-								print("hop rise atk", aaa.hop_limit2, "<=", p.op.pos_y)
+								--print("hop rise atk", aaa.hop_limit2, "<=", p.op.pos_y)
 								ant_air = true
 							end
 						elseif jump then
 							if falling and aaa.jump_limit3 >= p.op.pos_y then -- ジャンプ下り攻撃
-								print("jmp fall atk", aaa.jump_limit3, ">=", p.op.pos_y)
+								--print("jmp fall atk", aaa.jump_limit3, ">=", p.op.pos_y)
 								ant_air = true
 							elseif rising and aaa.jump_limit2 <= p.op.pos_y then -- ジャンプ上り攻撃
-								print("jmp rise atk", aaa.jump_limit2, "<=", p.op.pos_y)
+								--print("jmp rise atk", aaa.jump_limit2, "<=", p.op.pos_y)
 								ant_air = true
 							end
 						end
 					elseif falling then
 						if jump and aaa.jump_limit1 >= p.op.pos_y then -- ジャンプ下り
-							print("jmp fall    ", aaa.jump_limit1, ">=", p.op.pos_y)
+							--print("jmp fall    ", aaa.jump_limit1, ">=", p.op.pos_y)
 							ant_air = true
 						elseif hop  and aaa.hop_limit1 >= p.op.pos_y then  -- 小ジャンプ下り
-							print("hop fall    ", aaa.hop_limit1, ">=", p.op.pos_y)
+							--print("hop fall    ", aaa.hop_limit1, ">=", p.op.pos_y)
 							ant_air = true
 						end
 					end
