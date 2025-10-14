@@ -285,7 +285,7 @@ rbff2.startplugin  = function()
 		to_auto = nil,
 	}
 	menu.set_current  = function(next_menu)
-		-- print("next", next_menu or "main")
+		--print("next", next_menu or "main")
 		if next_menu and (type(next_menu) == "string") then
 			next_menu = menu[next_menu]
 		end
@@ -5072,14 +5072,37 @@ rbff2.startplugin  = function()
 				local jump = p.op.in_air and ut.tstb(p.op.flag_c0, db.flag_c0._21 | db.flag_c0._22 | db.flag_c0._23)
 				local hop = p.op.in_air and ut.tstb(p.op.flag_c0, db.flag_c0._18 | db.flag_c0._19 | db.flag_c0._20)
 				local aaa, falling, attacking = p.away_anti_air, (jump or hop) and p.op.pos_y < p.op.old.pos_y, 0 < p.op.flag_c4
-				local ant_air = false
-				ant_air = ant_air or (attacking and hop and falling and aaa.hop_limit3 < p.op.pos_y) -- 小ジャンプ下り攻撃
-				ant_air = ant_air or (attacking and hop and not falling and aaa.hop_limit2 < p.op.pos_y) -- 小ジャンプ上り攻撃
-				ant_air = ant_air or (attacking and jump and falling and aaa.jump_limit3 < p.op.pos_y) -- ジャンプ下り攻撃
-				ant_air = ant_air or (attacking and jump and not falling and aaa.jump_limit2 < p.op.pos_y) -- ジャンプ上り攻撃
-				ant_air = ant_air or (falling and jump and p.op.pos_y <= aaa.jump_limit1)      -- ジャンプ下り
-				ant_air = ant_air or (falling and hop and p.op.pos_y <= aaa.hop_limit1)        -- 小ジャンプ下り
-				if ant_air then p.reset_cmd_hook(db.cmd_types._AB) end
+				local ant_air, rising = false, not falling
+				if p.flag_c4 == 0 and p.flag_c8 == 0 then
+					if attacking then
+						if hop then
+							if falling and aaa.hop_limit3 >= p.op.pos_y then -- 小ジャンプ下り攻撃
+								print("hop fall atk", aaa.hop_limit3, ">=", p.op.pos_y)
+								ant_air = true
+							elseif rising and aaa.hop_limit2 <= p.op.pos_y then -- 小ジャンプ上り攻撃
+								print("hop rise atk", aaa.hop_limit2, "<=", p.op.pos_y)
+								ant_air = true
+							end
+						elseif jump then
+							if falling and aaa.jump_limit3 >= p.op.pos_y then -- ジャンプ下り攻撃
+								print("jmp fall atk", aaa.jump_limit3, ">=", p.op.pos_y)
+								ant_air = true
+							elseif rising and aaa.jump_limit2 <= p.op.pos_y then -- ジャンプ上り攻撃
+								print("jmp rise atk", aaa.jump_limit2, "<=", p.op.pos_y)
+								ant_air = true
+							end
+						end
+					elseif falling then
+						if jump and aaa.jump_limit1 >= p.op.pos_y then -- ジャンプ下り
+							print("jmp fall    ", aaa.jump_limit1, ">=", p.op.pos_y)
+							ant_air = true
+						elseif hop  and aaa.hop_limit1 >= p.op.pos_y then  -- 小ジャンプ下り
+							print("hop fall    ", aaa.hop_limit1, ">=", p.op.pos_y)
+							ant_air = true
+						end
+					end
+					if ant_air then p.reset_cmd_hook(db.cmd_types._AB) end
+				end
 			end
 
 			-- 自動ダウン追撃
@@ -6046,9 +6069,9 @@ rbff2.startplugin  = function()
 
 		local next_menu = nil
 
-		if p1.away_anti_air.enabled and not cancel and row == 14 then -- 1P 避け攻撃対空
+		if p1.away_anti_air.enabled and not cancel and row == 17 then -- 1P 避け攻撃対空
 			next_menu = "away_anti_air1"
-		elseif p2.away_anti_air.enabled and not cancel and row == 15 then -- 2P 避け攻撃対空
+		elseif p2.away_anti_air.enabled and not cancel and row == 18 then -- 2P 避け攻撃対空
 			next_menu = "away_anti_air2"
 		end
 
