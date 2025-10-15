@@ -5067,7 +5067,7 @@ rbff2.startplugin  = function()
 				end
 			end
 
-			-- 避け攻撃対空
+			-- 自動避け攻撃対空
 			if p.away_anti_air.enabled and not p.op.in_hitstun then
 				local jump = p.op.in_air and ut.tstb(p.op.flag_c0, db.flag_c0._21 | db.flag_c0._22 | db.flag_c0._23)
 				local hop = p.op.in_air and ut.tstb(p.op.flag_c0, db.flag_c0._18 | db.flag_c0._19 | db.flag_c0._20)
@@ -5101,7 +5101,15 @@ rbff2.startplugin  = function()
 							ant_air = true
 						end
 					end
-					if ant_air then p.reset_cmd_hook(db.cmd_types._AB) end
+					if ant_air then
+						local dummy_rvs = get_next_rvs(p)
+						if dummy_rvs then
+							p.dummy_rvs = dummy_rvs
+							input_rvs(rvs_types.in_knock_back, p, string.format("[AntiAir] %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer))
+						else
+							p.reset_cmd_hook(db.cmd_types._AB)
+						end
+					end
 				end
 			end
 
@@ -6531,7 +6539,7 @@ rbff2.startplugin  = function()
 		local key = string.format("away_anti_air%s", i)
 		menu[key] = menu.create(
 			string.format("%sP 避け攻撃対空設定", i),
-			"トレーニングダミーが避け攻撃を出す条件を設定します。",
+			"トレーニングダミーが避け攻撃（かリバーサル技）を出す条件を設定します。",
 			{
 				{ "通常ジャンプ高度", limit },
 				{ "上りジャンプ攻撃高度", limit },
