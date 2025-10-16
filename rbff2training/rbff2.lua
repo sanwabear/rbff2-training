@@ -1904,6 +1904,10 @@ rbff2.startplugin  = function()
 				hop_limit1 = 45, -- 小ジャンプ高度
 				hop_limit2 = 45, -- 上り小ジャンプ攻撃高度
 				hop_limit3 = 60, -- 下り小ジャンプ攻撃高度
+				fwd_limit1 = 80, -- 前進位置
+				fwd_limit2 =  0, -- 前進攻撃位置
+				bak_limit1 =  0, -- 後退位置
+				bak_limit2 =  0, -- 後退攻撃位置
 			},
 
 			addr            = {
@@ -5072,34 +5076,49 @@ rbff2.startplugin  = function()
 				local jump = p.op.in_air and ut.tstb(p.op.flag_c0, db.flag_c0._21 | db.flag_c0._22 | db.flag_c0._23)
 				local hop = p.op.in_air and ut.tstb(p.op.flag_c0, db.flag_c0._18 | db.flag_c0._19 | db.flag_c0._20)
 				local aaa, falling, attacking = p.away_anti_air, (jump or hop) and p.op.pos_y < p.op.old.pos_y, 0 < p.op.flag_c4
-				local ant_air, rising = false, not falling
+				local backwarding = p.block_side == 1 and p.op.pos < p.op.old.pos -- ガード方向や内部の向き 1:右向き -1:左向き
+				local ant_air, forwarding, rising = false, not backwarding, not falling
+				local abs_space = math.abs(p_space)
 				if p.flag_c4 == 0 and p.flag_c8 == 0 then
 					if attacking then
 						if hop then
-							if falling and aaa.hop_limit3 >= p.op.pos_y then -- 小ジャンプ下り攻撃
+							if falling and aaa.hop_limit3 ~= 1 and aaa.hop_limit3 >= p.op.pos_y then -- 小ジャンプ下り攻撃
 								--print("hop fall atk", aaa.hop_limit3, ">=", p.op.pos_y)
 								ant_air = true
-							elseif rising and aaa.hop_limit2 <= p.op.pos_y then -- 小ジャンプ上り攻撃
+							elseif rising and aaa.hop_limit2 ~= 1 and aaa.hop_limit2 <= p.op.pos_y then -- 小ジャンプ上り攻撃
 								--print("hop rise atk", aaa.hop_limit2, "<=", p.op.pos_y)
 								ant_air = true
 							end
 						elseif jump then
-							if falling and aaa.jump_limit3 >= p.op.pos_y then -- ジャンプ下り攻撃
+							if falling and aaa.jump_limit3 ~= 1 and aaa.jump_limit3 >= p.op.pos_y then -- ジャンプ下り攻撃
 								--print("jmp fall atk", aaa.jump_limit3, ">=", p.op.pos_y)
 								ant_air = true
-							elseif rising and aaa.jump_limit2 <= p.op.pos_y then -- ジャンプ上り攻撃
+							elseif rising and aaa.jump_limit2 ~= 1 and aaa.jump_limit2 <= p.op.pos_y then -- ジャンプ上り攻撃
 								--print("jmp rise atk", aaa.jump_limit2, "<=", p.op.pos_y)
 								ant_air = true
 							end
 						end
+						if forwarding and aaa.fwd_limit2 > 0 and aaa.fwd_limit2 >= abs_space then -- 前進攻撃
+							--print("fwd      atk", aaa.fwd_limit2, ">=", abs_space)
+							ant_air = true
+						elseif backwarding and aaa.bak_limit2 > 0 and aaa.bak_limit2 <= abs_space then -- 後退攻撃
+							--print("bak      atk", aaa.bak_limit2, "<=", abs_space)
+							ant_air = true
+						end
 					elseif falling then
-						if jump and aaa.jump_limit1 >= p.op.pos_y then -- ジャンプ下り
+						if jump and aaa.jump_limit1 ~= 1 and aaa.jump_limit1 >= p.op.pos_y then -- ジャンプ下り
 							--print("jmp fall    ", aaa.jump_limit1, ">=", p.op.pos_y)
 							ant_air = true
-						elseif hop  and aaa.hop_limit1 >= p.op.pos_y then  -- 小ジャンプ下り
+						elseif hop and aaa.hop_limit1 ~= 1 and aaa.hop_limit1 >= p.op.pos_y then  -- 小ジャンプ下り
 							--print("hop fall    ", aaa.hop_limit1, ">=", p.op.pos_y)
 							ant_air = true
 						end
+					elseif forwarding and aaa.fwd_limit1 > 0 and aaa.fwd_limit1 >= abs_space then -- 前進
+						--print("fwd         ", aaa.fwd_limit1, ">=", abs_space)
+						ant_air = true
+					elseif backwarding and aaa.bak_limit1 > 0 and aaa.bak_limit1 <= abs_space then -- 後退
+						--print("bak         ", aaa.bak_limit1, "<=", abs_space)
+						ant_air = true
 					end
 					if ant_air then
 						local dummy_rvs = get_next_rvs(p)
@@ -6535,7 +6554,7 @@ rbff2.startplugin  = function()
 
 	for i = 1, 2 do
 		local limit = { "OFF" }
-		for px = 1, 100 do table.insert(limit, px) end
+		for px = 1, 160 do table.insert(limit, px) end
 		local key = string.format("away_anti_air%s", i)
 		menu[key] = menu.create(
 			string.format("%sP 避け攻撃対空設定", i),
@@ -6547,24 +6566,36 @@ rbff2.startplugin  = function()
 				{ "小ジャンプ高度", limit },
 				{ "上り小ジャンプ攻撃高度", limit },
 				{ "下り小ジャンプ攻撃高度", limit },
+				{ "前進位置", limit },
+				{ "後退位置", limit },
+				{ "前進攻撃位置", limit },
+				{ "後退攻撃位置", limit },
 			},
 			function()
 				local col, a = menu[key].pos.col, players[i].away_anti_air
-				col[1] = a.jump_limit1 + 1 -- 通常ジャンプ高度
-				col[2] = a.jump_limit2 + 1 -- 上りジャンプ攻撃高度
-				col[3] = a.jump_limit3 + 1 -- 下りジャンプ攻撃高度
-				col[4] = a.hop_limit1 + 1 -- 小ジャンプ高度
-				col[5] = a.hop_limit2 + 1 -- 上り小ジャンプ攻撃高度
-				col[6] = a.hop_limit3 + 1 -- 下り小ジャンプ攻撃高度
+				col[ 1] = a.jump_limit1 + 1 -- 通常ジャンプ高度
+				col[ 2] = a.jump_limit2 + 1 -- 上りジャンプ攻撃高度
+				col[ 3] = a.jump_limit3 + 1 -- 下りジャンプ攻撃高度
+				col[ 4] = a.hop_limit1 + 1 -- 小ジャンプ高度
+				col[ 5] = a.hop_limit2 + 1 -- 上り小ジャンプ攻撃高度
+				col[ 6] = a.hop_limit3 + 1 -- 下り小ジャンプ攻撃高度
+				col[ 7] = a.fwd_limit1 + 1 -- 前進位置
+				col[ 8] = a.fwd_limit2 + 1 -- 前進攻撃位置
+				col[ 9] = a.bak_limit1 + 1 -- 後退位置
+				col[10] = a.bak_limit2 + 1 -- 後退攻撃位置
 			end,
 			ut.new_filled_table(18, function()
 				local col, a  = menu[key].pos.col, players[i].away_anti_air
-				a.jump_limit1 = col[1] - 1 -- 通常ジャンプ高度
-				a.jump_limit2 = col[2] - 1 -- 上りジャンプ攻撃高度
-				a.jump_limit3 = col[3] - 1 -- 下りジャンプ攻撃高度
-				a.hop_limit1  = col[4] - 1 -- 小ジャンプ高度
-				a.hop_limit2  = col[5] - 1 -- 上り小ジャンプ攻撃高度
-				a.hop_limit3  = col[6] - 1 -- 下り小ジャンプ攻撃高度
+				a.jump_limit1 = col[ 1] - 1 -- 通常ジャンプ高度
+				a.jump_limit2 = col[ 2] - 1 -- 上りジャンプ攻撃高度
+				a.jump_limit3 = col[ 3] - 1 -- 下りジャンプ攻撃高度
+				a.hop_limit1  = col[ 4] - 1 -- 小ジャンプ高度
+				a.hop_limit2  = col[ 5] - 1 -- 上り小ジャンプ攻撃高度
+				a.hop_limit3  = col[ 6] - 1 -- 下り小ジャンプ攻撃高度
+				a.fwd_limit1  = col[ 7] - 1 -- 前進位置
+				a.fwd_limit2  = col[ 8] - 1 -- 前進攻撃位置
+				a.bak_limit1  = col[ 9] - 1 -- 後退位置
+				a.bak_limit2  = col[10] - 1 -- 後退攻撃位置
 				menu.set_current()
 			end))
 	end
