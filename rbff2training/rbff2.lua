@@ -2365,12 +2365,16 @@ rbff2.startplugin  = function()
 			end,
 		}
 		p.wp16                     = {
-			[0x34] = function(data) p.thrust = data end,
-			[0x36] = function(data) p.thrust_frc = ut.int16tofloat(data) end,
+			[0x34] = function(data) p.thrust_int = ut.int16(data) end, -- 前進移動量X
+			[0x36] = function(data) p.thrust_frc = ut.int16tofloat(data) end, -- 前進移動量の小数部X
+			--[0x44] = function(data) p.thrusty_int = ut.int16(data) end, -- ジャンプ移動量Y
+			--[0x46] = function(data) p.thrusty_frc = ut.int16tofloat(data) end, -- ジャンプ移動量の小数部Y
+			[0x48] = function(data) p.thrusty_int = ut.int16(data) end, -- ジャンプ移動量Y
+			[0x4A] = function(data) p.thrusty_frc = ut.int16tofloat(data) end, -- ジャンプ移動量の小数部Y
 			--[0x92] = function(data) p.anyhit_id = data end,
 			--[0x9E] = function(data) p.ophit = all_objects[data] end, -- ヒットさせた相手側のベースアドレス
-			[0xDA] = function(data) p.inertia = data end,
-			[0xDC] = function(data) p.inertia_frc = ut.int16tofloat(data) end,
+			[0xDA] = function(data) p.inertia_int = ut.int16(data) end, -- 慣性移動量
+			[0xDC] = function(data) p.inertia_frc = ut.int16tofloat(data) end, -- 慣性移動量の小数部
 			[0xE6] = function(data) p.on_hit_any = now() + 1 end,                                                        -- 0xE6か0xE7 打撃か当身でフラグが立つ
 			[p1 and 0x10B854 or 0x10B85C] = function(data) p.hit_stun_timer = data end,                                  -- 気絶値ゼロ化までの残フレーム数
 		}
@@ -2759,12 +2763,15 @@ rbff2.startplugin  = function()
 					-- 舞小JA,小JCの攻撃判定なしの判定表示が邪魔なので嘘判定にする
 					if ((p.act == 0x50 or p.act == 0x53) and p.act_count ~= 3) or ((p.act == 0x52 or p.act == 0x55) and p.act_count ~= 2) then fake_pc, fake = true, true end
 				end
+				if global.mvs_billy and p.body.char == db.char_id.billy then
+					-- MVSビリーの小ジャンプB、垂直小ジャンプAの判定表示が邪魔なので嘘判定にする
+					if (p.act == 0x50 or p.act == 0x51 or p.act == 0x54) then fake_pc, fake = true, true end
+				end
 				if p.is_fireball and p.body.char == db.char_id.chonrei and p.act == 0x268 and p.base ~= 0x4551e then
 					-- チョンレイ飛び道具の攻撃判定なしの判定表示が邪魔なので嘘判定にする
 					fake_pc, fake = true, true
 				end
 				p.attackbits.fake = fake_pc and fake
-				-- if mem.pc() == 0x2D462 and p.char == db.char_id.billy and data == 0x8 then p.attackbits.fake = true end -- MVSビリーの判定なくなるバグの表現専用
 				p.attackbits.obsolute = (not fake_pc) and fake
 				if fake_pc and p.attackbits.harmless and p.on_update_act then p.attackbits.fake = true end
 				-- ut.printf("%X %s %s | %X %X | %s | %s %s | %X %X %X | %s %s", mem.pc(), now(), p.on_hit, base, data, ut.tobitstr(data), fake_pc, fake, p.act, p.act_count, p.act_frame, p.attackbits.fake, p.attackbits.obsolute)
@@ -4349,11 +4356,14 @@ rbff2.startplugin  = function()
 			p.throwable         = p.state == 0 and op.state == 0 and p.throw_timer > 24 and p.sway_status == 0x00 and p.invincible == 0 -- 投げ可能ベース
 			p.tw_muteki2        = p.tw_muteki2 or 0
 			p.n_throwable       = p.throwable and p.tw_muteki2 == 0                                                            -- 通常投げ可能
-			p.thrust            = p.thrust + p.thrust_frc
-			p.inertia           = p.inertia + p.inertia_frc
+			p.thrust            = p.thrust_int + p.thrust_frc
+			p.inertia           = p.inertia_int + p.inertia_frc
 			p.inertial          = not p.sliding and p.thrust == 0 and p.inertia > 0 and ut.tstb(p.flag_c0, db.flag_c0._31) -- ダッシュ慣性残し
+			p.thrusty           = p.thrusty_int + p.thrusty_frc
 			p.pos_total         = p.pos + p.pos_frc
+			p.pos_total_y       = p.pos_y + p.pos_frc_y
 			p.diff_pos_total    = p.old.pos_total and p.pos_total - p.old.pos_total or 0
+			p.diff_pos_total_y  = p.old.pos_total_y and p.pos_total_y - p.old.pos_total_y or 0
 			-- 位置の保存(文字と数値)
 			local old_pos       = p.pos_hist[#p.pos_hist]
 			table.insert(p.pos_hist, {
@@ -4482,6 +4492,15 @@ rbff2.startplugin  = function()
 				end
 			end
 			p.move_count = p.update_act and 1 or (p.move_count + 1)
+		end
+		for _, p in ipairs(players) do
+			if p.pos > p.op.pos then
+				p.thrust, p.inertia = -1 * p.thrust, -1 * p.inertia
+				p.diff_pos_total = -1 * p.diff_pos_total
+			end
+			p.thrust, p.inertia = p.thrust == 0 and 0 or p.thrust, p.inertia == 0 and 0 or p.inertia
+			p.diff_pos_total = p.diff_pos_total == 0 and 0 or p.diff_pos_total
+			p.thrusty = p.thrusty == 0 and 0 or p.thrusty
 		end
 
 		-- 1Pと2Pの状態読取 入力
@@ -5998,14 +6017,15 @@ rbff2.startplugin  = function()
 					if x3 ~= x2 or not p.last_posx_txt then
 						p.last_posx_txt = string.format("X:%s>%s>%s", x1, x2, x3)
 					end
+					p.speed_txt = string.format("%+3.3f,%+3.3f,%+3.3f", p.diff_pos_total or 0, p.thrusty or 0, p.diff_pos_total_y or 0)
 					if global.disp_pos == 2 or global.disp_pos == 4 then
 						local tx1 = i == 1 and 36 or 221
 						local tx2 = i == 1 and 100 or 193
 						scr:draw_box(tx1, y5, tx1 + 63, y5 + get_line_height(2), 0, col)
-						scr:draw_box(tx2, y5, tx2 + 27, y5 + get_line_height(), 0, col)
+						scr:draw_box(tx2, y5, tx2 + 27, y5 + get_line_height(2), 0, col)
 						--_draw_text(i == 1 and "left" or "right", y5 - get_line_height(), { p.last_posx_txt, p.last_posy_txt })
 						_draw_text(tx1 + 1, y5, { p.last_posx_txt, p.last_posy_txt })
-						_draw_text(tx2 + 1, y5, p.last_posz_txt)
+						_draw_text(tx2 + 1, y5, { p.last_posz_txt, p.speed_txt })
 					end
 					local tx = i == 1 and 90 or 170 - screen.s_width
 					if global.disp_pos == 2 or global.disp_pos == 3 then
