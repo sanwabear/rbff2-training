@@ -2367,6 +2367,8 @@ rbff2.startplugin  = function()
 		p.wp16                     = {
 			[0x34] = function(data) p.thrust_int = ut.int16(data) end, -- 前進移動量X
 			[0x36] = function(data) p.thrust_frc = ut.int16tofloat(data) end, -- 前進移動量の小数部X
+			--[0x40] = function(data) end, -- キャラ固有の前進移動量X
+			--[0x42] = function(data) end, -- キャラ固有の前進移動量の小数部X
 			--[0x44] = function(data) p.thrusty_int = ut.int16(data) end, -- ジャンプ移動量Y
 			--[0x46] = function(data) p.thrusty_frc = ut.int16tofloat(data) end, -- ジャンプ移動量の小数部Y
 			[0x48] = function(data) p.thrusty_int = ut.int16(data) end, -- ジャンプ移動量Y
@@ -4885,6 +4887,22 @@ rbff2.startplugin  = function()
 						p.reset_cmd_hook(db.cmd_types._8) -- 地上のジャンプ移行モーション以外だったら上入力
 					elseif p.dummy_act == 5 and p.op.sway_status == 0x00 and p.state == 0 then
 						p.reset_cmd_hook(db.cmd_types._2D) -- スウェー待機(スウェー移動)
+					elseif p.dummy_act == 6 then
+						p.reset_cmd_hook(db.cmd_types.front) -- 歩き
+					elseif p.dummy_act == 7 then
+						p.reset_cmd_hook(db.cmd_types.front_crouch) -- しゃがみ歩き
+					elseif p.dummy_act == 8 then -- ダッシュジャンプ
+						if ut.tstb(p.flag_c0, db.flag_c0._19 | db.flag_c0._17 | db.flag_c0._22) or ut.tstb(p.flag_c0, db.flag_c0._24, true) then
+							p.reset_cmd_hook(db.cmd_types.front_jump) -- 前ジャンプ
+						else
+							p.reset_sp_hook(db.common_rvs_list[14]) -- ダッシュ
+						end
+					elseif p.dummy_act == 9 then -- ダッシュ小ジャンプ
+						if not ut.tstb(p.flag_c0, db.flag_c0._24, true) then -- ダッシュ
+							p.reset_sp_hook(db.common_rvs_list[14]) -- ダッシュ
+						else
+							p.reset_cmd_hook(db.cmd_types.front_jump) -- 前ジャンプ
+						end
 					end
 				elseif p.dummy_act == 5 and p.in_sway_line then
 					p.reset_cmd_hook(db.cmd_types._8) -- スウェー待機
@@ -6625,8 +6643,8 @@ rbff2.startplugin  = function()
 		"トレーニングダミーの基本動作を設定します。",
 		{
 			{ "ダミーモード", { "プレイヤー vs プレイヤー", "プレイヤー vs CPU", "CPU vs プレイヤー", "1P&2P入れ替え", "レコード", "リプレイ" }, },
-			{ "1P アクション", { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
-			{ "2P アクション", { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" }, },
+			{ "1P アクション", { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き", "ダッシュジャンプ", "ダッシュ小ジャンプ" }, },
+			{ "2P アクション", { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き", "ダッシュジャンプ", "ダッシュ小ジャンプ" }, },
 			{ title = true, "ガード・ブレイクショット設定" },
 			{ "1P ガード", { "なし", "オート", "1ヒットガード", "1ガード", "上段", "下段", "アクション", "ランダム", "強制" }, },
 			{ "2P ガード", { "なし", "オート", "1ヒットガード", "1ガード", "上段", "下段", "アクション", "ランダム", "強制" }, },

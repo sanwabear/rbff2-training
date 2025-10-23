@@ -1692,14 +1692,20 @@ local cmd_types = {
 	_2B = cmd_bytes._2 | cmd_bytes._B,
 	_4B = cmd_bytes._4 | cmd_bytes._B,
 	_6C = cmd_bytes._6 | cmd_bytes._C,
+	_6CD = cmd_bytes._6 | cmd_bytes._C | cmd_bytes._D,
 	_3C = cmd_bytes._3 | cmd_bytes._C,
 	_2C = cmd_bytes._2 | cmd_bytes._C,
 	_4C = cmd_bytes._4 | cmd_bytes._C,
 	_8D = cmd_bytes._8 | cmd_bytes._D,
 	_2D = cmd_bytes._2 | cmd_bytes._D,
 }
-cmd_types.front = { [-1] = cmd_types._4, [1] = cmd_types._6, }
-cmd_types.back = { [-1] = cmd_types._6, [1] = cmd_types._4, }
+local dirL, dirR = -1, 1
+cmd_types.front = { [dirL] = cmd_types._4, [dirR] = cmd_types._6, }
+cmd_types.back = { [dirL] = cmd_types._6, [dirR] = cmd_types._4, }
+cmd_types.front_jump = { [dirL] = cmd_types._7, [dirR] = cmd_types._9, }
+cmd_types.back_jump = { [dirL] = cmd_types._9, [dirR] = cmd_types._7, }
+cmd_types.front_crouch = { [dirL] = cmd_types._1, [dirR] = cmd_types._3, }
+cmd_types.back_crouch = { [dirL] = cmd_types._3, [dirR] = cmd_types._1, }
 local hook_cmd_types = {
 	none = 0,
 	reversal = 2 ^ 0,
@@ -1715,7 +1721,7 @@ local hook_cmd_types = {
 }
 hook_cmd_types.ex_breakshot = hook_cmd_types.breakshot | hook_cmd_types.ex_breakshot
 local common_rvs = {
-	{ cmd = cmd_types._6C, hook_type = hook_cmd_types.reversal| hook_cmd_types.throw, common = true, name = "[共通] 投げ(_6_+_C)", },
+	{ cmd = cmd_types._6CD, hook_type = hook_cmd_types.reversal| hook_cmd_types.throw, common = true, name = "[共通] 投げ(_6_+_C+_D)", },
 	{ cmd = cmd_types._AB, hook_type = hook_cmd_types.reversal, common = true, name = "[共通] 避け攻撃(_A_+_B)", },
 	{ cmd = cmd_types._2A, hook_type = hook_cmd_types.reversal, common = true, name = "[共通] 屈A(_2_+_A)", },
 	{ cmd = cmd_types._A, hook_type = hook_cmd_types.reversal, common = true, name = "[共通] 立A", },
@@ -2124,7 +2130,8 @@ local rvs_bs_list = {
 		{ id = 0x10, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "大鉄神", },
 		{ id = 0x11, f = 0x06, a = 0xFD, hook_type = hook_cmd_types.reversal, name = "超白龍", },
 		{ id = 0x00, f = 0x06, a = 0xFD, hook_type = hook_cmd_types.add_attack, name = "超白龍2", },
-		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.throw | hook_cmd_types.ex_breakshot, name = "真心牙", },
+		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.throw | hook_cmd_types.ex_breakshot, name = "真心牙（投げ狙い）", },
+		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.ex_breakshot, name = "真心牙（弾狙い）", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 天崩山", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 大鉄神", },
 	},
@@ -2195,6 +2202,7 @@ db.cmd_masks        = cmd_masks
 db.cmd_types        = cmd_types
 db.char_rvs_list    = char_rvs_list
 db.char_bs_list     = char_bs_list
+db.common_rvs_list  = common_rvs
 db.rvs_bs_list      = rvs_bs_list
 db.sp_throws        = sp_throws
 
