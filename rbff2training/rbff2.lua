@@ -5048,7 +5048,7 @@ rbff2.startplugin  = function()
 			-- print(p.state, p.knockback2, p.knockback1, p.flag_7e, p.hitstop_remain, rvs_types.in_knock_back, p.last_blockstun, string.format("%x", p.act), p.act_count, p.act_frame)
 			-- ヒットストップ中は無視
 			-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
-			if not p.skip_frame and rvs_wake_types[p.dummy_wakeup] and p.dummy_rvs then
+			if p.knockback2 < 3 and p.hitstop_remain == 0 and not p.skip_frame and rvs_wake_types[p.dummy_wakeup] and p.dummy_rvs then
 				-- ダウン起き上がりリバーサル入力
 				if db.wakeup_acts[p.act] and (p.char_data.wakeup_frms - 3) <= (global.frame_number - p.on_wakeup) then
 					input_rvs(rvs_types.on_wakeup, p, string.format("[Reversal] wakeup %s %s",
