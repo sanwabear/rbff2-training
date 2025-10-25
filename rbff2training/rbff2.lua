@@ -2010,7 +2010,7 @@ rbff2.startplugin  = function()
 				if addr then return addr == tbl.addr else return tbl.id == last_sp and tbl.estab == exp end
 			end) do
 				tbl.on_input_estab = on_input_estab
-				table.insert(p.key.cmd_hist, { txt = table.concat(tbl.lr_cmds[p.cmd_side]), time = now(60) })
+				table.insert(p.key.cmd_hist, { txt = table.concat(tbl.lr_cmds[p.cmd_side]), time = now(60), tbl = tbl })
 				p.last_spids = p.last_spids or {}
 				table.insert(p.last_spids, tbl.spid)
 			end
@@ -4529,7 +4529,18 @@ rbff2.startplugin  = function()
 				local max = (old and old.on_prev == on_prev) and old.max or chg_remain
 				local input_estab = old and old.input_estab or false
 				local charging, reset, force_reset = false, false, false
-
+				local begin1 = old and old.begin1 or 0
+				local begin2 = old and old.begin2 or 0
+				local estab1 = old and old.estab1 or 0
+				local estab2 = old and old.estab2 or 0
+				if (old and old.on ~= on) or old == nil then
+					if on == 0 and tbl.on_input_estab then
+						estab1, estab2 = tbl.on_input_estab - begin1, tbl.on_input_estab - begin2
+						tbl.last_estab1, tbl.last_estab2 = estab1, estab2
+					end
+					if on == 1 then begin1 = global.frame_number - 1 end
+					if on > 1 and (old and old.on_prev == 1) then begin2 = global.frame_number - 1 end
+				end
 				-- コマンド種類ごとの表示用の補正
 				if tbl.type == input_state.types.charge then
 					if on == 1 and chg_remain == 0 then
@@ -4568,6 +4579,10 @@ rbff2.startplugin  = function()
 					input_estab = input_estab,
 					charging = charging,
 					max = max,
+					begin1 = begin1,
+					begin2 = begin2,
+					estab1 = estab1,
+					estab2 = estab2,
 				})
 			end
 		end
@@ -5632,7 +5647,7 @@ rbff2.startplugin  = function()
 				local p1 = i == 1
 				local y0, col1, col2 = global.estab_cmd_y_offset, 0xFAC71585, 0x40303030
 				local x1, x2, step
-				if p1 then x1, x2, step = 0, 50, 8 else x1, x2, step = 320, 270, -8 end
+				if p1 then x1, x2, step = 0, 70, 8 else x1, x2, step = 320, 250, -8 end
 				-- コマンド入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
 				if p.disp_command == 2 or p.disp_command == 3 then
 					for k, log in ipairs(p.key.log) do draw_cmd(i, k, log.frame, log.key, log.spid, #p.key.log) end
@@ -5640,7 +5655,13 @@ rbff2.startplugin  = function()
 						local disp, hist = {}, nil
 						for hi = #p.key.cmd_hist, 1, -1 do
 							hist = p.key.cmd_hist[hi]
-							if global.frame_number <= hist.time then table.insert(disp, hist.txt) end
+							-- hist.tbl.last_estabは成立時のフックではなく入力状態表示からの参照渡しなのでここで表示データとして遅延結合させる
+							local txt
+							if hist.tbl.last_estab2 then
+								hist.txt_f = hist.txt_f or (hist.txt .. " " .. hist.tbl.last_estab1 .. "F/" .. hist.tbl.last_estab2 .. "F")
+								txt = hist.txt_f
+							else txt = hist.txt end
+							if global.frame_number <= hist.time then table.insert(disp, txt) end
 						end
 						if #disp > 0 then -- 成立コマンドを表示
 							local y1, y2 = y0 + get_line_height(), y0 + get_line_height(#disp + 1)
