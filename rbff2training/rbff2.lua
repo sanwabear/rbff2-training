@@ -1848,7 +1848,7 @@ rbff2.startplugin  = function()
 			num             = i,
 			is_fireball     = false,
 			base            = 0x0,
-			dummy_act       = 1,         -- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
+			dummy_act       = 1,         -- { "立ち", "しゃがみ", "垂直ジャンプ", "前方ジャンプ", "後方ジャンプ", "垂直小ジャンプ", "前方小ジャンプ", "後方小ジャンプ", "ダッシュジャンプ", "ダッシュ小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き" }
 			dummy_gd        = dummy_gd_type.none, -- なし, オート1, オート2, 1ヒットガード, 1ガード, 上段, 下段, アクション, ランダム, 強制
 			bs              = false,     -- ブレイクショット
 			dummy_wakeup    = wakeup_type.none, -- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
@@ -4874,37 +4874,44 @@ rbff2.startplugin  = function()
 				in_rec_replay = false
 			end
 
-			-- 立ち, しゃがみ, ジャンプ, 小ジャンプ, スウェー待機
-			-- { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機" },
+			-- { "立ち", "しゃがみ", "垂直ジャンプ", "前方ジャンプ", "後方ジャンプ", "垂直小ジャンプ", "前方小ジャンプ", "後方小ジャンプ", "ダッシュジャンプ", "ダッシュ小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き" }
 			-- レコード中、リプレイ中は行動しない
 			if in_rec_replay then
 				if p.sway_status == 0x00 then
-					if p.dummy_act == 2 then
+					if p.dummy_act == menu.dummy_acts.crounch then
 						p.reset_cmd_hook(db.cmd_types._2) -- しゃがみ
-					elseif p.dummy_act == 3 then
-						p.reset_cmd_hook(db.cmd_types._8) -- ジャンプ
-					elseif p.dummy_act == 4 and not ut.tstb(p.flag_c0, db.flag_c0._17, true) then
-						p.reset_cmd_hook(db.cmd_types._8) -- 地上のジャンプ移行モーション以外だったら上入力
-					elseif p.dummy_act == 5 and p.op.sway_status == 0x00 and p.state == 0 then
+					elseif p.dummy_act == menu.dummy_acts.sway and p.op.sway_status == 0x00 and p.state == 0 then
 						p.reset_cmd_hook(db.cmd_types._2D) -- スウェー待機(スウェー移動)
-					elseif p.dummy_act == 6 then
+					elseif p.dummy_act == menu.dummy_acts.walk then
 						p.reset_cmd_hook(db.cmd_types.front) -- 歩き
-					elseif p.dummy_act == 7 then
+					elseif p.dummy_act == menu.dummy_acts.walk_crounch then
 						p.reset_cmd_hook(db.cmd_types.front_crouch) -- しゃがみ歩き
-					elseif p.dummy_act == 8 then -- ダッシュジャンプ
+					elseif p.dummy_act == menu.dummy_acts.jump_v then
+						p.reset_cmd_hook(db.cmd_types._8) -- ジャンプ
+					elseif p.dummy_act == menu.dummy_acts.jump_short_v and not ut.tstb(p.flag_c0, db.flag_c0._17, true) then
+						p.reset_cmd_hook(db.cmd_types._8) -- 地上のジャンプ移行モーション以外だったら上入力
+					elseif p.dummy_act == menu.dummy_acts.jump_f then
+						p.reset_cmd_hook(db.cmd_types.front_jump) -- 前ジャンプ
+					elseif p.dummy_act == menu.dummy_acts.jump_short_f and not ut.tstb(p.flag_c0, db.flag_c0._17, true) then
+						p.reset_cmd_hook(db.cmd_types.front_jump) -- 地上のジャンプ移行モーション以外だったら上入力
+					elseif p.dummy_act == menu.dummy_acts.jump_b then
+						p.reset_cmd_hook(db.cmd_types.back_jump) -- 後ジャンプ
+					elseif p.dummy_act == menu.dummy_acts.jump_short_b and not ut.tstb(p.flag_c0, db.flag_c0._17, true) then
+						p.reset_cmd_hook(db.cmd_types.back_jump) -- 地上のジャンプ移行モーション以外だったら上入力
+					elseif p.dummy_act == menu.dummy_acts.dash_jump then -- ダッシュジャンプ
 						if ut.tstb(p.flag_c0, db.flag_c0._19 | db.flag_c0._17 | db.flag_c0._22) or ut.tstb(p.flag_c0, db.flag_c0._24, true) then
 							p.reset_cmd_hook(db.cmd_types.front_jump) -- 前ジャンプ
 						else
 							p.reset_sp_hook(db.common_rvs_list[14]) -- ダッシュ
 						end
-					elseif p.dummy_act == 9 then -- ダッシュ小ジャンプ
+					elseif p.dummy_act == menu.dummy_acts.dash_jump_short then -- ダッシュ小ジャンプ
 						if not ut.tstb(p.flag_c0, db.flag_c0._24, true) then -- ダッシュ
 							p.reset_sp_hook(db.common_rvs_list[14]) -- ダッシュ
 						else
 							p.reset_cmd_hook(db.cmd_types.front_jump) -- 前ジャンプ
 						end
 					end
-				elseif p.dummy_act == 5 and p.in_sway_line then
+				elseif p.dummy_act == menu.dummy_acts.sway and p.in_sway_line then
 					p.reset_cmd_hook(db.cmd_types._8) -- スウェー待機
 				end
 			end
@@ -6638,13 +6645,29 @@ rbff2.startplugin  = function()
 			end))
 	end
 
+	menu.dummy_acts = {
+		stand           = 1,  -- 立ち
+		crounch         = 2,  -- しゃがみ
+		jump_v          = 3,  -- 垂直ジャンプ
+		jump_f          = 4,  -- 前方ジャンプ
+		jump_b          = 5,  -- 後方ジャンプ
+		jump_short_v    = 6,  -- 垂直小ジャンプ
+		jump_short_f    = 7,  -- 前方小ジャンプ
+		jump_short_b    = 8,  -- 後方小ジャンプ
+		dash_jump       = 9,  -- ダッシュジャンプ
+		dash_jump_short = 10, -- ダッシュ小ジャンプ
+		sway            = 11, -- スウェー待機
+		walk            = 12, -- 歩き
+		walk_crounch    = 13, -- しゃがみ歩き
+	}
+
 	menu.training  = menu.create(
 		"ダミー設定",
 		"トレーニングダミーの基本動作を設定します。",
 		{
 			{ "ダミーモード", { "プレイヤー vs プレイヤー", "プレイヤー vs CPU", "CPU vs プレイヤー", "1P&2P入れ替え", "レコード", "リプレイ" }, },
-			{ "1P アクション", { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き", "ダッシュジャンプ", "ダッシュ小ジャンプ" }, },
-			{ "2P アクション", { "立ち", "しゃがみ", "ジャンプ", "小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き", "ダッシュジャンプ", "ダッシュ小ジャンプ" }, },
+			{ "1P アクション", { "立ち", "しゃがみ", "垂直ジャンプ", "前方ジャンプ", "後方ジャンプ", "垂直小ジャンプ", "前方小ジャンプ", "後方小ジャンプ", "ダッシュジャンプ", "ダッシュ小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き" }, },
+			{ "2P アクション", { "立ち", "しゃがみ", "垂直ジャンプ", "前方ジャンプ", "後方ジャンプ", "垂直小ジャンプ", "前方小ジャンプ", "後方小ジャンプ", "ダッシュジャンプ", "ダッシュ小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き" }, },
 			{ title = true, "ガード・ブレイクショット設定" },
 			{ "1P ガード", { "なし", "オート", "1ヒットガード", "1ガード", "上段", "下段", "アクション", "ランダム", "強制" }, },
 			{ "2P ガード", { "なし", "オート", "1ヒットガード", "1ガード", "上段", "下段", "アクション", "ランダム", "強制" }, },
