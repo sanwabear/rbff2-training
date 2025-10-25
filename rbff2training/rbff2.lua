@@ -4886,6 +4886,14 @@ rbff2.startplugin  = function()
 						p.reset_cmd_hook(db.cmd_types.front) -- 歩き
 					elseif p.dummy_act == menu.dummy_acts.walk_crounch then
 						p.reset_cmd_hook(db.cmd_types.front_crouch) -- しゃがみ歩き
+					elseif p.dummy_act == menu.dummy_acts.back then
+						p.reset_cmd_hook(db.cmd_types.back) -- 後退
+					elseif p.dummy_act == menu.dummy_acts.back_crounch then
+						p.reset_cmd_hook(db.cmd_types.back_crouch) -- しゃがみ後退（ガード）
+					elseif p.dummy_act == menu.dummy_acts.dash then
+						p.reset_sp_hook(db.common_rvs_list[14]) -- ダッシュ
+					elseif p.dummy_act == menu.dummy_acts.flyback then
+						p.reset_sp_hook(db.common_rvs_list[15]) -- 飛び退き
 					elseif p.dummy_act == menu.dummy_acts.jump_v then
 						p.reset_cmd_hook(db.cmd_types._8) -- ジャンプ
 					elseif p.dummy_act == menu.dummy_acts.jump_short_v and not ut.tstb(p.flag_c0, db.flag_c0._17, true) then
@@ -5065,8 +5073,8 @@ rbff2.startplugin  = function()
 				if 1 < p.pos_y_down and p.old.pos_y > p.pos_y and p.in_air ~= true then
 					input_rvs(rvs_types.knock_back_landing, p, "[Reversal] blown landing")
 				end
-				-- 着地リバーサル入力（通常ジャンプの着地）
-				if p.act == 0x9 and (p.act_frame == 2 or p.act_frame == 0) then
+				-- バクステ後と着地リバーサル入力（通常ジャンプの着地）
+				if (p.act == 0x9 or p.act == 0x2C9 or p.act == 0x1C) and (p.act_frame == 2 or p.act_frame == 0) then
 					input_rvs(rvs_types.jump_landing, p, "[Reversal] jump landing")
 				end
 				-- リバーサルじゃない最速入力
@@ -6659,6 +6667,10 @@ rbff2.startplugin  = function()
 		sway            = 11, -- スウェー待機
 		walk            = 12, -- 歩き
 		walk_crounch    = 13, -- しゃがみ歩き
+		back            = 14, -- 後退
+		back_crounch    = 15, -- しゃがみ後退（ガード）
+		dash            = 16, -- ダッシュ
+		flyback         = 17, -- 飛び退き
 	}
 
 	menu.training  = menu.create(
@@ -6666,8 +6678,8 @@ rbff2.startplugin  = function()
 		"トレーニングダミーの基本動作を設定します。",
 		{
 			{ "ダミーモード", { "プレイヤー vs プレイヤー", "プレイヤー vs CPU", "CPU vs プレイヤー", "1P&2P入れ替え", "レコード", "リプレイ" }, },
-			{ "1P アクション", { "立ち", "しゃがみ", "垂直ジャンプ", "前方ジャンプ", "後方ジャンプ", "垂直小ジャンプ", "前方小ジャンプ", "後方小ジャンプ", "ダッシュジャンプ", "ダッシュ小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き" }, },
-			{ "2P アクション", { "立ち", "しゃがみ", "垂直ジャンプ", "前方ジャンプ", "後方ジャンプ", "垂直小ジャンプ", "前方小ジャンプ", "後方小ジャンプ", "ダッシュジャンプ", "ダッシュ小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き" }, },
+			{ "1P アクション", { "立ち", "しゃがみ", "垂直ジャンプ", "前方ジャンプ", "後方ジャンプ", "垂直小ジャンプ", "前方小ジャンプ", "後方小ジャンプ", "ダッシュジャンプ", "ダッシュ小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き", "後退", "しゃがみ後退（ガード）", "ダッシュ", "飛び退き" }, },
+			{ "2P アクション", { "立ち", "しゃがみ", "垂直ジャンプ", "前方ジャンプ", "後方ジャンプ", "垂直小ジャンプ", "前方小ジャンプ", "後方小ジャンプ", "ダッシュジャンプ", "ダッシュ小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き", "後退", "しゃがみ後退（ガード）", "ダッシュ", "飛び退き" }, },
 			{ title = true, "ガード・ブレイクショット設定" },
 			{ "1P ガード", { "なし", "オート", "1ヒットガード", "1ガード", "上段", "下段", "アクション", "ランダム", "強制" }, },
 			{ "2P ガード", { "なし", "オート", "1ヒットガード", "1ガード", "上段", "下段", "アクション", "ランダム", "強制" }, },
