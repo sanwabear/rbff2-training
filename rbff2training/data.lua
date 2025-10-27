@@ -2797,6 +2797,7 @@ local input_state_types              = {
 	shinsoku = 6,
 	todome = 7,
 	drill5 = 8,
+	n_first = 9,
 }
 local create_input_states            = function()
 	local _1236b___ = "_1|_2|_3|_6|_+_B"
@@ -3543,6 +3544,10 @@ local create_input_states            = function()
 				tbl.cmds = cmds
 				tbl.name_plain = tbl.name
 				tbl.name = ut.convert(tbl.name)
+				if string.find(tbl.cmd, "^_N") then
+					-- ニュートラル開始
+					tbl.type = input_state_types.n_first
+				end
 			end
 		end
 		return input_tables

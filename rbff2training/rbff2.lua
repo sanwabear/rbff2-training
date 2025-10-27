@@ -4532,19 +4532,34 @@ rbff2.startplugin  = function()
 				local old_chg = (old and old.on ~= on)
 				local begin1 = old and old.begin1 or 0
 				local begin2 = old and old.begin2 or 0
+
+				--ut.printf("cmd %6x:%2d %6x:%2d %4d %4d %4d %4d", addr, on, addr - 1, chg_remain, begin1 or -1, begin2 or -1, global.frame_number, tbl.on_input_estab or -1)
 				if old_chg then
 					if old and old.begin1 then
 						if on == 0 and tbl.on_input_estab then
 							--ut.printf("comp %6x:%2x %6x:%2x %4d %4d %4d %4d", addr, on, addr - 1, chg_remain, global.frame_number - old.begin1, global.frame_number - old.begin2, global.frame_number, tbl.on_input_estab or -1)
-							tbl.estab_txt = string.format("%3dF/%3dF", tbl.on_input_estab - old.begin1, tbl.on_input_estab - old.begin2 + 1)
+							if tbl.type == input_state.types.n_first then
+								tbl.estab_txt = string.format("%3dF", tbl.on_input_estab - old.begin2 + 1)
+							elseif tbl.type == input_state.types.charge then
+								local f2 = tbl.on_input_estab - old.begin2 + 1
+								local f1 = f2 + begin1 - 1 -- ため完了までの時間に変換
+								tbl.estab_txt = string.format("%3dF/%3dF", f1, f2)
+							else
+								tbl.estab_txt = string.format("%3dF/%3dF", tbl.on_input_estab - old.begin1, tbl.on_input_estab - old.begin2 + 1)
+							end
+							begin1, begin2 = 0, 0
 						end
 					end
 					if tbl.type == input_state.types.charge then
-						if on == 1 and old.on_prev == 0 then begin1 = chg_remain end
-						if on == 2 and old.on_prev == 1 then
+						if on == 1 and chg_remain > 0 then
+							begin1 = chg_remain
+							--ut.printf("chg1 %6x:%2d %6x:%2d %4d %4d %4d %4d", addr, on, addr - 1, chg_remain, begin1 or -1, begin2 or -1, global.frame_number, tbl.on_input_estab or -1)
+						end
+						if begin1 and old.chg_remain == 0 then
 							begin2 = global.frame_number - 1 -- ため完了時点を保存
-							begin1 = begin2 - begin1 -- ため完了までの時間に変換
-						 end
+							--ut.printf("chg2 %6x:%2d %6x:%2d %4d %4d %4d %4d", addr, on, addr - 1, chg_remain, begin1 or -1, begin2 or -1, global.frame_number, tbl.on_input_estab or -1)
+						end
+						--ut.printf("chg %6x:%2d %6x:%2d %4d %4d %4d %4d", addr, on, addr - 1, chg_remain, global.frame_number - begin1, global.frame_number - begin2, global.frame_number, tbl.on_input_estab or -1)
 					else
 						if on == 1 and old.on_prev == 0 then begin1 = global.frame_number - 1 end
 						if on >= 2 and old.on_prev == 1 then begin2 = global.frame_number - 1 end
