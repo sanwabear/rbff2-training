@@ -4532,18 +4532,23 @@ rbff2.startplugin  = function()
 				local old_chg = (old and old.on ~= on)
 				local begin1 = old and old.begin1 or 0
 				local begin2 = old and old.begin2 or 0
-				local estab1 = old and old.estab1 or 0
-				local estab2 = old and old.estab2 or 0
 				if old_chg then
 					if old and old.begin1 then
-						if on == 0 and old.on_prev == #tbl.cmds and tbl.on_input_estab then
+						if on == 0 and tbl.on_input_estab then
 							--ut.printf("comp %6x:%2x %6x:%2x %4d %4d %4d %4d", addr, on, addr - 1, chg_remain, global.frame_number - old.begin1, global.frame_number - old.begin2, global.frame_number, tbl.on_input_estab or -1)
-							estab1, estab2 = tbl.on_input_estab - old.begin1, tbl.on_input_estab - old.begin2
-							tbl.last_estab1, tbl.last_estab2 = estab1, estab2
+							tbl.estab_txt = string.format("%3dF/%3dF", tbl.on_input_estab - old.begin1, tbl.on_input_estab - old.begin2 + 1)
 						end
 					end
-					if on == 1 and old.on_prev == 0 then begin1 = global.frame_number - 1 end
-					if on >= 2 and old.on_prev == 1 then begin2 = global.frame_number - 1 end
+					if tbl.type == input_state.types.charge then
+						if on == 1 and old.on_prev == 0 then begin1 = chg_remain end
+						if on == 2 and old.on_prev == 1 then
+							begin2 = global.frame_number - 1 -- ため完了時点を保存
+							begin1 = begin2 - begin1 -- ため完了までの時間に変換
+						 end
+					else
+						if on == 1 and old.on_prev == 0 then begin1 = global.frame_number - 1 end
+						if on >= 2 and old.on_prev == 1 then begin2 = global.frame_number - 1 end
+					end
 				end
 				-- コマンド種類ごとの表示用の補正
 				if tbl.type == input_state.types.charge then
@@ -4585,9 +4590,6 @@ rbff2.startplugin  = function()
 					max = max,
 					begin1 = begin1,
 					begin2 = begin2,
-					estab1 = estab1,
-					estab2 = estab2,
-					on_input_estab = tbl.on_input_estab,
 				})
 			end
 		end
@@ -5660,13 +5662,13 @@ rbff2.startplugin  = function()
 						local disp, hist = {}, nil
 						for hi = #p.key.cmd_hist, 1, -1 do
 							hist = p.key.cmd_hist[hi]
-							-- hist.tbl.last_estabは成立時のフックではなく入力状態表示からの参照渡しなのでここで表示データとして遅延結合させる
+							-- hist.tbl.estab_txtは成立時のフックではなく入力状態表示からの参照渡しなのでここで表示データとして遅延結合させる
 							local txt
 							if hist.txt_f then
 								txt = hist.txt_f
-							elseif hist.tbl.last_estab2 then
-								hist.txt_f = string.format("%3dF/%3dF %s", hist.tbl.last_estab1, hist.tbl.last_estab2, hist.txt)
-								hist.tbl.last_estab1, hist.tbl.last_estab2 = nil, nil
+							elseif hist.tbl.estab_txt then
+								hist.txt_f = string.format("%s %s", hist.tbl.estab_txt, hist.txt)
+								hist.tbl.estab_txt = nil -- リセットしてこのifへの再突入を防ぐ
 								txt = hist.txt_f
 							else txt = hist.txt end
 							if global.frame_number <= hist.time then table.insert(disp, txt) end
