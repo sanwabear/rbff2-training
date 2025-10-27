@@ -283,6 +283,34 @@ rbff2.startplugin  = function()
 		to_ex = nil,
 		to_col = nil,
 		to_auto = nil,
+
+		dummy_modes = {
+			ply_vs_ply      = 1, -- プレイヤー vs プレイヤー
+			ply_vs_cpu      = 2, -- プレイヤー vs CPU
+			cpu_vs_ply      = 3, -- CPU vs プレイヤー
+			swap            = 4, -- 1P&2P入れ替え
+			record          = 5, -- レコード
+			replay          = 6, -- リプレイ
+		},
+		dummy_acts = {
+			stand           = 1,  -- 立ち
+			crounch         = 2,  -- しゃがみ
+			jump_v          = 3,  -- 垂直ジャンプ
+			jump_f          = 4,  -- 前方ジャンプ
+			jump_b          = 5,  -- 後方ジャンプ
+			jump_short_v    = 6,  -- 垂直小ジャンプ
+			jump_short_f    = 7,  -- 前方小ジャンプ
+			jump_short_b    = 8,  -- 後方小ジャンプ
+			dash_jump       = 9,  -- ダッシュジャンプ
+			dash_jump_short = 10, -- ダッシュ小ジャンプ
+			sway            = 11, -- スウェー待機
+			walk            = 12, -- 歩き
+			walk_crounch    = 13, -- しゃがみ歩き
+			back            = 14, -- 後退
+			back_crounch    = 15, -- しゃがみ後退（ガード）
+			dash            = 16, -- ダッシュ
+			flyback         = 17, -- 飛び退き
+		},
 	}
 	menu.set_current  = function(next_menu)
 		--print("next", next_menu or "main")
@@ -733,8 +761,8 @@ rbff2.startplugin  = function()
 		frzc                 = 1,
 		frz                  = { 0x1, 0x0 }, -- DIPによる停止操作用の値とカウンタ
 
-		dummy_mode           = 1,
-		old_dummy_mode       = 1,
+		dummy_mode           = menu.dummy_modes.ply_vs_ply,
+		old_dummy_mode       = menu.dummy_modes.ply_vs_ply,
 		rec_main             = nil,
 
 		next_block_grace     = 0, -- 1ガードでの持続フレーム数
@@ -1772,7 +1800,8 @@ rbff2.startplugin  = function()
 		for i, p in ut.ifind_all(players, function(p) return not target_p or target_p == p.num end) do
 			if not p.key then return end
 			local addr = p.addr.key
-			if global.dummy_mode == 4 or global.dummy_mode == 5 then
+			if global.dummy_mode == menu.dummy_modes.record then
+				--global.dummy_mode == menu.dummy_modes.replay 
 				addr = p.op.addr.key
 			end
 			local status_b, reg_pcnt = mem.r08(addr.reg_st_b) ~ 0xFF, mem.r08(addr.reg_pcnt) ~ 0xFF
@@ -3189,13 +3218,14 @@ rbff2.startplugin  = function()
 		end
 
 		-- ランダムで1つ選定
-		recording.active_slot = #tmp_slots > 0 and tmp_slots[math.random(#tmp_slots)] or { store = {}, name = "EMPTY" }
+		recording.active_slot = #tmp_slots > 0 and tmp_slots[math.random(#tmp_slots)] or { store = {}, name = "EMPTY", dummy = true }
 
-		if #recording.active_slot.store > 0 and (input.accept("st") or force_start_play == true) then
+		if input.accept("st") or force_start_play == true then
 			recording.force_start_play = false
 			-- 状態変更
 			recording.play_count = 1
 			global.rec_main = recording.procs.await_fixpos
+			if recording.fixpos == nil then recording.procs.fixpos() end
 			recording.fixpos.await_fixpos_frame = global.frame_number
 			ut.printf("%s await_play -> await_fixpos", global.frame_number)
 
@@ -3296,7 +3326,7 @@ rbff2.startplugin  = function()
 		local stop = false
 		local store = recording.active_slot.store[recording.play_count]
 		local p = players[recording.player]
-		if store == nil then
+		if store == nil or recording.active_slot.dummy then
 			stop = true
 		elseif p.state == 1 then
 			if global.replay_stop_on_dmg then stop = true end
@@ -4312,14 +4342,16 @@ rbff2.startplugin  = function()
 		local next_joy, state_past = new_next_joy(), scr:frame_number() - input.accepted
 
 		-- スタートボタン（リプレイモード中のみスタートボタンおしっぱでメニュー表示へ切り替え
-		if (global.dummy_mode == 6 and input.long_start()) or
-			(global.dummy_mode ~= 6 and input.accept("st", state_past)) or
+		local in_replay = (global.dummy_mode == menu.dummy_modes.replay)
+		local in_record = (global.dummy_mode == menu.dummy_modes.record)
+		if (in_replay and input.long_start()) or
+			(not in_replay and input.accept("st", state_past)) or
 			(global.rec_main == recording.procs.fixpos and input.accept("st", state_past)) then
 			menu.state = menu -- メニュー表示状態へ切り替え
 			cls_joy()
-			if global.dummy_mode == 5 then
+			if in_record then
 				menu.set_current("recording")
-			elseif global.dummy_mode == 6 then
+			elseif in_replay then
 				menu.set_current("replay")
 			end
 			return
@@ -4885,11 +4917,11 @@ rbff2.startplugin  = function()
 		-- キー入力の取得（1P、2Pの操作を入れ替えていたりする場合もあるのでモード判定と一緒に処理する）
 		for i, p in ipairs(players) do
 			-- プレイヤー vs プレイヤー, プレイヤー vs CPU, CPU vs プレイヤー, 1P&2P入れ替え, レコード, 同じ位置でリプレイ, その場でリプレイ
-			if global.dummy_mode == 2 then
+			if global.dummy_mode == menu.dummy_modes.ply_vs_cpu then
 				p.control = i == 1 and i or 3
-			elseif global.dummy_mode == 3 then
+			elseif global.dummy_mode == menu.dummy_modes.cpu_vs_ply then
 				p.control = i == 1 and 3 or i
-			elseif global.dummy_mode == 4 or global.dummy_mode == 5 then
+			elseif global.dummy_mode == menu.dummy_modes.swap or global.dummy_mode == menu.dummy_modes.record then
 				p.control = 3 - i
 			else
 				p.control = i
@@ -4904,16 +4936,27 @@ rbff2.startplugin  = function()
 			p.reset_sp_hook()
 
 			-- レコード中、リプレイ中は行動しないためのフラグ
-			local in_rec_replay = true
-			if global.dummy_mode == 5 then
-				in_rec_replay = false
-			elseif global.dummy_mode == 6 and global.rec_main == recording.procs.play and recording.player == p.control then
-				in_rec_replay = false
+			local in_record = global.dummy_mode == menu.dummy_modes.record
+			local in_replay = global.dummy_mode == menu.dummy_modes.replay
+			--[[
+				recording.procs.await_1st_input
+				recording.procs.await_fixpos
+				recording.procs.await_no_input
+				recording.procs.await_play
+				recording.procs.fixpos
+				recording.procs.input
+				recording.procs.play
+				recording.procs.play_interval
+			]]
+			if in_replay --[[and recording.player == p.control]] then
+				if global.rec_main == recording.procs.play_interval or
+					global.rec_main == recording.procs.await_play then
+					in_replay = false
+				end
 			end
 
-			-- { "立ち", "しゃがみ", "垂直ジャンプ", "前方ジャンプ", "後方ジャンプ", "垂直小ジャンプ", "前方小ジャンプ", "後方小ジャンプ", "ダッシュジャンプ", "ダッシュ小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き" }
-			-- レコード中、リプレイ中は行動しない
-			if in_rec_replay then
+			-- リプレイ中は行動しない
+			if in_replay == false then
 				if p.sway_status == 0x00 then
 					if p.dummy_act == menu.dummy_acts.crounch then
 						p.reset_cmd_hook(db.cmd_types._2) -- しゃがみ
@@ -4984,7 +5027,7 @@ rbff2.startplugin  = function()
 				end
 			end
 			-- リプレイ中は自動ガードしない
-			if p.dummy_gd ~= dummy_gd_type.none and ut.tstb(act_type, db.act_types.attack) and in_rec_replay then
+			if p.dummy_gd ~= dummy_gd_type.none and ut.tstb(act_type, db.act_types.attack) and in_replay == false then
 				p.clear_cmd_hook(db.cmd_types._8) -- 上は無効化
 
 				-- 投げ無敵タイマーを使って256F経過後はガード状態を解除
@@ -5292,7 +5335,7 @@ rbff2.startplugin  = function()
 		end
 
 		-- レコード＆リプレイ
-		if global.dummy_mode == 5 or global.dummy_mode == 6 then
+		if global.dummy_mode == menu.dummy_modes.record or global.dummy_mode == menu.dummy_modes.replay then
 			local prev_rec_main, called = nil, {}
 			repeat
 				prev_rec_main = global.rec_main
@@ -6120,13 +6163,13 @@ rbff2.startplugin  = function()
 		end,
 		record_replay = function()
 			-- レコーディング状態表示
-			if global.disp_replay and recording.info and (global.dummy_mode == 5 or global.dummy_mode == 6) then
+			if global.disp_replay and recording.info and (global.dummy_mode == menu.dummy_modes.record or global.dummy_mode == menu.dummy_modes.replay) then
 				local time = global.rec_main == recording.procs.play and
 					ut.frame_to_time(#recording.active_slot.store - recording.play_count) or
 					ut.frame_to_time(recording.max_frames - #recording.active_slot.store)
 				scr:draw_box(235, 200, 315, 224, 0, 0xA0303030)
 				for i, info in ipairs(recording.info) do
-					draw_text(239, 204 + get_line_height(i - 1), string.format(info.label, recording.last_slot, time), info.col)
+					draw_text(239, 204 + get_line_height(i - 1), string.format(info.label, recording.last_slot or "-", time), info.col)
 				end
 			end
 		end,
@@ -6698,26 +6741,6 @@ rbff2.startplugin  = function()
 				menu.set_current()
 			end))
 	end
-
-	menu.dummy_acts = {
-		stand           = 1,  -- 立ち
-		crounch         = 2,  -- しゃがみ
-		jump_v          = 3,  -- 垂直ジャンプ
-		jump_f          = 4,  -- 前方ジャンプ
-		jump_b          = 5,  -- 後方ジャンプ
-		jump_short_v    = 6,  -- 垂直小ジャンプ
-		jump_short_f    = 7,  -- 前方小ジャンプ
-		jump_short_b    = 8,  -- 後方小ジャンプ
-		dash_jump       = 9,  -- ダッシュジャンプ
-		dash_jump_short = 10, -- ダッシュ小ジャンプ
-		sway            = 11, -- スウェー待機
-		walk            = 12, -- 歩き
-		walk_crounch    = 13, -- しゃがみ歩き
-		back            = 14, -- 後退
-		back_crounch    = 15, -- しゃがみ後退（ガード）
-		dash            = 16, -- ダッシュ
-		flyback         = 17, -- 飛び退き
-	}
 
 	menu.training  = menu.create(
 		"ダミー設定",
