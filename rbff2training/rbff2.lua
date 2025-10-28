@@ -6159,10 +6159,10 @@ rbff2.startplugin  = function()
 					end
 					p.speed_txt = string.format("%+3.3f,%+3.3f,%+3.3f", p.diff_pos_total or 0, p.thrusty or 0, p.diff_pos_total_y or 0)
 					if global.disp_pos == 2 or global.disp_pos == 4 then
-						local tx1 = i == 1 and 36 or 221
-						local tx2 = i == 1 and 100 or 193
+						local tx1 = i == 1 and 36 or 167--193
+						local tx2 = i == 1 and 100 or 231--257
 						scr:draw_box(tx1, y5, tx1 + 63, y5 + get_line_height(2), 0, col)
-						scr:draw_box(tx2, y5, tx2 + 27, y5 + get_line_height(2), 0, col)
+						scr:draw_box(tx2, y5, tx2 + 51, y5 + get_line_height(2), 0, col)
 						--_draw_text(i == 1 and "left" or "right", y5 - get_line_height(), { p.last_posx_txt, p.last_posy_txt })
 						_draw_text(tx1 + 1, y5, { p.last_posx_txt, p.last_posy_txt })
 						_draw_text(tx2 + 1, y5, { p.last_posz_txt, p.speed_txt })
