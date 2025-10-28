@@ -733,7 +733,7 @@ rbff2.startplugin  = function()
 		-- リバーサルとブレイクショットの設定
 		dummy_bs_cnt         = 1, -- ブレイクショットのカウンタ
 		dummy_rvs_cnt        = 1, -- リバーサルのカウンタ
-
+		hookp                = {}, -- フックポイント
 		auto_input           = {
 			otg_throw     = false, -- ダウン投げ
 			sp_throw      = false, -- 必殺投げ
@@ -1969,6 +1969,7 @@ rbff2.startplugin  = function()
 				cmd = type(cmd) == "table" and cmd[p.cmd_side] or cmd
 				p.bs_hook.cmd = p.bs_hook.cmd & db.cmd_masks[cmd]
 				p.bs_hook.cmd = p.bs_hook.cmd | cmd
+				--ut.printf("%d %s add_cmd_hook cmd %x", global.frame_number, p.num, cmd)
 			end,
 			clear_cmd_hook  = function(mask)
 				local p = players[i]
@@ -1976,12 +1977,14 @@ rbff2.startplugin  = function()
 				mask = type(mask) == "table" and mask[p.cmd_side] or mask
 				mask = 0xFF ~ mask
 				p.bs_hook.cmd = p.bs_hook.cmd & mask
+				--ut.printf("%d %s clear_cmd_hook cmd %x", global.frame_number, p.num, mask)
 			end,
 			reset_cmd_hook  = function(cmd)
 				local p = players[i]
 				p.bs_hook = (p.bs_hook and p.bs_hook.cmd) and p.bs_hook or { cmd = db.cmd_types._5 }
 				cmd = type(cmd) == "table" and cmd[p.cmd_side] or cmd
 				p.bs_hook = { cmd = cmd }
+				--ut.printf("%d %s reset_cmd_hook cmd %x", global.frame_number, p.num, cmd)
 			end,
 			reset_sp_hook   = function(hook)
 				if hook and hook.cmd then
@@ -1989,10 +1992,12 @@ rbff2.startplugin  = function()
 					p.bs_hook = (p.bs_hook and p.bs_hook.cmd) and p.bs_hook or { cmd = db.cmd_types._5 }
 					local cmd = hook.cmd
 					cmd = type(cmd) == "table" and cmd[p.cmd_side] or cmd
-					-- emu.print_info(global.frame_number .. ' cmd ')
 					p.bs_hook = { cmd = cmd }
+					--ut.printf("%d %s reset_sp_hook cmd %x", global.frame_number, p.num, hook.cmd)
 				else
-					players[i].bs_hook = hook
+					local p = players[i]
+					p.bs_hook = hook
+					--ut.printf("%d %s reset_sp_hook sp %s", global.frame_number, p.num, hook and "*table*" or "*NIL*")
 				end
 			end,
 		}
@@ -2227,12 +2232,17 @@ rbff2.startplugin  = function()
 			[p1 and 0x10B84E or 0x10B856] = function(data) p.stun_limit = data end, -- 最大気絶値
 			[p1 and 0x10B850 or 0x10B858] = function(data) p.hit_stun = data end, -- 現在気絶値
 			[p.addr.key.on1f] = function(data, ret)
-				local hook = p.bs_hook
-				if not hook or not hook.cmd then return end
-				--ut.printf("%s bs_hook cmd %x", p.num, hook.cmd)
+				local q = p
+				q = global.hookp[i] or q
+				local hook, addrkey = q.bs_hook, p.addr.key
+				if not hook or not hook.cmd then
+					--ut.printf("%d %s bs_hook cmd %x:*NIL* -> %s", global.frame_number, p.num, p.addr.key.on1f, q.num)
+					return
+				end
+				--ut.printf("%d %s bs_hook cmd %x:%x -> %s", global.frame_number, p.num, p.addr.key.on1f, hook.cmd, q.num)
 				-- フックの処理量軽減のため1F,5F,おしっぱのキー入力をまとめて記録する
-				mem.w08(p.addr.key.on5f, input.merge(mem.r08(p.addr.key.on5f), hook.on5f or hook.cmd)) -- 押しっぱずっと有効
-				mem.w08(p.addr.key.hold, input.merge(mem.r08(p.addr.key.hold), hook.hold or hook.cmd)) -- 押しっぱ有効が5Fのみ
+				mem.w08(addrkey.on5f, input.merge(mem.r08(addrkey.on5f), hook.on5f or hook.cmd)) -- 押しっぱずっと有効
+				mem.w08(addrkey.hold, input.merge(mem.r08(addrkey.hold), hook.hold or hook.cmd)) -- 押しっぱ有効が5Fのみ
 				ret.value = input.merge(data, hook.on1f or hook.cmd)               -- 押しっぱ有効が1Fのみ
 			end,
 		}
@@ -4926,7 +4936,7 @@ rbff2.startplugin  = function()
 			else
 				p.control = i
 			end
-			p.bs_hook = nil -- フックを無効化
+			p.clear_cmd_hook(db.cmd_types._5)  -- フックを無効化
 		end
 		apply_1p2p_active()
 
@@ -4948,7 +4958,15 @@ rbff2.startplugin  = function()
 				recording.procs.play
 				recording.procs.play_interval
 			]]
-			if in_replay --[[and recording.player == p.control]] then
+			global.hookp[p.num] = p -- 通常は自分の状態を参照する
+			if in_record then
+				if p.num ~= recording.player then
+					in_record = false
+				end
+				--ut.printf("%d %s hookp swap -> %s", global.frame_number, p.num, p.op.num)
+				global.hookp[p.num] = p.op -- レコード中はお互いに相手の状態を参照する
+			end
+			if in_replay --[[and recording.player ~= p.num]] then
 				if global.rec_main == recording.procs.play_interval or
 					global.rec_main == recording.procs.await_play then
 					in_replay = false
@@ -4956,7 +4974,7 @@ rbff2.startplugin  = function()
 			end
 
 			-- リプレイ中は行動しない
-			if in_replay == false then
+			if in_record == false and in_replay == false then
 				if p.sway_status == 0x00 then
 					if p.dummy_act == menu.dummy_acts.crounch then
 						p.reset_cmd_hook(db.cmd_types._2) -- しゃがみ
@@ -5027,7 +5045,7 @@ rbff2.startplugin  = function()
 				end
 			end
 			-- リプレイ中は自動ガードしない
-			if p.dummy_gd ~= dummy_gd_type.none and ut.tstb(act_type, db.act_types.attack) and in_replay == false then
+			if p.dummy_gd ~= dummy_gd_type.none and ut.tstb(act_type, db.act_types.attack) and in_record == false and in_replay == false then
 				p.clear_cmd_hook(db.cmd_types._8) -- 上は無効化
 
 				-- 投げ無敵タイマーを使って256F経過後はガード状態を解除
