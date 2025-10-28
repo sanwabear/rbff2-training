@@ -5756,7 +5756,7 @@ rbff2.startplugin  = function()
 								scr:draw_box(x1, y1 - 1, xi + 1, y2 + 1, 0, col1)
 								col = col - 0x18000000
 							end
-							draw_text(p1 and x1 + 4 or x2 + 4, y1, disp)
+							draw_text(p1 and (x1 + 4) or (x2 + 8), y1, disp)
 							for yy = y1, y1 + get_line_height(#disp), get_line_height() do
 								col = 0xFAFFFFFF
 								for xi = x1, x2, step do
