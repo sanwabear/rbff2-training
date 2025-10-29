@@ -312,16 +312,32 @@ rbff2.startplugin  = function()
 			flyback         = 17, -- 飛び退き
 		},
 	}
-	menu.set_current  = function(next_menu)
-		--print("next", next_menu or "main")
-		if next_menu and (type(next_menu) == "string") then
-			next_menu = menu[next_menu]
+	menu.stack = {}
+	menu.reset_current = function()
+		menu.current = menu.main
+		menu.stack = {}
+		ut.printf("menu size:%s * %s", #menu.stack, to_sjis(menu.current.name))
+	end
+	menu.back = function()
+		local prev_menu = table.remove(menu.stack)
+		prev_menu = prev_menu or menu.main
+		menu.current = prev_menu
+		if prev_menu ~= menu.main and type(prev_menu.init) == "function" then prev_menu.init() end
+		ut.printf("menu size:%s - %s", #menu.stack, to_sjis(menu.current.name))
+	end
+	menu.set_current = function(next_menu)
+		if type(next_menu) == "string" then next_menu = menu[next_menu] end
+
+		-- 新しいメニュー指定が「直前のメニュー」と同じ場合は戻る扱い
+		if next_menu == nil or (next_menu and menu.stack[#menu.stack] == next_menu) then
+			menu.back()
+		elseif next_menu then
+			table.insert(menu.stack, menu.current)
+			menu.current = next_menu
+			if next_menu ~= menu.main and type(next_menu.init) == "function" then next_menu.init() end
 		end
-		next_menu = next_menu or menu.main
-		if next_menu ~= menu.main and menu.current ~= next_menu and next_menu.init ~= nil and type(next_menu.init) == "function" then
-			next_menu.init()
-		end
-		menu.current = next_menu
+
+		ut.printf("menu size:%s + %s", #menu.stack, to_sjis(menu.current.name))
 	end
 	for i = -20, 0xF0 do table.insert(menu.labels.fix_scr_tops, "" .. i) end
 	for i = 1, 301 do table.insert(menu.labels.play_interval, i - 1) end
@@ -1927,16 +1943,12 @@ rbff2.startplugin  = function()
 			pos_hist        = ut.new_filled_table(3, { x = format_num(0), y = format_num(0), z = "00", pos = 0, pos_frc = 0, pos_y = 0, pos_frc_y = 0, }),
 			away_anti_air   = {
 				enabled = false,
-				jump_limit1 = 75, -- 通常ジャンプ高度
-				jump_limit2 = 50, -- 上りジャンプ攻撃高度
-				jump_limit3 = 75, -- 下りジャンプ攻撃高度
-				hop_limit1 = 45, -- 小ジャンプ高度
-				hop_limit2 = 45, -- 上り小ジャンプ攻撃高度
-				hop_limit3 = 60, -- 下り小ジャンプ攻撃高度
-				fwd_limit1 = 80, -- 前進位置
-				fwd_limit2 =  0, -- 前進攻撃位置
-				bak_limit1 =  0, -- 後退位置
-				bak_limit2 =  0, -- 後退攻撃位置
+				type        = 1, -- 1:避け攻撃 2:リバーサル技
+				rise_limit  = 0,
+				fall_limit  = 53,
+				fwd_limit   = 0,
+				bak_limit   = 0,
+				atk_only    = true,
 			},
 
 			addr            = {
@@ -3230,7 +3242,9 @@ rbff2.startplugin  = function()
 		-- ランダムで1つ選定
 		recording.active_slot = #tmp_slots > 0 and tmp_slots[math.random(#tmp_slots)] or { store = {}, name = "EMPTY", dummy = true }
 
-		if input.accept("st") or force_start_play == true then
+		local st, st1, _ = input.accept("st")
+		if st or force_start_play == true then
+			recording.player = st1 and 2 or 1
 			recording.force_start_play = false
 			-- 状態変更
 			recording.play_count = 1
@@ -3290,16 +3304,16 @@ rbff2.startplugin  = function()
 			-- 3:1Pと2P 5:2P
 			if global.replay_fix_pos == 3 or global.replay_fix_pos == 5 then all_fixed = fixmem(fixpos.fixpos2.p2) and all_fixed end
 			if all_fixed or timeout then
-				global.rec_main = recording.procs.play
-				ut.printf("%s await_fixpos -> play", global.frame_number)
+				global.rec_main = recording.procs.timing_jump
+				ut.printf("%s await_fixpos -> timing_jump", global.frame_number)
 			else
 				-- 補正位置に戻りきるまでループさせる
 				global.rec_main = recording.procs.await_fixpos
 				ut.printf("%s await_fixpos -> await_fixpos", global.frame_number)
 			end
 		else
-			global.rec_main = recording.procs.play
-			ut.printf("%s await_fixpos -> play", global.frame_number)
+			global.rec_main = recording.procs.timing_jump
+			ut.printf("%s await_fixpos -> timing_jump", global.frame_number)
 		end
 	end
 	-- 繰り返しリプレイ待ち
@@ -3321,6 +3335,54 @@ rbff2.startplugin  = function()
 					return
 				end
 			end
+		end
+	end
+	-- タイミングジャンプ
+	recording.procs.timing_jump = function(_)
+		recording.info = recording.info2
+		-- 繰り返し前の行動が完了するまで待つ
+		local p, op, p_ok = players[3 - recording.player], players[recording.player], true
+		p_ok = p.act_data.neutral or (not p.act_data.neutral and p.on_update_act == global.frame_number and recording.last_act ~= p.act)
+		if p_ok then
+			if p.pos_y == 0 then
+				-- リプレイ側が通常状態まで待つ
+				if op.act_data.neutral and op.state == 0 then
+					-- 状態変更
+					global.rec_main = recording.procs.pre_jumping
+					ut.printf("%s timing_jump -> pre_jumping", global.frame_number)
+					return
+				end
+			end
+		end
+	end
+	-- タイミングジャンプ
+	recording.procs.pre_jumping = function(_)
+		recording.info = recording.info2
+		if input.accept("st") then
+			-- 状態変更
+			global.rec_main = recording.procs.await_play
+			ut.printf("%s pre_jumping -> await_play", global.frame_number)
+			return
+		end
+
+		local p = players[recording.player]
+		local goto_play = false
+		if p.sway_status == 0x00 then
+			if ut.tstb(p.old.flag_c0, db.flag_c0._16) and ut.tstb(p.flag_c0, db.flag_c0._31) then
+				goto_play = true
+			elseif not ut.tstb(p.flag_c0, db.flag_c0._16 | db.flag_c0._17 | db.flag_c0._20 | db.flag_c0._23) or
+				ut.tstb(p.flag_c0, db.flag_c0._17 | db.flag_c0._20 | db.flag_c0._23) then
+				p.reset_cmd_hook(db.cmd_types._8) -- ジャンプ
+			else p.reset_cmd_hook() end
+		else goto_play = true end	
+		if goto_play then
+			global.rec_main = recording.procs.play
+			ut.printf("%s pre_jumping -> play", global.frame_number)
+			return
+		else
+			global.rec_main = recording.procs.pre_jumping
+			--ut.printf("%s pre_jumping -> pre_jumping", global.frame_number)
+			return
 		end
 	end
 	-- リプレイ中
@@ -4957,6 +5019,7 @@ rbff2.startplugin  = function()
 				recording.procs.input
 				recording.procs.play
 				recording.procs.play_interval
+				recording.procs.timing_jump
 			]]
 			global.hookp[p.num] = p -- 通常は自分の状態を参照する
 			if in_record then
@@ -5223,63 +5286,48 @@ rbff2.startplugin  = function()
 
 			-- 自動避け攻撃対空
 			if p.away_anti_air.enabled and not p.op.in_hitstun then
-				local jump = p.op.in_air and ut.tstb(p.op.flag_c0, db.flag_c0._21 | db.flag_c0._22 | db.flag_c0._23)
-				local hop = p.op.in_air and ut.tstb(p.op.flag_c0, db.flag_c0._18 | db.flag_c0._19 | db.flag_c0._20)
-				local aaa, falling, attacking = p.away_anti_air, (jump or hop) and p.op.pos_y < p.op.old.pos_y, 0 < p.op.flag_c4
-				local backwarding = p.block_side == 1 and p.op.pos < p.op.old.pos -- ガード方向や内部の向き 1:右向き -1:左向き
-				local ant_air, forwarding, rising = false, not backwarding, not falling
-				local abs_space = math.abs(p_space)
-				if p.flag_c4 == 0 and p.flag_c8 == 0 then
-					if attacking then
-						if hop then
-							if falling and aaa.hop_limit3 ~= 1 and aaa.hop_limit3 >= p.op.pos_y then -- 小ジャンプ下り攻撃
-								--print("hop fall atk", aaa.hop_limit3, ">=", p.op.pos_y)
-								ant_air = true
-							elseif rising and aaa.hop_limit2 ~= 1 and aaa.hop_limit2 <= p.op.pos_y then -- 小ジャンプ上り攻撃
-								--print("hop rise atk", aaa.hop_limit2, "<=", p.op.pos_y)
-								ant_air = true
-							end
-						elseif jump then
-							if falling and aaa.jump_limit3 ~= 1 and aaa.jump_limit3 >= p.op.pos_y then -- ジャンプ下り攻撃
-								--print("jmp fall atk", aaa.jump_limit3, ">=", p.op.pos_y)
-								ant_air = true
-							elseif rising and aaa.jump_limit2 ~= 1 and aaa.jump_limit2 <= p.op.pos_y then -- ジャンプ上り攻撃
-								--print("jmp rise atk", aaa.jump_limit2, "<=", p.op.pos_y)
-								ant_air = true
-							end
-						end
-						if forwarding and aaa.fwd_limit2 > 0 and aaa.fwd_limit2 >= abs_space then -- 前進攻撃
-							--print("fwd      atk", aaa.fwd_limit2, ">=", abs_space)
-							ant_air = true
-						elseif backwarding and aaa.bak_limit2 > 0 and aaa.bak_limit2 <= abs_space then -- 後退攻撃
-							--print("bak      atk", aaa.bak_limit2, "<=", abs_space)
-							ant_air = true
-						end
-					elseif falling then
-						if jump and aaa.jump_limit1 ~= 1 and aaa.jump_limit1 >= p.op.pos_y then -- ジャンプ下り
-							--print("jmp fall    ", aaa.jump_limit1, ">=", p.op.pos_y)
-							ant_air = true
-						elseif hop and aaa.hop_limit1 ~= 1 and aaa.hop_limit1 >= p.op.pos_y then  -- 小ジャンプ下り
-							--print("hop fall    ", aaa.hop_limit1, ">=", p.op.pos_y)
-							ant_air = true
-						end
-					elseif forwarding and aaa.fwd_limit1 > 0 and aaa.fwd_limit1 >= abs_space then -- 前進
-						--print("fwd         ", aaa.fwd_limit1, ">=", abs_space)
-						ant_air = true
-					elseif backwarding and aaa.bak_limit1 > 0 and aaa.bak_limit1 <= abs_space then -- 後退
-						--print("bak         ", aaa.bak_limit1, "<=", abs_space)
-						ant_air = true
+				local jump = p.op.in_air and ut.tstb(p.op.flag_c0, db.flag_c0.jump)
+				local aaa, falling, attacking = p.away_anti_air, jump and (p.op.pos_y <= p.op.old.pos_y), 0 < (p.op.flag_c4 | p.op.flag_c8)
+				local abs_space, old_space = math.abs(p_space), math.abs(prev_space)
+				local backwarding = abs_space > old_space or (abs_space == old_space and abs_space == 248)
+				local forwarding  = abs_space < old_space or (abs_space == old_space and abs_space == 0)
+				local xa, ya, rising = false, false, jump and not falling
+				local xlabel, ylabel, label
+				local chk_rise = aaa.rise_limit > 0 -- この高さより上昇時
+				local chk_fall = aaa.fall_limit > 0 -- この高さより下降時
+				local chk_fwd  = aaa.fwd_limit  > 0 -- この間合いより近づいた時
+				local chk_bak  = aaa.bak_limit  > 0 -- この間合いより遠のいた時
+				--label = string.format("%s %s %4s %3s %3s", global.frame_number, p.num, jump and (falling and "fall" or (rising and "rise" or "")) or "", forwarding and "fwd" or (backwarding and "bak" or ""), attacking and "atk" or "")
+				if p.flag_c4 == 0 and p.flag_c8 == 0 and ((aaa.atk_only and attacking) or not aaa.atk_only) then
+					if not chk_fall and not chk_rise then
+						ya = true -- 非ジャンプ全般
+					elseif falling and chk_fall and aaa.fall_limit >= p.op.pos_y then -- ジャンプ下り
+						ylabel = label and string.format("%3d %2s %3d", aaa.fall_limit, ">=", p.op.pos_y) or nil
+						ya = true
+					elseif rising and chk_rise and aaa.rise_limit <= p.op.pos_y then -- ジャンプ上り
+						ylabel = label and string.format("%3d %2s %3d", aaa.rise_limit, "<=", p.op.pos_y) or nil
+						ya = true
 					end
-					if ant_air then
-						local dummy_rvs = get_next_rvs(p)
-						if dummy_rvs then
-							p.dummy_rvs = dummy_rvs
-							input_rvs(rvs_types.in_knock_back, p, string.format("[AntiAir] %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer))
-						else
-							p.reset_cmd_hook(db.cmd_types._AB)
-						end
+					if not chk_fwd and not chk_bak then
+						xa = true -- 間合い指定なし
+					elseif forwarding and chk_fwd and aaa.fwd_limit >= abs_space then -- 前進
+						xlabel = label and string.format("%3d %2s %3d", aaa.fwd_limit, ">=", abs_space) or nil
+						xa = true
+					elseif backwarding and chk_bak and aaa.bak_limit <= abs_space then -- 後退
+						xlabel = label and string.format("%3d %2s %3d", aaa.bak_limit, "<=", abs_space) or nil
+						xa = true
 					end
 				end
+				if xa and ya then
+					if label then ut.printf("%s Y:%s X:%s", label, ylabel, xlabel) end
+					local dummy_rvs = (aaa.type == 2) and get_next_rvs(p) or nil
+					if dummy_rvs then
+						p.dummy_rvs = dummy_rvs
+						input_rvs(rvs_types.in_knock_back, p, string.format("[AntiAir] %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer))
+					else
+						p.reset_cmd_hook(db.cmd_types._AB)
+					end
+				elseif label then ut.printf("%s Y:%3d X:%3d", label, p.op.pos_y, abs_space) end
 			end
 
 			-- 自動ダウン追撃
@@ -6255,37 +6303,34 @@ rbff2.startplugin  = function()
 		g.old_dummy_mode = g.dummy_mode
 
 		local next_menu = nil
-
-		if p1.away_anti_air.enabled and not cancel and row == 17 then -- 1P 避け攻撃対空
-			next_menu = "away_anti_air1"
-		elseif p2.away_anti_air.enabled and not cancel and row == 18 then -- 2P 避け攻撃対空
-			next_menu = "away_anti_air2"
-		end
-
-		if g.dummy_mode == 5 then -- レコード
-			g.dummy_mode = 1 -- 設定でレコーディングに入らずに抜けたとき用にモードを1に戻しておく
-			menu.recording.init()
-			if not cancel and row == 1 then next_menu = "recording" end
-		elseif g.dummy_mode == 6 then -- リプレイ
-			g.dummy_mode = 1    -- 設定でリプレイに入らずに抜けたとき用にモードを1に戻しておく
-			menu.replay.init()
-			if not cancel and row == 1 then next_menu = "replay" end
-		end
-
-		-- プレイヤー選択しなおしなどで初期化したいときはサブメニュー遷移しない
-		if do_init ~= true and not cancel then
-			-- ブレイクショット ガードのメニュー設定
-			if row == 9 and p1.bs then next_menu = menu.bs_menus[1][p1.char] end
-			if row == 10 and p2.bs then next_menu = menu.bs_menus[2][p2.char] end
-			if row == 5 or row == 6 then -- 特殊設定の出張設定項目
-				local col1 = menu.bs_menus[1][p1.char].pos.col
-				local col2 = menu.bs_menus[2][p1.char].pos.col
-				col1[#col1] = g.all_bs and 2 or 1
-				col2[#col2] = g.all_bs and 2 or 1
+		if cancel ~= true then
+			if row == 1 then
+				if g.dummy_mode == 5 then
+					next_menu = "recording" -- レコード
+				elseif g.dummy_mode == 6 then
+					next_menu = "replay" -- リプレイ
+				end
+			elseif p1.away_anti_air.enabled and row == 17 then
+				next_menu = "away_anti_air1" -- 1P 避け攻撃対空
+			elseif p2.away_anti_air.enabled and row == 18 then
+				next_menu = "away_anti_air2" -- 2P 避け攻撃対空
 			end
-			-- リバーサル やられ時行動のメニュー設定
-			if row == 13 and rvs_wake_types[p1.dummy_wakeup] then next_menu = menu.rvs_menus[1][p1.char] end
-			if row == 14 and rvs_wake_types[p2.dummy_wakeup] then next_menu = menu.rvs_menus[2][p2.char] end
+
+			-- プレイヤー選択しなおしなどで初期化したいときはサブメニュー遷移しない
+			if do_init ~= true then
+				-- ブレイクショット ガードのメニュー設定
+				if row == 9  and p1.bs then next_menu = menu.bs_menus[1][p1.char] end
+				if row == 10 and p2.bs then next_menu = menu.bs_menus[2][p2.char] end
+				if row == 5 or row == 6 then -- 特殊設定の出張設定項目
+					local col1 = menu.bs_menus[1][p1.char].pos.col
+					local col2 = menu.bs_menus[2][p1.char].pos.col
+					col1[#col1] = g.all_bs and 2 or 1
+					col2[#col2] = g.all_bs and 2 or 1
+				end
+				-- リバーサル やられ時行動のメニュー設定
+				if row == 13 and rvs_wake_types[p1.dummy_wakeup] then next_menu = menu.rvs_menus[1][p1.char] end
+				if row == 14 and rvs_wake_types[p2.dummy_wakeup] then next_menu = menu.rvs_menus[2][p2.char] end
+			end
 		end
 
 		menu.set_current(next_menu)
@@ -6351,9 +6396,8 @@ rbff2.startplugin  = function()
 		g.rec_main = recording.procs.await_play
 		input.accepted = scr:frame_number()
 		menu.exit_and_play_common()
-		menu.to_tra()
+		menu.set_current()
 	end
-
 
 	menu.to_tra                   = function() menu.set_current("training") end
 	menu.to_bar                   = function() menu.set_current("bar") end
@@ -6387,6 +6431,7 @@ rbff2.startplugin  = function()
 			-- リプレイ
 			menu.exit_and_play()
 		end
+		menu.reset_current()
 	end
 	menu.on_restart_fight_a       = function()
 		---@diagnostic disable-next-line: undefined-field
@@ -6411,6 +6456,7 @@ rbff2.startplugin  = function()
 		elseif g.old_dummy_mode == 6 then
 			menu.exit_and_play()               -- レコード＆リプレイ用の初期化 リプレイ
 		end
+		menu.reset_current()
 	end
 	menu.set_hide                 = function(bit, val) return ut.hex_set(global.hide, bit, val) end
 	menu.organize_disp_config     = function()
@@ -6675,7 +6721,7 @@ rbff2.startplugin  = function()
 				local g = global
 				g.all_bs = col[#col] == 2
 				mod.all_bs(g.all_bs)
-				menu.to_tra()
+				menu.back()
 			end
 			for _, bs in ipairs(char_data.bs) do
 				local name, ex_breakshot = bs.name, ut.tstb(bs.hook_type, hook_cmd_types.ex_breakshot, true)
@@ -6713,51 +6759,49 @@ rbff2.startplugin  = function()
 	for i = 1, 99 do table.insert(menu.labels.attack_harmless, string.format("%s段目で空振り", i)) end
 
 	for i = 1, 2 do
-		local limit = { "OFF" }
-		for px = 1, 160 do table.insert(limit, px) end
+		local jumplimit, rangelimit = { "OFF" }, { "OFF" }
+		for px = 1, 260 do table.insert(jumplimit, px) end
+		for px = 1, 250 do table.insert(rangelimit, px) end
 		local key = string.format("away_anti_air%s", i)
+		local on_x = function(cancel)
+			local a                  = players[i].away_anti_air
+			local col, row, g        = menu[key].pos.col, menu[key].pos.row, global
+			local p                  = players[i]
+			local next_menu          = "training"
+			a.type        = col[ 1]         -- 迎撃行動
+			a.rise_limit  = col[ 2] - 1     -- この高さより上昇時
+			a.fall_limit  = col[ 3] - 1     -- この高さより下降時
+			a.fwd_limit   = col[ 4] - 1     -- この間合いより近づいた時
+			a.bak_limit   = col[ 5] - 1     -- この間合いより遠のいた時
+			a.atk_only    = col[ 6] == 2    -- 攻撃にのみ反応する
+			-- リバーサル やられ時行動のメニュー設定
+			if cancel == false and a.type == 2 and row == 1 then next_menu = menu.rvs_menus[i][p.char] end
+			menu.set_current(next_menu)
+		end
+		local on_a = function() on_x(false) end
+		local on_b = function() on_x(true) end
 		menu[key] = menu.create(
-			string.format("%sP 避け攻撃対空設定", i),
-			"トレーニングダミーが避け攻撃（かリバーサル技）を出す条件を設定します。",
+			string.format("%sP 自動迎撃設定", i),
+			"トレーニングダミーが迎撃行動する条件を設定します。",
 			{
-				{ "通常ジャンプ高度", limit },
-				{ "上りジャンプ攻撃高度", limit },
-				{ "下りジャンプ攻撃高度", limit },
-				{ "小ジャンプ高度", limit },
-				{ "上り小ジャンプ攻撃高度", limit },
-				{ "下り小ジャンプ攻撃高度", limit },
-				{ "前進位置", limit },
-				{ "後退位置", limit },
-				{ "前進攻撃位置", limit },
-				{ "後退攻撃位置", limit },
+				{ "迎撃行動", { "避け攻撃", "リバーサル技（Aで選択画面へ）" } },
+				{ "この高さより上昇時", jumplimit },
+				{ "この高さより下降時", jumplimit },
+				{ "この間合いより近づいた時", rangelimit },
+				{ "この間合いより遠のいた時", rangelimit },
+				{ "攻撃にのみ反応する", menu.labels.off_on, },
 			},
 			function()
 				local col, a = menu[key].pos.col, players[i].away_anti_air
-				col[ 1] = a.jump_limit1 + 1 -- 通常ジャンプ高度
-				col[ 2] = a.jump_limit2 + 1 -- 上りジャンプ攻撃高度
-				col[ 3] = a.jump_limit3 + 1 -- 下りジャンプ攻撃高度
-				col[ 4] = a.hop_limit1 + 1 -- 小ジャンプ高度
-				col[ 5] = a.hop_limit2 + 1 -- 上り小ジャンプ攻撃高度
-				col[ 6] = a.hop_limit3 + 1 -- 下り小ジャンプ攻撃高度
-				col[ 7] = a.fwd_limit1 + 1 -- 前進位置
-				col[ 8] = a.fwd_limit2 + 1 -- 前進攻撃位置
-				col[ 9] = a.bak_limit1 + 1 -- 後退位置
-				col[10] = a.bak_limit2 + 1 -- 後退攻撃位置
+				col[ 1] = a.type                -- 迎撃行動
+				col[ 2] = a.rise_limit + 1      -- この高さより上昇時
+				col[ 3] = a.fall_limit + 1      -- この高さより下降時
+				col[ 4] = a.fwd_limit  + 1      -- この間合いより近づいた時
+				col[ 5] = a.bak_limit  + 1      -- この間合いより遠のいた時
+				col[ 6] = a.atk_only and 2 or 1 -- 攻撃にのみ反応する
 			end,
-			ut.new_filled_table(18, function()
-				local col, a  = menu[key].pos.col, players[i].away_anti_air
-				a.jump_limit1 = col[ 1] - 1 -- 通常ジャンプ高度
-				a.jump_limit2 = col[ 2] - 1 -- 上りジャンプ攻撃高度
-				a.jump_limit3 = col[ 3] - 1 -- 下りジャンプ攻撃高度
-				a.hop_limit1  = col[ 4] - 1 -- 小ジャンプ高度
-				a.hop_limit2  = col[ 5] - 1 -- 上り小ジャンプ攻撃高度
-				a.hop_limit3  = col[ 6] - 1 -- 下り小ジャンプ攻撃高度
-				a.fwd_limit1  = col[ 7] - 1 -- 前進位置
-				a.fwd_limit2  = col[ 8] - 1 -- 前進攻撃位置
-				a.bak_limit1  = col[ 9] - 1 -- 後退位置
-				a.bak_limit2  = col[10] - 1 -- 後退攻撃位置
-				menu.set_current()
-			end))
+			ut.new_filled_table(6, on_a),
+			ut.new_filled_table(6, on_b))
 	end
 
 	menu.training  = menu.create(
