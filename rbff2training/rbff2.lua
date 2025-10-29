@@ -328,7 +328,17 @@ rbff2.startplugin  = function()
 	menu.set_current = function(next_menu)
 		if type(next_menu) == "string" then next_menu = menu[next_menu] end
 
-		-- 新しいメニュー指定が「直前のメニュー」と同じ場合は戻る扱い
+		-- 新しいメニュー指定が「過去のメニュー」と同じ場合はそこまで戻る
+		local new_stack = {}
+		for i, hist_menu in ipairs(menu.stack) do
+			if hist_menu == next_menu then
+				table.insert(new_stack, hist_menu)
+				break
+			else
+				table.insert(new_stack, hist_menu)
+			end
+		end
+		menu.stack = new_stack
 		if next_menu == nil or (next_menu and menu.stack[#menu.stack] == next_menu) then
 			menu.back()
 		elseif next_menu then
@@ -658,6 +668,8 @@ rbff2.startplugin  = function()
 	local in_player_select     = false -- プレイヤー選択画面のときtrue
 	local p_space              = 0  -- 1Pと2Pの間隔
 	local prev_space           = 0  -- 1Pと2Pの間隔(前フレーム)
+	local p_elev               = 0  -- 1Pと2Pの標高差（elevation）
+	local prev_elev            = 0  -- 1Pと2Pの標高差(前フレーム)
 
 	local get_median_width     = function()
 		local str = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -743,6 +755,7 @@ rbff2.startplugin  = function()
 		pause_hitbox         = 1, -- 判定発生時にポーズ 1:OFF, 2:投げ, 3:攻撃, 4:変化時
 		pause                = false,
 		replay_stop_on_dmg   = false, -- ダメージでリプレイ中段
+		replay_timing_jmp    = true,  -- リプレイ前のタイミングどり用ジャンプ有効
 
 		next_stg3            = 0,
 
@@ -1817,7 +1830,7 @@ rbff2.startplugin  = function()
 			if not p.key then return end
 			local addr = p.addr.key
 			if global.dummy_mode == menu.dummy_modes.record then
-				--global.dummy_mode == menu.dummy_modes.replay 
+				--global.dummy_mode == menu.dummy_modes.replay
 				addr = p.op.addr.key
 			end
 			local status_b, reg_pcnt = mem.r08(addr.reg_st_b) ~ 0xFF, mem.r08(addr.reg_pcnt) ~ 0xFF
@@ -3242,9 +3255,10 @@ rbff2.startplugin  = function()
 		-- ランダムで1つ選定
 		recording.active_slot = #tmp_slots > 0 and tmp_slots[math.random(#tmp_slots)] or { store = {}, name = "EMPTY", dummy = true }
 
-		local st, st1, _ = input.accept("st")
+		local st, st1, st2 = input.accept("st")
 		if st or force_start_play == true then
-			recording.player = st1 and 2 or 1
+			-- 強制初期化時はrecording.playerは更新しない
+			if st then recording.player = st1 and 2 or 1 end
 			recording.force_start_play = false
 			-- 状態変更
 			recording.play_count = 1
@@ -3258,13 +3272,14 @@ rbff2.startplugin  = function()
 				-- 状態リセット   1:OFF 2:1Pと2P 3:1P 4:2P
 				if global.replay_reset == 2 or (global.replay_reset == 3 and i == 3) or (global.replay_reset == 4 and i == 4) then
 					for fnc, tbl in pairs({
-						[mem.w16i] = { [0x28] = 0, [0x24] = 0x18, },
-						[mem.w16] = { [0x34] = 0, [0x40] = 0, [0x44] = 0, [0x48] = 0, [0x4A] = 0, [0x60] = 0x1, [0x64] = 0xFFFF, [0x6E] = 0, },
+						[mem.w16i] = { [0x24] = 0x18, },
+						[mem.w16] = { [0x60] = 0x1, [0x64] = 0xFFFF, [0x6E] = 0, },
 						-- 0x58D5A = やられからの復帰処理  0x261A0: 素立ち処理
 						[mem.w32] = { [p.addr.base] = 0x58D5A, [0x28] = 0, [0x34] = 0, [0x38] = 0, [0x3C] = 0, [0x44] = 0, [0x48] = 0, [0x4C] = 0, [0x50] = 0, [0xDA] = 0, [0xDE] = 0, },
 						[mem.w08] = { [0x61] = 0x1, [0x63] = 0x2, [0x65] = 0x2, [0x66] = 0, [0x6A] = 0, [0x7E] = 0, [0xB0] = 0, [0xB1] = 0, [0xC0] = 0x80, [0xC2] = 0, [0xFC] = 0, [0xFD] = 0, [0x89] = 0, },
 					}) do for addr, value in pairs(tbl) do fnc(addr, value) end end
 					p.do_recover(true)
+					p.reset_cmd_hook()
 					p.old.frame_gap = 0
 				end
 			end
@@ -3340,6 +3355,14 @@ rbff2.startplugin  = function()
 	-- タイミングジャンプ
 	recording.procs.timing_jump = function(_)
 		recording.info = recording.info2
+		if input.accept("st") then
+			-- 状態変更
+			global.rec_main = recording.procs.await_play
+			global.rec_force_start_play = true -- 一時的な強制初期化フラグをON
+			ut.printf("%s timing_jump -> await_play(force)", global.frame_number)
+			return
+		end
+
 		-- 繰り返し前の行動が完了するまで待つ
 		local p, op, p_ok = players[3 - recording.player], players[recording.player], true
 		p_ok = p.act_data.neutral or (not p.act_data.neutral and p.on_update_act == global.frame_number and recording.last_act ~= p.act)
@@ -3361,20 +3384,21 @@ rbff2.startplugin  = function()
 		if input.accept("st") then
 			-- 状態変更
 			global.rec_main = recording.procs.await_play
-			ut.printf("%s pre_jumping -> await_play", global.frame_number)
+			global.rec_force_start_play = true -- 一時的な強制初期化フラグをON
+			ut.printf("%s pre_jumping -> await_play(force)", global.frame_number)
 			return
 		end
 
 		local p = players[recording.player]
 		local goto_play = false
-		if p.sway_status == 0x00 then
+		if global.replay_timing_jmp and p.sway_status == 0x00 then
 			if ut.tstb(p.old.flag_c0, db.flag_c0._16) and ut.tstb(p.flag_c0, db.flag_c0._31) then
 				goto_play = true
 			elseif not ut.tstb(p.flag_c0, db.flag_c0._16 | db.flag_c0._17 | db.flag_c0._20 | db.flag_c0._23) or
 				ut.tstb(p.flag_c0, db.flag_c0._17 | db.flag_c0._20 | db.flag_c0._23) then
 				p.reset_cmd_hook(db.cmd_types._8) -- ジャンプ
 			else p.reset_cmd_hook() end
-		else goto_play = true end	
+		else goto_play = true end
 		if goto_play then
 			global.rec_main = recording.procs.play
 			ut.printf("%s pre_jumping -> play", global.frame_number)
@@ -4984,6 +5008,7 @@ rbff2.startplugin  = function()
 
 		-- キャラ間の距離
 		prev_space, p_space = (p_space ~= 0) and p_space or prev_space, players[1].pos - players[2].pos
+		prev_elev, p_elev = (p_space ~= 0) and p_space or prev_space, players[1].pos_y - players[2].pos_y
 
 		-- プレイヤー操作事前設定（それぞれCPUか人力か入れ替えか）
 		-- キー入力の取得（1P、2Pの操作を入れ替えていたりする場合もあるのでモード判定と一緒に処理する）
@@ -5286,8 +5311,11 @@ rbff2.startplugin  = function()
 
 			-- 自動避け攻撃対空
 			if p.away_anti_air.enabled and not p.op.in_hitstun then
-				local jump = p.op.in_air and ut.tstb(p.op.flag_c0, db.flag_c0.jump)
-				local aaa, falling, attacking = p.away_anti_air, jump and (p.op.pos_y <= p.op.old.pos_y), 0 < (p.op.flag_c4 | p.op.flag_c8)
+				local jump1 = p.in_air and ut.tstb(p.flag_c0, db.flag_c0.jump)
+				local jump2 = p.op.in_air and ut.tstb(p.op.flag_c0, db.flag_c0.jump)
+				local jump = jump1 or jump2
+				local abs_elev, old_elev = math.abs(p_elev), math.abs(prev_elev)
+				local aaa, falling, attacking = p.away_anti_air, jump and (abs_elev <= old_elev), 0 < (p.op.flag_c4 | p.op.flag_c8)
 				local abs_space, old_space = math.abs(p_space), math.abs(prev_space)
 				local backwarding = abs_space > old_space or (abs_space == old_space and abs_space == 248)
 				local forwarding  = abs_space < old_space or (abs_space == old_space and abs_space == 0)
@@ -5327,7 +5355,7 @@ rbff2.startplugin  = function()
 					else
 						p.reset_cmd_hook(db.cmd_types._AB)
 					end
-				elseif label then ut.printf("%s Y:%3d X:%3d", label, p.op.pos_y, abs_space) end
+				elseif label then ut.printf("%s Y:%3d X:%3d", label, abs_elev, abs_space) end
 			end
 
 			-- 自動ダウン追撃
@@ -5402,13 +5430,15 @@ rbff2.startplugin  = function()
 
 		-- レコード＆リプレイ
 		if global.dummy_mode == menu.dummy_modes.record or global.dummy_mode == menu.dummy_modes.replay then
-			local prev_rec_main, called = nil, {}
-			repeat
-				prev_rec_main = global.rec_main
-				called[prev_rec_main or "NOT DEFINED"] = true
-				global.rec_main(next_joy)
-			until global.rec_main == prev_rec_main or called[global.rec_main] == true
-			input.read(recording.player, global.rec_main == recording.procs.play)
+			if global.rec_main then
+				local prev_rec_main, called = nil, {}
+				repeat
+					prev_rec_main = global.rec_main
+					called[prev_rec_main or "NOT DEFINED"] = true
+					global.rec_main(next_joy)
+				until global.rec_main == prev_rec_main or called[global.rec_main] == true
+				input.read(recording.player, global.rec_main == recording.procs.play)
+			end
 		end
 
 		-- キーディス用の処理
@@ -6268,6 +6298,10 @@ rbff2.startplugin  = function()
 		local p1, p2             = players[1], players[2]
 
 		g.dummy_mode             = col[1] -- 01 ダミーモード
+		-- 誤動作抑止のためレコード・リプレイの選択時にキャンセルされた場合は選択を通常モードに戻す
+		if cancel == true and (g.dummy_mode == menu.dummy_modes.record or g.dummy_mode == menu.dummy_modes.replay) then
+			g.dummy_mode = menu.dummy_modes.ply_vs_ply
+		end
 		p1.dummy_act             = col[2] -- 02 1P アクション
 		p2.dummy_act             = col[3] -- 03 2P アクション
 		-- 04 ガード・ブレイクショット設定
@@ -6305,9 +6339,9 @@ rbff2.startplugin  = function()
 		local next_menu = nil
 		if cancel ~= true then
 			if row == 1 then
-				if g.dummy_mode == 5 then
+				if g.dummy_mode == menu.dummy_modes.record then
 					next_menu = "recording" -- レコード
-				elseif g.dummy_mode == 6 then
+				elseif g.dummy_mode == menu.dummy_modes.replay then
 					next_menu = "replay" -- リプレイ
 				end
 			elseif p1.away_anti_air.enabled and row == 17 then
@@ -6365,11 +6399,12 @@ rbff2.startplugin  = function()
 		g.replay_reset            = col[15] -- 状態リセット
 		g.disp_replay             = col[16] == 2 -- ガイド表示
 		g.replay_stop_on_dmg      = col[17] == 2 -- ダメージでリプレイ中止
+		g.replay_timing_jmp       = col[18] == 2 -- リプレイ前に垂直ジャンプ
 		g.repeat_interval         = recording.repeat_interval
 	end
 	menu.exit_and_rec_pos     = function()
 		local g = global
-		g.dummy_mode = 6 -- リプレイモードにする
+		g.dummy_mode = menu.dummy_modes.replay -- リプレイモードにする
 		g.rec_main = recording.procs.fixpos
 		input.accepted = scr:frame_number()
 		recording.temp_player = players[1].reg_pcnt ~= 0 and 2 or 1
@@ -6383,7 +6418,7 @@ rbff2.startplugin  = function()
 			menu.exit_and_rec_pos()
 			return
 		end
-		g.dummy_mode = 6 -- リプレイモードにする
+		g.dummy_mode = menu.dummy_modes.replay -- リプレイモードにする
 		g.rec_main = recording.procs.await_play
 		input.accepted = scr:frame_number()
 		menu.exit_and_play_common()
@@ -6392,7 +6427,7 @@ rbff2.startplugin  = function()
 	end
 	menu.exit_and_play_cancel = function()
 		local g = global
-		g.dummy_mode = 6 -- リプレイモードにする
+		g.dummy_mode = menu.dummy_modes.replay -- リプレイモードにする
 		g.rec_main = recording.procs.await_play
 		input.accepted = scr:frame_number()
 		menu.exit_and_play_common()
@@ -7284,6 +7319,7 @@ rbff2.startplugin  = function()
 			{ "状態リセット", { "OFF", "1Pと2P", "1P", "2P", }, },
 			{ "ガイド表示", menu.labels.off_on, },
 			{ "ダメージでリプレイ中止", menu.labels.off_on, },
+			{ "リプレイ前に垂直ジャンプ", menu.labels.off_on, },
 		},
 		-- スロット1-スロット8
 		function(first)
@@ -7295,6 +7331,7 @@ rbff2.startplugin  = function()
 			col[15] = g.replay_reset         -- 状態リセット
 			col[16] = g.disp_replay and 2 or 1 -- ガイド表示
 			col[17] = g.replay_stop_on_dmg and 2 or 1 -- ダメージでリプレイ中止
+			col[18] = g.replay_timing_jmp  and 2 or 1 -- リプレイ前に垂直ジャンプ
 			for i = 2, 1 + 8 do
 				if first then col[i] = 2 end
 				local store_len = #recording.slot[i - 1].store
@@ -7305,8 +7342,8 @@ rbff2.startplugin  = function()
 				}
 			end
 		end,
-		ut.new_filled_table(17, menu.exit_and_play),
-		ut.new_filled_table(17, menu.exit_and_play_cancel))
+		ut.new_filled_table(18, menu.exit_and_play),
+		ut.new_filled_table(18, menu.exit_and_play_cancel))
 
 	for key, sub_menu in pairs(menu) do
 		if type(sub_menu) == "table" and sub_menu.init and type(sub_menu.init) == "function" then
