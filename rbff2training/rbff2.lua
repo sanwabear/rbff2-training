@@ -316,14 +316,14 @@ rbff2.startplugin  = function()
 	menu.reset_current = function()
 		menu.current = menu.main
 		menu.stack = {}
-		ut.printf("menu size:%s * %s", #menu.stack, to_sjis(menu.current.name))
+		--ut.printf("menu size:%s * %s", #menu.stack, to_sjis(menu.current.name))
 	end
 	menu.back = function()
 		local prev_menu = table.remove(menu.stack)
 		prev_menu = prev_menu or menu.main
 		menu.current = prev_menu
 		if prev_menu ~= menu.main and type(prev_menu.init) == "function" then prev_menu.init() end
-		ut.printf("menu size:%s - %s", #menu.stack, to_sjis(menu.current.name))
+		--ut.printf("menu size:%s - %s", #menu.stack, to_sjis(menu.current.name))
 	end
 	menu.set_current = function(next_menu)
 		if type(next_menu) == "string" then next_menu = menu[next_menu] end
@@ -347,7 +347,7 @@ rbff2.startplugin  = function()
 			if next_menu ~= menu.main and type(next_menu.init) == "function" then next_menu.init() end
 		end
 
-		ut.printf("menu size:%s + %s", #menu.stack, to_sjis(menu.current.name))
+		--ut.printf("menu size:%s + %s", #menu.stack, to_sjis(menu.current.name))
 	end
 	for i = -20, 0xF0 do table.insert(menu.labels.fix_scr_tops, "" .. i) end
 	for i = 1, 301 do table.insert(menu.labels.play_interval, i - 1) end
@@ -5008,7 +5008,7 @@ rbff2.startplugin  = function()
 
 		-- キャラ間の距離
 		prev_space, p_space = (p_space ~= 0) and p_space or prev_space, players[1].pos - players[2].pos
-		prev_elev, p_elev = (p_space ~= 0) and p_space or prev_space, players[1].pos_y - players[2].pos_y
+		prev_elev, p_elev = (p_elev ~= 0) and p_elev or prev_elev, players[1].pos_y - players[2].pos_y
 
 		-- プレイヤー操作事前設定（それぞれCPUか人力か入れ替えか）
 		-- キー入力の取得（1P、2Pの操作を入れ替えていたりする場合もあるのでモード判定と一緒に処理する）
