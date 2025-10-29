@@ -3306,7 +3306,7 @@ rbff2.startplugin  = function()
 						if currdata ~= data then
 							fixed = false
 							memw(addr, data)
-							ut.printf("%s fixpos[%s] %s %X %X -> %X", global.frame_number, global.frame_number - fixpos.await_fixpos_frame, m, addr, currdata, data)
+							--ut.printf("%s fixpos[%s] %s %X %X -> %X", global.frame_number, global.frame_number - fixpos.await_fixpos_frame, m, addr, currdata, data)
 						end
 					end
 				end
