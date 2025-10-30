@@ -756,6 +756,7 @@ rbff2.startplugin  = function()
 		pause                = false,
 		replay_stop_on_dmg   = false, -- ダメージでリプレイ中段
 		replay_timing_jmp    = true,  -- リプレイ前のタイミングどり用ジャンプ有効
+		recover_wait         = 180,
 
 		next_stg3            = 0,
 
@@ -2584,8 +2585,8 @@ rbff2.startplugin  = function()
 			end
 			p.do_recover       = function(force)
 				-- init timer
-				local timeoverp = 180 < (global.frame_number - global.on_pow_up)
-				local timeover  = 180 < math.min(p.throw_timer, p.op.throw_timer)
+				local timeoverp = global.recover_wait < (global.frame_number - global.on_pow_up)
+				local timeover  = global.recover_wait < math.min(p.throw_timer, p.op.throw_timer)
 				-- 体力と気絶値とMAX気絶値回復
 				local life = { 0xC0, 0x60 }
 				local max_life = life[p.red] or (p.red - #life) -- 赤体力にするかどうか
@@ -6912,6 +6913,7 @@ rbff2.startplugin  = function()
 			{ "2P POWゲージ量", menu.labels.pow_range, }, -- "最大", "半分", "ゼロ" ...
 			{ "体力ゲージモード", { "自動回復", "固定", "通常動作" }, },
 			{ "POWゲージモード", { "自動回復", "固定", "通常動作", "自動減少" }, },
+			{ "自動回復までのフレーム数", { "OFF", "30", "60", "90", "120", "150", "180", "210", "240" }, }, -- (index - 1) * 30
 		},
 		function()
 			---@diagnostic disable-next-line: undefined-field
@@ -6922,8 +6924,9 @@ rbff2.startplugin  = function()
 			col[4] = p[2].max -- 2P POWゲージ量
 			col[5] = g.life_mode -- 体力ゲージモード
 			col[6] = g.pow_mode -- POWゲージモード
+			col[7] = (g.recover_wait / 30) + 1 -- 自動回復までのフレーム数
 		end,
-		ut.new_filled_table(6, function()
+		ut.new_filled_table(7, function()
 			local col, p, g = menu.bar.pos.col, players, global
 			p[1].red        = col[1] -- 1P 体力ゲージ量
 			p[2].red        = col[2] -- 2P 体力ゲージ量
@@ -6931,6 +6934,7 @@ rbff2.startplugin  = function()
 			p[2].max        = col[4] -- 2P POWゲージ量
 			menu.organize_life_config(col[5]) -- 体力ゲージモード 1:自動回復 2:固定 3:通常動作
 			g.pow_mode = col[6]      -- POWゲージモード 1:自動回復 2:固定 3:通常動作 4:自動減少
+			g.recover_wait  = (col[7] - 1) * 30 -- 自動回復までのフレーム数
 			set_dip_config(true)
 			menu.set_current()
 		end))
