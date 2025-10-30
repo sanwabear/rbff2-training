@@ -1836,7 +1836,7 @@ rbff2.startplugin  = function()
 			local status_b, reg_pcnt = mem.r08(addr.reg_st_b) ~ 0xFF, mem.r08(addr.reg_pcnt) ~ 0xFF
 			local on1f, on5f, hold = mem.r08(addr.on1f), mem.r08(addr.on5f), mem.r08(addr.hold)
 			if merge_bs_hook and p.bs_hook and p.bs_hook.cmd then
-				reg_pcnt, on1f, on5f, hold = p.bs_hook.cmd, p.bs_hook.on1f, p.bs_hook.on5f, p.bs_hook.hold
+				reg_pcnt, on1f, on5f, hold = p.bs_hook.cmd or reg_pcnt, p.bs_hook.on1f or on1f, p.bs_hook.on5f or on5f, p.bs_hook.hold or hold
 			end
 			local cnt_r, cnt_b, tmp = 0xF & reg_pcnt, 0xF0 & reg_pcnt, {}
 			for k, v in pairs(db.cmd_status_b[i]) do tmp[k] = ut.tstb(status_b, v) end
@@ -5246,6 +5246,14 @@ rbff2.startplugin  = function()
 				p.gd_bs_enabled = false
 			end -- ガード状態が解除されたらBS解除
 
+			if p.old.knockback2 ~= nil and p.old.knockback2 == 1 then
+				if ut.tstb(p.flag_c0, db.flag_c0._02 | db.flag_c0._06 | db.flag_c0._26 | db.flag_c0._28) then
+					p.reset_cmd_hook(db.cmd_types._5)
+				else
+					p.reset_cmd_hook(db.cmd_types._2)
+				end
+			end
+
 			-- print(p.state, p.knockback2, p.knockback1, p.flag_7e, p.hitstop_remain, rvs_types.in_knock_back, p.last_blockstun, string.format("%x", p.act), p.act_count, p.act_frame)
 			-- ヒットストップ中は無視
 			-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
@@ -5443,6 +5451,7 @@ rbff2.startplugin  = function()
 
 		-- キーディス用の処理
 		for _, p in ipairs(players) do
+			input.read(p.num, true)
 			local key, keybuf = "", {} -- _1~_9 _A_B_C_D
 			local ggbutton = { lever = 5, A = false, B = false, C = false, D = false, }
 
