@@ -2041,20 +2041,26 @@ rbff2.startplugin  = function()
 			p.char_data = p.is_fireball and db.chars[#db.chars] or db.chars[data] -- 弾はダミーを設定する
 			if not p.is_fireball then p.proc_active = true end
 		end
-		p.update_tmp_combo         = function(data)
-			if data == 1 then    -- 一次的なコンボ数が1リセットしたタイミングでコンボ用の情報もリセットする
+		p.update_tmp_combo         = function(data, first_zero)
+			-- first_zero コンボ加算がない状態でダメージ状態が継続している場合にtrueとする
+			if first_zero == true or data == 1 then    -- 一次的なコンボ数が1リセットしたタイミングでコンボ用の情報もリセットする
+				if p.combo_reset > 0 then
+					p.last_stun          = 0
+					p.last_st_timer      = 0
+					p.combo_damage       = 0
+					p.combo_stun         = 0
+					p.combo_stun_timer   = 0
+				end
+				p.combo_reset            = 0
 				p.last_combo             = 1 -- 2以上でのみ0x10B4E4か0x10B4E5が更新されるのでここで1リセットする
-				p.last_stun              = 0
-				p.last_st_timer          = 0
 				p.combo_update           = global.frame_number + 1
-				p.combo_damage           = 0
 				p.combo_start_stun       = p.hit_stun
 				p.combo_start_stun_timer = p.hit_stun_timer
-				p.combo_stun             = 0
-				p.combo_stun_timer       = 0
 				p.combo_pow              = p.hurt_attack == p.op.attack and p.op.pow_up or 0
 			elseif data > 1 then
-				p.combo_update = global.frame_number + 1
+				p.combo_update           = global.frame_number + 1
+			elseif first_zero ~= true and data == 0 then
+				p.combo_reset            = global.frame_number + 1
 			end
 		end
 		p.add_sp_establish_hist    = function(last_sp, exp, count, on_input_estab)
@@ -2637,6 +2643,7 @@ rbff2.startplugin  = function()
 				p.input_states = {}
 				p.char_data = db.chars[p.char]
 				if call_recover then p.do_recover(true) end
+				p.combo_reset = 0
 				p.combo_update = 0
 				p.combo_damage = 0
 				p.combo_start_stun = 0
@@ -4527,6 +4534,12 @@ rbff2.startplugin  = function()
 			else
 				p.attackbits.on_air, p.attackbits.on_ground = false, false
 			end
+			p.old.in_hurt = p.in_hurt
+			p.in_hurt = ut.tstb(p.flag_cc, db.flag_cc.all_hurt)
+			if p.old.in_hurt ~= true and p.in_hurt == true then
+				p.on_hit = global.frame_number
+				p.update_tmp_combo(0, true)
+			end
 			if p.on_hit == global.frame_number or p.on_block == global.frame_number then p.last_block_side = p.block_side end
 			--p.attackbits.in_air, p.attackbits.in_ground = p.in_air, not p.in_air
 			-- 高さが0になった時点でジャンプ中状態を解除する
@@ -5750,7 +5763,7 @@ rbff2.startplugin  = function()
 				table.insert(label2, string.format("CC %-32s %s %-s", ut.hextobitstr(cc, " "), cc, db.get_flag_name(p.flag_cc, db.flag_names_cc)))
 				table.insert(label2, string.format("D0 %-8s %s %-s", ut.hextobitstr(d0, " "), d0, db.get_flag_name(p.flag_d0, db.flag_names_d0)))
 				table.insert(label2, string.format("7E %-8s %s %-s", ut.hextobitstr(_7e, " "), _7e, db.get_flag_name(p.flag_7e, db.flag_names_7e)))
-				table.insert(label2, string.format("%3s %3s", p.knockback1, p.knockback2))
+				table.insert(label2, string.format("%1s %3s %3s", p.state, p.knockback1, p.knockback2))
 				p.state_line3 = label2
 			end
 		end
