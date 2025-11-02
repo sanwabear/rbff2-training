@@ -1878,7 +1878,7 @@ rbff2.startplugin  = function()
 					x = p.x + screen.left,
 					y = p.y - screen.top,
 					v_sym = p.falling and "v" or (p.rising and "^" or "="),
-					w_sym = p.backwarding and "<" or (p.forwarding and ">" or "="),
+					w_sym = p.expanding and (p.cmd_side == 1 and "<" or ">") or (p.closing and (p.cmd_side == 1 and ">" or "<") or "="),
 					space = abs_space,
 					elev = abs_elev,
 				}) -- ジャンプ中のキー入力位置を保存
@@ -5345,10 +5345,10 @@ rbff2.startplugin  = function()
 					end
 					if not chk_fwd and not chk_bak then
 						xa = true -- 間合い指定なし
-					elseif (p.closing or p.op.closing) and chk_fwd and aaa.fwd_limit >= abs_space then -- 接近
+					elseif closing and chk_fwd and aaa.fwd_limit >= abs_space then -- 接近
 						xlabel = label and string.format("%3d %2s %3d", aaa.fwd_limit, ">=", abs_space) or nil
 						xa = true
-					elseif (p.expanding or p.op.expanding) and chk_bak and aaa.bak_limit <= abs_space then -- 離遠
+					elseif expanding and chk_bak and aaa.bak_limit <= abs_space then -- 離遠
 						xlabel = label and string.format("%3d %2s %3d", aaa.bak_limit, "<=", abs_space) or nil
 						xa = true
 					end
