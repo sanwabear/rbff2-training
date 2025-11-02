@@ -670,6 +670,8 @@ rbff2.startplugin  = function()
 	local prev_space           = 0  -- 1Pと2Pの間隔(前フレーム)
 	local p_elev               = 0  -- 1Pと2Pの標高差（elevation）
 	local prev_elev            = 0  -- 1Pと2Pの標高差(前フレーム)
+	local abs_elev, old_elev   = 0, 0
+	local abs_space, old_space = 0, 0
 
 	local get_median_width     = function()
 		local str = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -1875,6 +1877,10 @@ rbff2.startplugin  = function()
 					on1f = on1f, label = keybuff, flip_x = p.flip_x,
 					x = p.x + screen.left,
 					y = p.y - screen.top,
+					v_sym = p.falling and "v" or (p.rising and "^" or "="),
+					w_sym = p.backwarding and "<" or (p.forwarding and ">" or "="),
+					space = abs_space,
+					elev = abs_elev,
 				}) -- ジャンプ中のキー入力位置を保存
 				while global.key_pos_hist_limit < #p.key.pos_hist do table.remove(p.key.pos_hist, 1) end --バッファ長調整
 			end
@@ -4495,6 +4501,7 @@ rbff2.startplugin  = function()
 			p.pos_total_y       = p.pos_y + p.pos_frc_y
 			p.diff_pos_total    = p.old.pos_total and p.pos_total - p.old.pos_total or 0
 			p.diff_pos_total_y  = p.old.pos_total_y and p.pos_total_y - p.old.pos_total_y or 0
+
 			-- 位置の保存(文字と数値)
 			local old_pos       = p.pos_hist[#p.pos_hist]
 			table.insert(p.pos_hist, {
@@ -4914,17 +4921,6 @@ rbff2.startplugin  = function()
 					within = false,
 					p = p,
 				})
-				-- 入力座標
-				for _, ph in ipairs(p.key.pos_hist) do
-					table.insert(ranges, {
-						label = string.format("%sP %s", p.num, ph.label),
-						x = ph.x - screen.left,
-						y = ph.y + screen.top,
-						flip_x = ph.flip_x,
-						within = false,
-						p = p,
-					})
-				end
 			end
 
 			if p.is_fireball ~= true then
@@ -5010,6 +5006,14 @@ rbff2.startplugin  = function()
 		-- キャラ間の距離
 		prev_space, p_space = (p_space ~= 0) and p_space or prev_space, players[1].pos - players[2].pos
 		prev_elev, p_elev = (p_elev ~= 0) and p_elev or prev_elev, players[1].pos_y - players[2].pos_y
+		abs_elev, old_elev = math.abs(p_elev), math.abs(prev_elev)
+		abs_space, old_space = math.abs(p_space), math.abs(prev_space)
+		for _, p in ipairs(players) do
+			p.falling           = ut.tstb(p.flag_c0, db.flag_c0.jump) and abs_elev <= old_elev
+			p.rising            = ut.tstb(p.flag_c0, db.flag_c0.jump) and not p.falling
+			p.expanding         = abs_space > old_space or (abs_space == old_space and abs_space == 248)
+			p.closing           = abs_space < old_space or (abs_space == old_space and abs_space == 0)
+		end
 
 		-- プレイヤー操作事前設定（それぞれCPUか人力か入れ替えか）
 		-- キー入力の取得（1P、2Pの操作を入れ替えていたりする場合もあるのでモード判定と一緒に処理する）
@@ -5320,37 +5324,31 @@ rbff2.startplugin  = function()
 
 			-- 自動避け攻撃対空
 			if p.away_anti_air.enabled and not p.op.in_hitstun then
-				local jump1 = p.in_air and ut.tstb(p.flag_c0, db.flag_c0.jump)
-				local jump2 = p.op.in_air and ut.tstb(p.op.flag_c0, db.flag_c0.jump)
-				local jump = jump1 or jump2
-				local abs_elev, old_elev = math.abs(p_elev), math.abs(prev_elev)
-				local aaa, falling, attacking = p.away_anti_air, jump and (abs_elev <= old_elev), 0 < (p.op.flag_c4 | p.op.flag_c8)
-				local abs_space, old_space = math.abs(p_space), math.abs(prev_space)
-				local backwarding = abs_space > old_space or (abs_space == old_space and abs_space == 248)
-				local forwarding  = abs_space < old_space or (abs_space == old_space and abs_space == 0)
-				local xa, ya, rising = false, false, jump and not falling
+				local aaa, attacking = p.away_anti_air, 0 < (p.op.flag_c4 | p.op.flag_c8)
+				local closing, expanding = p.closing or p.op.closing, p.expanding or p.op.expanding
+				local xa, ya         = false, false
 				local xlabel, ylabel, label
 				local chk_rise = aaa.rise_limit > 0 -- この高さより上昇時
 				local chk_fall = aaa.fall_limit > 0 -- この高さより下降時
 				local chk_fwd  = aaa.fwd_limit  > 0 -- この間合いより近づいた時
 				local chk_bak  = aaa.bak_limit  > 0 -- この間合いより遠のいた時
-				--label = string.format("%s %s %4s %3s %3s", global.frame_number, p.num, jump and (falling and "fall" or (rising and "rise" or "")) or "", forwarding and "fwd" or (backwarding and "bak" or ""), attacking and "atk" or "")
+				--label = string.format("%s %s %4s %3s %3s", global.frame_number, p.num, p.falling and "fall" or (p.rising and "rise" or ""), closing and "clo" or (expanding and "exp" or ""), attacking and "atk" or "")
 				if p.flag_c4 == 0 and p.flag_c8 == 0 and ((aaa.atk_only and attacking) or not aaa.atk_only) then
 					if not chk_fall and not chk_rise then
 						ya = true -- 非ジャンプ全般
-					elseif falling and chk_fall and aaa.fall_limit >= p.op.pos_y then -- ジャンプ下り
-						ylabel = label and string.format("%3d %2s %3d", aaa.fall_limit, ">=", p.op.pos_y) or nil
+					elseif p.falling and chk_fall and aaa.fall_limit >= abs_elev then -- ジャンプ下り
+						ylabel = label and string.format("%3d %2s %3d", aaa.fall_limit, ">=", abs_elev) or nil
 						ya = true
-					elseif rising and chk_rise and aaa.rise_limit <= p.op.pos_y then -- ジャンプ上り
-						ylabel = label and string.format("%3d %2s %3d", aaa.rise_limit, "<=", p.op.pos_y) or nil
+					elseif p.rising and chk_rise and aaa.rise_limit <= abs_elev then -- ジャンプ上り
+						ylabel = label and string.format("%3d %2s %3d", aaa.rise_limit, "<=", abs_elev) or nil
 						ya = true
 					end
 					if not chk_fwd and not chk_bak then
 						xa = true -- 間合い指定なし
-					elseif forwarding and chk_fwd and aaa.fwd_limit >= abs_space then -- 前進
+					elseif (p.closing or p.op.closing) and chk_fwd and aaa.fwd_limit >= abs_space then -- 接近
 						xlabel = label and string.format("%3d %2s %3d", aaa.fwd_limit, ">=", abs_space) or nil
 						xa = true
-					elseif backwarding and chk_bak and aaa.bak_limit <= abs_space then -- 後退
+					elseif (p.expanding or p.op.expanding) and chk_bak and aaa.bak_limit <= abs_space then -- 離遠
 						xlabel = label and string.format("%3d %2s %3d", aaa.bak_limit, "<=", abs_space) or nil
 						xa = true
 					end
@@ -5489,6 +5487,18 @@ rbff2.startplugin  = function()
 			else
 				table.insert(p.key.log, { key = key, frame = 1 })
 				while global.key_hists < #p.key.log do table.remove(p.key.log, 1) end
+			end
+
+			-- 入力座標
+			for _, ph in ipairs(p.key.pos_hist) do
+				table.insert(ranges, {
+					label = string.format("%sP %s\n%s:%d,%s:%d", p.num, ph.label, ph.w_sym, ph.space, ph.v_sym, ph.elev),
+					x = ph.x - screen.left,
+					y = ph.y + screen.top,
+					flip_x = ph.flip_x,
+					within = false,
+					p = p,
+				})
 			end
 
 			p.do_recover()
