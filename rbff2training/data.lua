@@ -2194,16 +2194,16 @@ for char, list in ipairs(rvs_bs_list) do
 	chars[char].rvs, chars[char].bs = rvs_list, bs_list
 end
 local sp_throws     = { -- 投げ技IDごとのテーブル
-	[0x05] = calc_ver({ char = 0x05, id = 0x07, f = 0x06, a = 0xFD, auto_sp_throw = true, name = "真空投げ", }),
-	[0x06] = calc_ver({ char = 0x05, id = 0x12, f = 0x06, a = 0x00, auto_sp_throw = true, name = "羅生門", }),
-	[0x07] = calc_ver({ char = 0x06, id = 0x04, f = 0x06, a = 0xFE, auto_sp_throw = true, name = "鬼門陣", }),
-	[0x10] = calc_ver({ char = 0x0B, id = 0x08, f = 0x06, a = 0x00, auto_sp_throw = true, name = "爆弾パチキ", }),
-	[0x11] = calc_ver({ char = 0x0B, id = 0x12, f = 0x06, a = 0x00, auto_sp_throw = true, name = "ドリル", }),
-	[0x13] = calc_ver({ char = 0x0E, id = 0x10, f = 0x06, a = 0x00, auto_sp_throw = true, name = "ブレイクスパイラル", }),
-	[0x14] = calc_ver({ char = 0x0E, id = 0x11, f = 0x06, a = 0xFA, auto_sp_throw = true, name = "ブレイクスパイラルBR", }),
-	[0x15] = calc_ver({ char = 0x14, id = 0x05, f = 0x06, a = 0x00, auto_sp_throw = true, name = "デンジャラススルー", }),
-	[0x16] = calc_ver({ char = 0x14, id = 0x07, f = 0x06, a = 0x00, auto_sp_throw = true, name = "リフトアップブロー", }),
-	[0x17] = calc_ver({ char = 0x14, id = 0x12, f = 0x06, a = 0x00, auto_sp_throw = true, name = "ギガティックサイクロン", }),
+	[0x05] = calc_ver({ char = char_id.geese,    id = 0x07, f = 0x06, a = 0xFD, auto_sp_throw = true, name = "真空投げ", }),
+	[0x06] = calc_ver({ char = char_id.geese,    id = 0x12, f = 0x06, a = 0x00, auto_sp_throw = true, name = "羅生門", }),
+	[0x07] = calc_ver({ char = char_id.sokaku,   id = 0x04, f = 0x06, a = 0xFE, auto_sp_throw = true, name = "鬼門陣", }),
+	[0x10] = calc_ver({ char = char_id.yamazaki, id = 0x08, f = 0x06, a = 0x00, auto_sp_throw = true, name = "爆弾パチキ", }),
+	[0x11] = calc_ver({ char = char_id.yamazaki, id = 0x12, f = 0x06, a = 0x00, auto_sp_throw = true, name = "ドリル", }),
+	[0x13] = calc_ver({ char = char_id.duck,     id = 0x10, f = 0x06, a = 0x00, auto_sp_throw = true, name = "ブレイクスパイラル", }),
+	[0x14] = calc_ver({ char = char_id.duck,     id = 0x11, f = 0x06, a = 0xFA, auto_sp_throw = true, name = "ブレイクスパイラルBR", }),
+	[0x15] = calc_ver({ char = char_id.krauser,  id = 0x05, f = 0x06, a = 0x00, auto_sp_throw = true, name = "デンジャラススルー", }),
+	[0x16] = calc_ver({ char = char_id.krauser,  id = 0x07, f = 0x06, a = 0x00, auto_sp_throw = true, name = "リフトアップブロー", }),
+	[0x17] = calc_ver({ char = char_id.krauser,  id = 0x12, f = 0x06, a = 0x00, auto_sp_throw = true, name = "ギガティックサイクロン", }),
 }
 
 db.cmd_bytes        = cmd_bytes
