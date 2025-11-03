@@ -1699,14 +1699,14 @@ local cmd_types = {
 	_8D = cmd_bytes._8 | cmd_bytes._D,
 	_2D = cmd_bytes._2 | cmd_bytes._D,
 }
-local dirL, dirR = -1, 1
-cmd_types.front = { [dirL] = cmd_types._4, [dirR] = cmd_types._6, }
-cmd_types.back = { [dirL] = cmd_types._6, [dirR] = cmd_types._4, }
-cmd_types.front_jump = { [dirL] = cmd_types._7, [dirR] = cmd_types._9, }
-cmd_types.back_jump = { [dirL] = cmd_types._9, [dirR] = cmd_types._7, }
+local dirL, dirR       = -1, 1
+cmd_types.front        = { [dirL] = cmd_types._4, [dirR] = cmd_types._6, }
+cmd_types.back         = { [dirL] = cmd_types._6, [dirR] = cmd_types._4, }
+cmd_types.front_jump   = { [dirL] = cmd_types._7, [dirR] = cmd_types._9, }
+cmd_types.back_jump    = { [dirL] = cmd_types._9, [dirR] = cmd_types._7, }
 cmd_types.front_crouch = { [dirL] = cmd_types._1, [dirR] = cmd_types._3, }
-cmd_types.back_crouch = { [dirL] = cmd_types._3, [dirR] = cmd_types._1, }
-local hook_cmd_types = {
+cmd_types.back_crouch  = { [dirL] = cmd_types._3, [dirR] = cmd_types._1, }
+local hook_cmd_types   = {
 	none = 0,
 	reversal = 2 ^ 0,
 	breakshot = 2 ^ 1,
@@ -2177,6 +2177,9 @@ for char, list in ipairs(rvs_bs_list) do
 			local cmd, rev = rvs.cmd, rvs.cmd
 			if (rev & cmd_types._6) == cmd_types._6 then
 				rev = (rev - cmd_types._6) | cmd_types._4
+			end
+			if (rev & cmd_types._4) == cmd_types._4 then
+				rev = (rev - cmd_types._4) | cmd_types._6
 			end
 			rvs.cmd = { [-1] = rev, [1] = cmd }
 		end
