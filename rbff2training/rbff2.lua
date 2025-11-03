@@ -2480,7 +2480,7 @@ rbff2.startplugin  = function()
 					ret.value = db.hit_effects.addrs[global.damaged_move]
 				end
 			end,
-			[0x0C] = function(data) p.reserve_proc = data end,             -- 予約中の処理アドレス
+			--[0x0C] = function(data) p.reserve_proc = data end,             -- 予約中の処理アドレス
 			[0xC0] = function(data) p.flag_c0 = data end,                  -- フラグ群
 			[0xC4] = function(data) p.flag_c4 = data end,                  -- フラグ群
 			[0xC8] = function(data) p.flag_c8 = data end,                  -- フラグ群
@@ -5182,7 +5182,8 @@ rbff2.startplugin  = function()
 			-- リプレイ中は自動ガードしない
 			if ut.tstb(p.flag_c0, db.flag_c0._24) and not ut.tstb(p.flag_7e, db.flag_7e._02) then
 				-- ダッシュは中断可能動作なので切り替えフラグが立つまではガード移行させないでダッシュを可能なかぎり持続させる
-			elseif p.base == 0x2AEA4 or p.base == 0x58A32 or p.base == 0x2AFB0 then
+			--elseif p.on_sp_established == global.frame_number then
+			elseif p.base == 0x2AEA4 or p.base == 0x2AFB0 then
 				-- ダッシュ移行のプログラム動作時も同様。できれば利用可能なフラグで再現できるようにするのがTODO。
 			elseif p.dummy_gd ~= dummy_gd_type.none and ut.tstb(act_type, db.act_types.attack) == true and in_record == false and in_replay == false then
 				p.clear_cmd_hook(db.cmd_types._8) -- 上は無効化
