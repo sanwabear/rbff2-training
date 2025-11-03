@@ -2205,6 +2205,13 @@ local sp_throws     = { -- 投げ技IDごとのテーブル
 	[0x16] = calc_ver({ char = char_id.krauser,  id = 0x07, f = 0x06, a = 0x00, auto_sp_throw = true, name = "リフトアップブロー", }),
 	[0x17] = calc_ver({ char = char_id.krauser,  id = 0x12, f = 0x06, a = 0x00, auto_sp_throw = true, name = "ギガティックサイクロン", }),
 }
+db.sp_throws_by_char = {}
+for _, sp_throw in pairs(sp_throws) do
+	local char = sp_throw.char
+	local list = db.sp_throws_by_char[char] or {}
+	list[sp_throw.id] = sp_throw
+	db.sp_throws_by_char[char] = list
+end
 
 db.cmd_bytes        = cmd_bytes
 db.cmd_status_b     = cmd_status_b

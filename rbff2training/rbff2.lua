@@ -5388,28 +5388,32 @@ rbff2.startplugin  = function()
 				end
 			end
 
-			-- 自動必殺投げの切り替え
-			local sp_throw_hook = nil
-			if p.last_spids then
-				-- 成立コマンドから切り替え
+			if p.last_spids and #p.last_spids > 0 then
 				table.sort(p.last_spids)
-				for _, spid in ipairs(p.last_spids) do
-					--ut.printf("try switch %X %X", p.char, spid)
-					for throw_id, sp_throw in pairs(db.sp_throws) do
-						if sp_throw.char == p.char and sp_throw.id == spid then
-							--ut.printf("switch %X %X %X %X %s", p.char, throw_id, sp_throw.id, sp_throw.ver, to_sjis(sp_throw.name))
-							sp_throw_hook = sp_throw
+				local char_sp_throws = db.sp_throws_by_char[p.char]
+				if char_sp_throws then
+					for _, spid in ipairs(p.last_spids) do
+						p.sp_throw_hook = char_sp_throws[spid] or p.sp_throw_hook
+						break
+					end
+				end
+				p.last_spids = {}
+			end
+
+			if global.auto_input.sp_throw then
+				local char, hook = p.char, p.sp_throw_hook
+				if hook and hook.char == char then
+					p.reset_sp_hook(hook) -- 既存の必殺投げをリセット
+				else
+					-- 初期値設定（キャラの最初の投げ技を使用）
+					local char_sp_throws = db.sp_throws_by_char[char]
+					if char_sp_throws then
+						for _, sp_throw in pairs(char_sp_throws) do
+							p.sp_throw_hook = sp_throw
 							break
 						end
 					end
-					if sp_throw_hook then break end
 				end
-			end
-			p.last_spids, p.sp_throw_hook = {}, sp_throw_hook and sp_throw_hook or p.sp_throw_hook
-			-- 自動必殺投げ
-			if global.auto_input.sp_throw and p.sp_throw_hook and (p.sp_throw_hook.char == p.char) then
-				--ut.printf("reset_sp_hook %X %X %X", p.char, p.sp_throw_hook.id, p.sp_throw_hook.f)
-				p.reset_sp_hook(p.sp_throw_hook)
 			end
 
 			-- 自動投げ追撃
