@@ -768,7 +768,8 @@ rbff2.startplugin  = function()
 		hookp                = {}, -- フックポイント
 		auto_input           = {
 			otg_throw     = false, -- ダウン投げ
-			sp_throw      = false, -- 必殺投げ
+			sp_throw      = 1, -- 自動必殺投げ 1:OFF 2:ON 3:ON:空キャン投げ 4:ON:直投げ
+			sp_throw_lag  = 9, -- 空キャン投げ発動までのラグ
 			otg_attack    = false, -- ダウン攻撃
 			combo_throw   = false, -- 通常投げの派生技
 			rave          = 1, -- デッドリーレイブ
@@ -2091,7 +2092,7 @@ rbff2.startplugin  = function()
 		p.wp08                     = {
 			[0x16] = function(data) p.knockback1 = data end, -- のけぞり確認用2(裏雲隠し)
 			[0x69] = function(data) p.knockback2 = data end, -- のけぞり確認用1(色々)
-			[0x7E] = function(data) p.flag_7e = data end, -- のけぞり確認用3(フェニックススルー)
+			[0x7E] = function(data) p.flag_7e = data end, -- 動作切替、のけぞり確認用3(フェニックススルー)
 			[{ addr = 0x82, filter = { 0x2668C, 0x2AD24, 0x2AD2C } }] = function(data, ret)
 				local pc = mem.pc()
 				if pc == 0x2668C then p.input1, p.flag_fin = data, false end
@@ -4002,8 +4003,14 @@ rbff2.startplugin  = function()
 				update = true
 			end
 		end
-		if p.flag_cc ~= p.old.flag_cc and ut.tstb(p.flag_7e, db.flag_7e._02) then
-			update = true
+		p.on_update_7e_02 = p.on_update_7e_02 or 0
+		if ut.tstb(p.flag_7e, db.flag_7e._02) then
+			if p.flag_cc ~= p.old.flag_cc then
+				update = true
+			end
+			if ut.tstb(p.old.flag_7e, db.flag_7e._02) ~= true then
+				p.on_update_7e_02 = global.frame_number
+			end
 		end
 		local f_plus = ut.tstb(p.attackbit, frame_attack_types.frame_plus)
 
@@ -4342,8 +4349,8 @@ rbff2.startplugin  = function()
 	end
 
 	local input_rvs = function(rvs_type, p, logtxt)
-		if global.rvslog and logtxt then emu.print_info(logtxt) end -- else emu.print_info("nolog rvs") 
-		if ut.tstb(p.dummy_rvs.hook_type, hook_cmd_types.throw) then
+		if global.rvslog and logtxt then emu.print_info(string.format("%s %s", global.frame_number, logtxt)) end
+		if ut.tstb(p.dummy_rvs.hook_type, hook_cmd_types.throw) and not ut.tstb(p.dummy_rvs.hook_type, hook_cmd_types.sp_throw) then
 			if p.act == 0x9 and p.act_frame > 1 then return end -- 着地硬直は投げでないのでスルー
 			if p.op.in_air then return end
 			if p.op.sway_status ~= 0x00 then return end -- 全投げ無敵
@@ -4534,8 +4541,10 @@ rbff2.startplugin  = function()
 			else
 				p.attackbits.on_air, p.attackbits.on_ground = false, false
 			end
-			p.old.in_hurt = p.in_hurt
-			p.in_hurt = ut.tstb(p.flag_cc, db.flag_cc.all_hurt)
+			p.old.in_naked, p.old.in_hurt, p.old.in_block = p.in_naked, p.in_hurt, p.in_block
+			p.in_hurt = ut.tstb(p.flag_cc, db.flag_cc.hitstun)
+			p.in_block = ut.tstb(p.old.flag_cc, db.flag_cc.blocking)
+			p.in_naked = p.in_hurt ~= true and p.in_block ~= true
 			if p.old.in_hurt ~= true and p.in_hurt == true then
 				p.on_hit = global.frame_number
 				p.update_tmp_combo(0, true)
@@ -5080,7 +5089,7 @@ rbff2.startplugin  = function()
 			end
 
 			-- リプレイ中は行動しない
-			if in_record == false and in_replay == false then
+			if in_record ~= true and in_replay ~= true and p.in_naked == true then
 				if p.sway_status == 0x00 then
 					if p.dummy_act == menu.dummy_acts.crounch then
 						p.reset_cmd_hook(db.cmd_types._2) -- しゃがみ
@@ -5379,7 +5388,7 @@ rbff2.startplugin  = function()
 			end
 
 			-- 自動ダウン追撃
-			if p.op.act == 0x190 or p.op.act == 0x192 or p.op.act == 0x18E or p.op.act == 0x13B then
+			if p.in_naked == true and p.op.act == 0x190 or p.op.act == 0x192 or p.op.act == 0x18E or p.op.act == 0x13B then
 				if global.auto_input.otg_throw and p.char_data.otg_throw then
 					p.reset_sp_hook(p.char_data.otg_throw) -- 自動ダウン投げ
 				end
@@ -5388,6 +5397,7 @@ rbff2.startplugin  = function()
 				end
 			end
 
+			-- 自動必殺投げの場合は技成立データに別の必殺投げが含まれているならそれを優先させる
 			if p.last_spids and #p.last_spids > 0 then
 				table.sort(p.last_spids)
 				local char_sp_throws = db.sp_throws_by_char[p.char]
@@ -5400,56 +5410,71 @@ rbff2.startplugin  = function()
 				p.last_spids = {}
 			end
 
-			if global.auto_input.sp_throw then
-				local char, hook = p.char, p.sp_throw_hook
-				if hook and hook.char == char then
-					p.reset_sp_hook(hook) -- 既存の必殺投げをリセット
+			if p.in_naked == true and global.auto_input.sp_throw > 1 then
+				-- 自動必殺投げ 1:OFF 2:ON 3:ON:空キャン投げ 4:ON:直投げ
+				local dohook
+				if global.auto_input.sp_throw == 2 then
+					dohook = true
+				elseif (p.flag_c4 > 0) or ut.tstb(p.flag_c8, db.flag_c8.normal_atk) == true or ut.tstb(p.flag_cc, db.flag_cc._19) == true then
+					local lag = global.frame_number - p.on_update_7e_02
+					dohook = global.auto_input.sp_throw == 3 and lag >= global.auto_input.sp_throw_lag
 				else
-					-- 初期値設定（キャラの最初の投げ技を使用）
-					local char_sp_throws = db.sp_throws_by_char[char]
-					if char_sp_throws then
-						for _, sp_throw in pairs(char_sp_throws) do
-							p.sp_throw_hook = sp_throw
-							break
+					dohook = global.auto_input.sp_throw == 4
+				end
+				if dohook then
+					local char, hook = p.char, p.sp_throw_hook
+					if hook and hook.char == char then
+						p.reset_sp_hook(hook) -- 既存の必殺投げをリセット
+					else
+						-- 初期値設定（キャラの最初の投げ技を使用）
+						local char_sp_throws = db.sp_throws_by_char[char]
+						if char_sp_throws then
+							for _, sp_throw in pairs(char_sp_throws) do
+								p.sp_throw_hook = sp_throw
+								break
+							end
 						end
 					end
 				end
 			end
 
-			-- 自動投げ追撃
-			if global.auto_input.combo_throw then
-				if p.char == db.char_id.joe and p.act == 0x70 then
-					p.reset_cmd_hook(db.cmd_types._2C) -- ジョー
-				elseif p.act == 0x6D and p.char_data.add_throw then
-					p.reset_sp_hook(p.char_data.add_throw) -- ボブ、ギース、双角、マリー
-				elseif p.char == db.char_id.xiangfei and p.act == 0x9F and p.act_count == 2 and p.act_frame >= 0 and p.char_data.add_throw then
-					p.reset_sp_hook(p.char_data.add_throw) -- 閃里肘皇・心砕把
-				elseif p.char == db.char_id.duck and (p.act == 0xAF or p.act == 0xB8 or p.act == 0xB9) then
-					p.reset_sp_hook(p.char_data.add_throw) -- ダック
+			-- 自動追撃
+			if p.in_block ~= true then
+				-- 自動投げ追撃
+				if global.auto_input.combo_throw then
+					if p.char == db.char_id.joe and p.act == 0x70 then
+						p.reset_cmd_hook(db.cmd_types._2C) -- ジョー
+					elseif p.act == 0x6D and p.char_data.add_throw then
+						p.reset_sp_hook(p.char_data.add_throw) -- ボブ、ギース、双角、マリー
+					elseif p.char == db.char_id.xiangfei and p.act == 0x9F and p.act_count == 2 and p.act_frame >= 0 and p.char_data.add_throw then
+						p.reset_sp_hook(p.char_data.add_throw) -- 閃里肘皇・心砕把
+					elseif p.char == db.char_id.duck and (p.act == 0xAF or p.act == 0xB8 or p.act == 0xB9) then
+						p.reset_sp_hook(p.char_data.add_throw) -- ダック
+					end
 				end
-			end
 
-			-- 自動閃里肘皇・貫空
-			if global.auto_input.kanku and p.char == db.char_id.xiangfei then
-				if p.act == 0xA1 and p.act_count == 6 and p.act_frame >= 0 then
-					p.reset_sp_hook(db.rvs_bs_list[p.char][21]) -- 閃里肘皇・貫空
+				-- 自動閃里肘皇・貫空
+				if global.auto_input.kanku and p.char == db.char_id.xiangfei then
+					if p.act == 0xA1 and p.act_count == 6 and p.act_frame >= 0 then
+						p.reset_sp_hook(db.rvs_bs_list[p.char][21]) -- 閃里肘皇・貫空
+					end
 				end
-			end
 
-			-- 自動超白龍
-			if 1 < global.auto_input.pairon and p.char == db.char_id.xiangfei then
-				if p.act == 0x43 and p.act_count >= 0 and p.act_count <= 3 and p.act_frame >= 0 and 2 == global.auto_input.pairon then
-					p.reset_sp_hook(db.rvs_bs_list[p.char][28]) -- 超白龍
-				elseif p.act == 0x43 and p.act_count == 3 and p.act_count <= 3 and p.act_frame >= 0 and 3 == global.auto_input.pairon then
-					p.reset_sp_hook(db.rvs_bs_list[p.char][28]) -- 超白龍
+				-- 自動超白龍
+				if 1 < global.auto_input.pairon and p.char == db.char_id.xiangfei then
+					if p.act == 0x43 and p.act_count >= 0 and p.act_count <= 3 and p.act_frame >= 0 and 2 == global.auto_input.pairon then
+						p.reset_sp_hook(db.rvs_bs_list[p.char][28]) -- 超白龍
+					elseif p.act == 0x43 and p.act_count == 3 and p.act_count <= 3 and p.act_frame >= 0 and 3 == global.auto_input.pairon then
+						p.reset_sp_hook(db.rvs_bs_list[p.char][28]) -- 超白龍
+					end
+					if p.act == 0xFE then
+						p.reset_sp_hook(db.rvs_bs_list[p.char][29]) -- 超白龍2
+					end
 				end
-				if p.act == 0xFE then
-					p.reset_sp_hook(db.rvs_bs_list[p.char][29]) -- 超白龍2
-				end
+			else
+				-- ブレイクショット
+				if p.gd_bs_enabled then p.reset_sp_hook(p.dummy_bs) end
 			end
-
-			-- ブレイクショット
-			if p.gd_bs_enabled then p.reset_sp_hook(p.dummy_bs) end
 		end
 
 		-- レコード＆リプレイ
@@ -6847,7 +6872,7 @@ rbff2.startplugin  = function()
 			a.bak_limit   = col[ 5] - 1     -- この間合いより遠のいた時
 			a.atk_only    = col[ 6] == 2    -- 攻撃にのみ反応する
 			-- リバーサル やられ時行動のメニュー設定
-			if cancel == false and a.type == 2 and row == 1 then next_menu = menu.rvs_menus[i][p.char] end
+			if cancel ~= true and a.type == 2 and row == 1 then next_menu = menu.rvs_menus[i][p.char] end
 			menu.set_current(next_menu)
 		end
 		local on_a = function() on_x(false) end
@@ -7179,7 +7204,8 @@ rbff2.startplugin  = function()
 			{ "DEBUG4-4 半自動潜在能力", menu.labels.off_on, },
 			{ title = true, "自動追加動作" },
 			{ "自動ダウン投げ", menu.labels.off_on, },
-			{ "自動必殺投げ", menu.labels.off_on, },
+			{ "自動必殺投げ", { "OFF", "ON", "ON:空キャン投げ", "ON:直投げ" }, },
+			{ "自動空キャン投げ猶予F", { "3:最速", 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 }, },
 			{ "自動ダウン攻撃", menu.labels.off_on, },
 			{ "自動投げ派生", menu.labels.off_on, },
 			{ "デッドリーレイブ", { "通常動作", 2, 3, 4, 5, 6, 7, 8, 9, 10 }, },
@@ -7207,27 +7233,28 @@ rbff2.startplugin  = function()
 			col[2] = dip_config.semiauto_p and 2 or 1 -- 半自動潜在能力
 			-- 3 自動追加動作
 			col[4] = g.auto_input.otg_throw and 2 or 1 -- ダウン投げ
-			col[5] = g.auto_input.sp_throw and 2 or 1 -- 必殺投げ
-			col[6] = g.auto_input.otg_attack and 2 or 1 -- ダウン攻撃
-			col[7] = g.auto_input.combo_throw and 2 or 1 -- 通常投げの派生技
-			col[8] = g.auto_input.rave             -- デッドリーレイブ
-			col[9] = g.auto_input.desire           -- アンリミテッドデザイア
-			col[10] = g.auto_input.drill           -- ドリル
-			col[11] = g.auto_input.kanku and 2 or 1 -- 閃里肘皇・貫空
-			col[12] = g.auto_input.pairon          -- 超白龍
-			col[13] = g.auto_input.real_counter    -- M.リアルカウンター
-			col[14] = g.auto_input.auto_3ecst and 2 or 1 -- M.トリプルエクスタシー
-			col[15] = g.auto_input.taneuma and 2 or 1 -- 炎の種馬
-			col[16] = g.auto_input.katsu_ca and 2 or 1 -- 喝CA
-			col[17] = g.auto_input.sikkyaku_ca     -- 飛燕失脚CA
-			-- 18 MOD
-			col[19] = g.auto_input.esaka_check     -- 詠酒距離チェック
-			col[20] = g.auto_input.fast_kadenzer and 2 or 1 -- 必勝！逆襲拳
-			col[21] = g.auto_input.kara_ca and 2 or 1 -- 空振りCA
-			col[22] = g.auto_input.no_charge and 2 or 1 -- タメ時間なし
-			col[23] = g.auto_input.cancel and 2 or 1 -- 全通常技キャンセル可能
-			col[24] = g.auto_input.fast_recover and 2 or 1 -- 高速気絶回復
-			col[25] = g.auto_input.hebi_damashi and 2 or 1 -- 最速蛇だまし
+			col[5] = g.auto_input.sp_throw -- 自動必殺投げ 1:OFF 2:ON 3:ON:空キャン投げ 4:ON:直投げ
+			col[6] = g.auto_input.sp_throw_lag -- 自動必殺投げ 空キャン投げのラグ
+			col[7] = g.auto_input.otg_attack and 2 or 1 -- ダウン攻撃
+			col[8] = g.auto_input.combo_throw and 2 or 1 -- 通常投げの派生技
+			col[9] = g.auto_input.rave             -- デッドリーレイブ
+			col[10] = g.auto_input.desire          -- アンリミテッドデザイア
+			col[11] = g.auto_input.drill           -- ドリル
+			col[12] = g.auto_input.kanku and 2 or 1 -- 閃里肘皇・貫空
+			col[13] = g.auto_input.pairon          -- 超白龍
+			col[14] = g.auto_input.real_counter    -- M.リアルカウンター
+			col[15] = g.auto_input.auto_3ecst and 2 or 1 -- M.トリプルエクスタシー
+			col[16] = g.auto_input.taneuma and 2 or 1 -- 炎の種馬
+			col[17] = g.auto_input.katsu_ca and 2 or 1 -- 喝CA
+			col[18] = g.auto_input.sikkyaku_ca     -- 飛燕失脚CA
+			-- 19 MOD
+			col[20] = g.auto_input.esaka_check     -- 詠酒距離チェック
+			col[21] = g.auto_input.fast_kadenzer and 2 or 1 -- 必勝！逆襲拳
+			col[22] = g.auto_input.kara_ca and 2 or 1 -- 空振りCA
+			col[23] = g.auto_input.no_charge and 2 or 1 -- タメ時間なし
+			col[24] = g.auto_input.cancel and 2 or 1 -- 全通常技キャンセル可能
+			col[25] = g.auto_input.fast_recover and 2 or 1 -- 高速気絶回復
+			col[26] = g.auto_input.hebi_damashi and 2 or 1 -- 最速蛇だまし
 		end,
 		ut.new_filled_table(25, function()
 			local col, g, ez           = menu.auto.pos.col, global, mod.easy_move
@@ -7235,27 +7262,28 @@ rbff2.startplugin  = function()
 			dip_config.semiauto_p      = col[2] == 2 -- 半自動潜在能力
 			-- 3 自動追加動作
 			g.auto_input.otg_throw     = col[4] == 2 -- ダウン投げ
-			g.auto_input.sp_throw      = col[5] == 2 -- 必殺投げ
-			g.auto_input.otg_attack    = col[6] == 2 -- ダウン攻撃
-			g.auto_input.combo_throw   = col[7] == 2 -- 通常投げの派生技
-			g.auto_input.rave          = col[8] -- デッドリーレイブ
-			g.auto_input.desire        = col[9] -- アンリミテッドデザイア
-			g.auto_input.drill         = col[10] -- ドリル
-			g.auto_input.kanku         = col[11] == 2 -- 閃里肘皇・貫空
-			g.auto_input.pairon        = col[12] -- 超白龍
-			g.auto_input.real_counter  = col[13] -- M.リアルカウンター
-			g.auto_input.auto_3ecst    = col[14] == 2 -- M.トリプルエクスタシー
-			g.auto_input.taneuma       = col[15] == 2 -- 炎の種馬
-			g.auto_input.katsu_ca      = col[16] == 2 -- 喝CA
-			g.auto_input.sikkyaku_ca   = col[17] -- 飛燕失脚CA
-			-- 18 MOD
-			g.auto_input.esaka_check   = col[19] -- 詠酒チェック
-			g.auto_input.fast_kadenzer = col[20] == 2 -- 必勝！逆襲拳
-			g.auto_input.kara_ca       = col[21] == 2 -- 空振りCA
-			g.auto_input.no_charge     = col[22] == 2 -- タメ時間なし
-			g.auto_input.cancel        = col[23] == 2 -- 全通常技キャンセル可能
-			g.auto_input.fast_recover  = col[24] == 2 -- 高速気絶回復
-			g.auto_input.hebi_damashi  = col[25] == 2 -- 最速蛇だまし
+			g.auto_input.sp_throw      = col[5] -- 自動必殺投げ 1:OFF 2:ON 3:ON:空キャン投げ 4:ON:直投げ
+			g.auto_input.sp_throw_lag  = col[6] -- 自動必殺投げ 空キャン投げのラグ
+			g.auto_input.otg_attack    = col[7] == 2 -- ダウン攻撃
+			g.auto_input.combo_throw   = col[8] == 2 -- 通常投げの派生技
+			g.auto_input.rave          = col[9] -- デッドリーレイブ
+			g.auto_input.desire        = col[10] -- アンリミテッドデザイア
+			g.auto_input.drill         = col[11] -- ドリル
+			g.auto_input.kanku         = col[12] == 2 -- 閃里肘皇・貫空
+			g.auto_input.pairon        = col[13] -- 超白龍
+			g.auto_input.real_counter  = col[14] -- M.リアルカウンター
+			g.auto_input.auto_3ecst    = col[15] == 2 -- M.トリプルエクスタシー
+			g.auto_input.taneuma       = col[16] == 2 -- 炎の種馬
+			g.auto_input.katsu_ca      = col[17] == 2 -- 喝CA
+			g.auto_input.sikkyaku_ca   = col[18] -- 飛燕失脚CA
+			-- 19 MOD
+			g.auto_input.esaka_check   = col[20] -- 詠酒チェック
+			g.auto_input.fast_kadenzer = col[21] == 2 -- 必勝！逆襲拳
+			g.auto_input.kara_ca       = col[22] == 2 -- 空振りCA
+			g.auto_input.no_charge     = col[23] == 2 -- タメ時間なし
+			g.auto_input.cancel        = col[24] == 2 -- 全通常技キャンセル可能
+			g.auto_input.fast_recover  = col[25] == 2 -- 高速気絶回復
+			g.auto_input.hebi_damashi  = col[26] == 2 -- 最速蛇だまし
 			-- 簡易入力のROMハックを反映する
 			ez.real_counter(g.auto_input.real_counter) -- ジャーマン, フェイスロック, 投げっぱなしジャーマン
 			ez.esaka_check(g.auto_input.esaka_check) -- 詠酒の条件チェックを飛ばす

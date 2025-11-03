@@ -1719,6 +1719,7 @@ local hook_cmd_types   = {
 	jump = 2 ^ 8,
 	ex_breakshot = 2 ^ 9,
 	air_throw = 2 ^ 10,
+	sp_throw = 2 ^ 11,
 }
 hook_cmd_types.ex_breakshot = hook_cmd_types.breakshot | hook_cmd_types.ex_breakshot
 local common_rvs = {
@@ -1826,9 +1827,9 @@ local rvs_bs_list = {
 		{ id = 0x04, f = 0x06, a = 0xFE, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "裏雲隠し", },
 		{ id = 0x05, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "下段当て身打ち", },
 		{ id = 0x06, f = 0x06, a = 0x00, hook_type = hook_cmd_types.otg_throw, name = "雷鳴豪波投げ", },
-		{ id = 0x07, f = 0x06, a = 0xFD, hook_type = hook_cmd_types.reversal | hook_cmd_types.throw | hook_cmd_types.ex_breakshot, name = "真空投げ", },
+		{ id = 0x07, f = 0x06, a = 0xFD, hook_type = hook_cmd_types.reversal | hook_cmd_types.sp_throw | hook_cmd_types.throw | hook_cmd_types.ex_breakshot, name = "真空投げ", },
 		{ id = 0x10, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "レイジングストーム", },
-		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "羅生門", },
+		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.sp_throw | hook_cmd_types.ex_breakshot, name = "羅生門", },
 		{ id = 0x13, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "デッドリーレイブ", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 烈風拳", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント レイジングストーム", },
@@ -1841,7 +1842,7 @@ local rvs_bs_list = {
 		{ id = 0x01, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "野猿狩り", },
 		{ id = 0x02, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "まきびし", },
 		{ id = 0x03, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "憑依弾", },
-		{ id = 0x04, f = 0x06, a = 0xFE, hook_type = hook_cmd_types.reversal| hook_cmd_types.throw | hook_cmd_types.ex_breakshot, name = "鬼門陣", },
+		{ id = 0x04, f = 0x06, a = 0xFE, hook_type = hook_cmd_types.reversal| hook_cmd_types.sp_throw | hook_cmd_types.throw | hook_cmd_types.ex_breakshot, name = "鬼門陣", },
 		{ id = 0x05, f = 0x0C, a = 0xFF, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "邪棍舞", },
 		{ id = 0x06, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "喝", },
 		{ id = 0x07, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "渦炎陣", },
@@ -1941,10 +1942,10 @@ local rvs_bs_list = {
 		{ id = 0x05, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "ヤキ入れ", },
 		{ id = 0x06, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "倍返し", },
 		{ id = 0x07, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "裁きの匕首", },
-		{ id = 0x08, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.throw | hook_cmd_types.ex_breakshot, name = "爆弾パチキ", },
+		{ id = 0x08, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.sp_throw | hook_cmd_types.throw | hook_cmd_types.ex_breakshot, name = "爆弾パチキ", },
 		{ id = 0x09, f = 0x0C, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.otg_stomp | hook_cmd_types.add_throw | hook_cmd_types.ex_breakshot, name = "トドメ", },
 		{ id = 0x10, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "ギロチン", },
-		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.throw | hook_cmd_types.ex_breakshot, name = "ドリル", },
+		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.sp_throw | hook_cmd_types.throw | hook_cmd_types.ex_breakshot, name = "ドリル", },
 		{ id = 0x23, f = 0x78, a = 0x00, hook_type = hook_cmd_types.wakeup, name = "メツブシ", },
 		{ id = 0x00, f = 0x06, a = 0xFE, hook_type = hook_cmd_types.add_attack, name = "ドリル Lv.5", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 裁きの匕首", },
@@ -2006,8 +2007,8 @@ local rvs_bs_list = {
 		{ id = 0x09, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "ダンシングキャリバー", },
 		{ id = 0x0A, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "ローリングパニッシャー", },
 		{ id = 0x0C, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "ブレイクハリケーン", },
-		{ id = 0x10, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.throw | hook_cmd_types.ex_breakshot, name = "ブレイクスパイラル", },
-		{ id = 0x11, f = 0x06, a = 0xFA, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "ブレイクスパイラルBR", },
+		{ id = 0x10, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.sp_throw | hook_cmd_types.throw | hook_cmd_types.ex_breakshot, name = "ブレイクスパイラル", },
+		{ id = 0x11, f = 0x06, a = 0xFA, hook_type = hook_cmd_types.reversal | hook_cmd_types.air_throw | hook_cmd_types.ex_breakshot, name = "ブレイクスパイラルBR", },
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "ダックダンス", },
 		{ id = 0x00, f = 0x06, a = 0xF8, hook_type = hook_cmd_types.add_attack, name = "ダックダンス継続", },
 		{ id = 0x13, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "スーパーポンピングマシーン", },
@@ -2096,13 +2097,13 @@ local rvs_bs_list = {
 		{ id = 0x01, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "ブリッツボール・上段", },
 		{ id = 0x02, f = 0x06, a = 0xFF, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "ブリッツボール・下段", },
 		{ id = 0x03, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "レッグトマホーク", },
-		{ id = 0x04, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.throw | hook_cmd_types.ex_breakshot, name = "フェニックススルー", },
-		{ id = 0x05, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.throw | hook_cmd_types.ex_breakshot, name = "デンジャラススルー", },
+		{ id = 0x04, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.ex_breakshot, name = "フェニックススルー", },
+		{ id = 0x05, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.sp_throw | hook_cmd_types.throw | hook_cmd_types.ex_breakshot, name = "デンジャラススルー", },
 		{ id = 0x00, f = 0x06, a = 0xFD, hook_type = hook_cmd_types.add_attack, name = "グリフォンアッパー", },
 		{ id = 0x06, f = 0x06, a = 0xFC, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "カイザークロー", },
-		{ id = 0x07, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "リフトアップブロー", },
+		{ id = 0x07, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.sp_throw | hook_cmd_types.throw | hook_cmd_types.ex_breakshot, name = "リフトアップブロー", },
 		{ id = 0x10, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "カイザーウェイブ", },
-		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.throw | hook_cmd_types.ex_breakshot, name = "ギガティックサイクロン", },
+		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.sp_throw | hook_cmd_types.throw | hook_cmd_types.ex_breakshot, name = "ギガティックサイクロン", },
 		{ id = 0x13, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "アンリミテッドデザイア", },
 		{ id = 0x00, f = 0x06, a = 0xFE, hook_type = hook_cmd_types.add_attack, name = "アンリミテッドデザイア2", },
 		{ id = 0x21, f = 0x06, a = 0x00, hook_type = hook_cmd_types.otg_stomp, name = "ダイビングエルボー", },
@@ -2142,7 +2143,7 @@ local rvs_bs_list = {
 		{ id = 0x10, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "大鉄神", },
 		{ id = 0x11, f = 0x06, a = 0xFD, hook_type = hook_cmd_types.reversal, name = "超白龍", },
 		{ id = 0x00, f = 0x06, a = 0xFD, hook_type = hook_cmd_types.add_attack, name = "超白龍2", },
-		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.throw | hook_cmd_types.ex_breakshot, name = "真心牙（投げ狙い）", },
+		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.sp_throw | hook_cmd_types.throw | hook_cmd_types.ex_breakshot, name = "真心牙（投げ狙い）", },
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.ex_breakshot, name = "真心牙（弾狙い）", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 天崩山", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 大鉄神", },
@@ -2177,8 +2178,7 @@ for char, list in ipairs(rvs_bs_list) do
 			local cmd, rev = rvs.cmd, rvs.cmd
 			if (rev & cmd_types._6) == cmd_types._6 then
 				rev = (rev - cmd_types._6) | cmd_types._4
-			end
-			if (rev & cmd_types._4) == cmd_types._4 then
+			elseif (rev & cmd_types._4) == cmd_types._4 then
 				rev = (rev - cmd_types._4) | cmd_types._6
 			end
 			rvs.cmd = { [-1] = rev, [1] = cmd }
@@ -2358,6 +2358,23 @@ local flag_c8       = {
 	_30 = 2 ^ 30, -- 必殺技
 	_31 = 2 ^ 31, -- 必殺技
 }
+flag_c8.normal_atk  =
+	flag_c8._00 | --
+	flag_c8._01 | --
+	flag_c8._02 | --
+	flag_c8._03 | --
+	flag_c8._04 | --
+	flag_c8._05 | --
+	flag_c8._06 | --
+	flag_c8._07 | --
+	flag_c8._08 | -- 特殊技
+	flag_c8._09 | --
+	flag_c8._10 | --
+	flag_c8._11 | -- 特殊技
+	flag_c8._12 | -- 特殊技
+	flag_c8._13 | -- 特殊技
+	flag_c8._14 | -- 特殊技
+	flag_c8._15  -- 特殊技
 local flag_cc       = {
 	_00 = 2 ^ 0, -- CA
 	_01 = 2 ^ 1, -- AかB攻撃
@@ -2476,18 +2493,6 @@ flag_cc.hurt     =
 	flag_cc._12 | -- ラインずらしやられ
 	flag_cc._14 | -- 空中やられ
 	flag_cc._15 -- 地上やられ
-flag_cc.all_hurt = -- やられ継続状態
-	flag_cc._03 | -- 必殺投げやられ
-	flag_cc._08 | -- 投げ派生やられ
-	flag_cc._09 | -- つかみ投げやられ
-	flag_cc._10 | -- 投げられ
-	flag_cc._12 | -- ラインずらしやられ
-	flag_cc._13 | -- ダウン
-	flag_cc._14 | -- 空中やられ
-	flag_cc._15 | -- 地上やられ
-	flag_cc._17 | -- 気絶
-	flag_cc._18 | -- 気絶起き上がり
-	flag_cc._23   -- 起き上がり
 flag_d0.hurt        =
 	flag_d0._03 | -- ギガティック投げられ
 	flag_d0._06 | -- ガード中、やられ中
