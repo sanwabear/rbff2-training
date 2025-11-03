@@ -1971,7 +1971,7 @@ rbff2.startplugin  = function()
 				fall_limit  = 53,
 				fwd_limit   = 0,
 				bak_limit   = 0,
-				atk_only    = true,
+				atk_only    = 1, -- 追加の動作条件 1:OFF 2:相手の攻撃に反応 3:相手の移動中に発動 4:自身の動作中に発動
 			},
 
 			addr            = {
@@ -1998,13 +1998,13 @@ rbff2.startplugin  = function()
 				},
 			},
 
-			add_cmd_hook    = function(cmd)
+			add_cmd_hook    = function(cmd, label)
 				local p = players[i]
 				p.bs_hook = (p.bs_hook and p.bs_hook.cmd) and p.bs_hook or { cmd = db.cmd_types._5 }
 				cmd = type(cmd) == "table" and cmd[p.cmd_side] or cmd
 				p.bs_hook.cmd = p.bs_hook.cmd & db.cmd_masks[cmd]
 				p.bs_hook.cmd = p.bs_hook.cmd | cmd
-				--ut.printf("%d %s add_cmd_hook cmd %x", global.frame_number, p.num, cmd)
+				if global.rvslog then ut.printf("%d %s add_cmd_hook cmd %x %s", global.frame_number, p.num, cmd, label or "") end
 			end,
 			clear_cmd_hook  = function(mask)
 				local p = players[i]
@@ -2012,14 +2012,14 @@ rbff2.startplugin  = function()
 				mask = type(mask) == "table" and mask[p.cmd_side] or mask
 				mask = 0xFF ~ mask
 				p.bs_hook.cmd = p.bs_hook.cmd & mask
-				--ut.printf("%d %s clear_cmd_hook cmd %x", global.frame_number, p.num, mask)
+				if global.rvslog then ut.printf("%d %s clear_cmd_hook cmd %x", global.frame_number, p.num, mask) end
 			end,
 			reset_cmd_hook  = function(cmd)
 				local p = players[i]
 				p.bs_hook = (p.bs_hook and p.bs_hook.cmd) and p.bs_hook or { cmd = db.cmd_types._5 }
 				cmd = type(cmd) == "table" and cmd[p.cmd_side] or cmd
 				p.bs_hook = { cmd = cmd }
-				--ut.printf("%d %s reset_cmd_hook cmd %x", global.frame_number, p.num, cmd)
+				if global.rvslog then ut.printf("%d %s reset_cmd_hook cmd %x", global.frame_number, p.num, cmd) end
 			end,
 			reset_sp_hook   = function(hook)
 				if hook and hook.cmd then
@@ -2028,11 +2028,11 @@ rbff2.startplugin  = function()
 					local cmd = hook.cmd
 					cmd = type(cmd) == "table" and cmd[p.cmd_side] or cmd
 					p.bs_hook = { cmd = cmd }
-					--ut.printf("%d %s reset_sp_hook cmd %x", global.frame_number, p.num, hook.cmd)
+					if global.rvslog then ut.printf("%d %s reset_sp_hook cmd %x", global.frame_number, p.num, hook.cmd) end
 				else
 					local p = players[i]
 					p.bs_hook = hook
-					--ut.printf("%d %s reset_sp_hook sp %s", global.frame_number, p.num, hook and "*table*" or "*NIL*")
+					if global.rvslog then ut.printf("%d %s reset_sp_hook sp %s", global.frame_number, p.num, hook and "*table*" or "*NIL*") end
 				end
 			end,
 		}
@@ -2480,7 +2480,7 @@ rbff2.startplugin  = function()
 					ret.value = db.hit_effects.addrs[global.damaged_move]
 				end
 			end,
-			-- [0x0C] = function(data) p.reserve_proc = data end,               -- 予約中の処理アドレス
+			[0x0C] = function(data) p.reserve_proc = data end,             -- 予約中の処理アドレス
 			[0xC0] = function(data) p.flag_c0 = data end,                  -- フラグ群
 			[0xC4] = function(data) p.flag_c4 = data end,                  -- フラグ群
 			[0xC8] = function(data) p.flag_c8 = data end,                  -- フラグ群
@@ -2711,18 +2711,21 @@ rbff2.startplugin  = function()
 				local p = get_object_by_reg("A4", {})
 				local sp = p.bs_hook
 				if not sp then return end
+				if sp.cmd then return end
 				if (sp ~= p.dummy_rvs or sp ~= p.dummy_enc) and sp == p.dummy_bs and p.base ~= 0x5893A then return end
 				-- 自動必殺投げの場合は技成立データに別の必殺投げが含まれているならそれを優先させるために抜ける
 				if sp.ver then
 					if sp.auto_sp_throw and (sp.char == p.char) and db.sp_throws[mem.r08(p.addr.base + 0xA3)] then return end
-					--ut.printf("bs_hook1 %x %x", sp.id, sp.ver)
+					if global.rvslog then ut.printf("%s bs_hook1 %x %x", now(), sp.id or 0, sp.ver or 0) end
 					mem.w08(p.addr.base + 0xA3, sp.id)
 					mem.w16(p.addr.base + 0xA4, sp.ver)
-				else
+				elseif sp.f then
 					if sp.auto_sp_throw and (sp.char == p.char) and db.sp_throws[mem.r08(p.addr.base + 0xD6)] then return end
-					--ut.printf("bs_hook2 %x %x", sp.id, sp.f)
+					if global.rvslog then ut.printf("%s bs_hook2 %x %x", now(), sp.id or 0, sp.f or 0) end
 					mem.w08(p.addr.base + 0xD6, sp.id)
 					mem.w08(p.addr.base + 0xD7, sp.f)
+				else
+					if global.rvslog then ut.printf("%s bs_hook *BUG* %s %s %s %s", now(), sp.id, sp.f, sp.ver, sp.cmd) end
 				end
 			end,
 		},
@@ -3464,6 +3467,7 @@ rbff2.startplugin  = function()
 				end
 			end
 			p.bs_hook = { cmd = reg_pcnt, on1f = on1f, on5f = on5f, hold = hold }
+			if global.rvslog then ut.printf("%d %s reset_cmd_hook cmd %x", global.frame_number, p.num, reg_pcnt) end
 			recording.play_count = recording.play_count + 1
 
 			-- 繰り返し判定
@@ -4370,6 +4374,7 @@ rbff2.startplugin  = function()
 	end
 
 	local input_enc = function(p)
+		if global.rvslog then emu.print_info(string.format("%s %s", global.frame_number, "input_enc")) end
 		if ut.tstb(p.dummy_enc.hook_type, hook_cmd_types.throw) and not ut.tstb(p.dummy_enc.hook_type, hook_cmd_types.sp_throw) then
 			if p.act == 0x9 and p.act_frame > 1 then return end -- 着地硬直は投げでないのでスルー
 			if p.op.in_air then return end
@@ -5046,8 +5051,8 @@ rbff2.startplugin  = function()
 		abs_elev, old_elev = math.abs(p_elev), math.abs(prev_elev)
 		abs_space, old_space = math.abs(p_space), math.abs(prev_space)
 		for _, p in ipairs(players) do
-			p.falling           = ut.tstb(p.flag_c0, db.flag_c0.jump) and abs_elev <= old_elev
-			p.rising            = ut.tstb(p.flag_c0, db.flag_c0.jump) and not p.falling
+			p.falling           = ut.tstb(p.flag_c0, db.flag_c0.jump) == true and abs_elev <= old_elev
+			p.rising            = ut.tstb(p.flag_c0, db.flag_c0.jump) == true and not p.falling
 			p.expanding         = abs_space > old_space or (abs_space == old_space and abs_space == 248)
 			p.closing           = abs_space < old_space or (abs_space == old_space and abs_space == 0)
 		end
@@ -5175,7 +5180,11 @@ rbff2.startplugin  = function()
 				end
 			end
 			-- リプレイ中は自動ガードしない
-			if p.dummy_gd ~= dummy_gd_type.none and ut.tstb(act_type, db.act_types.attack) and in_record == false and in_replay == false then
+			if ut.tstb(p.flag_c0, db.flag_c0._24) and not ut.tstb(p.flag_7e, db.flag_7e._02) then
+				-- ダッシュは中断可能動作なので切り替えフラグが立つまではガード移行させないでダッシュを可能なかぎり持続させる
+			elseif p.base == 0x2AEA4 or p.base == 0x58A32 or p.base == 0x2AFB0 then
+				-- ダッシュ移行のプログラム動作時も同様。できれば利用可能なフラグで再現できるようにするのがTODO。
+			elseif p.dummy_gd ~= dummy_gd_type.none and ut.tstb(act_type, db.act_types.attack) == true and in_record == false and in_replay == false then
 				p.clear_cmd_hook(db.cmd_types._8) -- 上は無効化
 
 				-- 投げ無敵タイマーを使って256F経過後はガード状態を解除
@@ -5189,15 +5198,14 @@ rbff2.startplugin  = function()
 
 				if p.dummy_gd == dummy_gd_type.action then
 					-- アクション（ガード方向はダミーモードに従う）
-					p.add_cmd_hook(db.cmd_types.back)
+					p.add_cmd_hook(db.cmd_types.back, "dummy_gd_type.action")
 				elseif p.dummy_gd == dummy_gd_type.high then
 					-- 上段
 					p.clear_cmd_hook(db.cmd_types._2)
-					p.add_cmd_hook(db.cmd_types.back)
+					p.add_cmd_hook(db.cmd_types.back, "dummy_gd_type.high")
 				elseif p.dummy_gd == dummy_gd_type.low then
 					-- 下段
-					p.add_cmd_hook(db.cmd_types._2)
-					p.add_cmd_hook(db.cmd_types.back)
+					p.add_cmd_hook(db.cmd_types.back_crouch, "dummy_gd_type.low")
 				elseif p.dummy_gd == dummy_gd_type.auto or  -- オート
 					p.dummy_gd == dummy_gd_type.bs or       -- ブレイクショット
 					p.dummy_gd == dummy_gd_type.random or   -- ランダム
@@ -5212,9 +5220,9 @@ rbff2.startplugin  = function()
 					elseif ut.tstb(p.op.flag_c0, db.flag_c0.jump) and (p.op.flag_c4 > 0) then
 						p.clear_cmd_hook(db.cmd_types._2)
 					elseif ut.tstb(act_type, db.act_types.low_attack, true) then
-						p.add_cmd_hook(db.cmd_types._2)
+						p.add_cmd_hook(db.cmd_types._2, "db.act_types.low_attack")
 					elseif global.crouch_block then
-						p.add_cmd_hook(db.cmd_types._2)
+						p.add_cmd_hook(db.cmd_types._2, "global.crouch_block")
 					end
 					if p.dummy_gd == dummy_gd_type.block1 and p.next_block ~= true then
 						-- 1ガードの時は連続ガードの上下段のみ対応させる
@@ -5225,7 +5233,9 @@ rbff2.startplugin  = function()
 						elseif p.op.on_update_act == global.frame_number then
 							p.next_block = global.random_boolean(0.65)
 						end
-						if p.next_block then p.add_cmd_hook(db.cmd_types.back) end
+						if p.next_block then
+							p.add_cmd_hook(db.cmd_types.back, string.format("other block %8X %8X", p.old.base, p.base))
+						end
 					end
 				end
 				-- コマンド入力状態を無効にしてバクステ暴発を防ぐ
@@ -5267,7 +5277,9 @@ rbff2.startplugin  = function()
 
 			-- 相手がプレイヤーで挑発中は前進
 			if not global.proceed_cpu then
-				if p.fwd_prov and (p.op.control ~= 3) and ut.tstb(p.op.flag_cc, db.flag_cc._19) then p.add_cmd_hook(db.cmd_types.front) end
+				if p.fwd_prov and (p.op.control ~= 3) and ut.tstb(p.op.flag_cc, db.flag_cc._19) then
+					p.add_cmd_hook(db.cmd_types.front, "p.fwd_prov")
+				end
 			end
 
 			-- ガードリバーサル
@@ -5360,23 +5372,46 @@ rbff2.startplugin  = function()
 			end
 
 			-- 自動避け攻撃対空
-			if p.away_anti_air.enabled and not p.op.in_hitstun then
-				local aaa, attacking = p.away_anti_air, 0 < (p.op.flag_c4 | p.op.flag_c8)
-				local closing, expanding = p.closing or p.op.closing, p.expanding or p.op.expanding
-				local xa, ya         = false, false
+			if p.away_anti_air.enabled and not p.op.in_hitstun and not p.bs_hook then
+				local aaa, op = p.away_anti_air, p.op
+				local other_cond = false
+				local falling, rising = p.falling or op.falling, p.rising or op.rising
+				if aaa.atk_only == 1 then -- 1:OFF
+					other_cond = true
+					--falling, rising = p.falling or op.falling, p.rising or op.rising
+				elseif aaa.atk_only == 2 then -- 2:相手の攻撃に反応
+					other_cond = p.flag_c4 == 0 and p.flag_c8 == 0 and 0 < (op.flag_c4 | op.flag_c8)
+					--falling, rising = op.falling, op.rising
+				elseif aaa.atk_only == 3 then -- 3:相手の移動中に発動
+					other_cond = p.flag_c4 == 0 and p.flag_c8 == 0 and (ut.tstb(op.flag_c8, db.flag_c8.normal_atk) or op.diff_pos_total ~= 0 or op.diff_pos_total_y ~= 0)
+					--falling, rising = op.falling, op.rising
+				elseif aaa.atk_only == 4 then -- 4:自身の動作中に発動
+					other_cond = p.in_naked == true and (ut.tstb(p.flag_c8, db.flag_c8.normal_atk) or p.diff_pos_total ~= 0 or p.diff_pos_total_y ~= 0)
+					--falling, rising = p.falling , p.rising
+				end
+				local closing, expanding = p.closing or op.closing, p.expanding or op.expanding
+				local xa, ya = false, false
 				local xlabel, ylabel, label
 				local chk_rise = aaa.rise_limit > 0 -- この高さより上昇時
 				local chk_fall = aaa.fall_limit > 0 -- この高さより下降時
 				local chk_fwd  = aaa.fwd_limit  > 0 -- この間合いより近づいた時
 				local chk_bak  = aaa.bak_limit  > 0 -- この間合いより遠のいた時
-				--label = string.format("%s %s %4s %3s %3s", global.frame_number, p.num, p.falling and "fall" or (p.rising and "rise" or ""), closing and "clo" or (expanding and "exp" or ""), attacking and "atk" or "")
-				if p.flag_c4 == 0 and p.flag_c8 == 0 and ((aaa.atk_only and attacking) or not aaa.atk_only) then
+				--[[
+				label = string.format("%s %s %4s op:%4s %3s %3s",
+					global.frame_number,
+					p.num,
+					p.falling == true and "fall" or (p.rising == true and "rise" or ""),
+					op.falling == true and "fall" or (op.rising == true and "rise" or ""),
+					closing == true and "clo" or (expanding == true and "exp" or ""),
+					other_cond == true and "oth" or "")
+				]]
+				if other_cond == true then
 					if not chk_fall and not chk_rise then
 						ya = true -- 非ジャンプ全般
-					elseif p.falling and chk_fall and aaa.fall_limit >= abs_elev then -- ジャンプ下り
+					elseif falling and chk_fall and aaa.fall_limit >= abs_elev then -- ジャンプ下り
 						ylabel = label and string.format("%3d %2s %3d", aaa.fall_limit, ">=", abs_elev) or nil
 						ya = true
-					elseif p.rising and chk_rise and aaa.rise_limit <= abs_elev then -- ジャンプ上り
+					elseif rising and chk_rise and aaa.rise_limit <= abs_elev then -- ジャンプ上り
 						ylabel = label and string.format("%3d %2s %3d", aaa.rise_limit, "<=", abs_elev) or nil
 						ya = true
 					end
@@ -5486,7 +5521,7 @@ rbff2.startplugin  = function()
 				end
 			else
 				-- ブレイクショット
-				if p.gd_bs_enabled then p.reset_sp_hook(p.dummy_bs) end
+				if p.gd_bs_enabled == true then p.reset_sp_hook(p.dummy_bs) end
 			end
 		end
 
@@ -6910,7 +6945,7 @@ rbff2.startplugin  = function()
 			a.fall_limit  = col[ 3] - 1     -- この高さより下降時
 			a.fwd_limit   = col[ 4] - 1     -- この間合いより近づいた時
 			a.bak_limit   = col[ 5] - 1     -- この間合いより遠のいた時
-			a.atk_only    = col[ 6] == 2    -- 攻撃にのみ反応する
+			a.atk_only    = col[ 6]         -- 追加の動作条件 1:OFF 2:相手の攻撃に反応 3:相手の移動中に発動 4:自身の動作中に発動
 			-- 邀撃行動のメニュー設定
 			if cancel ~= true and a.type == 2 and row == 1 then next_menu = menu.enc_menus[i][p.char] end
 			menu.set_current(next_menu)
@@ -6926,16 +6961,16 @@ rbff2.startplugin  = function()
 				{ "この高さより下降時", jumplimit },
 				{ "この間合いより近づいた時", rangelimit },
 				{ "この間合いより遠のいた時", rangelimit },
-				{ "相手の攻撃にのみ反応する", menu.labels.off_on, },
+				{ "追加の動作条件", { "追加条件なし", "相手の攻撃に反応", "相手の移動に反応", "自身の動作で発動" }, },
 			},
 			function()
 				local col, a = menu[key].pos.col, players[i].away_anti_air
-				col[ 1] = a.type                -- 迎撃行動
-				col[ 2] = a.rise_limit + 1      -- この高さより上昇時
-				col[ 3] = a.fall_limit + 1      -- この高さより下降時
-				col[ 4] = a.fwd_limit  + 1      -- この間合いより近づいた時
-				col[ 5] = a.bak_limit  + 1      -- この間合いより遠のいた時
-				col[ 6] = a.atk_only and 2 or 1 -- 攻撃にのみ反応する
+				col[ 1] = a.type           -- 迎撃行動
+				col[ 2] = a.rise_limit + 1 -- この高さより上昇時
+				col[ 3] = a.fall_limit + 1 -- この高さより下降時
+				col[ 4] = a.fwd_limit  + 1 -- この間合いより近づいた時
+				col[ 5] = a.bak_limit  + 1 -- この間合いより遠のいた時
+				col[ 6] = a.atk_only       -- 追加の動作条件 1:OFF 2:相手の攻撃に反応 3:相手の移動中に発動 4:自身の動作中に発動
 			end,
 			ut.new_filled_table(6, on_a),
 			ut.new_filled_table(6, on_b))
