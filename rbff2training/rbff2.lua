@@ -229,6 +229,7 @@ rbff2.startplugin  = function()
 		exit = nil,
 		bs_menus = nil,
 		rvs_menus = nil,
+		enc_menus = nil,
 		bar = nil,
 		disp = nil,
 		extra = nil,
@@ -1084,6 +1085,7 @@ rbff2.startplugin  = function()
 		-- ut.printf("next %s %s/%s", top_label_count == 1 and "rvs" or "bs", idx, #ons)
 		return ons[idx]
 	end
+	local get_next_enc         = function(p) return get_next_xs(p, p.char_data and p.char_data.enc or nil, menu.enc_menus, 0) end
 	local get_next_rvs         = function(p) return get_next_xs(p, p.char_data and p.char_data.rvs or nil, menu.rvs_menus, 0) end
 	local get_next_bs          = function(p) return get_next_xs(p, p.char_data and p.char_data.bs or nil, menu.bs_menus, 0) end
 
@@ -1920,12 +1922,12 @@ rbff2.startplugin  = function()
 			dummy_wakeup    = wakeup_type.none, -- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
 			dummy_bs        = nil,       -- ランダムで選択されたブレイクショット
 			dummy_bs_list   = {},        -- ブレイクショットのコマンドテーブル上の技ID
-			dummy_bs_chr    = 0,         -- ブレイクショットの設定をした時のキャラID
 			bs_count        = -1,        -- ブレイクショットの実施カウント
 			dummy_rvs       = nil,       -- ランダムで選択されたリバーサル
 			dummy_rvs_list  = {},        -- リバーサルのコマンドテーブル上の技ID
-			dummy_rvs_chr   = 0,         -- リバーサルの設定をした時のキャラID
 			rvs_count       = -1,        -- リバーサルの実施カウント
+			dummy_enc       = nil,       -- ランダムで選択された邀撃
+			dummy_enc_list  = {},        -- 邀撃のコマンドテーブル上の技ID
 			gd_rvs_enabled  = false,     -- ガードリバーサルの実行可否
 			gd_bs_enabled   = false,     -- BSの実行可否
 			fwd_prov        = true,      -- 挑発で自動前進
@@ -1964,7 +1966,7 @@ rbff2.startplugin  = function()
 			pos_hist        = ut.new_filled_table(3, { x = format_num(0), y = format_num(0), z = "00", pos = 0, pos_frc = 0, pos_y = 0, pos_frc_y = 0, }),
 			away_anti_air   = {
 				enabled = false,
-				type        = 1, -- 1:避け攻撃 2:リバーサル技
+				type        = 1, -- 1:避け攻撃 2:邀撃技
 				rise_limit  = 0,
 				fall_limit  = 53,
 				fwd_limit   = 0,
@@ -2709,7 +2711,7 @@ rbff2.startplugin  = function()
 				local p = get_object_by_reg("A4", {})
 				local sp = p.bs_hook
 				if not sp then return end
-				if sp ~= p.dummy_rvs and sp == p.dummy_bs and p.base ~= 0x5893A then return end
+				if (sp ~= p.dummy_rvs or sp ~= p.dummy_enc) and sp == p.dummy_bs and p.base ~= 0x5893A then return end
 				-- 自動必殺投げの場合は技成立データに別の必殺投げが含まれているならそれを優先させるために抜ける
 				if sp.ver then
 					if sp.auto_sp_throw and (sp.char == p.char) and db.sp_throws[mem.r08(p.addr.base + 0xA3)] then return end
@@ -4367,6 +4369,19 @@ rbff2.startplugin  = function()
 		end
 	end
 
+	local input_enc = function(p)
+		if ut.tstb(p.dummy_enc.hook_type, hook_cmd_types.throw) and not ut.tstb(p.dummy_enc.hook_type, hook_cmd_types.sp_throw) then
+			if p.act == 0x9 and p.act_frame > 1 then return end -- 着地硬直は投げでないのでスルー
+			if p.op.in_air then return end
+			if p.op.sway_status ~= 0x00 then return end -- 全投げ無敵
+		elseif ut.tstb(p.dummy_enc.hook_type, hook_cmd_types.jump) then
+			if p.state == 0 and p.old.state == 0 and ((p.flag_c0 | p.old.flag_c0) & 0x10000) == 0x10000 then
+				return -- 連続通常ジャンプを繰り返さない
+			end
+		end
+		p.reset_sp_hook(p.dummy_enc)
+	end
+
 	-- 技データのIDかフラグから技データを返す
 	local resolve_act_neutral = function(p)
 		--[[
@@ -4567,7 +4582,7 @@ rbff2.startplugin  = function()
 			p.d6 = mem.r08(p.addr.base + 0xD6) -- 起き上がり攻撃用フラグ
 
 			-- リバーサルとBS動作の再抽選
-			p.dummy_rvs, p.dummy_bs = get_next_rvs(p), get_next_bs(p)
+			p.dummy_enc, p.dummy_rvs, p.dummy_bs = get_next_enc(p), get_next_rvs(p), get_next_bs(p)
 
 			-- キャンセル可否家庭用 02AD90 からの処理と各種呼び出し元からの断片
 			p.hit_cancelable = false
@@ -5377,10 +5392,8 @@ rbff2.startplugin  = function()
 				end
 				if xa and ya then
 					if label then ut.printf("%s Y:%s X:%s", label, ylabel, xlabel) end
-					local dummy_rvs = (aaa.type == 2) and get_next_rvs(p) or nil
-					if dummy_rvs then
-						p.dummy_rvs = dummy_rvs
-						input_rvs(rvs_types.in_knock_back, p, string.format("[AntiAir] %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer))
+					if (aaa.type == 2) and p.dummy_enc ~= nil then
+						input_enc(p)
 					else
 						p.reset_cmd_hook(db.cmd_types._AB)
 					end
@@ -6392,8 +6405,9 @@ rbff2.startplugin  = function()
 				p.next_block, p.next_block_ec = true, 75 -- カウンター初期化 true
 			end
 			p.block1 = 0
-			p.rvs_count, p.dummy_rvs_chr, p.dummy_rvs = -1, p.char, get_next_rvs(p) -- リバサガードカウンター初期化、キャラとBSセット
-			p.bs_count, p.dummy_bs_chr, p.dummy_bs = -1, p.char, get_next_bs(p) -- BSガードカウンター初期化、キャラとBSセット
+			p.dummy_enc = get_next_enc(p) -- リバサガードカウンター初期化、キャラとBSセット
+			p.rvs_count, p.dummy_rvs = -1, get_next_rvs(p) -- リバサガードカウンター初期化、キャラとBSセット
+			p.bs_count, p.dummy_bs = -1, get_next_bs(p) -- BSガードカウンター初期化、キャラとBSセット
 		end
 
 		g.old_dummy_mode = g.dummy_mode
@@ -6764,21 +6778,21 @@ rbff2.startplugin  = function()
 				p.next_block, p.next_block_ec = true, 75 -- カウンター初期化 true
 			end
 			p.block1 = 0
-			p.rvs_count, p.dummy_rvs_chr, p.dummy_rvs = -1, p.char, get_next_rvs(p) -- リバサガードカウンター初期化、キャラとBSセット
-			p.bs_count, p.dummy_bs_chr, p.dummy_bs = -1, p.char, get_next_bs(p) -- BSガードカウンター初期化、キャラとBSセット
+			p.dummy_enc = get_next_enc(p) -- キャラと邀撃セット
+			p.rvs_count, p.dummy_rvs = -1, get_next_rvs(p) -- リバサガードカウンター初期化、キャラとリバサセット
+			p.bs_count, p.dummy_bs = -1, get_next_bs(p) -- BSガードカウンター初期化、キャラとBSセット
 		end
 	end
 	-- ブレイクショットメニュー
-	menu.bs_menus, menu.rvs_menus = {}, {}
+	menu.bs_menus, menu.rvs_menus, menu.enc_menus = {}, {}, {}
 	local bs_blocks, rvs_blocks   = {}, {}
 	for i = 1, 60 do
 		table.insert(bs_blocks, string.format("%s回ガード後に発動", i))
 		table.insert(rvs_blocks, string.format("%s回ガード後に発動", i))
 	end
-
-	menu.rvs_to_tra = function()
+	menu.any_to_tra = function(any_menus)
 		local cur_prvs = nil
-		for _, prvs in ipairs(menu.rvs_menus) do
+		for _, prvs in ipairs(any_menus) do
 			for _, a_bs_menu in ipairs(prvs) do
 				if menu.current == a_bs_menu then
 					cur_prvs = prvs
@@ -6799,14 +6813,17 @@ rbff2.startplugin  = function()
 		end
 		menu.to_tra()
 	end
+	menu.rvs_to_tra = function() menu.any_to_tra(menu.rvs_menus) end
+	menu.enc_to_tra = function() menu.any_to_tra(menu.enc_menus) end
 	for i = 1, 2 do
-		local pbs, prvs = {}, {}
-		table.insert(menu.bs_menus, pbs)
-		table.insert(menu.rvs_menus, prvs)
+		local p_bs, p_rvs, p_enc = {}, {}, {}
+		table.insert(menu.bs_menus, p_bs)
+		table.insert(menu.rvs_menus, p_rvs)
+		table.insert(menu.enc_menus, p_enc)
 		for _, char_data in pairs(db.chars) do
 			if not char_data.bs then break end
 			local list, on_ab, col = {}, {}, {}
-			table.insert(pbs, {
+			table.insert(p_bs, {
 				name = string.format("ブレイクショット選択(%s)", char_data.name),
 				desc = "ONにしたスロットからランダムで発動されます。\n*がついたものは「全必殺技でBS可能」がON時のみ有効です。",
 				list = list,
@@ -6837,7 +6854,7 @@ rbff2.startplugin  = function()
 		for _, char_data in pairs(db.chars) do
 			if not char_data.rvs then break end
 			local list, on_ab, col = {}, {}, {}
-			table.insert(prvs, {
+			table.insert(p_rvs, {
 				name = string.format("リバーサル技選択(%s)", char_data.name),
 				desc = "ONにしたスロットからランダムで発動されます。",
 				list = list,
@@ -6848,6 +6865,29 @@ rbff2.startplugin  = function()
 			for _, bs in ipairs(char_data.rvs) do
 				table.insert(list, { ut.convert(bs.name), menu.labels.off_on, common = bs.common == true, row = #list, })
 				table.insert(on_ab, menu.rvs_to_tra)
+				table.insert(col, 1)
+			end
+		end
+		for _, char_data in pairs(db.chars) do
+			if not char_data.enc then break end
+			local list, on_ab, col = {}, {}, {}
+			table.insert(p_enc, {
+				name = string.format("邀撃(ようげき)技選択(%s)", char_data.name),
+				desc = "ONにしたスロットからランダムで発動されます。",
+				list = list,
+				pos = { offset = 1, row = 1, col = col, },
+				on_a = on_ab,
+				on_b = on_ab,
+			})
+			local to_tra = function()
+				local g = global
+				g.all_bs = col[#col] == 2
+				mod.all_bs(g.all_bs)
+				menu.back()
+			end
+			for _, bs in ipairs(char_data.enc) do
+				table.insert(list, { ut.convert(bs.name), menu.labels.off_on, common = bs.common == true, row = #list, })
+				table.insert(on_ab, menu.enc_to_tra)
 				table.insert(col, 1)
 			end
 		end
@@ -6865,28 +6905,28 @@ rbff2.startplugin  = function()
 			local col, row, g        = menu[key].pos.col, menu[key].pos.row, global
 			local p                  = players[i]
 			local next_menu          = "training"
-			a.type        = col[ 1]         -- 迎撃行動
+			a.type        = col[ 1]         -- 邀撃行動
 			a.rise_limit  = col[ 2] - 1     -- この高さより上昇時
 			a.fall_limit  = col[ 3] - 1     -- この高さより下降時
 			a.fwd_limit   = col[ 4] - 1     -- この間合いより近づいた時
 			a.bak_limit   = col[ 5] - 1     -- この間合いより遠のいた時
 			a.atk_only    = col[ 6] == 2    -- 攻撃にのみ反応する
-			-- リバーサル やられ時行動のメニュー設定
-			if cancel ~= true and a.type == 2 and row == 1 then next_menu = menu.rvs_menus[i][p.char] end
+			-- 邀撃行動のメニュー設定
+			if cancel ~= true and a.type == 2 and row == 1 then next_menu = menu.enc_menus[i][p.char] end
 			menu.set_current(next_menu)
 		end
 		local on_a = function() on_x(false) end
 		local on_b = function() on_x(true) end
 		menu[key] = menu.create(
-			string.format("%sP 自動迎撃設定", i),
-			"トレーニングダミーが迎撃行動する条件を設定します。",
+			string.format("邀撃(ようげき)行動設定(%s)", i),
+			"トレーニングダミーが邀撃(ようげき)行動をする条件を設定します。",
 			{
-				{ "迎撃行動", { "避け攻撃", "リバーサル技（Aで選択画面へ）" } },
+				{ "邀撃行動", { "避け攻撃", "邀撃(ようげき)技（Aで選択画面へ）" } },
 				{ "この高さより上昇時", jumplimit },
 				{ "この高さより下降時", jumplimit },
 				{ "この間合いより近づいた時", rangelimit },
 				{ "この間合いより遠のいた時", rangelimit },
-				{ "攻撃にのみ反応する", menu.labels.off_on, },
+				{ "相手の攻撃にのみ反応する", menu.labels.off_on, },
 			},
 			function()
 				local col, a = menu[key].pos.col, players[i].away_anti_air
@@ -6920,9 +6960,9 @@ rbff2.startplugin  = function()
 			{ "1P やられ時行動", { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ（Aで選択画面へ）", "グランドスウェー（Aで選択画面へ）", "起き上がり攻撃", }, },
 			{ "2P やられ時行動", { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ（Aで選択画面へ）", "グランドスウェー（Aで選択画面へ）", "起き上がり攻撃", }, },
 			{ "ガードリバーサル設定", bs_blocks },
-			{ title = true, "避け攻撃対空設定" },
-			{ "1P 避け攻撃対空", { "OFF", "ON（Aで選択画面へ）", }, },
-			{ "2P 避け攻撃対空", { "OFF", "ON（Aで選択画面へ）", }, },
+			{ title = true, "邀撃(ようげき)行動設定" },
+			{ "1P 邀撃(ようげき)行動", { "OFF", "ON（Aで選択画面へ）", }, },
+			{ "2P 邀撃(ようげき)行動", { "OFF", "ON（Aで選択画面へ）", }, },
 			{ title = true, "その他設定" },
 			{ "1P 挑発で前進", menu.labels.off_on, },
 			{ "2P 挑発で前進", menu.labels.off_on, },
@@ -6939,7 +6979,7 @@ rbff2.startplugin  = function()
 			col[7]          = g.crouch_block and 2 or 1    -- 07 可能な限りしゃがみガード
 			col[8]          = g.next_block_grace + 1       -- 08 1ガード持続フレーム数
 			col[9]          = p[1].bs and 2 or 1           -- 08 1P ブレイクショット
-			col[10]          = p[2].bs and 2 or 1           -- 10 2P ブレイクショット
+			col[10]         = p[2].bs and 2 or 1           -- 10 2P ブレイクショット
 			col[11]         = g.dummy_bs_cnt               -- 11 ブレイクショット設定
 			-- 12 やられ時行動・リバーサル設定
 			col[13]         = p[1].dummy_wakeup            -- 13 1P やられ時行動
