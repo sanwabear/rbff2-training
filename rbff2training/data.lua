@@ -2179,9 +2179,9 @@ local calc_ver = function(rvs)
 	if rvs.id and rvs.id < 0x1E then rvs.ver = (rvs.f << 0x8) | rvs.a end
 	return rvs
 end
-local char_enc_list, char_rvs_list, char_bs_list = {}, {}, {}
+local char_enc_list, char_rvs_list, char_bs_list, char_fol_list = {}, {}, {}, {}
 for char, list in ipairs(rvs_bs_list) do
-	local enc_list, rvs_list, bs_list = {}, {}, {}
+	local enc_list, rvs_list, bs_list, fol_list = {}, {}, {}, {}
 	for i, rvs in pairs(common_rvs) do table.insert(list, i, rvs) end
 	for _, rvs in pairs(list) do
 		if rvs.cmd and type(rvs.cmd) ~= "table" then -- 左右それぞれの向きのコマンドに変換分割する
@@ -2196,6 +2196,7 @@ for char, list in ipairs(rvs_bs_list) do
 		rvs = calc_ver(rvs)
 		local type = rvs.hook_type
 		if ut.tstb(type, hook_cmd_types.breakshot) then table.insert(bs_list, rvs) end
+		if ut.tstb(type, hook_cmd_types.breakshot) then table.insert(fol_list, rvs) end
 		if ut.tstb(type, hook_cmd_types.reversal) then table.insert(rvs_list, rvs) end
 		if ut.tstb(type, hook_cmd_types.encounter | hook_cmd_types.reversal) then table.insert(enc_list, rvs) end
 		if ut.tstb(type, hook_cmd_types.otg_stomp) then chars[char].otg_stomp = rvs end
@@ -2206,7 +2207,8 @@ for char, list in ipairs(rvs_bs_list) do
 	table.insert(char_enc_list, enc_list)
 	table.insert(char_rvs_list, rvs_list)
 	table.insert(char_bs_list, bs_list)
-	chars[char].enc, chars[char].rvs, chars[char].bs = enc_list, rvs_list, bs_list
+	table.insert(char_fol_list, fol_list)
+	chars[char].enc, chars[char].rvs, chars[char].bs, chars[char].fol = enc_list, rvs_list, bs_list, fol_list
 end
 local sp_throws     = { -- 投げ技IDごとのテーブル
 	[0x05] = calc_ver({ char = char_id.geese,    id = 0x07, f = 0x06, a = 0xFD, auto_sp_throw = true, name = "真空投げ", }),
