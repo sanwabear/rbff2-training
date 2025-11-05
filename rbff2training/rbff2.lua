@@ -4357,37 +4357,29 @@ rbff2.startplugin  = function()
 		frame_txt.add_to(p, p.objects, frame_info, frame_txt.buf[p.num])
 	end
 
-	local input_rvs = function(rvs_type, p, logtxt)
-		if global.rvslog and logtxt then emu.print_info(string.format("%s %s", global.frame_number, logtxt)) end
-		if ut.tstb(p.dummy_rvs.hook_type, hook_cmd_types.throw) and not ut.tstb(p.dummy_rvs.hook_type, hook_cmd_types.sp_throw) then
-			if p.act == 0x9 and p.act_frame > 1 then return end -- 着地硬直は投げでないのでスルー
-			if p.op.in_air then return end
-			if p.op.sway_status ~= 0x00 then return end -- 全投げ無敵
-		elseif ut.tstb(p.dummy_rvs.hook_type, hook_cmd_types.jump) then
-			if p.state == 0 and p.old.state == 0 and ((p.flag_c0 | p.old.flag_c0) & 0x10000) == 0x10000 then
-				return -- 連続通常ジャンプを繰り返さない
-			end
-		end
-		p.reset_sp_hook(p.dummy_rvs)
-		if p.dummy_rvs.cmd and rvs_types.knock_back_recovery ~= rvs_type then
-			if (((p.flag_c0 | p.old.flag_c0) & 0x2 == 0x2) or db.pre_down_acts[p.act]) and p.dummy_rvs.cmd == db.cmd_types._2D then
-				p.reset_sp_hook() -- no act
-			end
-		end
-	end
-
 	local input_any = function(p, hook, label)
 		if global.rvslog then emu.print_info(string.format("%s %s", global.frame_number, label or "input_any")) end
 		if ut.tstb(hook.hook_type, hook_cmd_types.throw) and not ut.tstb(hook.hook_type, hook_cmd_types.sp_throw) then
 			if p.act == 0x9 and p.act_frame > 1 then return end -- 着地硬直は投げでないのでスルー
 			if p.op.in_air then return end
 			if p.op.sway_status ~= 0x00 then return end -- 全投げ無敵
-		elseif ut.tstb(hook.hook_type, hook_cmd_types.jump) then
-			if p.state == 0 and p.old.state == 0 and ((p.flag_c0 | p.old.flag_c0) & 0x10000) == 0x10000 then
+		elseif p.state == 0 and p.old.state == 0 then
+			if ut.tstb(hook.hook_type, hook_cmd_types.jump) and  ut.tstb(p.flag_c0 | p.old.flag_c0, db.flag_c0._16) then
 				return -- 連続通常ジャンプを繰り返さない
+			elseif ut.tstb(hook.hook_type, hook_cmd_types.backstep) and ut.tstb(p.flag_c0 | p.old.flag_c0, db.flag_c0._25) then
+				return -- 連続バクステを繰り返さない
 			end
 		end
 		p.reset_sp_hook(hook)
+	end
+
+	local input_rvs = function(rvs_type, p, logtxt)
+		input_any(p, p.dummy_rvs, logtxt)
+		if p.dummy_rvs.cmd and rvs_types.knock_back_recovery ~= rvs_type then
+			if (((p.flag_c0 | p.old.flag_c0) & 0x2 == 0x2) or db.pre_down_acts[p.act]) and p.dummy_rvs.cmd == db.cmd_types._2D then
+				p.reset_sp_hook() -- no act
+			end
+		end
 	end
 
 	-- 技データのIDかフラグから技データを返す
@@ -5322,7 +5314,7 @@ rbff2.startplugin  = function()
 						p.char_data.wakeup_frms, (global.frame_number - p.on_wakeup)))
 				end
 				-- 着地リバーサル入力（やられの着地）
-				if 1 < p.pos_y_down and p.old.pos_y > p.pos_y and p.in_air ~= true then
+				if 1 < p.pos_y_down and p.old.pos_y > p.pos_y and p.in_air ~= true and not ut.tstb(p.flag_c0, db.flag_c0._25) then
 					input_rvs(rvs_types.knock_back_landing, p, "[Reversal] blown landing")
 				end
 				-- バクステ後と着地リバーサル入力（通常ジャンプの着地）

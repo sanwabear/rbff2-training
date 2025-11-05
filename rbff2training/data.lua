@@ -1725,6 +1725,7 @@ local hook_cmd_types   = {
 	air_throw = 2 ^ 10,
 	sp_throw = 2 ^ 11,
 	encounter = 2 ^ 12,
+	backstep = 2 ^ 13,
 }
 hook_cmd_types.ex_breakshot = hook_cmd_types.breakshot | hook_cmd_types.ex_breakshot
 local common_rvs = {
@@ -1747,7 +1748,7 @@ local common_rvs = {
 	{ cmd = cmd_types._9, hook_type = hook_cmd_types.reversal| hook_cmd_types.jump, common = true, name = "[共通] 前ジャンプ(_9)", },
 	{ cmd = cmd_types._7, hook_type = hook_cmd_types.reversal| hook_cmd_types.jump, common = true, name = "[共通] 後ジャンプ(_7)", },
 	{ id = 0x1E, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, common = true, name = "[共通] ダッシュ", },
-	{ id = 0x1F, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, common = true, name = "[共通] 飛び退き", },
+	{ id = 0x1F, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.backstep, common = true, name = "[共通] 飛び退き", },
 }
 -- idはコマンドテーブル上の技ID
 -- verは追加入力フラグとして認識される技ID
