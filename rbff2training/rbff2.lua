@@ -767,6 +767,7 @@ rbff2.startplugin  = function()
 		-- リバーサルとブレイクショットの設定
 		dummy_bs_cnt         = 1, -- ブレイクショットのカウンタ
 		dummy_rvs_cnt        = 1, -- リバーサルのカウンタ
+		dummy_rvs_type       = 1, -- リバーサル対象 1:すべて 2:ガード時 3:やられ時 4:その他動作時
 		hookp                = {}, -- フックポイント
 		auto_input           = {
 			otg_throw     = false, -- ダウン投げ
@@ -5307,6 +5308,13 @@ rbff2.startplugin  = function()
 			-- print(p.state, p.knockback2, p.knockback1, p.flag_7e, p.hitstop_remain, rvs_types.in_knock_back, p.last_blockstun, string.format("%x", p.act), p.act_count, p.act_frame)
 			-- ヒットストップ中は無視
 			-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
+			if global.dummy_rvs_type == 2 then -- リバーサル対象 2:ガード時
+				if p.in_block ~= true then p.dummy_rvs = nil end
+			elseif global.dummy_rvs_type == 3 then -- リバーサル対象 3:やられ時
+				if p.in_hurt ~= true then p.dummy_rvs = nil end
+			elseif global.dummy_rvs_type == 4 then -- リバーサル対象 4:その他動作時
+				if p.in_block or p.in_hurt then p.dummy_rvs = nil end
+			end
 			if p.knockback2 < 3 and p.hitstop_remain == 0 and not p.skip_frame and rvs_wake_types[p.dummy_wakeup] and p.dummy_rvs then
 				-- ダウン起き上がりリバーサル入力
 				if db.wakeup_acts[p.act] and (p.char_data.wakeup_frms - 3) <= (global.frame_number - p.on_wakeup) then
@@ -6397,12 +6405,13 @@ rbff2.startplugin  = function()
 		p1.dummy_wakeup          = col[13] -- 13 1P やられ時行動
 		p2.dummy_wakeup          = col[14] -- 14 2P やられ時行動
 		g.dummy_rvs_cnt          = col[15] -- 15 ガードリバーサル設定
-		-- 16 避け攻撃対空設定
-		p1.away_anti_air.enabled = col[17] == 2 -- 17 1P 避け攻撃対空
-		p2.away_anti_air.enabled = col[18] == 2 -- 18 2P 避け攻撃対空
-		-- 19 その他設定
-		p1.fwd_prov              = col[20] == 2 -- 20 1P 挑発で前進
-		p2.fwd_prov              = col[21] == 2 -- 21 2P 挑発で前進
+		g.dummy_rvs_type         = col[16] -- 16 リバーサル対象
+		-- 17 避け攻撃対空設定
+		p1.away_anti_air.enabled = col[18] == 2 -- 17 1P 避け攻撃対空
+		p2.away_anti_air.enabled = col[19] == 2 -- 18 2P 避け攻撃対空
+		-- 20 その他設定
+		p1.fwd_prov              = col[21] == 2 -- 20 1P 挑発で前進
+		p2.fwd_prov              = col[22] == 2 -- 21 2P 挑発で前進
 		for _, p in ipairs(players) do
 			p.update_char()
 			if p.dummy_gd == dummy_gd_type.hit1 then
@@ -6427,9 +6436,9 @@ rbff2.startplugin  = function()
 				elseif g.dummy_mode == menu.dummy_modes.replay then
 					next_menu = "replay" -- リプレイ
 				end
-			elseif p1.away_anti_air.enabled and row == 17 then
+			elseif p1.away_anti_air.enabled and row == 18 then
 				next_menu = "away_anti_air1" -- 1P 避け攻撃対空
-			elseif p2.away_anti_air.enabled and row == 18 then
+			elseif p2.away_anti_air.enabled and row == 19 then
 				next_menu = "away_anti_air2" -- 2P 避け攻撃対空
 			end
 
@@ -6819,7 +6828,8 @@ rbff2.startplugin  = function()
 				end
 			end
 		end
-		menu.to_tra()
+		--menu.to_tra()
+		menu.back()
 	end
 	menu.fol_to_tra = function() menu.any_to_tra(menu.fol_menus) end
 	menu.rvs_to_tra = function() menu.any_to_tra(menu.rvs_menus) end
@@ -6992,6 +7002,7 @@ rbff2.startplugin  = function()
 			{ "1P やられ時行動", { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ（Aで選択画面へ）", "グランドスウェー（Aで選択画面へ）", "起き上がり攻撃", }, },
 			{ "2P やられ時行動", { "なし", "リバーサル（Aで選択画面へ）", "テクニカルライズ（Aで選択画面へ）", "グランドスウェー（Aで選択画面へ）", "起き上がり攻撃", }, },
 			{ "ガードリバーサル設定", bs_blocks },
+			{ "リバーサル対象", { "すべて", "ガード時", "やられ時", "その他動作時" } },
 			{ title = true, "邀撃(ようげき)行動設定" },
 			{ "1P 邀撃(ようげき)行動", { "OFF", "ON（Aで選択画面へ）", }, },
 			{ "2P 邀撃(ようげき)行動", { "OFF", "ON（Aで選択画面へ）", }, },
@@ -7017,15 +7028,16 @@ rbff2.startplugin  = function()
 			col[13]         = p[1].dummy_wakeup            -- 13 1P やられ時行動
 			col[14]         = p[2].dummy_wakeup            -- 14 2P やられ時行動
 			col[15]         = g.dummy_rvs_cnt              -- 15 ガードリバーサル設定
-			-- 16 避け攻撃対空設定
-			col[17]         = p[1].away_anti_air.enabled and 2 or 1 -- 17 1P 避け攻撃対空
-			col[18]         = p[2].away_anti_air.enabled and 2 or 1 -- 18 2P 避け攻撃対空
-			-- 19 その他設定
-			col[20]         = p[1].fwd_prov and 2 or 1     -- 20 1P 挑発で前進
-			col[21]         = p[2].fwd_prov and 2 or 1     -- 21 2P 挑発で前進
+			col[16]         = g.dummy_rvs_type             -- 16 リバーサル対象
+			-- 17 避け攻撃対空設定
+			col[18]         = p[1].away_anti_air.enabled and 2 or 1 -- 17 1P 避け攻撃対空
+			col[19]         = p[2].away_anti_air.enabled and 2 or 1 -- 18 2P 避け攻撃対空
+			-- 20 その他設定
+			col[21]         = p[1].fwd_prov and 2 or 1     -- 20 1P 挑発で前進
+			col[22]         = p[2].fwd_prov and 2 or 1     -- 21 2P 挑発で前進
 		end,
-		ut.new_filled_table(21, menu.to_main),
-		ut.new_filled_table(21, menu.to_main_cancel))
+		ut.new_filled_table(22, menu.to_main),
+		ut.new_filled_table(22, menu.to_main_cancel))
 
 	menu.bar       = menu.create(
 		"ゲージ設定",
