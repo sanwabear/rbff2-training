@@ -2449,14 +2449,18 @@ rbff2.startplugin  = function()
 		p.wp16                     = {
 			[0x34] = function(data) p.thrust_int = ut.int16(data) end, -- 前進移動量X
 			[0x36] = function(data) p.thrust_frc = ut.int16tofloat(data) end, -- 前進移動量の小数部X
-			--[0x40] = function(data) end, -- キャラ固有の前進移動量X
-			--[0x42] = function(data) end, -- キャラ固有の前進移動量の小数部X
-			--[0x44] = function(data) p.thrusty_int = ut.int16(data) end, -- ジャンプ移動量Y
-			--[0x46] = function(data) p.thrusty_frc = ut.int16tofloat(data) end, -- ジャンプ移動量の小数部Y
+			[0x40] = function(data) p.int1 = ut.int16(data) end, -- キャラ固有の前進移動量X
+			[0x42] = function(data) p.frc1 = ut.int16tofloat(data) end, -- キャラ固有の前進移動量の小数部X
+			[0x44] = function(data) p.int2 = ut.int16(data) end, -- ジャンプ移動量Y
+			[0x46] = function(data) p.frc2 = ut.int16tofloat(data) end, -- ジャンプ移動量の小数部Y
 			[0x48] = function(data) p.thrusty_int = ut.int16(data) end, -- ジャンプ移動量Y
 			[0x4A] = function(data) p.thrusty_frc = ut.int16tofloat(data) end, -- ジャンプ移動量の小数部Y
 			--[0x92] = function(data) p.anyhit_id = data end,
 			--[0x9E] = function(data) p.ophit = all_objects[data] end, -- ヒットさせた相手側のベースアドレス
+			[0xD0] = function(data) p.int3 = ut.int16(data) end,
+			[0xD2] = function(data) p.frc3 = ut.int16tofloat(data) end,
+			[0xD4] = function(data) p.int4 = ut.int16(data) end,
+			[0xD6] = function(data) p.frc4 = ut.int16tofloat(data) end,
 			[0xDA] = function(data) p.inertia_int = ut.int16(data) end, -- 慣性移動量
 			[0xDC] = function(data) p.inertia_frc = ut.int16tofloat(data) end, -- 慣性移動量の小数部
 			[0xE6] = function(data) p.on_hit_any = now() + 1 end,                                                        -- 0xE6か0xE7 打撃か当身でフラグが立つ
@@ -5383,10 +5387,10 @@ rbff2.startplugin  = function()
 					other_cond = p.flag_c4 == 0 and p.flag_c8 == 0 and 0 < (op.flag_c4 | op.flag_c8)
 					--falling, rising = op.falling, op.rising
 				elseif aaa.atk_only == 3 then -- 3:相手の移動中に発動
-					other_cond = p.flag_c4 == 0 and p.flag_c8 == 0 and (ut.tstb(op.flag_c8, db.flag_c8.normal_atk) or op.diff_pos_total ~= 0 or op.diff_pos_total_y ~= 0)
+					other_cond = p.flag_c4 == 0 and p.flag_c8 == 0 and (ut.tstb(op.flag_c8, db.flag_c8.normal_atk) or op.thrust ~= 0 or op.inertia ~= 0 or op.thrusty ~= 0)
 					--falling, rising = op.falling, op.rising
 				elseif aaa.atk_only == 4 then -- 4:自身の動作中に発動
-					other_cond = p.in_naked == true and (ut.tstb(p.flag_c8, db.flag_c8.normal_atk) or p.diff_pos_total ~= 0 or p.diff_pos_total_y ~= 0)
+					other_cond = p.in_naked == true and (ut.tstb(p.flag_c8, db.flag_c8.normal_atk) or p.thrust ~= 0 or p.inertia ~= 0 or p.thrusty ~= 0)
 					--falling, rising = p.falling , p.rising
 				end
 				local closing, expanding = p.closing or op.closing, p.expanding or op.expanding
@@ -5806,14 +5810,15 @@ rbff2.startplugin  = function()
 				local label2 = {}
 				local c0, c4 = string.format("%08X", p.flag_c0 or 0), string.format("%08X", p.flag_c4 or 0)
 				local c8, cc = string.format("%08X", p.flag_c8 or 0), string.format("%08X", p.flag_cc or 0)
-				local d0, _7e = string.format("%02X", p.flag_d0 or 0), string.format("%02X", p.flag_7e or 0)
+				local d0, _7e, _6a = string.format("%02X", p.flag_d0 or 0), string.format("%02X", p.flag_7e or 0), string.format("%02X", p.flag_6a or 0)
 				table.insert(label2, string.format("C0 %-32s %s %-s", ut.hextobitstr(c0, " "), c0, db.get_flag_name(p.flag_c0, db.flag_names_c0)))
 				table.insert(label2, string.format("C4 %-32s %s %-s", ut.hextobitstr(c4, " "), c4, db.get_flag_name(p.flag_c4, db.flag_names_c4)))
 				table.insert(label2, string.format("C8 %-32s %s %-s", ut.hextobitstr(c8, " "), c8, db.get_flag_name(p.flag_c8, db.flag_names_c8)))
 				table.insert(label2, string.format("CC %-32s %s %-s", ut.hextobitstr(cc, " "), cc, db.get_flag_name(p.flag_cc, db.flag_names_cc)))
 				table.insert(label2, string.format("D0 %-8s %s %-s", ut.hextobitstr(d0, " "), d0, db.get_flag_name(p.flag_d0, db.flag_names_d0)))
+				table.insert(label2, string.format("6A %-8s %s %-s", ut.hextobitstr(_6a, " "), _6a, db.get_flag_name(p.flag_6a, db.flag_names_6a)))
 				table.insert(label2, string.format("7E %-8s %s %-s %-2s", ut.hextobitstr(_7e, " "), _7e, db.get_flag_name(p.flag_7e, db.flag_names_7e),
-					math.min(99, global.frame_number - p.on_update_7e_02 or 0)))
+					math.min(99, p.on_update_7e_02 and (global.frame_number - p.on_update_7e_02) or 0)))
 				table.insert(label2, string.format("%1s %3s %3s", p.state, p.knockback1, p.knockback2))
 				p.state_line3 = label2
 			end
