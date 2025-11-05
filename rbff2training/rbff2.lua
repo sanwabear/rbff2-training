@@ -255,6 +255,7 @@ rbff2.startplugin  = function()
 			attack_harmless = { "OFF" },
 			play_interval   = {},
 			force_y_pos     = { "OFF", 0 },
+			no_action       = { "OFF" },
 		},
 
 		config = {
@@ -355,6 +356,7 @@ rbff2.startplugin  = function()
 	for i = 1, 301 do table.insert(menu.labels.play_interval, i - 1) end
 	for i = 1, 256 do table.insert(menu.labels.force_y_pos, i) end
 	for i = -1, -256, -1 do table.insert(menu.labels.force_y_pos, i) end
+	for i = 1, 255 do table.insert(menu.labels.no_action, string.format("%sF間停止", i)) end
 	for _, stg in ipairs(menu.stage_list) do table.insert(menu.labels.stage_list, stg.name) end
 	for _, bgm in ipairs(menu.bgms) do
 		local exists = false
@@ -761,6 +763,7 @@ rbff2.startplugin  = function()
 		replay_stop_on_dmg   = false, -- ダメージでリプレイ中段
 		replay_timing_jmp    = true,  -- リプレイ前のタイミングどり用ジャンプ有効
 		recover_wait         = 180,
+		no_action            = 1, -- くらい時アクション停止 1:OFF 2~:フレーム数 
 
 		next_stg3            = 0,
 
@@ -1965,8 +1968,8 @@ rbff2.startplugin  = function()
 			throw_boxies    = {},
 			fireballs       = {},
 			pos_hist        = ut.new_filled_table(3, { x = format_num(0), y = format_num(0), z = "00", pos = 0, pos_frc = 0, pos_y = 0, pos_frc_y = 0, }),
-			away_anti_air   = {
-				enabled = false,
+			enc_enabled     = false,
+			encounter       = {
 				type        = 1, -- 1:OFF 2:邀撃技
 				rise_limit  = 0,
 				fall_limit  = 53,
@@ -5106,7 +5109,8 @@ rbff2.startplugin  = function()
 
 			-- リプレイ中は行動しない
 			if in_record ~= true and in_replay ~= true and p.in_naked == true then
-				if p.sway_status == 0x00 then
+				if p.sway_status == 0x00 and p.dummy_act ~= menu.dummy_acts.stand and
+					(global.no_action == 1 or (p.throw_timer + 1) >= global.no_action) then
 					if p.dummy_act == menu.dummy_acts.crounch then
 						p.reset_cmd_hook(db.cmd_types._2) -- しゃがみ
 					elseif p.dummy_act == menu.dummy_acts.sway and p.op.sway_status == 0x00 and p.state == 0 then
@@ -5376,8 +5380,8 @@ rbff2.startplugin  = function()
 			end
 
 			-- 自動避け攻撃対空
-			if p.away_anti_air.enabled and not p.op.in_hitstun and not p.bs_hook then
-				local aaa, op = p.away_anti_air, p.op
+			if p.enc_enabled and not p.op.in_hitstun and not p.bs_hook then
+				local aaa, op = p.encounter, p.op
 				local other_cond = false
 				local falling, rising = p.falling or op.falling, p.rising or op.rising
 				if aaa.atk_only == 1 then -- 1:OFF
@@ -5448,15 +5452,15 @@ rbff2.startplugin  = function()
 			end
 
 			-- 自動必殺技
-			if p.in_naked == true and p.away_anti_air.auto_sp > 1 then
+			if p.in_naked == true and p.encounter.auto_sp > 1 then
 				-- 必殺技 1:OFF 2:ON 3:ON:空キャン
 				local dohook = false
-				if p.away_anti_air.auto_sp == 2 then
+				if p.encounter.auto_sp == 2 then
 					dohook = true
-				elseif p.away_anti_air.auto_sp == 3 and
+				elseif p.encounter.auto_sp == 3 and
 					((p.flag_c4 > 0) or ut.tstb(p.flag_c8, db.flag_c8.normal_atk) == true or ut.tstb(p.flag_cc, db.flag_cc._19) == true) then
 					local lag = global.frame_number - p.on_update_7e_02
-					dohook = lag >= p.away_anti_air.sp_lag
+					dohook = lag >= p.encounter.sp_lag
 				end
 				if dohook == true and p.dummy_fol ~= nil then
 					input_any(p, p.dummy_fol, "input_fol")
@@ -6391,27 +6395,28 @@ rbff2.startplugin  = function()
 		if cancel == true and (g.dummy_mode == menu.dummy_modes.record or g.dummy_mode == menu.dummy_modes.replay) then
 			g.dummy_mode = menu.dummy_modes.ply_vs_ply
 		end
-		p1.dummy_act             = col[2] -- 02 1P アクション
-		p2.dummy_act             = col[3] -- 03 2P アクション
-		-- 04 ガード・ブレイクショット設定
-		p1.dummy_gd              = col[5] -- 05 1P ガード
-		p2.dummy_gd              = col[6] -- 06 2P ガード
-		g.crouch_block           = col[7] == 2 -- 07 可能な限りしゃがみガード
-		g.next_block_grace       = col[8] - 1 -- 08 1ガード持続フレーム数
-		p1.bs                    = col[9] == 2 -- 09 1P ブレイクショット
-		p2.bs                    = col[10] == 2 -- 10 2P ブレイクショット
-		g.dummy_bs_cnt           = col[11] -- 11 ブレイクショット設定
-		-- 12 やられ時行動・リバーサル設定
-		p1.dummy_wakeup          = col[13] -- 13 1P やられ時行動
-		p2.dummy_wakeup          = col[14] -- 14 2P やられ時行動
-		g.dummy_rvs_cnt          = col[15] -- 15 ガードリバーサル設定
-		g.dummy_rvs_type         = col[16] -- 16 リバーサル対象
-		-- 17 避け攻撃対空設定
-		p1.away_anti_air.enabled = col[18] == 2 -- 17 1P 避け攻撃対空
-		p2.away_anti_air.enabled = col[19] == 2 -- 18 2P 避け攻撃対空
-		-- 20 その他設定
-		p1.fwd_prov              = col[21] == 2 -- 20 1P 挑発で前進
-		p2.fwd_prov              = col[22] == 2 -- 21 2P 挑発で前進
+		p1.dummy_act       = col[2] -- 02 1P アクション
+		p2.dummy_act       = col[3] -- 03 2P アクション
+		g.no_action        = col[4] -- 03 2P アクション
+		-- 05 ガード・ブレイクショット設定
+		p1.dummy_gd        = col[6] -- 05 1P ガード
+		p2.dummy_gd        = col[7] -- 06 2P ガード
+		g.crouch_block     = col[8] == 2 -- 07 可能な限りしゃがみガード
+		g.next_block_grace = col[9] - 1 -- 08 1ガード持続フレーム数
+		p1.bs              = col[10] == 2 -- 09 1P ブレイクショット
+		p2.bs              = col[11] == 2 -- 10 2P ブレイクショット
+		g.dummy_bs_cnt     = col[12] -- 11 ブレイクショット設定
+		-- 13 やられ時行動・リバーサル設定
+		p1.dummy_wakeup    = col[14] -- 13 1P やられ時行動
+		p2.dummy_wakeup    = col[15] -- 14 2P やられ時行動
+		g.dummy_rvs_cnt    = col[16] -- 15 ガードリバーサル設定
+		g.dummy_rvs_type   = col[17] -- 16 リバーサル対象
+		-- 18 避け攻撃対空設定
+		p1.enc_enabled     = col[19] == 2 -- 17 1P 避け攻撃対空
+		p2.enc_enabled     = col[20] == 2 -- 18 2P 避け攻撃対空
+		-- 21 その他設定
+		p1.fwd_prov        = col[22] == 2 -- 20 1P 挑発で前進
+		p2.fwd_prov        = col[23] == 2 -- 21 2P 挑発で前進
 		for _, p in ipairs(players) do
 			p.update_char()
 			if p.dummy_gd == dummy_gd_type.hit1 then
@@ -6436,26 +6441,26 @@ rbff2.startplugin  = function()
 				elseif g.dummy_mode == menu.dummy_modes.replay then
 					next_menu = "replay" -- リプレイ
 				end
-			elseif p1.away_anti_air.enabled and row == 18 then
-				next_menu = "away_anti_air1" -- 1P 避け攻撃対空
-			elseif p2.away_anti_air.enabled and row == 19 then
-				next_menu = "away_anti_air2" -- 2P 避け攻撃対空
+			elseif p1.enc_enabled and row == 19 then
+				next_menu = "encounter1" -- 1P 避け攻撃対空
+			elseif p2.enc_enabled and row == 20 then
+				next_menu = "encounter2" -- 2P 避け攻撃対空
 			end
 
 			-- プレイヤー選択しなおしなどで初期化したいときはサブメニュー遷移しない
 			if do_init ~= true then
 				-- ブレイクショット ガードのメニュー設定
-				if row == 9  and p1.bs then next_menu = menu.bs_menus[1][p1.char] end
-				if row == 10 and p2.bs then next_menu = menu.bs_menus[2][p2.char] end
-				if row == 5 or row == 6 then -- 特殊設定の出張設定項目
+				if row == 10 and p1.bs then next_menu = menu.bs_menus[1][p1.char] end
+				if row == 11 and p2.bs then next_menu = menu.bs_menus[2][p2.char] end
+				if row == 6 or row == 7 then -- 特殊設定の出張設定項目
 					local col1 = menu.bs_menus[1][p1.char].pos.col
 					local col2 = menu.bs_menus[2][p1.char].pos.col
 					col1[#col1] = g.all_bs and 2 or 1
 					col2[#col2] = g.all_bs and 2 or 1
 				end
 				-- リバーサル やられ時行動のメニュー設定
-				if row == 13 and rvs_wake_types[p1.dummy_wakeup] then next_menu = menu.rvs_menus[1][p1.char] end
-				if row == 14 and rvs_wake_types[p2.dummy_wakeup] then next_menu = menu.rvs_menus[2][p2.char] end
+				if row == 14 and rvs_wake_types[p1.dummy_wakeup] then next_menu = menu.rvs_menus[1][p1.char] end
+				if row == 15 and rvs_wake_types[p2.dummy_wakeup] then next_menu = menu.rvs_menus[2][p2.char] end
 			end
 		end
 
@@ -6931,9 +6936,9 @@ rbff2.startplugin  = function()
 		local jumplimit, rangelimit = { "OFF" }, { "OFF" }
 		for px = 1, 260 do table.insert(jumplimit, px) end
 		for px = 1, 250 do table.insert(rangelimit, px) end
-		local key = string.format("away_anti_air%s", i)
+		local key = string.format("encounter%s", i)
 		local on_x = function(cancel)
-			local a                  = players[i].away_anti_air
+			local a                  = players[i].encounter
 			local col, row, g        = menu[key].pos.col, menu[key].pos.row, global
 			local p                  = players[i]
 			local next_menu          = "training"
@@ -6968,7 +6973,7 @@ rbff2.startplugin  = function()
 				{ "空キャンセル投げ猶予F", { "3:最速", 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 }, },
 			},
 			function()
-				local col, a = menu[key].pos.col, players[i].away_anti_air
+				local col, a = menu[key].pos.col, players[i].encounter
 				col[ 1] = a.type           -- 迎撃行動
 				col[ 2] = a.rise_limit + 1 -- この高さより上昇時
 				col[ 3] = a.fall_limit + 1 -- この高さより下降時
@@ -6990,6 +6995,7 @@ rbff2.startplugin  = function()
 			{ "ダミーモード", { "プレイヤー vs プレイヤー", "プレイヤー vs CPU", "CPU vs プレイヤー", "1P&2P入れ替え", "レコード", "リプレイ" }, },
 			{ "1P アクション", { "立ち", "しゃがみ", "垂直ジャンプ", "前方ジャンプ", "後方ジャンプ", "垂直小ジャンプ", "前方小ジャンプ", "後方小ジャンプ", "ダッシュジャンプ", "ダッシュ小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き", "後退", "しゃがみ後退（ガード）", "ダッシュ", "飛び退き" }, },
 			{ "2P アクション", { "立ち", "しゃがみ", "垂直ジャンプ", "前方ジャンプ", "後方ジャンプ", "垂直小ジャンプ", "前方小ジャンプ", "後方小ジャンプ", "ダッシュジャンプ", "ダッシュ小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き", "後退", "しゃがみ後退（ガード）", "ダッシュ", "飛び退き" }, },
+			{ "くらい後アクション停止", menu.labels.no_action, },
 			{ title = true, "ガード・ブレイクショット設定" },
 			{ "1P ガード", { "なし", "オート", "1ヒットガード", "1ガード", "上段", "下段", "アクション", "ランダム", "強制" }, },
 			{ "2P ガード", { "なし", "オート", "1ヒットガード", "1ガード", "上段", "下段", "アクション", "ランダム", "強制" }, },
@@ -7013,31 +7019,32 @@ rbff2.startplugin  = function()
 		function()
 			---@diagnostic disable-next-line: undefined-field
 			local col, p, g = menu.training.pos.col, players, global
-			col[1]          = g.dummy_mode                 -- 01 ダミーモード
-			col[2]          = p[1].dummy_act               -- 02 1P アクション
-			col[3]          = p[2].dummy_act               -- 03 2P アクション
-			-- 04 ガード・ブレイクショット設定
-			col[5]          = p[1].dummy_gd                -- 05 1P ガード
-			col[6]          = p[2].dummy_gd                -- 06 2P ガード
-			col[7]          = g.crouch_block and 2 or 1    -- 07 可能な限りしゃがみガード
-			col[8]          = g.next_block_grace + 1       -- 08 1ガード持続フレーム数
-			col[9]          = p[1].bs and 2 or 1           -- 08 1P ブレイクショット
-			col[10]         = p[2].bs and 2 or 1           -- 10 2P ブレイクショット
-			col[11]         = g.dummy_bs_cnt               -- 11 ブレイクショット設定
-			-- 12 やられ時行動・リバーサル設定
-			col[13]         = p[1].dummy_wakeup            -- 13 1P やられ時行動
-			col[14]         = p[2].dummy_wakeup            -- 14 2P やられ時行動
-			col[15]         = g.dummy_rvs_cnt              -- 15 ガードリバーサル設定
-			col[16]         = g.dummy_rvs_type             -- 16 リバーサル対象
-			-- 17 避け攻撃対空設定
-			col[18]         = p[1].away_anti_air.enabled and 2 or 1 -- 17 1P 避け攻撃対空
-			col[19]         = p[2].away_anti_air.enabled and 2 or 1 -- 18 2P 避け攻撃対空
-			-- 20 その他設定
-			col[21]         = p[1].fwd_prov and 2 or 1     -- 20 1P 挑発で前進
-			col[22]         = p[2].fwd_prov and 2 or 1     -- 21 2P 挑発で前進
+			col[1]  = g.dummy_mode                 -- 01 ダミーモード
+			col[2]  = p[1].dummy_act               -- 02 1P アクション
+			col[3]  = p[2].dummy_act               -- 03 2P アクション
+			col[4]  = g.no_action                  -- 04 くらい後アクションOFF
+			-- 05 ガード・ブレイクショット設定
+			col[6]  = p[1].dummy_gd                -- 06 1P ガード
+			col[7]  = p[2].dummy_gd                -- 07 2P ガード
+			col[8]  = g.crouch_block and 2 or 1    -- 08 可能な限りしゃがみガード
+			col[9]  = g.next_block_grace + 1       -- 08 1ガード持続フレーム数
+			col[10] = p[1].bs and 2 or 1           -- 10 1P ブレイクショット
+			col[11] = p[2].bs and 2 or 1           -- 11 2P ブレイクショット
+			col[12] = g.dummy_bs_cnt               --  ブレイクショット設定
+			--  13 やられ時行動・リバーサル設定               13
+			col[14] = p[1].dummy_wakeup            -- 14 1P やられ時行動
+			col[15] = p[2].dummy_wakeup            -- 15 2P やられ時行動
+			col[16] = g.dummy_rvs_cnt              -- 16 ガードリバーサル設定
+			col[17] = g.dummy_rvs_type             -- 17 リバーサル対象
+			--  18 避け攻撃対空設定
+			col[19] = p[1].enc_enabled and 2 or 1  -- 18 1P 避け攻撃対空
+			col[20] = p[2].enc_enabled and 2 or 1  -- 20 2P 避け攻撃対空
+			--  21 その他設定
+			col[22] = p[1].fwd_prov and 2 or 1     -- 22 1P 挑発で前進
+			col[23] = p[2].fwd_prov and 2 or 1     -- 23 2P 挑発で前進
 		end,
-		ut.new_filled_table(22, menu.to_main),
-		ut.new_filled_table(22, menu.to_main_cancel))
+		ut.new_filled_table(23, menu.to_main),
+		ut.new_filled_table(23, menu.to_main_cancel))
 
 	menu.bar       = menu.create(
 		"ゲージ設定",
