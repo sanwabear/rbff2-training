@@ -1821,7 +1821,7 @@ rbff2.startplugin  = function()
 			fixpos = nil,
 		},
 	}
-	for i = 1, 8 do table.insert(recording.slot, { side = 1, store = {}, name = string.format("スロット%s", i) }) end
+	for i = 1, 8 do table.insert(recording.slot, { side = 1, store = {}, name = string.format("スロット%s", i), num = i }) end
 	local hitboxies_order                              = function(b1, b2) return (b1.id < b2.id) end
 	local ranges_order                                 = function(r1, r2) return (r1.within and 1 or -1) < (r2.within and 1 or -1) end
 	local get_object_by_addr                           = function(addr, default) return all_objects[addr] or default end              -- ベースアドレスからオブジェクト解決
@@ -1873,10 +1873,11 @@ rbff2.startplugin  = function()
 	end
 	input.readp                                        = function(p, merge_bs_hook)
 		if not p.key then return end
+		local pkey = players[p.control].key
 		local addr = p.addr.key
 		local status_b, reg_pcnt = mem.r08(addr.reg_st_b) ~ 0xFF, mem.r08(addr.reg_pcnt) ~ 0xFF
 		local on1f, on5f, hold = mem.r08(addr.on1f), mem.r08(addr.on5f), mem.r08(addr.hold)
-		if merge_bs_hook and p.bs_hook and p.bs_hook.cmd then
+		if merge_bs_hook and p.bs_hook and p.bs_hook.cmd and p.bs_hook.cmd ~= db.cmd_types._5 then
 			reg_pcnt, on1f, on5f, hold = p.bs_hook.cmd or reg_pcnt, p.bs_hook.on1f or on1f, p.bs_hook.on5f or on5f, p.bs_hook.hold or hold
 		end
 		local cnt_r, cnt_b, tmp = 0xF & reg_pcnt, 0xF0 & reg_pcnt, {}
@@ -1923,14 +1924,10 @@ rbff2.startplugin  = function()
 			while global.key_pos_hist_limit < #p.key.pos_hist do table.remove(p.key.pos_hist, 1) end --バッファ長調整
 		end
 	end
-	input.read                                         = function(target_p, merge_bs_hook)
-		if target_p then
-			input.readp(target_p, merge_bs_hook)
-		else
-			-- 1Pと2Pの入力読取
-			for _, p in ipairs(players) do
-				input.readp(p, merge_bs_hook)
-			end
+	input.read                                         = function(merge_bs_hook)
+		-- 1Pと2Pの入力読取
+		for _, p in ipairs(players) do
+			input.readp(p, merge_bs_hook)
 		end
 	end
 	input.accept                                       = function(btn, state_past)
@@ -3258,7 +3255,7 @@ rbff2.startplugin  = function()
 		recording.fixpos = { fixpos2 = fixpos2, }
 	end
 	recording.log = function(...)
-		ut.printf(...)
+		--ut.printf(...)
 	end
 	-- 初回入力まち
 	-- 未入力状態を待ちける→入力開始まで待ち受ける
@@ -3328,7 +3325,11 @@ rbff2.startplugin  = function()
 		end
 
 		-- ランダムで1つ選定
-		recording.active_slot = #tmp_slots > 0 and tmp_slots[math.random(#tmp_slots)] or { store = {}, name = "EMPTY", dummy = true }
+		recording.active_slot = #tmp_slots > 0 and tmp_slots[math.random(#tmp_slots)] or { store = {}, name = "EMPTY", dummy = true, num = 0 }
+		-- 再生対象がない場合はデフォルトP2にする
+		if recording.active_slot.p == nil then
+			recording.active_slot.p = players[2]
+		end
 
 		local st, st1, st2 = input.accept("st")
 		if st or force_start_play == true then
@@ -5681,12 +5682,6 @@ rbff2.startplugin  = function()
 	tra_sub.rec_replay = function()
 		-- レコード＆リプレイ
 		if global.dummy_mode == menu.dummy_modes.record or global.dummy_mode == menu.dummy_modes.replay then
-			local p
-			if global.dummy_mode == menu.dummy_modes.record then
-				p = recording.player
-			else
-				p = recording.active_slot.p
-			end
 			if global.rec_main then
 				local prev_rec_main, called = nil, {}
 				repeat
@@ -5694,12 +5689,11 @@ rbff2.startplugin  = function()
 					called[prev_rec_main or "NOT DEFINED"] = true
 					global.rec_main()
 				until global.rec_main == prev_rec_main or called[global.rec_main] == true
-				input.readp(p, global.rec_main == recording.procs.play)
 			end
 		end
 	end
 	tra_sub.save_input = function()
-		input.read(nil, true)
+		input.read(true)
 		-- キーディス用の処理
 		for _, p in ipairs(players) do
 			local key, keybuf = "", {} -- _1~_9 _A_B_C_D
@@ -6126,17 +6120,18 @@ rbff2.startplugin  = function()
 		key_hist = function()
 			-- コマンド入力表示
 			for i, p in ipairs(players) do
+				local pkey = players[p.control].key
 				local p1 = i == 1
 				local y0, col1, col2 = global.estab_cmd_y_offset, 0xFAC71585, 0x40303030
 				local x1, x2, step
 				if p1 then x1, x2, step = 0, 70, 8 else x1, x2, step = 320, 250, -8 end
 				-- コマンド入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
 				if p.disp_command == 2 or p.disp_command == 3 then
-					for k, log in ipairs(p.key.log) do draw_cmd(i, k, log.frame, log.key, log.spid, #p.key.log) end
+					for k, log in ipairs(pkey.log) do draw_cmd(i, k, log.frame, log.key, log.spid, #pkey.log) end
 					if global.frame_number <= p.on_sp_established + 60 then
 						local disp, hist = {}, nil
-						for hi = #p.key.cmd_hist, 1, -1 do
-							hist = p.key.cmd_hist[hi]
+						for hi = #pkey.cmd_hist, 1, -1 do
+							hist = pkey.cmd_hist[hi]
 							-- hist.tbl.estab_txtは成立時のフックではなく入力状態表示からの参照渡しなのでここで表示データとして遅延結合させる
 							local txt
 							if hist.txt_f then
@@ -6176,10 +6171,11 @@ rbff2.startplugin  = function()
 		key_gg = function()
 			-- GG風コマンド入力表示
 			for _, p in ipairs(players) do
+				local pkey = players[p.control].key
 				-- コマンド入力表示 1:OFF 2:ON 3:ログのみ 4:キーディスのみ
 				if p.disp_command == 2 or p.disp_command == 4 then
-					local xoffset, yoffset = p.key.gg.xoffset, p.key.gg.yoffset
-					local oct_vt, key_xy = p.key.gg.oct_vt, p.key.gg.key_xy
+					local xoffset, yoffset = pkey.gg.xoffset, pkey.gg.yoffset
+					local oct_vt, key_xy = pkey.gg.oct_vt, pkey.gg.key_xy
 					local tracks, max_track = {}, 6 -- 軌跡をつくる 軌跡は6個まで
 					scr:draw_box(xoffset - 13, yoffset - 13, xoffset + 35, yoffset + 13, 0xA0303030, 0xA0303030)
 					for ni = 1, 8 do -- 八角形描画
@@ -6191,9 +6187,9 @@ rbff2.startplugin  = function()
 						scr:draw_line(xy1.x3, xy1.y3, xy2.x3, xy2.y3, 0xDDCCCCCC)
 						scr:draw_line(xy1.x4, xy1.y4, xy2.x4, xy2.y4, 0xDDCCCCCC)
 					end
-					for j = #p.key.gg.hist, 2, -1 do -- 軌跡採取
+					for j = #pkey.gg.hist, 2, -1 do -- 軌跡採取
 						local k = j - 1
-						local xy1, xy2 = key_xy[p.key.gg.hist[j].lever], key_xy[p.key.gg.hist[k].lever]
+						local xy1, xy2 = key_xy[pkey.gg.hist[j].lever], key_xy[pkey.gg.hist[k].lever]
 						if xy1.x ~= xy2.x or xy1.y ~= xy2.y then
 							table.insert(tracks, 1, { xy1 = xy1, xy2 = xy2, })
 							if #tracks >= max_track then break end
@@ -6217,7 +6213,7 @@ rbff2.startplugin  = function()
 							scr:draw_line(xy1.x4, xy1.y4, xy2.x4, xy2.y4, col)
 						end
 					end
-					local ggbutton = p.key.gg.hist[#p.key.gg.hist]
+					local ggbutton = pkey.gg.hist[#pkey.gg.hist]
 					if ggbutton then -- ボタン描画
 						for _, ctl in ipairs({
 							{ key = "",  btn = "_)", x = key_xy[ggbutton.lever].xt, y = key_xy[ggbutton.lever].yt, col = 0xFFCC0000 },
