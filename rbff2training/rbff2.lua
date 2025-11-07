@@ -2001,11 +2001,12 @@ rbff2.startplugin  = function()
 			on_punish       = -999,
 			on_block        = 0,
 			key             = {
-				log = ut.new_filled_table(global.key_hists, { key = "", frame = 0 }),
-				gg = ggkey_create(i == 1),
-				input = {},
-				cmd_hist = {},
-				pos_hist = {}, -- ジャンプ中の入力位置
+				num         = i,
+				log         = ut.new_filled_table(global.key_hists, { key = "", frame = 0 }),
+				gg          = ggkey_create(i == 1),
+				input       = {},
+				cmd_hist    = {},
+				pos_hist    = {}, -- ジャンプ中の入力位置
 			},
 			throw_boxies    = {},
 			fireballs       = {},
@@ -3235,19 +3236,18 @@ rbff2.startplugin  = function()
 	-- 初回入力まち
 	-- 未入力状態を待ちける→入力開始まで待ち受ける
 	recording.procs.await_no_input = function(_)
-		local key, addr, p = recording.key, recording.addr, recording.player
+		local key, p = recording.key, recording.player
 		if key.reg_pcnt == 0 then -- 状態変更
 			global.rec_main = recording.procs.await_1st_input
-			ut.printf("%s await_no_input -> await_1st_input %s %s", global.frame_number, p.num, p.control)
+			ut.printf("%s await_no_input -> await_1st_input target=%s control=%s key=%s", global.frame_number, p.num, p.control, key.num)
 		end
 	end
 	recording.procs.store_one = function(first)
-		local key, addr, p = recording.key, recording.addr, recording.player
+		local key, p = recording.key, recording.player
 		local cmd_side = p.cmd_side
 		local pos = { players[1].cmd_side, players[2].cmd_side }
 		if first then
 			recording.active_slot.p = p
-			recording.active_slot.addr = addr
 		else
 			table.remove(recording.active_slot.store)
 		end
@@ -3263,16 +3263,16 @@ rbff2.startplugin  = function()
 	end
 	recording.procs.await_1st_input = function(_)
 		recording.info = recording.info1
-		local key, addr, p = recording.key, recording.addr, recording.player
+		local key, p = recording.key, recording.player
 		if key.reg_pcnt ~= 0 then
 			recording.procs.store_one(true)
 			-- 状態変更
 			-- 初回のみ開始記憶
 			if recording.fixpos == nil then recording.procs.fixpos() end
 			global.rec_main = recording.procs.input
-			ut.printf("%s await_1st_input -> input %s %s", global.frame_number, p.num, p.control)
+			ut.printf("%s await_1st_input -> input target=%s control=%s key=%s", global.frame_number, p.num, p.control, key.num)
 		else
-			ut.printf("%s await_1st_input -> await_1st_input %s %s", global.frame_number, p.num, p.control)
+			--ut.printf("%s await_1st_input -> await_1st_input %s %s", global.frame_number, p.num, p.control)
 		end
 	end
 	recording.procs.input = function(_) -- 入力中+入力保存
@@ -4474,1376 +4474,1412 @@ rbff2.startplugin  = function()
 		[0x12] = "Air",
 	}
 
-	local tra_sub = {
-		read_basic_state = function()
-			-- 1Pと2Pの状態読取
-			for i, p in ipairs(players) do
-				local op = players[3 - i]
-				p.op     = op
-				p.update_char()
-				p.sliding = ut.tstb(p.flag_cc, db.flag_cc._02) -- ダッシュ滑り攻撃
-				-- やられ状態
-				if p.flag_fin or ut.tstb(p.flag_c0, db.flag_c0._16) then
-					-- 最終フレームか着地フレームの場合は前フレームのを踏襲する
-					p.in_hitstun = p.in_hitstun
-				elseif p.flag_c8 == 0 and p.hurt_state then
-					p.in_hitstun = p.hurt_state > 0 or
-						ut.tstb(p.flag_cc, db.flag_cc.hitstun) or
-						ut.tstb(p.flag_d0, db.flag_d0._06) or -- ガード中、やられ中
-						ut.tstb(p.flag_c0, db.flag_c0._01) -- ダウン
-				else
-					p.in_hitstun = false
-				end
-				if ut.tstb(p.flag_c4, db.flag_c4.hop) then
-					p.pos_miny = p.char_data.min_sy
-				elseif ut.tstb(p.flag_c4, db.flag_c4.jump) then
-					p.pos_miny = p.char_data.min_y
-				end
-				p.last_normal_state = p.normal_state
-				p.normal_state      = p.state == 0                                                                                 -- 素立ち
-				-- 通常投げ無敵判断 その2(HOME 039FC6から03A000の処理を再現して投げ無敵の値を求める)
-				p.throwable         = p.state == 0 and op.state == 0 and p.throw_timer > 24 and p.sway_status == 0x00 and p.invincible == 0 -- 投げ可能ベース
-				p.tw_muteki2        = p.tw_muteki2 or 0
-				p.n_throwable       = p.throwable and p.tw_muteki2 == 0                                                            -- 通常投げ可能
-				p.thrust            = p.thrust_int + p.thrust_frc
-				p.inertia           = p.inertia_int + p.inertia_frc
-				p.inertial          = not p.sliding and p.thrust == 0 and p.inertia > 0 and ut.tstb(p.flag_c0, db.flag_c0._31) -- ダッシュ慣性残し
-				p.thrusty           = p.thrusty_int + p.thrusty_frc
-				p.pos_total         = p.pos + p.pos_frc
-				p.pos_total_y       = p.pos_y + p.pos_frc_y
-				p.diff_pos_total    = p.old.pos_total and p.pos_total - p.old.pos_total or 0
-				p.diff_pos_total_y  = p.old.pos_total_y and p.pos_total_y - p.old.pos_total_y or 0
-
-				-- 位置の保存(文字と数値)
-				local old_pos       = p.pos_hist[#p.pos_hist]
-				table.insert(p.pos_hist, {
-					x = format_num(p.pos + p.pos_frc),
-					y = format_num(p.pos_y + p.pos_frc_y),
-					z = string.format("%02d", p.pos_z or 0),
-					pos = p.pos,
-					pos_frc = p.pos_frc,
-					pos_y = p.pos_y,
-					pos_frc_y = p.pos_frc_y,
-				})
-				while 3 < #p.pos_hist do table.remove(p.pos_hist, 1) end
-				p.old.pos       = old_pos.pos
-				p.old.pos_frc   = old_pos.pos_frc
-				p.old.pos_y     = old_pos.pos_y
-				p.old.pos_frc_y = old_pos.pos_frc_y
-				p.in_air        = 0 ~= p.pos_y or 0 ~= p.pos_frc_y
-				-- ジャンプの遷移ポイントかどうか
-				if not p.old.in_air and p.in_air then
-					p.attackbits.on_air, p.attackbits.on_ground = true, false
-				elseif p.old.in_air and not p.in_air then
-					p.attackbits.on_air, p.attackbits.on_ground = false, true
-				else
-					p.attackbits.on_air, p.attackbits.on_ground = false, false
-				end
-				p.old.in_naked, p.old.in_hurt, p.old.in_block = p.in_naked, p.in_hurt, p.in_block
-				p.in_hurt = ut.tstb(p.flag_cc, db.flag_cc.hitstun)
-				p.in_block = ut.tstb(p.old.flag_cc, db.flag_cc.blocking)
-				p.in_naked = p.in_hurt ~= true and p.in_block ~= true
-				if p.old.in_hurt ~= true and p.in_hurt == true then
-					p.on_hit = global.frame_number
-					p.update_tmp_combo(0, true)
-				end
-				if p.on_hit == global.frame_number or p.on_block == global.frame_number then p.last_block_side = p.block_side end
-				--p.attackbits.in_air, p.attackbits.in_ground = p.in_air, not p.in_air
-				-- 高さが0になった時点でジャンプ中状態を解除する
-				if p.attackbits.on_ground then p.jumping = false end
-				-- ジャンプ以降直後に空中になっていればジャンプ中とみなす
-				-- 部分無敵の判断にジャンプ中かどうかを使う
-				p.jumping = ut.tstb(p.old.flag_c0, db.flag_c0._17, true) and p.attackbits.on_air or p.jumping
-				p.pos_y_peek = p.in_air and math.max(p.pos_y_peek or 0, p.pos_y) or 0
-				if p.pos_y < p.old.pos_y or (p.pos_y == p.old.pos_y and p.pos_frc_y < p.old.pos_frc_y) then
-					p.pos_y_down = p.pos_y_down and (p.pos_y_down + 1) or 1
-				else
-					p.pos_y_down = 0
-				end
-				p.attackbits.on_main_line = p.on_main_line == global.frame_number
-				p.attackbits.on_main_to_sway = p.on_main_to_sway == global.frame_number
-				p.d6 = mem.r08(p.addr.base + 0xD6) -- 起き上がり攻撃用フラグ
-
-				-- リバーサルとBS動作の再抽選
-				p.dummy_enc, p.dummy_rvs, p.dummy_bs, p.dummy_fol = get_next_enc(p), get_next_rvs(p), get_next_bs(p), get_next_fol(p)
-
-				-- キャンセル可否家庭用 02AD90 からの処理と各種呼び出し元からの断片
-				p.hit_cancelable = false
-				local d0 = p.cancelable_data & 0xC0
-				if d0 ~= 0 and (d0 << 1) > 0xFF then
-					p.hit_cancelable = ut.tstb(p.flag_7e, db.flag_7e._05, true)
-				elseif d0 ~= 0 and (d0 << 2) > 0xFF then
-					p.hit_cancelable = not ut.tstb(p.flag_7e, db.flag_7e._04, true)
-				end
-				p.op.attackbits.op_cancelable = p.hit_cancelable
-				--ut.printf("hit_cancelable %X %s %s", d0, ut.tobitstr(p.flag_7e), p.hit_cancelable)
-
-				-- 追加入力確認
-				p.attackbits.on_additional_r1 = p.on_additional_r1 == global.frame_number
-				p.attackbits.on_additional_r5 = p.on_additional_r5 == global.frame_number
-				p.attackbits.on_additional_rsp = p.on_additional_rsp == global.frame_number
-				p.attackbits.on_additional_w1 = p.on_additional_w1 == global.frame_number
-				p.attackbits.on_additional_w5 = p.on_additional_w5 == global.frame_number
-				p.attackbits.on_additional_wsp = p.on_additional_wsp == global.frame_number
-
-				-- ガード持続の種類 家庭用 0271FC からの処理 0:攻撃無し 1:ガード継続小 2:ガード継続大
-				if p.firing then
-					p.kagenui_type = 2
-				elseif p.attack and p.attack ~= 0 then
-					local b2 = 0x80 == (0x80 & pgm:read_u8(pgm:read_u32(0x8C9E2 + p.char4) + p.attack))
-					p.kagenui_type = b2 and 3 or 2
-				else
-					p.kagenui_type = 1
-				end
-
-				--フレーム用
-				p.skip_frame            = global.skip_frame1 or global.skip_frame2 or p.skip_frame
-				p.old.act_data          = p.act_data or get_act_data(p.old)
-				p.act_data              = get_act_data(p)
-				local prev              = p.old.act_data and p.old.act_data.name_plain
-				p.act_data.last_plain   = (p.act_data.name_set and p.act_data.name_set[prev]) and prev or p.act_data.name_plain
-				p.act_data.last_name    = ut.convert(p.act_data.last_plain)
-
-				-- ガード移行可否と有利不利フレームの加減
-				global.both_act_neutral = p.act_data.neutral and global.both_act_neutral
-				if i == 2 then
-					local p1, p2, last = p.op, p, false -- global.both_act_neutral and not global.old_both_act_neutral
-					if p1.act_data.neutral and p2.act_data.neutral then
-						p1.frame_gap, p2.frame_gap = 0, 0
-					elseif not p1.act_data.neutral and not p2.act_data.neutral then
-						p1.frame_gap, p2.frame_gap, last = 0, 0, true
-					elseif not p1.act_data.neutral then
-						p1.frame_gap, p2.frame_gap, last = p1.frame_gap - 1, p2.frame_gap + 1, true
-					elseif not p2.act_data.neutral then
-						p1.frame_gap, p2.frame_gap, last = p1.frame_gap + 1, p2.frame_gap - 1, true
-					end
-					if last then
-						p1.last_frame_gap, p2.last_frame_gap = p1.frame_gap, p2.frame_gap
-					end
-				end
-
-				-- 弾の状態読取
-				p.attackbits.pre_fireball = false
-				p.attackbits.post_fireball = false
-				p.attackbits.on_fireball = false
-				p.attackbits.off_fireball = false
-				for _, fb in pairs(p.fireballs) do
-					if fb.proc_active then
-						global.both_act_neutral = false
-						fb.skip_frame = p.skip_frame -- 親オブジェクトの停止フレームを反映
-						p.attackbits.pre_fireball = p.attackbits.pre_fireball or fb.on_prefb == global.frame_number
-						p.attackbits.on_fireball = p.attackbits.on_fireball or fb.on_fireball == global.frame_number
-						p.attackbits.off_fireball = p.attackbits.off_fireball or fb.on_fireball == -global.frame_number
-					end
-					p.attackbits.post_fireball = p.attackbits.post_fireball or fb.on_prefb == -global.frame_number
-				end
-
-				-- フレーム表示の切替良否
-				p.update_act = false
-				if not ut.tstb(p.old.flag_cc, db.flag_cc.blocking | db.flag_cc.hitstun) then
-					if p.spid > 0 and p.on_update_spid == global.frame_number then
-						p.update_act = true
-					elseif p.spid == 0 and p.on_update_act == global.frame_number then
-						if p.attack_data == 0 then p.update_act = true elseif p.on_update_attack == global.frame_number then p.update_act = true end
-					elseif p.act_data.neutral ~= p.old.act_data.neutral and p.on_update_act == global.frame_number then
-						p.update_act = true
-					end
-				end
-				p.move_count = p.update_act and 1 or (p.move_count + 1)
+	local tra_sub = {}
+	tra_sub.read_basic_state = function()
+		-- 1Pと2Pの状態読取
+		for i, p in ipairs(players) do
+			local op = players[3 - i]
+			p.op     = op
+			p.update_char()
+			p.sliding = ut.tstb(p.flag_cc, db.flag_cc._02) -- ダッシュ滑り攻撃
+			-- やられ状態
+			if p.flag_fin or ut.tstb(p.flag_c0, db.flag_c0._16) then
+				-- 最終フレームか着地フレームの場合は前フレームのを踏襲する
+				p.in_hitstun = p.in_hitstun
+			elseif p.flag_c8 == 0 and p.hurt_state then
+				p.in_hitstun = p.hurt_state > 0 or
+					ut.tstb(p.flag_cc, db.flag_cc.hitstun) or
+					ut.tstb(p.flag_d0, db.flag_d0._06) or -- ガード中、やられ中
+					ut.tstb(p.flag_c0, db.flag_c0._01) -- ダウン
+			else
+				p.in_hitstun = false
 			end
-			for _, p in ipairs(players) do
-				if p.pos > p.op.pos then
-					p.thrust, p.inertia = -1 * p.thrust, -1 * p.inertia
-					p.diff_pos_total = -1 * p.diff_pos_total
-				end
-				p.thrust, p.inertia = p.thrust == 0 and 0 or p.thrust, p.inertia == 0 and 0 or p.inertia
-				p.diff_pos_total = p.diff_pos_total == 0 and 0 or p.diff_pos_total
-				p.thrusty = p.thrusty == 0 and 0 or p.thrusty
+			if ut.tstb(p.flag_c4, db.flag_c4.hop) then
+				p.pos_miny = p.char_data.min_sy
+			elseif ut.tstb(p.flag_c4, db.flag_c4.jump) then
+				p.pos_miny = p.char_data.min_y
+			end
+			p.last_normal_state = p.normal_state
+			p.normal_state      = p.state == 0                                                                                 -- 素立ち
+			-- 通常投げ無敵判断 その2(HOME 039FC6から03A000の処理を再現して投げ無敵の値を求める)
+			p.throwable         = p.state == 0 and op.state == 0 and p.throw_timer > 24 and p.sway_status == 0x00 and p.invincible == 0 -- 投げ可能ベース
+			p.tw_muteki2        = p.tw_muteki2 or 0
+			p.n_throwable       = p.throwable and p.tw_muteki2 == 0                                                            -- 通常投げ可能
+			p.thrust            = p.thrust_int + p.thrust_frc
+			p.inertia           = p.inertia_int + p.inertia_frc
+			p.inertial          = not p.sliding and p.thrust == 0 and p.inertia > 0 and ut.tstb(p.flag_c0, db.flag_c0._31) -- ダッシュ慣性残し
+			p.thrusty           = p.thrusty_int + p.thrusty_frc
+			p.pos_total         = p.pos + p.pos_frc
+			p.pos_total_y       = p.pos_y + p.pos_frc_y
+			p.diff_pos_total    = p.old.pos_total and p.pos_total - p.old.pos_total or 0
+			p.diff_pos_total_y  = p.old.pos_total_y and p.pos_total_y - p.old.pos_total_y or 0
+
+			-- 位置の保存(文字と数値)
+			local old_pos       = p.pos_hist[#p.pos_hist]
+			table.insert(p.pos_hist, {
+				x = format_num(p.pos + p.pos_frc),
+				y = format_num(p.pos_y + p.pos_frc_y),
+				z = string.format("%02d", p.pos_z or 0),
+				pos = p.pos,
+				pos_frc = p.pos_frc,
+				pos_y = p.pos_y,
+				pos_frc_y = p.pos_frc_y,
+			})
+			while 3 < #p.pos_hist do table.remove(p.pos_hist, 1) end
+			p.old.pos       = old_pos.pos
+			p.old.pos_frc   = old_pos.pos_frc
+			p.old.pos_y     = old_pos.pos_y
+			p.old.pos_frc_y = old_pos.pos_frc_y
+			p.in_air        = 0 ~= p.pos_y or 0 ~= p.pos_frc_y
+			-- ジャンプの遷移ポイントかどうか
+			if not p.old.in_air and p.in_air then
+				p.attackbits.on_air, p.attackbits.on_ground = true, false
+			elseif p.old.in_air and not p.in_air then
+				p.attackbits.on_air, p.attackbits.on_ground = false, true
+			else
+				p.attackbits.on_air, p.attackbits.on_ground = false, false
+			end
+			p.old.in_naked, p.old.in_hurt, p.old.in_block = p.in_naked, p.in_hurt, p.in_block
+			p.in_hurt = ut.tstb(p.flag_cc, db.flag_cc.hitstun)
+			p.in_block = ut.tstb(p.old.flag_cc, db.flag_cc.blocking)
+			p.in_naked = p.in_hurt ~= true and p.in_block ~= true
+			if p.old.in_hurt ~= true and p.in_hurt == true then
+				p.on_hit = global.frame_number
+				p.update_tmp_combo(0, true)
+			end
+			if p.on_hit == global.frame_number or p.on_block == global.frame_number then p.last_block_side = p.block_side end
+			--p.attackbits.in_air, p.attackbits.in_ground = p.in_air, not p.in_air
+			-- 高さが0になった時点でジャンプ中状態を解除する
+			if p.attackbits.on_ground then p.jumping = false end
+			-- ジャンプ以降直後に空中になっていればジャンプ中とみなす
+			-- 部分無敵の判断にジャンプ中かどうかを使う
+			p.jumping = ut.tstb(p.old.flag_c0, db.flag_c0._17, true) and p.attackbits.on_air or p.jumping
+			p.pos_y_peek = p.in_air and math.max(p.pos_y_peek or 0, p.pos_y) or 0
+			if p.pos_y < p.old.pos_y or (p.pos_y == p.old.pos_y and p.pos_frc_y < p.old.pos_frc_y) then
+				p.pos_y_down = p.pos_y_down and (p.pos_y_down + 1) or 1
+			else
+				p.pos_y_down = 0
+			end
+			p.attackbits.on_main_line = p.on_main_line == global.frame_number
+			p.attackbits.on_main_to_sway = p.on_main_to_sway == global.frame_number
+			p.d6 = mem.r08(p.addr.base + 0xD6) -- 起き上がり攻撃用フラグ
+
+			-- リバーサルとBS動作の再抽選
+			p.dummy_enc, p.dummy_rvs, p.dummy_bs, p.dummy_fol = get_next_enc(p), get_next_rvs(p), get_next_bs(p), get_next_fol(p)
+
+			-- キャンセル可否家庭用 02AD90 からの処理と各種呼び出し元からの断片
+			p.hit_cancelable = false
+			local d0 = p.cancelable_data & 0xC0
+			if d0 ~= 0 and (d0 << 1) > 0xFF then
+				p.hit_cancelable = ut.tstb(p.flag_7e, db.flag_7e._05, true)
+			elseif d0 ~= 0 and (d0 << 2) > 0xFF then
+				p.hit_cancelable = not ut.tstb(p.flag_7e, db.flag_7e._04, true)
+			end
+			p.op.attackbits.op_cancelable = p.hit_cancelable
+			--ut.printf("hit_cancelable %X %s %s", d0, ut.tobitstr(p.flag_7e), p.hit_cancelable)
+
+			-- 追加入力確認
+			p.attackbits.on_additional_r1 = p.on_additional_r1 == global.frame_number
+			p.attackbits.on_additional_r5 = p.on_additional_r5 == global.frame_number
+			p.attackbits.on_additional_rsp = p.on_additional_rsp == global.frame_number
+			p.attackbits.on_additional_w1 = p.on_additional_w1 == global.frame_number
+			p.attackbits.on_additional_w5 = p.on_additional_w5 == global.frame_number
+			p.attackbits.on_additional_wsp = p.on_additional_wsp == global.frame_number
+
+			-- ガード持続の種類 家庭用 0271FC からの処理 0:攻撃無し 1:ガード継続小 2:ガード継続大
+			if p.firing then
+				p.kagenui_type = 2
+			elseif p.attack and p.attack ~= 0 then
+				local b2 = 0x80 == (0x80 & pgm:read_u8(pgm:read_u32(0x8C9E2 + p.char4) + p.attack))
+				p.kagenui_type = b2 and 3 or 2
+			else
+				p.kagenui_type = 1
 			end
 
-			-- 1Pと2Pの状態読取 入力
-			for _, p in ipairs(players) do
-				if p.old and p.old.char == p.char then
-					p.old.input_states = p.input_states or {}
-					p.input_states     = {}
-					p.old.chaging      = p.chaging or {}
-					p.chaging          = {}
-				else
-					p.old.input_states = {}
-					p.input_states     = {}
-					p.old.chaging      = {}
-					p.chaging          = {}
-				end
-				local debug  = false -- 調査時のみtrue
-				local states = dip_config.easy_super and db.input_state_easy or db.input_state_normal
-				--ut.printf("%s %s %s", dip_config.easy_super, states == db.input_state_easy, states == db.input_state_normal)
-				states       = debug and states[#states] or states[p.char]
-				for ti, tbl in ipairs(states) do
-					local old, addr = p.old.input_states[ti], tbl.addr + p.input_offset
-					local on, chg_remain = mem.r08(addr - 1), mem.r08(addr)
-					local on_prev = on
-					local max = (old and old.on_prev == on_prev) and old.max or chg_remain
-					local input_estab = old and old.input_estab or false
-					local charging, reset, force_reset = false, false, false
-					local old_chg = (old and old.on ~= on)
-					local begin1 = old and old.begin1 or 0
-					local begin2 = old and old.begin2 or 0
+			--フレーム用
+			p.skip_frame            = global.skip_frame1 or global.skip_frame2 or p.skip_frame
+			p.old.act_data          = p.act_data or get_act_data(p.old)
+			p.act_data              = get_act_data(p)
+			local prev              = p.old.act_data and p.old.act_data.name_plain
+			p.act_data.last_plain   = (p.act_data.name_set and p.act_data.name_set[prev]) and prev or p.act_data.name_plain
+			p.act_data.last_name    = ut.convert(p.act_data.last_plain)
 
-					--ut.printf("cmd %6x:%2d %6x:%2d %4d %4d %4d %4d", addr, on, addr - 1, chg_remain, begin1 or -1, begin2 or -1, global.frame_number, tbl.on_input_estab or -1)
-					if old_chg then
-						if old and old.begin1 then
-							if on == 0 and tbl.on_input_estab then
-								--ut.printf("comp %6x:%2x %6x:%2x %4d %4d %4d %4d", addr, on, addr - 1, chg_remain, global.frame_number - old.begin1, global.frame_number - old.begin2, global.frame_number, tbl.on_input_estab or -1)
-								if tbl.type == input_state.types.n_first then
-									tbl.estab_txt = string.format("%3dF", tbl.on_input_estab - old.begin2 + 1)
-								elseif tbl.type == input_state.types.charge then
-									local f2 = tbl.on_input_estab - old.begin2 + 1
-									local f1 = f2 + begin1 - 1 -- ため完了までの時間に変換
-									tbl.estab_txt = string.format("%3dF/%3dF", f1, f2)
-								else
-									tbl.estab_txt = string.format("%3dF/%3dF", tbl.on_input_estab - old.begin1, tbl.on_input_estab - old.begin2 + 1)
-								end
-								begin1, begin2 = 0, 0
-							end
-						end
-						if tbl.type == input_state.types.charge then
-							if on == 1 and chg_remain > 0 then
-								begin1 = chg_remain
-								--ut.printf("chg1 %6x:%2d %6x:%2d %4d %4d %4d %4d", addr, on, addr - 1, chg_remain, begin1 or -1, begin2 or -1, global.frame_number, tbl.on_input_estab or -1)
-							end
-							if begin1 and old.chg_remain == 0 then
-								begin2 = global.frame_number - 1 -- ため完了時点を保存
-								--ut.printf("chg2 %6x:%2d %6x:%2d %4d %4d %4d %4d", addr, on, addr - 1, chg_remain, begin1 or -1, begin2 or -1, global.frame_number, tbl.on_input_estab or -1)
-							end
-							--ut.printf("chg %6x:%2d %6x:%2d %4d %4d %4d %4d", addr, on, addr - 1, chg_remain, global.frame_number - begin1, global.frame_number - begin2, global.frame_number, tbl.on_input_estab or -1)
-						else
-							if on == 1 and old.on_prev == 0 then begin1 = global.frame_number - 1 end
-							if on >= 2 and old.on_prev == 1 then begin2 = global.frame_number - 1 end
-						end
-					end
-					-- コマンド種類ごとの表示用の補正
-					if tbl.type == input_state.types.charge then
-						if on == 1 and chg_remain == 0 then
-							on = 3
-						elseif on > 1 then
-							on = on + 1
-						end
-						charging = on == 1
-						if old then reset = old.on == #tbl.cmds and old.chg_remain > 0 end
-						local c_old = p.old.chaging[#p.chaging + 1]
-						table.insert(p.chaging, { -- ため時間だけの履歴を登録する
-							charging = charging,
-							chg_remain = charging and chg_remain or on > 1 and 0 or (c_old and c_old.chg_remain or 0),
-							max = charging and max or (c_old and c_old.max or max),
-							tbl = tbl,
-						})
-					else
-						if old then reset = old.on == #tbl.cmds and old.chg_remain > 0 end
-					end
-					if old then
-						if p.char ~= old.char or on == 1 then
-							input_estab = false
-							tbl.on_input_estab = nil
-						elseif tbl.on_input_estab then
-							input_estab = tbl.on_input_estab <= global.frame_number
-						end
-						if force_reset then input_estab = false end
-					end
-					table.insert(p.input_states, {
-						char = p.char,
-						chg_remain = chg_remain, -- 次の入力の受付猶予F
-						on = on,
-						on_prev = on_prev, -- 加工前の入力のすすみの数値
-						tbl = tbl,
-						debug = debug,
-						input_estab = input_estab,
-						charging = charging,
-						max = max,
-						begin1 = begin1,
-						begin2 = begin2,
-					})
+			-- ガード移行可否と有利不利フレームの加減
+			global.both_act_neutral = p.act_data.neutral and global.both_act_neutral
+			if i == 2 then
+				local p1, p2, last = p.op, p, false -- global.both_act_neutral and not global.old_both_act_neutral
+				if p1.act_data.neutral and p2.act_data.neutral then
+					p1.frame_gap, p2.frame_gap = 0, 0
+				elseif not p1.act_data.neutral and not p2.act_data.neutral then
+					p1.frame_gap, p2.frame_gap, last = 0, 0, true
+				elseif not p1.act_data.neutral then
+					p1.frame_gap, p2.frame_gap, last = p1.frame_gap - 1, p2.frame_gap + 1, true
+				elseif not p2.act_data.neutral then
+					p1.frame_gap, p2.frame_gap, last = p1.frame_gap + 1, p2.frame_gap - 1, true
+				end
+				if last then
+					p1.last_frame_gap, p2.last_frame_gap = p1.frame_gap, p2.frame_gap
 				end
 			end
 
-			for _, p in pairs(all_objects) do -- 処理アドレス保存
-				local base = p.bases[#p.bases]
-				if not base or base.addr ~= p.base then
-					p.update_base = true
-					ut.table_add(p.bases, {
-						addr     = p.base,
-						count    = 1,
-						act_data = p.body.act_data,
-						name     = p.proc_active and ut.convert(p.body.act_data.name_plain) or "NOP",
-						xmov     = p.body.diff_pos_total,
-					}, 16)
-				else
-					p.update_base = false
-					base.count, base.xmov = base.count + 1, base.xmov + p.body.diff_pos_total
+			-- 弾の状態読取
+			p.attackbits.pre_fireball = false
+			p.attackbits.post_fireball = false
+			p.attackbits.on_fireball = false
+			p.attackbits.off_fireball = false
+			for _, fb in pairs(p.fireballs) do
+				if fb.proc_active then
+					global.both_act_neutral = false
+					fb.skip_frame = p.skip_frame -- 親オブジェクトの停止フレームを反映
+					p.attackbits.pre_fireball = p.attackbits.pre_fireball or fb.on_prefb == global.frame_number
+					p.attackbits.on_fireball = p.attackbits.on_fireball or fb.on_fireball == global.frame_number
+					p.attackbits.off_fireball = p.attackbits.off_fireball or fb.on_fireball == -global.frame_number
+				end
+				p.attackbits.post_fireball = p.attackbits.post_fireball or fb.on_prefb == -global.frame_number
+			end
+
+			-- フレーム表示の切替良否
+			p.update_act = false
+			if not ut.tstb(p.old.flag_cc, db.flag_cc.blocking | db.flag_cc.hitstun) then
+				if p.spid > 0 and p.on_update_spid == global.frame_number then
+					p.update_act = true
+				elseif p.spid == 0 and p.on_update_act == global.frame_number then
+					if p.attack_data == 0 then p.update_act = true elseif p.on_update_attack == global.frame_number then p.update_act = true end
+				elseif p.act_data.neutral ~= p.old.act_data.neutral and p.on_update_act == global.frame_number then
+					p.update_act = true
 				end
 			end
-		end,
-		read_box = function ()
-			-- キャラと弾への当たり判定の反映
-			hitboxies, ranges = {}, {} -- ソート前の判定のバッファ
+			p.move_count = p.update_act and 1 or (p.move_count + 1)
+		end
+		for _, p in ipairs(players) do
+			if p.pos > p.op.pos then
+				p.thrust, p.inertia = -1 * p.thrust, -1 * p.inertia
+				p.diff_pos_total = -1 * p.diff_pos_total
+			end
+			p.thrust, p.inertia = p.thrust == 0 and 0 or p.thrust, p.inertia == 0 and 0 or p.inertia
+			p.diff_pos_total = p.diff_pos_total == 0 and 0 or p.diff_pos_total
+			p.thrusty = p.thrusty == 0 and 0 or p.thrusty
+		end
 
-			for _, p in ut.find_all(all_objects, function(_, p) return p.proc_active end) do
-				-- 判定表示前の座標補正
-				p.x, p.y, p.flip_x = p.pos - screen.left, screen.top - p.pos_y - p.pos_z, (p.flip_x1 ~ p.flip_x2) > 0 and 1 or -1
-				p.vulnerable = (p.invincible and p.invincible > 0) or p.hurt_invincible or (p.on_hitcheck ~= global.frame_number and p.on_vulnerable ~= global.frame_number)
-				-- ut.printf("%x p.vulnerable %s %s %s %s %s %s", p.addr.base, p.vulnerable, p.invincible, p.hurt_invincible, p.on_vulnerable, global.frame_number, p.on_vulnerable ~= global.frame_number)
-				-- 判定位置を考慮しない属性を追加
-				p.parrieable = (p.parrieable or 0) | (p.parrieable1 and p.parrieable2 and hitbox_parry_bits.baigaeshi or 0)
-				p.hitboxies, p.hitbox_types, p.hurt = {}, {}, {} -- 座標補正後データ格納のためバッファのクリア
-				local boxkeys = { hit = {}, hurt = {} }
-				p.hurt = {
-					max_top = -0xFFFF,
-					min_bottom = 0xFFFF,
-					dodge = p.vulnerable and frame_attack_types.full or 0,
-					main = 0, -- 通常のやられ判定の数
-					sway = 0, -- スウェイ上のやられ判定の数
-					launch = 0, -- 空中追撃可能なやられ判定の数
-					down_otg = 0, -- ダウン追撃可能なやられ判定の数
-				}
-				p.hit = { box_count = 0 }
-				p.attackbit = calc_attackbit(p.attackbits, p)
+		-- 1Pと2Pの状態読取 入力
+		for _, p in ipairs(players) do
+			if p.old and p.old.char == p.char then
+				p.old.input_states = p.input_states or {}
+				p.input_states     = {}
+				p.old.chaging      = p.chaging or {}
+				p.chaging          = {}
+			else
+				p.old.input_states = {}
+				p.input_states     = {}
+				p.old.chaging      = {}
+				p.chaging          = {}
+			end
+			local debug  = false -- 調査時のみtrue
+			local states = dip_config.easy_super and db.input_state_easy or db.input_state_normal
+			--ut.printf("%s %s %s", dip_config.easy_super, states == db.input_state_easy, states == db.input_state_normal)
+			states       = debug and states[#states] or states[p.char]
+			for ti, tbl in ipairs(states) do
+				local old, addr = p.old.input_states[ti], tbl.addr + p.input_offset
+				local on, chg_remain = mem.r08(addr - 1), mem.r08(addr)
+				local on_prev = on
+				local max = (old and old.on_prev == on_prev) and old.max or chg_remain
+				local input_estab = old and old.input_estab or false
+				local charging, reset, force_reset = false, false, false
+				local old_chg = (old and old.on ~= on)
+				local begin1 = old and old.begin1 or 0
+				local begin2 = old and old.begin2 or 0
 
-				-- 判定が変わったらポーズさせる  1:OFF, 2:投げ, 3:攻撃, 4:変化時
-				if global.pause_hitbox == 4 and p.act_data and not p.act_data.neutral and (p.chg_hitbox or p.chg_hurtbox) then global.pause = true end
-
-				-- 当たりとやられ判定判定
-				if p.delayed_clearing == global.frame_number then p.boxies = {} end
-				if p.delayed_inactive == global.frame_number then
-					p.parrieable, p.attack_id, p.attackbits = 0, 0, {}
-					p.boxies, p.on_fireball = #p.boxies == 0 and p.boxies or {}, -1
-					if p.is_fireball then p.proc_active = false end
-				end
-				p.hurt.dodge = frame_attack_types.full -- くらい判定なし＝全身無敵をデフォルトにする
-				p.hit.blockbit = {
-					main = 0,
-					sway = 0,
-					punish = 0,
-					parrieable = 0,
-				}
-				for _, _, box in ut.ifind_all(p.boxies, function(box)
-					local type = fix_box_type(p, p.attackbit, box) -- 属性はヒット状況などで変わるので都度解決する
-					if not (db.hurt_boxies[type] and p.vulnerable) then
-						local src = box
-						box = fix_box_scale(p, src)
-						box.type = type
-						box.keytxt = string.format("b%2x%2x%2x%2x%2x", box.type.no, src.top, src.bottom, src.left, src.right)
-						return box
-					end
-				end) do
-					if box.type == db.box_types.hurt1 or box.type == db.box_types.hurt2 then
-						p.hurt.main = p.hurt.main + 1
-					elseif box.type == db.box_types.down_otg then
-						p.hurt.down_otg = p.hurt.down_otg + 1
-					elseif box.type == db.box_types.launch then
-						p.hurt.launch = p.hurt.launch + 1
-					elseif box.type == db.box_types.hurt3 or box.type == db.box_types.hurt4 then
-						p.hurt.sway = p.hurt.sway + 1
-					end
-					if box.type.kind == db.box_kinds.attack or box.type.kind == db.box_kinds.parry then
-						if global.pause_hitbox == 3 then global.pause = true end -- 強制ポーズ 1:OFF, 2:投げ, 3:攻撃, 4:変化時
-						p.hit.box_count = p.hit.box_count + 1     -- 攻撃判定の数
-					end
-					if box.type.kind == db.box_kinds.attack then  -- 攻撃位置から解決した属性を付与する
-						box.blockables = {
-							main = ut.tstb(box.possible, possible_types.same_line) and box.blockable | get_top_type(box.real_top, db.top_types) or 0,
-							sway = ut.tstb(box.possible, possible_types.diff_line) and box.blockable | get_top_type(box.real_top, db.top_sway_types) or 0,
-							punish = ut.tstb(box.possible, possible_types.same_line) and get_top_type(box.real_bottom, db.hurt_dodge_types) or 0,
-						}
-						-- 判定位置を考慮した属性を追加
-						local parrieable, possibles = 0, get_hitbox_possibles(box.id)
-						for _, t in ipairs(hitbox_parry_types) do
-							local in_range = possibles[t.name] and t.range(box.real_top, box.real_bottom)
-							if t == hitbox_parry_bits.baigaeshi then
-								if p.is_fireball and p.proc_active and p.parrieable1 and p.parrieable2 and in_range then
-									parrieable = parrieable | t.value
-								end
+				--ut.printf("cmd %6x:%2d %6x:%2d %4d %4d %4d %4d", addr, on, addr - 1, chg_remain, begin1 or -1, begin2 or -1, global.frame_number, tbl.on_input_estab or -1)
+				if old_chg then
+					if old and old.begin1 then
+						if on == 0 and tbl.on_input_estab then
+							--ut.printf("comp %6x:%2x %6x:%2x %4d %4d %4d %4d", addr, on, addr - 1, chg_remain, global.frame_number - old.begin1, global.frame_number - old.begin2, global.frame_number, tbl.on_input_estab or -1)
+							if tbl.type == input_state.types.n_first then
+								tbl.estab_txt = string.format("%3dF", tbl.on_input_estab - old.begin2 + 1)
+							elseif tbl.type == input_state.types.charge then
+								local f2 = tbl.on_input_estab - old.begin2 + 1
+								local f1 = f2 + begin1 - 1 -- ため完了までの時間に変換
+								tbl.estab_txt = string.format("%3dF/%3dF", f1, f2)
 							else
-								parrieable = parrieable | (in_range and t.value or 0)
+								tbl.estab_txt = string.format("%3dF/%3dF", tbl.on_input_estab - old.begin1, tbl.on_input_estab - old.begin2 + 1)
 							end
-						end
-						box.parrieable = parrieable
-						p.hit.blockbit.main = p.hit.blockbit.main | box.blockables.main
-						p.hit.blockbit.sway = p.hit.blockbit.sway | box.blockables.sway
-						p.hit.blockbit.punish = p.hit.blockbit.punish | box.blockables.punish
-						p.hit.blockbit.parrieable = p.hit.blockbit.parrieable | box.parrieable
-					elseif box.type.kind == db.box_kinds.hurt then -- くらいの無敵(部分無敵)の属性を付与する
-						if (not ut.tstb(p.flag_c0, db.flag_c0._01)) and (box.type == db.box_types.down_otg) then
-							-- ignore
-						else
-							p.hurt.max_top = math.max(p.hurt.max_top or 0, box.real_top)
-							p.hurt.min_bottom = math.min(p.hurt.min_bottom or 0xFFFF, box.real_bottom)
-						end
-						if p.hurt.max_top ~= -0xFFFF and p.hurt.min_bottom ~= 0xFFFF then
-							p.hurt.dodge = get_dodge(p, box, p.hurt.max_top, p.hurt.min_bottom)
+							begin1, begin2 = 0, 0
 						end
 					end
+					if tbl.type == input_state.types.charge then
+						if on == 1 and chg_remain > 0 then
+							begin1 = chg_remain
+							--ut.printf("chg1 %6x:%2d %6x:%2d %4d %4d %4d %4d", addr, on, addr - 1, chg_remain, begin1 or -1, begin2 or -1, global.frame_number, tbl.on_input_estab or -1)
+						end
+						if begin1 and old.chg_remain == 0 then
+							begin2 = global.frame_number - 1 -- ため完了時点を保存
+							--ut.printf("chg2 %6x:%2d %6x:%2d %4d %4d %4d %4d", addr, on, addr - 1, chg_remain, begin1 or -1, begin2 or -1, global.frame_number, tbl.on_input_estab or -1)
+						end
+						--ut.printf("chg %6x:%2d %6x:%2d %4d %4d %4d %4d", addr, on, addr - 1, chg_remain, global.frame_number - begin1, global.frame_number - begin2, global.frame_number, tbl.on_input_estab or -1)
+					else
+						if on == 1 and old.on_prev == 0 then begin1 = global.frame_number - 1 end
+						if on >= 2 and old.on_prev == 1 then begin2 = global.frame_number - 1 end
+					end
+				end
+				-- コマンド種類ごとの表示用の補正
+				if tbl.type == input_state.types.charge then
+					if on == 1 and chg_remain == 0 then
+						on = 3
+					elseif on > 1 then
+						on = on + 1
+					end
+					charging = on == 1
+					if old then reset = old.on == #tbl.cmds and old.chg_remain > 0 end
+					local c_old = p.old.chaging[#p.chaging + 1]
+					table.insert(p.chaging, { -- ため時間だけの履歴を登録する
+						charging = charging,
+						chg_remain = charging and chg_remain or on > 1 and 0 or (c_old and c_old.chg_remain or 0),
+						max = charging and max or (c_old and c_old.max or max),
+						tbl = tbl,
+					})
+				else
+					if old then reset = old.on == #tbl.cmds and old.chg_remain > 0 end
+				end
+				if old then
+					if p.char ~= old.char or on == 1 then
+						input_estab = false
+						tbl.on_input_estab = nil
+					elseif tbl.on_input_estab then
+						input_estab = tbl.on_input_estab <= global.frame_number
+					end
+					if force_reset then input_estab = false end
+				end
+				table.insert(p.input_states, {
+					char = p.char,
+					chg_remain = chg_remain, -- 次の入力の受付猶予F
+					on = on,
+					on_prev = on_prev, -- 加工前の入力のすすみの数値
+					tbl = tbl,
+					debug = debug,
+					input_estab = input_estab,
+					charging = charging,
+					max = max,
+					begin1 = begin1,
+					begin2 = begin2,
+				})
+			end
+		end
+
+		for _, p in pairs(all_objects) do -- 処理アドレス保存
+			local base = p.bases[#p.bases]
+			if not base or base.addr ~= p.base then
+				p.update_base = true
+				ut.table_add(p.bases, {
+					addr     = p.base,
+					count    = 1,
+					act_data = p.body.act_data,
+					name     = p.proc_active and ut.convert(p.body.act_data.name_plain) or "NOP",
+					xmov     = p.body.diff_pos_total,
+				}, 16)
+			else
+				p.update_base = false
+				base.count, base.xmov = base.count + 1, base.xmov + p.body.diff_pos_total
+			end
+		end
+	end
+	tra_sub.read_box = function ()
+		-- キャラと弾への当たり判定の反映
+		hitboxies, ranges = {}, {} -- ソート前の判定のバッファ
+
+		for _, p in ut.find_all(all_objects, function(_, p) return p.proc_active end) do
+			-- 判定表示前の座標補正
+			p.x, p.y, p.flip_x = p.pos - screen.left, screen.top - p.pos_y - p.pos_z, (p.flip_x1 ~ p.flip_x2) > 0 and 1 or -1
+			p.vulnerable = (p.invincible and p.invincible > 0) or p.hurt_invincible or (p.on_hitcheck ~= global.frame_number and p.on_vulnerable ~= global.frame_number)
+			-- ut.printf("%x p.vulnerable %s %s %s %s %s %s", p.addr.base, p.vulnerable, p.invincible, p.hurt_invincible, p.on_vulnerable, global.frame_number, p.on_vulnerable ~= global.frame_number)
+			-- 判定位置を考慮しない属性を追加
+			p.parrieable = (p.parrieable or 0) | (p.parrieable1 and p.parrieable2 and hitbox_parry_bits.baigaeshi or 0)
+			p.hitboxies, p.hitbox_types, p.hurt = {}, {}, {} -- 座標補正後データ格納のためバッファのクリア
+			local boxkeys = { hit = {}, hurt = {} }
+			p.hurt = {
+				max_top = -0xFFFF,
+				min_bottom = 0xFFFF,
+				dodge = p.vulnerable and frame_attack_types.full or 0,
+				main = 0, -- 通常のやられ判定の数
+				sway = 0, -- スウェイ上のやられ判定の数
+				launch = 0, -- 空中追撃可能なやられ判定の数
+				down_otg = 0, -- ダウン追撃可能なやられ判定の数
+			}
+			p.hit = { box_count = 0 }
+			p.attackbit = calc_attackbit(p.attackbits, p)
+
+			-- 判定が変わったらポーズさせる  1:OFF, 2:投げ, 3:攻撃, 4:変化時
+			if global.pause_hitbox == 4 and p.act_data and not p.act_data.neutral and (p.chg_hitbox or p.chg_hurtbox) then global.pause = true end
+
+			-- 当たりとやられ判定判定
+			if p.delayed_clearing == global.frame_number then p.boxies = {} end
+			if p.delayed_inactive == global.frame_number then
+				p.parrieable, p.attack_id, p.attackbits = 0, 0, {}
+				p.boxies, p.on_fireball = #p.boxies == 0 and p.boxies or {}, -1
+				if p.is_fireball then p.proc_active = false end
+			end
+			p.hurt.dodge = frame_attack_types.full -- くらい判定なし＝全身無敵をデフォルトにする
+			p.hit.blockbit = {
+				main = 0,
+				sway = 0,
+				punish = 0,
+				parrieable = 0,
+			}
+			for _, _, box in ut.ifind_all(p.boxies, function(box)
+				local type = fix_box_type(p, p.attackbit, box) -- 属性はヒット状況などで変わるので都度解決する
+				if not (db.hurt_boxies[type] and p.vulnerable) then
+					local src = box
+					box = fix_box_scale(p, src)
+					box.type = type
+					box.keytxt = string.format("b%2x%2x%2x%2x%2x", box.type.no, src.top, src.bottom, src.left, src.right)
+					return box
+				end
+			end) do
+				if box.type == db.box_types.hurt1 or box.type == db.box_types.hurt2 then
+					p.hurt.main = p.hurt.main + 1
+				elseif box.type == db.box_types.down_otg then
+					p.hurt.down_otg = p.hurt.down_otg + 1
+				elseif box.type == db.box_types.launch then
+					p.hurt.launch = p.hurt.launch + 1
+				elseif box.type == db.box_types.hurt3 or box.type == db.box_types.hurt4 then
+					p.hurt.sway = p.hurt.sway + 1
+				end
+				if box.type.kind == db.box_kinds.attack or box.type.kind == db.box_kinds.parry then
+					if global.pause_hitbox == 3 then global.pause = true end -- 強制ポーズ 1:OFF, 2:投げ, 3:攻撃, 4:変化時
+					p.hit.box_count = p.hit.box_count + 1     -- 攻撃判定の数
+				end
+				if box.type.kind == db.box_kinds.attack then  -- 攻撃位置から解決した属性を付与する
+					box.blockables = {
+						main = ut.tstb(box.possible, possible_types.same_line) and box.blockable | get_top_type(box.real_top, db.top_types) or 0,
+						sway = ut.tstb(box.possible, possible_types.diff_line) and box.blockable | get_top_type(box.real_top, db.top_sway_types) or 0,
+						punish = ut.tstb(box.possible, possible_types.same_line) and get_top_type(box.real_bottom, db.hurt_dodge_types) or 0,
+					}
+					-- 判定位置を考慮した属性を追加
+					local parrieable, possibles = 0, get_hitbox_possibles(box.id)
+					for _, t in ipairs(hitbox_parry_types) do
+						local in_range = possibles[t.name] and t.range(box.real_top, box.real_bottom)
+						if t == hitbox_parry_bits.baigaeshi then
+							if p.is_fireball and p.proc_active and p.parrieable1 and p.parrieable2 and in_range then
+								parrieable = parrieable | t.value
+							end
+						else
+							parrieable = parrieable | (in_range and t.value or 0)
+						end
+					end
+					box.parrieable = parrieable
+					p.hit.blockbit.main = p.hit.blockbit.main | box.blockables.main
+					p.hit.blockbit.sway = p.hit.blockbit.sway | box.blockables.sway
+					p.hit.blockbit.punish = p.hit.blockbit.punish | box.blockables.punish
+					p.hit.blockbit.parrieable = p.hit.blockbit.parrieable | box.parrieable
+				elseif box.type.kind == db.box_kinds.hurt then -- くらいの無敵(部分無敵)の属性を付与する
+					if (not ut.tstb(p.flag_c0, db.flag_c0._01)) and (box.type == db.box_types.down_otg) then
+						-- ignore
+					else
+						p.hurt.max_top = math.max(p.hurt.max_top or 0, box.real_top)
+						p.hurt.min_bottom = math.min(p.hurt.min_bottom or 0xFFFF, box.real_bottom)
+					end
+					if p.hurt.max_top ~= -0xFFFF and p.hurt.min_bottom ~= 0xFFFF then
+						p.hurt.dodge = get_dodge(p, box, p.hurt.max_top, p.hurt.min_bottom)
+					end
+				end
+				box.p = p
+				table.insert(p.hitboxies, box)
+				table.insert(hitboxies, box)
+				table.insert(p.hitbox_types, box.type)
+				local hit = box.type.kind == db.box_kinds.attack or box.type.kind == db.box_kinds.parry
+				table.insert(hit and boxkeys.hit or boxkeys.hurt, box.keytxt)
+			end
+			if not p.is_fireball then p.attackbit = p.attackbit | p.hurt.dodge end -- 本体の部分無敵フラグを設定
+
+			-- 攻撃判定がない場合は関連するフラグを無効化する
+			if p.hit.box_count == 0 then p.attackbit = ut.hex_clear(p.attackbit, db.box_with_bit_types.mask) end
+
+			if p.is_fireball ~= true then
+				-- 押し合い判定（本体のみ）
+				if p.push_invincible and p.push_invincible == 0 and mem._0x10B862 == 0 then
+					local src = get_push_box(p)
+					local box = fix_box_scale(p, src)
+					box.keytxt = string.format("p%2x%2x%2x%2x%2x", box.type.no, src.top, src.bottom, src.left, src.right)
 					box.p = p
 					table.insert(p.hitboxies, box)
 					table.insert(hitboxies, box)
+					table.insert(boxkeys.hurt, box.keytxt)
 					table.insert(p.hitbox_types, box.type)
-					local hit = box.type.kind == db.box_kinds.attack or box.type.kind == db.box_kinds.parry
-					table.insert(hit and boxkeys.hit or boxkeys.hurt, box.keytxt)
 				end
-				if not p.is_fireball then p.attackbit = p.attackbit | p.hurt.dodge end -- 本体の部分無敵フラグを設定
 
-				-- 攻撃判定がない場合は関連するフラグを無効化する
-				if p.hit.box_count == 0 then p.attackbit = ut.hex_clear(p.attackbit, db.box_with_bit_types.mask) end
-
-				if p.is_fireball ~= true then
-					-- 押し合い判定（本体のみ）
-					if p.push_invincible and p.push_invincible == 0 and mem._0x10B862 == 0 then
-						local src = get_push_box(p)
-						local box = fix_box_scale(p, src)
-						box.keytxt = string.format("p%2x%2x%2x%2x%2x", box.type.no, src.top, src.bottom, src.left, src.right)
-						box.p = p
-						table.insert(p.hitboxies, box)
-						table.insert(hitboxies, box)
-						table.insert(boxkeys.hurt, box.keytxt)
-						table.insert(p.hitbox_types, box.type)
-					end
-
-					-- 投げ判定
-					local new_throw_ids = {}
-					for _, box in pairs(p.throw_boxies) do
-						if global.pause_hitbox == 2 then global.pause = true end -- 強制ポーズ  1:OFF, 2:投げ, 3:攻撃, 4:変化時
-						box.keytxt = string.format("t%2x%2x", box.type.no, box.id)
-						box.p = p
-						table.insert(p.hitboxies, box)
-						table.insert(hitboxies, box)
-						table.insert(boxkeys.hit, box.keytxt)
-						table.insert(p.hitbox_types, box.type)
-						table.insert(new_throw_ids, { char = p.char, id = box.id })
-					end
-					p.throw_boxies = {}
-					if 0 < #new_throw_ids then
-						p.last_throw_ids = new_throw_ids
-					elseif p.last_throw_ids then
-						for _, item in ipairs(p.last_throw_ids) do
-							if item.char == p.char then
-								local box = get_throwbox(p, item.id)
-								box.type = db.box_types.push
-								box.p = p
-								table.insert(p.hitboxies, box)
-								table.insert(hitboxies, box)
-							end
+				-- 投げ判定
+				local new_throw_ids = {}
+				for _, box in pairs(p.throw_boxies) do
+					if global.pause_hitbox == 2 then global.pause = true end -- 強制ポーズ  1:OFF, 2:投げ, 3:攻撃, 4:変化時
+					box.keytxt = string.format("t%2x%2x", box.type.no, box.id)
+					box.p = p
+					table.insert(p.hitboxies, box)
+					table.insert(hitboxies, box)
+					table.insert(boxkeys.hit, box.keytxt)
+					table.insert(p.hitbox_types, box.type)
+					table.insert(new_throw_ids, { char = p.char, id = box.id })
+				end
+				p.throw_boxies = {}
+				if 0 < #new_throw_ids then
+					p.last_throw_ids = new_throw_ids
+				elseif p.last_throw_ids then
+					for _, item in ipairs(p.last_throw_ids) do
+						if item.char == p.char then
+							local box = get_throwbox(p, item.id)
+							box.type = db.box_types.push
+							box.p = p
+							table.insert(p.hitboxies, box)
+							table.insert(hitboxies, box)
 						end
 					end
+				end
 
-					-- 座標
+				-- 座標
+				table.insert(ranges, {
+					label = string.format("%sP", p.num),
+					x = p.x,
+					y = p.y,
+					flip_x = p.cmd_side,
+					within = false,
+					p = p,
+				})
+			end
+
+			if p.is_fireball ~= true then
+				-- 詠酒を発動される範囲
+				if p.esaka and p.esaka > 0 then
+					p.esaka_range = p.calc_range_x(p.esaka) -- 位置を反映した座標を計算
 					table.insert(ranges, {
-						label = string.format("%sP", p.num),
-						x = p.x,
+						label = string.format("E%sP%s", p.num, p.esaka_type),
+						x = p.esaka_range,
 						y = p.y,
-						flip_x = p.cmd_side,
-						within = false,
+						flip_x = -p.flip_x, -- 内側に太線を引きたいのでflipを反転する
+						within = p.within(p.x, p.esaka_range),
 						p = p,
 					})
 				end
 
-				if p.is_fireball ~= true then
-					-- 詠酒を発動される範囲
-					if p.esaka and p.esaka > 0 then
-						p.esaka_range = p.calc_range_x(p.esaka) -- 位置を反映した座標を計算
+				-- 地上通常技かライン移動技の遠近判断距離
+				if p.pos_y + p.pos_frc_y == 0 then
+					for label, close_far in pairs(p.char_data.close_far[p.sway_status]) do
+						local x1, x2 = close_far.x1 == 0 and p.x or p.calc_range_x(close_far.x1), p.calc_range_x(close_far.x2)
 						table.insert(ranges, {
-							label = string.format("E%sP%s", p.num, p.esaka_type),
-							x = p.esaka_range,
+							label = label,
+							x = x2,
 							y = p.y,
 							flip_x = -p.flip_x, -- 内側に太線を引きたいのでflipを反転する
-							within = p.within(p.x, p.esaka_range),
+							within = p.within(x1, x2),
 							p = p,
 						})
 					end
+				end
+			end
 
-					-- 地上通常技かライン移動技の遠近判断距離
-					if p.pos_y + p.pos_frc_y == 0 then
-						for label, close_far in pairs(p.char_data.close_far[p.sway_status]) do
-							local x1, x2 = close_far.x1 == 0 and p.x or p.calc_range_x(close_far.x1), p.calc_range_x(close_far.x2)
-							table.insert(ranges, {
-								label = label,
-								x = x2,
-								y = p.y,
-								flip_x = -p.flip_x, -- 内側に太線を引きたいのでflipを反転する
-								within = p.within(x1, x2),
-								p = p,
+			table.sort(boxkeys.hit)
+			table.sort(boxkeys.hurt)
+			p.old.hitboxkey, p.hitboxkey = p.hitboxkey, table.concat(boxkeys.hit, "|")
+			p.old.hurtboxkey, p.hurtboxkey = p.hurtboxkey, table.concat(boxkeys.hurt, "|")
+			p.chg_hitbox = p.old.hitboxkey ~= p.hitboxkey
+			p.chg_hurtbox = p.old.hurtboxkey ~= p.hurtboxkey
+		end
+		table.sort(hitboxies, hitboxies_order)
+		table.sort(ranges, ranges_order)
+
+		-- 投げ無敵
+		local either_throw_indiv = true -- 両キャラともメインライン上でいずれかが投げ無敵中
+		for _, p in ipairs(players) do
+			local sway_flag = ut.tstb(p.flag_c0, 0x3F38)
+			local sway_status = (p.sway_status ~= 0x00)
+			local non_main = sway_flag or sway_status -- スウェー状態(フラグと状態)
+			local com_indiv =
+				(p.state ~= 0 or p.op.state ~= 0) or -- 双方とも非やられ状態
+				(p.old.pos_y ~= 0 or p.old.pos_frc_y ~= 0) or -- 空中状態
+				ut.tstb(p.flag_c0, db.flag_c0._01) -- ダウン中(フラグ)
+			local sp_indiv = com_indiv or
+				sway_status or
+				(p.old.invincible ~= 0) -- 無敵フレーム(1フレずれる)
+			local n_indiv = com_indiv or
+				non_main or -- メインライン上ではない
+				(p.invincible ~= 0) -- 無敵フレーム
+			-- 通常投げ無敵(技動作の無敵フラグ 投げ無敵タイマー24)
+			local tw_muteki2 = (p.attack_data ~= 0 and p.tw_muteki2 ~= 0)
+			if n_indiv or tw_muteki2 or p.throw_timer <= 24 then p.attackbit = p.attackbit | frame_attack_types.throw_indiv_n end
+			-- 地上コマンド投げ無敵(投げ無敵タイマー10)
+			if sp_indiv or p.throw_timer <= 10 then p.attackbit = p.attackbit | frame_attack_types.throw_indiv10 end
+			-- 地上コマンド投げ無敵(投げ無敵タイマー20)
+			if sp_indiv or p.throw_timer <= 20 then p.attackbit = p.attackbit | frame_attack_types.throw_indiv20 end
+			if non_main then either_throw_indiv = false end
+		end
+		if not ut.tstb(players[1].attackbit | players[2].attackbit, frame_attack_types.throw_indiv) then either_throw_indiv = false end
+		global.either_throw_indiv = either_throw_indiv
+
+		-- キャラ、弾ともに通常動作状態ならリセットする
+		for _, p in pairs(all_objects) do
+			if not global.both_act_neutral and global.old_both_act_neutral then p.clear_frame_data() end
+		end
+		-- 全キャラ特別な動作でない場合はフレーム記録しない
+		local disp_neutral = global.disp_neutral_frames
+		disp_neutral = disp_neutral or (either_throw_indiv and ((frame_meter.update_frame + 1) >= global.frame_number))
+		for _, p in ipairs(players) do
+			if disp_neutral or not global.both_act_neutral then frame_meter.update(p) end
+		end
+		frame_meter.adjust_buffer() --1Pと2Pともにフレーム数が多すぎる場合は加算をやめる
+
+		-- キャラ間の距離
+		prev_space, p_space = (p_space ~= 0) and p_space or prev_space, players[1].pos - players[2].pos
+		prev_elev, p_elev = (p_elev ~= 0) and p_elev or prev_elev, players[1].pos_y - players[2].pos_y
+		abs_elev, old_elev = math.abs(p_elev), math.abs(prev_elev)
+		abs_space, old_space = math.abs(p_space), math.abs(prev_space)
+		for _, p in ipairs(players) do
+			p.falling           = ut.tstb(p.flag_c0, db.flag_c0.jump) == true and abs_elev <= old_elev
+			p.rising            = ut.tstb(p.flag_c0, db.flag_c0.jump) == true and not p.falling
+			p.expanding         = abs_space > old_space or (abs_space == old_space and abs_space == 248)
+			p.closing           = abs_space < old_space or (abs_space == old_space and abs_space == 0)
+		end
+	end
+	tra_sub.controll_init = function ()
+		-- プレイヤー操作事前設定（それぞれCPUか人力か入れ替えか）
+		-- キー入力の取得（1P、2Pの操作を入れ替えていたりする場合もあるのでモード判定と一緒に処理する）
+		for i, p in ipairs(players) do
+			if global.dummy_mode == menu.dummy_modes.ply_vs_cpu then
+				p.control = i == 1 and i or 3 -- プレイヤー vs CPU
+			elseif global.dummy_mode == menu.dummy_modes.cpu_vs_ply then
+				p.control = i == 1 and 3 or i -- CPU vs プレイヤー
+			elseif global.dummy_mode == menu.dummy_modes.swap then
+				p.control = 3 - i -- 1P&2P入れ替え
+			else
+				p.control = i
+			end
+		end
+
+		-- 操作対象とフック動作対象をレコーディングモードにあわせて切り替える
+		if global.dummy_mode == menu.dummy_modes.record then
+			local p1, p2 = players[1], players[2]
+			local key, p = recording.key, recording.player
+			local ctrl1, ctrl2 = p1.control, p2.control
+			local hook1, hook2 = global.hookp[1], global.hookp[2]
+			if recording.mode == 1 then
+				key, p = p1.key, p2 -- 1:1P操作/2P動作
+				ctrl1, ctrl2 = 2, 1
+				hook1, hook2 = p2, p1
+			elseif recording.mode == 2 then
+				key, p = p1.key, p1 -- 2:1P操作/1P動作
+				ctrl1, ctrl2 = 1, 2
+				hook1, hook2 = p1, p2
+			elseif recording.mode == 3 then
+				key, p = p2.key, p1 -- 3:2P操作/1P動作
+				ctrl1, ctrl2 = 2, 1
+				hook1, hook2 = p2, p1
+			elseif recording.mode == 4 then
+				key, p = p2.key, p2 -- 4:2P操作/2P動作
+				ctrl1, ctrl2 = 1, 2
+				hook1, hook2 = p1, p2
+			end
+			recording.key, recording.player = key, p
+			p1.control, p2.control = ctrl1, ctrl2
+			global.hookp[1], global.hookp[2] = hook1, hook2
+		end
+		--[[
+		ut.printf("rec:%s ctrl p1:%s p2:%s",
+			(global.dummy_mode == menu.dummy_modes.record) and recording.player.num or "-",
+			players[1].control, players[2].control)
+		]]
+
+		-- 通常CPU戦でない場合にコントロール対象をセット
+		if global.proceed_cpu ~= true then
+			for _, p in ipairs(players) do
+				mem.w16(p.addr.control, 0x0101 * p.control)	-- Human 1 or 2, CPU 3
+			end
+			if in_match and mem.r08(0x1041D3) == 0 then
+				mem.w08(0x100024, 0x03)
+				mem.w08(0x100027, 0x03)
+			end
+		end
+
+		-- 前処理としてフックを無効化
+		for _, p in ut.ifind_all(players, function(p) return p.control == 1 or p.control == 2 end) do
+			p.clear_cmd_hook(db.cmd_types._5) -- レバーボタン中立にリセット
+			p.reset_sp_hook() -- 必殺技リセット
+		end
+	end
+	tra_sub.controll_dummy_mode = function(p)
+		if p.in_naked ~= true then
+			return
+		end
+		if p.sway_status == 0x00 and p.dummy_act ~= menu.dummy_acts.stand and
+			(global.no_action == 1 or (p.throw_timer + 1) >= global.no_action) then
+			if p.dummy_act == menu.dummy_acts.crounch then
+				p.reset_cmd_hook(db.cmd_types._2) -- しゃがみ
+			elseif p.dummy_act == menu.dummy_acts.sway and p.op.sway_status == 0x00 and p.state == 0 then
+				p.reset_cmd_hook(db.cmd_types._2D) -- スウェー待機(スウェー移動)
+			elseif p.dummy_act == menu.dummy_acts.walk then
+				p.reset_cmd_hook(db.cmd_types.front) -- 歩き
+			elseif p.dummy_act == menu.dummy_acts.walk_crounch then
+				p.reset_cmd_hook(db.cmd_types.front_crouch) -- しゃがみ歩き
+			elseif p.dummy_act == menu.dummy_acts.back then
+				p.reset_cmd_hook(db.cmd_types.back) -- 後退
+			elseif p.dummy_act == menu.dummy_acts.back_crounch then
+				p.reset_cmd_hook(db.cmd_types.back_crouch) -- しゃがみ後退（ガード）
+			elseif p.dummy_act == menu.dummy_acts.dash then
+				p.reset_sp_hook(db.common_rvs_list[14]) -- ダッシュ
+			elseif p.dummy_act == menu.dummy_acts.flyback then
+				p.reset_sp_hook(db.common_rvs_list[15]) -- 飛び退き
+			elseif p.dummy_act == menu.dummy_acts.jump_v then
+				p.reset_cmd_hook(db.cmd_types._8) -- ジャンプ
+			elseif p.dummy_act == menu.dummy_acts.jump_short_v and not ut.tstb(p.flag_c0, db.flag_c0._17, true) then
+				p.reset_cmd_hook(db.cmd_types._8) -- 地上のジャンプ移行モーション以外だったら上入力
+			elseif p.dummy_act == menu.dummy_acts.jump_f then
+				p.reset_cmd_hook(db.cmd_types.front_jump) -- 前ジャンプ
+			elseif p.dummy_act == menu.dummy_acts.jump_short_f and not ut.tstb(p.flag_c0, db.flag_c0._17, true) then
+				p.reset_cmd_hook(db.cmd_types.front_jump) -- 地上のジャンプ移行モーション以外だったら上入力
+			elseif p.dummy_act == menu.dummy_acts.jump_b then
+				p.reset_cmd_hook(db.cmd_types.back_jump) -- 後ジャンプ
+			elseif p.dummy_act == menu.dummy_acts.jump_short_b and not ut.tstb(p.flag_c0, db.flag_c0._17, true) then
+				p.reset_cmd_hook(db.cmd_types.back_jump) -- 地上のジャンプ移行モーション以外だったら上入力
+			elseif p.dummy_act == menu.dummy_acts.dash_jump then -- ダッシュジャンプ
+				if ut.tstb(p.flag_c0, db.flag_c0._19 | db.flag_c0._17 | db.flag_c0._22) or ut.tstb(p.flag_c0, db.flag_c0._24, true) then
+					p.reset_cmd_hook(db.cmd_types.front_jump) -- 前ジャンプ
+				else
+					p.reset_sp_hook(db.common_rvs_list[14]) -- ダッシュ
+				end
+			elseif p.dummy_act == menu.dummy_acts.dash_jump_short then -- ダッシュ小ジャンプ
+				if not ut.tstb(p.flag_c0, db.flag_c0._24, true) then -- ダッシュ
+					p.reset_sp_hook(db.common_rvs_list[14]) -- ダッシュ
+				else
+					p.reset_cmd_hook(db.cmd_types.front_jump) -- 前ジャンプ
+				end
+			end
+		elseif p.dummy_act == menu.dummy_acts.sway and p.in_sway_line then
+			p.reset_cmd_hook(db.cmd_types._8) -- スウェー待機
+		end
+	end
+	tra_sub.controll_dummy_block = function(p)
+		-- 自動ガード用
+		local act_type = p.op.act_data.type
+		for _, fb in pairs(p.op.fireballs) do
+			if fb.proc_active and fb.act_data then act_type = act_type | fb.act_data.type end
+		end
+		if not p.op.attackbits.harmless and p.op.attack and p.op.attack > 0 then
+			-- CPU自動ガードの処理の一部より。家庭用 056140 から
+			local cpu_block, cpu_block_next = mem.r08(0x56226 + p.op.attack), true
+			while cpu_block_next do
+				if cpu_block == 0 then
+					act_type, cpu_block_next = act_type | db.act_types.attack, false
+				elseif cpu_block == 1 then
+					act_type, cpu_block_next = act_type | db.act_types.low_attack, false
+				elseif cpu_block == 2 then
+					cpu_block = mem.r08(((p.char - 1) << 3) + p.op.attack - 0x27 + 0x562FE)
+				elseif cpu_block == 3 then
+					cpu_block = mem.r08(((p.char - 1) << 5) + p.op.attack - 0x30 + 0x563B6)
+				else
+					cpu_block_next = false
+				end
+			end
+		end
+
+		if ut.tstb(p.flag_c0, db.flag_c0._24) and not ut.tstb(p.flag_7e, db.flag_7e._02) then
+			-- ダッシュは中断可能動作なので切り替えフラグが立つまではガード移行させないでダッシュを可能なかぎり持続させる
+		--elseif p.on_sp_established == global.frame_number then
+		elseif p.base == 0x2AEA4 or p.base == 0x2AFB0 then
+			-- ダッシュ移行のプログラム動作時も同様。できれば利用可能なフラグで再現できるようにするのがTODO。
+		elseif p.dummy_gd ~= dummy_gd_type.none and ut.tstb(act_type, db.act_types.attack) == true then
+			p.clear_cmd_hook(db.cmd_types._8) -- 上は無効化
+
+			-- 投げ無敵タイマーを使って256F経過後はガード状態を解除
+			if p.throw_timer >= 0xFF then
+				if p.dummy_gd == dummy_gd_type.block1 and p.next_block ~= true then
+					p.next_block = true
+				elseif p.dummy_gd == dummy_gd_type.hit1 and p.next_block == true then
+					p.next_block = false
+				end
+			end
+
+			if p.dummy_gd == dummy_gd_type.action then
+				-- アクション（ガード方向はダミーモードに従う）
+				p.add_cmd_hook(db.cmd_types.back, "dummy_gd_type.action")
+			elseif p.dummy_gd == dummy_gd_type.high then
+				-- 上段
+				p.clear_cmd_hook(db.cmd_types._2)
+				p.add_cmd_hook(db.cmd_types.back, "dummy_gd_type.high")
+			elseif p.dummy_gd == dummy_gd_type.low then
+				-- 下段
+				p.add_cmd_hook(db.cmd_types.back_crouch, "dummy_gd_type.low")
+			elseif p.dummy_gd == dummy_gd_type.auto or  -- オート
+				p.dummy_gd == dummy_gd_type.bs or       -- ブレイクショット
+				p.dummy_gd == dummy_gd_type.random or   -- ランダム
+				(p.dummy_gd == dummy_gd_type.hit1 and p.next_block) or -- 1ヒットガード
+				(p.dummy_gd == dummy_gd_type.block1)    -- 1ガード
+			then
+				-- 中段から優先
+				if ut.tstb(act_type, db.act_types.overhead, true) then
+					p.clear_cmd_hook(db.cmd_types._2)
+				elseif ut.tstb(p.op.flag_c4, db.flag_c4.overhead) then
+					p.clear_cmd_hook(db.cmd_types._2)
+				elseif ut.tstb(p.op.flag_c0, db.flag_c0.jump) and (p.op.flag_c4 > 0) then
+					p.clear_cmd_hook(db.cmd_types._2)
+				elseif ut.tstb(act_type, db.act_types.low_attack, true) then
+					p.add_cmd_hook(db.cmd_types._2, "db.act_types.low_attack")
+				elseif global.crouch_block then
+					p.add_cmd_hook(db.cmd_types._2, "global.crouch_block")
+				end
+				if p.dummy_gd == dummy_gd_type.block1 and p.next_block ~= true then
+					-- 1ガードの時は連続ガードの上下段のみ対応させる
+					p.clear_cmd_hook(db.cmd_types.back)
+				else
+					if p.dummy_gd ~= dummy_gd_type.random then
+						p.next_block = true
+					elseif p.op.on_update_act == global.frame_number then
+						p.next_block = global.random_boolean(0.65)
+					end
+					if p.next_block then
+						p.add_cmd_hook(db.cmd_types.back, string.format("other block %8X %8X", p.old.base, p.base))
+					end
+				end
+			end
+			-- コマンド入力状態を無効にしてバクステ暴発を防ぐ
+			local bs_addr = dip_config.easy_super and p.char_data.easy_bs_addr or p.char_data.bs_addr
+			mem.w08(p.input_offset + bs_addr, 0x80)
+		end
+
+		-- 次のガード要否を判断する
+		if p.dummy_gd == dummy_gd_type.hit1 then
+			-- 1ヒットガードのときは次ガードすべきかどうかの状態を切り替える
+			if global.frame_number == p.on_hit then
+				p.next_block = true -- ヒット時はガードに切り替え
+				p.next_block_ec = 75 -- カウンター初期化
+			elseif global.frame_number == p.on_block then
+				p.next_block = false
+			end
+			if p.next_block == false then
+				-- カウンター消費しきったらヒットするように切り替える
+				p.next_block_ec = p.next_block_ec and (p.next_block_ec - 1) or 0
+				if p.next_block_ec == 0 then p.next_block = false end
+			end
+		elseif p.dummy_gd == dummy_gd_type.block1 then
+			if global.frame_number == p.on_block then
+				p.next_unblock = p.on_block + global.next_block_grace
+			elseif global.frame_number == p.on_hit then
+				p.next_block = true
+				p.next_unblock = 0
+			end
+			if global.frame_number == p.next_unblock then
+				p.next_block = false -- ヒット時はガードに切り替え
+				p.next_block_ec = 75 -- カウンター初期化
+			end
+			if p.next_block == false then
+				-- カウンター消費しきったらガードするように切り替える
+				p.next_block_ec = p.next_block_ec and (p.next_block_ec - 1) or 0
+				if p.next_block_ec == 0 then p.next_block = true end
+			end
+		end
+	end
+	tra_sub.controll_dummy_fwd_prov = function(p)
+		-- 相手がプレイヤーで挑発中は前進
+		if not global.proceed_cpu then
+			if p.fwd_prov and (p.op.control ~= 3) and ut.tstb(p.op.flag_cc, db.flag_cc._19) then
+				p.add_cmd_hook(db.cmd_types.front, "p.fwd_prov")
+			end
+		end
+	end
+	tra_sub.controll_dummy_reversal = function(p)
+		-- ガードリバーサル
+		if not p.gd_rvs_enabled and (p.dummy_wakeup == wakeup_type.rvs) and p.dummy_rvs and (p.on_block == global.frame_number) then
+			p.rvs_count = (p.rvs_count < 1) and 1 or p.rvs_count + 1
+			if global.dummy_rvs_cnt <= p.rvs_count and p.dummy_rvs then p.gd_rvs_enabled, p.rvs_count = true, -1 end
+			-- ut.printf("%s rvs %s %s", p.num, p.rvs_count, p.gd_rvs_enabled)
+		elseif p.gd_rvs_enabled and p.state ~= 2 then
+			p.gd_rvs_enabled = false
+		end -- ガード状態が解除されたらリバサ解除
+
+		-- BS
+		if not p.gd_bs_enabled and p.bs and p.dummy_bs and p.on_block == global.frame_number then
+			p.bs_count = (p.bs_count < 1) and 1 or p.bs_count + 1
+			if global.dummy_bs_cnt <= p.bs_count and p.dummy_bs then p.gd_bs_enabled, p.bs_count = true, -1 end
+			-- ut.printf("%s bs %s %s", p.num, p.bs_count, p.gd_bs_enabled)
+		elseif p.gd_bs_enabled and p.state ~= 2 then
+			p.gd_bs_enabled = false
+		end -- ガード状態が解除されたらBS解除
+
+		if p.old.knockback2 ~= nil and p.old.knockback2 == 1 then
+			if ut.tstb(p.flag_c0, db.flag_c0._02 | db.flag_c0._06 | db.flag_c0._26 | db.flag_c0._28) then
+				p.reset_cmd_hook(db.cmd_types._5)
+			else
+				p.reset_cmd_hook(db.cmd_types._2)
+			end
+		end
+
+		-- print(p.state, p.knockback2, p.knockback1, p.flag_7e, p.hitstop_remain, rvs_types.in_knock_back, p.last_blockstun, string.format("%x", p.act), p.act_count, p.act_frame)
+		-- ヒットストップ中は無視
+		-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
+		if global.dummy_rvs_type == 2 then -- リバーサル対象 2:ガード時
+			if p.in_block ~= true then p.dummy_rvs = nil end
+		elseif global.dummy_rvs_type == 3 then -- リバーサル対象 3:やられ時
+			if p.in_hurt ~= true then p.dummy_rvs = nil end
+		elseif global.dummy_rvs_type == 4 then -- リバーサル対象 4:その他動作時
+			if p.in_block or p.in_hurt then p.dummy_rvs = nil end
+		end
+		if p.knockback2 < 3 and p.hitstop_remain == 0 and not p.skip_frame and rvs_wake_types[p.dummy_wakeup] and p.dummy_rvs then
+			-- ダウン起き上がりリバーサル入力
+			if db.wakeup_acts[p.act] and (p.char_data.wakeup_frms - 3) <= (global.frame_number - p.on_wakeup) then
+				input_rvs(rvs_types.on_wakeup, p, string.format("[Reversal] wakeup %s %s",
+					p.char_data.wakeup_frms, (global.frame_number - p.on_wakeup)))
+			end
+			-- 着地リバーサル入力（やられの着地）
+			if 1 < p.pos_y_down and p.old.pos_y > p.pos_y and p.in_air ~= true and not ut.tstb(p.flag_c0, db.flag_c0._25) then
+				input_rvs(rvs_types.knock_back_landing, p, "[Reversal] blown landing")
+			end
+			-- バクステ後と着地リバーサル入力（通常ジャンプの着地）
+			if (p.act == 0x9 or p.act == 0x2C9 or p.act == 0x1C) and (p.act_frame == 2 or p.act_frame == 0) then
+				input_rvs(rvs_types.jump_landing, p, "[Reversal] jump landing")
+			end
+			-- リバーサルじゃない最速入力
+			-- ut.printf("aa" .. (p.act_data.name or "") .. " %X %s %X %s", p.flag_cc, ut.tstb(p.flag_cc, db.flag_cc.hurt), p.old.flag_cc, ut.tstb(p.old.flag_cc, db.flag_cc.hurt))
+			-- if p.state == 0 and p.act_data.name ~= "やられ" and p.old.act_data.name == "やられ" and p.knockback2 == 0 then
+			if p.state == 1 and ut.tstb(p.flag_cc, db.flag_cc.hurt) == true and p.knockback2 == 0 then
+				input_rvs(rvs_types.knock_back_recovery, p, "[Reversal] blockstun 1")
+			end
+			-- のけぞりのリバーサル入力
+			if (p.state == 1 or (p.state == 2 and p.gd_rvs_enabled)) and p.hitstop_remain == 0 then
+				-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する
+				-- 奥ラインへずらした場合だけ無視する（p.act ~= 0x14A）
+				if p.flag_7e == 0x80 and p.knockback2 == 0 and p.act ~= 0x14A and not ut.tstb(p.flag_7e, db.flag_7e._02) and not p.on_block then
+					-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する1
+					input_rvs(rvs_types.in_knock_back, p, "[Reversal] blockstun 2")
+				elseif p.old.knockback2 > 0 and p.knockback2 == 0 then
+					-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する2
+					input_rvs(rvs_types.in_knock_back, p, "[Reversal] blockstun 3")
+				end
+				-- デンジャラススルー用
+				if p.flag_7e == 0x0 and p.hitstop_remain < 3 and p.base == 0x34538 then
+					input_rvs(rvs_types.dangerous_through, p, "[Reversal] blockstun 4")
+				end
+			elseif p.state == 3 and p.hitstop_remain == 0 and p.knockback1 <= 1 then
+				-- 当身うち空振りと裏雲隠し用
+				input_rvs(rvs_types.atemi, p, "[Reversal] blockstun 5")
+			end
+			-- 奥ラインへずらしたあとのリバサ
+			if p.act == 0x14A and (p.act_count == 4 or p.act_count == 5) and p.old.act_frame == 0 and p.act_frame == 0 and p.throw_timer == 0 then
+				input_rvs(rvs_types.in_knock_back, p, string.format("[Reversal] plane shift %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer))
+			end
+			-- テクニカルライズのリバサ
+			if p.act == 0x2C9 and p.act_count == 2 and p.act_frame == 0 and p.throw_timer == 0 then
+				input_rvs(rvs_types.in_knock_back, p, string.format("[Reversal] tech-rise1 %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer))
+			end
+			if p.act == 0x2C9 and p.act_count == 0 and p.act_frame == 2 and p.throw_timer == 0 then
+				input_rvs(rvs_types.in_knock_back, p, string.format("[Reversal] tech-rise2 %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer))
+			end
+			-- グランドスウェー
+			local sway_act_frame = 0
+			if p.char_data.sway_act_counts ~= 0 then
+				sway_act_frame = 1
+			end
+			if p.act == 0x13E and p.act_count == p.char_data.sway_act_counts and p.act_frame == sway_act_frame then
+				input_rvs(rvs_types.in_knock_back, p, string.format("[Reversal] ground sway %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer))
+			end
+		end
+	end
+	tra_sub.controll_dummy_encounter = function(p)
+		-- 自動避け攻撃対空
+		if p.enc_enabled and not p.op.in_hitstun and not p.bs_hook then
+			local aaa, op = p.encounter, p.op
+			local other_cond = false
+			local falling, rising = p.falling or op.falling, p.rising or op.rising
+			if aaa.atk_only == 1 then -- 1:OFF
+				other_cond = true
+				--falling, rising = p.falling or op.falling, p.rising or op.rising
+			elseif aaa.atk_only == 2 then -- 2:相手の攻撃に反応
+				other_cond = p.flag_c4 == 0 and p.flag_c8 == 0 and 0 < (op.flag_c4 | op.flag_c8)
+				--falling, rising = op.falling, op.rising
+			elseif aaa.atk_only == 3 then -- 3:相手の移動中に発動
+				other_cond = p.flag_c4 == 0 and p.flag_c8 == 0 and (ut.tstb(op.flag_c8, db.flag_c8.normal_atk) or op.thrust ~= 0 or op.inertia ~= 0 or op.thrusty ~= 0)
+				--falling, rising = op.falling, op.rising
+			elseif aaa.atk_only == 4 then -- 4:自身の動作中に発動
+				other_cond = p.in_naked == true and (ut.tstb(p.flag_c8, db.flag_c8.normal_atk) or p.thrust ~= 0 or p.inertia ~= 0 or p.thrusty ~= 0)
+				--falling, rising = p.falling , p.rising
+			end
+			local closing, expanding = p.closing or op.closing, p.expanding or op.expanding
+			local xa, ya = false, false
+			local xlabel, ylabel, label
+			local chk_rise = aaa.rise_limit > 0 -- この高さより上昇時
+			local chk_fall = aaa.fall_limit > 0 -- この高さより下降時
+			local chk_fwd  = aaa.fwd_limit  > 0 -- この間合いより近づいた時
+			local chk_bak  = aaa.bak_limit  > 0 -- この間合いより遠のいた時
+			--[[
+			label = string.format("%s %s %4s op:%4s %3s %3s",
+				global.frame_number,
+				p.num,
+				p.falling == true and "fall" or (p.rising == true and "rise" or ""),
+				op.falling == true and "fall" or (op.rising == true and "rise" or ""),
+				closing == true and "clo" or (expanding == true and "exp" or ""),
+				other_cond == true and "oth" or "")
+			]]
+			if other_cond == true then
+				if not chk_fall and not chk_rise then
+					ya = true -- 非ジャンプ全般
+				elseif falling and chk_fall and aaa.fall_limit >= abs_elev then -- ジャンプ下り
+					ylabel = label and string.format("%3d %2s %3d", aaa.fall_limit, ">=", abs_elev) or nil
+					ya = true
+				elseif rising and chk_rise and aaa.rise_limit <= abs_elev then -- ジャンプ上り
+					ylabel = label and string.format("%3d %2s %3d", aaa.rise_limit, "<=", abs_elev) or nil
+					ya = true
+				end
+				if not chk_fwd and not chk_bak then
+					xa = true -- 間合い指定なし
+				elseif closing and chk_fwd and aaa.fwd_limit >= abs_space then -- 接近
+					xlabel = label and string.format("%3d %2s %3d", aaa.fwd_limit, ">=", abs_space) or nil
+					xa = true
+				elseif expanding and chk_bak and aaa.bak_limit <= abs_space then -- 離遠
+					xlabel = label and string.format("%3d %2s %3d", aaa.bak_limit, "<=", abs_space) or nil
+					xa = true
+				end
+			end
+			if xa and ya then
+				if label then ut.printf("%s Y:%s X:%s", label, ylabel, xlabel) end
+				if (aaa.type == 2) and p.dummy_enc ~= nil then
+					input_any(p, p.dummy_enc, "input_enc")
+				end
+			elseif label then ut.printf("%s Y:%3d X:%3d", label, abs_elev, abs_space) end
+		end
+	end
+	tra_sub.controll_dummy_auto_otg = function(p)
+		-- 自動ダウン追撃
+		if p.in_naked == true and p.op.act == 0x190 or p.op.act == 0x192 or p.op.act == 0x18E or p.op.act == 0x13B then
+			if global.auto_input.otg_throw and p.char_data.otg_throw then
+				p.reset_sp_hook(p.char_data.otg_throw) -- 自動ダウン投げ
+			end
+			if global.auto_input.otg_attack and p.char_data.otg_stomp then
+				p.reset_sp_hook(p.char_data.otg_stomp) -- 自動ダウン攻撃
+			end
+		end
+	end
+	tra_sub.controll_dummy_auto_sp = function(p)
+		-- 自動必殺技
+		if p.in_naked == true and p.encounter.auto_sp > 1 then
+			-- 必殺技 1:OFF 2:ON 3:ON:空キャン
+			local dohook = false
+			if p.encounter.auto_sp == 2 then
+				dohook = true
+			elseif p.encounter.auto_sp == 3 and
+				((p.flag_c4 > 0) or ut.tstb(p.flag_c8, db.flag_c8.normal_atk) == true or ut.tstb(p.flag_cc, db.flag_cc._19) == true) then
+				local lag = global.frame_number - p.on_update_7e_02
+				dohook = lag >= p.encounter.sp_lag
+			end
+			if dohook == true and p.dummy_fol ~= nil then
+				input_any(p, p.dummy_fol, "input_fol")
+			end
+		end
+	end
+	tra_sub.controll_dummy_auto_add = function(p)
+		-- 自動追撃
+		if p.in_block ~= true then
+			-- 自動投げ追撃
+			if global.auto_input.combo_throw then
+				if p.char == db.char_id.joe and p.act == 0x70 then
+					p.reset_cmd_hook(db.cmd_types._2C) -- ジョー
+				elseif p.act == 0x6D and p.char_data.add_throw then
+					p.reset_sp_hook(p.char_data.add_throw) -- ボブ、ギース、双角、マリー
+				elseif p.char == db.char_id.xiangfei and p.act == 0x9F and p.act_count == 2 and p.act_frame >= 0 and p.char_data.add_throw then
+					p.reset_sp_hook(p.char_data.add_throw) -- 閃里肘皇・心砕把
+				elseif p.char == db.char_id.duck and (p.act == 0xAF or p.act == 0xB8 or p.act == 0xB9) then
+					p.reset_sp_hook(p.char_data.add_throw) -- ダック
+				end
+			end
+
+			-- 自動閃里肘皇・貫空
+			if global.auto_input.kanku and p.char == db.char_id.xiangfei then
+				if p.act == 0xA1 and p.act_count == 6 and p.act_frame >= 0 then
+					p.reset_sp_hook(db.rvs_bs_list[p.char][21]) -- 閃里肘皇・貫空
+				end
+			end
+
+			-- 自動超白龍
+			if 1 < global.auto_input.pairon and p.char == db.char_id.xiangfei then
+				if p.act == 0x43 and p.act_count >= 0 and p.act_count <= 3 and p.act_frame >= 0 and 2 == global.auto_input.pairon then
+					p.reset_sp_hook(db.rvs_bs_list[p.char][28]) -- 超白龍
+				elseif p.act == 0x43 and p.act_count == 3 and p.act_count <= 3 and p.act_frame >= 0 and 3 == global.auto_input.pairon then
+					p.reset_sp_hook(db.rvs_bs_list[p.char][28]) -- 超白龍
+				end
+				if p.act == 0xFE then
+					p.reset_sp_hook(db.rvs_bs_list[p.char][29]) -- 超白龍2
+				end
+			end
+		end
+	end
+	tra_sub.controll_dummy_apply_hook = function(p)
+		-- 自動追撃
+		if p.in_block == true then
+			-- ブレイクショット
+			if p.gd_bs_enabled == true then p.reset_sp_hook(p.dummy_bs) end
+		end
+	end
+	tra_sub.controll_dummy_p = function(p)
+		-- レコード、リプレイ中は行動しない
+		if global.dummy_mode == menu.dummy_modes.record and p == recording.player then
+			--ut.printf("%d %s hookp swap -> %s", global.frame_number, p.num, p.op.num)
+			return
+		end
+
+		--[[
+			recording.procs.await_1st_input
+			recording.procs.await_fixpos
+			recording.procs.await_no_input
+			recording.procs.await_play
+			recording.procs.fixpos
+			recording.procs.input
+			recording.procs.play
+			recording.procs.play_interval
+			recording.procs.timing_jump
+		]]
+		if global.dummy_mode == menu.dummy_modes.replay then
+			if p ~= recording.active_slot.p then
+				-- リプレイ対象サイドでなければ継続
+			elseif global.rec_main == recording.procs.play_interval or
+				global.rec_main == recording.procs.await_play then
+				-- リプレイ対象でもリプレイ待ちならば継続
+			else
+				return
+			end
+		end
+
+		tra_sub.controll_dummy_mode(p)
+		tra_sub.controll_dummy_block(p)
+		tra_sub.controll_dummy_fwd_prov(p)
+		tra_sub.controll_dummy_reversal(p)
+		tra_sub.controll_dummy_encounter(p)
+		tra_sub.controll_dummy_auto_otg(p)
+		tra_sub.controll_dummy_auto_sp(p)
+		tra_sub.controll_dummy_auto_add(p)
+		tra_sub.controll_dummy_apply_hook(p)
+	end
+	tra_sub.controll_dummy_basic = function()
+		-- プレイヤー操作 人操作のみ処理対象にする
+		for _, p in ut.ifind_all(players, function(p) return p.control == 1 or p.control == 2 end) do
+			tra_sub.controll_dummy_p(p)
+		end
+	end
+	tra_sub.rec_replay = function()
+		-- レコード＆リプレイ
+		if global.dummy_mode == menu.dummy_modes.record or global.dummy_mode == menu.dummy_modes.replay then
+			if global.rec_main then
+				local prev_rec_main, called = nil, {}
+				repeat
+					prev_rec_main = global.rec_main
+					called[prev_rec_main or "NOT DEFINED"] = true
+					global.rec_main()
+				until global.rec_main == prev_rec_main or called[global.rec_main] == true
+				input.readp(recording.player, global.rec_main == recording.procs.play)
+			end
+		end
+	end
+	tra_sub.save_input = function()
+		input.read(nil, true)
+		-- キーディス用の処理
+		for _, p in ipairs(players) do
+			local key, keybuf = "", {} -- _1~_9 _A_B_C_D
+			local ggbutton = { lever = 5, A = false, B = false, C = false, D = false, }
+
+			-- GG風キーディスの更新
+			for k, v, kk in ut.find_all(p.key.state, function(k, v) return string.gsub(k, "_", "") end) do
+				if tonumber(kk) then
+					if 0 < v then key, ggbutton.lever = (k == "_5" and "_N" or k), tonumber(kk) end
+				elseif kk == "st" or kk == "sl" then
+				else
+					if 0 < v then keybuf[#keybuf + 1], ggbutton[kk] = k, true end
+				end
+			end
+			ut.table_add(p.key.gg.hist, ggbutton, 60)
+			table.sort(keybuf)
+			key = key .. table.concat(keybuf)
+
+			-- キーログの更新
+			-- 必殺技コマンド成立を直前のキーログに反映する
+			if p.on_sp_established == global.frame_number then -- or 0 < p.sp_established_duration
+				local prev = p.key.log[#p.key.log]
+				if prev and not prev.on_sp_established then
+					if prev.frame == 1 then
+						prev.spid, prev.on_sp_established = p.last_sp, global.frame_number
+					else
+						prev.frame = prev.frame - 1
+						table.insert(p.key.log, { key = prev.key, frame = 1, spid = p.last_sp, on_sp_established = global.frame_number })
+					end
+				end
+			end
+			-- 最新のキーログを追加する
+			local prev = p.key.log[#p.key.log]
+			if prev and prev.key == key and not prev.on_sp_established then
+				prev.frame = prev.frame < 999 and prev.frame + 1 or prev.frame
+			else
+				table.insert(p.key.log, { key = key, frame = 1 })
+				while global.key_hists < #p.key.log do table.remove(p.key.log, 1) end
+			end
+
+			-- 入力座標
+			for _, ph in ipairs(p.key.pos_hist) do
+				table.insert(ranges, {
+					label = string.format("%sP %s\n%s:%d,%s:%d", p.num, ph.label, ph.w_sym, ph.space, ph.v_sym, ph.elev),
+					x = ph.x - screen.left,
+					y = ph.y + screen.top,
+					flip_x = ph.flip_x,
+					within = false,
+					p = p,
+				})
+			end
+		end
+	end
+	tra_sub.recover = function()
+		for _, p in ipairs(players) do
+			p.do_recover()
+		end
+	end
+	tra_sub.force_fix_pos = function()
+		-- Y座標強制
+		for _, p in ipairs(players) do
+			if p.force_y_pos > 1 then mem.w16i(p.addr.pos_y, menu.labels.force_y_pos[p.force_y_pos]) end
+		end
+
+		-- X座標同期とY座標をだいぶ下に
+		if global.sync_pos_x ~= 1 then
+			local from = global.sync_pos_x - 1
+			local to   = 3 - from
+			mem.w16i(players[to].addr.pos, players[from].pos)
+			mem.w16i(players[to].addr.pos_y, players[from].pos_y - 124)
+		end
+	end
+	tra_sub.read_view_state = function()
+		-- 状態表示(大)データの更新
+		for _, p in ipairs(players) do
+			local add = function(xp, typev, txt)
+				xp.large_states[typev] = { txt = txt, attack = xp.body.attack, attack_id = xp.attack_id }
+			end
+			for _, xp in ipairs(p.objects) do
+				xp.large_states = xp.body.char == xp.body.old.char and xp.large_states or {}
+				xp.latest_states = {}
+				if xp.proc_active then
+					local st = xp.latest_states
+					st.parent_id = xp.body.attack and string.format("%3X", xp.body.attack) or "---"
+					st.fbid = (xp.attack and xp.is_fireball) and string.format("%3X", xp.attack) or "---"
+					st.id = xp.attack_id and string.format("%3X", xp.attack_id) or "---"
+					st.fake = xp.attackbits.fake
+					st.name = "---"
+					if xp.act_data then st.name = xp.act_data and xp.act_data.last_name or xp.act_data.name or "---" end
+					st.damage = xp.damage or 0
+					st.chip = xp.chip or 0
+					st.stun = xp.stun or 0
+					st.stun_timer = xp.stun_timer or 0
+					st.cmd_timer = xp.cmd_timer or 0
+					st.effect, st.effect_name1, st.effect_name2 = db.hit_effects.get_name(xp.effect, "---")
+					st.nokezori = db.hit_effects.is_nokezori(xp.effect)
+					-- フレームデータがある場合は-1、システム固定処理による+2で補正する
+					st.hitstop = (not xp.hitstop or xp.hitstop == 0) and "--" or (math.max(0, xp.hitstop - 1) + 2)
+					-- フレームデータがある場合は-1、システム固定処理による+2で補正する
+					st.blockstop = (not xp.blockstop or xp.hitstop == "--") and "--" or (math.max(0, xp.blockstop - 1) + 2)
+					-- システム固定処理による+3で補正する
+					st.hitstun_short = (st.nokezori and xp.hitstun and xp.hitstun > 0) and (xp.hitstun + 3) or nil
+					st.hitstun = st.hitstun_short or "--"
+					-- システム固定処理による+2で補正する
+					st.blockstun = (not xp.blockstun or xp.blockstun == 0) and "--" or (xp.blockstun + 2)
+					st.parrieable = to_parrieable_txt(xp.parrieable)
+					st.max_hit_nm = xp.max_hit_nm or "-"
+					st.max_hit_dn = xp.max_hit_dn or "-"
+					st.multi_hit = xp.multi_hit
+					st.fb_rank = xp.fireball_rank or "--"
+					st.pow_up = p.pow_up_direct == 0 and p.pow_up or p.pow_up_direct or 0
+					st.pow_up_hit = p.pow_up_hit or 0
+					st.pow_up_block = p.pow_up_block or 0
+					st.pow_revenge = p.pow_revenge or "-"
+					st.pow_absorb = p.pow_absorb or "-"
+					st.sp_invincible = xp.sp_invincible or "--"
+					st.bs_pow = (ut.tstb(xp.flag_cc, db.flag_cc._21) and xp.bs_pow and xp.bs_pow > 0) and -xp.bs_pow or "---"
+					st.bs_invincible = (ut.tstb(xp.flag_cc, db.flag_cc._21) and xp.bs_invincible) or "--"
+					st.esaka = xp.esaka_target and xp.esaka or "---"
+					st.esaka_type = xp.esaka_target and xp.esaka_type or "---"
+					st.kagenui_name = kagenui_names[p.kagenui_type]
+					st.repeatable = xp.repeatable and "Repeat" or "---"
+					st.cancelable = xp.cancelable and "Special" or "---"
+					st.cancelable_short = xp.repeatable and "Rep." or xp.cancelable and "Sp." or "-"
+					st.teching = (xp.forced_down or xp.in_bs) and "Can't" or "Can"
+					st.sliding = p.sliding and "Slide" or (p.inertial and "Inertial" or "---")
+					st.hurt_dodge1, st.hurt_dodge2, st.hurt_dodge3 = "", "", ""
+					if p.hurt then st.hurt_dodge1, st.hurt_dodge2, st.hurt_dodge3 = db.get_dodge_name(p.hurt.dodge, "") end
+					st.hurt_dodge_name = table.concat({ st.hurt_dodge1, st.hurt_dodge2, st.hurt_dodge3 }, "")
+					if #st.hurt_dodge_name > 0 then st.hurt_dodge_name = "Dodge-" .. st.hurt_dodge_name end
+					st.hits = {}
+					st.hurts = {}
+					st.throws = {}
+					for _, box in ipairs(xp.hitboxies) do
+						--        Top Btm Fwd Bwd Note
+						-- %-6s   %3s %3s %3s %3s %-5s
+						-- Hurt 1 %3s %3s %3s %3s %-5s
+						-- Throw2 %3s %3s %3s %3s %-5s
+						if box.type.kind == db.box_kinds.attack or box.type.kind == db.box_kinds.parry then
+							local blockables = not st.fake and box.blockables or nil
+							local blockable_main = blockables and db.top_type_name(blockables.main) or "-"
+							local blockable_sway = blockables and db.top_type_name(blockables.sway) or "-"
+							local punish_name = blockables and db.get_punish_name(blockables.punish) or ""
+							local anti_away = #punish_name > 0 and "Anti-" .. punish_name or "-"
+							local anti_away_short = #punish_name > 0 and punish_name or "-"
+							local rank = xp.is_fireball and string.format("[%s]", st.fb_rank) or ""
+							local attribute = string.format("%s/%s/%s%s", blockable_main, blockable_sway, anti_away, rank)
+							local parry, short_parry
+							if box.type.kind == db.box_kinds.attack then
+								parry, short_parry = to_parrieable_txt(box.parrieable)
+							else
+								parry, short_parry = "", ""
+							end
+							table.insert(st.hits, {
+								reach = string.format("%-5s%s %3s %3s %3s %3s %-s%-s", box.type.kind, box.no, box.real_top, box.real_bottom, box.real_front, box.real_back, parry, attribute),
+								attribute = attribute,
+								real_top = box.real_top,
+								real_bottom = box.real_bottom,
+								real_front = box.real_front,
+								real_back = box.real_back,
+								blockable_main = blockable_main,
+								blockable_sway = blockable_sway,
+								punish_name = punish_name,
+								anti_away = anti_away,
+								anti_away_short = anti_away_short,
+								rank = rank,
+								parry = parry,
+								short_parry = short_parry,
+							})
+						elseif box.type.kind == db.box_kinds.hurt or box.type.kind == db.box_kinds.block then
+							local note = box.type.kind ~= db.box_kinds.block and st.hurt_dodge_name or block_names[box.id]
+							table.insert(st.hurts, {
+								reach = string.format("%-5s%s %3s %3s %3s %3s %-s", box.type.kind, box.no, box.real_top, box.real_bottom, box.real_front, box.real_back, note),
+							})
+						elseif box.type.kind == db.box_kinds.throw then
+							local threshold = box.type == db.box_types.air_throw and 0 or box.threshold
+							local type_name = throw_names[box.type]
+							local note = string.format("Threshold %2s %-s", threshold, type_name)
+							table.insert(st.throws, {
+								reach = string.format("%-5s%s %3s %3s %3s %3s %-s", box.type.kind, box.no or "", box.real_top, box.real_bottom, box.real_front, box.real_back, note),
+								real_top = box.real_top,
+								real_bottom = box.real_bottom,
+								real_front = box.real_front,
+								real_back = box.real_back,
+								threshold = threshold,
+								type_name = type_name,
 							})
 						end
 					end
-				end
 
-				table.sort(boxkeys.hit)
-				table.sort(boxkeys.hurt)
-				p.old.hitboxkey, p.hitboxkey = p.hitboxkey, table.concat(boxkeys.hit, "|")
-				p.old.hurtboxkey, p.hurtboxkey = p.hurtboxkey, table.concat(boxkeys.hurt, "|")
-				p.chg_hitbox = p.old.hitboxkey ~= p.hitboxkey
-				p.chg_hurtbox = p.old.hurtboxkey ~= p.hurtboxkey
-			end
-			table.sort(hitboxies, hitboxies_order)
-			table.sort(ranges, ranges_order)
-
-			-- 投げ無敵
-			local either_throw_indiv = true -- 両キャラともメインライン上でいずれかが投げ無敵中
-			for _, p in ipairs(players) do
-				local sway_flag = ut.tstb(p.flag_c0, 0x3F38)
-				local sway_status = (p.sway_status ~= 0x00)
-				local non_main = sway_flag or sway_status -- スウェー状態(フラグと状態)
-				local com_indiv =
-					(p.state ~= 0 or p.op.state ~= 0) or -- 双方とも非やられ状態
-					(p.old.pos_y ~= 0 or p.old.pos_frc_y ~= 0) or -- 空中状態
-					ut.tstb(p.flag_c0, db.flag_c0._01) -- ダウン中(フラグ)
-				local sp_indiv = com_indiv or
-					sway_status or
-					(p.old.invincible ~= 0) -- 無敵フレーム(1フレずれる)
-				local n_indiv = com_indiv or
-					non_main or -- メインライン上ではない
-					(p.invincible ~= 0) -- 無敵フレーム
-				-- 通常投げ無敵(技動作の無敵フラグ 投げ無敵タイマー24)
-				local tw_muteki2 = (p.attack_data ~= 0 and p.tw_muteki2 ~= 0)
-				if n_indiv or tw_muteki2 or p.throw_timer <= 24 then p.attackbit = p.attackbit | frame_attack_types.throw_indiv_n end
-				-- 地上コマンド投げ無敵(投げ無敵タイマー10)
-				if sp_indiv or p.throw_timer <= 10 then p.attackbit = p.attackbit | frame_attack_types.throw_indiv10 end
-				-- 地上コマンド投げ無敵(投げ無敵タイマー20)
-				if sp_indiv or p.throw_timer <= 20 then p.attackbit = p.attackbit | frame_attack_types.throw_indiv20 end
-				if non_main then either_throw_indiv = false end
-			end
-			if not ut.tstb(players[1].attackbit | players[2].attackbit, frame_attack_types.throw_indiv) then either_throw_indiv = false end
-			global.either_throw_indiv = either_throw_indiv
-
-			-- キャラ、弾ともに通常動作状態ならリセットする
-			for _, p in pairs(all_objects) do
-				if not global.both_act_neutral and global.old_both_act_neutral then p.clear_frame_data() end
-			end
-			-- 全キャラ特別な動作でない場合はフレーム記録しない
-			local disp_neutral = global.disp_neutral_frames
-			disp_neutral = disp_neutral or (either_throw_indiv and ((frame_meter.update_frame + 1) >= global.frame_number))
-			for _, p in ipairs(players) do
-				if disp_neutral or not global.both_act_neutral then frame_meter.update(p) end
-			end
-			frame_meter.adjust_buffer() --1Pと2Pともにフレーム数が多すぎる場合は加算をやめる
-
-			-- キャラ間の距離
-			prev_space, p_space = (p_space ~= 0) and p_space or prev_space, players[1].pos - players[2].pos
-			prev_elev, p_elev = (p_elev ~= 0) and p_elev or prev_elev, players[1].pos_y - players[2].pos_y
-			abs_elev, old_elev = math.abs(p_elev), math.abs(prev_elev)
-			abs_space, old_space = math.abs(p_space), math.abs(prev_space)
-			for _, p in ipairs(players) do
-				p.falling           = ut.tstb(p.flag_c0, db.flag_c0.jump) == true and abs_elev <= old_elev
-				p.rising            = ut.tstb(p.flag_c0, db.flag_c0.jump) == true and not p.falling
-				p.expanding         = abs_space > old_space or (abs_space == old_space and abs_space == 248)
-				p.closing           = abs_space < old_space or (abs_space == old_space and abs_space == 0)
-			end
-		end,
-		controll_init = function ()
-			-- プレイヤー操作事前設定（それぞれCPUか人力か入れ替えか）
-			-- キー入力の取得（1P、2Pの操作を入れ替えていたりする場合もあるのでモード判定と一緒に処理する）
-			for i, p in ipairs(players) do
-				if global.dummy_mode == menu.dummy_modes.ply_vs_cpu then
-					p.control = i == 1 and i or 3 -- プレイヤー vs CPU
-				elseif global.dummy_mode == menu.dummy_modes.cpu_vs_ply then
-					p.control = i == 1 and 3 or i -- CPU vs プレイヤー
-				elseif global.dummy_mode == menu.dummy_modes.swap then
-					p.control = 3 - i -- 1P&2P入れ替え
-				elseif global.dummy_mode == menu.dummy_modes.record then
-					p.control = 3 - i -- レコード
-				else
-					p.control = i
-				end
-			end
-			if global.dummy_mode == menu.dummy_modes.record then
-				local key, addr, p = recording.key, recording.addr, recording.player
-				if recording.mode == 1 then
-					key, addr, p = players[1].key, players[1].addr, players[2] -- 1:1P操作/2P動作
-				elseif recording.mode == 2 then
-					key, addr, p = players[1].key, players[1].addr, players[1] -- 2:1P操作/1P動作
-				elseif recording.mode == 3 then
-					key, addr, p = players[2].key, players[2].addr, players[1] -- 3:2P操作/1P動作
-				elseif recording.mode == 4 then
-					key, addr, p = players[2].key, players[2].addr, players[2] -- 4:2P操作/2P動作
-				end
-				recording.key, recording.addr, recording.player = key, addr, p
-			end
-			--[[
-			ut.printf("rec:%s ctrl p1:%s p2:%s",
-				(global.dummy_mode == menu.dummy_modes.record) and recording.player.num or "-",
-				players[1].control, players[2].control)
-			]]
-
-			-- 通常CPU戦でない場合にコントロール対象をセット
-			if global.proceed_cpu ~= true then
-				for _, p in ipairs(players) do
-					mem.w16(p.addr.control, 0x0101 * p.control)	-- Human 1 or 2, CPU 3
-				end
-				if in_match and mem.r08(0x1041D3) == 0 then
-					mem.w08(0x100024, 0x03)
-					mem.w08(0x100027, 0x03)
-				end
-			end
-
-			-- フックを無効化
-			for _, p in ut.ifind_all(players, function(p) return p.control == 1 or p.control == 2 end) do
-				p.clear_cmd_hook(db.cmd_types._5) -- レバーボタン中立にリセット
-				p.reset_sp_hook() -- 必殺技リセット
-			end
-		end,
-		controll_dummy_basic = function()
-			-- プレイヤー操作 人操作のみ処理対象にする
-			for _, p in ut.ifind_all(players, function(p) return p.control == 1 or p.control == 2 end) do
-				-- レコード中、リプレイ中は行動しないためのフラグ
-				local in_record = global.dummy_mode == menu.dummy_modes.record
-				local in_replay = global.dummy_mode == menu.dummy_modes.replay
-				--[[
-					recording.procs.await_1st_input
-					recording.procs.await_fixpos
-					recording.procs.await_no_input
-					recording.procs.await_play
-					recording.procs.fixpos
-					recording.procs.input
-					recording.procs.play
-					recording.procs.play_interval
-					recording.procs.timing_jump
-				]]
-				global.hookp[p.num] = p -- 通常は自分の状態を参照する
-				if in_record then
-					if p ~= recording.player then
-						in_record = false
-					end
-					--ut.printf("%d %s hookp swap -> %s", global.frame_number, p.num, p.op.num)
-					global.hookp[p.num] = p.op -- レコード中はお互いに相手の状態を参照する
-				end
-				if in_replay --[[and recording.player ~= p]] then
-					if global.rec_main == recording.procs.play_interval or
-						global.rec_main == recording.procs.await_play then
-						in_replay = false
-					end
-				end
-
-				-- リプレイ中は行動しない
-				if in_record ~= true and in_replay ~= true and p.in_naked == true then
-					if p.sway_status == 0x00 and p.dummy_act ~= menu.dummy_acts.stand and
-						(global.no_action == 1 or (p.throw_timer + 1) >= global.no_action) then
-						if p.dummy_act == menu.dummy_acts.crounch then
-							p.reset_cmd_hook(db.cmd_types._2) -- しゃがみ
-						elseif p.dummy_act == menu.dummy_acts.sway and p.op.sway_status == 0x00 and p.state == 0 then
-							p.reset_cmd_hook(db.cmd_types._2D) -- スウェー待機(スウェー移動)
-						elseif p.dummy_act == menu.dummy_acts.walk then
-							p.reset_cmd_hook(db.cmd_types.front) -- 歩き
-						elseif p.dummy_act == menu.dummy_acts.walk_crounch then
-							p.reset_cmd_hook(db.cmd_types.front_crouch) -- しゃがみ歩き
-						elseif p.dummy_act == menu.dummy_acts.back then
-							p.reset_cmd_hook(db.cmd_types.back) -- 後退
-						elseif p.dummy_act == menu.dummy_acts.back_crounch then
-							p.reset_cmd_hook(db.cmd_types.back_crouch) -- しゃがみ後退（ガード）
-						elseif p.dummy_act == menu.dummy_acts.dash then
-							p.reset_sp_hook(db.common_rvs_list[14]) -- ダッシュ
-						elseif p.dummy_act == menu.dummy_acts.flyback then
-							p.reset_sp_hook(db.common_rvs_list[15]) -- 飛び退き
-						elseif p.dummy_act == menu.dummy_acts.jump_v then
-							p.reset_cmd_hook(db.cmd_types._8) -- ジャンプ
-						elseif p.dummy_act == menu.dummy_acts.jump_short_v and not ut.tstb(p.flag_c0, db.flag_c0._17, true) then
-							p.reset_cmd_hook(db.cmd_types._8) -- 地上のジャンプ移行モーション以外だったら上入力
-						elseif p.dummy_act == menu.dummy_acts.jump_f then
-							p.reset_cmd_hook(db.cmd_types.front_jump) -- 前ジャンプ
-						elseif p.dummy_act == menu.dummy_acts.jump_short_f and not ut.tstb(p.flag_c0, db.flag_c0._17, true) then
-							p.reset_cmd_hook(db.cmd_types.front_jump) -- 地上のジャンプ移行モーション以外だったら上入力
-						elseif p.dummy_act == menu.dummy_acts.jump_b then
-							p.reset_cmd_hook(db.cmd_types.back_jump) -- 後ジャンプ
-						elseif p.dummy_act == menu.dummy_acts.jump_short_b and not ut.tstb(p.flag_c0, db.flag_c0._17, true) then
-							p.reset_cmd_hook(db.cmd_types.back_jump) -- 地上のジャンプ移行モーション以外だったら上入力
-						elseif p.dummy_act == menu.dummy_acts.dash_jump then -- ダッシュジャンプ
-							if ut.tstb(p.flag_c0, db.flag_c0._19 | db.flag_c0._17 | db.flag_c0._22) or ut.tstb(p.flag_c0, db.flag_c0._24, true) then
-								p.reset_cmd_hook(db.cmd_types.front_jump) -- 前ジャンプ
-							else
-								p.reset_sp_hook(db.common_rvs_list[14]) -- ダッシュ
-							end
-						elseif p.dummy_act == menu.dummy_acts.dash_jump_short then -- ダッシュ小ジャンプ
-							if not ut.tstb(p.flag_c0, db.flag_c0._24, true) then -- ダッシュ
-								p.reset_sp_hook(db.common_rvs_list[14]) -- ダッシュ
-							else
-								p.reset_cmd_hook(db.cmd_types.front_jump) -- 前ジャンプ
-							end
-						end
-					elseif p.dummy_act == menu.dummy_acts.sway and p.in_sway_line then
-						p.reset_cmd_hook(db.cmd_types._8) -- スウェー待機
-					end
-				end
-
-				-- 自動ガード用
-				local act_type = p.op.act_data.type
-				for _, fb in pairs(p.op.fireballs) do
-					if fb.proc_active and fb.act_data then act_type = act_type | fb.act_data.type end
-				end
-				if not p.op.attackbits.harmless and p.op.attack and p.op.attack > 0 then
-					-- CPU自動ガードの処理の一部より。家庭用 056140 から
-					local cpu_block, cpu_block_next = mem.r08(0x56226 + p.op.attack), true
-					while cpu_block_next do
-						if cpu_block == 0 then
-							act_type, cpu_block_next = act_type | db.act_types.attack, false
-						elseif cpu_block == 1 then
-							act_type, cpu_block_next = act_type | db.act_types.low_attack, false
-						elseif cpu_block == 2 then
-							cpu_block = mem.r08(((p.char - 1) << 3) + p.op.attack - 0x27 + 0x562FE)
-						elseif cpu_block == 3 then
-							cpu_block = mem.r08(((p.char - 1) << 5) + p.op.attack - 0x30 + 0x563B6)
+					add(xp, state_line_types.id, string.format("Id %3s  Fb %3s  Hitbox %2s  %s", st.parent_id, st.fbid, st.id, st.name))
+					if xp.attack_data ~= 0 then
+						add(xp, state_line_types.damage, string.format("Damage %3s/%1s  Stun %2s/%2s Frame  %2s %s/%s", st.damage, st.chip, st.stun, st.stun_timer, st.effect, st.effect_name1, st.effect_name2))
+						add(xp, state_line_types.hitstop, string.format("HitStop %2s/%2s  HitStun %2s/%2s  Parry %-s", st.hitstop, st.blockstop, st.hitstun, st.blockstun, st.parrieable))
+						if xp.is_fireball then
+							add(xp, state_line_types.fb_hits, string.format("%s/%s Hit  Fireball-Lv. %2s", st.max_hit_nm, st.max_hit_dn, st.fb_rank))
 						else
-							cpu_block_next = false
+							add(xp, state_line_types.pow, string.format("Pow  Bonus %2s  Hit %2s  Block %2s  Parry %2s  Absorb %2s  B.S. %3s", st.pow_up, st.pow_up_hit, st.pow_up_block, st.pow_revenge, st.pow_absorb, st.bs_pow))
+							add(xp, state_line_types.inv, string.format("Invincible %2s  B.S. %2s  Hit %s/%s  Esaka %3s %-5s  Kagenui %-s", st.sp_invincible, st.bs_invincible, st.max_hit_nm, st.max_hit_dn, st.esaka, st.esaka_type, st.kagenui_name))
+							add(xp, state_line_types.cancel, string.format("Cancel %-7s/%-7s  Teching %-5s  Rush %-s", st.repeatable, st.cancelable, st.teching, st.sliding))
 						end
 					end
-				end
-				-- リプレイ中は自動ガードしない
-				if ut.tstb(p.flag_c0, db.flag_c0._24) and not ut.tstb(p.flag_7e, db.flag_7e._02) then
-					-- ダッシュは中断可能動作なので切り替えフラグが立つまではガード移行させないでダッシュを可能なかぎり持続させる
-				--elseif p.on_sp_established == global.frame_number then
-				elseif p.base == 0x2AEA4 or p.base == 0x2AFB0 then
-					-- ダッシュ移行のプログラム動作時も同様。できれば利用可能なフラグで再現できるようにするのがTODO。
-				elseif p.dummy_gd ~= dummy_gd_type.none and ut.tstb(act_type, db.act_types.attack) == true and in_record == false and in_replay == false then
-					p.clear_cmd_hook(db.cmd_types._8) -- 上は無効化
-
-					-- 投げ無敵タイマーを使って256F経過後はガード状態を解除
-					if p.throw_timer >= 0xFF then
-						if p.dummy_gd == dummy_gd_type.block1 and p.next_block ~= true then
-							p.next_block = true
-						elseif p.dummy_gd == dummy_gd_type.hit1 and p.next_block == true then
-							p.next_block = false
+					add(xp, state_line_types.box, "Box  # Top Btm Fwd Bwd Note")
+					local uniq, buff, hurt_labels = {}, {}, {}
+					for _, hit in ipairs(st.hits) do
+						if not uniq[hit.attribute] then
+							table.insert(buff, hit.attribute)
+							uniq[hit.attribute] = true
 						end
 					end
-
-					if p.dummy_gd == dummy_gd_type.action then
-						-- アクション（ガード方向はダミーモードに従う）
-						p.add_cmd_hook(db.cmd_types.back, "dummy_gd_type.action")
-					elseif p.dummy_gd == dummy_gd_type.high then
-						-- 上段
-						p.clear_cmd_hook(db.cmd_types._2)
-						p.add_cmd_hook(db.cmd_types.back, "dummy_gd_type.high")
-					elseif p.dummy_gd == dummy_gd_type.low then
-						-- 下段
-						p.add_cmd_hook(db.cmd_types.back_crouch, "dummy_gd_type.low")
-					elseif p.dummy_gd == dummy_gd_type.auto or  -- オート
-						p.dummy_gd == dummy_gd_type.bs or       -- ブレイクショット
-						p.dummy_gd == dummy_gd_type.random or   -- ランダム
-						(p.dummy_gd == dummy_gd_type.hit1 and p.next_block) or -- 1ヒットガード
-						(p.dummy_gd == dummy_gd_type.block1)    -- 1ガード
-					then
-						-- 中段から優先
-						if ut.tstb(act_type, db.act_types.overhead, true) then
-							p.clear_cmd_hook(db.cmd_types._2)
-						elseif ut.tstb(p.op.flag_c4, db.flag_c4.overhead) then
-							p.clear_cmd_hook(db.cmd_types._2)
-						elseif ut.tstb(p.op.flag_c0, db.flag_c0.jump) and (p.op.flag_c4 > 0) then
-							p.clear_cmd_hook(db.cmd_types._2)
-						elseif ut.tstb(act_type, db.act_types.low_attack, true) then
-							p.add_cmd_hook(db.cmd_types._2, "db.act_types.low_attack")
-						elseif global.crouch_block then
-							p.add_cmd_hook(db.cmd_types._2, "global.crouch_block")
-						end
-						if p.dummy_gd == dummy_gd_type.block1 and p.next_block ~= true then
-							-- 1ガードの時は連続ガードの上下段のみ対応させる
-							p.clear_cmd_hook(db.cmd_types.back)
-						else
-							if p.dummy_gd ~= dummy_gd_type.random then
-								p.next_block = true
-							elseif p.op.on_update_act == global.frame_number then
-								p.next_block = global.random_boolean(0.65)
-							end
-							if p.next_block then
-								p.add_cmd_hook(db.cmd_types.back, string.format("other block %8X %8X", p.old.base, p.base))
-							end
-						end
+					for _, hit in ipairs(st.hurts) do table.insert(hurt_labels, hit.reach) end
+					if #st.hurts == 0 and not xp.is_fireball then
+						table.insert(hurt_labels, string.format("%-5s%s %3s %3s %3s %3s %-s", db.box_kinds.hurt, "-", "---", "---", "---", "---", st.hurt_dodge_name))
 					end
-					-- コマンド入力状態を無効にしてバクステ暴発を防ぐ
-					local bs_addr = dip_config.easy_super and p.char_data.easy_bs_addr or p.char_data.bs_addr
-					mem.w08(p.input_offset + bs_addr, 0x80)
-				end
-
-				-- 次のガード要否を判断する
-				if p.dummy_gd == dummy_gd_type.hit1 then
-					-- 1ヒットガードのときは次ガードすべきかどうかの状態を切り替える
-					if global.frame_number == p.on_hit then
-						p.next_block = true -- ヒット時はガードに切り替え
-						p.next_block_ec = 75 -- カウンター初期化
-					elseif global.frame_number == p.on_block then
-						p.next_block = false
+					if #hurt_labels > 0 then add(xp, state_line_types.hurt, hurt_labels) end
+					if xp.attack_id ~= 0 and #st.throws > 0 then
+						local throw_labels = {}
+						for _, hit in ipairs(st.throws) do table.insert(throw_labels, hit.reach) end
+						if #throw_labels > 0 then add(xp, state_line_types.throw, throw_labels) end
 					end
-					if p.next_block == false then
-						-- カウンター消費しきったらヒットするように切り替える
-						p.next_block_ec = p.next_block_ec and (p.next_block_ec - 1) or 0
-						if p.next_block_ec == 0 then p.next_block = false end
+					if xp.attack_id ~= 0 and #st.hits > 0 then
+						local hit_labels = {}
+						for _, hit in ipairs(st.hits) do table.insert(hit_labels, hit.reach) end
+						if #hit_labels > 0 then add(xp, state_line_types.hit, hit_labels) end
 					end
-				elseif p.dummy_gd == dummy_gd_type.block1 then
-					if global.frame_number == p.on_block then
-						p.next_unblock = p.on_block + global.next_block_grace
-					elseif global.frame_number == p.on_hit then
-						p.next_block = true
-						p.next_unblock = 0
+					if #buff > 0 then
+						table.insert(buff, 1, st.parrieable)
+						p.last_combo_attributes = buff
 					end
-					if global.frame_number == p.next_unblock then
-						p.next_block = false -- ヒット時はガードに切り替え
-						p.next_block_ec = 75 -- カウンター初期化
-					end
-					if p.next_block == false then
-						-- カウンター消費しきったらガードするように切り替える
-						p.next_block_ec = p.next_block_ec and (p.next_block_ec - 1) or 0
-						if p.next_block_ec == 0 then p.next_block = true end
-					end
-				end
-
-				-- 相手がプレイヤーで挑発中は前進
-				if not global.proceed_cpu then
-					if p.fwd_prov and (p.op.control ~= 3) and ut.tstb(p.op.flag_cc, db.flag_cc._19) then
-						p.add_cmd_hook(db.cmd_types.front, "p.fwd_prov")
-					end
-				end
-
-				-- ガードリバーサル
-				if not p.gd_rvs_enabled and (p.dummy_wakeup == wakeup_type.rvs) and p.dummy_rvs and (p.on_block == global.frame_number) then
-					p.rvs_count = (p.rvs_count < 1) and 1 or p.rvs_count + 1
-					if global.dummy_rvs_cnt <= p.rvs_count and p.dummy_rvs then p.gd_rvs_enabled, p.rvs_count = true, -1 end
-					-- ut.printf("%s rvs %s %s", p.num, p.rvs_count, p.gd_rvs_enabled)
-				elseif p.gd_rvs_enabled and p.state ~= 2 then
-					p.gd_rvs_enabled = false
-				end -- ガード状態が解除されたらリバサ解除
-
-				-- BS
-				if not p.gd_bs_enabled and p.bs and p.dummy_bs and p.on_block == global.frame_number then
-					p.bs_count = (p.bs_count < 1) and 1 or p.bs_count + 1
-					if global.dummy_bs_cnt <= p.bs_count and p.dummy_bs then p.gd_bs_enabled, p.bs_count = true, -1 end
-					-- ut.printf("%s bs %s %s", p.num, p.bs_count, p.gd_bs_enabled)
-				elseif p.gd_bs_enabled and p.state ~= 2 then
-					p.gd_bs_enabled = false
-				end -- ガード状態が解除されたらBS解除
-
-				if p.old.knockback2 ~= nil and p.old.knockback2 == 1 then
-					if ut.tstb(p.flag_c0, db.flag_c0._02 | db.flag_c0._06 | db.flag_c0._26 | db.flag_c0._28) then
-						p.reset_cmd_hook(db.cmd_types._5)
-					else
-						p.reset_cmd_hook(db.cmd_types._2)
-					end
-				end
-
-				-- print(p.state, p.knockback2, p.knockback1, p.flag_7e, p.hitstop_remain, rvs_types.in_knock_back, p.last_blockstun, string.format("%x", p.act), p.act_count, p.act_frame)
-				-- ヒットストップ中は無視
-				-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
-				if global.dummy_rvs_type == 2 then -- リバーサル対象 2:ガード時
-					if p.in_block ~= true then p.dummy_rvs = nil end
-				elseif global.dummy_rvs_type == 3 then -- リバーサル対象 3:やられ時
-					if p.in_hurt ~= true then p.dummy_rvs = nil end
-				elseif global.dummy_rvs_type == 4 then -- リバーサル対象 4:その他動作時
-					if p.in_block or p.in_hurt then p.dummy_rvs = nil end
-				end
-				if p.knockback2 < 3 and p.hitstop_remain == 0 and not p.skip_frame and rvs_wake_types[p.dummy_wakeup] and p.dummy_rvs then
-					-- ダウン起き上がりリバーサル入力
-					if db.wakeup_acts[p.act] and (p.char_data.wakeup_frms - 3) <= (global.frame_number - p.on_wakeup) then
-						input_rvs(rvs_types.on_wakeup, p, string.format("[Reversal] wakeup %s %s",
-							p.char_data.wakeup_frms, (global.frame_number - p.on_wakeup)))
-					end
-					-- 着地リバーサル入力（やられの着地）
-					if 1 < p.pos_y_down and p.old.pos_y > p.pos_y and p.in_air ~= true and not ut.tstb(p.flag_c0, db.flag_c0._25) then
-						input_rvs(rvs_types.knock_back_landing, p, "[Reversal] blown landing")
-					end
-					-- バクステ後と着地リバーサル入力（通常ジャンプの着地）
-					if (p.act == 0x9 or p.act == 0x2C9 or p.act == 0x1C) and (p.act_frame == 2 or p.act_frame == 0) then
-						input_rvs(rvs_types.jump_landing, p, "[Reversal] jump landing")
-					end
-					-- リバーサルじゃない最速入力
-					-- ut.printf("aa" .. (p.act_data.name or "") .. " %X %s %X %s", p.flag_cc, ut.tstb(p.flag_cc, db.flag_cc.hurt), p.old.flag_cc, ut.tstb(p.old.flag_cc, db.flag_cc.hurt))
-					-- if p.state == 0 and p.act_data.name ~= "やられ" and p.old.act_data.name == "やられ" and p.knockback2 == 0 then
-					if p.state == 1 and ut.tstb(p.flag_cc, db.flag_cc.hurt) == true and p.knockback2 == 0 then
-						input_rvs(rvs_types.knock_back_recovery, p, "[Reversal] blockstun 1")
-					end
-					-- のけぞりのリバーサル入力
-					if (p.state == 1 or (p.state == 2 and p.gd_rvs_enabled)) and p.hitstop_remain == 0 then
-						-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する
-						-- 奥ラインへずらした場合だけ無視する（p.act ~= 0x14A）
-						if p.flag_7e == 0x80 and p.knockback2 == 0 and p.act ~= 0x14A and not ut.tstb(p.flag_7e, db.flag_7e._02) and not p.on_block then
-							-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する1
-							input_rvs(rvs_types.in_knock_back, p, "[Reversal] blockstun 2")
-						elseif p.old.knockback2 > 0 and p.knockback2 == 0 then
-							-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する2
-							input_rvs(rvs_types.in_knock_back, p, "[Reversal] blockstun 3")
-						end
-						-- デンジャラススルー用
-						if p.flag_7e == 0x0 and p.hitstop_remain < 3 and p.base == 0x34538 then
-							input_rvs(rvs_types.dangerous_through, p, "[Reversal] blockstun 4")
-						end
-					elseif p.state == 3 and p.hitstop_remain == 0 and p.knockback1 <= 1 then
-						-- 当身うち空振りと裏雲隠し用
-						input_rvs(rvs_types.atemi, p, "[Reversal] blockstun 5")
-					end
-					-- 奥ラインへずらしたあとのリバサ
-					if p.act == 0x14A and (p.act_count == 4 or p.act_count == 5) and p.old.act_frame == 0 and p.act_frame == 0 and p.throw_timer == 0 then
-						input_rvs(rvs_types.in_knock_back, p, string.format("[Reversal] plane shift %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer))
-					end
-					-- テクニカルライズのリバサ
-					if p.act == 0x2C9 and p.act_count == 2 and p.act_frame == 0 and p.throw_timer == 0 then
-						input_rvs(rvs_types.in_knock_back, p, string.format("[Reversal] tech-rise1 %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer))
-					end
-					if p.act == 0x2C9 and p.act_count == 0 and p.act_frame == 2 and p.throw_timer == 0 then
-						input_rvs(rvs_types.in_knock_back, p, string.format("[Reversal] tech-rise2 %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer))
-					end
-					-- グランドスウェー
-					local sway_act_frame = 0
-					if p.char_data.sway_act_counts ~= 0 then
-						sway_act_frame = 1
-					end
-					if p.act == 0x13E and p.act_count == p.char_data.sway_act_counts and p.act_frame == sway_act_frame then
-						input_rvs(rvs_types.in_knock_back, p, string.format("[Reversal] ground sway %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer))
-					end
-				end
-
-				-- 自動避け攻撃対空
-				if p.enc_enabled and not p.op.in_hitstun and not p.bs_hook then
-					local aaa, op = p.encounter, p.op
-					local other_cond = false
-					local falling, rising = p.falling or op.falling, p.rising or op.rising
-					if aaa.atk_only == 1 then -- 1:OFF
-						other_cond = true
-						--falling, rising = p.falling or op.falling, p.rising or op.rising
-					elseif aaa.atk_only == 2 then -- 2:相手の攻撃に反応
-						other_cond = p.flag_c4 == 0 and p.flag_c8 == 0 and 0 < (op.flag_c4 | op.flag_c8)
-						--falling, rising = op.falling, op.rising
-					elseif aaa.atk_only == 3 then -- 3:相手の移動中に発動
-						other_cond = p.flag_c4 == 0 and p.flag_c8 == 0 and (ut.tstb(op.flag_c8, db.flag_c8.normal_atk) or op.thrust ~= 0 or op.inertia ~= 0 or op.thrusty ~= 0)
-						--falling, rising = op.falling, op.rising
-					elseif aaa.atk_only == 4 then -- 4:自身の動作中に発動
-						other_cond = p.in_naked == true and (ut.tstb(p.flag_c8, db.flag_c8.normal_atk) or p.thrust ~= 0 or p.inertia ~= 0 or p.thrusty ~= 0)
-						--falling, rising = p.falling , p.rising
-					end
-					local closing, expanding = p.closing or op.closing, p.expanding or op.expanding
-					local xa, ya = false, false
-					local xlabel, ylabel, label
-					local chk_rise = aaa.rise_limit > 0 -- この高さより上昇時
-					local chk_fall = aaa.fall_limit > 0 -- この高さより下降時
-					local chk_fwd  = aaa.fwd_limit  > 0 -- この間合いより近づいた時
-					local chk_bak  = aaa.bak_limit  > 0 -- この間合いより遠のいた時
-					--[[
-					label = string.format("%s %s %4s op:%4s %3s %3s",
-						global.frame_number,
-						p.num,
-						p.falling == true and "fall" or (p.rising == true and "rise" or ""),
-						op.falling == true and "fall" or (op.rising == true and "rise" or ""),
-						closing == true and "clo" or (expanding == true and "exp" or ""),
-						other_cond == true and "oth" or "")
-					]]
-					if other_cond == true then
-						if not chk_fall and not chk_rise then
-							ya = true -- 非ジャンプ全般
-						elseif falling and chk_fall and aaa.fall_limit >= abs_elev then -- ジャンプ下り
-							ylabel = label and string.format("%3d %2s %3d", aaa.fall_limit, ">=", abs_elev) or nil
-							ya = true
-						elseif rising and chk_rise and aaa.rise_limit <= abs_elev then -- ジャンプ上り
-							ylabel = label and string.format("%3d %2s %3d", aaa.rise_limit, "<=", abs_elev) or nil
-							ya = true
-						end
-						if not chk_fwd and not chk_bak then
-							xa = true -- 間合い指定なし
-						elseif closing and chk_fwd and aaa.fwd_limit >= abs_space then -- 接近
-							xlabel = label and string.format("%3d %2s %3d", aaa.fwd_limit, ">=", abs_space) or nil
-							xa = true
-						elseif expanding and chk_bak and aaa.bak_limit <= abs_space then -- 離遠
-							xlabel = label and string.format("%3d %2s %3d", aaa.bak_limit, "<=", abs_space) or nil
-							xa = true
-						end
-					end
-					if xa and ya then
-						if label then ut.printf("%s Y:%s X:%s", label, ylabel, xlabel) end
-						if (aaa.type == 2) and p.dummy_enc ~= nil then
-							input_any(p, p.dummy_enc, "input_enc")
-						end
-					elseif label then ut.printf("%s Y:%3d X:%3d", label, abs_elev, abs_space) end
-				end
-
-				-- 自動ダウン追撃
-				if p.in_naked == true and p.op.act == 0x190 or p.op.act == 0x192 or p.op.act == 0x18E or p.op.act == 0x13B then
-					if global.auto_input.otg_throw and p.char_data.otg_throw then
-						p.reset_sp_hook(p.char_data.otg_throw) -- 自動ダウン投げ
-					end
-					if global.auto_input.otg_attack and p.char_data.otg_stomp then
-						p.reset_sp_hook(p.char_data.otg_stomp) -- 自動ダウン攻撃
-					end
-				end
-
-				-- 自動必殺技
-				if p.in_naked == true and p.encounter.auto_sp > 1 then
-					-- 必殺技 1:OFF 2:ON 3:ON:空キャン
-					local dohook = false
-					if p.encounter.auto_sp == 2 then
-						dohook = true
-					elseif p.encounter.auto_sp == 3 and
-						((p.flag_c4 > 0) or ut.tstb(p.flag_c8, db.flag_c8.normal_atk) == true or ut.tstb(p.flag_cc, db.flag_cc._19) == true) then
-						local lag = global.frame_number - p.on_update_7e_02
-						dohook = lag >= p.encounter.sp_lag
-					end
-					if dohook == true and p.dummy_fol ~= nil then
-						input_any(p, p.dummy_fol, "input_fol")
-					end
-				end
-
-				-- 自動追撃
-				if p.in_block ~= true then
-					-- 自動投げ追撃
-					if global.auto_input.combo_throw then
-						if p.char == db.char_id.joe and p.act == 0x70 then
-							p.reset_cmd_hook(db.cmd_types._2C) -- ジョー
-						elseif p.act == 0x6D and p.char_data.add_throw then
-							p.reset_sp_hook(p.char_data.add_throw) -- ボブ、ギース、双角、マリー
-						elseif p.char == db.char_id.xiangfei and p.act == 0x9F and p.act_count == 2 and p.act_frame >= 0 and p.char_data.add_throw then
-							p.reset_sp_hook(p.char_data.add_throw) -- 閃里肘皇・心砕把
-						elseif p.char == db.char_id.duck and (p.act == 0xAF or p.act == 0xB8 or p.act == 0xB9) then
-							p.reset_sp_hook(p.char_data.add_throw) -- ダック
-						end
-					end
-
-					-- 自動閃里肘皇・貫空
-					if global.auto_input.kanku and p.char == db.char_id.xiangfei then
-						if p.act == 0xA1 and p.act_count == 6 and p.act_frame >= 0 then
-							p.reset_sp_hook(db.rvs_bs_list[p.char][21]) -- 閃里肘皇・貫空
-						end
-					end
-
-					-- 自動超白龍
-					if 1 < global.auto_input.pairon and p.char == db.char_id.xiangfei then
-						if p.act == 0x43 and p.act_count >= 0 and p.act_count <= 3 and p.act_frame >= 0 and 2 == global.auto_input.pairon then
-							p.reset_sp_hook(db.rvs_bs_list[p.char][28]) -- 超白龍
-						elseif p.act == 0x43 and p.act_count == 3 and p.act_count <= 3 and p.act_frame >= 0 and 3 == global.auto_input.pairon then
-							p.reset_sp_hook(db.rvs_bs_list[p.char][28]) -- 超白龍
-						end
-						if p.act == 0xFE then
-							p.reset_sp_hook(db.rvs_bs_list[p.char][29]) -- 超白龍2
-						end
-					end
-				else
-					-- ブレイクショット
-					if p.gd_bs_enabled == true then p.reset_sp_hook(p.dummy_bs) end
 				end
 			end
-		end,
-		rec_replay = function()
-			-- レコード＆リプレイ
-			if global.dummy_mode == menu.dummy_modes.record or global.dummy_mode == menu.dummy_modes.replay then
-				if global.rec_main then
-					local prev_rec_main, called = nil, {}
-					repeat
-						prev_rec_main = global.rec_main
-						called[prev_rec_main or "NOT DEFINED"] = true
-						global.rec_main()
-					until global.rec_main == prev_rec_main or called[global.rec_main] == true
-					input.readp(recording.player, global.rec_main == recording.procs.play)
-				end
-			end
-		end,
-		save_input = function()
-			input.read(nil, true)
-			-- キーディス用の処理
-			for _, p in ipairs(players) do
-				local key, keybuf = "", {} -- _1~_9 _A_B_C_D
-				local ggbutton = { lever = 5, A = false, B = false, C = false, D = false, }
+			frame_txt.add(p)
+		end
 
-				-- GG風キーディスの更新
-				for k, v, kk in ut.find_all(p.key.state, function(k, v) return string.gsub(k, "_", "") end) do
-					if tonumber(kk) then
-						if 0 < v then key, ggbutton.lever = (k == "_5" and "_N" or k), tonumber(kk) end
-					elseif kk == "st" or kk == "sl" then
-					else
-						if 0 < v then keybuf[#keybuf + 1], ggbutton[kk] = k, true end
-					end
-				end
-				ut.table_add(p.key.gg.hist, ggbutton, 60)
-				table.sort(keybuf)
-				key = key .. table.concat(keybuf)
+		-- コンボダメージ表示の更新
+		for _, p in ipairs(players) do
+			local op, col1, col2, col3 = p.op, {}, {}, {}
+			local last_damage_scaling = 100.00
+			if op.last_damage_scaling1 and op.last_damage_scaling2 then
+				last_damage_scaling = (op.last_damage_scaling1 * op.last_damage_scaling2) * 100
+			end
+			if op.combo_update == global.frame_number then
+				local stun, timer                       = math.max(op.hit_stun - op.combo_start_stun), math.max(op.hit_stun_timer - op.combo_start_stun_timer, 0)
+				op.combo_stun, op.last_stun             = stun, math.max(stun - op.combo_stun, 0)
+				op.combo_stun_timer, op.last_stun_timer = timer, math.max(timer - op.combo_stun_timer, 0)
+				op.max_combo                            = math.max(op.max_combo or 0, op.last_combo)
+				op.max_combo_pow                        = math.max(op.max_combo_pow or 0, op.combo_pow)
+				op.max_combo_stun                       = math.max(op.max_combo_stun or 0, op.combo_stun)
+				op.max_combo_stun_timer                 = math.max(op.max_combo_stun_timer or 0, op.combo_stun_timer)
+			end
+			table.insert(col2, string.format("%3d>%3d(%.3f%%)", op.last_damage, op.last_damage_scaled, last_damage_scaling))
+			table.insert(col2, string.format("%3d(%4s)", op.combo_damage or 0, string.format("+%d", op.last_damage_scaled)))
+			table.insert(col2, string.format("%3X", op.last_combo))
+			table.insert(col2, string.format("%3d(%4s)", op.combo_stun or 0, string.format("+%d", op.last_stun or 0)))
+			table.insert(col2, string.format("%3d(%4s)", op.combo_stun_timer or 0, string.format("+%d", op.last_stun_timer or 0)))
+			table.insert(col2, string.format("%3d(%4s)", op.combo_pow or 0, string.format("+%d", p.last_pow_up or 0)))
+			table.insert(col2, #p.last_combo_attributes > 0 and p.last_combo_attributes[1] or "")
+			table.insert(col3, "")
+			table.insert(col3, string.format("%3d", op.max_combo_damage or 0))
+			table.insert(col3, string.format("%3X", op.max_combo or 0))
+			table.insert(col3, string.format("%3d", op.max_combo_stun or 0))
+			table.insert(col3, string.format("%3d", op.max_combo_stun_timer or 0))
+			table.insert(col3, string.format("%3d", op.max_combo_pow or 0))
+			table.insert(col3, "")
+			if p.disp_damage then
+				ut.table_add_all(col1, { -- コンボ表示
+					"Scaling",
+					"Damage",
+					"Combo",
+					"Stun",
+					"Timer",
+					"Power",
+					"Attribute",
+				})
+			end
+			p.combo_col1, p.combo_col2, p.combo_col3 = col1, col2, col3
+		end
 
-				-- キーログの更新
-				-- 必殺技コマンド成立を直前のキーログに反映する
-				if p.on_sp_established == global.frame_number then -- or 0 < p.sp_established_duration
-					local prev = p.key.log[#p.key.log]
-					if prev and not prev.on_sp_established then
-						if prev.frame == 1 then
-							prev.spid, prev.on_sp_established = p.last_sp, global.frame_number
-						else
-							prev.frame = prev.frame - 1
-							table.insert(p.key.log, { key = prev.key, frame = 1, spid = p.last_sp, on_sp_established = global.frame_number })
-						end
-					end
-				end
-				-- 最新のキーログを追加する
-				local prev = p.key.log[#p.key.log]
-				if prev and prev.key == key and not prev.on_sp_established then
-					prev.frame = prev.frame < 999 and prev.frame + 1 or prev.frame
-				else
-					table.insert(p.key.log, { key = key, frame = 1 })
-					while global.key_hists < #p.key.log do table.remove(p.key.log, 1) end
-				end
-
-				-- 入力座標
-				for _, ph in ipairs(p.key.pos_hist) do
-					table.insert(ranges, {
-						label = string.format("%sP %s\n%s:%d,%s:%d", p.num, ph.label, ph.w_sym, ph.space, ph.v_sym, ph.elev),
-						x = ph.x - screen.left,
-						y = ph.y + screen.top,
-						flip_x = ph.flip_x,
-						within = false,
-						p = p,
-					})
-				end
+		-- 状態表示データ
+		for _, p in ipairs(players) do
+			if p.disp_state == 2 or p.disp_state == 3 then -- 1:OFF 2:ON 3:ON:小表示 4:ON:フラグ表示 5:ON:ALL
+				local label1 = {}
+				local plus = ut.tstb(p.attackbit, frame_attack_types.frame_plus, true)
+				local minus = ut.tstb(p.attackbit, frame_attack_types.frame_minus, true)
+				table.insert(label1, string.format("%s %02d %03d %03d", p.state, p.throwing and p.throwing.threshold or 0, p.throwing and p.throwing.timer or 0, p.throw_timer or 0))
+				table.insert(label1, string.format("%03X %02X %02X %02X", p.acta or 0, p.spid or 0, p.attack_data or 0, p.attack_id or 0))
+				table.insert(label1, string.format("%03X %02X %02X %s%s%s", p.act, p.act_count, p.act_frame, p.update_base and "u" or "k", p.update_act and "U" or "K", p.act_data.neutral and "N" or "A"))
+				table.insert(label1, string.format("%02X %02X %02X %02X %s %s", p.hurt_state, p.sway_status, p.additional, p.d6, #p.boxies, plus and "+" or (minus and "-" or "")))
+				p.state_line2 = label1
 			end
-		end,
-		recover = function()
-			for _, p in ipairs(players) do
-				p.do_recover()
+			if p.disp_state == 4 or p.disp_state == 5 then -- 1:OFF 2:ON 3:ON:小表示 4:ON:フラグ表示 5:ON:ALL
+				local label2 = {}
+				local c0, c4 = string.format("%08X", p.flag_c0 or 0), string.format("%08X", p.flag_c4 or 0)
+				local c8, cc = string.format("%08X", p.flag_c8 or 0), string.format("%08X", p.flag_cc or 0)
+				local d0, _7e, _6a = string.format("%02X", p.flag_d0 or 0), string.format("%02X", p.flag_7e or 0), string.format("%02X", p.flag_6a or 0)
+				table.insert(label2, string.format("C0 %-32s %s %-s", ut.hextobitstr(c0, " "), c0, db.get_flag_name(p.flag_c0, db.flag_names_c0)))
+				table.insert(label2, string.format("C4 %-32s %s %-s", ut.hextobitstr(c4, " "), c4, db.get_flag_name(p.flag_c4, db.flag_names_c4)))
+				table.insert(label2, string.format("C8 %-32s %s %-s", ut.hextobitstr(c8, " "), c8, db.get_flag_name(p.flag_c8, db.flag_names_c8)))
+				table.insert(label2, string.format("CC %-32s %s %-s", ut.hextobitstr(cc, " "), cc, db.get_flag_name(p.flag_cc, db.flag_names_cc)))
+				table.insert(label2, string.format("D0 %-8s %s %-s", ut.hextobitstr(d0, " "), d0, db.get_flag_name(p.flag_d0, db.flag_names_d0)))
+				table.insert(label2, string.format("6A %-8s %s %-s", ut.hextobitstr(_6a, " "), _6a, db.get_flag_name(p.flag_6a, db.flag_names_6a)))
+				table.insert(label2, string.format("7E %-8s %s %-s %-2s", ut.hextobitstr(_7e, " "), _7e, db.get_flag_name(p.flag_7e, db.flag_names_7e),
+					math.min(99, p.on_update_7e_02 and (global.frame_number - p.on_update_7e_02) or 0)))
+				table.insert(label2, string.format("%1s %3s %3s", p.state, p.knockback1, p.knockback2))
+				p.state_line3 = label2
 			end
-		end,
-		force_fix_pos = function()
-			-- Y座標強制
-			for _, p in ipairs(players) do
-				if p.force_y_pos > 1 then mem.w16i(p.addr.pos_y, menu.labels.force_y_pos[p.force_y_pos]) end
-			end
-
-			-- X座標同期とY座標をだいぶ下に
-			if global.sync_pos_x ~= 1 then
-				local from = global.sync_pos_x - 1
-				local to   = 3 - from
-				mem.w16i(players[to].addr.pos, players[from].pos)
-				mem.w16i(players[to].addr.pos_y, players[from].pos_y - 124)
-			end
-		end,
-		read_view_state = function()
-			-- 状態表示(大)データの更新
-			for _, p in ipairs(players) do
-				local add = function(xp, typev, txt)
-					xp.large_states[typev] = { txt = txt, attack = xp.body.attack, attack_id = xp.attack_id }
-				end
-				for _, xp in ipairs(p.objects) do
-					xp.large_states = xp.body.char == xp.body.old.char and xp.large_states or {}
-					xp.latest_states = {}
-					if xp.proc_active then
-						local st = xp.latest_states
-						st.parent_id = xp.body.attack and string.format("%3X", xp.body.attack) or "---"
-						st.fbid = (xp.attack and xp.is_fireball) and string.format("%3X", xp.attack) or "---"
-						st.id = xp.attack_id and string.format("%3X", xp.attack_id) or "---"
-						st.fake = xp.attackbits.fake
-						st.name = "---"
-						if xp.act_data then st.name = xp.act_data and xp.act_data.last_name or xp.act_data.name or "---" end
-						st.damage = xp.damage or 0
-						st.chip = xp.chip or 0
-						st.stun = xp.stun or 0
-						st.stun_timer = xp.stun_timer or 0
-						st.cmd_timer = xp.cmd_timer or 0
-						st.effect, st.effect_name1, st.effect_name2 = db.hit_effects.get_name(xp.effect, "---")
-						st.nokezori = db.hit_effects.is_nokezori(xp.effect)
-						-- フレームデータがある場合は-1、システム固定処理による+2で補正する
-						st.hitstop = (not xp.hitstop or xp.hitstop == 0) and "--" or (math.max(0, xp.hitstop - 1) + 2)
-						-- フレームデータがある場合は-1、システム固定処理による+2で補正する
-						st.blockstop = (not xp.blockstop or xp.hitstop == "--") and "--" or (math.max(0, xp.blockstop - 1) + 2)
-						-- システム固定処理による+3で補正する
-						st.hitstun_short = (st.nokezori and xp.hitstun and xp.hitstun > 0) and (xp.hitstun + 3) or nil
-						st.hitstun = st.hitstun_short or "--"
-						-- システム固定処理による+2で補正する
-						st.blockstun = (not xp.blockstun or xp.blockstun == 0) and "--" or (xp.blockstun + 2)
-						st.parrieable = to_parrieable_txt(xp.parrieable)
-						st.max_hit_nm = xp.max_hit_nm or "-"
-						st.max_hit_dn = xp.max_hit_dn or "-"
-						st.multi_hit = xp.multi_hit
-						st.fb_rank = xp.fireball_rank or "--"
-						st.pow_up = p.pow_up_direct == 0 and p.pow_up or p.pow_up_direct or 0
-						st.pow_up_hit = p.pow_up_hit or 0
-						st.pow_up_block = p.pow_up_block or 0
-						st.pow_revenge = p.pow_revenge or "-"
-						st.pow_absorb = p.pow_absorb or "-"
-						st.sp_invincible = xp.sp_invincible or "--"
-						st.bs_pow = (ut.tstb(xp.flag_cc, db.flag_cc._21) and xp.bs_pow and xp.bs_pow > 0) and -xp.bs_pow or "---"
-						st.bs_invincible = (ut.tstb(xp.flag_cc, db.flag_cc._21) and xp.bs_invincible) or "--"
-						st.esaka = xp.esaka_target and xp.esaka or "---"
-						st.esaka_type = xp.esaka_target and xp.esaka_type or "---"
-						st.kagenui_name = kagenui_names[p.kagenui_type]
-						st.repeatable = xp.repeatable and "Repeat" or "---"
-						st.cancelable = xp.cancelable and "Special" or "---"
-						st.cancelable_short = xp.repeatable and "Rep." or xp.cancelable and "Sp." or "-"
-						st.teching = (xp.forced_down or xp.in_bs) and "Can't" or "Can"
-						st.sliding = p.sliding and "Slide" or (p.inertial and "Inertial" or "---")
-						st.hurt_dodge1, st.hurt_dodge2, st.hurt_dodge3 = "", "", ""
-						if p.hurt then st.hurt_dodge1, st.hurt_dodge2, st.hurt_dodge3 = db.get_dodge_name(p.hurt.dodge, "") end
-						st.hurt_dodge_name = table.concat({ st.hurt_dodge1, st.hurt_dodge2, st.hurt_dodge3 }, "")
-						if #st.hurt_dodge_name > 0 then st.hurt_dodge_name = "Dodge-" .. st.hurt_dodge_name end
-						st.hits = {}
-						st.hurts = {}
-						st.throws = {}
-						for _, box in ipairs(xp.hitboxies) do
-							--        Top Btm Fwd Bwd Note
-							-- %-6s   %3s %3s %3s %3s %-5s
-							-- Hurt 1 %3s %3s %3s %3s %-5s
-							-- Throw2 %3s %3s %3s %3s %-5s
-							if box.type.kind == db.box_kinds.attack or box.type.kind == db.box_kinds.parry then
-								local blockables = not st.fake and box.blockables or nil
-								local blockable_main = blockables and db.top_type_name(blockables.main) or "-"
-								local blockable_sway = blockables and db.top_type_name(blockables.sway) or "-"
-								local punish_name = blockables and db.get_punish_name(blockables.punish) or ""
-								local anti_away = #punish_name > 0 and "Anti-" .. punish_name or "-"
-								local anti_away_short = #punish_name > 0 and punish_name or "-"
-								local rank = xp.is_fireball and string.format("[%s]", st.fb_rank) or ""
-								local attribute = string.format("%s/%s/%s%s", blockable_main, blockable_sway, anti_away, rank)
-								local parry, short_parry
-								if box.type.kind == db.box_kinds.attack then
-									parry, short_parry = to_parrieable_txt(box.parrieable)
-								else
-									parry, short_parry = "", ""
-								end
-								table.insert(st.hits, {
-									reach = string.format("%-5s%s %3s %3s %3s %3s %-s%-s", box.type.kind, box.no, box.real_top, box.real_bottom, box.real_front, box.real_back, parry, attribute),
-									attribute = attribute,
-									real_top = box.real_top,
-									real_bottom = box.real_bottom,
-									real_front = box.real_front,
-									real_back = box.real_back,
-									blockable_main = blockable_main,
-									blockable_sway = blockable_sway,
-									punish_name = punish_name,
-									anti_away = anti_away,
-									anti_away_short = anti_away_short,
-									rank = rank,
-									parry = parry,
-									short_parry = short_parry,
-								})
-							elseif box.type.kind == db.box_kinds.hurt or box.type.kind == db.box_kinds.block then
-								local note = box.type.kind ~= db.box_kinds.block and st.hurt_dodge_name or block_names[box.id]
-								table.insert(st.hurts, {
-									reach = string.format("%-5s%s %3s %3s %3s %3s %-s", box.type.kind, box.no, box.real_top, box.real_bottom, box.real_front, box.real_back, note),
-								})
-							elseif box.type.kind == db.box_kinds.throw then
-								local threshold = box.type == db.box_types.air_throw and 0 or box.threshold
-								local type_name = throw_names[box.type]
-								local note = string.format("Threshold %2s %-s", threshold, type_name)
-								table.insert(st.throws, {
-									reach = string.format("%-5s%s %3s %3s %3s %3s %-s", box.type.kind, box.no or "", box.real_top, box.real_bottom, box.real_front, box.real_back, note),
-									real_top = box.real_top,
-									real_bottom = box.real_bottom,
-									real_front = box.real_front,
-									real_back = box.real_back,
-									threshold = threshold,
-									type_name = type_name,
-								})
-							end
-						end
-
-						add(xp, state_line_types.id, string.format("Id %3s  Fb %3s  Hitbox %2s  %s", st.parent_id, st.fbid, st.id, st.name))
-						if xp.attack_data ~= 0 then
-							add(xp, state_line_types.damage, string.format("Damage %3s/%1s  Stun %2s/%2s Frame  %2s %s/%s", st.damage, st.chip, st.stun, st.stun_timer, st.effect, st.effect_name1, st.effect_name2))
-							add(xp, state_line_types.hitstop, string.format("HitStop %2s/%2s  HitStun %2s/%2s  Parry %-s", st.hitstop, st.blockstop, st.hitstun, st.blockstun, st.parrieable))
-							if xp.is_fireball then
-								add(xp, state_line_types.fb_hits, string.format("%s/%s Hit  Fireball-Lv. %2s", st.max_hit_nm, st.max_hit_dn, st.fb_rank))
-							else
-								add(xp, state_line_types.pow, string.format("Pow  Bonus %2s  Hit %2s  Block %2s  Parry %2s  Absorb %2s  B.S. %3s", st.pow_up, st.pow_up_hit, st.pow_up_block, st.pow_revenge, st.pow_absorb, st.bs_pow))
-								add(xp, state_line_types.inv, string.format("Invincible %2s  B.S. %2s  Hit %s/%s  Esaka %3s %-5s  Kagenui %-s", st.sp_invincible, st.bs_invincible, st.max_hit_nm, st.max_hit_dn, st.esaka, st.esaka_type, st.kagenui_name))
-								add(xp, state_line_types.cancel, string.format("Cancel %-7s/%-7s  Teching %-5s  Rush %-s", st.repeatable, st.cancelable, st.teching, st.sliding))
-							end
-						end
-						add(xp, state_line_types.box, "Box  # Top Btm Fwd Bwd Note")
-						local uniq, buff, hurt_labels = {}, {}, {}
-						for _, hit in ipairs(st.hits) do
-							if not uniq[hit.attribute] then
-								table.insert(buff, hit.attribute)
-								uniq[hit.attribute] = true
-							end
-						end
-						for _, hit in ipairs(st.hurts) do table.insert(hurt_labels, hit.reach) end
-						if #st.hurts == 0 and not xp.is_fireball then
-							table.insert(hurt_labels, string.format("%-5s%s %3s %3s %3s %3s %-s", db.box_kinds.hurt, "-", "---", "---", "---", "---", st.hurt_dodge_name))
-						end
-						if #hurt_labels > 0 then add(xp, state_line_types.hurt, hurt_labels) end
-						if xp.attack_id ~= 0 and #st.throws > 0 then
-							local throw_labels = {}
-							for _, hit in ipairs(st.throws) do table.insert(throw_labels, hit.reach) end
-							if #throw_labels > 0 then add(xp, state_line_types.throw, throw_labels) end
-						end
-						if xp.attack_id ~= 0 and #st.hits > 0 then
-							local hit_labels = {}
-							for _, hit in ipairs(st.hits) do table.insert(hit_labels, hit.reach) end
-							if #hit_labels > 0 then add(xp, state_line_types.hit, hit_labels) end
-						end
-						if #buff > 0 then
-							table.insert(buff, 1, st.parrieable)
-							p.last_combo_attributes = buff
-						end
-					end
-				end
-				frame_txt.add(p)
-			end
-
-			-- コンボダメージ表示の更新
-			for _, p in ipairs(players) do
-				local op, col1, col2, col3 = p.op, {}, {}, {}
-				local last_damage_scaling = 100.00
-				if op.last_damage_scaling1 and op.last_damage_scaling2 then
-					last_damage_scaling = (op.last_damage_scaling1 * op.last_damage_scaling2) * 100
-				end
-				if op.combo_update == global.frame_number then
-					local stun, timer                       = math.max(op.hit_stun - op.combo_start_stun), math.max(op.hit_stun_timer - op.combo_start_stun_timer, 0)
-					op.combo_stun, op.last_stun             = stun, math.max(stun - op.combo_stun, 0)
-					op.combo_stun_timer, op.last_stun_timer = timer, math.max(timer - op.combo_stun_timer, 0)
-					op.max_combo                            = math.max(op.max_combo or 0, op.last_combo)
-					op.max_combo_pow                        = math.max(op.max_combo_pow or 0, op.combo_pow)
-					op.max_combo_stun                       = math.max(op.max_combo_stun or 0, op.combo_stun)
-					op.max_combo_stun_timer                 = math.max(op.max_combo_stun_timer or 0, op.combo_stun_timer)
-				end
-				table.insert(col2, string.format("%3d>%3d(%.3f%%)", op.last_damage, op.last_damage_scaled, last_damage_scaling))
-				table.insert(col2, string.format("%3d(%4s)", op.combo_damage or 0, string.format("+%d", op.last_damage_scaled)))
-				table.insert(col2, string.format("%3X", op.last_combo))
-				table.insert(col2, string.format("%3d(%4s)", op.combo_stun or 0, string.format("+%d", op.last_stun or 0)))
-				table.insert(col2, string.format("%3d(%4s)", op.combo_stun_timer or 0, string.format("+%d", op.last_stun_timer or 0)))
-				table.insert(col2, string.format("%3d(%4s)", op.combo_pow or 0, string.format("+%d", p.last_pow_up or 0)))
-				table.insert(col2, #p.last_combo_attributes > 0 and p.last_combo_attributes[1] or "")
-				table.insert(col3, "")
-				table.insert(col3, string.format("%3d", op.max_combo_damage or 0))
-				table.insert(col3, string.format("%3X", op.max_combo or 0))
-				table.insert(col3, string.format("%3d", op.max_combo_stun or 0))
-				table.insert(col3, string.format("%3d", op.max_combo_stun_timer or 0))
-				table.insert(col3, string.format("%3d", op.max_combo_pow or 0))
-				table.insert(col3, "")
-				if p.disp_damage then
-					ut.table_add_all(col1, { -- コンボ表示
-						"Scaling",
-						"Damage",
-						"Combo",
-						"Stun",
-						"Timer",
-						"Power",
-						"Attribute",
-					})
-				end
-				p.combo_col1, p.combo_col2, p.combo_col3 = col1, col2, col3
-			end
-
-			-- 状態表示データ
-			for _, p in ipairs(players) do
-				if p.disp_state == 2 or p.disp_state == 3 then -- 1:OFF 2:ON 3:ON:小表示 4:ON:フラグ表示 5:ON:ALL
-					local label1 = {}
-					local plus = ut.tstb(p.attackbit, frame_attack_types.frame_plus, true)
-					local minus = ut.tstb(p.attackbit, frame_attack_types.frame_minus, true)
-					table.insert(label1, string.format("%s %02d %03d %03d", p.state, p.throwing and p.throwing.threshold or 0, p.throwing and p.throwing.timer or 0, p.throw_timer or 0))
-					table.insert(label1, string.format("%03X %02X %02X %02X", p.acta or 0, p.spid or 0, p.attack_data or 0, p.attack_id or 0))
-					table.insert(label1, string.format("%03X %02X %02X %s%s%s", p.act, p.act_count, p.act_frame, p.update_base and "u" or "k", p.update_act and "U" or "K", p.act_data.neutral and "N" or "A"))
-					table.insert(label1, string.format("%02X %02X %02X %02X %s %s", p.hurt_state, p.sway_status, p.additional, p.d6, #p.boxies, plus and "+" or (minus and "-" or "")))
-					p.state_line2 = label1
-				end
-				if p.disp_state == 4 or p.disp_state == 5 then -- 1:OFF 2:ON 3:ON:小表示 4:ON:フラグ表示 5:ON:ALL
-					local label2 = {}
-					local c0, c4 = string.format("%08X", p.flag_c0 or 0), string.format("%08X", p.flag_c4 or 0)
-					local c8, cc = string.format("%08X", p.flag_c8 or 0), string.format("%08X", p.flag_cc or 0)
-					local d0, _7e, _6a = string.format("%02X", p.flag_d0 or 0), string.format("%02X", p.flag_7e or 0), string.format("%02X", p.flag_6a or 0)
-					table.insert(label2, string.format("C0 %-32s %s %-s", ut.hextobitstr(c0, " "), c0, db.get_flag_name(p.flag_c0, db.flag_names_c0)))
-					table.insert(label2, string.format("C4 %-32s %s %-s", ut.hextobitstr(c4, " "), c4, db.get_flag_name(p.flag_c4, db.flag_names_c4)))
-					table.insert(label2, string.format("C8 %-32s %s %-s", ut.hextobitstr(c8, " "), c8, db.get_flag_name(p.flag_c8, db.flag_names_c8)))
-					table.insert(label2, string.format("CC %-32s %s %-s", ut.hextobitstr(cc, " "), cc, db.get_flag_name(p.flag_cc, db.flag_names_cc)))
-					table.insert(label2, string.format("D0 %-8s %s %-s", ut.hextobitstr(d0, " "), d0, db.get_flag_name(p.flag_d0, db.flag_names_d0)))
-					table.insert(label2, string.format("6A %-8s %s %-s", ut.hextobitstr(_6a, " "), _6a, db.get_flag_name(p.flag_6a, db.flag_names_6a)))
-					table.insert(label2, string.format("7E %-8s %s %-s %-2s", ut.hextobitstr(_7e, " "), _7e, db.get_flag_name(p.flag_7e, db.flag_names_7e),
-						math.min(99, p.on_update_7e_02 and (global.frame_number - p.on_update_7e_02) or 0)))
-					table.insert(label2, string.format("%1s %3s %3s", p.state, p.knockback1, p.knockback2))
-					p.state_line3 = label2
-				end
-			end
-		end,
-	}
+		end
+	end
 
 	-- トレモのメイン処理
 	menu.tra_main.proc = function()
@@ -6459,29 +6495,28 @@ rbff2.startplugin  = function()
 		if cancel == true and (g.dummy_mode == menu.dummy_modes.record or g.dummy_mode == menu.dummy_modes.replay) then
 			g.dummy_mode = menu.dummy_modes.ply_vs_ply
 		end
-		recording.mode     = col[2]       -- 02 レコード対象 1:1P操作/2P動作 2:1P操作/1P動作 3:2P操作/1P動作 4:2P操作/2P動作
-		p1.dummy_act       = col[3]       -- 03 1P アクション
-		p2.dummy_act       = col[4]       -- 04 2P アクション
-		g.no_action        = col[5]       -- 05 2P アクション
-		--                       6           06 ガード・ブレイクショット設定
-		p1.dummy_gd        = col[7]       -- 07 1P ガード
-		p2.dummy_gd        = col[8]       -- 08 2P ガード
-		g.crouch_block     = col[9] == 2  -- 09 可能な限りしゃがみガード
-		g.next_block_grace = col[10] - 1  -- 10 1ガード持続フレーム数
-		p1.bs              = col[11] == 2 -- 11 1P ブレイクショット
-		p2.bs              = col[12] == 2 -- 12 2P ブレイクショット
-		g.dummy_bs_cnt     = col[13]      -- 13 ブレイクショット設定
-		--                       14          14 やられ時行動・リバーサル設定
-		p1.dummy_wakeup    = col[15]      -- 15 1P やられ時行動
-		p2.dummy_wakeup    = col[16]      -- 16 2P やられ時行動
-		g.dummy_rvs_cnt    = col[17]      -- 17 ガードリバーサル設定
-		g.dummy_rvs_type   = col[18]      -- 18 リバーサル対象
-		--                       19          19 避け攻撃対空設定
-		p1.enc_enabled     = col[20] == 2 -- 20 1P 避け攻撃対空
-		p2.enc_enabled     = col[21] == 2 -- 21 2P 避け攻撃対空
-		--                       22          22 その他設定
-		p1.fwd_prov        = col[23] == 2 -- 23 1P 挑発で前進
-		p2.fwd_prov        = col[24] == 2 -- 24 2P 挑発で前進
+		p1.dummy_act       = col[ 2]       -- 02 1P アクション
+		p2.dummy_act       = col[ 3]       -- 03 2P アクション
+		g.no_action        = col[ 4]       -- 04 2P アクション
+		--                        5           05 ガード・ブレイクショット設定
+		p1.dummy_gd        = col[ 6]       -- 06 1P ガード
+		p2.dummy_gd        = col[ 7]       -- 07 2P ガード
+		g.crouch_block     = col[ 8] == 2  -- 08 可能な限りしゃがみガード
+		g.next_block_grace = col[ 9] - 1  -- 09 1ガード持続フレーム数
+		p1.bs              = col[10] == 2 -- 10 1P ブレイクショット
+		p2.bs              = col[11] == 2 -- 11 2P ブレイクショット
+		g.dummy_bs_cnt     = col[12]      -- 12 ブレイクショット設定
+		--                       13          13 やられ時行動・リバーサル設定
+		p1.dummy_wakeup    = col[14]      -- 14 1P やられ時行動
+		p2.dummy_wakeup    = col[15]      -- 15 2P やられ時行動
+		g.dummy_rvs_cnt    = col[16]      -- 16 ガードリバーサル設定
+		g.dummy_rvs_type   = col[17]      -- 17 リバーサル対象
+		--                       18          18 避け攻撃対空設定
+		p1.enc_enabled     = col[19] == 2 -- 19 1P 避け攻撃対空
+		p2.enc_enabled     = col[20] == 2 -- 20 2P 避け攻撃対空
+		--                       21          21 その他設定
+		p1.fwd_prov        = col[22] == 2 -- 22 1P 挑発で前進
+		p2.fwd_prov        = col[23] == 2 -- 23 2P 挑発で前進
 		for _, p in ipairs(players) do
 			p.update_char()
 			if p.dummy_gd == dummy_gd_type.hit1 then
@@ -6506,26 +6541,26 @@ rbff2.startplugin  = function()
 				elseif g.dummy_mode == menu.dummy_modes.replay then
 					next_menu = "replay" -- リプレイ
 				end
-			elseif p1.enc_enabled and row == 19 then
+			elseif p1.enc_enabled and row == 18 then
 				next_menu = "encounter1" -- 1P 避け攻撃対空
-			elseif p2.enc_enabled and row == 20 then
+			elseif p2.enc_enabled and row == 19 then
 				next_menu = "encounter2" -- 2P 避け攻撃対空
 			end
 
 			-- プレイヤー選択しなおしなどで初期化したいときはサブメニュー遷移しない
 			if do_init ~= true then
 				-- ブレイクショット ガードのメニュー設定
-				if row == 11 and p1.bs then next_menu = menu.bs_menus[1][p1.char] end
-				if row == 12 and p2.bs then next_menu = menu.bs_menus[2][p2.char] end
-				if row == 7 or row == 8 then -- 特殊設定の出張設定項目
+				if row == 10 and p1.bs then next_menu = menu.bs_menus[1][p1.char] end
+				if row == 11 and p2.bs then next_menu = menu.bs_menus[2][p2.char] end
+				if row == 8 or row == 7 then -- 特殊設定の出張設定項目
 					local col1 = menu.bs_menus[1][p1.char].pos.col
 					local col2 = menu.bs_menus[2][p1.char].pos.col
 					col1[#col1] = g.all_bs and 2 or 1
 					col2[#col2] = g.all_bs and 2 or 1
 				end
 				-- リバーサル やられ時行動のメニュー設定
-				if row == 15 and rvs_wake_types[p1.dummy_wakeup] then next_menu = menu.rvs_menus[1][p1.char] end
-				if row == 16 and rvs_wake_types[p2.dummy_wakeup] then next_menu = menu.rvs_menus[2][p2.char] end
+				if row == 14 and rvs_wake_types[p1.dummy_wakeup] then next_menu = menu.rvs_menus[1][p1.char] end
+				if row == 15 and rvs_wake_types[p2.dummy_wakeup] then next_menu = menu.rvs_menus[2][p2.char] end
 			end
 		end
 
@@ -6535,8 +6570,18 @@ rbff2.startplugin  = function()
 	for i = 1, 0xC0 - 1 do table.insert(menu.labels.life_range, i) end
 	for i = 1, 0x3C - 1 do table.insert(menu.labels.pow_range, i) end
 
-	menu.rec_to_tra           = function() menu.set_current("training") end
+	menu.exit_rec_common = function()
+		local col, g = menu.recording.pos.col, global
+		recording.mode        = col[11] -- 11 レコード対象 1:1P操作/2P動作 2:1P操作/1P動作 3:2P操作/1P動作 4:2P操作/2P動作
+	end
+	menu.rec_to_tra           = function()
+		menu.exit_rec_common()
+		menu.set_current("training")
+		print("rec_to_tra", recording.mode)
+	end
 	menu.exit_and_rec         = function(slot_no, enabled)
+		menu.exit_rec_common()
+		print("exit_and_rec", recording.mode)
 		if not enabled then return end
 		local g               = global
 		g.dummy_mode          = menu.dummy_modes.record
@@ -7056,7 +7101,6 @@ rbff2.startplugin  = function()
 		"トレーニングダミーの基本動作を設定します。",
 		{
 			{ "ダミーモード", { "プレイヤー vs プレイヤー", "プレイヤー vs CPU", "CPU vs プレイヤー", "1P&2P入れ替え", "レコード", "リプレイ" }, },
-			{ "レコード対象", { "1P操作/2P動作", "1P操作/1P動作", "2P操作/1P動作", "2P操作/2P動作" }, },
 			{ "1P アクション", { "立ち", "しゃがみ", "垂直ジャンプ", "前方ジャンプ", "後方ジャンプ", "垂直小ジャンプ", "前方小ジャンプ", "後方小ジャンプ", "ダッシュジャンプ", "ダッシュ小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き", "後退", "しゃがみ後退（ガード）", "ダッシュ", "飛び退き" }, },
 			{ "2P アクション", { "立ち", "しゃがみ", "垂直ジャンプ", "前方ジャンプ", "後方ジャンプ", "垂直小ジャンプ", "前方小ジャンプ", "後方小ジャンプ", "ダッシュジャンプ", "ダッシュ小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き", "後退", "しゃがみ後退（ガード）", "ダッシュ", "飛び退き" }, },
 			{ "くらい後アクション停止", menu.labels.no_action, },
@@ -7084,32 +7128,31 @@ rbff2.startplugin  = function()
 			---@diagnostic disable-next-line: undefined-field
 			local col, p, g = menu.training.pos.col, players, global
 			col[1]  = g.dummy_mode                 -- 01 ダミーモード
-			col[2]  = recording.mode               -- 02 レコード対象 1:1P操作/2P動作 2:1P操作/1P動作 3:2P操作/1P動作 4:2P操作/2P動作
-			col[3]  = p[1].dummy_act               -- 03 1P アクション
-			col[4]  = p[2].dummy_act               -- 04 2P アクション
-			col[5]  = g.no_action                  -- 05 くらい後アクションOFF
-			-- 06 ガード・ブレイクショット設定        06
-			col[7]  = p[1].dummy_gd                -- 07 1P ガード
-			col[8]  = p[2].dummy_gd                -- 08 2P ガード
-			col[9]  = g.crouch_block and 2 or 1    -- 08 可能な限りしゃがみガード
-			col[10] = g.next_block_grace + 1       -- 10 1ガード持続フレーム数
-			col[11] = p[1].bs and 2 or 1           -- 11 1P ブレイクショット
-			col[12] = p[2].bs and 2 or 1           -- 12 2P ブレイクショット
-			col[13] = g.dummy_bs_cnt               -- 13 ブレイクショット設定
-			--  14 やられ時行動・リバーサル設定       14
-			col[15] = p[1].dummy_wakeup            -- 15 1P やられ時行動
-			col[16] = p[2].dummy_wakeup            -- 16 2P やられ時行動
-			col[17] = g.dummy_rvs_cnt              -- 17 ガードリバーサル設定
-			col[18] = g.dummy_rvs_type             -- 18 リバーサル対象
-			--  19 避け攻撃対空設定                   19
-			col[20] = p[1].enc_enabled and 2 or 1  -- 20 1P 避け攻撃対空
-			col[21] = p[2].enc_enabled and 2 or 1  -- 21 2P 避け攻撃対空
-			--  22 その他設定                         22
-			col[23] = p[1].fwd_prov and 2 or 1     -- 23 1P 挑発で前進
-			col[24] = p[2].fwd_prov and 2 or 1     -- 24 2P 挑発で前進
+			col[ 2]  = p[1].dummy_act              -- 02 1P アクション
+			col[ 3]  = p[2].dummy_act              -- 03 2P アクション
+			col[ 4]  = g.no_action                 -- 04 くらい後アクションOFF
+			--   5 ガード・ブレイクショット設定       05
+			col[ 6]  = p[1].dummy_gd               -- 06 1P ガード
+			col[ 7]  = p[2].dummy_gd               -- 07 2P ガード
+			col[ 8]  = g.crouch_block and 2 or 1   -- 08 可能な限りしゃがみガード
+			col[ 9] = g.next_block_grace + 1       -- 08 1ガード持続フレーム数
+			col[10] = p[1].bs and 2 or 1           -- 10 1P ブレイクショット
+			col[11] = p[2].bs and 2 or 1           -- 11 2P ブレイクショット
+			col[12] = g.dummy_bs_cnt               -- 12 ブレイクショット設定
+			--  13 やられ時行動・リバーサル設定       13
+			col[14] = p[1].dummy_wakeup            -- 14 1P やられ時行動
+			col[15] = p[2].dummy_wakeup            -- 15 2P やられ時行動
+			col[16] = g.dummy_rvs_cnt              -- 16 ガードリバーサル設定
+			col[17] = g.dummy_rvs_type             -- 17 リバーサル対象
+			--  18 避け攻撃対空設定                   18
+			col[19] = p[1].enc_enabled and 2 or 1  -- 19 1P 避け攻撃対空
+			col[20] = p[2].enc_enabled and 2 or 1  -- 20 2P 避け攻撃対空
+			--  21 その他設定                         21
+			col[22] = p[1].fwd_prov and 2 or 1     -- 22 1P 挑発で前進
+			col[23] = p[2].fwd_prov and 2 or 1     -- 23 2P 挑発で前進
 		end,
-		ut.new_filled_table(24, menu.to_main),
-		ut.new_filled_table(24, menu.to_main_cancel))
+		ut.new_filled_table(23, menu.to_main),
+		ut.new_filled_table(23, menu.to_main_cancel))
 
 	menu.bar       = menu.create(
 		"ゲージ設定",
@@ -7488,10 +7531,14 @@ rbff2.startplugin  = function()
 			{ "スロット6", { "ロック", "Aでレコード開始", }, },
 			{ "スロット7", { "ロック", "Aでレコード開始", }, },
 			{ "スロット8", { "ロック", "Aでレコード開始", }, },
+			{ title = true, "レコード設定" },
+			{ "レコード対象", { "1P操作/2P動作", "1P操作/1P動作", "2P操作/1P動作", "2P操作/2P動作" }, },
 		},
 		-- スロット1-スロット8
 		function(first)
 			local col = menu.recording.pos.col
+			-- 10 レコード対象
+			col[11] = recording.mode -- 11 レコード対象 1:1P操作/2P動作 2:1P操作/1P動作 3:2P操作/1P動作 4:2P操作/2P動作
 			for i = 2, 1 + 8 do
 				if first then col[i] = 2 end
 				local store_len = #recording.slot[i - 1].store
@@ -7513,8 +7560,10 @@ rbff2.startplugin  = function()
 			function() menu.exit_and_rec(6, menu.recording.pos.col[7] == 2) end, -- スロット6
 			function() menu.exit_and_rec(7, menu.recording.pos.col[8] == 2) end, -- スロット7
 			function() menu.exit_and_rec(8, menu.recording.pos.col[9] == 2) end, -- スロット8
+			menu.rec_to_tra,                                            -- レコード設定
+			menu.rec_to_tra,                                            -- レコード対象
 		},
-		ut.new_filled_table(1, menu.rec_to_tra, 8, menu.to_tra))
+		ut.new_filled_table(11, menu.rec_to_tra))
 
 	menu.replay    = menu.create(
 		"リプレイ",
