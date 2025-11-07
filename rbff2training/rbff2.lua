@@ -3274,6 +3274,7 @@ rbff2.startplugin  = function()
 		local pos = { players[1].cmd_side, players[2].cmd_side }
 		if first then
 			recording.active_slot.p = p
+			recording.active_slot.store = {}
 		else
 			table.remove(recording.active_slot.store)
 		end
