@@ -1601,6 +1601,7 @@ db.pre_down_acts = ut.new_set(0x142, 0x145, 0x156, 0x15A, 0x15B, 0x15E, 0x15F, 0
 --------------------------------------------------------------------------------------
 
 local rvs_types = {
+	none                = nil,
 	on_wakeup           = 1, -- ダウン起き上がりリバーサル入力
 	jump_landing        = 2, -- 着地リバーサル入力（やられの着地）
 	knock_back_landing  = 3, -- 着地リバーサル入力（通常ジャンプの着地）
@@ -1728,6 +1729,8 @@ local hook_cmd_types   = {
 	backstep = 2 ^ 13,
 }
 hook_cmd_types.ex_breakshot = hook_cmd_types.breakshot | hook_cmd_types.ex_breakshot
+local dash       = { id = 0x1E, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, common = true, name = "[共通] ダッシュ", }
+local flyback    = { id = 0x1F, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.backstep, common = true, name = "[共通] 飛び退き", }
 local common_rvs = {
 	{ cmd = cmd_types._6CD, hook_type = hook_cmd_types.reversal| hook_cmd_types.throw, common = true, name = "[共通] 投げ(_6_+_C+_D)", },
 	{ cmd = cmd_types._AB, hook_type = hook_cmd_types.reversal, common = true, name = "[共通] 避け攻撃(_A_+_B)", },
@@ -1747,8 +1750,8 @@ local common_rvs = {
 	{ cmd = cmd_types._8, hook_type = hook_cmd_types.reversal| hook_cmd_types.jump, common = true, name = "[共通] 垂直ジャンプ(_8)", },
 	{ cmd = cmd_types._9, hook_type = hook_cmd_types.reversal| hook_cmd_types.jump, common = true, name = "[共通] 前ジャンプ(_9)", },
 	{ cmd = cmd_types._7, hook_type = hook_cmd_types.reversal| hook_cmd_types.jump, common = true, name = "[共通] 後ジャンプ(_7)", },
-	{ id = 0x1E, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, common = true, name = "[共通] ダッシュ", },
-	{ id = 0x1F, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.backstep, common = true, name = "[共通] 飛び退き", },
+	dash,
+	flyback,
 }
 -- idはコマンドテーブル上の技ID
 -- verは追加入力フラグとして認識される技ID
@@ -1810,6 +1813,7 @@ local rvs_bs_list = {
 		{ id = 0x21, f = 0x06, a = 0x00, hook_type = hook_cmd_types.otg_stomp, name = "炎の指先", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント ハリケーンアッパー", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント スラッシュキック", },
+		{ cmd = cmd_types._2C, hook_type = hook_cmd_types.add_throw, name = "夏のおもひで(_2_+_C)", },
 	},
 	-- 不知火舞
 	{
@@ -2242,6 +2246,10 @@ db.char_enc_list    = char_enc_list
 db.char_rvs_list    = char_rvs_list
 db.char_bs_list     = char_bs_list
 db.common_rvs_list  = common_rvs
+db.common_rvs       = {
+	dash = dash,
+	flyback = flyback,
+}
 db.rvs_bs_list      = rvs_bs_list
 db.sp_throws        = sp_throws
 
@@ -2306,6 +2314,15 @@ flag_c0.jump        =
 flag_c0.basic       =
 	flag_c0._28 | -- 屈
 	flag_c0._31 -- 立
+flag_c0.crounch     =
+	flag_c0._02 | -- 屈途中
+	flag_c0._06 | -- 屈振向
+	flag_c0._26 | -- 屈前進
+	flag_c0._28 -- 屈
+flag_c0.front_jump  =
+	flag_c0._17 | -- ジャンプ移行
+	flag_c0._19 | -- 前方小ジャンプ
+	flag_c0._22 -- 前方ジャンプ
 local flag_c4       = {
 	_00 = 2 ^ 0, -- 避け攻撃
 	_01 = 2 ^ 1, -- 対スウェーライン下段攻撃
