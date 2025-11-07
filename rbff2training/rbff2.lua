@@ -5160,7 +5160,9 @@ rbff2.startplugin  = function()
 		none = nil,
 		simple = 1,
 		high = 2,
-		low = 3,
+		high_n = 3,
+		low = 4,
+		low_n = 5,
 	}
 	tra_sub.controll_dummy_block = function(p)
 		-- 自動ガード用
@@ -5231,7 +5233,13 @@ rbff2.startplugin  = function()
 				end
 				if p.dummy_gd == dummy_gd_type.block1 and p.next_block ~= true then
 					-- 1ガードの時は連続ガードの上下段のみ対応させる
-					block_type = tra_sub.block_types.none
+					if block_type == tra_sub.block_types.high then
+						block_type = tra_sub.block_types.high_n
+					elseif block_type == tra_sub.block_types.low then
+						block_type = tra_sub.block_types.low_n
+					elseif block_type == tra_sub.block_types.simple then
+						block_type = tra_sub.block_types.none
+					end
 				else
 					if p.dummy_gd ~= dummy_gd_type.random then
 						p.next_block = true
@@ -5665,10 +5673,23 @@ rbff2.startplugin  = function()
 			p.add_cmd_hook(db.cmd_types.back, "tra_sub.block_types.high")
 			tra_sub.log(global.frame_number, "10")
 			return
+		elseif block_type == tra_sub.block_types.high_n then
+			-- 上下後リセット+下セット
+			p.clear_cmd_hook(db.cmd_types._8 | db.cmd_types._2, "tra_sub.block_types.high_n")
+			p.clear_cmd_hook(db.cmd_types.back, "tra_sub.block_types.high_n")
+			tra_sub.log(global.frame_number, "10")
+			return
 		elseif block_type == tra_sub.block_types.low then
 			-- 上リセット+下後セット
 			p.clear_cmd_hook(db.cmd_types._8, "tra_sub.block_types.low")
 			p.add_cmd_hook(db.cmd_types.back_crouch, "tra_sub.block_types.low")
+			tra_sub.log(global.frame_number, "11")
+			return
+		elseif block_type == tra_sub.block_types.low_n then
+			-- 上後リセット+下セット
+			p.clear_cmd_hook(db.cmd_types._8, "tra_sub.block_types.low_n")
+			p.clear_cmd_hook(db.cmd_types.back, "tra_sub.block_types.low_n")
+			p.add_cmd_hook(db.cmd_types._2, "tra_sub.block_types.low_n")
 			tra_sub.log(global.frame_number, "11")
 			return
 		end
