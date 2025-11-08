@@ -1732,6 +1732,7 @@ local hook_cmd_types   = {
 	followup = 2^ 14,
 }
 hook_cmd_types.ex_breakshot = hook_cmd_types.breakshot | hook_cmd_types.ex_breakshot
+local neutaral   = { cmd = cmd_types._5, hook_type = hook_cmd_types.none, common = true, name = "[共通] ニュートラル", }
 local dash       = { id = 0x1E, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, common = true, name = "[共通] ダッシュ", }
 local flyback    = { id = 0x1F, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.backstep, common = true, name = "[共通] 飛び退き", }
 local common_rvs = {
@@ -2272,6 +2273,7 @@ db.common_rvs       = {
 	dash = dash,
 	flyback = flyback,
 	size = #common_rvs,
+	neutaral = neutaral,
 }
 db.rvs_bs_list      = rvs_bs_list
 db.sp_throws        = sp_throws

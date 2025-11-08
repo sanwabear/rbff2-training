@@ -5045,10 +5045,17 @@ rbff2.startplugin  = function()
 		abs_elev, old_elev = math.abs(p_elev), math.abs(prev_elev)
 		abs_space, old_space = math.abs(p_space), math.abs(prev_space)
 		for _, p in ipairs(players) do
-			p.falling           = ut.tstb(p.flag_c0, db.flag_c0.jump) == true and abs_elev <= old_elev
-			p.rising            = ut.tstb(p.flag_c0, db.flag_c0.jump) == true and not p.falling
-			p.expanding         = abs_space > old_space or (abs_space == old_space and abs_space == 248)
-			p.closing           = abs_space < old_space or (abs_space == old_space and abs_space == 0)
+			if not p.old.in_air and p.in_air then
+				-- 離陸直後は上昇中に強制設定
+				p.falling, p.rising = false, true
+			elseif p.in_air then
+				p.falling = abs_elev <= old_elev
+				p.rising  = not p.falling
+			else
+				p.falling, p.rising = false, false
+			end
+			p.expanding = abs_space > old_space or (abs_space == old_space and abs_space == 248)
+			p.closing   = abs_space < old_space or (abs_space == old_space and abs_space == 0)
 		end
 	end
 	tra_sub.controll_init = function ()
@@ -5551,6 +5558,7 @@ rbff2.startplugin  = function()
 			if a.taneuma and p.act == 0xBB and p.char == db.char_id.honfu then
 				mem.w08(p.addr.base + 0xF0, 0xFF) -- フィニッシュ発動フラグ
 				mem.w08(p.addr.base + 0xF1, 0x03) -- 成立回数
+				dummy_add = db.common_rvs.neutaral
 			end
 
 			-- 自動リアルカウンター投げ
