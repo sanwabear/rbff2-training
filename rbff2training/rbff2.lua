@@ -591,7 +591,7 @@ rbff2.startplugin  = function()
 				if mode == 2 or mode == 4 then shinku = true end
 				mem.wd16(0x03DE48, nc and 0x4E71 or 0x660E) -- レバーN入力チェックをNOPに
 				mem.wd16(0x03DE4E, nc and 0x4E71 or 0x6708) -- C入力チェックをNOPに
-				mem.wd16(0x03DEA6, shinku and 0x4E71 or 0x6612) -- 一回転+C入力チェックをNOPに
+				mem.wd16(0x03DEA6, shinku and 0x4E71 or 0x6612) -- 一回転+A入力チェックをNOPに
 			end,
 			kara_ca = function(enabled)                        -- 空振りCAできる
 				mem.wd08(0x02FA5E, enabled and 0x60 or 0x67)   -- テーブルチェックを飛ばす
