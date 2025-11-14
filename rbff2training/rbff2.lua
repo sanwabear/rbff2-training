@@ -1285,15 +1285,21 @@ rbff2.startplugin  = function()
 		return v2, v1
 	end
 
+	local calc_scale = function(scale, d1, d2, d3, d4)
+		-- 8bit を超えたら終了（bcs）
+		if scale > 0xFF then return ut.int16(d1 << 2), ut.int16(d2 << 2), ut.int16(d3 << 2), ut.int16(d4 << 2) end
+		-- シフト込みの簡易計算
+		return ut.int16((d1 * scale) >> 6), ut.int16((d2 * scale) >> 6), ut.int16((d3 * scale) >> 6), ut.int16((d4 * scale) >> 6)
+	end
+
 	local fix_box_scale                        = function(p, src, dest)
 		--local prev = string.format("%x id=%02x top=%s bottom=%s left=%s right=%s", p.addr.base, src.id, src.top, src.bottom, src.left, src.right)
 		dest = dest or ut.deepcopy(src) -- 計算元のboxを汚さないようにディープコピーしてから処理する
 		-- 全座標について p.box_scale / 0x1000 の整数値に計算しなおす
-		dest.top, dest.bottom = ut.int16((src.top * p.box_scale) >> 6), ut.int16((src.bottom * p.box_scale) >> 6)
-		dest.left, dest.right = ut.int16((src.left * p.box_scale) >> 6), ut.int16((src.right * p.box_scale) >> 6)
+		dest.top, dest.bottom, dest.left, dest.right = calc_scale(p.box_scale, src.top, src.bottom, src.left, src.right)
 		--ut.printf("%s ->a top=%s bottom=%s left=%s right=%s", prev, dest.top, dest.bottom, dest.left, dest.right)
 		-- キャラの座標と合算して画面上への表示位置に座標を変換する
-		local pos_z = 24 - p.pos_z + 24
+		local pos_z = p.box_pos.z
 		dest.real_top = math.tointeger(math.max(dest.top, dest.bottom) + screen.top - pos_z - p.y)
 		dest.real_bottom = math.tointeger(math.min(dest.top, dest.bottom) + screen.top - pos_z - p.y + 1)
 		dest.real_front = math.tointeger(math.max(dest.left * -1, dest.right * -1) + (p.x - p.body.x) * p.flip_x)
@@ -3153,6 +3159,26 @@ rbff2.startplugin  = function()
 			end,
 			[0x62] = function(data) p.acta = data end, -- 行動ID デバッグディップステータス表示のAと同じ
 		})
+		p.rp08 = ut.hash_add_all(p.rp08, {
+			[{ addr = 0x88, filter = 0x05C562 }] = function(data)                    -- 攻撃判定とやられ判定
+				if p.is_fireball then
+					p.box_pos = {
+						x = p.pos,
+						y = p.pos_y,
+						z = p.pos_z > 24 and p.pos_z - 3 or p.pos_z -- ライン上の判定表示のずれ対応ワークアラウンドで-3
+					}
+				end
+			end,
+			[{ addr = 0xB1, filter = 0x05C2FE }] = function(data)                    -- 攻撃判定とやられ判定
+				if not p.is_fireball then
+					p.box_pos = {
+						x = p.pos,
+						y = p.pos_y,
+						z = p.pos_z > 24 and p.pos_z - 3 or p.pos_z -- ライン上の判定表示のずれ対応ワークアラウンドで-3
+					}
+				end
+			end,
+		})
 		table.insert(wps.all, p)
 	end
 	local goto_player_select = function(p_no)
@@ -4812,7 +4838,7 @@ rbff2.startplugin  = function()
 
 		for _, p in ut.find_all(all_objects, function(_, p) return p.proc_active end) do
 			-- 判定表示前の座標補正
-			p.x, p.y, p.flip_x = p.pos - screen.left, screen.top - p.pos_y - p.pos_z, (p.flip_x1 ~ p.flip_x2) > 0 and 1 or -1
+			p.x, p.y, p.flip_x = p.box_pos.x - screen.left, screen.top - p.box_pos.y - p.box_pos.z, (p.flip_x1 ~ p.flip_x2) > 0 and 1 or -1
 			p.vulnerable = (p.invincible and p.invincible > 0) or p.hurt_invincible or (p.on_hitcheck ~= global.frame_number and p.on_vulnerable ~= global.frame_number)
 			-- ut.printf("%x p.vulnerable %s %s %s %s %s %s", p.addr.base, p.vulnerable, p.invincible, p.hurt_invincible, p.on_vulnerable, global.frame_number, p.on_vulnerable ~= global.frame_number)
 			-- 判定位置を考慮しない属性を追加
