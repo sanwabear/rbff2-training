@@ -2796,6 +2796,20 @@ rbff2.startplugin  = function()
 			end
 			p.old_copy = function() p.old = old_copy(p) end
 			p.old_copy()
+			p.save_box_pos =  function(_)                    -- 攻撃判定とやられ判定
+				p.box_pos = {
+				x = p.pos,
+				y = p.pos_y,
+				z = p.pos_z > 24 and p.pos_z - 3 or p.pos_z -- ライン上の判定表示のずれ対応ワークアラウンドで-3
+				}
+			end
+			p.save_range_pos =  function(_)                    -- 攻撃判定とやられ判定
+				p.range_pos = {
+					x = p.pos,
+					y = p.pos_y,
+					z = p.pos_z > 24 and p.pos_z - 3 or p.pos_z -- ライン上の判定表示のずれ対応ワークアラウンドで-3
+				}
+			end
 		end
 	end
 	local change_player_input = function()
@@ -2807,7 +2821,11 @@ rbff2.startplugin  = function()
 	end
 	table.insert(wps.all, {                                                 -- プレイヤー別ではない共通のフック
 		wp08 = {
-			[0x10B862] = function(data) mem._0x10B862 = data end,           -- 押し合い判定で使用
+			[0x10B862] = function(data) -- 押し合い判定で使用
+				mem._0x10B862 = data
+				players[1].save_range_pos()
+				players[2].save_range_pos()
+			end,
 			[0x107EBF] = function(data) global.skip_frame2 = data ~= 0 end, -- 潜在能力強制停止
 			--[0x107C1F] = function(data) global.skip_frame3 = data ~= 0 end, -- 潜在能力強制停止
 		},
@@ -3159,33 +3177,19 @@ rbff2.startplugin  = function()
 			end,
 			[0x62] = function(data) p.acta = data end, -- 行動ID デバッグディップステータス表示のAと同じ
 		})
-		local save_box_pos =  function(_)                    -- 攻撃判定とやられ判定
-			p.box_pos = {
-				x = p.pos,
-				y = p.pos_y,
-				z = p.pos_z > 24 and p.pos_z - 3 or p.pos_z -- ライン上の判定表示のずれ対応ワークアラウンドで-3
-			}
-		end
-		local save_range_pos =  function(_)                    -- 攻撃判定とやられ判定
-			p.range_pos = {
-				x = p.pos,
-				y = p.pos_y,
-				z = p.pos_z > 24 and p.pos_z - 3 or p.pos_z -- ライン上の判定表示のずれ対応ワークアラウンドで-3
-			}
-		end
 		if p.is_fireball then
 			p.rp08 = ut.hash_add_all(p.rp08, {
-				[{ addr = 0x88, filter = 0x05C562 }] = save_box_pos, -- 当たり判定処理フック
+				[{ addr = 0x88, filter = 0x05C562 }] = p.save_box_pos, -- 当たり判定処理フック
 			})
 		elseif p.num == 1 then
 			p.rp08 = ut.hash_add_all(p.rp08, {
-				[{ addr = 0x67, filter = 0x012D14 }] = save_range_pos, -- 1P押し合い判定処理フック
-				[{ addr = 0xB1, filter = 0x05C2FE }] = save_box_pos, -- 当たり判定処理フック
+				[{ addr = 0x67, filter = 0x012D14 }] = p.save_range_pos, -- 1P押し合い判定処理フック
+				[{ addr = 0xB1, filter = 0x05C2FE }] = p.save_box_pos, -- 当たり判定処理フック
 			})
 		elseif p.num == 2 then
 			p.rp08 = ut.hash_add_all(p.rp08, {
-				[{ addr = 0x67, filter = 0x012D5E }] = save_range_pos, -- 2P押し合い判定処理フック
-				[{ addr = 0xB1, filter = 0x05C2FE }] = save_box_pos, -- 当たり判定処理フック
+				[{ addr = 0x67, filter = 0x012D5E }] = p.save_range_pos, -- 2P押し合い判定処理フック
+				[{ addr = 0xB1, filter = 0x05C2FE }] = p.save_box_pos, -- 当たり判定処理フック
 			})
 		end
 		table.insert(wps.all, p)
