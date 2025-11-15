@@ -1292,21 +1292,21 @@ rbff2.startplugin  = function()
 		return ut.int16((d1 * scale) >> 6), ut.int16((d2 * scale) >> 6), ut.int16((d3 * scale) >> 6), ut.int16((d4 * scale) >> 6)
 	end
 
-	local fix_box_scale                        = function(p, src, dest)
+	local fix_box_scale                        = function(p, p_x, p_y, p_z, src, dest)
 		--local prev = string.format("%x id=%02x top=%s bottom=%s left=%s right=%s", p.addr.base, src.id, src.top, src.bottom, src.left, src.right)
 		dest = dest or ut.deepcopy(src) -- 計算元のboxを汚さないようにディープコピーしてから処理する
 		-- 全座標について p.box_scale / 0x1000 の整数値に計算しなおす
 		dest.top, dest.bottom, dest.left, dest.right = calc_scale(p.box_scale, src.top, src.bottom, src.left, src.right)
 		--ut.printf("%s ->a top=%s bottom=%s left=%s right=%s", prev, dest.top, dest.bottom, dest.left, dest.right)
 		-- キャラの座標と合算して画面上への表示位置に座標を変換する
-		local pos_z = p.box_pos.z
-		dest.real_top = math.tointeger(math.max(dest.top, dest.bottom) + screen.top - pos_z - p.y)
-		dest.real_bottom = math.tointeger(math.min(dest.top, dest.bottom) + screen.top - pos_z - p.y + 1)
-		dest.real_front = math.tointeger(math.max(dest.left * -1, dest.right * -1) + (p.x - p.body.x) * p.flip_x)
-		dest.real_back = math.tointeger(math.min(dest.left * -1, dest.right * -1) + (p.x - p.body.x) * p.flip_x)
-		dest.left, dest.right = p.x - dest.left * p.flip_x, p.x - dest.right * p.flip_x
-		dest.bottom, dest.top = p.y - dest.bottom, p.y - dest.top
-		--ut.printf("%s ->b x=%s y=%s top=%s bottom=%s left=%s right=%s", prev, p.x, p.y, dest.top, dest.bottom, dest.left, dest.right)
+		local pos_z = p_z
+		dest.real_top = math.tointeger(math.max(dest.top, dest.bottom) + screen.top - pos_z - p_y)
+		dest.real_bottom = math.tointeger(math.min(dest.top, dest.bottom) + screen.top - pos_z - p_y + 1)
+		dest.real_front = math.tointeger(math.max(dest.left * -1, dest.right * -1) + (p_x - p.body.x) * p.flip_x)
+		dest.real_back = math.tointeger(math.min(dest.left * -1, dest.right * -1) + (p_x - p.body.x) * p.flip_x)
+		dest.left, dest.right = p_x - dest.left * p.flip_x, p_x - dest.right * p.flip_x
+		dest.bottom, dest.top = p_y - dest.bottom, p_y - dest.top
+		--ut.printf("%s ->b x=%s y=%s top=%s bottom=%s left=%s right=%s", prev, p_x, p_y, dest.top, dest.bottom, dest.left, dest.right)
 		return dest
 	end
 
@@ -1642,7 +1642,7 @@ rbff2.startplugin  = function()
 			end
 		end
 		if #hits > 0 then return hits[1] end
-		ut.printf("fallback %s", ut.tobitstr(attackbit))
+		--ut.printf("fallback %s", ut.tobitstr(attackbit))
 		return types[#types].box_type -- fallback
 	end
 
@@ -3159,26 +3159,35 @@ rbff2.startplugin  = function()
 			end,
 			[0x62] = function(data) p.acta = data end, -- 行動ID デバッグディップステータス表示のAと同じ
 		})
-		p.rp08 = ut.hash_add_all(p.rp08, {
-			[{ addr = 0x88, filter = 0x05C562 }] = function(data)                    -- 攻撃判定とやられ判定
-				if p.is_fireball then
-					p.box_pos = {
-						x = p.pos,
-						y = p.pos_y,
-						z = p.pos_z > 24 and p.pos_z - 3 or p.pos_z -- ライン上の判定表示のずれ対応ワークアラウンドで-3
-					}
-				end
-			end,
-			[{ addr = 0xB1, filter = 0x05C2FE }] = function(data)                    -- 攻撃判定とやられ判定
-				if not p.is_fireball then
-					p.box_pos = {
-						x = p.pos,
-						y = p.pos_y,
-						z = p.pos_z > 24 and p.pos_z - 3 or p.pos_z -- ライン上の判定表示のずれ対応ワークアラウンドで-3
-					}
-				end
-			end,
-		})
+		local save_box_pos =  function(_)                    -- 攻撃判定とやられ判定
+			p.box_pos = {
+				x = p.pos,
+				y = p.pos_y,
+				z = p.pos_z > 24 and p.pos_z - 3 or p.pos_z -- ライン上の判定表示のずれ対応ワークアラウンドで-3
+			}
+		end
+		local save_range_pos =  function(_)                    -- 攻撃判定とやられ判定
+			p.range_pos = {
+				x = p.pos,
+				y = p.pos_y,
+				z = p.pos_z > 24 and p.pos_z - 3 or p.pos_z -- ライン上の判定表示のずれ対応ワークアラウンドで-3
+			}
+		end
+		if p.is_fireball then
+			p.rp08 = ut.hash_add_all(p.rp08, {
+				[{ addr = 0x88, filter = 0x05C562 }] = save_box_pos, -- 当たり判定処理フック
+			})
+		elseif p.num == 1 then
+			p.rp08 = ut.hash_add_all(p.rp08, {
+				[{ addr = 0x67, filter = 0x012D14 }] = save_range_pos, -- 1P押し合い判定処理フック
+				[{ addr = 0xB1, filter = 0x05C2FE }] = save_box_pos, -- 当たり判定処理フック
+			})
+		elseif p.num == 2 then
+			p.rp08 = ut.hash_add_all(p.rp08, {
+				[{ addr = 0x67, filter = 0x012D5E }] = save_range_pos, -- 2P押し合い判定処理フック
+				[{ addr = 0xB1, filter = 0x05C2FE }] = save_box_pos, -- 当たり判定処理フック
+			})
+		end
 		table.insert(wps.all, p)
 	end
 	local goto_player_select = function(p_no)
@@ -4838,7 +4847,12 @@ rbff2.startplugin  = function()
 
 		for _, p in ut.find_all(all_objects, function(_, p) return p.proc_active end) do
 			-- 判定表示前の座標補正
-			p.x, p.y, p.flip_x = p.box_pos.x - screen.left, screen.top - p.box_pos.y - p.box_pos.z, (p.flip_x1 ~ p.flip_x2) > 0 and 1 or -1
+			p.x, p.y, p.z, p.flip_x = p.box_pos.x - screen.left, screen.top - p.box_pos.y - p.box_pos.z, p.box_pos.z, (p.flip_x1 ~ p.flip_x2) > 0 and 1 or -1
+			if p.is_fireball then
+				p.rx, p.ry, p.rz = p.x, p.y, p.z
+			else
+				p.rx, p.ry, p.rz = p.range_pos.x - screen.left, screen.top - p.range_pos.y - p.range_pos.z, p.range_pos.z
+			end
 			p.vulnerable = (p.invincible and p.invincible > 0) or p.hurt_invincible or (p.on_hitcheck ~= global.frame_number and p.on_vulnerable ~= global.frame_number)
 			-- ut.printf("%x p.vulnerable %s %s %s %s %s %s", p.addr.base, p.vulnerable, p.invincible, p.hurt_invincible, p.on_vulnerable, global.frame_number, p.on_vulnerable ~= global.frame_number)
 			-- 判定位置を考慮しない属性を追加
@@ -4878,7 +4892,7 @@ rbff2.startplugin  = function()
 				local type = fix_box_type(p, p.attackbit, box) -- 属性はヒット状況などで変わるので都度解決する
 				if not (db.hurt_boxies[type] and p.vulnerable) then
 					local src = box
-					box = fix_box_scale(p, src)
+					box = fix_box_scale(p, p.x, p.y, p.z, src)
 					box.type = type
 					box.keytxt = string.format("b%2x%2x%2x%2x%2x", box.type.no, src.top, src.bottom, src.left, src.right)
 					return box
@@ -4945,9 +4959,12 @@ rbff2.startplugin  = function()
 
 			if p.is_fireball ~= true then
 				-- 押し合い判定（本体のみ）
-				if p.push_invincible and p.push_invincible == 0 and mem._0x10B862 == 0 then
+				if (p.push_invincible and p.push_invincible ~= 0) or (mem._0x10B862 ~= 0 and ut.tstb(p.op.flag_cc, db.flag_cc.thrown)) then
+					-- 投げ演出の透過は判定を消す
+					-- 打撃演出の透過は判定を参考用に表示する
+				else
 					local src = get_push_box(p)
-					local box = fix_box_scale(p, src)
+					local box = fix_box_scale(p, p.rx, p.ry, p.rz, src)
 					box.keytxt = string.format("p%2x%2x%2x%2x%2x", box.type.no, src.top, src.bottom, src.left, src.right)
 					box.p = p
 					table.insert(p.hitboxies, box)
@@ -4992,6 +5009,16 @@ rbff2.startplugin  = function()
 					within = false,
 					p = p,
 				})
+				if p.rx ~= p.x or p.ry ~= p.y then
+					table.insert(ranges, {
+						label = string.format("*%sP*", p.num),
+						x = p.rx,
+						y = p.ry,
+						flip_x = p.cmd_side,
+						within = false,
+						p = p,
+					})
+				end
 			end
 
 			if p.is_fireball ~= true then
