@@ -3121,7 +3121,7 @@ rbff2.startplugin  = function()
 				p.attackbits.fullhit = data ~= 0
 				--ut.printf("full %X %s %s | %X %X | %s | %X %X %X | %s", mem.pc(), now(), p.on_hit, base, data, ut.tobitstr(data), p.act, p.act_count, p.act_frame, p.attackbits.fullhit)
 				if p.is_fireball and data == 0xFF then p.on_fireball = now() * -1 end
-				local fake = true
+				local fake = now() ~= p.on_hit -- ヒット時は確認のため判定がわかるように残す
 				if data == 0xFF and p.is_fireball and p.body.char == db.char_id.billy and p.act == 0x266 then
 					-- 三節棍中段打ちの攻撃無効化、判定表示の邪魔なのでここで判定を削除する
 				elseif data == 0xFF and p.is_fireball and p.body.char == db.char_id.sokaku and p.act == 0x274 then
