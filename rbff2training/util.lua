@@ -146,6 +146,9 @@ end
 
 ut.printf             = function(format, ...) print(string.format(format, ...)) end
 
+-- 前後の空白を除去する trim 関数
+ut.trim = function(s) return (s:gsub("^%s*(.-)%s*$", "%1")) end
+
 ut.int8               = function(pos)
 	if 127 < pos or pos < -128 then
 		-- (pos + 2 ^ 15) % 2 ^ 16 - 2 ^ 15

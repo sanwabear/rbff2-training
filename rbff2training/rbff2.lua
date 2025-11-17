@@ -2211,7 +2211,7 @@ rbff2.startplugin  = function()
 			end,
 			]]
 			[0x86] = function(data) p.cmd_side = ut.int8(data) < 0 and -1 or 1 end, -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
-			[0x87] = function(data) p.flag_87, p.on_update_87 = data, now() end,   -- 80=動作中
+			[0x87] = function(data) p.flag_87, p.on_upd_frame = data, now() end,   -- 80=動作中
 			[0x88] = function(data) p.in_bs = data ~= 0 end,                       -- BS動作中
 			[0x89] = function(data) p.sway_status, p.in_sway_line = data, data ~= 0x00 end, -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
 			[0x8B] = function(data, ret)
@@ -2347,7 +2347,7 @@ rbff2.startplugin  = function()
 			[0xD6] = function(data) p.d6 = data end, -- 起き上がり攻撃用フラグ
 			[0xD7] = function(data) p.cmd_timer = data end, -- コマンド維持タイマー=起き上がり攻撃用クリアタイマー
 			[0xE2] = function(data) p.sway_close = data == 0 end,
-			--[0xE3] = function(data) p.on_last_frame = data == 0xFF and now(-1) or p.on_last_frame end,
+			--[0xE3] = function(data) p.on_last_frame = data == 0xFF and now(-1) or p.on_last_frame end, -- 動作終了フラグ0xFF
 			[0xE4] = function(data) p.hurt_state = data end,                       -- やられ状態
 			[0xE8] = function(data, ret)
 				if data < 0x10 and p.dummy_gd == dummy_gd_type.force then ret.value = 0x10 end -- 0x10以上でガード
@@ -2491,6 +2491,7 @@ rbff2.startplugin  = function()
 					mem.w08(mem.rg("A0", 0xFFFFFF) + (data & 0x1) * 2, 1) -- 起き上がり動作の入力を更新
 				end
 			end,
+			--[{ addr = 0x8A, filter = 0x2FAA8 }] = function(data) p.readed_ca = mem.rg("A0", 0xFFFFFF) end,
 			[{ addr = 0x8E, filter = 0x39F8A }] = function(data)
 				if is_ready_match_p() and 0x05CD70 == mem.rg("A0") then add_throw_box(p.op, get_normal_throw_box(p.op)) end -- 通常投げ
 			end,
@@ -2512,6 +2513,12 @@ rbff2.startplugin  = function()
 			end,
 			-- 着地暗転ガー不では無敵フラグチェックまでの隙間にヒットチェックが入るのでヒットチェック時のフレームを記録する
 			[{ addr = 0xA9, filter = { 0x5C2B4, 0x5C2CC } }] = function(data) if data ~= 0 then p.on_hitcheck = now() end end,
+			--[[
+			[{ addr = 0xA3, filter = 0x03972C }] = function(data)
+				p.loaded_sp_addr = mem.rg("A0", 0xFFFFFF)
+				p.on_load_sp_addr = now()
+			end,
+			]]
 			--[{ addr = 0xA5, filter = { 0x3DBE6, 0x49988, 0x42C26 } }] = function(data, ret)
 			[0xA5] = function(data, ret)
 				local pc = mem.pc()
@@ -2598,12 +2605,13 @@ rbff2.startplugin  = function()
 					ret.value = db.hit_effects.addrs[global.damaged_move]
 				end
 			end,
+			--[0xD2] = function(data) p.next_ca = data end,                  -- CA派生処理アドレス
 			--[0x0C] = function(data) p.reserve_proc = data end,             -- 予約中の処理アドレス
-			[0xC0] = function(data) p.flag_c0 = data end,                  -- フラグ群
-			[0xC4] = function(data) p.flag_c4 = data end,                  -- フラグ群
-			[0xC8] = function(data) p.flag_c8 = data end,                  -- フラグ群
+			[0xC0] = function(data) p.flag_c0, p.on_upd_move = data, now() end, -- フラグ群
+			[0xC4] = function(data) p.flag_c4, p.on_upd_move = data, now() end, -- フラグ群
+			[0xC8] = function(data) p.flag_c8, p.on_upd_move = data, now() end, -- フラグ群
 			[0xCC] = function(data)
-				p.flag_cc, p.on_update_flag_cc = data, now()               -- フラグ群
+				p.flag_cc, p.on_update_flag_cc, p.on_upd_move = data, now(), now() -- フラグ群
 			end,
 			[p1 and 0x394C4 or 0x394C8] = function(data) p.input_offset = data end, -- コマンド入力状態のオフセットアドレス
 		}
@@ -2797,17 +2805,19 @@ rbff2.startplugin  = function()
 			p.old_copy = function() p.old = old_copy(p) end
 			p.old_copy()
 			p.save_box_pos =  function(_)                    -- 攻撃判定とやられ判定
+				local z = p.pos_z or 0
 				p.box_pos = {
-				x = p.pos,
-				y = p.pos_y,
-				z = p.pos_z > 24 and p.pos_z - 3 or p.pos_z -- ライン上の判定表示のずれ対応ワークアラウンドで-3
+					x = p.pos,
+					y = p.pos_y,
+					z = z > 24 and z - 3 or z -- ライン上の判定表示のずれ対応ワークアラウンドで-3
 				}
 			end
 			p.save_range_pos =  function(_)                    -- 攻撃判定とやられ判定
+				local z = p.pos_z or 0
 				p.range_pos = {
-					x = p.pos,
-					y = p.pos_y,
-					z = p.pos_z > 24 and p.pos_z - 3 or p.pos_z -- ライン上の判定表示のずれ対応ワークアラウンドで-3
+					x = p.pos or 0,
+					y = p.pos_y or 0,
+					z = z > 24 and z - 3 or z -- ライン上の判定表示のずれ対応ワークアラウンドで-3
 				}
 			end
 		end
@@ -4110,7 +4120,7 @@ rbff2.startplugin  = function()
 		local plain   = p.body.act_data.last_plain
 		local name    = p.body.act_data.last_name
 		local key     = key_mask & attackbit
-		local update  = (p.on_update_87 == global.frame_number) and p.update_act
+		local update  = (p.on_upd_frame == global.frame_number) and p.update_act
 		-- カイザーウェーブ、蛇使いレベルアップ
 		if p.kaiserwave and p.on_update_spid == global.frame_number then
 			if (p.kaiserwave[0x49418] == global.frame_number)
@@ -5657,7 +5667,7 @@ rbff2.startplugin  = function()
 			if a.taneuma and p.act == 0xBB and p.char == db.char_id.honfu then
 				mem.w08(p.addr.base + 0xF0, 0xFF) -- フィニッシュ発動フラグ
 				mem.w08(p.addr.base + 0xF1, 0x03) -- 成立回数
-				dummy_add = db.common_rvs.neutaral
+				dummy_add = db.common_rvs.neutral
 			end
 
 			-- 自動リアルカウンター投げ
@@ -5773,9 +5783,255 @@ rbff2.startplugin  = function()
 		end
 		return dummy_add
 	end
+
 	tra_sub.log = function(...)
 		--print(...)
 	end
+
+	-- フォールバック関数
+	-- fallback_list: { {id=..., value=...}, ... }
+	-- token: "XZ" など、パース単位のトークン
+	tra_sub.fallback_parse_token = function(token, fallback_list)
+		-- 1. "0x" で始まる場合は 16 進数として返す
+		if token:sub(1, 2):lower() == "0x" then
+			token = tonumber(token)
+		end
+		for _, entry in ipairs(fallback_list) do
+			if entry.id == token then
+				return entry
+			end
+		end
+		-- 何も一致しない
+		return nil
+	end
+
+	-- db.cmd_types のプロパティへ変換したリストを返す関数
+	-- 文字列をスペースで分割し、スペース区切りのレバーボタン操作を分解してフック形式の構造体リストに変換して返す
+	tra_sub.parse_cmd_types = function(str)
+		str = ut.trim(str)
+
+		local results = {}
+		local splist = db.rvs_bs_list[db.char_id.terry]
+
+		for token in string.gmatch(str, "%S+") do
+			local merged = nil
+			local failed = false
+			local cmd, lag = token:match("^(.-)%((%d+)%)$")
+
+			if cmd and lag then
+				cmd, lag = cmd, tonumber(lag)
+			else
+				cmd, lag = token, 0
+			end
+
+			for c in cmd:gmatch(".") do
+				local key = "_" .. c
+				local value = db.cmd_types[key]
+
+				if not value then
+					-- db で失敗した → フォールバックへ
+					failed = true
+					break
+				end
+
+				merged = merged and (merged | value) or value
+			end
+
+			if failed then
+				-- フォールバック関数を呼び出す
+				local fb_hook = tra_sub.fallback_parse_token(cmd, splist)
+				if fb_hook ~= nil then
+					-- 成功 → 追加
+					table.insert(results, fb_hook)
+				end
+				-- nil → スキップ、次の token へ
+			else
+				-- 正常処理成功
+				local cmd_hook = {
+					lag = lag,
+					cmd = merged,
+					name = string.format("%s:%s", #results + 1, token),
+					hook_type = db.hook_cmd_types.none,
+				}
+				table.insert(results, cmd_hook)
+			end
+		end
+		return results
+	end
+
+	tra_sub.new_combo = function(list)
+		return {
+			state = "neutral",
+			list = list or {},
+			last = false,
+			count = 0, -- 入力リストのカウンタ
+			input    = nil, -- 次の入力反映候補 tra_sub.combo.list[tra_sub.combo.count]
+			hook_cmd = nil, -- 次の入力反映候補 tra_sub.combo.list[tra_sub.combo.count]
+			hook_sp  = nil, -- 次の入力反映候補 tra_sub.combo.list[tra_sub.combo.count]
+			lag = 0,
+			advance = false,
+			timeout = false,
+		}
+	end
+
+	tra_sub.combo = tra_sub.new_combo()
+
+	tra_sub.combo.list = tra_sub.parse_cmd_types("A(5) B(5) C(5) 0x46") -- 入力リスト
+
+	-- 自動CA対応の練習用(仮実装中)
+	tra_sub.controll_dummy_combo = function(p)
+		if p.num == 2 then return nil end
+		--if p.num == 1 then return nil end
+
+		local c = tra_sub.combo
+		local moving = (p.flag_c4 > 0) or
+			(p.flag_c8 > 0) or
+			ut.tstb(p.flag_c0, db.flag_c0.startups) or
+			ut.tstb(p.flag_cc, db.flag_cc.moving)
+		local old_moving = moving
+		local o = p.old
+		if o then
+			old_moving = ((o.flag_c4 or 0) > 0) or
+				((o.flag_c8 or 0) > 0) or
+				ut.tstb(o.flag_c0 or 0, db.flag_c0.startups) or
+				ut.tstb(o.flag_cc or 0, db.flag_cc.moving)
+		end
+		local advance = false
+		local timeout = false
+
+		-- 変化を待つ
+		if p.on_upd_move == global.frame_number then
+			-- c0 flag_c0.startupsの更新があれば
+			-- c4 いずれかの更新があれば
+			-- c8 いずれかの更新があれば
+			-- cc flag_cc.movingの更新があれば
+			if not moving and old_moving then
+				timeout = true
+			end
+			if moving then
+				advance = true
+			end
+		end
+
+		local do_log = function(entry)
+			--[[
+			ut.printf("[FSM] %5s:%8s %3s %3s %3s %3s %4s %s %s %s",
+				entry and "entry" or "  -->",
+				c.state,
+				advance and "+adv" or "----",
+				timeout and "+to" or "---",
+				c.advance and "adv" or "---",
+				c.timeout and "to" or "---",
+				moving and "move" or "----",
+				c.count,
+				c.lag,
+				c.input and to_sjis(c.input.name) or "--")
+			]]
+		end
+
+		do_log(true)
+
+		if c.state == "neutral" or c.input == nil then
+			c.advance = false
+			c.timeout = false
+
+			-- 動作中は状態維持
+			if moving then
+				do_log()
+				return nil
+			end
+
+			c.count = 1
+			c.last = c.count == #c.list
+			c.input = c.list[1]
+			c.hook_cmd = c.input.cmd and c.input or nil
+			c.hook_sp = c.input.cmd and nil or c.input
+			c.lag = 0
+			c.state = "exec"
+			do_log()
+			-- すぐexecへ
+		end
+
+		if c.state == "lag" then
+			c.advance = c.advance or advance
+			c.timeout = c.timeout or timeout
+
+			-- 動作終了に来た場合は初期化する
+			if c.timeout then
+				c.state = "finish"
+				do_log()
+				return nil
+			end
+
+			-- 待ちがある場合はカウントダウンして抜ける
+			if c.lag > 0 then
+				c.lag = c.lag - 1
+				do_log()
+				return nil
+			end
+
+			c.state = "exec"
+			do_log()
+			-- すぐexecへ
+		end
+
+		-- 入力を返して待ち状態へ
+		if c.state == "exec" then
+			c.state = "await"
+			c.advance = false
+			c.timeout = false
+			do_log()
+			return c.input
+		end
+
+		-- 動作開始まで待ち
+		if c.state == "await" then
+			c.advance = c.advance or advance
+			c.timeout = c.timeout or timeout
+
+			if c.timeout then
+				-- 動作終了に来た場合は初期化する
+				c.state = "finish"
+				do_log()
+				-- すぐにfinishへ
+			elseif c.advance and not c.last then
+				c.count    = c.count + 1
+				-- 次の input を準備
+				c.lag      = c.input.lag or 1 -- 今のラグ設定を次の待ち時間にする
+				c.last     = c.count == #c.list
+				c.input    = c.list[c.count]
+				c.hook_cmd = c.input.cmd and c.input or nil
+				c.hook_sp  = not c.input.cmd and c.input or nil
+				c.state    = "lag"
+				c.advance  = false
+				c.timeout  = false
+				do_log()
+				return nil
+			elseif c.advance and c.last then
+				do_log()
+				return nil
+			else
+				do_log()
+				return c.hook_sp
+			end
+		end
+
+		-- 動作終了に来た場合は初期化する
+		if c.timeout then
+			c.state = "finish"
+			do_log()
+			-- すぐにfinishへ
+		end
+
+		if c.state == "finish" then
+			tra_sub.combo = tra_sub.new_combo(c.list)
+			c = tra_sub.combo
+		end
+
+		do_log()
+		return nil
+	end
+
 	tra_sub.controll_dummy_p = function(p)
 		-- レコード、リプレイ中は行動しない
 		if global.dummy_mode == menu.dummy_modes.record and p == recording.player then
@@ -5803,6 +6059,14 @@ rbff2.startplugin  = function()
 			else
 				return
 			end
+		end
+
+		--local combo_hook = tra_sub.controll_dummy_combo(p)
+		local combo_hook = nil
+		if combo_hook then
+			p.input_any(combo_hook, "combo_hook")
+			tra_sub.log(global.frame_number, "cmb1")
+			return
 		end
 
 		-- ガード判定 回数の状態管理もあるので実施必須

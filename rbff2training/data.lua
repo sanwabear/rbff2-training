@@ -2570,6 +2570,9 @@ flag_cc.attacking   =
 	flag_cc._27 | -- 投げ追撃
 	flag_cc._30 | -- 空中投げ
 	flag_cc._31 -- 投げ
+flag_cc.moving      =
+	flag_cc.attacking |
+	flag_cc._24 -- フェイント
 flag_cc.grabbing    =
 	flag_cc._25 | -- つかみ技
 	flag_cc._27 -- 投げ追撃
