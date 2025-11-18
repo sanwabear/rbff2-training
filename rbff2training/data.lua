@@ -1782,16 +1782,12 @@ local rvs_bs_list = {
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "トリプルゲイザー", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント バーンナックル", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント パワーゲイザー", },
-		"2A B C",
-		"2A B 3C",
-		"3A C C",
-		"B B",
-		"B B C",
-		"B C",
-		"A C",
-		"2A 2C",
-		"2A B 3C 0x46",
-		"3A C C 0x46",
+		"[A B 2A 2B] [B 2B] [C 6C 3C] [0x04 0x05 0x46 0x47]",
+		"3A C C [0x04 0x05 0x46 0x47]",
+		"A A C [0x04 0x05 0x46 0x47]",
+		"A C [0x04 0x05 0x46 0x47]",
+		"2A 2A 2C [0x04 0x05 0x46 0x47]",
+		"2A 2C [0x04 0x05 0x46 0x47]",
 	},
 	-- アンディ・ボガード
 	{
@@ -2391,11 +2387,53 @@ local parse_combo_string = function(char_id, str)
 	end
 	return table.concat(names, "‐"), results
 end
+
+-- テキストをパースして、グループごとに分割する
+local function parse_groups(char_id, str)
+    local result = {}
+    
+    -- 前後の空白除去
+    str = str:gsub("^%s+", ""):gsub("%s+$", "")
+
+    -- グループ抽出ループ
+    local idx = 1
+    while idx <= #str do
+        -- 1) 括弧グループの検出
+        local s, e, inside = str:find("%[([^%]]+)%]", idx)
+        if s then
+            -- 括弧前の独立ワードがあれば処理
+            if idx < s then
+                local before = str:sub(idx, s - 1):match("^%s*(.-)%s*$")
+                for word in before:gmatch("%S+") do
+					local name, group = parse_combo_string(char_id, word)
+					table.insert(result, group)
+                end
+            end
+
+            -- 括弧内を分割
+			local name, group = parse_combo_string(char_id, inside)
+			table.insert(result, group)
+
+            idx = e + 1
+        else
+            -- 2) 括弧がもうない → 残りを単語ごとに処理
+            local rest = str:sub(idx):match("^%s*(.-)%s*$")
+            for word in rest:gmatch("%S+") do
+				local name, group = parse_combo_string(char_id, word)
+				table.insert(result, group)
+            end
+            break
+        end
+    end
+
+    return str, result
+end
+
 for char, list in ipairs(rvs_bs_list) do
 	for i = 1, #list do
 		local rvs = list[i]
 		if type(rvs) == "string" then
-			local name, combo = parse_combo_string(char, rvs)
+			local name, combo = parse_groups(char, rvs)
 			list[i] = { combo = combo, hook_type = hook_cmd_types.combo, name = ut.convert(name) }
 			--print(char, i , name, #combo)
 		end

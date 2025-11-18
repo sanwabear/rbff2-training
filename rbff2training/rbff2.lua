@@ -5243,9 +5243,17 @@ rbff2.startplugin  = function()
 
 	tra_sub.new_combo = function(p)
 		local next_combo = get_next_combo(p)
+		local next_list = {}
+		local combo_list = next_combo and next_combo.combo or {}
+		local max_combo = math.random(#combo_list)
+		for i, group in ipairs(combo_list) do
+			local idx = math.random(#group)
+			table.insert(next_list, group[idx])
+			if i == max_combo then break end
+		end
 		p.combo          = p.combo or {}
 		p.combo.state    = "neutral"
-		p.combo.list     = next_combo and next_combo.combo or {}
+		p.combo.list     = next_list
 		p.combo.last     = false
 		p.combo.count    = 0 -- 入力リストのカウンタ
 		p.combo.input    = nil -- 次の入力反映候補
