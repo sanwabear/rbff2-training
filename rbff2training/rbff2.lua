@@ -313,6 +313,7 @@ rbff2.startplugin  = function()
 			back_crounch    = 15, -- しゃがみ後退（ガード）
 			dash            = 16, -- ダッシュ
 			flyback         = 17, -- 飛び退き
+			combo           = 18, -- プリセットコンボ（Aで選択画面へ）
 		},
 	}
 	menu.stack = {}
@@ -1062,7 +1063,7 @@ rbff2.startplugin  = function()
 	local rvs_types            = db.rvs_types
 	local hook_cmd_types       = db.hook_cmd_types
 
-	local get_next_xs          = function(p, list, cur_menu, top_label_count)
+	local get_next_xs          = function(p, list, cur_menu, top_label_count, log_label)
 		-- top_label_countはメニュー上部のラベル行数
 		local sub_menu, ons = cur_menu[p.num][p.char], {}
 		if sub_menu == nil or list == nil then return nil end
@@ -1074,13 +1075,14 @@ rbff2.startplugin  = function()
 		end
 		if #ons == 0 then return nil end
 		local idx = math.random(#ons)
-		-- ut.printf("next %s %s/%s", top_label_count == 1 and "rvs" or "bs", idx, #ons)
+		--ut.printf("%s next %s of %s", log_label, idx, #ons)
 		return ons[idx]
 	end
-	local get_next_enc         = function(p) return get_next_xs(p, p.char_data and p.char_data.enc or nil, menu.enc_menus, 0) end
-	local get_next_rvs         = function(p) return get_next_xs(p, p.char_data and p.char_data.rvs or nil, menu.rvs_menus, 0) end
-	local get_next_bs          = function(p) return get_next_xs(p, p.char_data and p.char_data.bs or nil, menu.bs_menus, 0) end
-	local get_next_fol         = function(p) return get_next_xs(p, p.char_data and p.char_data.fol or nil, menu.fol_menus, 0) end
+	local get_next_enc         = function(p) return get_next_xs(p, p.char_data and p.char_data.enc or nil, menu.enc_menus, 0, "enc") end
+	local get_next_rvs         = function(p) return get_next_xs(p, p.char_data and p.char_data.rvs or nil, menu.rvs_menus, 0, "rvs") end
+	local get_next_bs          = function(p) return get_next_xs(p, p.char_data and p.char_data.bs or nil, menu.bs_menus, 0, "bs") end
+	local get_next_fol         = function(p) return get_next_xs(p, p.char_data and p.char_data.fol or nil, menu.fol_menus, 0, "fol") end
+	local get_next_combo       = function(p) return get_next_xs(p, p.char_data and p.char_data.combo or nil, menu.combo_menus, 0, "combo") end
 
 	local joy1, joy2, joys     = ":edge:joy:JOY1", ":edge:joy:JOY2", ":edge:joy:START"
 	local use_joy              = {
@@ -1954,7 +1956,25 @@ rbff2.startplugin  = function()
 			control         = i,
 			is_fireball     = false,
 			base            = 0x0,
-			dummy_act       = 1,         -- { "立ち", "しゃがみ", "垂直ジャンプ", "前方ジャンプ", "後方ジャンプ", "垂直小ジャンプ", "前方小ジャンプ", "後方小ジャンプ", "ダッシュジャンプ", "ダッシュ小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き" }
+			dummy_act       = 1,         --
+										-- 立ち
+										-- しゃがみ
+										-- 垂直ジャンプ
+										-- 前方ジャンプ
+										-- 後方ジャンプ
+										-- 垂直小ジャンプ
+										-- 前方小ジャンプ
+										-- 後方小ジャンプ
+										-- ダッシュジャンプ
+										-- ダッシュ小ジャンプ
+										-- スウェー待機
+										-- 歩き
+										-- しゃがみ歩き
+										-- 後退
+										-- しゃがみ後退（ガード）
+										-- ダッシュ
+										-- 飛び退き
+										-- プリセットコンボ（Aで選択画面へ）
 			dummy_gd        = dummy_gd_type.none, -- なし, オート1, オート2, 1ヒットガード, 1ガード, 上段, 下段, アクション, ランダム, 強制
 			bs              = false,     -- ブレイクショット
 			dummy_wakeup    = wakeup_type.none, -- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
@@ -2004,6 +2024,18 @@ rbff2.startplugin  = function()
 			fireballs       = {},
 			pos_hist        = ut.new_filled_table(3, { x = format_num(0), y = format_num(0), z = "00", pos = 0, pos_frc = 0, pos_y = 0, pos_frc_y = 0, }),
 			enc_enabled     = false,
+			combo           = {
+				state       = "neutral",
+				list        = {},
+				last        = false,
+				count       = 0, -- 入力リストのカウンタ
+				input       = nil, -- 次の入力反映候補
+				hook_cmd    = nil, -- 次の入力反映候補-コマンド
+				hook_sp     = nil, -- 次の入力反映候補-必殺技
+				lag         = 0,
+				advance     = false,
+				timeout     = false,
+			},
 			encounter       = {
 				type        = 1, -- 1:OFF 2:邀撃技
 				rise_limit  = 0,
@@ -4638,7 +4670,10 @@ rbff2.startplugin  = function()
 			p.d6 = mem.r08(p.addr.base + 0xD6) -- 起き上がり攻撃用フラグ
 
 			-- リバーサルとBS動作の再抽選
-			p.dummy_enc, p.dummy_rvs, p.dummy_bs, p.dummy_fol = get_next_enc(p), get_next_rvs(p), get_next_bs(p), get_next_fol(p)
+			p.dummy_enc   = get_next_enc(p)
+			p.dummy_rvs   = get_next_rvs(p)
+			p.dummy_bs    = get_next_bs(p)
+			p.dummy_fol   = get_next_fol(p)
 
 			-- キャンセル可否家庭用 02AD90 からの処理と各種呼び出し元からの断片
 			p.hit_cancelable = false
@@ -5205,6 +5240,267 @@ rbff2.startplugin  = function()
 			p.reset_sp_hook() -- 必殺技リセット
 		end
 	end
+
+	tra_sub.new_combo = function(p)
+		local next_combo = get_next_combo(p)
+		p.combo          = p.combo or {}
+		p.combo.state    = "neutral"
+		p.combo.list     = next_combo and next_combo.combo or {}
+		p.combo.last     = false
+		p.combo.count    = 0 -- 入力リストのカウンタ
+		p.combo.input    = nil -- 次の入力反映候補
+		p.combo.hook_cmd = nil -- 次の入力反映候補
+		p.combo.hook_sp  = nil -- 次の入力反映候補
+		p.combo.lag      = 0
+		p.combo.advance  = false
+		p.combo.timeout  = false
+		return p.combo
+	end
+
+	-- 自動CA対応の練習用(仮実装中)
+	tra_sub.controll_dummy_combo = function(p)
+		local c = p.combo or tra_sub.new_combo(p)
+		if p.normal_state ~= true then
+			c = tra_sub.new_combo(p)
+		end
+		local moving = (p.flag_c4 > 0) or
+			(p.flag_c8 > 0) or
+			ut.tstb(p.flag_c0, db.flag_c0.startups) or
+			ut.tstb(p.flag_cc, db.flag_cc.moving)
+		local old_moving = moving
+		local o = p.old
+		if o then
+			old_moving = ((o.flag_c4 or 0) > 0) or
+				((o.flag_c8 or 0) > 0) or
+				ut.tstb(o.flag_c0 or 0, db.flag_c0.startups) or
+				ut.tstb(o.flag_cc or 0, db.flag_cc.moving)
+		end
+		local advance = false
+		local timeout = false
+
+		-- 変化を待つ
+		if p.on_upd_move == global.frame_number then
+			-- c0 flag_c0.startupsの更新があれば
+			-- c4 いずれかの更新があれば
+			-- c8 いずれかの更新があれば
+			-- cc flag_cc.movingの更新があれば
+			if not moving and old_moving then
+				timeout = true
+			end
+			if moving then
+				advance = true
+			end
+		end
+
+		local cancel = false
+		local repcan = false
+		local capable = false
+		local addition = false
+		if ut.tstb(p.flag_7e, db.flag_7e._05) then
+			local ca = ut.tstb(p.cancelable_data, 0xC0) -- キャンセル可
+			--ut.printf("H %X", p.cancelable_data)
+			cancel = ca -- ヒット限定
+		elseif ut.tstb(p.flag_7e, db.flag_7e._04) then
+			local ca = ut.tstb(p.cancelable_data, 0x40) -- ガード時のみキャンセル可
+			--ut.printf("B %X", p.cancelable_data)
+			cancel = ca -- ガード限定
+		end
+		if ut.tstb(p.flag_c4, db.flag_c4._28 | db.flag_c4._31) then
+			local ca = ut.tstb(p.cancelable_data, 0x10)
+			--ut.printf("A %X %s", p.cancelable_data, ca)
+			repcan = ca -- 連続のみキャンセル可
+		end
+		if ut.tstb(p.flag_6a, 0x8) then -- 攻撃判定あり
+			capable = (p.flag_c4 > 0) or ut.tstb(p.flag_c8, db.flag_c8.normal_atk)
+		end
+		if p.on_additional_r1 == global.frame_number or p.on_additional_r5 == global.frame_number then
+			addition = true
+		end
+		--[[
+		ut.printf("%s %3s %3s %3s %3s",
+			global.frame_number,
+			cancel and "can" or "---",
+			repcan and "rep" or "---",
+			capable and "cap" or "---",
+			addition and "add" or "---"
+		)
+		]]
+		local do_log = function(entry)
+			--[[
+			ut.printf("[FSM] %5s:%8s %3s %3s %3s %3s %4s %s %s %s",
+				entry and "entry" or "  -->",
+				c.state,
+				advance and "+adv" or "----",
+				timeout and "+to" or "---",
+				c.advance and "adv" or "---",
+				c.timeout and "to" or "---",
+				moving and "move" or "----",
+				c.count,
+				c.lag,
+				c.input and to_sjis(c.input.name) or "--")
+			]]
+		end
+
+		do_log(true)
+
+		if c.state == "neutral" or c.input == nil then
+			c.advance = false
+			c.timeout = false
+
+			-- 動作中は状態維持
+			if moving then
+				do_log()
+				return nil
+			end
+
+			c.count = 1
+			c.last = c.count == #c.list
+			c.input = c.list[1]
+			c.lag = 0
+			if c.input then
+				c.state = "walk"
+				c.hook_cmd = c.input.cmd and c.input or nil
+				c.hook_sp = c.input.cmd and nil or c.input
+			else
+				c.state = "finish"
+				c.hook_cmd = nil
+				c.hook_sp = nil
+			end
+			do_log()
+			-- すぐwalk or finishへ
+		end
+
+		if c.state == "walk" then
+			local space = math.abs(p.pos - p.op.pos)
+			space = space - 40
+			if math.abs(space) < 3 then
+				c.state = "exec"
+				do_log()
+				-- すぐexecへ
+			else
+				if space > 0 then
+					if space < 8 then
+						return db.common_rvs.c_walk
+					end
+					return db.common_rvs.walk
+				else
+					return db.common_rvs.back
+				end
+			end
+		end
+
+		if c.state == "lag" then
+			c.advance = c.advance or advance
+			c.timeout = c.timeout or timeout
+
+			-- 動作終了に来た場合は初期化する
+			if c.timeout then
+				c.state = "finish"
+				do_log()
+				return nil
+			end
+
+			-- 待ちがある場合はカウントダウンして抜ける
+			if c.lag > 0 then
+				if p.hitstop_remain == 0 then
+					c.lag = c.lag - 1 -- TODO ヒットストップ中
+				end
+				do_log()
+				return nil
+			end
+
+			c.state = "exec"
+			do_log()
+			-- すぐexecへ
+		end
+
+		-- 入力を返して待ち状態へ
+		if c.state == "exec" then
+			c.state = "await"
+			c.advance = false
+			c.timeout = false
+			do_log()
+			--print("input", c.count)
+			return c.input
+		end
+
+		-- 動作開始まで待ち
+		if c.state == "await" then
+			c.advance = (c.advance or advance)
+			c.timeout = c.timeout or timeout
+
+			if c.timeout then
+				--print("to")
+				-- 動作終了に来た場合は初期化する
+				c.state = "finish"
+				do_log()
+				-- すぐにfinishへ
+			elseif c.advance and not c.last then
+				--print("adv1")
+				c.count    = c.count + 1
+				-- 次の input を準備
+				c.lag      = c.input.lag or 1 -- 今のラグ設定を次の待ち時間にする
+				c.last     = c.count == #c.list
+				c.input    = c.list[c.count]
+				c.hook_cmd = c.input.cmd and c.input or nil
+				c.hook_sp  = not c.input.cmd and c.input or nil
+				c.state    = "lag"
+				c.advance  = false
+				c.timeout  = false
+				do_log()
+				return nil
+			elseif c.advance and c.last then
+				--print("adv2")
+				do_log()
+				return nil
+			elseif cancel and c.hook_sp and not c.advance then
+				-- キャンセル可能タイミング
+				--print("can")
+				do_log()
+				--print("input", c.count)
+				return c.hook_sp
+			elseif addition and c.hook_cmd and not c.advance then
+				-- 固有処理での追加入力受付向け
+				--print("add")
+				do_log()
+				--print("input", c.count)
+				return c.hook_cmd
+			elseif repcan and c.hook_cmd and not c.advance then
+				-- A連キャン
+				--print("rep")
+				do_log()
+				--print("input", c.count)
+				return c.hook_cmd
+			elseif capable and c.hook_sp and not c.advance then
+				-- ヒットorガード時のキャンセル
+				--print("cap")
+				do_log()
+				--print("input", c.count)
+				return c.hook_sp
+			else
+				--print("sp")
+				--do_log()
+				--return c.hook_sp
+				--print("await")
+				return nil
+			end
+		end
+
+		-- 動作終了に来た場合は初期化する
+		if c.timeout then
+			c.state = "finish"
+			do_log()
+			-- すぐにfinishへ
+		end
+
+		if c.state == "finish" then
+			c = tra_sub.new_combo(p)
+		end
+
+		do_log()
+		return nil
+	end
+
 	tra_sub.controll_dummy_mode = function(p)
 		local cmd, hook, label = db.cmd_types._5, nil, "none"
 		if p.sway_status == 0x00 and p.dummy_act ~= menu.dummy_acts.stand and
@@ -5252,6 +5548,9 @@ rbff2.startplugin  = function()
 			end
 		elseif p.dummy_act == menu.dummy_acts.sway and p.in_sway_line then
 			cmd, label = db.cmd_types._8, "sway" -- スウェー待機
+		end
+		if p.dummy_act == menu.dummy_acts.combo then
+			hook, label = tra_sub.controll_dummy_combo(p), "combo" -- プリセットコンボ
 		end
 		return hook, cmd, label
 	end
@@ -5763,7 +6062,7 @@ rbff2.startplugin  = function()
 				elseif p.act == 0x90 or p.act == 0x91 then
 					if a.hebi_count < a.hebi_damashi then
 						dummy_add = list[size + 19] -- 19 蛇使い・中段
-						--ut.printf("3 %X %s %s %s", p.act, a.pairon, size + 19, to_sjis(dummy_add.name))
+						--ut.printf("3 %X %s %s %s", p.act, a.pairon, size + 19, to_sjis(dummy_a4dd.name))
 					else
 						dummy_add = list[size + 22] -- 22 蛇使だまし・中段
 						--ut.printf("4 %X %s %s %s", p.act, a.pairon, size + 22, to_sjis(dummy_add.name))
@@ -5786,413 +6085,6 @@ rbff2.startplugin  = function()
 
 	tra_sub.log = function(...)
 		--print(...)
-	end
-
-	-- フォールバック関数
-	-- fallback_list: { {id=..., value=...}, ... }
-	-- token: "XZ" など、パース単位のトークン
-	tra_sub.fallback_parse_token = function(token, fallback_list)
-		-- 1. "0x" で始まる場合は 16 進数として返す
-		if token:sub(1, 2):lower() == "0x" then
-			token = tonumber(token)
-		end
-		for _, entry in ipairs(fallback_list) do
-			if entry.id == token then
-				return entry
-			end
-		end
-		-- 何も一致しない
-		return nil
-	end
-
-	-- db.cmd_types のプロパティへ変換したリストを返す関数
-	-- 文字列をスペースで分割し、スペース区切りのレバーボタン操作を分解してフック形式の構造体リストに変換して返す
-	tra_sub.parse_cmd = function(char_id, str)
-		str = ut.trim(str)
-
-		local results, splist = {}, db.rvs_bs_list[char_id]
-		local flip_tbl = { ["7"] = "9", ["4"] = "6", ["1"] = "3", ["9"] = "7", ["6"] = "4", ["3"] = "1", }
-
-		for token in string.gmatch(str, "%S+") do
-			local merged, merged_r, failed = nil, nil, false
-			local cmd, lag = token:match("^(.-)%((%d+)%)$")
-
-			if cmd and lag then
-				cmd, lag = cmd, tonumber(lag)
-			else
-				cmd, lag = token, 5
-			end
-
-			for c in cmd:gmatch(".") do
-				local key = "_" .. c
-				local key_r = flip_tbl[c]
-				key_r = key_r and ("_" .. key_r) or key
-				local value = db.cmd_types[key]
-				local value_r = (key_r == key) and value or db.cmd_types[key_r]
-
-				if not value then
-					-- コマンド検索で失敗したらフォールバックへ
-					failed = true
-					break
-				end
-
-				merged = merged and (merged | value) or value
-				merged_r = merged_r and (merged_r | value_r) or value_r
-			end
-
-			if failed then
-				-- フォールバック関数を呼び出す
-				local fb_hook = tra_sub.fallback_parse_token(cmd, splist)
-				if fb_hook ~= nil then
-					-- 成功 → 追加
-					table.insert(results, fb_hook)
-				end
-				-- nil = スキップ、次の token へ
-			else
-				-- 正常処理成功
-				local cmd_hook = {
-					lag = lag,
-					-- コマンドの右向き左向きをあらわすデータ値をキーにしたテーブルを用意
-					cmd = (merged == merged_r) and merged or { [1] = merged, [-1] = merged_r, },
-					name = string.format("%s:%s", #results + 1, token),
-					hook_type = db.hook_cmd_types.none,
-				}
-				table.insert(results, cmd_hook)
-			end
-		end
-		return results
-	end
-
-	tra_sub.new_combo = function(list)
-		return {
-			state    = "neutral",
-			list     = list or {},
-			last     = false,
-			count    = 0, -- 入力リストのカウンタ
-			input    = nil, -- 次の入力反映候補 tra_sub.combo.list[tra_sub.combo.count]
-			hook_cmd = nil, -- 次の入力反映候補 tra_sub.combo.list[tra_sub.combo.count]
-			hook_sp  = nil, -- 次の入力反映候補 tra_sub.combo.list[tra_sub.combo.count]
-			lag      = 0,
-			advance  = false,
-			timeout  = false,
-		}
-	end
-
-	tra_sub.combo = tra_sub.new_combo()
-
-	tra_sub.combo_char_list = {
-		{ -- テリー・ボガード
-			"2A B C",
-			"2A B 3C",
-			"3A C C",
-			"B B",
-			"B B C",
-			"B C",
-			"A C",
-			"2A 2C",
-			"2A B 3C 0x46",
-			"3A C C 0x46",
-		},
-		{ -- アンディ・ボガード
-			"2A B C",
-			"2A B 3C",
-			"3A C C",
-			"B B",
-			"B B C",
-			"B C",
-			"A C",
-			"2A A C",
-			"2A B 3C 0x46",
-			"3A C C 0x46",
-		},
-		{ -- 東丈
-			"A C",
-			"B C",
-			"2A 2B 3C",
-			"2A 2B 8C",
-		},
-		{ -- 不知火舞
-			"2A B 3C",
-			"2A 2C 3C",
-		},
-		{ -- 望月双角
-			"2A C",
-			"A C",
-			"B C",
-		},
-		{ -- ボブ・ウィルソン
-			"A C",
-			"2A A C",
-			"B C",
-			"B B C",
-			"2B B C",
-			"2B B 3C",
-			"2A B C",
-			"2A B 3C",
-			"C C 6C",
-			"C C 8C",
-			"C C",
-		},
-		{ -- ホンフゥ
-			"A C",
-			"A C 0x46 2C 0x46",
-			"B B C",
-		},
-		{ -- ブルー・マリー
-			"A C",
-			"B B 6C",
-			"B B 3C",
-			"2B 2B 2C",
-		},
-		{ -- フランコ・バッシュ
-			"A C 0x46",
-			"A C 0x46 A C B",
-		},
-		{ -- 山崎竜二
-			"B C",
-			"AB C",
-			"3A C",
-			"A 2C",
-		},
-		{ -- 秦崇秀
-			"A B C",
-			"2A 2B 2C",
-			"2A 2B 6C",
-			"C C C",
-		},
-		{ -- 秦崇雷
-			"2A 2B 2C",
-			"2A 2B 6C",
-			"B C C",
-			"B C 3C",
-			"C 2B",
-			"C 6B",
-		},
-		{ -- ダック・キング
-			"2A A B C",
-			"2A A B 3C",
-			"2A A B 6C",
-		},
-		{ -- キム・カッファン
-			"A B",
-			"A B C",
-			"2A A B",
-			"2A A B C",
-			"C A",
-			"C A B",
-			"C A B C",
-		},
-		{ -- ビリー・カーン
-			"A C",
-			"2A 2C",
-		},
-		{ -- チン・シンザン
-			"2A 2C",
-			"A C",
-			"B C",
-		},
-		{ -- タン・フー・ルー
-			"AB C",
-			"3A C",
-		},
-		{ -- ローレンス・ブラッド
-			"BC 2C",
-			"BC 6C",
-			"BC B",
-		},
-		{ -- ヴォルフガング・クラウザー
-			"A C",
-			"B C",
-			"2A C",
-			"2B 2C",
-			"C 3C",
-			"C C",
-		},
-		{ -- リック・ストラウド
-			"2A 2A C",
-			"2A A C",
-			"2B 2C",
-			"B C",
-			"6C C",
-			"3A 6C",
-		},
-		{ -- 李香緋
-			"2B 2B C",
-			"A C A C",
-			"A A A C",
-			"A A A B",
-		},
-		{ -- アルフレッド
-		},
-	}
-
-	for char, clist in ipairs(tra_sub.combo_char_list) do
-		for i = 1, #clist do
-			clist[i] = tra_sub.parse_cmd(char, clist[i])
-		end
-	end
-	-- tra_sub.combo.list = tra_sub.parse_cmd(db.char_id.terry, "A(5) B(5) 3C(5) 0x46") -- 入力リスト
-
-	-- 自動CA対応の練習用(仮実装中)
-	tra_sub.controll_dummy_combo = function(p)
-		if p.num == 2 then return nil end
-		if p.num == 1 then return nil end
-
-		local c = tra_sub.combo
-		local moving = (p.flag_c4 > 0) or
-			(p.flag_c8 > 0) or
-			ut.tstb(p.flag_c0, db.flag_c0.startups) or
-			ut.tstb(p.flag_cc, db.flag_cc.moving)
-		local old_moving = moving
-		local o = p.old
-		if o then
-			old_moving = ((o.flag_c4 or 0) > 0) or
-				((o.flag_c8 or 0) > 0) or
-				ut.tstb(o.flag_c0 or 0, db.flag_c0.startups) or
-				ut.tstb(o.flag_cc or 0, db.flag_cc.moving)
-		end
-		local advance = false
-		local timeout = false
-
-		-- 変化を待つ
-		if p.on_upd_move == global.frame_number then
-			-- c0 flag_c0.startupsの更新があれば
-			-- c4 いずれかの更新があれば
-			-- c8 いずれかの更新があれば
-			-- cc flag_cc.movingの更新があれば
-			if not moving and old_moving then
-				timeout = true
-			end
-			if moving then
-				advance = true
-			end
-		end
-
-		local do_log = function(entry)
-			--[[
-			ut.printf("[FSM] %5s:%8s %3s %3s %3s %3s %4s %s %s %s",
-				entry and "entry" or "  -->",
-				c.state,
-				advance and "+adv" or "----",
-				timeout and "+to" or "---",
-				c.advance and "adv" or "---",
-				c.timeout and "to" or "---",
-				moving and "move" or "----",
-				c.count,
-				c.lag,
-				c.input and to_sjis(c.input.name) or "--")
-			]]
-		end
-
-		do_log(true)
-
-		if c.state == "neutral" or c.input == nil then
-			c.advance = false
-			c.timeout = false
-
-			-- 動作中は状態維持
-			if moving then
-				do_log()
-				return nil
-			end
-
-			c.count = 1
-			c.last = c.count == #c.list
-			c.input = c.list[1]
-			c.lag = 0
-			if c.input then
-				c.state = "exec"
-				c.hook_cmd = c.input.cmd and c.input or nil
-				c.hook_sp = c.input.cmd and nil or c.input
-			else
-				c.state = "finish"
-				c.hook_cmd = nil
-				c.hook_sp = nil
-			end
-			do_log()
-			-- すぐexecへ
-		end
-
-		if c.state == "lag" then
-			c.advance = c.advance or advance
-			c.timeout = c.timeout or timeout
-
-			-- 動作終了に来た場合は初期化する
-			if c.timeout then
-				c.state = "finish"
-				do_log()
-				return nil
-			end
-
-			-- 待ちがある場合はカウントダウンして抜ける
-			if c.lag > 0 then
-				c.lag = c.lag - 1
-				do_log()
-				return nil
-			end
-
-			c.state = "exec"
-			do_log()
-			-- すぐexecへ
-		end
-
-		-- 入力を返して待ち状態へ
-		if c.state == "exec" then
-			c.state = "await"
-			c.advance = false
-			c.timeout = false
-			do_log()
-			return c.input
-		end
-
-		-- 動作開始まで待ち
-		if c.state == "await" then
-			c.advance = c.advance or advance
-			c.timeout = c.timeout or timeout
-
-			if c.timeout then
-				-- 動作終了に来た場合は初期化する
-				c.state = "finish"
-				do_log()
-				-- すぐにfinishへ
-			elseif c.advance and not c.last then
-				c.count    = c.count + 1
-				-- 次の input を準備
-				c.lag      = c.input.lag or 1 -- 今のラグ設定を次の待ち時間にする
-				c.last     = c.count == #c.list
-				c.input    = c.list[c.count]
-				c.hook_cmd = c.input.cmd and c.input or nil
-				c.hook_sp  = not c.input.cmd and c.input or nil
-				c.state    = "lag"
-				c.advance  = false
-				c.timeout  = false
-				do_log()
-				return nil
-			elseif c.advance and c.last then
-				do_log()
-				return nil
-			else
-				do_log()
-				return c.hook_sp
-			end
-		end
-
-		-- 動作終了に来た場合は初期化する
-		if c.timeout then
-			c.state = "finish"
-			do_log()
-			-- すぐにfinishへ
-		end
-
-		if c.state == "finish" then
-			local full = tra_sub.combo_char_list[p.char]
-			local list = #full == 0 and {} or full[math.random(#full)]
-			tra_sub.combo = tra_sub.new_combo(list)
-			c = tra_sub.combo
-		end
-
-		do_log()
-		return nil
 	end
 
 	tra_sub.controll_dummy_p = function(p)
@@ -6222,14 +6114,6 @@ rbff2.startplugin  = function()
 			else
 				return
 			end
-		end
-
-		local combo_hook = tra_sub.controll_dummy_combo(p)
-		--local combo_hook = nil
-		if combo_hook then
-			p.input_any(combo_hook, "combo_hook")
-			tra_sub.log(global.frame_number, "cmb1")
-			return
 		end
 
 		-- ガード判定 回数の状態管理もあるので実施必須
@@ -7324,6 +7208,7 @@ rbff2.startplugin  = function()
 			p.block1 = 0
 			p.dummy_enc = get_next_enc(p) -- 邀撃動作セット
 			p.dummy_fol = get_next_fol(p) -- 自動必殺技セット
+			tra_sub.new_combo(p) -- プリセットコンボ更新
 			p.rvs_count, p.dummy_rvs = -1, get_next_rvs(p) -- リバサガードカウンター初期化、キャラとBSセット
 			p.bs_count, p.dummy_bs = -1, get_next_bs(p) -- BSガードカウンター初期化、キャラとBSセット
 		end
@@ -7338,6 +7223,10 @@ rbff2.startplugin  = function()
 				elseif g.dummy_mode == menu.dummy_modes.replay then
 					next_menu = "replay" -- リプレイ
 				end
+			elseif row == 2 and p1.dummy_act == menu.dummy_acts.combo then
+				next_menu = menu.combo_menus[1][p1.char] -- 1P プリセットコンボ
+			elseif row == 3 and p2.dummy_act == menu.dummy_acts.combo then
+				next_menu = menu.combo_menus[2][p2.char] -- 2P プリセットコンボ
 			elseif p1.enc_enabled and row == 19 then
 				next_menu = "encounter1" -- 1P 邀撃(ようげき)行動
 			elseif p2.enc_enabled and row == 20 then
@@ -7709,7 +7598,7 @@ rbff2.startplugin  = function()
 		end
 	end
 	-- ブレイクショットメニュー
-	menu.bs_menus, menu.rvs_menus, menu.enc_menus, menu.fol_menus = {}, {}, {}, {}
+	menu.bs_menus, menu.rvs_menus, menu.enc_menus, menu.fol_menus, menu.combo_menus = {}, {}, {}, {}, {}
 	local bs_blocks, rvs_blocks = {}, {}
 	for i = 1, 60 do
 		table.insert(bs_blocks, string.format("%s回ガード後に発動", i))
@@ -7718,8 +7607,8 @@ rbff2.startplugin  = function()
 	menu.any_to_tra = function(any_menus)
 		local cur_prvs = nil
 		for _, prvs in ipairs(any_menus) do
-			for _, a_bs_menu in ipairs(prvs) do
-				if menu.current == a_bs_menu then
+			for _, a_menu in ipairs(prvs) do
+				if menu.current == a_menu then
 					cur_prvs = prvs
 					break
 				end
@@ -7727,27 +7616,28 @@ rbff2.startplugin  = function()
 			if cur_prvs then break end
 		end
 		-- 共通行動の設定を全キャラにコピー反映
-		for _, a_bs_menu in ipairs(cur_prvs or {}) do
-			if menu.current ~= a_bs_menu then
-				for _, rvs in ipairs(a_bs_menu.list) do
+		for _, a_menu in ipairs(cur_prvs or {}) do
+			if menu.current ~= a_menu then
+				for _, rvs in ipairs(a_menu.list) do
 					if rvs.common then
-						a_bs_menu.pos.col[rvs.row] = menu.current.pos.col[rvs.row]
+						a_menu.pos.col[rvs.row] = menu.current.pos.col[rvs.row]
 					end
 				end
 			end
 		end
-		--menu.to_tra()
 		menu.back()
 	end
-	menu.fol_to_tra = function() menu.any_to_tra(menu.fol_menus) end
-	menu.rvs_to_tra = function() menu.any_to_tra(menu.rvs_menus) end
-	menu.enc_to_tra = function() menu.any_to_tra(menu.enc_menus) end
+	menu.fol_to_tra   = function() menu.any_to_tra(menu.fol_menus)   end
+	menu.rvs_to_tra   = function() menu.any_to_tra(menu.rvs_menus)   end
+	menu.enc_to_tra   = function() menu.any_to_tra(menu.enc_menus)   end
+	menu.combo_to_tra = function() menu.any_to_tra(menu.combo_menus) end
 	for i = 1, 2 do
-		local p_bs, p_rvs, p_enc, p_fol = {}, {}, {}, {}
-		table.insert(menu.bs_menus, p_bs)
-		table.insert(menu.fol_menus, p_fol)
-		table.insert(menu.rvs_menus, p_rvs)
-		table.insert(menu.enc_menus, p_enc)
+		local p_bs, p_rvs, p_enc, p_fol, p_combo = {}, {}, {}, {}, {}
+		table.insert(menu.bs_menus,    p_bs)
+		table.insert(menu.fol_menus,   p_fol)
+		table.insert(menu.rvs_menus,   p_rvs)
+		table.insert(menu.enc_menus,   p_enc)
+		table.insert(menu.combo_menus, p_combo)
 		for _, char_data in pairs(db.chars) do
 			if not char_data.bs then break end
 			local list, on_ab, col = {}, {}, {}
@@ -7828,6 +7718,23 @@ rbff2.startplugin  = function()
 			for _, bs in ipairs(char_data.enc) do
 				table.insert(list, { ut.convert(bs.name), menu.labels.off_on, common = bs.common == true, row = #list, })
 				table.insert(on_ab, menu.enc_to_tra)
+				table.insert(col, 1)
+			end
+		end
+		for _, char_data in pairs(db.chars) do
+			if not char_data.combo then break end
+			local list, on_ab, col = {}, {}, {}
+			table.insert(p_combo, {
+				name = string.format("プリセットコンボ選択(%s)", char_data.name),
+				desc = "ONにしたスロットからランダムで発動されます。",
+				list = list,
+				pos = { offset = 1, row = 1, col = col, },
+				on_a = on_ab,
+				on_b = on_ab,
+			})
+			for _, bs in ipairs(char_data.combo) do
+				table.insert(list, { ut.convert(bs.name), menu.labels.off_on, row = #list, })
+				table.insert(on_ab, menu.combo_to_tra)
 				table.insert(col, 1)
 			end
 		end
@@ -7959,8 +7866,8 @@ rbff2.startplugin  = function()
 		"トレーニングダミーの基本動作を設定します。",
 		{
 			{ "ダミーモード", { "プレイヤー vs プレイヤー", "プレイヤー vs CPU", "CPU vs プレイヤー", "1P&2P入れ替え", "レコード", "リプレイ" }, },
-			{ "1P アクション", { "立ち", "しゃがみ", "垂直ジャンプ", "前方ジャンプ", "後方ジャンプ", "垂直小ジャンプ", "前方小ジャンプ", "後方小ジャンプ", "ダッシュジャンプ", "ダッシュ小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き", "後退", "しゃがみ後退（ガード）", "ダッシュ", "飛び退き" }, },
-			{ "2P アクション", { "立ち", "しゃがみ", "垂直ジャンプ", "前方ジャンプ", "後方ジャンプ", "垂直小ジャンプ", "前方小ジャンプ", "後方小ジャンプ", "ダッシュジャンプ", "ダッシュ小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き", "後退", "しゃがみ後退（ガード）", "ダッシュ", "飛び退き" }, },
+			{ "1P アクション", { "立ち", "しゃがみ", "垂直ジャンプ", "前方ジャンプ", "後方ジャンプ", "垂直小ジャンプ", "前方小ジャンプ", "後方小ジャンプ", "ダッシュジャンプ", "ダッシュ小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き", "後退", "しゃがみ後退（ガード）", "ダッシュ", "飛び退き", "プリセットコンボ（Aで選択画面へ）" }, },
+			{ "2P アクション", { "立ち", "しゃがみ", "垂直ジャンプ", "前方ジャンプ", "後方ジャンプ", "垂直小ジャンプ", "前方小ジャンプ", "後方小ジャンプ", "ダッシュジャンプ", "ダッシュ小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き", "後退", "しゃがみ後退（ガード）", "ダッシュ", "飛び退き", "プリセットコンボ（Aで選択画面へ）" }, },
 			{ "くらい後アクション停止", menu.labels.no_action, },
 			{ title = true, "ガード・ブレイクショット設定" },
 			{ "1P ガード", { "なし", "オート", "1ヒットガード", "1ガード", "上段", "下段", "アクション", "ランダム", "強制" }, },
@@ -7985,7 +7892,7 @@ rbff2.startplugin  = function()
 		function()
 			---@diagnostic disable-next-line: undefined-field
 			local col, p, g = menu.training.pos.col, players, global
-			col[1]  = g.dummy_mode                 -- 01 ダミーモード
+			col[ 1]  = g.dummy_mode                -- 01 ダミーモード
 			col[ 2]  = p[1].dummy_act              -- 02 1P アクション
 			col[ 3]  = p[2].dummy_act              -- 03 2P アクション
 			col[ 4]  = g.no_action                 -- 04 くらい後アクションOFF
