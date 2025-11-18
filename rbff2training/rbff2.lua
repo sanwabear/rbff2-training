@@ -5807,34 +5807,37 @@ rbff2.startplugin  = function()
 
 	-- db.cmd_types のプロパティへ変換したリストを返す関数
 	-- 文字列をスペースで分割し、スペース区切りのレバーボタン操作を分解してフック形式の構造体リストに変換して返す
-	tra_sub.parse_cmd_types = function(str)
+	tra_sub.parse_cmd = function(char_id, str)
 		str = ut.trim(str)
 
-		local results = {}
-		local splist = db.rvs_bs_list[db.char_id.terry]
+		local results, splist = {}, db.rvs_bs_list[char_id]
+		local flip_tbl = { ["7"] = "9", ["4"] = "6", ["1"] = "3", ["9"] = "7", ["6"] = "4", ["3"] = "1", }
 
 		for token in string.gmatch(str, "%S+") do
-			local merged = nil
-			local failed = false
+			local merged, merged_r, failed = nil, nil, false
 			local cmd, lag = token:match("^(.-)%((%d+)%)$")
 
 			if cmd and lag then
 				cmd, lag = cmd, tonumber(lag)
 			else
-				cmd, lag = token, 0
+				cmd, lag = token, 5
 			end
 
 			for c in cmd:gmatch(".") do
 				local key = "_" .. c
+				local key_r = flip_tbl[c]
+				key_r = key_r and ("_" .. key_r) or key
 				local value = db.cmd_types[key]
+				local value_r = (key_r == key) and value or db.cmd_types[key_r]
 
 				if not value then
-					-- db で失敗した → フォールバックへ
+					-- コマンド検索で失敗したらフォールバックへ
 					failed = true
 					break
 				end
 
 				merged = merged and (merged | value) or value
+				merged_r = merged_r and (merged_r | value_r) or value_r
 			end
 
 			if failed then
@@ -5844,12 +5847,13 @@ rbff2.startplugin  = function()
 					-- 成功 → 追加
 					table.insert(results, fb_hook)
 				end
-				-- nil → スキップ、次の token へ
+				-- nil = スキップ、次の token へ
 			else
 				-- 正常処理成功
 				local cmd_hook = {
 					lag = lag,
-					cmd = merged,
+					-- コマンドの右向き左向きをあらわすデータ値をキーにしたテーブルを用意
+					cmd = (merged == merged_r) and merged or { [1] = merged, [-1] = merged_r, },
 					name = string.format("%s:%s", #results + 1, token),
 					hook_type = db.hook_cmd_types.none,
 				}
@@ -5861,27 +5865,178 @@ rbff2.startplugin  = function()
 
 	tra_sub.new_combo = function(list)
 		return {
-			state = "neutral",
-			list = list or {},
-			last = false,
-			count = 0, -- 入力リストのカウンタ
+			state    = "neutral",
+			list     = list or {},
+			last     = false,
+			count    = 0, -- 入力リストのカウンタ
 			input    = nil, -- 次の入力反映候補 tra_sub.combo.list[tra_sub.combo.count]
 			hook_cmd = nil, -- 次の入力反映候補 tra_sub.combo.list[tra_sub.combo.count]
 			hook_sp  = nil, -- 次の入力反映候補 tra_sub.combo.list[tra_sub.combo.count]
-			lag = 0,
-			advance = false,
-			timeout = false,
+			lag      = 0,
+			advance  = false,
+			timeout  = false,
 		}
 	end
 
 	tra_sub.combo = tra_sub.new_combo()
 
-	tra_sub.combo.list = tra_sub.parse_cmd_types("A(5) B(5) C(5) 0x46") -- 入力リスト
+	tra_sub.combo_char_list = {
+		{ -- テリー・ボガード
+			"2A B C",
+			"2A B 3C",
+			"3A C C",
+			"B B",
+			"B B C",
+			"B C",
+			"A C",
+			"2A 2C",
+			"2A B 3C 0x46",
+			"3A C C 0x46",
+		},
+		{ -- アンディ・ボガード
+			"2A B C",
+			"2A B 3C",
+			"3A C C",
+			"B B",
+			"B B C",
+			"B C",
+			"A C",
+			"2A A C",
+			"2A B 3C 0x46",
+			"3A C C 0x46",
+		},
+		{ -- 東丈
+			"A C",
+			"B C",
+			"2A 2B 3C",
+			"2A 2B 8C",
+		},
+		{ -- 不知火舞
+			"2A B 3C",
+			"2A 2C 3C",
+		},
+		{ -- 望月双角
+			"2A C",
+			"A C",
+			"B C",
+		},
+		{ -- ボブ・ウィルソン
+			"A C",
+			"2A A C",
+			"B C",
+			"B B C",
+			"2B B C",
+			"2B B 3C",
+			"2A B C",
+			"2A B 3C",
+			"C C 6C",
+			"C C 8C",
+			"C C",
+		},
+		{ -- ホンフゥ
+			"A C",
+			"A C 0x46 2C 0x46",
+			"B B C",
+		},
+		{ -- ブルー・マリー
+			"A C",
+			"B B 6C",
+			"B B 3C",
+			"2B 2B 2C",
+		},
+		{ -- フランコ・バッシュ
+			"A C 0x46",
+			"A C 0x46 A C B",
+		},
+		{ -- 山崎竜二
+			"B C",
+			"AB C",
+			"3A C",
+			"A 2C",
+		},
+		{ -- 秦崇秀
+			"A B C",
+			"2A 2B 2C",
+			"2A 2B 6C",
+			"C C C",
+		},
+		{ -- 秦崇雷
+			"2A 2B 2C",
+			"2A 2B 6C",
+			"B C C",
+			"B C 3C",
+			"C 2B",
+			"C 6B",
+		},
+		{ -- ダック・キング
+			"2A A B C",
+			"2A A B 3C",
+			"2A A B 6C",
+		},
+		{ -- キム・カッファン
+			"A B",
+			"A B C",
+			"2A A B",
+			"2A A B C",
+			"C A",
+			"C A B",
+			"C A B C",
+		},
+		{ -- ビリー・カーン
+			"A C",
+			"2A 2C",
+		},
+		{ -- チン・シンザン
+			"2A 2C",
+			"A C",
+			"B C",
+		},
+		{ -- タン・フー・ルー
+			"AB C",
+			"3A C",
+		},
+		{ -- ローレンス・ブラッド
+			"BC 2C",
+			"BC 6C",
+			"BC B",
+		},
+		{ -- ヴォルフガング・クラウザー
+			"A C",
+			"B C",
+			"2A C",
+			"2B 2C",
+			"C 3C",
+			"C C",
+		},
+		{ -- リック・ストラウド
+			"2A 2A C",
+			"2A A C",
+			"2B 2C",
+			"B C",
+			"6C C",
+			"3A 6C",
+		},
+		{ -- 李香緋
+			"2B 2B C",
+			"A C A C",
+			"A A A C",
+			"A A A B",
+		},
+		{ -- アルフレッド
+		},
+	}
+
+	for char, clist in ipairs(tra_sub.combo_char_list) do
+		for i = 1, #clist do
+			clist[i] = tra_sub.parse_cmd(char, clist[i])
+		end
+	end
+	-- tra_sub.combo.list = tra_sub.parse_cmd(db.char_id.terry, "A(5) B(5) 3C(5) 0x46") -- 入力リスト
 
 	-- 自動CA対応の練習用(仮実装中)
 	tra_sub.controll_dummy_combo = function(p)
 		if p.num == 2 then return nil end
-		--if p.num == 1 then return nil end
+		if p.num == 1 then return nil end
 
 		local c = tra_sub.combo
 		local moving = (p.flag_c4 > 0) or
@@ -5944,10 +6099,16 @@ rbff2.startplugin  = function()
 			c.count = 1
 			c.last = c.count == #c.list
 			c.input = c.list[1]
-			c.hook_cmd = c.input.cmd and c.input or nil
-			c.hook_sp = c.input.cmd and nil or c.input
 			c.lag = 0
-			c.state = "exec"
+			if c.input then
+				c.state = "exec"
+				c.hook_cmd = c.input.cmd and c.input or nil
+				c.hook_sp = c.input.cmd and nil or c.input
+			else
+				c.state = "finish"
+				c.hook_cmd = nil
+				c.hook_sp = nil
+			end
 			do_log()
 			-- すぐexecへ
 		end
@@ -6024,7 +6185,9 @@ rbff2.startplugin  = function()
 		end
 
 		if c.state == "finish" then
-			tra_sub.combo = tra_sub.new_combo(c.list)
+			local full = tra_sub.combo_char_list[p.char]
+			local list = #full == 0 and {} or full[math.random(#full)]
+			tra_sub.combo = tra_sub.new_combo(list)
 			c = tra_sub.combo
 		end
 
@@ -6061,8 +6224,8 @@ rbff2.startplugin  = function()
 			end
 		end
 
-		--local combo_hook = tra_sub.controll_dummy_combo(p)
-		local combo_hook = nil
+		local combo_hook = tra_sub.controll_dummy_combo(p)
+		--local combo_hook = nil
 		if combo_hook then
 			p.input_any(combo_hook, "combo_hook")
 			tra_sub.log(global.frame_number, "cmb1")
