@@ -1063,16 +1063,20 @@ rbff2.startplugin  = function()
 	local rvs_types            = db.rvs_types
 	local hook_cmd_types       = db.hook_cmd_types
 
-	local get_next_xs          = function(p, list, cur_menu, top_label_count, log_label)
+	local get_selected_menu    = function(p, list, cur_menu, top_label_count, log_label)
 		-- top_label_countはメニュー上部のラベル行数
 		local sub_menu, ons = cur_menu[p.num][p.char], {}
-		if sub_menu == nil or list == nil then return nil end
+		if sub_menu == nil or list == nil then return ons end
 		for j, s in ipairs(list) do
 			local idx = j + top_label_count
 			if #list < idx then break end
 			local col, row = sub_menu.pos.col[idx], sub_menu.list[idx]
 			if col == 2 and (not row.ex_breakshot or global.all_bs) then table.insert(ons, s) end
 		end
+		return ons
+	end
+	local get_next_xs          = function(p, list, cur_menu, top_label_count, log_label)
+		local ons = get_selected_menu(p, list, cur_menu, top_label_count, log_label)
 		if #ons == 0 then return nil end
 		local idx = math.random(#ons)
 		--ut.printf("%s next %s of %s", log_label, idx, #ons)
@@ -1082,7 +1086,13 @@ rbff2.startplugin  = function()
 	local get_next_rvs         = function(p) return get_next_xs(p, p.char_data and p.char_data.rvs or nil, menu.rvs_menus, 0, "rvs") end
 	local get_next_bs          = function(p) return get_next_xs(p, p.char_data and p.char_data.bs or nil, menu.bs_menus, 0, "bs") end
 	local get_next_fol         = function(p) return get_next_xs(p, p.char_data and p.char_data.fol or nil, menu.fol_menus, 0, "fol") end
-	local get_next_combo       = function(p) return get_next_xs(p, p.char_data and p.char_data.combo or nil, menu.combo_menus, 0, "combo") end
+	local get_next_combo       = function(p)
+		local rows = get_selected_menu(p, p.char_data and p.char_data.combo or nil, menu.combo_menus, 0, "combo")
+		local ret = {}
+		for _, row in ipairs(rows) do table.insert(ret, row.combo) end
+		--print_table(ret)
+		return ret
+	end
 
 	local joy1, joy2, joys     = ":edge:joy:JOY1", ":edge:joy:JOY2", ":edge:joy:START"
 	local use_joy              = {
@@ -2035,6 +2045,8 @@ rbff2.startplugin  = function()
 				lag         = 0,
 				advance     = false,
 				timeout     = false,
+				min_count   = 2,
+				rnd_count   = false,
 			},
 			encounter       = {
 				type        = 1, -- 1:OFF 2:邀撃技
@@ -5241,19 +5253,227 @@ rbff2.startplugin  = function()
 		end
 	end
 
-	tra_sub.new_combo = function(p)
-		local next_combo = get_next_combo(p)
-		local next_list = {}
-		local combo_list = next_combo and next_combo.combo or {}
-		local max_combo = math.random(#combo_list)
-		for i, group in ipairs(combo_list) do
-			local idx = math.random(#group)
-			table.insert(next_list, group[idx])
-			if i == max_combo then break end
+	-- ランダム抽出システム（完全仕様準拠版）
+	local rnd_picker = {}
+
+	-- picker 作成関数
+	-- options.pull_count: 抽出するグループ数
+	--   - "max" または nil: 全グループから抽出（デフォルト）
+	--   - "random": 1〜全グループ数の間でランダムに決定
+	--   - 数値: 指定した数〜全グループ数の間でランダムに決定
+	--     例: 1 → 1〜最大のランダム
+	--         2 → 2〜最大のランダム
+	rnd_picker.create_picker = function(top_list, options)
+		options = options or {}
+
+		local picker = {
+			groups = {},
+			order = {},
+			top_index = 1,
+			pull_count = options.pull_count or "max"
+		}
+
+		-- top_list の順序をシャッフル
+		for ti = 1, #top_list do
+			picker.order[ti] = ti
 		end
+		ut.shuffle_array(picker.order)
+
+		-- 各 top_list の groups を処理
+		for ti = 1, #top_list do
+			local groups = top_list[ti]
+
+			picker.groups[ti] = {}
+
+			-- 各 group を処理（順序は維持）
+			for gi = 1, #groups do
+				local group = groups[gi]
+
+				-- leaf の shallow copy を作成してシャッフル
+				local items_copy = ut.shallow_copy(group)
+				ut.shuffle_array(items_copy)
+
+				picker.groups[ti][gi] = {
+					items = items_copy,
+					index = 1
+				}
+			end
+		end
+
+		return picker
+	end
+
+	-- 1ラウンド分抽出（groups から指定数のグループから1個ずつ）
+	rnd_picker.pull_round_from_groups = function(groups, pull_count)
+		local result = {}
+
+		-- 抽出するグループ数を決定
+		local num_groups_to_pull
+		if pull_count == "max" then
+			num_groups_to_pull = #groups
+		elseif pull_count == "random" then
+			num_groups_to_pull = math.random(1, #groups)
+		elseif type(pull_count) == "number" then
+			-- 数値: 指定値〜最大の間でランダム
+			local min_count = math.max(1, math.min(pull_count, #groups))
+			num_groups_to_pull = math.random(min_count, #groups)
+		else
+			num_groups_to_pull = #groups
+		end
+
+		-- 先頭から指定数のグループから抽出
+		for gi = 1, num_groups_to_pull do
+			local group = groups[gi]
+
+			-- leaf が枯渇していたら再シャッフル
+			if group.index > #group.items then
+				ut.shuffle_array(group.items)
+				group.index = 1
+			end
+
+			-- leaf を取り出す
+			local leaf = group.items[group.index]
+			group.index = group.index + 1
+
+			table.insert(result, leaf)
+		end
+
+		return result
+	end
+
+	-- ランダム抽出のメイン関数
+	rnd_picker.random_pull = function(picker)
+		-- 現在の top_list インデックスを取得
+		local ti = picker.order[picker.top_index]
+		local groups = picker.groups[ti]
+
+		-- 1ラウンド分を抽出
+		local result = rnd_picker.pull_round_from_groups(groups, picker.pull_count)
+
+		-- top_index を進める（末尾に達したらループ）
+		picker.top_index = picker.top_index + 1
+		if picker.top_index > #picker.order then
+			picker.top_index = 1
+		end
+
+		return result
+	end
+
+	-- デモ用のテストコード
+	rnd_picker.demo = function()
+		print("========================================")
+		print("ランダム抽出システム デモ")
+		print("========================================\n")
+
+		-- テストデータ作成（leaf はオブジェクト扱い）
+		local leaf_A1 = { name = "A1" }
+		local leaf_A2 = { name = "A2" }
+		local leaf_A3 = { name = "A3" }
+		local leaf_B1 = { name = "B1" }
+		local leaf_C1 = { name = "C1" }
+		local leaf_C2 = { name = "C2" }
+		local leaf_D1 = { name = "D1" }
+		local leaf_D2 = { name = "D2" }
+		local leaf_E1 = { name = "E1" }
+		local leaf_E2 = { name = "E2" }
+		local leaf_E3 = { name = "E3" }
+		local leaf_E4 = { name = "E4" }
+
+		-- top_list 構築
+		local top_list = {
+			-- groups 1
+			{
+				{ leaf_A1, leaf_A2, leaf_A3 }, -- group 1
+				{ leaf_B1 },     -- group 2
+				{ leaf_C1, leaf_C2 } -- group 3
+			},
+			-- groups 2
+			{
+				{ leaf_D1, leaf_D2 },    -- group 1
+				{ leaf_E1, leaf_E2, leaf_E3, leaf_E4 } -- group 2
+			}
+		}
+
+		print("■ top_list 構造:")
+		print("  groups[1]: 3 groups (3 leafs, 1 leaf, 2 leafs)")
+		print("  groups[2]: 2 groups (2 leafs, 4 leafs)\n")
+
+		math.randomseed(os.time())
+
+		-- テスト1: デフォルト（max）
+		print("========================================")
+		print("テスト1: pull_count = 'max' (デフォルト)")
+		print("========================================")
+		local picker1 = rnd_picker.create_picker(top_list)
+		print("  top_list 順序: " .. table.concat(picker1.order, ", ") .. "\n")
+
+		for round = 1, 5 do
+			local result = rnd_picker.random_pull(picker1)
+			local names = {}
+			for i = 1, #result do
+				table.insert(names, result[i].name)
+			end
+			print(string.format("  Round %d: [%s] (%d個)", round, table.concat(names, ", "), #result))
+		end
+
+		-- テスト2: 固定数（2グループ）
+		print("\n========================================")
+		print("テスト2: pull_count = 2（2〜最大のランダム）")
+		print("========================================")
+		local picker2 = rnd_picker.create_picker(top_list, { pull_count = 2 })
+		print("  top_list 順序: " .. table.concat(picker2.order, ", ") .. "\n")
+
+		for round = 1, 5 do
+			local result = rnd_picker.random_pull(picker2)
+			local names = {}
+			for i = 1, #result do
+				table.insert(names, result[i].name)
+			end
+			print(string.format("  Round %d: [%s] (%d個)", round, table.concat(names, ", "), #result))
+		end
+
+		-- テスト3: 最小値1
+		print("\n========================================")
+		print("テスト3: pull_count = 1（1〜最大のランダム）")
+		print("========================================")
+		local picker3 = rnd_picker.create_picker(top_list, { pull_count = 1 })
+		print("  top_list 順序: " .. table.concat(picker3.order, ", ") .. "\n")
+
+		for round = 1, 10 do
+			local result = rnd_picker.random_pull(picker3)
+			local names = {}
+			for i = 1, #result do
+				table.insert(names, result[i].name)
+			end
+			print(string.format("  Round %d: [%s] (%d個)", round, table.concat(names, ", "), #result))
+		end
+
+		-- テスト4: ランダム（"random"）
+		print("\n========================================")
+		print("テスト4: pull_count = 'random'（1〜最大のランダム）")
+		print("========================================")
+		local picker4 = rnd_picker.create_picker(top_list, { pull_count = "random" })
+		print("  top_list 順序: " .. table.concat(picker4.order, ", ") .. "\n")
+
+		for round = 1, 10 do
+			local result = rnd_picker.random_pull(picker4)
+			local names = {}
+			for i = 1, #result do
+				table.insert(names, result[i].name)
+			end
+			print(string.format("  Round %d: [%s] (%d個)", round, table.concat(names, ", "), #result))
+		end
+
+		print("\n========================================")
+		print("デモ終了")
+		print("========================================")
+	end
+	-- デモ実行（コメントアウトを外して実行）
+	--rnd_picker.demo()
+
+	tra_sub.new_combo = function(p, reset_picker)
 		p.combo          = p.combo or {}
 		p.combo.state    = "neutral"
-		p.combo.list     = next_list
 		p.combo.last     = false
 		p.combo.count    = 0 -- 入力リストのカウンタ
 		p.combo.input    = nil -- 次の入力反映候補
@@ -5262,14 +5482,36 @@ rbff2.startplugin  = function()
 		p.combo.lag      = 0
 		p.combo.advance  = false
 		p.combo.timeout  = false
+		p.combo.pull_cnt = p.combo.pull_cnt or 1
+		if reset_picker or p.combo.picker == nil then
+			local top_list = get_next_combo(p)
+			-- picker を作成
+			if #top_list == 0 then
+				p.combo.picker = nil
+			else
+				local mode = p.combo.pull_cnt
+				p.combo.picker = rnd_picker.create_picker(top_list, {
+					pull_count = (mode == 1) and "max" or ((mode == 2) and "random" or (mode - 2))
+				})
+			end
+		end
+		-- 1ラウンド分抽出（各groupから1つずつ）
+		local list       = p.combo.picker and rnd_picker.random_pull(p.combo.picker) or {}
+		ut.print_table(list, to_sjis)
+		p.combo.list     = list
 		return p.combo
 	end
 
 	-- 自動CA対応の練習用(仮実装中)
 	tra_sub.controll_dummy_combo = function(p)
-		local c = p.combo or tra_sub.new_combo(p)
+		local c
 		if p.normal_state ~= true then
-			c = tra_sub.new_combo(p)
+			p.combo = nil
+			return nil
+		elseif p.combo == nil then
+			c = tra_sub.new_combo(p, true)
+		else
+			c = p.combo
 		end
 		local moving = (p.flag_c4 > 0) or
 			(p.flag_c8 > 0) or
@@ -5362,6 +5604,7 @@ rbff2.startplugin  = function()
 			end
 
 			c.count = 1
+			c.list = c.list or {}
 			c.last = c.count == #c.list
 			c.input = c.list[1]
 			c.lag = 0
@@ -5429,6 +5672,10 @@ rbff2.startplugin  = function()
 			c.timeout = false
 			do_log()
 			--print("input", c.count)
+			-- 2段目は必殺技だと空キャンセルになるので通常、特殊、CAのみ許す
+			if c.count == 2 then
+				return c.hook_cmd
+			end
 			return c.input
 		end
 
@@ -7216,7 +7463,7 @@ rbff2.startplugin  = function()
 			p.block1 = 0
 			p.dummy_enc = get_next_enc(p) -- 邀撃動作セット
 			p.dummy_fol = get_next_fol(p) -- 自動必殺技セット
-			tra_sub.new_combo(p) -- プリセットコンボ更新
+			p.combo = nil -- プリセットコンボ更新用
 			p.rvs_count, p.dummy_rvs = -1, get_next_rvs(p) -- リバサガードカウンター初期化、キャラとBSセット
 			p.bs_count, p.dummy_bs = -1, get_next_bs(p) -- BSガードカウンター初期化、キャラとBSセット
 		end

@@ -620,5 +620,40 @@ local compress_txt = function(s)
 end
 
 ut.compress_txt      = compress_txt
+
+-- Fisher-Yates シャッフル（インプレースでシャッフル）
+ut.shuffle_array = function(arr)
+	for i = #arr, 2, -1 do
+		local j = math.random(1, i)
+		arr[i], arr[j] = arr[j], arr[i]
+	end
+end
+
+-- shallow copy（参照をコピー）
+ut.shallow_copy = function(arr)
+	local result = {}
+	for i = 1, #arr do
+		result[i] = arr[i]
+	end
+	return result
+end
+
+local print_table
+local dummy_enc = function(str) return str end
+print_table = function(t, indent, enc)
+	enc = enc or dummy_enc
+	indent = indent or ""
+	for k, v in pairs(t) do
+		if type(v) == "table" then
+			print(enc(indent .. tostring(k) .. ": {"))
+			print_table(v, indent .. "  ", enc) -- Recursive call for nested tables
+			print(enc(indent .. "}"))
+		else
+			print(enc(indent .. tostring(k) .. ": " .. tostring(v)))
+		end
+	end
+end
+ut.print_table = function(t, enc) print_table(t, nil, enc) end
+
 print("util loaded")
 return ut
