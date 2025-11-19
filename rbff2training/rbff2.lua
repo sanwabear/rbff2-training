@@ -1476,7 +1476,7 @@ rbff2.startplugin  = function()
 
 	-- 通常投げ間合い
 	-- 家庭用0x05D78Cからの処理
-	local get_normal_throw_box                         = function(p)
+	local get_normal_throw_range                       = function(p)
 		-- 相手が向き合いか背向けかで押し合い幅を解決して反映
 		local push_box, op_push_box = db.chars[p.char].push_box[0x5C9BC], db.chars[p.op.char].push_box[0x5C9BC]
 		local op_edge = (p.block_side == p.op.block_side) and op_push_box.back or op_push_box.front
@@ -1484,6 +1484,10 @@ rbff2.startplugin  = function()
 		local range = mem.r08(0x05D874 + p.char4)
 		local left = center - range
 		local right = center + range
+		return left, right
+	end
+	local get_normal_throw_box                         = function(p)
+		local left, right = get_normal_throw_range(p)
 		return fix_throw_box_pos({
 			id = 0x100, -- dummy
 			type = db.box_types.normal_throw,
@@ -1557,7 +1561,7 @@ rbff2.startplugin  = function()
 	end
 
 	local get_throwbox                                 = function(p, id)
-		if id == 0x100 then
+		if id == 0x100 or (id == nil) then
 			return get_normal_throw_box(p)
 		elseif id == 0x200 then
 			return get_air_throw_box(p)
@@ -2046,6 +2050,7 @@ rbff2.startplugin  = function()
 				advance     = false,
 				timeout     = false,
 				rnd_count   = 1,
+				ranges      = {},
 			},
 			encounter       = {
 				type        = 1, -- 1:OFF 2:邀撃技
@@ -3006,7 +3011,7 @@ rbff2.startplugin  = function()
 		-- 判定表示前の座標がらみの関数
 		p.x, p.y, p.flip_x = 0, 0, 0
 		p.calc_range_x = function(range_x) return p.x + range_x * p.flip_x end -- 自身の範囲の座標計算
-		-- 自身が指定の範囲内かどうかの関数
+		-- 自身の指定する範囲内に相手がいるかどうかの関数
 		p.within = function(x1, x2) return (x1 <= p.op.x and p.op.x <= x2) or (x1 >= p.op.x and p.op.x >= x2) end
 
 		p.wp08 = ut.hash_add_all(p.wp08, {
@@ -5097,16 +5102,27 @@ rbff2.startplugin  = function()
 
 				-- 地上通常技かライン移動技の遠近判断距離
 				if p.pos_y + p.pos_frc_y == 0 then
+					local box = {}
+					box.left, box.right = get_normal_throw_range(p)
+					box.left, box.right = math.abs(box.left), math.abs(box.right)
+					--print(p.num, "pb", box.left, box.right)
+					p.combo.ranges["pb"] = box -- プリセットコンボ用の間合い保存
 					for label, close_far in pairs(p.char_data.close_far[p.sway_status]) do
+						local org_x1, org_x2 = close_far.x1, close_far.x2
 						local x1, x2 = close_far.x1 == 0 and p.x or p.calc_range_x(close_far.x1), p.calc_range_x(close_far.x2)
-						table.insert(ranges, {
+						local range = {
 							label = label,
 							x = x2,
 							y = p.y,
 							flip_x = -p.flip_x, -- 内側に太線を引きたいのでflipを反転する
 							within = p.within(x1, x2),
 							p = p,
-						})
+							left = org_x1,
+							right = org_x2,
+						}
+						--print(p.num, label, x1, x2)
+						p.combo.ranges[label] = range -- プリセットコンボ用の間合い保存
+						table.insert(ranges, range)
 					end
 				end
 			end
@@ -5494,6 +5510,7 @@ rbff2.startplugin  = function()
 				p.combo.picker = nil
 			else
 				local mode = p.combo.rnd_count
+				local count = (mode - 2) + 1 -- メニュー固定2を引いて、間合い管理の要素+1をする
 				p.combo.picker = rnd_picker.create_picker(top_list, {
 					pull_count = (mode == 1) and "max" or ((mode == 2) and "random" or (mode - 2))
 				})
@@ -5502,8 +5519,71 @@ rbff2.startplugin  = function()
 		-- 1ラウンド分抽出（各groupから1つずつ）
 		local list = p.combo.picker and rnd_picker.random_pull(p.combo.picker) or {}
 		ut.print_table(list, to_sjis)
+		local range_elm = table.remove(list, 1)
+		p.combo.range = range_elm and range_elm.range or ""
 		p.combo.list = list
-		return list
+		return p.combo.range, p.combo.list
+	end
+
+
+	-- 座標範囲をチェックして前進/後退コマンドを実行する関数
+	-- pattern: "close" または "far"
+	-- x1: 手前の座標
+	-- x2: 奥の座標
+	-- xp: 現在のプレイヤー座標
+	-- speed: 移動速度（2～5）
+	-- forwardCmd: 前進コマンド関数
+	-- backwardCmd: 後退コマンド関数
+	function tra_sub.checkPositionAndMove(pattern, x1, x2, xp, speed, forwardCmd, backwardCmd)
+		local inRange = false
+		local needMove = ""
+
+		if pattern == "close" then
+			-- closeパターン: x1以上でx2以下なら範囲内
+			if xp >= x1 and xp <= x2 then
+				inRange = true
+			elseif xp < x1 then
+				needMove = "forward"  -- x1より手前にいるので前進
+			else -- xp > x2
+				needMove = "backward" -- x2より奥にいるので後退
+			end
+			
+		elseif pattern == "far" then
+			-- farパターン: x2以上で範囲内
+			if xp >= x2 then
+				inRange = true
+			else
+				needMove = "forward"  -- x2より手前にいるので前進
+			end
+			
+		else
+			print("エラー: パターンは'close'または'far'を指定してください")
+			return false
+		end
+		
+		-- 範囲内ならコマンド実行不要
+		if inRange then
+			print(string.format("範囲内です (pattern=%s, xp=%.2f, x1=%.2f, x2=%.2f)", 
+				pattern, xp, x1, x2))
+			return true
+		end
+		
+		-- 範囲外なら適切なコマンドを実行
+		if needMove == "forward" then
+			print(string.format("範囲外: 前進します (pattern=%s, xp=%.2f → x1=%.2f, speed=%d)", 
+				pattern, xp, x1, speed))
+			if forwardCmd then
+				forwardCmd(speed)
+			end
+		elseif needMove == "backward" then
+			print(string.format("範囲外: 後退します (pattern=%s, xp=%.2f → x2=%.2f, speed=%d)", 
+				pattern, xp, x2, speed))
+			if backwardCmd then
+				backwardCmd(speed)
+			end
+		end
+		
+		return false
 	end
 
 	-- 自動CA対応の練習用(仮実装中)
@@ -5606,7 +5686,7 @@ rbff2.startplugin  = function()
 			end
 
 			c.count = 1
-			c.list = tra_sub.reload_combo(p)
+			c.range, c.list = tra_sub.reload_combo(p)
 			c.last = c.count == #c.list
 			c.input = c.list[1]
 			c.lag = 0
@@ -5625,20 +5705,49 @@ rbff2.startplugin  = function()
 
 		if c.state == "walk" then
 			local space = math.abs(p.pos - p.op.pos)
-			space = space - 40
-			if math.abs(space) < 3 then
+			local key = c.range == "pb" and "pb" or c.input.range_key or "A"
+			local range = c.ranges[key] or c.ranges["A"]
+			local x1, x2 = math.min(range.left, range.right), math.max(range.left, range.right)
+			local in_range = 0
+			if c.range == "far" then
+				x1, x2 = x2, x2 + 5
+				--print(key, x1, x2, space)
+				if space >= x1 and space <= x2 then
+					in_range = 0
+				elseif space < x1 then
+					in_range = -1
+				else
+					in_range = 1
+				end
+			elseif c.range == "pb" then
+				x1, x2 = x1, x2
+				--print(key, x1, x2, space)
+				if space >= x1 and space <= x2 then
+					in_range = 0
+				elseif space < x1 then
+					in_range = -1
+				else
+					in_range = 1
+				end
+			else
+				x1, x2 = x2 - 5, x2
+				--print(key, x1, x2, space)
+				if space >= x1 and space <= x2 then
+					in_range = 0
+				elseif space < x1 then
+					in_range = -1
+				else
+					in_range = 1
+				end
+			end
+			if in_range > 0 then
+				return db.common_rvs.walk -- x1より手前にいるので前進
+			elseif in_range < 0 then
+				return db.common_rvs.back -- x2より奥にいるので後退
+			else
 				c.state = "exec"
 				do_log()
 				-- すぐexecへ
-			else
-				if space > 0 then
-					if space < 8 then
-						return db.common_rvs.c_walk
-					end
-					return db.common_rvs.walk
-				else
-					return db.common_rvs.back
-				end
 			end
 		end
 
