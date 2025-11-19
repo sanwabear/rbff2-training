@@ -2045,8 +2045,7 @@ rbff2.startplugin  = function()
 				lag         = 0,
 				advance     = false,
 				timeout     = false,
-				min_count   = 2,
-				rnd_count   = false,
+				rnd_count   = 1,
 			},
 			encounter       = {
 				type        = 1, -- 1:OFF 2:邀撃技
@@ -5472,44 +5471,47 @@ rbff2.startplugin  = function()
 	--rnd_picker.demo()
 
 	tra_sub.new_combo = function(p, reset_picker)
-		p.combo          = p.combo or {}
-		p.combo.state    = "neutral"
-		p.combo.last     = false
-		p.combo.count    = 0 -- 入力リストのカウンタ
-		p.combo.input    = nil -- 次の入力反映候補
-		p.combo.hook_cmd = nil -- 次の入力反映候補
-		p.combo.hook_sp  = nil -- 次の入力反映候補
-		p.combo.lag      = 0
-		p.combo.advance  = false
-		p.combo.timeout  = false
-		p.combo.pull_cnt = p.combo.pull_cnt or 1
-		if reset_picker or p.combo.picker == nil then
+		p.combo           = p.combo or {}
+		p.combo.state     = "neutral"
+		p.combo.last      = false
+		p.combo.count     = 0 -- 入力リストのカウンタ
+		p.combo.input     = nil -- 次の入力反映候補
+		p.combo.hook_cmd  = nil -- 次の入力反映候補
+		p.combo.hook_sp   = nil -- 次の入力反映候補
+		p.combo.lag       = 0
+		p.combo.advance   = false
+		p.combo.timeout   = false
+		p.combo.rnd_count = p.combo.rnd_count or 1
+		p.combo.picker    = not reset_picker and p.combo.picker or nil
+		return p.combo
+	end
+
+	tra_sub.reload_combo = function(p)
+		if p.combo.picker == nil then
 			local top_list = get_next_combo(p)
 			-- picker を作成
 			if #top_list == 0 then
 				p.combo.picker = nil
 			else
-				local mode = p.combo.pull_cnt
+				local mode = p.combo.rnd_count
 				p.combo.picker = rnd_picker.create_picker(top_list, {
 					pull_count = (mode == 1) and "max" or ((mode == 2) and "random" or (mode - 2))
 				})
 			end
 		end
 		-- 1ラウンド分抽出（各groupから1つずつ）
-		local list       = p.combo.picker and rnd_picker.random_pull(p.combo.picker) or {}
+		local list = p.combo.picker and rnd_picker.random_pull(p.combo.picker) or {}
 		ut.print_table(list, to_sjis)
-		p.combo.list     = list
-		return p.combo
+		p.combo.list = list
+		return list
 	end
 
 	-- 自動CA対応の練習用(仮実装中)
 	tra_sub.controll_dummy_combo = function(p)
 		local c
 		if p.normal_state ~= true then
-			p.combo = nil
-			return nil
-		elseif p.combo == nil then
 			c = tra_sub.new_combo(p, true)
+			return nil
 		else
 			c = p.combo
 		end
@@ -5604,7 +5606,7 @@ rbff2.startplugin  = function()
 			end
 
 			c.count = 1
-			c.list = c.list or {}
+			c.list = tra_sub.reload_combo(p)
 			c.last = c.count == #c.list
 			c.input = c.list[1]
 			c.lag = 0
@@ -7463,7 +7465,7 @@ rbff2.startplugin  = function()
 			p.block1 = 0
 			p.dummy_enc = get_next_enc(p) -- 邀撃動作セット
 			p.dummy_fol = get_next_fol(p) -- 自動必殺技セット
-			p.combo = nil -- プリセットコンボ更新用
+			p.combo     = tra_sub.new_combo(p, true) -- プリセットコンボ更新用
 			p.rvs_count, p.dummy_rvs = -1, get_next_rvs(p) -- リバサガードカウンター初期化、キャラとBSセット
 			p.bs_count, p.dummy_bs = -1, get_next_bs(p) -- BSガードカウンター初期化、キャラとBSセット
 		end
@@ -7480,8 +7482,12 @@ rbff2.startplugin  = function()
 				end
 			elseif row == 2 and p1.dummy_act == menu.dummy_acts.combo then
 				next_menu = menu.combo_menus[1][p1.char] -- 1P プリセットコンボ
+				local col1 = next_menu.pos.col
+				col1[#col1] = p1.combo and p1.combo.rnd_count or 1
 			elseif row == 3 and p2.dummy_act == menu.dummy_acts.combo then
 				next_menu = menu.combo_menus[2][p2.char] -- 2P プリセットコンボ
+				local col2 = next_menu.pos.col
+				col2[#col2] = p2.combo and p2.combo.rnd_count or 1
 			elseif p1.enc_enabled and row == 19 then
 				next_menu = "encounter1" -- 1P 邀撃(ようげき)行動
 			elseif p2.enc_enabled and row == 20 then
@@ -7893,6 +7899,7 @@ rbff2.startplugin  = function()
 		table.insert(menu.rvs_menus,   p_rvs)
 		table.insert(menu.enc_menus,   p_enc)
 		table.insert(menu.combo_menus, p_combo)
+		-- ブレイクショット選択メニュー作成
 		for _, char_data in pairs(db.chars) do
 			if not char_data.bs then break end
 			local list, on_ab, col = {}, {}, {}
@@ -7925,6 +7932,7 @@ rbff2.startplugin  = function()
 			table.insert(on_ab, to_tra)
 			table.insert(col, 1)
 		end
+		-- 自動必殺技選択メニュー作成
 		for _, char_data in pairs(db.chars) do
 			if not char_data.fol then break end
 			local list, on_ab, col = {}, {}, {}
@@ -7942,6 +7950,7 @@ rbff2.startplugin  = function()
 				table.insert(col, 1)
 			end
 		end
+		-- リバーサル技選択メニュー作成
 		for _, char_data in pairs(db.chars) do
 			if not char_data.rvs then break end
 			local list, on_ab, col = {}, {}, {}
@@ -7959,6 +7968,7 @@ rbff2.startplugin  = function()
 				table.insert(col, 1)
 			end
 		end
+		-- 邀撃(ようげき)技選択メニュー作成
 		for _, char_data in pairs(db.chars) do
 			if not char_data.enc then break end
 			local list, on_ab, col = {}, {}, {}
@@ -7976,6 +7986,9 @@ rbff2.startplugin  = function()
 				table.insert(col, 1)
 			end
 		end
+		-- プリセットコンボ選択メニュー作成
+		local combo_random_label = { "FULL", "RANDOM" }
+		for rnd = 1, 10 do table.insert(combo_random_label, string.format("RANDOM(%s～FULL)", rnd)) end
 		for _, char_data in pairs(db.chars) do
 			if not char_data.combo then break end
 			local list, on_ab, col = {}, {}, {}
@@ -7987,11 +8000,23 @@ rbff2.startplugin  = function()
 				on_a = on_ab,
 				on_b = on_ab,
 			})
+			-- 共通の動作だが追加する行数が違うのでキャラごとに生成する必要がある
+			local to_tra = function()
+				local p = players[i]
+				p.combo.rnd_count = col[#col]
+				menu.combo_to_tra()
+			end
 			for _, bs in ipairs(char_data.combo) do
 				table.insert(list, { ut.convert(bs.name), menu.labels.off_on, row = #list, })
-				table.insert(on_ab, menu.combo_to_tra)
+				table.insert(on_ab, to_tra)
 				table.insert(col, 1)
 			end
+			table.insert(list, { title = true, "ロード設定" })
+			table.insert(on_ab, to_tra)
+			table.insert(col, 0)
+			table.insert(list, { "コンボ段数", combo_random_label })
+			table.insert(on_ab, to_tra)
+			table.insert(col, 1)
 		end
 	end
 	for i = 1, 61 do table.insert(menu.labels.block_frames, string.format("%sF後にガード解除", (i - 1))) end
