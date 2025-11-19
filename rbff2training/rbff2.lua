@@ -5518,7 +5518,7 @@ rbff2.startplugin  = function()
 		end
 		-- 1ラウンド分抽出（各groupから1つずつ）
 		local list = p.combo.picker and rnd_picker.random_pull(p.combo.picker) or {}
-		ut.print_table(list, to_sjis)
+		--ut.print_table(list, to_sjis)
 		local range_elm = table.remove(list, 1)
 		p.combo.range = range_elm and range_elm.range or ""
 		p.combo.list = list
