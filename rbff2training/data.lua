@@ -1835,10 +1835,14 @@ local rvs_bs_list = {
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント ハリケーンアッパー", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント スラッシュキック", },
 		{ cmd = cmd_types._2C, hook_type = hook_cmd_types.add_throw, name = "夏のおもひで(_2_+_C)", },
-		"A C 0x46",
-		"B C 0x46",
-		"4B [0x46 0x05]",
-		"2A 2B 8C",
+		"close A C [0x46, 0x05]",
+		"close B C [0x46, 0x05]",
+		"far B C 0x46",
+		"far 4B [0x46 0x06]",
+		"close [2A 2B] 2B 8C",
+		"close 4B 0x46",
+		"far 3B",
+		"pb 3C",
 	},
 	-- 不知火舞
 	{
@@ -2327,6 +2331,33 @@ local fallback_parse_token = function(token, fallback_list)
 	-- 何も一致しない
 	return nil
 end
+-- 文字列の先頭にあるプレフィックス（far, close, pb）を検出して分離する関数
+-- なし  40ドット程度
+-- far   遠距離技の間合い
+-- close 近距離技の間合い
+-- pb    通常投げの間合い
+local separate_range_prefix = function(str)
+	-- nilや空文字列のチェック
+	if not str or str == "" then
+		return "", str
+	end
+
+	-- プレフィックスのパターンリスト
+	local prefixes = { "far", "close", "pb" }
+
+	-- 各プレフィックスをチェック
+	for _, prefix in ipairs(prefixes) do
+		-- 文字列が指定のプレフィックスで始まるかチェック
+		if str:sub(1, #prefix) == prefix then
+			-- プレフィックスとその後続文字列を分離
+			local remaining = str:sub(#prefix + 1)
+			return prefix, remaining
+		end
+	end
+
+	-- プレフィックスが見つからない場合
+	return "", str
+end
 -- 文字列をスペースで分割し、スペース区切りのレバーボタン操作を分解してフック形式の構造体リストに変換して返す
 local parse_combo_string = function(char_id, str)
 	str = ut.trim(str)
@@ -2344,7 +2375,7 @@ local parse_combo_string = function(char_id, str)
 			cmd, lag = token, 5
 		end
 
-		local cmd_name, sp_name = {}, nil
+		local cmd_name, sp_name, range_key = {}, nil, nil
 		for c in cmd:gmatch(".") do
 			local key = "_" .. c
 			table.insert(cmd_name, key)
@@ -2352,6 +2383,9 @@ local parse_combo_string = function(char_id, str)
 			key_r = key_r and ("_" .. key_r) or key
 			local value = cmd_types[key]
 			local value_r = (key_r == key) and value or cmd_types[key_r]
+			if (range_key == nil) and (c == "A" or c == "B" or c == "C") then
+				range_key = c
+			end
 
 			if not value then
 				-- コマンド検索で失敗したらフォールバックへ
@@ -2374,6 +2408,7 @@ local parse_combo_string = function(char_id, str)
 			-- 正常処理成功
 			local hook = {
 				lag = lag,
+				range_key = range_key or "A",
 				-- コマンドの右向き左向きをあらわすデータ値をキーにしたテーブルを用意
 				cmd = (merged == merged_r) and merged or { [1] = merged, [-1] = merged_r, },
 				name = string.format("%s:%s", #results + 1, token),
@@ -2384,53 +2419,58 @@ local parse_combo_string = function(char_id, str)
 	end
 	return table.concat(names, "‐"), results
 end
-
 -- テキストをパースして、グループごとに分割する
 local function parse_groups(char_id, str)
-    local result = {}
-    
-    -- 前後の空白除去
-    str = str:gsub("^%s+", ""):gsub("%s+$", "")
+	local result = {}
+	local range
+	range, str = separate_range_prefix(str)
 
-    -- グループ抽出ループ
-    local idx = 1
-    while idx <= #str do
-        -- 1) 括弧グループの検出
-        local s, e, inside = str:find("%[([^%]]+)%]", idx)
-        if s then
-            -- 括弧前の独立ワードがあれば処理
-            if idx < s then
-                local before = str:sub(idx, s - 1):match("^%s*(.-)%s*$")
-                for word in before:gmatch("%S+") do
+	-- 前後の空白除去
+	str = str:gsub("^%s+", ""):gsub("%s+$", "")
+
+	-- グループ抽出ループ
+	local idx = 1
+	while idx <= #str do
+		-- 1) 括弧グループの検出
+		local s, e, inside = str:find("%[([^%]]+)%]", idx)
+		if s then
+			-- 括弧前の独立ワードがあれば処理
+			if idx < s then
+				local before = str:sub(idx, s - 1):match("^%s*(.-)%s*$")
+				for word in before:gmatch("%S+") do
 					local name, group = parse_combo_string(char_id, word)
 					table.insert(result, group)
-                end
-            end
+				end
+			end
 
-            -- 括弧内を分割
-			local name, group = parse_combo_string(char_id, inside)
+			-- 括弧内を分割
+			local _, group = parse_combo_string(char_id, inside)
 			table.insert(result, group)
 
-            idx = e + 1
-        else
-            -- 2) 括弧がもうない → 残りを単語ごとに処理
-            local rest = str:sub(idx):match("^%s*(.-)%s*$")
-            for word in rest:gmatch("%S+") do
-				local name, group = parse_combo_string(char_id, word)
+			idx = e + 1
+		else
+			-- 2) 括弧がもうない → 残りを単語ごとに処理
+			local rest = str:sub(idx):match("^%s*(.-)%s*$")
+			for word in rest:gmatch("%S+") do
+				local _, group = parse_combo_string(char_id, word)
 				table.insert(result, group)
-            end
-            break
-        end
-    end
+			end
+			break
+		end
+	end
 
-    return str, result
+	return range, str, result
 end
 
 for char, list in ipairs(rvs_bs_list) do
 	for i = 1, #list do
 		local rvs = list[i]
 		if type(rvs) == "string" then
-			local name, combo = parse_groups(char, rvs)
+			local range, name, combo = parse_groups(char, rvs)
+			-- 先頭に間合い情報を入れる
+			table.insert(combo, 1, { -- group
+				{ range = range, range_key = #combo > 0 and combo[1].range_key or "A" } -- leaf
+			})
 			list[i] = { combo = combo, hook_type = hook_cmd_types.combo, name = ut.convert(name) }
 			--print(char, i , name, #combo)
 		end

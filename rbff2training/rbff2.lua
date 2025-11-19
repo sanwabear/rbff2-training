@@ -5525,68 +5525,7 @@ rbff2.startplugin  = function()
 		return p.combo.range, p.combo.list
 	end
 
-
-	-- 座標範囲をチェックして前進/後退コマンドを実行する関数
-	-- pattern: "close" または "far"
-	-- x1: 手前の座標
-	-- x2: 奥の座標
-	-- xp: 現在のプレイヤー座標
-	-- speed: 移動速度（2～5）
-	-- forwardCmd: 前進コマンド関数
-	-- backwardCmd: 後退コマンド関数
-	function tra_sub.checkPositionAndMove(pattern, x1, x2, xp, speed, forwardCmd, backwardCmd)
-		local inRange = false
-		local needMove = ""
-
-		if pattern == "close" then
-			-- closeパターン: x1以上でx2以下なら範囲内
-			if xp >= x1 and xp <= x2 then
-				inRange = true
-			elseif xp < x1 then
-				needMove = "forward"  -- x1より手前にいるので前進
-			else -- xp > x2
-				needMove = "backward" -- x2より奥にいるので後退
-			end
-			
-		elseif pattern == "far" then
-			-- farパターン: x2以上で範囲内
-			if xp >= x2 then
-				inRange = true
-			else
-				needMove = "forward"  -- x2より手前にいるので前進
-			end
-			
-		else
-			print("エラー: パターンは'close'または'far'を指定してください")
-			return false
-		end
-		
-		-- 範囲内ならコマンド実行不要
-		if inRange then
-			print(string.format("範囲内です (pattern=%s, xp=%.2f, x1=%.2f, x2=%.2f)", 
-				pattern, xp, x1, x2))
-			return true
-		end
-		
-		-- 範囲外なら適切なコマンドを実行
-		if needMove == "forward" then
-			print(string.format("範囲外: 前進します (pattern=%s, xp=%.2f → x1=%.2f, speed=%d)", 
-				pattern, xp, x1, speed))
-			if forwardCmd then
-				forwardCmd(speed)
-			end
-		elseif needMove == "backward" then
-			print(string.format("範囲外: 後退します (pattern=%s, xp=%.2f → x2=%.2f, speed=%d)", 
-				pattern, xp, x2, speed))
-			if backwardCmd then
-				backwardCmd(speed)
-			end
-		end
-		
-		return false
-	end
-
-	-- 自動CA対応の練習用(仮実装中)
+	-- プリセットコンボのロード
 	tra_sub.controll_dummy_combo = function(p)
 		local c
 		if p.normal_state ~= true then
