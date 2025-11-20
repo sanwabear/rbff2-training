@@ -5682,7 +5682,7 @@ rbff2.startplugin  = function()
 					in_range = 1
 				end
 			elseif c.range == "mid" then
-				x1, x2 = x1, x2
+				x1, x2 = x1, x2 + 80
 				--print(key, x1, x2, space)
 				if space >= x1 and space <= x2 then
 					in_range = 0
@@ -5692,7 +5692,7 @@ rbff2.startplugin  = function()
 					in_range = 1
 				end
 			elseif c.range == "pb" then
-				x1, x2 = x1, x2 + 100
+				x1, x2 = x1, x2
 				--print(key, x1, x2, space)
 				if space >= x1 and space <= x2 then
 					in_range = 0
