@@ -2047,6 +2047,7 @@ rbff2.startplugin  = function()
 				hook_cmd    = nil, -- 次の入力反映候補-コマンド
 				hook_sp     = nil, -- 次の入力反映候補-必殺技
 				lag         = 0,
+				kara        = false,
 				advance     = false,
 				timeout     = false,
 				rnd_count   = 1,
@@ -5495,6 +5496,7 @@ rbff2.startplugin  = function()
 		p.combo.hook_cmd  = nil -- 次の入力反映候補
 		p.combo.hook_sp   = nil -- 次の入力反映候補
 		p.combo.lag       = 0
+		p.combo.kara      = false
 		p.combo.advance   = false
 		p.combo.timeout   = false
 		p.combo.rnd_count = p.combo.rnd_count or 1
@@ -5629,6 +5631,7 @@ rbff2.startplugin  = function()
 			c.last = c.count == #c.list
 			c.input = c.list[1]
 			c.lag = 0
+			c.kara = false
 			if c.input then
 				c.state = "walk"
 				c.hook_cmd = c.input.cmd and c.input or nil
@@ -5644,9 +5647,14 @@ rbff2.startplugin  = function()
 
 		if c.state == "walk" then
 			local space = math.abs(p.pos - p.op.pos)
-			local key = c.range == "pb" and "pb" or c.input.range_key or "A"
-			local range = c.ranges[key] or c.ranges["A"]
-			local x1, x2 = math.min(range.left, range.right), math.max(range.left, range.right)
+			local x1, x2
+			if (c.range ~= nil) and type(c.range) == "number" then
+				x1, x2 = c.range, c.range
+			else
+				local key = c.range == "pb" and "pb" or c.input.range_key or "A"
+				local range = c.ranges[key] or c.ranges["A"]
+				x1, x2 = math.min(range.left, range.right), math.max(range.left, range.right)
+			end
 			local in_range = 0
 			if c.range == "far" then
 				x1, x2 = x2, x2 + 5
@@ -5745,6 +5753,7 @@ rbff2.startplugin  = function()
 				c.count    = c.count + 1
 				-- 次の input を準備
 				c.lag      = c.input.lag or 1 -- 今のラグ設定を次の待ち時間にする
+				c.kara     = c.input.kara and (c.input.kara == true) or false
 				c.last     = c.count == #c.list
 				c.input    = c.list[c.count]
 				c.hook_cmd = c.input.cmd and c.input or nil
@@ -5781,6 +5790,14 @@ rbff2.startplugin  = function()
 				--print("cap")
 				do_log()
 				--print("input", c.count)
+				return c.hook_sp
+			elseif c.kara and c.hook_sp and not c.advance then
+				-- 必殺技の空キャンセル
+				do_log()
+				return c.hook_sp
+			elseif ut.tstb(c.input.hook_type, hook_cmd_types.sp_throw) and c.hook_sp and not c.advance then
+				-- 投げ必殺技の場合はヒットorガード時のキャンセル
+				do_log()
 				return c.hook_sp
 			else
 				--print("sp")

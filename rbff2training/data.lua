@@ -1731,6 +1731,7 @@ local hook_cmd_types   = {
 	backstep     = 2 ^ 13,
 	followup     = 2 ^ 14,
 	combo        = 2 ^ 15,
+	combo_fin    = 2 ^ 16,
 }
 hook_cmd_types.ex_breakshot = hook_cmd_types.breakshot | hook_cmd_types.ex_breakshot
 local neutaral   = { cmd = cmd_types._5, hook_type = hook_cmd_types.none, common = true, name = "[共通] ニュートラル", }
@@ -1761,6 +1762,12 @@ local common_rvs = {
 	dash,
 	flyback,
 }
+local combo = function(str, name)
+	return { str = str, name = name, hook_type = hook_cmd_types.combo }
+end
+local combo_fin = function(str, name)
+	return { str = str, name = name, hook_type = hook_cmd_types.combo_fin }
+end
 -- idはコマンドテーブル上の技ID
 -- verは追加入力フラグとして認識される技ID
 local rvs_bs_list = {
@@ -1782,12 +1789,12 @@ local rvs_bs_list = {
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "トリプルゲイザー", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント バーンナックル", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント パワーゲイザー", },
-		"[A B 2A 2B] [B 2B] [C 6C 3C] [0x04 0x05 0x46 0x47]",
-		"3A C C [0x04 0x05 0x46 0x47]",
-		"A A C [0x04 0x05 0x46 0x47]",
-		"A C [0x04 0x05 0x46 0x47]",
-		"2A 2A 2C [0x04 0x05 0x46 0x47]",
-		"2A 2C [0x04 0x05 0x46 0x47]",
+		combo("[A B 2A 2B] [B 2B] [C 6C 3C] [0x04 0x05 0x46 0x47]"),
+		combo("3A C C [0x04 0x05 0x46 0x47]"),
+		combo("A A C [0x04 0x05 0x46 0x47]"),
+		combo("A C [0x04 0x05 0x46 0x47]"),
+		combo("2A 2A 2C [0x04 0x05 0x46 0x47]"),
+		combo("2A 2C [0x04 0x05 0x46 0x47]")
 	},
 	-- アンディ・ボガード
 	{
@@ -1806,13 +1813,11 @@ local rvs_bs_list = {
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 残影拳", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 飛翔拳", },
 		{ id = 0x48, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 超裂破弾", },
-		"B B [2C 0x03, 0x47]",
-		"AB [0x03, 0x04, 0x47]",
-		"AB [0x01, 0x02] [0x02]",
-		"2C [0x03 0x04 0x47]",
-		"A C [0x03, 0x04, 0x47]",
-		"3A C C [0x03 0x04 0x47]",
-		"3A C C [0x01, 0x02] [0x02]",
+		combo("far B B [2C 0x47]"),
+		combo("far AB [0x03 0x01 0x02]"),
+		combo("far 2C [0x03 0x47]"),
+		combo("far A C [0x03 0x47]"),
+		combo("close 3A C C 0x47"),
 	},
 	-- 東丈
 	{
@@ -1835,14 +1840,14 @@ local rvs_bs_list = {
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント ハリケーンアッパー", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント スラッシュキック", },
 		{ cmd = cmd_types._2C, hook_type = hook_cmd_types.add_throw, name = "夏のおもひで(_2_+_C)", },
-		"close A C [0x46, 0x05]",
-		"close B C [0x46, 0x05]",
-		"far B C 0x46",
-		"far 4B [0x46 0x06]",
-		"close [2A 2B] 2B 8C",
-		"close 4B 0x46",
-		"far 3B",
-		"pb 3C",
+		combo("close A C [0x46, 0x05]"),
+		combo("close B C [0x46, 0x05]"),
+		combo("far B C 0x46"),
+		combo("far 4B [0x46 0x06]"),
+		combo("close [2A 2B] 2B 8C"),
+		combo("close 4B 0x46"),
+		combo("far 3B"),
+		combo("pb 3C"),
 	},
 	-- 不知火舞
 	{
@@ -1858,8 +1863,8 @@ local rvs_bs_list = {
 		{ id = 0x23, f = 0x78, a = 0x00, hook_type = hook_cmd_types.wakeup, name = "跳ね蹴り", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 花蝶扇", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 花嵐", },
-		"2A B 3C",
-		"2A 2C 3C",
+		combo("2A B 3C"),
+		combo("2A 2C 3C"),
 	},
 	-- ギース・ハワード
 	{
@@ -1883,13 +1888,13 @@ local rvs_bs_list = {
 		{ cmd = cmd_types._5C, hook_type = hook_cmd_types.none, name = "飛燕失脚CA(_N_+_C)", }, -- 18
 		-- 自動CAのためにフックタイプを投げにしない。相手のやられ状態をチェックしなくてもいいようにしておく。
 		{ id = 0x07, f = 0x06, a = 0xFD, hook_type = hook_cmd_types.none, name = "真空投げ", }, -- 19
-		"6A C",
-		"6A(40) C",
-		"2B 2B 2C",
-		"4B 2D",
-		"2A 2C",
-		"2A C",
-		"A B 2C",
+		combo("pos120 6A(40) C", "飛燕失脚CA"),
+		combo("close 2B 2B 2C [0x46 0x047 0x01]", "_2_B _2_B _2_C 必"),
+		combo("close 2A C [0x46 0x047 0x01]", "_2_A _2_C 必"),
+		combo("pos120 4B 2D [0x46 0x047 0x01]", "_4_B _2_D 必"),
+		combo("pos120 0x1E 3B [0x46 0x01]", "_B 必"),
+		combo("pos120 4B 2D [0x46 0x01]", "雷光"),
+		combo("pos120 4B(15kara) [0x07 0x01 0x03 0x04 0x05]", "雷光(当身)投げ"),
 	},
 	-- 望月双角
 	{
@@ -1909,9 +1914,9 @@ local rvs_bs_list = {
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント いかづち", },
 		{ id = 0x50, f = 0x06, a = 0x00, hook_type = hook_cmd_types.add_throw, name = "地獄門", },
 		{ cmd = cmd_types._C, hook_type = hook_cmd_types.none, name = "喝CA(_C)", }, -- 16
-		"2A C",
-		"A C",
-		"B C",
+		combo("2A C"),
+		combo("A C"),
+		combo("B C"),
 	},
 	-- ボブ・ウィルソン
 	{
@@ -1931,17 +1936,17 @@ local rvs_bs_list = {
 		{ id = 0x21, f = 0x06, a = 0x00, hook_type = hook_cmd_types.otg_stomp, name = "リンクスファング", },
 		{ id = 0x23, f = 0x78, a = 0x00, hook_type = hook_cmd_types.wakeup, name = "ボブサマー", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント ダンシングバイソン", },
-		"A C",
-		"2A A C",
-		"B C",
-		"B B C",
-		"2B B C",
-		"2B B 3C",
-		"2A B C",
-		"2A B 3C",
-		"C C 6C",
-		"C C 8C",
-		"C C",
+		combo("A C"),
+		combo("2A A C"),
+		combo("B C"),
+		combo("B B C"),
+		combo("2B B C"),
+		combo("2B B 3C"),
+		combo("2A B C"),
+		combo("2A B 3C"),
+		combo("C C 6C"),
+		combo("C C 8C"),
+		combo("C C"),
 	},
 	-- ホンフゥ
 	{
@@ -1961,9 +1966,9 @@ local rvs_bs_list = {
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "よかトンハンマー", },
 		{ id = 0x21, f = 0x06, a = 0x00, hook_type = hook_cmd_types.otg_stomp, name = "トドメヌンチャク", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 制空烈火棍", },
-		"A C",
-		"A C 0x46 2C 0x46",
-		"B B C",
+		combo("A C"),
+		combo("A C 0x46 2C 0x46"),
+		combo("B B C"),
 	},
 	-- ブルー・マリー
 	{
@@ -1991,10 +1996,10 @@ local rvs_bs_list = {
 		{ cmd = cmd_types._B, hook_type = hook_cmd_types.none, name = "フェイスロック(_B)", }, -- 22
 		{ cmd = cmd_types._C, hook_type = hook_cmd_types.none, name = "投げっぱなしジャーマン(_C)", }, -- 23
 		{ cmd = cmd_types._4B, hook_type = hook_cmd_types.none, name = "リバースキック(ヤングダイブ中_4_+_B)", }, -- 24
-		"A C",
-		"B B 6C",
-		"B B 3C",
-		"2B 2B 2C",
+		combo("A C"),
+		combo("B B 6C"),
+		combo("B B 3C"),
+		combo("2B 2B 2C"),
 	},
 	-- フランコ・バッシュ
 	{
@@ -2011,8 +2016,8 @@ local rvs_bs_list = {
 		{ id = 0x23, f = 0x78, a = 0x00, hook_type = hook_cmd_types.wakeup, name = "スマッシュ", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント ハルマゲドンバスター", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント ガッツダンク", },
-		"A C 0x46",
-		"A C 0x46 A C B",
+		combo("A C 0x46"),
+		combo("A C 0x46 A C B"),
 	},
 	-- 山崎竜二
 	{
@@ -2039,10 +2044,10 @@ local rvs_bs_list = {
 		{ cmd = cmd_types._AD, hook_type = hook_cmd_types.none, name = "蛇使だまし・上段(_Aタメ押し_D)", }, -- 21
 		{ cmd = cmd_types._BD, hook_type = hook_cmd_types.none, name = "蛇使だまし・中段(_Bタメ押し_D)", }, -- 22
 		{ cmd = cmd_types._CD, hook_type = hook_cmd_types.none, name = "蛇使だまし・下段(_Cタメ押し_D)", }, -- 23
-		"B C",
-		"AB C",
-		"3A C",
-		"A 2C",
+		combo("B C"),
+		combo("AB C"),
+		combo("3A C"),
+		combo("A 2C"),
 	},
 	-- 秦崇秀
 	{
@@ -2062,10 +2067,10 @@ local rvs_bs_list = {
 		{ id = 0x10, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "帝王漏尽拳", },
 		{ id = 0x11, f = 0x06, a = 0x00, hook_type = hook_cmd_types.encounter | hook_cmd_types.ex_breakshot, name = "帝王空殺漏尽拳", },
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "海龍照臨", },
-		"A B C",
-		"2A 2B 2C",
-		"2A 2B 6C",
-		"C C C",
+		combo("A B C"),
+		combo("2A 2B 2C"),
+		combo("2A 2B 6C"),
+		combo("C C C"),
 	},
 	-- 秦崇雷,
 	{
@@ -2083,12 +2088,12 @@ local rvs_bs_list = {
 		{ id = 0x00, f = 0x06, a = 0xFE, hook_type = hook_cmd_types.add_attack, name = "帝王宿命拳(連射)", },
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "帝王龍声拳", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 帝王宿命拳", },
-		"2A 2B 2C",
-		"2A 2B 6C",
-		"B C C",
-		"B C 3C",
-		"C 2B",
-		"C 6B",
+		combo("2A 2B 2C"),
+		combo("2A 2B 6C"),
+		combo("B C C"),
+		combo("B C 3C"),
+		combo("C 2B"),
+		combo("C 6B"),
 	},
 	-- ダック・キング
 	{
@@ -2120,9 +2125,9 @@ local rvs_bs_list = {
 		{ id = 0x21, f = 0x06, a = 0x00, hook_type = hook_cmd_types.otg_stomp, name = "ショッキングボール", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント ダックダンス", },
 		{ id = 0x28, f = 0x06, a = 0x00, hook_type = hook_cmd_types.add_attack, act = 0x245, name = "旧ブレイクストーム", },
-		"2A A B C",
-		"2A A B 3C",
-		"2A A B 6C",
+		combo("2A A B C"),
+		combo("2A A B 3C"),
+		combo("2A A B 6C"),
 	},
 	-- キム・カッファン
 	{
@@ -2140,17 +2145,17 @@ local rvs_bs_list = {
 		{ id = 0x10, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "鳳凰天舞脚", },
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "鳳凰脚", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 鳳凰脚", },
-		"2A 2A A B 0x46",
-		"2A 2A A B C 0x46",
-		"A B",
-		"A B C",
-		"2A 2A A B",
-		"2A A B",
-		"2A 2A A B C",
-		"2A A B C",
-		"C A",
-		"C A B",
-		"C A B C",
+		combo("2A 2A A B 0x46"),
+		combo("2A 2A A B C 0x46"),
+		combo("A B"),
+		combo("A B C"),
+		combo("2A 2A A B"),
+		combo("2A A B"),
+		combo("2A 2A A B C"),
+		combo("2A A B C"),
+		combo("C A"),
+		combo("C A B"),
+		combo("C A B C"),
 	},
 	-- ビリー・カーン
 	{
@@ -2165,8 +2170,8 @@ local rvs_bs_list = {
 		{ id = 0x11, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "紅蓮殺棍", },
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "サラマンダーストリーム", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 強襲飛翔棍", },
-		"A C",
-		"2A 2C",
+		combo("A C"),
+		combo("2A 2C"),
 	},
 	-- チン・シンザン
 	{
@@ -2185,9 +2190,9 @@ local rvs_bs_list = {
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "ホエホエ弾", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 破岩撃", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント クッサメ砲", },
-		"2A 2C",
-		"A C",
-		"B C",
+		combo("2A 2C"),
+		combo("A C"),
+		combo("B C"),
 	},
 	-- タン・フー・ルー,
 	{
@@ -2200,8 +2205,8 @@ local rvs_bs_list = {
 		{ id = 0x10, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "旋風剛拳", },
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "大撃放", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 旋風剛拳", },
-		"AB C",
-		"3A C",
+		combo("AB C"),
+		combo("3A C"),
 	},
 	-- ローレンス・ブラッド
 	{
@@ -2218,9 +2223,9 @@ local rvs_bs_list = {
 		{ cmd = cmd_types._C, hook_type = hook_cmd_types.add_attack, name = "オーレィ中_C)", },
 		{ cmd = cmd_types._2C, hook_type = hook_cmd_types.add_attack, name = "オーレィ中_2_+_C", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.add_attack, name = "_6_3_2_+_C(オーレィ中_6_3_2_+_C)", },
-		"BC 2C",
-		"BC 6C",
-		"BC B",
+		combo("BC 2C"),
+		combo("BC 6C"),
+		combo("BC B"),
 	},
 	-- ヴォルフガング・クラウザー
 	{
@@ -2242,12 +2247,12 @@ local rvs_bs_list = {
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント ブリッツボール", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント カイザーウェイブ", },
 		{ id = 0x28, f = 0x06, a = 0x00, hook_type = hook_cmd_types.add_attack, name = "_2_3_6_+_C", },
-		"A C",
-		"B C",
-		"2A C",
-		"2B 2C",
-		"C 3C",
-		"C C",
+		combo("A C"),
+		combo("B C"),
+		combo("2A C"),
+		combo("2B 2C"),
+		combo("C 3C"),
+		combo("C C"),
 	},
 	-- リック・ストラウド
 	{
@@ -2265,12 +2270,12 @@ local rvs_bs_list = {
 		{ id = 0x10, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "ガイアブレス", },
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "ハウリング・ブル", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント シューティングスター", },
-		"2A 2A C",
-		"2A A C",
-		"2B 2C",
-		"B C",
-		"6C C",
-		"3A 6C",
+		combo("2A 2A C"),
+		combo("2A A C"),
+		combo("2B 2C"),
+		combo("B C"),
+		combo("6C C"),
+		combo("3A 6C"),
 	},
 	-- 李香緋
 	{
@@ -2292,10 +2297,10 @@ local rvs_bs_list = {
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.ex_breakshot, name = "真心牙（弾狙い）", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 天崩山", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 大鉄神", },
-		"2B 2B C",
-		"A C A C",
-		"A A A C",
-		"A A A B",
+		combo("2B 2B C"),
+		combo("A C A C"),
+		combo("A A A C"),
+		combo("A A A B"),
 	},
 	-- アルフレッド
 	{
@@ -2312,7 +2317,7 @@ local rvs_bs_list = {
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "ウェーブライダー", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント クリティカルウィング", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント オーグメンターウィング", },
-		"A A A",
+		combo("A A A"),
 	},
 }
 -- フォールバック関数
@@ -2336,27 +2341,32 @@ end
 -- far   遠距離技の間合い
 -- close 近距離技の間合い
 -- pb    通常投げの間合い
+-- posN  間合いNドット Nは数字
 local separate_range_prefix = function(str)
 	-- nilや空文字列のチェック
-	if not str or str == "" then
-		return "", str
-	end
-
-	-- プレフィックスのパターンリスト
-	local prefixes = { "far", "close", "pb" }
-
-	-- 各プレフィックスをチェック
-	for _, prefix in ipairs(prefixes) do
-		-- 文字列が指定のプレフィックスで始まるかチェック
-		if str:sub(1, #prefix) == prefix then
-			-- プレフィックスとその後続文字列を分離
-			local remaining = str:sub(#prefix + 1)
-			return prefix, remaining
-		end
-	end
-
-	-- プレフィックスが見つからない場合
+	if not str or str == "" then return "", str end
+	-- パターン1: posN (Nは数値)
+	local pos_num, remaining = str:match("^pos(%d+)(.*)$")
+	if pos_num then return tonumber(pos_num), remaining end
+	-- パターン2: far
+	if str:sub(1, 3) == "far" then return "far", str:sub(4) end
+	-- パターン3: close
+	if str:sub(1, 5) == "close" then return "close", str:sub(6) end
+	-- パターン4: pb
+	if str:sub(1, 2) == "pb" then return "pb", str:sub(3) end
+	-- マッチしない場合は空文字列とする
 	return "", str
+end
+-- 数字と"kara"を分離してパースする関数
+local parse_lag_kara        = function(str)
+	if not str or str == "" then return nil, nil end         -- nilや空文字列のチェック
+	if str:match("^%d+$") then return tonumber(str), nil end -- パターン1: 数字のみ（例: "15"）
+	if str == "kara" then return nil, "kara" end             -- パターン2: "kara"のみ
+	local num1 = str:match("^kara(%d+)$")
+	if num1 then return tonumber(num1), "kara" end           -- パターン3: kara+数字（例: "kara15"）
+	num1 = str:match("^(%d+)kara$")
+	if num1 then return tonumber(num1), "kara" end           -- パターン4: 数字+kara（例: "15kara"）
+	return nil, nil -- マッチしない場合
 end
 -- 文字列をスペースで分割し、スペース区切りのレバーボタン操作を分解してフック形式の構造体リストに変換して返す
 local parse_combo_string = function(char_id, str)
@@ -2367,10 +2377,11 @@ local parse_combo_string = function(char_id, str)
 
 	for token in string.gmatch(str, "%S+") do
 		local merged, merged_r, failed = nil, nil, false
-		local cmd, lag = token:match("^(.-)%((%d+)%)$")
+		local cmd, lag = token:match("^(.-)%(([%d%D]+)%)$")
+		local kara
 
 		if cmd and lag then
-			cmd, lag = cmd, tonumber(lag)
+			lag, kara = parse_lag_kara(lag)
 		else
 			cmd, lag = token, 5
 		end
@@ -2408,6 +2419,7 @@ local parse_combo_string = function(char_id, str)
 			-- 正常処理成功
 			local hook = {
 				lag = lag,
+				kara = kara ~= nil,
 				range_key = range_key or "A",
 				-- コマンドの右向き左向きをあらわすデータ値をキーにしたテーブルを用意
 				cmd = (merged == merged_r) and merged or { [1] = merged, [-1] = merged_r, },
@@ -2420,7 +2432,7 @@ local parse_combo_string = function(char_id, str)
 	return table.concat(names, "‐"), results
 end
 -- テキストをパースして、グループごとに分割する
-local function parse_groups(char_id, str)
+local parse_groups = function(char_id, str)
 	local result = {}
 	local range
 	range, str = separate_range_prefix(str)
@@ -2465,14 +2477,19 @@ end
 for char, list in ipairs(rvs_bs_list) do
 	for i = 1, #list do
 		local rvs = list[i]
-		if type(rvs) == "string" then
-			local range, name, combo = parse_groups(char, rvs)
+		local parse = function(str, in_name)
+			local range, name, combo = parse_groups(char, str)
 			-- 先頭に間合い情報を入れる
 			table.insert(combo, 1, { -- group
 				{ range = range, range_key = #combo > 0 and combo[1].range_key or "A" } -- leaf
 			})
-			list[i] = { combo = combo, hook_type = hook_cmd_types.combo, name = ut.convert(name) }
+			list[i] = { combo = combo, hook_type = hook_cmd_types.combo, name = ut.convert(in_name or name) }
 			--print(char, i , name, #combo)
+		end
+		if type(rvs) == "string" then
+			parse(rvs)
+		elseif type(rvs) == "table" and (rvs.hook_type == hook_cmd_types.combo_fin or rvs.hook_type == hook_cmd_types.combo) then
+			parse(rvs.str, rvs.name)
 		end
 		--print(char, i , list[i].name)
 	end
@@ -2493,9 +2510,9 @@ local calc_ver = function(hook)
 	if hook.id and hook.id < 0x1E then hook.ver = (hook.f << 0x8) | hook.a end
 	return hook
 end
-local char_enc_list, char_rvs_list, char_bs_list, char_fol_list, char_combo_list = {}, {}, {}, {}, {}
+local char_enc_list, char_rvs_list, char_bs_list, char_fol_list, char_combo_list, char_fin_list = {}, {}, {}, {}, {}, {}
 for char, list in ipairs(rvs_bs_list) do
-	local enc_list, rvs_list, bs_list, fol_list, combo_list = {}, {}, {}, {}, {}
+	local enc_list, rvs_list, bs_list, fol_list, combo_list, fin_list = {}, {}, {}, {}, {}, {}
 	for i, hook in pairs(common_rvs) do table.insert(list, i, hook) end
 	for _, hook in pairs(list) do
 		hook = rev_cmd(hook)
@@ -2504,6 +2521,7 @@ for char, list in ipairs(rvs_bs_list) do
 		if ut.tstb(type, types.breakshot) then table.insert(bs_list, hook) end
 		if ut.tstb(type, types.breakshot | types.followup) then table.insert(fol_list, hook) end
 		if ut.tstb(type, types.combo) then table.insert(combo_list, hook) end
+		if ut.tstb(type, types.breakshot | types.followup) then table.insert(fin_list, hook) end
 		if ut.tstb(type, types.reversal) then table.insert(rvs_list, hook) end
 		if ut.tstb(type, types.encounter | types.reversal) then table.insert(enc_list, hook) end
 		if ut.tstb(type, types.otg_stomp) then chars[char].otg_stomp = hook end
@@ -2516,6 +2534,7 @@ for char, list in ipairs(rvs_bs_list) do
 	chars[char].bs   , char_bs_list[char]    = bs_list,    bs_list
 	chars[char].fol  , char_fol_list[char]   = fol_list,   fol_list
 	chars[char].combo, char_combo_list[char] = combo_list, combo_list
+	chars[char].fin  , char_fin_list[char]   = fin_list,   fin_list
 end
 local sp_throws     = { -- 投げ技IDごとのテーブル
 	[0x05] = calc_ver({ char = char_id.geese,    id = 0x07, f = 0x06, a = 0xFD, auto_sp_throw = true, name = "真空投げ", }),
@@ -2549,6 +2568,7 @@ db.char_rvs_list    = char_rvs_list
 db.char_bs_list     = char_bs_list
 db.char_fol_list    = char_fol_list
 db.char_combo_list  = char_combo_list
+db.char_fin_list    = char_fin_list
 db.common_rvs_list  = common_rvs
 db.common_rvs       = {
 	dash = dash,
