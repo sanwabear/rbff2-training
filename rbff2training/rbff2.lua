@@ -5693,7 +5693,7 @@ rbff2.startplugin  = function()
 				end
 			elseif c.range == "pb" then
 				x1, x2 = x1, x2 + 100
-				print(key, x1, x2, space)
+				--print(key, x1, x2, space)
 				if space >= x1 and space <= x2 then
 					in_range = 0
 				elseif space < x1 then
