@@ -2048,6 +2048,7 @@ rbff2.startplugin  = function()
 				hook_sp     = nil, -- 次の入力反映候補-必殺技
 				lag         = 0,
 				kara        = false,
+				hits        = nil,
 				advance     = false,
 				timeout     = false,
 				rnd_count   = 1,
@@ -5497,6 +5498,7 @@ rbff2.startplugin  = function()
 		p.combo.hook_sp   = nil -- 次の入力反映候補
 		p.combo.lag       = 0
 		p.combo.kara      = false
+		p.combo.hits      = nil
 		p.combo.advance   = false
 		p.combo.timeout   = false
 		p.combo.rnd_count = p.combo.rnd_count or 1
@@ -5569,14 +5571,23 @@ rbff2.startplugin  = function()
 		local repcan = false
 		local capable = false
 		local addition = false
+		local meethits = false
+		if (c.hits ~= nil) and c.hits > 0 then
+			if c.hits <= p.max_hit_nm then
+				meethits = true
+			end
+		else
+			-- ヒット数評価がない場合はtrueとして他の評価の邪魔をさせない
+			meethits = true
+		end
 		if ut.tstb(p.flag_7e, db.flag_7e._05) then
 			local ca = ut.tstb(p.cancelable_data, 0xC0) -- キャンセル可
 			--ut.printf("H %X", p.cancelable_data)
-			cancel = ca -- ヒット限定
+			cancel = ca and meethits -- ヒット限定
 		elseif ut.tstb(p.flag_7e, db.flag_7e._04) then
 			local ca = ut.tstb(p.cancelable_data, 0x40) -- ガード時のみキャンセル可
 			--ut.printf("B %X", p.cancelable_data)
-			cancel = ca -- ガード限定
+			cancel = ca and meethits -- ガード限定
 		end
 		if ut.tstb(p.flag_c4, db.flag_c4._28 | db.flag_c4._31) then
 			local ca = ut.tstb(p.cancelable_data, 0x10)
@@ -5585,17 +5596,19 @@ rbff2.startplugin  = function()
 		end
 		if ut.tstb(p.flag_6a, 0x8) then -- 攻撃判定あり
 			capable = (p.flag_c4 > 0) or ut.tstb(p.flag_c8, db.flag_c8.normal_atk)
+			capable = capable and meethits
 		end
 		if p.on_additional_r1 == global.frame_number or p.on_additional_r5 == global.frame_number then
 			addition = true
 		end
 		--[[
-		ut.printf("%s %3s %3s %3s %3s",
+		ut.printf("%s %3s %3s %3s %3s %3s",
 			global.frame_number,
 			cancel and "can" or "---",
 			repcan and "rep" or "---",
 			capable and "cap" or "---",
-			addition and "add" or "---"
+			addition and "add" or "---",
+			meethits and "hit" or "---"
 		)
 		]]
 		local do_log = function(entry)
@@ -5632,6 +5645,7 @@ rbff2.startplugin  = function()
 			c.input = c.list[1]
 			c.lag = 0
 			c.kara = false
+			c.hits = 0
 			if c.input then
 				c.state = "walk"
 				c.hook_cmd = c.input.cmd and c.input or nil
@@ -5734,6 +5748,10 @@ rbff2.startplugin  = function()
 			if c.count == 2 then
 				return c.hook_cmd
 			end
+			-- 最大ヒットが必要な場合は遷移イベントでコマンドを返さない
+			if not meethits then
+				return nil
+			end
 			return c.input
 		end
 
@@ -5754,6 +5772,7 @@ rbff2.startplugin  = function()
 				-- 次の input を準備
 				c.lag      = c.input.lag or 1 -- 今のラグ設定を次の待ち時間にする
 				c.kara     = c.input.kara and (c.input.kara == true) or false
+				c.hits     = c.input.hits or 0
 				c.last     = c.count == #c.list
 				c.input    = c.list[c.count]
 				c.hook_cmd = c.input.cmd and c.input or nil
@@ -5789,7 +5808,6 @@ rbff2.startplugin  = function()
 				-- ヒットorガード時のキャンセル
 				--print("cap")
 				do_log()
-				--print("input", c.count)
 				return c.hook_sp
 			elseif c.kara and c.hook_sp and not c.advance then
 				-- 必殺技の空キャンセル

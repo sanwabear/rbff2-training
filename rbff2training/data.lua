@@ -1890,7 +1890,7 @@ local rvs_bs_list = {
 		{ id = 0x07, f = 0x06, a = 0xFD, hook_type = hook_cmd_types.none, name = "真空投げ", }, -- 19
 		combo("pos120 6A(40) C", "飛燕失脚CA"),
 		combo("close 2B 2B 2C [0x46 0x047 0x01]", "_2_B _2_B _2_C 必"),
-		combo("close 2A C [0x46 0x047 0x01]", "_2_A _2_C 必"),
+		combo("close 2A C(2hit) [0x46 0x047 0x01]", "_2_A _2_C 必"),
 		combo("pos120 4B 2D [0x46 0x047 0x01]", "_4_B _2_D 必"),
 		combo("pos120 0x1E 3B [0x46 0x01]", "_B 必"),
 		combo("pos120 4B 2D [0x46 0x01]", "雷光"),
@@ -2357,15 +2357,15 @@ local separate_range_prefix = function(str)
 	-- マッチしない場合は空文字列とする
 	return "", str
 end
--- 数字と"kara"を分離してパースする関数
-local parse_lag_kara        = function(str)
+-- 数字と"any"を分離してパースする関数
+local parse_lag_any        = function(str, any)
 	if not str or str == "" then return nil, nil end         -- nilや空文字列のチェック
 	if str:match("^%d+$") then return tonumber(str), nil end -- パターン1: 数字のみ（例: "15"）
-	if str == "kara" then return nil, "kara" end             -- パターン2: "kara"のみ
-	local num1 = str:match("^kara(%d+)$")
-	if num1 then return tonumber(num1), "kara" end           -- パターン3: kara+数字（例: "kara15"）
-	num1 = str:match("^(%d+)kara$")
-	if num1 then return tonumber(num1), "kara" end           -- パターン4: 数字+kara（例: "15kara"）
+	if str == any then return nil, any end             -- パターン2: anyのみ
+	local num1 = str:match("^" .. any .. "(%d+)$")
+	if num1 then return tonumber(num1), any end           -- パターン3: kara+数字（例: "kara15"）
+	num1 = str:match("^(%d+)" .. any .. "$")
+	if num1 then return tonumber(num1), any end           -- パターン4: 数字+kara（例: "15kara"）
 	return nil, nil -- マッチしない場合
 end
 -- 文字列をスペースで分割し、スペース区切りのレバーボタン操作を分解してフック形式の構造体リストに変換して返す
@@ -2377,13 +2377,16 @@ local parse_combo_string = function(char_id, str)
 
 	for token in string.gmatch(str, "%S+") do
 		local merged, merged_r, failed = nil, nil, false
-		local cmd, lag = token:match("^(.-)%(([%d%D]+)%)$")
-		local kara
+		local cmd, await = token:match("^(.-)%(([%d%D]+)%)$")
+		local kara, hits, await_num
 
-		if cmd and lag then
-			lag, kara = parse_lag_kara(lag)
+		if cmd and await then
+			await_num, hits = parse_lag_any(await, "hit")
+			if hits == nil then
+				await_num, kara = parse_lag_any(await, "kara")
+			end
 		else
-			cmd, lag = token, 5
+			cmd, await_num = token, 5
 		end
 
 		local cmd_name, sp_name, range_key = {}, nil, nil
@@ -2418,8 +2421,9 @@ local parse_combo_string = function(char_id, str)
 		else
 			-- 正常処理成功
 			local hook = {
-				lag = lag,
-				kara = kara ~= nil,
+				lag = (hits == nil) and await_num or nil, -- 待機フレーム
+				kara = (kara ~= nil), -- 空キャンセル実施有無
+				hits = (hits ~= nil) and await_num or nil, -- ヒット数
 				range_key = range_key or "A",
 				-- コマンドの右向き左向きをあらわすデータ値をキーにしたテーブルを用意
 				cmd = (merged == merged_r) and merged or { [1] = merged, [-1] = merged_r, },
