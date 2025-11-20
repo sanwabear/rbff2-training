@@ -357,7 +357,7 @@ rbff2.startplugin  = function()
 	for i = 1, 301 do table.insert(menu.labels.play_interval, i - 1) end
 	for i = 1, 256 do table.insert(menu.labels.force_y_pos, i) end
 	for i = -1, -256, -1 do table.insert(menu.labels.force_y_pos, i) end
-	for i = 1, 255 do table.insert(menu.labels.no_action, string.format("%sF間停止", i)) end
+	for i = 1, 255 do table.insert(menu.labels.no_action, string.format("%sF間停止", i)) end --くらい後アクション停止
 	for _, stg in ipairs(menu.stage_list) do table.insert(menu.labels.stage_list, stg.name) end
 	for _, bgm in ipairs(menu.bgms) do
 		local exists = false
@@ -768,7 +768,7 @@ rbff2.startplugin  = function()
 		replay_stop_on_dmg   = false, -- ダメージでリプレイ中段
 		replay_timing_jmp    = true,  -- リプレイ前のタイミングどり用ジャンプ有効
 		recover_wait         = 180,
-		no_action            = 1, -- くらい時アクション停止 1:OFF 2~:フレーム数 
+		no_action            = 1, -- くらい後アクション停止 1:OFF 2~:フレーム数 
 
 		next_stg3            = 0,
 
@@ -5661,11 +5661,12 @@ rbff2.startplugin  = function()
 
 		if c.state == "walk" then
 			local space = math.abs(p.pos - p.op.pos)
-			local x1, x2
+			local key, x1, x2 = nil, 0, 160
+			key = (c.range == "pb" or c.range == "mid") and "pb" or c.input.range_key or "A"
 			if (c.range ~= nil) and type(c.range) == "number" then
+				-- 数値指定
 				x1, x2 = c.range, c.range
 			else
-				local key = c.range == "pb" and "pb" or c.input.range_key or "A"
 				local range = c.ranges[key] or c.ranges["A"]
 				x1, x2 = math.min(range.left, range.right), math.max(range.left, range.right)
 			end
@@ -5680,9 +5681,19 @@ rbff2.startplugin  = function()
 				else
 					in_range = 1
 				end
-			elseif c.range == "pb" then
+			elseif c.range == "mid" then
 				x1, x2 = x1, x2
 				--print(key, x1, x2, space)
+				if space >= x1 and space <= x2 then
+					in_range = 0
+				elseif space < x1 then
+					in_range = -1
+				else
+					in_range = 1
+				end
+			elseif c.range == "pb" then
+				x1, x2 = x1, x2 + 100
+				print(key, x1, x2, space)
 				if space >= x1 and space <= x2 then
 					in_range = 0
 				elseif space < x1 then
@@ -5843,8 +5854,8 @@ rbff2.startplugin  = function()
 
 	tra_sub.controll_dummy_mode = function(p)
 		local cmd, hook, label = db.cmd_types._5, nil, "none"
-		if p.sway_status == 0x00 and p.dummy_act ~= menu.dummy_acts.stand and
-			(global.no_action == 1 or (p.throw_timer + 1) >= global.no_action) then
+		local do_act = (global.no_action == 1) or ((p.throw_timer + 1) >= global.no_action)
+		if p.sway_status == 0x00 and p.dummy_act ~= menu.dummy_acts.stand and do_act then
 			if p.dummy_act == menu.dummy_acts.crounch then
 				cmd, label = db.cmd_types._2 , "crounch" -- しゃがみ
 			elseif p.dummy_act == menu.dummy_acts.sway and p.op.sway_status == 0x00 and p.state == 0 then
@@ -5886,10 +5897,10 @@ rbff2.startplugin  = function()
 					cmd, label = db.cmd_types.front_jump, "dash_jump_short-j" -- 前ジャンプ
 				end
 			end
-		elseif p.dummy_act == menu.dummy_acts.sway and p.in_sway_line then
+		elseif p.dummy_act == menu.dummy_acts.sway and p.in_sway_line and do_act then
 			cmd, label = db.cmd_types._8, "sway" -- スウェー待機
 		end
-		if p.dummy_act == menu.dummy_acts.combo then
+		if p.dummy_act == menu.dummy_acts.combo and do_act then
 			hook, label = tra_sub.controll_dummy_combo(p), "combo" -- プリセットコンボ
 		end
 		return hook, cmd, label
@@ -8258,7 +8269,7 @@ rbff2.startplugin  = function()
 			col[ 1]  = g.dummy_mode                -- 01 ダミーモード
 			col[ 2]  = p[1].dummy_act              -- 02 1P アクション
 			col[ 3]  = p[2].dummy_act              -- 03 2P アクション
-			col[ 4]  = g.no_action                 -- 04 くらい後アクションOFF
+			col[ 4]  = g.no_action                 -- 04 くらい後アクション停止
 			--   5 ガード・ブレイクショット設定       05
 			col[ 6]  = p[1].dummy_gd               -- 06 1P ガード
 			col[ 7]  = p[2].dummy_gd               -- 07 2P ガード

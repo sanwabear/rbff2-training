@@ -1789,12 +1789,15 @@ local rvs_bs_list = {
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "トリプルゲイザー", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント バーンナックル", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント パワーゲイザー", },
-		combo("[A B 2A 2B] [B 2B] [C 6C 3C] [0x04 0x05 0x46 0x47]"),
-		combo("3A C C [0x04 0x05 0x46 0x47]"),
-		combo("A A C [0x04 0x05 0x46 0x47]"),
-		combo("A C [0x04 0x05 0x46 0x47]"),
-		combo("2A 2A 2C [0x04 0x05 0x46 0x47]"),
-		combo("2A 2C [0x04 0x05 0x46 0x47]")
+		combo("pos110 B B"),
+		combo("pos120 0x1E 6C"),
+		combo("pos120 0x1E(8) B B"),
+		combo("close 3A C C [0x04 0x05 0x46 0x47]"),
+		combo("close A A C [0x04 0x05 0x46 0x47]"),
+		combo("close A C [0x04 0x05 0x46 0x47]"),
+		combo("close 2B [B 2B] 0x05"),
+		combo("close 2A 2A 2C [0x04 0x05 0x46 0x47]"),
+		combo("close 2A 2C [0x04 0x05 0x46 0x47]")
 	},
 	-- アンディ・ボガード
 	{
@@ -1863,8 +1866,10 @@ local rvs_bs_list = {
 		{ id = 0x23, f = 0x78, a = 0x00, hook_type = hook_cmd_types.wakeup, name = "跳ね蹴り", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 花蝶扇", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 花嵐", },
-		combo("2A B 3C"),
-		combo("2A 2C 3C"),
+		combo("pb 2A 2C [0x46 0x01]"),
+		combo("mid 2A 2C [0x46 0x01]"),
+		combo("pb 2A B 3C [0x46 0x01]"),
+		combo("mid 2A 2C [0x46 0x01]"),
 	},
 	-- ギース・ハワード
 	{
@@ -1888,13 +1893,13 @@ local rvs_bs_list = {
 		{ cmd = cmd_types._5C, hook_type = hook_cmd_types.none, name = "飛燕失脚CA(_N_+_C)", }, -- 18
 		-- 自動CAのためにフックタイプを投げにしない。相手のやられ状態をチェックしなくてもいいようにしておく。
 		{ id = 0x07, f = 0x06, a = 0xFD, hook_type = hook_cmd_types.none, name = "真空投げ", }, -- 19
-		combo("pos120 6A(40) C", "飛燕失脚CA"),
+		combo("pos130 6A(40) C", "飛燕失脚CA"),
 		combo("close 2B 2B 2C [0x46 0x047 0x01]", "_2_B _2_B _2_C 必"),
 		combo("close 2A C(2hit) [0x46 0x047 0x01]", "_2_A _2_C 必"),
-		combo("pos120 4B 2D [0x46 0x047 0x01]", "_4_B _2_D 必"),
-		combo("pos120 0x1E 3B [0x46 0x01]", "_B 必"),
-		combo("pos120 4B 2D [0x46 0x01]", "雷光"),
-		combo("pos120 4B(15kara) [0x07 0x01 0x03 0x04 0x05]", "雷光(当身)投げ"),
+		combo("pos130 4B 2D [0x46 0x047 0x01]", "_4_B _2_D 必"),
+		combo("pos130 0x1E(10) 3B [0x46 0x01 0x10]", "ダ滑_B 必"),
+		combo("pos130 4B 2D [0x46 0x01]", "雷光"),
+		combo("pos130 4B(15kara) [0x07 0x01 0x03 0x04 0x05]", "雷光(当身)投げ"),
 	},
 	-- 望月双角
 	{
@@ -2170,8 +2175,14 @@ local rvs_bs_list = {
 		{ id = 0x11, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "紅蓮殺棍", },
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "サラマンダーストリーム", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 強襲飛翔棍", },
-		combo("A C"),
-		combo("2A 2C"),
+		{ id = 0x28, f = 0x06, a = 0x00, hook_type = hook_cmd_types.none, name = "CA 集点連破棍", },
+		combo("close A C"),
+		combo("far 2A 2C"),
+		combo("pb 3C C 0x28"),
+		combo("pb 6C 0x06"),
+		combo("pos130 A C"),
+		combo("pos130 2A 0x01"),
+		combo("pos130 2A 0x06"),
 	},
 	-- チン・シンザン
 	{
@@ -2327,10 +2338,11 @@ local fallback_parse_token = function(token, fallback_list)
 	-- 1. "0x" で始まる場合は 16 進数として返す
 	if token:sub(1, 2):lower() == "0x" then
 		token = tonumber(token)
-	end
-	for _, entry in ipairs(fallback_list) do
-		if entry.id == token then
-			return entry
+		for _, entry in ipairs(common_rvs) do
+			if entry.id == token then return entry end
+		end
+		for _, entry in ipairs(fallback_list) do
+			if entry.id == token then return entry end
 		end
 	end
 	-- 何も一致しない
@@ -2345,15 +2357,12 @@ end
 local separate_range_prefix = function(str)
 	-- nilや空文字列のチェック
 	if not str or str == "" then return "", str end
-	-- パターン1: posN (Nは数値)
-	local pos_num, remaining = str:match("^pos(%d+)(.*)$")
+	local pos_num, remaining = str:match("^pos(%d+)(.*)$") -- posN (Nは数値)
 	if pos_num then return tonumber(pos_num), remaining end
-	-- パターン2: far
 	if str:sub(1, 3) == "far" then return "far", str:sub(4) end
-	-- パターン3: close
 	if str:sub(1, 5) == "close" then return "close", str:sub(6) end
-	-- パターン4: pb
 	if str:sub(1, 2) == "pb" then return "pb", str:sub(3) end
+	if str:sub(1, 3) == "mid" then return "mid", str:sub(4) end
 	-- マッチしない場合は空文字列とする
 	return "", str
 end
@@ -2488,7 +2497,7 @@ for char, list in ipairs(rvs_bs_list) do
 				{ range = range, range_key = #combo > 0 and combo[1].range_key or "A" } -- leaf
 			})
 			list[i] = { combo = combo, hook_type = hook_cmd_types.combo, name = ut.convert(in_name or name) }
-			--print(char, i , name, #combo)
+			print(char, i , name, range, #combo)
 		end
 		if type(rvs) == "string" then
 			parse(rvs)
