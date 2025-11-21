@@ -2048,6 +2048,7 @@ rbff2.startplugin  = function()
 				hook_sp     = nil, -- 次の入力反映候補-必殺技
 				lag         = 0,
 				kara        = false,
+				hold        = false,
 				hits        = nil,
 				advance     = false,
 				timeout     = false,
@@ -4687,6 +4688,12 @@ rbff2.startplugin  = function()
 			p.attackbits.on_main_to_sway = p.on_main_to_sway == global.frame_number
 			p.d6 = mem.r08(p.addr.base + 0xD6) -- 起き上がり攻撃用フラグ
 
+			-- フラグ
+			p.flag_c0 = p.flag_c0 or 0
+			p.flag_c4 = p.flag_c4 or 0
+			p.flag_c8 = p.flag_c8 or 0
+			p.flag_cc = p.flag_cc or 0
+
 			-- リバーサルとBS動作の再抽選
 			p.dummy_enc   = get_next_enc(p)
 			p.dummy_rvs   = get_next_rvs(p)
@@ -5498,6 +5505,7 @@ rbff2.startplugin  = function()
 		p.combo.hook_sp   = nil -- 次の入力反映候補
 		p.combo.lag       = 0
 		p.combo.kara      = false
+		p.combo.hold      = false
 		p.combo.hits      = nil
 		p.combo.advance   = false
 		p.combo.timeout   = false
@@ -5538,18 +5546,13 @@ rbff2.startplugin  = function()
 		else
 			c = p.combo
 		end
-		local moving = (p.flag_c4 > 0) or
-			(p.flag_c8 > 0) or
-			ut.tstb(p.flag_c0, db.flag_c0.startups) or
+		local po = p.old
+		local moving = (p.flag_c4 > 0) or (p.flag_c8 > 0) or
+			ut.tstb(p.flag_c0, db.flag_c0.startups | db.flag_c0.jump) or 
 			ut.tstb(p.flag_cc, db.flag_cc.moving)
-		local old_moving = moving
-		local o = p.old
-		if o then
-			old_moving = ((o.flag_c4 or 0) > 0) or
-				((o.flag_c8 or 0) > 0) or
-				ut.tstb(o.flag_c0 or 0, db.flag_c0.startups) or
-				ut.tstb(o.flag_cc or 0, db.flag_cc.moving)
-		end
+		local old_moving = po and ((po.flag_c4 > 0) or (po.flag_c8 > 0) or
+			ut.tstb(po.flag_c0, db.flag_c0.startups | db.flag_c0.jump) or
+			ut.tstb(po.flag_cc, db.flag_cc.moving)) or moving
 		local advance = false
 		local timeout = false
 
@@ -5559,7 +5562,7 @@ rbff2.startplugin  = function()
 			-- c4 いずれかの更新があれば
 			-- c8 いずれかの更新があれば
 			-- cc flag_cc.movingの更新があれば
-			if not moving and old_moving then
+			if (moving ~= true) and (old_moving == true) then
 				timeout = true
 			end
 			if moving then
@@ -5611,23 +5614,73 @@ rbff2.startplugin  = function()
 			meethits and "hit" or "---"
 		)
 		]]
-		local do_log = function(entry)
+		local next_input = function()
+			c.count    = c.count + 1
+			-- 次の input を準備
+			c.lag      = c.input.lag or 1 -- 今のラグ設定を次の待ち時間にする
+			c.kara     = c.input.kara and (c.input.kara == true) or false
+			c.hold     = nil
+			c.hits     = c.input.hits or 0
+			c.last     = c.count == #c.list
+			c.input    = c.list[c.count]
+			c.hook_cmd = (c.input.cmd ~= nil) and c.input or nil
+			c.hook_sp  = (c.input.cmd == nil) and c.input or nil
+			c.state    = "lag"
+			c.advance  = false
+			c.timeout  = false
+		end
+
+		local do_log = function(point, entry)
 			--[[
-			ut.printf("[FSM] %5s:%8s %3s %3s %3s %3s %4s %s %s %s",
-				entry and "entry" or "  -->",
+			point = point or ""
+			ut.printf("%8s [FSM] %16s:%8s %3s %3s %3s %3s %4s %4s %4s %4s %s %s %s",
+				entry and global.frame_number or "",
+				entry and "entry" or " ->" .. point,
 				c.state,
 				advance and "+adv" or "----",
 				timeout and "+to" or "---",
 				c.advance and "adv" or "---",
 				c.timeout and "to" or "---",
 				moving and "move" or "----",
+				c.hits and c.hits or "----",
+				c.kara and "kara" or "----",
+				c.hold and c.hold or "----",
 				c.count,
 				c.lag,
 				c.input and to_sjis(c.input.name) or "--")
 			]]
 		end
 
-		do_log(true)
+		local log_with_ret = function(ret, point, entry)
+			--do_log(point, entry)
+			--ut.printf("         [FSM] return %s", (ret == nil) and "nil" or (ret.cmd == nil) and "sp" or "cmd")
+			return ret
+		end
+
+		local exec = function (force)
+			c.state = "await"
+			c.advance = false
+			c.timeout = false
+			if c.hook_cmd and c.hook_cmd.hold then
+				c.state = "hold"
+				c.hold = c.hook_cmd.hold
+				return log_with_ret(c.hook_cmd, "exec4")
+			end
+			--print("input", c.count)
+			-- 2段目は必殺技だと空キャンセルになるので通常、特殊、CAのみ許す
+			if force then
+				return log_with_ret(c.input, "exec4")
+			elseif c.count == 2 then
+				return log_with_ret(c.hook_cmd, "exec1")
+			end
+			-- 最大ヒットが必要な場合は遷移イベントでコマンドを返さない
+			if not meethits then
+				return log_with_ret(nil, "exec2")
+			end
+			return log_with_ret(c.input, "exec3")
+		end
+
+		do_log("", true)
 
 		if c.state == "neutral" or c.input == nil then
 			c.advance = false
@@ -5635,27 +5688,28 @@ rbff2.startplugin  = function()
 
 			-- 動作中は状態維持
 			if moving then
-				do_log()
-				return nil
+				return log_with_ret(nil, "moving")
 			end
 
 			c.count = 1
+			c.old = nil
 			c.range, c.list = tra_sub.reload_combo(p)
 			c.last = c.count == #c.list
 			c.input = c.list[1]
 			c.lag = 0
 			c.kara = false
+			c.hold = nil
 			c.hits = 0
 			if c.input then
 				c.state = "walk"
-				c.hook_cmd = c.input.cmd and c.input or nil
-				c.hook_sp = c.input.cmd and nil or c.input
+				c.hook_cmd = (c.input.cmd ~= nil) and c.input or nil
+				c.hook_sp  = (c.input.cmd == nil) and c.input or nil
 			else
 				c.state = "finish"
 				c.hook_cmd = nil
 				c.hook_sp = nil
 			end
-			do_log()
+			do_log("exit neutral")
 			-- すぐwalk or finishへ
 		end
 
@@ -5718,7 +5772,7 @@ rbff2.startplugin  = function()
 				return db.common_rvs.back -- x2より奥にいるので後退
 			else
 				c.state = "exec"
-				do_log()
+				do_log("exit walk")
 				-- すぐexecへ
 			end
 		end
@@ -5730,8 +5784,7 @@ rbff2.startplugin  = function()
 			-- 動作終了に来た場合は初期化する
 			if c.timeout then
 				c.state = "finish"
-				do_log()
-				return nil
+				return log_with_ret(nil, "lag fin")
 			end
 
 			-- 待ちがある場合はカウントダウンして抜ける
@@ -5739,31 +5792,38 @@ rbff2.startplugin  = function()
 				if p.hitstop_remain == 0 then
 					c.lag = c.lag - 1 -- TODO ヒットストップ中
 				end
-				do_log()
-				return nil
+				return log_with_ret(nil, "lag")
 			end
 
 			c.state = "exec"
-			do_log()
+			do_log("exit lag")
 			-- すぐexecへ
 		end
 
 		-- 入力を返して待ち状態へ
 		if c.state == "exec" then
-			c.state = "await"
-			c.advance = false
-			c.timeout = false
-			do_log()
-			--print("input", c.count)
-			-- 2段目は必殺技だと空キャンセルになるので通常、特殊、CAのみ許す
-			if c.count == 2 then
-				return c.hook_cmd
+			return exec()
+		end
+
+		if c.state == "hold" then
+			c.advance = c.advance or advance
+			c.timeout = c.timeout or timeout
+
+			-- 動作終了に来た場合は初期化する
+			if c.timeout then
+				c.state = "finish"
+				return log_with_ret(nil, "hold fin")
 			end
-			-- 最大ヒットが必要な場合は遷移イベントでコマンドを返さない
-			if not meethits then
-				return nil
+
+			-- 待ちがある場合はカウントダウンして抜ける
+			if c.hold > 0 then
+				c.hold = c.hold - 1 -- ヒットストップ中
+				return log_with_ret(c.input, "hold")
 			end
-			return c.input
+
+			next_input()
+			c.state = "exec"
+			return exec(true)
 		end
 
 		-- 動作開始まで待ち
@@ -5772,75 +5832,42 @@ rbff2.startplugin  = function()
 			c.timeout = c.timeout or timeout
 
 			if c.timeout then
-				--print("to")
 				-- 動作終了に来た場合は初期化する
 				c.state = "finish"
-				do_log()
+				do_log("exit await")
 				-- すぐにfinishへ
 			elseif c.advance and not c.last then
-				--print("adv1")
-				c.count    = c.count + 1
-				-- 次の input を準備
-				c.lag      = c.input.lag or 1 -- 今のラグ設定を次の待ち時間にする
-				c.kara     = c.input.kara and (c.input.kara == true) or false
-				c.hits     = c.input.hits or 0
-				c.last     = c.count == #c.list
-				c.input    = c.list[c.count]
-				c.hook_cmd = c.input.cmd and c.input or nil
-				c.hook_sp  = not c.input.cmd and c.input or nil
-				c.state    = "lag"
-				c.advance  = false
-				c.timeout  = false
-				do_log()
-				return nil
+				next_input()
+				return log_with_ret(nil, "adv1")
 			elseif c.advance and c.last then
-				--print("adv2")
-				do_log()
-				return nil
+				return log_with_ret(nil, "adv2")
 			elseif cancel and c.hook_sp and not c.advance then
 				-- キャンセル可能タイミング
-				--print("can")
-				do_log()
-				--print("input", c.count)
-				return c.hook_sp
+				return log_with_ret(c.hook_sp, "can")
 			elseif addition and c.hook_cmd and not c.advance then
 				-- 固有処理での追加入力受付向け
-				--print("add")
-				do_log()
-				--print("input", c.count)
-				return c.hook_cmd
+				return log_with_ret(c.hook_cmd, "add")
 			elseif repcan and c.hook_cmd and not c.advance then
 				-- A連キャン
-				--print("rep")
-				do_log()
-				--print("input", c.count)
-				return c.hook_cmd
+				return log_with_ret(c.hook_cmd, "rep")
 			elseif capable and c.hook_sp and not c.advance then
 				-- ヒットorガード時のキャンセル
-				--print("cap")
-				do_log()
-				return c.hook_sp
+				return log_with_ret(c.hook_sp, "cap")
 			elseif c.kara and c.hook_sp and not c.advance then
 				-- 必殺技の空キャンセル
-				do_log()
-				return c.hook_sp
+				return log_with_ret(c.hook_sp, "kara")
 			elseif ut.tstb(c.input.hook_type, hook_cmd_types.sp_throw) and c.hook_sp and not c.advance then
 				-- 投げ必殺技の場合はヒットorガード時のキャンセル
-				do_log()
-				return c.hook_sp
+				return log_with_ret(c.hook_sp, "thorw")
 			else
-				--print("sp")
-				--do_log()
-				--return c.hook_sp
-				--print("await")
-				return nil
+				return log_with_ret(nil, "awaiting")
 			end
 		end
 
 		-- 動作終了に来た場合は初期化する
 		if c.timeout then
 			c.state = "finish"
-			do_log()
+			do_log("timeout")
 			-- すぐにfinishへ
 		end
 
@@ -5848,8 +5875,7 @@ rbff2.startplugin  = function()
 			c = tra_sub.new_combo(p)
 		end
 
-		do_log()
-		return nil
+		return log_with_ret(nil, "return")
 	end
 
 	tra_sub.controll_dummy_mode = function(p)

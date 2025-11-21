@@ -2004,6 +2004,7 @@ local rvs_bs_list = {
 		{ cmd = cmd_types._C, hook_type = hook_cmd_types.none, name = "投げっぱなしジャーマン(_C)", }, -- 23
 		{ cmd = cmd_types._4B, hook_type = hook_cmd_types.none, name = "リバースキック(ヤングダイブ中_4_+_B)", }, -- 24
 		combo("A C"),
+		combo("9(6hold) 0x01"),
 		combo("B B 6C"),
 		combo("B B 3C"),
 		combo("2B 2B 2C"),
@@ -2051,6 +2052,7 @@ local rvs_bs_list = {
 		{ cmd = cmd_types._AD, hook_type = hook_cmd_types.none, name = "蛇使だまし・上段(_Aタメ押し_D)", }, -- 21
 		{ cmd = cmd_types._BD, hook_type = hook_cmd_types.none, name = "蛇使だまし・中段(_Bタメ押し_D)", }, -- 22
 		{ cmd = cmd_types._CD, hook_type = hook_cmd_types.none, name = "蛇使だまし・下段(_Cタメ押し_D)", }, -- 23
+		-- 3Aをすぐに蛇使いでキャンセルできるようにkaraをつけて空キャンする速度での次動作を発生させる
 		combo("pb B C 0x02 AD", "_B _C 蛇キャン"),
 		combo("pb AB C 0x02 AD", "避け攻撃 _C 蛇キャン"),
 		combo("pb 3A(kara) 0x02 AD", "極近_3_A 蛇キャン"),
@@ -2395,12 +2397,17 @@ local parse_combo_string = function(char_id, str)
 	for token in string.gmatch(str, "%S+") do
 		local merged, merged_r, failed = nil, nil, false
 		local cmd, await = token:match("^(.-)%(([%d%D]+)%)$")
-		local kara, hits, await_num
+		local kara, hits, hold, await_num
 
 		if cmd and await then
 			await_num, hits = parse_lag_any(await, "hit")
-			if hits == nil then
-				await_num, kara = parse_lag_any(await, "kara")
+			await_num, kara = parse_lag_any(await, "kara")
+			await_num, hold = parse_lag_any(await, "hold")
+			if hits then
+				await_num, hits = nil, await_num
+			end
+			if hold then
+				await_num, hold = nil, await_num
 			end
 		else
 			cmd, await_num = token, 5
@@ -2438,9 +2445,10 @@ local parse_combo_string = function(char_id, str)
 		else
 			-- 正常処理成功
 			local hook = {
-				lag = (hits == nil) and await_num or nil, -- 待機フレーム
+				lag = await_num, -- 待機フレーム
 				kara = (kara ~= nil), -- 空キャンセル実施有無
-				hits = (hits ~= nil) and await_num or nil, -- ヒット数
+				hold = hold, -- ためおし待ち実施有無
+				hits = hits, -- ヒット数
 				range_key = range_key or "A",
 				-- コマンドの右向き左向きをあらわすデータ値をキーにしたテーブルを用意
 				cmd = (merged == merged_r) and merged or { [1] = merged, [-1] = merged_r, },
@@ -2661,6 +2669,13 @@ flag_c0.startups    =
 	flag_c0._17 | -- ジャンプ移行
 	flag_c0._24 | -- ダッシュ
 	flag_c0._25 -- 飛び退き
+flag_c0.startups_nojump    =
+	flag_c0._08 | -- スウェーライン上飛び退き～戻り
+	flag_c0._09 | -- スウェーライン上ダッシュ～戻り
+	flag_c0._10 | -- スウェーライン→メイン
+	flag_c0._12 | -- メインライン→スウェーライン移動中
+	flag_c0._24 | -- ダッシュ
+	flag_c0._25 -- 飛び退き
 flag_c0.jump        =
 	flag_c0._18 | -- 後方小ジャンプ
 	flag_c0._19 | -- 前方小ジャンプ
@@ -2668,6 +2683,8 @@ flag_c0.jump        =
 	flag_c0._21 | -- 後方ジャンプ
 	flag_c0._22 | -- 前方ジャンプ
 	flag_c0._23 -- 垂直ジャンプ
+flag_c0.fulljump    =
+	flag_c0.jump | flag_c0._17
 flag_c0.basic       =
 	flag_c0._28 | -- 屈
 	flag_c0._31 -- 立
