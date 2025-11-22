@@ -1900,7 +1900,7 @@ local rvs_bs_list = {
 		combo("close 2A C(2hit) [0x46 0x047 0x01]", "_2_A_2_C固め"),
 		combo("pos130 0x1E(10) 3B [0x46 0x01 0x10]", "ダッシュ_B連携"),
 		combo("pos130 4B 2D [0x46 0x47 0x01]", "雷光固め"),
-		combo("pos130 4B(15kara) [0x07 0x01 0x03 0x04 0x05]", "雷光(当身)投げ"),
+		combo("pos130 4B(12kara) [0x07 0x01 0x03 0x04 0x05]", "雷光(当身)投げ"),
 	},
 	-- 望月双角
 	{
@@ -2139,8 +2139,8 @@ local rvs_bs_list = {
 		{ id = 0x28, f = 0x06, a = 0x00, hook_type = hook_cmd_types.add_attack, act = 0x245, name = "旧ブレイクストーム", },
 		combo("close 2A A B [C 3C 6C]", "_2_A_A_B_C"),
 		combo("close 2A 2A 0x01", "_2_A_2_Aヘッドスピン"),
-		combo("pos50 4A(10kara) 0x10", "中段 ブレスパ"),
-		combo("far C(10kara) 0x10", "遠_C ブレスパ"),
+		combo("pos50 4A(7kara) 0x10", "中段 ブレスパ"),
+		combo("far C(7kara) 0x10", "遠_C ブレスパ"),
 	},
 	-- キム・カッファン
 	{
@@ -2374,15 +2374,15 @@ local separate_range_prefix = function(str)
 	return "", str
 end
 -- 数字と"any"を分離してパースする関数
-local parse_lag_any        = function(str, any)
-	if not str or str == "" then return nil, nil end         -- nilや空文字列のチェック
-	if str:match("^%d+$") then return tonumber(str), nil end -- パターン1: 数字のみ（例: "15"）
-	if str == any then return nil, any end             -- パターン2: anyのみ
+local parse_lag_any         = function(str, any)
+	if not str or str == "" then return nil end      -- nilや空文字列のチェック
+	if str:match("^%d+$") then return tonumber(str) end -- パターン1: 数字のみ（例: "15"）
+	if str == any then return 0 end                  -- パターン2: anyのみ
 	local num1 = str:match("^" .. any .. "(%d+)$")
-	if num1 then return tonumber(num1), any end           -- パターン3: kara+数字（例: "kara15"）
+	if num1 then return tonumber(num1) end           -- パターン3: any+数字（例: "any15"）
 	num1 = str:match("^(%d+)" .. any .. "$")
-	if num1 then return tonumber(num1), any end           -- パターン4: 数字+kara（例: "15kara"）
-	return nil, nil -- マッチしない場合
+	if num1 then return tonumber(num1) end           -- パターン4: 数字+any（例: "15any"）
+	return nil                                       -- マッチしない場合
 end
 -- 文字列をスペースで分割し、スペース区切りのレバーボタン操作を分解してフック形式の構造体リストに変換して返す
 local parse_combo_string = function(char_id, str)
@@ -2397,14 +2397,35 @@ local parse_combo_string = function(char_id, str)
 		local kara, hits, hold, await_num
 
 		if cmd and await then
-			await_num, hits = parse_lag_any(await, "hit")
-			await_num, kara = parse_lag_any(await, "kara")
-			await_num, hold = parse_lag_any(await, "hold")
-			if hits then
-				await_num, hits = nil, await_num
-			end
-			if hold then
-				await_num, hold = nil, await_num
+			while true do -- An infinite loop
+				if type(await) == "number" then
+					await_num = tonumber(await)
+					break
+				end
+				-- シンプルな待ち
+				await_num = parse_lag_any(await, "lag")
+				if await_num then
+					break
+				end
+				-- ヒット数カウント待ち
+				await_num = parse_lag_any(await, "hit")
+				if await_num then
+					hits = true
+					break
+				end
+				-- 待ち+空キャンセル
+				await_num = parse_lag_any(await, "kara")
+				if await_num then
+					kara = true
+					break
+				end
+				-- タメおし
+				await_num, hold = parse_lag_any(await, "hold")
+				if hold then
+					await_num, hold = nil, await_num
+					break
+				end
+				break
 			end
 		else
 			cmd, await_num = token, 5
@@ -2444,7 +2465,7 @@ local parse_combo_string = function(char_id, str)
 			local hook = {
 				lag = await_num, -- 待機フレーム
 				kara = (kara ~= nil), -- 空キャンセル実施有無
-				hold = hold, -- ためおし待ち実施有無
+				hold = hold, -- タメおし待ち実施有無
 				hits = hits, -- ヒット数
 				range_key = range_key or "A",
 				-- コマンドの右向き左向きをあらわすデータ値をキーにしたテーブルを用意

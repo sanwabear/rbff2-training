@@ -5795,7 +5795,7 @@ rbff2.startplugin  = function()
 			-- 待ちがある場合はカウントダウンして抜ける
 			if c.lag > 0 then
 				if p.hitstop_remain == 0 then
-					c.lag = c.lag - 1 -- TODO ヒットストップ中
+					c.lag = c.lag - 1 -- ヒットストップ中
 				end
 				return log_with_ret(nil, "lag")
 			end
