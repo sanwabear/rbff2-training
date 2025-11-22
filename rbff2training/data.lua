@@ -1945,8 +1945,8 @@ local rvs_bs_list = {
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント ダンシングバイソン", },
 		combo("close 2A 2A B 3C 0x46", "_2A CA出し切り"),
 		combo("mid 2B B 3C 0x46", "_2B CA出し切り"),
-		combo("pos120 0x1E 5(hold4) 4 A B C", "滑り_A_B_C"),
-		combo("pos120 0x1E 5(hold4) 3B 0x01 6(hold15)", "滑り_Bローリング"),
+		combo("pos120 0x1E 5(hold7) 4 A B C", "滑り_A_B_C"),
+		combo("pos120 0x1E 5(hold7) 3B 0x01 6(hold15)", "滑り_Bローリング"),
 		combo("pb C C [8C 5]", "_C_C択"),
 	},
 	-- ホンフゥ
@@ -2410,7 +2410,7 @@ local parse_combo_string = function(char_id, str)
 				-- ヒット数カウント待ち
 				await_num = parse_lag_any(await, "hit")
 				if await_num then
-					hits = true
+					hits = await_num
 					break
 				end
 				-- 待ち+空キャンセル
@@ -2420,15 +2420,15 @@ local parse_combo_string = function(char_id, str)
 					break
 				end
 				-- タメおし
-				await_num, hold = parse_lag_any(await, "hold")
-				if hold then
-					await_num, hold = nil, await_num
+				await_num = parse_lag_any(await, "hold")
+				if await_num then
+					hold = await_num
 					break
 				end
 				break
 			end
 		else
-			cmd, await_num = token, 5
+			cmd, await_num = token, 0
 		end
 
 		local cmd_name, sp_name, range_key = {}, nil, nil

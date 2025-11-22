@@ -833,6 +833,8 @@ rbff2.startplugin  = function()
 
 		random_boolean       = function(true_ratio) return math.random() <= true_ratio end,
 		on_pow_up            = 255,
+
+		combo_log            = 1, -- 1:OFF 2:ON 3:VERBOSE
 	}
 	local safe_cb              = function(cb)
 		return function(...)
@@ -2026,6 +2028,13 @@ rbff2.startplugin  = function()
 			move_count      = 0,         -- スクショ用の動作カウント
 			on_punish       = -999,
 			on_block        = 0,
+			flag_c0         = 0,
+			flag_c4         = 0,
+			flag_c8         = 0,
+			flag_cc         = 0,
+			flag_d0         = 0,
+			flag_6a         = 0,
+			flag_7e         = 0,
 			key             = {
 				num         = i,
 				log         = ut.new_filled_table(global.key_hists, { key = "", frame = 0 }),
@@ -4688,12 +4697,6 @@ rbff2.startplugin  = function()
 			p.attackbits.on_main_to_sway = p.on_main_to_sway == global.frame_number
 			p.d6 = mem.r08(p.addr.base + 0xD6) -- 起き上がり攻撃用フラグ
 
-			-- フラグ
-			p.flag_c0 = p.flag_c0 or 0
-			p.flag_c4 = p.flag_c4 or 0
-			p.flag_c8 = p.flag_c8 or 0
-			p.flag_cc = p.flag_cc or 0
-
 			-- リバーサルとBS動作の再抽選
 			p.dummy_enc   = get_next_enc(p)
 			p.dummy_rvs   = get_next_rvs(p)
@@ -5505,7 +5508,7 @@ rbff2.startplugin  = function()
 		p.combo.hook_sp   = nil -- 次の入力反映候補
 		p.combo.lag       = 0
 		p.combo.kara      = false
-		p.combo.hold      = false
+		p.combo.hold      = nil
 		p.combo.hits      = nil
 		p.combo.advance   = false
 		p.combo.timeout   = false
@@ -5524,7 +5527,7 @@ rbff2.startplugin  = function()
 				local mode = p.combo.rnd_count
 				local count = (mode - 2) + 1 -- メニュー固定2を引いて、間合い管理の要素+1をする
 				p.combo.picker = rnd_picker.create_picker(top_list, {
-					pull_count = (mode == 1) and "max" or ((mode == 2) and "random" or (mode - 2))
+					pull_count = (mode == 1) and "max" or ((mode == 2) and "random" or count)
 				})
 			end
 		end
@@ -5604,16 +5607,16 @@ rbff2.startplugin  = function()
 		if p.on_additional_r1 == global.frame_number or p.on_additional_r5 == global.frame_number then
 			addition = true
 		end
-		--[[
-		ut.printf("%s %3s %3s %3s %3s %3s",
-			global.frame_number,
-			cancel and "can" or "---",
-			repcan and "rep" or "---",
-			capable and "cap" or "---",
-			addition and "add" or "---",
-			meethits and "hit" or "---"
-		)
-		]]
+		if global.combo_log > 2 then
+			ut.printf("%s %3s %3s %3s %3s %3s",
+				global.frame_number,
+				cancel and "can" or "---",
+				repcan and "rep" or "---",
+				capable and "cap" or "---",
+				addition and "add" or "---",
+				meethits and "hit" or "---"
+			)
+		end
 		local first_input = function()
 			c.count = 1
 			c.old = nil
@@ -5636,46 +5639,65 @@ rbff2.startplugin  = function()
 		end
 
 		local next_input = function()
+			local prev = c.input
 			c.count    = c.count + 1
 			-- 次の input を準備
 			c.lag      = c.input.lag or 0 -- 今のラグ設定を次の待ち時間にする
 			c.kara     = c.input.kara and (c.input.kara == true) or false
-			c.hold     = nil
+			c.hold     = c.input.hold
 			c.hits     = c.input.hits or 0
 			c.last     = c.count == #c.list
 			c.input    = c.list[c.count]
-			c.hook_cmd = (c.input.cmd ~= nil) and c.input or nil
-			c.hook_sp  = (c.input.cmd == nil) and c.input or nil
+			c.hook_cmd = (c.input and c.input.cmd ~= nil) and c.input or nil
+			c.hook_sp  = (c.input and c.input.cmd == nil) and c.input or nil
 			c.state    = c.lag > 0 and "lag" or "exec"
 			c.advance  = false
 			c.timeout  = false
+			if global.combo_log > 1 then
+				ut.printf("         [FSM] --> next %s -> %s  kara:%s hold:%s hits:%s last:%s input:%s state:%s advance:%s timeout:%s",
+					prev and to_sjis(prev.name) or "---",
+					c.input and to_sjis(c.input.name) or "---",
+					(c.kara == nil) and "nil" or c.kara,
+					(c.hold == nil) and "nil" or c.kara,
+					(c.hits == nil) and "nil" or c.kara,
+					(c.last == nil) and "nil" or c.kara,
+					c.hook_cmd and "cmd" or (c.hook_sp and "sp " or "---"),
+					(c.state == nil) and "nil" or c.kara,
+					(c.advance == nil) and "nil" or c.kara,
+					(c.timeout == nil) and "nil" or c.kara
+				)
+			end
 		end
 
-		local enablelog = 0
 		local do_log = function(point, entry)
-			if not enablelog or enablelog <= 0 then return end
-			point = point or ""
-			ut.printf("%8s [FSM] %16s:%8s %3s %3s %3s %3s %4s %4s %4s %4s %s %s %s",
-				entry and global.frame_number or "",
-				entry and "entry" or " ->" .. point,
-				c.state,
-				advance and "+adv" or "----",
-				timeout and "+to" or "---",
-				c.advance and "adv" or "---",
-				c.timeout and "to" or "---",
-				moving and "move" or "----",
-				c.hits and c.hits or "----",
-				c.kara and "kara" or "----",
-				c.hold and c.hold or "----",
-				c.count,
-				c.lag,
-				c.input and to_sjis(c.input.name) or "--")
+			if global.combo_log > 1 then
+				point = point or ""
+				ut.printf("%8s [FSM] %16s:%8s %3s %3s %3s %3s %4s %4s %4s %4s %s %s %s",
+					entry and global.frame_number or "",
+					entry and "entry" or " ->" .. point,
+					c.state,
+					advance and "+adv" or "----",
+					timeout and "+to" or "---",
+					c.advance and "adv" or "---",
+					c.timeout and "to" or "---",
+					moving and "move" or "----",
+					c.hits and c.hits or "----",
+					c.kara and "kara" or "----",
+					c.hold and c.hold or "----",
+					c.count,
+					c.lag,
+					c.input and to_sjis(c.input.name) or "--"
+				)
+			end
 		end
 
 		local log_with_ret = function(ret, point, entry)
-			if not enablelog or enablelog <= 1 then return ret end
-			do_log(point, entry)
-			ut.printf("         [FSM] return %s", (ret == nil) and "nil" or (ret.cmd == nil) and "sp" or "cmd")
+			if global.combo_log > 1 then
+				do_log(point, entry)
+				ut.printf("         [FSM] --> %s",
+					(ret == nil) and "nil" or (ret.cmd == nil) and "sp" or "cmd"
+				)
+			end
 			return ret
 		end
 
@@ -5713,7 +5735,7 @@ rbff2.startplugin  = function()
 				return log_with_ret(nil, "moving")
 			end
 
-			if p.op.normal_state ~= true then
+			if global.both_act_neutral ~= true then
 				return log_with_ret(nil, "op mov")
 			end
 
@@ -7612,11 +7634,13 @@ rbff2.startplugin  = function()
 			elseif row == 2 and p1.dummy_act == menu.dummy_acts.combo then
 				next_menu = menu.combo_menus[1][p1.char] -- 1P プリセットコンボ
 				local col1 = next_menu.pos.col
-				col1[#col1] = p1.combo and p1.combo.rnd_count or 1
+				col1[#col1 - 2] = p1.combo and p1.combo.rnd_count or 1
+				col1[#col1 - 0] = g.combo_log
 			elseif row == 3 and p2.dummy_act == menu.dummy_acts.combo then
 				next_menu = menu.combo_menus[2][p2.char] -- 2P プリセットコンボ
 				local col2 = next_menu.pos.col
-				col2[#col2] = p2.combo and p2.combo.rnd_count or 1
+				col2[#col2 - 2] = p2.combo and p2.combo.rnd_count or 1
+				col2[#col2 - 0] = g.combo_log
 			elseif p1.enc_enabled and row == 19 then
 				next_menu = "encounter1" -- 1P 邀撃(ようげき)行動
 			elseif p2.enc_enabled and row == 20 then
@@ -8121,6 +8145,7 @@ rbff2.startplugin  = function()
 		for _, char_data in pairs(db.chars) do
 			if not char_data.combo then break end
 			local list, on_ab, col = {}, {}, {}
+			local ex_row = 0
 			table.insert(p_combo, {
 				name = string.format("プリセットコンボ選択(%s)", char_data.name),
 				desc = "ONにしたスロットからランダムで発動されます。",
@@ -8132,7 +8157,9 @@ rbff2.startplugin  = function()
 			-- 共通の動作だが追加する行数が違うのでキャラごとに生成する必要がある
 			local to_tra = function()
 				local p = players[i]
-				p.combo.rnd_count = col[#col]
+				local g = global
+				p.combo.rnd_count = col[#col - 2]
+				g.combo_log       = col[#col - 0]
 				menu.combo_to_tra()
 			end
 			for _, bs in ipairs(char_data.combo) do
@@ -8144,6 +8171,12 @@ rbff2.startplugin  = function()
 			table.insert(on_ab, to_tra)
 			table.insert(col, 0)
 			table.insert(list, { "コンボ段数", combo_random_label })
+			table.insert(on_ab, to_tra)
+			table.insert(col, 1)
+			table.insert(list, { title = true, "デバッグ用" })
+			table.insert(on_ab, to_tra)
+			table.insert(col, 0)
+			table.insert(list, { "ログ", { "OFF", "ON", "ON:VERBOSE" } })
 			table.insert(on_ab, to_tra)
 			table.insert(col, 1)
 		end
