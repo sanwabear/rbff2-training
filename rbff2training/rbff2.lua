@@ -2241,10 +2241,12 @@ rbff2.startplugin  = function()
 			[0x16] = function(data) p.knockback1 = data end, -- のけぞり確認用2(裏雲隠し)
 			[0x69] = function(data) p.knockback2 = data end, -- のけぞり確認用1(色々)
 			[0x7E] = function(data) p.flag_7e = data end, -- 動作切替、のけぞり確認用3(フェニックススルー)
-			[{ addr = 0x82, filter = { 0x2668C, 0x2AD24, 0x2AD2C } }] = function(data, ret)
+			[0x82] = function(data, ret)
 				local pc = mem.pc()
-				if pc == 0x2668C then p.input1, p.flag_fin = data, false end
-				if pc == 0x2AD24 or pc == 0x2AD2C then p.flag_fin = ut.tstb(data, 0x80) end -- キー入力 直近Fの入力, 動作の最終F
+				if pc == 0x2668C then
+					p.input1, p.flag_fin = data, false  -- キー入力 直近Fの入力, 動作の最終F
+				end
+				p.flag_fin = ut.tstb(data, 0x80)
 			end,
 			--[[
 			[0x82] = function(data)                 end,                           -- クリアリングされた方向入力
@@ -5618,15 +5620,17 @@ rbff2.startplugin  = function()
 			)
 		end
 		local first_input = function()
-			c.count = 1
-			c.old = nil
+			c.count  = 1
+			c.old    = nil
 			c.range, c.list = tra_sub.reload_combo(p)
-			c.last = c.count == #c.list
-			c.input = c.list[1]
-			c.lag = 0
-			c.kara = false
-			c.hold = nil
-			c.hits = 0
+			c.last   = c.count == #c.list
+			c.input  = c.list[1]
+			c.fin    = nil
+			c.meoshi = nil
+			c.lag    = 0
+			c.kara   = false
+			c.hold   = nil
+			c.hits   = 0
 			if c.input then
 				c.state = "walk"
 				c.hook_cmd = (c.input.cmd ~= nil) and c.input or nil
@@ -5641,6 +5645,9 @@ rbff2.startplugin  = function()
 		local next_input = function()
 			local prev = c.input
 			c.count    = c.count + 1
+			while c.list[c.count].dummy do
+				c.count    = c.count + 1
+			end
 			-- 次の input を準備
 			c.lag      = c.input.lag or 0 -- 今のラグ設定を次の待ち時間にする
 			c.kara     = c.input.kara and (c.input.kara == true) or false
@@ -5648,6 +5655,9 @@ rbff2.startplugin  = function()
 			c.hits     = c.input.hits or 0
 			c.last     = c.count == #c.list
 			c.input    = c.list[c.count]
+			c.fin      = nil
+			local realprev = c.list[c.count - 1] -- ダミーを含めた前のオブジェクト
+			c.meoshi   = realprev and realprev.meoshi or nil
 			c.hook_cmd = (c.input and c.input.cmd ~= nil) and c.input or nil
 			c.hook_sp  = (c.input and c.input.cmd == nil) and c.input or nil
 			c.state    = c.lag > 0 and "lag" or "exec"
@@ -5672,7 +5682,7 @@ rbff2.startplugin  = function()
 		local do_log = function(point, entry)
 			if global.combo_log > 1 then
 				point = point or ""
-				ut.printf("%8s [FSM] %16s:%8s %3s %3s %3s %3s %4s %4s %4s %4s %s %s %s",
+				ut.printf("%8s [FSM] %16s:%8s %3s %3s %3s %3s %4s %4s %4s %4s %s %s %s %s",
 					entry and global.frame_number or "",
 					entry and "entry" or " ->" .. point,
 					c.state,
@@ -5686,7 +5696,8 @@ rbff2.startplugin  = function()
 					c.hold and c.hold or "----",
 					c.count,
 					c.lag,
-					c.input and to_sjis(c.input.name) or "--"
+					c.input and to_sjis(c.input.name) or "--",
+					p.flag_fin
 				)
 			end
 		end
@@ -5820,7 +5831,7 @@ rbff2.startplugin  = function()
 
 			-- 待ちがある場合はカウントダウンして抜ける
 			if c.lag > 0 then
-				if p.hitstop_remain == 0 then
+				if not (p.hitstop_remain > 0 or p.skip_frame or p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number) then
 					c.lag = c.lag - 1 -- ヒットストップ中
 				end
 				return log_with_ret(nil, "lag")
@@ -5861,6 +5872,12 @@ rbff2.startplugin  = function()
 		if c.state == "await" then
 			c.advance = (c.advance or advance)
 			c.timeout = c.timeout or timeout
+
+			if c.meoshi and p.flag_fin and not c.last and (c.fin == nil) then
+				c.state = "exec"
+				c.fin = (c.fin or 0) + 1 -- 動作終了フラグが連続するためカウンタで多重実行を避ける
+				return exec(true)
+			end
 
 			if c.timeout then
 				-- 動作終了に来た場合は初期化する

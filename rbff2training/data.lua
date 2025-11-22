@@ -1947,7 +1947,9 @@ local rvs_bs_list = {
 		combo("mid 2B B 3C 0x46", "_2B CA出し切り"),
 		combo("pos120 0x1E 5(hold7) 4 A B C", "滑り_A_B_C"),
 		combo("pos120 0x1E 5(hold7) 3B 0x01 6(hold15)", "滑り_Bローリング"),
-		combo("pb C C [8C 5]", "_C_C択"),
+		combo("pb C C 8C", "_C_C択中段"),
+		combo("pb C C(lag22) me [8C 2B(hold2)] B C", "_C_C択中下段"),
+		combo("pb C C me 2B B C", "_C_C択下段"),
 	},
 	-- ホンフゥ
 	{
@@ -2158,14 +2160,17 @@ local rvs_bs_list = {
 		{ id = 0x10, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "鳳凰天舞脚", },
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "鳳凰脚", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 鳳凰脚", },
-		combo("far A B [0x46 0x02 0x03]", "_A_B始動"),
-		combo("far A B(20) [0x46 0x02 0x03]", "_A_Bディレイ"),
-		combo("far A B C [0x46 0x02 0x03]", "_A_B_C"),
-		combo("far A B(20) C [0x46 0x02 0x03]", "_A_Bディレイ_C"),
-		combo("far A B C(20) [0x46 0x02 0x03]", "_A_B_Cディレイ"),
-		combo("pb 6C A [0x46 0x02 0x03]", "_C始動2段止め"),
-		combo("pb 6C A B [0x46 0x02 0x03]", "C始動3段止め"),
-		combo("pb 6C A B C", "C始動出し切り"),
+		combo("far A B           [0x46 0x02 0x03]", "_A_B必"),
+		combo("far A B(20)       [0x46 0x02 0x03]", "_A_Bディレイ必"),
+		combo("far A B(20) C     [0x46 0x02 0x03]", "_A_Bディレイ_C必"),
+		combo("far A B     C     [0x46 0x02 0x03]", "_A_B_C必"),
+		combo("far A B     C(20) [0x46 0x02 0x03]", "_A_B_Cディレイ必"),
+		combo("pos70 0x1E 5(hold1) 4 A B     0x06 me 0x1E 5(hold1) 4 A B C [0x46 0x02 0x03]", "_A_B覇気脚 滑り_A_B_C"),
+		combo("pos45 0x1E 5(hold1) 4 C(1hit) 0x06 me 0x1E 5(hold1) 4 A B C [0x46 0x02 0x03]", "_C覇気脚 滑り_A_B_C"),
+		combo("far   0x1E 5(hold1) 4 A B C", "滑り_A_B_C"),
+		combo("pb 6C A   [0x46 0x02 0x03]", "投げフォロー_C始動2段"),
+		combo("pb 6C A B [0x46 0x02 0x03]", "投げフォローC始動3段"),
+		combo("pb 6C A B C",                "投げフォローC始動全段"),
 	},
 	-- ビリー・カーン
 	{
@@ -2431,6 +2436,12 @@ local parse_combo_string = function(char_id, str)
 			cmd, await_num = token, 0
 		end
 
+		-- 目押し
+		local meoshi = false
+		if cmd == "me" or cmd == "link" then
+			meoshi = true
+		end
+
 		local cmd_name, sp_name, range_key = {}, nil, nil
 		for c in cmd:gmatch(".") do
 			local key = "_" .. c
@@ -2453,7 +2464,10 @@ local parse_combo_string = function(char_id, str)
 			merged_r = merged_r and (merged_r | value_r) or value_r
 		end
 
-		if failed then
+		if meoshi then
+			table.insert(results, { meoshi = true, dummy = true })
+			table.insert(names, "目押し")
+		elseif failed then
 			-- フォールバック関数を呼び出す
 			local hook = fallback_parse_token(cmd, splist)
 			if hook ~= nil then
@@ -2531,7 +2545,7 @@ for char, list in ipairs(rvs_bs_list) do
 				{ range = range, range_key = #combo > 0 and combo[1].range_key or "A" } -- leaf
 			})
 			list[i] = { combo = combo, hook_type = hook_cmd_types.combo, name = ut.convert(in_name or name) }
-			print(char, i , name, range, #combo)
+			--print(char, i , name, range, #combo)
 		end
 		if type(rvs) == "string" then
 			parse(rvs)
