@@ -5614,10 +5614,31 @@ rbff2.startplugin  = function()
 			meethits and "hit" or "---"
 		)
 		]]
+		local first_input = function()
+			c.count = 1
+			c.old = nil
+			c.range, c.list = tra_sub.reload_combo(p)
+			c.last = c.count == #c.list
+			c.input = c.list[1]
+			c.lag = 0
+			c.kara = false
+			c.hold = nil
+			c.hits = 0
+			if c.input then
+				c.state = "walk"
+				c.hook_cmd = (c.input.cmd ~= nil) and c.input or nil
+				c.hook_sp  = (c.input.cmd == nil) and c.input or nil
+			else
+				c.state = "finish"
+				c.hook_cmd = nil
+				c.hook_sp = nil
+			end
+		end
+
 		local next_input = function()
 			c.count    = c.count + 1
 			-- 次の input を準備
-			c.lag      = c.input.lag or 1 -- 今のラグ設定を次の待ち時間にする
+			c.lag      = c.input.lag or 0 -- 今のラグ設定を次の待ち時間にする
 			c.kara     = c.input.kara and (c.input.kara == true) or false
 			c.hold     = nil
 			c.hits     = c.input.hits or 0
@@ -5625,13 +5646,14 @@ rbff2.startplugin  = function()
 			c.input    = c.list[c.count]
 			c.hook_cmd = (c.input.cmd ~= nil) and c.input or nil
 			c.hook_sp  = (c.input.cmd == nil) and c.input or nil
-			c.state    = "lag"
+			c.state    = c.lag > 0 and "lag" or "exec"
 			c.advance  = false
 			c.timeout  = false
 		end
 
+		local enablelog = 0
 		local do_log = function(point, entry)
-			--[[
+			if not enablelog or enablelog <= 0 then return end
 			point = point or ""
 			ut.printf("%8s [FSM] %16s:%8s %3s %3s %3s %3s %4s %4s %4s %4s %s %s %s",
 				entry and global.frame_number or "",
@@ -5648,12 +5670,12 @@ rbff2.startplugin  = function()
 				c.count,
 				c.lag,
 				c.input and to_sjis(c.input.name) or "--")
-			]]
 		end
 
 		local log_with_ret = function(ret, point, entry)
-			--do_log(point, entry)
-			--ut.printf("         [FSM] return %s", (ret == nil) and "nil" or (ret.cmd == nil) and "sp" or "cmd")
+			if not enablelog or enablelog <= 1 then return ret end
+			do_log(point, entry)
+			ut.printf("         [FSM] return %s", (ret == nil) and "nil" or (ret.cmd == nil) and "sp" or "cmd")
 			return ret
 		end
 
@@ -5691,24 +5713,7 @@ rbff2.startplugin  = function()
 				return log_with_ret(nil, "moving")
 			end
 
-			c.count = 1
-			c.old = nil
-			c.range, c.list = tra_sub.reload_combo(p)
-			c.last = c.count == #c.list
-			c.input = c.list[1]
-			c.lag = 0
-			c.kara = false
-			c.hold = nil
-			c.hits = 0
-			if c.input then
-				c.state = "walk"
-				c.hook_cmd = (c.input.cmd ~= nil) and c.input or nil
-				c.hook_sp  = (c.input.cmd == nil) and c.input or nil
-			else
-				c.state = "finish"
-				c.hook_cmd = nil
-				c.hook_sp = nil
-			end
+			first_input()
 			do_log("exit neutral")
 			-- すぐwalk or finishへ
 		end

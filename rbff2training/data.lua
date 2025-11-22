@@ -1920,9 +1920,10 @@ local rvs_bs_list = {
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント いかづち", },
 		{ id = 0x50, f = 0x06, a = 0x00, hook_type = hook_cmd_types.add_throw, name = "地獄門", },
 		{ cmd = cmd_types._C, hook_type = hook_cmd_types.none, name = "喝CA(_C)", }, -- 16
-		combo("2A C"),
-		combo("A C"),
-		combo("B C"),
+		combo("close 2A C 0x05(lag30) [6C 3C]", "_2_A_C邪棍舞"),
+		combo("close A C 0x05(lag30) [6C 3C]", "_A_C邪棍舞"),
+		combo("far AB 0x05(lag30) [6C 3C]", "避け攻撃 邪棍舞"),
+		combo("far B C 0x05(lag30) [6C 3C]", "_B_C邪棍舞"),
 	},
 	-- ボブ・ウィルソン
 	{
@@ -1942,17 +1943,11 @@ local rvs_bs_list = {
 		{ id = 0x21, f = 0x06, a = 0x00, hook_type = hook_cmd_types.otg_stomp, name = "リンクスファング", },
 		{ id = 0x23, f = 0x78, a = 0x00, hook_type = hook_cmd_types.wakeup, name = "ボブサマー", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント ダンシングバイソン", },
-		combo("A C"),
-		combo("2A A C"),
-		combo("B C"),
-		combo("B B C"),
-		combo("2B B C"),
-		combo("2B B 3C"),
-		combo("2A B C"),
-		combo("2A B 3C"),
-		combo("C C 6C"),
-		combo("C C 8C"),
-		combo("C C"),
+		combo("close 2A 2A B 3C 0x46", "_2A CA出し切り"),
+		combo("mid 2B B 3C 0x46", "_2B CA出し切り"),
+		combo("pos120 0x1E 5(hold4) 4 A B C", "滑り_A_B_C"),
+		combo("pos120 0x1E 5(hold4) 3B 0x01 6(hold15)", "滑り_Bローリング"),
+		combo("pb C C [8C 5]", "_C_C択"),
 	},
 	-- ホンフゥ
 	{
@@ -1972,10 +1967,10 @@ local rvs_bs_list = {
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "よかトンハンマー", },
 		{ id = 0x21, f = 0x06, a = 0x00, hook_type = hook_cmd_types.otg_stomp, name = "トドメヌンチャク", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 制空烈火棍", },
-		combo("pb A C 0x46"),
-		combo("mid A C 0x46"),
-		combo("far B B C"),
-		combo("pb 3C"),
+		combo("pb A C 0x46", "近_A_C固め"),
+		combo("mid A C 0x46", "_A_C固め"),
+		combo("far B B C", "_B_B_C"),
+		combo("pb 3C 0x46", "掴み投げフォロー"),
 	},
 	-- ブルー・マリー
 	{
@@ -2003,11 +1998,12 @@ local rvs_bs_list = {
 		{ cmd = cmd_types._B, hook_type = hook_cmd_types.none, name = "フェイスロック(_B)", }, -- 22
 		{ cmd = cmd_types._C, hook_type = hook_cmd_types.none, name = "投げっぱなしジャーマン(_C)", }, -- 23
 		{ cmd = cmd_types._4B, hook_type = hook_cmd_types.none, name = "リバースキック(ヤングダイブ中_4_+_B)", }, -- 24
-		combo("A C"),
-		combo("9(6hold) 0x01"),
-		combo("B B 6C"),
-		combo("B B 3C"),
-		combo("2B 2B 2C"),
+		combo("close A C [0x09 0x04]", "_A_C"),
+		combo("9(10hold) 0x01", "M.スパイダー"),
+		combo("close B B 6C", "_B_B_6C"),
+		combo("close B B 3C [0x09 0x04] [0x01 4B]", "_B_B_3Cフォロー"),
+		combo("far 2B 2B 2C", "_B_B_2C"),
+		combo("pb 4B(2hit) 3C [0x09 0x04] [0x01 4B]"),
 	},
 	-- フランコ・バッシュ
 	{
@@ -2024,8 +2020,10 @@ local rvs_bs_list = {
 		{ id = 0x23, f = 0x78, a = 0x00, hook_type = hook_cmd_types.wakeup, name = "スマッシュ", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント ハルマゲドンバスター", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント ガッツダンク", },
-		combo("A C 0x46"),
-		combo("A C 0x46 A C B"),
+		combo("close A A [0x47 0x03]", "_A_A固め"),
+		combo("mid A C 0x46", "_A_Cフォロー"),
+		combo("mid A C [2C B C 0x01]", "_A_Cフォロー"),
+		combo("far BC(7kara) 0x03", "バロム W.ブロー"),
 	},
 	-- 山崎竜二
 	{
@@ -2081,10 +2079,9 @@ local rvs_bs_list = {
 		{ id = 0x10, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "帝王漏尽拳", },
 		{ id = 0x11, f = 0x06, a = 0x00, hook_type = hook_cmd_types.encounter | hook_cmd_types.ex_breakshot, name = "帝王空殺漏尽拳", },
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "海龍照臨", },
-		combo("A B C"),
-		combo("2A 2B 2C"),
-		combo("2A 2B 6C"),
-		combo("C C C"),
+		{ id = 0x28, f = 0x06, a = 0x00, hook_type = hook_cmd_types.none, name = "CA _6_4_+_C", },
+		combo("[2A 2B] 2B [6A 0x01 0x02 0x03]", "_A_B_Cフォロー"),
+		combo("C C C [0x28 5]", "_C_C_Cフォロー"),
 	},
 	-- 秦崇雷,
 	{
@@ -2102,13 +2099,13 @@ local rvs_bs_list = {
 		{ id = 0x00, f = 0x06, a = 0xFE, hook_type = hook_cmd_types.add_attack, name = "帝王宿命拳(連射)", },
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "帝王龍声拳", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 帝王宿命拳", },
-		combo("close 2A 2B 2C"),
-		combo("close 2A 2B 6C [0x02 0x03 0x07 0x08]"),
-		combo("close B C 3C 0x01 0x01"),
-		combo("far B C 3C 0x01 0x01"),
-		combo("close B C 8C"),
-		combo("close C [2B 6B 0x07 0x08]"),
-		combo("far [2A 2B 2C] [0x02 0x03 0x07 0x08]"),
+		combo("close 2A 2B 2C", "_2A_2B_2C"),
+		combo("close 2A 2B 6C [0x02 0x03 0x07 0x08]", "_2A_2B_6Cフォロー"),
+		combo("close B C 3C 0x01 0x01", "近_B_C_3Cフォロー"),
+		combo("far B C 3C 0x01 0x01", "遠_B_C_3Cフォロー"),
+		combo("close B C 8C", "近_B_C_中段"),
+		combo("close C [2B 6B 0x07 0x08]", "近_C_中下段"),
+		combo("far [2A 2B 2C 6B(10kara)] [0x02 0x03 0x07 0x08]", "下段フォロー"),
 	},
 	-- ダック・キング
 	{
@@ -2141,9 +2138,11 @@ local rvs_bs_list = {
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント ダックダンス", },
 		{ id = 0x28, f = 0x06, a = 0x00, hook_type = hook_cmd_types.add_attack, act = 0x245, name = "旧ブレイクストーム", },
 		combo("close 2A A B C"),
+		combo("close 2A 2A 0x01"),
 		combo("close 2A A B 3C"),
 		combo("close 2A A B 6C"),
-		combo("far C(kara) 0x10"),
+		combo("pos50 4A(10kara) 0x10"),
+		combo("far C(10kara) 0x10"),
 	},
 	-- キム・カッファン
 	{
@@ -2188,9 +2187,9 @@ local rvs_bs_list = {
 		combo("far 2A 2C(20) 0x06", "_2_A_2_C"),
 		combo("pb 3C C 0x28", "掴み投げフォロー焦点CA"),
 		combo("pb 6C 0x06(20) 0x06", "投げフォロー火龍"),
-		combo("pos120 A C", "遠_A_C"),
-		combo("pos120 2A [0x01 0x06]", "_2_Aけん制"),
-		combo("pos120 2A(10) [0x01 0x06]", "_2_Aけん制ディレイ"),
+		combo("pos100 A C", "遠_A_C"),
+		combo("pos110 2A [0x01 0x06]", "_2_Aけん制"),
+		combo("pos110 2A(10) [0x01 0x06]", "_2_Aけん制ディレイ"),
 	},
 	-- チン・シンザン
 	{
@@ -2209,9 +2208,9 @@ local rvs_bs_list = {
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "ホエホエ弾", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 破岩撃", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント クッサメ砲", },
-		combo("close 2A 2C 0x06"),
-		combo("close A C 0x06"),
-		combo("close B C 0x06"),
+		combo("close 2A 2C 0x06", "_2_A_2_C軟体"),
+		combo("close A C 0x06", "_A_C軟体"),
+		combo("close 2B 2C 0x06", "_2B_2C軟体"),
 	},
 	-- タン・フー・ルー,
 	{
@@ -2224,8 +2223,10 @@ local rvs_bs_list = {
 		{ id = 0x10, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "旋風剛拳", },
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "大撃放", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 旋風剛拳", },
-		combo("far AB C"),
-		combo("pb 3A C"),
+		combo("far AB C", "避けCA"),
+		combo("pb 3A C 0x46", "_3_A_Cフェイント"),
+		combo("pos60 0x1E 5(hold3) A A C 0x46", "ダッシュ_A_A_Cフェイント"),
+		combo("far 2C 0x46", "_2_Cフェイント"),
 	},
 	-- ローレンス・ブラッド
 	{
@@ -2245,6 +2246,7 @@ local rvs_bs_list = {
 		combo("far BC 2C"),
 		combo("far BC 6C"),
 		combo("far BC B"),
+		combo("close C C C"),
 	},
 	-- ヴォルフガング・クラウザー
 	{
