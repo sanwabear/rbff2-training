@@ -635,6 +635,9 @@ ut.shallow_copy = function(arr)
 	for i = 1, #arr do
 		result[i] = arr[i]
 	end
+	for k, v in pairs(arr) do
+		result[k] = v
+	end
 	return result
 end
 

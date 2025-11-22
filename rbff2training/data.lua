@@ -2005,7 +2005,7 @@ local rvs_bs_list = {
 		combo("close B B 6C", "_B_B_6C"),
 		combo("close B B 3C [0x09 0x04] [0x01 4B]", "_B_B_3Cフォロー"),
 		combo("far 2B 2B 2C", "_B_B_2C"),
-		combo("pb 4B(2hit) 3C [0x09 0x04] [0x01 4B]"),
+		combo("pb 4B(2hit) 3C [0x09 0x04] [0x01 4B]", "ローリング"),
 	},
 	-- フランコ・バッシュ
 	{
@@ -2022,7 +2022,10 @@ local rvs_bs_list = {
 		{ id = 0x23, f = 0x78, a = 0x00, hook_type = hook_cmd_types.wakeup, name = "スマッシュ", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント ハルマゲドンバスター", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント ガッツダンク", },
-		combo("close A A [0x47 0x03]", "_A_A固め"),
+		combo("pb [A 2B] [A 2B] [C 2C]", "_A_A固め 短"),
+		combo("pb [A 2B] [A 2B] 0x47(lag12) me 6B(hold2) [0x47 0x02 0x03 0x01 2C]", "_A_A固め 中"),
+		combo("pos45 0x1E 5(hold1) 4 [A B] [A 2B] 0x47 me [2A 2B] C [0x47 0x02 A] [0x47 0x02]", "_A_A固め 長"),
+		combo("pb 6B [0x47 0x02 0x03 0x01 2C]", "_6_B固め"),
 		combo("mid A C 0x46", "_A_Cフォロー"),
 		combo("mid A C [2C B C 0x01]", "_A_Cフォロー"),
 		combo("far BC(7kara) 0x03", "バロム W.ブロー"),
@@ -2464,30 +2467,32 @@ local parse_combo_string = function(char_id, str)
 			merged_r = merged_r and (merged_r | value_r) or value_r
 		end
 
+		local hook, name
 		if meoshi then
-			table.insert(results, { meoshi = true, dummy = true })
-			table.insert(names, "目押し")
+			hook, name = { meoshi = true, dummy = true }, "目押し"
 		elseif failed then
 			-- フォールバック関数を呼び出す
-			local hook = fallback_parse_token(cmd, splist)
-			if hook ~= nil then
-				table.insert(results, hook)
-				table.insert(names, hook.name)
+			hook = fallback_parse_token(cmd, splist)
+			if hook then
+				hook = ut.shallow_copy(hook)
+				name = hook.name
 			end
 		else
 			-- 正常処理成功
-			local hook = {
-				lag = await_num, -- 待機フレーム
-				kara = (kara ~= nil), -- 空キャンセル実施有無
-				hold = hold, -- タメおし待ち実施有無
-				hits = hits, -- ヒット数
-				range_key = range_key or "A",
+			hook, name = {
 				-- コマンドの右向き左向きをあらわすデータ値をキーにしたテーブルを用意
 				cmd = (merged == merged_r) and merged or { [1] = merged, [-1] = merged_r, },
 				name = string.format("%s:%s", #results + 1, token),
-			}
+			}, table.concat(cmd_name, "")
+		end
+		if hook then
+			hook.lag = await_num -- 待機フレーム
+			hook.kara = (kara ~= nil) -- 空キャンセル実施有無
+			hook.hold = hold -- タメおし待ち実施有無
+			hook.hits = hits -- ヒット数
+			hook.range_key = range_key or "A"
 			table.insert(results, hook)
-			table.insert(names, table.concat(cmd_name, ""))
+			table.insert(names, name)
 		end
 	end
 	return table.concat(names, "‐"), results

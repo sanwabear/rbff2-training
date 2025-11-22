@@ -29,9 +29,14 @@ rbff2.startplugin  = function()
 	local UTF8toSJIS = require("rbff2training/UTF8toSJIS")
 
 	local to_sjis    = function(s)
+		if s == nil then return s end
 		if type(s) == "table" then
 			for i, ss in ipairs(s) do
-				s[i] = UTF8toSJIS:UTF8_to_SJIS_str_cnv(ss)
+				if ss == nil then
+					s[i] = ss
+				else
+					s[i] = UTF8toSJIS:UTF8_to_SJIS_str_cnv(ss)
+				end
 			end
 			return s
 		end
@@ -5528,6 +5533,8 @@ rbff2.startplugin  = function()
 			else
 				local mode = p.combo.rnd_count
 				local count = (mode - 2) + 1 -- メニュー固定2を引いて、間合い管理の要素+1をする
+				count = (mode == 1) and "max" or ((mode == 2) and "random" or count)
+				if global.combo_log > 1 then ut.printf("combo pick count=%s", count) end
 				p.combo.picker = rnd_picker.create_picker(top_list, {
 					pull_count = (mode == 1) and "max" or ((mode == 2) and "random" or count)
 				})
@@ -5535,18 +5542,20 @@ rbff2.startplugin  = function()
 		end
 		-- 1ラウンド分抽出（各groupから1つずつ）
 		local list = p.combo.picker and rnd_picker.random_pull(p.combo.picker) or {}
-		--ut.print_table(list, to_sjis)
 		local range_elm = table.remove(list, 1)
 		p.combo.range = range_elm and range_elm.range or ""
 		p.combo.list = list
+		if global.combo_log > 1 then ut.print_table(list, to_sjis) end
 		return p.combo.range, p.combo.list
 	end
 
 	-- プリセットコンボのロード
 	tra_sub.controll_dummy_combo = function(p)
 		local c
-		if p.normal_state ~= true then
-			c = tra_sub.new_combo(p, true)
+		if p.normal_state ~= true or p.in_block == true or p.in_hurt == true then
+			if (p.combo == nil) or (p.combo.count == nil) or p.combo.count > 1 then
+				c = tra_sub.new_combo(p, true)
+			end
 			return nil
 		else
 			c = p.combo
@@ -5735,6 +5744,49 @@ rbff2.startplugin  = function()
 			return log_with_ret(c.input, "exec3")
 		end
 
+		local do_await = function()
+			if c.meoshi and p.flag_fin and not c.last and (c.fin == nil) then
+				c.state = "exec"
+				c.fin = (c.fin or 0) + 1 -- 動作終了フラグが連続するためカウンタで多重実行を避ける
+				return exec(true)
+			end
+
+			if c.timeout and not c.advance then
+				-- 動作終了に来た場合は初期化する
+				c.state = "finish"
+				do_log("exit await")
+				-- すぐにfinishへ
+			elseif c.advance and not c.last then
+				next_input()
+				return log_with_ret(nil, "adv1")
+			elseif c.advance and c.last then
+				-- 永久ループ防止
+				c.state = "finish"
+				c.advance = false
+				return log_with_ret(nil, "adv2")
+			elseif cancel and c.hook_sp and not c.advance then
+				-- キャンセル可能タイミング
+				return log_with_ret(c.hook_sp, "can")
+			elseif addition and c.hook_cmd and not c.advance then
+				-- 固有処理での追加入力受付向け
+				return log_with_ret(c.hook_cmd, "add")
+			elseif repcan and c.hook_cmd and not c.advance then
+				-- A連キャン
+				return log_with_ret(c.hook_cmd, "rep")
+			elseif capable and c.hook_sp and not c.advance then
+				-- ヒットorガード時のキャンセル
+				return log_with_ret(c.hook_sp, "cap")
+			elseif c.kara and c.hook_sp and not c.advance then
+				-- 必殺技の空キャンセル
+				return log_with_ret(c.hook_sp, "kara")
+			elseif ut.tstb(c.input.hook_type, hook_cmd_types.sp_throw) and c.hook_sp and not c.advance then
+				-- 投げ必殺技の場合はヒットorガード時のキャンセル
+				return log_with_ret(c.hook_sp, "thorw")
+			else
+				return log_with_ret(nil, "awaiting")
+			end
+		end
+
 		do_log("", true)
 
 		if c.state == "neutral" or c.input == nil then
@@ -5872,44 +5924,7 @@ rbff2.startplugin  = function()
 		if c.state == "await" then
 			c.advance = (c.advance or advance)
 			c.timeout = c.timeout or timeout
-
-			if c.meoshi and p.flag_fin and not c.last and (c.fin == nil) then
-				c.state = "exec"
-				c.fin = (c.fin or 0) + 1 -- 動作終了フラグが連続するためカウンタで多重実行を避ける
-				return exec(true)
-			end
-
-			if c.timeout then
-				-- 動作終了に来た場合は初期化する
-				c.state = "finish"
-				do_log("exit await")
-				-- すぐにfinishへ
-			elseif c.advance and not c.last then
-				next_input()
-				return log_with_ret(nil, "adv1")
-			elseif c.advance and c.last then
-				return log_with_ret(nil, "adv2")
-			elseif cancel and c.hook_sp and not c.advance then
-				-- キャンセル可能タイミング
-				return log_with_ret(c.hook_sp, "can")
-			elseif addition and c.hook_cmd and not c.advance then
-				-- 固有処理での追加入力受付向け
-				return log_with_ret(c.hook_cmd, "add")
-			elseif repcan and c.hook_cmd and not c.advance then
-				-- A連キャン
-				return log_with_ret(c.hook_cmd, "rep")
-			elseif capable and c.hook_sp and not c.advance then
-				-- ヒットorガード時のキャンセル
-				return log_with_ret(c.hook_sp, "cap")
-			elseif c.kara and c.hook_sp and not c.advance then
-				-- 必殺技の空キャンセル
-				return log_with_ret(c.hook_sp, "kara")
-			elseif ut.tstb(c.input.hook_type, hook_cmd_types.sp_throw) and c.hook_sp and not c.advance then
-				-- 投げ必殺技の場合はヒットorガード時のキャンセル
-				return log_with_ret(c.hook_sp, "thorw")
-			else
-				return log_with_ret(nil, "awaiting")
-			end
+			return do_await()
 		end
 
 		-- 動作終了に来た場合は初期化する
@@ -5920,6 +5935,13 @@ rbff2.startplugin  = function()
 		end
 
 		if c.state == "finish" then
+			-- ギリギリ間に合ったケースでは遷移させる
+			c.advance = (c.advance or advance)
+			if c.advance and not c.last then
+				local ret = do_await()
+				c.advance = false -- 永久ループ防止
+				return ret
+			end
 			c = tra_sub.new_combo(p)
 		end
 
@@ -8158,11 +8180,10 @@ rbff2.startplugin  = function()
 		end
 		-- プリセットコンボ選択メニュー作成
 		local combo_random_label = { "FULL", "RANDOM" }
-		for rnd = 1, 10 do table.insert(combo_random_label, string.format("RANDOM(%s～FULL)", rnd)) end
+		for rnd = 1, 30 do table.insert(combo_random_label, string.format("RANDOM(%s～FULL)", rnd)) end
 		for _, char_data in pairs(db.chars) do
 			if not char_data.combo then break end
 			local list, on_ab, col = {}, {}, {}
-			local ex_row = 0
 			table.insert(p_combo, {
 				name = string.format("プリセットコンボ選択(%s)", char_data.name),
 				desc = "ONにしたスロットからランダムで発動されます。",
