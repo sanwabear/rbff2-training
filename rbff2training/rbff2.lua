@@ -5713,6 +5713,10 @@ rbff2.startplugin  = function()
 				return log_with_ret(nil, "moving")
 			end
 
+			if p.op.normal_state ~= true then
+				return log_with_ret(nil, "op mov")
+			end
+
 			first_input()
 			do_log("exit neutral")
 			-- すぐwalk or finishへ
