@@ -2406,7 +2406,7 @@ local parse_combo_string = function(char_id, str)
 
 		if cmd and await then
 			while true do -- An infinite loop
-				if type(await) == "number" then
+				if str:match("^%d+$") or type(await) == "number" then
 					await_num = tonumber(await)
 					break
 				end
@@ -2445,7 +2445,7 @@ local parse_combo_string = function(char_id, str)
 			meoshi = true
 		end
 
-		local cmd_name, sp_name, range_key = {}, nil, nil
+		local cmd_name, range_key = {}, nil
 		for c in cmd:gmatch(".") do
 			local key = "_" .. c
 			table.insert(cmd_name, key)
@@ -2474,7 +2474,6 @@ local parse_combo_string = function(char_id, str)
 			-- フォールバック関数を呼び出す
 			hook = fallback_parse_token(cmd, splist)
 			if hook then
-				hook = ut.shallow_copy(hook)
 				name = hook.name
 			end
 		else
@@ -2486,12 +2485,16 @@ local parse_combo_string = function(char_id, str)
 			}, table.concat(cmd_name, "")
 		end
 		if hook then
-			hook.lag = await_num -- 待機フレーム
-			hook.kara = (kara ~= nil) -- 空キャンセル実施有無
-			hook.hold = hold -- タメおし待ち実施有無
-			hook.hits = hits -- ヒット数
-			hook.range_key = range_key or "A"
-			table.insert(results, hook)
+			table.insert(results, {
+				meta = {
+					hold = hold,                  -- 待ちタメおしフレーム
+					hits = hits,                  -- 待ちヒット数
+					lag  = await_num,             -- 待ち強制フレーム
+					kara = (kara ~= nil),         -- 待ちなし空キャンセル実施有無
+					range_key = range_key or "A", -- 間合いキー
+				},
+				hook = hook
+			})
 			table.insert(names, name)
 		end
 	end

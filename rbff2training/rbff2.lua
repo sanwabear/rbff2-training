@@ -5629,17 +5629,18 @@ rbff2.startplugin  = function()
 			)
 		end
 		local first_input = function()
-			c.count  = 1
-			c.old    = nil
+			c.count         = 1
+			c.old           = nil
 			c.range, c.list = tra_sub.reload_combo(p)
-			c.last   = c.count == #c.list
-			c.input  = c.list[1]
-			c.fin    = nil
-			c.meoshi = nil
-			c.lag    = 0
-			c.kara   = false
-			c.hold   = nil
-			c.hits   = 0
+			c.last          = c.count == #c.list
+			c.meta          = c.list[1].meta
+			c.input         = c.list[1].hook
+			c.fin           = nil
+			c.meoshi        = nil
+			c.lag           = 0
+			c.kara          = false
+			c.hold          = nil
+			c.hits          = 0
 			if c.input then
 				c.state = "walk"
 				c.hook_cmd = (c.input.cmd ~= nil) and c.input or nil
@@ -5658,12 +5659,14 @@ rbff2.startplugin  = function()
 				c.count    = c.count + 1
 			end
 			-- 次の input を準備
-			c.lag      = c.input.lag or 0 -- 今のラグ設定を次の待ち時間にする
-			c.kara     = c.input.kara and (c.input.kara == true) or false
-			c.hold     = c.input.hold
-			c.hits     = c.input.hits or 0
+			local meta = c.meta
+			c.lag      = meta.lag or 0 -- 今のラグ設定を次の待ち時間にする
+			c.kara     = meta.kara and (meta.kara == true) or false
+			c.hold     = meta.hold
+			c.hits     = meta.hits or 0
 			c.last     = c.count == #c.list
-			c.input    = c.list[c.count]
+			c.meta     = c.list[c.count].meta
+			c.input    = c.list[c.count].hook
 			c.fin      = nil
 			local realprev = c.list[c.count - 1] -- ダミーを含めた前のオブジェクト
 			c.meoshi   = realprev and realprev.meoshi or nil
@@ -5677,13 +5680,13 @@ rbff2.startplugin  = function()
 					prev and to_sjis(prev.name) or "---",
 					c.input and to_sjis(c.input.name) or "---",
 					(c.kara == nil) and "nil" or c.kara,
-					(c.hold == nil) and "nil" or c.kara,
-					(c.hits == nil) and "nil" or c.kara,
-					(c.last == nil) and "nil" or c.kara,
+					(c.hold == nil) and "nil" or c.hold,
+					(c.hits == nil) and "nil" or c.hits,
+					(c.last == nil) and "nil" or c.last,
 					c.hook_cmd and "cmd" or (c.hook_sp and "sp " or "---"),
-					(c.state == nil) and "nil" or c.kara,
-					(c.advance == nil) and "nil" or c.kara,
-					(c.timeout == nil) and "nil" or c.kara
+					(c.state == nil) and "nil" or c.state,
+					(c.advance == nil) and "nil" or c.advance,
+					(c.timeout == nil) and "nil" or c.timeout
 				)
 			end
 		end
@@ -5725,9 +5728,9 @@ rbff2.startplugin  = function()
 			c.state = "await"
 			c.advance = false
 			c.timeout = false
-			if c.hook_cmd and c.hook_cmd.hold then
+			if c.hook_cmd and c.meta.hold then
 				c.state = "hold"
-				c.hold = c.hook_cmd.hold
+				c.hold = c.meta.hold
 				return log_with_ret(c.hook_cmd, "exec4")
 			end
 			--print("input", c.count)
