@@ -2243,9 +2243,17 @@ rbff2.startplugin  = function()
 			while global.cmd_hist_limit < #p.key.cmd_hist do table.remove(p.key.cmd_hist, 1) end --バッファ長調整
 		end
 		p.wp08                     = {
-			[0x16] = function(data) p.knockback1 = data end, -- のけぞり確認用2(裏雲隠し)
+			[0x16] = function(data)
+				p.knockback1 = data
+				if data < 1 and mem.pc() == 0x05FAD0 then
+					p.on_last_frame = now()
+					if p.dummy_rvs then p.input_any(p.dummy_rvs, "[Reversal] 0x16 hook") end
+				end
+			end, -- のけぞり確認用2(裏雲隠し)
 			[0x69] = function(data) p.knockback2 = data end, -- のけぞり確認用1(色々)
-			[0x7E] = function(data) p.flag_7e = data end, -- 動作切替、のけぞり確認用3(フェニックススルー)
+			[0x7E] = function(data)
+				p.flag_7e = data
+			end, -- 動作切替、のけぞり確認用3(フェニックススルー)
 			[0x82] = function(data, ret)
 				local pc = mem.pc()
 				if pc == 0x2668C then
@@ -2286,6 +2294,11 @@ rbff2.startplugin  = function()
 				if global.life_mode ~= 3 then ret.value = math.max(data, 1) end -- 残体力がゼロだと次の削りガードが失敗するため常に1残すようにもする
 			end,
 			[0x8E] = function(data)
+				local pc = mem.pc()
+				if pc == 0x058D5A or pc == 0x05BB38 then
+					p.on_last_frame = now()
+					if p.dummy_rvs then p.input_any(p.dummy_rvs, "[Reversal] 0x8E hook") end
+				end
 				local changed, n = p.state ~= data, now()
 				p.on_block = data == 2 and n or p.on_block                                     -- ガードへの遷移フレームを記録
 				p.on_hit = (data == 1 or data == 3) and n or p.on_hit                          -- ヒットへの遷移フレームを記録
@@ -2442,7 +2455,7 @@ rbff2.startplugin  = function()
 				p.update_tmp_combo(data)
 			end,
 			[p1 and 0x10B4E5 or 0x10B4E4] = function(data) p.last_combo = data end, -- 最近のコンボ数
-			[p1 and 0x10B4E7 or 0x10B4E8] = function(data) p.konck_back4 = data end, -- 1ならやられ中
+			[p1 and 0x10B4E7 or 0x10B4E8] = function(data) p.konck_back4 = data end, -- 1ならやられ中(投げ技は反映されない)
 			--[p1 and 0x10B4EA or 0x10B4E9] = function(data) p.tmp_combo2 = data end,  -- 一時的なコンボ数-1
 			--[p1 and 0x10B4F0 or 0x10B4EF] = function(data) p.max_combo = data end, -- 最大コンボ数
 			[p1 and 0x10B84E or 0x10B856] = function(data) p.stun_limit = data end, -- 最大気絶値
@@ -2549,14 +2562,37 @@ rbff2.startplugin  = function()
 					if mem.rg("D1", 0xFF) < check_count then ret.value = 0x3 end -- 自動デッドリー、自動アンリミ1
 				end
 			end,
+			[0x7E] = function(data)
+				local pc = mem.pc()
+				if pc == 0x030116 or -- キャンセル可能なふきとび着地
+					pc == 0x02CAB4 or -- キャンセル可能なジャンプ着地
+					(
+						(
+							pc == 0x05A882 or -- 投げ 起き上がり
+							pc == 0x05A78E or -- ダウン 起き上がり
+							pc == 0x05A916 or -- ライン飛ばしダウンの起き上がり
+							pc == 0x0592C2 or -- 空中やられ着地
+							pc == 0x05AC18 or -- テクニカルライズ起き上がり
+							pc == 0x05AAD0    -- グランドスウェー起き上がり
+						) and ut.tstb(data, db.flag_7e._07)
+					) then
+					ut.printf("%s 7E:%X ADDR:%X", p.num, data, pc)
+					p.on_last_frame = now()
+					if p.dummy_rvs then p.input_any(p.dummy_rvs, "[Reversal] 0x7E hook") end
+				end
+			end, -- 動作切替、のけぞり確認用3(フェニックススルー)
 			[{ addr = 0x28, filter = ut.table_add_all(special_throw_addrs, { 0x6042A }) }] = extra_throw_callback,
 			[{ addr = 0x8A, filter = { 0x5A9A2, 0x5AB34 } }] = function(data)
-				local pc = mem.pc()
-				if p.dummy_wakeup == wakeup_type.sway and pc == 0x5A9A2 then
-					mem.w08(mem.rg("A0", 0xFFFFFF) + (data & 0x1) * 2, 2) -- 起き上がり動作の入力を更新
-				elseif p.dummy_wakeup == wakeup_type.tech and pc == 0x5AB34 then
-					mem.w08(mem.rg("A0", 0xFFFFFF) + (data & 0x1) * 2, 1) -- 起き上がり動作の入力を更新
+				local ret = nil
+				if p.dummy_wakeup == wakeup_type.sway then
+					ret = 2 -- 2のときグランドスウェー
+				elseif p.dummy_wakeup == wakeup_type.tech then
+					ret = 1 -- 1のときテクニカルライズ
+				else
+					return
 				end
+				-- 起き上がり動作の入力を更新
+				mem.w08(mem.rg("A0", 0xFFFFFF) + (data & 0x1) * 2, ret)
 			end,
 			--[{ addr = 0x8A, filter = 0x2FAA8 }] = function(data) p.readed_ca = mem.rg("A0", 0xFFFFFF) end,
 			[{ addr = 0x8E, filter = 0x39F8A }] = function(data)
@@ -3239,7 +3275,9 @@ rbff2.startplugin  = function()
 				p.on_sway_to_main = (p.pos_z == 40 and data ~= 40) and nowv or p.on_sway_to_main -- メインラインへの遷移時
 				p.pos_z           = data                                                                  -- Z座標
 			end,
-			[0x28] = function(data) p.pos_y = ut.int16(data) end,                                         -- Y座標
+			[0x28] = function(data)
+				p.pos_y = ut.int16(data)
+			end,                                         -- Y座標
 			[0x2A] = function(data) p.pos_frc_y = ut.int16tofloat(data) end,                              -- Y座標(小数部)
 			[{ addr = 0x5E, filter = 0x011E10 }] = function(data) p.box_addr = mem.rg("A0", 0xFFFFFFFF) - 0x2 end, -- 判定のアドレス
 			[0x60] = function(data)
@@ -5917,6 +5955,18 @@ rbff2.startplugin  = function()
 			-- 待ちがある場合はカウントダウンして抜ける
 			if c.hold > 0 then
 				c.hold = c.hold - 1 -- ヒットストップ中
+				local on = c.meta.hold - c.hold
+				local hook = c.hook_cmd
+				if hook.cmd then
+					local k = hook.cmd
+					if on == 1 then
+						hook.on1f, hook.on5f, hook.hold = k, k, k
+					elseif on >= 5 then
+						hook.on1f, hook.on5f, hook.hold = 0, k, k
+					else
+						hook.on1f, hook.on5f, hook.hold = 0, 0, k
+					end
+				end
 				return log_with_ret(c.input, "hold")
 			end
 
@@ -6194,76 +6244,9 @@ rbff2.startplugin  = function()
 		elseif global.dummy_rvs_type == 4 then -- リバーサル対象 4:その他動作時
 			if p.in_block or p.in_hurt then p.dummy_rvs = nil end
 		end
-		if p.knockback2 < 3 and p.hitstop_remain == 0 and not p.skip_frame and rvs_wake_types[p.dummy_wakeup] and p.dummy_rvs then
-			-- ダウン起き上がりリバーサル入力
-			if db.wakeup_acts[p.act] and (p.char_data.wakeup_frms - 3) <= (global.frame_number - p.on_wakeup) then
-				--input_rvs(rvs_types.on_wakeup, p, string.format("[Reversal] wakeup %s %s",
-				--	p.char_data.wakeup_frms, (global.frame_number - p.on_wakeup)))
-				type, log = rvs_types.on_wakeup, string.format("[Reversal] wakeup %s %s",
-					p.char_data.wakeup_frms, (global.frame_number - p.on_wakeup))
-			end
-			-- 着地リバーサル入力（やられの着地）
-			if 1 < p.pos_y_down and p.old.pos_y > p.pos_y and p.in_air ~= true and not ut.tstb(p.flag_c0, db.flag_c0._25) then
-				--input_rvs(rvs_types.knock_back_landing, p, "[Reversal] blown landing")
-				type, log = rvs_types.knock_back_landing, "[Reversal] blown landing"
-			end
-			-- バクステ後と着地リバーサル入力（通常ジャンプの着地）
-			if (p.act == 0x9 or p.act == 0x2C9 or p.act == 0x1C) and (p.act_frame == 2 or p.act_frame == 0) then
-				--input_rvs(rvs_types.jump_landing, p, "[Reversal] jump landing")
-				type, log = rvs_types.jump_landing, "[Reversal] jump landing"
-			end
-			-- リバーサルじゃない最速入力
-			-- ut.printf("aa" .. (p.act_data.name or "") .. " %X %s %X %s", p.flag_cc, ut.tstb(p.flag_cc, db.flag_cc.hurt), p.old.flag_cc, ut.tstb(p.old.flag_cc, db.flag_cc.hurt))
-			-- if p.state == 0 and p.act_data.name ~= "やられ" and p.old.act_data.name == "やられ" and p.knockback2 == 0 then
-			if p.state == 1 and ut.tstb(p.flag_cc, db.flag_cc.hurt) == true and p.knockback2 == 0 then
-				--input_rvs(rvs_types.knock_back_recovery, p, "[Reversal] blockstun 1")
-				type, log = rvs_types.knock_back_recovery, "[Reversal] blockstun 1"
-			end
-			-- のけぞりのリバーサル入力
-			if (p.state == 1 or (p.state == 2 and p.gd_rvs_enabled)) and p.hitstop_remain == 0 then
-				-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する
-				-- 奥ラインへずらした場合だけ無視する（p.act ~= 0x14A）
-				if p.flag_7e == 0x80 and p.knockback2 == 0 and p.act ~= 0x14A and not ut.tstb(p.flag_7e, db.flag_7e._02) and not p.on_block then
-					-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する1
-					--input_rvs(rvs_types.in_knock_back, p, "[Reversal] blockstun 2")
-					type, log = rvs_types.in_knock_back, "[Reversal] blockstun 2"
-				elseif p.old.knockback2 > 0 and p.knockback2 == 0 then
-					-- のけぞり中のデータをみてのけぞり終了の2F前に入力確定する2
-					--input_rvs(rvs_types.in_knock_back, p, "[Reversal] blockstun 3")
-					type, log = rvs_types.in_knock_back, "[Reversal] blockstun 3"
-				end
-				-- デンジャラススルー用
-				if p.flag_7e == 0x0 and p.hitstop_remain < 3 and p.base == 0x34538 then
-					--input_rvs(rvs_types.dangerous_through, p, "[Reversal] blockstun 4")
-					type, log = rvs_types.dangerous_through, "[Reversal] blockstun 4"
-				end
-			elseif p.state == 3 and p.hitstop_remain == 0 and p.knockback1 <= 1 then
-				-- 当身うち空振りと裏雲隠し用
-				--input_rvs(rvs_types.atemi, p, "[Reversal] blockstun 5")
-				type, log = rvs_types.atemi, "[Reversal] blockstun 5"
-			end
-			-- 奥ラインへずらしたあとのリバサ
-			if p.act == 0x14A and (p.act_count == 4 or p.act_count == 5) and p.old.act_frame == 0 and p.act_frame == 0 and p.throw_timer == 0 then
-				--input_rvs(rvs_types.in_knock_back, p, string.format("[Reversal] plane shift %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer))
-				type, log = rvs_types.in_knock_back, string.format("[Reversal] plane shift %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer)
-			end
-			-- テクニカルライズのリバサ
-			if p.act == 0x2C9 and p.act_count == 2 and p.act_frame == 0 and p.throw_timer == 0 then
-				--input_rvs(rvs_types.in_knock_back, p, string.format("[Reversal] tech-rise1 %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer))
-				type, log = rvs_types.in_knock_back, string.format("[Reversal] tech-rise1 %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer)
-			end
-			if p.act == 0x2C9 and p.act_count == 0 and p.act_frame == 2 and p.throw_timer == 0 then
-				--input_rvs(rvs_types.in_knock_back, p, string.format("[Reversal] tech-rise2 %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer))
-				type, log = rvs_types.in_knock_back, string.format("[Reversal] tech-rise2 %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer)
-			end
-			-- グランドスウェー
-			local sway_act_frame = 0
-			if p.char_data.sway_act_counts ~= 0 then
-				sway_act_frame = 1
-			end
-			if p.act == 0x13E and p.act_count == p.char_data.sway_act_counts and p.act_frame == sway_act_frame then
-				--input_rvs(rvs_types.in_knock_back, p, string.format("[Reversal] ground sway %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer))
-				type, log = rvs_types.in_knock_back, string.format("[Reversal] ground sway %x %x %x %s", p.act, p.act_count, p.act_frame, p.throw_timer)
+		if not p.skip_frame and rvs_wake_types[p.dummy_wakeup] and p.dummy_rvs then
+			if p.on_last_frame == global.frame_number then
+				type, log = rvs_types.knock_back_recovery, "[Reversal] 1"
 			end
 		end
 		return p.dummy_rvs, type, log, reset_cmd
