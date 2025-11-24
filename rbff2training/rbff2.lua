@@ -2181,7 +2181,7 @@ rbff2.startplugin  = function()
 		end
 		p.input_rvs         = function(rvs_type, hook, label)
 			p.input_any(hook, label)
-			if p.dummy_rvs.cmd and rvs_types.knock_back_recovery ~= rvs_type then
+			if p.dummy_rvs.cmd and rvs_types.reversal ~= rvs_type then
 				if (((p.flag_c0 | p.old.flag_c0) & 0x2 == 0x2) or db.pre_down_acts[p.act]) and p.dummy_rvs.cmd == db.cmd_types._2D then
 					p.reset_sp_hook() -- no act
 				end
@@ -2251,9 +2251,7 @@ rbff2.startplugin  = function()
 				end
 			end, -- のけぞり確認用2(裏雲隠し)
 			[0x69] = function(data) p.knockback2 = data end, -- のけぞり確認用1(色々)
-			[0x7E] = function(data)
-				p.flag_7e = data
-			end, -- 動作切替、のけぞり確認用3(フェニックススルー)
+			[0x7E] = function(data) p.flag_7e = data end, -- 動作切替、のけぞり確認用3(フェニックススルー)
 			[0x82] = function(data, ret)
 				local pc = mem.pc()
 				if pc == 0x2668C then
@@ -2295,7 +2293,8 @@ rbff2.startplugin  = function()
 			end,
 			[0x8E] = function(data)
 				local pc = mem.pc()
-				if pc == 0x058D5A or pc == 0x05BB38 then
+				if pc == 0x058D5A or -- やられ状態リセット
+					pc == 0x05BB38 then -- スウェーライン上くらい ダウン投げ起き上がり
 					p.on_last_frame = now()
 					if p.dummy_rvs then p.input_any(p.dummy_rvs, "[Reversal] 0x8E hook") end
 				end
@@ -2562,12 +2561,25 @@ rbff2.startplugin  = function()
 					if mem.rg("D1", 0xFF) < check_count then ret.value = 0x3 end -- 自動デッドリー、自動アンリミ1
 				end
 			end,
+			[0x69] = function(data) 
+				local pc = mem.pc()
+				if (
+						(
+							pc == 0x058A1C
+						) and data == 0
+					) then
+					--ut.printf("%s 7E:%X ADDR:%X", p.num, data, pc)
+					p.on_last_frame = now()
+					if p.dummy_rvs then p.input_any(p.dummy_rvs, "[Reversal] 0x7E hook") end
+				end
+			end,
 			[0x7E] = function(data)
 				local pc = mem.pc()
 				if pc == 0x030116 or -- キャンセル可能なふきとび着地
 					pc == 0x02CAB4 or -- キャンセル可能なジャンプ着地
 					(
 						(
+							pc == 0x058C26 or -- 空中ガード着地
 							pc == 0x05A882 or -- 投げ 起き上がり
 							pc == 0x05A78E or -- ダウン 起き上がり
 							pc == 0x05A916 or -- ライン飛ばしダウンの起き上がり
@@ -2576,7 +2588,7 @@ rbff2.startplugin  = function()
 							pc == 0x05AAD0    -- グランドスウェー起き上がり
 						) and ut.tstb(data, db.flag_7e._07)
 					) then
-					ut.printf("%s 7E:%X ADDR:%X", p.num, data, pc)
+					--ut.printf("%s 7E:%X ADDR:%X", p.num, data, pc)
 					p.on_last_frame = now()
 					if p.dummy_rvs then p.input_any(p.dummy_rvs, "[Reversal] 0x7E hook") end
 				end
@@ -6206,7 +6218,7 @@ rbff2.startplugin  = function()
 		return dummy_cmd
 	end
 	tra_sub.controll_dummy_reversal = function(p)
-		local reset_cmd, type, log = nil, db.rvs_types.none, nil
+		local reset_cmd, type, log = nil, rvs_types.none, nil
 
 		-- ガードリバーサル
 		if not p.gd_rvs_enabled and (p.dummy_wakeup == wakeup_type.rvs) and p.dummy_rvs and (p.on_block == global.frame_number) then
@@ -6234,7 +6246,7 @@ rbff2.startplugin  = function()
 			end
 		end
 
-		-- print(p.state, p.knockback2, p.knockback1, p.flag_7e, p.hitstop_remain, rvs_types.in_knock_back, p.last_blockstun, string.format("%x", p.act), p.act_count, p.act_frame)
+		-- print(p.state, p.knockback2, p.knockback1, p.flag_7e, p.hitstop_remain, rvs_types.reversal, p.last_blockstun, string.format("%x", p.act), p.act_count, p.act_frame)
 		-- ヒットストップ中は無視
 		-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
 		if global.dummy_rvs_type == 2 then -- リバーサル対象 2:ガード時
@@ -6246,7 +6258,7 @@ rbff2.startplugin  = function()
 		end
 		if not p.skip_frame and rvs_wake_types[p.dummy_wakeup] and p.dummy_rvs then
 			if p.on_last_frame == global.frame_number then
-				type, log = rvs_types.knock_back_recovery, "[Reversal] 1"
+				type, log = rvs_types.reversal, "[Reversal] 1"
 			end
 		end
 		return p.dummy_rvs, type, log, reset_cmd
@@ -6577,7 +6589,7 @@ rbff2.startplugin  = function()
 			tra_sub.log(global.frame_number, "1")
 			return
 		end
-		if dummy_rvs and rvs_type ~= db.rvs_types.none then
+		if dummy_rvs and rvs_type ~= rvs_types.none then
 			if reset_rvs then
 				p.reset_cmd_hook(reset_rvs, rvs_log or "reset_rvs")
 			end
