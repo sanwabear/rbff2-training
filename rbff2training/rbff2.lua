@@ -2579,13 +2579,15 @@ rbff2.startplugin  = function()
 					pc == 0x02CAB4 or -- キャンセル可能なジャンプ着地
 					(
 						(
+							pc == 0x05EEA6 or -- つかみ投げ抜け着地
 							pc == 0x058C26 or -- 空中ガード着地
 							pc == 0x05A882 or -- 投げ 起き上がり
 							pc == 0x05A78E or -- ダウン 起き上がり
 							pc == 0x05A916 or -- ライン飛ばしダウンの起き上がり
 							pc == 0x0592C2 or -- 空中やられ着地
 							pc == 0x05AC18 or -- テクニカルライズ起き上がり
-							pc == 0x05AAD0    -- グランドスウェー起き上がり
+							pc == 0x05AAD0 or -- グランドスウェー起き上がり
+							pc == 0x02BBF0    -- 気絶回復
 						) and ut.tstb(data, db.flag_7e._07)
 					) then
 					--ut.printf("%s 7E:%X ADDR:%X", p.num, data, pc)
@@ -6238,6 +6240,12 @@ rbff2.startplugin  = function()
 			p.gd_bs_enabled = false
 		end -- ガード状態が解除されたらBS解除
 
+		-- モード判定
+		if p.dummy_wakeup == wakeup_type.none then
+			p.dummy_rvs = nil
+		end
+
+		-- レバー操作の強制リセット
 		if p.old.knockback2 ~= nil and p.old.knockback2 == 1 then
 			if ut.tstb(p.flag_c0, db.flag_c0.crounch) then
 				reset_cmd = db.cmd_types._5 -- 強制立
@@ -6256,11 +6264,15 @@ rbff2.startplugin  = function()
 		elseif global.dummy_rvs_type == 4 then -- リバーサル対象 4:その他動作時
 			if p.in_block or p.in_hurt then p.dummy_rvs = nil end
 		end
+
+		-- フック検知してのリバサ発動有無
 		if not p.skip_frame and rvs_wake_types[p.dummy_wakeup] and p.dummy_rvs then
 			if p.on_last_frame == global.frame_number then
 				type, log = rvs_types.reversal, "[Reversal] 1"
 			end
 		end
+
+		-- p.dummy_rvsはフック時のリバサ動作に反映されるので返り値と変数の値を同じにする
 		return p.dummy_rvs, type, log, reset_cmd
 	end
 	tra_sub.controll_dummy_encounter = function(p)
