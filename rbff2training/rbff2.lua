@@ -1999,13 +1999,13 @@ rbff2.startplugin  = function()
 			bs              = false,     -- ブレイクショット
 			dummy_wakeup    = wakeup_type.none, -- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
 			dummy_bs        = nil,       -- ランダムで選択されたブレイクショット
-			dummy_bs_list   = {},        -- ブレイクショットのコマンドテーブル上の技ID
+
 			bs_count        = -1,        -- ブレイクショットの実施カウント
 			dummy_rvs       = nil,       -- ランダムで選択されたリバーサル
-			dummy_rvs_list  = {},        -- リバーサルのコマンドテーブル上の技ID
+
 			rvs_count       = -1,        -- リバーサルの実施カウント
 			dummy_enc       = nil,       -- ランダムで選択された邀撃
-			dummy_enc_list  = {},        -- 邀撃のコマンドテーブル上の技ID
+
 			gd_rvs_enabled  = false,     -- ガードリバーサルの実行可否
 			gd_bs_enabled   = false,     -- BSの実行可否
 			fwd_prov        = true,      -- 挑発で自動前進
@@ -2552,16 +2552,12 @@ rbff2.startplugin  = function()
 			end
 		end
 		p.rp08                     = {
-			[{ addr = 0x12, filter = { 0x3DCF8, 0x49B2C } }] = function(data, ret)
-				--[[
-				0x24950, 0x24A2C, 0x24A52, 
+			[{ addr = 0x12, filter = { 0x3DCF8, 0x49B2C, 0x24950, 0x24A2C, 0x24A52 } }] = function(data, ret)
 				local pc = mem.pc()
-				if pc == 0x24950 or pc == 0x24A2C or pc == 0x24A52 then -- コマンド成立チェックをスキップ
+				if p.dummy_rvs and (pc == 0x24950 or pc == 0x24A2C or pc == 0x24A52) then -- コマンド成立チェックをスキップ
 					local sp = p.bs_hook
 					if sp and sp.cmd then ret.value = 0x3 end
-				else
-				]]
-				if p.enc_enabled then
+				elseif p.enc_enabled and (pc == 0x3DCF8 or pc == 0x49B2C) then
 					local check_count = 0
 					if p.char == db.char_id.geese then check_count = p.encounter.rave == 10 and 9 or (p.encounter.rave - 1) end
 					if p.char == db.char_id.krauser then check_count = p.encounter.desire == 11 and 9 or (p.encounter.desire - 1) end
@@ -6248,7 +6244,7 @@ rbff2.startplugin  = function()
 		end -- ガード状態が解除されたらBS解除
 
 		-- モード判定
-		if p.dummy_wakeup == wakeup_type.none or not p.gd_rvs_enabled then
+		if p.dummy_wakeup == wakeup_type.none or (not p.gd_rvs_enabled and global.dummy_rvs_cnt > 1)then
 			p.dummy_rvs = nil
 		end
 
