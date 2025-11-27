@@ -1891,7 +1891,6 @@ rbff2.startplugin  = function()
 	end
 	input.readp                                        = function(p, merge_bs_hook)
 		if not p.key then return end
-		local pkey = players[p.control].key
 		local addr = p.addr.key
 		local status_b, reg_pcnt = mem.r08(addr.reg_st_b) ~ 0xFF, mem.r08(addr.reg_pcnt) ~ 0xFF
 		local on1f, on5f, hold = mem.r08(addr.on1f), mem.r08(addr.on5f), mem.r08(addr.hold)
@@ -2488,7 +2487,7 @@ rbff2.startplugin  = function()
 				if pc == 0x06042A then add_throw_box(p, get_air_throw_box(p)) end -- 空中投げ
 			end
 		end
-		-- ドリル回数 0x42C3Eからのデータと合わせrう
+		-- ドリル回数 0x42C3Eからのデータと合わせる
 		local drill_counts         = { 0x07, 0x09, 0x0B, 0x0C, 0x3C, } -- { 0x00, 0x01, 0x02, 0x03, 0x04, }
 		local additional_buttons   = {
 			--0x038FF8,
@@ -2554,6 +2553,14 @@ rbff2.startplugin  = function()
 		end
 		p.rp08                     = {
 			[{ addr = 0x12, filter = { 0x3DCF8, 0x49B2C } }] = function(data, ret)
+				--[[
+				0x24950, 0x24A2C, 0x24A52, 
+				local pc = mem.pc()
+				if pc == 0x24950 or pc == 0x24A2C or pc == 0x24A52 then -- コマンド成立チェックをスキップ
+					local sp = p.bs_hook
+					if sp and sp.cmd then ret.value = 0x3 end
+				else
+				]]
 				if p.enc_enabled then
 					local check_count = 0
 					if p.char == db.char_id.geese then check_count = p.encounter.rave == 10 and 9 or (p.encounter.rave - 1) end
@@ -2568,7 +2575,7 @@ rbff2.startplugin  = function()
 							pc == 0x058A1C
 						) and data == 0
 					) then
-					--ut.printf("%s 7E:%X ADDR:%X", p.num, data, pc)
+					--ut.printf("%s 69:%X ADDR:%X", p.num, data, pc)
 					p.on_last_frame = now()
 					if p.dummy_rvs then p.input_any(p.dummy_rvs, "[Reversal] 0x7E hook") end
 				end
@@ -6241,7 +6248,7 @@ rbff2.startplugin  = function()
 		end -- ガード状態が解除されたらBS解除
 
 		-- モード判定
-		if p.dummy_wakeup == wakeup_type.none then
+		if p.dummy_wakeup == wakeup_type.none or not p.gd_rvs_enabled then
 			p.dummy_rvs = nil
 		end
 
