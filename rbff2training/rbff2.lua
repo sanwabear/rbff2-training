@@ -49,6 +49,10 @@ rbff2.startplugin  = function()
 	local cpu        = machine.devices[":maincpu"]
 	local pgm        = cpu.spaces["program"]
 	local scr        = machine.screens:at(1)
+	local scaled_scr = {
+		width = (320 - scr.width * scr.xscale) / 2,
+		height = scr.height * scr.yscale,
+	}
 	local ioports    = man.machine.ioport.ports
 	local base_path  = function()
 		local base = emu.subst_env(man.options.entries.homepath:value():match('([^;]+)')) .. "/plugins/rbff2training"
@@ -1082,17 +1086,15 @@ rbff2.startplugin  = function()
 		end
 		return ons
 	end
-	local get_next_xs          = function(p, list, cur_menu, top_label_count, log_label)
-		local ons = get_selected_menu(p, list, cur_menu, top_label_count, log_label)
-		if #ons == 0 then return nil end
-		local idx = math.random(#ons)
-		--ut.printf("%s next %s of %s", log_label, idx, #ons)
-		return ons[idx]
-	end
-	local get_next_enc         = function(p) return get_next_xs(p, p.char_data and p.char_data.enc or nil, menu.enc_menus, 0, "enc") end
-	local get_next_rvs         = function(p) return get_next_xs(p, p.char_data and p.char_data.rvs or nil, menu.rvs_menus, 0, "rvs") end
-	local get_next_bs          = function(p) return get_next_xs(p, p.char_data and p.char_data.bs or nil, menu.bs_menus, 0, "bs") end
-	local get_next_fol         = function(p) return get_next_xs(p, p.char_data and p.char_data.fol or nil, menu.fol_menus, 0, "fol") end
+	local get_onlist_enc       = function(p) return get_selected_menu(p, p.char_data and p.char_data.enc or nil, menu.enc_menus, 0, "enc") end
+	local get_onlist_rvs       = function(p) return get_selected_menu(p, p.char_data and p.char_data.rvs or nil, menu.rvs_menus, 0, "rvs") end
+	local get_onlist_bs        = function(p) return get_selected_menu(p, p.char_data and p.char_data.bs  or nil, menu.bs_menus , 0, "bs" ) end
+	local get_onlist_fol       = function(p) return get_selected_menu(p, p.char_data and p.char_data.fol or nil, menu.fol_menus, 0, "fol") end
+	local get_next_xs          = function(ons) return (#ons > 0) and ons[math.random(#ons)] or nil end
+	local get_next_enc         = function(p) return get_next_xs(p.onlist.enc) end
+	local get_next_rvs         = function(p) return get_next_xs(p.onlist.rvs) end
+	local get_next_bs          = function(p) return get_next_xs(p.onlist.bs ) end
+	local get_next_fol         = function(p) return get_next_xs(p.onlist.fol) end
 	local get_next_combo       = function(p)
 		local rows = get_selected_menu(p, p.char_data and p.char_data.combo or nil, menu.combo_menus, 0, "combo")
 		local ret = {}
@@ -2231,6 +2233,12 @@ rbff2.startplugin  = function()
 			p.dummy_enc = nil -- 邀撃動作セット
 			p.dummy_fol = nil -- 自動必殺技セット
 			p.dummy_rvs = nil -- キャラとリバサセット
+			p.onlist    = {
+				enc = get_onlist_enc(p),
+				rvs = get_onlist_rvs(p),
+				bs  = get_onlist_bs(p),
+				fol = get_onlist_fol(p),
+			}
 		end
 		p.update_tmp_combo         = function(data, first_zero)
 			-- first_zero コンボ加算がない状態でダメージ状態が継続している場合にtrueとする
@@ -2320,7 +2328,7 @@ rbff2.startplugin  = function()
 				p.cln_btn = ret.value
 			end,
 			]]
-			[0x86] = function(data) p.cmd_side = ut.int8(data) < 0 and -1 or 1 end, -- コマンド入力でのキャラ向きチェック用 00:左側 80:右側
+			[0x86] = function(data) p.cmd_side =  1 - (data >> 6) end,  -- 0x00 -> 1, 0x80 -> -1  向き 00:左側 80:右側 コマンド入力でのキャラ向きチェック用
 			[0x87] = function(data) p.flag_87, p.on_upd_frame = data, now() end,   -- 80=動作中
 			[0x88] = function(data) p.in_bs = data ~= 0 end,                       -- BS動作中
 			[0x89] = function(data) p.sway_status, p.in_sway_line = data, data ~= 0x00 end, -- 80:奥ライン 1:奥へ移動中 82:手前へ移動中 0:手前
@@ -2590,12 +2598,8 @@ rbff2.startplugin  = function()
 			end
 		end
 		p.rp08                     = {
-			[{ addr = 0x12, filter = { 0x3DCF8, 0x49B2C, 0x24950, 0x24A2C, 0x24A52 } }] = function(data, ret)
-				local pc = mem.pc()
-				if p.dummy_rvs and p.dummy_hook_rvs and (pc == 0x24950 or pc == 0x24A2C or pc == 0x24A52) then -- コマンド成立チェックをスキップ
-					local sp = p.hook
-					if sp and sp.cmd then ret.value = 0x3 end
-				elseif p.enc_enabled and (pc == 0x3DCF8 or pc == 0x49B2C) then
+			[{ addr = 0x12, filter = { 0x3DCF8, 0x49B2C } }] = function(data, ret)
+				if p.enc_enabled then
 					local check_count = 0
 					if p.char == db.char_id.geese then check_count = p.encounter.rave == 10 and 9 or (p.encounter.rave - 1) end
 					if p.char == db.char_id.krauser then check_count = p.encounter.desire == 11 and 9 or (p.encounter.desire - 1) end
@@ -2998,8 +3002,8 @@ rbff2.startplugin  = function()
 			--[0x107C1F] = function(data) global.skip_frame3 = data ~= 0 end, -- 潜在能力強制停止
 		},
 		wp16 = {
-			[mem.stage_base_addr + screen.offset_x] = function(data) screen.left = data + (320 - scr.width * scr.xscale) / 2 end,
-			[mem.stage_base_addr + screen.offset_y] = function(data) screen.top = data + scr.height * scr.yscale end,
+			[mem.stage_base_addr + screen.offset_x] = function(data) screen.left = data + scaled_scr.width  end,
+			[mem.stage_base_addr + screen.offset_y] = function(data) screen.top  = data + scaled_scr.height end,
 			[{ addr = 0x107BB8, filter = 0xF368 }] = function(data, ret)
 				if global.next_stg3 == 2 then ret.value = 2 end -- 双角ステージの雨バリエーション指定用
 			end,
@@ -3041,8 +3045,8 @@ rbff2.startplugin  = function()
 				if global.proceed_cpu then return end -- 通常CPU戦では無視する
 				ret.value = 1             -- 双角ステージの雨バリエーション時でも1ラウンド相当の前処理を行う
 			end,
-			[mem.stage_base_addr + 0x46] = function(data, ret) if global.fix_scr_top > 1 then ret.value = data + global.fix_scr_top - 20 end end,
-			[mem.stage_base_addr + 0xA4] = function(data, ret) if global.fix_scr_top > 1 then ret.value = data + global.fix_scr_top - 20 end end,
+			[mem.stage_base_addr + 0x46] = function(data, ret) if global.fix_scr_top > 1 then ret.value = data + global.fix_scr_top_20 end end,
+			[mem.stage_base_addr + 0xA4] = function(data, ret) if global.fix_scr_top > 1 then ret.value = data + global.fix_scr_top_20 end end,
 			[{ addr = 0x107EBE, filter = { 0x24C5E, 0x24CE2 } }] = function(data) global.skip_frame1 = data ~= 0 end, -- 潜在能力強制停止
 		},
 		rp32 = {
@@ -3071,7 +3075,7 @@ rbff2.startplugin  = function()
 		},
 		rp08 = {
 			[{ addr = 0x107765, filter = { 0x40EE, 004114, 0x413A } }] = function(_, ret)
-				local pc = mem.pc()
+				--local pc = mem.pc()
 				local a = mem.rg("A4", 0xFFFFFF)
 				local b = mem.r32(a + 0x8A)
 				local c = mem.r16(a + 0xA) + 0x100000
@@ -3126,7 +3130,7 @@ rbff2.startplugin  = function()
 
 		p.wp08 = ut.hash_add_all(p.wp08, {
 			[0x10] = p.update_char,
-			[0x58] = function(data) p.block_side = ut.int8(data) < 0 and -1 or 1 end, -- 向き 00:左側 80:右側
+			[0x58] = function(data) p.block_side = 1 - (data >> 6) end,  -- 0x00 -> 1, 0x80 -> -1  向き 00:左側 80:右側
 			[0x66] = function(data)
 				p.act_count = data                                           -- 現在の行動のカウンタ
 				if p.is_fireball then return end
@@ -3320,7 +3324,7 @@ rbff2.startplugin  = function()
 			[{ addr = 0xF1, filter = { 0x408D4, 0x40954 } }] = function(data) p.drill_count = data end, -- 炎の種馬の追加連打の成立回数
 		})
 		p.wp16 = ut.hash_add_all(p.wp16, {
-			[0x20] = function(data) p.pos, p.max_pos, p.min_pos = data, math.max(p.max_pos or 0, data), math.min(p.min_pos or 1000, data) end,
+			[0x20] = function(data) p.pos = data end,
 			[0x22] = function(data) p.pos_frc = ut.int16tofloat(data) end, -- X座標(小数部)
 			[0x24] = function(data)
 				local nowv        = now()
@@ -6195,9 +6199,12 @@ rbff2.startplugin  = function()
 					end
 				end
 			end
-			-- コマンド入力状態を無効にしてバクステ暴発を防ぐ
-			local bs_addr = dip_config.easy_super and p.char_data.easy_bs_addr or p.char_data.bs_addr
-			mem.w08(p.input_offset + bs_addr, 0x80)
+			-- コマンド入力状態を無効にして飛び退きや必殺技コマンド成立による技の暴発を防ぐ
+			--local bs_addr = dip_config.easy_super and p.char_data.easy_bs_addr or p.char_data.bs_addr
+			--mem.w08(p.input_offset + bs_addr, 0x80)
+			for addr = p.input_offset, p.input_offset + p.char_data.normal_max_addr, 2 do
+				mem.w08(addr, 0x80) -- 全コマンド入力状態をつぶす
+			end
 		end
 
 		-- 次のガード要否を判断する
@@ -6599,10 +6606,6 @@ rbff2.startplugin  = function()
 		return dummy_add
 	end
 
-	tra_sub.log = function(...)
-		--print(...)
-	end
-
 	tra_sub.controll_dummy_p = function(p)
 		p.dummy_bs = nil
 		p.dummy_enc = nil
@@ -6651,14 +6654,12 @@ rbff2.startplugin  = function()
 		if bs_hook then
 			p.dummy_bs = bs_hook
 			p.input_any(bs_hook, "bs_hook")
-			tra_sub.log(global.frame_number, "1")
 			return
 		end
 		if rvs_hook and rvs_type ~= rvs_types.none then
 			p.dummy_rvs = rvs_hook
 			if reset_rvs then p.reset_cmd_hook(reset_rvs, rvs_log or "reset_rvs") end
 			p.input_rvs(rvs_type, rvs_hook, rvs_log or "dummy_rvs")
-			tra_sub.log(global.frame_number, "2")
 			return
 		end
 
@@ -6666,7 +6667,6 @@ rbff2.startplugin  = function()
 		local dummy_fwd  = tra_sub.controll_dummy_fwd_prov(p)
 		if dummy_fwd then
 			p.add_cmd_hook(dummy_fwd, "dummy_fwd")
-			tra_sub.log(global.frame_number, "3")
 			return
 		end
 
@@ -6676,14 +6676,12 @@ rbff2.startplugin  = function()
 			local dummy_add = tra_sub.controll_dummy_auto_add(p)
 			if dummy_add then
 				p.input_any(dummy_add, "dummy_add")
-				tra_sub.log(global.frame_number, "4")
 				return
 			end
 			-- ダウン追撃
 			local dummy_otg = tra_sub.controll_dummy_auto_otg(p)
 			if dummy_otg then
 				p.input_any(dummy_otg, "dummy_otg")
-				tra_sub.log(global.frame_number, "5")
 				return
 			end
 			-- 自動必殺技
@@ -6691,7 +6689,6 @@ rbff2.startplugin  = function()
 			if sp_hook then
 				p.dummy_fol = sp_hook
 				p.input_any(sp_hook, sp_log or "dummy_sp")
-				tra_sub.log(global.frame_number, "6")
 				return
 			end
 			-- 邀撃動作
@@ -6699,7 +6696,6 @@ rbff2.startplugin  = function()
 			if enc_hook then
 				p.dummy_enc = enc_hook
 				p.input_any(enc_hook, enc_log or "dummy_enc")
-				tra_sub.log(global.frame_number, "7")
 				return
 			end
 		end
@@ -6708,7 +6704,6 @@ rbff2.startplugin  = function()
 		local dummy_hook, dummy_cmd, dummy_log = tra_sub.controll_dummy_mode(p)
 		if do_act and dummy_hook then
 			p.reset_sp_hook(dummy_hook, dummy_log)
-			tra_sub.log(global.frame_number, "8")
 			return
 		end
 		if do_act and dummy_cmd then
@@ -6718,32 +6713,27 @@ rbff2.startplugin  = function()
 			-- 上リセット+後セット
 			p.clear_cmd_hook(db.cmd_types._8, "tra_sub.block_types.simple")
 			p.add_cmd_hook(db.cmd_types.back, "tra_sub.block_types.simple")
-			tra_sub.log(global.frame_number, "9")
 			return
 		elseif block_type == tra_sub.block_types.high then
 			-- 上下リセット+下後セット
 			p.clear_cmd_hook(db.cmd_types._8 | db.cmd_types._2, "tra_sub.block_types.high")
 			p.add_cmd_hook(db.cmd_types.back, "tra_sub.block_types.high")
-			tra_sub.log(global.frame_number, "10")
 			return
 		elseif block_type == tra_sub.block_types.high_n then
 			-- 上下後リセット+下セット
 			p.clear_cmd_hook(db.cmd_types._8 | db.cmd_types._2, "tra_sub.block_types.high_n")
 			p.clear_cmd_hook(db.cmd_types.back, "tra_sub.block_types.high_n")
-			tra_sub.log(global.frame_number, "10")
 			return
 		elseif block_type == tra_sub.block_types.low then
 			-- 上リセット+下後セット
 			p.clear_cmd_hook(db.cmd_types._8, "tra_sub.block_types.low")
 			p.add_cmd_hook(db.cmd_types.back_crouch, "tra_sub.block_types.low")
-			tra_sub.log(global.frame_number, "11")
 			return
 		elseif block_type == tra_sub.block_types.low_n then
 			-- 上後リセット+下セット
 			p.clear_cmd_hook(db.cmd_types._8, "tra_sub.block_types.low_n")
 			p.clear_cmd_hook(db.cmd_types.back, "tra_sub.block_types.low_n")
 			p.add_cmd_hook(db.cmd_types._2, "tra_sub.block_types.low_n")
-			tra_sub.log(global.frame_number, "11")
 			return
 		end
 	end
@@ -8537,6 +8527,7 @@ rbff2.startplugin  = function()
 		g.hide                = menu.set_hide(o.shadow1, col[28] ~= 2) -- 28 影表示  1:ON 2:OFF 3:ON:反射→影
 		g.hide                = menu.set_hide(o.shadow2, col[28] ~= 3) -- 29 影表示  1:ON 2:OFF 3:ON:反射→影
 		g.fix_scr_top         = col[29]                             -- 29 画面カメラ位置
+		g.fix_scr_top_20      = g.fix_scr_top - 20
 		-- 30 撮影用(特殊動作の強制)
 		p[2].no_hit_limit     = col[31] - 1                         -- 31 1P 強制空振り
 		p[1].no_hit_limit     = col[32] - 1                         -- 32 2P 強制空振り
@@ -9030,7 +9021,6 @@ rbff2.startplugin  = function()
 			end
 			row_num = row_num + 1
 		end
-		players[1].max_pos, players[1].min_pos, players[2].max_pos, players[2].min_pos = 0, 1000, 0, 1000
 	end
 
 	local active_mem_0x100701 = {}

@@ -4101,6 +4101,18 @@ db.input_state_types                 = input_state_types
 db.input_state_normal                = input_state.states.normal
 db.input_state_easy                  = input_state.states.easy
 
+for char_no, char_data in ipairs(chars) do
+	local normal_max_addr, easy_max_addr = 0, 0
+	for _, tbl in ipairs(input_state.states.normal[char_no]) do
+		normal_max_addr = math.max(normal_max_addr, tbl.addr)
+	end
+	for _, tbl in ipairs(input_state.states.easy[char_no]) do
+		easy_max_addr = math.max(easy_max_addr, tbl.addr)
+	end
+	char_data.normal_max_addr = normal_max_addr
+	char_data.easy_max_addr = easy_max_addr
+end
+
 --------------------------------------------------------------------------------------
 -- 判定の種類
 --------------------------------------------------------------------------------------
