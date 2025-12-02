@@ -1889,13 +1889,13 @@ rbff2.startplugin  = function()
 		end
 		return (cmd1 & mask) | cmd2
 	end
-	input.readp                                        = function(p, merge_bs_hook)
+	input.readp                                        = function(p, merge_hook)
 		if not p.key then return end
 		local addr = p.addr.key
 		local status_b, reg_pcnt = mem.r08(addr.reg_st_b) ~ 0xFF, mem.r08(addr.reg_pcnt) ~ 0xFF
 		local on1f, on5f, hold = mem.r08(addr.on1f), mem.r08(addr.on5f), mem.r08(addr.hold)
-		if merge_bs_hook and p.bs_hook and p.bs_hook.cmd and p.bs_hook.cmd ~= db.cmd_types._5 then
-			reg_pcnt, on1f, on5f, hold = p.bs_hook.cmd or reg_pcnt, p.bs_hook.on1f or on1f, p.bs_hook.on5f or on5f, p.bs_hook.hold or hold
+		if merge_hook and p.hook and p.hook.cmd and p.hook.cmd ~= db.cmd_types._5 then
+			reg_pcnt, on1f, on5f, hold = p.hook.cmd or reg_pcnt, p.hook.on1f or on1f, p.hook.on5f or on5f, p.hook.hold or hold
 		end
 		local cnt_r, cnt_b, tmp = 0xF & reg_pcnt, 0xF0 & reg_pcnt, {}
 		for k, v in pairs(db.cmd_status_b[p.num]) do tmp[k] = ut.tstb(status_b, v) end
@@ -1941,10 +1941,10 @@ rbff2.startplugin  = function()
 			while global.key_pos_hist_limit < #p.key.pos_hist do table.remove(p.key.pos_hist, 1) end --バッファ長調整
 		end
 	end
-	input.read                                         = function(merge_bs_hook)
+	input.read                                         = function(merge_hook)
 		-- 1Pと2Pの入力読取
 		for _, p in ipairs(players) do
-			input.readp(p, merge_bs_hook)
+			input.readp(p, merge_hook)
 		end
 	end
 	input.accept                                       = function(btn, state_past)
@@ -2002,6 +2002,7 @@ rbff2.startplugin  = function()
 
 			bs_count        = -1,        -- ブレイクショットの実施カウント
 			dummy_rvs       = nil,       -- ランダムで選択されたリバーサル
+			dummy_hook_rvs  = nil,
 
 			rvs_count       = -1,        -- リバーサルの実施カウント
 			dummy_enc       = nil,       -- ランダムで選択された邀撃
@@ -2078,6 +2079,9 @@ rbff2.startplugin  = function()
 				sway_limit  = 0,
 				main_lmt_f  = 0,
 				sway_lmt_f  = 0,
+				jump_lmt_f  = 0,
+				dash_lmt_f  = 0,
+
 				atk_only    = 1, -- 追加の動作条件 1:OFF 2:相手の攻撃に反応 3:相手の移動中に発動 4:自身の動作中に発動
 				auto_sp     = 1, -- 自動必殺 1:OFF 2:ON 3:ON:空キャンセル
 				sp_lag      = 8, -- 自動必殺 空キャンセル
@@ -2130,37 +2134,37 @@ rbff2.startplugin  = function()
 		p.cmd_num           = function(cmd) return type(cmd) == "table" and cmd[p.cmd_side] or cmd end
 		p.apply_cmd_hook    = function(cmd, label) -- cmd: table or int
 			local p = players[i]
-			p.bs_hook, cmd = p.get_hook(p.bs_hook), p.cmd_num(cmd)
-			p.bs_hook.cmd = p.bs_hook.cmd & db.cmd_masks[cmd]
-			p.bs_hook.cmd = p.bs_hook.cmd | cmd
-			if global.hook_log then ut.printf("%d %s add_cmd_hook cmd %x %s", global.frame_number, p.num, p.bs_hook.cmd, label or "") end
+			p.hook, cmd = p.get_hook(p.hook), p.cmd_num(cmd)
+			p.hook.cmd = p.hook.cmd & db.cmd_masks[cmd]
+			p.hook.cmd = p.hook.cmd | cmd
+			if global.hook_log then ut.printf("%d %s add_cmd_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
 		end
 		p.add_cmd_hook      = function(cmd, label) -- cmd: table or int
 			local p = players[i]
-			p.bs_hook, cmd = p.get_hook(p.bs_hook), p.cmd_num(cmd)
-			p.bs_hook.cmd = p.bs_hook.cmd & db.cmd_masks[cmd]
-			p.bs_hook.cmd = p.bs_hook.cmd | cmd
-			if global.hook_log then ut.printf("%d %s add_cmd_hook cmd %x %s", global.frame_number, p.num, p.bs_hook.cmd, label or "") end
+			p.hook, cmd = p.get_hook(p.hook), p.cmd_num(cmd)
+			p.hook.cmd = p.hook.cmd & db.cmd_masks[cmd]
+			p.hook.cmd = p.hook.cmd | cmd
+			if global.hook_log then ut.printf("%d %s add_cmd_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
 		end
 		p.clear_cmd_hook    = function(cmd, label) -- cmd: table or int
 			local p = players[i]
-			p.bs_hook, cmd = p.get_hook(p.bs_hook), p.cmd_num(cmd)
-			p.bs_hook.cmd = p.bs_hook.cmd & (0xFF ~ cmd)
-			if global.hook_log then ut.printf("%d %s clear_cmd_hook cmd %x %s", global.frame_number, p.num, p.bs_hook.cmd, label or "") end
+			p.hook, cmd = p.get_hook(p.hook), p.cmd_num(cmd)
+			p.hook.cmd = p.hook.cmd & (0xFF ~ cmd)
+			if global.hook_log then ut.printf("%d %s clear_cmd_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
 		end
 		p.reset_cmd_hook    = function(cmd, label) -- cmd: table or int
 			local p = players[i]
-			p.bs_hook = { cmd = p.cmd_num(cmd) }
-			if global.hook_log then ut.printf("%d %s reset_cmd_hook cmd %x %s", global.frame_number, p.num, p.bs_hook.cmd, label or "") end
+			p.hook = { cmd = p.cmd_num(cmd) }
+			if global.hook_log then ut.printf("%d %s reset_cmd_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
 		end
 		p.reset_sp_hook     = function(hook, label)
 			local p = players[i]
 			if hook and hook.cmd then
-				p.bs_hook = { cmd = p.cmd_num(hook.cmd) }
-				if global.hook_log then ut.printf("%d %s reset_sp_hook cmd %x %s", global.frame_number, p.num, p.bs_hook.cmd, label or "") end
+				p.hook = { cmd = p.cmd_num(hook.cmd) }
+				if global.hook_log then ut.printf("%d %s reset_sp_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
 			else
-				p.bs_hook = hook
-				if global.hook_log then ut.printf("%d %s reset_sp_hook sp %s %s", global.frame_number, p.num, p.bs_hook and "*table*" or "*NIL*", label or "") end
+				p.hook = hook
+				if global.hook_log then ut.printf("%d %s reset_sp_hook sp %s %s", global.frame_number, p.num, p.hook and "*table*" or "*NIL*", label or "") end
 			end
 		end
 		p.input_any         = function(hook, label)
@@ -2180,19 +2184,53 @@ rbff2.startplugin  = function()
 		end
 		p.input_rvs         = function(rvs_type, hook, label)
 			p.input_any(hook, label)
-			if p.dummy_rvs.cmd and rvs_types.reversal ~= rvs_type then
-				if (((p.flag_c0 | p.old.flag_c0) & 0x2 == 0x2) or db.pre_down_acts[p.act]) and p.dummy_rvs.cmd == db.cmd_types._2D then
+			if hook.cmd and rvs_types.reversal ~= rvs_type then
+				if (((p.flag_c0 | p.old.flag_c0) & 0x2 == 0x2) or db.pre_down_acts[p.act]) and hook.cmd == db.cmd_types._2D then
 					p.reset_sp_hook() -- no act
 				end
 			end
 		end
 		table.insert(players, p)
 		p.body                     = p -- プレイヤーデータ自身、fireballとの互換用
+		p.new_preset_combo = function(reset_picker)
+			p.combo           = p.combo or {}
+			p.combo.state     = "neutral"
+			p.combo.last      = false
+			p.combo.count     = 0 -- 入力リストのカウンタ
+			p.combo.input     = nil -- 次の入力反映候補
+			p.combo.hook_cmd  = nil -- 次の入力反映候補
+			p.combo.hook_sp   = nil -- 次の入力反映候補
+			p.combo.lag       = 0
+			p.combo.kara      = false
+			p.combo.hold      = nil
+			p.combo.hits      = nil
+			p.combo.advance   = false
+			p.combo.timeout   = false
+			p.combo.rnd_count = p.combo.rnd_count or 1
+			p.combo.picker    = not reset_picker and p.combo.picker or nil
+			return p.combo
+		end
 		p.update_char              = function(data)
 			data = data or mem.r08(p.addr.char)
 			p.char, p.char4, p.char8 = data, (data << 2), (data << 3)
 			p.char_data = p.is_fireball and db.chars[#db.chars] or db.chars[data] -- 弾はダミーを設定する
 			if not p.is_fireball then p.proc_active = true end
+		end
+		p.reset_char_menu          = function()
+			p.update_char()
+			if p.dummy_gd == dummy_gd_type.hit1 then
+				p.next_block, p.next_block_ec = false, 75 -- カウンター初期化 false
+			elseif p.dummy_gd == dummy_gd_type.block1 then
+				p.next_block, p.next_block_ec = true, 75 -- カウンター初期化 true
+			end
+			p.block1 = 0
+			p.new_preset_combo(true) -- プリセットコンボ更新用
+			p.rvs_count = -1 -- リバサガードカウンター初期化
+			p.bs_count  = -1 -- BSガードカウンター初期化
+			p.dummy_bs  = nil -- キャラとBSセット
+			p.dummy_enc = nil -- 邀撃動作セット
+			p.dummy_fol = nil -- 自動必殺技セット
+			p.dummy_rvs = nil -- キャラとリバサセット
 		end
 		p.update_tmp_combo         = function(data, first_zero)
 			-- first_zero コンボ加算がない状態でダメージ状態が継続している場合にtrueとする
@@ -2246,7 +2284,7 @@ rbff2.startplugin  = function()
 				p.knockback1 = data
 				if data < 1 and mem.pc() == 0x05FAD0 then
 					p.on_last_frame = now()
-					if p.dummy_rvs then p.input_any(p.dummy_rvs, "[Reversal] 0x16 hook") end
+					if p.dummy_hook_rvs then p.input_any(p.dummy_hook_rvs, "[Reversal] 0x16 hook") end
 				end
 			end, -- のけぞり確認用2(裏雲隠し)
 			[0x69] = function(data) p.knockback2 = data end, -- のけぞり確認用1(色々)
@@ -2265,7 +2303,7 @@ rbff2.startplugin  = function()
 				p.cln_btn = data
 				local q = p
 				q = global.hookp[i] or q
-				local hook = q.bs_hook
+				local hook = q.hook
 				if not hook or not hook.cmd then
 					return
 				end
@@ -2295,7 +2333,7 @@ rbff2.startplugin  = function()
 				if pc == 0x058D5A or -- やられ状態リセット
 					pc == 0x05BB38 then -- スウェーライン上くらい ダウン投げ起き上がり
 					p.on_last_frame = now()
-					if p.dummy_rvs then p.input_any(p.dummy_rvs, "[Reversal] 0x8E hook") end
+					if p.dummy_hook_rvs then p.input_any(p.dummy_hook_rvs, "[Reversal] 0x8E hook") end
 				end
 				local changed, n = p.state ~= data, now()
 				p.on_block = data == 2 and n or p.on_block                                     -- ガードへの遷移フレームを記録
@@ -2461,12 +2499,12 @@ rbff2.startplugin  = function()
 			[p.addr.key.on1f] = function(data, ret)
 				local q = p
 				q = global.hookp[i] or q
-				local hook, addrkey = q.bs_hook, p.addr.key
+				local hook, addrkey = q.hook, p.addr.key
 				if not hook or not hook.cmd then
-					--ut.printf("%d %s bs_hook cmd %x:*NIL* -> %s", global.frame_number, p.num, p.addr.key.on1f, q.num)
+					--ut.printf("%d %s hook cmd %x:*NIL* -> %s", global.frame_number, p.num, p.addr.key.on1f, q.num)
 					return
 				end
-				--ut.printf("%d %s bs_hook cmd %x:%x -> %s", global.frame_number, p.num, p.addr.key.on1f, hook.cmd, q.num)
+				--ut.printf("%d %s hook cmd %x:%x -> %s", global.frame_number, p.num, p.addr.key.on1f, hook.cmd, q.num)
 				-- フックの処理量軽減のため1F,5F,おしっぱのキー入力をまとめて記録する
 				mem.w08(addrkey.on5f, input.merge(mem.r08(addrkey.on5f), hook.on5f or hook.cmd)) -- 押しっぱずっと有効
 				mem.w08(addrkey.hold, input.merge(mem.r08(addrkey.hold), hook.hold or hook.cmd)) -- 押しっぱ有効が5Fのみ
@@ -2554,8 +2592,8 @@ rbff2.startplugin  = function()
 		p.rp08                     = {
 			[{ addr = 0x12, filter = { 0x3DCF8, 0x49B2C, 0x24950, 0x24A2C, 0x24A52 } }] = function(data, ret)
 				local pc = mem.pc()
-				if p.dummy_rvs and (pc == 0x24950 or pc == 0x24A2C or pc == 0x24A52) then -- コマンド成立チェックをスキップ
-					local sp = p.bs_hook
+				if p.dummy_rvs and p.dummy_hook_rvs and (pc == 0x24950 or pc == 0x24A2C or pc == 0x24A52) then -- コマンド成立チェックをスキップ
+					local sp = p.hook
 					if sp and sp.cmd then ret.value = 0x3 end
 				elseif p.enc_enabled and (pc == 0x3DCF8 or pc == 0x49B2C) then
 					local check_count = 0
@@ -2564,16 +2602,12 @@ rbff2.startplugin  = function()
 					if mem.rg("D1", 0xFF) < check_count then ret.value = 0x3 end -- 自動デッドリー、自動アンリミ1
 				end
 			end,
-			[0x69] = function(data) 
+			[0x69] = function(data)
 				local pc = mem.pc()
-				if (
-						(
-							pc == 0x058A1C
-						) and data == 0
-					) then
+				if ((pc == 0x058A1C) and data == 0) then
 					--ut.printf("%s 69:%X ADDR:%X", p.num, data, pc)
 					p.on_last_frame = now()
-					if p.dummy_rvs then p.input_any(p.dummy_rvs, "[Reversal] 0x7E hook") end
+					if p.dummy_hook_rvs then p.input_any(p.dummy_hook_rvs, "[Reversal] 0x7E hook") end
 				end
 			end,
 			[0x7E] = function(data)
@@ -2595,7 +2629,7 @@ rbff2.startplugin  = function()
 					) then
 					--ut.printf("%s 7E:%X ADDR:%X", p.num, data, pc)
 					p.on_last_frame = now()
-					if p.dummy_rvs then p.input_any(p.dummy_rvs, "[Reversal] 0x7E hook") end
+					if p.dummy_hook_rvs then p.input_any(p.dummy_hook_rvs, "[Reversal] 0x7E hook") end
 				end
 			end, -- 動作切替、のけぞり確認用3(フェニックススルー)
 			[{ addr = 0x28, filter = ut.table_add_all(special_throw_addrs, { 0x6042A }) }] = extra_throw_callback,
@@ -2847,7 +2881,11 @@ rbff2.startplugin  = function()
 			p.do_recover       = function(force)
 				-- init timer
 				local timeoverp = global.recover_wait < (global.frame_number - global.on_pow_up)
-				local timeover  = global.recover_wait < math.min(p.throw_timer, p.op.throw_timer)
+				local timeover  = false
+				-- 気絶中はライフ回復を止めておく
+				if not ut.tstb(p.flag_cc, db.flag_cc._17 | db.flag_cc._18) then
+					timeover  = global.recover_wait < math.min(p.throw_timer, p.op.throw_timer)
+				end
 				-- 体力と気絶値とMAX気絶値回復
 				local life = { 0xC0, 0x60 }
 				local max_life = life[p.red] or (p.red - #life) -- 赤体力にするかどうか
@@ -2975,10 +3013,10 @@ rbff2.startplugin  = function()
 		rp08 = {
 			[{ addr = 0x107C1F, filter = 0x39456 }] = function(data)
 				local p = get_object_by_reg("A4", {})
-				local sp = p.bs_hook
+				local sp = p.hook
 				if not sp then return end
 				if sp.cmd then return end
-				if (sp ~= p.dummy_rvs or sp ~= p.dummy_enc) and sp == p.dummy_bs and p.base ~= 0x5893A then return end
+				if (sp ~= p.dummy_hook_rvs or sp ~= p.dummy_enc) and sp == p.dummy_bs and p.base ~= 0x5893A then return end
 				if sp.ver then
 					if global.hook_log then ut.printf("%s hook1 P%s cmd A3:%X A4:%X", now(), p.num, sp.id or 0, sp.ver or 0) end
 					mem.w08(p.addr.base + 0xA3, sp.id)
@@ -3707,7 +3745,7 @@ rbff2.startplugin  = function()
 					hold = ut.hex_set(ut.hex_clear(hold, _6), _4)
 				end
 			end
-			p.bs_hook = { cmd = reg_pcnt, on1f = on1f, on5f = on5f, hold = hold }
+			p.hook = { cmd = reg_pcnt, on1f = on1f, on5f = on5f, hold = hold }
 			if global.hook_log then ut.printf("%d %s reset_cmd_hook cmd %x", global.frame_number, p.num, reg_pcnt) end
 			recording.play_count = recording.play_count + 1
 
@@ -4734,6 +4772,10 @@ rbff2.startplugin  = function()
 			else
 				p.attackbits.on_air, p.attackbits.on_ground = false, false
 			end
+			if p.attackbits.on_air    then p.on_air    = global.frame_number end
+			if p.attackbits.on_ground then p.on_ground = global.frame_number end
+			p.in_dash = ut.tstb(p.flag_c0, db.flag_c0.dash)
+			if p.old.in_dash ~= true and p.in_dash == true then p.on_dash = global.frame_number end
 			p.old.in_naked, p.old.in_hurt, p.old.in_block = p.in_naked, p.in_hurt, p.in_block
 			p.in_hurt = ut.tstb(p.flag_cc, db.flag_cc.hitstun)
 			p.in_block = ut.tstb(p.old.flag_cc, db.flag_cc.blocking)
@@ -4760,10 +4802,10 @@ rbff2.startplugin  = function()
 			p.d6 = mem.r08(p.addr.base + 0xD6) -- 起き上がり攻撃用フラグ
 
 			-- リバーサルとBS動作の再抽選
-			p.dummy_enc   = get_next_enc(p)
-			p.dummy_rvs   = get_next_rvs(p)
-			p.dummy_bs    = get_next_bs(p)
-			p.dummy_fol   = get_next_fol(p)
+			--p.dummy_enc   = get_next_enc(p)
+			--get_next_rvs(p)
+			--get_next_bs(p)
+			--p.dummy_fol   = get_next_fol(p)
 
 			-- キャンセル可否家庭用 02AD90 からの処理と各種呼び出し元からの断片
 			p.hit_cancelable = false
@@ -5560,25 +5602,6 @@ rbff2.startplugin  = function()
 	-- デモ実行（コメントアウトを外して実行）
 	--rnd_picker.demo()
 
-	tra_sub.new_combo = function(p, reset_picker)
-		p.combo           = p.combo or {}
-		p.combo.state     = "neutral"
-		p.combo.last      = false
-		p.combo.count     = 0 -- 入力リストのカウンタ
-		p.combo.input     = nil -- 次の入力反映候補
-		p.combo.hook_cmd  = nil -- 次の入力反映候補
-		p.combo.hook_sp   = nil -- 次の入力反映候補
-		p.combo.lag       = 0
-		p.combo.kara      = false
-		p.combo.hold      = nil
-		p.combo.hits      = nil
-		p.combo.advance   = false
-		p.combo.timeout   = false
-		p.combo.rnd_count = p.combo.rnd_count or 1
-		p.combo.picker    = not reset_picker and p.combo.picker or nil
-		return p.combo
-	end
-
 	tra_sub.reload_combo = function(p)
 		if p.combo.picker == nil then
 			local top_list = get_next_combo(p)
@@ -5652,7 +5675,7 @@ rbff2.startplugin  = function()
 
 		if p.normal_state ~= true or p.flag_d0 ~= 0 or p.in_hurt == true then
 			if (p.combo == nil) or (p.combo.count == nil) or p.combo.count > 1 then
-				c = tra_sub.new_combo(p, true)
+				c = p.new_preset_combo(true)
 			end
 			c = p.combo
 			return log_with_ret(nil, "skip")
@@ -6014,7 +6037,7 @@ rbff2.startplugin  = function()
 				c.advance = false -- 永久ループ防止
 				return ret
 			end
-			c = tra_sub.new_combo(p)
+			c = p.new_preset_combo()
 		end
 
 		return log_with_ret(nil, "return")
@@ -6109,7 +6132,8 @@ rbff2.startplugin  = function()
 			end
 		end
 
-		local block_type, bs_hook = tra_sub.block_types.none, nil
+		local block_type = tra_sub.block_types.none
+
 		if ut.tstb(p.flag_c0, db.flag_c0._24) and not ut.tstb(p.flag_7e, db.flag_7e._02) then
 			-- ダッシュは中断可能動作なので切り替えフラグが立つまではガード移行させないでダッシュを可能なかぎり持続させる
 		--elseif p.on_sp_established == global.frame_number then
@@ -6208,11 +6232,27 @@ rbff2.startplugin  = function()
 				if p.next_block_ec == 0 then p.next_block = true end
 			end
 		end
-		-- 自動追撃
-		if p.in_block == true and p.gd_bs_enabled == true then
-			bs_hook = p.dummy_bs
+
+		return block_type
+	end
+	tra_sub.controll_dummy_breakshot = function(p)
+		local bs_hook = get_next_bs(p) -- キャラごとのBS候補を抽選取得
+
+		-- BS
+		if not p.gd_bs_enabled and p.bs and bs_hook and p.on_block == global.frame_number then
+			p.bs_count = (p.bs_count < 1) and 1 or p.bs_count + 1
+			if global.dummy_bs_cnt <= p.bs_count and bs_hook then p.gd_bs_enabled, p.bs_count = true, -1 end
+			-- ut.printf("%s bs %s %s", p.num, p.bs_count, p.gd_bs_enabled)
+		elseif p.gd_bs_enabled and p.state ~= 2 then
+			p.gd_bs_enabled = false
+		end -- ガード状態が解除されたらBS解除
+
+		-- 現フレームのBS要否確認
+		if p.in_block ~= true or p.gd_bs_enabled ~= true then
+			bs_hook = nil
 		end
-		return block_type, bs_hook
+
+		return bs_hook
 	end
 	tra_sub.controll_dummy_fwd_prov = function(p)
 		local dummy_cmd
@@ -6223,29 +6263,22 @@ rbff2.startplugin  = function()
 		return dummy_cmd
 	end
 	tra_sub.controll_dummy_reversal = function(p)
-		local reset_cmd, type, log = nil, rvs_types.none, nil
+		local hook_rvs, reset_cmd, type, log = nil, nil, rvs_types.none, nil
+
+		hook_rvs = get_next_rvs(p) -- キャラごとのリバサ候補を抽選取得
 
 		-- ガードリバーサル
-		if not p.gd_rvs_enabled and (p.dummy_wakeup == wakeup_type.rvs) and p.dummy_rvs and (p.on_block == global.frame_number) then
+		if not p.gd_rvs_enabled and (p.dummy_wakeup == wakeup_type.rvs) and hook_rvs and (p.on_block == global.frame_number) then
 			p.rvs_count = (p.rvs_count < 1) and 1 or p.rvs_count + 1
-			if global.dummy_rvs_cnt <= p.rvs_count and p.dummy_rvs then p.gd_rvs_enabled, p.rvs_count = true, -1 end
+			if global.dummy_rvs_cnt <= p.rvs_count and hook_rvs then p.gd_rvs_enabled, p.rvs_count = true, -1 end
 			-- ut.printf("%s rvs %s %s", p.num, p.rvs_count, p.gd_rvs_enabled)
 		elseif p.gd_rvs_enabled and p.state ~= 2 then
 			p.gd_rvs_enabled = false
 		end -- ガード状態が解除されたらリバサ解除
 
-		-- BS
-		if not p.gd_bs_enabled and p.bs and p.dummy_bs and p.on_block == global.frame_number then
-			p.bs_count = (p.bs_count < 1) and 1 or p.bs_count + 1
-			if global.dummy_bs_cnt <= p.bs_count and p.dummy_bs then p.gd_bs_enabled, p.bs_count = true, -1 end
-			-- ut.printf("%s bs %s %s", p.num, p.bs_count, p.gd_bs_enabled)
-		elseif p.gd_bs_enabled and p.state ~= 2 then
-			p.gd_bs_enabled = false
-		end -- ガード状態が解除されたらBS解除
-
 		-- モード判定
 		if p.dummy_wakeup == wakeup_type.none or (not p.gd_rvs_enabled and global.dummy_rvs_cnt > 1)then
-			p.dummy_rvs = nil
+			hook_rvs = nil
 		end
 
 		-- レバー操作の強制リセット
@@ -6260,28 +6293,27 @@ rbff2.startplugin  = function()
 		-- print(p.state, p.knockback2, p.knockback1, p.flag_7e, p.hitstop_remain, rvs_types.reversal, p.last_blockstun, string.format("%x", p.act), p.act_count, p.act_frame)
 		-- ヒットストップ中は無視
 		-- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
-		if global.dummy_rvs_type == 2 then -- リバーサル対象 2:ガード時
-			if p.in_block ~= true then p.dummy_rvs = nil end
-		elseif global.dummy_rvs_type == 3 then -- リバーサル対象 3:やられ時
-			if p.in_hurt ~= true then p.dummy_rvs = nil end
-		elseif global.dummy_rvs_type == 4 then -- リバーサル対象 4:その他動作時
-			if p.in_block or p.in_hurt then p.dummy_rvs = nil end
+		if (global.dummy_rvs_type == 2 and p.in_block ~= true) or -- リバーサル対象 2:ガード時
+			(global.dummy_rvs_type == 3 and p.in_hurt ~= true) or -- リバーサル対象 3:やられ時
+			(global.dummy_rvs_type == 4 and (p.in_block or p.in_hurt)) then -- リバーサル対象 4:その他動作時
+			hook_rvs = nil
 		end
 
 		-- フック検知してのリバサ発動有無
-		if not p.skip_frame and rvs_wake_types[p.dummy_wakeup] and p.dummy_rvs then
+		if not p.skip_frame and rvs_wake_types[p.dummy_wakeup] and hook_rvs then
 			if p.on_last_frame == global.frame_number then
 				type, log = rvs_types.reversal, "[Reversal] 1"
 			end
 		end
 
-		-- p.dummy_rvsはフック時のリバサ動作に反映されるので返り値と変数の値を同じにする
-		return p.dummy_rvs, type, log, reset_cmd
+		-- dummy_hook_rvsはフック時のリバサ動作に反映されるので返り値と変数の値を同じにする
+		p.dummy_hook_rvs = hook_rvs
+		return hook_rvs, type, log, reset_cmd
 	end
 	tra_sub.controll_dummy_encounter = function(p)
 		local enc, log
 		-- 自動避け攻撃対空
-		if p.enc_enabled and not p.op.in_hitstun and not p.bs_hook then
+		if p.enc_enabled and not p.op.in_hitstun and not p.hook then
 			local aaa, op = p.encounter, p.op
 			local other_cond = false
 			local falling, rising = p.falling or op.falling, p.rising or op.rising
@@ -6299,25 +6331,30 @@ rbff2.startplugin  = function()
 				--falling, rising = p.falling , p.rising
 			end
 			local closing, expanding = p.closing or op.closing, p.expanding or op.expanding
-			local xa, ya, za, zfa = false, false, false, false
-			local xlabel, ylabel, zlabel, zflabel, label
+			local xa, ya, za, zfa, jfa, dfa = false, false, false, false, false, false
+			local xlabel, ylabel, zlabel, zflabel, label, jflabel, dflabel
 			local chk_rise = aaa.rise_limit > 0 -- この高さより上昇時
 			local chk_fall = aaa.fall_limit > 0 -- この高さより下降時
 			local chk_fwd  = aaa.fwd_limit  > 0 -- この間合いより近づいた時
 			local chk_bak  = aaa.bak_limit  > 0 -- この間合いより遠のいた時
 			local chk_main = aaa.main_limit > 0 -- この奥行より近づいた時
 			local chk_sway = aaa.sway_limit > 0 -- この奥行より遠のいた時
-			local chk_main_f = aaa.main_lmt_f > 0 -- 対メインからのフレーム数
-			local chk_sway_f = aaa.sway_lmt_f > 0 -- スウェーからのフレーム数
+			local chk_main_f = aaa.main_lmt_f > 0 -- 対メインからのフレーム
+			local chk_sway_f = aaa.sway_lmt_f > 0 -- スウェーからのフレーム
+			local chk_jump_f = aaa.jump_lmt_f > 0 -- ジャンプからのフレーム
+			local chk_dash_f = aaa.dash_lmt_f > 0 -- ダッシュ/飛び退きからのフレーム
 			local on_to_sway = global.frame_number - (op.on_main_to_sway_c0 or 0) + 1
 			local on_to_main = global.frame_number - (op.on_sway_to_main_c0 or 0) + 1
+			local on_jump    = global.frame_number - (p.on_air or 0) + 1
+			local on_dash    = global.frame_number - (p.on_dash or 0) + 1
 			--[[
-			label = string.format("%s %s %4s op:%4s %3s %7s %3s",
+			label = string.format("%s %s %4s op:%4s %3s %4s %7s %3s",
 				global.frame_number,
 				p.num,
 				p.falling == true and "fall" or (p.rising == true and "rise" or ""),
 				op.falling == true and "fall" or (op.rising == true and "rise" or ""),
 				closing == true and "clo" or (expanding == true and "exp" or ""),
+				p.in_dash == true and "dash" or "",
 				op.main_in == true and string.format("main%3d", on_to_main) or (op.sway_out == true and string.format("sway%3d", on_to_sway) or ""),
 				other_cond == true and "oth" or "")
 			]]
@@ -6358,14 +6395,27 @@ rbff2.startplugin  = function()
 					zflabel = label and string.format("%3d %2s %3d", aaa.sway_lmt_f, "<=", on_to_sway) or nil
 					zfa = true
 				end
-			end
-			if xa and ya and za and zfa then
-				if label then ut.printf("%s Y:%s X:%s Z:%s Zf:%s", label, ylabel, xlabel, zlabel, zflabel) end
-				if (aaa.type == 2) and p.dummy_enc ~= nil then
-					--p.input_any(p.dummy_enc, "input_enc")
-					enc, log = p.dummy_enc, "input_enc"
+				if not chk_jump_f then
+					jfa = true
+				elseif p.in_air and chk_jump_f and aaa.jump_lmt_f == on_jump then -- ジャンプからのフレーム
+					jflabel = label and string.format("%3d %2s %3d", aaa.jump_lmt_f, "<=", on_to_main) or nil
+					jfa = true
 				end
-			elseif label then ut.printf("%s Y:%3d X:%3d Z:%3d ^f:%3d vf:%3d", label, abs_elev, abs_space, abs_depth, on_to_sway, on_to_main) end
+				if not chk_dash_f then
+					dfa = true
+				elseif p.in_dash and chk_dash_f and aaa.dash_lmt_f == on_dash then -- ダッシュ/飛び退きからのフレーム
+					dflabel = label and string.format("%3d %2s %3d", aaa.dash_lmt_f, "<=", on_dash) or nil
+					dfa = true
+				end
+			end
+			local next_enc = get_next_enc(p) -- 邀撃動作セット
+			if xa and ya and za and zfa and jfa and dfa then
+				if label then ut.printf("%s Y:%s X:%s Z:%s Zf:%s Jf:%s Df:%s ", label, ylabel, xlabel, zlabel, zflabel, jflabel, dflabel) end
+				if (aaa.type == 2) and next_enc ~= nil then
+					--p.input_any(next_enc, "input_enc")
+					enc, log = next_enc, "input_enc"
+				end
+			elseif label then ut.printf("%s Y:%3d X:%3d Z:%3d ^f:%3d vf:%3d J:%3d D:%3d", label, abs_elev, abs_space, abs_depth, on_to_sway, on_to_main, on_jump, on_dash) end
 		end
 		return enc, log
 	end
@@ -6395,9 +6445,10 @@ rbff2.startplugin  = function()
 				local lag = global.frame_number - p.on_update_7e_02 + 1
 				dohook = lag >= p.encounter.sp_lag
 			end
-			if dohook == true and p.dummy_fol ~= nil then
-				--p.input_any(p.dummy_fol, "input_fol")
-				auto_sp, log = p.dummy_fol, "input_fol"
+			local hook_fol = get_next_fol(p)
+			if dohook == true and hook_fol ~= nil then
+				--p.input_any(hook_fol, "input_fol")
+				auto_sp, log = hook_fol, "input_fol"
 			end
 		end
 		return auto_sp, log
@@ -6554,6 +6605,11 @@ rbff2.startplugin  = function()
 	end
 
 	tra_sub.controll_dummy_p = function(p)
+		p.dummy_bs = nil
+		p.dummy_enc = nil
+		p.dummy_fol = nil
+		p.dummy_rvs = nil
+
 		-- レコード、リプレイ中は行動しない
 		if global.dummy_mode == menu.dummy_modes.record and p == recording.player then
 			--ut.printf("%d %s hookp swap -> %s", global.frame_number, p.num, p.op.num)
@@ -6583,9 +6639,7 @@ rbff2.startplugin  = function()
 		end
 
 		-- ガード判定 回数の状態管理もあるので実施必須
-		local block_type, bs_hook = tra_sub.controll_dummy_block(p)
-		-- リバーサル判定 回数の状態管理もあるので実施必須
-		local dummy_rvs, rvs_type, rvs_log, reset_rvs = tra_sub.controll_dummy_reversal(p)
+		local block_type = tra_sub.controll_dummy_block(p)
 		--[[
 			優先順位
 			1. BS発動
@@ -6599,16 +6653,20 @@ rbff2.startplugin  = function()
 				4. 邀撃動作
 			5. 通常動作モードにガード方向を追加する
 		]]
+		-- BS判定 回数の状態管理もあるので実施必須
+		local bs_hook = tra_sub.controll_dummy_breakshot(p)
+		-- リバーサル判定 回数の状態管理もあるので実施必須
+		local rvs_hook, rvs_type, rvs_log, reset_rvs = tra_sub.controll_dummy_reversal(p)
 		if bs_hook then
+			p.dummy_bs = bs_hook
 			p.input_any(bs_hook, "bs_hook")
 			tra_sub.log(global.frame_number, "1")
 			return
 		end
-		if dummy_rvs and rvs_type ~= rvs_types.none then
-			if reset_rvs then
-				p.reset_cmd_hook(reset_rvs, rvs_log or "reset_rvs")
-			end
-			p.input_rvs(rvs_type, dummy_rvs, rvs_log or "dummy_rvs")
+		if rvs_hook and rvs_type ~= rvs_types.none then
+			p.dummy_rvs = rvs_hook
+			if reset_rvs then p.reset_cmd_hook(reset_rvs, rvs_log or "reset_rvs") end
+			p.input_rvs(rvs_type, rvs_hook, rvs_log or "dummy_rvs")
 			tra_sub.log(global.frame_number, "2")
 			return
 		end
@@ -6638,16 +6696,18 @@ rbff2.startplugin  = function()
 				return
 			end
 			-- 自動必殺技
-			local dummy_sp, sp_log = tra_sub.controll_dummy_auto_sp(p)
-			if dummy_sp then
-				p.input_any(dummy_sp, sp_log or "dummy_sp")
+			local sp_hook, sp_log = tra_sub.controll_dummy_auto_sp(p)
+			if sp_hook then
+				p.dummy_fol = sp_hook
+				p.input_any(sp_hook, sp_log or "dummy_sp")
 				tra_sub.log(global.frame_number, "6")
 				return
 			end
 			-- 邀撃動作
-			local dummy_enc, enc_log = tra_sub.controll_dummy_encounter(p)
-			if dummy_enc then
-				p.input_any(dummy_enc, enc_log or "dummy_enc")
+			local enc_hook, enc_log = tra_sub.controll_dummy_encounter(p)
+			if enc_hook then
+				p.dummy_enc = enc_hook
+				p.input_any(enc_hook, enc_log or "dummy_enc")
 				tra_sub.log(global.frame_number, "7")
 				return
 			end
@@ -7637,18 +7697,18 @@ rbff2.startplugin  = function()
 		local col, row, g  = menu.training.pos.col, menu.training.pos.row, global
 		local p1, p2       = players[1], players[2]
 
-		g.dummy_mode       = col[1] -- 01 ダミーモード
+		g.dummy_mode       = col[1]       -- 01 ダミーモード
 		-- 誤動作抑止のためレコード・リプレイの選択時にキャンセルされた場合は選択を通常モードに戻す
 		if cancel == true and (g.dummy_mode == menu.dummy_modes.record or g.dummy_mode == menu.dummy_modes.replay) then
 			g.dummy_mode = menu.dummy_modes.ply_vs_ply
 		end
-		p1.dummy_act       = col[ 2]       -- 02 1P アクション
-		p2.dummy_act       = col[ 3]       -- 03 2P アクション
-		g.no_action        = col[ 4]       -- 04 2P アクション
-		--                        5           05 ガード・ブレイクショット設定
-		p1.dummy_gd        = col[ 6]       -- 06 1P ガード
-		p2.dummy_gd        = col[ 7]       -- 07 2P ガード
-		g.crouch_block     = col[ 8] == 2  -- 08 可能な限りしゃがみガード
+		p1.dummy_act       = col[ 2]      -- 02 1P アクション
+		p2.dummy_act       = col[ 3]      -- 03 2P アクション
+		g.no_action        = col[ 4]      -- 04 2P アクション
+		--                        5          05 ガード・ブレイクショット設定
+		p1.dummy_gd        = col[ 6]      -- 06 1P ガード
+		p2.dummy_gd        = col[ 7]      -- 07 2P ガード
+		g.crouch_block     = col[ 8] == 2 -- 08 可能な限りしゃがみガード
 		g.next_block_grace = col[ 9] - 1  -- 09 1ガード持続フレーム数
 		p1.bs              = col[10] == 2 -- 10 1P ブレイクショット
 		p2.bs              = col[11] == 2 -- 11 2P ブレイクショット
@@ -7664,20 +7724,9 @@ rbff2.startplugin  = function()
 		--                       21          21 その他設定
 		p1.fwd_prov        = col[22] == 2 -- 22 1P 挑発で前進
 		p2.fwd_prov        = col[23] == 2 -- 23 2P 挑発で前進
-		for _, p in ipairs(players) do
-			p.update_char()
-			if p.dummy_gd == dummy_gd_type.hit1 then
-				p.next_block, p.next_block_ec = false, 75 -- カウンター初期化 false
-			elseif p.dummy_gd == dummy_gd_type.block1 then
-				p.next_block, p.next_block_ec = true, 75 -- カウンター初期化 true
-			end
-			p.block1 = 0
-			p.dummy_enc = get_next_enc(p) -- 邀撃動作セット
-			p.dummy_fol = get_next_fol(p) -- 自動必殺技セット
-			p.combo     = tra_sub.new_combo(p, true) -- プリセットコンボ更新用
-			p.rvs_count, p.dummy_rvs = -1, get_next_rvs(p) -- リバサガードカウンター初期化、キャラとBSセット
-			p.bs_count, p.dummy_bs = -1, get_next_bs(p) -- BSガードカウンター初期化、キャラとBSセット
-		end
+
+		-- キャラにあわせたメニュー設定
+		for _, p in ipairs(players) do p.reset_char_menu() end
 
 		g.old_dummy_mode = g.dummy_mode
 
@@ -7732,6 +7781,7 @@ rbff2.startplugin  = function()
 
 	menu.exit_rec_common = function()
 		local col, g = menu.recording.pos.col, global
+		--                         [10] -- 10 レコード設定
 		recording.mode        = col[11] -- 11 レコード対象 1:1P操作/2P動作 2:1P操作/1P動作 3:2P操作/1P動作 4:2P操作/2P動作
 	end
 	menu.rec_to_tra           = function()
@@ -8057,19 +8107,7 @@ rbff2.startplugin  = function()
 		col[18] = 1 -- プラグイン終了可否 表示時は常に1
 
 		-- キャラにあわせたメニュー設定
-		for _, p in ipairs(players) do
-			p.update_char()
-			if p.dummy_gd == dummy_gd_type.hit1 then
-				p.next_block, p.next_block_ec = false, 75 -- カウンター初期化 false
-			elseif p.dummy_gd == dummy_gd_type.block1 then
-				p.next_block, p.next_block_ec = true, 75 -- カウンター初期化 true
-			end
-			p.block1 = 0
-			p.dummy_enc = get_next_enc(p) -- 邀撃動作セット
-			p.dummy_fol = get_next_fol(p) -- 自動必殺技セット
-			p.rvs_count, p.dummy_rvs = -1, get_next_rvs(p) -- リバサガードカウンター初期化、キャラとリバサセット
-			p.bs_count, p.dummy_bs = -1, get_next_bs(p) -- BSガードカウンター初期化、キャラとBSセット
-		end
+		for _, p in ipairs(players) do p.reset_char_menu() end
 	end
 	-- ブレイクショットメニュー
 	menu.bs_menus, menu.rvs_menus, menu.enc_menus, menu.fol_menus, menu.combo_menus = {}, {}, {}, {}, {}
@@ -8260,33 +8298,38 @@ rbff2.startplugin  = function()
 			local p                  = players[i]
 			local next_menu          = "training"
 			a.type                   = col[ 1]      --  1 邀撃行動
-			a.rise_limit             = col[ 2] - 1  --  2 この高さより上昇時
-			a.fall_limit             = col[ 3] - 1  --  3 この高さより下降時
-			a.fwd_limit              = col[ 4] - 1  --  4 この間合いより近づいた時
-			a.bak_limit              = col[ 5] - 1  --  5 この間合いより遠のいた時
-			a.main_limit             = col[ 6] - 1  --  6 この奥行より近づいた時
-			a.sway_limit             = col[ 7] - 1  --  7 この奥行より遠のいた時
-			a.main_lmt_f             = col[ 8] - 1  --  8 対メイン発動からのフレーム
-			a.sway_lmt_f             = col[ 9] - 1  --  9 スウェー発動からのフレーム
-			a.atk_only               = col[10]      -- 10 追加の動作条件 1:OFF 2:相手の攻撃に反応 3:相手の移動中に発動 4:自身の動作中に発動
-			--                            [11]      -- 11 自動動作設定
-			a.auto_sp                = col[12]      -- 12 自動必殺 1:OFF 2:ON 3:ON:空キャン
-			a.sp_lag                 = col[13]      -- 13 自動必殺 空キャンセル必殺のラグ
-			--                            [14]      -- 14 自動追加動作
-			a.otg_throw              = col[15] == 2 -- 15 ダウン投げ
-			a.otg_attack             = col[16] == 2 -- 16 ダウン攻撃
-			a.combo_throw            = col[17] == 2 -- 17 通常投げの派生技
-			a.rave                   = col[18]      -- 18 デッドリーレイブ
-			a.desire                 = col[19]      -- 19 アンリミテッドデザイア
-			a.drill                  = col[20]      -- 20 ドリル
-			a.kanku                  = col[21]      -- 21 閃里肘皇 1:OFF 2:貫空 3:心砕把
-			a.pairon2                = col[22] == 2 -- 22 超白龍2
-			a.real_counter           = col[23]      -- 23 M.リアルカウンター
-			a.auto_3ecst             = col[24]      -- 24 M.トリプルエクスタシー
-			a.taneuma                = col[25] == 2 -- 25 炎の種馬
-			a.katsu_ca               = col[26]      -- 26 喝CA
-			a.sikkyaku_ca            = col[27]      -- 27 飛燕失脚CA
-			a.hebi_damashi           = col[28]      -- 28 蛇だまし
+			--                              2       --  2 相互位置への反応設定
+			a.rise_limit             = col[ 3] - 1  --  3 この高さより上昇時
+			a.fall_limit             = col[ 4] - 1  --  4 この高さより下降時
+			a.fwd_limit              = col[ 5] - 1  --  5 この間合いより近づいた時
+			a.bak_limit              = col[ 6] - 1  --  6 この間合いより遠のいた時
+			a.main_limit             = col[ 7] - 1  --  7 この奥行より近づいた時
+			a.sway_limit             = col[ 8] - 1  --  8 この奥行より遠のいた時
+			a.atk_only               = col[ 9]      --  9 追加の動作条件 1:OFF 2:相手の攻撃に反応 3:相手の移動中に発動 4:自身の動作中に発動
+			--                             10       -- 10 相手動作への反応設定
+			a.main_lmt_f             = col[11] - 1  -- 11 対メイン発動からのフレーム
+			a.sway_lmt_f             = col[12] - 1  -- 12 スウェー発動からのフレーム
+			--                             13       -- 13 自己動作への反応設定
+			a.jump_lmt_f             = col[14] - 1  -- 14 ジャンプからのフレーム
+			a.dash_lmt_f             = col[15] - 1  -- 15 ダッシュ/飛び退きからのフレーム
+			--                            [16]      -- 16 自動動作設定
+			a.auto_sp                = col[17]      -- 17 自動必殺 1:OFF 2:ON 3:ON:空キャン
+			a.sp_lag                 = col[18]      -- 18 自動必殺 空キャンセル必殺のラグ
+			--                            [19]      -- 19 自動追加動作
+			a.otg_throw              = col[20] == 2 -- 20 ダウン投げ
+			a.otg_attack             = col[21] == 2 -- 21 ダウン攻撃
+			a.combo_throw            = col[22] == 2 -- 22 通常投げの派生技
+			a.rave                   = col[23]      -- 23 デッドリーレイブ
+			a.desire                 = col[24]      -- 24 アンリミテッドデザイア
+			a.drill                  = col[25]      -- 25 ドリル
+			a.kanku                  = col[26]      -- 26 閃里肘皇 1:OFF 2:貫空 3:心砕把
+			a.pairon2                = col[27] == 2 -- 27 超白龍2
+			a.real_counter           = col[28]      -- 28 M.リアルカウンター
+			a.auto_3ecst             = col[29]      -- 29 M.トリプルエクスタシー
+			a.taneuma                = col[30] == 2 -- 30 炎の種馬
+			a.katsu_ca               = col[31]      -- 31 喝CA
+			a.sikkyaku_ca            = col[32]      -- 32 飛燕失脚CA
+			a.hebi_damashi           = col[33]      -- 33 蛇だまし
 			-- 邀撃行動のメニュー設定
 			if cancel ~= true and a.type == 2 and row == 1 then next_menu = menu.enc_menus[i][p.char] end
 			if cancel ~= true and a.auto_sp >= 2 and row == 12 then next_menu = menu.fol_menus[i][p.char] end
@@ -8303,15 +8346,20 @@ rbff2.startplugin  = function()
 			"トレーニングダミーが邀撃(ようげき)行動をする条件を設定します。\n自動必殺技をONにした場合は自動ガードができなくなります。",
 			{
 				{ "邀撃行動", { "OFF", "ON:（Aで選択画面へ）" } },
+				{ title = true, "相互位置への反応設定" },
 				{ "この高さより上昇時", jumplimit },
 				{ "この高さより下降時", jumplimit },
 				{ "この間合いより近づいた時", rangelimit },
 				{ "この間合いより遠のいた時", rangelimit },
 				{ "この奥行より近づいた時", swaylimit },
 				{ "この奥行より遠のいた時", swaylimit },
+				{ "追加の動作条件", { "追加条件なし", "相手の攻撃に反応", "相手の移動に反応", "自身の動作で発動" }, },
+				{ title = true, "相手動作への反応設定" },
 				{ "対メイン発動からのフレーム", swaylmt_f },
 				{ "スウェー発動からのフレーム", swaylmt_f },
-				{ "追加の動作条件", { "追加条件なし", "相手の攻撃に反応", "相手の移動に反応", "自身の動作で発動" }, },
+				{ title = true, "自己動作への反応設定" },
+				{ "ジャンプからのフレーム", swaylmt_f },
+				{ "ダッシュ/飛び退きからのフレーム", swaylmt_f },
 				{ title = true, "自動動作設定" },
 				{ "自動必殺技", { "OFF", "ON（Aで選択画面へ）", "ON:空キャンセル（Aで選択画面へ）" } },
 				{ "空キャンセル猶予F", menu.labels.kara_frames, },
@@ -8334,36 +8382,41 @@ rbff2.startplugin  = function()
 			function()
 				local col, a = menu[key].pos.col, players[i].encounter
 				col[ 1] = a.type                   --  1 迎撃行動
-				col[ 2] = a.rise_limit + 1         --  2 この高さより上昇時
-				col[ 3] = a.fall_limit + 1         --  3 この高さより下降時
-				col[ 4] = a.fwd_limit  + 1         --  4 この間合いより近づいた時
-				col[ 5] = a.bak_limit  + 1         --  5 この間合いより遠のいた時
-				col[ 6] = a.main_limit + 1         --  6 この奥行より近づいた時
-				col[ 7] = a.sway_limit + 1         --  7 この奥行より遠のいた時
-				col[ 8] = a.main_lmt_f + 1         --  8 対メイン発動からのフレーム
-				col[ 9] = a.sway_lmt_f + 1         --  9 スウェー発動からのフレーム
-				col[10] = a.atk_only               -- 10 追加の動作条件 1:OFF 2:相手の攻撃に反応 3:相手の移動中に発動 4:自身の動作中に発動
-				-- [11]                            -- 11 自動動作設定
-				col[12] = a.auto_sp                -- 12 自動必殺 1:OFF 2:ON 3:ON:空キャンセル
-				col[13] = a.sp_lag                 -- 13 自動必殺 空キャンセルのラグ
-				-- [14]                            -- 14 自動追加動作
-				col[15] = a.otg_throw and 2 or 1   -- 15 ダウン投げ
-				col[16] = a.otg_attack and 2 or 1  -- 16 ダウン攻撃
-				col[17] = a.combo_throw and 2 or 1 -- 17 通常投げの派生技
-				col[18] = a.rave                   -- 18 デッドリーレイブ
-				col[19] = a.desire                 -- 19 アンリミテッドデザイア
-				col[20] = a.drill                  -- 20 ドリル
-				col[21] = a.kanku                  -- 21 閃里肘皇 1:OFF 2:貫空 3:心砕把
-				col[22] = a.pairon2 and 2 or 1     -- 22 超白龍2
-				col[23] = a.real_counter           -- 23 M.リアルカウンター
-				col[24] = a.auto_3ecst             -- 24 M.トリプルエクスタシー
-				col[25] = a.taneuma and 2 or 1     -- 25 炎の種馬
-				col[26] = a.katsu_ca               -- 26 喝CA
-				col[27] = a.sikkyaku_ca            -- 27 飛燕失脚CA
-				col[28] = a.hebi_damashi           -- 28 最速蛇だまし
+				--   2                             --  2 相互位置への反応設定
+				col[ 3] = a.rise_limit + 1         --  3 この高さより上昇時
+				col[ 4] = a.fall_limit + 1         --  4 この高さより下降時
+				col[ 5] = a.fwd_limit  + 1         --  5 この間合いより近づいた時
+				col[ 6] = a.bak_limit  + 1         --  6 この間合いより遠のいた時
+				col[ 7] = a.main_limit + 1         --  7 この奥行より近づいた時
+				col[ 8] = a.sway_limit + 1         --  8 この奥行より遠のいた時
+				col[ 9] = a.atk_only               --  9 追加の動作条件 1:OFF 2:相手の攻撃に反応 3:相手の移動中に発動 4:自身の動作中に発動
+				--  10                             -- 10 相手動作への反応設定
+				col[11] = a.main_lmt_f + 1         -- 11 対メイン発動からのフレーム
+				col[12] = a.sway_lmt_f + 1         -- 12 スウェー発動からのフレーム
+				--  13                             -- 13 自己動作への反応設定
+				col[14] = a.jump_lmt_f + 1         -- 14 ジャンプからのフレーム
+				col[15] = a.dash_lmt_f + 1         -- 15 ダッシュ/飛び退きからのフレーム
+				-- [16]                            -- 16 自動動作設定
+				col[17] = a.auto_sp                -- 17 自動必殺 1:OFF 2:ON 3:ON:空キャンセル
+				col[18] = a.sp_lag                 -- 18 自動必殺 空キャンセルのラグ
+				-- [19]                            -- 19 自動追加動作
+				col[20] = a.otg_throw and 2 or 1   -- 20 ダウン投げ
+				col[21] = a.otg_attack and 2 or 1  -- 21 ダウン攻撃
+				col[22] = a.combo_throw and 2 or 1 -- 22 通常投げの派生技
+				col[23] = a.rave                   -- 23 デッドリーレイブ
+				col[24] = a.desire                 -- 24 アンリミテッドデザイア
+				col[25] = a.drill                  -- 25 ドリル
+				col[26] = a.kanku                  -- 26 閃里肘皇 1:OFF 2:貫空 3:心砕把
+				col[27] = a.pairon2 and 2 or 1     -- 27 超白龍2
+				col[28] = a.real_counter           -- 28 M.リアルカウンター
+				col[29] = a.auto_3ecst             -- 29 M.トリプルエクスタシー
+				col[30] = a.taneuma and 2 or 1     -- 30 炎の種馬
+				col[31] = a.katsu_ca               -- 31 喝CA
+				col[32] = a.sikkyaku_ca            -- 32 飛燕失脚CA
+				col[33] = a.hebi_damashi           -- 33 最速蛇だまし
 			end,
-			ut.new_filled_table(28, on_a),
-			ut.new_filled_table(28, on_b))
+			ut.new_filled_table(33, on_a),
+			ut.new_filled_table(33, on_b))
 	end
 
 	menu.training  = menu.create(
@@ -8755,7 +8808,7 @@ rbff2.startplugin  = function()
 		-- スロット1-スロット8
 		function(first)
 			local col = menu.recording.pos.col
-			-- 10 レコード対象
+			-- [10]                  -- 10 レコード設定
 			col[11] = recording.mode -- 11 レコード対象 1:1P操作/2P動作 2:1P操作/1P動作 3:2P操作/1P動作 4:2P操作/2P動作
 			for i = 2, 1 + 8 do
 				if first then col[i] = 2 end
@@ -8778,8 +8831,8 @@ rbff2.startplugin  = function()
 			function() menu.exit_and_rec(6, menu.recording.pos.col[7] == 2) end, -- スロット6
 			function() menu.exit_and_rec(7, menu.recording.pos.col[8] == 2) end, -- スロット7
 			function() menu.exit_and_rec(8, menu.recording.pos.col[9] == 2) end, -- スロット8
-			menu.rec_to_tra,                                            -- レコード設定
-			menu.rec_to_tra,                                            -- レコード対象
+			menu.rec_to_tra, --                                   [10]           -- レコード設定
+			menu.rec_to_tra, --                                   [11]           -- レコード対象
 		},
 		ut.new_filled_table(11, menu.rec_to_tra))
 
