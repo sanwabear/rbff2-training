@@ -6113,26 +6113,37 @@ rbff2.startplugin  = function()
 	}
 	tra_sub.controll_dummy_block = function(p)
 		-- 自動ガード用
-		local act_type = p.op.act_data.type
-		for _, fb in pairs(p.op.fireballs) do
+		local op = p.op
+		local act_type = op.act_data.type
+		for _, fb in pairs(op.fireballs) do
 			if fb.proc_active and fb.act_data then act_type = act_type | fb.act_data.type end
 		end
-		if not p.op.attackbits.harmless and p.op.attack and p.op.attack > 0 then
+		if not op.attackbits.harmless and op.attack and op.attack > 0 then
 			-- CPU自動ガードの処理の一部より。家庭用 056140 から
-			local cpu_block, cpu_block_next = mem.r08(0x56226 + p.op.attack), true
-			while cpu_block_next do
-				if cpu_block == 0 then
-					act_type, cpu_block_next = act_type | db.act_types.attack, false
-				elseif cpu_block == 1 then
-					act_type, cpu_block_next = act_type | db.act_types.low_attack, false
-				elseif cpu_block == 2 then
-					cpu_block = mem.r08(((p.char - 1) << 3) + p.op.attack - 0x27 + 0x562FE)
-				elseif cpu_block == 3 then
-					cpu_block = mem.r08(((p.char - 1) << 5) + p.op.attack - 0x30 + 0x563B6)
-				else
-					cpu_block_next = false
+			p.char_data.attack_act_types = p.char_data.attack_act_types or {}
+			local types = p.char_data.attack_act_types
+			local ext_type = types[p.attack]
+			if ext_type == nil then
+				local cpu_block = mem.r08(0x56226 + op.attack)
+				ext_type = 0
+				while true do
+					if cpu_block == 0 then
+						ext_type = ext_type | db.act_types.attack
+						break
+					elseif cpu_block == 1 then
+						ext_type = ext_type | db.act_types.low_attack
+						break
+					elseif cpu_block == 2 then
+						cpu_block = mem.r08(((p.char - 1) << 3) + op.attack + 0x562D7) -- 0x562D7 = -0x27 + 0x562FE
+					elseif cpu_block == 3 then
+						cpu_block = mem.r08(((p.char - 1) << 5) + op.attack + 0x56386) -- 0x56386 = -0x30 + 0x563B6
+					else
+						break
+					end
 				end
+				types[op.attack] = ext_type
 			end
+			act_type = act_type | ext_type
 		end
 
 		local block_type = tra_sub.block_types.none
@@ -6170,9 +6181,9 @@ rbff2.startplugin  = function()
 				-- 中段から優先
 				if ut.tstb(act_type, db.act_types.overhead, true) then
 					block_type = tra_sub.block_types.high
-				elseif ut.tstb(p.op.flag_c4, db.flag_c4.overhead) then
+				elseif ut.tstb(op.flag_c4, db.flag_c4.overhead) then
 					block_type = tra_sub.block_types.high
-				elseif ut.tstb(p.op.flag_c0, db.flag_c0.jump) and (p.op.flag_c4 > 0) then
+				elseif ut.tstb(op.flag_c0, db.flag_c0.jump) and (op.flag_c4 > 0) then
 					block_type = tra_sub.block_types.high
 				elseif ut.tstb(act_type, db.act_types.low_attack, true) then
 					block_type = tra_sub.block_types.low
@@ -6191,7 +6202,7 @@ rbff2.startplugin  = function()
 				else
 					if p.dummy_gd ~= dummy_gd_type.random then
 						p.next_block = true
-					elseif p.op.on_update_act == global.frame_number then
+					elseif op.on_update_act == global.frame_number then
 						p.next_block = global.random_boolean(0.65)
 					end
 					if p.next_block and block_type == tra_sub.block_types.none then
