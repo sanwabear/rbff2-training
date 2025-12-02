@@ -8332,7 +8332,7 @@ rbff2.startplugin  = function()
 			a.hebi_damashi           = col[33]      -- 33 蛇だまし
 			-- 邀撃行動のメニュー設定
 			if cancel ~= true and a.type == 2 and row == 1 then next_menu = menu.enc_menus[i][p.char] end
-			if cancel ~= true and a.auto_sp >= 2 and row == 12 then next_menu = menu.fol_menus[i][p.char] end
+			if cancel ~= true and a.auto_sp >= 2 and row == 17 then next_menu = menu.fol_menus[i][p.char] end
 			menu.set_current(next_menu)
 		end
 		local on_a = function() on_x(false) end
