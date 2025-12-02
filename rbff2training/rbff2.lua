@@ -6045,8 +6045,7 @@ rbff2.startplugin  = function()
 
 	tra_sub.controll_dummy_mode = function(p)
 		local cmd, hook, label = db.cmd_types._5, nil, "none"
-		local do_act = (global.no_action == 1) or ((p.throw_timer + 1) >= global.no_action)
-		if p.sway_status == 0x00 and p.dummy_act ~= menu.dummy_acts.stand and do_act then
+		if p.sway_status == 0x00 and p.dummy_act ~= menu.dummy_acts.stand then
 			if p.dummy_act == menu.dummy_acts.crounch then
 				cmd, label = db.cmd_types._2 , "crounch" -- しゃがみ
 			elseif p.dummy_act == menu.dummy_acts.sway and p.op.sway_status == 0x00 and p.state == 0 then
@@ -6088,10 +6087,10 @@ rbff2.startplugin  = function()
 					cmd, label = db.cmd_types.front_jump, "dash_jump_short-j" -- 前ジャンプ
 				end
 			end
-		elseif p.dummy_act == menu.dummy_acts.sway and p.in_sway_line and do_act then
+		elseif p.dummy_act == menu.dummy_acts.sway and p.in_sway_line then
 			cmd, label = db.cmd_types._8, "sway" -- スウェー待機
 		end
-		if p.dummy_act == menu.dummy_acts.combo and do_act then
+		if p.dummy_act == menu.dummy_acts.combo then
 			if global.combo_log > 1 then ut.printf("%s combo P%s entry", global.frame_number, p.num) end
 			hook, label = tra_sub.controll_dummy_combo(p), "combo" -- プリセットコンボ
 			if global.combo_log > 1 then ut.printf("%s combo P%s entry %s %s", global.frame_number, p.num, hook and "hook" or "nil", label) end
@@ -6616,17 +6615,6 @@ rbff2.startplugin  = function()
 			return
 		end
 
-		--[[
-			recording.procs.await_1st_input
-			recording.procs.await_fixpos
-			recording.procs.await_no_input
-			recording.procs.await_play
-			recording.procs.fixpos
-			recording.procs.input
-			recording.procs.play
-			recording.procs.play_interval
-			recording.procs.timing_jump
-		]]
 		if global.dummy_mode == menu.dummy_modes.replay then
 			if p ~= recording.active_slot.p then
 				-- リプレイ対象サイドでなければ継続
@@ -6637,6 +6625,9 @@ rbff2.startplugin  = function()
 				return
 			end
 		end
+
+		-- くらい後アクション停止の設定
+		local do_act = (global.no_action == 1) or ((p.throw_timer + 1) >= global.no_action)
 
 		-- ガード判定 回数の状態管理もあるので実施必須
 		local block_type = tra_sub.controll_dummy_block(p)
@@ -6680,7 +6671,7 @@ rbff2.startplugin  = function()
 		end
 
 		-- 邀撃動作全般
-		if p.enc_enabled then
+		if do_act and p.enc_enabled then
 			-- 自動追加技
 			local dummy_add = tra_sub.controll_dummy_auto_add(p)
 			if dummy_add then
@@ -6715,12 +6706,12 @@ rbff2.startplugin  = function()
 
 		-- ベース動作判定
 		local dummy_hook, dummy_cmd, dummy_log = tra_sub.controll_dummy_mode(p)
-		if dummy_hook then
+		if do_act and dummy_hook then
 			p.reset_sp_hook(dummy_hook, dummy_log)
 			tra_sub.log(global.frame_number, "8")
 			return
 		end
-		if dummy_cmd then
+		if do_act and dummy_cmd then
 			p.reset_cmd_hook(dummy_cmd, dummy_log)
 		end
 		if block_type == tra_sub.block_types.simple then
@@ -8298,23 +8289,23 @@ rbff2.startplugin  = function()
 			local p                  = players[i]
 			local next_menu          = "training"
 			a.type                   = col[ 1]      --  1 邀撃行動
-			--                              2       --  2 相互位置への反応設定
-			a.rise_limit             = col[ 3] - 1  --  3 この高さより上昇時
-			a.fall_limit             = col[ 4] - 1  --  4 この高さより下降時
-			a.fwd_limit              = col[ 5] - 1  --  5 この間合いより近づいた時
-			a.bak_limit              = col[ 6] - 1  --  6 この間合いより遠のいた時
-			a.main_limit             = col[ 7] - 1  --  7 この奥行より近づいた時
-			a.sway_limit             = col[ 8] - 1  --  8 この奥行より遠のいた時
-			a.atk_only               = col[ 9]      --  9 追加の動作条件 1:OFF 2:相手の攻撃に反応 3:相手の移動中に発動 4:自身の動作中に発動
-			--                             10       -- 10 相手動作への反応設定
-			a.main_lmt_f             = col[11] - 1  -- 11 対メイン発動からのフレーム
-			a.sway_lmt_f             = col[12] - 1  -- 12 スウェー発動からのフレーム
-			--                             13       -- 13 自己動作への反応設定
-			a.jump_lmt_f             = col[14] - 1  -- 14 ジャンプからのフレーム
-			a.dash_lmt_f             = col[15] - 1  -- 15 ダッシュ/飛び退きからのフレーム
-			--                            [16]      -- 16 自動動作設定
-			a.auto_sp                = col[17]      -- 17 自動必殺 1:OFF 2:ON 3:ON:空キャン
-			a.sp_lag                 = col[18]      -- 18 自動必殺 空キャンセル必殺のラグ
+			--                            [ 2]      --  2 自動動作設定
+			a.auto_sp                = col[ 3]      --  3 自動必殺 1:OFF 2:ON 3:ON:空キャン
+			a.sp_lag                 = col[ 4]      --  4 自動必殺 空キャンセル必殺のラグ
+			--                              5       --  5 相互位置への反応設定
+			a.rise_limit             = col[ 6] - 1  --  6 この高さより上昇時
+			a.fall_limit             = col[ 7] - 1  --  7 この高さより下降時
+			a.fwd_limit              = col[ 8] - 1  --  8 この間合いより近づいた時
+			a.bak_limit              = col[ 9] - 1  --  9 この間合いより遠のいた時
+			a.main_limit             = col[10] - 1  -- 10 この奥行より近づいた時
+			a.sway_limit             = col[11] - 1  -- 11 この奥行より遠のいた時
+			a.atk_only               = col[12]      -- 12 追加の動作条件 1:OFF 2:相手の攻撃に反応 3:相手の移動中に発動 4:自身の動作中に発動
+			--                             13       -- 13 相手動作への反応設定
+			a.main_lmt_f             = col[14] - 1  -- 14 対メイン発動からのフレーム
+			a.sway_lmt_f             = col[15] - 1  -- 15 スウェー発動からのフレーム
+			--                             16       -- 16 自己動作への反応設定
+			a.jump_lmt_f             = col[17] - 1  -- 17 ジャンプからのフレーム
+			a.dash_lmt_f             = col[18] - 1  -- 18 ダッシュ/飛び退きからのフレーム
 			--                            [19]      -- 19 自動追加動作
 			a.otg_throw              = col[20] == 2 -- 20 ダウン投げ
 			a.otg_attack             = col[21] == 2 -- 21 ダウン攻撃
@@ -8332,7 +8323,7 @@ rbff2.startplugin  = function()
 			a.hebi_damashi           = col[33]      -- 33 蛇だまし
 			-- 邀撃行動のメニュー設定
 			if cancel ~= true and a.type == 2 and row == 1 then next_menu = menu.enc_menus[i][p.char] end
-			if cancel ~= true and a.auto_sp >= 2 and row == 17 then next_menu = menu.fol_menus[i][p.char] end
+			if cancel ~= true and a.auto_sp >= 2 and row == 3 then next_menu = menu.fol_menus[i][p.char] end
 			menu.set_current(next_menu)
 		end
 		local on_a = function() on_x(false) end
@@ -8346,6 +8337,9 @@ rbff2.startplugin  = function()
 			"トレーニングダミーが邀撃(ようげき)行動をする条件を設定します。\n自動必殺技をONにした場合は自動ガードができなくなります。",
 			{
 				{ "邀撃行動", { "OFF", "ON:（Aで選択画面へ）" } },
+				{ title = true, "自動動作設定" },
+				{ "自動必殺技", { "OFF", "ON（Aで選択画面へ）", "ON:空キャンセル（Aで選択画面へ）" } },
+				{ "空キャンセル猶予F", menu.labels.kara_frames, },
 				{ title = true, "相互位置への反応設定" },
 				{ "この高さより上昇時", jumplimit },
 				{ "この高さより下降時", jumplimit },
@@ -8360,9 +8354,6 @@ rbff2.startplugin  = function()
 				{ title = true, "自己動作への反応設定" },
 				{ "ジャンプからのフレーム", swaylmt_f },
 				{ "ダッシュ/飛び退きからのフレーム", swaylmt_f },
-				{ title = true, "自動動作設定" },
-				{ "自動必殺技", { "OFF", "ON（Aで選択画面へ）", "ON:空キャンセル（Aで選択画面へ）" } },
-				{ "空キャンセル猶予F", menu.labels.kara_frames, },
 				{ title = true, "自動追加動作" },
 				{ "自動ダウン投げ", menu.labels.off_on, },
 				{ "自動ダウン攻撃", menu.labels.off_on, },
@@ -8382,23 +8373,23 @@ rbff2.startplugin  = function()
 			function()
 				local col, a = menu[key].pos.col, players[i].encounter
 				col[ 1] = a.type                   --  1 迎撃行動
-				--   2                             --  2 相互位置への反応設定
-				col[ 3] = a.rise_limit + 1         --  3 この高さより上昇時
-				col[ 4] = a.fall_limit + 1         --  4 この高さより下降時
-				col[ 5] = a.fwd_limit  + 1         --  5 この間合いより近づいた時
-				col[ 6] = a.bak_limit  + 1         --  6 この間合いより遠のいた時
-				col[ 7] = a.main_limit + 1         --  7 この奥行より近づいた時
-				col[ 8] = a.sway_limit + 1         --  8 この奥行より遠のいた時
-				col[ 9] = a.atk_only               --  9 追加の動作条件 1:OFF 2:相手の攻撃に反応 3:相手の移動中に発動 4:自身の動作中に発動
-				--  10                             -- 10 相手動作への反応設定
-				col[11] = a.main_lmt_f + 1         -- 11 対メイン発動からのフレーム
-				col[12] = a.sway_lmt_f + 1         -- 12 スウェー発動からのフレーム
-				--  13                             -- 13 自己動作への反応設定
-				col[14] = a.jump_lmt_f + 1         -- 14 ジャンプからのフレーム
-				col[15] = a.dash_lmt_f + 1         -- 15 ダッシュ/飛び退きからのフレーム
-				-- [16]                            -- 16 自動動作設定
-				col[17] = a.auto_sp                -- 17 自動必殺 1:OFF 2:ON 3:ON:空キャンセル
-				col[18] = a.sp_lag                 -- 18 自動必殺 空キャンセルのラグ
+				-- [ 2]                            --  2 自動動作設定
+				col[ 3] = a.auto_sp                --  3 自動必殺 1:OFF 2:ON 3:ON:空キャンセル
+				col[ 4] = a.sp_lag                 --  4 自動必殺 空キャンセルのラグ
+				--   5                             --  5 相互位置への反応設定
+				col[ 6] = a.rise_limit + 1         --  6 この高さより上昇時
+				col[ 7] = a.fall_limit + 1         --  7 この高さより下降時
+				col[ 8] = a.fwd_limit  + 1         --  8 この間合いより近づいた時
+				col[ 9] = a.bak_limit  + 1         --  9 この間合いより遠のいた時
+				col[10] = a.main_limit + 1         -- 10 この奥行より近づいた時
+				col[11] = a.sway_limit + 1         -- 11 この奥行より遠のいた時
+				col[12] = a.atk_only               -- 12 追加の動作条件 1:OFF 2:相手の攻撃に反応 3:相手の移動中に発動 4:自身の動作中に発動
+				--  13                             -- 13 相手動作への反応設定
+				col[14] = a.main_lmt_f + 1         -- 14 対メイン発動からのフレーム
+				col[15] = a.sway_lmt_f + 1         -- 15 スウェー発動からのフレーム
+				--  16                             -- 16 自己動作への反応設定
+				col[17] = a.jump_lmt_f + 1         -- 17 ジャンプからのフレーム
+				col[18] = a.dash_lmt_f + 1         -- 18 ダッシュ/飛び退きからのフレーム
 				-- [19]                            -- 19 自動追加動作
 				col[20] = a.otg_throw and 2 or 1   -- 20 ダウン投げ
 				col[21] = a.otg_attack and 2 or 1  -- 21 ダウン攻撃
