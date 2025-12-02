@@ -843,7 +843,7 @@ rbff2.startplugin  = function()
 		on_pow_up            = 255,
 
 		combo_log            = 1, -- 1:OFF 2:ON 3:VERBOSE
-		hook_log             = false,
+		hook_log             = 1, -- 1:OFF 2:ON 3:VERBOSE
 	}
 	local safe_cb              = function(cb)
 		return function(...)
@@ -2139,38 +2139,40 @@ rbff2.startplugin  = function()
 			p.hook, cmd = p.get_hook(p.hook), p.cmd_num(cmd)
 			p.hook.cmd = p.hook.cmd & db.cmd_masks[cmd]
 			p.hook.cmd = p.hook.cmd | cmd
-			if global.hook_log then ut.printf("%d %s add_cmd_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
+			if global.hook_log > 2 then ut.printf("%d %s add_cmd_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
 		end
 		p.add_cmd_hook      = function(cmd, label) -- cmd: table or int
 			local p = players[i]
 			p.hook, cmd = p.get_hook(p.hook), p.cmd_num(cmd)
 			p.hook.cmd = p.hook.cmd & db.cmd_masks[cmd]
 			p.hook.cmd = p.hook.cmd | cmd
-			if global.hook_log then ut.printf("%d %s add_cmd_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
+			if global.hook_log > 2 then ut.printf("%d %s add_cmd_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
 		end
 		p.clear_cmd_hook    = function(cmd, label) -- cmd: table or int
 			local p = players[i]
 			p.hook, cmd = p.get_hook(p.hook), p.cmd_num(cmd)
 			p.hook.cmd = p.hook.cmd & (0xFF ~ cmd)
-			if global.hook_log then ut.printf("%d %s clear_cmd_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
+			if global.hook_log > 2 then ut.printf("%d %s clear_cmd_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
 		end
 		p.reset_cmd_hook    = function(cmd, label) -- cmd: table or int
 			local p = players[i]
 			p.hook = { cmd = p.cmd_num(cmd) }
-			if global.hook_log then ut.printf("%d %s reset_cmd_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
+			if global.hook_log > 2 then ut.printf("%d %s reset_cmd_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
 		end
 		p.reset_sp_hook     = function(hook, label)
 			local p = players[i]
 			if hook and hook.cmd then
 				p.hook = { cmd = p.cmd_num(hook.cmd) }
-				if global.hook_log then ut.printf("%d %s reset_sp_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
+				if global.hook_log > 2 then ut.printf("%d %s reset_sp_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
 			else
 				p.hook = hook
-				if global.hook_log then ut.printf("%d %s reset_sp_hook sp %s %s", global.frame_number, p.num, p.hook and "*table*" or "*NIL*", label or "") end
+				if global.hook_log > 2 then ut.printf("%d %s reset_sp_hook sp %s %s", global.frame_number, p.num, p.hook and "*table*" or "*NIL*", label or "") end
 			end
 		end
 		p.input_any         = function(hook, label)
-			if global.hook_log then emu.print_info(string.format("%s %s %s", global.frame_number, hook and "*table*" or "*NIL*", label or "input_any")) end
+			if ((hook ~= nil) and (global.hook_log > 1)) or ((hook == nil) and (global.hook_log > 2)) then
+				emu.print_info(string.format("%s %s %s %X", global.frame_number, hook and "*table*" or "*NIL*", label or "input_any", hook.cmd and p.cmd_num(hook.cmd) or hook.id))
+			end
 			if ut.tstb(hook.hook_type, hook_cmd_types.throw) and not ut.tstb(hook.hook_type, hook_cmd_types.sp_throw) then
 				if p.act == 0x9 and p.act_frame > 1 then return end -- 着地硬直は投げでないのでスルー
 				if p.op.in_air then return end
@@ -3022,15 +3024,15 @@ rbff2.startplugin  = function()
 				if sp.cmd then return end
 				if (sp ~= p.dummy_hook_rvs or sp ~= p.dummy_enc) and sp == p.dummy_bs and p.base ~= 0x5893A then return end
 				if sp.ver then
-					if global.hook_log then ut.printf("%s hook1 P%s cmd A3:%X A4:%X", now(), p.num, sp.id or 0, sp.ver or 0) end
+					if global.hook_log > 1 then ut.printf("%s hook1 P%s ver A3:%X A4:%X", now(), p.num, sp.id or 0, sp.ver or 0) end
 					mem.w08(p.addr.base + 0xA3, sp.id)
 					mem.w16(p.addr.base + 0xA4, sp.ver)
 				elseif sp.f then
-					if global.hook_log then ut.printf("%s hook2 P%s sp  D6:%X D7:%X", now(), p.num, sp.id or 0, sp.f or 0) end
+					if global.hook_log > 1 then ut.printf("%s hook2 P%s sp  D6:%X D7:%X", now(), p.num, sp.id or 0, sp.f or 0) end
 					mem.w08(p.addr.base + 0xD6, sp.id)
 					mem.w08(p.addr.base + 0xD7, sp.f)
 				else
-					if global.hook_log then ut.printf("%s hook3 P%s BUG %s %s %s %s", now(), p.num, sp.id, sp.f, sp.ver, sp.cmd) end
+					if global.hook_log > 2 then ut.printf("%s hook3 P%s BUG %s %s %s %s", now(), p.num, sp.id, sp.f, sp.ver, sp.cmd) end
 				end
 			end,
 		},
@@ -3750,7 +3752,11 @@ rbff2.startplugin  = function()
 				end
 			end
 			p.hook = { cmd = reg_pcnt, on1f = on1f, on5f = on5f, hold = hold }
-			if global.hook_log then ut.printf("%d %s reset_cmd_hook cmd %x", global.frame_number, p.num, reg_pcnt) end
+			if reg_pcnt == 0 then
+				if global.hook_log > 2 then ut.printf("%d %s reset_cmd_hook cmd %x", global.frame_number, p.num, reg_pcnt) end
+			else
+				if global.hook_log > 1 then ut.printf("%d %s reset_cmd_hook cmd %x", global.frame_number, p.num, reg_pcnt) end
+			end
 			recording.play_count = recording.play_count + 1
 
 			-- 繰り返し判定
@@ -5749,9 +5755,10 @@ rbff2.startplugin  = function()
 			c.count         = 1
 			c.old           = nil
 			c.range, c.list = tra_sub.reload_combo(p)
+			local max       = #c.list
 			c.last          = c.count == #c.list
-			c.meta          = c.list[1].meta
-			c.input         = c.list[1].hook
+			c.meta          = max > 0 and c.list[1].meta or {}
+			c.input         = max > 0 and c.list[1].hook or nil
 			c.fin           = nil
 			c.meoshi        = nil
 			c.lag           = 0
@@ -6317,9 +6324,11 @@ rbff2.startplugin  = function()
 		end
 
 		-- フック検知してのリバサ発動有無
-		if not p.skip_frame and rvs_wake_types[p.dummy_wakeup] and hook_rvs then
+		if not p.skip_frame and rvs_wake_types[p.dummy_wakeup] and hook_rvs and p.on_last_frame then
 			if p.on_last_frame == global.frame_number then
 				type, log = rvs_types.reversal, "[Reversal] 1"
+			elseif ut.tstb(hook_rvs.hook_type, hook_cmd_types.sp_throw) and (p.on_last_frame + 1) == global.frame_number then
+				type, log = rvs_types.reversal, "[Reversal] 2"
 			end
 		end
 
@@ -8269,7 +8278,7 @@ rbff2.startplugin  = function()
 			table.insert(list, { "コンボログ", { "OFF", "ON", "ON:VERBOSE" } })
 			table.insert(on_ab, to_tra)
 			table.insert(col, 1)
-			table.insert(list, { "フックログ", menu.labels.off_on })
+			table.insert(list, { "フックログ", { "OFF", "ON", "ON:VERBOSE" } })
 			table.insert(on_ab, to_tra)
 			table.insert(col, 1)
 		end
