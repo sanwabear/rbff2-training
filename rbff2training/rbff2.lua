@@ -2396,51 +2396,50 @@ rbff2.startplugin  = function()
 				if not p.char_data then return end
 				-- 攻撃中のみ変化、判定チェック用2 0のときは何もしていない、 詠酒の間合いチェック用など
 				p.attackbits.harmless = data == 0
-				--ut.printf("harmless %X %s %s | %X %X | %s | %X %X %X | %s", mem.pc(), now(), p.on_hit, base, data, ut.tobitstr(data), p.act, p.act_count, p.act_frame, p.attackbits.harmless)
 				p.attack_data         = data
 				p.on_update_attack    = now()
 				if data == 0 then return end
 				if p.attack ~= data then
 					p.clear_damages()
-					p.pow_up        = 0x58 > data and 0 or p.pow_up
-					p.pow_up_direct = 0x58 > data and 0 or p.pow_up_direct
-				end
-				-- ut.printf("attack %x", data)
-				p.attack            = data
-				p.last_attack_data  = p.attack
-				p.on_update_attack  = now()
-				p.attackbits.attack = data
-				local base_addr     = p.char_data.proc_base
-				p.forced_down       = 2 <= mem.r08(data + base_addr.forced_down) -- テクニカルライズ可否 家庭用 05A9BA からの処理
-				-- ヒットストップ 家庭用 攻撃側:05AE2A やられ側:05AE50 からの処理 OK
-				p.hitstop           = 0x7F & mem.r08(data + base_addr.hitstop)
-				p.blockstop         = math.max(0, p.hitstop - 1) -- ガード時の補正
-				p.damage            = mem.r08(data + base_addr.damege) -- 補正前ダメージ  家庭用 05B118 からの処理
-				p.stun              = mem.r08(data + base_addr.stun) -- 気絶値 05C1CA からの処理
-				p.stun_timer        = mem.r08(data + base_addr.stun_timer) -- 気絶タイマー 05C1CA からの処理
-				p.max_hit_dn        = data > 0 and mem.r08(data + base_addr.max_hit) or 0
-				p.multi_hit         = p.max_hit_dn > 1 or p.max_hit_dn == 0 or (p.char == db.char_id.mai and p.attack == 0x16)
-				p.tw_muteki2        = data >= 0x70 and mem.r08(base_addr.tw_invincible + (0xFF & (data - 0x70))) or 0 -- 投げ無敵 家庭用 039FE4からの処理
-				p.esaka_target      = false
-				if 0x58 > data then
-					-- 詠酒距離 家庭用 0236F0 からの処理
-					local esaka           = mem.r16(base_addr.esaka + ((data + data) & 0xFFFF))
-					p.esaka, p.esaka_type = esaka & 0x1FFF, db.esaka_type_names[esaka & 0xE000] or ""
-					p.esaka_target        = p.esaka > 0
-					if 0x27 <= data then                                    -- 家庭用 05B37E からの処理
-						p.pow_up_hit = mem.r08((0xFF & (data - 0x27)) + base_addr.pow_up_ext) -- CA技、特殊技
-					else
-						p.pow_up_hit = mem.r08(base_addr.pow_up + data)     -- ビリー、チョンシュ、その他の通常技
+					if data < 0x58 then
+						p.pow_up, p.pow_up_direct = 0, 0
 					end
-					p.pow_up_block = 0xFF & (p.pow_up_hit >> 1)             -- ガード時増加量 d0の右1ビットシフト=1/2
 				end
-				if p.char_data.pow and p.char_data.pow[data] then
-					p.pow_revenge = p.char_data.pow[data].pow_revenge or p.pow_revenge
-					p.pow_absorb = p.char_data.pow[data].pow_absorb or p.pow_absorb
-					p.pow_up_hit = p.char_data.pow[data].pow_up_hit or p.pow_up_hit
+				p.attack, p.last_attack_data, p.attackbits.attack = data, data, data
+				local base = p.char_data.proc_base
+				local hitstop_raw = mem.r08(data + base.hitstop)
+				-- ヒットストップ 家庭用 攻撃側:05AE2A やられ側:05AE50 からの処理 OK
+				p.hitstop     = hitstop_raw & 0x7F
+				p.blockstop   = p.hitstop > 0 and p.hitstop - 1 or 0
+				p.forced_down = mem.r08(data + base.forced_down) >= 2
+				p.damage      = mem.r08(data + base.damege)     -- 補正前ダメージ  家庭用 05B118 からの処理
+				p.stun        = mem.r08(data + base.stun)       -- 気絶値 05C1CA からの処理
+				p.stun_timer  = mem.r08(data + base.stun_timer) -- 気絶タイマー 05C1CA からの処理
+				local max_hit = mem.r08(data + base.max_hit)
+				p.max_hit_dn  = max_hit
+				p.multi_hit   = max_hit ~= 1 or (p.char == db.char_id.mai and data == 0x16)
+				p.tw_muteki2  = data >= 0x70 and mem.r08(base.tw_invincible + ((data - 0x70) & 0xFF)) or 0
+				if data < 0x58 then
+					-- 詠酒距離 家庭用 0236F0 からの処理
+					local esaka = mem.r16(base.esaka + (data << 1 & 0xFFFF))
+					p.esaka, p.esaka_type, p.esaka_target = esaka & 0x1FFF, db.esaka_type_names[esaka & 0xE000] or "", (esaka & 0x1FFF) > 0
+					-- 家庭用 05B37E からの処理
+					-- ビリー、チョンシュ、その他の通常技
+					p.pow_up_hit   = mem.r08(data >= 0x27 and base.pow_up_ext + (data - 0x27 & 0xFF) or base.pow_up + data)
+					p.pow_up_block = p.pow_up_hit >> 1             -- ガード時増加量 d0の右1ビットシフト=1/2
+				else
+					p.esaka_target = false
+				end
+				local char_pow = p.char_data.pow
+				if char_pow then
+					local pow_data = char_pow[data]
+					if pow_data then
+						p.pow_revenge = pow_data.pow_revenge or p.pow_revenge
+						p.pow_absorb  = pow_data.pow_absorb or p.pow_absorb
+						p.pow_up_hit  = pow_data.pow_up_hit or p.pow_up_hit
+					end
 				end
 				p.stand_close = mem.pc() == 0x2AE02 -- 0x2AE02は近距離版動作へのデータ補正の処理アドレス
-				-- ut.printf("%x dmg %x %s %s %s %s %s", p.addr.base, data, p.damage, p.stun, p.stun_timer, p.pow_up_hit, p.pow_up_block)
 			end,
 			-- [0xB7] = function(data) p.corner = data end, -- 画面端状態 0:端以外 1:画面端 3:端押し付け
 			[0xB8] = function(data)
@@ -9118,8 +9117,8 @@ rbff2.startplugin  = function()
 		reset_memory_tap(nil, false, true)         -- フック外し
 		for i = 1, 4 do mem.w08(0x10E000 + i - 1, 0) end -- デバッグ設定戻し
 		-- フックの呼び出し回数を出力
-		for addr, cnt in pairs(mem.wp_cnt) do ut.printf("wp %x %s", addr, cnt) end
-		for addr, cnt in pairs(mem.rp_cnt) do ut.printf("rp %x %s", addr, cnt) end
+		for addr, cnt in pairs(mem.wp_cnt) do ut.printf("wp %7x %7s %4d", addr, cnt, math.floor(cnt / global.frame_number * 100)) end
+		for addr, cnt in pairs(mem.rp_cnt) do ut.printf("rp %7x %7s %4d", addr, cnt, math.floor(cnt / global.frame_number * 100)) end
 		mem.wp_cnt, mem.rp_cnt = {}, {}
 		self_destruct()
 		machine:hard_reset() -- ハードリセットでメモリ上のロムパッチの戻しも兼ねる
