@@ -137,11 +137,9 @@ end
 ut.get_digit          = function(num) return string.len(tostring(num)) end
 
 -- 16ビット値を0.999上限の数値に変える
-ut.int16tofloat       = function(int16v)
-	if int16v and type(int16v) == "number" then
-		return int16v / 0x10000
-	end
-	return 0
+local INV_65536 = 1.0 / 0x10000
+ut.int16tofloat       = function(word)
+	return word * INV_65536
 end
 
 ut.printf             = function(format, ...) print(string.format(format, ...)) end
@@ -149,20 +147,19 @@ ut.printf             = function(format, ...) print(string.format(format, ...)) 
 -- 前後の空白を除去する trim 関数
 ut.trim = function(s) return (s:gsub("^%s*(.-)%s*$", "%1")) end
 
-ut.int8               = function(pos)
-	if 127 < pos or pos < -128 then
-		-- (pos + 2 ^ 15) % 2 ^ 16 - 2 ^ 15
-		return (pos + 128) % 256 - 128
-	end
-	return pos
+-- ルックアップテーブル版（8ビット専用、超高速）
+local u8_to_s8_lut = {}
+for i = 0, 255 do
+    u8_to_s8_lut[i] = ((i + 128) & 0xFF) - 128
 end
 
-ut.int16              = function(pos)
-	if 32767 < pos or pos < -32768 then
-		-- (pos + 2 ^ 15) % 2 ^ 16 - 2 ^ 15
-		return (pos + 32768) % 65536 - 32768
-	end
-	return pos
+ut.int8               = function(byte)
+    return u8_to_s8_lut[byte]
+end
+
+ut.int16 = function(pos)
+    if pos >= -32768 and pos <= 32767 then return pos end
+    return ((pos + 32768) & 0xFFFF) - 32768
 end
 
 local deepcopy

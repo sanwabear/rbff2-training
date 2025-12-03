@@ -2728,10 +2728,10 @@ rbff2.startplugin  = function()
 		p.wp16                     = {
 			[0x34] = function(data) p.thrust_int = ut.int16(data) end, -- 前進移動量X
 			[0x36] = function(data) p.thrust_frc = ut.int16tofloat(data) end, -- 前進移動量の小数部X
-			[0x40] = function(data) p.int1 = ut.int16(data) end, -- キャラ固有の前進移動量X
-			[0x42] = function(data) p.frc1 = ut.int16tofloat(data) end, -- キャラ固有の前進移動量の小数部X
-			[0x44] = function(data) p.int2 = ut.int16(data) end, -- ジャンプ移動量Y
-			[0x46] = function(data) p.frc2 = ut.int16tofloat(data) end, -- ジャンプ移動量の小数部Y
+			--[0x40] = function(data) p.int1 = ut.int16(data) end, -- キャラ固有の前進移動量X
+			--[0x42] = function(data) p.frc1 = ut.int16tofloat(data) end, -- キャラ固有の前進移動量の小数部X
+			--[0x44] = function(data) p.int2 = ut.int16(data) end, -- ジャンプ移動量Y
+			--[0x46] = function(data) p.frc2 = ut.int16tofloat(data) end, -- ジャンプ移動量の小数部Y
 			[0x48] = function(data) p.thrusty_int = ut.int16(data) end, -- ジャンプ移動量Y
 			[0x4A] = function(data) p.thrusty_frc = ut.int16tofloat(data) end, -- ジャンプ移動量の小数部Y
 			--[0x92] = function(data) p.anyhit_id = data end,
@@ -6301,7 +6301,7 @@ rbff2.startplugin  = function()
 		end -- ガード状態が解除されたらリバサ解除
 
 		-- モード判定
-		if p.dummy_wakeup == wakeup_type.none or (not p.gd_rvs_enabled and global.dummy_rvs_cnt > 1)then
+		if p.dummy_wakeup == wakeup_type.none or (not p.gd_rvs_enabled and global.dummy_rvs_cnt > 1) then
 			hook_rvs = nil
 		end
 
@@ -6447,12 +6447,13 @@ rbff2.startplugin  = function()
 	end
 	tra_sub.controll_dummy_auto_otg = function(p)
 		local otg
+		local op = p.op
 		-- 自動ダウン追撃
-		if p.in_naked == true and p.op.act == 0x190 or p.op.act == 0x192 or p.op.act == 0x18E or p.op.act == 0x13B then
+		if p.in_naked == true and op.act == 0x190 or op.act == 0x192 or op.act == 0x18E or op.act == 0x13B then
 			if p.encounter.otg_throw and p.char_data.otg_throw then
 				otg = p.char_data.otg_throw -- 自動ダウン投げ
 			end
-			if p.encounter.otg_attack and p.char_data.otg_stomp then
+			if p.encounter.otg_attack and p.char_data.otg_stomp and not op.hurt_invincible then
 				otg = p.char_data.otg_stomp -- 自動ダウン攻撃
 			end
 		end
