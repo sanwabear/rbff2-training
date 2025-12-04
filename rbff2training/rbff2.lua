@@ -4190,9 +4190,9 @@ rbff2.startplugin  = function()
 			local args = separators[i]
 			if args.box then scr:draw_box(table.unpack(args.box)) end
 			if args.deco then _draw_text(table.unpack(args.deco)) end
-		end
-		for i = 1, last_idx - 1 do
-			local args = separators[i]
+		--end
+		--for i = 1, last_idx - 1 do
+		--	local args = separators[i]
 			if args.txt then _draw_text(table.unpack(args.txt)) end
 		end
 
@@ -6392,9 +6392,8 @@ rbff2.startplugin  = function()
 		end
 		if not op.attackbits.harmless and op.attack and op.attack > 0 then
 			-- CPU自動ガードの処理の一部より。家庭用 056140 から
-			p.char_data.attack_act_types = p.char_data.attack_act_types or {}
-			local types = p.char_data.attack_act_types
-			local ext_type = types[p.attack]
+			op.char_data.attack_act_types = op.char_data.attack_act_types or {}
+			local ext_type = op.char_data.attack_act_types[op.attack]
 			if ext_type == nil then
 				local cpu_block = mem.r08(0x56226 + op.attack)
 				ext_type = 0
@@ -6413,7 +6412,7 @@ rbff2.startplugin  = function()
 						break
 					end
 				end
-				types[op.attack] = ext_type
+				op.char_data.attack_act_types[op.attack] = ext_type
 			end
 			act_type = act_type | ext_type
 		end
