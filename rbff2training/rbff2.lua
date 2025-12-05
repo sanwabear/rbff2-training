@@ -6732,6 +6732,9 @@ rbff2.startplugin  = function()
 			if rvs_bases2[p.base] then -- キャンセル可能な着地
 				type, log = rvs_types.reversal, "[Reversal] 5"
 			end
+			if p.base == 0x589b6 and p.knockback2 < 3 then
+				type, log = rvs_types.reversal, "[Reversal] 6"
+			end
 		end
 
 		-- dummy_hook_rvsはフック時のリバサ動作に反映されるので返り値と変数の値を同じにする
