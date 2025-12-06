@@ -2301,7 +2301,8 @@ rbff2.startplugin  = function()
 		end
 		table.insert(players, p)
 		p.body                     = p -- プレイヤーデータ自身、fireballとの互換用
-		p.new_preset_combo = function(reset_picker)
+		p.new_preset_combo = function(reset_picker, label)
+			if global.combo_log > 1 then ut.printf("         [FSM][-] P%s NEW", p.num) end
 			p.combo           = p.combo or {}
 			p.combo.state     = "neutral"
 			p.combo.last      = false
@@ -2333,7 +2334,7 @@ rbff2.startplugin  = function()
 				p.next_block, p.next_block_ec = true, 75 -- カウンター初期化 true
 			end
 			p.block1 = 0
-			p.new_preset_combo(true) -- プリセットコンボ更新用
+			p.new_preset_combo(true, "reset_char_menu") -- プリセットコンボ更新用
 			p.rvs_count = -1 -- リバサガードカウンター初期化
 			p.bs_count  = -1 -- BSガードカウンター初期化
 			p.dummy_bs  = nil -- キャラとBSセット
@@ -3285,6 +3286,13 @@ rbff2.startplugin  = function()
 					return
 				end
 				-- ut.printf("%s %s box %x %x %x", now(), p.on_hit, p.addr.base, mem.pc(), data)
+				--[[
+				if (p.char == db.char_id.andy and (p.act == 0x88 or p.act == 0x92)) then
+					return -- 斬影拳ヒット時の判定形状がわかるように更新しない
+				elseif p.char == db.char_id.rick and p.act == 0x88 then
+					return -- 小シューティングスターヒット時の判定形状がわかるように更新しない
+				end
+				]]
 				p.boxies = {}
 				if data <= 0 then return end
 				p.attackbits.fb = p.is_fireball
@@ -5983,6 +5991,7 @@ rbff2.startplugin  = function()
 	--rnd_picker.demo()
 
 	tra_sub.reload_combo = function(p)
+		if global.combo_log > 1 then ut.printf("         [FSM][-] P%s RELOAD", p.num) end
 		if p.combo.picker == nil then
 			local top_list = get_next_combo(p)
 			-- picker を作成
@@ -6023,8 +6032,9 @@ rbff2.startplugin  = function()
 		local do_log = function(point, entry)
 			if global.combo_log > 1 then
 				point = point or ""
-				ut.printf("%8s [FSM] %16s:%8s %3s %3s %3s %3s %4s %4s %4s %4s %s %s %s %s",
+				ut.printf("%8s [FSM][%s] %16s:%8s %3s %3s %3s %3s %4s %4s %4s %4s %s %s %s %s",
 					entry and global.frame_number or "",
+					c.count,
 					entry and "entry" or " ->" .. point,
 					c.state,
 					advance and "+adv" or "----",
@@ -6046,7 +6056,8 @@ rbff2.startplugin  = function()
 		local log_with_ret = function(ret, point, entry)
 			if global.combo_log > 1 then
 				do_log(point, entry)
-				ut.printf("         [FSM] --> %s",
+				ut.printf("         [FSM][%s] --> %s",
+					p.combo.count,
 					(ret == nil) and "nil" or (ret.cmd == nil) and "sp" or "cmd"
 				)
 			end
@@ -6054,8 +6065,12 @@ rbff2.startplugin  = function()
 		end
 
 		if p.normal_state ~= true or p.flag_d0 ~= 0 or p.in_hurt == true then
-			if (p.combo == nil) or (p.combo.count == nil) or p.combo.count > 1 then
-				c = p.new_preset_combo(true)
+			if p.combo == nil then
+				c = p.new_preset_combo(true, "combo nil skip")
+			elseif p.combo.count == nil then
+				c = p.new_preset_combo(true, "count nil skip")
+			--elseif  p.combo.count > 1 then
+				--c = p.new_preset_combo(true, "count >1 skip")
 			end
 			c = p.combo
 			return log_with_ret(nil, "skip")
@@ -6092,21 +6107,22 @@ rbff2.startplugin  = function()
 		end
 		if ut.tstb(p.flag_7e, db.flag_7e._05) then
 			local ca = ut.tstb(p.cancelable_data, 0xC0) -- キャンセル可
-			--ut.printf("H %X", p.cancelable_data)
 			cancel = ca and meethits -- ヒット限定
+			if global.combo_log > 1 then ut.printf("Can.Hit %X %s", p.cancelable_data, cancel) end
 		elseif ut.tstb(p.flag_7e, db.flag_7e._04) then
 			local ca = ut.tstb(p.cancelable_data, 0x40) -- ガード時のみキャンセル可
-			--ut.printf("B %X", p.cancelable_data)
 			cancel = ca and meethits -- ガード限定
+			if global.combo_log > 1 then ut.printf("Can.Block %X %s", p.cancelable_data, cancel) end
 		end
 		if ut.tstb(p.flag_c4, db.flag_c4._28 | db.flag_c4._31) then
 			local ca = ut.tstb(p.cancelable_data, 0x10)
-			--ut.printf("A %X %s", p.cancelable_data, ca)
 			repcan = ca -- 連続のみキャンセル可
+			if global.combo_log > 1 then ut.printf("Repeatable %X %s", p.cancelable_data, repcan) end
 		end
 		if ut.tstb(p.flag_6a, 0x8) then -- 攻撃判定あり
 			capable = (p.flag_c4 > 0) or ut.tstb(p.flag_c8, db.flag_c8.normal_atk)
 			capable = capable and meethits
+			if global.combo_log > 1 then ut.printf("Active C4:%X C8:%X %s", p.flag_c4, p.flag_c8, capable) end
 		end
 		if p.on_additional_r1 == global.frame_number or p.on_additional_r5 == global.frame_number then
 			addition = true
@@ -6127,8 +6143,13 @@ rbff2.startplugin  = function()
 			c.range, c.list = tra_sub.reload_combo(p)
 			local max       = #c.list
 			c.last          = c.count == #c.list
-			c.meta          = max > 0 and c.list[1].meta or {}
-			c.input         = max > 0 and c.list[1].hook or nil
+			if max > 0 and c.list[1] then
+				c.meta  = c.list[1].meta or {}
+				c.input = c.list[1].hook
+			else
+				c.meta  = {}
+				c.input = nil
+			end
 			c.fin           = nil
 			c.meoshi        = nil
 			c.lag           = 0
@@ -6148,10 +6169,21 @@ rbff2.startplugin  = function()
 
 		local next_input = function()
 			local prev = c.input
-			c.count    = c.count + 1
-			while c.list[c.count].dummy do
-				c.count    = c.count + 1
+			c.count = c.count + 1
+
+			-- ダミーをスキップ(範囲チェック付き)
+			while c.count <= #c.list and c.list[c.count] and c.list[c.count].dummy do
+				c.count = c.count + 1
 			end
+
+			-- 範囲外チェック
+			if c.count > #c.list then
+				c.state = "finish"
+				c.last = true
+				if global.combo_log > 1 then ut.printf("         [FSM][%s] P%s FINISH", c.count, p.num) end
+				return
+			end
+
 			-- 次の input を準備
 			local meta = c.meta
 			c.lag      = meta.lag or 0 -- 今のラグ設定を次の待ち時間にする
@@ -6170,7 +6202,8 @@ rbff2.startplugin  = function()
 			c.advance  = false
 			c.timeout  = false
 			if global.combo_log > 1 then
-				ut.printf("         [FSM] --> next %s -> %s  kara:%s hold:%s hits:%s last:%s input:%s state:%s advance:%s timeout:%s",
+				ut.printf("         [FSM][%s] --> next %s -> %s  kara:%s hold:%s hits:%s last:%s input:%s state:%s advance:%s timeout:%s",
+					c.count,
 					prev and to_sjis(prev.name) or "---",
 					c.input and to_sjis(c.input.name) or "---",
 					(c.kara == nil) and "nil" or c.kara,
@@ -6418,7 +6451,8 @@ rbff2.startplugin  = function()
 				c.advance = false -- 永久ループ防止
 				return ret
 			end
-			c = p.new_preset_combo()
+			if global.combo_log > 1 then ut.printf("         [FSM][%s] P%s RESET", c.count, p.num) end
+			c = p.new_preset_combo(false, "finish")
 		end
 
 		return log_with_ret(nil, "return")
