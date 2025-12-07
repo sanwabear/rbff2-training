@@ -2800,7 +2800,12 @@ rbff2.startplugin  = function()
 				if not ac then return end
 				if ac[p.base] == data then p.on_additional_wsp = now() elseif ac[p.base] then p.on_additional_rsp = now() end
 			end,
-			[{ addr = 0xB9, filter = { 0x396B4, 0x39756 } }] = function(data) p.on_bs_check = now() end, -- BSの技IDチェック
+			[{ addr = 0xB9, filter = { 0x396B4, 0x39756 } }] = function(data, ret)
+				p.on_bs_check = now()
+				if p.hook ~= p.dummy_bs then
+					if p.dummy_hook_rvs then ret.value = 0x00 end -- 自動BS以外の発動を阻止
+				end
+			end, -- BSの技IDチェック
 			[{ addr = 0xBF, filter = { 0x3BEF6, 0x3BF24, 0x5B346, 0x5B368 } }] = function(data)
 				if data ~= 0 then                                                               -- 増加量を確認するためなのでBSチェックは省く
 					local pc, pow_up = mem.pc(), 0
@@ -6727,6 +6732,10 @@ rbff2.startplugin  = function()
 
 		-- モード判定
 		if p.dummy_wakeup == wakeup_type.none or (not p.gd_rvs_enabled and global.dummy_rvs_cnt > 1) then
+			hook_rvs = nil
+		end
+
+		if p.hitstop_remain > 0 then
 			hook_rvs = nil
 		end
 
