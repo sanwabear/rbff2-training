@@ -841,9 +841,6 @@ rbff2.startplugin  = function()
 
 		random_boolean       = function(true_ratio) return math.random() <= true_ratio end,
 		on_pow_up            = 255,
-
-		combo_log            = 1, -- 1:OFF 2:ON 3:VERBOSE
-		hook_log             = 1, -- 1:OFF 2:ON 3:VERBOSE
 	}
 	local safe_cb              = function(cb)
 		return function(...)
@@ -2118,6 +2115,9 @@ rbff2.startplugin  = function()
 			gd_bs_enabled   = false,     -- BSの実行可否
 			fwd_prov        = true,      -- 挑発で自動前進
 
+			combo_log       = 1,         -- 1:OFF 2:ON 3:VERBOSE
+			hook_log        = 1,         -- 1:OFF 2:ON 3:VERBOSE
+
 			life_rec        = true,      -- 自動で体力回復させるときtrue
 			red             = 2,         -- 体力設定     	--"最大", "赤", "ゼロ" ...
 			max             = 1,         -- パワー設定       --"最大", "半分", "ゼロ" ...
@@ -2244,38 +2244,38 @@ rbff2.startplugin  = function()
 			p.hook, cmd = p.get_hook(p.hook), p.cmd_num(cmd)
 			p.hook.cmd = p.hook.cmd & db.cmd_masks[cmd]
 			p.hook.cmd = p.hook.cmd | cmd
-			if global.hook_log > 2 then ut.printf("%d %s add_cmd_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
+			if p.hook_log > 2 then ut.printf("%d %s add_cmd_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
 		end
 		p.add_cmd_hook      = function(cmd, label) -- cmd: table or int
 			local p = players[i]
 			p.hook, cmd = p.get_hook(p.hook), p.cmd_num(cmd)
 			p.hook.cmd = p.hook.cmd & db.cmd_masks[cmd]
 			p.hook.cmd = p.hook.cmd | cmd
-			if global.hook_log > 2 then ut.printf("%d %s add_cmd_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
+			if p.hook_log > 2 then ut.printf("%d %s add_cmd_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
 		end
 		p.clear_cmd_hook    = function(cmd, label) -- cmd: table or int
 			local p = players[i]
 			p.hook, cmd = p.get_hook(p.hook), p.cmd_num(cmd)
 			p.hook.cmd = p.hook.cmd & (0xFF ~ cmd)
-			if global.hook_log > 2 then ut.printf("%d %s clear_cmd_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
+			if p.hook_log > 2 then ut.printf("%d %s clear_cmd_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
 		end
 		p.reset_cmd_hook    = function(cmd, label) -- cmd: table or int
 			local p = players[i]
 			p.hook = { cmd = p.cmd_num(cmd) }
-			if global.hook_log > 2 then ut.printf("%d %s reset_cmd_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
+			if p.hook_log > 2 then ut.printf("%d %s reset_cmd_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
 		end
 		p.reset_sp_hook     = function(hook, label)
 			local p = players[i]
 			if hook and hook.cmd then
 				p.hook = { cmd = p.cmd_num(hook.cmd) }
-				if global.hook_log > 2 then ut.printf("%d %s reset_sp_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
+				if p.hook_log > 2 then ut.printf("%d %s reset_sp_hook cmd %x %s", global.frame_number, p.num, p.hook.cmd, label or "") end
 			else
 				p.hook = hook
-				if global.hook_log > 2 then ut.printf("%d %s reset_sp_hook sp %s %s", global.frame_number, p.num, p.hook and "*table*" or "*NIL*", label or "") end
+				if p.hook_log > 2 then ut.printf("%d %s reset_sp_hook sp %s %s", global.frame_number, p.num, p.hook and "*table*" or "*NIL*", label or "") end
 			end
 		end
 		p.input_any         = function(hook, label)
-			if ((hook ~= nil) and (global.hook_log > 1)) or ((hook == nil) and (global.hook_log > 2)) then
+			if ((hook ~= nil) and (p.hook_log > 1)) or ((hook == nil) and (p.hook_log > 2)) then
 				emu.print_info(string.format("%s %s %s %X", global.frame_number, hook and "*table*" or "*NIL*", label or "input_any", hook.cmd and p.cmd_num(hook.cmd) or hook.id))
 			end
 			if ut.tstb(hook.hook_type, hook_cmd_types.throw) and not ut.tstb(hook.hook_type, hook_cmd_types.sp_throw) then
@@ -2302,7 +2302,7 @@ rbff2.startplugin  = function()
 		table.insert(players, p)
 		p.body                     = p -- プレイヤーデータ自身、fireballとの互換用
 		p.new_preset_combo = function(reset_picker, label)
-			if global.combo_log > 1 then ut.printf("         [FSM][-] P%s NEW", p.num) end
+			if p.combo_log > 1 then ut.printf("         [FSM][-] P%s NEW", p.num) end
 			p.combo           = p.combo or {}
 			p.combo.state     = "neutral"
 			p.combo.last      = false
@@ -3135,15 +3135,15 @@ rbff2.startplugin  = function()
 				-- BS発動時はその他自動動作を抑止する
 				if (sp ~= p.dummy_hook_rvs or sp ~= p.dummy_enc) and sp == p.dummy_bs and p.base ~= 0x5893A then return end
 				if sp.ver then
-					if global.hook_log > 1 then ut.printf("%s hook1 P%s ver A3:%X A4:%X", now(), p.num, sp.id or 0, sp.ver or 0) end
+					if p.hook_log > 1 then ut.printf("%s hook1 P%s ver A3:%X A4:%X", now(), p.num, sp.id or 0, sp.ver or 0) end
 					mem.w08(p.addr.base + 0xA3, sp.id)
 					mem.w16(p.addr.base + 0xA4, sp.ver)
 				elseif sp.f then
-					if global.hook_log > 1 then ut.printf("%s hook2 P%s sp  D6:%X D7:%X", now(), p.num, sp.id or 0, sp.f or 0) end
+					if p.hook_log > 1 then ut.printf("%s hook2 P%s sp  D6:%X D7:%X", now(), p.num, sp.id or 0, sp.f or 0) end
 					mem.w08(p.addr.base + 0xD6, sp.id)
 					mem.w08(p.addr.base + 0xD7, sp.f)
 				else
-					if global.hook_log > 2 then ut.printf("%s hook3 P%s BUG %s %s %s %s", now(), p.num, sp.id, sp.f, sp.ver, sp.cmd) end
+					if p.hook_log > 2 then ut.printf("%s hook3 P%s BUG %s %s %s %s", now(), p.num, sp.id, sp.f, sp.ver, sp.cmd) end
 				end
 			end,
 		},
@@ -3871,9 +3871,9 @@ rbff2.startplugin  = function()
 			end
 			p.hook = { cmd = reg_pcnt, on1f = on1f, on5f = on5f, hold = hold }
 			if reg_pcnt == 0 then
-				if global.hook_log > 2 then ut.printf("%d %s reset_cmd_hook cmd %x", global.frame_number, p.num, reg_pcnt) end
+				if p.hook_log > 2 then ut.printf("%d %s reset_cmd_hook cmd %x", global.frame_number, p.num, reg_pcnt) end
 			else
-				if global.hook_log > 1 then ut.printf("%d %s reset_cmd_hook cmd %x", global.frame_number, p.num, reg_pcnt) end
+				if p.hook_log > 1 then ut.printf("%d %s reset_cmd_hook cmd %x", global.frame_number, p.num, reg_pcnt) end
 			end
 			recording.play_count = recording.play_count + 1
 
@@ -5996,7 +5996,7 @@ rbff2.startplugin  = function()
 	--rnd_picker.demo()
 
 	tra_sub.reload_combo = function(p)
-		if global.combo_log > 1 then ut.printf("         [FSM][-] P%s RELOAD", p.num) end
+		if p.combo_log > 1 then ut.printf("         [FSM][-] P%s RELOAD", p.num) end
 		if p.combo.picker == nil then
 			local top_list = get_next_combo(p)
 			-- picker を作成
@@ -6006,7 +6006,7 @@ rbff2.startplugin  = function()
 				local mode = p.combo.rnd_count
 				local count = (mode - 2) + 1 -- メニュー固定2を引いて、間合い管理の要素+1をする
 				count = (mode == 1) and "max" or ((mode == 2) and "random" or count)
-				if global.combo_log > 1 then ut.printf("combo pick count=%s", count) end
+				if p.combo_log > 1 then ut.printf("combo pick count=%s", count) end
 				p.combo.picker = rnd_picker.create_picker(top_list, {
 					pull_count = (mode == 1) and "max" or ((mode == 2) and "random" or count)
 				})
@@ -6017,7 +6017,7 @@ rbff2.startplugin  = function()
 		local range_elm = table.remove(list, 1)
 		p.combo.range = range_elm and range_elm.range or ""
 		p.combo.list = list
-		if global.combo_log > 1 then ut.print_table(list, to_sjis) end
+		if p.combo_log > 1 then ut.print_table(list, to_sjis) end
 		return p.combo.range, p.combo.list
 	end
 
@@ -6035,7 +6035,7 @@ rbff2.startplugin  = function()
 			ut.tstb(po.flag_cc, db.flag_cc.moving)) or moving
 
 		local do_log = function(point, entry)
-			if global.combo_log > 1 then
+			if p.combo_log > 1 then
 				point = point or ""
 				ut.printf("%8s [FSM][%s] %16s:%8s %3s %3s %3s %3s %4s %4s %4s %4s %s %s %s %s",
 					entry and global.frame_number or "",
@@ -6059,7 +6059,7 @@ rbff2.startplugin  = function()
 		end
 
 		local log_with_ret = function(ret, point, entry)
-			if global.combo_log > 1 then
+			if p.combo_log > 1 then
 				do_log(point, entry)
 				ut.printf("         [FSM][%s] --> %s",
 					p.combo.count,
@@ -6113,26 +6113,26 @@ rbff2.startplugin  = function()
 		if ut.tstb(p.flag_7e, db.flag_7e._05) then
 			local ca = ut.tstb(p.cancelable_data, 0xC0) -- キャンセル可
 			cancel = ca and meethits -- ヒット限定
-			if global.combo_log > 1 then ut.printf("Can.Hit %X %s", p.cancelable_data, cancel) end
+			if p.combo_log > 1 then ut.printf("Can.Hit %X %s", p.cancelable_data, cancel) end
 		elseif ut.tstb(p.flag_7e, db.flag_7e._04) then
 			local ca = ut.tstb(p.cancelable_data, 0x40) -- ガード時のみキャンセル可
 			cancel = ca and meethits -- ガード限定
-			if global.combo_log > 1 then ut.printf("Can.Block %X %s", p.cancelable_data, cancel) end
+			if p.combo_log > 1 then ut.printf("Can.Block %X %s", p.cancelable_data, cancel) end
 		end
 		if ut.tstb(p.flag_c4, db.flag_c4._28 | db.flag_c4._31) then
 			local ca = ut.tstb(p.cancelable_data, 0x10)
 			repcan = ca -- 連続のみキャンセル可
-			if global.combo_log > 1 then ut.printf("Repeatable %X %s", p.cancelable_data, repcan) end
+			if p.combo_log > 1 then ut.printf("Repeatable %X %s", p.cancelable_data, repcan) end
 		end
 		if ut.tstb(p.flag_6a, 0x8) then -- 攻撃判定あり
 			capable = (p.flag_c4 > 0) or ut.tstb(p.flag_c8, db.flag_c8.normal_atk)
 			capable = capable and meethits
-			if global.combo_log > 1 then ut.printf("Active C4:%X C8:%X %s", p.flag_c4, p.flag_c8, capable) end
+			if p.combo_log > 1 then ut.printf("Active C4:%X C8:%X %s", p.flag_c4, p.flag_c8, capable) end
 		end
 		if p.on_additional_r1 == global.frame_number or p.on_additional_r5 == global.frame_number then
 			addition = true
 		end
-		if global.combo_log > 2 then
+		if p.combo_log > 2 then
 			ut.printf("%s %3s %3s %3s %3s %3s",
 				global.frame_number,
 				cancel and "can" or "---",
@@ -6185,7 +6185,7 @@ rbff2.startplugin  = function()
 			if c.count > #c.list then
 				c.state = "finish"
 				c.last = true
-				if global.combo_log > 1 then ut.printf("         [FSM][%s] P%s FINISH", c.count, p.num) end
+				if p.combo_log > 1 then ut.printf("         [FSM][%s] P%s FINISH", c.count, p.num) end
 				return
 			end
 
@@ -6206,7 +6206,7 @@ rbff2.startplugin  = function()
 			c.state    = c.lag > 0 and "lag" or "exec"
 			c.advance  = false
 			c.timeout  = false
-			if global.combo_log > 1 then
+			if p.combo_log > 1 then
 				ut.printf("         [FSM][%s] --> next %s -> %s  kara:%s hold:%s hits:%s last:%s input:%s state:%s advance:%s timeout:%s",
 					c.count,
 					prev and to_sjis(prev.name) or "---",
@@ -6456,7 +6456,7 @@ rbff2.startplugin  = function()
 				c.advance = false -- 永久ループ防止
 				return ret
 			end
-			if global.combo_log > 1 then ut.printf("         [FSM][%s] P%s RESET", c.count, p.num) end
+			if p.combo_log > 1 then ut.printf("         [FSM][%s] P%s RESET", c.count, p.num) end
 			c = p.new_preset_combo(false, "finish")
 		end
 
@@ -6511,11 +6511,11 @@ rbff2.startplugin  = function()
 			cmd, label = db.cmd_types._8, "sway" -- スウェー待機
 		end
 		if p.dummy_act == menu.dummy_acts.combo then
-			if global.combo_log > 1 then ut.printf("%s combo P%s entry", global.frame_number, p.num) end
+			if p.combo_log > 1 then ut.printf("%s combo P%s entry", global.frame_number, p.num) end
 			hook, label = tra_sub.controll_dummy_combo(p), "combo" -- プリセットコンボ
-			if global.combo_log > 1 then ut.printf("%s combo P%s entry %s %s", global.frame_number, p.num, hook and "hook" or "nil", label) end
+			if p.combo_log > 1 then ut.printf("%s combo P%s entry %s %s", global.frame_number, p.num, hook and "hook" or "nil", label) end
 		else
-			if global.combo_log > 2 then ut.printf("%s combo P%s skip", global.frame_number, p.num) end
+			if p.combo_log > 2 then ut.printf("%s combo P%s skip", global.frame_number, p.num) end
 		end
 		return hook, cmd, label
 	end
@@ -8427,14 +8427,14 @@ rbff2.startplugin  = function()
 				next_menu = menu.combo_menus[1][p1.char] -- 1P プリセットコンボ
 				local col1 = next_menu.pos.col
 				col1[#col1 - 3] = p1.combo and p1.combo.rnd_count or 1
-				col1[#col1 - 1] = g.combo_log
-				col1[#col1 - 0] = g.hook_log
+				col1[#col1 - 1] = p1.combo_log
+				col1[#col1 - 0] = p1.hook_log
 			elseif row == 3 and p2.dummy_act == menu.dummy_acts.combo then
 				next_menu = menu.combo_menus[2][p2.char] -- 2P プリセットコンボ
 				local col2 = next_menu.pos.col
 				col2[#col2 - 3] = p2.combo and p2.combo.rnd_count or 1
-				col2[#col2 - 1] = g.combo_log
-				col2[#col2 - 0] = g.hook_log
+				col2[#col2 - 1] = p2.combo_log
+				col2[#col2 - 0] = p2.hook_log
 			elseif p1.enc_enabled and row == 19 then
 				next_menu = "encounter1" -- 1P 邀撃(ようげき)行動
 			elseif p2.enc_enabled and row == 20 then
@@ -8941,8 +8941,8 @@ rbff2.startplugin  = function()
 				local p = players[i]
 				local g = global
 				p.combo.rnd_count = col[#col - 3]
-				g.combo_log       = col[#col - 1]
-				g.hook_log        = col[#col - 0]
+				p.combo_log       = col[#col - 1]
+				p.hook_log        = col[#col - 0]
 				menu.combo_to_tra()
 			end
 			for _, bs in ipairs(char_data.combo) do
