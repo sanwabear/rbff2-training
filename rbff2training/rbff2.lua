@@ -1068,7 +1068,6 @@ rbff2.startplugin  = function()
 	local joy_k                = db.joy_k
 	local joy_neutrala         = db.joy_neutrala
 
-	local rvs_types            = db.rvs_types
 	local hook_cmd_types       = db.hook_cmd_types
 
 	local get_selected_menu    = function(p, list, cur_menu, top_label_count, log_label)
@@ -2291,14 +2290,6 @@ rbff2.startplugin  = function()
 			end
 			p.reset_sp_hook(hook)
 		end
-		p.input_rvs         = function(rvs_type, hook, label)
-			p.input_any(hook, label)
-			if hook.cmd and rvs_types.reversal ~= rvs_type then
-				if (((p.flag_c0 | p.old.flag_c0) & 0x2 == 0x2) or db.pre_down_acts[p.act]) and hook.cmd == db.cmd_types._2D then
-					p.reset_sp_hook() -- no act
-				end
-			end
-		end
 		table.insert(players, p)
 		p.body                     = p -- プレイヤーデータ自身、fireballとの互換用
 		p.new_preset_combo = function(reset_picker, label)
@@ -3094,6 +3085,24 @@ rbff2.startplugin  = function()
 					z = z > 24 and z - 3 or z -- ライン上の判定表示のずれ対応ワークアラウンドで-3
 				}
 			end
+			p.apply_sp_hook  =  function(_)
+				local sp = p.hook
+				if not sp then return end
+				if sp.cmd then return end
+				-- BS発動時はその他自動動作を抑止する
+				if (sp ~= p.dummy_hook_rvs or sp ~= p.dummy_enc) and sp == p.dummy_bs and p.base ~= 0x5893A then return end
+				if sp.ver then
+					if p.hook_log > 1 then ut.printf("%s hook1 P%s ver A3:%X A4:%X", now(), p.num, sp.id or 0, sp.ver or 0) end
+					mem.w08(p.addr.base + 0xA3, sp.id)
+					mem.w16(p.addr.base + 0xA4, sp.ver)
+				elseif sp.f then
+					if p.hook_log > 1 then ut.printf("%s hook2 P%s sp  D6:%X D7:%X", now(), p.num, sp.id or 0, sp.f or 0) end
+					mem.w08(p.addr.base + 0xD6, sp.id)
+					mem.w08(p.addr.base + 0xD7, sp.f)
+				else
+					if p.hook_log > 2 then ut.printf("%s hook3 P%s BUG %s %s %s %s", now(), p.num, sp.id, sp.f, sp.ver, sp.cmd) end
+				end
+			end
 		end
 	end
 	local change_player_input = function()
@@ -3125,27 +3134,6 @@ rbff2.startplugin  = function()
 			end,
 		},
 		wp32 = {
-		},
-		rp08 = {
-			[{ addr = 0x107C1F, filter = 0x39456 }] = function(data)
-				local p = get_object_by_reg("A4", {})
-				local sp = p.hook
-				if not sp then return end
-				if sp.cmd then return end
-				-- BS発動時はその他自動動作を抑止する
-				if (sp ~= p.dummy_hook_rvs or sp ~= p.dummy_enc) and sp == p.dummy_bs and p.base ~= 0x5893A then return end
-				if sp.ver then
-					if p.hook_log > 1 then ut.printf("%s hook1 P%s ver A3:%X A4:%X", now(), p.num, sp.id or 0, sp.ver or 0) end
-					mem.w08(p.addr.base + 0xA3, sp.id)
-					mem.w16(p.addr.base + 0xA4, sp.ver)
-				elseif sp.f then
-					if p.hook_log > 1 then ut.printf("%s hook2 P%s sp  D6:%X D7:%X", now(), p.num, sp.id or 0, sp.f or 0) end
-					mem.w08(p.addr.base + 0xD6, sp.id)
-					mem.w08(p.addr.base + 0xD7, sp.f)
-				else
-					if p.hook_log > 2 then ut.printf("%s hook3 P%s BUG %s %s %s %s", now(), p.num, sp.id, sp.f, sp.ver, sp.cmd) end
-				end
-			end,
 		},
 		rp16 = {
 			[{ addr = 0x107BB8, filter = {
@@ -3479,11 +3467,13 @@ rbff2.startplugin  = function()
 			p.rp08 = ut.hash_add_all(p.rp08, {
 				[{ addr = 0x67, filter = 0x012D14 }] = p.save_range_pos, -- 1P押し合い判定処理フック
 				[{ addr = 0xB1, filter = 0x05C2FE }] = p.save_box_pos, -- 当たり判定処理フック
+				[{ addr = 0xA3, filter = 0x03944C }] = p.apply_sp_hook,
 			})
 		elseif p.num == 2 then
 			p.rp08 = ut.hash_add_all(p.rp08, {
 				[{ addr = 0x67, filter = 0x012D5E }] = p.save_range_pos, -- 2P押し合い判定処理フック
 				[{ addr = 0xB1, filter = 0x05C2FE }] = p.save_box_pos, -- 当たり判定処理フック
+				[{ addr = 0xA3, filter = 0x03944C }] = p.apply_sp_hook,
 			})
 		end
 		table.insert(wps.all, p)
@@ -6531,6 +6521,7 @@ rbff2.startplugin  = function()
 		-- 自動ガード用
 		local op = p.op
 		local act_type = op.act_data.type
+		local ignore_sp = false
 		for _, fb in pairs(op.fireballs) do
 			if fb.proc_active and fb.act_data then act_type = act_type | fb.act_data.type end
 		end
@@ -6625,12 +6616,9 @@ rbff2.startplugin  = function()
 					end
 				end
 			end
+
 			-- コマンド入力状態を無効にして飛び退きや必殺技コマンド成立による技の暴発を防ぐ
-			--local bs_addr = dip_config.easy_super and p.char_data.easy_bs_addr or p.char_data.bs_addr
-			--mem.w08(p.input_offset + bs_addr, 0x80)
-			for addr = p.input_offset, p.input_offset + p.char_data.normal_max_addr, 2 do
-				mem.w08(addr, 0x80) -- 全コマンド入力状態をつぶす
-			end
+			ignore_sp = true
 		end
 
 		-- 次のガード要否を判断する
@@ -6665,7 +6653,7 @@ rbff2.startplugin  = function()
 			end
 		end
 
-		return block_type
+		return block_type, ignore_sp
 	end
 	tra_sub.controll_dummy_breakshot = function(p)
 		local bs_hook = get_next_bs(p) -- キャラごとのBS候補を抽選取得
@@ -6716,26 +6704,45 @@ rbff2.startplugin  = function()
 		0x5eea6, -- つかみ投げ抜け着地
 		0x5fad0 -- 裏雲隠しのけぞり
 	)
+	tra_sub.rev_break_states          = {
+		[1] = ut.new_set(0), -- リバーサル対象 1:すべて
+		[2] = ut.new_set(0, 1, 3), -- リバーサル対象 2:ガード時
+		[3] = ut.new_set(0, 2), -- リバーサル対象 3:やられ時
+		[4] = ut.new_set(),  -- リバーサル対象 4:その他動作時
+	}
 	tra_sub.controll_dummy_reversal = function(p)
-		local hook_rvs, reset_cmd, type, log = nil, nil, rvs_types.none, nil
+		local hook_rvs, reset_cmd = nil, nil
 
 		hook_rvs = get_next_rvs(p) -- キャラごとのリバサ候補を抽選取得
 
 		-- ガードリバーサル
-		if not p.gd_rvs_enabled and (p.dummy_wakeup == wakeup_type.rvs) and hook_rvs and (p.on_block == global.frame_number) then
+		local on_any = false
+		local break_state = false
+		if global.dummy_rvs_type == 1 then
+			on_any = ((p.on_hit == global.frame_number) and (p.old.on_hit ~= (global.frame_number - 1))) or (p.on_block == global.frame_number)
+			break_state = tra_sub.rev_break_states[global.dummy_rvs_type][p.state] ~= nil
+			break_state = break_state and ut.tstb(p.flag_cc, db.flag_cc.hitstun) ~= true
+		elseif global.dummy_rvs_type == 2 then -- リバーサル対象 2:ガード時
+			on_any = p.on_block == global.frame_number
+			break_state = tra_sub.rev_break_states[global.dummy_rvs_type][p.state] ~= nil
+		elseif global.dummy_rvs_type == 3 then -- リバーサル対象 3:やられ時
+			on_any = (p.on_hit == global.frame_number) and (p.old.on_hit ~= (global.frame_number - 1))
+			break_state = tra_sub.rev_break_states[global.dummy_rvs_type][p.state] ~= nil
+			break_state = break_state and ut.tstb(p.flag_cc, db.flag_cc.hitstun) ~= true
+		elseif global.dummy_rvs_type == 4 then -- リバーサル対象 4:その他動作時
+		end
+
+		if not p.gd_rvs_enabled and (p.dummy_wakeup == wakeup_type.rvs) and hook_rvs and on_any then
 			p.rvs_count = (p.rvs_count < 1) and 1 or p.rvs_count + 1
 			if global.dummy_rvs_cnt <= p.rvs_count and hook_rvs then p.gd_rvs_enabled, p.rvs_count = true, -1 end
-			-- ut.printf("%s rvs %s %s", p.num, p.rvs_count, p.gd_rvs_enabled)
-		elseif p.gd_rvs_enabled and p.state ~= 2 then
+			--ut.printf("%s P%s rvs count:%s enabled:%s state:%s hit:%s ohit:%s blk:%s %s %s",
+			--	global.frame_number, p.num, p.rvs_count, p.gd_rvs_enabled, p.state, p.on_hit, p.old.on_hit, p.on_block, on_any, break_state)
+		elseif p.gd_rvs_enabled and break_state then
 			p.gd_rvs_enabled = false
 		end -- ガード状態が解除されたらリバサ解除
 
 		-- モード判定
 		if p.dummy_wakeup == wakeup_type.none or (not p.gd_rvs_enabled and global.dummy_rvs_cnt > 1) then
-			hook_rvs = nil
-		end
-
-		if p.hitstop_remain > 0 then
 			hook_rvs = nil
 		end
 
@@ -6757,32 +6764,40 @@ rbff2.startplugin  = function()
 			hook_rvs = nil
 		end
 
+		local ret_and_log = function(log)
+			-- dummy_hook_rvsはフック時のリバサ動作に反映されるので返り値と変数の値を同じにする
+			p.dummy_hook_rvs = hook_rvs
+			return hook_rvs, log, reset_cmd
+		end
+
 		-- フック検知してのリバサ発動有無
 		if not p.skip_frame and rvs_wake_types[p.dummy_wakeup] and hook_rvs then
 			if p.on_last_frame then
 				if p.on_last_frame == global.frame_number then
-					type, log = rvs_types.reversal, "[Reversal] 1"
+					return ret_and_log("[Reversal] 1")
 				elseif ut.tstb(hook_rvs.hook_type, hook_cmd_types.sp_throw) and (p.on_last_frame + 1) == global.frame_number then
-					type, log = rvs_types.reversal, "[Reversal] 2"
+					return ret_and_log("[Reversal] 2")
 				end
 			end
 			if (rvs_bases1[p.base] or rvs_bases1[p.old.base]) and ut.tstb(p.flag_7e, db.flag_7e._07) then
-				type, log = rvs_types.reversal, "[Reversal] 3"
+				return ret_and_log("[Reversal] 3")
 			end
 			if p.base == 0x34538 and p.hitstop_remain < 3 then -- デンジャラススルーのけぞり
-				type, log = rvs_types.reversal, "[Reversal] 4"
+				return ret_and_log("[Reversal] 4")
 			end
 			if rvs_bases2[p.base] then -- キャンセル可能な着地
-				type, log = rvs_types.reversal, "[Reversal] 5"
+				return ret_and_log("[Reversal] 5")
 			end
-			if p.base == 0x589b6 and p.knockback2 < 3 then
-				type, log = rvs_types.reversal, "[Reversal] 6"
+			if p.base == 0x589b6 and p.knockback2 < 4 then
+				return ret_and_log("[Reversal] 6")
 			end
 		end
 
-		-- dummy_hook_rvsはフック時のリバサ動作に反映されるので返り値と変数の値を同じにする
-		p.dummy_hook_rvs = hook_rvs
-		return hook_rvs, type, log, reset_cmd
+		hook_rvs = nil
+		if (0x58A32 == p.base and 0x58A32 ~= p.old.base) then
+			if p.hook_log > 1 then print(global.frame_number, "LAST FRAME") end
+		end
+		return ret_and_log()
 	end
 	tra_sub.controll_dummy_encounter = function(p)
 		local enc, log
@@ -7102,7 +7117,7 @@ rbff2.startplugin  = function()
 		local do_act = (global.no_action == 1) or ((p.throw_timer + 1) >= global.no_action)
 
 		-- ガード判定 回数の状態管理もあるので実施必須
-		local block_type = tra_sub.controll_dummy_block(p)
+		local block_type, ignore_sp = tra_sub.controll_dummy_block(p)
 		--[[
 			優先順位
 			1. BS発動
@@ -7119,16 +7134,16 @@ rbff2.startplugin  = function()
 		-- BS判定 回数の状態管理もあるので実施必須
 		local bs_hook = tra_sub.controll_dummy_breakshot(p)
 		-- リバーサル判定 回数の状態管理もあるので実施必須
-		local rvs_hook, rvs_type, rvs_log, reset_rvs = tra_sub.controll_dummy_reversal(p)
+		local rvs_hook, rvs_log, reset_rvs = tra_sub.controll_dummy_reversal(p)
 		if bs_hook then
 			p.dummy_bs = bs_hook
 			p.input_any(bs_hook, "bs_hook")
 			return
 		end
-		if rvs_hook and rvs_type ~= rvs_types.none then
+		if rvs_hook then
 			p.dummy_rvs = rvs_hook
-			if reset_rvs then p.reset_cmd_hook(reset_rvs, rvs_log or "reset_rvs") end
-			p.input_rvs(rvs_type, rvs_hook, rvs_log or "dummy_rvs")
+			if reset_rvs then p.reset_cmd_hook(reset_rvs, rvs_log) end
+			p.input_any(rvs_hook, rvs_log)
 			return
 		end
 
@@ -7177,6 +7192,14 @@ rbff2.startplugin  = function()
 		end
 		if do_act and dummy_cmd then
 			p.reset_cmd_hook(dummy_cmd, dummy_log)
+		end
+		if ignore_sp then
+			-- コマンド入力状態を無効にして飛び退きや必殺技コマンド成立による技の暴発を防ぐ
+			--local bs_addr = dip_config.easy_super and p.char_data.easy_bs_addr or p.char_data.bs_addr
+			--mem.w08(p.input_offset + bs_addr, 0x80)
+			for addr = p.input_offset, p.input_offset + p.char_data.normal_max_addr, 2 do
+				mem.w08(addr, 0x80) -- 全コマンド入力状態をつぶす
+			end
 		end
 		if block_type == tra_sub.block_types.simple then
 			-- 上リセット+後セット
@@ -8265,8 +8288,19 @@ rbff2.startplugin  = function()
 							p.gd_bs_enabled and global.dummy_bs_cnt > 1 and 0 or (global.dummy_bs_cnt - math.max(p.bs_count, 0))))
 					end
 					if p.dummy_wakeup == wakeup_type.rvs and global.dummy_rvs_cnt > 1 then
-						table.insert(bs_label, string.format("%02d回ガードでRev.",
-							p.gd_rvs_enabled and global.dummy_rvs_cnt > 1 and 0 or (global.dummy_rvs_cnt - math.max(p.rvs_count, 0))))
+						local label
+						if global.dummy_rvs_type == 1 then -- リバーサル対象 1:ON時
+							label = "%02d回ヒットorガードでRev."
+						elseif global.dummy_rvs_type == 2 then -- リバーサル対象 2:ガード時
+							label = "%02d回ガードでRev."
+						elseif global.dummy_rvs_type == 3 then -- リバーサル対象 3:やられ時
+							label = "%02d回ヒットでRev."
+						elseif global.dummy_rvs_type == 4 then -- リバーサル対象 4:その他動作時
+						end
+						if label then
+							table.insert(bs_label, string.format(label,
+								p.gd_rvs_enabled and global.dummy_rvs_cnt > 1 and 0 or (global.dummy_rvs_cnt - math.max(p.rvs_count, 0))))
+						end
 					end
 					if #bs_label > 0 then
 						_draw_text(p1 and 48 or 230, 40, bs_label, p.on_block <= global.frame_number and 0xFFFFFFFF or 0xFF00FFFF)
