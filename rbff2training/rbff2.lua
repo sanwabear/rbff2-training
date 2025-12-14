@@ -2810,10 +2810,10 @@ rbff2.startplugin  = function()
 					elseif pc == 0x5B346 then
 						pow_up = 1 -- 被ガード時のパワー増加
 					elseif pc == 0x5B368 then
-						pow_up = (p.flag_cc & 0xE0 == 0) and p.pow_up_hit or p.pow_up_block or 0
+						pow_up = (p.op.flag_cc & 0xE0 == 0) and p.pow_up_hit or p.pow_up_block or 0
 					end
 					p.last_pow_up, p.op.combo_pow = pow_up, (p.op.combo_pow or 0) + pow_up
-					--ut.printf("%x %x data=%s last_pow_up=%s combo_pow=%s", base, pc, data, p.last_pow_up, p.op.combo_pow)
+					--ut.printf("P%x PC=%x data=%s last_pow_up=%s combo_pow=%s", p.num, pc, data, p.last_pow_up, p.op.combo_pow)
 				end
 			end,
 			[{ addr = 0xCD, filter = special_throw_addrs }] = extra_throw_callback,
