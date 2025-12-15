@@ -9386,24 +9386,26 @@ rbff2.startplugin  = function()
 		ut.new_filled_table(35, function() menu.on_disp(true) end))
 
 	menu.labels.motion_stops = {}
-	for i = 1, 0x2FF do table.insert(menu.labels.motion_stops, string.format("%X", i)) end
+	menu.labels.motion_stops2 = {}
+	for i = 0, 0x2FF do table.insert(menu.labels.motion_stops, string.format("%X", i)) end
+	for i = 0, 0xFF do table.insert(menu.labels.motion_stops2, string.format("%X", i)) end
 	menu.motion_stop = menu.create(
 		"モーションストップ設定",
 		"モーションを停止します。",
 		{
 			{ "ACT", menu.labels.motion_stops, },
-			{ "COUNT", menu.labels.motion_stops, },
+			{ "COUNT", menu.labels.motion_stops2, },
 		},
 		function()
 			---@diagnostic disable-next-line: undefined-field
 			local col, p, g = menu.motion_stop.pos.col, players, global
-			col[1] = g.motion_stop_act
-			col[2] = g.motion_stop_count
+			col[1] = g.motion_stop_act + 1
+			col[2] = g.motion_stop_count + 1
 		end,
 		ut.new_filled_table(2, function(on_a1, cancel)
 			local col, row, p, g = menu.motion_stop.pos.col, menu.motion_stop.pos.row, players, global
-			g.motion_stop_act   = col[1]
-			g.motion_stop_count = col[2]
+			g.motion_stop_act   = col[1] - 1
+			g.motion_stop_count = col[2] - 1
 			menu.set_current("extra")
 		end))
 	menu.on_extra    = function(cancel)
