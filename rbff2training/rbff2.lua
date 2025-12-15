@@ -3478,7 +3478,12 @@ rbff2.startplugin  = function()
 				p.hitstop_remain, p.in_hitstop = data, (data > 0 or (p.hitstop_remain and p.hitstop_remain > 0)) and now() or p.in_hitstop -- 0になるタイミングも含める
 			end,
 			[{ addr = 0x94, filter = { 0x434C8, 0x434E0 } }] = function(data) p.drill_count = data end,                        -- ドリルのCカウント 0x434C8 Cカウント加算, 0x434E0 C以外押下でCカウントリセット
-			[0xAA] = function(data)
+			[0xAA] = function(data, ret)
+				if p.motion_stop then
+					ret.value = p.pos_back._aa
+					return
+				end
+				p.pos_back._aa = data
 				p.attackbits.fullhit = data ~= 0
 				--ut.printf("full %X %s %s | %X %X | %s | %X %X %X | %s", mem.pc(), now(), p.on_hit, base, data, ut.tobitstr(data), p.act, p.act_count, p.act_frame, p.attackbits.fullhit)
 				if p.is_fireball and data == 0xFF then p.on_fireball = now() * -1 end
