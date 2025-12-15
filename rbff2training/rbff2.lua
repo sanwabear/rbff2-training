@@ -2831,22 +2831,95 @@ rbff2.startplugin  = function()
 			end,
 		}
 		p.wp16                     = {
-			[0x34] = function(data) p.thrust_int = ut.int16(data) end, -- 前進移動量X
-			[0x36] = function(data) p.thrust_frc = ut.int16tofloat(data) end, -- 前進移動量の小数部X
-			--[0x40] = function(data) p.int1 = ut.int16(data) end, -- キャラ固有の前進移動量X
-			--[0x42] = function(data) p.frc1 = ut.int16tofloat(data) end, -- キャラ固有の前進移動量の小数部X
-			--[0x44] = function(data) p.int2 = ut.int16(data) end, -- ジャンプ移動量Y
-			--[0x46] = function(data) p.frc2 = ut.int16tofloat(data) end, -- ジャンプ移動量の小数部Y
-			[0x48] = function(data) p.thrusty_int = ut.int16(data) end, -- ジャンプ移動量Y
-			[0x4A] = function(data) p.thrusty_frc = ut.int16tofloat(data) end, -- ジャンプ移動量の小数部Y
+			[0x34] = function(data, ret)
+				if p.motion_stop then
+					ret.value = p.pos_back.t1
+					return
+				end
+				p.pos_back.t1 = data
+				p.thrust_int  = ut.int16(data)
+			end, -- 前進移動量X
+			[0x36] = function(data, ret)
+				if p.motion_stop then
+					ret.value = p.pos_back._36
+					return
+				end
+				p.pos_back._36 = data
+				p.thrust_frc = ut.int16tofloat(data)
+			end, -- 前進移動量の小数部X
+			[0x3C] = function(data, ret)
+				if p.motion_stop then
+					ret.value = p.pos_back._3C
+					return
+				end
+				p.pos_back._3C = data
+			end, -- 前進移動量の小数部X
+			[0x40] = function(data, ret)
+				if p.motion_stop then
+					ret.value = p.pos_back._40
+					return
+				end
+				p.pos_back._40 = data
+			end, -- キャラ固有の前進移動量X
+			[0x42] = function(data, ret)
+				if p.motion_stop then
+					ret.value = p.pos_back._42
+					return
+				end
+				p.pos_back._42 = data
+			end, -- キャラ固有の前進移動量の小数部X
+			[0x44] = function(data, ret)
+				if p.motion_stop then
+					ret.value = p.pos_back._44
+					return
+				end
+				p.pos_back._44 = data
+			end, -- ジャンプ移動量Y
+			[0x46] = function(data, ret)
+				if p.motion_stop then
+					ret.value = p.pos_back._46
+					return
+				end
+				p.pos_back._46 = data
+			end, -- ジャンプ移動量の小数部Y
+			[0x48] = function(data, ret)
+				if p.motion_stop then
+					ret.value = p.pos_back.t2
+					return
+				end
+				p.pos_back.t2 = data
+				p.thrusty_int = ut.int16(data)
+			end, -- ジャンプ移動量Y
+			[0x4A] = function(data, ret)
+				if p.motion_stop then
+					ret.value = p.pos_back.t3
+					return
+				end
+				p.pos_back.t3 = data
+				p.thrusty_frc = ut.int16tofloat(data)
+			end, -- ジャンプ移動量の小数部Y
 			--[0x92] = function(data) p.anyhit_id = data end,
 			--[0x9E] = function(data) p.ophit = all_objects[data] end, -- ヒットさせた相手側のベースアドレス
 			--[0xD0] = function(data) p.int3 = ut.int16(data) end,
 			--[0xD2] = function(data) p.frc3 = ut.int16tofloat(data) end,
 			--[0xD4] = function(data) p.int4 = ut.int16(data) end,
 			--[0xD6] = function(data) p.frc4 = ut.int16tofloat(data) end,
-			[0xDA] = function(data) p.inertia_int = ut.int16(data) end, -- 慣性移動量
-			[0xDC] = function(data) p.inertia_frc = ut.int16tofloat(data) end, -- 慣性移動量の小数部
+			[0xDA] = function(data, ret)
+				if p.motion_stop then
+					ret.value = p.pos_back.i1
+					return
+				end
+				p.pos_back.i1 = data
+				p.inertia_int = ut.int16(data)
+			end, -- 慣性移動量
+			[0xDC] = function(data, ret)
+				if p.motion_stop then
+					ret.value = p.pos_back.i2
+					return
+				end
+				p.pos_back.i2 = data
+				p.inertia_frc = ut.int16tofloat(data)
+			end, -- 慣性移動量の小数部
 			[0xE6] = function(data) p.on_hit_any = now() + 1 end,                                                        -- 0xE6か0xE7 打撃か当身でフラグが立つ
 			[p1 and 0x10B854 or 0x10B85C] = function(data) p.hit_stun_timer = data end,                                  -- 気絶値ゼロ化までの残フレーム数
 		}
@@ -3439,10 +3512,32 @@ rbff2.startplugin  = function()
 			[0xEB] = function(data) p.hurt_attack = data end,                                  -- やられ中のみ変化
 			[{ addr = 0xF1, filter = { 0x408D4, 0x40954 } }] = function(data) p.drill_count = data end, -- 炎の種馬の追加連打の成立回数
 		})
+		p.pos_back = {
+			x1 = 0, x2 = 0, y1 = 0, y2 = 0, z1 = 0,
+		}
 		p.wp16 = ut.hash_add_all(p.wp16, {
-			[0x20] = function(data) p.pos = data end,
-			[0x22] = function(data) p.pos_frc = ut.int16tofloat(data) end, -- X座標(小数部)
-			[0x24] = function(data)
+			[0x20] = function(data, ret)
+				if p.motion_stop then
+					ret.value = p.pos_back.x1
+					return
+				end
+				p.pos_back.x1 = data
+				p.pos         = data
+			end,
+			[0x22] = function(data, ret)
+				if p.motion_stop then
+					ret.value = p.pos_back.x2
+					return
+				end
+				p.pos_back.x2 = data
+				p.pos_frc     = ut.int16tofloat(data)
+			end, -- X座標(小数部)
+			[0x24] = function(data, ret)
+				if p.motion_stop then
+					ret.value = p.pos_back.z
+					return
+				end
+				p.pos_back.z      = data
 				local nowv        = now()
 				p.on_sway_line    = (p.pos_z ~= 40 and 40 == data) and nowv or p.on_sway_line
 				p.on_main_line    = (p.pos_z ~= 24 and 24 == data) and nowv or p.on_main_line
@@ -3450,10 +3545,22 @@ rbff2.startplugin  = function()
 				p.on_sway_to_main = (p.pos_z == 40 and data ~= 40) and nowv or p.on_sway_to_main -- メインラインへの遷移時
 				p.pos_z           = data                                                                  -- Z座標
 			end,
-			[0x28] = function(data)
+			[0x28] = function(data, ret)
+				if p.motion_stop then
+					ret.value = p.pos_back.y1
+					return
+				end
+				p.pos_back.y1 = data
 				p.pos_y = ut.int16(data)
 			end,                                         -- Y座標
-			[0x2A] = function(data) p.pos_frc_y = ut.int16tofloat(data) end,                              -- Y座標(小数部)
+			[0x2A] = function(data, ret)
+				if p.motion_stop then
+					ret.value = p.pos_back.y2
+					return
+				end
+				p.pos_back.y2 = data
+				p.pos_frc_y = ut.int16tofloat(data)
+			end,                              -- Y座標(小数部)
 			[{ addr = 0x5E, filter = 0x011E10 }] = function(data) p.box_addr = mem.rg("A0", 0xFFFFFFFF) - 0x2 end, -- 判定のアドレス
 			[0x60] = function(data)
 				if p.act ~= data and (data == 0x193 or data == 0x13B) then p.on_wakeup = now() end
@@ -9387,25 +9494,31 @@ rbff2.startplugin  = function()
 
 	menu.labels.motion_stops = {}
 	menu.labels.motion_stops2 = {}
-	for i = 0, 0x2FF do table.insert(menu.labels.motion_stops, string.format("%X", i)) end
-	for i = 0, 0xFF do table.insert(menu.labels.motion_stops2, string.format("%X", i)) end
+	for i = 0, 0x2FF do table.insert(menu.labels.motion_stops, string.format("%3X", i)) end
+	for i = 0, 0xFF do table.insert(menu.labels.motion_stops2, string.format("%2X", i)) end
 	menu.motion_stop = menu.create(
 		"モーションストップ設定",
-		"モーションを停止します。",
+		"状態表示 小表示 で確認できるIDを指定して該当するモーションを停止します。",
 		{
 			{ "ACT", menu.labels.motion_stops, },
 			{ "COUNT", menu.labels.motion_stops2, },
+			{ "1P 状態表示", { "OFF", "ON", "ON:小表示", "ON:フラグ表示", "ON:ALL" }, },
+			{ "2P 状態表示", { "OFF", "ON", "ON:小表示", "ON:フラグ表示", "ON:ALL" }, },
 		},
 		function()
 			---@diagnostic disable-next-line: undefined-field
 			local col, p, g = menu.motion_stop.pos.col, players, global
 			col[1] = g.motion_stop_act + 1
 			col[2] = g.motion_stop_count + 1
+			col[3] = p[1].disp_state                                   --  3 1P 状態表示  1:OFF 2:ON, ON:小表示, ON:大表示, ON:フラグ表示
+			col[4] = p[2].disp_state                                   --  4 2P 状態表示  1:OFF 2:ON, ON:小表示, ON:大表示, ON:フラグ表示
 		end,
-		ut.new_filled_table(2, function(on_a1, cancel)
+		ut.new_filled_table(4, function(on_a1, cancel)
 			local col, row, p, g = menu.motion_stop.pos.col, menu.motion_stop.pos.row, players, global
-			g.motion_stop_act   = col[1] - 1
-			g.motion_stop_count = col[2] - 1
+			g.motion_stop_act     = col[1] - 1
+			g.motion_stop_count   = col[2] - 1
+			p[1].disp_state       = col[3]                             --  3 1P 状態表示  1:OFF 2:ON, ON:小表示, ON:大表示, ON:フラグ表示
+			p[2].disp_state       = col[4]                             --  4 2P 状態表示  1:OFF 2:ON, ON:小表示, ON:大表示, ON:フラグ表示
 			menu.set_current("extra")
 		end))
 	menu.on_extra    = function(cancel)
