@@ -841,6 +841,10 @@ rbff2.startplugin  = function()
 
 		random_boolean       = function(true_ratio) return math.random() <= true_ratio end,
 		on_pow_up            = 255,
+
+		motion_stop          = 1, -- 1:OFF 2:1P 3:2P
+		motion_stop_act      = 0x48,
+		motion_stop_count    = 0x06,
 	}
 	local safe_cb              = function(cb)
 		return function(...)
@@ -3232,7 +3236,11 @@ rbff2.startplugin  = function()
 		p.wp08 = ut.hash_add_all(p.wp08, {
 			[0x10] = p.update_char,
 			[0x58] = function(data) p.block_side = 1 - (data >> 6) end,  -- 0x00 -> 1, 0x80 -> -1  向き 00:左側 80:右側
-			[0x66] = function(data)
+			[0x66] = function(data, ret)
+				if p.motion_stop and mem.pc() == 0x11B96 then
+					ret.value = p.act_count
+					return
+				end
 				p.act_count = data                                           -- 現在の行動のカウンタ
 				if p.is_fireball then return end
 				if p.multi_hit then
@@ -4106,6 +4114,7 @@ rbff2.startplugin  = function()
 	frame_meter.buffer_limit = frame_meter.limit * 2 -- バッファ長=2行まで許容
 	frame_meter.add = function(p, frame)          -- フレームデータの追加
 		if p.is_fireball then return end
+		if p.motion_stop or p.op.motion_stop then return end
 		if not global.both_act_neutral and global.old_both_act_neutral then
 			p.frames = {}               -- バッファ初期化
 		end
@@ -7113,6 +7122,16 @@ rbff2.startplugin  = function()
 			end
 		end
 
+		if global.motion_stop == (p.num + 1) and p.act == global.motion_stop_act and p.act_count == global.motion_stop_count then
+			if p.on_hit == global.frame_number or p.on_block == global.frame_number then
+				p.motion_stop = false
+			else
+				p.motion_stop = true
+			end
+		else
+			p.motion_stop = false
+		end
+
 		-- くらい後アクション停止の設定
 		local do_act = (global.no_action == 1) or ((p.throw_timer + 1) >= global.no_action)
 
@@ -9366,6 +9385,61 @@ rbff2.startplugin  = function()
 		ut.new_filled_table(35, function() menu.on_disp(false) end),
 		ut.new_filled_table(35, function() menu.on_disp(true) end))
 
+	menu.labels.motion_stops = {}
+	for i = 1, 0x2FF do table.insert(menu.labels.motion_stops, string.format("%X", i)) end
+	menu.motion_stop = menu.create(
+		"モーションストップ設定",
+		"モーションを停止します。",
+		{
+			{ "ACT", menu.labels.motion_stops, },
+			{ "COUNT", menu.labels.motion_stops, },
+		},
+		function()
+			---@diagnostic disable-next-line: undefined-field
+			local col, p, g = menu.motion_stop.pos.col, players, global
+			col[1] = g.motion_stop_act
+			col[2] = g.motion_stop_count
+		end,
+		ut.new_filled_table(2, function(on_a1, cancel)
+			local col, row, p, g = menu.motion_stop.pos.col, menu.motion_stop.pos.row, players, global
+			g.motion_stop_act   = col[1]
+			g.motion_stop_count = col[2]
+			menu.set_current("extra")
+		end))
+	menu.on_extra    = function(cancel)
+		local col, row, p, g = menu.extra.pos.col, menu.extra.pos.row, players, global
+		local next_menu = nil
+		p[1].dis_plain_shift = col[1] == 2 or col[1] == 3 -- ラインずらさない現象
+		p[2].dis_plain_shift = col[1] == 2 or col[1] == 4 -- ラインずらさない現象
+		g.pause_hit      = col[2] -- ヒット時にポーズ
+		g.pause_hitbox   = col[3] -- 判定発生時にポーズ
+		g.motion_stop    = col[4] -- モーション停止
+		g.save_snapshot  = col[5] -- 技画像保存
+		g.damaged_move   = col[6] -- ヒット効果確認用
+		g.mvs_billy      = col[7] == 2 -- ビリーMVS化
+		g.sadomazo_fix   = col[8] == 2 -- サドマゾと必勝!逆襲拳空振り時の投げ無敵化修正
+		g.fix_skip_frame = col[9] == 2 -- 暗転フレームチェック処理修正
+		-- タイム設定 1:無限:RB2(デフォルト) 2:無限:RB2 3:無限:SNK 4:90 5:60 6:45
+		-- CPU戦進行あり
+		menu.organize_time_config(col[10], col[11] == 2)
+		g.cpu_hardest = col[12] == 2 -- CPU難度最高
+		g.cpu_wait    = col[13] -- CPU待ち時間 1:100% 2:75% 3:50% 4:25% 5:0%
+		g.cpu_stg     = col[14] == 2 -- CPUステージ
+		g.sokaku_stg  = col[15] == 2 -- 対戦双角ステージ
+		mod.mvs_billy(g.mvs_billy)
+		mod.sadomazo_fix(g.sadomazo_fix)
+		mod.fix_skip_frame(g.fix_skip_frame)
+		set_dip_config(true)
+		menu.set_current()
+		mod.cpu_hardest(g.cpu_hardest)
+		mod.cpu_wait(g.cpu_wait)
+		mod.cpu_stg(g.cpu_stg)
+		mod.sokaku_stg(g.sokaku_stg)
+		if cancel ~= true and g.motion_stop > 1 and row == 4 then
+			next_menu = "motion_stop"
+		end
+		menu.set_current(next_menu)
+	end
 	menu.extra     = menu.create(
 		"特殊設定",
 		"調査や情報確認のための特殊な動作を設定します。",
@@ -9373,6 +9447,7 @@ rbff2.startplugin  = function()
 			{ "ラインずらさない現象", { "OFF", "ON", "ON:1Pのみ", "ON:2Pのみ" }, },
 			{ "ヒット時にポーズ", { "OFF", "ON", "ON:やられのみ", "ON:投げやられのみ", "ON:打撃やられのみ", "ON:ガードのみ", }, },
 			{ "判定発生時にポーズ", { "OFF", "投げ", "攻撃", "変化時", }, },
+			{ "モーション停止", { "OFF", "1P", "2P", }, },
 			{ "技画像保存", { "OFF", "ON:新規", "ON:上書き", }, },
 			{ "ヒット効果確認用", db.hit_effects.menus, },
 			{ "ビリーMVS化", menu.labels.off_on, },
@@ -9398,46 +9473,21 @@ rbff2.startplugin  = function()
 			end
 			col[2] = g.pause_hit        -- ヒット時にポーズ
 			col[3] = g.pause_hitbox     -- 判定発生時にポーズ
-			col[4] = g.save_snapshot    -- 技画像保存
-			col[5] = g.damaged_move     -- ヒット効果確認用
-			col[6] = g.mvs_billy and 2 or 1 -- ビリーMVS化
-			col[7] = g.sadomazo_fix and 2 or 1 -- サドマゾと必勝!逆襲拳空振り時の投げ無敵化修正
-			col[8] = g.fix_skip_frame and 2 or 1 -- 暗転フレームチェック処理修正
-			col[9] = g.time_mode        -- タイム設定 1:無限:RB2(デフォルト) 2:無限:RB2 3:無限:SNK 4:90 5:60 6:30
-			col[10] = g.proceed_cpu and 2 or 1 -- CPU戦進行あり
-			col[11] = g.cpu_hardest and 2 or 1 -- CPU難度最高
-			col[12] = g.cpu_wait        -- CPU待ち時間 1:100% 2:75% 3:50% 4:25% 5:0%
-			col[13] = g.cpu_stg and 2 or 1 -- CPUステージ
-			col[14] = g.sokaku_stg and 2 or 1 -- 対戦双角ステージ
+			col[4] = g.motion_stop      -- モーション停止
+			col[5] = g.save_snapshot    -- 技画像保存
+			col[6] = g.damaged_move     -- ヒット効果確認用
+			col[7] = g.mvs_billy and 2 or 1 -- ビリーMVS化
+			col[8] = g.sadomazo_fix and 2 or 1 -- サドマゾと必勝!逆襲拳空振り時の投げ無敵化修正
+			col[9] = g.fix_skip_frame and 2 or 1 -- 暗転フレームチェック処理修正
+			col[10] = g.time_mode        -- タイム設定 1:無限:RB2(デフォルト) 2:無限:RB2 3:無限:SNK 4:90 5:60 6:30
+			col[11] = g.proceed_cpu and 2 or 1 -- CPU戦進行あり
+			col[12] = g.cpu_hardest and 2 or 1 -- CPU難度最高
+			col[13] = g.cpu_wait        -- CPU待ち時間 1:100% 2:75% 3:50% 4:25% 5:0%
+			col[14] = g.cpu_stg and 2 or 1 -- CPUステージ
+			col[15] = g.sokaku_stg and 2 or 1 -- 対戦双角ステージ
 		end,
-		ut.new_filled_table(14, function()
-			local col, p, g = menu.extra.pos.col, players, global
-			p[1].dis_plain_shift = col[1] == 2 or col[1] == 3 -- ラインずらさない現象
-			p[2].dis_plain_shift = col[1] == 2 or col[1] == 4 -- ラインずらさない現象
-			g.pause_hit      = col[2] -- ヒット時にポーズ
-			g.pause_hitbox   = col[3] -- 判定発生時にポーズ
-			g.save_snapshot  = col[4] -- 技画像保存
-			g.damaged_move   = col[5] -- ヒット効果確認用
-			g.mvs_billy      = col[6] == 2 -- ビリーMVS化
-			g.sadomazo_fix   = col[7] == 2 -- サドマゾと必勝!逆襲拳空振り時の投げ無敵化修正
-			g.fix_skip_frame = col[8] == 2 -- 暗転フレームチェック処理修正
-			-- タイム設定 1:無限:RB2(デフォルト) 2:無限:RB2 3:無限:SNK 4:90 5:60 6:45
-			-- CPU戦進行あり
-			menu.organize_time_config(col[9], col[10] == 2)
-			g.cpu_hardest = col[11] == 2 -- CPU難度最高
-			g.cpu_wait    = col[12] -- CPU待ち時間 1:100% 2:75% 3:50% 4:25% 5:0%
-			g.cpu_stg     = col[13] == 2 -- CPUステージ
-			g.sokaku_stg  = col[14] == 2 -- 対戦双角ステージ
-			mod.mvs_billy(g.mvs_billy)
-			mod.sadomazo_fix(g.sadomazo_fix)
-			mod.fix_skip_frame(g.fix_skip_frame)
-			set_dip_config(true)
-			menu.set_current()
-			mod.cpu_hardest(g.cpu_hardest)
-			mod.cpu_wait(g.cpu_wait)
-			mod.cpu_stg(g.cpu_stg)
-			mod.sokaku_stg(g.sokaku_stg)
-		end))
+		ut.new_filled_table(15, function() menu.on_extra(false) end),
+		ut.new_filled_table(15, function() menu.on_extra(true) end))
 	menu.auto      = menu.create(
 		"追加動作・改造動作設定",
 		"技の発動についての動作を設定します。",
