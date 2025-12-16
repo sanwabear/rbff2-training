@@ -3300,6 +3300,9 @@ rbff2.startplugin  = function()
 				end
 			end,
 			[0x67] = function(data) p.act_boxtype = 0xFFFF & (data & 0xC0 * 4) end, -- 現在の行動の判定種類
+			[0x69] = function(data, ret)
+				if p.mos_filter(0x69, data, ret) then return end
+			end, -- ダウン起き上がりまでのカウンタ
 			[0x6A] = function(data)
 				p.flag_6a = data
 				p.hit_repeatable = p.flag_c8 == 0 and (data & 0x4) == 0x4 -- 連打キャンセル判定
@@ -3450,7 +3453,8 @@ rbff2.startplugin  = function()
 				end
 				-- ut.printf("%s %s box %x %x %x %s", now(), p.on_hit, p.addr.base, mem.pc(), data, #p.boxies)
 			end,
-			[0x8D] = function(data)
+			[0x8D] = function(data, ret)
+				if p.mos_filter(0x8D, data, ret) then return end
 				p.hitstop_remain, p.in_hitstop = data, (data > 0 or (p.hitstop_remain and p.hitstop_remain > 0)) and now() or p.in_hitstop -- 0になるタイミングも含める
 			end,
 			[{ addr = 0x94, filter = { 0x434C8, 0x434E0 } }] = function(data) p.drill_count = data end,                        -- ドリルのCカウント 0x434C8 Cカウント加算, 0x434E0 C以外押下でCカウントリセット
@@ -3483,7 +3487,10 @@ rbff2.startplugin  = function()
 				end
 				if fake then p.boxies, p.attackbits.fake = {}, true end
 			end,
-			[0xAB] = function(data) p.max_hit_nm = data end,                                   -- 同一技行動での最大ヒット数 分子
+			[0xAB] = function(data, ret)
+				if p.mos_filter(0xAB, data, ret) then return end
+				p.max_hit_nm = data
+			end,                                   -- 同一技行動での最大ヒット数 分子
 			[0xB1] = function(data) p.hurt_invincible = data > 0 end,                          -- やられ判定無視の全身無敵
 			[0xE9] = function(data) p.dmg_id = data end,                                       -- 最後にヒット/ガードした技ID
 			[0xEB] = function(data) p.hurt_attack = data end,                                  -- やられ中のみ変化
