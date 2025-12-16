@@ -2801,6 +2801,9 @@ rbff2.startplugin  = function()
 					if p.dummy_hook_rvs then ret.value = 0x00 end -- 自動BS以外の発動を阻止
 				end
 			end, -- BSの技IDチェック
+			[0xBB] = function(data, ret)
+				if p.mos_filter(0xBB, data, ret) then return end
+			end, -- ライン移動カウンタ
 			[{ addr = 0xBF, filter = { 0x3BEF6, 0x3BF24, 0x5B346, 0x5B368 } }] = function(data)
 				if data ~= 0 then                                                               -- 増加量を確認するためなのでBSチェックは省く
 					local pc, pow_up = mem.pc(), 0
@@ -2832,92 +2835,56 @@ rbff2.startplugin  = function()
 		}
 		p.wp16                     = {
 			[0x34] = function(data, ret)
-				if p.motion_stop then
-					ret.value = p.pos_back.t1
-					return
-				end
-				p.pos_back.t1 = data
+				if p.mos_filter(0x34, data, ret) then return end
 				p.thrust_int  = ut.int16(data)
 			end, -- 前進移動量X
 			[0x36] = function(data, ret)
-				if p.motion_stop then
-					ret.value = p.pos_back._36
-					return
-				end
-				p.pos_back._36 = data
+				if p.mos_filter(0x36, data, ret) then return end
 				p.thrust_frc = ut.int16tofloat(data)
 			end, -- 前進移動量の小数部X
 			[0x3C] = function(data, ret)
-				if p.motion_stop then
-					ret.value = p.pos_back._3C
-					return
-				end
-				p.pos_back._3C = data
+				if p.mos_filter(0x3C, data, ret) then return end
 			end, -- 前進移動量の小数部X
 			[0x40] = function(data, ret)
-				if p.motion_stop then
-					ret.value = p.pos_back._40
-					return
-				end
-				p.pos_back._40 = data
+				if p.mos_filter(0x40, data, ret) then return end
 			end, -- キャラ固有の前進移動量X
 			[0x42] = function(data, ret)
-				if p.motion_stop then
-					ret.value = p.pos_back._42
-					return
-				end
-				p.pos_back._42 = data
+				if p.mos_filter(0x42, data, ret) then return end
 			end, -- キャラ固有の前進移動量の小数部X
 			[0x44] = function(data, ret)
-				if p.motion_stop then
-					ret.value = p.pos_back._44
-					return
-				end
-				p.pos_back._44 = data
+				if p.mos_filter(0x44, data, ret) then return end
 			end, -- ジャンプ移動量Y
 			[0x46] = function(data, ret)
-				if p.motion_stop then
-					ret.value = p.pos_back._46
-					return
-				end
-				p.pos_back._46 = data
+				if p.mos_filter(0x46, data, ret) then return end
 			end, -- ジャンプ移動量の小数部Y
 			[0x48] = function(data, ret)
-				if p.motion_stop then
-					ret.value = p.pos_back.t2
-					return
-				end
-				p.pos_back.t2 = data
+				if p.mos_filter(0x48, data, ret) then return end
 				p.thrusty_int = ut.int16(data)
 			end, -- ジャンプ移動量Y
 			[0x4A] = function(data, ret)
-				if p.motion_stop then
-					ret.value = p.pos_back.t3
-					return
-				end
-				p.pos_back.t3 = data
+				if p.mos_filter(0x4A, data, ret) then return end
 				p.thrusty_frc = ut.int16tofloat(data)
 			end, -- ジャンプ移動量の小数部Y
 			--[0x92] = function(data) p.anyhit_id = data end,
 			--[0x9E] = function(data) p.ophit = all_objects[data] end, -- ヒットさせた相手側のベースアドレス
-			--[0xD0] = function(data) p.int3 = ut.int16(data) end,
-			--[0xD2] = function(data) p.frc3 = ut.int16tofloat(data) end,
-			--[0xD4] = function(data) p.int4 = ut.int16(data) end,
-			--[0xD6] = function(data) p.frc4 = ut.int16tofloat(data) end,
+			[0xD0] = function(data, ret)
+				if p.mos_filter(0x4A, data, ret) then return end
+			end,
+			[0xD2] = function(data, ret)
+				if p.mos_filter(0xD2, data, ret) then return end
+			end,
+			[0xD4] = function(data, ret)
+				if p.mos_filter(0xD4, data, ret) then return end
+			end,
+			[0xD6] = function(data, ret)
+				if p.mos_filter(0xD6, data, ret) then return end
+			end,
 			[0xDA] = function(data, ret)
-				if p.motion_stop then
-					ret.value = p.pos_back.i1
-					return
-				end
-				p.pos_back.i1 = data
+				if p.mos_filter(0xDA, data, ret) then return end
 				p.inertia_int = ut.int16(data)
 			end, -- 慣性移動量
 			[0xDC] = function(data, ret)
-				if p.motion_stop then
-					ret.value = p.pos_back.i2
-					return
-				end
-				p.pos_back.i2 = data
+				if p.mos_filter(0xDC, data, ret) then return end
 				p.inertia_frc = ut.int16tofloat(data)
 			end, -- 慣性移動量の小数部
 			[0xE6] = function(data) p.on_hit_any = now() + 1 end,                                                        -- 0xE6か0xE7 打撃か当身でフラグが立つ
@@ -3305,6 +3272,15 @@ rbff2.startplugin  = function()
 		p.calc_range_x = function(range_x) return p.x + range_x * p.flip_x end -- 自身の範囲の座標計算
 		-- 自身の指定する範囲内に相手がいるかどうかの関数
 		p.within = function(x1, x2) return (x1 <= p.op.x and p.op.x <= x2) or (x1 >= p.op.x and p.op.x >= x2) end
+		p.mos_back = {}
+		p.mos_filter = function(addr, data, ret)
+			if p.motion_stop then
+				ret.value = p.mos_back[addr] or 0
+				return true
+			end
+			p.mos_back[addr] = data
+			return false
+		end
 
 		p.wp08 = ut.hash_add_all(p.wp08, {
 			[0x10] = p.update_char,
@@ -3479,11 +3455,7 @@ rbff2.startplugin  = function()
 			end,
 			[{ addr = 0x94, filter = { 0x434C8, 0x434E0 } }] = function(data) p.drill_count = data end,                        -- ドリルのCカウント 0x434C8 Cカウント加算, 0x434E0 C以外押下でCカウントリセット
 			[0xAA] = function(data, ret)
-				if p.motion_stop then
-					ret.value = p.pos_back._aa
-					return
-				end
-				p.pos_back._aa = data
+				if p.mos_filter(0xAA, data, ret) then return end
 				p.attackbits.fullhit = data ~= 0
 				--ut.printf("full %X %s %s | %X %X | %s | %X %X %X | %s", mem.pc(), now(), p.on_hit, base, data, ut.tobitstr(data), p.act, p.act_count, p.act_frame, p.attackbits.fullhit)
 				if p.is_fireball and data == 0xFF then p.on_fireball = now() * -1 end
@@ -3517,32 +3489,17 @@ rbff2.startplugin  = function()
 			[0xEB] = function(data) p.hurt_attack = data end,                                  -- やられ中のみ変化
 			[{ addr = 0xF1, filter = { 0x408D4, 0x40954 } }] = function(data) p.drill_count = data end, -- 炎の種馬の追加連打の成立回数
 		})
-		p.pos_back = {
-			x1 = 0, x2 = 0, y1 = 0, y2 = 0, z1 = 0,
-		}
 		p.wp16 = ut.hash_add_all(p.wp16, {
 			[0x20] = function(data, ret)
-				if p.motion_stop then
-					ret.value = p.pos_back.x1
-					return
-				end
-				p.pos_back.x1 = data
+				if p.mos_filter(0x20, data, ret) then return end
 				p.pos         = data
 			end,
 			[0x22] = function(data, ret)
-				if p.motion_stop then
-					ret.value = p.pos_back.x2
-					return
-				end
-				p.pos_back.x2 = data
+				if p.mos_filter(0x22, data, ret) then return end
 				p.pos_frc     = ut.int16tofloat(data)
 			end, -- X座標(小数部)
 			[0x24] = function(data, ret)
-				if p.motion_stop then
-					ret.value = p.pos_back.z
-					return
-				end
-				p.pos_back.z      = data
+				if p.mos_filter(0x24, data, ret) then return end
 				local nowv        = now()
 				p.on_sway_line    = (p.pos_z ~= 40 and 40 == data) and nowv or p.on_sway_line
 				p.on_main_line    = (p.pos_z ~= 24 and 24 == data) and nowv or p.on_main_line
@@ -3551,19 +3508,11 @@ rbff2.startplugin  = function()
 				p.pos_z           = data                                                                  -- Z座標
 			end,
 			[0x28] = function(data, ret)
-				if p.motion_stop then
-					ret.value = p.pos_back.y1
-					return
-				end
-				p.pos_back.y1 = data
+				if p.mos_filter(0x28, data, ret) then return end
 				p.pos_y = ut.int16(data)
 			end,                                         -- Y座標
 			[0x2A] = function(data, ret)
-				if p.motion_stop then
-					ret.value = p.pos_back.y2
-					return
-				end
-				p.pos_back.y2 = data
+				if p.mos_filter(0x2A, data, ret) then return end
 				p.pos_frc_y = ut.int16tofloat(data)
 			end,                              -- Y座標(小数部)
 			[{ addr = 0x5E, filter = 0x011E10 }] = function(data) p.box_addr = mem.rg("A0", 0xFFFFFFFF) - 0x2 end, -- 判定のアドレス
