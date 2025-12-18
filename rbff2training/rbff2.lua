@@ -2150,6 +2150,8 @@ rbff2.startplugin  = function()
 			flag_d0         = 0,
 			flag_6a         = 0,
 			flag_7e         = 0,
+			knockback1      = 0,
+			knockback2      = 0,
 			key             = {
 				num         = i,
 				log         = ut.new_filled_table(global.key_hists, { key = "", frame = 0 }),
