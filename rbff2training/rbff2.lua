@@ -2938,7 +2938,9 @@ rbff2.startplugin  = function()
 				}
 			}
 			p.wp08 = {
+				[0xBB] = function(data)  end,
 				[0xB5] = function(data) p.fireball_rank = data end,
+				[0xF7] = function(data)  end,
 				[0xE7] = function(data) p.attackbits.fullhit, p.on_hit = data ~= 0, now() end,
 				[0xE9] = function(data) p.on_hit = now() end,
 				[0x8A] = function(data) p.parrieable1 = 0x2 >= data end,
@@ -3103,6 +3105,7 @@ rbff2.startplugin  = function()
 				p.max_combo_stun_timer = 0
 				p.max_combo_pow = 0
 				p.last_combo_attributes = {}
+				p.motion_stop = false
 				p.clear_frame_data()
 			end
 			if not p.is_fireball then p.update_char() end
@@ -3276,7 +3279,7 @@ rbff2.startplugin  = function()
 		p.within = function(x1, x2) return (x1 <= p.op.x and p.op.x <= x2) or (x1 >= p.op.x and p.op.x >= x2) end
 		p.mos_back = {}
 		p.mos_filter = function(addr, data, ret)
-			if p.motion_stop then
+			if p.body.motion_stop then
 				ret.value = p.mos_back[addr] or 0
 				return true
 			end
@@ -3288,7 +3291,7 @@ rbff2.startplugin  = function()
 			[0x10] = p.update_char,
 			[0x58] = function(data) p.block_side = 1 - (data >> 6) end,  -- 0x00 -> 1, 0x80 -> -1  向き 00:左側 80:右側
 			[0x66] = function(data, ret)
-				if p.motion_stop and mem.pc() == 0x11B96 then
+				if p.body.motion_stop and mem.pc() == 0x11B96 then
 					ret.value = p.act_count
 					return
 				end
@@ -3330,7 +3333,13 @@ rbff2.startplugin  = function()
 				if fake_pc and p.attackbits.harmless and p.on_update_act then p.attackbits.fake = true end
 				-- ut.printf("%X %s %s | %X %X | %s | %s %s | %X %X %X | %s %s", mem.pc(), now(), p.on_hit, base, data, ut.tobitstr(data), fake_pc, fake, p.act, p.act_count, p.act_frame, p.attackbits.fake, p.attackbits.obsolute)
 			end,
-			[0x6F] = function(data) p.act_frame = data end, -- 動作パターンの残フレーム
+			[0x6F] = function(data, ret)
+				if p.body.motion_stop and mem.pc() == 0x11B6E then
+					ret.value = p.act_frame
+					return
+				end
+				p.act_frame = data
+			end, -- 動作パターンの残フレーム
 			[0x71] = function(data) p.flip_x2 = (data & 1) end, -- 判定の反転
 			[0x73] = function(data) p.box_scale = data + 1 end, -- 判定の拡大率
 			--[0x76] = function(data) ut.printf("%X %X %X", base + 0x76, mem.pc(), data) end,
@@ -8687,6 +8696,11 @@ rbff2.startplugin  = function()
 			-- リプレイ
 			menu.exit_and_play()
 		end
+		for _, char_data in ipairs(db.chars) do
+			if char_data.acts then
+				char_data.acts = {}
+			end
+		end
 		menu.reset_current()
 	end
 	menu.on_restart_fight_a       = function()
@@ -8711,6 +8725,11 @@ rbff2.startplugin  = function()
 			menu.exit_and_rec(recording.last_slot or 1) -- レコード＆リプレイ用の初期化 レコード
 		elseif g.old_dummy_mode == menu.dummy_modes.replay then
 			menu.exit_and_play()               -- レコード＆リプレイ用の初期化 リプレイ
+		end
+		for _, char_data in ipairs(db.chars) do
+			if char_data.acts then
+				char_data.acts = {}
+			end
 		end
 		menu.reset_current()
 	end
