@@ -6115,9 +6115,10 @@ rbff2.startplugin  = function()
 		local do_log = function(point, entry)
 			if p.combo_log > 1 then
 				point = point or ""
-				ut.printf("%8s [FSM][%s] %16s:%8s %3s %3s %3s %3s %4s %4s %4s %4s %s %s %s %s",
+				ut.printf("%8s [FSM][%s][in:%s] %16s:%8s adv?:%3s to?:%3s adv:%3s to:%3s mov:%4s hits:%4s kara:%4s me:%2s hold:%4s cnt:%s lag:%s fin:%s",
 					entry and global.frame_number or "",
 					c.count,
+					c.input and to_sjis(c.input.name) or "--",
 					entry and "entry" or " ->" .. point,
 					c.state,
 					advance and "+adv" or "----",
@@ -6127,10 +6128,10 @@ rbff2.startplugin  = function()
 					moving and "move" or "----",
 					c.hits and c.hits or "----",
 					c.kara and "kara" or "----",
+					c.meoshi and "me" or "--",
 					c.hold and c.hold or "----",
 					c.count,
 					c.lag,
-					c.input and to_sjis(c.input.name) or "--",
 					p.flag_fin
 				)
 			end
@@ -6139,7 +6140,7 @@ rbff2.startplugin  = function()
 		local log_with_ret = function(ret, point, entry)
 			if p.combo_log > 1 then
 				do_log(point, entry)
-				ut.printf("         [FSM][%s] --> %s",
+				ut.printf("         [FSM][%s] --> [%s]",
 					p.combo.count,
 					(ret == nil) and "nil" or (ret.cmd == nil) and "sp" or "cmd"
 				)
@@ -6255,7 +6256,8 @@ rbff2.startplugin  = function()
 			c.count = c.count + 1
 
 			-- ダミーをスキップ(範囲チェック付き)
-			while c.count <= #c.list and c.list[c.count] and c.list[c.count].dummy do
+			while c.count <= #c.list and c.list[c.count] and c.list[c.count].hook and c.list[c.count].hook.dummy do
+				if p.combo_log > 1 then ut.printf("         [FSM][%s] P%s SKIP DUMMY", c.count, p.num) end
 				c.count = c.count + 1
 			end
 
@@ -6278,14 +6280,15 @@ rbff2.startplugin  = function()
 			c.input    = c.list[c.count].hook
 			c.fin      = nil
 			local realprev = c.list[c.count - 1] -- ダミーを含めた前のオブジェクト
-			c.meoshi   = realprev and realprev.meoshi or nil
+			local prevhook = realprev.hook
+			c.meoshi   = prevhook and prevhook.meoshi or nil
 			c.hook_cmd = (c.input and c.input.cmd ~= nil) and c.input or nil
 			c.hook_sp  = (c.input and c.input.cmd == nil) and c.input or nil
 			c.state    = c.lag > 0 and "lag" or "exec"
 			c.advance  = false
 			c.timeout  = false
 			if p.combo_log > 1 then
-				ut.printf("         [FSM][%s] --> next %s -> %s  kara:%s hold:%s hits:%s last:%s input:%s state:%s advance:%s timeout:%s",
+				ut.printf("         [FSM][%s] --> next %s -> %s  kara:%s hold:%s hits:%s last:%s input:%s state:%s advance:%s timeout:%s meoshi:%s",
 					c.count,
 					prev and to_sjis(prev.name) or "---",
 					c.input and to_sjis(c.input.name) or "---",
@@ -6296,7 +6299,8 @@ rbff2.startplugin  = function()
 					c.hook_cmd and "cmd" or (c.hook_sp and "sp " or "---"),
 					(c.state == nil) and "nil" or c.state,
 					(c.advance == nil) and "nil" or c.advance,
-					(c.timeout == nil) and "nil" or c.timeout
+					(c.timeout == nil) and "nil" or c.timeout,
+					(c.meoshi == nil) and "nil" or c.meoshi
 				)
 			end
 		end
@@ -6326,6 +6330,11 @@ rbff2.startplugin  = function()
 
 		local do_await = function()
 			if c.meoshi and p.flag_fin and not c.last and (c.fin == nil) then
+				c.state = "exec"
+				c.fin = (c.fin or 0) + 1 -- 動作終了フラグが連続するためカウンタで多重実行を避ける
+				return exec(true)
+			end
+			if c.meoshi and (p.on_update_7e_02 == global.frame_number) and not c.last and (c.fin == nil) then
 				c.state = "exec"
 				c.fin = (c.fin or 0) + 1 -- 動作終了フラグが連続するためカウンタで多重実行を避ける
 				return exec(true)
