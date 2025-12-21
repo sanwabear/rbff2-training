@@ -8708,11 +8708,6 @@ rbff2.startplugin  = function()
 			-- リプレイ
 			menu.exit_and_play()
 		end
-		for _, char_data in ipairs(db.chars) do
-			if char_data.acts then
-				char_data.acts = {}
-			end
-		end
 		menu.reset_current()
 	end
 	menu.on_restart_fight_a       = function()
@@ -8737,11 +8732,6 @@ rbff2.startplugin  = function()
 			menu.exit_and_rec(recording.last_slot or 1) -- レコード＆リプレイ用の初期化 レコード
 		elseif g.old_dummy_mode == menu.dummy_modes.replay then
 			menu.exit_and_play()               -- レコード＆リプレイ用の初期化 リプレイ
-		end
-		for _, char_data in ipairs(db.chars) do
-			if char_data.acts then
-				char_data.acts = {}
-			end
 		end
 		menu.reset_current()
 	end
