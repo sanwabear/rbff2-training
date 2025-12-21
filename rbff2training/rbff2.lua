@@ -6254,10 +6254,12 @@ rbff2.startplugin  = function()
 		local next_input = function()
 			local prev = c.input
 			c.count = c.count + 1
+			local skip = false
 
 			-- ダミーをスキップ(範囲チェック付き)
 			while c.count <= #c.list and c.list[c.count] and c.list[c.count].hook and c.list[c.count].hook.dummy do
 				if p.combo_log > 1 then ut.printf("         [FSM][%s] P%s SKIP DUMMY", c.count, p.num) end
+				skip = true
 				c.count = c.count + 1
 			end
 
@@ -6285,6 +6287,7 @@ rbff2.startplugin  = function()
 			c.hook_cmd = (c.input and c.input.cmd ~= nil) and c.input or nil
 			c.hook_sp  = (c.input and c.input.cmd == nil) and c.input or nil
 			c.state    = c.lag > 0 and "lag" or "exec"
+			--if skip then c.state = "await" end
 			c.advance  = false
 			c.timeout  = false
 			if p.combo_log > 1 then
@@ -6305,39 +6308,39 @@ rbff2.startplugin  = function()
 			end
 		end
 
-		local exec = function (force)
+		local exec = function (force, entry)
+			entry = (entry or "") .. "-"
 			c.state = "await"
 			c.advance = false
 			c.timeout = false
 			if c.hook_cmd and c.meta.hold then
 				c.state = "hold"
 				c.hold = c.meta.hold
-				return log_with_ret(c.hook_cmd, "exec4")
+				return log_with_ret(c.hook_cmd, entry .. "exec4")
 			end
 			--print("input", c.count)
 			-- 2段目は必殺技だと空キャンセルになるので通常、特殊、CAのみ許す
 			if force then
-				return log_with_ret(c.input, "exec4")
+				return log_with_ret(c.input, entry .. "exec4")
 			elseif c.count == 2 then
-				return log_with_ret(c.hook_cmd, "exec1")
+				return log_with_ret(c.hook_cmd, entry .. "exec1")
 			end
 			-- 最大ヒットが必要な場合は遷移イベントでコマンドを返さない
 			if not meethits then
-				return log_with_ret(nil, "exec2")
+				return log_with_ret(nil, entry .. "exec2")
 			end
-			return log_with_ret(c.input, "exec3")
+			return log_with_ret(c.input, entry .. "exec3")
 		end
 
 		local do_await = function()
 			if c.meoshi and p.flag_fin and not c.last and (c.fin == nil) then
 				c.state = "exec"
 				c.fin = (c.fin or 0) + 1 -- 動作終了フラグが連続するためカウンタで多重実行を避ける
-				return exec(true)
-			end
-			if c.meoshi and (p.on_update_7e_02 == global.frame_number) and not c.last and (c.fin == nil) then
+				return exec(true, "me1")
+			elseif c.meoshi and (p.on_update_7e_02 == global.frame_number) and not c.last and (c.fin == nil) then
 				c.state = "exec"
 				c.fin = (c.fin or 0) + 1 -- 動作終了フラグが連続するためカウンタで多重実行を避ける
-				return exec(true)
+				return exec(true, "me2")
 			end
 
 			if c.timeout and not c.advance then

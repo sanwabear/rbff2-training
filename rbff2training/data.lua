@@ -1887,7 +1887,8 @@ local rvs_bs_list = {
 		{ id = 0x07, f = 0x06, a = 0xFD, hook_type = hook_cmd_types.none, name = "真空投げ", }, -- 19
 		combo("pos130 6A(40) C", "飛燕失脚CA"),
 		combo("close 2B 2B 2C [0x46 0x047 0x01]", "_2_B固め"),
-		combo("close 2A C(2hit) [0x46 0x047 0x01]", "_2_A_2_C固め"),
+		combo("close 2A C(2hit) [0x46 0x047 0x01]", "_2_A_C固め"),
+		combo("far 2A 2C 0x01", "_2_A_2_C烈風拳"),
 		combo("pos130 0x1E(10) 3B [0x46 0x01 0x10]", "ダッシュ_B連携"),
 		combo("pos130 4B 2D [0x46 0x47 0x01]", "雷光固め"),
 		combo("pos130 4B(12kara) [0x07 0x01 0x03 0x04 0x05]", "雷光(当身)投げ"),
@@ -1910,8 +1911,9 @@ local rvs_bs_list = {
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント いかづち", },
 		{ id = 0x50, f = 0x06, a = 0x00, hook_type = hook_cmd_types.add_throw, name = "地獄門", },
 		{ cmd = cmd_types._C, hook_type = hook_cmd_types.none, name = "喝CA(_C)", }, -- 16
-		combo("close 2A C 0x05(lag30) [6C 3C]", "_2_A_C邪棍舞"),
+		combo("close 2A 2C 0x05(lag30) [6C 3C]", "_2_A_C邪棍舞"),
 		combo("close A C 0x05(lag30) [6C 3C]", "_A_C邪棍舞"),
+		combo("far 2A 2C 0x05(lag30) [6C 3C D]", "_A_C邪棍舞"),
 		combo("far AB 0x05(lag30) [6C 3C]", "避け攻撃 邪棍舞"),
 		combo("far B C 0x05(lag30) [6C 3C]", "_B_C邪棍舞"),
 	},
@@ -2313,10 +2315,18 @@ local rvs_bs_list = {
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.ex_breakshot, name = "真心牙（弾狙い）", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 天崩山", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 大鉄神", },
-		combo("far 2B 2B 0x02", "_2_B那夢波固め"),
-		combo("mid 2B 2B 0x01", "_2_B那夢波固め"),
-		combo("far 2B 2B [2C C 0x047]", "_2_B固め"),
-		combo("mid 2B 2B [2C C 0x047]", "_2_B固め"),
+		combo("pos100 AB 0x02", "避け大那夢波"),
+		combo("pos100 B 0x02", "_B大那夢波"),
+
+		combo("pos60 2B 2B 0x02",    "_2_B_2_B大那夢波"),
+		combo("pos60 2B 2B 0x01",    "_2_B_2_B小那夢波"),
+		combo("pos60 2B 2B C",       "_2_B_2_B_C"),
+		combo("pos60 2B 2B C me AB 0x02", "_2_B_2_B_C 避け 大那夢波"),
+		combo("pos60 2B 2B 2C",      "_2_B_2_B_2_C"),
+		combo("pos60 2B 2B 0x47",    "_2_B_2_Bフェイント"),
+
+		combo("far 2B 2B [2C C 0x47]", "_2_B固め"),
+		combo("mid 2B 2B [2C C 0x47]", "_2_B固め"),
 	},
 	-- アルフレッド
 	{
