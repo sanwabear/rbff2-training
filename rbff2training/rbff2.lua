@@ -6153,11 +6153,13 @@ rbff2.startplugin  = function()
 				c = p.new_preset_combo(true, "combo nil skip")
 			elseif p.combo.count == nil then
 				c = p.new_preset_combo(true, "count nil skip")
+			elseif p.on_update_7e_02 == global.frame_number then
+				c = p.new_preset_combo(true, "count nil skip")
 			--elseif  p.combo.count > 1 then
 				--c = p.new_preset_combo(true, "count >1 skip")
 			end
 			c = p.combo
-			return log_with_ret(nil, "skip")
+			return log_with_ret(nil, string.format("skip %s %s %s", p.normal_state, p.flag_d0, p.in_hurt))
 		else
 			c = p.combo
 		end
