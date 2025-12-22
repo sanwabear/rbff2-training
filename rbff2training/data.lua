@@ -2293,7 +2293,7 @@ local rvs_bs_list = {
 		combo("far 2B 2C [0x46 0x03]", "_2_B_2_C固め"),
 		combo("far B C [0x46 0x03]", "_B_C固め"),
 		combo("far 0x1E 6C C [0x46 0x03]", "ダッシュ_C_C固め"),
-		combo("close 3A 6C [0x46 0x03]", "ダッシュ_C_C固め"),
+		combo("close 3A 6C [0x46 0x03]", "_3_A_C固め"),
 	},
 	-- 李香緋
 	{
