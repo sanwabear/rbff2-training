@@ -3553,13 +3553,15 @@ rbff2.startplugin  = function()
 		elseif p.num == 1 then
 			p.rp08 = ut.hash_add_all(p.rp08, {
 				[{ addr = 0x67, filter = 0x012D14 }] = p.save_range_pos, -- 1P押し合い判定処理フック
-				[{ addr = 0xB1, filter = 0x05C2FE }] = p.save_box_pos, -- 当たり判定処理フック
+				[{ addr = 0xA9, filter = 0x05C2B4 }] = p.save_box_pos, -- 当たり判定処理フック
+				--[{ addr = 0xB1, filter = 0x05C2FE }] = p.save_box_pos, -- 当たり判定処理フック
 				[{ addr = 0xA3, filter = 0x03944C }] = p.apply_sp_hook,
 			})
 		elseif p.num == 2 then
 			p.rp08 = ut.hash_add_all(p.rp08, {
 				[{ addr = 0x67, filter = 0x012D5E }] = p.save_range_pos, -- 2P押し合い判定処理フック
-				[{ addr = 0xB1, filter = 0x05C2FE }] = p.save_box_pos, -- 当たり判定処理フック
+				[{ addr = 0xA9, filter = 0x05C2CC }] = p.save_box_pos, -- 当たり判定処理フック
+				--[{ addr = 0xB1, filter = 0x05C2FE }] = p.save_box_pos, -- 当たり判定処理フック
 				[{ addr = 0xA3, filter = 0x03944C }] = p.apply_sp_hook,
 			})
 		end
@@ -6148,7 +6150,7 @@ rbff2.startplugin  = function()
 			return ret
 		end
 
-		if p.normal_state ~= true or p.flag_d0 ~= 0 or p.in_hurt == true then
+		if p.normal_state ~= true or p.flag_d0 ~= 0 or p.in_hurt == true or p.in_block == true then
 			if p.combo == nil then
 				c = p.new_preset_combo(true, "combo nil skip")
 			elseif p.combo.count == nil then
