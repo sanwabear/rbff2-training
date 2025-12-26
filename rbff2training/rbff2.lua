@@ -2401,7 +2401,9 @@ rbff2.startplugin  = function()
 				--end
 			end, -- のけぞり確認用2(裏雲隠し)
 			[0x69] = function(data) p.knockback2 = data end, -- のけぞり確認用1(色々)
-			[0x7E] = function(data) p.flag_7e = data end, -- 動作切替、のけぞり確認用3(フェニックススルー)
+			[0x7E] = function(data, ret)
+				if p.mos_filter(0x7E, data, ret) then return end
+				p.flag_7e = data end, -- 動作切替、のけぞり確認用3(フェニックススルー)
 			[0x82] = function(data)
 				local pc = mem.pc()
 				if pc == 0x2668C then
@@ -2461,8 +2463,14 @@ rbff2.startplugin  = function()
 			[{ addr = 0x8F, filter = { 0x5B134, 0x5B154 } }] = function(data)
 				p.last_damage, p.last_damage_scaled = data, data                                  -- 補正前攻撃力
 			end,
-			[0x90] = function(data) p.throw_timer = data end,                                     -- 投げ可能かどうかのフレーム経過
-			[{ addr = 0xA9, filter = { 0x23284, 0x232B0 } }] = function(data) p.on_vulnerable = now() end, -- 判定無敵でない, 判定無敵+無敵タイマーONでない
+			[0x90] = function(data, ret)
+				if p.mos_filter(0x90, data, ret) then return end
+				p.throw_timer = data
+			end,                                     -- 投げ可能かどうかのフレーム経過
+			[{ addr = 0xA9, filter = { 0x23284, 0x232B0 } }] = function(data, ret)
+				if p.mos_filter(0xA9, data, ret) then return end
+				p.on_vulnerable = now()
+			end, -- 判定無敵でない, 判定無敵+無敵タイマーONでない
 			-- [0x92] = function(data) end, -- 弾ヒット?
 			[0xA2] = function(data) p.firing = data ~= 0 end,                                     -- 弾発射時に値が入る ガード判断用
 			[0xA3] = function(data)                                                               -- A3:成立した必殺技コマンドID
@@ -2582,7 +2590,10 @@ rbff2.startplugin  = function()
 			end,
 			[0xEC] = function(data) p.push_invincible = data end,                  -- 押し合い判定の透過状態
 			[0xEE] = function(data) p.in_hitstop_value, p.in_hitstun = data, ut.tstb(data, 0x80) end,
-			[0xF6] = function(data) p.invincible = data end,                       -- 打撃と投げの無敵の残フレーム数
+			[0xF6] = function(data, ret)
+				if p.mos_filter(0xF6, data, ret) then return end
+				p.invincible = data
+			end,                       -- 打撃と投げの無敵の残フレーム数
 			-- [0xF7] = function(data) end -- 技の内部の進行度
 			[{ addr = 0xFB, filter = { 0x49418, 0x49428, 0x42158 } }] = function(data)
 				-- 0x49418, 0x49428 -- カイザーウェイブのレベルアップ
