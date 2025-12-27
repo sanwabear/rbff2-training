@@ -8749,6 +8749,7 @@ rbff2.startplugin  = function()
 		elseif g.old_dummy_mode == menu.dummy_modes.replay then
 			menu.exit_and_play()               -- レコード＆リプレイ用の初期化 リプレイ
 		end
+		menu.reset_current()
 	end
 	menu.set_hide                 = function(bit, val) return ut.hex_set(global.hide, bit, val) end
 	menu.organize_disp_config     = function()
@@ -9140,7 +9141,7 @@ rbff2.startplugin  = function()
 			local a                  = players[i].encounter
 			local col, row, g        = menu[key].pos.col, menu[key].pos.row, global
 			local p                  = players[i]
-			local next_menu          = "training"
+			local next_menu          = nil
 			a.type                   = col[ 1]      --  1 邀撃行動
 			--                            [ 2]      --  2 自動動作設定
 			a.auto_sp                = col[ 3]      --  3 自動必殺 1:OFF 2:ON 3:ON:空キャン
@@ -9518,7 +9519,7 @@ rbff2.startplugin  = function()
 			g.motion_stop_count   = col[2] - 1
 			p[1].disp_state       = col[3]                             --  3 1P 状態表示  1:OFF 2:ON, ON:小表示, ON:大表示, ON:フラグ表示
 			p[2].disp_state       = col[4]                             --  4 2P 状態表示  1:OFF 2:ON, ON:小表示, ON:大表示, ON:フラグ表示
-			menu.set_current("extra")
+			menu.set_current()
 		end))
 	menu.on_extra    = function(cancel)
 		local col, row, p, g = menu.extra.pos.col, menu.extra.pos.row, players, global
