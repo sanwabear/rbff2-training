@@ -2881,7 +2881,7 @@ rbff2.startplugin  = function()
 			--[0x92] = function(data) p.anyhit_id = data end,
 			--[0x9E] = function(data) p.ophit = all_objects[data] end, -- ヒットさせた相手側のベースアドレス
 			[0xD0] = function(data, ret)
-				if p.mos_filter(0x4A, data, ret) then return end
+				if p.mos_filter(0xD0, data, ret) then return end
 			end,
 			[0xD2] = function(data, ret)
 				if p.mos_filter(0xD2, data, ret) then return end
@@ -3117,6 +3117,7 @@ rbff2.startplugin  = function()
 				p.max_combo_pow = 0
 				p.last_combo_attributes = {}
 				p.motion_stop = false
+				p.mos_back = {}
 				p.clear_frame_data()
 			end
 			if not p.is_fireball then p.update_char() end
@@ -3290,7 +3291,7 @@ rbff2.startplugin  = function()
 		p.within = function(x1, x2) return (x1 <= p.op.x and p.op.x <= x2) or (x1 >= p.op.x and p.op.x >= x2) end
 		p.mos_back = {}
 		p.mos_filter = function(addr, data, ret)
-			if p.body.motion_stop then
+			if p.body.motion_stop and in_match then
 				ret.value = p.mos_back[addr] or 0
 				return true
 			end
@@ -8748,7 +8749,6 @@ rbff2.startplugin  = function()
 		elseif g.old_dummy_mode == menu.dummy_modes.replay then
 			menu.exit_and_play()               -- レコード＆リプレイ用の初期化 リプレイ
 		end
-		menu.reset_current()
 	end
 	menu.set_hide                 = function(bit, val) return ut.hex_set(global.hide, bit, val) end
 	menu.organize_disp_config     = function()
