@@ -2318,12 +2318,12 @@ local rvs_bs_list = {
 		combo("pos100 AB 0x02", "避け大那夢波"),
 		combo("pos100 B 0x02", "_B大那夢波"),
 
-		combo("pos55 2B 2B 0x02",    "_2_B_2_B大那夢波"),
-		combo("pos55 2B 2B 0x01",    "_2_B_2_B小那夢波"),
-		combo("pos55 2B 2B C",       "_2_B_2_B_C"),
-		combo("pos55 2B 2B C me AB(1hit) 0x02", "_2_B_2_B_C 避け 大那夢波"),
-		combo("pos55 2B 2B 2C",      "_2_B_2_B_2_C"),
-		combo("pos55 2B 2B 0x47",    "_2_B_2_Bフェイント"),
+		combo("pos50 2B 2B 0x02",    "_2_B_2_B大那夢波"),
+		combo("pos50 2B 2B 0x01",    "_2_B_2_B小那夢波"),
+		combo("pos50 2B 2B C",       "_2_B_2_B_C"),
+		combo("pos50 2B 2B C me AB(1hit) 0x02", "_2_B_2_B_C 避け 大那夢波"),
+		combo("pos50 2B 2B 2C",      "_2_B_2_B_2_C"),
+		combo("pos50 2B 2B 0x47",    "_2_B_2_Bフェイント"),
 
 		combo("far 2B 2B [2C C 0x47]", "_2_B固め"),
 		combo("mid 2B 2B [2C C 0x47]", "_2_B固め"),
