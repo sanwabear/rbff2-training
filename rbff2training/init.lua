@@ -27,15 +27,40 @@ exports.license           = "MIT License"
 exports.author            = { name = "Sanwabear" }
 local training            = exports
 local subscription        = { reset = nil, stop = nil, frame = nil, pause = nil, resume = nil, }
-local romname             = "rbff2h"
-local script_lib          = "rbff2training/rbff2"
+local profiles            = {
+    ["rbff2h"]            = "rbff2training/rbff2",
+}
+-- ディレクトリ内の.luaファイルを検索してテーブルに保存する関数
+local ignore_files = {
+    ["util.lua"] = true,
+    ["mem.lua"]  = true,
+    ["data.lua"] = true,
+    ["init.lua"] = true
+}
+local lfs = require("lfs")
+local directory = "rbff2training"
+for file in lfs.dir(table.concat({lfs.currentdir(), "plugins", directory}, package.config:sub(1,1))) do
+    -- カレントディレクトリ(.)と親ディレクトリ(..)をスキップ
+    if file ~= "." and file ~= ".." then
+        local filepath = directory .. "/" .. file
+        local attr = lfs.attributes(filepath)
+        if attr and attr.mode == "file" and file:match("%.lua$") and not ignore_files[file] then
+            local name = file:match("(.+)%.lua$")
+            profiles[name] = directory .. "/" .. name
+        end
+    end
+end
+print("検出されたLuaファイル:")
+for name, path in pairs(profiles) do
+    print(name, path)
+end
 
 training.startplugin = function()
     local mode = 1 -- 1:ON 0:OFF 自動有効化のためデフォルト値は1にする
     local dummy, core, game
 
     local is_target_rom = function()
-        return emu.romname() == romname
+        return profiles[emu.romname()]
     end
 
     local core_to_dummy = function()
@@ -49,7 +74,8 @@ training.startplugin = function()
     end
 
     local core_to_game = function()
-        if core.is_dummy and is_target_rom() then
+        local script_lib = is_target_rom()
+        if core.is_dummy and script_lib then
             print("Enable Training-Core")
             game = game or require(script_lib)
             game.self_disable = false
