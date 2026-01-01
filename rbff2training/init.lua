@@ -25,15 +25,17 @@ exports.version           = "1.0.0"
 exports.description       = "RBFF2 Training"
 exports.license           = "MIT License"
 exports.author            = { name = "Sanwabear" }
-local rbff2training       = exports
+local training            = exports
 local subscription        = { reset = nil, stop = nil, frame = nil, pause = nil, resume = nil, }
+local romname             = "rbff2h"
+local script_lib          = "rbff2training/rbff2"
 
-rbff2training.startplugin = function()
+training.startplugin = function()
     local mode = 1 -- 1:ON 0:OFF 自動有効化のためデフォルト値は1にする
-    local dummy, core, rbff2
+    local dummy, core, game
 
     local is_target_rom = function()
-        return emu.romname() == "rbff2h" -- TODO: rbff2, rbff2k
+        return emu.romname() == romname
     end
 
     local core_to_dummy = function()
@@ -41,26 +43,26 @@ rbff2training.startplugin = function()
             print("Disable Training-Core")
             core.emu_stop()
             core = dummy
-            rbff2 = nil
+            game = nil
         end
         mode = core.is_dummy and 0 or 1
     end
 
-    local core_to_rbff2 = function()
+    local core_to_game = function()
         if core.is_dummy and is_target_rom() then
             print("Enable Training-Core")
-            rbff2 = rbff2 or require("rbff2training/rbff2")
-            rbff2.self_disable = false
-            rbff2.startplugin()
-            rbff2.emu_start()
-            core = rbff2
+            game = game or require(script_lib)
+            game.self_disable = false
+            game.startplugin()
+            game.emu_start()
+            core = game
             manager.machine:soft_reset()
         end
         mode = core.is_dummy and 0 or 1
     end
 
     local null_function = function() end
-    local auto_start = function() if is_target_rom() and mode == 1 then core_to_rbff2() else core_to_dummy() end end
+    local auto_start = function() if is_target_rom() and mode == 1 then core_to_game() else core_to_dummy() end end
 
     core = {
         is_dummy = true,
@@ -95,7 +97,7 @@ rbff2training.startplugin = function()
             mode = (mode ~= 0) and 0 or 1
             return true
         elseif (event == "select") then
-            if mode > 0 then core_to_rbff2() else core_to_dummy() end
+            if mode > 0 then core_to_game() else core_to_dummy() end
             return true
         end
         return false
