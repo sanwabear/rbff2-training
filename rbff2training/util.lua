@@ -142,6 +142,38 @@ ut.int16tofloat       = function(word)
 	return word * INV_65536
 end
 
+-- 元のstring.formatを保存
+local original_format = string.format
+-- デバッグ情報を含む新しいstring.format
+string.format = function (fmt, ...)
+    local success, result = pcall(original_format, fmt, ...)
+    if success then return result end
+    local args = {...}
+
+	print("========================================")
+	print("string.format error")
+	print("========================================")
+	print("format: " .. tostring(fmt))
+	print("arg count: " .. #args)
+	print("----------------------------------------")
+
+	for i, arg in ipairs(args) do
+		local arg_type, arg_value = type(arg), tostring(arg)
+		if #arg_value > 100 then arg_value = arg_value:sub(1, 100) .. "..." end -- 値が長すぎる場合は切り詰める
+		print(string.format("arg[%d]: type=%s, value=%s", i, arg_type, arg_value))
+	end
+
+	print("----------------------------------------")
+	print("Error: " .. tostring(result))
+	print("========================================")
+	if debug and debug.traceback then
+		print("Stacktrace:")
+		print(debug.traceback("", 2))
+		print("========================================")
+	end
+	error(result, 2) -- 元のエラーを再スロー
+end
+
 ut.printf             = function(format, ...) print(string.format(format, ...)) end
 
 -- 前後の空白を除去する trim 関数
