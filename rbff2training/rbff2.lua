@@ -2866,8 +2866,6 @@ rbff2.startplugin  = function()
 				p.max_combo_stun_timer = 0
 				p.max_combo_pow = 0
 				p.last_combo_attributes = {}
-				p.motion_stop = false
-				p.mos_back = {}
 				p.clear_frame_data()
 			end
 			if not p.is_fireball then p.update_char() end
@@ -8457,6 +8455,10 @@ rbff2.startplugin  = function()
 	menu.on_player_select         = function(p_no)
 		--main_menu.pos.row = 1
 		cls_ps()
+		for _, p in ipairs(players) do
+			p.motion_stop = false
+			p.mos_back = {}
+		end
 		goto_player_select(p_no)
 		--cls_joy()
 		--cls_ps()
@@ -8491,6 +8493,10 @@ rbff2.startplugin  = function()
 
 		cls_joy()
 		cls_ps()
+		for _, p in ipairs(players) do
+			p.motion_stop = false
+			p.mos_back = {}
+		end
 		menu.to_main(nil, false, true) -- 初期化
 		menu.state = menu.tra_main -- メニューを抜ける
 		menu.reset_pos = true
