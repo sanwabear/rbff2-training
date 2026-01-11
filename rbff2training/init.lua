@@ -35,22 +35,25 @@ local ignore_files = {
     ["util.lua"] = true,
     ["mem.lua"]  = true,
     ["data.lua"] = true,
-    ["init.lua"] = true
+    ["init.lua"] = true,
+    ["UTF8toSJIS.lua"] = true,
+    ["game.lua"] = true,
 }
 local lfs = require("lfs")
 local directory = "rbff2training"
 for file in lfs.dir(table.concat({lfs.currentdir(), "plugins", directory}, package.config:sub(1,1))) do
     -- カレントディレクトリ(.)と親ディレクトリ(..)をスキップ
     if file ~= "." and file ~= ".." then
-        local filepath = directory .. "/" .. file
-        local attr = lfs.attributes(filepath)
+        local realpath = table.concat({lfs.currentdir(), "plugins", directory, file}, package.config:sub(1,1))
+        local attr = lfs.attributes(realpath)
+        --print(file, realpath, attr and attr.mode or "--")
         if attr and attr.mode == "file" and file:match("%.lua$") and not ignore_files[file] then
             local name = file:match("(.+)%.lua$")
             profiles[name] = directory .. "/" .. name
         end
     end
 end
-print("検出されたLuaファイル:")
+print("Detected Lua files:")
 for name, path in pairs(profiles) do
     print(name, path)
 end

@@ -25,7 +25,6 @@ rbff2.self_disable = false
 rbff2.startplugin  = function()
 	local ut         = require("rbff2training/util")
 	local db         = require("rbff2training/data")
-	local gm         = require("rbff2training/game")
 	local mem        = require("rbff2training/mem")
 	local UTF8toSJIS = require("rbff2training/UTF8toSJIS")
 
@@ -749,6 +748,8 @@ rbff2.startplugin  = function()
 		no_bars              = false,
 		sync_pos_x           = 1, -- 1: OFF, 2:1Pと同期, 3:2Pと同期
 		hitbox_bold          = 1,
+		hitbox_hist_target   = 4,
+		hitbox_hist_count    = 0,
 
 		disp_pos             = 2, -- 向き・距離・位置表示 1;OFF 2:ON 3:向き・距離のみ 4:位置のみ
 		hide                 = hide_options.none,
@@ -1380,22 +1381,33 @@ rbff2.startplugin  = function()
 		return get_special_throw_box(p, id)
 	end
 
-	local draw_hitbox                                  = function(box, do_fill)
+	local draw_hitbox                                  = function(box, do_fill, bold, alpha, no_text)
 		local p = box.p
 		if not p.body.disp_hitbox or not box.type.visible(p, box) then return end
 		--ut.printf("%s  %s", box.type.kind, box.type.enabled)
 		-- 背景なしの場合は判定の塗りつぶしをやめる
-		local outline, fill = box.type.outline, global.disp_bg and box.type.fill or 0
+		local outline, fill = box.type.outline, do_fill and global.disp_bg and box.type.fill or 0
+		if alpha then
+			outline = outline & 0xFFFFFF
+			outline = alpha | outline
+		end
 		local x1, x2 = sort_ab(box.left, box.right)
 		local y1, y2 = sort_ab(box.top, box.bottom)
-		local b = global.hitbox_bold
-		scr:draw_box(x1, y1, x1 - b, y2, 0, outline)
-		scr:draw_box(x2, y1, x2 + b, y2, 0, outline)
-		scr:draw_box(x1, y1, x2, y1 - b, 0, outline)
-		scr:draw_box(x1, y2, x2, y2 + b, outline, outline)
-		scr:draw_box(x1, y1, x2, y2, outline, do_fill and fill or 0)
-		scr:draw_box(x1, y1, x2, y2, outline, do_fill and fill or 0)
-		draw_ctext(x1 + (x2 - x1) / 2, y1 + (y2 - y1 - screen.s_height) / 2, string.format("%s-%X", box.no or "0", box.id), outline)
+		local b = bold or global.hitbox_bold
+		if b > 0 then
+			scr:draw_box(x1, y1, x1 - b, y2, 0, outline)
+			scr:draw_box(x2, y1, x2 + b, y2, 0, outline)
+			scr:draw_box(x1, y1, x2, y1 - b, 0, outline)
+			scr:draw_box(x1, y2, x2, y2 + b, 0, outline)
+			if fill > 0 then
+				scr:draw_box(x1, y1, x2, y2, outline, fill)
+			end
+		else
+			scr:draw_box(x1, y1, x2, y2, outline, fill)
+		end
+		if not no_text then
+			draw_ctext(x1 + (x2 - x1) / 2, y1 + (y2 - y1 - screen.s_height) / 2, string.format("%s-%X", box.no or "0", box.id), outline)
+		end
 		--ut.printf("%s  x1=%s x2=%s y1=%s y2=%s",  box.type.kind, x1, x2, y1, y2)
 	end
 
@@ -1551,6 +1563,7 @@ rbff2.startplugin  = function()
 
 	local phase_count                                  = 1
 	local players, all_objects, hitboxies, ranges, wps = {}, {}, {}, {}, { all = {}, select = {}, hide = {} }
+	local hitboxies_hist, ranges_hist = {}, {}
 	local is_ready_match_p                             = function()
 		if #players ~= 2 then return false end
 		return db.chars[players[1].char] and db.chars[players[2].char]
@@ -1934,7 +1947,7 @@ rbff2.startplugin  = function()
 			encounter       = {
 				type        = 1, -- 1:OFF 2:邀撃技
 				rise_limit  = 0,
-				fall_limit  = 53,
+				fall_limit  = 0,
 				fwd_limit   = 0,
 				bak_limit   = 0,
 				main_limit  = 0,
@@ -5486,6 +5499,11 @@ rbff2.startplugin  = function()
 		table.sort(hitboxies, hitboxies_order)
 		table.sort(ranges, ranges_order)
 
+		table.insert(hitboxies_hist, hitboxies)
+		table.insert(ranges_hist, ranges)
+		while global.hitbox_hist_count < #hitboxies_hist do table.remove(hitboxies_hist, 1) end --バッファ長調整
+		while global.hitbox_hist_count < #ranges_hist do table.remove(ranges_hist, 1) end --バッファ長調整
+
 		-- 投げ無敵
 		local either_throw_indiv = true -- 両キャラともメインライン上でいずれかが投げ無敵中
 		for _, p in ipairs(players) do
@@ -6696,10 +6714,30 @@ rbff2.startplugin  = function()
 			local chk_sway_f = aaa.sway_lmt_f > 0 -- スウェーからのフレーム
 			local chk_jump_f = aaa.jump_lmt_f > 0 -- ジャンプからのフレーム
 			local chk_dash_f = aaa.dash_lmt_f > 0 -- ダッシュ/飛び退きからのフレーム
-			local on_to_sway = global.frame_number - (op.on_main_to_sway_c0 or 0) + 1
-			local on_to_main = global.frame_number - (op.on_sway_to_main_c0 or 0) + 1
-			local on_jump    = global.frame_number - (p.on_air or 0) + 1
-			local on_dash    = global.frame_number - (p.on_dash or 0) + 1
+			local on_to_main
+			if p.main_in then
+				on_to_main = global.frame_number - (p.on_sway_to_main_c0 or 0) + 1
+			elseif op.main_in then
+				on_to_main = global.frame_number - (op.on_sway_to_main_c0 or 0) + 1
+			end
+			local on_to_sway
+			if p.sway_out then
+				on_to_sway = global.frame_number - (p.on_main_to_sway_c0 or 0) + 1
+			elseif op.sway_out then
+				on_to_sway = global.frame_number - (op.on_main_to_sway_c0 or 0) + 1
+			end
+			local on_jump
+			if p.in_air then
+				on_jump    = global.frame_number - (p.on_air or 0) + 1
+			elseif op.in_air then
+				on_jump    = global.frame_number - (op.on_air or 0) + 1
+			end			
+			local on_dash
+			if p.in_dash then
+				on_dash    = global.frame_number - (p.on_dash or 0) + 1
+			elseif op.in_dash then
+				on_dash    = global.frame_number - (op.on_dash or 0) + 1
+			end
 			--[[
 			label = string.format("%s %s %4s op:%4s %3s %4s %7s %3s",
 				global.frame_number,
@@ -6712,6 +6750,8 @@ rbff2.startplugin  = function()
 				other_cond == true and "oth" or "")
 			]]
 			if other_cond == true then
+				-- この高さより上昇時
+				-- この高さより下降時
 				if not chk_fall and not chk_rise then
 					ya = true -- 非ジャンプ全般
 				elseif falling and chk_fall and aaa.fall_limit >= abs_elev then -- ジャンプ下り
@@ -6721,6 +6761,8 @@ rbff2.startplugin  = function()
 					ylabel = label and string.format("%3d %2s %3d", aaa.rise_limit, "<=", abs_elev) or nil
 					ya = true
 				end
+				-- この間合いより近づいた時
+				-- この間合いより遠のいた時
 				if not chk_fwd and not chk_bak then
 					xa = true -- 間合い指定なし
 				elseif closing and chk_fwd and aaa.fwd_limit >= abs_space then -- 接近
@@ -6730,6 +6772,8 @@ rbff2.startplugin  = function()
 					xlabel = label and string.format("%3d %2s %3d", aaa.bak_limit, "<=", abs_space) or nil
 					xa = true
 				end
+				-- この奥行より近づいた時
+				-- この奥行より遠のいた時
 				if not chk_main and not chk_sway then
 					za = true -- 非スゥエー全般
 				elseif op.main_in and chk_main and aaa.main_limit >= abs_depth then -- メインラインへ移動中
@@ -6739,25 +6783,29 @@ rbff2.startplugin  = function()
 					zlabel = label and string.format("%3d %2s %3d", aaa.sway_limit, "<=", abs_depth) or nil
 					za = true
 				end
+				-- 対メインからのフレーム
+				-- スウェーからのフレーム
 				if not chk_main_f and not chk_sway_f then
 					zfa = true -- 非スゥエー全般
-				elseif op.main_in and chk_main_f and aaa.main_lmt_f <= on_to_main then -- メインラインへ移動中
+				elseif on_to_main and chk_main_f and aaa.main_lmt_f <= on_to_main then -- メインラインへ移動中
 					zflabel = label and string.format("%3d %2s %3d", aaa.main_lmt_f, "<=", on_to_main) or nil
 					zfa = true
-				elseif op.sway_out and chk_sway_f and aaa.sway_lmt_f <= on_to_sway then -- スゥエーラインへ移動中
+				elseif on_to_sway and chk_sway_f and aaa.sway_lmt_f <= on_to_sway then -- スゥエーラインへ移動中
 					zflabel = label and string.format("%3d %2s %3d", aaa.sway_lmt_f, "<=", on_to_sway) or nil
 					zfa = true
 				end
+				-- ジャンプからのフレーム
 				if not chk_jump_f then
 					jfa = true
-				elseif p.in_air and chk_jump_f and aaa.jump_lmt_f == on_jump then -- ジャンプからのフレーム
-					jflabel = label and string.format("%3d %2s %3d", aaa.jump_lmt_f, "<=", on_to_main) or nil
+				elseif on_jump and chk_jump_f and aaa.jump_lmt_f == on_jump then -- ジャンプからのフレーム
+					jflabel = label and string.format("%3d %2s %3d", aaa.jump_lmt_f, "==", on_jump) or nil
 					jfa = true
 				end
+				-- ダッシュ/飛び退きからのフレーム
 				if not chk_dash_f then
 					dfa = true
-				elseif p.in_dash and chk_dash_f and aaa.dash_lmt_f == on_dash then -- ダッシュ/飛び退きからのフレーム
-					dflabel = label and string.format("%3d %2s %3d", aaa.dash_lmt_f, "<=", on_dash) or nil
+				elseif on_dash and chk_dash_f and aaa.dash_lmt_f == on_dash then -- ダッシュ/飛び退きからのフレーム
+					dflabel = label and string.format("%3d %2s %3d", aaa.dash_lmt_f, "==", on_dash) or nil
 					dfa = true
 				end
 			end
@@ -7502,6 +7550,23 @@ rbff2.startplugin  = function()
 	local draws = {
 		box = function()
 			-- 順番に判定表示（キャラ、弾）
+			-- 軌跡表示
+			local hist_max = math.min(global.hitbox_hist_count, #hitboxies_hist, #ranges_hist) - 1
+			for hi = 1, hist_max do
+				--[[
+				for _, range in ipairs(ranges_hist[hi]) do
+					if range.p.body.num == 1 then
+						draw_range(range, false) -- 座標と範囲
+					end
+				end
+				]]
+				for _, box in ipairs(hitboxies_hist[hi]) do
+					if global.hitbox_hist_target == 3 or box.p.body.num == global.hitbox_hist_target then
+						draw_hitbox(box, false, 0, 0x99000000, true) -- 各種判定
+					end
+				end
+			end
+			-- 最新表示
 			local do_fill = not ut.tstb(global.hide, hide_options.background, true)
 			for _, range in ipairs(ranges) do draw_range(range, do_fill) end -- 座標と範囲
 			for _, box in ipairs(hitboxies) do draw_hitbox(box, do_fill) end -- 各種判定
@@ -8902,35 +8967,33 @@ rbff2.startplugin  = function()
 			--                            [ 2]      --  2 自動動作設定
 			a.auto_sp                = col[ 3]      --  3 自動必殺 1:OFF 2:ON 3:ON:空キャン
 			a.sp_lag                 = col[ 4]      --  4 自動必殺 空キャンセル必殺のラグ
-			--                              5       --  5 相互位置への反応設定
+			--                              5       --  5 反応設定
 			a.rise_limit             = col[ 6] - 1  --  6 この高さより上昇時
 			a.fall_limit             = col[ 7] - 1  --  7 この高さより下降時
 			a.fwd_limit              = col[ 8] - 1  --  8 この間合いより近づいた時
 			a.bak_limit              = col[ 9] - 1  --  9 この間合いより遠のいた時
 			a.main_limit             = col[10] - 1  -- 10 この奥行より近づいた時
 			a.sway_limit             = col[11] - 1  -- 11 この奥行より遠のいた時
-			a.atk_only               = col[12]      -- 12 追加の動作条件 1:OFF 2:相手の攻撃に反応 3:相手の移動中に発動 4:自身の動作中に発動
-			--                             13       -- 13 相手動作への反応設定
-			a.main_lmt_f             = col[14] - 1  -- 14 対メイン発動からのフレーム
-			a.sway_lmt_f             = col[15] - 1  -- 15 スウェー発動からのフレーム
-			--                             16       -- 16 自己動作への反応設定
-			a.jump_lmt_f             = col[17] - 1  -- 17 ジャンプからのフレーム
-			a.dash_lmt_f             = col[18] - 1  -- 18 ダッシュ/飛び退きからのフレーム
-			--                            [19]      -- 19 自動追加動作
-			a.otg_throw              = col[20] == 2 -- 20 ダウン投げ
-			a.otg_attack             = col[21] == 2 -- 21 ダウン攻撃
-			a.combo_throw            = col[22] == 2 -- 22 通常投げの派生技
-			a.rave                   = col[23]      -- 23 デッドリーレイブ
-			a.desire                 = col[24]      -- 24 アンリミテッドデザイア
-			a.drill                  = col[25]      -- 25 ドリル
-			a.kanku                  = col[26]      -- 26 閃里肘皇 1:OFF 2:貫空 3:心砕把
-			a.pairon2                = col[27] == 2 -- 27 超白龍2
-			a.real_counter           = col[28]      -- 28 M.リアルカウンター
-			a.auto_3ecst             = col[29]      -- 29 M.トリプルエクスタシー
-			a.taneuma                = col[30] == 2 -- 30 炎の種馬
-			a.katsu_ca               = col[31]      -- 31 喝CA
-			a.sikkyaku_ca            = col[32]      -- 32 飛燕失脚CA
-			a.hebi_damashi           = col[33]      -- 33 蛇だまし
+			a.main_lmt_f             = col[12] - 1  -- 12 対メイン発動からのフレーム
+			a.sway_lmt_f             = col[13] - 1  -- 13 スウェー発動からのフレーム
+			a.jump_lmt_f             = col[14] - 1  -- 14 ジャンプからのフレーム
+			a.dash_lmt_f             = col[15] - 1  -- 15 ダッシュ/飛び退きからのフレーム
+			a.atk_only               = col[16]      -- 16 追加の動作条件 1:OFF 2:相手の攻撃に反応 3:相手の移動中に発動 4:自身の動作中に発動
+			--                            [17]      -- 17 自動追加動作
+			a.otg_throw              = col[18] == 2 -- 18 ダウン投げ
+			a.otg_attack             = col[19] == 2 -- 19 ダウン攻撃
+			a.combo_throw            = col[20] == 2 -- 20 通常投げの派生技
+			a.rave                   = col[21]      -- 21 デッドリーレイブ
+			a.desire                 = col[22]      -- 22 アンリミテッドデザイア
+			a.drill                  = col[23]      -- 23 ドリル
+			a.kanku                  = col[24]      -- 24 閃里肘皇 1:OFF 2:貫空 3:心砕把
+			a.pairon2                = col[25] == 2 -- 25 超白龍2
+			a.real_counter           = col[26]      -- 26 M.リアルカウンター
+			a.auto_3ecst             = col[27]      -- 27 M.トリプルエクスタシー
+			a.taneuma                = col[28] == 2 -- 28 炎の種馬
+			a.katsu_ca               = col[29]      -- 29 喝CA
+			a.sikkyaku_ca            = col[30]      -- 30 飛燕失脚CA
+			a.hebi_damashi           = col[31]      -- 31 蛇だまし
 			-- 邀撃行動のメニュー設定
 			if cancel ~= true and a.type == 2 and row == 1 then next_menu = menu.enc_menus[i][p.char] end
 			if cancel ~= true and a.auto_sp >= 2 and row == 3 then next_menu = menu.fol_menus[i][p.char] end
@@ -8950,20 +9013,18 @@ rbff2.startplugin  = function()
 				{ title = true, "自動動作設定" },
 				{ "自動必殺技", { "OFF", "ON（Aで選択画面へ）", "ON:空キャンセル（Aで選択画面へ）" } },
 				{ "空キャンセル猶予F", menu.labels.kara_frames, },
-				{ title = true, "相互位置への反応設定" },
+				{ title = true, "反応設定" },
 				{ "この高さより上昇時", jumplimit },
 				{ "この高さより下降時", jumplimit },
 				{ "この間合いより近づいた時", rangelimit },
 				{ "この間合いより遠のいた時", rangelimit },
 				{ "この奥行より近づいた時", swaylimit },
 				{ "この奥行より遠のいた時", swaylimit },
-				{ "追加の動作条件", { "追加条件なし", "相手の攻撃に反応", "相手の移動に反応", "自身の動作で発動" }, },
-				{ title = true, "相手動作への反応設定" },
 				{ "対メイン発動からのフレーム", swaylmt_f },
 				{ "スウェー発動からのフレーム", swaylmt_f },
-				{ title = true, "自己動作への反応設定" },
 				{ "ジャンプからのフレーム", swaylmt_f },
 				{ "ダッシュ/飛び退きからのフレーム", swaylmt_f },
+				{ "追加の動作条件", { "追加条件なし", "相手の攻撃に反応", "相手の移動に反応", "自身の動作で発動" }, },
 				{ title = true, "自動追加動作" },
 				{ "自動ダウン投げ", menu.labels.off_on, },
 				{ "自動ダウン攻撃", menu.labels.off_on, },
@@ -8986,38 +9047,36 @@ rbff2.startplugin  = function()
 				-- [ 2]                            --  2 自動動作設定
 				col[ 3] = a.auto_sp                --  3 自動必殺 1:OFF 2:ON 3:ON:空キャンセル
 				col[ 4] = a.sp_lag                 --  4 自動必殺 空キャンセルのラグ
-				--   5                             --  5 相互位置への反応設定
+				--   5                             --  5 反応設定
 				col[ 6] = a.rise_limit + 1         --  6 この高さより上昇時
 				col[ 7] = a.fall_limit + 1         --  7 この高さより下降時
 				col[ 8] = a.fwd_limit  + 1         --  8 この間合いより近づいた時
 				col[ 9] = a.bak_limit  + 1         --  9 この間合いより遠のいた時
 				col[10] = a.main_limit + 1         -- 10 この奥行より近づいた時
 				col[11] = a.sway_limit + 1         -- 11 この奥行より遠のいた時
-				col[12] = a.atk_only               -- 12 追加の動作条件 1:OFF 2:相手の攻撃に反応 3:相手の移動中に発動 4:自身の動作中に発動
-				--  13                             -- 13 相手動作への反応設定
-				col[14] = a.main_lmt_f + 1         -- 14 対メイン発動からのフレーム
-				col[15] = a.sway_lmt_f + 1         -- 15 スウェー発動からのフレーム
-				--  16                             -- 16 自己動作への反応設定
-				col[17] = a.jump_lmt_f + 1         -- 17 ジャンプからのフレーム
-				col[18] = a.dash_lmt_f + 1         -- 18 ダッシュ/飛び退きからのフレーム
-				-- [19]                            -- 19 自動追加動作
-				col[20] = a.otg_throw and 2 or 1   -- 20 ダウン投げ
-				col[21] = a.otg_attack and 2 or 1  -- 21 ダウン攻撃
-				col[22] = a.combo_throw and 2 or 1 -- 22 通常投げの派生技
-				col[23] = a.rave                   -- 23 デッドリーレイブ
-				col[24] = a.desire                 -- 24 アンリミテッドデザイア
-				col[25] = a.drill                  -- 25 ドリル
-				col[26] = a.kanku                  -- 26 閃里肘皇 1:OFF 2:貫空 3:心砕把
-				col[27] = a.pairon2 and 2 or 1     -- 27 超白龍2
-				col[28] = a.real_counter           -- 28 M.リアルカウンター
-				col[29] = a.auto_3ecst             -- 29 M.トリプルエクスタシー
-				col[30] = a.taneuma and 2 or 1     -- 30 炎の種馬
-				col[31] = a.katsu_ca               -- 31 喝CA
-				col[32] = a.sikkyaku_ca            -- 32 飛燕失脚CA
-				col[33] = a.hebi_damashi           -- 33 最速蛇だまし
+				col[12] = a.main_lmt_f + 1         -- 12 対メイン発動からのフレーム
+				col[13] = a.sway_lmt_f + 1         -- 13 スウェー発動からのフレーム
+				col[14] = a.jump_lmt_f + 1         -- 14 ジャンプからのフレーム
+				col[15] = a.dash_lmt_f + 1         -- 15 ダッシュ/飛び退きからのフレーム
+				col[16] = a.atk_only               -- 16 追加の動作条件 1:OFF 2:相手の攻撃に反応 3:相手の移動中に発動 4:自身の動作中に発動
+				-- [17]                            -- 17 自動追加動作
+				col[18] = a.otg_throw and 2 or 1   -- 18 ダウン投げ
+				col[19] = a.otg_attack and 2 or 1  -- 19 ダウン攻撃
+				col[20] = a.combo_throw and 2 or 1 -- 20 通常投げの派生技
+				col[21] = a.rave                   -- 21 デッドリーレイブ
+				col[22] = a.desire                 -- 22 アンリミテッドデザイア
+				col[23] = a.drill                  -- 23 ドリル
+				col[24] = a.kanku                  -- 24 閃里肘皇 1:OFF 2:貫空 3:心砕把
+				col[25] = a.pairon2 and 2 or 1     -- 25 超白龍2
+				col[26] = a.real_counter           -- 26 M.リアルカウンター
+				col[27] = a.auto_3ecst             -- 27 M.トリプルエクスタシー
+				col[28] = a.taneuma and 2 or 1     -- 28 炎の種馬
+				col[29] = a.katsu_ca               -- 29 喝CA
+				col[30] = a.sikkyaku_ca            -- 30 飛燕失脚CA
+				col[31] = a.hebi_damashi           -- 31 最速蛇だまし
 			end,
-			ut.new_filled_table(33, on_a),
-			ut.new_filled_table(33, on_b))
+			ut.new_filled_table(31, on_a),
+			ut.new_filled_table(31, on_b))
 	end
 
 	menu.training  = menu.create(
