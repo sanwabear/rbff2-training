@@ -6681,9 +6681,9 @@ rbff2.startplugin  = function()
 		end
 		return ret_and_log()
 	end
-	tra_sub.controll_dummy_encounter = function(p)
-		local enc, log
-		-- 自動避け攻撃対空
+	-- 要撃行動の開始判定
+	tra_sub.can_encounter            = function(p)
+		local executable, log = false, nil
 		if p.enc_enabled and not p.op.in_hitstun and not p.hook then
 			local aaa, op = p.encounter, p.op
 			local other_cond = false
@@ -6809,16 +6809,14 @@ rbff2.startplugin  = function()
 					dfa = true
 				end
 			end
-			local next_enc = get_next_enc(p) -- 邀撃動作セット
 			if xa and ya and za and zfa and jfa and dfa then
 				if label then ut.printf("%s Y:%s X:%s Z:%s Zf:%s Jf:%s Df:%s ", label, ylabel, xlabel, zlabel, zflabel, jflabel, dflabel) end
-				if (aaa.type == 2) and next_enc ~= nil then
-					--p.input_any(next_enc, "input_enc")
-					enc, log = next_enc, "input_enc"
+				if (aaa.type == 2) then
+					executable, log = true, "input_enc"
 				end
 			elseif label then ut.printf("%s Y:%3d X:%3d Z:%3d ^f:%3d vf:%3d J:%3d D:%3d", label, abs_elev, abs_space, abs_depth, on_to_sway, on_to_main, on_jump, on_dash) end
 		end
-		return enc, log
+		return executable, log
 	end
 	tra_sub.controll_dummy_auto_otg = function(p)
 		local otg
@@ -7098,7 +7096,8 @@ rbff2.startplugin  = function()
 				return
 			end
 			-- 邀撃動作
-			local enc_hook, enc_log = tra_sub.controll_dummy_encounter(p)
+			local can_enc, enc_log = tra_sub.can_encounter(p)
+			local enc_hook = can_enc and get_next_enc(p) or nil -- 邀撃動作セット
 			if enc_hook then
 				p.dummy_enc = enc_hook
 				p.input_any(enc_hook, enc_log or "dummy_enc")
