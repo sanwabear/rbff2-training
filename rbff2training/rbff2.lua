@@ -6023,7 +6023,8 @@ rbff2.startplugin  = function()
 			c.hold          = nil
 			c.hits          = 0
 			if c.input then
-				c.state = "walk"
+				--c.state = "walk"
+				c.state    = "enc"
 				c.hook_cmd = (c.input.cmd ~= nil) and c.input or nil
 				c.hook_sp  = (c.input.cmd == nil) and c.input or nil
 			else
@@ -6181,6 +6182,14 @@ rbff2.startplugin  = function()
 			-- すぐwalk or finishへ
 		end
 
+		if c.state == "enc" then
+			if tra_sub.can_encounter(p) then
+				c.state = "exec"
+				do_log("exit enc")
+				-- すぐexecへ
+			end
+		end
+
 		if c.state == "walk" then
 			local space = math.abs(p.pos - p.op.pos)
 			local key, x1, x2 = nil, 0, 160
@@ -6234,7 +6243,9 @@ rbff2.startplugin  = function()
 					in_range = 1
 				end
 			end
-			if in_range > 0 then
+			if in_range == nil then
+				-- なにもしない
+			elseif in_range > 0 then
 				return db.common_rvs.walk -- x1より手前にいるので前進
 			elseif in_range < 0 then
 				return db.common_rvs.back -- x2より奥にいるので後退
@@ -6381,13 +6392,6 @@ rbff2.startplugin  = function()
 			end
 		elseif p.dummy_act == menu.dummy_acts.sway and p.in_sway_line then
 			cmd, label = db.cmd_types._8, "sway" -- スウェー待機
-		end
-		if p.dummy_act == menu.dummy_acts.combo then
-			if p.combo_log > 1 then ut.printf("%s combo P%s entry", global.frame_number, p.num) end
-			hook, label = tra_sub.controll_dummy_combo(p), "combo" -- プリセットコンボ
-			if p.combo_log > 1 then ut.printf("%s combo P%s entry %s %s", global.frame_number, p.num, hook and "hook" or "nil", label) end
-		else
-			if p.combo_log > 2 then ut.printf("%s combo P%s skip", global.frame_number, p.num) end
 		end
 		return hook, cmd, label
 	end
@@ -6811,9 +6815,7 @@ rbff2.startplugin  = function()
 			end
 			if xa and ya and za and zfa and jfa and dfa then
 				if label then ut.printf("%s Y:%s X:%s Z:%s Zf:%s Jf:%s Df:%s ", label, ylabel, xlabel, zlabel, zflabel, jflabel, dflabel) end
-				if (aaa.type == 2) then
-					executable, log = true, "input_enc"
-				end
+				executable, log = true, "input_enc"
 			elseif label then ut.printf("%s Y:%3d X:%3d Z:%3d ^f:%3d vf:%3d J:%3d D:%3d", label, abs_elev, abs_space, abs_depth, on_to_sway, on_to_main, on_jump, on_dash) end
 		end
 		return executable, log
@@ -7096,8 +7098,16 @@ rbff2.startplugin  = function()
 				return
 			end
 			-- 邀撃動作
-			local can_enc, enc_log = tra_sub.can_encounter(p)
-			local enc_hook = can_enc and get_next_enc(p) or nil -- 邀撃動作セット
+			local can_enc, enc_log = false, nil
+			local enc_hook
+			if p.encounter.type == 2 then
+				can_enc, enc_log = tra_sub.can_encounter(p)
+				enc_hook = can_enc and get_next_enc(p) or nil -- 邀撃動作セット
+			elseif p.encounter.type == 3 then
+				if p.combo_log > 1 then ut.printf("%s combo P%s entry", global.frame_number, p.num) end
+				enc_hook, enc_log = tra_sub.controll_dummy_combo(p), "combo" -- プリセットコンボ
+				if p.combo_log > 1 then ut.printf("%s combo P%s entry %s %s", global.frame_number, p.num, enc_hook and "hook" or "nil", label) end
+			end
 			if enc_hook then
 				p.dummy_enc = enc_hook
 				p.input_any(enc_hook, enc_log or "dummy_enc")
@@ -8375,9 +8385,9 @@ rbff2.startplugin  = function()
 		p2.dummy_wakeup    = col[15]      -- 15 2P やられ時行動
 		g.dummy_rvs_cnt    = col[16]      -- 16 ガードリバーサル設定
 		g.dummy_rvs_type   = col[17]      -- 17 リバーサル対象
-		--                       18          18 避け攻撃対空設定
-		p1.enc_enabled     = col[19] == 2 -- 19 1P 避け攻撃対空
-		p2.enc_enabled     = col[20] == 2 -- 20 2P 避け攻撃対空
+		--                       18          18 邀撃動作設定
+		p1.enc_enabled     = col[19] == 2 -- 19 1P 邀撃動作
+		p2.enc_enabled     = col[20] == 2 -- 20 2P 邀撃動作
 		--                       21          21 その他設定
 		p1.fwd_prov        = col[22] == 2 -- 22 1P 挑発で前進
 		p2.fwd_prov        = col[23] == 2 -- 23 2P 挑発で前進
@@ -8994,7 +9004,15 @@ rbff2.startplugin  = function()
 			a.sikkyaku_ca            = col[30]      -- 30 飛燕失脚CA
 			a.hebi_damashi           = col[31]      -- 31 蛇だまし
 			-- 邀撃行動のメニュー設定
-			if cancel ~= true and a.type == 2 and row == 1 then next_menu = menu.enc_menus[i][p.char] end
+			if cancel ~= true and a.type == 2 and row == 1 then
+				next_menu = menu.enc_menus[i][p.char] -- 邀撃動作メニュー
+			elseif cancel ~= true and a.type == 3 and row == 1 then
+				next_menu = menu.combo_menus[i][p.char] -- プリセットコンボメニュー
+				local col1 = next_menu.pos.col
+				col1[#col1 - 3] = p.combo and p.combo.rnd_count or 1
+				col1[#col1 - 1] = p.combo_log
+				col1[#col1 - 0] = p.hook_log
+			end
 			if cancel ~= true and a.auto_sp >= 2 and row == 3 then next_menu = menu.fol_menus[i][p.char] end
 			menu.set_current(next_menu)
 		end
@@ -9008,7 +9026,7 @@ rbff2.startplugin  = function()
 			string.format("邀撃(ようげき)行動設定(%s)", i),
 			"トレーニングダミーが邀撃(ようげき)行動をする条件を設定します。\n自動必殺技をONにした場合は自動ガードができなくなります。",
 			{
-				{ "邀撃行動", { "OFF", "ON:（Aで選択画面へ）" } },
+				{ "邀撃(ようげき)行動", { "OFF", "ON:単一動作（Aで選択画面へ）", "ON:プリセットコンボ（Aで選択画面へ）" } },
 				{ title = true, "自動動作設定" },
 				{ "自動必殺技", { "OFF", "ON（Aで選択画面へ）", "ON:空キャンセル（Aで選択画面へ）" } },
 				{ "空キャンセル猶予F", menu.labels.kara_frames, },
@@ -9083,8 +9101,8 @@ rbff2.startplugin  = function()
 		"トレーニングダミーの基本動作を設定します。",
 		{
 			{ "ダミーモード", { "プレイヤー vs プレイヤー", "プレイヤー vs CPU", "CPU vs プレイヤー", "1P&2P入れ替え", "レコード", "リプレイ" }, },
-			{ "1P アクション", { "立ち", "しゃがみ", "垂直ジャンプ", "前方ジャンプ", "後方ジャンプ", "垂直小ジャンプ", "前方小ジャンプ", "後方小ジャンプ", "ダッシュジャンプ", "ダッシュ小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き", "後退", "しゃがみ後退（ガード）", "ダッシュ", "飛び退き", "プリセットコンボ（Aで選択画面へ）" }, },
-			{ "2P アクション", { "立ち", "しゃがみ", "垂直ジャンプ", "前方ジャンプ", "後方ジャンプ", "垂直小ジャンプ", "前方小ジャンプ", "後方小ジャンプ", "ダッシュジャンプ", "ダッシュ小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き", "後退", "しゃがみ後退（ガード）", "ダッシュ", "飛び退き", "プリセットコンボ（Aで選択画面へ）" }, },
+			{ "1P アクション", { "立ち", "しゃがみ", "垂直ジャンプ", "前方ジャンプ", "後方ジャンプ", "垂直小ジャンプ", "前方小ジャンプ", "後方小ジャンプ", "ダッシュジャンプ", "ダッシュ小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き", "後退", "しゃがみ後退（ガード）", "ダッシュ", "飛び退き" }, },
+			{ "2P アクション", { "立ち", "しゃがみ", "垂直ジャンプ", "前方ジャンプ", "後方ジャンプ", "垂直小ジャンプ", "前方小ジャンプ", "後方小ジャンプ", "ダッシュジャンプ", "ダッシュ小ジャンプ", "スウェー待機", "歩き", "しゃがみ歩き", "後退", "しゃがみ後退（ガード）", "ダッシュ", "飛び退き" }, },
 			{ "くらい後アクション停止", menu.labels.no_action, },
 			{ title = true, "ガード・ブレイクショット設定" },
 			{ "1P ガード", { "なし", "オート", "1ヒットガード", "1ガード", "上段", "下段", "アクション", "ランダム", "強制" }, },
