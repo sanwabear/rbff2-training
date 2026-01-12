@@ -322,7 +322,6 @@ rbff2.startplugin  = function()
 			back_crounch    = 15, -- しゃがみ後退（ガード）
 			dash            = 16, -- ダッシュ
 			flyback         = 17, -- 飛び退き
-			combo           = 18, -- プリセットコンボ（Aで選択画面へ）
 		},
 	}
 	menu.stack = {}
@@ -1864,7 +1863,6 @@ rbff2.startplugin  = function()
 										-- しゃがみ後退（ガード）
 										-- ダッシュ
 										-- 飛び退き
-										-- プリセットコンボ（Aで選択画面へ）
 			dummy_gd        = dummy_gd_type.none, -- なし, オート1, オート2, 1ヒットガード, 1ガード, 上段, 下段, アクション, ランダム, 強制
 			bs              = false,     -- ブレイクショット
 			dummy_wakeup    = wakeup_type.none, -- なし, リバーサル, テクニカルライズ, グランドスウェー, 起き上がり攻撃
@@ -2879,6 +2877,9 @@ rbff2.startplugin  = function()
 				p.max_combo_stun_timer = 0
 				p.max_combo_pow = 0
 				p.last_combo_attributes = {}
+				if p.new_preset_combo then
+					p.new_preset_combo(true, "init")
+				end
 				p.clear_frame_data()
 			end
 			if not p.is_fireball then p.update_char() end
@@ -5467,8 +5468,6 @@ rbff2.startplugin  = function()
 					local box = {}
 					box.left, box.right = get_normal_throw_range(p)
 					box.left, box.right = math.abs(box.left), math.abs(box.right)
-					--print(p.num, "pb", box.left, box.right)
-					p.combo.ranges["pb"] = box -- プリセットコンボ用の間合い保存
 					for label, close_far in pairs(p.char_data.close_far[p.sway_status]) do
 						local org_x1, org_x2 = close_far.x1, close_far.x2
 						local x1, x2 = close_far.x1 == 0 and p.x or p.calc_range_x(close_far.x1), p.calc_range_x(close_far.x2)
@@ -5483,7 +5482,6 @@ rbff2.startplugin  = function()
 							right = org_x2,
 						}
 						--print(p.num, label, x1, x2)
-						p.combo.ranges[label] = range -- プリセットコンボ用の間合い保存
 						table.insert(ranges, range)
 					end
 				end
@@ -5872,11 +5870,9 @@ rbff2.startplugin  = function()
 		end
 		-- 1ラウンド分抽出（各groupから1つずつ）
 		local list = p.combo.picker and rnd_picker.random_pull(p.combo.picker) or {}
-		local range_elm = table.remove(list, 1)
-		p.combo.range = range_elm and range_elm.range or ""
 		p.combo.list = list
 		if p.combo_log > 1 then ut.print_table(list, to_sjis) end
-		return p.combo.range, p.combo.list
+		return p.combo.list
 	end
 
 	-- プリセットコンボのロード
@@ -5920,7 +5916,7 @@ rbff2.startplugin  = function()
 		local log_with_ret = function(ret, point, entry)
 			if p.combo_log > 1 then
 				do_log(point, entry)
-				ut.printf("         [FSM][%s] --> [%s]",
+				ut.printf("     ret [FSM][%s] --> [%s]",
 					p.combo.count,
 					(ret == nil) and "nil" or (ret.cmd == nil) and "sp" or "cmd"
 				)
@@ -5930,13 +5926,13 @@ rbff2.startplugin  = function()
 
 		if p.normal_state ~= true or p.flag_d0 ~= 0 or p.in_hurt == true or p.in_block == true then
 			if p.combo == nil then
-				c = p.new_preset_combo(true, "combo nil skip")
+				p.new_preset_combo(true, "combo nil skip")
 			elseif p.combo.count == nil then
-				c = p.new_preset_combo(true, "count nil skip")
+				p.new_preset_combo(true, "count nil skip")
 			elseif p.on_update_7e_02 == global.frame_number then
-				c = p.new_preset_combo(true, "count nil skip")
+				p.new_preset_combo(true, "count nil skip")
 			--elseif  p.combo.count > 1 then
-				--c = p.new_preset_combo(true, "count >1 skip")
+				--p.new_preset_combo(true, "count >1 skip")
 			end
 			c = p.combo
 			return log_with_ret(nil, string.format("skip %s %s %s", p.normal_state, p.flag_d0, p.in_hurt))
@@ -6006,7 +6002,7 @@ rbff2.startplugin  = function()
 		local first_input = function()
 			c.count         = 1
 			c.old           = nil
-			c.range, c.list = tra_sub.reload_combo(p)
+			c.list = tra_sub.reload_combo(p)
 			local max       = #c.list
 			c.last          = c.count == #c.list
 			if max > 0 and c.list[1] then
@@ -6023,7 +6019,6 @@ rbff2.startplugin  = function()
 			c.hold          = nil
 			c.hits          = 0
 			if c.input then
-				--c.state = "walk"
 				c.state    = "enc"
 				c.hook_cmd = (c.input.cmd ~= nil) and c.input or nil
 				c.hook_sp  = (c.input.cmd == nil) and c.input or nil
@@ -6186,72 +6181,6 @@ rbff2.startplugin  = function()
 			if tra_sub.can_encounter(p) then
 				c.state = "exec"
 				do_log("exit enc")
-				-- すぐexecへ
-			end
-		end
-
-		if c.state == "walk" then
-			local space = math.abs(p.pos - p.op.pos)
-			local key, x1, x2 = nil, 0, 160
-			key = (c.range == "pb" or c.range == "mid") and "pb" or c.input.range_key or "A"
-			if (c.range ~= nil) and type(c.range) == "number" then
-				-- 数値指定
-				x1, x2 = c.range, c.range
-			else
-				local range = c.ranges[key] or c.ranges["A"]
-				x1, x2 = math.min(range.left, range.right), math.max(range.left, range.right)
-			end
-			local in_range = 0
-			if c.range == "far" then
-				x1, x2 = x2, x2 + 5
-				--print(key, x1, x2, space)
-				if space >= x1 and space <= x2 then
-					in_range = 0
-				elseif space < x1 then
-					in_range = -1
-				else
-					in_range = 1
-				end
-			elseif c.range == "mid" then
-				x1, x2 = x1, x2 + 80
-				--print(key, x1, x2, space)
-				if space >= x1 and space <= x2 then
-					in_range = 0
-				elseif space < x1 then
-					in_range = -1
-				else
-					in_range = 1
-				end
-			elseif c.range == "pb" then
-				x1, x2 = x1, x2
-				--print(key, x1, x2, space)
-				if space >= x1 and space <= x2 then
-					in_range = 0
-				elseif space < x1 then
-					in_range = -1
-				else
-					in_range = 1
-				end
-			else
-				x1, x2 = x2 - 5, x2
-				--print(key, x1, x2, space)
-				if space >= x1 and space <= x2 then
-					in_range = 0
-				elseif space < x1 then
-					in_range = -1
-				else
-					in_range = 1
-				end
-			end
-			if in_range == nil then
-				-- なにもしない
-			elseif in_range > 0 then
-				return db.common_rvs.walk -- x1より手前にいるので前進
-			elseif in_range < 0 then
-				return db.common_rvs.back -- x2より奥にいるので後退
-			else
-				c.state = "exec"
-				do_log("exit walk")
 				-- すぐexecへ
 			end
 		end
@@ -7106,7 +7035,7 @@ rbff2.startplugin  = function()
 			elseif p.encounter.type == 3 then
 				if p.combo_log > 1 then ut.printf("%s combo P%s entry", global.frame_number, p.num) end
 				enc_hook, enc_log = tra_sub.controll_dummy_combo(p), "combo" -- プリセットコンボ
-				if p.combo_log > 1 then ut.printf("%s combo P%s entry %s %s", global.frame_number, p.num, enc_hook and "hook" or "nil", label) end
+				if p.combo_log > 1 then ut.printf("%s combo P%s entry %s %s", global.frame_number, p.num, enc_hook and "hook" or "nil", enc_log) end
 			end
 			if enc_hook then
 				p.dummy_enc = enc_hook
@@ -8405,18 +8334,6 @@ rbff2.startplugin  = function()
 				elseif g.dummy_mode == menu.dummy_modes.replay then
 					next_menu = "replay" -- リプレイ
 				end
-			elseif row == 2 and p1.dummy_act == menu.dummy_acts.combo then
-				next_menu = menu.combo_menus[1][p1.char] -- 1P プリセットコンボ
-				local col1 = next_menu.pos.col
-				col1[#col1 - 3] = p1.combo and p1.combo.rnd_count or 1
-				col1[#col1 - 1] = p1.combo_log
-				col1[#col1 - 0] = p1.hook_log
-			elseif row == 3 and p2.dummy_act == menu.dummy_acts.combo then
-				next_menu = menu.combo_menus[2][p2.char] -- 2P プリセットコンボ
-				local col2 = next_menu.pos.col
-				col2[#col2 - 3] = p2.combo and p2.combo.rnd_count or 1
-				col2[#col2 - 1] = p2.combo_log
-				col2[#col2 - 0] = p2.hook_log
 			elseif p1.enc_enabled and row == 19 then
 				next_menu = "encounter1" -- 1P 邀撃(ようげき)行動
 			elseif p2.enc_enabled and row == 20 then

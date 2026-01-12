@@ -1781,15 +1781,15 @@ local rvs_bs_list = {
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "トリプルゲイザー", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント バーンナックル", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント パワーゲイザー", },
-		combo("pos110 B B", "BBけん制"),
-		combo("pos120 0x1E 6C", "中段"),
-		combo("pos120 0x1E(8) B B", "中段距離からBBけん制"),
-		combo("close 3A C C [0x04 0x05 0x46 0x47]", "_3_A固め"),
-		combo("close A A C [0x04 0x05 0x46 0x47]", "_Ax2_Cフォロー"),
-		combo("close A C [0x04 0x05 0x46 0x47]", "_A_Cフォロー"),
-		combo("close 2B [B 2B] 0x05", "_2_Bフォロー"),
-		combo("close 2A 2A 2C [0x04 0x05 0x46 0x47]", "_2_Ax2固め"),
-		combo("close 2A 2C [0x04 0x05 0x46 0x47]", "_2_A固め"),
+		combo("B B", "BBけん制"),
+		combo("0x1E 6C", "中段"),
+		combo("0x1E(8) B B", "中段距離からBBけん制"),
+		combo("3A C C [0x04 0x05 0x46 0x47]", "_3_A固め"),
+		combo("A A C [0x04 0x05 0x46 0x47]", "_Ax2_Cフォロー"),
+		combo("A C [0x04 0x05 0x46 0x47]", "_A_Cフォロー"),
+		combo("2B [B 2B] 0x05", "_2_Bフォロー"),
+		combo("2A 2A 2C [0x04 0x05 0x46 0x47]", "_2_Ax2固め"),
+		combo("2A 2C [0x04 0x05 0x46 0x47]", "_2_A固め"),
 	},
 	-- アンディ・ボガード
 	{
@@ -1808,11 +1808,11 @@ local rvs_bs_list = {
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 残影拳", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 飛翔拳", },
 		{ id = 0x48, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 超裂破弾", },
-		combo("far B B [2C 0x47]", "_B_Bけん制"),
-		combo("far AB [0x03 0x01 0x02]", "避け攻撃けん制"),
-		combo("far 2C [0x03 0x47]", "_2_Cけん制"),
-		combo("far A C [0x03 0x47]", "_A_Cフォロー"),
-		combo("close 3A C C 0x47", "_3_A固め"),
+		combo("B B [2C 0x47]", "_B_Bけん制"),
+		combo("AB [0x03 0x01 0x02]", "避け攻撃けん制"),
+		combo("2C [0x03 0x47]", "_2_Cけん制"),
+		combo("A C [0x03 0x47]", "_A_Cフォロー"),
+		combo("3A C C 0x47", "_3_A固め"),
 	},
 	-- 東丈
 	{
@@ -1835,14 +1835,14 @@ local rvs_bs_list = {
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント ハリケーンアッパー", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント スラッシュキック", },
 		{ cmd = cmd_types._2C, hook_type = hook_cmd_types.add_throw, name = "夏のおもひで(_2_+_C)", },
-		combo("close A C [0x46, 0x05]", "_A_Cフォロー"),
-		combo("close B C [0x46, 0x05]", "近_B_Cフォロー"),
-		combo("far B C 0x46", "遠_B_Cフォロー"),
-		combo("far 4B [0x46 0x06]", "_4_Bけん制"),
-		combo("close [2A 2B] 2B [8C _C]", "中段CA"),
-		combo("close 2B 0x05", "下段爆裂拳"),
+		combo("A C [0x46, 0x05]", "_A_Cフォロー"),
+		combo("B C [0x46, 0x05]", "近_B_Cフォロー"),
+		combo("B C 0x46", "遠_B_Cフォロー"),
+		combo("4B [0x46 0x06]", "_4_Bけん制"),
+		combo("[2A 2B] 2B [8C _C]", "中段CA"),
+		combo("2B 0x05", "下段爆裂拳"),
 		combo("110 3B", "スライディング"),
-		combo("pb 3C", "歩き膝地獄"),
+		combo("3C", "歩き膝地獄"),
 	},
 	-- 不知火舞
 	{
@@ -1858,10 +1858,10 @@ local rvs_bs_list = {
 		{ id = 0x23, f = 0x78, a = 0x00, hook_type = hook_cmd_types.wakeup, name = "跳ね蹴り", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 花蝶扇", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 花嵐", },
-		combo("pb 2A 2C [0x46 0x01]", "近_2_A_2_C固め"),
-		combo("mid 2A 2C [0x46 0x01]", "遠_2_A_2_C固め"),
-		combo("pb 2A B 3C [0x46 0x01]", "近_2_A浮ルート固め"),
-		combo("mid 2A 2C [0x46 0x01]", "遠_2_A浮ルート固め"),
+		combo("2A 2C [0x46 0x01]", "近_2_A_2_C固め"),
+		combo("2A 2C [0x46 0x01]", "遠_2_A_2_C固め"),
+		combo("2A B 3C [0x46 0x01]", "近_2_A浮ルート固め"),
+		combo("2A 2C [0x46 0x01]", "遠_2_A浮ルート固め"),
 	},
 	-- ギース・ハワード
 	{
@@ -1885,13 +1885,13 @@ local rvs_bs_list = {
 		{ cmd = cmd_types._5C, hook_type = hook_cmd_types.none, name = "飛燕失脚CA(_N_+_C)", }, -- 18
 		-- 自動CAのためにフックタイプを投げにしない。相手のやられ状態をチェックしなくてもいいようにしておく。
 		{ id = 0x07, f = 0x06, a = 0xFD, hook_type = hook_cmd_types.none, name = "真空投げ", }, -- 19
-		combo("pos130 6A(40) C", "飛燕失脚CA"),
-		combo("close 2B 2B 2C [0x46 0x047 0x01]", "_2_B固め"),
-		combo("close 2A C(2hit) [0x46 0x047 0x01]", "_2_A_C固め"),
-		combo("far 2A 2C 0x01", "_2_A_2_C烈風拳"),
-		combo("pos130 0x1E(10) 3B [0x46 0x01 0x10]", "ダッシュ_B連携"),
-		combo("pos130 4B 2D [0x46 0x47 0x01]", "雷光固め"),
-		combo("pos130 4B(12kara) [0x07 0x01 0x03 0x04 0x05]", "雷光(当身)投げ"),
+		combo("6A(40) C", "飛燕失脚CA"),
+		combo("2B 2B 2C [0x46 0x047 0x01]", "_2_B固め"),
+		combo("2A C(2hit) [0x46 0x047 0x01]", "_2_A_C固め"),
+		combo("2A 2C 0x01", "_2_A_2_C烈風拳"),
+		combo("0x1E(10) 3B [0x46 0x01 0x10]", "ダッシュ_B連携"),
+		combo("4B 2D [0x46 0x47 0x01]", "雷光固め"),
+		combo("4B(12kara) [0x07 0x01 0x03 0x04 0x05]", "雷光(当身)投げ"),
 	},
 	-- 望月双角
 	{
@@ -1911,11 +1911,11 @@ local rvs_bs_list = {
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント いかづち", },
 		{ id = 0x50, f = 0x06, a = 0x00, hook_type = hook_cmd_types.add_throw, name = "地獄門", },
 		{ cmd = cmd_types._C, hook_type = hook_cmd_types.none, name = "喝CA(_C)", }, -- 16
-		combo("close 2A 2C 0x05(lag30) [6C 3C]", "_2_A_C邪棍舞"),
-		combo("close A C 0x05(lag30) [6C 3C]", "_A_C邪棍舞"),
-		combo("far 2A 2C 0x05(lag30) [6C 3C D]", "_A_C邪棍舞"),
-		combo("far AB 0x05(lag30) [6C 3C]", "避け攻撃 邪棍舞"),
-		combo("far B C 0x05(lag30) [6C 3C]", "_B_C邪棍舞"),
+		combo("2A 2C 0x05(lag30) [6C 3C]", "_2_A_C邪棍舞"),
+		combo("A C 0x05(lag30) [6C 3C]", "_A_C邪棍舞"),
+		combo("2A 2C 0x05(lag30) [6C 3C D]", "_A_C邪棍舞"),
+		combo("AB 0x05(lag30) [6C 3C]", "避け攻撃 邪棍舞"),
+		combo("B C 0x05(lag30) [6C 3C]", "_B_C邪棍舞"),
 	},
 	-- ボブ・ウィルソン
 	{
@@ -1935,13 +1935,13 @@ local rvs_bs_list = {
 		{ id = 0x21, f = 0x06, a = 0x00, hook_type = hook_cmd_types.otg_stomp, name = "リンクスファング", },
 		{ id = 0x23, f = 0x78, a = 0x00, hook_type = hook_cmd_types.wakeup, name = "ボブサマー", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント ダンシングバイソン", },
-		combo("close 2A 2A B 3C 0x46", "_2A CA出し切り"),
-		combo("mid 2B B 3C 0x46", "_2B CA出し切り"),
-		combo("pos120 0x1E 5(hold7) 4 A B C", "滑り_A_B_C"),
-		combo("pos120 0x1E 5(hold7) 3B 0x01 6(hold15)", "滑り_Bローリング"),
-		combo("pb C C 8C", "_C_C択中段"),
-		combo("pb C C(lag22) me [8C 2B(hold2)] B C", "_C_C択中下段"),
-		combo("pb C C me 2B B C", "_C_C択下段"),
+		combo("2A 2A B 3C 0x46", "_2A CA出し切り"),
+		combo("2B B 3C 0x46", "_2B CA出し切り"),
+		combo("0x1E 5(hold7) 4 A B C", "滑り_A_B_C"),
+		combo("0x1E 5(hold7) 3B 0x01 6(hold15)", "滑り_Bローリング"),
+		combo("C C 8C", "_C_C択中段"),
+		combo("C C(lag22) me [8C 2B(hold2)] B C", "_C_C択中下段"),
+		combo("C C me 2B B C", "_C_C択下段"),
 	},
 	-- ホンフゥ
 	{
@@ -1961,10 +1961,10 @@ local rvs_bs_list = {
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.breakshot, name = "よかトンハンマー", },
 		{ id = 0x21, f = 0x06, a = 0x00, hook_type = hook_cmd_types.otg_stomp, name = "トドメヌンチャク", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 制空烈火棍", },
-		combo("pb A C 0x46", "近_A_C固め"),
-		combo("mid A C 0x46", "_A_C固め"),
-		combo("far B B C", "_B_B_C"),
-		combo("pb 3C 0x46", "掴み投げフォロー"),
+		combo("A C 0x46", "近_A_C固め"),
+		combo("A C 0x46", "_A_C固め"),
+		combo("B B C", "_B_B_C"),
+		combo("3C 0x46", "掴み投げフォロー"),
 	},
 	-- ブルー・マリー
 	{
@@ -1992,12 +1992,12 @@ local rvs_bs_list = {
 		{ cmd = cmd_types._B, hook_type = hook_cmd_types.none, name = "フェイスロック(_B)", }, -- 22
 		{ cmd = cmd_types._C, hook_type = hook_cmd_types.none, name = "投げっぱなしジャーマン(_C)", }, -- 23
 		{ cmd = cmd_types._4B, hook_type = hook_cmd_types.none, name = "リバースキック(ヤングダイブ中_4_+_B)", }, -- 24
-		combo("close A C [0x09 0x04]", "_A_C"),
+		combo("A C [0x09 0x04]", "_A_C"),
 		combo("9(10hold) 0x01", "M.スパイダー"),
-		combo("close B B 6C", "_B_B_6C"),
-		combo("close B B 3C [0x09 0x04] [0x01 4B]", "_B_B_3Cフォロー"),
-		combo("far 2B 2B 2C", "_B_B_2C"),
-		combo("pb 4B(2hit) 3C [0x09 0x04] [0x01 4B]", "ローリング"),
+		combo("B B 6C", "_B_B_6C"),
+		combo("B B 3C [0x09 0x04] [0x01 4B]", "_B_B_3Cフォロー"),
+		combo("2B 2B 2C", "_B_B_2C"),
+		combo("4B(2hit) 3C [0x09 0x04] [0x01 4B]", "ローリング"),
 	},
 	-- フランコ・バッシュ
 	{
@@ -2014,13 +2014,13 @@ local rvs_bs_list = {
 		{ id = 0x23, f = 0x78, a = 0x00, hook_type = hook_cmd_types.wakeup, name = "スマッシュ", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント ハルマゲドンバスター", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント ガッツダンク", },
-		combo("pb [A 2B] [A 2B] [C 2C]", "_A_A固め 短"),
-		combo("pb [A 2B] [A 2B] 0x47(lag12) me 6B(hold2) [0x47 0x02 0x03 0x01 2C]", "_A_A固め 中"),
-		combo("pos45 0x1E 5(hold1) 4 [A B] [A 2B] 0x47 me [2A 2B] C [0x47 0x02 A] [0x47 0x02]", "_A_A固め 長"),
-		combo("pb 6B [0x47 0x02 0x03 0x01 2C]", "_6_B固め"),
-		combo("mid A C 0x46", "_A_Cフォロー"),
-		combo("mid A C [2C B C 0x01]", "_A_Cフォロー"),
-		combo("far BC(7kara) 0x03", "バロム W.ブロー"),
+		combo("[A 2B] [A 2B] [C 2C]", "_A_A固め 短"),
+		combo("[A 2B] [A 2B] 0x47(lag12) me 6B(hold2) [0x47 0x02 0x03 0x01 2C]", "_A_A固め 中"),
+		combo("0x1E 5(hold1) 4 [A B] [A 2B] 0x47 me [2A 2B] C [0x47 0x02 A] [0x47 0x02]", "_A_A固め 長"),
+		combo("6B [0x47 0x02 0x03 0x01 2C]", "_6_B固め"),
+		combo("A C 0x46", "_A_Cフォロー"),
+		combo("A C [2C B C 0x01]", "_A_Cフォロー"),
+		combo("BC(7kara) 0x03", "バロム W.ブロー"),
 	},
 	-- 山崎竜二
 	{
@@ -2048,15 +2048,15 @@ local rvs_bs_list = {
 		{ cmd = cmd_types._BD, hook_type = hook_cmd_types.none, name = "蛇使だまし・中段(_Bタメ押し_D)", }, -- 22
 		{ cmd = cmd_types._CD, hook_type = hook_cmd_types.none, name = "蛇使だまし・下段(_Cタメ押し_D)", }, -- 23
 		-- 3Aをすぐに蛇使いでキャンセルできるようにkaraをつけて空キャンする速度での次動作を発生させる
-		combo("pb B C 0x02 AD", "_B _C 蛇キャン"),
-		combo("pb AB C 0x02 AD", "避け攻撃 _C 蛇キャン"),
-		combo("pb 3A(kara) 0x02 AD", "極近_3_A 蛇キャン"),
-		combo("pos50 3A(kara) 0x02 AD", "中近_3_A 蛇キャン"),
-		combo("close 3A(kara) 0x02 AD", "近_3_A 蛇キャン"),
-		combo("pb 3A C 0x02 AD", "_3_A _C 蛇キャン"),
-		combo("far [A B] 2C 0x02 AD", "下段CA 蛇キャン"),
-		combo("pb 6A(30) C 0x02 AD", "近 中段CA 蛇キャン"),
-		combo("pos80 6A(30) C 0x02 AD", "遠 中段CA 蛇キャン"),
+		combo("B C 0x02 AD", "_B _C 蛇キャン"),
+		combo("AB C 0x02 AD", "避け攻撃 _C 蛇キャン"),
+		combo("3A(kara) 0x02 AD", "極近_3_A 蛇キャン"),
+		combo("3A(kara) 0x02 AD", "中近_3_A 蛇キャン"),
+		combo("3A(kara) 0x02 AD", "近_3_A 蛇キャン"),
+		combo("3A C 0x02 AD", "_3_A _C 蛇キャン"),
+		combo("[A B] 2C 0x02 AD", "下段CA 蛇キャン"),
+		combo("6A(30) C 0x02 AD", "近 中段CA 蛇キャン"),
+		combo("6A(30) C 0x02 AD", "遠 中段CA 蛇キャン"),
 	},
 	-- 秦崇秀
 	{
@@ -2096,13 +2096,13 @@ local rvs_bs_list = {
 		{ id = 0x00, f = 0x06, a = 0xFE, hook_type = hook_cmd_types.add_attack, name = "帝王宿命拳(連射)", },
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "帝王龍声拳", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 帝王宿命拳", },
-		combo("close 2A 2B 2C", "_2A_2B_2C"),
-		combo("close 2A 2B 6C [0x02 0x03 0x07 0x08]", "_2A_2B_6Cフォロー"),
-		combo("close B C 3C 0x01 0x01", "近_B_C_3Cフォロー"),
-		combo("far B C 3C 0x01 0x01", "遠_B_C_3Cフォロー"),
-		combo("close B C 8C", "近_B_C_中段"),
-		combo("close C [2B 6B 0x07 0x08]", "近_C_中下段"),
-		combo("far [2A 2B 2C 6B(10kara)] [0x02 0x03 0x07 0x08]", "下段フォロー"),
+		combo("2A 2B 2C", "_2A_2B_2C"),
+		combo("2A 2B 6C [0x02 0x03 0x07 0x08]", "_2A_2B_6Cフォロー"),
+		combo("B C 3C 0x01 0x01", "近_B_C_3Cフォロー"),
+		combo("B C 3C 0x01 0x01", "遠_B_C_3Cフォロー"),
+		combo("B C 8C", "近_B_C_中段"),
+		combo("C [2B 6B 0x07 0x08]", "近_C_中下段"),
+		combo("[2A 2B 2C 6B(10kara)] [0x02 0x03 0x07 0x08]", "下段フォロー"),
 	},
 	-- ダック・キング
 	{
@@ -2134,10 +2134,10 @@ local rvs_bs_list = {
 		{ id = 0x21, f = 0x06, a = 0x00, hook_type = hook_cmd_types.otg_stomp, name = "ショッキングボール", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント ダックダンス", },
 		{ id = 0x28, f = 0x06, a = 0x00, hook_type = hook_cmd_types.add_attack, act = 0x245, name = "旧ブレイクストーム", },
-		combo("close 2A A B [5 C 3C 6C]", "_2_A_A_B_C"),
-		combo("close 2A 2A [5 0x01]", "_2_A_2_Aヘッドスピン"),
-		combo("pos50 4A(7kara) 0x10", "中段 ブレスパ"),
-		combo("far C(7kara) 0x10", "遠_C ブレスパ"),
+		combo("2A A B [5 C 3C 6C]", "_2_A_A_B_C"),
+		combo("2A 2A [5 0x01]", "_2_A_2_Aヘッドスピン"),
+		combo("4A(7kara) 0x10", "中段 ブレスパ"),
+		combo("C(7kara) 0x10", "遠_C ブレスパ"),
 	},
 	-- キム・カッファン
 	{
@@ -2155,17 +2155,17 @@ local rvs_bs_list = {
 		{ id = 0x10, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "鳳凰天舞脚", },
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "鳳凰脚", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 鳳凰脚", },
-		combo("far A B           [0x46 0x02 0x03]", "_A_B必"),
-		combo("far A B(20)       [0x46 0x02 0x03]", "_A_Bディレイ必"),
-		combo("far A B(20) C     [0x46 0x02 0x03]", "_A_Bディレイ_C必"),
-		combo("far A B     C     [0x46 0x02 0x03]", "_A_B_C必"),
-		combo("far A B     C(20) [0x46 0x02 0x03]", "_A_B_Cディレイ必"),
-		combo("pos70 0x1E 5(hold1) 4 A B     0x06 me 0x1E 5(hold1) 4 A B C [0x46 0x02 0x03]", "_A_B覇気脚 滑り_A_B_C"),
-		combo("pos45 0x1E 5(hold1) 4 C(1hit) 0x06 me 0x1E 5(hold1) 4 A B C [0x46 0x02 0x03]", "_C覇気脚 滑り_A_B_C"),
-		combo("far   0x1E 5(hold1) 4 A B C", "滑り_A_B_C"),
-		combo("pb 6C A   [0x46 0x02 0x03]", "投げフォロー_C始動2段"),
-		combo("pb 6C A B [0x46 0x02 0x03]", "投げフォローC始動3段"),
-		combo("pb 6C A B C",                "投げフォローC始動全段"),
+		combo("A B           [0x46 0x02 0x03]", "_A_B必"),
+		combo("A B(20)       [0x46 0x02 0x03]", "_A_Bディレイ必"),
+		combo("A B(20) C     [0x46 0x02 0x03]", "_A_Bディレイ_C必"),
+		combo("A B     C     [0x46 0x02 0x03]", "_A_B_C必"),
+		combo("A B     C(20) [0x46 0x02 0x03]", "_A_B_Cディレイ必"),
+		combo("0x1E 5(hold1) 4 A B     0x06 me 0x1E 5(hold1) 4 A B C [0x46 0x02 0x03]", "_A_B覇気脚 滑り_A_B_C"),
+		combo("0x1E 5(hold1) 4 C(1hit) 0x06 me 0x1E 5(hold1) 4 A B C [0x46 0x02 0x03]", "_C覇気脚 滑り_A_B_C"),
+		combo("0x1E 5(hold1) 4 A B C", "滑り_A_B_C"),
+		combo("6C A   [0x46 0x02 0x03]", "投げフォロー_C始動2段"),
+		combo("6C A B [0x46 0x02 0x03]", "投げフォローC始動3段"),
+		combo("6C A B C",                "投げフォローC始動全段"),
 	},
 	-- ビリー・カーン
 	{
@@ -2181,13 +2181,13 @@ local rvs_bs_list = {
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "サラマンダーストリーム", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 強襲飛翔棍", },
 		{ id = 0x28, f = 0x06, a = 0x00, hook_type = hook_cmd_types.none, name = "CA 集点連破棍", },
-		combo("close A C(20) 0x06", "近_A_C"),
-		combo("far 2A 2C(20) 0x06", "_2_A_2_C"),
-		combo("pb 3C C 0x28", "掴み投げフォロー焦点CA"),
-		combo("pb 6C 0x06(20) 0x06", "投げフォロー火龍"),
-		combo("pos100 A C", "遠_A_C"),
-		combo("pos110 2A [0x01 0x06]", "_2_Aけん制"),
-		combo("pos110 2A(10) [0x01 0x06]", "_2_Aけん制ディレイ"),
+		combo("A C(20) 0x06", "近_A_C"),
+		combo("2A 2C(20) 0x06", "_2_A_2_C"),
+		combo("3C C 0x28", "掴み投げフォロー焦点CA"),
+		combo("6C 0x06(20) 0x06", "投げフォロー火龍"),
+		combo("A C", "遠_A_C"),
+		combo("2A [0x01 0x06]", "_2_Aけん制"),
+		combo("2A(10) [0x01 0x06]", "_2_Aけん制ディレイ"),
 	},
 	-- チン・シンザン
 	{
@@ -2206,9 +2206,9 @@ local rvs_bs_list = {
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "ホエホエ弾", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 破岩撃", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント クッサメ砲", },
-		combo("close 2A 2C 0x06", "_2_A_2_C軟体"),
-		combo("close A C 0x06", "_A_C軟体"),
-		combo("close 2B 2C 0x06", "_2B_2C軟体"),
+		combo("2A 2C 0x06", "_2_A_2_C軟体"),
+		combo("A C 0x06", "_A_C軟体"),
+		combo("2B 2C 0x06", "_2B_2C軟体"),
 	},
 	-- タン・フー・ルー,
 	{
@@ -2221,10 +2221,10 @@ local rvs_bs_list = {
 		{ id = 0x10, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "旋風剛拳", },
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "大撃放", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 旋風剛拳", },
-		combo("far AB C", "避けCA"),
-		combo("pb 3A C 0x46", "_3_A_Cフェイント"),
-		combo("pos60 0x1E 5(hold3) A A C 0x46", "ダッシュ_A_A_Cフェイント"),
-		combo("far 2C 0x46", "_2_Cフェイント"),
+		combo("AB C", "避けCA"),
+		combo("3A C 0x46", "_3_A_Cフェイント"),
+		combo("0x1E 5(hold3) A A C 0x46", "ダッシュ_A_A_Cフェイント"),
+		combo("2C 0x46", "_2_Cフェイント"),
 	},
 	-- ローレンス・ブラッド
 	{
@@ -2241,8 +2241,8 @@ local rvs_bs_list = {
 		{ cmd = cmd_types._C, hook_type = hook_cmd_types.add_attack, name = "オーレィ中_C)", },
 		{ cmd = cmd_types._2C, hook_type = hook_cmd_types.add_attack, name = "オーレィ中_2_+_C", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.add_attack, name = "_6_3_2_+_C(オーレィ中_6_3_2_+_C)", },
-		combo("close BC [2C 6C B]", "オーレイ"),
-		combo("close C C [C 5]", "_C_C_C"),
+		combo("BC [2C 6C B]", "オーレイ"),
+		combo("C C [C 5]", "_C_C_C"),
 	},
 	-- ヴォルフガング・クラウザー
 	{
@@ -2264,13 +2264,13 @@ local rvs_bs_list = {
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント ブリッツボール", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント カイザーウェイブ", },
 		{ id = 0x28, f = 0x06, a = 0x00, hook_type = hook_cmd_types.add_attack, name = "_2_3_6_+_C", },
-		combo("close 2A C [0x02 0x46]", "_2_A_2_C固め"),
-		combo("close A C [0x02 0x46]", "_A_C固め"),
-		combo("far [A B] [C 0x02 0x47 0x46 0x10]", "_Aor_B始動連携"),
-		combo("far 2B 2C", "_2_B_2_C"),
-		combo("pb C(2hit) C [0x28 0x46 0x02]", "_C_C固め"),
-		combo("pb C [C 3C] [0x02 0x46]", "_C_3_C固め"),
-		combo("pb AB [0x02 0x46]", "避け攻撃固め"),
+		combo("2A C [0x02 0x46]", "_2_A_2_C固め"),
+		combo("A C [0x02 0x46]", "_A_C固め"),
+		combo("[A B] [C 0x02 0x47 0x46 0x10]", "_Aor_B始動連携"),
+		combo("2B 2C", "_2_B_2_C"),
+		combo("C(2hit) C [0x28 0x46 0x02]", "_C_C固め"),
+		combo("C [C 3C] [0x02 0x46]", "_C_3_C固め"),
+		combo("AB [0x02 0x46]", "避け攻撃固め"),
 	},
 	-- リック・ストラウド
 	{
@@ -2288,12 +2288,12 @@ local rvs_bs_list = {
 		{ id = 0x10, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "ガイアブレス", },
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal | hook_cmd_types.ex_breakshot, name = "ハウリング・ブル", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント シューティングスター", },
-		combo("close 2A 2A C [0x46 0x03]", "_2_A_2_A_C固め"),
-		combo("close 2A A C [0x46 0x03]", "_2_A_C固め"),
-		combo("far 2B 2C [0x46 0x03]", "_2_B_2_C固め"),
-		combo("far B C [0x46 0x03]", "_B_C固め"),
-		combo("far 0x1E 6C C [0x46 0x03]", "ダッシュ_C_C固め"),
-		combo("close 3A 6C [0x46 0x03]", "_3_A_C固め"),
+		combo("2A 2A C [0x46 0x03]", "_2_A_2_A_C固め"),
+		combo("2A A C [0x46 0x03]", "_2_A_C固め"),
+		combo("2B 2C [0x46 0x03]", "_2_B_2_C固め"),
+		combo("B C [0x46 0x03]", "_B_C固め"),
+		combo("0x1E 6C C [0x46 0x03]", "ダッシュ_C_C固め"),
+		combo("3A 6C [0x46 0x03]", "_3_A_C固め"),
 	},
 	-- 李香緋
 	{
@@ -2315,18 +2315,18 @@ local rvs_bs_list = {
 		{ id = 0x12, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal| hook_cmd_types.ex_breakshot, name = "真心牙（弾狙い）", },
 		{ id = 0x47, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 天崩山", },
 		{ id = 0x46, f = 0x06, a = 0x00, hook_type = hook_cmd_types.reversal, name = "フェイント 大鉄神", },
-		combo("pos100 AB 0x02", "避け大那夢波"),
-		combo("pos100 B 0x02", "_B大那夢波"),
+		combo("AB 0x02", "避け大那夢波"),
+		combo("B 0x02", "_B大那夢波"),
 
-		combo("pos50 2B 2B 0x02",    "_2_B_2_B大那夢波"),
-		combo("pos50 2B 2B 0x01",    "_2_B_2_B小那夢波"),
-		combo("pos50 2B 2B C",       "_2_B_2_B_C"),
-		combo("pos50 2B 2B C me AB(1hit) 0x02", "_2_B_2_B_C 避け 大那夢波"),
-		combo("pos50 2B 2B 2C",      "_2_B_2_B_2_C"),
-		combo("pos50 2B 2B 0x47",    "_2_B_2_Bフェイント"),
+		combo("2B 2B 0x02",    "_2_B_2_B大那夢波"),
+		combo("2B 2B 0x01",    "_2_B_2_B小那夢波"),
+		combo("2B 2B C",       "_2_B_2_B_C"),
+		combo("2B 2B C me AB(1hit) 0x02", "_2_B_2_B_C 避け 大那夢波"),
+		combo("2B 2B 2C",      "_2_B_2_B_2_C"),
+		combo("2B 2B 0x47",    "_2_B_2_Bフェイント"),
 
-		combo("far 2B 2B [2C C 0x47]", "_2_B固め"),
-		combo("mid 2B 2B [2C C 0x47]", "_2_B固め"),
+		combo("2B 2B [2C C 0x47]", "_2_B固め"),
+		combo("2B 2B [2C C 0x47]", "_2_B固め"),
 	},
 	-- アルフレッド
 	{
@@ -2362,24 +2362,6 @@ local fallback_parse_token = function(token, fallback_list)
 	end
 	-- 何も一致しない
 	return nil
-end
--- 文字列の先頭にあるプレフィックス（far, close, pb）を検出して分離する関数
--- なし  40ドット程度
--- far   遠距離技の間合い
--- close 近距離技の間合い
--- pb    通常投げの間合い
--- posN  間合いNドット Nは数字
-local separate_range_prefix = function(str)
-	-- nilや空文字列のチェック
-	if not str or str == "" then return "", str end
-	local pos_num, remaining = str:match("^pos(%d+)(.*)$") -- posN (Nは数値)
-	if pos_num then return tonumber(pos_num), remaining end
-	if str:sub(1, 3) == "far" then return "far", str:sub(4) end
-	if str:sub(1, 5) == "close" then return "close", str:sub(6) end
-	if str:sub(1, 2) == "pb" then return "pb", str:sub(3) end
-	if str:sub(1, 3) == "mid" then return "mid", str:sub(4) end
-	-- マッチしない場合は空文字列とする
-	return "", str
 end
 -- 数字と"any"を分離してパースする関数
 local parse_lag_any         = function(str, any)
@@ -2445,7 +2427,7 @@ local parse_combo_string = function(char_id, str)
 			meoshi = true
 		end
 
-		local cmd_name, range_key = {}, nil
+		local cmd_name = {}
 		for c in cmd:gmatch(".") do
 			local key = "_" .. c
 			table.insert(cmd_name, key)
@@ -2453,9 +2435,6 @@ local parse_combo_string = function(char_id, str)
 			key_r = key_r and ("_" .. key_r) or key
 			local value = cmd_types[key]
 			local value_r = (key_r == key) and value or cmd_types[key_r]
-			if (range_key == nil) and (c == "A" or c == "B" or c == "C") then
-				range_key = c
-			end
 
 			if not value then
 				-- コマンド検索で失敗したらフォールバックへ
@@ -2491,7 +2470,6 @@ local parse_combo_string = function(char_id, str)
 					hits = hits,                  -- 待ちヒット数
 					lag  = await_num,             -- 待ち強制フレーム
 					kara = (kara ~= nil),         -- 待ちなし空キャンセル実施有無
-					range_key = range_key or "A", -- 間合いキー
 				},
 				hook = hook
 			})
@@ -2503,8 +2481,6 @@ end
 -- テキストをパースして、グループごとに分割する
 local parse_groups = function(char_id, str)
 	local result = {}
-	local range
-	range, str = separate_range_prefix(str)
 
 	-- 前後の空白除去
 	str = str:gsub("^%s+", ""):gsub("%s+$", "")
@@ -2540,20 +2516,16 @@ local parse_groups = function(char_id, str)
 		end
 	end
 
-	return range, str, result
+	return str, result
 end
 
 for char, list in ipairs(rvs_bs_list) do
 	for i = 1, #list do
 		local rvs = list[i]
 		local parse = function(str, in_name)
-			local range, name, combo = parse_groups(char, str)
-			-- 先頭に間合い情報を入れる
-			table.insert(combo, 1, { -- group
-				{ range = range, range_key = #combo > 0 and combo[1].range_key or "A" } -- leaf
-			})
+			local name, combo = parse_groups(char, str)
 			list[i] = { combo = combo, hook_type = hook_cmd_types.combo, name = ut.convert(in_name or name) }
-			--print(char, i , name, range, #combo)
+			--print(char, i , name, #combo)
 		end
 		if type(rvs) == "string" then
 			parse(rvs)
@@ -4133,41 +4105,41 @@ local box_kinds                      = {
 	hurt    = "Hurt",
 }
 local box_types                      = {
-	attack             = { no = 1, id = 0x00, enabled = 2, kind = box_kinds.attack, sort = 4, color = 0xFF00FF, fill = 0x40, outline = 0xFF, sway = false, name = "攻撃", name_en = "attack", },
+	attack             = { no = 1, id = 0x00, enabled = 2, kind = box_kinds.attack, sort = 4, color = 0xFF00FF, fill = 0x80, outline = 0xFF, sway = false, name = "攻撃", name_en = "attack", },
 	fake_attack        = { no = 2, id = 0x00, enabled = 1, kind = box_kinds.attack, sort = 1, color = 0x00FF00, fill = 0x00, outline = 0xFF, sway = false, name = "攻撃(嘘)", name_en = "fake_attack", },
 	harmless_attack    = { no = 3, id = 0x00, enabled = 2, kind = box_kinds.attack, sort = 3, color = 0xFF00FF, fill = 0x00, outline = 0xFF, sway = false, name = "攻撃(無効)", name_en = "harmless_attack", },
-	juggle             = { no = 4, id = 0x00, enabled = 2, kind = box_kinds.attack, sort = 4, color = 0xFF0033, fill = 0x40, outline = 0xFF, sway = false, name = "攻撃(空中追撃可)", name_en = "juggle", },
+	juggle             = { no = 4, id = 0x00, enabled = 2, kind = box_kinds.attack, sort = 4, color = 0xFF0033, fill = 0x80, outline = 0xFF, sway = false, name = "攻撃(空中追撃可)", name_en = "juggle", },
 	fake_juggle        = { no = 5, id = 0x00, enabled = 1, kind = box_kinds.attack, sort = 1, color = 0x00FF33, fill = 0x00, outline = 0xFF, sway = false, name = "攻撃(嘘、空中追撃可)", name_en = "fake_juggle", },
 	harmless_juggle    = { no = 6, id = 0x00, enabled = 2, kind = box_kinds.attack, sort = 2, color = 0xFF0033, fill = 0x00, outline = 0xFF, sway = false, name = "攻撃(無効、空中追撃可)", name_en = "harmless_juggle", },
-	unknown            = { no = 7, id = 0x00, enabled = 1, kind = box_kinds.throw, sort = -1, color = 0x8B4513, fill = 0x40, outline = 0xFF, sway = false, name = "用途不明", name_en = "unknown", },
-	fireball           = { no = 8, id = 0x00, enabled = 2, kind = box_kinds.attack, sort = 5, color = 0xFF00FF, fill = 0x40, outline = 0xFF, sway = false, name = "弾", name_en = "fireball", },
+	unknown            = { no = 7, id = 0x00, enabled = 1, kind = box_kinds.throw, sort = -1, color = 0x8B4513, fill = 0x80, outline = 0xFF, sway = false, name = "用途不明", name_en = "unknown", },
+	fireball           = { no = 8, id = 0x00, enabled = 2, kind = box_kinds.attack, sort = 5, color = 0xFF00FF, fill = 0x80, outline = 0xFF, sway = false, name = "弾", name_en = "fireball", },
 	fake_fireball      = { no = 9, id = 0x00, enabled = 2, kind = box_kinds.attack, sort = 1, color = 0x00FF00, fill = 0x00, outline = 0xFF, sway = false, name = "弾(嘘)", name_en = "fake_fireball", },
 	harmless_fireball  = { no = 10, id = 0x00, enabled = 2, kind = box_kinds.attack, sort = 3, color = 0xFF00FF, fill = 0x00, outline = 0xFF, sway = false, name = "弾(無効)", name_en = "harmless_fireball", },
-	juggle_fireball    = { no = 11, id = 0x00, enabled = 2, kind = box_kinds.attack, sort = 5, color = 0xFF0033, fill = 0x40, outline = 0xFF, sway = false, name = "弾(空中追撃可)", name_en = "juggle_fireball", },
+	juggle_fireball    = { no = 11, id = 0x00, enabled = 2, kind = box_kinds.attack, sort = 5, color = 0xFF0033, fill = 0x80, outline = 0xFF, sway = false, name = "弾(空中追撃可)", name_en = "juggle_fireball", },
 	fake_juggle_fb     = { no = 12, id = 0x00, enabled = 2, kind = box_kinds.attack, sort = 1, color = 0x00FF33, fill = 0x00, outline = 0xFF, sway = false, name = "弾(嘘、空中追撃可)", name_en = "fake_juggle_fb", },
 	harmless_juggle_fb = { no = 13, id = 0x00, enabled = 2, kind = box_kinds.attack, sort = 2, color = 0xFF0033, fill = 0x00, outline = 0xFF, sway = false, name = "弾(無効、空中追撃可)", name_en = "harmless_juggle_fb", },
-	normal_throw       = { no = 14, id = 0x00, enabled = 2, kind = box_kinds.throw, sort = 6, color = 0xFFFF00, fill = 0x40, outline = 0xFF, sway = false, name = "投げ", name_en = "normal_throw", },
-	special_throw      = { no = 15, id = 0x00, enabled = 2, kind = box_kinds.throw, sort = 6, color = 0xFFFF00, fill = 0x40, outline = 0xFF, sway = false, name = "必殺技投げ", name_en = "special_throw", },
-	air_throw          = { no = 16, id = 0x00, enabled = 2, kind = box_kinds.throw, sort = 6, color = 0xFFFF00, fill = 0x40, outline = 0xFF, sway = false, name = "空中投げ", name_en = "air_throw", },
+	normal_throw       = { no = 14, id = 0x00, enabled = 2, kind = box_kinds.throw, sort = 6, color = 0xFFFF00, fill = 0x80, outline = 0xFF, sway = false, name = "投げ", name_en = "normal_throw", },
+	special_throw      = { no = 15, id = 0x00, enabled = 2, kind = box_kinds.throw, sort = 6, color = 0xFFFF00, fill = 0x80, outline = 0xFF, sway = false, name = "必殺技投げ", name_en = "special_throw", },
+	air_throw          = { no = 16, id = 0x00, enabled = 2, kind = box_kinds.throw, sort = 6, color = 0xFFFF00, fill = 0x80, outline = 0xFF, sway = false, name = "空中投げ", name_en = "air_throw", },
 	push               = { no = 17, id = 0x01, enabled = 2, kind = box_kinds.push, sort = 1, color = 0xDDDDDD, fill = 0x00, outline = 0xFF, sway = false, name = "押し合い", name_en = "push", },
-	hurt1              = { no = 18, id = 0x02, enabled = 2, kind = box_kinds.hurt, sort = 2, color = 0x0000FF, fill = 0x40, outline = 0xFF, sway = false, name = "食らい1", name_en = "hurt1", },
-	hurt2              = { no = 19, id = 0x03, enabled = 2, kind = box_kinds.hurt, sort = 2, color = 0x0000FF, fill = 0x40, outline = 0xFF, sway = false, name = "食らい2", name_en = "hurt2", },
-	down_otg           = { no = 20, id = 0x04, enabled = 2, kind = box_kinds.hurt, sort = 2, color = 0x00FFFF, fill = 0x80, outline = 0xFF, sway = false, name = "食らい(ダウン追撃のみ可)", name_en = "down_otg", },
-	launch             = { no = 21, id = 0x05, enabled = 2, kind = box_kinds.hurt, sort = 2, color = 0x00FFFF, fill = 0x80, outline = 0xFF, sway = false, name = "食らい(空中追撃のみ可)", name_en = "launch", },
-	hurt3              = { no = 22, id = 0x07, enabled = 2, kind = box_kinds.hurt, sort = 2, color = 0x00CC77, fill = 0x80, outline = 0xFF, sway = false, name = "食らい(対ライン上攻撃)", name_en = "hurt3", },
-	hurt4              = { no = 23, id = 0x08, enabled = 2, kind = box_kinds.hurt, sort = 2, color = 0x00CC77, fill = 0x80, outline = 0xFF, sway = false, name = "食らい(対ライン下攻撃)", name_en = "hurt4", },
-	block_overhead     = { no = 24, id = 0x11, enabled = 2, kind = box_kinds.block, sort = 3, color = 0xC0C0C0, fill = 0x40, outline = 0xFF, sway = false, name = "立ガード", name_en = "block_overhead", },
-	block_low          = { no = 25, id = 0x12, enabled = 2, kind = box_kinds.block, sort = 3, color = 0xC0C0C0, fill = 0x40, outline = 0xFF, sway = false, name = "下段ガード", name_en = "block_low", },
-	block_air          = { no = 26, id = 0x13, enabled = 2, kind = box_kinds.block, sort = 3, color = 0xC0C0C0, fill = 0x40, outline = 0xFF, sway = false, name = "空中ガード", name_en = "block_air", },
-	joudan_atemi       = { no = 27, id = 0x14, enabled = 2, kind = box_kinds.parry, sort = 3, color = 0xFF7F00, fill = 0x40, outline = 0xFF, sway = false, name = "上段当身投げ", name_en = "joudan_atemi", },
-	urakumo_kakushi    = { no = 28, id = 0x15, enabled = 2, kind = box_kinds.parry, sort = 3, color = 0xFF7F00, fill = 0x40, outline = 0xFF, sway = false, name = "裏雲隠し", name_en = "urakumo_kakushi", },
-	gedan_atemiuchi    = { no = 29, id = 0x16, enabled = 2, kind = box_kinds.parry, sort = 3, color = 0xFF7F00, fill = 0x40, outline = 0xFF, sway = false, name = "下段当身打ち", name_en = "gedan_atemiuchi", },
-	gyakusyuken        = { no = 30, id = 0x17, enabled = 2, kind = box_kinds.parry, sort = 3, color = 0xFF7F00, fill = 0x40, outline = 0xFF, sway = false, name = "必勝逆襲拳", name_en = "gyakusyuken", },
-	sadomazo           = { no = 31, id = 0x18, enabled = 2, kind = box_kinds.parry, sort = 3, color = 0xFF7F00, fill = 0x40, outline = 0xFF, sway = false, name = "サドマゾ", name_en = "sadomazo", },
-	baigaeshi          = { no = 32, id = 0x19, enabled = 2, kind = box_kinds.parry, sort = 3, color = 0xFF007F, fill = 0x40, outline = 0xFF, sway = false, name = "倍返し", name_en = "baigaeshi", },
-	phoenix_throw      = { no = 33, id = 0x1C, enabled = 2, kind = box_kinds.parry, sort = 3, color = 0xFF7F00, fill = 0x40, outline = 0xFF, sway = false, name = "フェニックススルー", name_en = "phoenix_throw", },
-	sway_hurt1         = { no = 34, id = 0x02, enabled = 2, kind = box_kinds.hurt, sort = 2, color = 0x8000FF, fill = 0x40, outline = 0xFF, sway = true, name = "食らい1(スウェー中)", name_en = "sway_hurt1", },
-	sway_hurt2         = { no = 35, id = 0x03, enabled = 2, kind = box_kinds.hurt, sort = 2, color = 0x8000FF, fill = 0x40, outline = 0xFF, sway = true, name = "食らい2(スウェー中)", name_en = "sway_hurt2", },
+	hurt1              = { no = 18, id = 0x02, enabled = 2, kind = box_kinds.hurt, sort = 2, color = 0x0000FF, fill = 0x80, outline = 0xFF, sway = false, name = "食らい1", name_en = "hurt1", },
+	hurt2              = { no = 19, id = 0x03, enabled = 2, kind = box_kinds.hurt, sort = 2, color = 0x0000FF, fill = 0x80, outline = 0xFF, sway = false, name = "食らい2", name_en = "hurt2", },
+	down_otg           = { no = 20, id = 0x04, enabled = 2, kind = box_kinds.hurt, sort = 2, color = 0x00FFFF, fill = 0xD0, outline = 0xFF, sway = false, name = "食らい(ダウン追撃のみ可)", name_en = "down_otg", },
+	launch             = { no = 21, id = 0x05, enabled = 2, kind = box_kinds.hurt, sort = 2, color = 0x00FFFF, fill = 0xD0, outline = 0xFF, sway = false, name = "食らい(空中追撃のみ可)", name_en = "launch", },
+	hurt3              = { no = 22, id = 0x07, enabled = 2, kind = box_kinds.hurt, sort = 2, color = 0x00CC77, fill = 0xD0, outline = 0xFF, sway = false, name = "食らい(対ライン上攻撃)", name_en = "hurt3", },
+	hurt4              = { no = 23, id = 0x08, enabled = 2, kind = box_kinds.hurt, sort = 2, color = 0x00CC77, fill = 0xD0, outline = 0xFF, sway = false, name = "食らい(対ライン下攻撃)", name_en = "hurt4", },
+	block_overhead     = { no = 24, id = 0x11, enabled = 2, kind = box_kinds.block, sort = 3, color = 0xC0C0C0, fill = 0x80, outline = 0xFF, sway = false, name = "立ガード", name_en = "block_overhead", },
+	block_low          = { no = 25, id = 0x12, enabled = 2, kind = box_kinds.block, sort = 3, color = 0xC0C0C0, fill = 0x80, outline = 0xFF, sway = false, name = "下段ガード", name_en = "block_low", },
+	block_air          = { no = 26, id = 0x13, enabled = 2, kind = box_kinds.block, sort = 3, color = 0xC0C0C0, fill = 0x80, outline = 0xFF, sway = false, name = "空中ガード", name_en = "block_air", },
+	joudan_atemi       = { no = 27, id = 0x14, enabled = 2, kind = box_kinds.parry, sort = 3, color = 0xFF7F00, fill = 0x80, outline = 0xFF, sway = false, name = "上段当身投げ", name_en = "joudan_atemi", },
+	urakumo_kakushi    = { no = 28, id = 0x15, enabled = 2, kind = box_kinds.parry, sort = 3, color = 0xFF7F00, fill = 0x80, outline = 0xFF, sway = false, name = "裏雲隠し", name_en = "urakumo_kakushi", },
+	gedan_atemiuchi    = { no = 29, id = 0x16, enabled = 2, kind = box_kinds.parry, sort = 3, color = 0xFF7F00, fill = 0x80, outline = 0xFF, sway = false, name = "下段当身打ち", name_en = "gedan_atemiuchi", },
+	gyakusyuken        = { no = 30, id = 0x17, enabled = 2, kind = box_kinds.parry, sort = 3, color = 0xFF7F00, fill = 0x80, outline = 0xFF, sway = false, name = "必勝逆襲拳", name_en = "gyakusyuken", },
+	sadomazo           = { no = 31, id = 0x18, enabled = 2, kind = box_kinds.parry, sort = 3, color = 0xFF7F00, fill = 0x80, outline = 0xFF, sway = false, name = "サドマゾ", name_en = "sadomazo", },
+	baigaeshi          = { no = 32, id = 0x19, enabled = 2, kind = box_kinds.parry, sort = 3, color = 0xFF007F, fill = 0x80, outline = 0xFF, sway = false, name = "倍返し", name_en = "baigaeshi", },
+	phoenix_throw      = { no = 33, id = 0x1C, enabled = 2, kind = box_kinds.parry, sort = 3, color = 0xFF7F00, fill = 0x80, outline = 0xFF, sway = false, name = "フェニックススルー", name_en = "phoenix_throw", },
+	sway_hurt1         = { no = 34, id = 0x02, enabled = 2, kind = box_kinds.hurt, sort = 2, color = 0x8000FF, fill = 0x80, outline = 0xFF, sway = true, name = "食らい1(スウェー中)", name_en = "sway_hurt1", },
+	sway_hurt2         = { no = 35, id = 0x03, enabled = 2, kind = box_kinds.hurt, sort = 2, color = 0x8000FF, fill = 0x80, outline = 0xFF, sway = true, name = "食らい2(スウェー中)", name_en = "sway_hurt2", },
 }
 local main_box_types, sway_box_types = {}, {}
 for _, boxtype in pairs(box_types) do
