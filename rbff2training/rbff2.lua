@@ -1946,6 +1946,8 @@ rbff2.startplugin  = function()
 				type        = 1, -- 1:OFF 2:邀撃技
 				rise_limit  = 0,
 				fall_limit  = 0,
+				fwd_range   = 1,
+				bak_range   = 1,
 				fwd_limit   = 0,
 				bak_limit   = 0,
 				main_limit  = 0,
@@ -8878,7 +8880,8 @@ rbff2.startplugin  = function()
 	for i = 1, 99 do table.insert(menu.labels.attack_harmless, string.format("%s段目で空振り", i)) end
 
 	for i = 1, 2 do
-		local jumplimit, rangelimit, swaylimit, swaylmt_f = { "OFF" }, { "OFF" }, { "OFF" }, { "OFF" }
+		local jumplimit, swaylimit, swaylmt_f = { "OFF" }, { "OFF" }, { "OFF" }
+		local rangelimit = { "OFF", "近A", "近B", "近C", "近D", }
 		for px = 1, 260 do table.insert(jumplimit, px) end
 		for px = 1, 250 do table.insert(rangelimit, px) end
 		for px = 1, 16 do table.insert(swaylimit, px) end
@@ -8896,8 +8899,8 @@ rbff2.startplugin  = function()
 			--                              5       --  5 反応設定
 			a.rise_limit             = col[ 6] - 1  --  6 この高さより上昇時
 			a.fall_limit             = col[ 7] - 1  --  7 この高さより下降時
-			a.fwd_limit              = col[ 8] - 1  --  8 この間合いより近づいた時
-			a.bak_limit              = col[ 9] - 1  --  9 この間合いより遠のいた時
+			a.fwd_range              = col[ 8]      --  8 この間合いより近づいた時
+			a.bak_range              = col[ 9]      --  9 この間合いより遠のいた時
 			a.main_limit             = col[10] - 1  -- 10 この奥行より近づいた時
 			a.sway_limit             = col[11] - 1  -- 11 この奥行より遠のいた時
 			a.main_lmt_f             = col[12] - 1  -- 12 対メイン発動からのフレーム
@@ -8920,6 +8923,26 @@ rbff2.startplugin  = function()
 			a.katsu_ca               = col[29]      -- 29 喝CA
 			a.sikkyaku_ca            = col[30]      -- 30 飛燕失脚CA
 			a.hebi_damashi           = col[31]      -- 31 蛇だまし
+
+			-- 間合い解決
+			local close_far = p.char_data.close_far[0]
+			local resolve_range = function(range_num)
+				if range_num == 1 then -- OFF
+					return 0
+				elseif range_num == 2 then -- 近A
+					return close_far.A.x2
+				elseif range_num == 3 then -- 近B
+					return close_far.B.x2
+				elseif range_num == 4 then -- 近C
+					return close_far.C.x2
+				elseif range_num == 5 then -- 近D
+					return close_far.D.x2
+				end
+				return range_num - 5
+			end
+			a.fwd_limit   = resolve_range(a.fwd_range)
+			a.bak_limit   = resolve_range(a.bak_range)
+
 			-- 邀撃行動のメニュー設定
 			if cancel ~= true and a.type == 2 and row == 1 then
 				next_menu = menu.enc_menus[i][p.char] -- 邀撃動作メニュー
@@ -8984,8 +9007,8 @@ rbff2.startplugin  = function()
 				--   5                             --  5 反応設定
 				col[ 6] = a.rise_limit + 1         --  6 この高さより上昇時
 				col[ 7] = a.fall_limit + 1         --  7 この高さより下降時
-				col[ 8] = a.fwd_limit  + 1         --  8 この間合いより近づいた時
-				col[ 9] = a.bak_limit  + 1         --  9 この間合いより遠のいた時
+				col[ 8] = a.fwd_range              --  8 この間合いより近づいた時
+				col[ 9] = a.bak_range              --  9 この間合いより遠のいた時
 				col[10] = a.main_limit + 1         -- 10 この奥行より近づいた時
 				col[11] = a.sway_limit + 1         -- 11 この奥行より遠のいた時
 				col[12] = a.main_lmt_f + 1         -- 12 対メイン発動からのフレーム
