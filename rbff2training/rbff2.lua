@@ -1943,7 +1943,7 @@ rbff2.startplugin  = function()
 				ranges      = {},
 			},
 			encounter       = {
-				type        = 1, -- 1:OFF 2:邀撃技
+				type        = 1, -- 1:OFF 2:邀撃技 3:プリセットコンボ
 				rise_limit  = 0,
 				fall_limit  = 0,
 				fwd_range   = 1,
@@ -5392,6 +5392,7 @@ rbff2.startplugin  = function()
 				if (p.push_invincible and p.push_invincible ~= 0) or (mem._0x10B862 ~= 0 and ut.tstb(p.op.flag_cc, db.flag_cc.thrown)) then
 					-- 投げ演出の透過は判定を消す
 					-- 打撃演出の透過は判定を参考用に表示する
+					p.push_box = nil
 				else
 					local src = get_push_box(p)
 					local box = fix_box_scale(p, p.rx, p.ry, p.rz, src)
@@ -5401,6 +5402,7 @@ rbff2.startplugin  = function()
 					table.insert(hitboxies, box)
 					table.insert(boxkeys.hurt, box.keytxt)
 					table.insert(p.hitbox_types, box.type)
+					p.push_box = box
 				end
 
 				-- 投げ判定
@@ -6698,13 +6700,20 @@ rbff2.startplugin  = function()
 				end
 				-- この間合いより近づいた時
 				-- この間合いより遠のいた時
+				local p_space, fwd_limit, bak_limit = abs_space, aaa.fwd_limit, aaa.bak_limit
+				if p.push_box and op.push_box and not p.in_sway_line and not op.in_sway_line then
+					local a1, a2, b1, b2 = p.push_box.left, p.push_box.right, op.push_box.left, op.push_box.right
+					local space_limit = math.min(math.abs(a1 - b1), math.abs(a1 - b2), math.abs(a2 - b1), math.abs(a2 - b2))
+					fwd_limit = math.max(fwd_limit, space_limit)
+					bak_limit = math.max(fwd_limit, space_limit)
+				end
 				if not chk_fwd and not chk_bak then
 					xa = true -- 間合い指定なし
-				elseif closing and chk_fwd and aaa.fwd_limit >= abs_space then -- 接近
-					xlabel = label and string.format("%3d %2s %3d", aaa.fwd_limit, ">=", abs_space) or nil
+				elseif closing and chk_fwd and fwd_limit >= p_space then -- 接近
+					xlabel = label and string.format("%3d %2s %3d", fwd_limit, ">=", p_space) or nil
 					xa = true
-				elseif expanding and chk_bak and aaa.bak_limit <= abs_space then -- 離遠
-					xlabel = label and string.format("%3d %2s %3d", aaa.bak_limit, "<=", abs_space) or nil
+				elseif expanding and chk_bak and bak_limit <= p_space then -- 離遠
+					xlabel = label and string.format("%3d %2s %3d", bak_limit, "<=", p_space) or nil
 					xa = true
 				end
 				-- この奥行より近づいた時
