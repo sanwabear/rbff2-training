@@ -747,8 +747,8 @@ rbff2.startplugin  = function()
 		no_bars              = false,
 		sync_pos_x           = 1, -- 1: OFF, 2:1Pと同期, 3:2Pと同期
 		hitbox_bold          = 1,
-		hitbox_hist_target   = 4,
-		hitbox_hist_count    = 0,
+		hitbox_hist_target   = 1,
+		hitbox_hist_count    = 60,
 
 		disp_pos             = 2, -- 向き・距離・位置表示 1;OFF 2:ON 3:向き・距離のみ 4:位置のみ
 		hide                 = hide_options.none,
@@ -1562,7 +1562,7 @@ rbff2.startplugin  = function()
 
 	local phase_count                                  = 1
 	local players, all_objects, hitboxies, ranges, wps = {}, {}, {}, {}, { all = {}, select = {}, hide = {} }
-	local hitboxies_hist, ranges_hist = {}, {}
+	local screens_hist, hitboxies_hist, ranges_hist = {}, {}, {}
 	local is_ready_match_p                             = function()
 		if #players ~= 2 then return false end
 		return db.chars[players[1].char] and db.chars[players[2].char]
@@ -5501,10 +5501,13 @@ rbff2.startplugin  = function()
 		table.sort(hitboxies, hitboxies_order)
 		table.sort(ranges, ranges_order)
 
+		table.insert(screens_hist, { left = screen.left, top = screen.top } )
 		table.insert(hitboxies_hist, hitboxies)
 		table.insert(ranges_hist, ranges)
-		while global.hitbox_hist_count < #hitboxies_hist do table.remove(hitboxies_hist, 1) end --バッファ長調整
-		while global.hitbox_hist_count < #ranges_hist do table.remove(ranges_hist, 1) end --バッファ長調整
+		--バッファ長調整
+		while global.hitbox_hist_count < #screens_hist do table.remove(screens_hist, 1) end
+		while global.hitbox_hist_count < #hitboxies_hist do table.remove(hitboxies_hist, 1) end
+		while global.hitbox_hist_count < #ranges_hist do table.remove(ranges_hist, 1) end
 
 		-- 投げ無敵
 		local either_throw_indiv = true -- 両キャラともメインライン上でいずれかが投げ無敵中
@@ -7042,10 +7045,10 @@ rbff2.startplugin  = function()
 			local enc_hook
 			if p.encounter.type == 2 then
 				can_enc, enc_log = tra_sub.can_encounter(p)
-				enc_hook = can_enc and get_next_enc(p) or nil -- 邀撃動作セット
+				enc_hook = can_enc and get_next_enc(p) or nil -- 単一動作セット
 			elseif p.encounter.type == 3 then
 				if p.combo_log > 1 then ut.printf("%s combo P%s entry", global.frame_number, p.num) end
-				enc_hook, enc_log = tra_sub.controll_dummy_combo(p), "combo" -- プリセットコンボ
+				enc_hook, enc_log = tra_sub.controll_dummy_combo(p), "combo" -- プリセットコンボセット
 				if p.combo_log > 1 then ut.printf("%s combo P%s entry %s %s", global.frame_number, p.num, enc_hook and "hook" or "nil", enc_log) end
 			end
 			if enc_hook then
@@ -7509,9 +7512,19 @@ rbff2.startplugin  = function()
 					end
 				end
 				]]
+				local hscr, top_diff, left_diff
 				for _, box in ipairs(hitboxies_hist[hi]) do
-					if global.hitbox_hist_target == 3 or box.p.body.num == global.hitbox_hist_target then
-						draw_hitbox(box, false, 0, 0x99000000, true) -- 各種判定
+					hscr = screens_hist[hi]
+					top_diff, left_diff = screen.top - hscr.top, screen.left - hscr.left
+					if global.hitbox_hist_target == 4 or (box.p.body.num + 1) == global.hitbox_hist_target then
+						draw_hitbox({
+							p = box.p,
+							type = box.type,
+							left = box.left - left_diff,
+							right = box.right - left_diff,
+							top = box.top + top_diff,
+							bottom = box.bottom + top_diff,
+						}, false, 0, 0x99000000, true) -- 各種判定
 					end
 				end
 			end
@@ -9143,42 +9156,44 @@ rbff2.startplugin  = function()
 		local col, p, g, o, c = menu.disp.pos.col, players, global, hide_options, menu.config
 		c.disp_box_range1p    = col[1]                              -- 01 1P 判定・間合い表示  1:OFF 2:ON 3:ON:判定のみ 4:ON:間合いのみ
 		c.disp_box_range2p    = col[2]                              -- 02 2P 判定・間合い表示  1:OFF 2:ON 3:ON:判定のみ 4:ON:間合いのみ
-		p[1].disp_command     = col[3]                              -- 03 1P 入力表示  1:OFF 2:ON 3:ログのみ 4:キーディスのみ
-		p[2].disp_command     = col[4]                              -- 04 2P 入力表示  1:OFF 2:ON 3:ログのみ 4:キーディスのみ
-		c.disp_stun           = col[5]                              -- 05 気絶メーター表示  1:OFF 2:ON 3:1P 4:2P
-		c.disp_damage         = col[6]                              -- 06 ダメージ表示  1:OFF 2:ON 3:1P 4:2P
-		-- 07 フレーム表示 label
-		g.disp_input          = col[8]                              -- 08 コマンド入力状態表示  1:OFF 2:1P 3:2P 4:1Pため時間 5:2Pため時間
-		c.disp_frame          = col[9]                              -- 09 フレームメーター表示
+		g.hitbox_hist_target  = col[3]                              -- 03 判定軌跡表示 1:OFF 2:ON:1P 3:ON:2P 4:ON:1Pと2P
+		g.hitbox_hist_count   = col[4]                              -- 04 判定軌跡表示のフレーム数
+		p[1].disp_command     = col[5]                              -- 05 1P 入力表示  1:OFF 2:ON 3:ログのみ 4:キーディスのみ
+		p[2].disp_command     = col[6]                              -- 06 2P 入力表示  1:OFF 2:ON 3:ログのみ 4:キーディスのみ
+		c.disp_stun           = col[7]                              -- 07 気絶メーター表示  1:OFF 2:ON 3:1P 4:2P
+		c.disp_damage         = col[8]                              -- 08 ダメージ表示  1:OFF 2:ON 3:1P 4:2P
+		-- 09 フレーム表示 label
+		g.disp_input          = col[10]                              -- 10 コマンド入力状態表示  1:OFF 2:1P 3:2P 4:1Pため時間 5:2Pため時間
+		c.disp_frame          = col[11]                              -- 11 フレームメーター表示
 		-- 1:OFF, 2:ON:大表示, 3:ON:大表示(+1P情報), 4:ON:大表示(+2P情報), 5:ON:小表示, 6:ON:小表示 1Pのみ, 7:ON:小表示 2Pのみ
-		c.split_frame         = col[10]                             -- 10 フレームメーター設定  1:ON 2:ON:判定の形毎 3:ON:攻撃判定の形毎 4:ON:くらい判定の形毎
-		c.disp_fb_frame       = col[11] == 2                        -- 11 フレームメーター弾表示  1:OFF 2:ON
-		g.disp_neutral_frames = col[12] == 2                        -- 12 通常動作フレーム非表示  1:OFF 2:ON
-		-- 13 状態表示 label
-		p[1].disp_state       = col[14]                             -- 13 1P 状態表示  1:OFF 2: ON, ON:小表示, ON:大表示, ON:フラグ表示
-		p[2].disp_state       = col[15]                             -- 15 2P 状態表示  1:OFF 2:ON, ON:小表示, ON:大表示, ON:フラグ表示
-		p[1].disp_base        = col[16]                             -- 16 1P 処理アドレス表示  1:OFF 2:本体 3:弾1 4:弾2 5:弾3
-		p[2].disp_base        = col[17]                             -- 17 2P 処理アドレス表示  1:OFF 2:本体 3:弾1 4:弾2 5:弾3
-		g.disp_pos            = col[18]                             -- 18 向き・距離・位置表示  1;OFF 2:ON 3:向き・距離のみ 4:位置のみ
-		-- 19 撮影用 label
-		c.disp_char           = col[20]                             -- 19 キャラ表示  1:OFF 2:ON 3:1P 4:2P
-		c.disp_phantasm       = col[21]                             -- 21 残像表示  1:OFF 2:ON 3:1P 4:2P
-		c.disp_effect         = col[22]                             -- 22 エフェクト表示  1:OFF 2:ON 3:1P 4:2P
-		g.hide                = menu.set_hide(o.p_chan, col[23] ~= 1) -- 23 Pちゃん表示 1:OFF 2:ON
-		g.hide                = menu.set_hide(o.effect, col[24] ~= 1) -- 24 共通エフェクト表示  1:OFF 2:ON
-		-- 25 撮影用(有効化時はリスタートします)
-		g.hide                = menu.set_hide(o.meters, col[26] == 2) -- 26 体力,POWゲージ表示  1:OFF 2:ON
-		g.hide                = menu.set_hide(o.background, col[27] == 2) -- 27 背景表示  1:OFF 2:ON
-		g.hide                = menu.set_hide(o.shadow1, col[28] ~= 2) -- 28 影表示  1:ON 2:OFF 3:ON:反射→影
-		g.hide                = menu.set_hide(o.shadow2, col[28] ~= 3) -- 29 影表示  1:ON 2:OFF 3:ON:反射→影
-		g.fix_scr_top         = col[29]                             -- 29 画面カメラ位置
+		c.split_frame         = col[12]                             -- 12 フレームメーター設定  1:ON 2:ON:判定の形毎 3:ON:攻撃判定の形毎 4:ON:くらい判定の形毎
+		c.disp_fb_frame       = col[13] == 2                        -- 13 フレームメーター弾表示  1:OFF 2:ON
+		g.disp_neutral_frames = col[14] == 2                        -- 14 通常動作フレーム非表示  1:OFF 2:ON
+		-- 15 状態表示 label
+		p[1].disp_state       = col[16]                             -- 16 1P 状態表示  1:OFF 2: ON, ON:小表示, ON:大表示, ON:フラグ表示
+		p[2].disp_state       = col[17]                             -- 17 2P 状態表示  1:OFF 2:ON, ON:小表示, ON:大表示, ON:フラグ表示
+		p[1].disp_base        = col[18]                             -- 18 1P 処理アドレス表示  1:OFF 2:本体 3:弾1 4:弾2 5:弾3
+		p[2].disp_base        = col[19]                             -- 19 2P 処理アドレス表示  1:OFF 2:本体 3:弾1 4:弾2 5:弾3
+		g.disp_pos            = col[20]                             -- 20 向き・距離・位置表示  1;OFF 2:ON 3:向き・距離のみ 4:位置のみ
+		-- 21 撮影用 label
+		c.disp_char           = col[22]                             -- 22 キャラ表示  1:OFF 2:ON 3:1P 4:2P
+		c.disp_phantasm       = col[23]                             -- 23 残像表示  1:OFF 2:ON 3:1P 4:2P
+		c.disp_effect         = col[24]                             -- 24 エフェクト表示  1:OFF 2:ON 3:1P 4:2P
+		g.hide                = menu.set_hide(o.p_chan, col[25] ~= 1) -- 25 Pちゃん表示 1:OFF 2:ON
+		g.hide                = menu.set_hide(o.effect, col[26] ~= 1) -- 26 共通エフェクト表示  1:OFF 2:ON
+		-- 27 撮影用(有効化時はリスタートします)
+		g.hide                = menu.set_hide(o.meters, col[28] == 2) -- 28 体力,POWゲージ表示  1:OFF 2:ON
+		g.hide                = menu.set_hide(o.background, col[29] == 2) -- 29 背景表示  1:OFF 2:ON
+		g.hide                = menu.set_hide(o.shadow1, col[30] ~= 2) -- 30 影表示  1:ON 2:OFF 3:ON:反射→影
+		g.hide                = menu.set_hide(o.shadow2, col[30] ~= 3) -- 30 影表示  1:ON 2:OFF 3:ON:反射→影
+		g.fix_scr_top         = col[31]                             -- 31 画面カメラ位置
 		g.fix_scr_top_20      = g.fix_scr_top - 20
-		-- 30 撮影用(特殊動作の強制)
-		p[2].no_hit_limit     = col[31] - 1                         -- 31 1P 強制空振り
-		p[1].no_hit_limit     = col[32] - 1                         -- 32 2P 強制空振り
-		p[1].force_y_pos      = col[33]                             -- 33 1P Y座標強制
-		p[2].force_y_pos      = col[34]                             -- 34 2P Y座標強制
-		g.sync_pos_x          = col[35]                             -- 35 画面下に移動
+		-- 32 撮影用(特殊動作の強制)
+		p[2].no_hit_limit     = col[33] - 1                         -- 33 1P 強制空振り
+		p[1].no_hit_limit     = col[34] - 1                         -- 34 2P 強制空振り
+		p[1].force_y_pos      = col[35]                             -- 35 1P Y座標強制
+		p[2].force_y_pos      = col[36]                             -- 36 2P Y座標強制
+		g.sync_pos_x          = col[37]                             -- 37 画面下に移動
 
 		menu.organize_disp_config()
 
@@ -9189,12 +9204,18 @@ rbff2.startplugin  = function()
 		end
 	end
 
+	local hitbox_hist_counts = {}
+	for i = 1, 60 do
+		table.insert(hitbox_hist_counts, string.format("%sF", i))
+	end
 	menu.disp      = menu.create(
 		"表示設定",
 		"補助的な情報表示を設定します。",
 		{
 			{ "1P 判定・間合い表示", { "OFF", "ON", "ON:判定のみ", "ON:間合いのみ" }, },
 			{ "2P 判定・間合い表示", { "OFF", "ON", "ON:判定のみ", "ON:間合いのみ" }, },
+			{ "判定軌跡表示", { "OFF", "ON:1P", "ON:2P", "ON:1Pと2P" }, },
+			{ "判定軌跡表示のフレーム数", hitbox_hist_counts },
 			{ "1P 入力表示", { "OFF", "ON", "ON:ログのみ", "ON:キーディスのみ", }, },
 			{ "2P 入力表示", { "OFF", "ON", "ON:ログのみ", "ON:キーディスのみ", }, },
 			{ "気絶メーター表示", menu.labels.off_on_1p2p, },
@@ -9232,46 +9253,46 @@ rbff2.startplugin  = function()
 		function()
 			---@diagnostic disable-next-line: undefined-field
 			local col, p, g, o, c = menu.disp.pos.col, players, global, hide_options, menu.config
-			col[1] = c.disp_box_range1p                     -- 01 1P 判定・間合い表示  1:OFF 2:ON 3:ON:判定のみ 4:ON:間合いのみ
-			col[2] = c.disp_box_range2p                     -- 02 2P 判定・間合い表示  1:OFF 2:ON 3:ON:判定のみ 4:ON:間合いのみ
-			col[3] = p[1].disp_command                      -- 03 1P 入力表示  1:OFF 2:ON 3:ログのみ 4:キーディスのみ
-			col[4] = p[2].disp_command                      -- 04 2P 入力表示  1:OFF 2:ON 3:ログのみ 4:キーディスのみ
-			col[5] = c.disp_stun                            -- 05 気絶メーター表示  1:OFF 2:ON 3:1P 4:2P
-			col[6] = c.disp_damage                          -- 06 ダメージ表示  1:OFF 2:ON 3:1P 4:2P
-			-- 07 フレーム表示 label
-			col[8] = g.disp_input                           -- 08 コマンド入力状態表示  1:OFF 2:1P 3:2P
-			col[9] = c.disp_frame                           -- 09 フレームメーター表示
-			-- 1:OFF, 2:ON:大表示, 3:ON:大表示(+1P情報), 4:ON:大表示(+2P情報), 5:ON:小表示, 6:ON:小表示 1Pのみ, 7:ON:小表示 2Pのみ
-			col[10] = c.split_frame                         -- 10 フレームメーター設定  1:ON 2:ON:判定の形毎 3:ON:攻撃判定の形毎 4:ON:くらい判定の形毎
-			col[11] = c.disp_fb_frame and 2 or 1            -- 11 フレームメーター弾表示  1:OFF 2:ON
-			col[12] = g.disp_neutral_frames and 2 or 1      -- 12 通常動作フレーム非表示  1:OFF 2:ON
-			--  13 状態表示 label
-			col[14] = p[1].disp_state                       -- 14 1P 状態表示  1:OFF 2: ON, ON:小表示, ON:大表示, ON:フラグ表示
-			col[15] = p[2].disp_state                       -- 15 2P 状態表示  1:OFF 2:ON, ON:小表示, ON:大表示, ON:フラグ表示
-			col[16] = p[1].disp_base                        -- 16 1P 処理アドレス表示  1:OFF 2:本体 3:弾1 4:弾2 5:弾3
-			col[17] = p[2].disp_base                        -- 17 2P 処理アドレス表示  1:OFF 2:本体 3:弾1 4:弾2 5:弾3
-			col[18] = g.disp_pos                            -- 18 向き・距離・位置表示 1;OFF 2:ON 3:向き・距離のみ 4:位置のみ
-			--  19 撮影用 label
-			col[20] = c.disp_char                           -- 20 キャラ表示 1:OFF 2:ON 3:1P 4:2P
-			col[21] = c.disp_phantasm                       -- 21 残像表示 1:OFF 2:ON 3:1P 4:2P
-			col[22] = c.disp_effect                         -- 22 エフェクト表示 1:OFF 2:ON 3:1P 4:2P
-			col[23] = ut.tstb(g.hide, o.p_chan) and 1 or 2  -- 23 Pちゃん表示 1:OFF 2:ON
-			col[24] = ut.tstb(g.hide, o.effect) and 1 or 2  -- 24 共通エフェクト表示 1:OFF 2:ON
-			--  25 撮影用(有効化時はリスタートします)             25
-			col[26] = ut.tstb(g.hide, o.meters, true) and 1 or 2 -- 26 体力,POWゲージ表示 1:OFF 2:ON
-			col[27] = ut.tstb(g.hide, o.background, true) and 1 or 2 -- 27 背景表示 1:OFF 2:ON
-			col[28] = ut.tstb(g.hide, o.shadow1, true) and 2 or
-				ut.tstb(g.hide, o.shadow2, true) and 3 or 1 -- 28 影表示  1:ON 2:OFF 3:ON:反射→影
-			col[29] = global.fix_scr_top                    -- 29 画面カメラ位置
-			--  30 撮影用(特殊動作の強制)
-			col[31] = p[2].no_hit_limit + 1                 -- 31 1P 強制空振り
-			col[32] = p[1].no_hit_limit + 1                 -- 32 2P 強制空振り
-			col[33] = p[1].force_y_pos                      -- 33 1P Y座標強制
-			col[34] = p[2].force_y_pos                      -- 34 2P Y座標強制
-			g.sync_pos_x = col[35]                          -- 35 X座標同期
+			col[ 1] = c.disp_box_range1p                             --  1 1P 判定・間合い表示  1:OFF 2:ON 3:ON:判定のみ 4:ON:間合いのみ
+			col[ 2] = c.disp_box_range2p                             --  2 2P 判定・間合い表示  1:OFF 2:ON 3:ON:判定のみ 4:ON:間合いのみ
+			col[ 3] = g.hitbox_hist_target                           --  3 判定軌跡表示 1:OFF 2:ON:1P 3:ON:2P 4:ON:1Pと2P
+			col[ 4] = g.hitbox_hist_count                            --  4 判定軌跡表示のフレーム数
+			col[ 5] = p[1].disp_command                              --  5 1P 入力表示  1:OFF 2:ON 3:ログのみ 4:キーディスのみ
+			col[ 6] = p[2].disp_command                              --  6 2P 入力表示  1:OFF 2:ON 3:ログのみ 4:キーディスのみ
+			col[ 7] = c.disp_stun                                    --  7 気絶メーター表示  1:OFF 2:ON 3:1P 4:2P
+			col[ 8] = c.disp_damage                                  --  8 ダメージ表示  1:OFF 2:ON 3:1P 4:2P
+			--   9 フレーム表示 label                                    9
+			col[10] = g.disp_input                                   -- 10 コマンド入力状態表示  1:OFF 2:1P 3:2P
+			col[11] = c.disp_frame                                   -- 11 フレームメーター表示 -- 1:OFF, 2:ON:大表示, 3:ON:大表示(+1P情報), 4:ON:大表示(+2P情報), 5:ON:小表示, 6:ON:小表示 1Pのみ, 7:ON:小表示 2Pのみ
+			col[12] = c.split_frame                                  -- 12 フレームメーター設定  1:ON 2:ON:判定の形毎 3:ON:攻撃判定の形毎 4:ON:くらい判定の形毎
+			col[13] = c.disp_fb_frame and 2 or 1                     -- 13 フレームメーター弾表示  1:OFF 2:ON
+			col[14] = g.disp_neutral_frames and 2 or 1               -- 14 通常動作フレーム非表示  1:OFF 2:ON
+			--  15 状態表示 label                                       15 状態表示
+			col[16] = p[1].disp_state                                -- 16 1P 状態表示  1:OFF 2: ON, ON:小表示, ON:大表示, ON:フラグ表示
+			col[17] = p[2].disp_state                                -- 17 2P 状態表示  1:OFF 2:ON, ON:小表示, ON:大表示, ON:フラグ表示
+			col[18] = p[1].disp_base                                 -- 18 1P 処理アドレス表示  1:OFF 2:本体 3:弾1 4:弾2 5:弾3
+			col[19] = p[2].disp_base                                 -- 19 2P 処理アドレス表示  1:OFF 2:本体 3:弾1 4:弾2 5:弾3
+			col[20] = g.disp_pos                                     -- 20 向き・距離・位置表示 1;OFF 2:ON 3:向き・距離のみ 4:位置のみ
+			--  21 撮影用 label                                         21 撮影用
+			col[22] = c.disp_char                                    -- 22 キャラ表示 1:OFF 2:ON 3:1P 4:2P
+			col[23] = c.disp_phantasm                                -- 23 残像表示 1:OFF 2:ON 3:1P 4:2P
+			col[24] = c.disp_effect                                  -- 24 エフェクト表示 1:OFF 2:ON 3:1P 4:2P
+			col[25] = ut.tstb(g.hide, o.p_chan) and 1 or 2           -- 25 Pちゃん表示 1:OFF 2:ON
+			col[26] = ut.tstb(g.hide, o.effect) and 1 or 2           -- 26 共通エフェクト表示 1:OFF 2:ON
+			--  27 撮影用(有効化時はリスタートします)                   27 撮影用
+			col[28] = ut.tstb(g.hide, o.meters, true) and 1 or 2     -- 28 体力,POWゲージ表示 1:OFF 2:ON
+			col[29] = ut.tstb(g.hide, o.background, true) and 1 or 2 -- 29 背景表示 1:OFF 2:ON
+			col[30] = ut.tstb(g.hide, o.shadow1, true) and 2 or ut.tstb(g.hide, o.shadow2, true) and 3 or 1     -- 30 影表示  1:ON 2:OFF 3:ON:反射→影
+			col[31] = global.fix_scr_top                             -- 31 画面カメラ位置
+			--  32                                                      32 撮影用(特殊動作の強制)
+			col[33] = p[2].no_hit_limit + 1                          -- 33 1P 強制空振り
+			col[34] = p[1].no_hit_limit + 1                          -- 34 2P 強制空振り
+			col[35] = p[1].force_y_pos                               -- 35 1P Y座標強制
+			col[36] = p[2].force_y_pos                               -- 36 2P Y座標強制
+			col[37] = g.sync_pos_x                                   -- 37 X座標同期
 		end,
-		ut.new_filled_table(35, function() menu.on_disp(false) end),
-		ut.new_filled_table(35, function() menu.on_disp(true) end))
+		ut.new_filled_table(37, function() menu.on_disp(false) end),
+		ut.new_filled_table(37, function() menu.on_disp(true) end))
 
 	menu.labels.motion_stops = {}
 	menu.labels.motion_stops2 = {}
