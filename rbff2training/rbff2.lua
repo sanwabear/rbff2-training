@@ -749,6 +749,7 @@ rbff2.startplugin  = function()
 		hitbox_bold          = 1,
 		hitbox_hist_target   = 1,
 		hitbox_hist_count    = 60,
+		hitbox_hist_fill     = true,
 
 		disp_pos             = 2, -- 向き・距離・位置表示 1;OFF 2:ON 3:向き・距離のみ 4:位置のみ
 		hide                 = hide_options.none,
@@ -1387,8 +1388,10 @@ rbff2.startplugin  = function()
 		-- 背景なしの場合は判定の塗りつぶしをやめる
 		local outline, fill = box.type.outline, do_fill and global.disp_bg and box.type.fill or 0
 		if alpha then
-			outline = outline & 0xFFFFFF
-			outline = alpha | outline
+			outline = alpha | (outline & 0xFFFFFF)
+			if (fill & 0xFF000000) > 0 then
+				fill = ((alpha / 2) & 0xFF000000) | (fill & 0xFFFFFF)
+			end
 		end
 		local x1, x2 = sort_ab(box.left, box.right)
 		local y1, y2 = sort_ab(box.top, box.bottom)
@@ -7499,8 +7502,28 @@ rbff2.startplugin  = function()
 		set_freeze(not global.pause)
 	end
 
+	local draw_util = {}
+	-- 符号付き16bitに正規化
+	draw_util.to_int16                = function(v)
+		v = v & 0xFFFF
+		if v >= 0x8000 then
+			v = v - 0x10000
+		end
+		return v
+	end
+	-- 4つの符号付き16bit整数を64bitにパック
+	draw_util.pack4                   = function(a, b, c, d)
+		return ((draw_util.to_int16(a) & 0xFFFF) << 48)
+			| ((draw_util.to_int16(b) & 0xFFFF) << 32)
+			| ((draw_util.to_int16(c) & 0xFFFF) << 16)
+			|  (draw_util.to_int16(d) & 0xFFFF)
+	end
 	local draws = {
 		box = function()
+			local keys = ut.new_set()
+			for _, box in ipairs(hitboxies) do 
+				keys[draw_util.pack4(box.left, box.right, box.top, box.bottom)] = true
+			end
 			-- 順番に判定表示（キャラ、弾）
 			-- 軌跡表示
 			local hist_max = math.min(global.hitbox_hist_count, #hitboxies_hist, #ranges_hist) - 1
@@ -7512,19 +7535,21 @@ rbff2.startplugin  = function()
 					end
 				end
 				]]
-				local hscr, top_diff, left_diff
+				local hbox, hscr, top_diff, left_diff, hkey
 				for _, box in ipairs(hitboxies_hist[hi]) do
 					hscr = screens_hist[hi]
 					top_diff, left_diff = screen.top - hscr.top, screen.left - hscr.left
 					if global.hitbox_hist_target == 4 or (box.p.body.num + 1) == global.hitbox_hist_target then
-						draw_hitbox({
-							p = box.p,
-							type = box.type,
-							left = box.left - left_diff,
-							right = box.right - left_diff,
-							top = box.top + top_diff,
-							bottom = box.bottom + top_diff,
-						}, false, 0, 0x99000000, true) -- 各種判定
+						hbox = ut.shallow_copy(box)
+						hbox.left = box.left - left_diff
+						hbox.right = box.right - left_diff
+						hbox.top = box.top + top_diff
+						hbox.bottom = box.bottom + top_diff
+						hkey = draw_util.pack4(hbox.left, hbox.right, hbox.top, hbox.bottom)
+						if not keys[hkey] then
+							keys[hkey] = true
+							draw_hitbox(hbox, global.hitbox_hist_fill, 0, 0x99000000, true) -- 各種判定
+						end
 					end
 				end
 			end
