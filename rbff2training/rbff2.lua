@@ -772,7 +772,7 @@ rbff2.startplugin  = function()
 		dummy_rvs_type       = 1, -- リバーサル対象 1:すべて 2:ガード時 3:やられ時 4:その他動作時
 		hookp                = {}, -- フックポイント
 		auto_input           = {
-			esaka_check   = false, -- 詠酒距離チェック
+			esaka_check   = 1,     -- 詠酒距離チェック
 			fast_kadenzer = false, -- 必勝！逆襲拳
 			kara_ca       = false, -- 空振りCA
 			no_charge     = false, -- タメ時間なし
@@ -6887,7 +6887,7 @@ rbff2.startplugin  = function()
 				end
 			end
 			]]
-			if a.pairon2 and p.char == db.char_id.xiangfei and p.act == 0x43 then
+			if a.pairon2 and p.char == db.char_id.xiangfei and p.act == 0xFE then
 				dummy_add = list[size + 14] -- 超白龍2
 				--ut.printf("3 %X %s %s %s", p.act, a.pairon, size + 11, to_sjis(dummy_add.name))
 			end
@@ -6918,28 +6918,28 @@ rbff2.startplugin  = function()
 				if p.act == 0x86 or p.act == 0x87 then
 					if a.hebi_count < a.hebi_damashi then
 						dummy_add = list[size + 18] -- 18 蛇使い・上段
-						--ut.printf("1 %X %s %s %s", p.act, a.pairon, size + 18, to_sjis(dummy_add.name))
+						--ut.printf("1 %X %s %s %s", p.act, a.hebi_damashi, size + 18, to_sjis(dummy_add.name))
 					else
 						dummy_add = list[size + 21] -- 21 蛇使だまし・上段
-						--ut.printf("2 %X %s %s %s", p.act, a.pairon, size + 21, to_sjis(dummy_add.name))
+						--ut.printf("2 %X %s %s %s", p.act, a.hebi_damashi, size + 21, to_sjis(dummy_add.name))
 					end
 					a.hebi_count = a.hebi_count + 1
 				elseif p.act == 0x90 or p.act == 0x91 then
 					if a.hebi_count < a.hebi_damashi then
 						dummy_add = list[size + 19] -- 19 蛇使い・中段
-						--ut.printf("3 %X %s %s %s", p.act, a.pairon, size + 19, to_sjis(dummy_a4dd.name))
+						--ut.printf("3 %X %s %s %s", p.act, a.hebi_damashi, size + 19, to_sjis(dummy_a4dd.name))
 					else
 						dummy_add = list[size + 22] -- 22 蛇使だまし・中段
-						--ut.printf("4 %X %s %s %s", p.act, a.pairon, size + 22, to_sjis(dummy_add.name))
+						--ut.printf("4 %X %s %s %s", p.act, a.hebi_damashi, size + 22, to_sjis(dummy_add.name))
 					end
 					a.hebi_count = a.hebi_count + 1
 				elseif p.act == 0x9A or p.act == 0x9B then
 					if a.hebi_count < a.hebi_damashi then
 						dummy_add = list[size + 20] -- 20 蛇使い・下段
-						--ut.printf("5 %X %s %s %s", p.act, a.pairon, size + 20, to_sjis(dummy_add.name))
+						--ut.printf("5 %X %s %s %s", p.act, a.hebi_damashi, size + 20, to_sjis(dummy_add.name))
 					else
 						dummy_add = list[size + 23] -- 23 蛇使だまし・下段
-						--ut.printf("6 %X %s %s %s", p.act, a.pairon, size + 23, to_sjis(dummy_add.name))
+						--ut.printf("6 %X %s %s %s", p.act, a.hebi_damashi, size + 23, to_sjis(dummy_add.name))
 					end
 					a.hebi_count = a.hebi_count + 1
 				end
@@ -9468,6 +9468,7 @@ rbff2.startplugin  = function()
 			g.auto_input.cancel        = col[ 8] == 2    -- 全通常技キャンセル可能
 			g.auto_input.fast_recover  = col[ 9] == 2    -- 高速気絶回復
 			-- 簡易入力のROMハックを反映する
+			ez.esaka_check(g.auto_input.esaka_check)     -- 詠酒チェック
 			ez.fast_kadenzer(g.auto_input.fast_kadenzer) -- 必勝！逆襲拳1発キャッチカデンツァ
 			ez.kara_ca(g.auto_input.kara_ca)             -- 空振りCAできる
 			ez.no_charge(g.auto_input.no_charge)         -- タメ時間なし
