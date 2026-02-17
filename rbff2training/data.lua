@@ -2160,9 +2160,9 @@ local rvs_bs_list = {
 		combo("A B(20) C     [0x46 0x02 0x03]", "_A_Bディレイ_C必"),
 		combo("A B     C     [0x46 0x02 0x03]", "_A_B_C必"),
 		combo("A B     C(20) [0x46 0x02 0x03]", "_A_B_Cディレイ必"),
-		combo("0x1E 5(hold1) 4 A B     0x06 me 0x1E 5(hold1) 4 A B C [0x46 0x02 0x03]", "_A_B覇気脚 滑り_A_B_C"),
-		combo("0x1E 5(hold1) 4 C(1hit) 0x06 me 0x1E 5(hold1) 4 A B C [0x46 0x02 0x03]", "_C覇気脚 滑り_A_B_C"),
-		combo("0x1E 5(hold1) 4 A B C", "滑り_A_B_C"),
+		combo("0x1E(5) 4(hold1) A(4) B     0x06 me 0x1E 5(hold1) 4(hold1) A B C [0x46 0x02 0x03]", "滑り_A_B覇気脚 滑り_A_B_C"),
+		combo("0x1E(5) 4(hold1) C(8) 0x06 me 0x1E 5(hold1) 4(hold1) A B C [0x46 0x02 0x03]", "滑り_C覇気脚 滑り_A_B_C"),
+		combo("0x1E(5) 4(hold1) A(4) B C", "滑り_A_B_C"),
 		combo("6C A   [0x46 0x02 0x03]", "投げフォロー_C始動2段"),
 		combo("6C A B [0x46 0x02 0x03]", "投げフォローC始動3段"),
 		combo("6C A B C",                "投げフォローC始動全段"),
@@ -2714,6 +2714,35 @@ flag_c0.dash        =
 	flag_c0._09 | -- スウェーライン上ダッシュ～戻り
 	flag_c0._24 | -- ダッシュ
 	flag_c0._25 -- 飛び退き
+flag_c0.normal_a =
+	flag_c0._02 | -- 屈途中
+	flag_c0._03 | -- 奥後退
+	flag_c0._04 | -- 奥前進
+	flag_c0._05 | -- 奥振向
+	flag_c0._06 | -- 屈振向
+	flag_c0._07 | -- 立振向
+	flag_c0._11 | -- スウェーライン上立
+	flag_c0._13 | -- スウェーライン上維持
+	flag_c0._18 | -- 後方小ジャンプ
+	flag_c0._19 | -- 前方小ジャンプ
+	flag_c0._20 | -- 垂直小ジャンプ
+	flag_c0._21 | -- 後方ジャンプ
+	flag_c0._22 | -- 前方ジャンプ
+	flag_c0._23 | -- 垂直ジャンプ
+	flag_c0._24 | -- ダッシュ
+	flag_c0._26 | -- 屈前進
+	flag_c0._27 | -- 立途中
+	flag_c0._28 | -- 屈
+	flag_c0._29 | -- 後退
+	flag_c0._30 | -- 前進
+	flag_c0._31 -- 立
+flag_c0.normal_b =
+	flag_c0._01 | -- ダウン
+	flag_c0._08 | -- スウェーライン上飛び退き～戻り
+	flag_c0._09 | -- スウェーライン上ダッシュ～戻り
+	flag_c0._10 | -- スウェーライン→メイン
+	flag_c0._12 | -- メインライン→スウェーライン移動中
+	flag_c0._25 -- 飛び退き
 local flag_c4       = {
 	_00 = 2 ^ 0, -- 避け攻撃
 	_01 = 2 ^ 1, -- 対スウェーライン下段攻撃
@@ -2759,6 +2788,33 @@ flag_c4.sway_attack =
 	flag_c4._03 | -- 対メインライン威力大攻撃
 	flag_c4._04 | -- 対メインラインB攻撃
 	flag_c4._05 -- 対メインラインA攻撃
+-- 小ジャンプ
+flag_c4.hop         = flag_c4._06 |
+	flag_c4._07 |
+	flag_c4._08 |
+	flag_c4._09 |
+	flag_c4._10 |
+	flag_c4._11 |
+	flag_c4._12 |
+	flag_c4._13 |
+	flag_c4._14
+-- ジャンプ
+flag_c4.jump        = flag_c4._15 |
+	flag_c4._16 |
+	flag_c4._17 |
+	flag_c4._18 |
+	flag_c4._19 |
+	flag_c4._20 |
+	flag_c4._21 |
+	flag_c4._22 |
+	flag_c4._23
+flag_c4.overhead    = flag_c4.hop |
+	flag_c4.jump |
+	flag_c4._02 | -- 対スウェーライン上段攻撃
+	flag_c4._05 -- 対メインラインA攻撃
+flag_c4.a =
+	flag_c4._28 | -- 屈A
+	flag_c4._31 -- 立A
 local flag_c8       = {
 	_00 = 2 ^ 0, --
 	_01 = 2 ^ 1, --
@@ -2817,6 +2873,32 @@ flag_c8.normal_atk  =
 	flag_c8._13 | -- 特殊技
 	flag_c8._14 | -- 特殊技
 	flag_c8._15  -- 特殊技
+flag_c8.sp = 
+	flag_c8._16 | -- 潜在能力
+	flag_c8._17 | -- 潜在能力
+	flag_c8._18 | -- 超必殺技
+	flag_c8._19 | -- 超必殺技
+	flag_c8._20 | -- 必殺技
+	flag_c8._21 | -- 必殺技
+	flag_c8._22 | -- 必殺技
+	flag_c8._23 | -- 必殺技
+	flag_c8._24 | -- 必殺技
+	flag_c8._25 | -- 必殺技
+	flag_c8._26 | -- 必殺技
+	flag_c8._27 | -- 必殺技
+	flag_c8._28 | -- 必殺技
+	flag_c8._29 | -- 必殺技
+	flag_c8._30 | -- 必殺技
+	flag_c8._31 -- 必殺技
+flag_c8.cmd =
+	flag_c8._08 | -- 特殊技
+	flag_c8._09 | --
+	flag_c8._10 | --
+	flag_c8._11 | -- 特殊技
+	flag_c8._12 | -- 特殊技
+	flag_c8._13 | -- 特殊技
+	flag_c8._14 | -- 特殊技
+	flag_c8._15 -- 特殊技
 local flag_cc       = {
 	_00 = 2 ^ 0, -- CA
 	_01 = 2 ^ 1, -- AかB攻撃
@@ -2858,30 +2940,8 @@ local flag_cc       = {
 	_30 = 2 ^ 30, -- 空中投げ
 	_31 = 2 ^ 31, -- 投げ
 }
--- 小ジャンプ
-flag_c4.hop         = flag_c4._06 |
-	flag_c4._07 |
-	flag_c4._08 |
-	flag_c4._09 |
-	flag_c4._10 |
-	flag_c4._11 |
-	flag_c4._12 |
-	flag_c4._13 |
-	flag_c4._14
--- ジャンプ
-flag_c4.jump        = flag_c4._15 |
-	flag_c4._16 |
-	flag_c4._17 |
-	flag_c4._18 |
-	flag_c4._19 |
-	flag_c4._20 |
-	flag_c4._21 |
-	flag_c4._22 |
-	flag_c4._23
-flag_c4.overhead    = flag_c4.hop |
-	flag_c4.jump |
-	flag_c4._02 | -- 対スウェーライン上段攻撃
-	flag_c4._05 -- 対メインラインA攻撃
+flag_cc.ca =
+	flag_cc._00 -- CA
 local flag_d0       = {
 	_00 = 0x1, --
 	_01 = 0x2, --

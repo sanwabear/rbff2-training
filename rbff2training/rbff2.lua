@@ -2100,6 +2100,7 @@ rbff2.startplugin  = function()
 			end
 			p.block1 = 0
 			p.new_preset_combo(true, "reset_char_menu") -- プリセットコンボ更新用
+			p.combo.state = "reload"
 			p.rvs_count = -1 -- リバサガードカウンター初期化
 			p.bs_count  = -1 -- BSガードカウンター初期化
 			p.bs_hook  = nil -- キャラとBSセット
@@ -2267,8 +2268,9 @@ rbff2.startplugin  = function()
 			-- キャンセル可否テーブルのデータ取得 家庭用 02AD90 からの処理
 			[0xAF] = function(data) -- キャンセル可否 00:不可 C0:可 D0:可 正確ではないかも
 				p.cancelable_data = data
-				p.cancelable = data & 0xC0 == 0xC0
-				p.repeatable = data & 0xD0 == 0xD0
+				p.hit_cancelable  = ut.tstb(data, 0xC0) -- キャンセル可
+				p.blk_cancelable  = ut.tstb(data, 0x40) -- ガード時のみキャンセル可
+				p.repeatable      = ut.tstb(data, 0x10) -- 連打のみキャンセル可
 			end,
 			[0x68] = function(data) p.skip_frame = data ~= 0 end, -- 潜在能力強制停止
 			[0xB6] = function(data)
@@ -2693,12 +2695,10 @@ rbff2.startplugin  = function()
 			end,
 			--[0xD2] = function(data) p.next_ca = data end,                  -- CA派生処理アドレス
 			--[0x0C] = function(data) p.reserve_proc = data end,             -- 予約中の処理アドレス
-			[0xC0] = function(data) p.flag_c0, p.on_upd_move = data, now() end, -- フラグ群
-			[0xC4] = function(data) p.flag_c4, p.on_upd_move = data, now() end, -- フラグ群
-			[0xC8] = function(data) p.flag_c8, p.on_upd_move = data, now() end, -- フラグ群
-			[0xCC] = function(data)
-				p.flag_cc, p.on_update_flag_cc, p.on_upd_move = data, now(), now() -- フラグ群
-			end,
+			[0xC0] = function(data) p.flag_c0, p.on_upd_flag_c0 = data, now() end, -- フラグ群
+			[0xC4] = function(data) p.flag_c4, p.on_upd_flag_c4 = data, now() end, -- フラグ群
+			[0xC8] = function(data) p.flag_c8, p.on_upd_flag_c8 = data, now() end, -- フラグ群
+			[0xCC] = function(data) p.flag_cc, p.on_upd_flag_cc = data, now() end, -- フラグ群
 			[p1 and 0x394C4 or 0x394C8] = function(data) p.input_offset = data end, -- コマンド入力状態のオフセットアドレス
 		}
 		all_objects[p.addr.base]   = p
@@ -2886,6 +2886,9 @@ rbff2.startplugin  = function()
 				p.last_combo_attributes = {}
 				if p.new_preset_combo then
 					p.new_preset_combo(true, "init")
+				end
+				if p.combo then
+					p.combo.state = "reload"
 				end
 				p.clear_frame_data()
 			end
@@ -3114,6 +3117,7 @@ rbff2.startplugin  = function()
 				if fake_pc and p.attackbits.harmless and p.on_update_act then p.attackbits.fake = true end
 				-- ut.printf("%X %s %s | %X %X | %s | %s %s | %X %X %X | %s %s", mem.pc(), now(), p.on_hit, base, data, ut.tobitstr(data), fake_pc, fake, p.act, p.act_count, p.act_frame, p.attackbits.fake, p.attackbits.obsolute)
 			end,
+			--[0x6E] = function(data, ret) end, -- キャンセル動作チェック用のフラグ群
 			[0x6F] = function(data, ret)
 				if p.body.motion_stop and mem.pc() == 0x11B6E then
 					ret.value = p.act_frame
@@ -3284,6 +3288,7 @@ rbff2.startplugin  = function()
 				p.max_hit_nm = data
 			end,                                   -- 同一技行動での最大ヒット数 分子
 			[0xB1] = function(data) p.hurt_invincible = data > 0 end,                          -- やられ判定無視の全身無敵
+			--[0xB6] = function(data)  end,                                                      -- キャンセル判断で使う攻撃ID
 			[0xE9] = function(data) p.dmg_id = data end,                                       -- 最後にヒット/ガードした技ID
 			[0xEB] = function(data) p.hurt_attack = data end,                                  -- やられ中のみ変化
 			[{ addr = 0xF1, filter = { 0x408D4, 0x40954 } }] = function(data) p.drill_count = data end, -- 炎の種馬の追加連打の成立回数
@@ -5887,90 +5892,67 @@ rbff2.startplugin  = function()
 		return p.combo.list
 	end
 
-	-- プリセットコンボのロード
-	tra_sub.controll_dummy_combo = function(p)
-		local c
-		local advance = false
-		local timeout = false
-		local po = p.old
-		local moving = (p.flag_c4 > 0) or (p.flag_c8 > 0) or
-			ut.tstb(p.flag_c0, db.flag_c0.startups | db.flag_c0.jump) or 
-			ut.tstb(p.flag_cc, db.flag_cc.moving)
-		local old_moving = po and ((po.flag_c4 > 0) or (po.flag_c8 > 0) or
-			ut.tstb(po.flag_c0, db.flag_c0.startups | db.flag_c0.jump) or
-			ut.tstb(po.flag_cc, db.flag_cc.moving)) or moving
+	local ps_combo = {}
 
-		local do_log = function(point, entry)
-			if p.combo_log > 1 then
-				point = point or ""
-				ut.printf("%8s [FSM][%s][in:%s] %16s:%8s adv?:%3s to?:%3s adv:%3s to:%3s mov:%4s hits:%4s kara:%4s me:%2s hold:%4s cnt:%s lag:%s fin:%s",
-					entry and global.frame_number or "",
-					c.count,
-					c.input and to_sjis(c.input.name) or "--",
-					entry and "entry" or " ->" .. point,
-					c.state,
-					advance and "+adv" or "----",
-					timeout and "+to" or "---",
-					c.advance and "adv" or "---",
-					c.timeout and "to" or "---",
-					moving and "move" or "----",
-					c.hits and c.hits or "----",
-					c.kara and "kara" or "----",
-					c.meoshi and "me" or "--",
-					c.hold and c.hold or "----",
-					c.count,
-					c.lag,
-					p.flag_fin
-				)
+	ps_combo.has_moving = function(p)
+		return (p.flag_c4 > 0) or -- 通常攻撃
+			(p.flag_c8 > 0) or -- 特殊技、必殺技
+			ut.tstb(p.flag_c0, db.flag_c0.startups | db.flag_c0.jump) or -- 動作
+			ut.tstb(p.flag_cc, db.flag_cc.moving) -- やられ以外
+	end
+
+	ps_combo.check_adv = function(on_upd, curr, old, mask)
+		if mask then
+			curr, old = curr & mask, old & mask
+		end
+		local moving, on_startup, on_endup = false, false, false
+		if curr > 0 then
+			moving = true -- 技発生中:true 未動作:false
+		end
+		if on_upd == true then
+			if curr > 0 then
+				on_startup = true -- 技発生
+			end
+			if curr == 0 and old > 0 then
+				on_endup = true -- 技終了
 			end
 		end
+		return moving,  -- 技発生中:true 未動作:false
+			on_startup, -- 技発生
+			on_endup    -- 技終了
+	end
 
-		local log_with_ret = function(ret, point, entry)
-			if p.combo_log > 1 then
-				do_log(point, entry)
-				ut.printf("     ret [FSM][%s] --> [%s]",
-					p.combo.count,
-					(ret == nil) and "nil" or (ret.cmd == nil) and "sp" or "cmd"
-				)
-			end
-			return ret
+	ps_combo.additional = function(p)
+		local c = p.combo
+		local cancel         = false
+		local hit_cancel     = false
+		local hit_cancelable = false
+		local blk_cancel     = false
+		local blk_cancelable = false
+		local repcan         = false
+		local capable        = false
+		local addition       = false
+		local meethits       = false
+		local moving         = false  -- 技発生中:true 未動作:false
+		local on_startup     = false -- 技発生
+		local on_endup       = false -- 技終了
+		local kara_capable   = false
+
+		-- 技のフラグ状態が変化かつ技発生とみなしたらadvance有効
+		-- 技のフラグ状態が変化かつ技未発生とみなしたらtimeout有効
+		-- ただし目押しコンボが続く場合はtimeoutとはしない
+		local now = global.frame_number
+		for _, args in ipairs({
+			{ p.on_upd_flag_c4 == now, p.flag_c4, p.old.flag_c4 }, -- 通常攻撃
+			{ p.on_upd_flag_c8 == now, p.flag_c8, p.old.flag_c8 }, -- 特殊技、必殺技
+			{ p.on_upd_flag_c0 == now, p.flag_c0, p.old.flag_c0, db.flag_c0.startups | db.flag_c0.jump }, -- 動作
+			{ p.on_upd_flag_cc == now, p.flag_cc, p.old.flag_cc, db.flag_cc.moving } -- やられ以外
+		}) do
+			local r1, r2, r3 = ps_combo.check_adv(table.unpack(args))
+			moving, on_startup, on_endup = moving or r1, on_startup or r2, on_endup or r3
 		end
 
-		if p.normal_state ~= true or p.flag_d0 ~= 0 or p.in_hurt == true or p.in_block == true then
-			if p.combo == nil then
-				p.new_preset_combo(true, "combo nil skip")
-			elseif p.combo.count == nil then
-				p.new_preset_combo(true, "count nil skip")
-			elseif p.on_update_7e_02 == global.frame_number then
-				p.new_preset_combo(true, "count nil skip")
-			--elseif  p.combo.count > 1 then
-				--p.new_preset_combo(true, "count >1 skip")
-			end
-			c = p.combo
-			return log_with_ret(nil, string.format("skip %s %s %s", p.normal_state, p.flag_d0, p.in_hurt))
-		else
-			c = p.combo
-		end
-
-		-- 変化を待つ
-		if p.on_upd_move == global.frame_number then
-			-- c0 flag_c0.startupsの更新があれば
-			-- c4 いずれかの更新があれば
-			-- c8 いずれかの更新があれば
-			-- cc flag_cc.movingの更新があれば
-			if (moving ~= true) and (old_moving == true) then
-				timeout = true
-			end
-			if moving then
-				advance = true
-			end
-		end
-
-		local cancel = false
-		local repcan = false
-		local capable = false
-		local addition = false
-		local meethits = false
+		-- ヒット判定
 		if (c.hits ~= nil) and c.hits > 0 then
 			if c.hits <= p.max_hit_nm then
 				meethits = true
@@ -5979,312 +5961,620 @@ rbff2.startplugin  = function()
 			-- ヒット数評価がない場合はtrueとして他の評価の邪魔をさせない
 			meethits = true
 		end
+
+		-- キャンセル判定
+		hit_cancelable = ut.tstb(p.cancelable_data, 0xC0) -- キャンセル可
+		blk_cancelable = ut.tstb(p.cancelable_data, 0x40) -- ガード時のみキャンセル可
 		if ut.tstb(p.flag_7e, db.flag_7e._05) then
-			local ca = ut.tstb(p.cancelable_data, 0xC0) -- キャンセル可
-			cancel = ca and meethits -- ヒット限定
-			if p.combo_log > 1 then ut.printf("Can.Hit %X %s", p.cancelable_data, cancel) end
+			hit_cancel = hit_cancelable and meethits -- ヒット限定
 		elseif ut.tstb(p.flag_7e, db.flag_7e._04) then
-			local ca = ut.tstb(p.cancelable_data, 0x40) -- ガード時のみキャンセル可
-			cancel = ca and meethits -- ガード限定
-			if p.combo_log > 1 then ut.printf("Can.Block %X %s", p.cancelable_data, cancel) end
+			blk_cancel = blk_cancelable and meethits -- ガード限定
 		end
+		cancel = hit_cancel or blk_cancel
 		if ut.tstb(p.flag_c4, db.flag_c4._28 | db.flag_c4._31) then
 			local ca = ut.tstb(p.cancelable_data, 0x10)
-			repcan = ca -- 連続のみキャンセル可
-			if p.combo_log > 1 then ut.printf("Repeatable %X %s", p.cancelable_data, repcan) end
+			repcan = ca -- 連打のみキャンセル可
 		end
-		if ut.tstb(p.flag_6a, 0x8) then -- 攻撃判定あり
+
+		-- 攻撃判定あり
+		if ut.tstb(p.flag_6a, 0x8) then
+			kara_capable = true
 			capable = (p.flag_c4 > 0) or ut.tstb(p.flag_c8, db.flag_c8.normal_atk)
 			capable = capable and meethits
-			if p.combo_log > 1 then ut.printf("Active C4:%X C8:%X %s", p.flag_c4, p.flag_c8, capable) end
 		end
-		if p.on_additional_r1 == global.frame_number or p.on_additional_r5 == global.frame_number then
+
+		-- 追加入力判定
+		if (p.on_additional_r1 == global.frame_number) or -- 1F追加入力の読み込みタイミング
+			(p.on_additional_r5 == global.frame_number) then -- 5F維持の追加入力の読み込みタイミング
 			addition = true
 		end
-		if p.combo_log > 2 then
-			ut.printf("%s %3s %3s %3s %3s %3s",
-				global.frame_number,
-				cancel and "can" or "---",
-				repcan and "rep" or "---",
-				capable and "cap" or "---",
-				addition and "add" or "---",
-				meethits and "hit" or "---"
-			)
-		end
-		local first_input = function()
-			c.count         = 1
-			c.old           = nil
-			c.list = tra_sub.reload_combo(p)
-			local max       = #c.list
-			c.last          = c.count == #c.list
-			if max > 0 and c.list[1] then
-				c.meta  = c.list[1].meta or {}
-				c.input = c.list[1].hook
-			else
-				c.meta  = {}
-				c.input = nil
-			end
-			c.fin           = nil
-			c.meoshi        = nil
-			c.lag           = 0
-			c.kara          = false
-			c.hold          = nil
-			c.hits          = 0
-			if c.input then
-				c.state    = "enc"
-				c.hook_cmd = (c.input.cmd ~= nil) and c.input or nil
-				c.hook_sp  = (c.input.cmd == nil) and c.input or nil
-			else
-				c.state = "finish"
-				c.hook_cmd = nil
-				c.hook_sp = nil
+
+		return {
+			moving = moving, -- 技発生中:true 未動作:false
+			on_startup = on_startup, -- 技発生
+			on_endup = on_endup, -- 技終了
+			meethits = meethits, -- ヒットあり
+			hit_cancel = hit_cancel, -- ヒット限定キャンセル可能
+			hit_cancelable = hit_cancelable, -- キャンセル可
+			blk_cancel = blk_cancel, -- ガード限定キャンセル可能
+			blk_cancelable = blk_cancelable, -- ガード時のみキャンセル可
+			cancel = cancel, -- ヒットガード問わずキャンセル可能
+			repcan = repcan, -- 連打キャンセル可能
+			kara_capable = kara_capable, -- 攻撃判定あり
+			capable = capable, -- 攻撃判定あり+ヒットあり
+			addition = addition, -- 追加入力の読み込みタイミング
+		}
+	end
+
+	ps_combo.reload = function(p)
+		if p.normal_state ~= true or p.flag_d0 ~= 0 or p.in_hurt == true or p.in_block == true then
+			if p.combo == nil then
+				p.new_preset_combo(true, "combo nil skip")
+			elseif p.combo.count == nil then
+				p.new_preset_combo(true, "count nil skip")
+			elseif p.on_update_7e_02 == global.frame_number then
+				p.new_preset_combo(true, "count nil skip")
 			end
 		end
+		p.combo.state = "neutral"
+		return true, nil
+	end
 
-		local next_input = function()
-			local prev = c.input
-			c.count = c.count + 1
-			local skip = false
+	ps_combo.neutral = function(p)
+		local c = p.combo
+		c.advance = false
+		c.timeout = false
 
-			-- ダミーをスキップ(範囲チェック付き)
-			while c.count <= #c.list and c.list[c.count] and c.list[c.count].hook and c.list[c.count].hook.dummy do
-				if p.combo_log > 1 then ut.printf("         [FSM][%s] P%s SKIP DUMMY", c.count, p.num) end
-				skip = true
-				c.count = c.count + 1
-			end
-
-			-- 範囲外チェック
-			if c.count > #c.list then
-				c.state = "finish"
-				c.last = true
-				if p.combo_log > 1 then ut.printf("         [FSM][%s] P%s FINISH", c.count, p.num) end
-				return
-			end
-
-			-- 次の input を準備
-			local meta = c.meta
-			c.lag      = meta.lag or 0 -- 今のラグ設定を次の待ち時間にする
-			c.kara     = meta.kara and (meta.kara == true) or false
-			c.hold     = meta.hold
-			c.hits     = meta.hits or 0
-			c.last     = c.count == #c.list
-			c.meta     = c.list[c.count].meta
-			c.input    = c.list[c.count].hook
-			c.fin      = nil
-			local realprev = c.list[c.count - 1] -- ダミーを含めた前のオブジェクト
-			local prevhook = realprev.hook
-			c.meoshi   = prevhook and prevhook.meoshi or nil
-			c.hook_cmd = (c.input and c.input.cmd ~= nil) and c.input or nil
-			c.hook_sp  = (c.input and c.input.cmd == nil) and c.input or nil
-			c.state    = c.lag > 0 and "lag" or "exec"
-			--if skip then c.state = "await" end
-			c.advance  = false
-			c.timeout  = false
-			if p.combo_log > 1 then
-				ut.printf("         [FSM][%s] --> next %s -> %s  kara:%s hold:%s hits:%s last:%s input:%s state:%s advance:%s timeout:%s meoshi:%s",
-					c.count,
-					prev and to_sjis(prev.name) or "---",
-					c.input and to_sjis(c.input.name) or "---",
-					(c.kara == nil) and "nil" or c.kara,
-					(c.hold == nil) and "nil" or c.hold,
-					(c.hits == nil) and "nil" or c.hits,
-					(c.last == nil) and "nil" or c.last,
-					c.hook_cmd and "cmd" or (c.hook_sp and "sp " or "---"),
-					(c.state == nil) and "nil" or c.state,
-					(c.advance == nil) and "nil" or c.advance,
-					(c.timeout == nil) and "nil" or c.timeout,
-					(c.meoshi == nil) and "nil" or c.meoshi
-				)
-			end
+		-- 動作中は状態維持
+		if ps_combo.has_moving(p) then
+			return false, nil
 		end
 
-		local exec = function (force, entry)
-			entry = (entry or "") .. "-"
-			c.state = "await"
-			c.advance = false
-			c.timeout = false
-			if c.hook_cmd and c.meta.hold then
-				c.state = "hold"
-				c.hold = c.meta.hold
-				return log_with_ret(c.hook_cmd, entry .. "exec4")
-			end
-			--print("input", c.count)
-			-- 2段目は必殺技だと空キャンセルになるので通常、特殊、CAのみ許す
-			if force then
-				return log_with_ret(c.input, entry .. "exec4")
-			elseif c.count == 2 then
-				return log_with_ret(c.hook_cmd, entry .. "exec1")
-			end
-			-- 最大ヒットが必要な場合は遷移イベントでコマンドを返さない
-			if not meethits then
-				return log_with_ret(nil, entry .. "exec2")
-			end
-			return log_with_ret(c.input, entry .. "exec3")
+		if global.both_act_neutral ~= true then
+			return false, nil
 		end
 
-		local do_await = function()
-			if c.meoshi and p.flag_fin and not c.last and (c.fin == nil) then
-				c.state = "exec"
-				c.fin = (c.fin or 0) + 1 -- 動作終了フラグが連続するためカウンタで多重実行を避ける
-				return exec(true, "me1")
-			elseif c.meoshi and (p.on_update_7e_02 == global.frame_number) and not c.last and (c.fin == nil) then
-				c.state = "exec"
-				c.fin = (c.fin or 0) + 1 -- 動作終了フラグが連続するためカウンタで多重実行を避ける
-				return exec(true, "me2")
-			end
-
-			if c.timeout and not c.advance then
-				-- 動作終了に来た場合は初期化する
-				c.state = "finish"
-				do_log("exit await")
-				-- すぐにfinishへ
-			elseif c.advance and not c.last then
-				next_input()
-				return log_with_ret(nil, "adv1")
-			elseif c.advance and c.last then
-				-- 永久ループ防止
-				c.state = "finish"
-				c.advance = false
-				return log_with_ret(nil, "adv2")
-			elseif cancel and c.hook_sp and not c.advance then
-				-- キャンセル可能タイミング
-				return log_with_ret(c.hook_sp, "can")
-			elseif addition and c.hook_cmd and not c.advance then
-				-- 固有処理での追加入力受付向け
-				return log_with_ret(c.hook_cmd, "add")
-			elseif repcan and c.hook_cmd and not c.advance then
-				-- A連キャン
-				return log_with_ret(c.hook_cmd, "rep")
-			elseif capable and c.hook_sp and not c.advance then
-				-- ヒットorガード時のキャンセル
-				return log_with_ret(c.hook_sp, "cap")
-			elseif c.kara and c.hook_sp and not c.advance then
-				-- 必殺技の空キャンセル
-				return log_with_ret(c.hook_sp, "kara")
-			elseif ut.tstb(c.input.hook_type, hook_cmd_types.sp_throw) and c.hook_sp and not c.advance then
-				-- 投げ必殺技の場合はヒットorガード時のキャンセル
-				return log_with_ret(c.hook_sp, "thorw")
-			else
-				return log_with_ret(nil, "awaiting")
-			end
+		c.count         = 1
+		c.old           = nil
+		c.list          = tra_sub.reload_combo(p)
+		local max       = #c.list
+		c.last          = c.count == #c.list
+		if max > 0 and c.list[1] then
+			c.meta  = c.list[1].meta or {}
+			c.input = c.list[1].hook
+		else
+			c.meta  = {}
+			c.input = nil
 		end
-
-		do_log("", true)
-
-		if c.state == "neutral" or c.input == nil then
-			c.advance = false
-			c.timeout = false
-
-			-- 動作中は状態維持
-			if moving then
-				return log_with_ret(nil, "moving")
-			end
-
-			if global.both_act_neutral ~= true then
-				return log_with_ret(nil, "op mov")
-			end
-
-			first_input()
-			do_log("exit neutral")
-			-- すぐwalk or finishへ
+		c.fin           = nil
+		c.meoshi        = nil
+		c.lag           = 0
+		c.kara          = false
+		c.hold          = nil
+		c.hits          = 0
+		if c.input then
+			c.state    = "enc"
+			c.hook_cmd = (c.input.cmd ~= nil) and c.input or nil
+			c.hook_sp  = (c.input.cmd == nil) and c.input or nil
+		else
+			c.state = "finish"
+			c.hook_cmd = nil
+			c.hook_sp = nil
 		end
+		-- すぐに次の処理へ
+		return true, nil
+	end
 
-		if c.state == "enc" then
-			if tra_sub.can_encounter(p) then
-				c.state = "exec"
-				do_log("exit enc")
-				-- すぐexecへ
-			end
-		end
-
-		if c.state == "lag" then
-			c.advance = c.advance or advance
-			c.timeout = c.timeout or timeout
-
-			-- 動作終了に来た場合は初期化する
-			if c.timeout then
-				c.state = "finish"
-				return log_with_ret(nil, "lag fin")
-			end
-
-			-- 待ちがある場合はカウントダウンして抜ける
-			if c.lag > 0 then
-				if not (p.hitstop_remain > 0 or p.skip_frame or p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number) then
-					c.lag = c.lag - 1 -- ヒットストップ中
-				end
-				return log_with_ret(nil, "lag")
-			end
-
+	ps_combo.enc = function(p)
+		if tra_sub.can_encounter(p) then
+			local c = p.combo
 			c.state = "exec"
-			do_log("exit lag")
-			-- すぐexecへ
+			-- すぐに次の処理へ
+			return true, nil
 		end
+		return false, nil
+	end
 
-		-- 入力を返して待ち状態へ
-		if c.state == "exec" then
-			return exec()
+	ps_combo.exec = function(p)
+		local c = p.combo
+		c.advance = false
+		c.timeout = false
+		if c.hook_cmd and c.meta.hold then
+			c.state = "exec_to_hold"
+			return true, nil
 		end
+		c.state = "await_root"
+		return false, c.input
+	end
 
-		if c.state == "hold" then
-			c.advance = c.advance or advance
-			c.timeout = c.timeout or timeout
-
-			-- 動作終了に来た場合は初期化する
-			if c.timeout then
-				c.state = "finish"
-				return log_with_ret(nil, "hold fin")
+	ps_combo.await_root = function(p)
+		local ad = ps_combo.additional(p)
+		local c = p.combo
+		local a = ut.tstb(p.flag_c4, db.flag_c4.a) -- A
+		local ca = ut.tstb(p.flag_cc, db.flag_cc.ca) -- CA技
+		local cm = ut.tstb(p.flag_c8, db.flag_c8.cmd) -- 特殊技
+		local sp = ut.tstb(p.flag_c8, db.flag_c8.sp) -- 必殺技
+		local mva = ut.tstb(p.flag_c0, db.flag_c0.normal_a) -- 動作A
+		local mvb = ut.tstb(p.flag_c0, db.flag_c0.normal_b) -- 動作B
+		if ad.on_startup then
+			if c.hits > 0 then
+				c.state = "await_hits"
+				return true, nil
 			end
-
-			-- 待ちがある場合はカウントダウンして抜ける
-			if c.hold > 0 then
-				c.hold = c.hold - 1 -- ヒットストップ中
-				local on = c.meta.hold - c.hold
-				local hook = c.hook_cmd
-				if hook.cmd then
-					local k = hook.cmd
-					if on == 1 then
-						hook.on1f, hook.on5f, hook.hold = k, k, k
-					elseif on >= 5 then
-						hook.on1f, hook.on5f, hook.hold = 0, k, k
-					else
-						hook.on1f, hook.on5f, hook.hold = 0, 0, k
-					end
-				end
-				return log_with_ret(c.input, "hold")
+			if ca then
+				c.state = "await_ca"
+				return true, nil
 			end
+			if a then
+				c.state = "await_a"
+				return true, nil
+			end
+			if cm then
+				c.state = "await_cmd"
+				return true, nil
+			end
+			if sp then
+				c.state = "await_sp"
+				return true, nil
+			end
+			if mva then
+				c.state = "await_mva"
+				return true, nil
+			end
+			if mvb then 
+				c.state = "await_mvb"
+				return true, nil
+			end
+		end
+		if ad.on_endup then
+			c.state = "await_to"
+			return true, nil
+		end
+		return false, nil
+	end
 
-			next_input()
+	ps_combo.await_hits = function(p)
+		local ad = ps_combo.additional(p)
+		local c = p.combo
+		if c.hits == 0 then
+			print("hits")
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		if ad.on_endup then
+			c.state = "await_to"
+			return true, nil
+		end
+		return false, nil
+	end
+
+	ps_combo.await_a = function(p)
+		local ad = ps_combo.additional(p)
+		local c = p.combo
+		-- 次の技＝A → 連打キャンセル → 連打キャンセル可状態になる
+		if ad.repcan then
+			print("repcan")
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		-- 次の技＝BかC → CAキャンセル → CAキャンセル可状態になる
+		if ad.kara_capable then
+			print("kara")
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		-- 次の技＝必殺技 → 必殺技キャンセル → 必殺技キャンセル可状態になる
+		if ad.cancel then
+			print("can")
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		-- → 目押し → 動作終了状態になる
+		if ad.on_endup then
+			print("end")
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		return false, nil
+	end
+
+	ps_combo.await_ca = function(p)
+		local ad = ps_combo.additional(p)
+		local c = p.combo
+		-- 次の技＝AかBかC
+		-- → CAキャンセル → CAキャンセル可状態になる
+		if ad.kara_capable then
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		-- → 特殊CAキャンセル → 入力受付状態になる
+		if ad.addition then
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		-- 次の技＝必殺技
+		-- → 必殺技キャンセル → 必殺技キャンセル可状態になる
+		if ad.cancel then
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		-- → 特殊CAキャンセル → 入力受付状態になる
+		if ad.addition then
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		-- → 目押し → 動作終了状態になる
+		if ad.on_endup then
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		return false, nil
+	end
+
+	ps_combo.await_cmd = function(p)
+		local ad = ps_combo.additional(p)
+		local c = p.combo
+		-- 次の技＝AかBかC
+		-- → CAキャンセル → CAキャンセル可状態になる
+		if ad.kara_capable then
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		-- → 特殊CAキャンセル → 入力受付状態になる
+		if ad.addition then
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		-- 次の技＝必殺技
+		-- → 必殺技キャンセル → 必殺技キャンセル可状態になる
+		if ad.cancel then
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		-- → 特殊CAキャンセル → 入力受付状態になる
+		if ad.addition then
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		-- → 目押し → 動作終了状態になる
+		if ad.on_endup then
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		return false, nil
+	end
+
+	ps_combo.await_sp = function(p)
+		local ad = ps_combo.additional(p)
+		local c = p.combo
+		-- 次の技＝AかBかC
+		-- → CAキャンセル → CAキャンセル可状態になる
+		if ad.kara_capable then
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		-- → 特殊CAキャンセル → 入力受付状態になる
+		if ad.addition then
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		-- 次の技＝必殺技
+		-- → 必殺技キャンセル → 必殺技キャンセル可状態になる
+		if ad.cancel then
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		-- → 特殊CAキャンセル → 入力受付状態になる
+		if ad.addition then
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		-- → 目押し → 動作終了状態になる
+		if ad.on_endup then
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		return false, nil
+	end
+
+	ps_combo.await_to = function(p)
+		-- 次の技＝なんでも → 特殊動作動作のキャンセル → いつでもいい
+		ps_combo.next_input(p)
+		return true, nil
+	end
+
+	ps_combo.await_mva = function(p)
+		-- 次の技＝なんでも → 特殊動作動作のキャンセル → いつでもいい
+		ps_combo.next_input(p)
+		-- 特殊動作モーションは開始を1Fまつ
+		p.combo.lag = (p.combo.lag or 0) + 1
+		return true, nil
+	end
+
+	ps_combo.await_mvb = function(p)
+		local ad = ps_combo.additional(p)
+		local c = p.combo
+		c.timeout = c.timeout or ad.on_endup
+		-- 次の技＝なんでも → 動作終了まで待つ → 動作終了状態になる
+		if c.timeout then
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		return false, nil
+	end
+
+	ps_combo.await = function(p)
+		local ad = ps_combo.additional(p)
+		local c = p.combo
+		c.advance = (c.advance or ad.on_startup)
+		c.timeout = c.timeout or ad.on_endup
+		if c.advance then
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		if c.timeout then
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		if ad.cancel then
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		if ad.repcan then
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		if ad.capable then
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		if ad.addition then
+			ps_combo.next_input(p)
+			return true, nil
+		end
+		return false, nil
+	end
+
+	ps_combo.lag = function(p)
+		local c = p.combo
+		-- すぐexecへ
+		if c.lag == 0 then
 			c.state = "exec"
-			return exec(true)
+			return true, nil
 		end
+		-- 待ちがある場合はカウントダウンして抜ける
+		-- ヒットストップ中は無視
+		if p.hitstop_remain > 0 or
+			p.skip_frame == true or
+			p.in_hitstop == global.frame_number or
+			p.on_hit_any == global.frame_number then
+			return false, nil
+		end
+		c.lag = c.lag - 1
+		return false, nil
+	end
 
-		-- 動作開始まで待ち
-		if c.state == "await" then
-			c.advance = (c.advance or advance)
-			c.timeout = c.timeout or timeout
-			return do_await()
+	ps_combo.exec_x = function(p)
+		local c = p.combo
+		c.advance = false
+		c.timeout = false
+		if c.hook_cmd and c.meta.hold then
+			c.state = "exec_to_hold"
+			return true, nil
 		end
+		if c.hook_cmd and c.count == 2 then
+			c.state = "exec_cmd"
+			return true, nil
+		end
+		-- 2段目は必殺技だと空キャンセルになるので通常、特殊、CAのみ許す
+		c.state = "exec_meethits"
+		return true, nil
+	end
+
+	ps_combo.exec_to_hold = function(p)
+		local c = p.combo
+		c.state = "hold"
+		c.hold = c.meta.hold
+		return false, c.hook_cmd
+	end
+
+	ps_combo.exec_cmd = function(p)
+		local c = p.combo
+		c.state = "await_root"
+		return false, c.hook_cmd
+	end
+
+	ps_combo.exec_meethits = function(p)
+		local ad = ps_combo.additional(p)
+		local c = p.combo
+		-- 最大ヒットが必要な場合は遷移イベントでコマンドを返さない
+		if not ad.meethits then
+			c.state = "await_root"
+			return false, nil
+		end
+		c.state = "await_root"
+		return false, c.input
+	end
+
+	ps_combo.lag_X = function(p)
+		local c = p.combo
+		local moving = ps_combo.has_moving(p)
+		local old_moving = p.old and ps_combo.has_moving(p.old) or moving
+		c.advance = p.on_upd_flag_c8 == global.frame_number
+		c.timeout = (moving ~= true) and (old_moving == true)
 
 		-- 動作終了に来た場合は初期化する
 		if c.timeout then
 			c.state = "finish"
-			do_log("timeout")
-			-- すぐにfinishへ
+			return true, nil
 		end
 
-		if c.state == "finish" then
-			-- ギリギリ間に合ったケースでは遷移させる
-			c.advance = (c.advance or advance)
-			if c.advance and not c.last then
-				local ret = do_await()
-				c.advance = false -- 永久ループ防止
-				return ret
+		-- 待ちがある場合はカウントダウンして抜ける
+		if c.lag > 0 then
+			if not (p.hitstop_remain > 0 or p.skip_frame or p.in_hitstop == global.frame_number or p.on_hit_any == global.frame_number) then
+				c.lag = c.lag - 1 -- ヒットストップ中
 			end
-			if p.combo_log > 1 then ut.printf("         [FSM][%s] P%s RESET", c.count, p.num) end
-			c = p.new_preset_combo(false, "finish")
+			return false, nil
 		end
 
-		return log_with_ret(nil, "return")
+		c.state = "exec"
+		-- すぐexecへ
+		return true, nil
+	end
+
+	ps_combo.next_input = function(p)
+		local c = p.combo
+		c.count = c.count + 1
+
+		-- ダミーをスキップ(範囲チェック付き)
+		while c.count <= #c.list and c.list[c.count] and c.list[c.count].hook and c.list[c.count].hook.dummy do
+			c.count = c.count + 1
+		end
+
+		-- 範囲外チェック
+		if c.count > #c.list then
+			c.state = "finish"
+			c.last = true
+			return
+		end
+
+		-- 次の input を準備
+		local meta = c.meta
+		c.lag      = meta.lag or 0 -- 今のラグ設定を次の待ち時間にする
+		c.kara     = meta.kara and (meta.kara == true) or false
+		c.hold     = meta.hold
+		c.hits     = meta.hits or 0
+		c.last     = c.count == #c.list
+		c.meta     = c.list[c.count].meta
+		c.input    = c.list[c.count].hook
+		c.fin      = nil
+		local realprev = c.list[c.count - 1] -- ダミーを含めた前のオブジェクト
+		local prevhook = realprev.hook
+		c.meoshi   = prevhook and prevhook.meoshi or nil
+		c.hook_cmd = (c.input and c.input.cmd ~= nil) and c.input or nil
+		c.hook_sp  = (c.input and c.input.cmd == nil) and c.input or nil
+		c.state    = "lag"
+		c.advance  = false
+		c.timeout  = false
+	end
+
+	ps_combo.hold = function(p)
+		local c = p.combo
+		local ad = ps_combo.additional(p)
+		c.advance = c.advance or ad.advance
+		c.timeout = c.timeout or ad.timeout
+
+		-- 動作終了に来た場合は初期化する
+		if c.timeout then
+			c.state = "finish"
+			return true, nil
+		end
+
+		-- 待ちがある場合はカウントダウンして抜ける
+		if c.hold > 0 then
+			c.hold = c.hold - 1 -- ヒットストップ中
+			local on = c.meta.hold - c.hold
+			local hook = c.hook_cmd
+			if hook.cmd then
+				local k = hook.cmd
+				if on == 1 then
+					hook.on1f, hook.on5f, hook.hold = k, k, k
+				elseif on >= 5 then
+					hook.on1f, hook.on5f, hook.hold = 0, k, k
+				else
+					hook.on1f, hook.on5f, hook.hold = 0, 0, k
+				end
+			end
+			return false, c.input
+		end
+
+		ps_combo.next_input(p)
+		c.state = "exec"
+		return true, nil
+	end
+
+	ps_combo.do_await = function(p)
+		local c = p.combo
+		if c.meoshi and p.flag_fin and not c.last and (c.fin == nil) then
+			c.state = "exec"
+			c.fin = (c.fin or 0) + 1 -- 動作終了フラグが連続するためカウンタで多重実行を避ける
+			return true, nil
+		elseif c.meoshi and (p.on_update_7e_02 == global.frame_number) and not c.last and (c.fin == nil) then
+			c.state = "exec"
+			c.fin = (c.fin or 0) + 1 -- 動作終了フラグが連続するためカウンタで多重実行を避ける
+			return true, nil
+		end
+
+		local ad = ps_combo.additional(p)
+		c.advance = c.advance or ad.advance
+		c.timeout = c.timeout or ad.timeout
+
+		if c.timeout and not c.advance then
+			-- 動作終了に来た場合は初期化する
+			c.state = "finish"
+			-- すぐにfinishへ
+			return true, nil
+		elseif c.advance and not c.last then
+			ps_combo.next_input(p)
+			return false, nil
+		elseif c.advance and c.last then
+			-- 永久ループ防止
+			c.state = "finish"
+			c.advance = false
+			return true, nil
+		elseif ad.cancel and c.hook_sp and not c.advance then
+			-- キャンセル可能タイミング
+			return false, c.hook_sp
+		elseif ad.addition and c.hook_cmd and not c.advance then
+			-- 固有処理での追加入力受付向け
+			return false, c.hook_cmd
+		elseif ad.repcan and c.hook_cmd and not c.advance then
+			-- A連キャン
+			return false, c.hook_cmd
+		elseif ad.capable and c.hook_sp and not c.advance then
+			-- ヒットorガード時のキャンセル
+			return false, c.hook_sp
+		elseif c.kara and c.hook_sp and not c.advance then
+			-- 必殺技の空キャンセル
+			return false, c.hook_sp
+		elseif ut.tstb(c.input.hook_type, hook_cmd_types.sp_throw) and c.hook_sp and not c.advance then
+			-- 投げ必殺技の場合はヒットorガード時のキャンセル
+			return false, c.hook_sp
+		end
+		return false, nil
+	end
+
+	ps_combo.await_x = function(p)
+		local ad = ps_combo.additional(p)
+		local c = p.combo
+		c.advance = (c.advance or ad.advance)
+		c.timeout = c.timeout or ad.timeout
+		return ps_combo.do_await(p)
+	end
+
+	ps_combo.timeout = function(p)
+		local c = p.combo
+		if c.timeout then
+			c.state = "finish"
+			-- すぐにfinishへ
+			return true, nil
+		end
+		return false, nil
+	end
+
+	ps_combo.finish = function(p)
+		local c = p.combo
+		local ad = ps_combo.additional(p)
+		-- ギリギリ間に合ったケースでは遷移させる
+		c.advance = (c.advance or ad.advance)
+		if c.advance and not c.last then
+			local ret1, ret2 = ps_combo.do_await(p)
+			c.advance = false -- 永久ループ防止
+			return ret1, ret2
+		end
+		c = p.new_preset_combo(false, "finish")
+		c.state = "reload"
+		return false, nil
 	end
 
 	tra_sub.controll_dummy_mode = function(p)
@@ -6626,9 +6916,16 @@ rbff2.startplugin  = function()
 		end
 		return ret_and_log()
 	end
-	-- 要撃行動の開始判定
+	-- 邀撃行動の開始判定
 	tra_sub.can_encounter            = function(p)
 		local executable, log = false, nil
+
+		if p.flag_c4 ~= 0 then return false, nil end -- 通常攻撃
+		if p.flag_c8 ~= 0 then return false, nil end -- 特殊技、必殺技
+		if ut.tstb(p.flag_c0, db.flag_c0.startups) then return false, nil end -- 動作
+		if ut.tstb(p.flag_cc, db.flag_cc.hitstun) then return false, nil end -- やられ以外
+		if ut.tstb(p.flag_d0, db.flag_d0.hurt) then return false, nil end -- やられ
+
 		if p.enc_enabled and not p.op.in_hitstun and not p.hook then
 			local aaa, op = p.encounter, p.op
 			local other_cond = false
@@ -7053,7 +7350,16 @@ rbff2.startplugin  = function()
 				enc_hook = can_enc and get_next_enc(p) or nil -- 単一動作セット
 			elseif p.encounter.type == 3 then
 				if p.combo_log > 1 then ut.printf("%s combo P%s entry", global.frame_number, p.num) end
-				enc_hook, enc_log = tra_sub.controll_dummy_combo(p), "combo" -- プリセットコンボセット
+				enc_log = "combo" -- プリセットコンボセット
+				local is_break, state = true, p.combo.state or "reload"
+				while ((is_break == true) and (enc_hook == nil)) do
+					local input = p.combo and p.combo.input or nil
+					if p.combo_log > 1 then
+						ut.printf("%s combo P%s %s %s %s", global.frame_number, p.num, input and to_sjis(input.name) or "---", state, enc_hook and "hook" or "")
+					end
+					is_break, enc_hook = ps_combo[state](p)
+					state = p.combo.state
+				end
 				if p.combo_log > 1 then ut.printf("%s combo P%s entry %s %s", global.frame_number, p.num, enc_hook and "hook" or "nil", enc_log) end
 			end
 			if enc_hook then
